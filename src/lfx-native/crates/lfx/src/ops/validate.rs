@@ -28,7 +28,10 @@ use indexmap::IndexMap;
 use serde_json::{Map, Value};
 
 use crate::ops::canonical::{is_finite_number, is_row_position, values_equal};
-use crate::ops::edges::{EdgeIndex, GraphRead, check_edge, edge_changed, endpoint};
+use crate::ops::edges::{
+    EdgeIndex, GraphRead, InputKind, check_edge, edge_changed, endpoint, index_outputs, node_body,
+    read_handles,
+};
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, ErrorCode, ErrorKind, Result};
 use crate::ops::schema::{NODE_OBJECT_PATHS, NODE_SCHEMA, field_value_path};
@@ -560,35 +563,138 @@ fn list<'a>(graph: &'a Value, key: &str) -> &'a [Value] {
         .unwrap_or_default()
 }
 
-/// The indexes of the edges `target` adds relative to `base`: new edges,
-/// and edges that changed ([`edge_changed`]), which a write deletes and adds again.
+/// The indexes of the edges `target` adds relative to `base`, and of the edges it cuts.
+///
+/// Added edges are new edges, and edges that changed ([`edge_changed`]),
+/// which a write deletes and adds again. A cut edge is one `target` keeps
+/// unchanged while it removes the template field or output at one of its
+/// ends. Applying that removal deletes the edge, so a target that keeps it
+/// can never be replayed. Both graphs must be structurally sound.
 ///
 /// # Errors
 ///
-/// A compared value holds a number that is not finite.
-pub fn added_edges(base: &Value, target: &Value) -> Result<Vec<usize>> {
+/// A compared value holds a number that is not finite, or an outputs list
+/// that a write changes is not a valid keyed list.
+pub fn changed_edges(base: &Value, target: &Value) -> Result<Vec<usize>> {
     let stored: HashMap<&str, &Map<String, Value>> = list(base, "edges")
         .iter()
         .filter_map(Value::as_object)
         .filter_map(|edge| Some((edge.get("id")?.as_str()?, edge)))
         .collect();
+    let removed = removed_ends(base, target)?;
     let mut indexes = Vec::new();
     for (index, edge) in list(target, "edges").iter().enumerate() {
         let Some(edge) = edge.as_object() else {
             continue;
         };
-        let added = match stored.get(edge.id()) {
+        let changed = match stored.get(edge.id()) {
             None => true,
-            Some(before) => edge_changed(before, edge)?,
+            Some(before) => edge_changed(before, edge)? || is_cut(edge, &removed),
         };
-        if added {
+        if changed {
             indexes.push(index);
         }
     }
     Ok(indexes)
 }
 
-/// The edge rules broken by the edges `target` adds relative to `base`.
+/// The template fields and outputs a write removes from one node.
+#[derive(Debug)]
+struct RemovedEnds {
+    fields: HashSet<String>,
+    outputs: HashSet<String>,
+}
+
+/// The template fields and outputs `target` removes from the nodes it keeps, by node id.
+fn removed_ends(base: &Value, target: &Value) -> Result<HashMap<String, RemovedEnds>> {
+    let stored: HashMap<&str, &Map<String, Value>> = list(base, "nodes")
+        .iter()
+        .filter_map(Value::as_object)
+        .map(|node| (node.id(), node))
+        .collect();
+    let mut removed = HashMap::new();
+    for node in list(target, "nodes").iter().filter_map(Value::as_object) {
+        let Some(stored) = stored.get(node.id()) else {
+            continue;
+        };
+        let fields = removed_fields(template(stored)?, template(node)?);
+        let outputs = removed_outputs(node_body(stored)?, node_body(node)?, node.id())?;
+        if !fields.is_empty() || !outputs.is_empty() {
+            removed.insert(node.id().to_owned(), RemovedEnds { fields, outputs });
+        }
+    }
+    Ok(removed)
+}
+
+/// A node's template. Structural validation keeps it an object.
+fn template(node: &Map<String, Value>) -> Result<&Map<String, Value>> {
+    node.template()
+        .ok_or_else(|| Error::invalid("node data.node.template must be an object"))
+}
+
+/// The template keys `before` has and `after` does not.
+fn removed_fields(before: &Map<String, Value>, after: &Map<String, Value>) -> HashSet<String> {
+    before
+        .keys()
+        .filter(|key| !after.contains_key(*key))
+        .cloned()
+        .collect()
+}
+
+/// The output names `before` has and `after` does not. Outputs that compare
+/// equal are not indexed, so a write that leaves them alone reads nothing.
+fn removed_outputs(
+    before: &Map<String, Value>,
+    after: &Map<String, Value>,
+    node_id: &str,
+) -> Result<HashSet<String>> {
+    let Some(outputs_before) = before.get("outputs") else {
+        return Ok(HashSet::new());
+    };
+    let outputs_after = after.get("outputs");
+    if let Some(outputs_after) = outputs_after
+        && values_equal(outputs_before, outputs_after)?
+    {
+        return Ok(HashSet::new());
+    }
+    let kept: HashSet<String> = match outputs_after {
+        Some(outputs_after) => index_outputs(outputs_after, node_id)?
+            .names()
+            .map(str::to_owned)
+            .collect(),
+        None => HashSet::new(),
+    };
+    Ok(index_outputs(outputs_before, node_id)?
+        .names()
+        .filter(|name| !kept.contains(*name))
+        .map(str::to_owned)
+        .collect())
+}
+
+/// Whether a kept edge leaves from or enters a field or output the write removes.
+///
+/// Applying the removal reads the handles of every edge at that node
+/// strictly, so an edge there whose handles cannot be read counts too, and
+/// the edge rules report it.
+fn is_cut(edge: &Map<String, Value>, removed: &HashMap<String, RemovedEnds>) -> bool {
+    let source = removed.get(endpoint(edge, "source"));
+    let target = removed.get(endpoint(edge, "target"));
+    if source.is_none() && target.is_none() {
+        return false;
+    }
+    let Ok(handles) = read_handles(edge) else {
+        return true;
+    };
+    if source.is_some_and(|source| source.outputs.contains(&handles.output)) {
+        return true;
+    }
+    target.is_some_and(|target| match handles.input.kind {
+        InputKind::Field => target.fields.contains(&handles.input.name),
+        InputKind::LoopOutput => target.outputs.contains(&handles.input.name),
+    })
+}
+
+/// The edge rules broken by the edges `target` adds, rewires or cuts relative to `base`.
 ///
 /// `target` must be structurally sound: unique ids, and edges whose endpoints
 /// exist. Checking one edge reads the other edges into its input, so it can
@@ -599,7 +705,7 @@ pub fn added_edges(base: &Value, target: &Value) -> Result<Vec<usize>> {
 ///
 /// A check failed in a way that is not an edge rule.
 pub fn find_edge_violations(base: &Value, target: &Value) -> Result<Vec<Violation>> {
-    let indexes = added_edges(base, target)?;
+    let indexes = changed_edges(base, target)?;
     if indexes.is_empty() {
         return Ok(Vec::new());
     }
