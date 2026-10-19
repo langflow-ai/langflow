@@ -117,7 +117,6 @@ describe("useRestoreRevision", () => {
     const [url, body] = apiPostMock.mock.calls[1];
     expect(url).toBe(URL);
     expect(body.fixes).toEqual([{ type: "delete_edges", ids: ["e"] }]);
-    expect(body.request_id).not.toBe(apiPostMock.mock.calls[0][1].request_id);
     expect(applyFlowToCanvasMock).toHaveBeenCalledWith({ id: "flow-1" });
     expect(setSuccessDataMock).toHaveBeenCalledWith({
       title:

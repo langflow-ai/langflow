@@ -1,6 +1,5 @@
 import type { ReactFlowJsonObject } from "@xyflow/react";
 import { useTranslation } from "react-i18next";
-import { v4 as uuidv4 } from "uuid";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import useAlertStore from "@/stores/alertStore";
@@ -251,9 +250,6 @@ const useSaveFlow = () => {
               : undefined;
           const updatePayload = {
             ...payload,
-            // One id per save: a retry of this request is recognized by the
-            // server and recorded in the flow's history only once.
-            request_id: uuidv4(),
             ...(cause && { cause }),
           };
           // biome-ignore lint/suspicious/noExplicitAny: legacy
@@ -279,7 +275,6 @@ const useSaveFlow = () => {
                   new Promise<void>((resolveRepair, rejectRepair) => {
                     mutateAsync({
                       ...updatePayload,
-                      request_id: uuidv4(),
                       ...(problem.code === "FLOW_REVISION_MISMATCH"
                         ? { repair_revision_mismatch: true }
                         : { repair_invalid_graph: true }),
