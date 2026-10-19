@@ -166,6 +166,24 @@ def _edge_to(field: str, edge_id: str = "e", source_handle: dict | None = None) 
     return _edge(edge_id, "a", "b", source_handle or {"name": "out"}, {"fieldName": field})
 
 
+def _loop_edge() -> dict:
+    return _edge("l", "a", "a", {"name": "out"}, {"name": "loop"})
+
+
+def _without_field(graph: dict, node_id: str, field: str) -> dict:
+    """Return ``graph`` with one template field removed from one node."""
+    node = next(node for node in graph["nodes"] if node["id"] == node_id)
+    del node["data"]["node"]["template"][field]
+    return graph
+
+
+def _with_outputs(graph: dict, node_id: str, outputs: list) -> dict:
+    """Return ``graph`` with one node's outputs replaced."""
+    node = next(node for node in graph["nodes"] if node["id"] == node_id)
+    node["data"]["node"]["outputs"] = outputs
+    return graph
+
+
 def _legacy_edge(edge_id: str = "old") -> dict:
     """An edge older editors wrote: handle strings that are not JSON, and no data."""
     return {"id": edge_id, "source": "a", "target": "b", "sourceHandle": "x|y", "targetHandle": "z"}
@@ -442,6 +460,31 @@ def _validation_inputs() -> list[dict[str, Any]]:
             "name": "rewiring a stored edge checks it",
             "flow": _connectable(_edge_to("missing")),
             "base": _connectable(_edge_to("f")),
+        },
+        {
+            "name": "removing a field cuts the edge the write keeps into it",
+            "flow": _without_field(_connectable(_edge_to("f")), "b", "f"),
+            "base": _connectable(_edge_to("f")),
+        },
+        {
+            "name": "removing a field together with its edge is valid",
+            "flow": _without_field(_connectable(), "b", "f"),
+            "base": _connectable(_edge_to("f")),
+        },
+        {
+            "name": "removing an output cuts the edge the write keeps from it",
+            "flow": _with_outputs(_connectable(_edge_to("f")), "a", [{"name": "loop", "allows_loop": True}]),
+            "base": _connectable(_edge_to("f")),
+        },
+        {
+            "name": "removing a loop output cuts the loop edge the write keeps into it",
+            "flow": _with_outputs(_connectable(_loop_edge()), "a", [{"name": "out"}]),
+            "base": _connectable(_loop_edge()),
+        },
+        {
+            "name": "removing a field reads every stored edge at its node strictly",
+            "flow": _without_field(_connectable(_legacy_edge()), "b", "many"),
+            "base": _connectable(_legacy_edge()),
         },
         {
             "name": "a broken edge found while checking another is reported once at itself",

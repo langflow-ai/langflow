@@ -392,6 +392,195 @@
       ]
     },
     {
+      "name": "removing a field cuts the edge the write keeps into it",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "base": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "violations": [
+        {"code": "EDGE_HANDLE_NOT_FOUND", "path": ["edges", 0], "message": "edge 'e': target node 'b' has no field 'f'", "resolution": "manual", "edge_id": "e"}
+      ]
+    },
+    {
+      "name": "removing a field together with its edge is valid",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": []
+      },
+      "base": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "violations": []
+    },
+    {
+      "name": "removing an output cuts the edge the write keeps from it",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "base": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "violations": [
+        {
+          "code": "EDGE_HANDLE_NOT_FOUND",
+          "path": ["edges", 0],
+          "message": "edge 'e': source node 'a' has no output 'out'",
+          "resolution": "manual",
+          "edge_id": "e"
+        }
+      ]
+    },
+    {
+      "name": "removing a loop output cuts the loop edge the write keeps into it",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "l",
+            "source": "a",
+            "target": "a",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œnameœ:œloopœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"name": "loop"}}
+          }
+        ]
+      },
+      "base": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "l",
+            "source": "a",
+            "target": "a",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œnameœ:œloopœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"name": "loop"}}
+          }
+        ]
+      },
+      "violations": [
+        {
+          "code": "EDGE_HANDLE_NOT_FOUND",
+          "path": ["edges", 0],
+          "message": "edge 'l': target node 'a' has no loop output 'loop'",
+          "resolution": "manual",
+          "edge_id": "l"
+        }
+      ]
+    },
+    {
+      "name": "removing a field reads every stored edge at its node strictly",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [{"id": "old", "source": "a", "target": "b", "sourceHandle": "x|y", "targetHandle": "z"}]
+      },
+      "base": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [{"id": "old", "source": "a", "target": "b", "sourceHandle": "x|y", "targetHandle": "z"}]
+      },
+      "violations": [
+        {
+          "code": "EDGE_HANDLE_INVALID",
+          "path": ["edges", 0],
+          "message": "edge 'old': sourceHandle must be an escaped JSON object",
+          "resolution": "manual",
+          "edge_id": "old"
+        }
+      ]
+    },
+    {
       "name": "a broken edge found while checking another is reported once at itself",
       "flow": {
         "nodes": [
