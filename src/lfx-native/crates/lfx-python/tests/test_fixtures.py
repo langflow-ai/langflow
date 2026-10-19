@@ -112,7 +112,7 @@ def ignoring_row_order(flow: Any) -> Any:
         node_text = dump(node)
         for name in parse(ops.table_fields(node_text)):
             field = node["data"]["node"]["template"][name]
-            field["value"] = sorted(field["value"], key=lambda row: row["_id"])
+            field["value"] = sorted(field["value"], key=lambda row: row["__id__"])
     return flow
 
 
@@ -290,9 +290,9 @@ def test_fill_positions(case):
     # The binding fills positions as part of assigning row ids. Rows that
     # already have unique ids show only the positions it filled.
     rows = case["rows"]
-    assigned = parse(ops.assign_row_ids(dump([{**row, "_id": f"row{index}"} for index, row in enumerate(rows)])))
-    positions = [row.get("_pos") for row in assigned]
-    check(matches, "positions", positions, [row.get("_pos") for row in case["expected"]])
+    assigned = parse(ops.assign_row_ids(dump([{**row, "__id__": f"row{index}"} for index, row in enumerate(rows)])))
+    positions = [row.get("__pos__") for row in assigned]
+    check(matches, "positions", positions, [row.get("__pos__") for row in case["expected"]])
 
 
 @pytest.mark.parametrize("case", section("editor_cases.json", "assign"))

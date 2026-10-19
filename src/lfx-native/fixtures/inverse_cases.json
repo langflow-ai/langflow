@@ -449,7 +449,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -482,7 +482,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -495,7 +495,12 @@
         {
           "type": "update_nodes",
           "updates": [
-            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r3"}], "value": {"_id": "r3", "_pos": 1.5, "v": "z"}}
+            {
+              "id": "t",
+              "op": "set_field",
+              "path": ["data", "node", "template", "rows", "value", {"key": "r3"}],
+              "value": {"__id__": "r3", "__pos__": 1.5, "v": "z"}
+            }
           ]
         }
       ],
@@ -504,7 +509,7 @@
       ]
     },
     {
-      "name": "apply case: list item: setting a row's _pos changes only its position",
+      "name": "apply case: list item: setting a row's __pos__ changes only its position",
       "base": {
         "nodes": [
           {
@@ -512,7 +517,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -524,14 +529,14 @@
       "operations": [
         {
           "type": "update_nodes",
-          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "_pos"], "value": 3}]
+          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "__pos__"], "value": 3}]
         }
       ],
       "inverse": [
         [
           {
             "type": "update_nodes",
-            "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "_pos"], "value": 1}]
+            "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "__pos__"], "value": 1}]
           }
         ]
       ]
@@ -545,7 +550,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -557,7 +562,9 @@
       "operations": [
         {
           "type": "update_nodes",
-          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r0"}], "value": {"_id": "r0", "_pos": 2}}]
+          "updates": [
+            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r0"}], "value": {"__id__": "r0", "__pos__": 2}}
+          ]
         }
       ],
       "inverse": [
@@ -573,7 +580,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -590,7 +597,12 @@
           {
             "type": "update_nodes",
             "updates": [
-              {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}], "value": {"_id": "r1", "_pos": 1, "v": "x"}}
+              {
+                "id": "t",
+                "op": "set_field",
+                "path": ["data", "node", "template", "rows", "value", {"key": "r1"}],
+                "value": {"__id__": "r1", "__pos__": 1, "v": "x"}
+              }
             ]
           }
         ]
@@ -607,7 +619,7 @@
                 "template": {
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}, {"_id": "r3", "_pos": 3, "v": "z"}]
+                    "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}, {"__id__": "r3", "__pos__": 3, "v": "z"}]
                   },
                   "text": {"type": "str", "value": "a"}
                 }
@@ -625,7 +637,12 @@
           {
             "type": "update_nodes",
             "updates": [
-              {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}], "value": {"_id": "r1", "_pos": 1, "v": "x"}}
+              {
+                "id": "t",
+                "op": "set_field",
+                "path": ["data", "node", "template", "rows", "value", {"key": "r1"}],
+                "value": {"__id__": "r1", "__pos__": 1, "v": "x"}
+              }
             ]
           }
         ]
@@ -640,7 +657,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -735,7 +752,9 @@
         "nodes": [
           {
             "id": "t",
-            "data": {"node": {"template": {"rows": {"type": "table", "value": [{"_id": "r1", "_pos": 2, "v": "x"}, {"_id": "r2", "_pos": 1, "v": "y"}]}}}}
+            "data": {
+              "node": {"template": {"rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 2, "v": "x"}, {"__id__": "r2", "__pos__": 1, "v": "y"}]}}}
+            }
           }
         ],
         "edges": []
@@ -764,7 +783,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -787,8 +806,8 @@
               "id": "t",
               "op": "set_field",
               "path": ["data", "node", "template", "rows", "value", {"key": "r2"}],
-              "value": {"_id": "r2", "_pos": 2, "v": 2},
-              "expect": {"value": {"v": "y", "_pos": 2, "_id": "r2"}}
+              "value": {"__id__": "r2", "__pos__": 2, "v": 2},
+              "expect": {"value": {"v": "y", "__pos__": 2, "__id__": "r2"}}
             }
           ]
         },
@@ -810,7 +829,12 @@
           {
             "type": "update_nodes",
             "updates": [
-              {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}], "value": {"_id": "r2", "_pos": 2, "v": "y"}}
+              {
+                "id": "t",
+                "op": "set_field",
+                "path": ["data", "node", "template", "rows", "value", {"key": "r2"}],
+                "value": {"__id__": "r2", "__pos__": 2, "v": "y"}
+              }
             ]
           }
         ],
@@ -831,7 +855,7 @@
             "data": {
               "node": {
                 "template": {
-                  "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]},
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                   "text": {"type": "str", "value": "a"}
                 }
               }
@@ -848,7 +872,7 @@
               "id": "t",
               "op": "set_field",
               "path": ["data", "node", "template", "rows", "value", {"key": "r3"}],
-              "value": {"_id": "r3", "_pos": 1.5, "v": "z"},
+              "value": {"__id__": "r3", "__pos__": 1.5, "v": "z"},
               "expect": {"absent": true}
             }
           ]
@@ -1436,7 +1460,11 @@
                   "many": {"type": "str", "list": true, "value": []},
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "k": "one"}, {"_id": "r2", "_pos": 2, "k": "two"}, {"_id": "r3", "_pos": 3, "k": "three"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
                   }
                 },
                 "outputs": []
@@ -1486,7 +1514,11 @@
                       "many": {"type": "str", "list": true, "value": []},
                       "rows": {
                         "type": "table",
-                        "value": [{"_id": "r1", "_pos": 1, "k": "one"}, {"_id": "r2", "_pos": 2, "k": "two"}, {"_id": "r3", "_pos": 3, "k": "three"}]
+                        "value": [
+                          {"__id__": "r1", "__pos__": 1, "k": "one"},
+                          {"__id__": "r2", "__pos__": 2, "k": "two"},
+                          {"__id__": "r3", "__pos__": 3, "k": "three"}
+                        ]
                       }
                     },
                     "outputs": []
@@ -1542,7 +1574,11 @@
                   "many": {"type": "str", "list": true, "value": []},
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "k": "one"}, {"_id": "r2", "_pos": 2, "k": "two"}, {"_id": "r3", "_pos": 3, "k": "three"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
                   }
                 },
                 "outputs": []
@@ -1627,7 +1663,11 @@
                   "many": {"type": "str", "list": true, "value": []},
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "k": "one"}, {"_id": "r2", "_pos": 2, "k": "two"}, {"_id": "r3", "_pos": 3, "k": "three"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
                   }
                 },
                 "outputs": []
@@ -1688,7 +1728,11 @@
                   "many": {"type": "str", "list": true, "value": []},
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "k": "one"}, {"_id": "r2", "_pos": 2, "k": "two"}, {"_id": "r3", "_pos": 3, "k": "three"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
                   }
                 },
                 "outputs": []
@@ -1763,7 +1807,11 @@
                   "many": {"type": "str", "list": true, "value": []},
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "k": "one"}, {"_id": "r2", "_pos": 2, "k": "two"}, {"_id": "r3", "_pos": 3, "k": "three"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
                   }
                 },
                 "outputs": []
@@ -1824,7 +1872,11 @@
                   "many": {"type": "str", "list": true, "value": []},
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "k": "one"}, {"_id": "r2", "_pos": 2, "k": "two"}, {"_id": "r3", "_pos": 3, "k": "three"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
                   }
                 },
                 "outputs": []
@@ -1885,7 +1937,11 @@
                   "many": {"type": "str", "list": true, "value": []},
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "k": "one"}, {"_id": "r2", "_pos": 2, "k": "two"}, {"_id": "r3", "_pos": 3, "k": "three"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
                   }
                 },
                 "outputs": []
@@ -1958,7 +2014,11 @@
                   "many": {"type": "str", "list": true, "value": []},
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "k": "one"}, {"_id": "r2", "_pos": 2, "k": "two"}, {"_id": "r3", "_pos": 3, "k": "three"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
                   }
                 },
                 "outputs": []
@@ -2019,7 +2079,11 @@
                   "many": {"type": "str", "list": true, "value": []},
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "k": "one"}, {"_id": "r2", "_pos": 2, "k": "two"}, {"_id": "r3", "_pos": 3, "k": "three"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
                   }
                 },
                 "outputs": []
@@ -2080,7 +2144,11 @@
                   "many": {"type": "str", "list": true, "value": []},
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "k": "one"}, {"_id": "r2", "_pos": 2, "k": "two"}, {"_id": "r3", "_pos": 3, "k": "three"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
                   }
                 },
                 "outputs": []
@@ -2161,7 +2229,11 @@
                   "many": {"type": "str", "list": true, "value": []},
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "k": "one"}, {"_id": "r2", "_pos": 2, "k": "two"}, {"_id": "r3", "_pos": 3, "k": "three"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
                   }
                 },
                 "outputs": []
@@ -2242,7 +2314,11 @@
                   "many": {"type": "str", "list": true, "value": []},
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "k": "one"}, {"_id": "r2", "_pos": 2, "k": "two"}, {"_id": "r3", "_pos": 3, "k": "three"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
                   }
                 },
                 "outputs": []
@@ -2330,7 +2406,11 @@
                   "many": {"type": "str", "list": true, "value": []},
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "k": "one"}, {"_id": "r2", "_pos": 2, "k": "two"}, {"_id": "r3", "_pos": 3, "k": "three"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
                   }
                 },
                 "outputs": []
@@ -2453,7 +2533,11 @@
                   "many": {"type": "str", "list": true, "value": []},
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "k": "one"}, {"_id": "r2", "_pos": 2, "k": "two"}, {"_id": "r3", "_pos": 3, "k": "three"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
                   }
                 },
                 "outputs": []
@@ -2549,7 +2633,11 @@
                   "many": {"type": "str", "list": true, "value": []},
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "k": "one"}, {"_id": "r2", "_pos": 2, "k": "two"}, {"_id": "r3", "_pos": 3, "k": "three"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
                   }
                 },
                 "outputs": []
@@ -2588,7 +2676,12 @@
         {
           "type": "update_nodes",
           "updates": [
-            {"id": "b", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r4"}], "value": {"_id": "r4", "_pos": 4, "k": "four"}}
+            {
+              "id": "b",
+              "op": "set_field",
+              "path": ["data", "node", "template", "rows", "value", {"key": "r4"}],
+              "value": {"__id__": "r4", "__pos__": 4, "k": "four"}
+            }
           ]
         }
       ],
@@ -2619,7 +2712,11 @@
                   "many": {"type": "str", "list": true, "value": []},
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "k": "one"}, {"_id": "r2", "_pos": 2, "k": "two"}, {"_id": "r3", "_pos": 3, "k": "three"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
                   }
                 },
                 "outputs": []
@@ -2666,7 +2763,7 @@
                 "id": "b",
                 "op": "set_field",
                 "path": ["data", "node", "template", "rows", "value", {"key": "r1"}],
-                "value": {"_id": "r1", "_pos": 1, "k": "one"}
+                "value": {"__id__": "r1", "__pos__": 1, "k": "one"}
               }
             ]
           }
@@ -2696,7 +2793,11 @@
                   "many": {"type": "str", "list": true, "value": []},
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "k": "one"}, {"_id": "r2", "_pos": 2, "k": "two"}, {"_id": "r3", "_pos": 3, "k": "three"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
                   }
                 },
                 "outputs": []
@@ -2734,14 +2835,14 @@
       "operations": [
         {
           "type": "update_nodes",
-          "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r3"}, "_pos"], "value": 0.5}]
+          "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r3"}, "__pos__"], "value": 0.5}]
         }
       ],
       "inverse": [
         [
           {
             "type": "update_nodes",
-            "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r3"}, "_pos"], "value": 3}]
+            "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r3"}, "__pos__"], "value": 3}]
           }
         ]
       ]
@@ -2769,7 +2870,11 @@
                   "many": {"type": "str", "list": true, "value": []},
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "k": "one"}, {"_id": "r2", "_pos": 2, "k": "two"}, {"_id": "r3", "_pos": 3, "k": "three"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
                   }
                 },
                 "outputs": []
@@ -2836,7 +2941,11 @@
                   "many": {"type": "str", "list": true, "value": []},
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "k": "one"}, {"_id": "r2", "_pos": 2, "k": "two"}, {"_id": "r3", "_pos": 3, "k": "three"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
                   }
                 },
                 "outputs": []
@@ -2897,7 +3006,11 @@
                   "many": {"type": "str", "list": true, "value": []},
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "k": "one"}, {"_id": "r2", "_pos": 2, "k": "two"}, {"_id": "r3", "_pos": 3, "k": "three"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
                   }
                 },
                 "outputs": []
@@ -2990,7 +3103,11 @@
                   "many": {"type": "str", "list": true, "value": []},
                   "rows": {
                     "type": "table",
-                    "value": [{"_id": "r1", "_pos": 1, "k": "one"}, {"_id": "r2", "_pos": 2, "k": "two"}, {"_id": "r3", "_pos": 3, "k": "three"}]
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
                   }
                 },
                 "outputs": []
@@ -3072,7 +3189,11 @@
                       "many": {"type": "str", "list": true, "value": []},
                       "rows": {
                         "type": "table",
-                        "value": [{"_id": "r1", "_pos": 1, "k": "one"}, {"_id": "r2", "_pos": 2, "k": "two"}, {"_id": "r3", "_pos": 3, "k": "three"}]
+                        "value": [
+                          {"__id__": "r1", "__pos__": 1, "k": "one"},
+                          {"__id__": "r2", "__pos__": 2, "k": "two"},
+                          {"__id__": "r3", "__pos__": 3, "k": "three"}
+                        ]
                       }
                     },
                     "outputs": []

@@ -1,13 +1,13 @@
 //! Keyed lists, indexed by item key.
 //!
 //! Outputs, tool actions and table rows are lists whose items carry a key: an
-//! output's `name`, a tool action's first tag, a row's `_id`. A write finds
+//! output's `name`, a tool action's first tag, a row's `__id__`. A write finds
 //! its item through an index instead of scanning the list, and building the
 //! index checks the list once: every item has a key, no key repeats, and
-//! every table row carries a numeric `_pos`.
+//! every table row carries a numeric `__pos__`.
 //!
 //! Natural lists keep the order writes leave them in. A table's order is its
-//! rows' `(_pos, _id)`, not their places in the array: readers sort rows when
+//! rows' `(__pos__, __id__)`, not their places in the array: readers sort rows when
 //! they strip the row keys, so the engine never sorts a table. A new row is
 //! appended, and the last row moves into a deleted row's place.
 
@@ -155,9 +155,9 @@ impl ListIndex {
 
 // --- Table rows ----------------------------------------------------------------------------
 //
-// Every row of a table value stored in a flow carries a stable `_id` and a
-// numeric position `_pos`, so concurrent edits address rows instead of
-// indexes. The table's order is its rows' `(_pos, _id)`, not their places in
+// Every row of a table value stored in a flow carries a stable `__id__` and a
+// numeric position `__pos__`, so concurrent edits address rows instead of
+// indexes. The table's order is its rows' `(__pos__, __id__)`, not their places in
 // the stored array, which nothing keeps sorted. Both keys exist for the
 // flow's history and are not data: components never see them, so every place
 // that hands a stored table to anything outside the engine strips them first,
@@ -186,7 +186,7 @@ fn is_row_key(key: &str) -> bool {
     key == row_id_key() || key == row_position_key()
 }
 
-/// A row without `_id` and `_pos`; a value that is not an object is returned as is.
+/// A row without `__id__` and `__pos__`; a value that is not an object is returned as is.
 fn without_row_keys(row: &Value) -> Value {
     match row {
         Value::Object(map) => Value::Object(
@@ -199,7 +199,7 @@ fn without_row_keys(row: &Value) -> Value {
     }
 }
 
-/// Table rows in order and without `_id` and `_pos`; a value that is not a list is returned as is.
+/// Table rows in order and without `__id__` and `__pos__`; a value that is not a list is returned as is.
 #[must_use]
 pub fn strip_row_keys(rows: &Value) -> Value {
     match rows {
@@ -238,7 +238,7 @@ fn table_value_mut<'n>(node: &'n mut Value, field: &str) -> Option<&'n mut Vec<V
         .as_array_mut()
 }
 
-/// Order the rows of every table value of a node and strip `_id` and `_pos`, in place.
+/// Order the rows of every table value of a node and strip `__id__` and `__pos__`, in place.
 pub fn strip_node_table_row_keys(node: &mut Value) {
     for field in table_fields(node) {
         if let Some(rows) = table_value_mut(node, &field) {
@@ -262,7 +262,7 @@ pub fn strip_flow_table_row_keys(flow: &mut Value) {
     }
 }
 
-/// Whether every row is an object with a unique `_id` and a numeric `_pos`:
+/// Whether every row is an object with a unique `__id__` and a numeric `__pos__`:
 /// the shape the server accepts.
 #[must_use]
 pub fn has_table_row_ids(rows: &[Value]) -> bool {
@@ -276,7 +276,7 @@ pub fn has_table_row_ids(rows: &[Value]) -> bool {
 
 /// Give one table value's rows the ids and positions a write needs, in place.
 ///
-/// Rows that already have a unique `_id` keep it, and rows with a position
+/// Rows that already have a unique `__id__` keep it, and rows with a position
 /// keep it. A row without an id that equals a not yet matched row of
 /// `previous` (the stored value, apart from ids and positions) takes that
 /// row's id and position; the others get a new random id. Rows still without
@@ -300,7 +300,7 @@ pub fn assign_row_ids(
     Ok(())
 }
 
-/// Give every row without a unique `_id` one, in place, keeping stored ids.
+/// Give every row without a unique `__id__` one, in place, keeping stored ids.
 ///
 /// A row that equals a not yet matched row of `previous` (the stored value,
 /// apart from ids and positions) takes that row's id, and its position when
@@ -609,7 +609,7 @@ pub fn assign_changed_table_row_ids(
     Ok(())
 }
 
-/// Rows appended after `rows`, each with a new `_id` and a `_pos` one past
+/// Rows appended after `rows`, each with a new `__id__` and a `__pos__` one past
 /// the last position. Keys the new rows carried (a duplicated row's) are
 /// replaced. `rows` first gets ids and positions where it lacks them.
 ///

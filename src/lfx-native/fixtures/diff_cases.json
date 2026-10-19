@@ -351,7 +351,9 @@
         "nodes": [
           {
             "id": "n",
-            "data": {"node": {"template": {"t": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}]}}}}
+            "data": {
+              "node": {"template": {"t": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]}}}
+            }
           }
         ],
         "edges": []
@@ -360,7 +362,9 @@
         "nodes": [
           {
             "id": "n",
-            "data": {"node": {"template": {"t": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "z"}]}}}}
+            "data": {
+              "node": {"template": {"t": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "z"}]}}}
+            }
           }
         ],
         "edges": []
@@ -389,7 +393,10 @@
             "data": {
               "node": {
                 "template": {
-                  "t": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "x"}, {"_id": "r2", "_pos": 2, "v": "y"}, {"_id": "r3", "_pos": 3, "v": "z"}]}
+                  "t": {
+                    "type": "table",
+                    "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}, {"__id__": "r3", "__pos__": 3, "v": "z"}]
+                  }
                 }
               }
             }
@@ -404,7 +411,10 @@
             "data": {
               "node": {
                 "template": {
-                  "t": {"type": "table", "value": [{"_id": "r2", "_pos": 2, "v": "y"}, {"_id": "r1", "_pos": 3, "v": "x"}, {"_id": "r4", "_pos": 4, "v": "w"}]}
+                  "t": {
+                    "type": "table",
+                    "value": [{"__id__": "r2", "__pos__": 2, "v": "y"}, {"__id__": "r1", "__pos__": 3, "v": "x"}, {"__id__": "r4", "__pos__": 4, "v": "w"}]
+                  }
                 }
               }
             }
@@ -418,7 +428,7 @@
           "updates": [
             {
               "id": "n",
-              "path": ["data", "node", "template", "t", "value", {"key": "r1"}, "_pos"],
+              "path": ["data", "node", "template", "t", "value", {"key": "r1"}, "__pos__"],
               "op": "set_field",
               "value": 3,
               "template_field": {"type": "table"}
@@ -427,7 +437,7 @@
               "id": "n",
               "path": ["data", "node", "template", "t", "value", {"key": "r4"}],
               "op": "set_field",
-              "value": {"_id": "r4", "_pos": 4, "v": "w"},
+              "value": {"__id__": "r4", "__pos__": 4, "v": "w"},
               "template_field": {"type": "table"}
             },
             {"id": "n", "path": ["data", "node", "template", "t", "value", {"key": "r3"}], "op": "delete_field"}
@@ -438,7 +448,10 @@
     {
       "name": "the first edit of a legacy table writes it whole with ids",
       "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"t": {"type": "table", "value": [{"v": "x"}]}}}}}], "edges": []},
-      "target": {"nodes": [{"id": "n", "data": {"node": {"template": {"t": {"type": "table", "value": [{"_id": "r1", "_pos": 1, "v": "z"}]}}}}}], "edges": []},
+      "target": {
+        "nodes": [{"id": "n", "data": {"node": {"template": {"t": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "z"}]}}}}}],
+        "edges": []
+      },
       "operations": [
         {
           "type": "update_nodes",
@@ -447,7 +460,7 @@
               "id": "n",
               "path": ["data", "node", "template", "t", "value"],
               "op": "set_field",
-              "value": [{"_id": "r1", "_pos": 1, "v": "z"}],
+              "value": [{"__id__": "r1", "__pos__": 1, "v": "z"}],
               "template_field": {"type": "table"}
             }
           ]

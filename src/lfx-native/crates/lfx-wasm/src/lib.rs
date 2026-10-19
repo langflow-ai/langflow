@@ -327,7 +327,7 @@ pub fn fixes_for_edges(fixes: &str, edge_ids: &str) -> Result<String, JsValue> {
     run(api::fixes_for_edges(fixes, edge_ids))
 }
 
-/// Rows in order, by `(_pos, _id)`, or as stored for a legacy table.
+/// Rows in order, by `(__pos__, __id__)`, or as stored for a legacy table.
 ///
 /// # Errors
 ///
@@ -337,7 +337,7 @@ pub fn ordered_rows(rows: &str) -> Result<String, JsValue> {
     run(api::ordered_rows(rows))
 }
 
-/// Rows in order and without `_id` and `_pos`.
+/// Rows in order and without `__id__` and `__pos__`.
 ///
 /// # Errors
 ///
@@ -347,7 +347,7 @@ pub fn strip_row_keys(rows: &str) -> Result<String, JsValue> {
     run(api::strip_row_keys(rows))
 }
 
-/// A flow whose top-level tables have their rows in order and without `_id` and `_pos`.
+/// A flow whose top-level tables have their rows in order and without `__id__` and `__pos__`.
 ///
 /// # Errors
 ///

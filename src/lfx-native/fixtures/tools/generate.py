@@ -206,8 +206,8 @@ def _table_graph(rows: Any, node_id: str = "api") -> dict:
 
 LEGACY_ROWS = [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]
 KEYED_ROWS = [
-    {"_id": "r1", "_pos": 1, "key": "Accept", "value": "json"},
-    {"_id": "r2", "_pos": 2, "key": "Auth", "value": "token"},
+    {"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"},
+    {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"},
 ]
 
 # --- canonical_cases.json -----------------------------------------------------------------
@@ -589,26 +589,30 @@ def _validation_inputs() -> list[dict[str, Any]]:
         },
         {
             "name": "duplicate row ids are refused",
-            "flow": rows_of([KEYED_ROWS[0], {**KEYED_ROWS[1], "_id": "r1"}]),
+            "flow": rows_of([KEYED_ROWS[0], {**KEYED_ROWS[1], "__id__": "r1"}]),
             "base": EMPTY,
         },
         {"name": "the stored order of rows is not checked", "flow": rows_of(list(reversed(KEYED_ROWS))), "base": EMPTY},
         {
             "name": "a position must be a number",
             "flow": rows_of(
-                [{**KEYED_ROWS[0], "_pos": "1"}, {**KEYED_ROWS[1], "_pos": None}, {"_id": "r3", "_pos": True}]
+                [
+                    {**KEYED_ROWS[0], "__pos__": "1"},
+                    {**KEYED_ROWS[1], "__pos__": None},
+                    {"__id__": "r3", "__pos__": True},
+                ]
             ),
             "base": EMPTY,
         },
         {
             "name": "a position must be finite",
-            "flow_json": json.dumps(rows_of([KEYED_ROWS[0]])).replace('"_pos": 1', '"_pos": 1e400'),
+            "flow_json": json.dumps(rows_of([KEYED_ROWS[0]])).replace('"__pos__": 1', '"__pos__": 1e400'),
             "base": EMPTY,
         },
         {"name": "a row must be an object", "flow": rows_of([KEYED_ROWS[0], "x", None]), "base": EMPTY},
         {
             "name": "a row id must be a non-empty string",
-            "flow": rows_of([{**KEYED_ROWS[0], "_id": ""}, {**KEYED_ROWS[1], "_id": 2}]),
+            "flow": rows_of([{**KEYED_ROWS[0], "__id__": ""}, {**KEYED_ROWS[1], "__id__": 2}]),
             "base": EMPTY,
         },
         {"name": "only table fields are checked", "flow": other_field, "base": EMPTY},
@@ -792,12 +796,12 @@ def _repair_inputs() -> list[dict[str, Any]]:
         {"name": "a legacy table without a base is left alone", "flow": _table_graph(LEGACY_ROWS)},
         {
             "name": "a missing position is filled between its neighbours",
-            "flow": _table_graph([KEYED_ROWS[0], {"_id": "r9", "key": "New"}, KEYED_ROWS[1]]),
+            "flow": _table_graph([KEYED_ROWS[0], {"__id__": "r9", "key": "New"}, KEYED_ROWS[1]]),
             "base": EMPTY,
         },
         {
             "name": "duplicate row ids are regenerated and the stored order is kept",
-            "flow": _table_graph([{**KEYED_ROWS[1]}, {**KEYED_ROWS[0], "_id": "r2"}, "not a row"]),
+            "flow": _table_graph([{**KEYED_ROWS[1]}, {**KEYED_ROWS[0], "__id__": "r2"}, "not a row"]),
             "base": EMPTY,
         },
         {
@@ -812,18 +816,18 @@ def _repair_inputs() -> list[dict[str, Any]]:
         },
         {
             "name": "rows before the first position count down from it",
-            "flow": _table_graph([{"key": "x"}, {"key": "y"}, {"_id": "r1", "_pos": 5, "key": "z"}]),
+            "flow": _table_graph([{"key": "x"}, {"key": "y"}, {"__id__": "r1", "__pos__": 5, "key": "z"}]),
             "base": EMPTY,
         },
         {
             "name": "rows after the last position count up from it",
-            "flow": _table_graph([{"_id": "r1", "_pos": 2.5, "key": "z"}, {"key": "x"}, {"key": "y"}]),
+            "flow": _table_graph([{"__id__": "r1", "__pos__": 2.5, "key": "z"}, {"key": "x"}, {"key": "y"}]),
             "base": EMPTY,
         },
         {
             "name": "rows between out-of-order neighbours follow the one before",
             "flow": _table_graph(
-                [{"_id": "r1", "_pos": 3, "key": "a"}, {"key": "b"}, {"_id": "r2", "_pos": 1, "key": "c"}]
+                [{"__id__": "r1", "__pos__": 3, "key": "a"}, {"key": "b"}, {"__id__": "r2", "__pos__": 1, "key": "c"}]
             ),
             "base": EMPTY,
         },
@@ -864,38 +868,41 @@ def repair_cases() -> dict[str, Any]:
 def table_cases() -> dict[str, Any]:
     strip_inputs = [
         ("rows are stripped and put in order", list(reversed(KEYED_ROWS))),
-        ("ties in position are ordered by id", [{"_id": "b", "_pos": 1, "k": 1}, {"_id": "a", "_pos": 1, "k": 2}]),
-        ("ids order by UTF-16 code units", [{"_id": "דּ", "_pos": 1}, {"_id": "\U0001f600", "_pos": 1}]),
-        ("1 and 1.0 are one position", [{"_id": "b", "_pos": 1.0}, {"_id": "a", "_pos": 1}]),
+        (
+            "ties in position are ordered by id",
+            [{"__id__": "b", "__pos__": 1, "k": 1}, {"__id__": "a", "__pos__": 1, "k": 2}],
+        ),
+        ("ids order by UTF-16 code units", [{"__id__": "דּ", "__pos__": 1}, {"__id__": "\U0001f600", "__pos__": 1}]),
+        ("1 and 1.0 are one position", [{"__id__": "b", "__pos__": 1.0}, {"__id__": "a", "__pos__": 1}]),
         ("a legacy table keeps its order", LEGACY_ROWS),
-        ("a table with one row without a position keeps its order", [{"_id": "b", "_pos": 2}, {"_id": "a"}]),
+        ("a table with one row without a position keeps its order", [{"__id__": "b", "__pos__": 2}, {"__id__": "a"}]),
         ("a value that is not a list is returned as is", None),
         ("rows that are not objects are kept", ["x", 1]),
     ]
     fill_inputs = [
         ("no positions at all become 1..n", [{"k": 1}, {"k": 2}, {"k": 3}]),
-        ("a run between two positions is spread evenly", [{"_pos": 1}, {"k": 1}, {"k": 2}, {"_pos": 2}]),
-        ("a run after the last position counts up", [{"_pos": 1.5}, {"k": 1}, {"k": 2}]),
-        ("a run before the first position counts down", [{"k": 1}, {"k": 2}, {"_pos": 10}]),
-        ("a run between out-of-order neighbours follows the one before", [{"_pos": 3}, {"k": 1}, {"_pos": 1}]),
-        ("non-numeric positions are replaced", [{"_pos": "a0"}, {"_pos": True}, {"_pos": None}]),
-        ("a gap with no room left is filled without renumbering", [{"_pos": 1}, {"k": 1}, {"_pos": 1 + 2**-52}]),
-        ("valid positions are kept", [{"_pos": 7}, {"_pos": -2.5}]),
+        ("a run between two positions is spread evenly", [{"__pos__": 1}, {"k": 1}, {"k": 2}, {"__pos__": 2}]),
+        ("a run after the last position counts up", [{"__pos__": 1.5}, {"k": 1}, {"k": 2}]),
+        ("a run before the first position counts down", [{"k": 1}, {"k": 2}, {"__pos__": 10}]),
+        ("a run between out-of-order neighbours follows the one before", [{"__pos__": 3}, {"k": 1}, {"__pos__": 1}]),
+        ("non-numeric positions are replaced", [{"__pos__": "a0"}, {"__pos__": True}, {"__pos__": None}]),
+        ("a gap with no room left is filled without renumbering", [{"__pos__": 1}, {"k": 1}, {"__pos__": 1 + 2**-52}]),
+        ("valid positions are kept", [{"__pos__": 7}, {"__pos__": -2.5}]),
     ]
     assign_inputs = [
         ("new rows get random ids and positions in order", LEGACY_ROWS, None),
         (
             "existing ids and positions are kept and gaps filled",
             [
-                {"_id": "r1", "_pos": 1, "key": "first"},
+                {"__id__": "r1", "__pos__": 1, "key": "first"},
                 {"key": "second"},
-                {"_id": "r1", "_pos": 2, "key": "duplicate id"},
+                {"__id__": "r1", "__pos__": 2, "key": "duplicate id"},
             ],
             None,
         ),
         ("a row equal to a stored row takes its id and position", LEGACY_ROWS, KEYED_ROWS),
         ("a stored row matches at most one row", [LEGACY_ROWS[0], LEGACY_ROWS[0]], KEYED_ROWS),
-        ("a row with a position keeps it when matched", [{**LEGACY_ROWS[1], "_pos": 9}], KEYED_ROWS),
+        ("a row with a position keeps it when matched", [{**LEGACY_ROWS[1], "__pos__": 9}], KEYED_ROWS),
         ("a table with a row that is not an object is left alone", [LEGACY_ROWS[0], "x"], None),
     ]
     tools = _table_graph(_fresh(KEYED_ROWS))

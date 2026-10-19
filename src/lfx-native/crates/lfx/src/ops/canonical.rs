@@ -9,7 +9,7 @@
 //!   order is never a change. JavaScript cannot tell integers from floats, so
 //!   a `0.0` that comes back from the editor as `0` must not count as an edit.
 //! - `nodes`, `edges` and table rows are collections keyed by id. Their array
-//!   order is not state; a table's order is its rows' `(_pos, _id)`.
+//!   order is not state; a table's order is its rows' `(__pos__, __id__)`.
 //! - View state is everything `node_schema.json` declares display only. It is
 //!   stored but never recorded and never compared.
 //! - An edge's `sourceHandle` and `targetHandle` strings are JSON with `œ`
@@ -313,7 +313,7 @@ pub fn parse_handle(handle: &Value) -> Option<Map<String, Value>> {
 
 // --- Table rows ---------------------------------------------------------------------------
 
-/// A table's rows in order: by `(_pos, _id)`, or as stored for a legacy table without them.
+/// A table's rows in order: by `(__pos__, __id__)`, or as stored for a legacy table without them.
 ///
 /// Positions compare as the doubles JavaScript holds, and ids by UTF-16 code
 /// units, as the editor sorts them.
@@ -817,7 +817,7 @@ mod tests {
             "nodes": [
                 {"id": "b", "selected": true, "data": {"node": {"template": {}}}},
                 {"id": "a", "data": {"node": {"last_updated": "x", "template": {
-                    "rows": {"type": "table", "value": [{"_id": "r2", "_pos": 2}, {"_id": "r1", "_pos": 1.0}]}
+                    "rows": {"type": "table", "value": [{"__id__": "r2", "__pos__": 2}, {"__id__": "r1", "__pos__": 1.0}]}
                 }}}},
             ],
             "edges": [{"id": "e", "sourceHandle": "{œnameœ: œoutœ}", "animated": true}],
@@ -825,7 +825,7 @@ mod tests {
         let right = json!({
             "nodes": [
                 {"id": "a", "data": {"node": {"template": {
-                    "rows": {"type": "table", "value": [{"_id": "r1", "_pos": 1}, {"_id": "r2", "_pos": 2}]}
+                    "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1}, {"__id__": "r2", "__pos__": 2}]}
                 }}}},
                 {"id": "b", "data": {"node": {"template": {}}}},
             ],

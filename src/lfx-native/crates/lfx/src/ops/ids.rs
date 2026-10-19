@@ -45,7 +45,7 @@ pub fn new_edge_id() -> String {
     format!("{EDGE_ID_PREFIX}{}", random_alphanumeric(EDGE_ID_LENGTH))
 }
 
-/// A new table row `_id`, 10 random alphanumerics, like the editor's `newTableRowId()`.
+/// A new table row `__id__`, 10 random alphanumerics, like the editor's `newTableRowId()`.
 #[must_use]
 pub fn new_table_row_id() -> String {
     random_alphanumeric(TABLE_ROW_ID_LENGTH)
