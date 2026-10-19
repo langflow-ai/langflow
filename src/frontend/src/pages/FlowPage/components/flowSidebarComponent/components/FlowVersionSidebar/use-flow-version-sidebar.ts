@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import {
+  isRevisionNotRetained,
   useGetFlowHistoryTimeline,
   useGetFlowRevision,
   useGetFlowRevisions,
@@ -62,6 +63,7 @@ export function useFlowVersionSidebar(
   const { t } = useTranslation();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const setPreview = useVersionPreviewStore((s) => s.setPreview);
   const clearPreview = useVersionPreviewStore((s) => s.clearPreview);
   const setPreviewLoading = useVersionPreviewStore((s) => s.setPreviewLoading);
@@ -251,15 +253,26 @@ export function useFlowVersionSidebar(
     data: selectedRevisionGraph,
     isLoading: isLoadingRevision,
     isError: isRevisionError,
+    error: revisionError,
   } = useGetFlowRevision(
     // Asked of the server only until the replayed history is ready.
     { flowId, revision: localGraph ? null : selectedRevision },
     { gcTime: 0, staleTime: 0 },
   );
+  // Compaction removed the revision after the list loaded: the list is out
+  // of date, not broken. Load it again and go back to the current flow.
+  const revisionNotRetained = isRevisionNotRetained(revisionError);
+  useEffect(() => {
+    if (!revisionNotRetained) return;
+    setSelectedId(CURRENT_DRAFT_ID);
+    refetchRevisions();
+    setNoticeData({ title: t("flowHistory.notRetained") });
+  }, [revisionNotRetained, refetchRevisions, setNoticeData, t]);
   const isLoadingEntry =
     (!!selectedVersionId && isLoadingVersion) ||
     (selectedRevision !== null && isLoadingRevision);
-  const isEntryError = isVersionError || isRevisionError;
+  const isEntryError =
+    isVersionError || (isRevisionError && !revisionNotRetained);
   // A timeline entry previews like a version: the flow at its last revision,
   // labelled by when it was recorded and summarized by what changed.
   const revisionData = localGraph ?? selectedRevisionGraph?.data;

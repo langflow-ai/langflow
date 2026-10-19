@@ -19,6 +19,19 @@ export const getFlowRevision = async (
   return response.data;
 };
 
+/** Whether a request failed because compaction removed the revision it asked for. */
+export const isRevisionNotRetained = (error: unknown): boolean => {
+  const response = (
+    error as {
+      response?: { status?: number; data?: { detail?: { code?: string } } };
+    } | null
+  )?.response;
+  return (
+    response?.status === 410 &&
+    response.data?.detail?.code === "FLOW_REVISION_NOT_RETAINED"
+  );
+};
+
 /** The flow's graph at one revision, with literal secrets removed. */
 export const useGetFlowRevision: useQueryFunctionType<
   FlowRevisionParams,
