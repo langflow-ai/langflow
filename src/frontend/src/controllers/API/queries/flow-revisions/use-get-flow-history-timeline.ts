@@ -13,6 +13,11 @@ import { getFlowRevisions, MAX_PAGE_SIZE } from "./use-get-flow-revisions";
  * Load every retained entry with its operations, and the graph to replay
  * them from: the revision before the oldest entry, or, when compaction cut
  * there, the oldest entry's end, which always has a checkpoint.
+ *
+ * A flow saved while flow history was off starts its history again from a
+ * new checkpoint, one revision past the last recorded operation, so its
+ * revisions have a gap there. Playback covers the entries after the last
+ * gap; an entry before it is previewed from the server.
  */
 export const getFlowHistoryTimeline = async (
   flowId: string,
@@ -27,7 +32,14 @@ export const getFlowHistoryTimeline = async (
   if (newestFirst.length === 0) return null;
 
   const entries = newestFirst.reverse();
-  const oldest = entries[0];
+  let first = entries.length - 1;
+  while (
+    first > 0 &&
+    entries[first - 1].end_revision + 1 === entries[first].start_revision
+  ) {
+    first -= 1;
+  }
+  const oldest = entries[first];
   let baseRevision = oldest.start_revision - 1;
   let base: FlowGraph;
   try {
@@ -36,7 +48,12 @@ export const getFlowHistoryTimeline = async (
     baseRevision = oldest.end_revision;
     base = (await getFlowRevision(flowId, baseRevision)).data as FlowGraph;
   }
-  return buildHistoryTimeline({ flowId, baseRevision, base, entries });
+  return buildHistoryTimeline({
+    flowId,
+    baseRevision,
+    base,
+    entries: entries.slice(first),
+  });
 };
 
 /**

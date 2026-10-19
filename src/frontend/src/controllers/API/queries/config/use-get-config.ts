@@ -54,6 +54,7 @@ export interface ConfigResponse extends BaseConfig {
   custom_component_admin_only: boolean;
   a2a_enabled: boolean;
   agentic_experience: boolean;
+  flow_history_enabled?: boolean;
   assistant_max_message_length: number;
   local_vector_store_available: boolean;
   /** Backend a new KB/MB lands on when none is named: postgres | opensearch | sqlite. */
@@ -147,6 +148,9 @@ export const useGetConfig: useQueryFunctionType<
   const setAgenticExperienceEnabled = useUtilityStore(
     (state) => state.setAgenticExperienceEnabled,
   );
+  const setFlowHistoryEnabled = useUtilityStore(
+    (state) => state.setFlowHistoryEnabled,
+  );
   const setAssistantMaxMessageLength = useUtilityStore(
     (state) => state.setAssistantMaxMessageLength,
   );
@@ -219,6 +223,7 @@ export const useGetConfig: useQueryFunctionType<
         setCustomComponentAdminOnly(data.custom_component_admin_only ?? false);
         setA2aEnabled(data.a2a_enabled ?? false);
         setAgenticExperienceEnabled(data.agentic_experience ?? true);
+        setFlowHistoryEnabled(data.flow_history_enabled ?? false);
         setAssistantMaxMessageLength(
           data.assistant_max_message_length ??
             DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH,
