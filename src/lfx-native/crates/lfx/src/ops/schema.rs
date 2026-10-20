@@ -8,6 +8,7 @@ use std::sync::LazyLock;
 
 use serde_json::{Map, Value};
 
+use crate::ops::ops::PathExt;
 use crate::ops::state::resolve;
 use crate::ops::validate::PathPart;
 
@@ -29,20 +30,6 @@ pub const NODE_OBJECT_PATHS: [&[&str]; 3] = [&["data"], &["data", "node"], &TEMP
 #[must_use]
 pub fn field_value_path(field: &str) -> [&str; 5] {
     ["data", "node", "template", field, "value"]
-}
-
-/// Whether two paths of object keys are the same.
-pub(crate) fn same_keys<A: AsRef<str>, B: AsRef<str>>(left: &[A], right: &[B]) -> bool {
-    left.len() == right.len() && starts_with_keys(left, right)
-}
-
-/// Whether a path of object keys starts with `prefix`.
-pub(crate) fn starts_with_keys<A: AsRef<str>, B: AsRef<str>>(path: &[A], prefix: &[B]) -> bool {
-    path.len() >= prefix.len()
-        && path
-            .iter()
-            .zip(prefix)
-            .all(|(key, other)| key.as_ref() == other.as_ref())
 }
 
 /// How the items of a keyed list are addressed and ordered.
@@ -252,7 +239,7 @@ impl NodeSchema {
         if let Some((_, keyed)) = self
             .natural_lists
             .iter()
-            .find(|(list_path, _)| same_keys(list_path, path))
+            .find(|(list_path, _)| list_path.equals(path))
         {
             return Some(keyed);
         }

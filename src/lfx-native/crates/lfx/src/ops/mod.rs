@@ -33,7 +33,7 @@ pub mod write;
 pub use apply::{Applied, ApplyOptions, apply_flow_operations};
 pub use diff::{Derived, derive_flow_operations, diff_flow_data};
 pub use error::{Error, ErrorCode, ErrorKind, Result};
-pub use ops::{Change, FieldUpdate, Operation, Segment};
+pub use ops::{AsKey, Change, FieldUpdate, Operation, Segment};
 pub use repair::{Fix, Repaired, repair_flow_data};
 pub use state::GraphState;
 pub use write::{PreparedWrite, WriteError, WriteOptions, prepare_write};
