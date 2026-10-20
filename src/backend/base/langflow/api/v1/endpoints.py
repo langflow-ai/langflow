@@ -28,6 +28,7 @@ from lfx.log.logger import logger
 from lfx.observability import execution_protocol
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
+from lfx.services.flow_operations import load_node_schema, ordered_rows, strip_row_keys
 from lfx.services.integration_policy import IntegrationPolicyError
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyError,
@@ -1870,20 +1871,44 @@ def _raw_component_parameters(
     field: str | None = None,
     field_value: Any = None,
 ) -> dict[str, Any]:
-    """Parse non-secret component form values for provider preflight."""
+    """Parse non-secret component form values for provider preflight.
+
+    Table rows lose the ``__id__`` and ``__pos__`` the flow's history gives them:
+    components never see them.
+    """
     params: dict[str, Any] = {}
     if isinstance(template, Mapping):
         for key, value_dict in template.items():
             if isinstance(value_dict, Mapping):
-                params[key] = parse_value(value_dict.get("value"), str(value_dict.get("_input_type")))
+                params[key] = _component_value(value_dict, value_dict.get("value"))
 
     # A real-time-refresh event can be newer than the template snapshot sent
     # beside it, so its value wins for the changed field.
     if field:
         field_template = template.get(field) if isinstance(template, Mapping) else None
-        field_input_type = str(field_template.get("_input_type")) if isinstance(field_template, Mapping) else "None"
-        params[field] = parse_value(field_value, field_input_type)
+        params[field] = _component_value(field_template if isinstance(field_template, Mapping) else {}, field_value)
     return params
+
+
+def _component_value(field_template: Mapping[str, Any], value: Any) -> Any:
+    """Return a template field's value as a component receives it."""
+    if _is_table_field(field_template):
+        value = strip_row_keys(value)
+    return parse_value(value, str(field_template.get("_input_type")))
+
+
+def _order_table_rows(build_config: dict[str, Any]) -> None:
+    """Put the raw rows of every table field in order, keeping their keys: stored rows are in no particular order."""
+    for field in build_config.values():
+        if isinstance(field, dict) and _is_table_field(field) and isinstance(field.get("value"), list):
+            field["value"] = ordered_rows(field["value"])
+
+
+def _is_table_field(field_template: Mapping[str, Any]) -> bool:
+    return any(
+        all(field_template.get(key) == expected for key, expected in condition.items())
+        for condition in load_node_schema().table_when_field
+    )
 
 
 @router.post("/custom_component", status_code=HTTPStatus.OK, include_in_schema=False)
@@ -2085,10 +2110,16 @@ async def custom_component_update(
                 )
                 cc_instance.set_attributes(params)
         updated_build_config = code_request.get_template()
+        # Hooks read the raw rows, keys and all, so they get them in the table's order.
+        _order_table_rows(updated_build_config)
+        field_value = code_request.field_value
+        changed_field = updated_build_config.get(code_request.field) if code_request.field else None
+        if isinstance(changed_field, dict) and _is_table_field(changed_field) and isinstance(field_value, list):
+            field_value = ordered_rows(field_value)
         await update_component_build_config(
             cc_instance,
             build_config=updated_build_config,
-            field_value=code_request.field_value,
+            field_value=field_value,
             field_name=code_request.field,
         )
         if "code" not in updated_build_config or not updated_build_config.get("code", {}).get("value"):

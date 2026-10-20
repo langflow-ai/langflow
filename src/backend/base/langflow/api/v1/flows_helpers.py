@@ -28,7 +28,8 @@ from langflow.api.utils import (
     remove_api_keys,
     strip_flow_secrets,
 )
-from langflow.api.v1.flow_conflict import claim_version_token
+from langflow.api.utils.flow_history import history_http_error, history_write_summary
+from langflow.api.v1.flow_conflict import ensure_version_precondition
 from langflow.services.audit import vocabulary as audit_vocab
 from langflow.services.audit.operations import stage_flow_succeeded
 from langflow.services.authorization.fetch import authorized_or_owner_scoped
@@ -40,17 +41,20 @@ from langflow.services.database.models.flow.guards import (
     lock_flow_for_update,
 )
 from langflow.services.database.models.flow.model import (
+    GRAPH_WRITE_OPTION_FIELDS,
     Flow,
     FlowCreate,
     FlowRead,
     FlowUpdate,
+    FlowWriteRead,
     is_virtual_flow_id,
 )
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.folder.utils import get_default_folder_id
 from langflow.services.deps import get_settings_service, get_variable_service
-from langflow.services.flow_history.shadow import observe_graph_write
+from langflow.services.flow_history.errors import FlowHistoryError
+from langflow.services.flow_history.recorder import GraphWriteResult, refuse_unreadable_graph, write_flow_graph
 from langflow.services.storage.service import StorageService
 from langflow.utils.flow_secrets import HiddenFieldMetadataError, restore_redacted_flow_values
 
@@ -161,6 +165,44 @@ def _apply_update_data(target: Flow, update_data: dict[str, Any]) -> None:
     for key, value in update_data.items():
         if key in _UPDATABLE_FLOW_FIELDS:
             setattr(target, key, value)
+
+
+async def _write_graph(
+    session: AsyncSession,
+    flow: Flow,
+    update_data: dict[str, Any],
+    *,
+    actor_id: UUID,
+    options: FlowCreate | FlowUpdate,
+    expected_version_token: UUID | None,
+) -> GraphWriteResult | None:
+    """Move ``data`` out of *update_data* and write it through the flow's history.
+
+    A write without a graph takes no writer's turn; it only passes multi-edit
+    safety's ``If-Match`` check, as before history existed.
+    """
+    if "data" not in update_data:
+        await ensure_version_precondition(session, flow, expected_version_token)
+        return None
+    try:
+        return await write_flow_graph(
+            session,
+            flow,
+            update_data.pop("data"),
+            actor_id=actor_id,
+            options=options,
+            expected_version_token=expected_version_token,
+        )
+    except FlowHistoryError as exc:
+        raise history_http_error(exc) from exc
+
+
+def _refuse_unreadable_graph(flow_data: Any) -> None:
+    """Answer 422, as a save does, for a new flow whose graph the flow engine cannot read."""
+    try:
+        refuse_unreadable_graph(flow_data)
+    except FlowHistoryError as exc:
+        raise history_http_error(exc) from exc
 
 
 def _endpoint_name_was_explicitly_cleared(flow: FlowCreate | FlowUpdate) -> bool:
@@ -496,6 +538,7 @@ async def _new_flow(
     try:
         effective_id = flow_id if flow_id is not None else flow.id
         _validate_new_flow_id(effective_id)
+        _refuse_unreadable_graph(flow.data)
         # Ownership follows the destination project, so it has to be resolved
         # before anything keyed on the owner: the filesystem sandbox, the
         # ``(user_id, name)`` / ``(user_id, endpoint_name)`` de-duplication, and
@@ -559,7 +602,7 @@ async def _new_flow(
             operation=audit_vocab.AuditOperation.CREATE,
             flow_id=db_flow.id,
             flow_name=db_flow.name,
-            written_fields=flow.model_fields_set,
+            written_fields=flow.model_fields_set - GRAPH_WRITE_OPTION_FIELDS,
             project_after=db_flow.folder_id,
         )
         if update_webhook:
@@ -646,7 +689,7 @@ async def _update_existing_flow(
     preserve_explicit_nulls: bool = False,
     locked_flow_persisted_values: Mapping[str, Any] | None = None,
     expected_version_token: UUID | None = None,
-) -> FlowRead:
+) -> FlowWriteRead:
     """Update an existing flow (PUT update path).
 
     Similar to update_flow but:
@@ -761,7 +804,9 @@ async def _update_existing_flow(
 
     # Ordinary PUT retains its legacy null-as-omitted behavior. Atomic
     # replacement must apply explicit nulls so a rollback can clear old values.
-    update_data = flow.model_dump(exclude_unset=True, exclude_none=not preserve_explicit_nulls)
+    update_data = flow.model_dump(
+        exclude_unset=True, exclude_none=not preserve_explicit_nulls, exclude=GRAPH_WRITE_OPTION_FIELDS
+    )
     if not is_owner_edit and isinstance(update_data.get("data"), dict):
         try:
             update_data["data"] = restore_redacted_flow_values(update_data["data"], existing_flow.data)
@@ -794,18 +839,17 @@ async def _update_existing_flow(
     if settings_service.settings.remove_api_keys:
         update_data = remove_api_keys(update_data)
 
-    graph_changed = "data" in update_data and update_data["data"] != existing_flow.data
-    previous_data = existing_flow.data
-
+    # Taken before the graph moves into its history write, which removes ``data``.
+    written_fields = update_data.keys() & _UPDATABLE_FLOW_FIELDS
+    graph_write = await _write_graph(
+        session,
+        existing_flow,
+        update_data,
+        actor_id=actor_user_id,
+        options=flow,
+        expected_version_token=expected_version_token,
+    )
     _apply_update_data(existing_flow, update_data)
-
-    if graph_changed:
-        # PUT and the import upsert replace the graph exactly like a PATCH does, so they
-        # take the writer's turn the same way. Leaving the token alone here let an editor
-        # that was open before the import save straight over it and be told nothing.
-        claimed = await claim_version_token(session, existing_flow, expected_version_token)
-        existing_flow.version_token = claimed or uuid4()
-        existing_flow.last_modified_by = actor_user_id
 
     await _validate_and_assign_folder(
         session,
@@ -827,7 +871,7 @@ async def _update_existing_flow(
         operation=audit_vocab.AuditOperation.REPLACE,
         flow_id=existing_flow.id,
         flow_name=existing_flow.name,
-        written_fields=update_data.keys() & _UPDATABLE_FLOW_FIELDS,
+        written_fields=written_fields,
         project_before=existing_folder_id,
         project_after=existing_flow.folder_id,
     )
@@ -838,10 +882,10 @@ async def _update_existing_flow(
     if save_to_fs:
         # Writes happen under the owner's storage namespace, not the actor's.
         await _save_flow_to_fs(existing_flow, owner_user_id, storage_service)
-    if "data" in update_data:
-        observe_graph_write(existing_flow.id, previous_data, existing_flow.data)
 
-    return FlowRead.model_validate(existing_flow, from_attributes=True)
+    return FlowWriteRead.model_validate(existing_flow, from_attributes=True).model_copy(
+        update={"history": history_write_summary(graph_write)}
+    )
 
 
 async def _patch_flow(
@@ -852,8 +896,8 @@ async def _patch_flow(
     user_id: UUID,
     storage_service: StorageService,
     expected_version_token: UUID | None = None,
-) -> FlowRead:
-    """Apply a partial update (PATCH) to an existing flow and return a FlowRead.
+) -> FlowWriteRead:
+    """Apply a partial update (PATCH) to an existing flow and return what it wrote.
 
     ``user_id`` is the *actor* — the caller making the patch. The flow's
     owner is ``db_flow.user_id``. For shared edits (actor != owner) we keep
@@ -871,7 +915,7 @@ async def _patch_flow(
 
     # PATCH follows the same rule: None-valued fields are omitted unless
     # explicitly reintroduced below (for example endpoint_name clear).
-    update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
+    update_data = flow.model_dump(exclude_unset=True, exclude_none=True, exclude=GRAPH_WRITE_OPTION_FIELDS)
     if not is_owner_edit and isinstance(update_data.get("data"), dict):
         try:
             update_data["data"] = restore_redacted_flow_values(update_data["data"], db_flow.data)
@@ -933,19 +977,17 @@ async def _patch_flow(
     if settings_service.settings.remove_api_keys:
         update_data = remove_api_keys(update_data)
 
-    # Only a graph change takes the writer's turn. A rename or a no-op save leaves
-    # the token alone on purpose — see the scope note in ``flow_conflict``.
-    graph_changed = "data" in update_data and update_data["data"] != db_flow.data
-    previous_data = db_flow.data
-
+    # Taken before the graph moves into its history write, which removes ``data``.
+    written_fields = update_data.keys() & _UPDATABLE_FLOW_FIELDS
+    graph_write = await _write_graph(
+        session,
+        db_flow,
+        update_data,
+        actor_id=user_id,
+        options=flow,
+        expected_version_token=expected_version_token,
+    )
     _apply_update_data(db_flow, update_data)
-
-    if graph_changed:
-        # Claimed here, not before: only a graph change takes the write turn, and the
-        # claim has to be the same indivisible step that grants it.
-        claimed = await claim_version_token(session, db_flow, expected_version_token)
-        db_flow.version_token = claimed or uuid4()
-        db_flow.last_modified_by = user_id
 
     # Validate fs_path if it was changed (will raise HTTPException if invalid).
     # fs_path lives under the owner's storage namespace, so the owner id
@@ -975,17 +1017,17 @@ async def _patch_flow(
         operation=audit_vocab.AuditOperation.PATCH,
         flow_id=db_flow.id,
         flow_name=db_flow.name,
-        written_fields=update_data.keys() & _UPDATABLE_FLOW_FIELDS,
+        written_fields=written_fields,
         project_before=existing_folder_id,
         project_after=db_flow.folder_id,
     )
     await _reconcile_flow_triggers(session, flow_id=db_flow.id, owner_id=db_flow.user_id, flow_data=db_flow.data)
     # Writes happen under the owner's storage namespace, not the actor's.
     await _save_flow_to_fs(db_flow, owner_user_id, storage_service)
-    if "data" in update_data:
-        observe_graph_write(db_flow.id, previous_data, db_flow.data)
 
-    return FlowRead.model_validate(db_flow, from_attributes=True)
+    return FlowWriteRead.model_validate(db_flow, from_attributes=True).model_copy(
+        update={"history": history_write_summary(graph_write)}
+    )
 
 
 def _sanitize_flow_filename(raw_name: str, fallback_id: str = "flow") -> str:

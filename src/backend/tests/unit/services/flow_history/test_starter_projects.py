@@ -95,3 +95,44 @@ def test_editing_a_starter_project_replays_exactly(starter):
     assert graph_hash(derived.flow_data) == graph_hash(target)
     # The reverse edit replays too, so restoring an earlier state is always expressible.
     assert graphs_equal(derive_flow_operations(target, starter).flow_data, starter)
+
+
+def _with_view_state(graph: dict) -> dict:
+    """The graph as an editor would send it back unedited: view state changed only."""
+    noisy = copy.deepcopy(graph)
+    noisy["viewport"] = {"x": 123.5, "y": -40, "zoom": 0.75}
+    for node in noisy["nodes"]:
+        node.update(selected=True, dragging=False, measured={"width": 1, "height": 2})
+    for edge in noisy["edges"]:
+        edge.update(selected=True, animated=True, className="running")
+    return noisy
+
+
+def _editor_spelling(handle: str) -> str:
+    """Spell an escaped-JSON handle the way the editor does (``scapedJSONStringfy``)."""
+    value = json.loads(handle.replace("\u0153", '"'))
+    return json.dumps(value, separators=(",", ":"), sort_keys=True, ensure_ascii=False).replace('"', "\u0153")
+
+
+def test_a_starter_project_saved_back_with_only_view_state_records_nothing(starter):
+    assert diff_flow_data(starter, _with_view_state(starter)) == []
+
+
+def test_respelled_edge_handles_record_nothing(starter):
+    """Handle spelling is not part of the recorded graph.
+
+    Canonical form compares handle strings by the JSON they encode, so an
+    editor that respells them on load and saves the result records nothing.
+    """
+    respelled = copy.deepcopy(starter)
+    changed = []
+    for edge in respelled["edges"]:
+        source, target = _editor_spelling(edge["sourceHandle"]), _editor_spelling(edge["targetHandle"])
+        if (source, target) != (edge["sourceHandle"], edge["targetHandle"]):
+            changed.append(edge["id"])
+        edge["sourceHandle"], edge["targetHandle"] = source, target
+    if not changed:
+        pytest.skip("this starter project already uses the editor's spelling")
+
+    assert diff_flow_data(starter, respelled) == []
+    assert graphs_equal(starter, respelled)

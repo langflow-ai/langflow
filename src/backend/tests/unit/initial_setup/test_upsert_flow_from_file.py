@@ -7,11 +7,14 @@ row's id but the flow name is the same. Before the fix the loader hit the
 
 from __future__ import annotations
 
+import copy
 from contextlib import contextmanager
+from pathlib import Path
 from uuid import uuid4
 
 import orjson
 import pytest
+from langflow.api.utils.core import normalize_flow_for_export
 from langflow.initial_setup.setup import (
     find_existing_flow,
     get_or_create_default_folder,
@@ -19,9 +22,15 @@ from langflow.initial_setup.setup import (
     upsert_flow_from_file,
 )
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow_operation import FlowOperation
 from langflow.services.database.models.user.model import User
+from langflow.services.flow_history.envelope import decode_row
+from langflow.services.flow_history.recorder import projection_matches
 from lfx.services.deps import get_settings_service
+from lfx.services.flow_operations.edge_rules import escape_handle
 from sqlmodel import select
+
+import lfx
 
 
 @contextmanager
@@ -61,6 +70,19 @@ def _node_with_field(node_id: str, *, value: str, load_from_db: bool) -> dict:
                 }
             }
         },
+    }
+
+
+def _self_edge(edge_id: str, node_id: str) -> dict:
+    """An edge from a node's output into its own api_key field, with both forms of its handles."""
+    source_handle, target_handle = {"id": node_id, "name": "out"}, {"fieldName": "api_key", "id": node_id}
+    return {
+        "id": edge_id,
+        "source": node_id,
+        "target": node_id,
+        "sourceHandle": escape_handle(source_handle),
+        "targetHandle": escape_handle(target_handle),
+        "data": {"sourceHandle": source_handle, "targetHandle": target_handle},
     }
 
 
@@ -200,7 +222,7 @@ async def test_upsert_flow_from_file_updates_existing_by_name() -> None:
             "id": str(file_id),
             "name": "MyFlow",
             "description": "updated from file",
-            "data": {"nodes": [{"id": "n1"}], "edges": []},
+            "data": {"nodes": [{"id": "n1", "data": {"node": {"template": {}}}}], "edges": []},
         }
     )
 
@@ -217,7 +239,7 @@ async def test_upsert_flow_from_file_updates_existing_by_name() -> None:
         updated = flows[0]
         assert updated.id == original.id, "DB id must be preserved on name-matched update"
         assert updated.description == "updated from file"
-        assert updated.data == {"nodes": [{"id": "n1"}], "edges": []}
+        assert updated.data == {"nodes": [{"id": "n1", "data": {"node": {"template": {}}}}], "edges": []}
 
 
 @pytest.mark.usefixtures("client")
@@ -362,10 +384,9 @@ async def test_upsert_flow_from_file_preserves_existing_variable_binding(incomin
         user_id=user_id,
         data={"nodes": [existing_node], "edges": []},
     )
-    incoming_data = {
-        "nodes": [_node_with_field("n1", value="", load_from_db=incoming_load_from_db)],
-        "edges": [{"id": "updated-edge"}],
-    }
+    incoming_node = _node_with_field("n1", value="", load_from_db=incoming_load_from_db)
+    incoming_node["data"]["node"]["outputs"] = [{"name": "out"}]
+    incoming_data = {"nodes": [incoming_node], "edges": [_self_edge("updated-edge", "n1")]}
     incoming_data["nodes"][0]["data"]["node"]["template"]["api_key"]["display_name"] = "New label"
     file_content = orjson.dumps({"id": str(original.id), "name": original.name, "data": incoming_data})
 
@@ -621,7 +642,7 @@ async def test_upsert_flow_from_file_with_user_loaded_in_same_session() -> None:
             "id": str(uuid4()),  # different id -> name-match path
             "name": f"le-1134-test-flow-{username}",
             "description": "updated from file",
-            "data": {"nodes": [{"id": "n1"}], "edges": []},
+            "data": {"nodes": [{"id": "n1", "data": {"node": {"template": {}}}}], "edges": []},
         }
     )
 
@@ -665,3 +686,190 @@ async def test_upsert_flow_from_file_id_match_still_overwrites_when_flag_disable
         rows = (await session.exec(select(Flow).where(Flow.user_id == user_id))).all()
         assert len(rows) == 1
         assert rows[0].description == "updated via id-match"
+
+
+def _text_node(node_id: str, text: str) -> dict:
+    return {"id": node_id, "data": {"node": {"template": {"text": {"value": text}}}}}
+
+
+@pytest.mark.usefixtures("client")
+async def test_upsert_flow_from_file_records_the_change_in_history() -> None:
+    """Overwriting a flow from a file is a save like any other, recorded as the loading user's."""
+    user_id = uuid4()
+    original = await _create_flow(
+        name="FromFile", user_id=user_id, data={"nodes": [_text_node("a", "hi")], "edges": []}
+    )
+    file_content = orjson.dumps(
+        {"id": str(original.id), "name": "FromFile", "data": {"nodes": [_text_node("a", "hello")], "edges": []}}
+    )
+
+    async with session_scope() as session:
+        await upsert_flow_from_file(file_content, "FromFile", session, user_id)
+
+    async with session_scope() as session:
+        flow = await session.get(Flow, original.id)
+        rows = (await session.exec(select(FlowOperation).where(FlowOperation.flow_id == original.id))).all()
+        assert flow.latest_revision == 1
+        assert {actor for row in rows for actor in row.actor_user_ids} == {str(user_id)}
+        # The stored graph is the one its history replays to, so the next save is accepted.
+        assert await projection_matches(session, flow)
+
+
+@pytest.mark.usefixtures("client")
+async def test_upsert_flow_from_file_repairs_a_file_whose_graph_breaks_the_rules() -> None:
+    """Files hold exported flows, so a graph that breaks the rules is repaired and recorded, not refused."""
+    user_id = uuid4()
+    graph = {"nodes": [_text_node("a", "hi")], "edges": []}
+    original = await _create_flow(name="Broken", user_id=user_id, data=graph)
+    file_content = orjson.dumps(
+        {
+            "id": str(original.id),
+            "name": "Broken",
+            "description": "from file",
+            "data": {"nodes": [_text_node("a", "x"), _text_node("a", "y")], "edges": []},
+        }
+    )
+
+    async with session_scope() as session:
+        await upsert_flow_from_file(file_content, "Broken", session, user_id)
+        await session.commit()
+
+    async with session_scope() as session:
+        flow = await session.get(Flow, original.id)
+        assert flow.data["nodes"][0]["id"] == "a"
+        assert len({node["id"] for node in flow.data["nodes"]}) == 2
+        assert flow.description == "from file"
+        assert flow.latest_revision >= 1
+        assert await projection_matches(session, flow)
+
+
+def _api_request_node(node_id: str) -> dict:
+    """An API Request node as the editor stores it: its default header row carries a row id and position."""
+    index = orjson.loads(Path(lfx.__file__).with_name("_assets").joinpath("component_index.json").read_bytes())
+    template = next(
+        components["APIRequest"]
+        for _category, components in index["entries"]
+        if isinstance(components, dict) and "APIRequest" in components
+    )
+    node = {
+        "id": node_id,
+        "type": "genericNode",
+        "position": {"x": 0, "y": 0},
+        "data": {"id": node_id, "type": "APIRequest", "node": copy.deepcopy(template)},
+    }
+    headers = node["data"]["node"]["template"]["headers"]
+    assert headers["value"], "the API Request component has default header rows"
+    headers["value"] = [{**row, "__id__": f"editor{i}", "__pos__": i} for i, row in enumerate(headers["value"], 1)]
+    return node
+
+
+def _headers(flow_data: dict) -> list[dict]:
+    return flow_data["nodes"][0]["data"]["node"]["template"]["headers"]["value"]
+
+
+async def _operations(flow_id) -> list:
+    async with session_scope() as session:
+        rows = (await session.exec(select(FlowOperation).where(FlowOperation.flow_id == flow_id))).all()
+        return [operation for row in rows for operation in decode_row(row)]
+
+
+@pytest.mark.usefixtures("client")
+async def test_syncing_an_exported_flow_assigns_table_row_ids_and_records_a_file_sync() -> None:
+    """Export strips table row ids; writing the file back repairs them instead of refusing the graph."""
+    user_id = uuid4()
+    stored_data = {"nodes": [_api_request_node("APIRequest-1")], "edges": []}
+    original = await _create_flow(name="ApiFlow", user_id=user_id, data=stored_data)
+
+    exported = normalize_flow_for_export({"id": str(original.id), "name": "ApiFlow", "data": stored_data})
+    assert all("__id__" not in row and "__pos__" not in row for row in _headers(exported["data"]))
+    exported["data"]["nodes"][0]["data"]["node"]["template"]["url_input"]["value"] = "https://example.com"
+
+    async with session_scope() as session:
+        await upsert_flow_from_file(orjson.dumps(exported), "ApiFlow", session, user_id)
+        await session.commit()
+
+    async with session_scope() as session:
+        updated = await session.get(Flow, original.id)
+        assert updated.data["nodes"][0]["data"]["node"]["template"]["url_input"]["value"] == "https://example.com"
+        rows = _headers(updated.data)
+        # The rows the file sent back are the stored rows, so they keep their ids.
+        assert [row["__id__"] for row in rows] == [row["__id__"] for row in _headers(stored_data)]
+        assert [{k: v for k, v in row.items() if k not in {"__id__", "__pos__"}} for row in rows] == _headers(
+            exported["data"]
+        )
+        assert await projection_matches(session, updated)
+    operations = await _operations(original.id)
+    assert operations
+    assert {operation.cause for operation in operations} == {"file_sync"}
+
+
+@pytest.mark.usefixtures("client")
+async def test_syncing_the_same_exported_file_again_records_nothing() -> None:
+    """A synced table keeps the stored rows' ids, so the same file changes nothing the second time."""
+    user_id = uuid4()
+    stored_data = {"nodes": [_api_request_node("APIRequest-1")], "edges": []}
+    original = await _create_flow(name="ApiFlowTwice", user_id=user_id, data=stored_data)
+    exported = normalize_flow_for_export({"id": str(original.id), "name": "ApiFlowTwice", "data": stored_data})
+
+    async def sync() -> None:
+        async with session_scope() as session:
+            await upsert_flow_from_file(orjson.dumps(exported), "ApiFlowTwice", session, user_id)
+            await session.commit()
+
+    await sync()
+    after_first = await _operations(original.id)
+    await sync()
+
+    assert after_first
+    assert len(await _operations(original.id)) == len(after_first)
+
+
+@pytest.mark.usefixtures("client")
+async def test_syncing_a_file_that_adds_a_row_records_only_that_row() -> None:
+    """The rows the stored table already held keep their ids; only the new row is recorded."""
+    user_id = uuid4()
+    stored_data = {"nodes": [_api_request_node("APIRequest-1")], "edges": []}
+    original = await _create_flow(name="ApiFlowNewRow", user_id=user_id, data=stored_data)
+    exported = normalize_flow_for_export({"id": str(original.id), "name": "ApiFlowNewRow", "data": stored_data})
+    _headers(exported["data"]).insert(0, {"key": "X-Trace", "value": "on"})
+
+    async with session_scope() as session:
+        await upsert_flow_from_file(orjson.dumps(exported), "ApiFlowNewRow", session, user_id)
+        await session.commit()
+
+    async with session_scope() as session:
+        updated = await session.get(Flow, original.id)
+        rows = _headers(updated.data)
+        assert rows[0]["key"] == "X-Trace"
+        assert [row["__id__"] for row in rows[1:]] == [row["__id__"] for row in _headers(stored_data)]
+    writes = [
+        update
+        for operation in await _operations(original.id)
+        if operation.operation.type == "update_nodes"
+        for update in operation.operation.updates
+        if "headers" in update.path
+    ]
+    assert len(writes) == 1
+    assert writes[0].op == "set_field"
+    assert writes[0].value["key"] == "X-Trace"
+
+
+@pytest.mark.usefixtures("client")
+async def test_a_file_whose_edges_only_the_client_can_fix_is_skipped() -> None:
+    """Repair cannot choose which handle an edge meant, so the sync leaves the stored flow as it is."""
+    user_id = uuid4()
+    stored = {"nodes": [_node_with_field("n1", value="kept", load_from_db=False)], "edges": []}
+    original = await _create_flow(name="BadEdgeFlow", user_id=user_id, data=stored)
+    incoming = copy.deepcopy(stored)
+    incoming["nodes"][0]["data"]["node"]["outputs"] = [{"name": "out"}]
+    incoming["edges"] = [{"id": "no-handles", "source": "n1", "target": "n1"}]
+    file_content = orjson.dumps({"id": str(original.id), "name": original.name, "data": incoming})
+
+    async with session_scope() as session:
+        await upsert_flow_from_file(file_content, original.name, session, user_id)
+        await session.commit()
+
+    async with session_scope() as session:
+        unchanged = await session.get(Flow, original.id)
+        assert unchanged.data == stored
+    assert await _operations(original.id) == []

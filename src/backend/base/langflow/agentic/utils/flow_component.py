@@ -2,15 +2,20 @@
 
 from datetime import datetime, timezone
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
+from lfx.services.flow_operations import assign_changed_table_row_ids
 
+from langflow.api.utils.flow_history import history_http_error
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.services.database.models.flow.guards import ensure_flow_unlocked, lock_flow_for_update
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow.model import Flow, FlowGraphWriteOptions
 from langflow.services.deps import session_scope
+from langflow.services.flow_history.envelope import ASSISTANT_CAUSE
+from langflow.services.flow_history.errors import FlowHistoryError
+from langflow.services.flow_history.recorder import write_flow_graph
 
 
 async def get_component_details(
@@ -284,15 +289,20 @@ async def update_component_field_value(
             # Check the row while its write lock is held through commit.
             ensure_flow_unlocked(db_flow)
 
-            # Update the flow data
-            db_flow.data = flow_data
+            # Update the flow data, recording the edit in the flow's history.
+            # A table value the assistant writes needs ids on its rows.
+            assign_changed_table_row_ids(db_flow.data, flow_data)
+            try:
+                await write_flow_graph(
+                    session,
+                    db_flow,
+                    flow_data,
+                    actor_id=UUID(str(user_id)),
+                    options=FlowGraphWriteOptions(cause=ASSISTANT_CAUSE),
+                )
+            except FlowHistoryError as exc:
+                return {"error": history_http_error(exc).detail, "success": False}
             db_flow.updated_at = datetime.now(timezone.utc)
-            # Same reason as the assistant runner: a graph write that does not
-            # rotate the token is invisible to every open editor, whose next save
-            # then overwrites it without anyone being told.
-            db_flow.version_token = uuid4()
-            # The signature accepts either form; the column is a UUID on Postgres.
-            db_flow.last_modified_by = user_id if isinstance(user_id, UUID) else UUID(str(user_id))
             session.add(db_flow)
             await session.commit()
             await session.refresh(db_flow)

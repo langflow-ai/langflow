@@ -50,7 +50,6 @@ from langflow.api.v1.authz_route_dependencies import (
     RequireFlowCreate,
 )
 from langflow.api.v1.flow_conflict import (
-    ensure_version_precondition,
     parse_if_match,
 )
 from langflow.api.v1.flows_helpers import (
@@ -60,6 +59,7 @@ from langflow.api.v1.flows_helpers import (
     _new_flow,
     _patch_flow,
     _read_flow,
+    _refuse_unreadable_graph,
     _resolve_flow_destination,
     _save_flow_to_fs,
     _update_existing_flow,
@@ -114,6 +114,7 @@ from langflow.services.database.models.flow.model import (
     FlowRead,
     FlowType,
     FlowUpdate,
+    FlowWriteRead,
 )
 
 # TODO: Full-version import/export is planned as a follow-up feature. When implemented,
@@ -312,8 +313,13 @@ FLOW_DELETE_BUSY = "The database is busy. Please retry the request."
 
 
 def _flow_read_for_caller(flow: Flow | FlowRead, caller_id: UUID) -> FlowRead:
-    """Keep persisted credentials visible only to the flow owner."""
-    flow_read = FlowRead.model_validate(flow, from_attributes=True)
+    """Keep persisted credentials visible only to the flow owner.
+
+    A write's response keeps its read model, so what the write recorded in the
+    flow's history still reaches the caller.
+    """
+    read_model = type(flow) if isinstance(flow, FlowRead) else FlowRead
+    flow_read = read_model.model_validate(flow, from_attributes=True)
     if flow.user_id != caller_id:
         flow_read.data = strip_secret_field_values(flow_read.data)
     return flow_read
@@ -636,7 +642,7 @@ async def read_public_flow(
     return flow_read
 
 
-@router.patch("/{flow_id}", response_model=FlowRead, status_code=200)
+@router.patch("/{flow_id}", response_model=FlowWriteRead, status_code=200)
 @audited_route(
     audit_vocab.AuditResourceType.FLOW,
     audit_vocab.FLOW_WRITE,
@@ -714,9 +720,6 @@ async def update_flow(
             )
             if not db_flow_for_attempt:
                 raise HTTPException(status_code=404, detail="Flow not found")
-            # Compared against the row we just re-read under lock, so a writer that
-            # committed between the client's read and this attempt is still caught.
-            await ensure_version_precondition(session, db_flow_for_attempt, expected_version_token)
             # TOCTOU: a concurrent PATCH could have moved this flow to a
             # different workspace/folder between the destination check above
             # and this retry attempt. Re-authorize against the freshly
@@ -823,7 +826,7 @@ async def update_flow(
         ) from e
 
 
-@router.put("/{flow_id}", response_model=FlowRead)
+@router.put("/{flow_id}", response_model=FlowWriteRead)
 @audited_route(
     audit_vocab.AuditResourceType.FLOW,
     audit_vocab.FLOW_WRITE,
@@ -984,7 +987,6 @@ async def upsert_flow(
                 await stage_mcp_secrets(
                     carried_secrets, secret_variables, writer_id, session, masked_targets=masked_targets
                 )
-                await ensure_version_precondition(session, existing_flow_for_attempt, expected_version_token)
                 return await _update_existing_flow(
                     session=session,
                     existing_flow=existing_flow_for_attempt,
@@ -1153,6 +1155,7 @@ async def create_flows(
     # keeps a denial in a later item from partially applying an earlier item.
     for flow in flow_list.flows:
         _validate_new_flow_id(flow.id)
+        _refuse_unreadable_graph(flow.data)
         _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
         await persist_and_strip_mcp_secrets(flow.data, current_user.id, session, flow_id=flow.id)
         # This endpoint bypasses _new_flow, so the fs_path containment check

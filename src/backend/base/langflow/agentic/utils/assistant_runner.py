@@ -13,11 +13,12 @@ import copy
 import json
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from fastapi import HTTPException
 from lfx.log.logger import logger
 from lfx.mcp.flow_builder_tools import get_working_flow
+from lfx.services.flow_operations import assign_changed_table_row_ids, remove_cut_edges
 
 from langflow.agentic.api.deps import enforce_agentic_component_admin
 from langflow.agentic.api.router import _resolve_assistant_context
@@ -25,13 +26,16 @@ from langflow.agentic.api.schemas import AssistantRequest
 from langflow.agentic.services.assistant_service import execute_flow_with_validation_streaming
 from langflow.agentic.services.flow_types import LANGFLOW_ASSISTANT_FLOW
 from langflow.api.utils.core import release_db_transaction
-from langflow.api.v1.flow_conflict import claim_version_token
+from langflow.api.utils.flow_history import history_http_error
 from langflow.api.v1.flows import _new_flow, _save_flow_to_fs, _validate_catalog_policy_for_write
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.database.models.flow.guards import ensure_flow_unlocked, lock_flow_for_update
-from langflow.services.database.models.flow.model import Flow, FlowCreate
+from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowGraphWriteOptions
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_catalog_policy_service, get_storage_service
+from langflow.services.flow_history.envelope import ASSISTANT_CAUSE
+from langflow.services.flow_history.errors import FlowHistoryError
+from langflow.services.flow_history.recorder import write_flow_graph
 from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 
 if TYPE_CHECKING:
@@ -259,28 +263,46 @@ async def run_assistant_and_persist(
         )
 
     if canvas.changed:
+        # The assistant can run for a while. Re-read under a row lock so a
+        # concurrent lock toggle and this write are ordered atomically, and so
+        # the write extends the flow's history from its latest revision.
+        await lock_flow_for_update(session, flow)
         if not created_new:
-            # The assistant can run for a while. Re-read under a row lock so a
-            # concurrent lock toggle and this write are ordered atomically.
-            await lock_flow_for_update(session, flow)
             ensure_flow_unlocked(flow)
-            # Take the writer's turn against the version this run started from.
-            # A run can take minutes, and without this the assistant wrote over
-            # whatever a person saved in the meantime and told nobody -- measured:
-            # a human saved, the run finished, and the human's edit was simply
-            # gone. Refusing instead turns silent loss into something the caller
-            # can see and re-run.
-            claimed = await claim_version_token(session, flow, reviewed_version_token)
         flow_data = working_snapshot["data"] if working_snapshot else canvas.data
         # Headless MCP has no UI to apply an edit_field review proposal, so apply
         # each to the working flow here or the text edit is dropped (Bug #13641).
         for edit in field_edits:
             _apply_field_edit(flow_data, edit)
+        # The assistant adds components with their default table rows, and the
+        # flow's history needs every table a write adds or changes to name its rows.
+        assign_changed_table_row_ids(flow.data, flow_data)
+        # A component the assistant rebuilt can lose a field or output; its edges go with it, as in the editor.
+        cut = remove_cut_edges(flow.data, flow_data)
+        if cut:
+            await logger.ainfo(f"Assistant write removed edges whose field or output is gone: {cut}")
         try:
             _validate_catalog_policy_for_write(
                 flow_data,
                 snapshot=get_catalog_policy_service().snapshot,
             )
+            try:
+                # Take the writer's turn against the version this run started from.
+                # A run can take minutes, and without this the assistant wrote over
+                # whatever a person saved in the meantime and told nobody -- measured:
+                # a human saved, the run finished, and the human's edit was simply
+                # gone. Refusing instead turns silent loss into something the caller
+                # can see and re-run.
+                await write_flow_graph(
+                    session,
+                    flow,
+                    flow_data,
+                    actor_id=user_id,
+                    options=FlowGraphWriteOptions(cause=ASSISTANT_CAUSE),
+                    expected_version_token=reviewed_version_token,
+                )
+            except FlowHistoryError as exc:
+                raise history_http_error(exc) from exc
         except HTTPException:
             if created_new:
                 # The assistant needs a committed flow id while it runs. Do not
@@ -289,16 +311,7 @@ async def run_assistant_and_persist(
                 await session.delete(flow)
                 await session.commit()
             raise
-        flow.data = flow_data
         flow.updated_at = datetime.now(timezone.utc)
-        # Take the writer's turn like any other graph write. Persisting without
-        # rotating leaves every open editor holding a token that still matches,
-        # so their next save silently overwrites what the assistant just wrote
-        # and no one is told -- the lost update the token exists to prevent.
-        # ``claimed`` is None for a flow this run created, or a legacy row with no
-        # token to compare; either way a fresh one is what the editors need.
-        flow.version_token = claimed if not created_new and claimed else uuid4()
-        flow.last_modified_by = user_id
         if created_new and canvas.name:
             flow.name = canvas.name
         session.add(flow)
