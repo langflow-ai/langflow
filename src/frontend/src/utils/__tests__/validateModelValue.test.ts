@@ -1,5 +1,5 @@
 import type { APITemplateType } from "@/types/api";
-import { validateModelValue } from "../model-node-helpers";
+import { findModelFieldKey, validateModelValue } from "../model-node-helpers";
 
 const openAiOption = { name: "gpt-6-luna", provider: "OpenAI", icon: "OpenAI" };
 
@@ -25,11 +25,28 @@ describe("validateModelValue", () => {
     expect(validateModelValue(template, "decision_model")).toBe(template);
   });
 
+  it("fills an empty decision field with the first option", () => {
+    const template = templateWith("decision", [openAiOption]);
+    template.decision_model.value = [];
+    const result = validateModelValue(template, "decision_model");
+    expect(result.decision_model.value[0].name).toBe("gpt-6-luna");
+  });
+
   it("still replaces an unavailable language model with the first option", () => {
     const result = validateModelValue(
       templateWith("language", [openAiOption]),
       "decision_model",
     );
     expect(result.decision_model.value[0].name).toBe("gpt-6-luna");
+  });
+});
+
+describe("findModelFieldKey", () => {
+  it("refreshes the model field that is shown", () => {
+    const template = {
+      decision_model: { type: "model", show: false },
+      model: { type: "model", show: true },
+    } as unknown as APITemplateType;
+    expect(findModelFieldKey(template)).toBe("model");
   });
 });

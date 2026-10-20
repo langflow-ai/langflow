@@ -60,7 +60,7 @@ export default function FloatComponent({
 
   const handleBlur = () => {
     // Number("") is 0, which would silently satisfy a required threshold.
-    if (preserveEmpty && String(localValue).trim() === "") {
+    if (preserveEmpty && localValue.trim() === "") {
       handleOnNewValue({ value: "" });
       return;
     }

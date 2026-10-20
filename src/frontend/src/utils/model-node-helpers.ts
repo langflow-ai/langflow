@@ -19,7 +19,11 @@ export function isModelNode(node: AllNodeType): boolean {
 export function findModelFieldKey(
   template: APITemplateType,
 ): string | undefined {
-  return Object.keys(template).find((key) => template[key]?.type === "model");
+  const keys = Object.keys(template).filter(
+    (key) => template[key]?.type === "model",
+  );
+  // Smart Router has a language and a decision model field; only one is shown per mode.
+  return keys.find((key) => template[key]?.show !== false) ?? keys[0];
 }
 
 /** Builds the refresh API payload with flow context */
@@ -64,9 +68,6 @@ export function validateModelValue(
 ): APITemplateType {
   const modelField = template[modelFieldKey];
   if (!modelField) return template;
-  // Never swap or clear a saved decision model: another provider would receive the
-  // flow's messages. An unavailable one fails clearly when the flow runs.
-  if (modelField.model_type === "decision") return template;
 
   const options = modelField.options || [];
   const currentValue = modelField.value;
@@ -81,6 +82,10 @@ export function validateModelValue(
     : currentValue;
   const currentModelName = currentModel?.name;
   const currentProvider = currentModel?.provider;
+  // Never swap or clear a saved decision model: another provider would receive the
+  // flow's messages, and an unavailable one fails clearly when the flow runs. An empty
+  // decision field is filled like any other model field.
+  if (modelField.model_type === "decision" && currentModelName) return template;
   const currentProviderConfiguration = currentProvider
     ? providerConfiguration?.get(currentProvider)
     : undefined;
