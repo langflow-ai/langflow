@@ -242,7 +242,10 @@ function idOf(entry: unknown): string {
  * Shares nested values with `flowData`: compare or serialize it, never change it.
  */
 export function canonicalGraph(flowData: JsonObject, keyed = true): JsonObject {
-  const graph = without(flowData, NODE_SCHEMA.flowViewState);
+  const graph: JsonObject = {};
+  for (const key of NODE_SCHEMA.flowGraphKeys) {
+    if (key in flowData) graph[key] = flowData[key];
+  }
   for (const key of ["nodes", "edges"]) {
     const entries = graph[key];
     if (!Array.isArray(entries)) continue;
