@@ -33,6 +33,7 @@ dependencies = [
     "lfx-docling>=0.2.1,<1.0.0",
     "lfx-datastax>=0.2.0,<1.0.0",
     "lfx-toolguard>=0.2.0,<1.0.0",
+    "lfx-acedatacloud>=0.1.3,<1.0.0",
     "lfx-openai>=0.2.0,<1.0.0",
     "lfx-anthropic>=0.2.0,<1.0.0",
     "lfx-azure>=0.2.0,<1.0.0",
@@ -103,6 +104,7 @@ langflow = { workspace = true }
 lfx = { workspace = true }
 langflow-sdk = { workspace = true }
 # langflow-extensions:bundle-sources-start
+lfx-acedatacloud = { workspace = true }
 lfx-duckduckgo = { workspace = true }
 lfx-arxiv = { workspace = true }
 lfx-ibm = { workspace = true }
@@ -143,6 +145,7 @@ members = [
     "src/langflow-stepflow",
     "src/sdk",
     # langflow-extensions:bundle-members-start
+    "src/bundles/acedatacloud",
     "src/bundles/duckduckgo",
     "src/bundles/arxiv",
     "src/bundles/ibm",
