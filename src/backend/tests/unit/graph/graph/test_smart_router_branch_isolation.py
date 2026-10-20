@@ -414,3 +414,307 @@ def test_update_outputs_names_match_routing_contract():
     frontend_node = component.update_outputs({"outputs": []}, "routes", _TWO_ROUTES)
     names = [o.name for o in frontend_node["outputs"]]
     assert names == ["category_1_result", "category_2_result"]
+
+
+class _DecisionSmartRouter(SmartRouterComponent):
+    outputs = _ElseSmartRouter.outputs
+
+
+def _decision_graph(*, connected_else=True, **settings):
+    router = _make_router(
+        _DecisionSmartRouter,
+        _TWO_ROUTES,
+        routing_mode="Decision Model",
+        decision_model=[{"name": "test-model", "provider": "Test"}],
+        minimum_probability=0.7,
+        enable_else_output=True,
+    )
+    router.set(**settings)
+    graph = Graph()
+    sinks = {name: RecordingSink(_id=name) for name in ("positive", "negative", "else")}
+    graph.add_component(router, "router")
+    for name, sink in sinks.items():
+        graph.add_component(sink, name)
+    graph.add_component_edge("router", ("category_1_result", "input_value"), "positive")
+    graph.add_component_edge("router", ("category_2_result", "input_value"), "negative")
+    if connected_else:
+        graph.add_component_edge("router", ("default_result", "input_value"), "else")
+    return graph, router, sinks
+
+
+def _decision_result(positive=0.8, negative=0.2):
+    from lfx.base.models.decisions.schema import DecisionResult
+
+    return DecisionResult(
+        kind="choice",
+        question_id="decision",
+        provider="Test",
+        model="test-model",
+        probabilities={"category_1_result": positive, "category_2_result": negative},
+        selected_option="category_1_result" if positive > negative else "category_2_result",
+    )
+
+
+async def test_decision_router_evaluates_once_and_preserves_reconvergence(monkeypatch):
+    calls = []
+
+    def evaluate(request, **_kwargs):
+        calls.append(request)
+        return _decision_result()
+
+    monkeypatch.setattr("lfx.components.llm_operations.llm_conditional_router.evaluate_decision", evaluate)
+    graph, router, sinks = _decision_graph()
+    merge = MergeSink(_id="merge")
+    graph.add_component(merge, "merge")
+    graph.add_component_edge("positive", ("out", "in1"), "merge")
+    graph.add_component_edge("negative", ("out", "in2"), "merge")
+
+    await _run(graph)
+
+    assert len(calls) == 1
+    assert sinks["positive"].did_run
+    assert not sinks["negative"].did_run
+    assert not sinks["else"].did_run
+    assert merge.did_run
+    assert router._decision_evidence["reason"] == "accepted"
+    assert router._decision_evidence["activated_branch"] == "category_1_result"
+    artifacts = router._artifacts
+    assert any(artifact["raw"]["decision"]["result"]["model"] == "test-model" for artifact in artifacts.values())
+
+
+async def test_decision_router_tie_and_below_threshold_use_else(monkeypatch):
+    for probability, reason in ((0.5, "tied_top_probability"), (0.6, "below_minimum_probability")):
+        monkeypatch.setattr(
+            "lfx.components.llm_operations.llm_conditional_router.evaluate_decision",
+            lambda *_args, p=probability, **_kwargs: _decision_result(p, 1 - p),
+        )
+        graph, router, sinks = _decision_graph()
+        await _run(graph)
+        assert sinks["else"].did_run
+        assert not sinks["positive"].did_run
+        assert not sinks["negative"].did_run
+        assert router._decision_evidence["reason"] == reason
+
+
+async def test_decision_router_applies_inclusive_top_route_override_only(monkeypatch):
+    monkeypatch.setattr(
+        "lfx.components.llm_operations.llm_conditional_router.evaluate_decision",
+        lambda *_args, **_kwargs: _decision_result(0.7, 0.3),
+    )
+    for top_threshold, expected in ((0.7, "positive"), (0.8, "else")):
+        routes = [
+            {**_TWO_ROUTES[0], "minimum_probability": top_threshold},
+            {**_TWO_ROUTES[1], "minimum_probability": 0.1},
+        ]
+        graph, router, sinks = _decision_graph(routes=routes)
+        await _run(graph)
+        assert sinks[expected].did_run
+        assert not sinks["negative"].did_run
+        assert router._decision_evidence["applied_threshold"] == top_threshold
+
+
+async def test_decision_router_checks_real_else_before_inference(monkeypatch):
+    import pytest
+
+    calls = []
+    monkeypatch.setattr(
+        "lfx.components.llm_operations.llm_conditional_router.evaluate_decision",
+        lambda *args, **_kwargs: calls.append(args),
+    )
+    for settings in ({"connected_else": False}, {"enable_else_output": False}):
+        graph, _, _ = _decision_graph(**settings)
+        with pytest.raises(Exception, match="enabled, connected Else"):
+            await _run(graph)
+    assert calls == []
+
+
+async def test_decision_router_error_else_keeps_diagnostics(monkeypatch):
+    from lfx.base.models.decisions.schema import DecisionEvaluationError
+
+    def evaluate(*_args, **_kwargs):
+        msg = "Provider timed out"
+        raise DecisionEvaluationError(msg)
+
+    monkeypatch.setattr("lfx.components.llm_operations.llm_conditional_router.evaluate_decision", evaluate)
+    graph, router, sinks = _decision_graph(evaluation_error_action="Route to Else")
+    await _run(graph)
+    assert sinks["else"].did_run
+    assert not sinks["positive"].did_run
+    assert router._decision_evidence["reason"] == "evaluation_error"
+    assert router._decision_evidence["error"]["message"] == "Provider timed out"
+
+
+async def test_decision_router_permission_and_configuration_always_stop(monkeypatch):
+    import pytest
+    from lfx.base.models.decisions.schema import DecisionConfigurationError
+
+    for error in (PermissionError("Denied by policy"), DecisionConfigurationError("Invalid model configuration")):
+
+        def evaluate(*_args, error=error, **_kwargs):
+            raise error
+
+        monkeypatch.setattr("lfx.components.llm_operations.llm_conditional_router.evaluate_decision", evaluate)
+        graph, _, sinks = _decision_graph(evaluation_error_action="Route to Else")
+        with pytest.raises(Exception, match=str(error)):
+            await _run(graph)
+        assert not any(sink.did_run for sink in sinks.values())
+
+
+async def test_decision_router_reentry_resets_evaluation_and_evidence(monkeypatch):
+    calls = []
+
+    def evaluate(*args, **_kwargs):
+        calls.append(args)
+        return _decision_result(0.8, 0.2) if len(calls) == 1 else _decision_result(0.2, 0.8)
+
+    monkeypatch.setattr("lfx.components.llm_operations.llm_conditional_router.evaluate_decision", evaluate)
+    graph, router, sinks = _decision_graph()
+    await _run(graph)
+    assert sinks["positive"].did_run
+    for sink in sinks.values():
+        sink.did_run = False
+    await _run(graph)
+    assert len(calls) == 2
+    assert sinks["negative"].did_run
+    assert not sinks["positive"].did_run
+    assert not sinks["else"].did_run
+    assert router._decision_evidence["activated_branch"] == "category_2_result"
+
+
+async def test_decision_router_refusal_uses_explicit_error_policy(monkeypatch):
+    import pytest
+    from lfx.base.models.decisions.schema import DecisionResult
+
+    result = DecisionResult(
+        kind="choice", provider="Test", model="test-model", status="refusal", refusal="Cannot evaluate this input"
+    )
+    monkeypatch.setattr(
+        "lfx.components.llm_operations.llm_conditional_router.evaluate_decision", lambda *_args, **_kwargs: result
+    )
+    graph, router, sinks = _decision_graph()
+    with pytest.raises(Exception, match="refused"):
+        await _run(graph)
+    assert not any(sink.did_run for sink in sinks.values())
+    assert router._decision_evidence["activated_branch"] is None
+
+    graph, router, sinks = _decision_graph(evaluation_error_action="Route to Else")
+    await _run(graph)
+    assert sinks["else"].did_run
+    assert router._decision_evidence["reason"] == "refusal"
+    assert router._decision_evidence["result"]["refusal"] == "Cannot evaluate this input"
+
+
+async def test_decision_router_keeps_message_precedence(monkeypatch):
+    monkeypatch.setattr(
+        "lfx.components.llm_operations.llm_conditional_router.evaluate_decision",
+        lambda *_args, **_kwargs: _decision_result(),
+    )
+    for override, route_value, expected in (("", "route text", "route text"), ("override", "route text", "override")):
+        graph, router, _ = _decision_graph(
+            routes=[{**_TWO_ROUTES[0], "output_value": route_value}, _TWO_ROUTES[1]], message=override
+        )
+        await _run(graph)
+        assert router._results["category_1_result"].text == expected
+
+
+async def test_decision_router_checks_else_in_imported_graph(monkeypatch):
+    import pytest
+
+    calls = []
+    monkeypatch.setattr(
+        "lfx.components.llm_operations.llm_conditional_router.evaluate_decision",
+        lambda *args, **_kwargs: calls.append(args),
+    )
+    import inspect
+
+    from lfx.components.llm_operations import llm_conditional_router
+
+    for settings, error in (
+        ({"connected_else": False}, "enabled, connected Else"),
+        ({"minimum_probability": None}, "Minimum probability must be a number"),
+    ):
+        graph, _, _ = _decision_graph(**settings)
+        graph.prepare()
+        payload = graph.dump()
+        router_node = next(node for node in payload["data"]["nodes"] if node["id"] == "router")
+        # Export the real built-in source, not the test-only subclass's containing module.
+        template = router_node["data"]["node"]["template"]
+        template["code"]["value"] = inspect.getsource(llm_conditional_router)
+        for field in ("decision_model", "decision_question", "minimum_probability", "evaluation_error_action"):
+            template[field].update(show=True, required=True)
+        template["model"].update(value=None, show=False, required=False)
+        imported = Graph.from_payload(payload)
+        with pytest.raises(Exception, match=error):
+            await _run(imported)
+    assert not calls
+
+
+async def test_valid_imported_decision_graph_requires_no_language_model(monkeypatch):
+    import inspect
+
+    from lfx.components.llm_operations import llm_conditional_router
+
+    calls = []
+
+    def evaluate(request, **_kwargs):
+        calls.append(request)
+        return _decision_result()
+
+    # Imported built-in source binds its evaluator at execution time.
+    monkeypatch.setattr("lfx.base.models.decisions.runtime.evaluate_decision", evaluate)
+    graph, _, _ = _decision_graph()
+    graph.prepare()
+    payload = graph.dump()
+    for node in payload["data"]["nodes"]:
+        template = node["data"]["node"]["template"]
+        if node["id"] == "router":
+            template["code"]["value"] = inspect.getsource(llm_conditional_router)
+            for field in ("decision_model", "decision_question", "minimum_probability", "evaluation_error_action"):
+                template[field].update(show=True, required=True)
+            template["model"].update(value=None, show=False, required=False)
+        else:
+            template["code"]["value"] = (
+                "from lfx.custom import Component\n"
+                "from lfx.io import MessageTextInput, Output\n"
+                "from lfx.schema.message import Message\n\n" + inspect.getsource(RecordingSink)
+            )
+    imported = Graph.from_payload(payload)
+    yielded = await _run(imported)
+    assert len(calls) == 1
+    assert "positive" in yielded
+    assert "negative" not in yielded
+    assert "else" not in yielded
+
+
+async def test_decision_router_never_forwards_language_model_api_key(monkeypatch):
+    seen = []
+
+    def evaluate(_request, **kwargs):
+        seen.append(kwargs)
+        return _decision_result()
+
+    monkeypatch.setattr("lfx.components.llm_operations.llm_conditional_router.evaluate_decision", evaluate)
+    graph, _, _ = _decision_graph(api_key="language-model-key")  # pragma: allowlist secret
+    await _run(graph)
+    assert seen
+    assert all(kwargs.get("api_key") is None for kwargs in seen)
+
+
+async def test_decision_router_hard_failure_never_records_or_caches_else(monkeypatch):
+    from types import SimpleNamespace
+
+    import pytest
+
+    def evaluate(*_args, **_kwargs):
+        msg = "Denied by policy"
+        raise PermissionError(msg)
+
+    monkeypatch.setattr("lfx.components.llm_operations.llm_conditional_router.evaluate_decision", evaluate)
+    _, router, _ = _decision_graph(evaluation_error_action="Route to Else")
+    router._vertex = SimpleNamespace(
+        outgoing_edges=[SimpleNamespace(source_handle=SimpleNamespace(name="default_result"))]
+    )
+    with pytest.raises(PermissionError):
+        router._get_categorization()
+    assert router._categorization_result is None
+    assert router._decision_evidence["activated_branch"] is None

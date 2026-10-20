@@ -653,6 +653,22 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMi
     field_type: SerializableFieldTypes = FieldTypes.FLOAT
     track_in_telemetry: CoalesceBool = True  # Safe numeric parameter
 
+    preserve_empty: bool = False
+
+    @model_validator(mode="wrap")
+    @classmethod
+    def preserve_empty_initial_value(cls, data, handler):
+        # Inherited value precedes preserve_empty in field order during construction.
+        preserve = isinstance(data, dict) and data.get("preserve_empty", False)
+        value = data.get("value", "") if isinstance(data, dict) else None
+        if preserve and isinstance(value, bool):
+            msg = "Value must be a number, not a Boolean."
+            raise ValueError(msg)
+        result = handler(data)
+        if preserve and (value is None or (isinstance(value, str) and not value.strip())):
+            object.__setattr__(result, "value", None)
+        return result
+
     @field_validator("value")
     @classmethod
     def validate_value(cls, v: Any, info):
@@ -669,6 +685,12 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMi
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
         _reject_secret_in_non_password_field(v, info)
+        if info.data.get("preserve_empty", False):
+            if v is None or (isinstance(v, str) and not v.strip()):
+                return None
+            if isinstance(v, bool):
+                msg = "Value must be a number, not a Boolean."
+                raise ValueError(msg)
         if isinstance(v, float):
             return v
         if isinstance(v, int):

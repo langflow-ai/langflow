@@ -140,3 +140,111 @@ class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
         assert result1 == "Positive"
         assert result2 == "Positive"
         assert mock_llm.invoke.call_count == 1  # LLM only called once due to caching
+
+
+@pytest.mark.parametrize("value", [None, "", "  ", -0.1, 1.1, float("nan"), float("inf")])
+def test_decision_threshold_has_no_implicit_zero(value):
+    from lfx.base.models.decisions.schema import DecisionConfigurationError
+
+    component = SmartRouterComponent()
+    component.set(minimum_probability=value)
+    with pytest.raises(DecisionConfigurationError):
+        component._validate_probability(component.minimum_probability)
+
+
+@pytest.mark.parametrize("value", [False, True])
+def test_decision_threshold_rejects_boolean(value):
+    component = SmartRouterComponent()
+    with pytest.raises(ValueError, match="not a Boolean"):
+        component.set(minimum_probability=value)
+
+
+def test_decision_artifacts_mask_secrets_without_changing_message():
+    component = SmartRouterComponent()
+    component.set(api_key="private-secret")  # pragma: allowlist secret
+    component._decision_evidence = {
+        "reason": "evaluation_error",
+        "error": {"category": "DecisionEvaluationError", "message": "Failed private-secret"},
+    }
+    message = Message(text="Original message")
+    artifact = component._build_artifact(message)
+    assert artifact["raw"]["message"] == "Original message"
+    assert artifact["raw"]["decision"]["error"]["message"] == "Failed **********"
+    assert artifact["type"] == "object"
+    assert message.text == "Original message"
+
+
+def test_switching_mode_preserves_llm_configuration(monkeypatch):
+    component = SmartRouterComponent()
+    component.set(model=[{"provider": "Test", "name": "llm"}], custom_prompt="Use {routes} for {input_text}")
+    config = {name: input_.model_dump() for name, input_ in component._inputs.items()}
+    monkeypatch.setattr(
+        "lfx.components.llm_operations.llm_conditional_router.handle_model_input_update",
+        lambda _component, build_config, *_args, **_kwargs: build_config,
+    )
+    decision_config = component.update_build_config(config, "Decision Model", "routing_mode")
+    assert decision_config["custom_prompt"]["value"] == "Use {routes} for {input_text}"
+    assert decision_config["model"]["value"] == [{"provider": "Test", "name": "llm"}]
+    assert not decision_config["custom_prompt"]["show"]
+    assert not decision_config["api_key"]["show"]
+    assert decision_config["minimum_probability"]["required"]
+    llm_config = component.update_build_config(decision_config, "Language Model", "routing_mode")
+    assert llm_config["custom_prompt"]["value"] == "Use {routes} for {input_text}"
+    assert llm_config["custom_prompt"]["show"]
+    assert llm_config["api_key"]["show"]
+    assert not llm_config["minimum_probability"]["required"]
+
+
+def test_optional_float_threshold_roundtrip_preserves_blank_and_legacy_default():
+    from lfx.inputs.inputs import FloatInput, instantiate_input
+
+    for value in (None, "", "  "):
+        threshold = FloatInput(name="minimum_probability", value=value, preserve_empty=True)
+        serialized = threshold.to_dict()
+        restored = instantiate_input(serialized.pop("_input_type"), serialized)
+        assert restored.value is None
+        restored.value = 0
+        assert restored.value == 0
+        restored.value = value
+        assert restored.value is None
+        assert FloatInput(name="legacy", value=value).value == 0
+
+
+@pytest.mark.parametrize(("mode", "expected"), [("Decision Model", ("perplexity",)), ("Language Model", ("openai",))])
+def test_provider_policy_only_checks_active_selection(mode, expected):
+    component = SmartRouterComponent()
+    parameters = {
+        "routing_mode": mode,
+        "model": [{"provider": "OpenAI", "name": "llm"}],
+        "decision_model": [{"provider": "Perplexity", "name": "decider"}],
+    }
+    assert component._selected_model_provider_policy_ids(parameters) == expected
+    assert "model" in parameters
+    assert "decision_model" in parameters
+
+
+async def test_active_provider_denial_cannot_fall_back_to_else(monkeypatch):
+    from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+    component = SmartRouterComponent()
+    component.set(
+        routing_mode="Decision Model",
+        model=[{"provider": "OpenAI", "name": "llm"}],
+        decision_model=[{"provider": "Perplexity", "name": "decider"}],
+        evaluation_error_action="Route to Else",
+    )
+    seen = []
+
+    class Policy:
+        def require(self, provider):
+            seen.append(provider)
+            msg = "Decision provider denied before credentials"
+            raise PermissionError(msg)
+
+    async def policy(**_kwargs):
+        return Policy()
+
+    monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", policy)
+    with pytest.raises(PermissionError, match="before credentials"):
+        await component.arequire_model_provider_policy(ModelProviderPolicyPurpose.USE)
+    assert seen == ["perplexity"]

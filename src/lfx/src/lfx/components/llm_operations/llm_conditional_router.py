@@ -1,5 +1,14 @@
+from collections.abc import Mapping
+from math import isfinite
 from typing import Any
 
+from lfx.base.models.decisions.runtime import evaluate_decision
+from lfx.base.models.decisions.schema import (
+    DecisionConfigurationError,
+    DecisionEvaluationError,
+    DecisionOption,
+    DecisionRequest,
+)
 from lfx.base.models.unified_models import (
     get_llm,
     handle_model_input_update,
@@ -7,6 +16,8 @@ from lfx.base.models.unified_models import (
 from lfx.custom import Component
 from lfx.io import (
     BoolInput,
+    DropdownInput,
+    FloatInput,
     MessageInput,
     MessageTextInput,
     ModelInput,
@@ -31,8 +42,45 @@ class SmartRouterComponent(Component):
         self._matched_category = None
         self._categorization_result: str | None = None
         self._excluded_outputs: set[str] = set()
+        self._decision_evidence: dict | None = None
 
     inputs = [
+        DropdownInput(
+            name="routing_mode",
+            display_name="Routing Mode",
+            options=["Language Model", "Decision Model"],
+            value="Language Model",
+            real_time_refresh=True,
+        ),
+        ModelInput(
+            name="decision_model",
+            display_name="Decision Model",
+            model_type="decision",
+            show=False,
+            real_time_refresh=True,
+        ),
+        MultilineInput(
+            name="decision_question",
+            display_name="Decision Question",
+            value="Which route best matches the input?",
+            info="Instructions for the decision model. Additional Instructions apply only to Language Model mode.",
+            show=False,
+        ),
+        FloatInput(
+            name="minimum_probability",
+            preserve_empty=True,
+            display_name="Minimum Probability",
+            info="Required in decision mode, from 0 to 1. A route can override this threshold.",
+            show=False,
+        ),
+        DropdownInput(
+            name="evaluation_error_action",
+            display_name="Evaluation Error Action",
+            options=["Stop with error", "Route to Else"],
+            value="Stop with error",
+            show=False,
+            advanced=True,
+        ),
         ModelInput(
             name="model",
             display_name="Language Model",
@@ -61,6 +109,13 @@ class SmartRouterComponent(Component):
                 "and optionally a custom output value."
             ),
             table_schema=[
+                {
+                    "name": "minimum_probability",
+                    "display_name": "Minimum Probability (Optional)",
+                    "type": "float",
+                    "description": "Decision mode only: override the router threshold (0 to 1).",
+                    "edit_mode": EditMode.INLINE,
+                },
                 {
                     "name": "route_category",
                     "display_name": "Route Name",
@@ -135,8 +190,35 @@ class SmartRouterComponent(Component):
 
     outputs: list[Output] = []
 
+    def _selected_model_provider_policy_ids(self, parameters: Mapping[str, Any] | None = None) -> tuple[str, ...]:
+        effective = dict(parameters if parameters is not None else self._parameters)
+        mode = effective.get("routing_mode", getattr(self, "routing_mode", "Language Model"))
+        if mode not in {"Language Model", "Decision Model"}:
+            msg = "Unknown routing mode."
+            raise DecisionConfigurationError(msg)
+        effective.pop("model" if mode == "Decision Model" else "decision_model", None)
+        return super()._selected_model_provider_policy_ids(effective)
+
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
+        decision_mode = (
+            field_value if field_name == "routing_mode" else getattr(self, "routing_mode", "Language Model")
+        ) == "Decision Model"
+        for name in ("decision_model", "decision_question", "minimum_probability", "evaluation_error_action"):
+            if name in build_config:
+                build_config[name]["show"] = decision_mode
+                build_config[name]["required"] = decision_mode
+        # The API key overrides the Language Model's credentials only; decision
+        # credentials come from that provider's own settings.
+        for name in ("model", "api_key", "custom_prompt"):
+            if name in build_config:
+                build_config[name]["show"] = not decision_mode
+        if "model" in build_config:
+            build_config["model"]["required"] = not decision_mode
+        if decision_mode:
+            return handle_model_input_update(
+                self, build_config, field_value, field_name, model_field_name="decision_model"
+            )
         return handle_model_input_update(self, build_config, field_value, field_name)
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
@@ -179,6 +261,9 @@ class SmartRouterComponent(Component):
         # Return cached result if available
         if self._categorization_result is not None:
             return self._categorization_result
+
+        if getattr(self, "routing_mode", "Language Model") == "Decision Model":
+            return self._get_decision_categorization()
 
         categories = getattr(self, "routes", [])
         input_text = getattr(self, "input_text", "")
@@ -246,6 +331,110 @@ class SmartRouterComponent(Component):
 
         return self._categorization_result
 
+    @staticmethod
+    def _validate_probability(value: Any) -> float:
+        if isinstance(value, bool) or not isinstance(value, int | float) or not isfinite(value) or not 0 <= value <= 1:
+            msg = "Minimum probability must be a number between 0 and 1."
+            raise DecisionConfigurationError(msg)
+        return float(value)
+
+    def _validate_decision_graph(self) -> None:
+        if (
+            not self.enable_else_output
+            or self._vertex is None
+            or not any(
+                edge.source_handle and edge.source_handle.name == "default_result"
+                for edge in self._vertex.outgoing_edges
+            )
+        ):
+            msg = "Decision mode requires an enabled, connected Else output."
+            raise DecisionConfigurationError(msg)
+
+    def _get_decision_categorization(self) -> str:
+        self._validate_decision_graph()
+        threshold = self._validate_probability(self.minimum_probability)
+        if self.evaluation_error_action not in {"Stop with error", "Route to Else"}:
+            msg = "Unknown evaluation error action."
+            raise DecisionConfigurationError(msg)
+        options = tuple(
+            DecisionOption(
+                id=f"category_{i + 1}_result",
+                label=row.get("route_category", ""),
+                description=row.get("route_description", ""),
+            )
+            for i, row in enumerate(self.routes)
+        )
+        thresholds = {
+            option.id: (
+                threshold
+                if row.get("minimum_probability") in (None, "")
+                else self._validate_probability(row["minimum_probability"])
+            )
+            for option, row in zip(options, self.routes, strict=True)
+        }
+        request = DecisionRequest(
+            kind="choice", question=self.decision_question, context=self.input_text, options=options
+        )
+        evidence = {
+            "options": [option.model_dump() for option in options],
+            "minimum_probability": threshold,
+            "route_thresholds": thresholds,
+            "activated_branch": None,
+            "error_action": self.evaluation_error_action,
+        }
+        self._decision_evidence = evidence
+        try:
+            self._categorization_result = self._apply_decision(request, options, thresholds, evidence)
+        finally:
+            # Any exception leaves the result unset, so a stopped build never activates Else.
+            if self._categorization_result == "":
+                evidence["activated_branch"] = "default_result"
+            self.log(self._sanitize_secret_values(evidence), name="Decision evidence")
+        return self._categorization_result
+
+    def _apply_decision(
+        self, request: DecisionRequest, options: tuple[DecisionOption, ...], thresholds: dict, evidence: dict
+    ) -> str:
+        """Return the accepted route label, or "" for Else; raise when the policy says stop."""
+        stop = self.evaluation_error_action == "Stop with error"
+        try:
+            # Never forward the Language Model's API key to a decision provider.
+            result = evaluate_decision(request, model=self.decision_model, user_id=self.user_id)
+        except DecisionEvaluationError as exc:
+            evidence.update(reason="evaluation_error", error={"category": type(exc).__name__, "message": str(exc)})
+            if stop:
+                raise
+            return ""
+        evidence["result"] = result.model_dump(exclude_none=True)
+        if result.status == "refusal":
+            evidence["reason"] = "refusal"
+            if stop:
+                msg = "The decision provider refused the evaluation."
+                raise DecisionEvaluationError(msg)
+            return ""
+        top_probability = max(result.probabilities.values())
+        winners = [option_id for option_id, p in result.probabilities.items() if p == top_probability]
+        if len(winners) != 1:
+            evidence["reason"] = "tied_top_probability"
+            return ""
+        winner = winners[0]
+        evidence.update(selected_outcome=winner, applied_threshold=thresholds[winner])
+        if top_probability < thresholds[winner]:
+            evidence["reason"] = "below_minimum_probability"
+            return ""
+        evidence.update(reason="accepted", activated_branch=winner)
+        return next(option.label for option in options if option.id == winner)
+
+    def _build_artifact(self, result):
+        artifact = super()._build_artifact(result)
+        if self._decision_evidence is not None:
+            artifact["raw"] = {
+                "message": artifact["raw"],
+                "decision": self._sanitize_secret_values(self._decision_evidence),
+            }
+            artifact["type"] = "object"
+        return artifact
+
     def _pre_run_setup(self) -> None:
         """Reset per-run routing state before each build.
 
@@ -255,6 +444,9 @@ class SmartRouterComponent(Component):
         self._matched_category = None
         self._categorization_result = None
         self._excluded_outputs = set()
+        self._decision_evidence = None
+        if getattr(self, "routing_mode", "Language Model") == "Decision Model":
+            self._validate_decision_graph()
 
     def _deactivate_branches(self, output_names: list[str]) -> None:
         """Deactivate the given output branches so their downstream nodes do not execute.
