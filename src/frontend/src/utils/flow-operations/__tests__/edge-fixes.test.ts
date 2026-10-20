@@ -75,6 +75,7 @@ describe("edgeFixes", () => {
   });
 
   it.each(editorCases.edge_fixes)("$name", (testCase) => {
+    expect(testCase.rule).toBeTruthy();
     expect(
       edgeFixes(testCase.read as JsonObject[], testCase.shown as JsonObject[]),
     ).toEqual(testCase.fixes);
@@ -98,6 +99,7 @@ describe("fixesForEdges", () => {
   });
 
   it.each(editorCases.fixes_for_edges)("$name", (testCase) => {
+    expect(testCase.rule).toBeTruthy();
     expect(
       fixesForEdges(
         testCase.fixes as FlowOperation[],

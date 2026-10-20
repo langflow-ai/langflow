@@ -267,12 +267,17 @@ describe("buildHistoryTimeline", () => {
 describe("playback steps back and forth", () => {
   const document = propertyCases as unknown as {
     base: FlowGraph;
-    sequences: { name: string; transactions: FlowOperation[][] }[];
+    sequences: {
+      name: string;
+      rule?: string;
+      transactions: FlowOperation[][];
+    }[];
   };
 
   it.each(document.sequences.map((s) => [s.name, s]))(
     "%s: every revision, in any order, is the forward replay",
     (_name, sequence) => {
+      expect(sequence.rule).toBeTruthy();
       const operations = sequence.transactions.flat();
       const expected = [canonical(document.base)];
       let graph = document.base;
@@ -322,6 +327,7 @@ describe("playback steps back and forth", () => {
 describe("inverse operations", () => {
   type GoldenCase = {
     name: string;
+    rule?: string;
     base: FlowGraph;
     operations: FlowOperation[];
     error?: string;
@@ -341,6 +347,7 @@ describe("inverse operations", () => {
   }
 
   it.each(successes)("undo %s", (_name, testCase) => {
+    expect(testCase.rule).toBeTruthy();
     const { flowData, inverseOperations } = applyFlowOperations(
       cloneDeep(testCase.base),
       cloneDeep(testCase.operations),

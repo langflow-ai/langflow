@@ -16,6 +16,7 @@ import { keyedListAt, NODE_SCHEMA } from "../schema";
 
 type GoldenCase = {
   name: string;
+  rule?: string;
   base: unknown;
   operations: FlowOperation[];
   expected?: unknown;
@@ -26,6 +27,7 @@ type GoldenCase = {
 
 type MergeCase = {
   name: string;
+  rule?: string;
   transactions: Record<string, FlowOperation[]>;
   order: string[];
   outcomes: Record<string, "applied" | { error: string; code: string }>;
@@ -34,6 +36,7 @@ type MergeCase = {
 
 type PropertySequence = {
   name: string;
+  rule?: string;
   transactions: FlowOperation[][];
   graph_hash: string;
 };
@@ -104,6 +107,7 @@ describe("applyFlowOperations matches the server engine", () => {
   it.each((golden as { cases: GoldenCase[] }).cases.map((c) => [c.name, c]))(
     "%s",
     (_name, testCase) => {
+      expect(testCase.rule).toBeTruthy();
       const base = cloneDeep(testCase.base);
 
       if (testCase.error) {
@@ -138,6 +142,7 @@ describe("transactions applied in order merge as on the server", () => {
   };
 
   it.each(document.cases.map((c) => [c.name, c]))("%s", (_name, testCase) => {
+    expect(testCase.rule).toBeTruthy();
     let graph = cloneDeep(document.base);
     const outcomes: MergeCase["outcomes"] = {};
     for (const name of testCase.order) {
@@ -161,7 +166,7 @@ describe("transactions applied in order merge as on the server", () => {
   });
 });
 
-describe("random transactions replay to the engine's hashes", () => {
+describe("the fixed property sequences replay to their hashes", () => {
   const document = propertyCases as unknown as {
     base: FlowGraph;
     sequences: PropertySequence[];
@@ -170,6 +175,7 @@ describe("random transactions replay to the engine's hashes", () => {
   it.each(document.sequences.map((s) => [s.name, s]))(
     "%s",
     (_name, sequence) => {
+      expect(sequence.rule).toBeTruthy();
       let graph = cloneDeep(document.base);
       for (const transaction of sequence.transactions) {
         graph = applyFlowOperations(graph, cloneDeep(transaction)).flowData;
