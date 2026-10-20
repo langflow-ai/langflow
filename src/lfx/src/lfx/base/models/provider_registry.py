@@ -801,6 +801,12 @@ def _load_registered_catalog(provider: str) -> tuple[dict[str, Any], ...]:
                 f"{model_type!r} at row {index}"
             )
             raise ValueError(msg)
+        if model_type != "decision" and spec.model_class is None and not spec.model_class_name():
+            msg = (
+                f"Catalog loader for provider {provider!r} returned a {model_type!r} model at row {index}, "
+                "but the provider has no model class; only decision models may omit mapping.model_class"
+            )
+            raise ValueError(msg)
         key = (model_type, normalized_name)
         if key in seen:
             msg = f"Catalog loader for provider {provider!r} returned duplicate model identity {key!r}"

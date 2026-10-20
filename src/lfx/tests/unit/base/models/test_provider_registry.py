@@ -773,3 +773,19 @@ def test_decision_only_descriptor_does_not_require_chat_model_class():
             }
         ]
     ]
+
+
+def fake_chat_catalog_without_model_class():
+    return [{"name": "fake-chat", "model_type": "llm"}]
+
+
+def test_catalog_only_descriptor_cannot_offer_chat_models():
+    register_provider(
+        ProviderSpec(
+            name="FakeCatalogOnlyChat",
+            metadata={"icon": "Bot", "variables": []},
+            catalog_loader=f"{__name__}:fake_chat_catalog_without_model_class",
+        )
+    )
+    with pytest.raises(ValueError, match="only decision models may omit"):
+        provider_registry.validate_registered_provider_catalogs(["FakeCatalogOnlyChat"])
