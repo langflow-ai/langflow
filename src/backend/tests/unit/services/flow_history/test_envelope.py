@@ -26,7 +26,7 @@ BOB = UUID(int=2)
 
 
 def _recorded(revision: int, request_id: UUID, actor: UUID, cause: str | None = None) -> RecordedOperation:
-    operation = parse_flow_operation({"type": "update_metadata", "fields": {"name": f"r{revision}"}})
+    operation = parse_flow_operation({"type": "delete_nodes", "ids": [f"n{revision}"]})
     return RecordedOperation(
         revision=revision, actor_user_id=actor, request_id=request_id, operation=operation, cause=cause
     )

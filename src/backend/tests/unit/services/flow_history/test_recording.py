@@ -381,16 +381,15 @@ async def test_rows_respect_the_operation_count_limit(client: AsyncClient, logge
     row_limits.flow_op_log_row_ops_limit = 2
     flow = await _create_flow(client, logged_in_headers, _graph(_node("a"), _node("gone")))
     target = _graph(_node("a", "changed"), _node("b"), edges=[_edge("e", "a", "b")])
-    target["description"] = "now described"
 
     await _patch(client, logged_in_headers, flow["id"], data=target)
 
     rows = await _rows(flow["id"])
-    assert [(row.start_revision, row.end_revision) for row in rows] == [(1, 2), (3, 4), (5, 5)]
+    assert [(row.start_revision, row.end_revision) for row in rows] == [(1, 2), (3, 4)]
     _assert_contiguous(rows)
     assert all(row.request_ids == rows[0].request_ids for row in rows)
     assert len(rows[0].request_ids) == 1
-    assert graphs_equal(await _reconstruct(flow["id"], 5), target)
+    assert graphs_equal(await _reconstruct(flow["id"], 4), target)
 
 
 async def test_a_large_paste_is_split_across_rows_by_size(client: AsyncClient, logged_in_headers, row_limits):
