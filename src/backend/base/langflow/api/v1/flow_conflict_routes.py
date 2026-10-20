@@ -6,6 +6,7 @@ before this feature, and these endpoints share no state with it.
 
 from __future__ import annotations
 
+import copy
 from typing import Annotated
 from uuid import UUID
 
@@ -24,8 +25,11 @@ from langflow.api.v1.flow_conflict import (
 from langflow.api.v1.flow_fork import FlowFork, build_fork_payload
 from langflow.api.v1.flows import _validate_catalog_policy_for_write
 from langflow.api.v1.flows_helpers import _new_flow, _patch_flow
+from langflow.services.database.models.flow.guards import lock_flow_for_update
 from langflow.services.database.models.flow.model import FlowRead, FlowUpdate, FlowWriteRead
+from langflow.services.database.models.flow_version.crud import create_flow_version_entry
 from langflow.services.deps import get_catalog_policy_service, get_storage_service
+from langflow.services.flow_history.recorder import flow_history_enabled
 from langflow.services.storage.service import StorageService
 
 router = APIRouter(prefix="/flows", tags=["Flows"])
@@ -108,9 +112,11 @@ async def overwrite_flow(
     the whole feature exists to close. So the meaning is "replace the version I
     just looked at", and a flow that moved again is refused with a fresh 409.
 
-    Nothing is archived as a copy. The replaced graph is the revision just before
-    the overwrite's operations, recoverable from the flow's history while it is
-    retained, and the operations that produced it keep their own authors.
+    With flow history on, nothing is archived as a copy. The replaced graph is
+    the revision just before the overwrite's operations, recoverable from the
+    flow's history while it is retained, and the operations that produced it
+    keep their own authors. With it off, the replaced graph is kept as a
+    version, as before history existed.
     """
     expected = parse_if_match(if_match)
     if expected is None:
@@ -123,8 +129,12 @@ async def overwrite_flow(
         )
     _validate_catalog_policy_for_write(overwrite.data, snapshot=get_catalog_policy_service().snapshot)
 
+    archive = not flow_history_enabled()
+    if archive:
+        await lock_flow_for_update(session, flow)
+        replaced_data, replaced_by = copy.deepcopy(flow.data), flow.last_modified_by
     await persist_and_strip_mcp_secrets(overwrite.data, current_user.id, session, flow_id=flow.id)
-    return await _patch_flow(
+    written = await _patch_flow(
         session=session,
         db_flow=flow,
         flow=FlowUpdate(data=overwrite.data),
@@ -132,3 +142,14 @@ async def overwrite_flow(
         storage_service=storage_service,
         expected_version_token=expected,
     )
+    if archive:
+        # After the write, so a refused overwrite archives nothing.
+        await create_flow_version_entry(
+            session,
+            flow_id=flow.id,
+            user_id=flow.user_id,
+            data=replaced_data,
+            description="Replaced by a newer edit",
+            saved_by_user_id=replaced_by,
+        )
+    return written

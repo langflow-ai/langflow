@@ -283,6 +283,13 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
         default=0,
         sa_column=Column(BigInteger, nullable=False, server_default=text("0")),
     )
+    # Set by a graph write made while flow history is off, after history had
+    # started. The next recorded write starts the history again from a new
+    # checkpoint, because ``data`` no longer matches ``current_revision``.
+    history_paused: bool = Field(
+        default=False,
+        sa_column=Column(Boolean, nullable=False, server_default=false()),
+    )
 
     def to_data(self):
         serialized = self.model_dump()

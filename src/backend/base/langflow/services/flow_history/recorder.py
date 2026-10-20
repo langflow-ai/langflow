@@ -30,6 +30,12 @@ the revision head safe to extend across workers.
    the graph the history holds: operations were recorded, or a repair
    rewrote the stored graph. A save that only changes view state does not
    rotate it, so it never makes other open editors stale.
+
+With flow history off (``flow_history_enabled``, the default), a graph write
+behaves as before history existed and records nothing. It marks a flow whose
+history had started (``history_paused``), and that flow's next recorded write
+starts its history again from a new checkpoint, one past the revisions
+recorded before, which stay readable.
 """
 
 from __future__ import annotations
@@ -124,6 +130,11 @@ def normalize_absent_graph(flow_data: Any) -> Any:
     return flow_data
 
 
+def flow_history_enabled() -> bool:
+    """Whether graph writes are recorded in the flow's history."""
+    return get_settings_service().settings.flow_history_enabled
+
+
 async def write_flow_graph(
     session: AsyncSession,
     flow: Flow,
@@ -153,6 +164,12 @@ async def write_flow_graph(
         flow.data = normalize_absent_graph(target)
         return result
 
+    if not flow_history_enabled():
+        await _write_without_history(
+            session, flow, target, actor_id=actor_id, expected_version_token=expected_version_token
+        )
+        return result
+
     if (
         expected_version_token is not None
         and flow.version_token is not None
@@ -170,7 +187,10 @@ async def write_flow_graph(
         )
 
     stored_repaired = False
-    started = flow.latest_revision > 0 or await has_anchor(session, flow.id)
+    # A paused flow's stored graph was written without history, so its history
+    # starts again as if it had none, and its stored graph is checked like one.
+    resuming = flow.history_paused
+    started = not resuming and (flow.latest_revision > 0 or await has_anchor(session, flow.id))
     if started:
         if not await projection_matches(session, flow):
             if not repair_mismatch:
@@ -227,7 +247,11 @@ async def write_flow_graph(
         return result
 
     if not started:
-        session.add(_checkpoint(flow, base, revision=0))
+        # Revision 0, or one past the revisions recorded before history paused.
+        anchor = flow.latest_revision + 1 if resuming else 0
+        session.add(checkpoint_system(flow, base, revision=anchor))
+        flow.latest_revision = flow.current_revision = anchor
+        flow.history_paused = False
 
     recorded = _sequence(
         derived.operations,
@@ -255,6 +279,12 @@ async def write_flow_graph(
     result.end_revision = recorded[-1].revision
     result.latest_revision = flow.latest_revision
     result.current_revision = flow.current_revision
+
+    # Imported here: maintenance builds on this module.
+    from langflow.services.flow_history.maintenance import needs_maintenance, request_maintenance
+
+    if await needs_maintenance(session, flow):
+        request_maintenance(session, flow.id)
     return result
 
 
@@ -285,6 +315,44 @@ def refuse_unreadable_graph(flow_data: Any) -> None:
         raise FlowGraphInvalidError([], graph="submitted", reason=str(exc)) from exc
 
 
+async def _write_without_history(
+    session: AsyncSession,
+    flow: Flow,
+    target: Any,
+    *,
+    actor_id: UUID,
+    expected_version_token: UUID | None,
+) -> None:
+    """Write the graph as Langflow did before flow history: nothing is recorded or checked against it.
+
+    As in multi-edit safety, only a graph that changed takes the writer's
+    turn: its ``If-Match`` must name the current token, and the token rotates.
+    Only the JSON limits are checked, as when a flow is created, so a graph
+    that history could never read is not stored while history is off.
+    """
+    if target == flow.data:
+        return
+    refuse_unreadable_graph(target)
+    if (
+        expected_version_token is not None
+        and flow.version_token is not None
+        and flow.version_token != expected_version_token
+    ):
+        raise FlowVersionConflictError(
+            flow.id,
+            expected=expected_version_token,
+            current=flow.version_token,
+            author_id=flow.last_modified_by,
+            author_name=await _username(session, flow.last_modified_by),
+            modified_at=flow.updated_at,
+        )
+    if not flow.history_paused and (flow.latest_revision > 0 or await has_anchor(session, flow.id)):
+        flow.history_paused = True
+    flow.data = target
+    flow.version_token = uuid4()
+    flow.last_modified_by = actor_id
+
+
 async def _username(session: AsyncSession, user_id: UUID | None) -> str | None:
     if user_id is None:
         return None
@@ -312,7 +380,12 @@ async def checkpoint_fields(session: AsyncSession, flow: Flow) -> dict[str, Any]
     the flow's current revision; otherwise, or before history starts, it is a
     plain snapshot and replay never starts from it.
     """
-    if flow.user_id is None or not (flow.latest_revision > 0 or await has_anchor(session, flow.id)):
+    if (
+        flow.user_id is None
+        or not flow_history_enabled()
+        or flow.history_paused
+        or not (flow.latest_revision > 0 or await has_anchor(session, flow.id))
+    ):
         return {}
     try:
         if not await projection_matches(session, flow):
@@ -322,7 +395,7 @@ async def checkpoint_fields(session: AsyncSession, flow: Flow) -> dict[str, Any]
         return {}
 
 
-def _checkpoint(flow: Flow, flow_data: dict[str, Any], *, revision: int) -> FlowVersion:
+def checkpoint_system(flow: Flow, flow_data: dict[str, Any], *, revision: int) -> FlowVersion:
     """Build a system checkpoint: no version number, never listed or pruned."""
     return FlowVersion(
         flow_id=flow.id,
