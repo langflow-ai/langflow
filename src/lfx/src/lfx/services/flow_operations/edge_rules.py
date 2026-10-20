@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING, Any, NoReturn
 
 from lfx.services.flow_operations.canonical import values_equal
 from lfx.services.flow_operations.exceptions import FlowDataValidationError, FlowOperationValidationError
+from lfx.services.flow_operations.limits import broken_limit
 from lfx.services.flow_operations.schema import load_node_schema
 
 if TYPE_CHECKING:
@@ -122,7 +123,8 @@ def _parse_handle(handle: Any) -> dict[str, Any] | None:
     """Return the object a handle string encodes, or None when it encodes none.
 
     The string is parsed as strict JSON, as JavaScript's ``JSON.parse`` reads
-    it: the ``NaN``, ``Infinity`` and ``-Infinity`` tokens do not parse.
+    it: the ``NaN``, ``Infinity`` and ``-Infinity`` tokens do not parse. A
+    handle that breaks the JSON limits (``limits.py``) encodes none either.
     """
     if not isinstance(handle, str):
         return None
@@ -130,7 +132,7 @@ def _parse_handle(handle: Any) -> dict[str, Any] | None:
         parsed = json.loads(handle.replace(HANDLE_QUOTE, '"'), parse_constant=_reject_constant)
     except ValueError:
         return None
-    return parsed if isinstance(parsed, dict) else None
+    return parsed if isinstance(parsed, dict) and broken_limit(parsed) is None else None
 
 
 def check_edge(state: GraphState, edge: dict[str, Any]) -> Handles:

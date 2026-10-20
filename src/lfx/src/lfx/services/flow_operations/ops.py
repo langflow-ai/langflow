@@ -7,6 +7,7 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from lfx.services.flow_operations.exceptions import FlowOperationValidationError
+from lfx.services.flow_operations.limits import check_operation_limits
 
 
 class AddNodesOp(BaseModel):
@@ -121,15 +122,27 @@ def normalize_requested_ops(operations: list[FlowOperation]) -> list[FlowOperati
 
 
 def parse_flow_operations(operations: list[dict[str, Any]]) -> list[FlowOperation]:
-    """Parse raw operation payloads at API/transport boundaries."""
+    """Parse raw operation payloads at API/transport boundaries.
+
+    The list must meet the JSON limits (``limits.py``); it is level 1 of its nesting.
+    """
+    check_operation_limits(operations)
     if not isinstance(operations, list):
         msg = "operations must be a list"
         raise FlowOperationValidationError(msg)
-    return [parse_flow_operation(operation) for operation in operations]
+    return [_parse_operation(operation) for operation in operations]
 
 
 def parse_flow_operation(operation: dict[str, Any]) -> FlowOperation:
-    """Parse a single raw operation payload at API/transport boundaries."""
+    """Parse a single raw operation payload at API/transport boundaries.
+
+    The operation must meet the JSON limits (``limits.py``); it is level 1 of its nesting.
+    """
+    check_operation_limits(operation)
+    return _parse_operation(operation)
+
+
+def _parse_operation(operation: dict[str, Any]) -> FlowOperation:
     if not isinstance(operation, dict):
         msg = "operation must be a dict"
         raise FlowOperationValidationError(msg)
