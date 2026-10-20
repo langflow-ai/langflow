@@ -1466,7 +1466,11 @@ async def test_replacement_by_non_owner_with_literal_mcp_secret_is_rejected(
             )
         )
         await session.commit()
-    login = await client.post("api/v1/login", data={"username": other_username, "password": other_password})
+    login_data = {
+        "username": other_username,
+        "password": other_password,
+    }
+    login = await client.post("api/v1/login", data=login_data)
     assert login.status_code == 200, login.text
     other_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
 
