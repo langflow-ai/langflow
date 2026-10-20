@@ -64,6 +64,25 @@ async def test_auth_cookie_lifecycle(client, active_user, monkeypatch, prefix, a
         assert (await browser.post(f"{path}api/v1/refresh")).status_code == 401
 
 
+@pytest.mark.parametrize("prefix", ["", "/langflow", "/tools/langflow/"])
+async def test_store_api_key_cookie_matches_login_cookie(client, active_user, monkeypatch, prefix):  # noqa: ARG001
+    path = f"{prefix.rstrip('/')}/"
+    app = _instance(monkeypatch, prefix)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as browser:
+        response = await browser.post(
+            f"{path}api/v1/login",
+            data={"username": active_user.username, "password": "testpassword"},  # pragma: allowlist secret
+        )
+        assert response.status_code == 200
+
+        response = await browser.post(
+            f"{path}api/v1/api_key/store",
+            json={"api_key": "synthetic-store-key"},  # pragma: allowlist secret
+        )
+        assert response.status_code == 200, response.text
+        _assert_cookie_paths(response, path, _cookie_names(prefix, {"apikey_tkn_lflw"}))
+
+
 async def test_sibling_instances_keep_separate_sessions(client, active_user, monkeypatch):  # noqa: ARG001
     app = FastAPI()
     first, second = "/langflow-a", "/tools/langflow-b"
