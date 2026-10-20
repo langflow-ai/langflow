@@ -108,6 +108,17 @@ describe("FloatComponent blank values", () => {
     expect(defaultProps.handleOnNewValue).toHaveBeenCalledWith({ value: "" });
   });
 
+  it("should_render_an_unset_preserve_empty_value_as_blank", () => {
+    render(
+      <FloatComponent
+        {...defaultProps}
+        value={null as unknown as number}
+        preserveEmpty
+      />,
+    );
+    expect(screen.getByTestId("float-input")).toBeInTheDocument();
+  });
+
   it("should_turn_a_cleared_field_into_zero_without_preserve_empty", () => {
     render(<FloatComponent {...defaultProps} value={0.7} />);
     const input = screen.getByTestId("float-input");

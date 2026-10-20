@@ -64,6 +64,9 @@ export function validateModelValue(
 ): APITemplateType {
   const modelField = template[modelFieldKey];
   if (!modelField) return template;
+  // Never swap or clear a saved decision model: another provider would receive the
+  // flow's messages. An unavailable one fails clearly when the flow runs.
+  if (modelField.model_type === "decision") return template;
 
   const options = modelField.options || [];
   const currentValue = modelField.value;

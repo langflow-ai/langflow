@@ -31,7 +31,8 @@ export default function FloatComponent({
   const max = rangeSpec?.max;
 
   // Local state for input value
-  const [localValue, setLocalValue] = useState<string>(value.toString());
+  // A preserve_empty field holds null when unset; the Controls table passes it through as is.
+  const [localValue, setLocalValue] = useState<string>(String(value ?? ""));
 
   // Clear component state
   useEffect(() => {
@@ -42,7 +43,7 @@ export default function FloatComponent({
 
   // Update local value when prop changes
   useEffect(() => {
-    setLocalValue(value.toString());
+    setLocalValue(String(value ?? ""));
   }, [value]);
 
   const [cursor, setCursor] = useState<number | null>(null);
