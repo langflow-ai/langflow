@@ -4,6 +4,7 @@ import type {
   ModelOptionType,
 } from "@/types/api";
 import type { AllNodeType } from "@/types/flow";
+import { withStoredRefreshFlag } from "@/utils/template-refresh-flag";
 
 /** Checks if a node has a model-type input field */
 export function isModelNode(node: AllNodeType): boolean {
@@ -37,7 +38,7 @@ export function buildRefreshPayload(
   };
 }
 
-/** Creates an updated node with new template data */
+/** Creates an updated node with new template data, keeping the node's own `is_refresh` */
 export function createUpdatedNode(
   currentNode: AllNodeType,
   updatedTemplate: APITemplateType,
@@ -49,7 +50,10 @@ export function createUpdatedNode(
       ...currentNode.data,
       node: {
         ...currentNode.data.node,
-        template: updatedTemplate,
+        template: withStoredRefreshFlag(
+          currentNode.data.node?.template,
+          updatedTemplate,
+        ),
         outputs: updatedOutputs ?? currentNode.data.node.outputs,
       },
     },

@@ -276,7 +276,7 @@ describe("createUpdatedNode", () => {
     };
 
     const result = createUpdatedNode(currentNode, newTemplate);
-    expect(result.data.node.template).toBe(newTemplate);
+    expect(result.data.node.template).toEqual(newTemplate);
     expect(result.id).toBe(currentNode.id);
   });
 
@@ -1361,6 +1361,57 @@ describe("refreshAllModelInputs — disconnected provider", () => {
       expect.objectContaining({ name: "gpt-5.6", provider: "OpenAI" }),
     ]);
     expect(template.api_key.show).toBe(true);
+  });
+});
+
+describe("refreshAllModelInputs — is_refresh", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockModelProviders = [];
+    mockComponentsToUpdate = [];
+    mockAllowCustomComponents = true;
+    mockTemplates = {};
+    // The backend sends back the template it was sent, is_refresh included.
+    (api.post as jest.Mock).mockImplementation(async (_url, body) => ({
+      data: { template: body.template },
+    }));
+  });
+
+  // biome-ignore lint/suspicious/noExplicitAny: test node double
+  const savedTemplate = (node: AllNodeType): any => {
+    const [, updater] = mockSetNode.mock.calls[0];
+    // biome-ignore lint/suspicious/noExplicitAny: test node double
+    return (updater(node) as any).data.node.template;
+  };
+
+  it("should keep a restored node's is_refresh in the node that is saved", async () => {
+    // A restore puts the stored graph on the canvas, where the model node
+    // holds is_refresh: false, and refreshes its model inputs as an open does.
+    const restored = createMockModelNode("node-1");
+    // biome-ignore lint/suspicious/noExplicitAny: test node double
+    (restored.data as any).node.template.is_refresh = false;
+    mockNodes = [restored];
+
+    // biome-ignore lint/suspicious/noExplicitAny: test query-client double
+    await refreshAllModelInputs(mockQueryClient as any, {
+      silent: true,
+      origin: "load",
+    });
+
+    expect((api.post as jest.Mock).mock.calls[0][1].template.is_refresh).toBe(
+      true,
+    );
+    expect(savedTemplate(restored).is_refresh).toBe(false);
+  });
+
+  it("should not add is_refresh to a node that has none", async () => {
+    const node = createMockModelNode("node-1");
+    mockNodes = [node];
+
+    // biome-ignore lint/suspicious/noExplicitAny: test query-client double
+    await refreshAllModelInputs(mockQueryClient as any, { silent: true });
+
+    expect(savedTemplate(node)).not.toHaveProperty("is_refresh");
   });
 });
 
