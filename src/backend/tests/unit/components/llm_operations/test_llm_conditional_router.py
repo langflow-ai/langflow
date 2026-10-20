@@ -2,7 +2,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
-from lfx.components.llm_operations.llm_conditional_router import SmartRouterComponent
+from lfx.components.llm_operations.llm_conditional_router import SmartRouterComponent, assign_route_ids
+from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
 
 from tests.base import ComponentTestBaseWithoutClient
@@ -261,3 +262,58 @@ def test_every_field_refresh_keeps_the_route_outputs(field_name):
     )
     node = router.update_outputs({"outputs": []}, field_name, getattr(router, field_name, None))
     assert [output.name for output in node["outputs"]] == ["category_1_result", "category_2_result", "default_result"]
+
+
+def _rows(*route_ids):
+    return [{"route_category": f"Route {i}", "route_id": route_id} for i, route_id in enumerate(route_ids)]
+
+
+@pytest.mark.parametrize(
+    ("rows", "last_number", "expected", "expected_last"),
+    [
+        # A flow saved before route IDs keeps its positional handles.
+        (_rows(None, None, None), 0, ["category_1_result", "category_2_result", "category_3_result"], 3),
+        # Deleting the middle route leaves the others' outputs alone.
+        (_rows("category_1_result", "category_3_result"), 3, ["category_1_result", "category_3_result"], 3),
+        # Deleting the last route and adding one in the same save never reuses its name.
+        (
+            _rows("category_1_result", "category_2_result", None),
+            3,
+            ["category_1_result", "category_2_result", "category_4_result"],
+            4,
+        ),
+        # A copied row gets its own output.
+        (_rows("category_1_result", "category_1_result"), 1, ["category_1_result", "category_2_result"], 2),
+        # Replacing every route still never reuses an old name.
+        (_rows(None, None), 3, ["category_4_result", "category_5_result"], 5),
+        # A malformed ID is replaced, not trusted.
+        (_rows("category_1_result", "default_result"), 1, ["category_1_result", "category_2_result"], 2),
+    ],
+)
+def test_assign_route_ids(rows, last_number, expected, expected_last):
+    keyed, last = assign_route_ids(rows, last_number)
+    assert [row["route_id"] for row in keyed] == expected
+    assert last == expected_last
+    assert assign_route_ids(keyed, last) == (keyed, last), "assignment must be stable"
+
+
+def test_editor_route_edits_keep_every_other_routes_output():
+    """Replays the editor: a load refresh, then one save that deletes a route and adds another."""
+    router = SmartRouterComponent()
+    router.set(enable_else_output=True)
+    build_config = dotdict(router.to_frontend_node()["data"]["node"]["template"])
+    build_config["routes"]["value"] = [{"route_category": name} for name in ("Billing", "Sales", "Support")]
+    build_config = router.update_build_config(build_config, None, "decision_model")
+
+    billing, _sales, support = build_config["routes"]["value"]
+    edited = [billing, support, {"route_category": "Accounts", "route_id": None}]
+    build_config = router.update_build_config(build_config, edited, "routes")
+    node = router.update_outputs({"outputs": [], "template": build_config}, "routes", edited)
+
+    assert [(output.display_name, output.name) for output in node["outputs"]] == [
+        ("Billing", "category_1_result"),
+        ("Support", "category_3_result"),
+        ("Accounts", "category_4_result"),
+        ("Else", "default_result"),
+    ]
+    assert build_config["last_route_number"]["value"] == 4

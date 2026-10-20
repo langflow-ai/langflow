@@ -1,3 +1,4 @@
+import re
 from collections.abc import Mapping
 from math import isfinite
 from typing import Any
@@ -21,6 +22,7 @@ from lfx.io import (
     BoolInput,
     DropdownInput,
     FloatInput,
+    IntInput,
     MessageInput,
     MessageTextInput,
     ModelInput,
@@ -32,6 +34,36 @@ from lfx.io import (
 from lfx.schema.message import Message
 from lfx.schema.table import EditMode
 from lfx.schema.token_usage import extract_usage_from_message
+
+_ROUTE_ID = re.compile(r"category_([1-9][0-9]{0,3})_result")
+
+
+def _route_number(route_id: object) -> int | None:
+    match = _ROUTE_ID.fullmatch(route_id) if isinstance(route_id, str) else None
+    return int(match.group(1)) if match else None
+
+
+def assign_route_ids(routes: list[dict], last_number: int) -> tuple[list[dict], int]:
+    """Give every route a stable output name, so editing routes never moves an edge to another route.
+
+    A row keeps a valid, unique ``route_id``. Rows saved before route IDs existed take their
+    positional names, which match the handles already saved with the flow. Any other row
+    without one, such as a new row or a copy, takes the next number above ``last_number``,
+    so a deleted route's name is never given to a new route.
+    """
+    numbers: list[int | None] = []
+    for row in routes:
+        number = _route_number(row.get("route_id"))
+        numbers.append(number if number not in numbers else None)
+    if last_number == 0 and not any(numbers):
+        numbers = list(range(1, len(routes) + 1))
+    highest = max([last_number, *(number for number in numbers if number)])
+    for i, number in enumerate(numbers):
+        if number is None:
+            highest += 1
+            numbers[i] = highest
+    keyed = [{**row, "route_id": f"category_{number}_result"} for row, number in zip(routes, numbers, strict=True)]
+    return keyed, highest
 
 
 class SmartRouterComponent(Component):
@@ -145,6 +177,14 @@ class SmartRouterComponent(Component):
                     "default": "",
                     "edit_mode": EditMode.POPOVER,
                 },
+                {
+                    "name": "route_id",
+                    "display_name": "Route ID",
+                    "type": "str",
+                    "description": "Set automatically. Keeps this route's connections when other routes change.",
+                    "hidden": True,
+                    "disable_edit": True,
+                },
             ],
             value=[
                 {
@@ -178,6 +218,14 @@ class SmartRouterComponent(Component):
             value=False,
             advanced=True,
             real_time_refresh=True,
+        ),
+        IntInput(
+            name="last_route_number",
+            display_name="Last Route Number",
+            info="Set automatically: the highest route number assigned, so a deleted route's output is never reused.",
+            value=0,
+            show=False,
+            advanced=True,
         ),
         MultilineInput(
             name="custom_prompt",
@@ -218,6 +266,12 @@ class SmartRouterComponent(Component):
                 build_config[name]["show"] = not decision_mode
         if "model" in build_config:
             build_config["model"]["required"] = not decision_mode
+        if "routes" in build_config:
+            rows = field_value if field_name == "routes" else build_config["routes"].get("value")
+            last = (build_config.get("last_route_number") or {}).get("value") or 0
+            build_config["routes"]["value"], last = assign_route_ids(rows or [], last)
+            if "last_route_number" in build_config:
+                build_config["last_route_number"]["value"] = last
         if decision_mode:
             return handle_model_input_update(
                 self, build_config, field_value, field_name, model_field_name="decision_model"
@@ -230,8 +284,13 @@ class SmartRouterComponent(Component):
         # so every field refresh must recreate them or the editor drops the route edges.
         frontend_node["outputs"] = []
 
-        # Get the routes data - either from field_value (if routes field) or from component state
-        routes_data = field_value if field_name == "routes" else getattr(self, "routes", [])
+        # Prefer the template's routes: update_build_config has already given them their IDs.
+        template = frontend_node.get("template") or {}
+        fallback = field_value if field_name == "routes" else getattr(self, "routes", [])
+        routes_data, _ = assign_route_ids(
+            (template.get("routes") or {}).get("value", fallback) or [],
+            (template.get("last_route_number") or {}).get("value", getattr(self, "last_route_number", 0)) or 0,
+        )
 
         # Add a dynamic output for each category - all using the same method
         for i, row in enumerate(routes_data):
@@ -239,7 +298,7 @@ class SmartRouterComponent(Component):
             frontend_node["outputs"].append(
                 Output(
                     display_name=route_category,
-                    name=f"category_{i + 1}_result",
+                    name=row["route_id"],
                     method="process_case",
                     group_outputs=True,
                 )
@@ -366,11 +425,11 @@ class SmartRouterComponent(Component):
         try:
             options = tuple(
                 DecisionOption(
-                    id=f"category_{i + 1}_result",
+                    id=route_id,
                     label=row["route_category"],
                     description=row.get("route_description") or "",
                 )
-                for i, row in enumerate(self.routes)
+                for route_id, row in zip(self._route_ids(), self.routes, strict=True)
             )
             request = DecisionRequest(
                 kind="choice", question=self.decision_question, context=self.input_text, options=options
@@ -463,6 +522,11 @@ class SmartRouterComponent(Component):
         if getattr(self, "routing_mode", "Language Model") == "Decision Model":
             self._validate_decision_graph()
 
+    def _route_ids(self) -> list[str]:
+        """Each route's output name, in route order."""
+        routes, _ = assign_route_ids(getattr(self, "routes", []) or [], getattr(self, "last_route_number", 0) or 0)
+        return [row["route_id"] for row in routes]
+
     def _deactivate_branches(self, output_names: list[str]) -> None:
         """Deactivate the given output branches so their downstream nodes do not execute.
 
@@ -516,9 +580,8 @@ class SmartRouterComponent(Component):
 
             # Deactivate all category outputs except the matched one, plus the default
             # output if present, so only the matched branch continues downstream.
-            outputs_to_deactivate = [
-                f"category_{i + 1}_result" for i in range(len(categories)) if i != matched_category
-            ]
+            route_ids = self._route_ids()
+            outputs_to_deactivate = [route_id for i, route_id in enumerate(route_ids) if i != matched_category]
             enable_else = getattr(self, "enable_else_output", False)
             if enable_else:
                 outputs_to_deactivate.append("default_result")
@@ -526,7 +589,7 @@ class SmartRouterComponent(Component):
 
             route_category = categories[matched_category].get("route_category", f"Category {matched_category + 1}")
             self.status = f"Categorized as {route_category}"
-            matched_output_name = f"category_{matched_category + 1}_result"
+            matched_output_name = route_ids[matched_category]
             if self._current_output and self._current_output != matched_output_name:
                 return Message(text="")
 
@@ -553,7 +616,7 @@ class SmartRouterComponent(Component):
         # No match found: deactivate every category output so none continue downstream.
         # The default/Else output (if enabled) is intentionally left active and handled by
         # default_response.
-        self._deactivate_branches([f"category_{i + 1}_result" for i in range(len(categories))])
+        self._deactivate_branches(self._route_ids())
 
         # Check if else output is enabled
         enable_else = getattr(self, "enable_else_output", False)

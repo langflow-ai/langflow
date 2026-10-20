@@ -82,6 +82,7 @@ class RecordingSink(Component):
 
     def run_sink(self) -> Message:
         self.did_run = True
+        self.received = getattr(self.input_value, "text", self.input_value)
         return Message(text=f"ran:{self._id}")
 
 
@@ -792,3 +793,84 @@ async def test_decision_router_needs_two_routes(monkeypatch):
     router = _connected_router(routes=[{"route_category": "Positive", "route_description": "good"}])
     with pytest.raises(DecisionConfigurationError, match="at least two routes"):
         router._get_categorization()
+
+
+_GAP_ROUTES = [
+    {**_TWO_ROUTES[0], "route_id": "category_1_result"},
+    {**_TWO_ROUTES[1], "route_id": "category_3_result"},
+]
+
+
+class _GapSmartRouter(_StubbedSmartRouter):
+    """Outputs after the middle of three routes was deleted: the survivors keep their IDs."""
+
+    outputs = [
+        Output(display_name="Positive", name="category_1_result", method="process_case", group_outputs=True),
+        Output(display_name="Negative", name="category_3_result", method="process_case", group_outputs=True),
+        Output(display_name="Else", name="default_result", method="default_response", group_outputs=True),
+    ]
+
+
+def _gap_graph(router):
+    graph = Graph()
+    sinks = {name: RecordingSink(_id=name) for name in ("positive", "negative", "else")}
+    graph.add_component(router, "router")
+    for name, sink in sinks.items():
+        graph.add_component(sink, name)
+    graph.add_component_edge("router", ("category_1_result", "input_value"), "positive")
+    graph.add_component_edge("router", ("category_3_result", "input_value"), "negative")
+    graph.add_component_edge("router", ("default_result", "input_value"), "else")
+    return graph, sinks
+
+
+async def test_language_model_routing_follows_route_ids_not_positions():
+    router = _make_router(_GapSmartRouter, _GAP_ROUTES, last_route_number=3, enable_else_output=True)
+    router.forced_category = "Negative"
+    graph, sinks = _gap_graph(router)
+
+    await _run(graph)
+
+    assert sinks["negative"].received == "I love this product!"
+    assert not sinks["positive"].did_run
+    assert not sinks["else"].did_run
+
+
+class _GapDecisionSmartRouter(SmartRouterComponent):
+    outputs = _GapSmartRouter.outputs
+
+
+async def test_decision_routing_follows_route_ids_not_positions(monkeypatch):
+    from lfx.base.models.decisions.schema import DecisionResult
+
+    asked = []
+
+    def evaluate(request, **_kwargs):
+        asked.append([option.id for option in request.options])
+        return DecisionResult(
+            kind="choice",
+            question_id="decision",
+            provider="Test",
+            model="test-model",
+            probabilities={"category_1_result": 0.1, "category_3_result": 0.9},
+            selected_option="category_3_result",
+        )
+
+    monkeypatch.setattr("lfx.components.llm_operations.llm_conditional_router.evaluate_decision", evaluate)
+    router = _make_router(
+        _GapDecisionSmartRouter,
+        _GAP_ROUTES,
+        last_route_number=3,
+        routing_mode="Decision Model",
+        decision_model=[{"name": "test-model", "provider": "Test"}],
+        minimum_probability=0.7,
+        enable_else_output=True,
+    )
+    graph, sinks = _gap_graph(router)
+
+    await _run(graph)
+
+    assert asked == [["category_1_result", "category_3_result"]]
+    assert sinks["negative"].did_run
+    assert not sinks["positive"].did_run
+    assert not sinks["else"].did_run
+    assert router._decision_evidence["activated_branch"] == "category_3_result"
