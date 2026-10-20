@@ -801,7 +801,8 @@ async def test_list_decision_models_returns_only_typed_decision_rows(client, log
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_list_decision_models_hides_policy_denied_model(client, logged_in_headers, monkeypatch):
+@pytest.mark.parametrize("params", [{"model_type": "decision"}, {}])
+async def test_list_decision_models_hides_policy_denied_model(client, logged_in_headers, monkeypatch, params):
     from lfx.services.model_provider_policy import (
         ModelProviderPolicyContext,
         ModelProviderPolicyPurpose,
@@ -817,9 +818,17 @@ async def test_list_decision_models_hides_policy_denied_model(client, logged_in_
         blocked_model_keys=frozenset({"openai::decision::gpt-6-luna"}),
     )
     monkeypatch.setattr(models_api, "_aresolve_read_policy", AsyncMock(return_value=snapshot))
-    response = await client.get("api/v1/models", params={"model_type": "decision"}, headers=logged_in_headers)
+    response = await client.get("api/v1/models", params=params, headers=logged_in_headers)
     assert response.status_code == 200
-    assert set(_decision_rows(response)) == DECISION_CATALOG - {("OpenAI", "gpt-6-luna")}
+    rows = {
+        (provider["provider"], model["model_name"], model["metadata"].get("model_type"))
+        for provider in response.json()
+        for model in provider["models"]
+    }
+    assert {(p, m) for p, m, kind in rows if kind == "decision"} == DECISION_CATALOG - {("OpenAI", "gpt-6-luna")}
+    if not params:
+        # Only decision rows are filtered; OpenAI's chat models stay listed.
+        assert any(provider == "OpenAI" and kind == "llm" for provider, _, kind in rows)
 
 
 @pytest.mark.parametrize(("validation_model_type", "validated"), [(None, False), ("decision", True)])

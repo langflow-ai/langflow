@@ -51,12 +51,13 @@ def require_official_openai_endpoint(variables: dict[str, Any]) -> None:
     """
     from lfx.base.models.unified_models.credentials import provider_variable_from_env
     from lfx.services.variable.request_scope import is_env_fallback_disabled
+    from lfx.utils.secrets import secret_value_to_str
 
     configured = dict(variables)
     if not is_env_fallback_disabled() and "OPENAI_API_BASE" not in configured:
         configured["OPENAI_API_BASE"] = provider_variable_from_env("OPENAI_API_BASE")
     for name in ("OPENAI_BASE_URL", "OPENAI_API_BASE"):
-        configured_url = str(configured.get(name) or "").rstrip("/")
+        configured_url = (secret_value_to_str(configured.get(name), strip=True) or "").rstrip("/")
         if configured_url and configured_url != OFFICIAL_OPENAI_BASE_URL:
             msg = "OpenAI Decisions currently requires the official hosted endpoint."
             raise DecisionConfigurationError(msg)

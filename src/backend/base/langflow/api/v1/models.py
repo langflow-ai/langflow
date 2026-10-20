@@ -442,13 +442,17 @@ async def list_models(
         provider_dict["is_configured"] = provider_configured_status.get(prov_name, False)
         provider_dict["live_discovery"] = prov_name in live_discovery_providers
         prov_models_status = enabled_models_map.get(prov_name, {})
+        # Decision model blocks apply to every listing, typed or not.
+        allowed = [
+            row
+            for row in provider_dict["models"]
+            if (row.get("metadata") or {}).get("model_type") != "decision"
+            or provider_policy.allows_model(prov_name, row["model_name"], model_type="decision")
+        ]
+        if len(allowed) != len(provider_dict["models"]):
+            provider_dict["models"] = allowed
+            provider_dict["num_models"] = len(allowed)
         if model_type == "decision":
-            provider_dict["models"] = [
-                row
-                for row in provider_dict["models"]
-                if provider_policy.allows_model(prov_name, row["model_name"], model_type="decision")
-            ]
-            provider_dict["num_models"] = len(provider_dict["models"])
             prov_models_status = (
                 enabled_models_result.get("enabled_models_by_type", {}).get(prov_name, {}).get("decision", {})
             )

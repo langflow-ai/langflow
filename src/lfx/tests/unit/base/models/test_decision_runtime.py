@@ -196,6 +196,23 @@ def test_callers_per_request_key_for_its_own_provider_comes_first(execution):
     assert transport.call_args.kwargs["api_key"] == "sk-header-key"
 
 
+@pytest.mark.parametrize("variable", ["OPENAI_BASE_URL", "OPENAI_API_BASE"])
+def test_callers_per_request_endpoint_cannot_be_ignored(execution, variable):
+    request, model, transport = execution
+    request_variables = {variable: "https://proxy.example/v1", "OPENAI_API_KEY": "sk-proxy-key"}
+    with pytest.raises(DecisionConfigurationError, match="official hosted"):
+        evaluate_decision(request, model=model, request_variables=request_variables)
+    transport.assert_not_called()
+
+
+def test_prefixed_environment_key_is_used(execution, monkeypatch):
+    request, model, transport = execution
+    monkeypatch.delenv("OPENAI_API_KEY")
+    monkeypatch.setenv("LANGFLOW_OPENAI_API_KEY", "sk-prefixed-test")
+    evaluate_decision(request, model=model)
+    assert transport.call_args.kwargs["api_key"] == "sk-prefixed-test"
+
+
 def test_per_request_keys_for_other_providers_are_ignored(execution):
     request, model, transport = execution
     evaluate_decision(request, model=model, request_variables={"ANTHROPIC_API_KEY": "sk-ant-other"})
