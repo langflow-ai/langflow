@@ -1,9 +1,10 @@
 //! The engine's part of a save, in one call.
 //!
 //! A save checks the graphs, repairs them when the request asks for it,
-//! derives the operations, checks that they replay, and packs them into rows.
-//! [`prepare_write`] does all of that. The caller keeps what needs the
-//! database: request deduplication, the version check, the lock, the check
+//! derives the operations, and checks that they replay. [`prepare_write`]
+//! does all of that, and returns the violations, the fixes and the
+//! operations. The caller owns the storage: it numbers the operations and
+//! packs them into rows, and keeps the version check, the lock, the check
 //! that the stored graph matches its latest revision, and the inserts.
 
 use std::fmt;
@@ -11,7 +12,6 @@ use std::fmt;
 use serde_json::{Map, Value};
 
 use crate::ops::diff::derive_flow_operations;
-use crate::ops::envelope::{PackedRow, Request, RowLimits, pack_rows, sequence};
 use crate::ops::error::{Error, ErrorKind};
 use crate::ops::ops::Operation;
 use crate::ops::repair::{Fix, repair_flow_data};
@@ -60,26 +60,16 @@ impl Role {
 }
 
 /// What a save asks for, beyond the two graphs.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct WriteOptions {
     /// Whether the flow already has history. Without it, the stored graph is
     /// checked too, and becomes the revision-0 checkpoint.
     pub started: bool,
     /// Repair what breaks the rules and has one fix, instead of refusing.
     pub repair_invalid_graph: bool,
-    /// The flow's latest revision, which the new operations follow.
-    pub latest_revision: u64,
-    /// The authenticated user, as a UUID.
-    pub actor_user_id: String,
-    /// The request, as a UUID.
-    pub request_id: String,
-    /// What made the write, a display hint.
-    pub cause: Option<String>,
-    /// The bounds on a stored row.
-    pub limits: RowLimits,
 }
 
-/// What a save stores.
+/// What a save stores, before the caller numbers the operations.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PreparedWrite {
     /// The stored graph the operations start from, repaired when it had no
@@ -92,10 +82,8 @@ pub struct PreparedWrite {
     pub target: Value,
     /// Every fix repair made, and the graph it made it in.
     pub repairs: Vec<(Role, Fix)>,
-    /// The operations, as recorded.
+    /// The operations, as recorded. Empty when nothing changed.
     pub operations: Vec<Operation>,
-    /// The rows to insert, in revision order. Empty when nothing changed.
-    pub rows: Vec<PackedRow>,
 }
 
 impl PreparedWrite {
@@ -162,7 +150,7 @@ impl From<Error> for WriteError {
     }
 }
 
-/// Check, repair, derive and pack a save of `target` over `stored`.
+/// Check, repair and derive a save of `target` over `stored`.
 ///
 /// # Errors
 ///
@@ -214,24 +202,12 @@ pub fn prepare_write(
     }
 
     let derived = derive_flow_operations(base.clone(), &target)?;
-    let recorded = sequence(
-        derived.operations.clone(),
-        options.latest_revision,
-        Request {
-            request_id: &options.request_id,
-            actor_user_id: &options.actor_user_id,
-        },
-        options.cause.as_deref(),
-        options.limits.bytes,
-    );
-    let rows = pack_rows(recorded, options.limits)?;
     Ok(PreparedWrite {
         base,
         stored_repaired,
         target,
         repairs,
         operations: derived.operations,
-        rows,
     })
 }
 

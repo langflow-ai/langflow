@@ -15,11 +15,11 @@ use std::collections::HashSet;
 use indexmap::IndexSet;
 use serde_json::{Map, Value};
 
-use crate::ops::canonical::{JsonType, is_row_position, values_equal};
+use crate::ops::canonical::is_row_position;
 use crate::ops::edges::{Input, InputKind, check_edge, index_outputs, node_outputs};
 use crate::ops::entry::EntryExt;
-use crate::ops::error::{Error, ErrorCode, Result, bail, invalid, quoted};
-use crate::ops::ops::{Change, Expect, FieldUpdate, Operation, Path, PathExt, Segment, path_label};
+use crate::ops::error::{Error, Result, bail, invalid, quoted};
+use crate::ops::ops::{Change, FieldUpdate, Operation, Path, PathExt, Segment, path_label};
 use crate::ops::schema::{
     KeyedList, ListKind, NODE_OBJECT_PATHS, NODE_SCHEMA, OUTPUTS_PATH, TEMPLATE_PATH,
 };
@@ -29,7 +29,6 @@ use crate::ops::validate::missing_node_object;
 
 /// How a batch is applied.
 #[derive(Debug, Clone, Copy, Default)]
-#[expect(clippy::struct_excessive_bools, reason = "four independent switches")]
 pub struct ApplyOptions {
     /// Return the operations as the engine records them.
     pub forward: bool,
@@ -41,10 +40,6 @@ pub struct ApplyOptions {
     /// would take with it, are both skipped. Never set this when applying
     /// operations that will be stored.
     pub restoring: bool,
-    /// Skip the `from_type` checks. History readers get secret values
-    /// redacted to null, so in a redacted graph a value's JSON type says
-    /// nothing. Never set this when applying operations that will be stored.
-    pub redacted: bool,
 }
 
 /// What a batch did.
@@ -124,7 +119,7 @@ impl GraphState {
     ///
     /// # Errors
     ///
-    /// An operation is invalid for the graph, or an `expect` does not hold.
+    /// An operation is invalid for the graph.
     pub fn apply(&mut self, operations: Vec<Operation>, options: ApplyOptions) -> Result<Applied> {
         self.begin();
         let mut report = Report::new(options);
@@ -152,10 +147,6 @@ impl GraphState {
             Operation::DeleteNodes(ids) => self.delete_nodes(&ids, report)?,
             Operation::AddEdges(edges) => self.add_edges(edges, report)?,
             Operation::DeleteEdges(ids) => self.delete_edges(&ids, report),
-            Operation::UpdateMetadata {
-                fields,
-                delete_keys,
-            } => self.update_metadata(fields, &delete_keys, report)?,
         }
         report.end_operation();
         Ok(())
@@ -401,73 +392,6 @@ impl GraphState {
         report.record_inverse(Operation::AddEdges(edges));
     }
 
-    // --- Metadata ------------------------------------------------------------------------
-
-    fn update_metadata(
-        &mut self,
-        fields: Map<String, Value>,
-        delete_keys: &[String],
-        report: &mut Report,
-    ) -> Result<()> {
-        for key in fields.keys() {
-            if is_collection_key(key) {
-                bail!(
-                    "update_metadata: cannot set graph collection key {}",
-                    quoted(key)
-                );
-            }
-        }
-        for key in delete_keys {
-            if is_collection_key(key) {
-                bail!(
-                    "update_metadata: cannot delete graph collection key {}",
-                    quoted(key)
-                );
-            }
-        }
-        let delete_keys: Vec<String> = delete_keys
-            .iter()
-            .cloned()
-            .collect::<IndexSet<_>>()
-            .into_iter()
-            .collect();
-        if fields.is_empty() && delete_keys.is_empty() {
-            return Ok(());
-        }
-        if report.options.inverse {
-            // The inverse puts back each key as it is now, or deletes it if it is new.
-            let mut restore = Map::new();
-            let mut remove = Vec::new();
-            let keys: IndexSet<&String> = fields.keys().chain(&delete_keys).collect();
-            for key in keys {
-                match self.root().get(key) {
-                    Some(value) => {
-                        restore.insert(key.clone(), value.clone());
-                    }
-                    None => remove.push(key.clone()),
-                }
-            }
-            report.record_inverse(Operation::UpdateMetadata {
-                fields: restore,
-                delete_keys: remove,
-            });
-        }
-        let forward = report.options.forward.then(|| fields.clone());
-        for (key, value) in fields {
-            self.set_root(&key, value);
-        }
-        for key in &delete_keys {
-            self.delete_root(key);
-        }
-        if let Some(fields) = forward {
-            report.record(Operation::UpdateMetadata {
-                fields,
-                delete_keys,
-            });
-        }
-        Ok(())
-    }
-
     // --- Field writes ----------------------------------------------------------------------
 
     /// Apply one `set_field` or `delete_field` to a node.
@@ -483,39 +407,35 @@ impl GraphState {
     ) -> Result<bool> {
         let walk = self.check_field_update(&FieldWrite { update, context }, inverses)?;
         let value = match &mut update.change {
-            Change::Set { value, .. } if !options.forward => std::mem::take(value),
-            Change::Set { value, .. } => value.clone(),
+            Change::Set(value) if !options.forward => std::mem::take(value),
+            Change::Set(value) => value.clone(),
             Change::Delete => Value::Null,
         };
         let write = FieldWrite { update, context };
-        let had_value = self.write_last(&write, &walk, value, options)?;
+        let had_value = self.write_last(&write, &walk, value)?;
         self.check_list_keys_kept(&write, &walk)?;
         Ok(had_value)
     }
 
     /// Check a field update before it writes anything: its path must exist
-    /// up to the last segment, and its `expect` must hold. Record its
-    /// inverse, and return its path as object keys and array indexes.
+    /// up to the last segment. Record its inverse, and return its path as
+    /// object keys and array indexes.
     fn check_field_update(
         &mut self,
         write: &FieldWrite<'_>,
         inverses: Option<&mut FieldInverses>,
     ) -> Result<Walk> {
         let walk = self.walk(write)?;
-        let last_step = match walk.missing_at {
-            Some(_) => None,
-            None => self.read_last(write, &walk)?,
-        };
-        let root = written(&self.graph, write);
-        let parent = resolve(root, &walk.steps);
-        let current = last_step
-            .as_ref()
-            .and_then(|step| resolve(parent?, std::slice::from_ref(step)));
-        check_expect(write.update, current, write.context)?;
         if let Some(missing) = walk.missing_at {
             return Err(missing_segment(write, missing));
         }
         if let Some(inverses) = inverses {
+            let last_step = self.read_last(write, &walk)?;
+            let root = written(&self.graph, write);
+            let parent = resolve(root, &walk.steps);
+            let current = last_step
+                .as_ref()
+                .and_then(|step| resolve(parent?, std::slice::from_ref(step)));
             inverses.record(root, write.update, parent, current);
         }
         Ok(walk)
@@ -612,17 +532,11 @@ impl GraphState {
     }
 
     /// Write or delete the last segment of the path. Returns whether it held a value.
-    fn write_last(
-        &mut self,
-        write: &FieldWrite<'_>,
-        walk: &Walk,
-        value: Value,
-        options: ApplyOptions,
-    ) -> Result<bool> {
+    fn write_last(&mut self, write: &FieldWrite<'_>, walk: &Walk, value: Value) -> Result<bool> {
         let (id, path) = (write.update.id.as_str(), &write.update.path);
         let undo = match &path[path.len() - 1] {
-            Segment::Key(key) => self.write_key(write, walk, key, value, options)?,
-            Segment::Item(key) => self.write_item(write, walk, key, value, options)?,
+            Segment::Key(key) => self.write_key(write, walk, key, value)?,
+            Segment::Item(key) => self.write_item(write, walk, key, value)?,
         };
         let Some(undo) = undo else {
             return Ok(false);
@@ -655,7 +569,6 @@ impl GraphState {
         walk: &Walk,
         key: &str,
         value: Value,
-        options: ApplyOptions,
     ) -> Result<Option<FieldUndo>> {
         let (update, context) = (write.update, write.context);
         let Some(Value::Object(map)) = self.parent_mut(write, walk) else {
@@ -672,7 +585,6 @@ impl GraphState {
                 old,
             }));
         }
-        check_type_change(map.get(key), update, &value, context, options)?;
         let old = map.insert(key.to_owned(), value);
         Ok(Some(FieldUndo::KeySet {
             key: key.to_owned(),
@@ -688,7 +600,6 @@ impl GraphState {
         walk: &Walk,
         key: &str,
         value: Value,
-        options: ApplyOptions,
     ) -> Result<Option<FieldUndo>> {
         let (update, context) = (write.update, write.context);
         let path = &update.path;
@@ -722,13 +633,6 @@ impl GraphState {
                 quoted(key)
             );
         }
-        check_type_change(
-            slot.map(|slot| &items[slot]),
-            update,
-            &value,
-            context,
-            options,
-        )?;
         if let Some(slot) = slot {
             let old = index.replace(items, slot, value, context)?;
             return Ok(Some(FieldUndo::ItemReplaced { slot, old }));
@@ -840,10 +744,6 @@ fn keyed_list<'p>(
     Ok((keyed, prefix))
 }
 
-fn is_collection_key(key: &str) -> bool {
-    key == "nodes" || key == "edges"
-}
-
 fn check_node_path(path: &Path, context: &str) -> Result<()> {
     if path[0].key() == Some("id") {
         bail!("{context}: cannot modify node identity");
@@ -874,78 +774,6 @@ fn reject_repeated_paths(updates: &[FieldUpdate], kind: &str) -> Result<()> {
         }
     }
     Ok(())
-}
-
-fn check_expect(update: &FieldUpdate, current: Option<&Value>, context: &str) -> Result<()> {
-    let exists = current.is_some();
-    match &update.expect {
-        Some(Expect::Absent) if exists => Err(Error::precondition(format!(
-            "{context}: expected {} to be absent, but it exists",
-            path_label(&update.path)
-        ))),
-        None | Some(Expect::Absent) => Ok(()),
-        Some(Expect::Value(expected)) => {
-            let holds = match current {
-                Some(current) => values_equal(current, expected)?,
-                None => false,
-            };
-            if holds {
-                Ok(())
-            } else {
-                Err(Error::precondition(format!(
-                    "{context}: expected {} to hold the given value, but found {}",
-                    path_label(&update.path),
-                    if exists {
-                        "a different value"
-                    } else {
-                        "nothing"
-                    }
-                )))
-            }
-        }
-    }
-}
-
-/// Refuse a `set_field` that silently changes a value's JSON type.
-///
-/// A type change must be declared with `from_type` naming the type being
-/// replaced. So `from_type` is also a check: the write applies only while
-/// the value still has that type.
-fn check_type_change(
-    current: Option<&Value>,
-    update: &FieldUpdate,
-    value: &Value,
-    context: &str,
-    options: ApplyOptions,
-) -> Result<()> {
-    if options.redacted {
-        return Ok(());
-    }
-    let Change::Set { from_type, .. } = &update.change else {
-        return Ok(());
-    };
-    match (from_type, current) {
-        (None, Some(current)) if JsonType::from(current) != JsonType::from(value) => {
-            Err(Error::invalid_with(
-                ErrorCode::FieldTypeChangeUndeclared,
-                format!(
-                    "{context}: set_field changes a {} to a {} without declaring from_type",
-                    JsonType::from(current).as_str(),
-                    JsonType::from(value).as_str()
-                ),
-            ))
-        }
-        (None, _) => Ok(()),
-        (Some(from_type), Some(current)) if JsonType::from(current) == *from_type => Ok(()),
-        (Some(from_type), current) => Err(Error::invalid_with(
-            ErrorCode::FieldTypePreconditionFailed,
-            format!(
-                "{context}: set_field expected to replace a {} but found {}",
-                from_type.as_str(),
-                current.map_or("nothing", |current| JsonType::from(current).as_str())
-            ),
-        )),
-    }
 }
 
 // --- Inverses of field writes --------------------------------------------------------------
@@ -1001,14 +829,8 @@ impl FieldInverses {
             }
             return;
         };
-        let mut entry = FieldUpdate::set(&update.id, path.clone(), current.clone());
-        if let (Change::Set { value, .. }, Change::Set { from_type, .. }) =
-            (&update.change, &mut entry.change)
-            && JsonType::from(current) != JsonType::from(value)
-        {
-            *from_type = Some(JsonType::from(value));
-        }
-        self.entries.push(entry);
+        self.entries
+            .push(FieldUpdate::set(&update.id, path.clone(), current.clone()));
     }
 
     fn operations(self, build: fn(Vec<FieldUpdate>) -> Operation) -> Vec<Operation> {
@@ -1035,8 +857,7 @@ impl FieldInverses {
 ///
 /// # Errors
 ///
-/// The graph breaks a structural rule, an operation is invalid for it, or an
-/// `expect` does not hold.
+/// The graph breaks a structural rule, or an operation is invalid for it.
 pub fn apply_flow_operations(
     base: Value,
     operations: Vec<Operation>,
@@ -1096,5 +917,30 @@ mod tests {
         state
             .apply(operations(swap), ApplyOptions::default())
             .unwrap();
+    }
+
+    #[test]
+    fn a_group_sub_flow_node_is_not_selected_by_key() {
+        let inner = json!({"id": "lm", "data": {"node": {"template": {"api_key": {"value": ""}}}}});
+        let graph = json!({
+            "nodes": [{"id": "g", "data": {"node": {
+                "template": {},
+                "flow": {"data": {"nodes": [inner], "edges": []}},
+            }}}],
+            "edges": [],
+        });
+        let path = json!([
+            "data", "node", "flow", "data", "nodes", {"key": "lm"},
+            "data", "node", "template", "api_key", "value",
+        ]);
+        let write = json!([{"type": "update_nodes", "updates": [
+            {"id": "g", "op": "set_field", "path": path, "value": "x"},
+        ]}]);
+        let error =
+            apply_flow_operations(graph, operations(write), ApplyOptions::default()).unwrap_err();
+        assert!(
+            error.to_string().contains("does not declare keyed"),
+            "{error}"
+        );
     }
 }

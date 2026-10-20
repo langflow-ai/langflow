@@ -1,5 +1,5 @@
 {
-  "description": "Shared diff cases. diff_flow_data(base, target) must return exactly `operations` (optional fields left unset are omitted), and applying them to `base` must give `target` under canonical equality. Units, keyed lists and view state follow node_schema.json.",
+  "description": "Shared diff cases. diff_flow_data(base, target) must return exactly `operations`, and applying them to `base` must give `target` under canonical equality. Units, keyed lists and view state follow node_schema.json: every top-level key other than `nodes` and `edges` is view state.",
   "cases": [
     {
       "name": "no change",
@@ -81,20 +81,8 @@
         {
           "type": "update_nodes",
           "updates": [
-            {
-              "id": "n",
-              "path": ["data", "node", "template", "f", "value"],
-              "op": "set_field",
-              "value": "b",
-              "template_field": {"type": "str", "load_from_db": false}
-            },
-            {
-              "id": "n",
-              "path": ["data", "node", "template", "f", "load_from_db"],
-              "op": "set_field",
-              "value": false,
-              "template_field": {"type": "str", "load_from_db": false}
-            }
+            {"id": "n", "path": ["data", "node", "template", "f", "value"], "op": "set_field", "value": "b"},
+            {"id": "n", "path": ["data", "node", "template", "f", "load_from_db"], "op": "set_field", "value": false}
           ]
         }
       ]
@@ -107,7 +95,7 @@
         {
           "type": "update_nodes",
           "updates": [
-            {"id": "n", "path": ["data", "node", "template", "f", "value"], "op": "set_field", "value": "b", "template_field": {"type": "str"}},
+            {"id": "n", "path": ["data", "node", "template", "f", "value"], "op": "set_field", "value": "b"},
             {"id": "n", "path": ["data", "node", "template", "f", "load_from_db"], "op": "delete_field"}
           ]
         }
@@ -118,33 +106,14 @@
       "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": {"a": 1, "b": 2}}}}}}], "edges": []},
       "target": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": {"a": 1, "b": 3}}}}}}], "edges": []},
       "operations": [
-        {
-          "type": "update_nodes",
-          "updates": [
-            {"id": "n", "path": ["data", "node", "template", "f", "value"], "op": "set_field", "value": {"a": 1, "b": 3}, "template_field": {"type": "str"}}
-          ]
-        }
+        {"type": "update_nodes", "updates": [{"id": "n", "path": ["data", "node", "template", "f", "value"], "op": "set_field", "value": {"a": 1, "b": 3}}]}
       ]
     },
     {
-      "name": "a value type change declares from_type",
+      "name": "a value type change is a plain write",
       "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "a"}}}}}], "edges": []},
       "target": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": 5}}}}}], "edges": []},
-      "operations": [
-        {
-          "type": "update_nodes",
-          "updates": [
-            {
-              "id": "n",
-              "path": ["data", "node", "template", "f", "value"],
-              "op": "set_field",
-              "value": 5,
-              "from_type": "string",
-              "template_field": {"type": "str"}
-            }
-          ]
-        }
-      ]
+      "operations": [{"type": "update_nodes", "updates": [{"id": "n", "path": ["data", "node", "template", "f", "value"], "op": "set_field", "value": 5}]}]
     },
     {
       "name": "a definition change writes the whole definition unit",
@@ -154,8 +123,8 @@
         {
           "type": "update_nodes",
           "updates": [
-            {"id": "n", "path": ["data", "node", "template", "f", "type"], "op": "set_field", "value": "str", "template_field": {"type": "str"}},
-            {"id": "n", "path": ["data", "node", "template", "f", "input_types"], "op": "set_field", "value": ["A", "B"], "template_field": {"type": "str"}}
+            {"id": "n", "path": ["data", "node", "template", "f", "type"], "op": "set_field", "value": "str"},
+            {"id": "n", "path": ["data", "node", "template", "f", "input_types"], "op": "set_field", "value": ["A", "B"]}
           ]
         }
       ]
@@ -168,7 +137,7 @@
         {
           "type": "update_nodes",
           "updates": [
-            {"id": "n", "path": ["data", "node", "template", "f", "type"], "op": "set_field", "value": "str", "template_field": {"type": "str"}},
+            {"id": "n", "path": ["data", "node", "template", "f", "type"], "op": "set_field", "value": "str"},
             {"id": "n", "path": ["data", "node", "template", "f", "input_types"], "op": "delete_field"}
           ]
         }
@@ -179,10 +148,7 @@
       "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "a", "advanced": false}}}}}], "edges": []},
       "target": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "a", "advanced": true}}}}}], "edges": []},
       "operations": [
-        {
-          "type": "update_nodes",
-          "updates": [{"id": "n", "path": ["data", "node", "template", "f", "advanced"], "op": "set_field", "value": true, "template_field": {"type": "str"}}]
-        }
+        {"type": "update_nodes", "updates": [{"id": "n", "path": ["data", "node", "template", "f", "advanced"], "op": "set_field", "value": true}]}
       ]
     },
     {
@@ -292,20 +258,8 @@
         {
           "type": "update_nodes",
           "updates": [
-            {
-              "id": "n",
-              "path": ["data", "node", "template", "tools_metadata", "value", {"key": "fetch"}, "on"],
-              "op": "set_field",
-              "value": false,
-              "template_field": {"type": "tools"}
-            },
-            {
-              "id": "n",
-              "path": ["data", "node", "template", "tools_metadata", "value", {"key": "fetch"}, "name"],
-              "op": "set_field",
-              "value": "fetch_page",
-              "template_field": {"type": "tools"}
-            }
+            {"id": "n", "path": ["data", "node", "template", "tools_metadata", "value", {"key": "fetch"}, "on"], "op": "set_field", "value": false},
+            {"id": "n", "path": ["data", "node", "template", "tools_metadata", "value", {"key": "fetch"}, "name"], "op": "set_field", "value": "fetch_page"}
           ]
         }
       ]
@@ -338,8 +292,7 @@
               "id": "n",
               "path": ["data", "node", "template", "tools_metadata", "value"],
               "op": "set_field",
-              "value": [{"tags": ["fetch"], "on": true}, {"tags": ["search"], "on": true}],
-              "template_field": {"type": "tools"}
+              "value": [{"tags": ["fetch"], "on": true}, {"tags": ["search"], "on": true}]
             }
           ]
         }
@@ -372,15 +325,7 @@
       "operations": [
         {
           "type": "update_nodes",
-          "updates": [
-            {
-              "id": "n",
-              "path": ["data", "node", "template", "t", "value", {"key": "r2"}, "v"],
-              "op": "set_field",
-              "value": "z",
-              "template_field": {"type": "table"}
-            }
-          ]
+          "updates": [{"id": "n", "path": ["data", "node", "template", "t", "value", {"key": "r2"}, "v"], "op": "set_field", "value": "z"}]
         }
       ]
     },
@@ -426,20 +371,8 @@
         {
           "type": "update_nodes",
           "updates": [
-            {
-              "id": "n",
-              "path": ["data", "node", "template", "t", "value", {"key": "r1"}, "__pos__"],
-              "op": "set_field",
-              "value": 3,
-              "template_field": {"type": "table"}
-            },
-            {
-              "id": "n",
-              "path": ["data", "node", "template", "t", "value", {"key": "r4"}],
-              "op": "set_field",
-              "value": {"__id__": "r4", "__pos__": 4, "v": "w"},
-              "template_field": {"type": "table"}
-            },
+            {"id": "n", "path": ["data", "node", "template", "t", "value", {"key": "r1"}, "__pos__"], "op": "set_field", "value": 3},
+            {"id": "n", "path": ["data", "node", "template", "t", "value", {"key": "r4"}], "op": "set_field", "value": {"__id__": "r4", "__pos__": 4, "v": "w"}},
             {"id": "n", "path": ["data", "node", "template", "t", "value", {"key": "r3"}], "op": "delete_field"}
           ]
         }
@@ -455,15 +388,7 @@
       "operations": [
         {
           "type": "update_nodes",
-          "updates": [
-            {
-              "id": "n",
-              "path": ["data", "node", "template", "t", "value"],
-              "op": "set_field",
-              "value": [{"__id__": "r1", "__pos__": 1, "v": "z"}],
-              "template_field": {"type": "table"}
-            }
-          ]
+          "updates": [{"id": "n", "path": ["data", "node", "template", "t", "value"], "op": "set_field", "value": [{"__id__": "r1", "__pos__": 1, "v": "z"}]}]
         }
       ]
     },
@@ -684,7 +609,7 @@
       "operations": [{"type": "delete_edges", "ids": ["e"]}, {"type": "delete_nodes", "ids": ["b"]}]
     },
     {
-      "name": "flow metadata changes are one update_metadata",
+      "name": "top-level keys other than nodes and edges are never recorded",
       "base": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -703,7 +628,7 @@
         "name": "b",
         "description": "d"
       },
-      "operations": [{"type": "update_metadata", "fields": {"description": "d", "name": "b"}}]
+      "operations": []
     }
   ]
 }

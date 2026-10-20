@@ -353,31 +353,7 @@
       ]
     },
     {
-      "name": "apply case: update_metadata sets and deletes top-level keys",
-      "base": {
-        "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
-        ],
-        "edges": [
-          {
-            "id": "e-ab",
-            "source": "a",
-            "target": "b",
-            "sourceHandle": "{œnameœ:œoutœ}",
-            "targetHandle": "{œfieldNameœ:œtextœ}",
-            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
-          }
-        ],
-        "viewport": {"x": 0, "y": 0, "zoom": 1},
-        "description": "old",
-        "flag": true
-      },
-      "operations": [{"type": "update_metadata", "fields": {"description": "new"}, "delete_keys": ["flag"]}],
-      "inverse": [[{"type": "update_metadata", "fields": {"description": "old", "flag": true}}]]
-    },
-    {
-      "name": "apply case: set_field accepts a type change declared with from_type",
+      "name": "apply case: set_field changes a value's JSON type",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -386,58 +362,7 @@
         "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
-      "operations": [
-        {
-          "type": "update_nodes",
-          "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": 3, "from_type": "string"}]
-        }
-      ],
-      "inverse": [
-        [
-          {
-            "type": "update_nodes",
-            "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "hi", "from_type": "number"}]
-          }
-        ]
-      ]
-    },
-    {
-      "name": "apply case: set_field treats integers and floats as one number type",
-      "base": {
-        "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
-        ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
-        "viewport": {"x": 0, "y": 0, "zoom": 1}
-      },
-      "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["position", "x"], "value": 1.5}]}],
-      "inverse": [[{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["position", "x"], "value": 0}]}]]
-    },
-    {
-      "name": "apply case: set_field carries template field metadata unchanged",
-      "base": {
-        "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
-        ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
-        "viewport": {"x": 0, "y": 0, "zoom": 1}
-      },
-      "operations": [
-        {
-          "type": "update_nodes",
-          "updates": [
-            {
-              "id": "a",
-              "op": "set_field",
-              "path": ["data", "node", "template", "text", "value"],
-              "value": "x",
-              "template_field": {"name": "text", "type": "str"}
-            }
-          ]
-        }
-      ],
+      "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": 3}]}],
       "inverse": [[{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "hi"}]}]]
     },
     {
@@ -772,114 +697,6 @@
             "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "x"}]
           }
         ]
-      ]
-    },
-    {
-      "name": "apply case: expect: numbers and key order compare canonically",
-      "base": {
-        "nodes": [
-          {
-            "id": "t",
-            "data": {
-              "node": {
-                "template": {
-                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
-                  "text": {"type": "str", "value": "a"}
-                }
-              }
-            }
-          }
-        ],
-        "edges": []
-      },
-      "operations": [
-        {
-          "type": "update_nodes",
-          "updates": [
-            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "q", "expect": {"value": "x"}}
-          ]
-        },
-        {
-          "type": "update_nodes",
-          "updates": [
-            {
-              "id": "t",
-              "op": "set_field",
-              "path": ["data", "node", "template", "rows", "value", {"key": "r2"}],
-              "value": {"__id__": "r2", "__pos__": 2, "v": 2},
-              "expect": {"value": {"v": "y", "__pos__": 2, "__id__": "r2"}}
-            }
-          ]
-        },
-        {
-          "type": "update_nodes",
-          "updates": [
-            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}, "v"], "value": 3, "expect": {"value": 2}}
-          ]
-        }
-      ],
-      "inverse": [
-        [
-          {
-            "type": "update_nodes",
-            "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "x"}]
-          }
-        ],
-        [
-          {
-            "type": "update_nodes",
-            "updates": [
-              {
-                "id": "t",
-                "op": "set_field",
-                "path": ["data", "node", "template", "rows", "value", {"key": "r2"}],
-                "value": {"__id__": "r2", "__pos__": 2, "v": "y"}
-              }
-            ]
-          }
-        ],
-        [
-          {
-            "type": "update_nodes",
-            "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}, "v"], "value": 2}]
-          }
-        ]
-      ]
-    },
-    {
-      "name": "apply case: expect: absent holds for a row that does not exist yet",
-      "base": {
-        "nodes": [
-          {
-            "id": "t",
-            "data": {
-              "node": {
-                "template": {
-                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
-                  "text": {"type": "str", "value": "a"}
-                }
-              }
-            }
-          }
-        ],
-        "edges": []
-      },
-      "operations": [
-        {
-          "type": "update_nodes",
-          "updates": [
-            {
-              "id": "t",
-              "op": "set_field",
-              "path": ["data", "node", "template", "rows", "value", {"key": "r3"}],
-              "value": {"__id__": "r3", "__pos__": 1.5, "v": "z"},
-              "expect": {"absent": true}
-            }
-          ]
-        }
-      ],
-      "inverse": [
-        [{"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r3"}]}]}]
       ]
     },
     {
@@ -1915,7 +1732,7 @@
       "inverse": [[{"type": "update_nodes", "updates": [{"id": "b", "op": "delete_field", "path": ["data", "node", "template", "f", "info"]}]}]]
     },
     {
-      "name": "a type change is undone with from_type",
+      "name": "a type change is undone by writing the old value back",
       "base": {
         "name": "flow",
         "nodes": [
@@ -1976,20 +1793,8 @@
           }
         ]
       },
-      "operations": [
-        {
-          "type": "update_nodes",
-          "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": 5, "from_type": "string"}]
-        }
-      ],
-      "inverse": [
-        [
-          {
-            "type": "update_nodes",
-            "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": "x", "from_type": "number"}]
-          }
-        ]
-      ]
+      "operations": [{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": 5}]}],
+      "inverse": [[{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": "x"}]}]]
     },
     {
       "name": "a delete of an existing key puts it back",
@@ -2917,71 +2722,6 @@
         [{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": "x"}]}],
         [{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": "y"}]}]
       ]
-    },
-    {
-      "name": "metadata sets and deletes are undone",
-      "base": {
-        "name": "flow",
-        "nodes": [
-          {
-            "id": "a",
-            "data": {
-              "node": {
-                "template": {"text": {"type": "str", "value": "hi"}},
-                "outputs": [{"name": "out"}, {"name": "mid"}, {"name": "last"}, {"name": "loop", "allows_loop": true}]
-              }
-            }
-          },
-          {
-            "id": "b",
-            "data": {
-              "node": {
-                "template": {
-                  "f": {"type": "str", "value": "x"},
-                  "many": {"type": "str", "list": true, "value": []},
-                  "rows": {
-                    "type": "table",
-                    "value": [
-                      {"__id__": "r1", "__pos__": 1, "k": "one"},
-                      {"__id__": "r2", "__pos__": 2, "k": "two"},
-                      {"__id__": "r3", "__pos__": 3, "k": "three"}
-                    ]
-                  }
-                },
-                "outputs": []
-              }
-            }
-          }
-        ],
-        "edges": [
-          {
-            "id": "e1",
-            "source": "a",
-            "target": "b",
-            "sourceHandle": "{œnameœ:œoutœ}",
-            "targetHandle": "{œfieldNameœ:œfœ}",
-            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
-          },
-          {
-            "id": "e2",
-            "source": "a",
-            "target": "b",
-            "sourceHandle": "{œnameœ:œmidœ}",
-            "targetHandle": "{œfieldNameœ:œmanyœ}",
-            "data": {"sourceHandle": {"name": "mid"}, "targetHandle": {"fieldName": "many"}}
-          },
-          {
-            "id": "loop",
-            "source": "a",
-            "target": "a",
-            "sourceHandle": "{œnameœ:œoutœ}",
-            "targetHandle": "{œnameœ:œloopœ}",
-            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"name": "loop"}}
-          }
-        ]
-      },
-      "operations": [{"type": "update_metadata", "fields": {"name": "renamed", "added": 1}, "delete_keys": ["name", "absent"]}],
-      "inverse": [[{"type": "update_metadata", "fields": {"name": "flow"}, "delete_keys": ["added", "absent"]}]]
     },
     {
       "name": "re-adding an edge with other handles puts it back",

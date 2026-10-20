@@ -185,6 +185,48 @@
       "right_hash": "9f98b243e33a44d03893d37b124064df1b66f856164f4e15b9c5df760fbd4c88"
     },
     {
+      "name": "top-level keys other than nodes and edges are view state",
+      "left": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "right": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ],
+        "name": "renamed",
+        "description": "every top-level key but nodes and edges is view state"
+      },
+      "equal": true,
+      "left_hash": "9f98b243e33a44d03893d37b124064df1b66f856164f4e15b9c5df760fbd4c88",
+      "right_hash": "9f98b243e33a44d03893d37b124064df1b66f856164f4e15b9c5df760fbd4c88"
+    },
+    {
       "name": "two spellings of one handle are one handle",
       "left": {
         "nodes": [

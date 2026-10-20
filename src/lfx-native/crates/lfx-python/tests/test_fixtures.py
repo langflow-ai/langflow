@@ -90,10 +90,6 @@ def graph_text(case: dict[str, Any], key: str) -> str:
     return case[f"{key}_json"] if f"{key}_json" in case else dump(case.get(key))
 
 
-def number(value: Any) -> int:
-    return int(value)
-
-
 # --- apply_cases.json, merge_cases.json, property_cases.json ------------------------------
 
 
@@ -353,67 +349,6 @@ def test_inverse_case(case):
     assert ops.graphs_equal(state.to_json(), dump(case["base"]))
 
 
-# --- envelope_cases.json, replay_cases.json ----------------------------------------------------------
-
-
-def corruption(error: ops.EngineError) -> dict[str, Any]:
-    details = parse(error.details)
-    return {"error": {"kind": details["damage"], "revision": details["revision"]}}
-
-
-@pytest.mark.parametrize("case", section("envelope_cases.json", "decode"))
-def test_decode(case):
-    try:
-        actual = {"decoded": parse(ops.decode_row(dump(case["row"])))}
-    except ops.EngineError as error:
-        actual = corruption(error)
-    expected = {"error": case["error"]} if "error" in case else {"decoded": case["decoded"]}
-    check(strict, "decoded row", actual, expected)
-
-
-@pytest.mark.parametrize("case", section("envelope_cases.json", "encode"))
-def test_encode(case):
-    actual = parse(ops.encode_envelope(dump(case["operations"])))
-    check(strict, "envelope", actual, {key: case[key] for key in ("envelope", "actor_user_ids", "request_ids")})
-
-
-@pytest.mark.parametrize("case", section("envelope_cases.json", "pack"))
-def test_pack(case):
-    options = {key: case[key] for key in ("latest_revision", "actor_user_id", "request_id", "limits") if key in case}
-    if "cause" in case:
-        options["cause"] = case["cause"]
-    check(strict, "rows", parse(ops.pack(dump(case["operations"]), dump(options))), case["rows"])
-
-
-@pytest.mark.parametrize("case", section("replay_cases.json", "cases"))
-def test_replay(case):
-    try:
-        actual = {
-            "expected": parse(
-                ops.replay(
-                    dump(case["checkpoint"]),
-                    number(case["checkpoint_revision"]),
-                    dump(case["rows"]),
-                    number(case["revision"]),
-                )
-            )
-        }
-    except ops.EngineError as error:
-        actual = corruption(error)
-    expected = {"error": case["error"]} if "error" in case else {"expected": case["expected"]}
-    check(strict, "replayed graph", actual, expected)
-
-
-@pytest.mark.parametrize("case", section("replay_cases.json", "verify"))
-def test_verify_checkpoint(case):
-    try:
-        ops.verify_checkpoint(dump(case["graph"]), case["hash"], number(case["revision"]))
-        actual = {}
-    except ops.EngineError as error:
-        actual = corruption(error)
-    check(strict, "verification", actual, {"error": case["error"]} if "error" in case else {})
-
-
 # --- restore_cases.json, write_cases.json ------------------------------------------------------------
 
 
@@ -456,8 +391,6 @@ def test_every_fixture_file_is_run():
         "table_cases.json",
         "editor_cases.json",
         "inverse_cases.json",
-        "envelope_cases.json",
-        "replay_cases.json",
         "restore_cases.json",
         "write_cases.json",
         "limit_cases.json",

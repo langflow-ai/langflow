@@ -1,13 +1,11 @@
-"""The flow operation engine: apply, diff, validate, repair, hash and replay flow graphs.
+"""The flow operation engine: apply, diff, validate, repair and hash flow graphs.
 
 Every function takes JSON text and returns JSON text. An engine error is
 raised as ``EngineError``: ``kind`` names the matching Python exception class
-(``FlowOperationValidationError``, ``FlowOperationPreconditionError``,
-``FlowDataValidationError``, ``FlowOperationReplayError``,
-``RestoreFixNotAllowedError``, ``FlowHistoryCorruptionError`` or
+(``FlowOperationValidationError``, ``FlowDataValidationError``,
+``FlowOperationReplayError``, ``RestoreFixNotAllowedError`` or
 ``FlowGraphInvalidError``), ``code`` is its stable code, and ``details`` is the
-whole error as JSON text, with the violations, edge id, damage, revision or
-graph it carries.
+whole error as JSON text, with the violations, edge id or graph it carries.
 """
 
 from lfx_native._native import (
@@ -21,11 +19,9 @@ from lfx_native._native import (
     assign_row_ids,
     assign_table_row_ids,
     canonical_json,
-    decode_row,
     derive,
     diff,
     edge_fixes,
-    encode_envelope,
     fixes_for_edges,
     graph_hash,
     graphs_equal,
@@ -34,16 +30,13 @@ from lfx_native._native import (
     node_schema,
     normalize_operations,
     ordered_rows,
-    pack,
     prepare_write,
     repair,
-    replay,
     strip_flow_table_row_keys,
     strip_row_keys,
     table_fields,
     validate,
     values_equal,
-    verify_checkpoint,
 )
 
 __all__ = [
@@ -57,11 +50,9 @@ __all__ = [
     "assign_row_ids",
     "assign_table_row_ids",
     "canonical_json",
-    "decode_row",
     "derive",
     "diff",
     "edge_fixes",
-    "encode_envelope",
     "fixes_for_edges",
     "graph_hash",
     "graphs_equal",
@@ -70,14 +61,11 @@ __all__ = [
     "node_schema",
     "normalize_operations",
     "ordered_rows",
-    "pack",
     "prepare_write",
     "repair",
-    "replay",
     "strip_flow_table_row_keys",
     "strip_row_keys",
     "table_fields",
     "validate",
     "values_equal",
-    "verify_checkpoint",
 ]

@@ -9,8 +9,6 @@ use crate::ops::validate::{Violation, ViolationCode};
 pub enum ErrorKind {
     /// An operation is malformed, or breaks a rule of the graph it is applied to.
     InvalidOperation,
-    /// A write's `expect` does not hold: the graph changed since the writer read it.
-    PreconditionFailed,
     /// A graph breaks the rules every stored flow graph follows.
     InvalidGraph,
     /// Derived operations do not replay to the graph they were derived from.
@@ -26,7 +24,6 @@ impl ErrorKind {
     pub fn class_name(self) -> &'static str {
         match self {
             Self::InvalidOperation => "FlowOperationValidationError",
-            Self::PreconditionFailed => "FlowOperationPreconditionError",
             Self::InvalidGraph => "FlowDataValidationError",
             Self::ReplayMismatch => "FlowOperationReplayError",
             Self::RestoreFixNotAllowed => "RestoreFixNotAllowedError",
@@ -39,12 +36,6 @@ impl ErrorKind {
 pub enum ErrorCode {
     /// An operation is malformed or breaks a graph rule.
     OperationInvalid,
-    /// A `set_field` changes a value's JSON type without declaring `from_type`.
-    FieldTypeChangeUndeclared,
-    /// A `set_field`'s `from_type` does not name the type it replaces.
-    FieldTypePreconditionFailed,
-    /// A write's `expect` does not hold.
-    ExpectationFailed,
     /// A graph breaks the graph rules; the error lists the violations.
     GraphInvalid,
     /// Derived operations do not replay to their target.
@@ -61,9 +52,6 @@ impl ErrorCode {
     pub fn as_str(self) -> &'static str {
         match self {
             Self::OperationInvalid => "FLOW_OPERATION_INVALID",
-            Self::FieldTypeChangeUndeclared => "FIELD_TYPE_CHANGE_UNDECLARED",
-            Self::FieldTypePreconditionFailed => "FIELD_TYPE_PRECONDITION_FAILED",
-            Self::ExpectationFailed => "EXPECTATION_FAILED",
             Self::GraphInvalid => "FLOW_GRAPH_INVALID",
             Self::ReplayMismatch => "FLOW_OPERATION_REPLAY_MISMATCH",
             Self::RestoreFixNotAllowed => "RESTORE_FIX_NOT_ALLOWED",
@@ -139,14 +127,6 @@ impl Error {
                 ErrorCode::Violation(code),
                 format!("edge {}: {reason}", quoted(edge_id)),
             )
-        }
-    }
-
-    /// A write whose `expect` does not hold.
-    pub fn precondition(message: impl Into<String>) -> Self {
-        Self {
-            kind: ErrorKind::PreconditionFailed,
-            ..Self::invalid_with(ErrorCode::ExpectationFailed, message)
         }
     }
 

@@ -65,15 +65,6 @@ enum Undo {
         id: String,
         edge: Value,
     },
-    RootSet {
-        key: String,
-        old: Option<Value>,
-    },
-    RootDeleted {
-        key: String,
-        index: usize,
-        old: Value,
-    },
     Field {
         node_id: String,
         container: Vec<PathPart>,
@@ -201,6 +192,7 @@ pub(crate) struct Batch {
 #[derive(Debug)]
 pub struct GraphState {
     /// The flow's top-level object; `nodes` and `edges` hold placeholders.
+    /// No operation writes its other keys, which are view state.
     root: Map<String, Value>,
     pub(crate) graph: Graph,
     pub(crate) edge_index: EdgeIndex,
@@ -274,11 +266,6 @@ impl GraphState {
         Value::Object(root)
     }
 
-    /// The flow's top-level object, without `nodes` and `edges`.
-    pub(crate) fn root(&self) -> &Map<String, Value> {
-        &self.root
-    }
-
     // --- Batches ---------------------------------------------------------------------
 
     /// Start a batch: forget what the previous one did.
@@ -312,17 +299,6 @@ impl GraphState {
             Undo::EdgeRemoved { index, id, edge } => {
                 self.graph.attach(&id, &edge);
                 self.graph.edges.shift_insert(index, id, edge);
-            }
-            Undo::RootSet { key, old } => match old {
-                Some(old) => {
-                    self.root.insert(key, old);
-                }
-                None => {
-                    self.root.shift_remove(&key);
-                }
-            },
-            Undo::RootDeleted { key, index, old } => {
-                self.root.shift_insert(index, key, old);
             }
             Undo::Field {
                 node_id,
@@ -417,27 +393,6 @@ impl GraphState {
             self.batch.undos.push(Undo::EdgeRemoved { index, id, edge });
         }
         (removed, kept)
-    }
-
-    pub(crate) fn set_root(&mut self, key: &str, value: Value) {
-        let old = self.root.insert(key.to_owned(), value);
-        self.batch.undos.push(Undo::RootSet {
-            key: key.to_owned(),
-            old,
-        });
-    }
-
-    pub(crate) fn delete_root(&mut self, key: &str) {
-        let Some(index) = self.root.keys().position(|existing| existing == key) else {
-            return;
-        };
-        if let Some(old) = self.root.shift_remove(key) {
-            self.batch.undos.push(Undo::RootDeleted {
-                key: key.to_owned(),
-                index,
-                old,
-            });
-        }
     }
 
     /// Record how to undo a change made inside a node.

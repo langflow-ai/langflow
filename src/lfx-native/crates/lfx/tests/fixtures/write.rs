@@ -1,7 +1,6 @@
 //! `restore_cases.json` and `write_cases.json`: restore fixes and the engine's part of a save.
 
 use lfx::ops::Operation;
-use lfx::ops::envelope::RowLimits;
 use lfx::ops::restore::apply_restore_fixes;
 use lfx::ops::validate::Violation;
 use lfx::ops::{WriteError, WriteOptions, prepare_write};
@@ -26,23 +25,11 @@ fn restore(case: &Value) -> Result<(), Failed> {
 
 fn write(case: &Value) -> Result<(), Failed> {
     let options = &case["options"];
-    let text = |key: &str| options[key].as_str().unwrap_or_default().to_owned();
     let write_options = WriteOptions {
         started: options["started"].as_bool().unwrap_or_default(),
         repair_invalid_graph: options["repair_invalid_graph"]
             .as_bool()
             .unwrap_or_default(),
-        latest_revision: options["latest_revision"].as_u64().unwrap_or_default(),
-        actor_user_id: text("actor_user_id"),
-        request_id: text("request_id"),
-        cause: options
-            .get("cause")
-            .and_then(Value::as_str)
-            .map(str::to_owned),
-        limits: RowLimits {
-            ops: usize::try_from(options["limits"]["ops"].as_u64().unwrap_or_default())?,
-            bytes: usize::try_from(options["limits"]["bytes"].as_u64().unwrap_or_default())?,
-        },
     };
     let actual = match prepare_write(
         case["stored"].clone(),
@@ -55,13 +42,6 @@ fn write(case: &Value) -> Result<(), Failed> {
             "target": prepared.target,
             "repairs": prepared.repairs_json(),
             "operations": prepared.operations.iter().map(Operation::to_value).collect::<Vec<_>>(),
-            "rows": prepared.rows.iter().map(|row| json!({
-                "start_revision": row.start_revision,
-                "end_revision": row.end_revision,
-                "ops": row.ops,
-                "actor_user_ids": row.actor_user_ids,
-                "request_ids": row.request_ids,
-            })).collect::<Vec<_>>(),
         }}),
         Err(WriteError::InvalidGraph { role, violations }) => json!({"error": {
             "graph": role.as_str(),

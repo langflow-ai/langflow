@@ -89,8 +89,9 @@ impl KeyedList {
 pub struct NodeSchema {
     /// The schema file's version.
     pub version: u64,
-    /// Top-level flow keys that are view state.
-    pub flow_view_state: HashSet<String>,
+    /// The top-level flow keys that are not view state. Every other
+    /// top-level key is.
+    pub flow_graph_keys: HashSet<String>,
     /// Node keys that are view state.
     pub node_view_state: HashSet<String>,
     /// Keys of `data.node` that are view state.
@@ -134,6 +135,13 @@ impl NodeSchema {
                 .into_iter()
                 .collect())
         };
+        let flow = key(view_state, "view_state", "flow")?;
+        let flow_graph_keys = strings(
+            key(flow, "view_state.flow", "except")?,
+            "view_state.flow.except",
+        )?
+        .into_iter()
+        .collect();
         let field_units = key(raw, "", "field_units")?;
         let keyed_lists = key(raw, "", "keyed_lists")?;
         let tables = key(keyed_lists, "keyed_lists", "tables")?;
@@ -174,7 +182,7 @@ impl NodeSchema {
             version: key(raw, "", "version")?
                 .as_u64()
                 .ok_or("version must be a non-negative integer")?,
-            flow_view_state: view_set("flow")?,
+            flow_graph_keys,
             node_view_state: view_set("node")?,
             node_data_view_state,
             template_view_state: view_set("template")?,
@@ -205,6 +213,12 @@ impl NodeSchema {
             },
             table_keys,
         })
+    }
+
+    /// Whether a top-level flow key is view state.
+    #[must_use]
+    pub fn is_flow_view_state(&self, key: &str) -> bool {
+        !self.flow_graph_keys.contains(key)
     }
 
     /// The keyed list a node holds at `path`, or `None` if the schema declares none there.
@@ -358,10 +372,10 @@ mod tests {
             NodeSchema::parse(&raw).unwrap_err(),
             "view_state.flow is missing"
         );
-        raw["view_state"]["flow"] = json!([1]);
+        raw["view_state"]["flow"] = json!({"except": [1]});
         assert_eq!(
             NodeSchema::parse(&raw).unwrap_err(),
-            "view_state.flow must be a list of strings"
+            "view_state.flow.except must be a list of strings"
         );
     }
 
@@ -369,6 +383,10 @@ mod tests {
     fn the_embedded_schema_loads() {
         assert_eq!(NODE_SCHEMA.version, 1);
         assert!(NODE_SCHEMA.node_data_view_state.contains("last_updated"));
+        assert!(NODE_SCHEMA.is_flow_view_state("viewport"));
+        assert!(NODE_SCHEMA.is_flow_view_state("name"));
+        assert!(!NODE_SCHEMA.is_flow_view_state("nodes"));
+        assert!(!NODE_SCHEMA.is_flow_view_state("edges"));
         assert_eq!(NODE_SCHEMA.table_keys.id, "__id__");
         assert_eq!(NODE_SCHEMA.table_keys.position, "__pos__");
     }

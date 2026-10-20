@@ -12,10 +12,10 @@
 //! record the same history:
 //!
 //! - at most one operation of each type, in the order `delete_edges`,
-//!   `delete_nodes`, `add_nodes`, `update_nodes`, `add_edges`,
-//!   `update_metadata`, each listing every item it applies to: deletions in
-//!   the order the stored graph lists them, everything else in the order the
-//!   target lists it. Nothing is sorted;
+//!   `delete_nodes`, `add_nodes`, `update_nodes`, `add_edges`, each listing
+//!   every item it applies to: deletions in the order the stored graph lists
+//!   them, everything else in the order the target lists it. Nothing is
+//!   sorted;
 //! - nodes, edges and table rows are matched by id, and array order is never
 //!   a change;
 //! - inside a node, the diff follows `node_schema.json`: it splits only the
@@ -31,7 +31,8 @@
 //!   written whole;
 //! - an edge that changed in any way is deleted and added again;
 //! - view state is never recorded, and two spellings of one handle are not a
-//!   change.
+//!   change. Every top-level key other than `nodes` and `edges` is view
+//!   state.
 
 use std::collections::HashSet;
 
@@ -39,24 +40,12 @@ use indexmap::IndexMap;
 use serde_json::{Map, Value};
 
 use crate::ops::apply::{ApplyOptions, apply_flow_operations};
-use crate::ops::canonical::{JsonType, graphs_equal, is_row_position, values_equal};
+use crate::ops::canonical::{graphs_equal, is_row_position, values_equal};
 use crate::ops::edges::edge_changed;
-use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result};
-use crate::ops::ops::{Change, FieldUpdate, Operation, Path, PathExt, Segment};
+use crate::ops::ops::{FieldUpdate, Operation, Path, PathExt, Segment};
 use crate::ops::schema::{KeyedList, ListKind, NODE_SCHEMA, OUTPUTS_PATH, TEMPLATE_PATH};
 use crate::ops::validate::{Numbers, validate_flow_data};
-
-/// The keys of a template field that decide whether its value is a secret,
-/// recorded with every write inside the field.
-pub const TEMPLATE_FIELD_METADATA_KEYS: [&str; 6] = [
-    "name",
-    "type",
-    "password",
-    "load_from_db",
-    "_input_type",
-    "table_schema",
-];
 
 /// Operations that turn one graph into another, verified by replay.
 #[derive(Debug, Clone, PartialEq)]
@@ -118,7 +107,11 @@ pub fn diff_flow_data(base: &Value, target: &Value) -> Result<Vec<Operation>> {
     let mut node_updates = Vec::new();
     for (id, node) in &target_nodes {
         if let Some(before) = base_nodes.get(id) {
-            NodeDiff::new(id, node, &mut node_updates).object(before, node, &[])?;
+            NodeDiff {
+                id,
+                updates: &mut node_updates,
+            }
+            .object(before, node, &mut Vec::new())?;
         }
     }
 
@@ -137,9 +130,6 @@ pub fn diff_flow_data(base: &Value, target: &Value) -> Result<Vec<Operation>> {
     }
     if !added_edges.is_empty() {
         operations.push(Operation::AddEdges(added_edges));
-    }
-    if let Some(metadata) = diff_metadata(base, target)? {
-        operations.push(metadata);
     }
     Ok(operations)
 }
@@ -190,74 +180,24 @@ fn without(map: &Map<String, Value>, hidden: impl Fn(&str) -> bool) -> Map<Strin
         .collect()
 }
 
-/// A `set_field` of `value`, declaring a type change from `previous`.
-fn set(
-    id: &str,
-    path: Path,
-    value: &Value,
-    previous: Option<&Value>,
-    template_field: Option<Map<String, Value>>,
-) -> FieldUpdate {
-    let from_type = previous
-        .filter(|previous| JsonType::from(*previous) != JsonType::from(value))
-        .map(JsonType::from);
-    FieldUpdate {
-        id: id.to_owned(),
-        path,
-        expect: None,
-        change: Change::Set {
-            value: value.clone(),
-            from_type,
-            template_field,
-        },
-    }
-}
-
 // --- Nodes ---------------------------------------------------------------------------
 
 /// The writes that turn one node into another.
 #[derive(Debug)]
 struct NodeDiff<'a> {
     id: &'a str,
-    /// The target node's template, whose fields' metadata writes inside a field record.
-    template: Option<&'a Map<String, Value>>,
     updates: &'a mut Vec<FieldUpdate>,
 }
 
-impl<'a> NodeDiff<'a> {
-    fn new(id: &'a str, target: &'a Map<String, Value>, updates: &'a mut Vec<FieldUpdate>) -> Self {
-        let template = target.template();
-        Self {
-            id,
-            template,
-            updates,
-        }
-    }
-
-    /// The metadata of the template field a path writes inside of.
-    ///
-    /// A path that sets a whole template field carries its metadata in the
-    /// value already, and a path outside the template writes no field value,
-    /// so only writes strictly inside one field need it recorded.
-    fn field_metadata(&self, path: &[Segment]) -> Option<Map<String, Value>> {
-        let depth = TEMPLATE_PATH.len();
-        if path.len() <= depth + 1 || !path.starts_with_keys(&TEMPLATE_PATH) {
-            return None;
-        }
-        let field = self.template?.get(path[depth].key()?)?.as_object()?;
-        let metadata: Map<String, Value> = TEMPLATE_FIELD_METADATA_KEYS
-            .iter()
-            .filter_map(|key| Some(((*key).to_owned(), field.get(*key)?.clone())))
-            .collect();
-        (!metadata.is_empty()).then_some(metadata)
-    }
-
-    fn set(&mut self, path: Path, value: &Value, previous: Option<&Value>) {
-        let metadata = self.field_metadata(&path);
+impl NodeDiff<'_> {
+    /// Record a `set_field`. The walk shares one path, so a caller passes
+    /// its own copy: the one copy the write needs.
+    fn set(&mut self, path: Path, value: &Value) {
         self.updates
-            .push(set(self.id, path, value, previous, metadata));
+            .push(FieldUpdate::set(self.id, path, value.clone()));
     }
 
+    /// Record a `delete_field`, with its own copy of the path like [`Self::set`].
     fn delete(&mut self, path: Path) {
         self.updates.push(FieldUpdate::delete(self.id, path));
     }
@@ -276,38 +216,42 @@ impl<'a> NodeDiff<'a> {
     }
 
     /// Diff an object the schema splits: split its children where the schema does, write the others whole.
+    ///
+    /// The walk shares one `path`: each step pushes its segment and pops it
+    /// when done. An error ends the whole diff, so it leaves the path as it is.
     fn object(
         &mut self,
         base: &Map<String, Value>,
         target: &Map<String, Value>,
-        path: &[Segment],
+        path: &mut Path,
     ) -> Result<()> {
         for (key, value) in target {
             if Self::skipped(path, key) {
                 continue;
             }
-            let child_path = path.child(key);
-            let Some(previous) = base.get(key) else {
-                self.set(child_path, value, None);
-                continue;
-            };
-            if self.split(previous, value, &child_path)? {
-                continue;
+            path.push(Segment::Key(key.clone()));
+            match base.get(key) {
+                None => self.set(path.clone(), value),
+                Some(previous) => {
+                    if !self.split(previous, value, path)? && !values_equal(previous, value)? {
+                        self.set(path.clone(), value);
+                    }
+                }
             }
-            if !values_equal(previous, value)? {
-                self.set(child_path, value, Some(previous));
-            }
+            path.pop();
         }
         for key in base.keys() {
             if !target.contains_key(key) && !Self::skipped(path, key) {
-                self.delete(path.child(key));
+                path.push(Segment::Key(key.clone()));
+                self.delete(path.clone());
+                path.pop();
             }
         }
         Ok(())
     }
 
     /// Diff a value the schema splits further. Returns false when it is written whole.
-    fn split(&mut self, base: &Value, target: &Value, path: &[Segment]) -> Result<bool> {
+    fn split(&mut self, base: &Value, target: &Value, path: &mut Path) -> Result<bool> {
         let recursed = NODE_SCHEMA
             .recursed_paths
             .iter()
@@ -339,18 +283,14 @@ impl<'a> NodeDiff<'a> {
     fn write_all(&mut self, writes: Vec<Write<'_>>) {
         for write in writes {
             match write {
-                Write::Set {
-                    path,
-                    value,
-                    previous,
-                } => self.set(path, value, previous),
+                Write::Set { path, value } => self.set(path, value),
                 Write::Delete { path } => self.delete(path),
             }
         }
     }
 
     /// Diff a template field unit by unit. Returns false for a key that is not a field.
-    fn field(&mut self, base: &Value, target: &Value, path: &[Segment]) -> Result<bool> {
+    fn field(&mut self, base: &Value, target: &Value, path: &mut Path) -> Result<bool> {
         let (Value::Object(base_field), Value::Object(target_field)) = (base, target) else {
             return Ok(false);
         };
@@ -383,17 +323,15 @@ impl<'a> NodeDiff<'a> {
         // The value is `value` with the keys that qualify it. A keyed list
         // value is written item by item instead, when both sides allow it.
         let field_name = path[TEMPLATE_PATH.len()].key().unwrap_or_default();
-        let value_path = path.child("value");
         let keyed = NODE_SCHEMA.field_value_list(field_name, target_field);
         let mut item_writes = Vec::new();
         let per_item = match (keyed, base.get("value"), target.get("value")) {
-            (Some(keyed), Some(base_value), Some(target_value)) => keyed_list(
-                keyed,
-                base_value,
-                target_value,
-                &value_path,
-                &mut item_writes,
-            )?,
+            (Some(keyed), Some(base_value), Some(target_value)) => {
+                path.push(Segment::Key("value".to_owned()));
+                let per_item = keyed_list(keyed, base_value, target_value, path, &mut item_writes)?;
+                path.pop();
+                per_item
+            }
             _ => false,
         };
         let value_keys: Vec<&str> = all_keys
@@ -413,12 +351,16 @@ impl<'a> NodeDiff<'a> {
                     self.write_all(writes);
                 }
             } else if written.contains(key) {
-                self.set(path.child(key), value, base.get(key).copied());
+                path.push(Segment::Key((*key).to_owned()));
+                self.set(path.clone(), value);
+                path.pop();
             }
         }
         for key in base.keys() {
             if !target.contains_key(key) && written.contains(key) {
-                self.delete(path.child(key));
+                path.push(Segment::Key((*key).to_owned()));
+                self.delete(path.clone());
+                path.pop();
             }
         }
         Ok(true)
@@ -464,22 +406,19 @@ fn any_changed(
 /// One write the keyed-list diff found, before the node diff records it.
 #[derive(Debug)]
 enum Write<'v> {
-    Set {
-        path: Path,
-        value: &'v Value,
-        previous: Option<&'v Value>,
-    },
-    Delete {
-        path: Path,
-    },
+    Set { path: Path, value: &'v Value },
+    Delete { path: Path },
 }
 
 /// Diff a keyed list item by item. Returns false when it has to be written whole.
+///
+/// `path` names the list. Like the node walk, it pushes and pops each step,
+/// and copies the path only into a write it records.
 fn keyed_list<'v>(
     keyed: &KeyedList,
     base: &'v Value,
     target: &'v Value,
-    path: &[Segment],
+    path: &mut Path,
     writes: &mut Vec<Write<'v>>,
 ) -> Result<bool> {
     let (Some(base_items), Some(target_items)) =
@@ -499,54 +438,62 @@ fn keyed_list<'v>(
             return Ok(false);
         }
     }
-    let item_path = |key: &str| -> Path {
-        path.iter()
-            .cloned()
-            .chain([Segment::Item(key.to_owned())])
-            .collect()
-    };
     for (key, item) in &target_items {
-        let Some(previous) = base_items.get(key) else {
-            writes.push(Write::Set {
-                path: item_path(key),
+        path.push(Segment::Item((*key).to_owned()));
+        match base_items.get(key) {
+            None => writes.push(Write::Set {
+                path: path.clone(),
                 value: item,
-                previous: None,
-            });
-            continue;
-        };
-        let (Some(item_map), Some(previous)) = (item.as_object(), previous.as_object()) else {
-            continue;
-        };
-        for (item_key, value) in item_map {
-            let before = previous.get(item_key);
-            let unchanged = match before {
-                Some(before) => values_equal(before, value)?,
-                None => false,
-            };
-            if !unchanged {
-                writes.push(Write::Set {
-                    path: item_path(key).child(item_key),
-                    value,
-                    previous: before,
-                });
+            }),
+            Some(previous) => {
+                if let (Some(item_map), Some(previous)) = (item.as_object(), previous.as_object()) {
+                    item_writes(item_map, previous, path, writes)?;
+                }
             }
         }
-        for item_key in previous.keys() {
-            if !item_map.contains_key(item_key) {
-                writes.push(Write::Delete {
-                    path: item_path(key).child(item_key),
-                });
-            }
-        }
+        path.pop();
     }
     for key in base_items.keys() {
         if !target_items.contains_key(key) {
-            writes.push(Write::Delete {
-                path: item_path(key),
-            });
+            path.push(Segment::Item((*key).to_owned()));
+            writes.push(Write::Delete { path: path.clone() });
+            path.pop();
         }
     }
     Ok(true)
+}
+
+/// The writes that turn one keyed-list item into another, key by key.
+/// `path` names the item.
+fn item_writes<'v>(
+    target: &'v Map<String, Value>,
+    base: &'v Map<String, Value>,
+    path: &mut Path,
+    writes: &mut Vec<Write<'v>>,
+) -> Result<()> {
+    for (key, value) in target {
+        let before = base.get(key);
+        let unchanged = match before {
+            Some(before) => values_equal(before, value)?,
+            None => false,
+        };
+        if !unchanged {
+            path.push(Segment::Key(key.clone()));
+            writes.push(Write::Set {
+                path: path.clone(),
+                value,
+            });
+            path.pop();
+        }
+    }
+    for key in base.keys() {
+        if !target.contains_key(key) {
+            path.push(Segment::Key(key.clone()));
+            writes.push(Write::Delete { path: path.clone() });
+            path.pop();
+        }
+    }
+    Ok(())
 }
 
 /// A list by item key, or `None` when it cannot be written item by item.
@@ -573,39 +520,4 @@ fn items_by_key<'v>(keyed: &KeyedList, items: &'v Value) -> Option<IndexMap<&'v 
         by_key.insert(key, item);
     }
     Some(by_key)
-}
-
-// --- Metadata ------------------------------------------------------------------------
-
-fn diff_metadata(base: &Value, target: &Value) -> Result<Option<Operation>> {
-    let empty = Map::new();
-    let base = base.as_object().unwrap_or(&empty);
-    let target = target.as_object().unwrap_or(&empty);
-    let skip =
-        |key: &str| key == "nodes" || key == "edges" || NODE_SCHEMA.flow_view_state.contains(key);
-    let mut fields = Map::new();
-    for (key, value) in target {
-        if skip(key) {
-            continue;
-        }
-        let unchanged = match base.get(key) {
-            Some(previous) => values_equal(previous, value)?,
-            None => false,
-        };
-        if !unchanged {
-            fields.insert(key.clone(), value.clone());
-        }
-    }
-    let delete_keys: Vec<String> = base
-        .keys()
-        .filter(|key| !skip(key) && !target.contains_key(*key))
-        .cloned()
-        .collect();
-    if fields.is_empty() && delete_keys.is_empty() {
-        return Ok(None);
-    }
-    Ok(Some(Operation::UpdateMetadata {
-        fields,
-        delete_keys,
-    }))
 }

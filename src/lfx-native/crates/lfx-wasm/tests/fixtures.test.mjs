@@ -75,7 +75,6 @@ function outcome(run) {
 
 const failure = (error) => ({ error: error.kind, code: error.code });
 const graphText = (c, key) => (`${key}_json` in c ? c[`${key}_json`] : dump(c[key] ?? null));
-const num = (value) => Number(value.rawJSON);
 
 function cases(name, section, run) {
   describe(`${name}::${section}`, () => {
@@ -245,41 +244,6 @@ cases("inverse_cases.json", "cases", (c) => {
   assert.ok(ops.graphsEqual(state.toJson(), dump(c.base)));
 });
 
-// --- envelope_cases.json, replay_cases.json -------------------------------------------------------
-
-const corruption = (error) => {
-  const details = parse(error.details);
-  return { error: { kind: details.damage, revision: details.revision } };
-};
-
-cases("envelope_cases.json", "decode", (c) => {
-  const result = outcome(() => parse(ops.decodeRow(dump(c.row))));
-  const actual = result.error ? corruption(result.error) : { decoded: result.value };
-  check(strict, "decoded row", actual, c.error ? { error: c.error } : { decoded: c.decoded });
-});
-
-cases("envelope_cases.json", "encode", (c) => {
-  const { envelope, actor_user_ids, request_ids } = c;
-  check(strict, "envelope", parse(ops.encodeEnvelope(dump(c.operations))), { envelope, actor_user_ids, request_ids });
-});
-
-cases("envelope_cases.json", "pack", (c) => {
-  const options = { latest_revision: c.latest_revision, actor_user_id: c.actor_user_id, request_id: c.request_id, limits: c.limits };
-  if ("cause" in c) options.cause = c.cause;
-  check(strict, "rows", parse(ops.pack(dump(c.operations), dump(options))), c.rows);
-});
-
-cases("replay_cases.json", "cases", (c) => {
-  const result = outcome(() => parse(ops.replay(dump(c.checkpoint), num(c.checkpoint_revision), dump(c.rows), num(c.revision))));
-  const actual = result.error ? corruption(result.error) : { expected: result.value };
-  check(strict, "replayed graph", actual, c.error ? { error: c.error } : { expected: c.expected });
-});
-
-cases("replay_cases.json", "verify", (c) => {
-  const result = outcome(() => ops.verifyCheckpoint(dump(c.graph), c.hash, num(c.revision)));
-  check(strict, "verification", result.error ? corruption(result.error) : {}, c.error ? { error: c.error } : {});
-});
-
 // --- restore_cases.json, write_cases.json ----------------------------------------------------------
 
 cases("restore_cases.json", "cases", (c) => {
@@ -300,9 +264,9 @@ cases("write_cases.json", "cases", (c) => {
 
 test("every fixture file is run", () => {
   const run = [
-    "apply_cases.json", "canonical_cases.json", "diff_cases.json", "editor_cases.json", "envelope_cases.json",
-    "inverse_cases.json", "limit_cases.json", "merge_cases.json", "property_cases.json", "repair_cases.json", "replay_cases.json",
-    "restore_cases.json", "table_cases.json", "validation_cases.json", "write_cases.json",
+    "apply_cases.json", "canonical_cases.json", "diff_cases.json", "editor_cases.json", "inverse_cases.json",
+    "limit_cases.json", "merge_cases.json", "property_cases.json", "repair_cases.json", "restore_cases.json",
+    "table_cases.json", "validation_cases.json", "write_cases.json",
   ];
   assert.deepEqual(readdirSync(FIXTURES).filter((name) => name.endsWith(".json")).sort(), run);
 });
