@@ -1,6 +1,6 @@
 # lfx-native
 
-The native core of lfx, written in Rust. It is one crate, `lfx`, with one module per feature. The first module is `lfx::ops`, the flow operation engine. It applies, diffs, validates, repairs and hashes flow graphs.
+The native core of lfx, written in Rust. It is one crate, `lfx`, with one module per feature. The first module is `lfx::ops`, the flow operation engine. It applies, diffs, validates, repairs and hashes flow graphs. It knows flow graphs, not storage: the flow history service owns stored rows, revision numbers, requests, actors and damaged history.
 
 The server and the editor use the same engine, through two thin bindings:
 
@@ -44,8 +44,6 @@ The modules of `lfx::ops`:
 | `keyed` | keyed lists and table rows |
 | `schema` | the node schema (`node_schema.json`, embedded) |
 | `canonical` | canonical form, number printing, `graph_hash` |
-| `envelope` | stored batches: encode, decode, row packing |
-| `replay` | replay of rows onto a checkpoint |
 | `restore` | restore fixes, from both sides |
 | `write` | the engine's part of a save, in one call |
 | `ids` | random ids in the editor's formats |
@@ -69,11 +67,9 @@ This table maps each part of the engine to its callers today, in the Python engi
 
 | Part | Python (`lfx_native.ops`) | Backend callers |
 | --- | --- | --- |
-| The save: validate, repair, derive, pack | `prepare_write`, or `validate`, `repair`, `derive`, `pack` | `flow_history/recorder.py` (every graph write: PATCH, PUT, import, version activation, the assistant, file sync) |
+| The save: validate, repair, derive | `prepare_write`, or `validate`, `repair`, `derive` | `flow_history/recorder.py` (every graph write: PATCH, PUT, import, version activation, the assistant, file sync). The recorder numbers the operations and packs them into rows itself. |
 | Diff | `diff` | through `derive` in the recorder |
-| Graph hash | `graph_hash` | checkpoints and the check that the stored graph matches its latest revision (`recorder.py`), replay |
-| Stored envelope | `decode_row`, `encode_envelope`, `pack` | recorder, replay, timeline (`flow_history/timeline.py`) |
-| Replay and checkpoint checks | `replay`, `verify_checkpoint` | revision reads (`api/v1/flow_revisions.py`), maintenance (`flow_history/maintenance.py`) |
+| Graph hash | `graph_hash` | checkpoints and the check that the stored graph matches its latest revision (`recorder.py`), replay (`flow_history/replay.py`) |
 | Restore fix check | `apply_restore_fixes` | revision restore (`api/v1/flow_revisions.py`), version restore (`api/v1/flow_version.py`) |
 | New edge ids | `new_edge_id` | flow expansion (`processing/expand_flow.py`), the flow builder (`lfx/graph/flow_builder/connect.py`) |
 
@@ -82,7 +78,6 @@ This table maps each part of the engine to its callers today, in the Python engi
 | Part | Browser (`lfx-native`) | Editor callers |
 | --- | --- | --- |
 | Inverses, and applying them | `GraphState.apply` with `inverse` and `restoring` | history timeline (`buildHistoryTimeline` and `graphAt` in `history.ts`) |
-| Redacted replay | `GraphState.apply` with `redacted` | history playback of operations whose secrets the API removed |
 | Changed nodes and edges | the `changed_nodes` and `changed_edges` of an apply | none yet; for history playback on the canvas |
 | Append rows, and renumber a full gap | `appendTableRows`, and `assignRowIds` with renumbering (the default in the browser) | `TableNodeComponent` |
 | Edge fixes for a refused restore | `edgeFixes`, `fixesForEdges` | `use-flow-version-sidebar.ts`, `refused-restore.ts` |

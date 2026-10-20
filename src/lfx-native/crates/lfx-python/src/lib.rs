@@ -81,11 +81,7 @@ impl GraphState {
     }
 
     /// Apply a batch; returns what it did as JSON.
-    #[pyo3(signature = (operations, *, forward = false, inverse = false, restoring = false, redacted = false))]
-    #[expect(
-        clippy::fn_params_excessive_bools,
-        reason = "the four apply switches, as Python keywords"
-    )]
+    #[pyo3(signature = (operations, *, forward = false, inverse = false, restoring = false))]
     fn apply(
         &mut self,
         py: Python<'_>,
@@ -93,14 +89,12 @@ impl GraphState {
         forward: bool,
         inverse: bool,
         restoring: bool,
-        redacted: bool,
     ) -> PyResult<String> {
         let operations = text(operations)?;
         let options = ApplyOptions {
             forward,
             inverse,
             restoring,
-            redacted,
         };
         let state = &mut self.state;
         run(py, || api::apply_to(state, operations, options))
@@ -115,11 +109,7 @@ impl GraphState {
 
 /// Apply operations to a graph; returns `{"flow_data", ...}` as JSON.
 #[pyfunction]
-#[pyo3(signature = (flow, operations, *, forward = true, inverse = false, restoring = false, redacted = false))]
-#[expect(
-    clippy::fn_params_excessive_bools,
-    reason = "the four apply switches, as Python keywords"
-)]
+#[pyo3(signature = (flow, operations, *, forward = true, inverse = false, restoring = false))]
 fn apply(
     py: Python<'_>,
     flow: &Bound<'_, PyAny>,
@@ -127,14 +117,12 @@ fn apply(
     forward: bool,
     inverse: bool,
     restoring: bool,
-    redacted: bool,
 ) -> PyResult<String> {
     let (flow, operations) = (text(flow)?, text(operations)?);
     let options = ApplyOptions {
         forward,
         inverse,
         restoring,
-        redacted,
     };
     run(py, || api::apply(flow, operations, options))
 }
@@ -219,58 +207,6 @@ fn values_equal(
 fn canonical_json(py: Python<'_>, value: &Bound<'_, PyAny>) -> PyResult<String> {
     let value = text(value)?;
     run(py, || api::canonical_json(value))
-}
-
-/// Decode a stored row into its recorded operations.
-#[pyfunction]
-fn decode_row(py: Python<'_>, row: &Bound<'_, PyAny>) -> PyResult<String> {
-    let row = text(row)?;
-    run(py, || api::decode_row(row))
-}
-
-/// Group recorded operations into a row's envelope.
-#[pyfunction]
-fn encode_envelope(py: Python<'_>, operations: &Bound<'_, PyAny>) -> PyResult<String> {
-    let operations = text(operations)?;
-    run(py, || api::encode_envelope(operations))
-}
-
-/// Number operations and pack them into rows.
-#[pyfunction]
-fn pack(
-    py: Python<'_>,
-    operations: &Bound<'_, PyAny>,
-    options: &Bound<'_, PyAny>,
-) -> PyResult<String> {
-    let (operations, options) = (text(operations)?, text(options)?);
-    run(py, || api::pack(operations, options))
-}
-
-/// The graph at `revision`, replayed from a checkpoint through stored rows.
-#[pyfunction]
-fn replay(
-    py: Python<'_>,
-    checkpoint: &Bound<'_, PyAny>,
-    checkpoint_revision: u64,
-    rows: &Bound<'_, PyAny>,
-    revision: u64,
-) -> PyResult<String> {
-    let (checkpoint, rows) = (text(checkpoint)?, text(rows)?);
-    run(py, || {
-        api::replay(checkpoint, checkpoint_revision, rows, revision)
-    })
-}
-
-/// Fail unless a checkpoint's graph hashes to its stored hash.
-#[pyfunction]
-fn verify_checkpoint(
-    py: Python<'_>,
-    flow: &Bound<'_, PyAny>,
-    stored_hash: &str,
-    revision: u64,
-) -> PyResult<()> {
-    let flow = text(flow)?;
-    run(py, || api::verify_checkpoint(flow, stored_hash, revision))
 }
 
 /// The engine's part of a save.
@@ -434,10 +370,9 @@ mod _native {
     use super::{
         EngineError, GraphState, append_table_rows, apply, apply_restore_fixes,
         assign_changed_node_table_row_ids, assign_changed_table_row_ids, assign_row_ids,
-        assign_table_row_ids, canonical_json, decode_row, derive, diff, edge_fixes,
-        encode_envelope, fixes_for_edges, graph_hash, graphs_equal, new_edge_id, new_table_row_id,
-        node_schema, normalize_operations, ordered_rows, pack, prepare_write, repair, replay,
-        strip_flow_table_row_keys, strip_row_keys, table_fields, validate, values_equal,
-        verify_checkpoint,
+        assign_table_row_ids, canonical_json, derive, diff, edge_fixes, fixes_for_edges,
+        graph_hash, graphs_equal, new_edge_id, new_table_row_id, node_schema, normalize_operations,
+        ordered_rows, prepare_write, repair, strip_flow_table_row_keys, strip_row_keys,
+        table_fields, validate, values_equal,
     };
 }

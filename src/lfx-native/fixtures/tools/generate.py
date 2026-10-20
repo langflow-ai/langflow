@@ -1,7 +1,7 @@
 """Generate the shared fixtures whose expected outputs come from the Python engine.
 
 The expected outputs of these files come from the Python engine
-(``lfx.services.flow_operations`` and the pure parts of
+(``lfx.services.flow_operations``, the restore fix check and the save path of
 ``langflow.services.flow_history``) of the operation log stack, never from
 the Rust engine. Run it from the repository root of a checkout of the stack's
 top branch (``oplog-history-ui``), with ``lfx`` and ``langflow`` importable:
@@ -9,9 +9,8 @@ top branch (``oplog-history-ui``), with ``lfx`` and ``langflow`` importable:
     uv run python src/lfx-native/fixtures/tools/generate.py
 
 It rewrites ``canonical_cases.json``, ``validation_cases.json``,
-``repair_cases.json``, ``table_cases.json``, ``envelope_cases.json``,
-``replay_cases.json``, ``restore_cases.json``, ``write_cases.json`` and
-``limit_cases.json`` next to the other fixtures. A run that changes no rule
+``repair_cases.json``, ``table_cases.json``, ``restore_cases.json``,
+``write_cases.json`` and ``limit_cases.json`` next to the other fixtures. A run that changes no rule
 leaves every file as it is.
 
 Two conventions keep the files runnable in every runtime:
@@ -25,30 +24,19 @@ Two conventions keep the files runnable in every runtime:
 
 from __future__ import annotations
 
-import ast
-import asyncio
-import importlib.util
 import json
 import sys
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any
-from uuid import UUID
 
 import lfx.services.flow_operations.repair as repair_module
 import lfx.services.flow_operations.table_rows as table_rows_module
-from langflow.services.flow_history import envelope as envelope_module
-from langflow.services.flow_history.errors import FlowHistoryCorruptionError, RestoreFixNotAllowedError
+from langflow.services.flow_history.errors import RestoreFixNotAllowedError
+from langflow.services.flow_history.recorder import normalize_absent_graph
 from langflow.services.flow_history.restore_fixes import apply_restore_fixes
 from lfx.services.flow_operations import (
-    AddEdgesOp,
-    AddNodesOp,
-    DeleteEdgesOp,
-    DeleteNodesOp,
     FlowDataValidationError,
     FlowOperationError,
-    UpdateMetadataOp,
-    UpdateNodesOp,
     canonical_json,
     derive_flow_operations,
     dump_flow_operation,
@@ -56,7 +44,6 @@ from lfx.services.flow_operations import (
     graph_hash,
     graphs_equal,
     ordered_rows,
-    parse_flow_operation,
     parse_flow_operations,
     parse_handle,
     repair_flow_data,
@@ -78,10 +65,6 @@ FIXTURES = Path(__file__).resolve().parent.parent
 REFERENCE = "the Python engine"
 GENERATED_EDGE_ID = "<generated edge id>"
 GENERATED_ROW_ID = "<generated row id>"
-ACTOR = "11111111-1111-4111-8111-111111111111"
-OTHER_ACTOR = "22222222-2222-4222-8222-222222222222"
-REQUEST = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
-OTHER_REQUEST = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
 EMPTY = {"nodes": [], "edges": []}
 
 # --- Generated ids ------------------------------------------------------------------------
@@ -314,6 +297,8 @@ def _graph_pairs() -> list[tuple[str, dict, dict]]:
     view["nodes"][0]["data"]["node"]["last_updated"] = "2026-10-15"
     view["nodes"][1]["data"]["node"]["template"]["f"]["display_name"] = "F"
     view["edges"][0].update({"selected": True, "animated": True, "className": "running"})
+    top_level = _fresh(base)
+    top_level.update({"name": "renamed", "description": "every top-level key but nodes and edges is view state"})
     respelled = _fresh(base)
     respelled["edges"][0]["sourceHandle"] = "{œnameœ: œoutœ}"
     moved = _fresh(base)
@@ -332,6 +317,7 @@ def _graph_pairs() -> list[tuple[str, dict, dict]]:
     return [
         ("node and edge order is not state", base, reordered),
         ("view state is not state", base, view),
+        ("top-level keys other than nodes and edges are view state", base, top_level),
         ("two spellings of one handle are one handle", base, respelled),
         ("a position is state", base, moved),
         ("1 and 1.0 are one number", integral, as_float),
@@ -1065,502 +1051,6 @@ def table_cases() -> dict[str, Any]:
     }
 
 
-# --- envelope_cases.json ------------------------------------------------------------------
-
-
-def _row(start: int, end: int, ops: Any) -> SimpleNamespace:
-    return SimpleNamespace(flow_id=UUID(int=1), start_revision=start, end_revision=end, ops=ops)
-
-
-def _element(revision: Any, operation: Any, cause: Any = None) -> dict:
-    element = {"revision": revision, "operation": operation}
-    if cause is not None:
-        element["cause"] = cause
-    return element
-
-
-def _batch(request: str, actor: str, *elements: dict) -> dict:
-    return {"request_id": request, "actor_user_id": actor, "operations": list(elements)}
-
-
-DELETE_A = {"type": "delete_nodes", "ids": ["a"]}
-DELETE_B = {"type": "delete_nodes", "ids": ["b"]}
-META = {"type": "update_metadata", "fields": {"name": "x"}}
-
-
-def _decode_inputs() -> list[tuple[str, int, int, Any]]:
-    return [
-        (
-            "one batch",
-            5,
-            6,
-            {"version": 1, "batches": [_batch(REQUEST, ACTOR, _element(5, DELETE_A, "edit_code"), _element(6, META))]},
-        ),
-        (
-            "two requests from two actors",
-            1,
-            3,
-            {
-                "version": 1,
-                "batches": [
-                    _batch(REQUEST, ACTOR, _element(1, DELETE_A)),
-                    _batch(OTHER_REQUEST, OTHER_ACTOR, _element(2, DELETE_B), _element(3, META)),
-                ],
-            },
-        ),
-        (
-            "ids in other spellings are normalized",
-            1,
-            1,
-            {
-                "version": 1,
-                "batches": [
-                    _batch(
-                        "{AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA}",
-                        "urn:uuid:11111111111141118111111111111111",
-                        _element(1, DELETE_A),
-                    )
-                ],
-            },
-        ),
-        (
-            "a null cause is no cause",
-            1,
-            1,
-            {"version": 1, "batches": [_batch(REQUEST, ACTOR, {"revision": 1, "cause": None, "operation": DELETE_A})]},
-        ),
-        (
-            "a float revision equal to the expected one is accepted",
-            1,
-            1,
-            {"version": 1, "batches": [_batch(REQUEST, ACTOR, _element(1.0, DELETE_A))]},
-        ),
-        ("an unknown version", 1, 1, {"version": 2, "batches": [_batch(REQUEST, ACTOR, _element(1, DELETE_A))]}),
-        ("an envelope that is not an object", 1, 1, [1]),
-        ("batches that are not a list", 1, 1, {"version": 1, "batches": {}}),
-        ("a batch without operations", 4, 4, {"version": 1, "batches": [_batch(REQUEST, ACTOR)]}),
-        ("a batch that is not an object", 4, 4, {"version": 1, "batches": ["x"]}),
-        (
-            "a batch with a malformed request id",
-            4,
-            4,
-            {"version": 1, "batches": [_batch("not-a-uuid", ACTOR, _element(4, DELETE_A))]},
-        ),
-        (
-            "a batch without an actor",
-            4,
-            4,
-            {"version": 1, "batches": [{"request_id": REQUEST, "operations": [_element(4, DELETE_A)]}]},
-        ),
-        (
-            "a request with two batches",
-            1,
-            2,
-            {
-                "version": 1,
-                "batches": [
-                    _batch(REQUEST, ACTOR, _element(1, DELETE_A)),
-                    _batch(REQUEST, ACTOR, _element(2, DELETE_B)),
-                ],
-            },
-        ),
-        (
-            "a revision out of order",
-            1,
-            2,
-            {"version": 1, "batches": [_batch(REQUEST, ACTOR, _element(1, DELETE_A), _element(3, DELETE_B))]},
-        ),
-        ("an element that is not an object", 1, 1, {"version": 1, "batches": [_batch(REQUEST, ACTOR, "x")]}),
-        (
-            "a malformed operation",
-            1,
-            1,
-            {"version": 1, "batches": [_batch(REQUEST, ACTOR, _element(1, {"type": "rename"}))]},
-        ),
-        ("an element without an operation", 1, 1, {"version": 1, "batches": [_batch(REQUEST, ACTOR, {"revision": 1})]}),
-        (
-            "a cause that is not a string",
-            1,
-            1,
-            {"version": 1, "batches": [_batch(REQUEST, ACTOR, _element(1, DELETE_A, 5))]},
-        ),
-        (
-            "fewer operations than the range",
-            1,
-            3,
-            {"version": 1, "batches": [_batch(REQUEST, ACTOR, _element(1, DELETE_A))]},
-        ),
-        (
-            "more operations than the range",
-            1,
-            1,
-            {"version": 1, "batches": [_batch(REQUEST, ACTOR, _element(1, DELETE_A), _element(2, DELETE_B))]},
-        ),
-    ]
-
-
-def _decoded(operation: Any) -> dict:
-    result = {
-        "revision": operation.revision,
-        "actor_user_id": str(operation.actor_user_id),
-        "request_id": str(operation.request_id),
-        "operation": dump_flow_operation(operation.operation),
-    }
-    if operation.cause is not None:
-        result["cause"] = operation.cause
-    return result
-
-
-def _recorder_namespace(ops_limit: int, bytes_limit: int) -> dict[str, Any]:
-    """The recorder's pure numbering and packing functions, read from its source and run as written."""
-    spec = importlib.util.find_spec("langflow.services.flow_history.recorder")
-    tree = ast.parse(Path(spec.origin).read_text(encoding="utf-8"))
-    wanted = {
-        "normalize_absent_graph",
-        "_json_size",
-        "_sequence",
-        "_pack_rows",
-        "_split_to_fit",
-        "_items",
-        "_dump_item",
-    }
-    constants = {"_ENVELOPE_OVERHEAD", "_BATCH_OVERHEAD"}
-    body = [
-        node
-        for node in tree.body
-        if (isinstance(node, ast.FunctionDef) and node.name in wanted)
-        or (isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id in constants for t in node.targets))
-    ]
-    settings = SimpleNamespace(flow_op_log_row_ops_limit=ops_limit, flow_op_log_row_bytes_limit=bytes_limit)
-    namespace: dict[str, Any] = {
-        "json": json,
-        "UUID": UUID,
-        "Any": Any,
-        "AddEdgesOp": AddEdgesOp,
-        "AddNodesOp": AddNodesOp,
-        "DeleteEdgesOp": DeleteEdgesOp,
-        "DeleteNodesOp": DeleteNodesOp,
-        "UpdateMetadataOp": UpdateMetadataOp,
-        "UpdateNodesOp": UpdateNodesOp,
-        "FlowOperation": object,
-        "Flow": object,
-        "RecordedOperation": envelope_module.RecordedOperation,
-        "dump_flow_operation": dump_flow_operation,
-        "encode_envelope": envelope_module.encode_envelope,
-        "batch_header": envelope_module.batch_header,
-        "get_settings_service": lambda: SimpleNamespace(settings=settings),
-    }
-    exec(compile(ast.Module(body=body, type_ignores=[]), spec.origin, "exec"), namespace)
-    return namespace
-
-
-def _pack(case: dict[str, Any]) -> list[dict[str, Any]]:
-    namespace = _recorder_namespace(case["limits"]["ops"], case["limits"]["bytes"])
-    recorded = namespace["_sequence"](
-        parse_flow_operations(_fresh(case["operations"])),
-        flow=SimpleNamespace(latest_revision=case["latest_revision"]),
-        actor_id=UUID(case["actor_user_id"]),
-        request_id=UUID(case["request_id"]),
-        cause=case.get("cause"),
-    )
-    return [
-        {
-            "start_revision": row[0].revision,
-            "end_revision": row[-1].revision,
-            "ops": envelope_module.encode_envelope(row),
-            "actor_user_ids": envelope_module.distinct_actor_ids(row),
-            "request_ids": envelope_module.request_ids_in_order(row),
-        }
-        for row in namespace["_pack_rows"](recorded)
-    ]
-
-
-def _pack_inputs() -> list[dict[str, Any]]:
-    many_nodes = [_node(f"n{index}", {"text": {"type": "str", "value": "x" * 40}}) for index in range(6)]
-    updates = [
-        {"id": "a", "op": "set_field", "path": ["data", "node", "template", f"f{index}", "value"], "value": index}
-        for index in range(5)
-    ]
-    return [
-        {
-            "name": "operations within both limits share one row",
-            "operations": [DELETE_A, META],
-            "latest_revision": 7,
-            "limits": {"ops": 100, "bytes": 204800},
-        },
-        {
-            "name": "the operation limit closes a row",
-            "operations": [DELETE_A, DELETE_B, META],
-            "latest_revision": 0,
-            "limits": {"ops": 2, "bytes": 204800},
-            "cause": "restore",
-        },
-        {
-            "name": "the byte limit closes a row",
-            "operations": [
-                {"type": "add_nodes", "nodes": many_nodes[:2]},
-                {"type": "add_nodes", "nodes": many_nodes[2:4]},
-            ],
-            "latest_revision": 3,
-            "limits": {"ops": 100, "bytes": 600},
-        },
-        {
-            "name": "a list that does not fit is split into operations of its type",
-            "operations": [{"type": "add_nodes", "nodes": many_nodes}],
-            "latest_revision": 0,
-            "limits": {"ops": 100, "bytes": 700},
-        },
-        {
-            "name": "an item larger than the limit is an operation of its own",
-            "operations": [
-                {
-                    "type": "add_nodes",
-                    "nodes": [_node("big", {"text": {"type": "str", "value": "x" * 900}}), many_nodes[0]],
-                }
-            ],
-            "latest_revision": 0,
-            "limits": {"ops": 100, "bytes": 500},
-        },
-        {
-            "name": "updates split by the byte limit",
-            "operations": [{"type": "update_nodes", "updates": updates}],
-            "latest_revision": 10,
-            "limits": {"ops": 100, "bytes": 450},
-        },
-        {
-            "name": "deletes split by the byte limit",
-            "operations": [{"type": "delete_edges", "ids": [f"edge-{index:03d}-{'x' * 30}" for index in range(12)]}],
-            "latest_revision": 0,
-            "limits": {"ops": 100, "bytes": 400},
-        },
-        {
-            "name": "metadata splits into sets and deletes",
-            "operations": [
-                {
-                    "type": "update_metadata",
-                    "fields": {f"k{index}": "v" * 60 for index in range(4)},
-                    "delete_keys": ["gone", "old"],
-                }
-            ],
-            "latest_revision": 0,
-            "limits": {"ops": 100, "bytes": 330},
-        },
-    ]
-
-
-def envelope_cases() -> dict[str, Any]:
-    decode = []
-    for name, start, end, ops in _decode_inputs():
-        row = {"start_revision": start, "end_revision": end, "ops": ops}
-        try:
-            decoded = envelope_module.decode_row(_row(start, end, _fresh(ops)))
-        except FlowHistoryCorruptionError as exc:
-            decode.append({"name": name, "row": row, "error": {"kind": exc.kind, "revision": exc.revision}})
-        else:
-            decode.append({"name": name, "row": row, "decoded": [_decoded(operation) for operation in decoded]})
-    pack = []
-    for inputs in _pack_inputs():
-        case = {"actor_user_id": ACTOR, "request_id": REQUEST, **inputs}
-        pack.append({**case, "rows": _pack(case)})
-    two_requests = [
-        envelope_module.RecordedOperation(1, UUID(ACTOR), UUID(REQUEST), parse_flow_operation(DELETE_A), "edit_code"),
-        envelope_module.RecordedOperation(2, UUID(ACTOR), UUID(REQUEST), parse_flow_operation(META)),
-        envelope_module.RecordedOperation(3, UUID(OTHER_ACTOR), UUID(OTHER_REQUEST), parse_flow_operation(DELETE_B)),
-    ]
-    encode = [
-        {
-            "name": "operations group into one batch per request",
-            "operations": [_decoded(operation) for operation in two_requests],
-            "envelope": envelope_module.encode_envelope(two_requests),
-            "actor_user_ids": envelope_module.distinct_actor_ids(two_requests),
-            "request_ids": envelope_module.request_ids_in_order(two_requests),
-        }
-    ]
-    return {
-        "description": (
-            "The stored operation envelope. Expected outputs come from "
-            f"{REFERENCE} (langflow.services.flow_history.envelope and the recorder's packing). `decode` "
-            "gives a stored row and its operations, or the damage (`kind` and `revision`). `encode` gives "
-            "recorded operations and their envelope, actors and requests. `pack` numbers operations from "
-            "`latest_revision`, splits what does not fit, and packs them into rows within `limits` (sizes "
-            "are compact JSON bytes)."
-        ),
-        "decode": decode,
-        "encode": encode,
-        "pack": pack,
-    }
-
-
-# --- replay_cases.json --------------------------------------------------------------------
-
-
-def _replay_namespace(rows: list[SimpleNamespace]) -> dict[str, Any]:
-    spec = importlib.util.find_spec("langflow.services.flow_history.replay")
-    tree = ast.parse(Path(spec.origin).read_text(encoding="utf-8"))
-    body = [
-        node
-        for node in tree.body
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-        and node.name in {"replay_from", "verify_checkpoint"}
-    ]
-
-    async def rows_covering(_session: Any, _flow_id: Any, *, after: int, through: int) -> list:
-        return [row for row in rows if row.end_revision > after and row.start_revision <= through]
-
-    from lfx.services.flow_operations import apply_flow_operations
-
-    namespace: dict[str, Any] = {
-        "Any": Any,
-        "UUID": UUID,
-        "FlowVersion": object,
-        "AsyncSession": object,
-        "FlowOperationError": FlowOperationError,
-        "FlowHistoryCorruptionError": FlowHistoryCorruptionError,
-        "apply_flow_operations": apply_flow_operations,
-        "graph_hash": graph_hash,
-        "decode_row": envelope_module.decode_row,
-        "rows_covering": rows_covering,
-    }
-    exec(compile(ast.Module(body=body, type_ignores=[]), spec.origin, "exec"), namespace)
-    return namespace
-
-
-def _replay_inputs() -> list[dict[str, Any]]:
-    graph = {"nodes": [_node("a", {"x": {"type": "str", "value": "1"}}), _node("b")], "edges": [], "name": "flow"}
-
-    def set_x(value: str) -> dict:
-        return {
-            "type": "update_nodes",
-            "updates": [
-                {"id": "a", "op": "set_field", "path": ["data", "node", "template", "x", "value"], "value": value}
-            ],
-        }
-
-    rows = [
-        {
-            "start_revision": 1,
-            "end_revision": 2,
-            "ops": {
-                "version": 1,
-                "batches": [_batch(REQUEST, ACTOR, _element(1, set_x("2")), _element(2, set_x("3")))],
-            },
-        },
-        {
-            "start_revision": 3,
-            "end_revision": 3,
-            "ops": {"version": 1, "batches": [_batch(OTHER_REQUEST, OTHER_ACTOR, _element(3, DELETE_B))]},
-        },
-    ]
-    gap = [
-        rows[0],
-        {
-            **rows[1],
-            "start_revision": 4,
-            "end_revision": 4,
-            "ops": {"version": 1, "batches": [_batch(OTHER_REQUEST, OTHER_ACTOR, _element(4, DELETE_B))]},
-        },
-    ]
-    failing = [
-        {
-            "start_revision": 1,
-            "end_revision": 1,
-            "ops": {
-                "version": 1,
-                "batches": [_batch(REQUEST, ACTOR, _element(1, {"type": "delete_nodes", "ids": ["zz"]}))],
-            },
-        }
-    ]
-    damaged = [{"start_revision": 1, "end_revision": 1, "ops": {"version": 2, "batches": []}}]
-    return [
-        {"name": "replay to the end", "checkpoint": graph, "checkpoint_revision": 0, "rows": rows, "revision": 3},
-        {
-            "name": "replay stops inside a row",
-            "checkpoint": graph,
-            "checkpoint_revision": 0,
-            "rows": rows,
-            "revision": 1,
-        },
-        {
-            "name": "a row that began before the checkpoint",
-            "checkpoint": {**graph, "nodes": [_node("a", {"x": {"type": "str", "value": "2"}}), _node("b")]},
-            "checkpoint_revision": 1,
-            "rows": rows,
-            "revision": 3,
-        },
-        {
-            "name": "the checkpoint revision itself",
-            "checkpoint": graph,
-            "checkpoint_revision": 2,
-            "rows": [],
-            "revision": 2,
-        },
-        {"name": "a missing revision", "checkpoint": graph, "checkpoint_revision": 0, "rows": gap, "revision": 4},
-        {
-            "name": "rows that end before the revision",
-            "checkpoint": graph,
-            "checkpoint_revision": 0,
-            "rows": rows[:1],
-            "revision": 3,
-        },
-        {
-            "name": "an operation that does not apply",
-            "checkpoint": graph,
-            "checkpoint_revision": 0,
-            "rows": failing,
-            "revision": 1,
-        },
-        {"name": "a damaged row", "checkpoint": graph, "checkpoint_revision": 0, "rows": damaged, "revision": 1},
-    ]
-
-
-def replay_cases() -> dict[str, Any]:
-    cases = []
-    for case in _replay_inputs():
-        rows = [_row(row["start_revision"], row["end_revision"], _fresh(row["ops"])) for row in case["rows"]]
-        namespace = _replay_namespace(rows)
-        anchor = SimpleNamespace(
-            flow_id=UUID(int=1), operation_revision=case["checkpoint_revision"], data=_fresh(case["checkpoint"])
-        )
-        try:
-            graph = asyncio.run(namespace["replay_from"](None, UUID(int=1), anchor, case["revision"]))
-        except FlowHistoryCorruptionError as exc:
-            cases.append({**case, "error": {"kind": exc.kind, "revision": exc.revision}})
-        else:
-            cases.append({**case, "expected": graph})
-    graph = _replay_inputs()[0]["checkpoint"]
-    verify = []
-    namespace = _replay_namespace([])
-    for name, data, stored_hash in [
-        ("a checkpoint that matches its hash", graph, graph_hash(graph)),
-        ("a checkpoint changed after it was hashed", {**graph, "name": "changed"}, graph_hash(graph)),
-    ]:
-        checkpoint = SimpleNamespace(flow_id=UUID(int=1), operation_revision=4, data=data, graph_hash=stored_hash)
-        try:
-            namespace["verify_checkpoint"](checkpoint)
-        except FlowHistoryCorruptionError as exc:
-            verify.append(
-                {
-                    "name": name,
-                    "graph": data,
-                    "hash": stored_hash,
-                    "revision": 4,
-                    "error": {"kind": exc.kind, "revision": exc.revision},
-                }
-            )
-        else:
-            verify.append({"name": name, "graph": data, "hash": stored_hash, "revision": 4})
-    return {
-        "description": (
-            "Replay onto a checkpoint. Expected outputs come from "
-            f"{REFERENCE} (langflow.services.flow_history.replay). A case applies the operations of `rows` "
-            "after `checkpoint_revision` up to `revision` to `checkpoint`, and gives the graph or the damage "
-            "(`kind` and `revision`). `verify` checks a checkpoint's graph against its stored hash."
-        ),
-        "cases": cases,
-        "verify": verify,
-    }
-
-
 # --- restore_cases.json -------------------------------------------------------------------
 
 
@@ -1701,15 +1191,13 @@ def restore_cases() -> dict[str, Any]:
 
 
 def _prepare_write(stored: Any, target: Any, options: dict[str, Any]) -> dict[str, Any]:
-    """The recorder's write path without the database, composed from the Python engine as write_flow_graph runs it."""
-    namespace = _recorder_namespace(options["limits"]["ops"], options["limits"]["bytes"])
-    normalize = namespace["normalize_absent_graph"]
+    """The engine's part of the recorder's write path, composed from the Python engine as write_flow_graph runs it."""
     repairs: list[dict[str, Any]] = []
     stored_repaired = False
     if options["started"]:
         base = stored
     else:
-        base = normalize(stored)
+        base = normalize_absent_graph(stored)
         violations = find_graph_violations(base)
         if violations:
             if not options["repair_invalid_graph"]:
@@ -1718,7 +1206,7 @@ def _prepare_write(stored: Any, target: Any, options: dict[str, Any]) -> dict[st
             base = repaired.flow_data
             stored_repaired = True
             repairs += [{"graph": "stored", **fix.to_dict()} for fix in repaired.fixes]
-    target = normalize(target)
+    target = normalize_absent_graph(target)
     violations = find_graph_violations(target, base=base)
     if violations:
         if not options["repair_invalid_graph"]:
@@ -1730,23 +1218,6 @@ def _prepare_write(stored: Any, target: Any, options: dict[str, Any]) -> dict[st
         target = repaired.flow_data
         repairs += [{"graph": "submitted", **fix.to_dict()} for fix in repaired.fixes]
     derived = derive_flow_operations(base, target)
-    recorded = namespace["_sequence"](
-        derived.operations,
-        flow=SimpleNamespace(latest_revision=options["latest_revision"]),
-        actor_id=UUID(options["actor_user_id"]),
-        request_id=UUID(options["request_id"]),
-        cause=options.get("cause"),
-    )
-    rows = [
-        {
-            "start_revision": row[0].revision,
-            "end_revision": row[-1].revision,
-            "ops": envelope_module.encode_envelope(row),
-            "actor_user_ids": envelope_module.distinct_actor_ids(row),
-            "request_ids": envelope_module.request_ids_in_order(row),
-        }
-        for row in namespace["_pack_rows"](recorded)
-    ]
     return {
         "expected": _placeholders(
             {
@@ -1755,48 +1226,40 @@ def _prepare_write(stored: Any, target: Any, options: dict[str, Any]) -> dict[st
                 "target": target,
                 "repairs": repairs,
                 "operations": [dump_flow_operation(operation) for operation in derived.operations],
-                "rows": rows,
             }
         )
     }
 
 
 def write_cases() -> dict[str, Any]:
-    options = {
-        "started": True,
-        "repair_invalid_graph": False,
-        "latest_revision": 4,
-        "actor_user_id": ACTOR,
-        "request_id": REQUEST,
-        "limits": {"ops": 100, "bytes": 204800},
-    }
+    options = {"started": True, "repair_invalid_graph": False}
     graph = _connectable(_edge_to("f"))
     edited = _fresh(graph)
     edited["nodes"][1]["data"]["node"]["template"]["f"]["value"] = "hello"
-    edited["name"] = "renamed"
     view_only = _fresh(graph)
     view_only["viewport"] = {"zoom": 2}
+    view_only["name"] = "renamed"
     broken_stored = {"nodes": [_node("a"), _node("a")], "edges": None}
     inputs = [
-        ("an edit records its operations in rows", graph, edited, {**options, "cause": "edit_code"}),
+        ("an edit records its operations", graph, edited, options),
         ("a save that changes only view state records nothing", graph, view_only, options),
         (
             "a flow without history and without data starts empty",
             None,
             graph,
-            {**options, "started": False, "latest_revision": 0},
+            {**options, "started": False},
         ),
         (
             "a stored graph that breaks the rules is refused",
             broken_stored,
             graph,
-            {**options, "started": False, "latest_revision": 0},
+            {**options, "started": False},
         ),
         (
             "a stored graph that breaks the rules is repaired on request",
             broken_stored,
             graph,
-            {**options, "started": False, "latest_revision": 0, "repair_invalid_graph": True},
+            {**options, "started": False, "repair_invalid_graph": True},
         ),
         ("a submitted legacy table is refused", EMPTY, _table_graph(LEGACY_ROWS), options),
         (
@@ -1811,12 +1274,6 @@ def write_cases() -> dict[str, Any]:
             _connectable(_edge_to("missing")),
             {**options, "repair_invalid_graph": True},
         ),
-        (
-            "operations past the row limit fill several rows",
-            {"nodes": [_node("gone")], "edges": []},
-            {"nodes": [_node(f"n{index}") for index in range(3)], "edges": [], "name": "x"},
-            {**options, "limits": {"ops": 2, "bytes": 204800}},
-        ),
     ]
     cases = []
     for name, stored, target, case_options in inputs:
@@ -1824,11 +1281,11 @@ def write_cases() -> dict[str, Any]:
         cases.append({"name": name, "stored": stored, "target": target, "options": case_options, **result})
     return {
         "description": (
-            "The engine's part of a save: check, repair on request, derive, number and pack. Expected "
-            f"outputs come from {REFERENCE}, composed from the recorder's write path (write_flow_graph) "
-            "without its database steps. A case gives the stored graph, the submitted graph and the options, "
-            "and either what the save stores or the graph whose violations refuse it. Random ids appear as "
-            f"`{GENERATED_EDGE_ID}` and `{GENERATED_ROW_ID}`."
+            "The engine's part of a save: check, repair on request, and derive. Expected outputs come from "
+            f"{REFERENCE}, composed from the recorder's write path (write_flow_graph) without its storage "
+            "steps: the history service numbers the operations and packs them into rows. A case gives the "
+            "stored graph, the submitted graph and the options, and either what the save stores or the graph "
+            f"whose violations refuse it. Random ids appear as `{GENERATED_EDGE_ID}` and `{GENERATED_ROW_ID}`."
         ),
         "cases": cases,
     }
@@ -1894,8 +1351,6 @@ def main() -> None:
         ("validation_cases.json", validation_cases),
         ("repair_cases.json", repair_cases),
         ("table_cases.json", table_cases),
-        ("envelope_cases.json", envelope_cases),
-        ("replay_cases.json", replay_cases),
         ("restore_cases.json", restore_cases),
         ("write_cases.json", write_cases),
         ("limit_cases.json", limit_cases),

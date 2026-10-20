@@ -27,7 +27,6 @@
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
-use std::str::FromStr;
 
 use serde_json::{Map, Number, Value};
 use sha2::{Digest, Sha256};
@@ -57,42 +56,6 @@ pub enum JsonType {
     Boolean,
     Null,
 }
-
-impl JsonType {
-    /// The type's name, as `from_type` spells it.
-    #[must_use]
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Object => "object",
-            Self::Array => "array",
-            Self::String => "string",
-            Self::Number => "number",
-            Self::Boolean => "boolean",
-            Self::Null => "null",
-        }
-    }
-}
-
-/// The type a name such as `"number"` names.
-impl FromStr for JsonType {
-    type Err = UnknownJsonType;
-
-    fn from_str(name: &str) -> Result<Self, UnknownJsonType> {
-        Ok(match name {
-            "object" => Self::Object,
-            "array" => Self::Array,
-            "string" => Self::String,
-            "number" => Self::Number,
-            "boolean" => Self::Boolean,
-            "null" => Self::Null,
-            _ => return Err(UnknownJsonType),
-        })
-    }
-}
-
-/// A name that is not one of the six JSON types.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct UnknownJsonType;
 
 /// The JSON type of a value.
 impl From<&Value> for JsonType {
@@ -381,7 +344,7 @@ fn canonical_graph(flow: &Value, mode: Mode) -> Canon<'_> {
     let Value::Object(flow) = flow else {
         return Canon::Raw(flow);
     };
-    let mut graph = without(flow, |key| NODE_SCHEMA.flow_view_state.contains(key));
+    let mut graph = without(flow, |key| NODE_SCHEMA.is_flow_view_state(key));
     for key in ["nodes", "edges"] {
         let Some(Canon::Raw(Value::Array(entries))) = graph.get(key) else {
             continue;
@@ -814,6 +777,7 @@ mod tests {
     fn graphs_compare_their_canonical_forms() {
         let left = json!({
             "viewport": {"x": 1},
+            "description": "every top-level key but nodes and edges is view state",
             "nodes": [
                 {"id": "b", "selected": true, "data": {"node": {"template": {}}}},
                 {"id": "a", "data": {"node": {"last_updated": "x", "template": {

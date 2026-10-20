@@ -31,7 +31,7 @@ fn run<T>(result: ApiResult<T>) -> Result<T, JsValue> {
     result.map_err(|error| thrown(&error))
 }
 
-/// Read the apply switches from an options object: `{forward, inverse, restoring, redacted}`.
+/// Read the apply switches from an options object: `{forward, inverse, restoring}`.
 fn apply_options(options: &JsValue, forward_by_default: bool) -> ApplyOptions {
     let flag = |name: &str| {
         Reflect::get(options, &JsValue::from_str(name))
@@ -42,22 +42,7 @@ fn apply_options(options: &JsValue, forward_by_default: bool) -> ApplyOptions {
         forward: flag("forward").unwrap_or(forward_by_default),
         inverse: flag("inverse").unwrap_or(false),
         restoring: flag("restoring").unwrap_or(false),
-        redacted: flag("redacted").unwrap_or(false),
     }
-}
-
-/// A revision from a JavaScript number, which must be a whole number from 0 up.
-fn revision(value: f64) -> Result<u64, JsValue> {
-    const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
-    if value.fract() == 0.0 && (0.0..=MAX_SAFE_INTEGER).contains(&value) {
-        #[expect(
-            clippy::cast_possible_truncation,
-            clippy::cast_sign_loss,
-            reason = "a whole number between 0 and 2^53 converts exactly"
-        )]
-        return Ok(value as u64);
-    }
-    Err(Error::new("a revision must be a whole number from 0 up").into())
 }
 
 /// A flow graph that the engine keeps loaded, to apply many batches to it.
@@ -85,7 +70,7 @@ impl GraphState {
     }
 
     /// Apply a batch; returns what it did as JSON. `options` is
-    /// `{forward, inverse, restoring, redacted}`, each false by default.
+    /// `{forward, inverse, restoring}`, each false by default.
     ///
     /// # Errors
     ///
@@ -107,7 +92,7 @@ impl GraphState {
 }
 
 /// Apply operations to a graph; returns `{"flow_data", ...}` as JSON.
-/// `options` is `{forward, inverse, restoring, redacted}`; `forward` is true by default.
+/// `options` is `{forward, inverse, restoring}`; `forward` is true by default.
 ///
 /// # Errors
 ///
@@ -221,66 +206,6 @@ pub fn values_equal(left: &str, right: &str) -> Result<bool, JsValue> {
 #[wasm_bindgen(js_name = canonicalJson)]
 pub fn canonical_json(value: &str) -> Result<String, JsValue> {
     run(api::canonical_json(value))
-}
-
-/// Decode a stored row into its recorded operations.
-///
-/// # Errors
-///
-/// The row does not parse, or is damaged.
-#[wasm_bindgen(js_name = decodeRow)]
-pub fn decode_row(row: &str) -> Result<String, JsValue> {
-    run(api::decode_row(row))
-}
-
-/// Group recorded operations into a row's envelope.
-///
-/// # Errors
-///
-/// The operations do not parse, or a request names two actors.
-#[wasm_bindgen(js_name = encodeEnvelope)]
-pub fn encode_envelope(operations: &str) -> Result<String, JsValue> {
-    run(api::encode_envelope(operations))
-}
-
-/// Number operations and pack them into rows.
-///
-/// # Errors
-///
-/// The inputs do not parse.
-#[wasm_bindgen]
-pub fn pack(operations: &str, options: &str) -> Result<String, JsValue> {
-    run(api::pack(operations, options))
-}
-
-/// The graph at `revision`, replayed from a checkpoint through stored rows.
-///
-/// # Errors
-///
-/// The inputs do not parse, or the history is damaged.
-#[wasm_bindgen]
-pub fn replay(
-    checkpoint: &str,
-    checkpoint_revision: f64,
-    rows: &str,
-    at: f64,
-) -> Result<String, JsValue> {
-    run(api::replay(
-        checkpoint,
-        revision(checkpoint_revision)?,
-        rows,
-        revision(at)?,
-    ))
-}
-
-/// Fail unless a checkpoint's graph hashes to its stored hash.
-///
-/// # Errors
-///
-/// The graph does not parse, or its hash differs.
-#[wasm_bindgen(js_name = verifyCheckpoint)]
-pub fn verify_checkpoint(flow: &str, stored_hash: &str, at: f64) -> Result<(), JsValue> {
-    run(api::verify_checkpoint(flow, stored_hash, revision(at)?))
 }
 
 /// The engine's part of a save.

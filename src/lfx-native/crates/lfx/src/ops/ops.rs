@@ -1,15 +1,15 @@
 //! Operation types and their strict parser.
 //!
-//! The parser accepts exactly the shapes the operation protocol defines: no
+//! Each type reads itself from a parsed JSON value (`FromValue`), so the
+//! parser accepts exactly the shapes the operation protocol defines: no
 //! unknown keys, no missing fields, no wrong types. A path names a list item
-//! by its key, never by its index. Printing an operation as JSON leaves out
-//! the optional fields that are unset, so an operation that is parsed and
-//! printed again reads as it was sent.
+//! by its key, never by its index. An operation that is parsed and printed
+//! again reads as it was sent.
 
-use serde_json::{Map, Value};
+use serde_json::{Map, Value, json};
 
-use crate::ops::canonical::JsonType;
-use crate::ops::error::{Error, Result, bail, invalid, quoted};
+use crate::ops::error::{Error, Result, quoted};
+use crate::ops::from_value::{FromValue, FromValueError, missing, read, unexpected};
 
 /// One step of a field path.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -44,7 +44,14 @@ impl Segment {
     fn to_value(&self) -> Value {
         match self {
             Self::Key(key) => Value::from(key.as_str()),
-            Self::Item(key) => single("key", Value::from(key.as_str())),
+            Self::Item(key) => json!({"key": key}),
+        }
+    }
+
+    fn into_value(self) -> Value {
+        match self {
+            Self::Key(key) => Value::String(key),
+            Self::Item(key) => json!({"key": key}),
         }
     }
 }
@@ -60,8 +67,6 @@ pub(crate) trait PathExt {
     fn starts_with_keys<S: AsRef<str>>(&self, keys: &[S]) -> bool;
     /// The path's object keys, or `None` when it names a list item.
     fn keys(&self) -> Option<Vec<&str>>;
-    /// The path with one more object key.
-    fn child(&self, key: &str) -> Path;
 }
 
 impl PathExt for [Segment] {
@@ -80,45 +85,21 @@ impl PathExt for [Segment] {
     fn keys(&self) -> Option<Vec<&str>> {
         self.iter().map(Segment::key).collect()
     }
-
-    fn child(&self, key: &str) -> Path {
-        self.iter()
-            .cloned()
-            .chain([Segment::Key(key.to_owned())])
-            .collect()
-    }
 }
 
-/// A path as JSON text, for error messages.
+/// A path as JSON text, for error messages. For example,
+/// `[Key("outputs"), Item("text"), Key("name")]` prints as
+/// `["outputs",{"key":"text"},"name"]`.
 #[must_use]
 pub fn path_label(path: &[Segment]) -> String {
     Value::Array(path.iter().map(Segment::to_value).collect()).to_string()
 }
 
-/// What a path must hold before a write.
-#[derive(Debug, Clone, PartialEq)]
-pub enum Expect {
-    /// The path holds this value, compared canonically.
-    Value(Value),
-    /// The path does not exist.
-    Absent,
-}
-
 /// What a field update does at its path.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Change {
-    /// Write a value.
-    Set {
-        /// The value written.
-        value: Value,
-        /// The JSON type the write replaces. Required when the type changes,
-        /// so a number cannot silently become a string.
-        from_type: Option<JsonType>,
-        /// The metadata of the template field the path writes into, as of
-        /// this operation. The engine ignores it; readers use it to strip
-        /// secret values without replaying the flow.
-        template_field: Option<Map<String, Value>>,
-    },
+    /// Write this value.
+    Set(Value),
     /// Remove the value.
     Delete,
 }
@@ -130,8 +111,6 @@ pub struct FieldUpdate {
     pub id: String,
     /// Where it is written.
     pub path: Path,
-    /// What the path must hold first. On a mismatch the whole batch fails.
-    pub expect: Option<Expect>,
     /// The write.
     pub change: Change,
 }
@@ -149,12 +128,7 @@ impl FieldUpdate {
         Self {
             id: id.to_owned(),
             path,
-            expect: None,
-            change: Change::Set {
-                value,
-                from_type: None,
-                template_field: None,
-            },
+            change: Change::Set(value),
         }
     }
 
@@ -164,7 +138,6 @@ impl FieldUpdate {
         Self {
             id: id.to_owned(),
             path,
-            expect: None,
             change: Change::Delete,
         }
     }
@@ -183,27 +156,71 @@ pub enum Operation {
     AddEdges(Vec<Map<String, Value>>),
     /// Delete edges.
     DeleteEdges(Vec<String>),
-    /// Set and delete top-level keys other than `nodes` and `edges`.
-    UpdateMetadata {
-        /// Keys to set.
-        fields: Map<String, Value>,
-        /// Keys to delete.
-        delete_keys: Vec<String>,
-    },
+}
+
+/// An operation's `type`, without its payload.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OperationKind {
+    AddNodes,
+    UpdateNodes,
+    DeleteNodes,
+    AddEdges,
+    DeleteEdges,
+}
+
+impl OperationKind {
+    /// The `type` as the protocol spells it.
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::AddNodes => "add_nodes",
+            Self::UpdateNodes => "update_nodes",
+            Self::DeleteNodes => "delete_nodes",
+            Self::AddEdges => "add_edges",
+            Self::DeleteEdges => "delete_edges",
+        }
+    }
+
+    /// The kind that a `type` names.
+    fn from_name(name: &str) -> Result<Self, FromValueError> {
+        match name {
+            "add_nodes" => Ok(Self::AddNodes),
+            "update_nodes" => Ok(Self::UpdateNodes),
+            "delete_nodes" => Ok(Self::DeleteNodes),
+            "add_edges" => Ok(Self::AddEdges),
+            "delete_edges" => Ok(Self::DeleteEdges),
+            _ => {
+                let message = format!("unsupported operation type {}", quoted(name));
+                Err(FromValueError::new(message).at_key("type"))
+            }
+        }
+    }
+
+    /// The kind an operation object names in its `type`. It only borrows the
+    /// object, so the caller can consume the object after.
+    fn of(object: &Map<String, Value>) -> Result<Self, FromValueError> {
+        match object.get("type") {
+            None => Err(FromValueError::new("type is missing")),
+            Some(Value::String(name)) => Self::from_name(name),
+            _ => Err(FromValueError::new("must be a string").at_key("type")),
+        }
+    }
 }
 
 impl Operation {
+    fn kind(&self) -> OperationKind {
+        match self {
+            Self::AddNodes(_) => OperationKind::AddNodes,
+            Self::UpdateNodes(_) => OperationKind::UpdateNodes,
+            Self::DeleteNodes(_) => OperationKind::DeleteNodes,
+            Self::AddEdges(_) => OperationKind::AddEdges,
+            Self::DeleteEdges(_) => OperationKind::DeleteEdges,
+        }
+    }
+
     /// The operation's `type`.
     #[must_use]
     pub fn type_name(&self) -> &'static str {
-        match self {
-            Self::AddNodes(_) => "add_nodes",
-            Self::UpdateNodes(_) => "update_nodes",
-            Self::DeleteNodes(_) => "delete_nodes",
-            Self::AddEdges(_) => "add_edges",
-            Self::DeleteEdges(_) => "delete_edges",
-            Self::UpdateMetadata { .. } => "update_metadata",
-        }
+        self.kind().as_str()
     }
 
     /// Parse a list of operations.
@@ -212,47 +229,52 @@ impl Operation {
     ///
     /// `operations` is not a list, or an operation does not parse.
     pub fn list_from_value(operations: Value) -> Result<Vec<Self>> {
-        let Value::Array(operations) = operations else {
-            bail!("operations must be a list");
-        };
-        operations.into_iter().map(Self::try_from).collect()
+        Vec::from_value(operations).map_err(|error| error.into_error("operations"))
     }
 
-    /// The operation as JSON, leaving out optional fields that are unset.
+    /// The operation as JSON. It copies every payload; a caller that owns
+    /// the operation and drops it after printing uses [`Self::into_value`].
     #[must_use]
     pub fn to_value(&self) -> Value {
-        let mut object = Map::new();
-        object.insert("type".into(), Value::from(self.type_name()));
         match self {
-            Self::AddNodes(items) => {
-                object.insert("nodes".into(), objects_json(items));
-            }
-            Self::AddEdges(items) => {
-                object.insert("edges".into(), objects_json(items));
-            }
-            Self::DeleteNodes(ids) | Self::DeleteEdges(ids) => {
-                object.insert("ids".into(), strings_json(ids));
-            }
-            Self::UpdateNodes(updates) => {
-                object.insert(
-                    "updates".into(),
-                    Value::Array(updates.iter().map(FieldUpdate::to_value).collect()),
-                );
-            }
-            Self::UpdateMetadata {
-                fields,
-                delete_keys,
-            } => {
-                if !fields.is_empty() {
-                    object.insert("fields".into(), Value::Object(fields.clone()));
-                }
-                if !delete_keys.is_empty() {
-                    object.insert("delete_keys".into(), strings_json(delete_keys));
-                }
-            }
+            Self::AddNodes(nodes) => json!({"type": "add_nodes", "nodes": nodes}),
+            Self::AddEdges(edges) => json!({"type": "add_edges", "edges": edges}),
+            Self::DeleteNodes(ids) => json!({"type": "delete_nodes", "ids": ids}),
+            Self::DeleteEdges(ids) => json!({"type": "delete_edges", "ids": ids}),
+            Self::UpdateNodes(updates) => json!({
+                "type": "update_nodes",
+                "updates": updates.iter().map(FieldUpdate::to_value).collect::<Vec<_>>(),
+            }),
         }
-        Value::Object(object)
     }
+
+    /// The operation as JSON, with its payload moved into the result instead of copied.
+    #[must_use]
+    pub fn into_value(self) -> Value {
+        let (kind, key, payload) = match self {
+            Self::AddNodes(nodes) => ("add_nodes", "nodes", objects(nodes)),
+            Self::AddEdges(edges) => ("add_edges", "edges", objects(edges)),
+            Self::DeleteNodes(ids) => ("delete_nodes", "ids", strings(ids)),
+            Self::DeleteEdges(ids) => ("delete_edges", "ids", strings(ids)),
+            Self::UpdateNodes(updates) => (
+                "update_nodes",
+                "updates",
+                Value::Array(updates.into_iter().map(FieldUpdate::into_value).collect()),
+            ),
+        };
+        let mut operation = Map::new();
+        operation.insert("type".into(), Value::from(kind));
+        operation.insert(key.into(), payload);
+        Value::Object(operation)
+    }
+}
+
+fn objects(objects: Vec<Map<String, Value>>) -> Value {
+    Value::Array(objects.into_iter().map(Value::Object).collect())
+}
+
+fn strings(strings: Vec<String>) -> Value {
+    Value::Array(strings.into_iter().map(Value::String).collect())
 }
 
 impl TryFrom<Value> for Operation {
@@ -261,272 +283,133 @@ impl TryFrom<Value> for Operation {
     /// Parse one operation. It fails unless the operation has exactly one of
     /// the protocol's shapes.
     fn try_from(operation: Value) -> Result<Self> {
-        let Value::Object(mut operation) = operation else {
-            bail!("operation must be a dict");
-        };
-        let type_name = match operation.get("type") {
-            Some(Value::String(name)) => name.clone(),
-            other => {
-                let shown = other.map_or_else(|| "None".to_owned(), Value::to_string);
-                bail!("Unsupported operation type: {shown}");
-            }
-        };
-        let context = type_name.as_str();
-        // Each type allows `type` and its own payload key, and requires the payload.
-        let mut payload = |key: &str| -> Result<Value> {
-            only_keys(&operation, &["type", key], context)?;
-            required(&mut operation, key, context)
-        };
-        Ok(match context {
-            "add_nodes" => Self::AddNodes(objects(payload("nodes")?, context)?),
-            "add_edges" => Self::AddEdges(objects(payload("edges")?, context)?),
-            "delete_nodes" => Self::DeleteNodes(strings(payload("ids")?, context)?),
-            "delete_edges" => Self::DeleteEdges(strings(payload("ids")?, context)?),
-            "update_nodes" => Self::UpdateNodes(updates(payload("updates")?, context)?),
-            "update_metadata" => {
-                only_keys(&operation, &["type", "fields", "delete_keys"], context)?;
-                let fields = match operation.remove("fields") {
-                    None => Map::new(),
-                    Some(Value::Object(fields)) => fields,
-                    Some(_) => bail!("update_metadata.fields must be an object"),
-                };
-                let delete_keys = match operation.remove("delete_keys") {
-                    None => Vec::new(),
-                    Some(keys) => strings(keys, "update_metadata.delete_keys")?,
-                };
-                Self::UpdateMetadata {
-                    fields,
-                    delete_keys,
-                }
-            }
-            _ => bail!("Unsupported operation type: {}", quoted(context)),
+        Self::from_value(operation).map_err(|error| error.into_error("operation"))
+    }
+}
+
+impl FromValue for Operation {
+    fn from_value(value: Value) -> Result<Self, FromValueError> {
+        let object = Map::from_value(value)?;
+        Ok(match OperationKind::of(&object)? {
+            OperationKind::AddNodes => Self::AddNodes(payload(object, "nodes")?),
+            OperationKind::AddEdges => Self::AddEdges(payload(object, "edges")?),
+            OperationKind::DeleteNodes => Self::DeleteNodes(payload(object, "ids")?),
+            OperationKind::DeleteEdges => Self::DeleteEdges(payload(object, "ids")?),
+            OperationKind::UpdateNodes => Self::UpdateNodes(payload(object, "updates")?),
         })
     }
+}
+
+/// The value of an operation's one payload key, read as `T`. The operation
+/// may hold only `type` and `key`.
+fn payload<T: FromValue>(
+    object: Map<String, Value>,
+    key: &'static str,
+) -> Result<T, FromValueError> {
+    let mut payload = None;
+    for (name, value) in object {
+        match name.as_str() {
+            "type" => {}
+            _ if name == key => payload = Some(read(value, key)?),
+            _ => return Err(unexpected(&name)),
+        }
+    }
+    payload.ok_or_else(|| missing(key))
 }
 
 impl FieldUpdate {
-    /// The update as JSON, leaving out optional fields that are unset.
+    /// The update as JSON. It copies the value; see [`Self::into_value`].
     #[must_use]
     pub fn to_value(&self) -> Value {
-        let mut object = Map::new();
-        object.insert("id".into(), Value::from(self.id.as_str()));
-        object.insert(
-            "path".into(),
-            Value::Array(self.path.iter().map(Segment::to_value).collect()),
-        );
-        if let Some(expect) = &self.expect {
-            object.insert(
-                "expect".into(),
-                match expect {
-                    Expect::Value(value) => single("value", value.clone()),
-                    Expect::Absent => single("absent", Value::Bool(true)),
-                },
-            );
-        }
+        let path = Value::Array(self.path.iter().map(Segment::to_value).collect());
         match &self.change {
-            Change::Set {
-                value,
-                from_type,
-                template_field,
-            } => {
-                object.insert("op".into(), Value::from("set_field"));
-                object.insert("value".into(), value.clone());
-                if let Some(from_type) = from_type {
-                    object.insert("from_type".into(), Value::from(from_type.as_str()));
-                }
-                if let Some(template_field) = template_field {
-                    object.insert(
-                        "template_field".into(),
-                        Value::Object(template_field.clone()),
-                    );
-                }
+            Change::Set(value) => {
+                json!({"id": self.id, "path": path, "op": "set_field", "value": value})
+            }
+            Change::Delete => json!({"id": self.id, "path": path, "op": "delete_field"}),
+        }
+    }
+
+    /// The update as JSON, with its path and value moved into the result instead of copied.
+    #[must_use]
+    pub fn into_value(self) -> Value {
+        let mut update = Map::new();
+        update.insert("id".into(), Value::String(self.id));
+        update.insert(
+            "path".into(),
+            Value::Array(self.path.into_iter().map(Segment::into_value).collect()),
+        );
+        match self.change {
+            Change::Set(value) => {
+                update.insert("op".into(), Value::from("set_field"));
+                update.insert("value".into(), value);
             }
             Change::Delete => {
-                object.insert("op".into(), Value::from("delete_field"));
+                update.insert("op".into(), Value::from("delete_field"));
             }
         }
-        Value::Object(object)
+        Value::Object(update)
     }
 }
 
-fn single(key: &str, value: Value) -> Value {
-    let mut object = Map::new();
-    object.insert(key.to_owned(), value);
-    Value::Object(object)
-}
-
-fn objects_json(items: &[Map<String, Value>]) -> Value {
-    Value::Array(items.iter().cloned().map(Value::Object).collect())
-}
-
-fn strings_json(items: &[String]) -> Value {
-    Value::Array(
-        items
-            .iter()
-            .map(|item| Value::from(item.as_str()))
-            .collect(),
-    )
-}
-
-fn only_keys(object: &Map<String, Value>, allowed: &[&str], context: &str) -> Result<()> {
-    match object.keys().find(|key| !allowed.contains(&key.as_str())) {
-        Some(key) => Err(invalid!("{context}: unexpected key {}", quoted(key))),
-        None => Ok(()),
-    }
-}
-
-fn required(object: &mut Map<String, Value>, key: &str, context: &str) -> Result<Value> {
-    object
-        .remove(key)
-        .ok_or_else(|| invalid!("{context}: {key} is required"))
-}
-
-fn objects(value: Value, context: &str) -> Result<Vec<Map<String, Value>>> {
-    let Value::Array(items) = value else {
-        bail!("{context}: must be a list of objects");
-    };
-    items
-        .into_iter()
-        .map(|item| match item {
-            Value::Object(object) => Ok(object),
-            _ => Err(invalid!("{context}: must be a list of objects")),
-        })
-        .collect()
-}
-
-fn strings(value: Value, context: &str) -> Result<Vec<String>> {
-    let Value::Array(items) = value else {
-        bail!("{context}: must be a list of strings");
-    };
-    items
-        .into_iter()
-        .map(|item| match item {
-            Value::String(string) => Ok(string),
-            _ => Err(invalid!("{context}: must be a list of strings")),
-        })
-        .collect()
-}
-
-fn updates(value: Value, context: &str) -> Result<Vec<FieldUpdate>> {
-    let Value::Array(items) = value else {
-        bail!("{context}.updates must be a list");
-    };
-    items
-        .into_iter()
-        .enumerate()
-        .map(|(index, item)| parse_update(item, &format!("{context}.updates[{index}]")))
-        .collect()
-}
-
-fn parse_update(update: Value, context: &str) -> Result<FieldUpdate> {
-    let Value::Object(mut update) = update else {
-        bail!("{context} must be an object");
-    };
-    let set = match update.get("op") {
-        Some(Value::String(op)) if op == "set_field" => true,
-        Some(Value::String(op)) if op == "delete_field" => false,
-        _ => {
-            bail!("{context}: op must be set_field or delete_field");
-        }
-    };
-    let allowed: &[&str] = if set {
-        &[
-            "id",
-            "op",
-            "path",
-            "expect",
-            "value",
-            "from_type",
-            "template_field",
-        ]
-    } else {
-        &["id", "op", "path", "expect"]
-    };
-    only_keys(&update, allowed, context)?;
-    let id = match update.remove("id") {
-        Some(Value::String(id)) if !id.is_empty() => id,
-        _ => {
-            bail!("{context}: id must be a non-empty string");
-        }
-    };
-    let path = match update.remove("path") {
-        Some(Value::Array(segments)) if !segments.is_empty() => segments
-            .into_iter()
-            .map(|segment| parse_segment(segment, context))
-            .collect::<Result<Path>>()?,
-        Some(Value::Array(_)) => {
-            bail!("{context}: path must not be empty");
-        }
-        _ => return Err(invalid!("{context}: path must be a list")),
-    };
-    let expect = match update.remove("expect") {
-        None | Some(Value::Null) => None,
-        Some(expect) => Some(parse_expect(expect, context)?),
-    };
-    let change = if set {
-        let value = required(&mut update, "value", context)?;
-        let from_type = match update.remove("from_type") {
-            None | Some(Value::Null) => None,
-            Some(Value::String(name)) => Some(
-                name.parse::<JsonType>()
-                    .map_err(|_| invalid!("{context}: from_type must name a JSON type"))?,
-            ),
+impl FromValue for FieldUpdate {
+    fn from_value(value: Value) -> Result<Self, FromValueError> {
+        let object = Map::from_value(value)?;
+        let set = match object.get("op") {
+            None => return Err(FromValueError::new("op is missing")),
+            Some(Value::String(op)) if op == "set_field" => true,
+            Some(Value::String(op)) if op == "delete_field" => false,
             Some(_) => {
-                bail!("{context}: from_type must name a JSON type");
+                return Err(FromValueError::new("must be set_field or delete_field").at_key("op"));
             }
         };
-        let template_field = match update.remove("template_field") {
-            None | Some(Value::Null) => None,
-            Some(Value::Object(field)) => Some(field),
-            Some(_) => {
-                bail!("{context}: template_field must be an object");
+        let mut id: Option<String> = None;
+        let mut path: Option<Path> = None;
+        let mut written = None;
+        for (name, value) in object {
+            match name.as_str() {
+                "op" => {}
+                "id" => id = Some(read(value, "id")?),
+                "path" => path = Some(read(value, "path")?),
+                "value" if set => written = Some(value),
+                _ => return Err(unexpected(&name)),
             }
+        }
+        let id = id.ok_or_else(|| missing("id"))?;
+        if id.is_empty() {
+            return Err(FromValueError::new("must not be empty").at_key("id"));
+        }
+        let path = path.ok_or_else(|| missing("path"))?;
+        if path.is_empty() {
+            return Err(FromValueError::new("must not be empty").at_key("path"));
+        }
+        let change = if set {
+            Change::Set(written.ok_or_else(|| missing("value"))?)
+        } else {
+            Change::Delete
         };
-        Change::Set {
-            value,
-            from_type,
-            template_field,
-        }
-    } else {
-        Change::Delete
-    };
-    Ok(FieldUpdate {
-        id,
-        path,
-        expect,
-        change,
-    })
-}
-
-fn parse_segment(segment: Value, context: &str) -> Result<Segment> {
-    match segment {
-        Value::String(key) => Ok(Segment::Key(key)),
-        Value::Number(_) | Value::Bool(_) => Err(invalid!(
-            "{context}: path segments must be object keys or list item keys; integer list indexes are not allowed"
-        )),
-        Value::Object(item) if item.len() == 1 => match item.into_iter().next() {
-            Some((name, Value::String(key))) if !key.is_empty() && name == "key" => {
-                Ok(Segment::Item(key))
-            }
-            _ => Err(invalid!("{context}: invalid path segment")),
-        },
-        _ => Err(invalid!("{context}: invalid path segment")),
+        Ok(Self { id, path, change })
     }
 }
 
-fn parse_expect(expect: Value, context: &str) -> Result<Expect> {
-    if let Value::Object(expect) = expect
-        && expect.len() == 1
-    {
-        match expect.into_iter().next() {
-            Some((key, value)) if key == "value" => return Ok(Expect::Value(value)),
-            Some((key, Value::Bool(true))) if key == "absent" => return Ok(Expect::Absent),
-            _ => {}
+impl FromValue for Segment {
+    fn from_value(value: Value) -> Result<Self, FromValueError> {
+        let invalid =
+            || FromValueError::new(r#"must be an object key or {"key": ...} with a non-empty key"#);
+        match value {
+            Value::String(key) => Ok(Self::Key(key)),
+            Value::Number(_) => Err(FromValueError::new(
+                r#"integer list indexes are not allowed; name a list item with {"key": ...}"#,
+            )),
+            Value::Object(item) if item.len() == 1 => match item.into_iter().next() {
+                Some((name, Value::String(key))) if name == "key" && !key.is_empty() => {
+                    Ok(Self::Item(key))
+                }
+                _ => Err(invalid()),
+            },
+            _ => Err(invalid()),
         }
     }
-    Err(invalid!(
-        "{context}.expect must be {{\"value\": ...}} or {{\"absent\": true}}"
-    ))
 }
 
 #[cfg(test)]
@@ -539,32 +422,19 @@ mod tests {
     fn operations_round_trip() {
         for operation in [
             json!({"type": "add_nodes", "nodes": [{"id": "a"}]}),
+            json!({"type": "add_edges", "edges": [{"id": "e", "source": "a", "target": "b"}]}),
+            json!({"type": "delete_nodes", "ids": ["a"]}),
             json!({"type": "delete_edges", "ids": ["e"]}),
-            json!({"type": "update_metadata", "fields": {"name": 1.0}}),
-            json!({"type": "update_metadata", "delete_keys": ["x"]}),
             json!({"type": "update_nodes", "updates": [
-                {"id": "a", "path": ["data", "node", "outputs", {"key": "out"}], "expect": {"absent": true}, "op": "set_field",
-                 "value": null, "from_type": "string", "template_field": {"name": "x"}},
-                {"id": "a", "path": ["data", "node", "template", "rows", "value", {"key": "r"}], "expect": {"value": [1]}, "op": "delete_field"},
+                {"id": "a", "path": ["data", "node", "outputs", {"key": "out"}], "op": "set_field", "value": {"name": "out", "size": 1.0}},
+                {"id": "a", "path": ["data", "node", "template", "rows", "value", {"key": "r"}], "op": "delete_field"},
             ]}),
         ] {
             let parsed = Operation::try_from(operation.clone()).unwrap();
+            assert_eq!(parsed.type_name(), operation["type"]);
             assert_eq!(parsed.to_value(), operation);
+            assert_eq!(parsed.into_value(), operation);
         }
-    }
-
-    #[test]
-    fn unset_optional_fields_are_left_out() {
-        let parsed = Operation::try_from(json!({"type": "update_nodes", "updates": [
-            {"id": "n", "op": "set_field", "path": ["data"], "value": 1, "from_type": null, "expect": null}
-        ]}))
-        .unwrap();
-        assert_eq!(
-            parsed.to_value(),
-            json!({"type": "update_nodes", "updates": [{"id": "n", "path": ["data"], "op": "set_field", "value": 1}]})
-        );
-        let empty = Operation::try_from(json!({"type": "update_metadata"})).unwrap();
-        assert_eq!(empty.to_value(), json!({"type": "update_metadata"}));
     }
 
     #[test]
@@ -577,8 +447,7 @@ mod tests {
             json!({"type": "add_nodes", "nodes": [1]}),
             json!({"type": "add_nodes", "nodes": [], "extra": 1}),
             json!({"type": "delete_nodes", "ids": [1]}),
-            json!({"type": "update_metadata", "fields": null}),
-            json!({"type": "update_metadata", "delete_keys": null}),
+            json!({"type": "update_metadata", "fields": {"name": "x"}}),
             json!({"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["x"]}]}),
             json!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["x"], "value": 1}]}),
             json!({"type": "update_nodes", "updates": [{"id": "", "op": "delete_field", "path": ["x"]}]}),
@@ -587,14 +456,54 @@ mod tests {
             json!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": [{"key": ""}]}]}),
             json!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": [{"id": "r"}]}]}),
             json!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": [{"id": "r", "key": "k"}]}]}),
-            json!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["x"], "expect": {}}]}),
-            json!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["x"], "expect": {"absent": false}}]}),
-            json!({"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["x"], "value": 1, "from_type": "integer"}]}),
+            json!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["x"], "expect": {"absent": true}}]}),
+            json!({"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["x"], "value": 1, "from_type": "number"}]}),
+            json!({"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["x"], "value": 1, "template_field": {}}]}),
+            json!({"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["x"], "value": 1, "secret": "literal"}]}), // pragma: allowlist secret
+            json!({"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["x"], "value": 1, "secrets": [{"path": [], "kind": "literal"}]}]}),
             json!({"type": "update_nodes", "updates": [{"id": "a", "op": "move_field", "path": ["x"]}]}),
         ] {
             let error = Operation::try_from(operation.clone()).unwrap_err();
             assert_eq!(error.code.as_str(), "FLOW_OPERATION_INVALID", "{operation}");
         }
         assert!(Operation::list_from_value(json!({})).is_err());
+    }
+
+    #[test]
+    fn path_labels_print_paths_as_json() {
+        let path = [
+            Segment::Key("outputs".into()),
+            Segment::Item("text".into()),
+            Segment::Key("name".into()),
+        ];
+        assert_eq!(path_label(&path), r#"["outputs",{"key":"text"},"name"]"#);
+    }
+
+    #[test]
+    fn errors_say_where_the_operation_is_malformed() {
+        for (operations, message) in [
+            (json!({}), "operations: must be a list"),
+            (json!([{"ids": ["a"]}]), "operations[0]: type is missing"),
+            (json!([{"type": 5}]), "operations[0].type: must be a string"),
+            (
+                json!([{"type": "update_edges"}]),
+                "operations[0].type: unsupported operation type 'update_edges'",
+            ),
+            (
+                json!([{"type": "delete_nodes", "ids": ["a"], "extra": 1}]),
+                "operations[0]: unexpected key 'extra'",
+            ),
+            (
+                json!([{"type": "delete_nodes", "ids": ["a"]}, {"type": "delete_nodes", "ids": ["b", 5]}]),
+                "operations[1].ids[1]: must be a string",
+            ),
+            (
+                json!([{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["x", 0]}]}]),
+                "operations[0].updates[0].path[1]: integer list indexes are not allowed; name a list item with {\"key\": ...}",
+            ),
+        ] {
+            let error = Operation::list_from_value(operations).unwrap_err();
+            assert_eq!(error.message, message);
+        }
     }
 }

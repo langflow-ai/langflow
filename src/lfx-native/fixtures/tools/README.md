@@ -4,7 +4,7 @@ The fixture files are the specification of the engine. Their expected outputs co
 
 | Script | Engine it runs | Files it writes |
 | --- | --- | --- |
-| `generate.py` | the Python engine (`lfx.services.flow_operations` and the pure parts of `langflow.services.flow_history`) | `canonical_cases.json`, `validation_cases.json`, `repair_cases.json`, `table_cases.json`, `envelope_cases.json`, `replay_cases.json`, `restore_cases.json`, `write_cases.json`, and `limit_cases.json` |
+| `generate.py` | the Python engine (`lfx.services.flow_operations`, and the restore fix check and the save path of `langflow.services.flow_history`) | `canonical_cases.json`, `validation_cases.json`, `repair_cases.json`, `table_cases.json`, `restore_cases.json`, `write_cases.json`, and `limit_cases.json` |
 | `generate_editor.mjs` | the editor's TypeScript engine (`src/frontend/src/utils/flow-operations/`), for what only it has: inverses, the editor's table rules and the edge fixes | `inverse_cases.json`, `editor_cases.json` |
 
 `limit_cases.json` is the exception: the docs decide its expectations, not the Python engine. The Python engine accepts lone surrogates and any depth. The Rust engine refuses both, as the docs decide: a Rust string cannot hold a lone surrogate, and one depth limit holds in every runtime. `generate.py` writes the file from cases that state those expectations.

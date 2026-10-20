@@ -119,7 +119,7 @@ function inverseBase() {
 }
 
 const node = (id, updates) => ({ type: "update_nodes", updates: updates.map((update) => ({ id, ...update })) });
-const set = (path, value, extra = {}) => ({ op: "set_field", path, value, ...extra });
+const set = (path, value) => ({ op: "set_field", path, value });
 const del = (path) => ({ op: "delete_field", path });
 const OUTPUTS = ["data", "node", "outputs"];
 const TEMPLATE = ["data", "node", "template"];
@@ -131,7 +131,7 @@ const INVERSE_CASES = [
   ["adding an edge is undone by deleting it", [{ type: "add_edges", edges: [edge("e3", "a", "b", "last", { fieldName: "many" })] }]],
   ["a set of an existing value puts the value back", [node("b", [set([...TEMPLATE, "f", "value"], "y")])]],
   ["a set of a new key is undone by deleting it", [node("b", [set([...TEMPLATE, "f", "info"], "help")])]],
-  ["a type change is undone with from_type", [node("b", [set([...TEMPLATE, "f", "value"], 5, { from_type: "string" })])]],
+  ["a type change is undone by writing the old value back", [node("b", [set([...TEMPLATE, "f", "value"], 5)])]],
   ["a delete of an existing key puts it back", [node("b", [del([...TEMPLATE, "f", "type"])])]],
   ["a delete that finds nothing has no inverse", [node("b", [del([...TEMPLATE, "f", "missing"])])]],
   ["deleting a field puts back the edges into it", [node("b", [del([...TEMPLATE, "f"])])]],
@@ -149,7 +149,6 @@ const INVERSE_CASES = [
     "two writes of one path in one batch undo in order",
     [node("b", [set([...TEMPLATE, "f", "value"], "y")]), node("b", [set([...TEMPLATE, "f", "value"], "z")])],
   ],
-  ["metadata sets and deletes are undone", [{ type: "update_metadata", fields: { name: "renamed", added: 1 }, delete_keys: ["name", "absent"] }]],
   [
     "re-adding an edge with other handles puts it back",
     [{ type: "delete_edges", ids: ["e1"] }, { type: "add_edges", edges: [edge("e1", "a", "b", "out", { fieldName: "many" })] }],

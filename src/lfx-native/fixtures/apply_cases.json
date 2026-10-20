@@ -1,5 +1,5 @@
 {
-  "description": "Shared apply cases for every flow operation engine. Each case applies `operations` to `base` in order; it either yields `expected` and the normalized `forward_operations` (optional fields left unset are omitted; when absent they equal `operations`; the ids a delete reports are compared as a set, since node and edge order is not state), or raises the named `error` with its `code` and leaves `base` unchanged. Keyed lists follow node_schema.json. Edges carry each handle in both forms, the `data` object and the escaped string, as the editor writes them.",
+  "description": "Shared apply cases for every flow operation engine. Each case applies `operations` to `base` in order; it either yields `expected` and the normalized `forward_operations` (when absent they equal `operations`; the ids a delete reports are compared as a set, since node and edge order is not state), or raises the named `error` with its `code` and leaves `base` unchanged. Keyed lists follow node_schema.json. Edges carry each handle in both forms, the `data` object and the escaped string, as the editor writes them.",
   "cases": [
     {
       "name": "empty operation list leaves the flow unchanged",
@@ -867,70 +867,6 @@
       "forward_operations": [{"type": "delete_edges", "ids": ["e-ab"]}]
     },
     {
-      "name": "update_metadata sets and deletes top-level keys",
-      "base": {
-        "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
-        ],
-        "edges": [
-          {
-            "id": "e-ab",
-            "source": "a",
-            "target": "b",
-            "sourceHandle": "{œnameœ:œoutœ}",
-            "targetHandle": "{œfieldNameœ:œtextœ}",
-            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
-          }
-        ],
-        "viewport": {"x": 0, "y": 0, "zoom": 1},
-        "description": "old",
-        "flag": true
-      },
-      "operations": [{"type": "update_metadata", "fields": {"description": "new"}, "delete_keys": ["flag"]}],
-      "expected": {
-        "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
-        ],
-        "edges": [
-          {
-            "id": "e-ab",
-            "source": "a",
-            "target": "b",
-            "sourceHandle": "{œnameœ:œoutœ}",
-            "targetHandle": "{œfieldNameœ:œtextœ}",
-            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
-          }
-        ],
-        "viewport": {"x": 0, "y": 0, "zoom": 1},
-        "description": "new"
-      }
-    },
-    {
-      "name": "update_metadata rejects graph collection keys",
-      "base": {
-        "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
-        ],
-        "edges": [
-          {
-            "id": "e-ab",
-            "source": "a",
-            "target": "b",
-            "sourceHandle": "{œnameœ:œoutœ}",
-            "targetHandle": "{œfieldNameœ:œtextœ}",
-            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
-          }
-        ],
-        "viewport": {"x": 0, "y": 0, "zoom": 1}
-      },
-      "operations": [{"type": "update_metadata", "fields": {"nodes": []}, "delete_keys": []}],
-      "error": "FlowOperationValidationError",
-      "code": "FLOW_OPERATION_INVALID"
-    },
-    {
       "name": "base flow with duplicate node ids is rejected",
       "base": {
         "nodes": [
@@ -968,7 +904,7 @@
       "code": "FLOW_GRAPH_INVALID"
     },
     {
-      "name": "set_field rejects an undeclared type change",
+      "name": "set_field changes a value's JSON type",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -978,25 +914,6 @@
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": 3}]}],
-      "error": "FlowOperationValidationError",
-      "code": "FIELD_TYPE_CHANGE_UNDECLARED"
-    },
-    {
-      "name": "set_field accepts a type change declared with from_type",
-      "base": {
-        "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
-        ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
-        "viewport": {"x": 0, "y": 0, "zoom": 1}
-      },
-      "operations": [
-        {
-          "type": "update_nodes",
-          "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": 3, "from_type": "string"}]
-        }
-      ],
       "expected": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": 3, "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -1007,7 +924,7 @@
       }
     },
     {
-      "name": "set_field rejects a from_type that does not match",
+      "name": "set_field refuses secret parts, which only the history stores",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -1019,64 +936,11 @@
       "operations": [
         {
           "type": "update_nodes",
-          "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": 3, "from_type": "boolean"}]
+          "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "x", "secrets": [{"path": [], "kind": "literal"}]}]
         }
       ],
       "error": "FlowOperationValidationError",
-      "code": "FIELD_TYPE_PRECONDITION_FAILED"
-    },
-    {
-      "name": "set_field treats integers and floats as one number type",
-      "base": {
-        "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
-        ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
-        "viewport": {"x": 0, "y": 0, "zoom": 1}
-      },
-      "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["position", "x"], "value": 1.5}]}],
-      "expected": {
-        "nodes": [
-          {"id": "a", "position": {"x": 1.5, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
-        ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
-        "viewport": {"x": 0, "y": 0, "zoom": 1}
-      }
-    },
-    {
-      "name": "set_field carries template field metadata unchanged",
-      "base": {
-        "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
-        ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
-        "viewport": {"x": 0, "y": 0, "zoom": 1}
-      },
-      "operations": [
-        {
-          "type": "update_nodes",
-          "updates": [
-            {
-              "id": "a",
-              "op": "set_field",
-              "path": ["data", "node", "template", "text", "value"],
-              "value": "x",
-              "template_field": {"name": "text", "type": "str"}
-            }
-          ]
-        }
-      ],
-      "expected": {
-        "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "x", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
-        ],
-        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
-        "viewport": {"x": 0, "y": 0, "zoom": 1}
-      }
+      "code": "FLOW_OPERATION_INVALID"
     },
     {
       "name": "add_nodes rejects a node without data.node.template",
@@ -1817,7 +1681,7 @@
       "code": "FLOW_OPERATION_INVALID"
     },
     {
-      "name": "expect: a path through a value that is not an object fails instead of reading as absent",
+      "name": "set_field under a value that is not an object fails",
       "base": {
         "nodes": [
           {
@@ -1830,278 +1694,10 @@
         "edges": []
       },
       "operations": [
-        {
-          "type": "update_nodes",
-          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "type", "x"], "value": 1, "expect": {"absent": true}}]
-        }
+        {"type": "update_nodes", "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "type", "x"], "value": 1}]}
       ],
       "error": "FlowOperationValidationError",
       "code": "FLOW_OPERATION_INVALID"
-    },
-    {
-      "name": "expect: numbers and key order compare canonically",
-      "base": {
-        "nodes": [
-          {
-            "id": "t",
-            "data": {
-              "node": {
-                "template": {
-                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
-                  "text": {"type": "str", "value": "a"}
-                }
-              }
-            }
-          }
-        ],
-        "edges": []
-      },
-      "operations": [
-        {
-          "type": "update_nodes",
-          "updates": [
-            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "q", "expect": {"value": "x"}}
-          ]
-        },
-        {
-          "type": "update_nodes",
-          "updates": [
-            {
-              "id": "t",
-              "op": "set_field",
-              "path": ["data", "node", "template", "rows", "value", {"key": "r2"}],
-              "value": {"__id__": "r2", "__pos__": 2, "v": 2},
-              "expect": {"value": {"v": "y", "__pos__": 2, "__id__": "r2"}}
-            }
-          ]
-        },
-        {
-          "type": "update_nodes",
-          "updates": [
-            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}, "v"], "value": 3, "expect": {"value": 2.0}}
-          ]
-        }
-      ],
-      "expected": {
-        "nodes": [
-          {
-            "id": "t",
-            "data": {
-              "node": {
-                "template": {
-                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "q"}, {"__id__": "r2", "__pos__": 2, "v": 3}]},
-                  "text": {"type": "str", "value": "a"}
-                }
-              }
-            }
-          }
-        ],
-        "edges": []
-      }
-    },
-    {
-      "name": "expect: a different value fails the whole batch",
-      "base": {
-        "nodes": [
-          {
-            "id": "t",
-            "data": {
-              "node": {
-                "template": {
-                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
-                  "text": {"type": "str", "value": "a"}
-                }
-              }
-            }
-          }
-        ],
-        "edges": []
-      },
-      "operations": [
-        {"type": "update_nodes", "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "b"}]},
-        {
-          "type": "update_nodes",
-          "updates": [
-            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "q", "expect": {"value": "old"}}
-          ]
-        }
-      ],
-      "error": "FlowOperationPreconditionError",
-      "code": "EXPECTATION_FAILED"
-    },
-    {
-      "name": "expect: a stored integer too large for a double is not a finite number",
-      "base": {
-        "nodes": [
-          {
-            "id": "t",
-            "data": {
-              "node": {
-                "template": {
-                  "count": {
-                    "type": "int",
-                    "value": 1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-                  }
-                }
-              }
-            }
-          }
-        ],
-        "edges": []
-      },
-      "operations": [
-        {
-          "type": "update_nodes",
-          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "count", "value"], "value": 1, "expect": {"value": 0}}]
-        }
-      ],
-      "error": "FlowDataValidationError",
-      "code": "FLOW_GRAPH_INVALID"
-    },
-    {
-      "name": "expect: absent holds for a row that does not exist yet",
-      "base": {
-        "nodes": [
-          {
-            "id": "t",
-            "data": {
-              "node": {
-                "template": {
-                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
-                  "text": {"type": "str", "value": "a"}
-                }
-              }
-            }
-          }
-        ],
-        "edges": []
-      },
-      "operations": [
-        {
-          "type": "update_nodes",
-          "updates": [
-            {
-              "id": "t",
-              "op": "set_field",
-              "path": ["data", "node", "template", "rows", "value", {"key": "r3"}],
-              "value": {"__id__": "r3", "__pos__": 1.5, "v": "z"},
-              "expect": {"absent": true}
-            }
-          ]
-        }
-      ],
-      "expected": {
-        "nodes": [
-          {
-            "id": "t",
-            "data": {
-              "node": {
-                "template": {
-                  "rows": {
-                    "type": "table",
-                    "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r3", "__pos__": 1.5, "v": "z"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]
-                  },
-                  "text": {"type": "str", "value": "a"}
-                }
-              }
-            }
-          }
-        ],
-        "edges": []
-      }
-    },
-    {
-      "name": "expect: absent fails when the path exists",
-      "base": {
-        "nodes": [
-          {
-            "id": "t",
-            "data": {
-              "node": {
-                "template": {
-                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
-                  "text": {"type": "str", "value": "a"}
-                }
-              }
-            }
-          }
-        ],
-        "edges": []
-      },
-      "operations": [
-        {
-          "type": "update_nodes",
-          "updates": [
-            {
-              "id": "t",
-              "op": "set_field",
-              "path": ["data", "node", "template", "rows", "value", {"key": "r1"}],
-              "value": {"__id__": "r1", "__pos__": 1},
-              "expect": {"absent": true}
-            }
-          ]
-        }
-      ],
-      "error": "FlowOperationPreconditionError",
-      "code": "EXPECTATION_FAILED"
-    },
-    {
-      "name": "expect: a value fails when the path does not exist",
-      "base": {
-        "nodes": [
-          {
-            "id": "t",
-            "data": {
-              "node": {
-                "template": {
-                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
-                  "text": {"type": "str", "value": "a"}
-                }
-              }
-            }
-          }
-        ],
-        "edges": []
-      },
-      "operations": [
-        {
-          "type": "update_nodes",
-          "updates": [
-            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r9"}, "v"], "value": "x", "expect": {"value": "x"}}
-          ]
-        }
-      ],
-      "error": "FlowOperationPreconditionError",
-      "code": "EXPECTATION_FAILED"
-    },
-    {
-      "name": "expect: delete_field checks its expectation",
-      "base": {
-        "nodes": [
-          {
-            "id": "t",
-            "data": {
-              "node": {
-                "template": {
-                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
-                  "text": {"type": "str", "value": "a"}
-                }
-              }
-            }
-          }
-        ],
-        "edges": []
-      },
-      "operations": [
-        {
-          "type": "update_nodes",
-          "updates": [
-            {"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}], "expect": {"value": {"__id__": "r2"}}}
-          ]
-        }
-      ],
-      "error": "FlowOperationPreconditionError",
-      "code": "EXPECTATION_FAILED"
     },
     {
       "name": "edge change: an edge's handles change by deleting and adding it, both forms together",

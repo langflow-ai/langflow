@@ -8,7 +8,6 @@ mod apply;
 mod canonical;
 mod diff;
 mod editor;
-mod history;
 mod repair;
 mod support;
 mod tables;
@@ -25,7 +24,6 @@ fn main() {
         canonical::trials(),
         diff::trials(),
         editor::trials(),
-        history::trials(),
         repair::trials(),
         tables::trials(),
         validate::trials(),
