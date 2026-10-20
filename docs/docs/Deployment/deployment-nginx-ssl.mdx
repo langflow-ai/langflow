@@ -181,6 +181,97 @@ Replace **DOMAIN_NAME** with your actual domain name, such as `langflow.example.
     sudo systemctl restart nginx
     ```
 
+## Host Langflow under a URL prefix
+
+To serve the UI and API at `https://example.com/langflow/`, set `LANGFLOW_ROOT_PATH=/langflow` when starting Langflow and configure the proxy to remove that prefix.
+The backend reads the environment variable at startup and sets the frontend's document base before the browser loads the application.
+The router, assets, API requests, health checks, and copied URLs use that prefix.
+
+The same frontend build or container image can run at `/`, `/langflow`, or a nested prefix such as `/tools/langflow`.
+Changing the prefix requires restarting Langflow, without rebuilding the frontend or modifying its installed files.
+An unset or empty `LANGFLOW_ROOT_PATH` serves at `/`.
+Use a URL path with ordinary letters, digits, hyphens, underscores, dots, or tildes in each segment, without a hostname, query string, fragment, or `.` and `..` segments.
+
+This behavior requires a Langflow version containing runtime frontend prefix support.
+Older images that only use `LANGFLOW_ROOT_PATH` for the API must be upgraded first.
+
+### Build and start from source
+
+From the repository root, run the following commands after installing the [development dependencies](/contributing-how-to-contribute).
+
+```bash
+npm --prefix src/frontend ci
+npm --prefix src/frontend run build
+LANGFLOW_ROOT_PATH=/langflow uv run langflow run \
+  --host 127.0.0.1 \
+  --port 7860 \
+  --frontend-path src/frontend/build
+```
+
+For local frontend development, use `VITE_LANGFLOW_BASE_PATH=/langflow npm --prefix src/frontend start` and open `http://localhost:3000/langflow/`.
+This development-only setting configures the separate Vite server, whose proxy removes the prefix before forwarding API and health requests to the backend.
+Production frontend builds use relative asset URLs and obtain their prefix from the backend at runtime.
+
+Alternatively, build a custom image from the repository root.
+
+```bash
+docker build -f docker/build_and_push.Dockerfile \
+  -t langflow:local .
+
+docker run --rm -p 127.0.0.1:7860:7860 \
+  -e LANGFLOW_ROOT_PATH=/langflow \
+  langflow:local
+```
+
+Retain your usual database, storage, and authentication configuration when starting the container.
+Reuse the same image with a different `LANGFLOW_ROOT_PATH` for another prefix.
+
+For multiple instances on one hostname, use non-overlapping prefixes such as `/langflow-a` and `/langflow-b`.
+Each instance scopes its login, refresh, and frontend authentication cookies to its configured prefix, including cookie removal during logout.
+Avoid placing one instance at `/` or beneath another instance's prefix, because browsers also send cookies from parent paths.
+Before upgrading an existing deployment that issued authentication cookies at `/`, sign out or clear those cookies for the hostname.
+
+### Configure Nginx
+
+In the Nginx server block, replace the `location /` example with these locations.
+The trailing slash on `proxy_pass` removes `/langflow/` from requests sent to Langflow.
+For example, `/langflow/api/v1/config` reaches the backend as `/api/v1/config`.
+
+```nginx
+location = /langflow {
+    return 308 /langflow/;
+}
+
+location /langflow/ {
+    proxy_pass http://127.0.0.1:7860/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Prefix /langflow;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_read_timeout 300s;
+    proxy_buffering off;
+    proxy_request_buffering off;
+}
+```
+
+For a Kubernetes ingress, apply the equivalent prefix rewrite and forward requests to the Langflow service.
+The public prefix and `LANGFLOW_ROOT_PATH` must agree.
+The frontend uses the configured environment value, rather than trusting a request's `X-Forwarded-Prefix` header.
+
+### Verify the deployment
+
+Open `/langflow/` and confirm that scripts, styles, and API requests stay under `/langflow/` in the browser network panel.
+With authentication enabled, open a protected deep link such as `/langflow/flow/FLOW_ID`, sign in, and confirm that the redirect returns to that flow with exactly one prefix.
+Reload the deep link to check the proxy and frontend fallback together.
+Check `/langflow/health_check` and `/langflow/docs`, then run a flow and verify any WebSocket or event-stream features you use.
+
+If you configure a separate public MCP address with `LANGFLOW_MCP_BASE_URL`, include its public path prefix in that URL.
+An explicit MCP address takes precedence over the address derived from the frontend.
+
 ## Install Certbot and obtain SSL certificates
 
 While Nginx handles SSL termination in encrypting and decrypting traffic, Certbot automatically obtains SSL certificates from Let's Encrypt and configures Nginx to use them.
