@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -258,12 +260,43 @@ class _User:
 
 
 @pytest.fixture
-def _reset_override_context():
+def _reset_override_context(monkeypatch):
     from langflow.services.authorization import flow_data_override
 
+    authz = SimpleNamespace(
+        is_enabled=AsyncMock(return_value=True),
+        supports_cross_user_fetch=AsyncMock(return_value=True),
+    )
+    monkeypatch.setattr(flow_data_override, "get_authorization_service", lambda: authz, raising=False)
     token = flow_data_override._flow_data_override_allowed.set(False)
     yield
     flow_data_override._flow_data_override_allowed.reset(token)
+
+
+@pytest.mark.usefixtures("_reset_override_context")
+@pytest.mark.parametrize(("enabled", "cross_user"), [(False, False), (True, False), (False, True)])
+async def test_passthrough_cannot_authorize_graph_or_tweak_override(monkeypatch, enabled, cross_user):
+    from langflow.api.v2.workflow_validation import _apply_flow_data_override_policy
+    from langflow.services.authorization import flow_data_override
+    from lfx.workflow.converters import ParsedWorkflowRun
+
+    authz = SimpleNamespace(
+        is_enabled=AsyncMock(return_value=enabled),
+        supports_cross_user_fetch=AsyncMock(return_value=cross_user),
+    )
+    monkeypatch.setattr(flow_data_override, "get_authorization_service", lambda: authz, raising=False)
+    write_check = AsyncMock()
+    monkeypatch.setattr(flow_data_override, "ensure_flow_permission", write_check)
+    flow, user = _Flow(owner_id=uuid4()), _User()
+
+    assert await flow_data_override.resolve_flow_data_override(user, flow) is False
+    parsed = ParsedWorkflowRun(
+        flow_id=str(flow.id), data={"nodes": [{"id": "alternate"}], "edges": []}, tweaks={"File": {"path": "other"}}
+    )
+    result = _apply_flow_data_override_policy(parsed, flow, user)
+    assert result.data is None
+    assert result.tweaks == {}
+    write_check.assert_not_awaited()
 
 
 @pytest.mark.asyncio
