@@ -34,6 +34,7 @@ from lfx.services.flow_operations.canonical import canonical_json, is_finite_num
 from lfx.services.flow_operations.codes import MANUAL_CODES, GraphViolationCode
 from lfx.services.flow_operations.edge_rules import derive_missing_handle_forms
 from lfx.services.flow_operations.ids import new_edge_id
+from lfx.services.flow_operations.limits import check_graph_limits
 from lfx.services.flow_operations.schema import load_node_schema
 from lfx.services.flow_operations.state import NODE_OBJECT_PATHS
 from lfx.services.flow_operations.table_rows import fill_missing_positions, match_row_ids
@@ -94,6 +95,8 @@ def repair_flow_data(flow_data: Any, *, base: Any = None) -> RepairResult:
 
     Raises ``FlowDataValidationError`` listing what is left when the graph also
     breaks a rule only the client can fix, so a repaired save writes nothing.
+    A graph that breaks the JSON limits (``limits.py``) has nothing to repair:
+    it raises ``FlowDataValidationError`` without violations.
 
     Generated node IDs are derived from the node's content and position, so
     repairing the same graph twice gives the same nodes. Generated edge IDs are
@@ -102,6 +105,7 @@ def repair_flow_data(flow_data: Any, *, base: Any = None) -> RepairResult:
     an identical stored row, so a table written back without IDs keeps the
     rows it already held, and only new rows get new random IDs.
     """
+    check_graph_limits(flow_data)
     fixes: list[GraphFix] = []
 
     def fix(code: GraphViolationCode, path: GraphPath) -> None:
@@ -303,7 +307,7 @@ def _generate_edge_id(used_ids: set[str]) -> str:
 
 
 def _short_digest(seed: str) -> str:
-    number = int.from_bytes(hashlib.sha256(seed.encode("utf-8", "surrogatepass")).digest()[:8], "big")
+    number = int.from_bytes(hashlib.sha256(seed.encode("utf-8")).digest()[:8], "big")
     characters = []
     for _ in range(_GENERATED_ID_LENGTH):
         number, remainder = divmod(number, len(_ID_ALPHABET))

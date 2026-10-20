@@ -31,6 +31,14 @@ from lfx.services.flow_operations.canonical import is_finite_number, is_row_posi
 from lfx.services.flow_operations.codes import GraphViolationCode, resolution_of
 from lfx.services.flow_operations.edge_rules import check_edge, edge_changed, outputs_by_name, read_handles
 from lfx.services.flow_operations.exceptions import FlowDataValidationError, FlowOperationValidationError
+from lfx.services.flow_operations.limits import (
+    LONE_SURROGATE,
+    MAX_DEPTH,
+    TOO_DEEP,
+    any_key_has_lone_surrogate,
+    graph_limit_error,
+    has_lone_surrogate,
+)
 from lfx.services.flow_operations.schema import load_node_schema
 from lfx.services.flow_operations.state import NODE_OBJECT_PATHS, index_graph, require_node_objects
 
@@ -71,8 +79,11 @@ def find_graph_violations(
     """Return every rule ``flow_data`` breaks, in document order.
 
     ``check_values`` also walks every value for NaN, Infinity and integers too
-    large for a double, which JavaScript reads as Infinity. The engine
-    skips it when replaying stored operations, whose values were checked when
+    large for a double, which JavaScript reads as Infinity. The same walk
+    raises ``FlowDataValidationError`` for a value that breaks the JSON limits
+    (``limits.py``), before any rule is checked: the Rust engine refuses such a
+    graph when it reads it, so it has no violations to report. The engine
+    skips the walk when replaying stored operations, whose values were checked when
     they were written, so replay stays proportional to the number of nodes and
     edges rather than to the size of the flow.
 
@@ -86,6 +97,7 @@ def find_graph_violations(
     lacks ``data``, ``data.node`` or ``data.node.template`` as an object, this
     raises ``FlowOperationValidationError``.
     """
+    value_violations = _value_violations(flow_data) if check_values else []
     if not isinstance(flow_data, dict):
         return [GraphViolation(GraphViolationCode.FLOW_DATA_NOT_OBJECT, (), "flow data must be an object")]
 
@@ -113,8 +125,7 @@ def find_graph_violations(
         violations.extend(find_table_violations(base, flow_data))
         if structural:
             violations.extend(find_edge_violations(base, flow_data))
-    if check_values:
-        violations.extend(_non_finite_violations(flow_data))
+    violations.extend(value_violations)
     return violations
 
 
@@ -191,23 +202,34 @@ def _edge_violations(edge: Any, path: GraphPath, edge_ids: set[str], node_ids: s
     return violations
 
 
-def _non_finite_violations(flow_data: dict[str, Any]) -> list[GraphViolation]:
+def _value_violations(flow_data: Any) -> list[GraphViolation]:
+    """Report every non-finite number, and raise for a value that breaks the JSON limits."""
     violations: list[GraphViolation] = []
     stack: list[tuple[Any, GraphPath]] = [(flow_data, ())]
     while stack:
         value, path = stack.pop()
-        if isinstance(value, (int, float)) and not is_finite_number(value):
-            violations.append(
-                GraphViolation(
-                    GraphViolationCode.NON_FINITE_NUMBER,
-                    path,
-                    "NaN, Infinity and integers too large for a double are not valid JSON",
+        if isinstance(value, str):
+            if has_lone_surrogate(value):
+                raise graph_limit_error(LONE_SURROGATE)
+        elif isinstance(value, (int, float)):
+            if not is_finite_number(value):
+                violations.append(
+                    GraphViolation(
+                        GraphViolationCode.NON_FINITE_NUMBER,
+                        path,
+                        "NaN, Infinity and integers too large for a double are not valid JSON",
+                    )
                 )
-            )
-        elif isinstance(value, dict):
-            stack.extend((item, (*path, key)) for key, item in reversed(value.items()))
-        elif isinstance(value, list):
-            stack.extend((item, (*path, index)) for index, item in reversed(list(enumerate(value))))
+        elif isinstance(value, (dict, list)):
+            # A container at a path of n steps is level n + 1 of the nesting.
+            if len(path) >= MAX_DEPTH:
+                raise graph_limit_error(TOO_DEEP)
+            if isinstance(value, dict):
+                if any_key_has_lone_surrogate(value):
+                    raise graph_limit_error(LONE_SURROGATE)
+                stack.extend((item, (*path, key)) for key, item in reversed(value.items()))
+            else:
+                stack.extend((item, (*path, index)) for index, item in reversed(list(enumerate(value))))
     return violations
 
 
