@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 import pytest
 from langflow.api.utils.flow_utils import cascade_delete_flow, compute_virtual_flow_id
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.traces.model import SpanTable, TraceTable
 from langflow.services.database.models.transactions.model import TransactionTable
@@ -136,6 +137,35 @@ async def test_preexisting_uuid5_flow_does_not_authorize_virtual_history(client,
         assert await session.get(Flow, flow_id) is not None
         assert (await session.get(MessageTable, message_id)).text == "private history"
         assert await session.get(TransactionTable, transaction_id) is not None
+
+
+async def test_project_delete_with_reserved_flow_returns_400_and_keeps_rows(client, logged_in_headers, active_user):
+    project_id = uuid4()
+    flow_id = compute_virtual_flow_id(uuid4(), uuid4(), principal_type="user")
+    async with session_scope() as session:
+        session.add(Folder(id=project_id, name="Legacy collision project", user_id=active_user.id))
+        await session.flush()
+        session.add(Flow(id=flow_id, user_id=active_user.id, folder_id=project_id, name="Existing collision", data={}))
+        message = MessageTable(
+            flow_id=flow_id,
+            session_id="victim-session",
+            sender="User",
+            sender_name="User",
+            text="private history",
+            properties={},
+        )
+        session.add(message)
+        await session.commit()
+        message_id = message.id
+
+    response = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+
+    assert response.status_code == 400, response.text
+    assert "reserved" in response.json()["detail"].lower()
+    async with session_scope() as session:
+        assert await session.get(Folder, project_id) is not None
+        assert await session.get(Flow, flow_id) is not None
+        assert await session.get(MessageTable, message_id) is not None
 
 
 async def test_reserved_flow_delete_preserves_foreign_key_histories():

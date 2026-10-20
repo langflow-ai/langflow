@@ -1052,6 +1052,10 @@ async def delete_project(
     try:
         await run_with_lock_retry(_delete_attempt, session=session, description=f"delete_project {project_id}")
         return Response(status_code=status.HTTP_204_NO_CONTENT)
+    except HTTPException:
+        # Preserve intentional client errors (e.g. the reserved UUID5 flow
+        # guard in cascade_delete_flow) instead of masking them as 500s.
+        raise
     except Exception as e:
         await araise_if_deployment_guard_error_or_skip(
             e,
