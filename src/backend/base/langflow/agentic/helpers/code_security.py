@@ -92,6 +92,7 @@ _FORMAT_FIELD_DUNDER_RE = re.compile(r"\{[^{}]*__")
 # ``type(x).__name__`` and ``err.__class__.__name__``, which ordinary component
 # code uses constantly for logging and error messages.
 _INERT_DUNDER_ATTRS: frozenset[str] = frozenset({"__name__", "__qualname__", "__module__", "__doc__"})
+_RUNTIME_LOADER_NAMES: frozenset[str] = frozenset({"__loader__", "__spec__"})
 
 
 def _is_blocked_attribute(attr: str | None) -> bool:
@@ -111,6 +112,7 @@ def _is_blocked_attribute(attr: str | None) -> bool:
 # Langflow's variable/secret service, never raw process env.
 DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
     ("os", "environ", "os.environ is forbidden — use Langflow's variable/secret service"),
+    ("os", "environb", "os.environb is forbidden. Use Langflow's variable/secret service"),
     ("gc", "garbage", "gc.garbage is forbidden in components (server object recovery)"),
     ("os.path", "os", "os.path.os is forbidden in components"),
     ("sys", "modules", "sys.modules is forbidden in components"),
@@ -215,6 +217,8 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     ("os", "dup2", "os.dup2() is forbidden in components"),
     ("os", "dup", "os.dup() is forbidden in components"),
     ("os", "getenv", "os.getenv() is forbidden — use Langflow's variable/secret service"),
+    ("os", "getenvb", "os.getenvb() is forbidden. Use Langflow's variable/secret service"),
+    ("os", "get_exec_path", "os.get_exec_path() is forbidden. Use Langflow's variable/secret service"),
     ("os", "putenv", "os.putenv() is forbidden in components"),
     ("shutil", "rmtree", "shutil.rmtree() is forbidden"),
     ("shutil", "move", "shutil.move() is forbidden in components"),
@@ -1456,6 +1460,9 @@ class _SecurityChecker(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_ImportFrom(self, node: ast.ImportFrom):
+        for alias in node.names:
+            if alias.name in _RUNTIME_LOADER_NAMES:
+                self.violations.append(f"Import of '{alias.name}' is forbidden in components (runtime loader)")
         if not node.module:
             return self.generic_visit(node)
 
@@ -2043,7 +2050,13 @@ class _SecurityChecker(ast.NodeVisitor):
     def visit_Name(self, node: ast.Name):
         """Catch wildcard-imported reads (``from os import *``; ``environ[...]``)."""
         if isinstance(node.ctx, ast.Load):
+            if node.id in _RUNTIME_LOADER_NAMES:
+                self.violations.append(f"Access to '{node.id}' is forbidden in components (runtime loader)")
+                return self.generic_visit(node)
             for resolved_name in self._resolved_names(node.id):
+                if resolved_name.rsplit(".", 1)[-1] in _RUNTIME_LOADER_NAMES:
+                    self.violations.append(f"Access to '{resolved_name}' is forbidden in components (runtime loader)")
+                    break
                 if resolved_name in DANGEROUS_SUBMODULES:
                     self.violations.append(f"Access to '{resolved_name}' is forbidden in components")
                     break
