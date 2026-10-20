@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import {
   IS_AUTO_LOGIN,
   LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS,
@@ -9,6 +10,7 @@ import { CustomNavigate } from "@/customization/components/custom-navigate";
 import useAuthStore from "@/stores/authStore";
 
 export const ProtectedRoute = ({ children }) => {
+  const { pathname } = useLocation();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { mutate: mutateRefresh } = useRefreshAccessToken();
   const autoLogin = useAuthStore((state) => state.autoLogin);
@@ -52,14 +54,16 @@ export const ProtectedRoute = ({ children }) => {
   }, [isAuthenticated, autoLogin]);
 
   if (shouldRedirect || testMockAutoLogin) {
-    const currentPath = window.location.pathname;
+    const currentPath = pathname;
     const isHomePath = currentPath === "/" || currentPath === "/flows";
-    const isLoginPage = location.pathname.includes("login");
+    const isLoginPage = pathname.includes("login");
     return (
       <CustomNavigate
         to={
           "/login" +
-          (!isHomePath && !isLoginPage ? "?redirect=" + currentPath : "")
+          (!isHomePath && !isLoginPage
+            ? "?redirect=" + encodeURIComponent(currentPath)
+            : "")
         }
         replace
       />
