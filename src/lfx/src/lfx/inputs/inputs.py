@@ -63,7 +63,7 @@ def decision_model_field_settings(value: Any) -> dict[str, Any]:
     return {"input_types": [], "external_options": {}}
 
 
-def _blank_preserved_float(value: Any) -> bool:
+def _is_blank_float(value: Any) -> bool:
     """For a ``preserve_empty`` float: reject Booleans, and report whether the value is blank."""
     if isinstance(value, bool):
         msg = "Value must be a number, not a Boolean."
@@ -672,11 +672,7 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMi
     @classmethod
     def preserve_empty_initial_value(cls, data, handler):
         # Inherited value precedes preserve_empty in field order during construction.
-        blank = (
-            isinstance(data, dict)
-            and data.get("preserve_empty", False)
-            and _blank_preserved_float(data.get("value", ""))
-        )
+        blank = isinstance(data, dict) and data.get("preserve_empty", False) and _is_blank_float(data.get("value", ""))
         result = handler(data)
         if blank:
             object.__setattr__(result, "value", None)
@@ -698,7 +694,7 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMi
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
         _reject_secret_in_non_password_field(v, info)
-        if info.data.get("preserve_empty", False) and _blank_preserved_float(v):
+        if info.data.get("preserve_empty", False) and _is_blank_float(v):
             return None
         if isinstance(v, float):
             return v

@@ -21,7 +21,9 @@ from lfx.base.models.decisions.schema import (
     validation_summary,
 )
 from lfx.base.models.provider_ssrf import provider_safe_httpx_post
+from lfx.base.models.unified_models.credentials import provider_variable_from_env
 from lfx.base.models.unified_models.provider_queries import get_provider_secret_variable_key
+from lfx.services.variable.request_scope import is_env_fallback_disabled
 from lfx.utils.secrets import secret_value_to_str
 from lfx.utils.ssrf_protection import SSRFProtectionError
 
@@ -52,9 +54,6 @@ def require_official_openai_endpoint(*sources: Mapping[str, Any]) -> None:
     blank or official value in one never hides a custom URL in another. A key meant for a proxy is
     therefore never sent to the official endpoint, whether by a run or by a key check.
     """
-    from lfx.base.models.unified_models.credentials import provider_variable_from_env
-    from lfx.services.variable.request_scope import is_env_fallback_disabled
-
     urls = [source.get(name) for source in sources for name in _OPENAI_BASE_URL_NAMES]
     if not is_env_fallback_disabled():
         urls += [provider_variable_from_env(name) for name in _OPENAI_BASE_URL_NAMES]

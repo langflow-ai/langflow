@@ -31,7 +31,8 @@ export default function FloatComponent({
   const max = rangeSpec?.max;
 
   // Local state for input value
-  // A preserve_empty field holds null when unset; the Controls table passes it through as is.
+  // A blank preserve_empty field arrives as null from the backend and is always written back
+  // as ""; both mean unset. The Controls table passes the raw value through as is.
   const [localValue, setLocalValue] = useState<string>(String(value ?? ""));
 
   // Clear component state; a preserve_empty field clears to blank, never to 0.

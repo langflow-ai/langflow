@@ -11,6 +11,16 @@ from lfx.schema.message import Message
 from tests.base import ComponentTestBaseWithoutClient
 
 
+def _rows(*route_ids):
+    return [{"route_category": f"Route {i}", "route_id": route_id} for i, route_id in enumerate(route_ids)]
+
+
+def _fresh_build_config(router):
+    build_config = dotdict(router.to_frontend_node()["data"]["node"]["template"])
+    build_config["routes"]["value"] = [{"route_category": name} for name in ("Billing", "Sales")]
+    return build_config
+
+
 class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def component_class(self):
@@ -144,24 +154,8 @@ class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
         assert result2 == "Positive"
         assert mock_llm.invoke.call_count == 1  # LLM only called once due to caching
 
-
-def _rows(*route_ids):
-    return [{"route_category": f"Route {i}", "route_id": route_id} for i, route_id in enumerate(route_ids)]
-
-
-def _fresh_build_config(router):
-    build_config = dotdict(router.to_frontend_node()["data"]["node"]["template"])
-    build_config["routes"]["value"] = [{"route_category": name} for name in ("Billing", "Sales")]
-    return build_config
-
-
-class TestSmartRouterRoutingModes:
-    """Decision mode, route IDs and threshold handling."""
-
     @pytest.mark.parametrize("value", [None, "", "  ", -0.1, 1.1, float("nan"), float("inf")])
     def test_decision_threshold_has_no_implicit_zero(self, value):
-        from lfx.base.models.decisions.schema import DecisionConfigurationError
-
         component = SmartRouterComponent()
         component.set(minimum_probability=value)
         with pytest.raises(DecisionConfigurationError):
@@ -425,3 +419,22 @@ class TestSmartRouterRoutingModes:
         )
         with pytest.raises(DecisionConfigurationError, match="don't match its outputs"):
             router._route_ids()
+
+    def test_rows_without_ids_follow_the_saved_route_order(self):
+        """A tweak that sends routes in their saved order keeps each route on its own output."""
+        router = self._router_with_outputs("category_1_result", "category_3_result", "category_2_result")
+        router.set(routes=[{"route_category": "A"}, {"route_category": "C"}, {"route_category": "B"}])
+        assert router._route_ids() == ["category_1_result", "category_3_result", "category_2_result"]
+
+    @pytest.mark.parametrize("mode", ["Language Model", "Decision Model"])
+    def test_routes_that_dont_match_the_outputs_stop_before_any_model_call(self, mode):
+        router = self._router_with_outputs("category_1_result", "category_2_result", "default_result")
+        router.set(
+            routing_mode=mode,
+            routes=[{"route_category": "A"}, {"route_category": "B"}, {"route_category": "C"}],
+        )
+        with (
+            patch.object(router, "_get_categorization", side_effect=AssertionError("no model call")),
+            pytest.raises(DecisionConfigurationError, match="don't match its outputs"),
+        ):
+            router._pre_run_setup()

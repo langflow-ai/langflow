@@ -45,6 +45,12 @@ _CUSTOM_PROMPT_DECISION_INFO = (
 )
 
 
+def _route_number(route_id: Any) -> int | None:
+    """The number in a valid route ID such as ``category_3_result``, or None."""
+    match = _ROUTE_ID.fullmatch(route_id) if isinstance(route_id, str) else None
+    return int(match.group(1)) if match else None
+
+
 def assign_route_ids(routes: list[dict], last_number: int) -> tuple[list[dict], int]:
     """Give every route a stable output name, so editing routes never moves an edge to another route.
 
@@ -59,9 +65,7 @@ def assign_route_ids(routes: list[dict], last_number: int) -> tuple[list[dict], 
     numbers: list[int | None] = []
     seen: set[int] = set()
     for row in routes:
-        route_id = row.get("route_id")
-        match = _ROUTE_ID.fullmatch(route_id) if isinstance(route_id, str) else None
-        number = int(match.group(1)) if match else None
+        number = _route_number(row.get("route_id"))
         numbers.append(number if number not in seen else None)
         if number is not None:
             seen.add(number)
@@ -265,10 +269,10 @@ class SmartRouterComponent(Component):
 
     def _selected_model_provider_policy_ids(self, parameters: Mapping[str, Any] | None = None) -> tuple[str, ...]:
         effective = dict(parameters if parameters is not None else self._parameters)
-        effective.pop("model" if self._decision_mode(effective.get("routing_mode")) else "decision_model", None)
+        effective.pop("model" if self._is_decision_mode(effective.get("routing_mode")) else "decision_model", None)
         return super()._selected_model_provider_policy_ids(effective)
 
-    def _decision_mode(self, mode: Any = None) -> bool:
+    def _is_decision_mode(self, mode: Any = None) -> bool:
         """Whether ``mode``, by default this router's Routing Mode, is Decision Model; an unknown mode stops."""
         if mode is None:
             mode = getattr(self, "routing_mode", "Language Model")
@@ -279,7 +283,7 @@ class SmartRouterComponent(Component):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
-        decision_mode = self._decision_mode(field_value if field_name == "routing_mode" else None)
+        decision_mode = self._is_decision_mode(field_value if field_name == "routing_mode" else None)
         for name in ("decision_model", "decision_question", "minimum_probability", "evaluation_error_action"):
             if name in build_config:
                 build_config[name]["show"] = decision_mode
@@ -362,7 +366,7 @@ class SmartRouterComponent(Component):
         if self._categorization_result is not None:
             return self._categorization_result
 
-        if self._decision_mode():
+        if self._is_decision_mode():
             return self._get_decision_categorization()
 
         categories = getattr(self, "routes", [])
@@ -563,22 +567,30 @@ class SmartRouterComponent(Component):
         self._categorization_result = None
         self._excluded_outputs = set()
         self._decision_evidence = None
-        if self._decision_mode():
+        # Checked before any model is called, so a mismatch never costs an inference.
+        self._route_ids()
+        if self._is_decision_mode():
             self._validate_decision_graph()
 
     def _route_ids(self) -> list[str]:
         """Each route's output name, in route order.
 
-        Routes sent without any IDs, such as an API tweak written before route IDs, keep their
-        positional names, as they always have. A route with no matching output on this router
-        stops the run instead of reaching a branch nothing is connected to.
+        Rows sent with no IDs at all, such as an API tweak written before route IDs, take this
+        router's saved route outputs in order, as their position meant before. A route with no
+        matching output stops the run instead of reaching a branch nothing is connected to.
         """
         rows = getattr(self, "routes", []) or []
-        has_ids = any(isinstance(row.get("route_id"), str) and _ROUTE_ID.fullmatch(row["route_id"]) for row in rows)
-        last = (getattr(self, "last_route_number", 0) or 0) if has_ids else 0
-        route_ids = [row["route_id"] for row in assign_route_ids(rows, last)[0]]
-        # Components built without a saved node (direct calls) have no outputs to compare with.
-        if self._outputs_map and any(route_id not in self._outputs_map for route_id in route_ids):
+        # Components built without a saved node (direct calls) have no outputs to follow or check.
+        saved = [name for name in self._outputs_map if _route_number(name)]
+        if saved and not any(_route_number(row.get("route_id")) for row in rows):
+            route_ids = saved
+        else:
+            route_ids = [
+                row["route_id"] for row in assign_route_ids(rows, getattr(self, "last_route_number", 0) or 0)[0]
+            ]
+        if self._outputs_map and (
+            len(route_ids) != len(rows) or any(route_id not in self._outputs_map for route_id in route_ids)
+        ):
             msg = "The Smart Router's routes don't match its outputs. Open the flow in the editor to update them."
             raise DecisionConfigurationError(msg)
         return route_ids

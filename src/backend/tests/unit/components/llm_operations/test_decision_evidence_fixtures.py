@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 from types import SimpleNamespace
+from typing import NamedTuple
 
 import httpx
 import pytest
@@ -105,9 +106,19 @@ SATISFACTION = [
     {"id": "delighted", "label": "Delighted", "description": ""},
 ]
 USAGE = {"input_tokens": 296, "output_tokens": 0, "total_tokens": 296}
-# Documented response shapes; each provider's own wire format is translated by the real adapter.
+
+
+class ResultScenario(NamedTuple):
+    provider: str
+    model: str
+    kind: str
+    question: str
+    candidates: list[dict]
+    response: dict  # the provider's documented response shape, translated by the real adapter
+
+
 RESULT_SCENARIOS = {
-    "choice": (
+    "choice": ResultScenario(
         "Perplexity",
         "pplx-decider-latest",
         "Choice",
@@ -126,7 +137,7 @@ RESULT_SCENARIOS = {
             "usage": USAGE,
         },
     ),
-    "boolean": (
+    "boolean": ResultScenario(
         "OpenAI",
         "gpt-6-luna",
         "Boolean",
@@ -138,7 +149,7 @@ RESULT_SCENARIOS = {
             "usage": USAGE,
         },
     ),
-    "score": (
+    "score": ResultScenario(
         "TypeSafe",
         "jev-latest",
         "Score",
@@ -158,7 +169,7 @@ RESULT_SCENARIOS = {
             "usage": USAGE,
         },
     ),
-    "refusal": (
+    "refusal": ResultScenario(
         "OpenAI",
         "gpt-6-luna",
         "Boolean",
@@ -172,21 +183,28 @@ RESULT_SCENARIOS = {
 }
 
 
-def _component_result(monkeypatch, provider, model, kind, question, candidates, body) -> dict:
-    monkeypatch.setenv(get_provider_secret_variable_key(provider), "fixture-key")  # pragma: allowlist secret
+def _component_result(monkeypatch, scenario: ResultScenario) -> dict:
+    monkeypatch.setenv(get_provider_secret_variable_key(scenario.provider), "fixture-key")  # pragma: allowlist secret
     monkeypatch.setattr(
         "lfx.base.models.decisions.providers.provider_safe_httpx_post",
-        lambda *_args, **_kwargs: httpx.Response(200, json=body),
+        lambda *_args, **_kwargs: httpx.Response(200, json=scenario.response),
     )
     component = DecisionModelComponent()
     component.set(
-        model=[{"provider": provider, "name": model}],
-        kind=kind,
+        model=[{"provider": scenario.provider, "name": scenario.model}],
+        kind=scenario.kind,
         context="I was charged twice for my October invoice. Support fixed it quickly, thanks!",
-        question=question,
-        candidates=candidates,
+        question=scenario.question,
+        candidates=scenario.candidates,
     )
     return component.evaluate().data
+
+
+def _check_fixture(path: Path, produced: dict) -> None:
+    """Compare with the saved fixture, rewriting it first when UPDATE_DECISION_FIXTURES=1."""
+    if os.environ.get("UPDATE_DECISION_FIXTURES") == "1":
+        path.write_text(json.dumps(produced, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    assert produced == json.loads(path.read_text(encoding="utf-8"))
 
 
 class TestDecisionEvidenceFixtures:
@@ -194,15 +212,11 @@ class TestDecisionEvidenceFixtures:
 
     def test_decision_evidence_fixtures_match_the_router(self, monkeypatch):
         produced = {name: _evidence(monkeypatch, action, evaluate) for name, (action, evaluate) in SCENARIOS.items()}
-        if os.environ.get("UPDATE_DECISION_FIXTURES") == "1":
-            FIXTURES.write_text(json.dumps(produced, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        assert produced == json.loads(FIXTURES.read_text(encoding="utf-8"))
+        _check_fixture(FIXTURES, produced)
 
     def test_decision_result_fixtures_match_the_component(self, monkeypatch):
-        produced = {name: _component_result(monkeypatch, *scenario) for name, scenario in RESULT_SCENARIOS.items()}
-        if os.environ.get("UPDATE_DECISION_FIXTURES") == "1":
-            RESULT_FIXTURES.write_text(json.dumps(produced, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        assert produced == json.loads(RESULT_FIXTURES.read_text(encoding="utf-8"))
+        produced = {name: _component_result(monkeypatch, scenario) for name, scenario in RESULT_SCENARIOS.items()}
+        _check_fixture(RESULT_FIXTURES, produced)
 
     def test_result_fixtures_keep_each_kind_of_evidence_distinct(self):
         results = json.loads(RESULT_FIXTURES.read_text(encoding="utf-8"))

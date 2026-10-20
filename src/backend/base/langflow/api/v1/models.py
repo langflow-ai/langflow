@@ -130,10 +130,10 @@ def _policy_denial_as_not_found() -> Iterator[None]:
         raise HTTPException(status_code=404, detail="Model not found") from exc
 
 
-def _policy_allows_model(
+def _not_a_blocked_decision_model(
     provider_policy: ModelProviderPolicySnapshot, provider: str, model_name: str, model_type: str | None
 ) -> bool:
-    """Decision models also honour per-model policy blocks."""
+    """True unless this is a decision model that policy blocks; other kinds keep their own checks."""
     return model_type != "decision" or provider_policy.allows_model(provider, model_name, model_type="decision")
 
 
@@ -463,7 +463,7 @@ async def list_models(
         allowed = [
             row
             for row in provider_dict["models"]
-            if _policy_allows_model(
+            if _not_a_blocked_decision_model(
                 provider_policy, prov_name, row["model_name"], (row.get("metadata") or {}).get("model_type")
             )
         ]
@@ -1080,7 +1080,7 @@ async def _get_enabled_models_result(
                 and not is_not_supported
                 and (explicitly_on if requires_explicit else (is_default or explicitly_on))
                 and not explicitly_off
-                and _policy_allows_model(provider_policy, provider, model_name, model_type)
+                and _not_a_blocked_decision_model(provider_policy, provider, model_name, model_type)
             )
             # Per-type map is exact; flat map ORs rows that share provider/name.
             models_for_type = enabled_models_by_type[provider].setdefault(model_type, {})
