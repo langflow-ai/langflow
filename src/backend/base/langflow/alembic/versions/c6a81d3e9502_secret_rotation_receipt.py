@@ -15,6 +15,10 @@ depends_on = None
 
 
 def upgrade() -> None:
+    from langflow.utils import migration
+
+    if migration.table_exists("secret_rotation", op.get_bind()):
+        return
     op.create_table(
         "secret_rotation",
         sa.Column("id", sa.String(36), primary_key=True),
@@ -28,4 +32,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_table("secret_rotation")
+    from langflow.utils import migration
+
+    if migration.table_exists("secret_rotation", op.get_bind()):
+        op.drop_table("secret_rotation")
