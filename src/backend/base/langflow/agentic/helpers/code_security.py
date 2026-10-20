@@ -111,6 +111,7 @@ def _is_blocked_attribute(attr: str | None) -> bool:
 # Langflow's variable/secret service, never raw process env.
 DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
     ("os", "environ", "os.environ is forbidden — use Langflow's variable/secret service"),
+    ("os", "environb", "os.environb is forbidden. Use Langflow's variable/secret service"),
     ("os.path", "os", "os.path.os is forbidden in components"),
     ("sys", "modules", "sys.modules is forbidden in components"),
     ("torch.package", "PackageImporter", "torch.package.PackageImporter is forbidden — external code loading"),
@@ -211,6 +212,7 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     ("os", "dup2", "os.dup2() is forbidden in components"),
     ("os", "dup", "os.dup() is forbidden in components"),
     ("os", "getenv", "os.getenv() is forbidden — use Langflow's variable/secret service"),
+    ("os", "getenvb", "os.getenvb() is forbidden. Use Langflow's variable/secret service"),
     ("os", "putenv", "os.putenv() is forbidden in components"),
     ("shutil", "rmtree", "shutil.rmtree() is forbidden"),
     ("shutil", "move", "shutil.move() is forbidden in components"),
@@ -1563,6 +1565,8 @@ class _SecurityChecker(ast.NodeVisitor):
     def visit_Match(self, node: ast.Match):
         """Merge successful cases and stateful guard fallthrough paths."""
         self.visit(node.subject)
+        # Capture patterns cannot retain restricted module or callable identities.
+        self._check_opaque_reference(node.subject)
         before_cases = self._snapshot_alias_state()
         fallthrough_states = [before_cases]
         completed_states: list[_AliasState] = []
@@ -1966,6 +1970,9 @@ class _SecurityChecker(ast.NodeVisitor):
         """Catch wildcard-imported reads (``from os import *``; ``environ[...]``)."""
         if isinstance(node.ctx, ast.Load):
             for resolved_name in self._resolved_names(node.id):
+                if resolved_name.rsplit(".", 1)[-1] in {"__loader__", "__spec__"}:
+                    self.violations.append(f"Access to '{resolved_name}' is forbidden in components (runtime loader)")
+                    break
                 if resolved_name in DANGEROUS_SUBMODULES:
                     self.violations.append(f"Access to '{resolved_name}' is forbidden in components")
                     break
