@@ -5052,6 +5052,11 @@
       "added_in": "1.13.0"
     },
     {
+      "bare_class_name": "CrawlerDataSearchComponent",
+      "target": "ext:crawlerdata:CrawlerDataSearchComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
       "bare_class_name": "SerpingApiSearchComponent",
       "target": "ext:serpingapi:SerpingApiSearchComponent@official",
       "added_in": "1.13.0"
