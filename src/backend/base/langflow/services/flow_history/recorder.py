@@ -35,7 +35,7 @@ from __future__ import annotations
 import copy
 import json
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 from uuid import UUID, uuid4
 
 from lfx.services.flow_operations import (
@@ -79,6 +79,7 @@ from langflow.services.flow_history.replay import reconstruct_graph, replay_from
 from langflow.services.flow_history.store import has_anchor, latest_anchor_at_or_before
 
 if TYPE_CHECKING:
+    from lfx.services.flow_operations import GraphViolation
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.database.models.flow.model import Flow, FlowGraphWriteOptions
@@ -179,7 +180,7 @@ async def write_flow_graph(
         base = flow.data
     else:
         base = normalize_absent_graph(flow.data)
-        violations = find_graph_violations(base)
+        violations = _graph_violations(base, graph="stored")
         if violations:
             if not repair_invalid:
                 raise FlowGraphInvalidError(violations, graph="stored")
@@ -192,7 +193,7 @@ async def write_flow_graph(
     target = normalize_absent_graph(target)
     # Against the stored graph, so the table rules apply to the tables this
     # write adds or changes, while a table it leaves alone is accepted as stored.
-    violations = find_graph_violations(target, base=base)
+    violations = _graph_violations(target, graph="submitted", base=base)
     if violations:
         if not repair_invalid:
             raise FlowGraphInvalidError(violations, graph="submitted")
@@ -248,6 +249,21 @@ async def write_flow_graph(
     result.latest_revision = flow.latest_revision
     result.current_revision = flow.current_revision
     return result
+
+
+def _graph_violations(
+    flow_data: Any, *, graph: Literal["stored", "submitted"], base: Any = None
+) -> list[GraphViolation]:
+    """Return the rules a graph breaks, refusing a graph the engine cannot read.
+
+    A graph that breaks the JSON limits (a lone surrogate, or nesting deeper
+    than 127 levels) is refused before any rule is checked, so it is refused
+    with no violations, and repair cannot fix it.
+    """
+    try:
+        return find_graph_violations(flow_data, base=base)
+    except FlowDataValidationError as exc:
+        raise FlowGraphInvalidError(exc.violations, graph=graph, reason=str(exc)) from exc
 
 
 async def _username(session: AsyncSession, user_id: UUID | None) -> str | None:

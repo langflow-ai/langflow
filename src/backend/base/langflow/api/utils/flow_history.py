@@ -57,15 +57,20 @@ def history_http_error(exc: FlowHistoryError) -> HTTPException:
             },
         )
     if isinstance(exc, FlowGraphInvalidError):
+        if exc.reason is not None:
+            # A graph the engine cannot read has no violations, so repair has nothing to fix.
+            message = f"{exc}."
+        else:
+            message = (
+                f"The {exc.graph} flow breaks the flow graph rules. Each violation's resolution says "
+                "how to fix it: resend with repair_invalid_graph to fix the ones marked auto and keep "
+                "the stored original as a version; the ones marked manual need the client to correct the flow."
+            )
         return HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail={
                 "code": exc.code,
-                "message": (
-                    f"The {exc.graph} flow breaks the flow graph rules. Each violation's resolution says "
-                    "how to fix it: resend with repair_invalid_graph to fix the ones marked auto and keep "
-                    "the stored original as a version; the ones marked manual need the client to correct the flow."
-                ),
+                "message": message,
                 "graph": exc.graph,
                 "violations": [violation.to_dict() for violation in exc.violations],
             },

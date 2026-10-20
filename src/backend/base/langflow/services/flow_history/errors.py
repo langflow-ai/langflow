@@ -63,14 +63,29 @@ class FlowVersionConflictError(FlowHistoryError):
 
 
 class FlowGraphInvalidError(FlowHistoryError):
-    """A graph breaks the flow graph rules and repair was not requested."""
+    """A graph breaks the flow graph rules and repair was not requested.
+
+    A graph the engine cannot read (a lone surrogate, or nesting deeper than
+    127 levels) has no violations: ``reason`` says why it is refused, and
+    repair cannot fix it.
+    """
 
     code = "FLOW_GRAPH_INVALID"
 
-    def __init__(self, violations: list[GraphViolation], *, graph: Literal["stored", "submitted"]) -> None:
-        super().__init__(f"The {graph} flow graph breaks {len(violations)} flow graph rule(s)")
+    def __init__(
+        self,
+        violations: list[GraphViolation],
+        *,
+        graph: Literal["stored", "submitted"],
+        reason: str | None = None,
+    ) -> None:
+        if reason is not None:
+            super().__init__(f"The {graph} {reason}")
+        else:
+            super().__init__(f"The {graph} flow graph breaks {len(violations)} flow graph rule(s)")
         self.graph = graph
         self.violations = violations
+        self.reason = reason
 
 
 class FlowRevisionNotFoundError(FlowHistoryError):

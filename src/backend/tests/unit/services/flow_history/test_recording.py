@@ -465,6 +465,55 @@ async def test_a_submitted_graph_that_breaks_the_rules_is_refused_or_repaired(cl
     assert stored.data["edges"] == []
 
 
+# JSON text for a node value that the engine refuses as it reads it, as the
+# Rust engine's parser does: the node's value is level 8 of the graph's nesting.
+JSON_LIMIT_VALUES = {
+    "a lone surrogate": '"\\ud800"',
+    "nesting 128 levels deep": "[" * 121 + "]" * 121,
+}
+
+
+def _body_with_value(value_json: str, **fields) -> str:
+    """A request body whose graph holds one node with ``value_json`` as its value, as raw JSON text."""
+    body = json.dumps({**fields, "data": _graph(_node("a", "VALUE"))})
+    return body.replace('"VALUE"', value_json)
+
+
+@pytest.mark.parametrize("value_json", JSON_LIMIT_VALUES.values(), ids=JSON_LIMIT_VALUES.keys())
+async def test_a_graph_that_breaks_a_json_limit_is_refused_even_with_a_repair(
+    client: AsyncClient, logged_in_headers, value_json
+):
+    headers = {**logged_in_headers, "Content-Type": "application/json"}
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+
+    for repair in (False, True):
+        body = _body_with_value(value_json, repair_invalid_graph=repair)
+        refused = await client.patch(f"api/v1/flows/{flow['id']}", content=body, headers=headers)
+
+        assert refused.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, refused.text
+        detail = refused.json()["detail"]
+        assert detail["code"] == "FLOW_GRAPH_INVALID"
+        assert detail["graph"] == "submitted"
+        assert detail["violations"] == []
+        assert detail["message"].startswith("The submitted flow data is not valid JSON: ")
+    assert await _rows(flow["id"]) == []
+    assert (await _flow(flow["id"])).data["nodes"][0]["data"]["node"]["template"]["text"]["value"] == "hi"
+
+
+async def test_a_stored_graph_that_breaks_a_json_limit_refuses_the_first_edit(client: AsyncClient, logged_in_headers):
+    headers = {**logged_in_headers, "Content-Type": "application/json"}
+    # Creating a flow records no history, so the engine first reads its graph at the first edit.
+    body = _body_with_value(JSON_LIMIT_VALUES["nesting 128 levels deep"], name=f"history-{uuid4().hex[:8]}")
+    created = await client.post("api/v1/flows/", content=body, headers=headers)
+    assert created.status_code == status.HTTP_201_CREATED, created.text
+
+    refused = await _patch(client, logged_in_headers, created.json()["id"], data=_graph(_node("a", "next")))
+
+    assert refused.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, refused.text
+    detail = refused.json()["detail"]
+    assert (detail["code"], detail["graph"], detail["violations"]) == ("FLOW_GRAPH_INVALID", "stored", [])
+
+
 async def test_a_stored_graph_that_breaks_the_rules_is_repaired_keeping_the_original(
     client: AsyncClient, logged_in_headers
 ):
