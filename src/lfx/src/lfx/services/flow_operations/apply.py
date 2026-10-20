@@ -8,7 +8,6 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from lfx.services.flow_operations.canonical import json_type
 from lfx.services.flow_operations.edge_rules import OUTPUTS_PATH, check_edge, node_outputs, outputs_by_name
 from lfx.services.flow_operations.exceptions import FlowOperationValidationError
 from lfx.services.flow_operations.ops import (
@@ -19,7 +18,6 @@ from lfx.services.flow_operations.ops import (
     DeleteNodesOp,
     FlowOperation,
     NodeFieldPath,
-    SetNodeFieldUpdate,
     UpdateNodeEntry,
     UpdateNodesOp,
     deduplicate_delete_ids,
@@ -352,7 +350,6 @@ def _write_last(
         if isinstance(update, DeleteNodeFieldUpdate):
             return parent.pop(last, _ABSENT)
         before = parent.get(last, _ABSENT)
-        _check_value_type_change(before, update, context=context)
         # Prevent stored graph state from sharing mutable objects with the
         # operation payload returned in forward_ops.
         parent[last] = copy_mutable_graph_value(update.value)
@@ -366,32 +363,10 @@ def _write_last(
     if items.keyed.key_of(value) != key:
         msg = f"{context}: a list item written at a selector must carry the same key: {key!r}"
         raise FlowOperationValidationError(msg)
-    _check_value_type_change(items.by_key.get(key, _ABSENT), update, context=context)
     if key in items.by_key:
         return items.replace(key, value, context=context)
     items.add(value, context=context)
     return _ABSENT
-
-
-def _check_value_type_change(current: Any, update: SetNodeFieldUpdate, *, context: str) -> None:
-    """Refuse a set_field that silently changes a value's JSON type.
-
-    A type change must be declared with ``from_type`` naming the type being
-    replaced, which also makes it a precondition: the write only applies to the
-    value it was derived from. ``current`` is ``_ABSENT`` when there is none.
-    """
-    if update.from_type is None:
-        if current is not _ABSENT and json_type(current) != json_type(update.value):
-            msg = (
-                f"{context}: set_field changes a {json_type(current)} to a {json_type(update.value)} "
-                "without declaring from_type"
-            )
-            raise FlowOperationValidationError(msg, code="FIELD_TYPE_CHANGE_UNDECLARED")
-        return
-    if current is _ABSENT or json_type(current) != update.from_type:
-        found = "nothing" if current is _ABSENT else json_type(current)
-        msg = f"{context}: set_field expected to replace a {update.from_type} but found {found}"
-        raise FlowOperationValidationError(msg, code="FIELD_TYPE_PRECONDITION_FAILED")
 
 
 def _keyed_list(

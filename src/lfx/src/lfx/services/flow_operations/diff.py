@@ -11,11 +11,10 @@ Shape of the result, so whole-flow saves and future operation submissions
 record the same history:
 
 - at most one operation of each type, in the order ``delete_edges``,
-  ``delete_nodes``, ``add_nodes``, ``update_nodes``, ``add_edges``,
-  ``update_metadata``, each listing every item it applies to:
-  deletions in the order the stored graph lists them, everything else in the
-  order the target lists it. Nothing is sorted, so the same two graphs always
-  give the same operations;
+  ``delete_nodes``, ``add_nodes``, ``update_nodes``, ``add_edges``, each
+  listing every item it applies to: deletions in the order the stored graph
+  lists them, everything else in the order the target lists it. Nothing is
+  sorted, so the same two graphs always give the same operations;
 - nodes, edges and table rows are matched by ID, and array order is never a
   change;
 - inside a node, the diff follows ``node_schema.json``: it splits only the
@@ -33,7 +32,8 @@ record the same history:
   whole;
 - an edge that changed in any way is deleted and added again;
 - view state is never recorded, and two spellings of one handle are not a
-  change.
+  change. Every top-level key other than ``nodes`` and ``edges`` is view
+  state.
 """
 
 from __future__ import annotations
@@ -44,17 +44,14 @@ from typing import Any
 from lfx.services.flow_operations.apply import apply_flow_operations
 from lfx.services.flow_operations.canonical import (
     EDGE_VIEW_STATE_KEYS,
-    FLOW_VIEW_STATE_KEYS,
     NODE_VIEW_STATE_KEYS,
     graphs_equal,
     is_row_position,
-    json_type,
     values_equal,
 )
 from lfx.services.flow_operations.edge_rules import edge_changed
 from lfx.services.flow_operations.exceptions import FlowOperationReplayError
 from lfx.services.flow_operations.ops import (
-    GRAPH_COLLECTION_KEYS,
     AddEdgesOp,
     AddNodesOp,
     DeleteEdgesOp,
@@ -64,7 +61,6 @@ from lfx.services.flow_operations.ops import (
     KeySelector,
     NodeFieldPath,
     SetNodeFieldUpdate,
-    UpdateMetadataOp,
     UpdateNodeEntry,
     UpdateNodesOp,
 )
@@ -72,14 +68,11 @@ from lfx.services.flow_operations.schema import KeyedList, load_node_schema
 from lfx.services.flow_operations.validation import validate_flow_data
 
 _SCHEMA = load_node_schema()
-_NON_METADATA_KEYS = GRAPH_COLLECTION_KEYS | FLOW_VIEW_STATE_KEYS
 _TEMPLATE_PATH: NodeFieldPath = ("data", "node", "template")
 _OUTPUTS_PATH: NodeFieldPath = ("data", "node", "outputs")
 _NODE_DATA_VIEW_STATE = frozenset(path[-1] for path in _SCHEMA.node_view_state_paths if path[:-1] == ("data", "node"))
 _VALUE_UNIT = frozenset(_SCHEMA.value_unit)
 _TOGGLES = frozenset(_SCHEMA.toggles)
-# The parts of a template field that decide whether its value is a secret.
-TEMPLATE_FIELD_METADATA_KEYS = ("name", "type", "password", "load_from_db", "_input_type", "table_schema")
 
 
 @dataclass(frozen=True)
@@ -137,10 +130,6 @@ def diff_flow_data(base: dict[str, Any], target: dict[str, Any]) -> list[FlowOpe
         operations.append(UpdateNodesOp(type="update_nodes", updates=node_updates))
     if added_edge_ids:
         operations.append(AddEdgesOp(type="add_edges", edges=[target_edges[edge_id] for edge_id in added_edge_ids]))
-
-    metadata = _diff_metadata(base, target)
-    if metadata is not None:
-        operations.append(metadata)
     return operations
 
 
@@ -175,7 +164,7 @@ _SKIPPED_AT: dict[NodeFieldPath, frozenset[str]] = {
 
 def _diff_node(node_id: str, base: dict[str, Any], target: dict[str, Any]) -> Updates:
     updates: Updates = []
-    _diff_object(node_id, base, target, (), target["data"]["node"]["template"], updates)
+    _diff_object(node_id, base, target, (), updates)
     return updates
 
 
@@ -184,7 +173,6 @@ def _diff_object(
     base: dict[str, Any],
     target: dict[str, Any],
     path: NodeFieldPath,
-    template: dict[str, Any],
     updates: Updates,
 ) -> None:
     """Diff an object the schema splits: split its children where the schema does, write the others whole."""
@@ -194,30 +182,30 @@ def _diff_object(
             continue
         key_path = (*path, key)
         if key not in base:
-            updates.append(_set(node_id, key_path, value, template=template))
+            updates.append(_set(node_id, key_path, value))
             continue
         previous = base[key]
-        if _diff_child(node_id, previous, value, key_path, template, updates):
+        if _diff_child(node_id, previous, value, key_path, updates):
             continue
         if not values_equal(previous, value):
-            updates.append(_set(node_id, key_path, value, previous=previous, template=template))
+            updates.append(_set(node_id, key_path, value))
     updates.extend(_delete(node_id, (*path, key)) for key in base if key not in target and key not in skip)
 
 
-def _diff_child(node_id: str, base: Any, target: Any, path: NodeFieldPath, template: dict, updates: Updates) -> bool:
+def _diff_child(node_id: str, base: Any, target: Any, path: NodeFieldPath, updates: Updates) -> bool:
     """Diff a value the schema splits further. Returns False when it is written whole."""
     if path in _SCHEMA.recursed_paths:
         # Validation keeps the node's data, data.node and template objects.
-        _diff_object(node_id, base, target, path, template, updates)
+        _diff_object(node_id, base, target, path, updates)
         return True
     if len(path) == len(_TEMPLATE_PATH) + 1 and path[:-1] == _TEMPLATE_PATH:
-        return _diff_field(node_id, base, target, path, template, updates)
+        return _diff_field(node_id, base, target, path, updates)
     if path == _OUTPUTS_PATH:
-        return _diff_keyed_list(node_id, _SCHEMA.keyed_list_at({}, path), base, target, path, template, updates)
+        return _diff_keyed_list(node_id, _SCHEMA.keyed_list_at({}, path), base, target, path, updates)
     return False
 
 
-def _diff_field(node_id: str, base: Any, target: Any, path: NodeFieldPath, template: dict, updates: Updates) -> bool:
+def _diff_field(node_id: str, base: Any, target: Any, path: NodeFieldPath, updates: Updates) -> bool:
     """Diff a template field unit by unit. Returns False for a key that is not a field."""
     if not (isinstance(base, dict) and isinstance(target, dict)):
         return False
@@ -245,7 +233,7 @@ def _diff_field(node_id: str, base: Any, target: Any, path: NodeFieldPath, templ
         keyed is not None
         and "value" in base
         and "value" in target
-        and _diff_keyed_list(node_id, keyed, base["value"], target["value"], value_path, template, items_diff)
+        and _diff_keyed_list(node_id, keyed, base["value"], target["value"], value_path, items_diff)
     )
     value_keys = set(_VALUE_UNIT & all_keys)
     if per_item:
@@ -257,7 +245,7 @@ def _diff_field(node_id: str, base: Any, target: Any, path: NodeFieldPath, templ
         if key == "value" and per_item:
             updates.extend(items_diff)
         elif key in written:
-            updates.append(_set(node_id, (*path, key), value, previous=base.get(key, _ABSENT), template=template))
+            updates.append(_set(node_id, (*path, key), value))
     updates.extend(_delete(node_id, (*path, key)) for key in base if key not in target and key in written)
     return True
 
@@ -271,7 +259,6 @@ def _diff_keyed_list(
     base: Any,
     target: Any,
     path: NodeFieldPath,
-    template: dict[str, Any],
     updates: Updates,
 ) -> bool:
     """Diff a keyed list item by item. Returns False when it has to be written whole."""
@@ -289,13 +276,12 @@ def _diff_keyed_list(
     for key, item in target_items.items():
         item_path = (*path, KeySelector(key=key))
         if key not in base_items:
-            updates.append(_set(node_id, item_path, item, template=template))
+            updates.append(_set(node_id, item_path, item))
             continue
         previous = base_items[key]
         for item_key, value in item.items():
-            before = previous.get(item_key, _ABSENT)
-            if before is _ABSENT or not values_equal(before, value):
-                updates.append(_set(node_id, (*item_path, item_key), value, previous=before, template=template))
+            if item_key not in previous or not values_equal(previous[item_key], value):
+                updates.append(_set(node_id, (*item_path, item_key), value))
         removed = [item_key for item_key in previous if item_key not in item]
         updates.extend(_delete(node_id, (*item_path, item_key)) for item_key in removed)
     updates.extend(_delete(node_id, (*path, KeySelector(key=key))) for key in base_items if key not in target_items)
@@ -324,58 +310,10 @@ def _items_by_key(keyed: KeyedList, items: Any) -> dict[str, dict[str, Any]] | N
 
 # --- Entries ---------------------------------------------------------------------------
 
-_ABSENT = object()
 
-
-def _set(
-    entry_id: str,
-    path: NodeFieldPath,
-    value: Any,
-    *,
-    previous: Any = _ABSENT,
-    template: dict[str, Any] | None = None,
-) -> SetNodeFieldUpdate:
-    from_type = None
-    if previous is not _ABSENT and json_type(previous) != json_type(value):
-        from_type = json_type(previous)
-    return SetNodeFieldUpdate(
-        id=entry_id,
-        op="set_field",
-        path=path,
-        value=value,
-        from_type=from_type,
-        template_field=_template_field_metadata(path, template) if template is not None else None,
-    )
+def _set(entry_id: str, path: NodeFieldPath, value: Any) -> SetNodeFieldUpdate:
+    return SetNodeFieldUpdate(id=entry_id, op="set_field", path=path, value=value)
 
 
 def _delete(entry_id: str, path: NodeFieldPath) -> DeleteNodeFieldUpdate:
     return DeleteNodeFieldUpdate(id=entry_id, op="delete_field", path=path)
-
-
-def _template_field_metadata(path: NodeFieldPath, template: dict[str, Any]) -> dict[str, Any] | None:
-    """Return the metadata of the template field a path writes inside of.
-
-    A path that sets a whole template field carries its metadata in the value
-    already, and a path outside the template writes no field value, so only
-    writes strictly inside one field need it recorded.
-    """
-    depth = len(_TEMPLATE_PATH)
-    if len(path) <= depth + 1 or path[:depth] != _TEMPLATE_PATH:
-        return None
-    field = template.get(path[depth])
-    if not isinstance(field, dict):
-        return None
-    metadata = {key: field[key] for key in TEMPLATE_FIELD_METADATA_KEYS if key in field}
-    return metadata or None
-
-
-def _diff_metadata(base: dict[str, Any], target: dict[str, Any]) -> UpdateMetadataOp | None:
-    fields = {
-        key: value
-        for key, value in target.items()
-        if key not in _NON_METADATA_KEYS and (key not in base or not values_equal(base[key], value))
-    }
-    delete_keys = [key for key in base if key not in _NON_METADATA_KEYS and key not in target]
-    if not fields and not delete_keys:
-        return None
-    return UpdateMetadataOp(type="update_metadata", fields=fields, delete_keys=delete_keys)

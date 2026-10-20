@@ -17,7 +17,6 @@ from lfx.services.flow_operations import (
     FlowDataValidationError,
     FlowOperationValidationError,
     KeySelector,
-    UpdateMetadataOp,
     UpdateNodesOp,
     apply_flow_operations,
     derive_flow_operations,
@@ -95,6 +94,7 @@ def test_reordering_nodes_and_edges_produces_no_operations():
 def test_view_state_changes_produce_no_operations():
     target = _graph()
     target["viewport"] = {"x": 10, "y": 10, "zoom": 3}
+    target["description"] = "every top-level key but nodes and edges is view state"
     target["nodes"][0].update(selected=True, dragging=True, measured={"width": 1, "height": 1})
     target["edges"][0].update(selected=True, animated=True, className="running")
 
@@ -123,49 +123,24 @@ def test_a_field_edit_is_one_set_field():
                     "op": "set_field",
                     "path": ["data", "node", "template", "text", "value"],
                     "value": "hello",
-                    "template_field": {"name": "text", "type": "str"},
                 }
             ],
         )
     ]
 
 
-def test_a_type_change_declares_the_replaced_type():
+def test_a_type_change_is_a_plain_set_field():
     target = _graph()
     _template(target, "a")["text"]["value"] = 1
 
     (operation,) = _replays(_graph(), target)
 
-    assert operation.updates[0].from_type == "string"
-
-
-def test_a_boolean_replacing_a_number_is_a_type_change():
-    base = _graph()
-    _template(base, "a")["text"]["value"] = 1
-    target = copy.deepcopy(base)
-    _template(target, "a")["text"]["value"] = True
-
-    (operation,) = _replays(base, target)
-
-    assert operation.updates[0].from_type == "number"
-
-
-def test_template_field_metadata_is_recorded_only_inside_a_field():
-    target = _graph()
-    _template(target, "b")["api_key"]["value"] = "sk-new"
-    _template(target, "a")["new_field"] = {"name": "new_field", "type": "str", "value": "x"}
-    target["nodes"][0]["position"] = {"x": 5, "y": 0}
-
-    (operation,) = _replays(_graph(), target)
-    by_path = {tuple(update.path): update for update in operation.updates}
-
-    assert by_path[("data", "node", "template", "api_key", "value")].template_field == {
-        "name": "api_key",
-        "type": "str",
-        "password": True,
+    assert operation.updates[0].model_dump(mode="json") == {
+        "id": "a",
+        "op": "set_field",
+        "path": ["data", "node", "template", "text", "value"],
+        "value": 1,
     }
-    assert by_path[("data", "node", "template", "new_field")].template_field is None
-    assert by_path[("position",)].template_field is None
 
 
 def test_a_removed_definition_key_rewrites_the_definition_unit():
@@ -253,7 +228,6 @@ def test_operation_types_come_in_a_fixed_order_and_items_in_the_order_the_target
     target["nodes"] += [_node("d"), _node("c", text={"type": "str", "list": True})]
     target["edges"] = [_edge("e-dc", "d", "c"), _edge("e-ac", "a", "c")]
     target["nodes"][0]["position"] = {"x": 1, "y": 1}
-    target["description"] = "changed"
     selected = copy.deepcopy(target)
     selected["nodes"][1]["selected"] = True
 
@@ -265,7 +239,6 @@ def test_operation_types_come_in_a_fixed_order_and_items_in_the_order_the_target
         "add_nodes",
         "update_nodes",
         "add_edges",
-        "update_metadata",
     ]
     add_nodes = operations[2]
     assert isinstance(add_nodes, AddNodesOp)
@@ -275,23 +248,15 @@ def test_operation_types_come_in_a_fixed_order_and_items_in_the_order_the_target
     assert [edge["id"] for edge in operations[4].edges] == ["e-dc", "e-ac"]
 
 
-def test_metadata_changes_exclude_viewport_and_graph_collections():
+def test_top_level_keys_other_than_nodes_and_edges_are_not_recorded():
     target = _graph()
     target["description"] = "changed"
     target["notes"] = {"k": "v"}
-    target["viewport"] = {"x": 1, "y": 1, "zoom": 1}
     base = _graph()
     base["legacy"] = True
 
-    operations = _replays(base, target)
-
-    assert operations == [
-        UpdateMetadataOp(
-            type="update_metadata",
-            fields={"description": "changed", "notes": {"k": "v"}},
-            delete_keys=["legacy"],
-        )
-    ]
+    assert diff_flow_data(base, target) == []
+    assert graphs_equal(base, target)
 
 
 @pytest.mark.parametrize(
