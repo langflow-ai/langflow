@@ -209,3 +209,21 @@ def test_standalone_request_endpoint_cannot_be_ignored(execution, monkeypatch):
         reset_request_variables(variables)
         reset_no_env_fallback(token)
     transport.assert_not_called()
+
+
+@pytest.mark.parametrize("named", ["ANTHROPIC_API_KEY", "TYPESAFE_API_KEY"])
+def test_api_key_field_cannot_name_another_providers_credential(execution, monkeypatch, named):
+    request, model, transport = execution
+    lookup = Mock(return_value="resolved")
+    monkeypatch.setattr(unified_models, "get_api_key_for_provider", lookup)
+    with pytest.raises(DecisionConfigurationError, match=f"cannot reference {named}"):
+        evaluate_decision(request, model=[model], api_key=named)
+    lookup.assert_not_called()
+    transport.assert_not_called()
+
+
+def test_api_key_field_may_name_its_own_providers_credential(execution, monkeypatch):
+    request, model, transport = execution
+    monkeypatch.setattr(unified_models, "get_api_key_for_provider", Mock(return_value="resolved-openai-key"))
+    evaluate_decision(request, model=[model], api_key="OPENAI_API_KEY")
+    assert transport.call_args.kwargs["api_key"] == "resolved-openai-key"

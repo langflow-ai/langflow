@@ -70,6 +70,15 @@ def evaluate_decision(
         if not is_env_fallback_disabled() and "OPENAI_API_BASE" not in variables:
             variables["OPENAI_API_BASE"] = provider_variable_from_env("OPENAI_API_BASE")
         require_official_openai_endpoint(variables)
+    from lfx.base.models.decisions.providers import API_KEY_VARIABLES
+    from lfx.utils.secrets import secret_value_to_str
+
+    # A flow may name its own provider's key variable, but never another provider's credential.
+    named = secret_value_to_str(api_key, strip=True)
+    foreign = set(unified_models.get_model_provider_variable_mapping().values()) - {API_KEY_VARIABLES[provider]}
+    if named in foreign:
+        msg = f"The {provider} decision API key cannot reference {named}; use {API_KEY_VARIABLES[provider]}."
+        raise DecisionConfigurationError(msg)
     resolved_key = unified_models.get_api_key_for_provider(user_id, provider, api_key)
     if not resolved_key:
         msg = f"Configure an API key for the {provider} decision model."
