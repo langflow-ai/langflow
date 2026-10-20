@@ -107,6 +107,15 @@ AUDIT_INGRESS_ACCEPT = "trigger_ingress:accept"
 AUDIT_INGRESS_REJECT = "trigger_ingress:reject"
 AUDIT_SUBSCRIPTION_RENEW = "trigger_subscription:renew"
 AUDIT_SUBSCRIPTION_REVOKE = "trigger_subscription:revoke"
+#: An operator's bulk pause or resume, one audit row per trigger it changed.
+AUDIT_ADMIN_PAUSE = "trigger:admin_pause"
+AUDIT_ADMIN_RESUME = "trigger:admin_resume"
+
+#: ``last_error`` the dispatcher records when a trigger's connection does not
+#: allow non-interactive use. The settings page keys its ``consent_required``
+#: reason off it, routing the owner to the background-runs switch rather than
+#: an OAuth reconnect that would not change the answer.
+CONNECTION_NOT_AUTHORIZED_ERROR = "connection_not_authorized"
 
 #: Slack trigger kinds (TRG-5). Each runs on either Slack mechanism; which one is
 #: decided per trigger from the connection it resolves and recorded as

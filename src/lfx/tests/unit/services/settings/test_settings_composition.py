@@ -192,6 +192,7 @@ EXPECTED_FIELDS = {
     "public_flow_cleanup_interval",
     "public_flow_expiration",
     "webhook_polling_interval",
+    "trigger_polling_interval",
     "fs_flows_polling_interval",
     "health_check_max_retries",
     "max_file_size_upload",
