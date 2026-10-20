@@ -19,7 +19,7 @@ use crate::ops::canonical::is_row_position;
 use crate::ops::edges::{Input, InputKind, check_edge, index_outputs, node_outputs};
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result, bail, invalid, quoted};
-use crate::ops::ops::{Change, FieldUpdate, Operation, Path, PathExt, Segment, path_label};
+use crate::ops::ops::{AsKey, Change, FieldUpdate, Operation, Path, PathExt, Segment, path_label};
 use crate::ops::schema::{
     KeyedList, ListKind, NODE_OBJECT_PATHS, NODE_SCHEMA, OUTPUTS_PATH, TEMPLATE_PATH,
 };
@@ -241,7 +241,7 @@ impl GraphState {
         let node_id = update.id.as_str();
         if update.is_delete()
             && path.len() == TEMPLATE_PATH.len() + 1
-            && path.starts_with_keys(&TEMPLATE_PATH)
+            && path.has_start(&TEMPLATE_PATH)
             && let Segment::Key(field) = &path[TEMPLATE_PATH.len()]
         {
             let input = Input {
@@ -251,12 +251,12 @@ impl GraphState {
             let connections = self.edge_index.connections(&self.graph, node_id)?;
             return Ok(connections.inputs.get(&input).cloned().unwrap_or_default());
         }
-        if !path.starts_with_keys(&OUTPUTS_PATH) {
+        if !path.has_start(&OUTPUTS_PATH) {
             return Ok(IndexSet::new());
         }
         let removed: Vec<String> = if path.len() == OUTPUTS_PATH.len() + 1 && update.is_delete() {
             path[OUTPUTS_PATH.len()]
-                .item()
+                .as_item()
                 .map(str::to_owned)
                 .into_iter()
                 .collect()
@@ -546,7 +546,7 @@ impl GraphState {
             FieldUndo::KeySet { old: None, .. } | FieldUndo::ItemAdded
         );
         // A whole value replaced or removed takes the lists indexed under it with it.
-        if let Some(keys) = path.keys() {
+        if let Some(keys) = path.to_list() {
             self.lists.forget_under(id, &keys);
         }
         self.record_field(id, walk.steps.clone(), undo);
@@ -728,7 +728,7 @@ fn keyed_list<'p>(
     value: &Value,
     context: &str,
 ) -> Result<(&'static KeyedList, Vec<&'p str>)> {
-    let prefix = path[..index].keys();
+    let prefix = path[..index].to_list();
     let Some((keyed, prefix)) = prefix.and_then(|prefix| {
         NODE_SCHEMA
             .keyed_list_at(node, &prefix)
@@ -745,13 +745,13 @@ fn keyed_list<'p>(
 }
 
 fn check_node_path(path: &Path, context: &str) -> Result<()> {
-    if path[0].key() == Some("id") {
+    if path[0].as_key() == Some("id") {
         bail!("{context}: cannot modify node identity");
     }
     // Every node keeps these objects, and operations patch inside them.
     let forbidden = NODE_OBJECT_PATHS
         .iter()
-        .any(|object_path| path.is_keys(object_path));
+        .any(|object_path| path.equals(object_path));
     if forbidden {
         bail!(
             "{context}: cannot update entire node data objects at path {}; forbidden paths are: data, data.node, data.node.template",
@@ -803,7 +803,7 @@ impl FieldInverses {
             && let (Segment::Item(key), Some(Value::Array(items)), Some(_)) =
                 (&path[last], parent, current)
             && let Some(keyed) = path[..last]
-                .keys()
+                .to_list()
                 .and_then(|prefix| NODE_SCHEMA.keyed_list_at(root, &prefix))
             && keyed.kind == ListKind::Natural
         {

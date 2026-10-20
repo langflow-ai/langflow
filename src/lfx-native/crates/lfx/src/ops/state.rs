@@ -21,7 +21,8 @@ use crate::ops::edges::{EdgeIndex, GraphRead, endpoint};
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result};
 use crate::ops::keyed::{ListIndex, Removal};
-use crate::ops::schema::{KeyedList, same_keys, starts_with_keys};
+use crate::ops::ops::PathExt;
+use crate::ops::schema::KeyedList;
 use crate::ops::validate::{Numbers, PathPart, validate_flow_data};
 
 /// Whether a removal returns copies of what it removed, which inverses need.
@@ -152,7 +153,7 @@ impl Lists {
         let lists = self.by_node.entry(node_id.to_owned()).or_default();
         let position = if let Some(position) = lists
             .iter()
-            .position(|(list_path, _)| same_keys(list_path, path))
+            .position(|(list_path, _)| list_path.equals(path))
         {
             position
         } else {
@@ -166,7 +167,7 @@ impl Lists {
     /// Forget the indexes of the lists at or under `path`, which a write replaced or removed.
     pub fn forget_under(&mut self, node_id: &str, path: &[&str]) {
         if let Some(lists) = self.by_node.get_mut(node_id) {
-            lists.retain(|(list_path, _)| !starts_with_keys(list_path, path));
+            lists.retain(|(list_path, _)| !list_path.has_start(path));
         }
     }
 

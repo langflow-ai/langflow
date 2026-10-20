@@ -43,7 +43,7 @@ use crate::ops::apply::{ApplyOptions, apply_flow_operations};
 use crate::ops::canonical::{graphs_equal, is_row_position, values_equal};
 use crate::ops::edges::edge_changed;
 use crate::ops::error::{Error, Result};
-use crate::ops::ops::{FieldUpdate, Operation, Path, PathExt, Segment};
+use crate::ops::ops::{AsKey, FieldUpdate, Operation, Path, PathExt, Segment};
 use crate::ops::schema::{KeyedList, ListKind, NODE_SCHEMA, OUTPUTS_PATH, TEMPLATE_PATH};
 use crate::ops::validate::{Numbers, validate_flow_data};
 
@@ -206,9 +206,9 @@ impl NodeDiff<'_> {
     fn skipped(path: &[Segment], key: &str) -> bool {
         if path.is_empty() {
             key == "id" || NODE_SCHEMA.node_view_state.contains(key)
-        } else if path.is_keys(&["data", "node"]) {
+        } else if path.equals(&["data", "node"]) {
             NODE_SCHEMA.node_data_view_state.contains(key)
-        } else if path.is_keys(&TEMPLATE_PATH) {
+        } else if path.equals(&TEMPLATE_PATH) {
             NODE_SCHEMA.template_view_state.contains(key)
         } else {
             false
@@ -255,7 +255,7 @@ impl NodeDiff<'_> {
         let recursed = NODE_SCHEMA
             .recursed_paths
             .iter()
-            .any(|recursed| path.is_keys(recursed));
+            .any(|recursed| path.equals(recursed));
         if recursed {
             // Validation keeps the node's data, data.node and template objects.
             if let (Value::Object(base), Value::Object(target)) = (base, target) {
@@ -264,10 +264,10 @@ impl NodeDiff<'_> {
             }
             return Ok(false);
         }
-        if path.len() == TEMPLATE_PATH.len() + 1 && path.starts_with_keys(&TEMPLATE_PATH) {
+        if path.len() == TEMPLATE_PATH.len() + 1 && path.has_start(&TEMPLATE_PATH) {
             return self.field(base, target, path);
         }
-        if path.is_keys(&OUTPUTS_PATH) {
+        if path.equals(&OUTPUTS_PATH) {
             let keyed = NODE_SCHEMA
                 .keyed_list_at(&Value::Null, &OUTPUTS_PATH)
                 .ok_or_else(|| Error::invalid("node_schema.json declares no outputs list"))?;
@@ -322,7 +322,7 @@ impl NodeDiff<'_> {
         }
         // The value is `value` with the keys that qualify it. A keyed list
         // value is written item by item instead, when both sides allow it.
-        let field_name = path[TEMPLATE_PATH.len()].key().unwrap_or_default();
+        let field_name = path[TEMPLATE_PATH.len()].as_key().unwrap_or_default();
         let keyed = NODE_SCHEMA.field_value_list(field_name, target_field);
         let mut item_writes = Vec::new();
         let per_item = match (keyed, base.get("value"), target.get("value")) {

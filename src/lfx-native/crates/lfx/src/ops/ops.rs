@@ -23,24 +23,19 @@ pub enum Segment {
 }
 
 impl Segment {
-    /// The object key, if this segment is one.
+    /// The key of the list item this segment names, or `None` when it is an
+    /// object key. For example, `Item("r1")` gives `Some("r1")`.
     #[must_use]
-    pub fn key(&self) -> Option<&str> {
-        match self {
-            Self::Key(key) => Some(key),
-            Self::Item(_) => None,
-        }
-    }
-
-    /// The list item's key, if this segment names a list item.
-    #[must_use]
-    pub fn item(&self) -> Option<&str> {
+    pub fn as_item(&self) -> Option<&str> {
         match self {
             Self::Key(_) => None,
             Self::Item(key) => Some(key),
         }
     }
 
+    /// The segment as a path writes it in JSON: an object key as a string,
+    /// a list item as `{"key": ...}`. For example, `Key("outputs")` gives
+    /// `"outputs"`, and `Item("r1")` gives `{"key": "r1"}`.
     fn to_value(&self) -> Value {
         match self {
             Self::Key(key) => Value::from(key.as_str()),
@@ -48,6 +43,8 @@ impl Segment {
         }
     }
 
+    /// The same JSON as [`Self::to_value`], but it moves the key into the
+    /// value instead of copying it.
     fn into_value(self) -> Value {
         match self {
             Self::Key(key) => Value::String(key),
@@ -59,31 +56,70 @@ impl Segment {
 /// A field path.
 pub type Path = Vec<Segment>;
 
-/// Checks on a field path that compare its object keys.
-pub(crate) trait PathExt {
-    /// Whether the path is exactly the object keys `keys`.
-    fn is_keys<S: AsRef<str>>(&self, keys: &[S]) -> bool;
-    /// Whether the path starts with the object keys `keys`.
-    fn starts_with_keys<S: AsRef<str>>(&self, keys: &[S]) -> bool;
-    /// The path's object keys, or `None` when it names a list item.
-    fn keys(&self) -> Option<Vec<&str>>;
+/// A part of a path that may be an object key, as `PathExt` compares it.
+pub trait AsKey {
+    /// The object key, or `None` when this part is not one, such as a
+    /// segment that names a list item.
+    fn as_key(&self) -> Option<&str>;
 }
 
-impl PathExt for [Segment] {
-    fn is_keys<S: AsRef<str>>(&self, keys: &[S]) -> bool {
-        self.len() == keys.len() && self.starts_with_keys(keys)
+impl AsKey for Segment {
+    fn as_key(&self) -> Option<&str> {
+        match self {
+            Self::Key(key) => Some(key),
+            Self::Item(_) => None,
+        }
+    }
+}
+
+impl AsKey for String {
+    fn as_key(&self) -> Option<&str> {
+        Some(self)
+    }
+}
+
+impl AsKey for &str {
+    fn as_key(&self) -> Option<&str> {
+        Some(self)
+    }
+}
+
+/// Checks on a path that compare its object keys. A field path holds
+/// [`Segment`]s; a schema path holds only object keys.
+pub(crate) trait PathExt {
+    /// Whether `self` is exactly the object keys `path`.
+    fn equals<S: AsRef<str>>(&self, path: &[S]) -> bool;
+
+    /// Whether `self` starts with the object keys `path`. It may be exactly
+    /// `path`.
+    fn has_start<S: AsRef<str>>(&self, path: &[S]) -> bool;
+
+    /// Whether `self` and `path` have the same object keys up to the length
+    /// of the shorter one. An empty `self` matches any `path`. A caller that
+    /// needs one to be a prefix of the other also compares their lengths.
+    fn shares_start<S: AsRef<str>>(&self, path: &[S]) -> bool;
+
+    /// The object keys of `self`, or `None` if any segment is a list item.
+    fn to_list(&self) -> Option<Vec<&str>>;
+}
+
+impl<T: AsKey> PathExt for [T] {
+    fn equals<S: AsRef<str>>(&self, path: &[S]) -> bool {
+        self.len() == path.len() && self.shares_start(path)
     }
 
-    fn starts_with_keys<S: AsRef<str>>(&self, keys: &[S]) -> bool {
-        self.len() >= keys.len()
-            && self
-                .iter()
-                .zip(keys)
-                .all(|(segment, key)| segment.key() == Some(key.as_ref()))
+    fn has_start<S: AsRef<str>>(&self, path: &[S]) -> bool {
+        self.len() >= path.len() && self.shares_start(path)
     }
 
-    fn keys(&self) -> Option<Vec<&str>> {
-        self.iter().map(Segment::key).collect()
+    fn shares_start<S: AsRef<str>>(&self, path: &[S]) -> bool {
+        self.iter()
+            .zip(path)
+            .all(|(seg, key)| seg.as_key() == Some(key.as_ref()))
+    }
+
+    fn to_list(&self) -> Option<Vec<&str>> {
+        self.iter().map(AsKey::as_key).collect()
     }
 }
 
