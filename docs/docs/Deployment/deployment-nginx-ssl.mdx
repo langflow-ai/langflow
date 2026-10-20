@@ -228,8 +228,9 @@ Reuse the same image with a different `LANGFLOW_ROOT_PATH` for another prefix.
 
 For multiple instances on one hostname, use non-overlapping prefixes such as `/langflow-a` and `/langflow-b`.
 Each instance scopes its login, refresh, and frontend authentication cookies to its configured prefix, including cookie removal during logout.
-Avoid placing one instance at `/` or beneath another instance's prefix, because browsers also send cookies from parent paths.
-Before upgrading an existing deployment that issued authentication cookies at `/`, sign out or clear those cookies for the hostname.
+Cookie names also include the encoded prefix so cookies from an earlier deployment at `/` cannot override the instance's session.
+Deployments at `/` retain their existing cookie names.
+Existing prefixed deployments require one new sign-in after upgrading to the prefix-specific cookie names.
 
 ### Configure Nginx
 
