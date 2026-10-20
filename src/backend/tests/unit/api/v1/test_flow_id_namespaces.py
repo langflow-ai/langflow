@@ -6,9 +6,10 @@ import zipfile
 from uuid import UUID, uuid4
 
 import pytest
-from langflow.api.utils.flow_utils import compute_virtual_flow_id
+from langflow.api.utils.flow_utils import cascade_delete_flow, compute_virtual_flow_id
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.message.model import MessageTable
+from langflow.services.database.models.traces.model import SpanTable, TraceTable
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.deps import session_scope
 
@@ -130,8 +131,76 @@ async def test_preexisting_uuid5_flow_does_not_authorize_virtual_history(client,
     assert response.status_code == 404
     await client.request("DELETE", "api/v1/monitor/messages", json=[str(message_id)], headers=logged_in_headers)
     response = await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
-    assert response.status_code == 200
+    assert response.status_code == 400
     async with session_scope() as session:
-        assert await session.get(Flow, flow_id) is None
+        assert await session.get(Flow, flow_id) is not None
         assert (await session.get(MessageTable, message_id)).text == "private history"
         assert await session.get(TransactionTable, transaction_id) is not None
+
+
+async def test_reserved_flow_delete_preserves_foreign_key_histories():
+    from fastapi import HTTPException
+    from sqlalchemy import event
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlmodel import SQLModel
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+
+    @event.listens_for(engine.sync_engine, "connect")
+    def enable_foreign_keys(connection, _record):
+        connection.execute("PRAGMA foreign_keys=ON")
+
+    flow_id = compute_virtual_flow_id(uuid4(), uuid4(), principal_type="user")
+    async with engine.begin() as connection:
+        await connection.run_sync(SQLModel.metadata.create_all)
+    try:
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            session.add(Flow(id=flow_id, name="Legacy UUID5 flow", data={}))
+            await session.commit()
+            trace = TraceTable(flow_id=flow_id, name="Public history")
+            session.add(trace)
+            await session.commit()
+            span = SpanTable(trace_id=trace.id, name="Public span")
+            session.add(span)
+            await session.commit()
+            trace_id, span_id = trace.id, span.id
+
+            with pytest.raises(HTTPException) as error:
+                await cascade_delete_flow(session, flow_id)
+            assert error.value.status_code == 400
+            await session.commit()
+            assert await session.get(Flow, flow_id) is not None
+            assert await session.get(TraceTable, trace_id) is not None
+            assert await session.get(SpanTable, span_id) is not None
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.parametrize("reserved", [True, False])
+async def test_trace_history_requires_a_persisted_flow_namespace(client, logged_in_headers, active_user, reserved):
+    flow_id = compute_virtual_flow_id(uuid4(), uuid4(), principal_type="user") if reserved else uuid4()
+    async with session_scope() as session:
+        session.add(Flow(id=flow_id, name="Synthetic trace flow", user_id=active_user.id, data={}))
+        await session.flush()
+        trace = TraceTable(flow_id=flow_id, name="Synthetic trace")
+        session.add(trace)
+        await session.flush()
+        span = SpanTable(trace_id=trace.id, name="Synthetic span")
+        session.add(span)
+        await session.commit()
+        trace_id, span_id = trace.id, span.id
+
+    for params in ({"flow_id": str(flow_id)}, {}):
+        response = await client.get("api/v1/monitor/traces", params=params, headers=logged_in_headers)
+        assert response.status_code == 200, response.text
+        assert response.json()["total"] == (0 if reserved else 1)
+    response = await client.get(f"api/v1/monitor/traces/{trace_id}", headers=logged_in_headers)
+    assert response.status_code == (404 if reserved else 200), response.text
+    response = await client.delete(f"api/v1/monitor/traces/{trace_id}", headers=logged_in_headers)
+    assert response.status_code == (404 if reserved else 204), response.text
+    response = await client.delete("api/v1/monitor/traces", params={"flow_id": str(flow_id)}, headers=logged_in_headers)
+    assert response.status_code == (404 if reserved else 204), response.text
+    async with session_scope() as session:
+        assert (await session.get(TraceTable, trace_id) is not None) is reserved
+        assert (await session.get(SpanTable, span_id) is not None) is reserved

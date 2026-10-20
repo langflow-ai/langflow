@@ -102,23 +102,23 @@ async def build_and_cache_graph_from_data(
 
 async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> bool:
     """Delete a flow and its related rows, returning whether the flow was removed."""
+    if is_virtual_flow_id(flow_id):
+        # Deleting a colliding Flow would also cascade through database foreign keys.
+        raise HTTPException(status_code=400, detail="UUID5 flow IDs are reserved for public execution histories.")
     try:
         await check_flow_has_deployed_versions(session, flow_id=flow_id)
-        # UUID5 IDs belong to virtual public executions. A legacy saved Flow
-        # with a colliding ID does not own those records, even when it is deleted.
-        if not is_virtual_flow_id(flow_id):
-            await session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))
-            await session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_id))
-            await session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id))
-            # span.trace_id lacks ON DELETE CASCADE, so remove spans first.
-            trace_ids = (await session.exec(select(TraceTable.id).where(TraceTable.flow_id == flow_id))).all()
-            if trace_ids:
-                await session.exec(delete(SpanTable).where(col(SpanTable.trace_id).in_(trace_ids)))
-                await session.exec(delete(TraceTable).where(col(TraceTable.id).in_(trace_ids)))
+        await session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))
+        await session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_id))
+        await session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id))
         # Explicit delete despite FK CASCADE -- SQLite doesn't enforce FK cascades
         # by default (requires PRAGMA foreign_keys = ON), and this function follows
         # the existing pattern of explicitly deleting all child records.
         await session.exec(delete(FlowVersion).where(FlowVersion.flow_id == flow_id))
+        # span.trace_id lacks ON DELETE CASCADE, so remove spans first.
+        trace_ids = (await session.exec(select(TraceTable.id).where(TraceTable.flow_id == flow_id))).all()
+        if trace_ids:
+            await session.exec(delete(SpanTable).where(col(SpanTable.trace_id).in_(trace_ids)))
+            await session.exec(delete(TraceTable).where(col(TraceTable.id).in_(trace_ids)))
         # authz_share is polymorphic over resource_type/resource_id with no
         # FK, so DB cascades cannot remove stale share rows when the flow is
         # deleted. Clean them up here so a deleted flow's grants do not
