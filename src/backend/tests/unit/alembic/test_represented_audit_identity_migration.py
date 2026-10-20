@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import base64
 import importlib
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
+from alembic.script import ScriptDirectory
 from langflow.services.audit.represented import decode_identity_value
 from langflow.services.database.models.audit_event.model import (
     REPRESENTED_ISSUER_MAX_LENGTH,
@@ -125,3 +127,12 @@ def test_maximum_unicode_identity_commits_with_mutation(db_url, schema):  # noqa
             )
     finally:
         engine.dispose()
+
+
+def test_represented_identity_and_release_migrations_have_one_head():
+    scripts = ScriptDirectory(str(Path(NEW.__file__).resolve().parents[1]))
+    head = scripts.get_current_head()
+    assert head is not None
+    revisions = {revision.revision for revision in scripts.iterate_revisions(head, "base")}
+    assert NEW.revision in revisions
+    assert "1d8d193028c8" in revisions  # pragma: allowlist secret
