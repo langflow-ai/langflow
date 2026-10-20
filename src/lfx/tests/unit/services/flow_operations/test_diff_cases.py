@@ -27,6 +27,7 @@ CASES = json.loads((FIXTURES / "diff_cases.json").read_text())["cases"]
 
 @pytest.mark.parametrize("case", CASES, ids=[case["name"] for case in CASES])
 def test_diff_case(case):
+    assert case.get("rule"), "every case names the rule it checks"
     base = copy.deepcopy(case["base"])
     target = copy.deepcopy(case["target"])
 
