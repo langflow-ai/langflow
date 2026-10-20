@@ -11,6 +11,11 @@
 
 import { act, render } from "@testing-library/react";
 
+jest.mock("react-router-dom", () => ({
+  ...jest.requireActual("react-router-dom"),
+  useLocation: () => ({ pathname: "/" }),
+}));
+
 // Mirrors the mocked LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS below (seconds → ms).
 const ACCESS_TOKEN_EXPIRE_SECONDS = 3240;
 const INTERVAL_MS = ACCESS_TOKEN_EXPIRE_SECONDS * 1000;
