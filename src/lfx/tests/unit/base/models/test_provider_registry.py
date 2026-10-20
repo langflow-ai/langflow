@@ -752,40 +752,14 @@ def fake_decision_catalog_loader():
     return [{"name": "fake-judge", "model_type": "decision", "capabilities": ["choice"]}]
 
 
-def test_decision_only_descriptor_does_not_require_chat_model_class():
+def test_extension_decision_catalog_rows_fail_clearly():
+    """Decision models run only on the built-in decision providers, so extensions cannot list them."""
     register_provider(
         ProviderSpec(
             name="FakeDecision",
-            metadata={"icon": "Bot", "variables": []},
+            metadata={"icon": "Bot", "variables": [], "mapping": {"model_class": "ChatOpenAI"}},
             catalog_loader=f"{__name__}:fake_decision_catalog_loader",
         )
     )
-    provider_registry.validate_registered_provider_catalogs(["FakeDecision"])
-    catalog = provider_registry.get_registered_model_catalogs()
-    assert catalog == [
-        [
-            {
-                "provider": "FakeDecision",
-                "name": "fake-judge",
-                "model_type": "decision",
-                "capabilities": ["choice"],
-                "icon": "Bot",
-            }
-        ]
-    ]
-
-
-def fake_chat_catalog_without_model_class():
-    return [{"name": "fake-chat", "model_type": "llm"}]
-
-
-def test_catalog_only_descriptor_cannot_offer_chat_models():
-    register_provider(
-        ProviderSpec(
-            name="FakeCatalogOnlyChat",
-            metadata={"icon": "Bot", "variables": []},
-            catalog_loader=f"{__name__}:fake_chat_catalog_without_model_class",
-        )
-    )
-    with pytest.raises(ValueError, match="only decision models may omit"):
-        provider_registry.validate_registered_provider_catalogs(["FakeCatalogOnlyChat"])
+    with pytest.raises(ValueError, match="unsupported model_type 'decision'"):
+        provider_registry.validate_registered_provider_catalogs(["FakeDecision"])
