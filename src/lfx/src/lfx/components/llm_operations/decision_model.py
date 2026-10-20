@@ -18,9 +18,7 @@ class DecisionModelComponent(Component):
     """Evaluates one judgment through the same runtime as the Smart Router."""
 
     display_name = "Decision Model"
-    description = (
-        "Evaluate a choice, Boolean probability, or ordered score with a TypeSafe, Perplexity or OpenAI decision model."
-    )
+    description = "Evaluate a choice, probability, or ordered score"
     name = "DecisionModel"
     icon = "Split"
 
