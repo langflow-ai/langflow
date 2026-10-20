@@ -43,6 +43,10 @@ export function repairableProblem(
     return { code: "FLOW_REVISION_MISMATCH" };
   }
   if (detail?.code === "FLOW_GRAPH_INVALID") {
+    // A graph the server cannot read at all (a lone surrogate, or nesting
+    // deeper than 127 levels) breaks no rule: there is nothing to repair, and
+    // a resent save gets the same refusal, so it is reported as an error.
+    if (!detail.violations?.length) return null;
     return {
       code: "FLOW_GRAPH_INVALID",
       graph: detail.graph,

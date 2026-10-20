@@ -709,6 +709,30 @@ describe("useSaveFlow", () => {
       },
     );
 
+    it("reports an invalid graph with no violations as a save error, not a repair", async () => {
+      const message =
+        "The submitted flow data is not valid JSON: it nests deeper than 127 levels.";
+      mockMutate.mockImplementationOnce((_payload, options) =>
+        options.onError(
+          refusal({
+            code: "FLOW_GRAPH_INVALID",
+            graph: "submitted",
+            violations: [],
+            message,
+          }),
+        ),
+      );
+      const { result } = renderHook(() => useSaveFlow());
+
+      await expect(result.current()).rejects.toBeDefined();
+
+      expect(useFlowHistoryRepairStore.getState().problem).toBeNull();
+      expect(mockSetErrorData).toHaveBeenCalledWith(
+        expect.objectContaining({ list: [message] }),
+      );
+      expect(mockMutate).toHaveBeenCalledTimes(1);
+    });
+
     it("reports other refusals as a save error", async () => {
       mockMutate.mockImplementationOnce((_payload, options) =>
         options.onError(refusal({ code: "SOMETHING_ELSE", message: "nope" })),
