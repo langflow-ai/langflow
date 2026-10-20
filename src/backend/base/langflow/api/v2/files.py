@@ -249,6 +249,9 @@ async def upload_user_file(
     if not file or not file.filename:
         raise HTTPException(status_code=400, detail="No file provided")
 
+    if file.size == 0:
+        raise HTTPException(status_code=400, detail="Empty file not allowed")
+
     # Validate file size (convert MB to bytes)
     if file.size > max_file_size_upload * 1024 * 1024:
         raise HTTPException(
