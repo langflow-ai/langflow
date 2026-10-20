@@ -34,6 +34,20 @@ def test_rejects_bare_runtime_loaders(code: str) -> None:
     assert not scan_code_security(code).is_safe
 
 
+@pytest.mark.parametrize("name", ["__loader__", "__spec__"])
+@pytest.mark.parametrize(
+    "code",
+    [
+        "from lfx.custom.validate import {name} as source",
+        "class Carrier:\n    from lfx.custom.validate import {name} as source",
+        "class Carrier:\n    {name} = None\n    del {name}\n    source = {name}",
+        "class Carrier:\n    {name} = None\n    del {name}\n    def read(self):\n        return {name}",
+    ],
+)
+def test_rejects_loader_imports_and_shadowed_loader_names(name: str, code: str) -> None:
+    assert not scan_code_security(code.format(name=name)).is_safe
+
+
 @pytest.mark.parametrize(
     "code",
     [

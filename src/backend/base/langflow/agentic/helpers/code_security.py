@@ -92,6 +92,7 @@ _FORMAT_FIELD_DUNDER_RE = re.compile(r"\{[^{}]*__")
 # ``type(x).__name__`` and ``err.__class__.__name__``, which ordinary component
 # code uses constantly for logging and error messages.
 _INERT_DUNDER_ATTRS: frozenset[str] = frozenset({"__name__", "__qualname__", "__module__", "__doc__"})
+_RUNTIME_LOADER_NAMES: frozenset[str] = frozenset({"__loader__", "__spec__"})
 
 
 def _is_blocked_attribute(attr: str | None) -> bool:
@@ -1434,6 +1435,7 @@ class _SecurityChecker(ast.NodeVisitor):
                 RESTRICTED_IMPORT_NAMES.get(root_module, set())
                 | _DANGEROUS_READ_MEMBERS.get(node.module, set())
                 | _DANGEROUS_CALL_MEMBERS.get(node.module, set())
+                | _RUNTIME_LOADER_NAMES
             )
             for alias in node.names:
                 if alias.name in restricted:
@@ -1970,8 +1972,11 @@ class _SecurityChecker(ast.NodeVisitor):
     def visit_Name(self, node: ast.Name):
         """Catch wildcard-imported reads (``from os import *``; ``environ[...]``)."""
         if isinstance(node.ctx, ast.Load):
+            if node.id in _RUNTIME_LOADER_NAMES:
+                self.violations.append(f"Access to '{node.id}' is forbidden in components (runtime loader)")
+                return self.generic_visit(node)
             for resolved_name in self._resolved_names(node.id):
-                if resolved_name.rsplit(".", 1)[-1] in {"__loader__", "__spec__"}:
+                if resolved_name.rsplit(".", 1)[-1] in _RUNTIME_LOADER_NAMES:
                     self.violations.append(f"Access to '{resolved_name}' is forbidden in components (runtime loader)")
                     break
                 if resolved_name in DANGEROUS_SUBMODULES:
