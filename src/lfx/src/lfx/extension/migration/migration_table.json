@@ -5057,6 +5057,36 @@
       "added_in": "1.13.0"
     },
     {
+      "bare_class_name": "SaltSendMessageComponent",
+      "target": "ext:salt:SaltSendMessageComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "SaltAskHumanComponent",
+      "target": "ext:salt:SaltAskHumanComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "SaltRequestPaymentComponent",
+      "target": "ext:salt:SaltRequestPaymentComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "SaltReadUpdatesComponent",
+      "target": "ext:salt:SaltReadUpdatesComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "SaltReadRoomComponent",
+      "target": "ext:salt:SaltReadRoomComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "SaltInterestsComponent",
+      "target": "ext:salt:SaltInterestsComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
       "bare_class_name": "GmailSendComponent",
       "target": "ext:google:GmailSendComponent@official",
       "added_in": "1.13.0"

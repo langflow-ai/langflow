@@ -1,0 +1,55 @@
+[project]
+name = "lfx-salt"
+version = "0.1.0"
+description = "Salt (saltapp.ai) agent components as a standalone Langflow Extension Bundle: send a message, ask a human, request a payment, read a room, set interests, check for new events."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+authors = [
+    { name = "Langflow", email = "contact@langflow.org" },
+]
+keywords = ["langflow", "lfx", "extension", "bundle", "salt", "saltapp", "agents", "human-in-the-loop"]
+
+# Runtime deps: lfx (the BUNDLE_API surface) plus the Salt Python SDK
+# (``saltapp``), which the components use for the Salt API client, the PGP
+# message crypto, card building and webhook-signature verification.
+# lfx is floored at the current major.minor line and capped below the next lfx
+# major; the floor is read from src/lfx/pyproject.toml at port time and
+# re-synced on ``make patch`` via scripts/ci/sync_bundle_lfx_pin.py.
+# Fine-grained BUNDLE_API compatibility is enforced via extension.json's
+# lfx.compat list against BUNDLE_API_VERSION.
+dependencies = [
+    "lfx>=1.13.0.dev0,<2.0.0",
+    "saltapp>=0.6.0,<1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org/extensions"
+Repository = "https://github.com/langflow-ai/langflow"
+
+# Manifest-shipping distributions are discovered via the
+# ``langflow.extensions`` entry-point.  Editable installs whose
+# ``dist.files`` only surfaces dist-info entries fall back to this
+# entry-point to find the manifest.
+[project.entry-points."langflow.extensions"]
+lfx-salt = "lfx_salt"
+
+[build-system]
+requires = ["hatchling==1.31.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# extension.json + components live inside the lfx_salt package so
+# ``importlib.metadata.files(dist)`` finds them and the loader resolves
+# bundles[].path relative to the manifest's directory.
+packages = ["src/lfx_salt"]
+include = ["src/lfx_salt/extension.json", "src/lfx_salt/components/**/*.py"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_salt",
+    "extension.json",
+    "README.md",
+    "pyproject.toml",
+]

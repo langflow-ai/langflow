@@ -52,6 +52,7 @@ members = [
     "lfx-openai-compatible",
     "lfx-oracle",
     "lfx-paddle",
+    "lfx-salt",
     "lfx-serpingapi",
     "lfx-serply",
     "lfx-slack",
@@ -7701,6 +7702,7 @@ bundles = [
     { name = "lfx-firecrawl" },
     { name = "lfx-nextplaid" },
     { name = "lfx-paddle" },
+    { name = "lfx-salt" },
     { name = "lfx-serpingapi" },
     { name = "lfx-serply" },
     { name = "lfx-valkey" },
@@ -7825,6 +7827,7 @@ requires-dist = [
     { name = "lfx-openai-compatible", editable = "src/bundles/openai-compatible" },
     { name = "lfx-oracle", editable = "src/bundles/oracle" },
     { name = "lfx-paddle", marker = "extra == 'bundles'", editable = "src/bundles/paddle" },
+    { name = "lfx-salt", marker = "extra == 'bundles'", editable = "src/bundles/salt" },
     { name = "lfx-serpingapi", marker = "extra == 'bundles'", editable = "src/bundles/serpingapi" },
     { name = "lfx-serply", marker = "extra == 'bundles'", editable = "src/bundles/serply" },
     { name = "lfx-slack", editable = "src/bundles/slack" },
@@ -10202,6 +10205,21 @@ dependencies = [
 requires-dist = [
     { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-salt"
+version = "0.1.0"
+source = { editable = "src/bundles/salt" }
+dependencies = [
+    { name = "lfx" },
+    { name = "saltapp" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "lfx", editable = "src/lfx" },
+    { name = "saltapp", specifier = ">=0.6.0,<1.0.0" },
 ]
 
 [[package]]
@@ -13965,6 +13983,16 @@ wheels = [
 ]
 
 [[package]]
+name = "pgpy"
+version = "0.6.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "pyasn1" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f8/68/5e285ba9465550a48e837b08b27fa99ef238618f6085a1464afaa4dc8426/PGPy-0.6.0.tar.gz", hash = "sha256:279c2e353f4c3a319f00bd9bd582456e420f8a3ac6de2b4e9731444746828383", size = 603002, upload-time = "2022-11-24T02:35:22.133Z" }
+
+[[package]]
 name = "pgvector"
 version = "0.5.0"
 source = { registry = "https://pypi.org/simple" }
@@ -17289,6 +17317,22 @@ torch = [
 ]
 
 [[package]]
+name = "saltapp"
+version = "0.16.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "httpx" },
+    { name = "pgpy" },
+    { name = "standard-imghdr", marker = "python_full_version >= '3.13'" },
+    { name = "websockets" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2e/2f/808e3e7d77b12119dcc1793054ee76a1f9253f40632dff6a3f6b33119dc5/saltapp-0.16.0.tar.gz", hash = "sha256:717cf7c05fdee867817e7b6a6939637521d42d8908e879ade3f94fa155d06e47", size = 211684, upload-time = "2026-10-20T01:40:52.284Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/21/32/93744bf231ebff6df29c2fc9761d6f377469e8d4b27c4615c58797fbb903/saltapp-0.16.0-py3-none-any.whl", hash = "sha256:d5751c68ffb07185aa71583229072d9e0ca118b9462a298213f1b28b0de82ff3", size = 129131, upload-time = "2026-10-20T01:40:50.666Z" },
+]
+
+[[package]]
 name = "sambanova"
 version = "1.12.1"
 source = { registry = "https://pypi.org/simple" }
@@ -18358,6 +18402,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/28/e3/55dcc2cfbc3ca9c29519eb6884dd1415ecb53b0e934862d3559ddcb7e20b/stack_data-0.6.3.tar.gz", hash = "sha256:836a778de4fec4dcd1dcd89ed8abff8a221f58308462e1c4aa2a3cf30148f0b9", size = 44707, upload-time = "2023-09-30T13:58:05.479Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f1/7b/ce1eafaf1a76852e2ec9b22edecf1daa58175c090266e9f6c64afcd81d91/stack_data-0.6.3-py3-none-any.whl", hash = "sha256:d5558e0c25a4cb0853cddad3d77da9891a08cb85dd9f9f91b9f8cd66e511e695", size = 24521, upload-time = "2023-09-30T13:58:03.53Z" },
+]
+
+[[package]]
+name = "standard-imghdr"
+version = "3.13.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/1a/8d/ab2620fbe2e348483c9cb776c3b7b3cc407899291a041d7fa026469b7cd1/standard_imghdr-3.13.0.tar.gz", hash = "sha256:8d9c68058d882f6fc3542a8d39ef9ff94d2187dc90bd0c851e0902776b7b7a42", size = 5511, upload-time = "2024-10-30T16:01:36.412Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/df/cb/e1da7e340586a078404c7e4328bfefc930867ace8a9a55916fd220cf9547/standard_imghdr-3.13.0-py3-none-any.whl", hash = "sha256:30a1bff5465605bb496f842a6ac3cc1f2131bf3025b0da28d4877d6d4b7cc8e9", size = 4639, upload-time = "2024-10-30T16:01:13.829Z" },
 ]
 
 [[package]]

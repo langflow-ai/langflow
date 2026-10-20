@@ -513,6 +513,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Plivo", name: "plivo", icon: "Plivo" },
   { display_name: "Qdrant", name: "qdrant", icon: "Qdrant" },
   { display_name: "Redis", name: "redis", icon: "Redis" },
+  { display_name: "Salt", name: "salt", icon: "Send" },
   { display_name: "SambaNova", name: "sambanova", icon: "SambaNova" },
   { display_name: "ScrapeGraph AI", name: "scrapegraph", icon: "ScrapeGraph" },
   { display_name: "SearchApi", name: "searchapi", icon: "SearchAPI" },
