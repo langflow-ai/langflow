@@ -14,7 +14,6 @@ from lfx.services.flow_operations import (
     FlowOperationsApplyResult,
     FlowOperationValidationError,
     PythonFlowOperationService,
-    UpdateMetadataOp,
     UpdateNodesOp,
     deduplicate_delete_ids,
     normalize_requested_ops,
@@ -686,59 +685,15 @@ class TestApplyFlowOperations:
         with pytest.raises(FlowDataValidationError, match=r"flow\.data\.edges: duplicate edge id"):
             apply_flow_operations(flow_data, [])
 
-    def test_update_metadata_shallow_updates_and_deletes(self):
-        flow_data = _base_flow_data()
-        flow_data["description"] = "old"
-        flow_data["custom_flag"] = True
-        original = copy.deepcopy(flow_data)
-        result = apply_flow_operations(
-            flow_data,
-            [
-                {
-                    "type": "update_metadata",
-                    "fields": {"description": "new", "notes": {"k": "v"}},
-                    "delete_keys": ["custom_flag", "custom_flag"],
-                }
-            ],
-        )
+    def test_no_operation_writes_top_level_keys(self):
+        with pytest.raises(FlowOperationValidationError, match="Unsupported operation type: 'update_metadata'"):
+            parse_flow_operations([{"type": "update_metadata", "fields": {"description": "new"}}])
 
-        assert flow_data == original
-        assert result.flow_data["description"] == "new"
-        assert result.flow_data["notes"] == {"k": "v"}
-        assert "custom_flag" not in result.flow_data
-        assert result.flow_data["viewport"] == {"x": 0, "y": 0, "zoom": 1}
-        metadata_op = result.forward_ops[0]
-        assert isinstance(metadata_op, UpdateMetadataOp)
-        assert metadata_op.fields == {"description": "new", "notes": {"k": "v"}}
-        assert metadata_op.delete_keys == ["custom_flag"]
-
-    def test_update_metadata_mutable_value_isolated_from_submitted_operation_model(self):
-        flow_data = _base_flow_data()
-        operations = parse_flow_operations(
-            [{"type": "update_metadata", "fields": {"notes": {"k": "v"}, "description": "new"}, "delete_keys": []}]
-        )
-
-        result = _apply_flow_operations(flow_data, operations)
-        operations[0].fields["notes"]["k"] = "changed"
-
-        assert result.flow_data["description"] == "new"
-        assert result.flow_data["notes"] == {"k": "v"}
-        metadata_op = result.forward_ops[0]
-        assert isinstance(metadata_op, UpdateMetadataOp)
-        assert metadata_op.fields["notes"] == {"k": "v"}
-
-    def test_update_metadata_rejects_graph_collection_keys(self):
-        flow_data = _base_flow_data()
-        with pytest.raises(FlowOperationValidationError, match="cannot set graph collection key"):
-            apply_flow_operations(
-                flow_data,
-                [{"type": "update_metadata", "fields": {"nodes": []}, "delete_keys": []}],
-            )
-        with pytest.raises(FlowOperationValidationError, match="cannot delete graph collection key"):
-            apply_flow_operations(
-                flow_data,
-                [{"type": "update_metadata", "fields": {}, "delete_keys": ["edges"]}],
-            )
+    @pytest.mark.parametrize("key", ["expect", "from_type", "template_field", "secret", "secrets"])
+    def test_set_field_refuses_keys_outside_the_protocol(self, key):
+        update = {"id": "a", "op": "set_field", "path": ["position"], "value": {"x": 1}, key: "string"}
+        with pytest.raises(FlowOperationValidationError, match="Extra inputs are not permitted"):
+            parse_flow_operations([{"type": "update_nodes", "updates": [update]}])
 
     def test_preserves_operation_order_in_forward_ops(self):
         flow_data = _base_flow_data()

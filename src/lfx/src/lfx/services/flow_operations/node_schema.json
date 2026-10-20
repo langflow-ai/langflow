@@ -2,8 +2,8 @@
   "version": 1,
   "description": "Where the units of a flow graph are, for every engine that records, diffs, merges or applies flow operations. The stored flow JSON keeps its shape; this file only says how to address it. Paths are lists of object keys; '*' matches any key. The editor keeps a byte-identical copy.",
   "view_state": {
-    "description": "Keys never recorded, diffed, merged or compared. Saves still store them.",
-    "flow": ["viewport"],
+    "description": "Keys never recorded, diffed, merged or compared. Saves still store them. Every top-level key of a flow is view state, except the keys that 'flow.except' lists.",
+    "flow": {"except": ["nodes", "edges"]},
     "node": ["selected", "dragging", "resizing", "measured", "width", "height"],
     "node_paths": [
       ["data", "node", "last_updated"],

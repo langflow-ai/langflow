@@ -8,21 +8,17 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from typing import Any
 
-from lfx.services.flow_operations.canonical import values_equal
 from lfx.services.flow_operations.edge_rules import OUTPUTS_PATH, check_edge, node_outputs
-from lfx.services.flow_operations.exceptions import FlowOperationPreconditionError, FlowOperationValidationError
+from lfx.services.flow_operations.exceptions import FlowOperationValidationError
 from lfx.services.flow_operations.keyed_lists import ListIndex
 from lfx.services.flow_operations.ops import (
-    GRAPH_COLLECTION_KEYS,
     AddEdgesOp,
     AddNodesOp,
     DeleteEdgesOp,
     DeleteNodeFieldUpdate,
     DeleteNodesOp,
-    ExpectAbsent,
     FlowOperation,
     NodeFieldPath,
-    UpdateMetadataOp,
     UpdateNodeEntry,
     UpdateNodesOp,
     deduplicate_delete_ids,
@@ -83,8 +79,6 @@ def _apply_operation(state: GraphState, op: FlowOperation) -> tuple[list[FlowOpe
         return _apply_add_edges(state, op.edges), []
     if isinstance(op, DeleteEdgesOp):
         return _apply_delete_edges(state, op.ids), []
-    if isinstance(op, UpdateMetadataOp):
-        return _apply_update_metadata(state, op.fields, op.delete_keys), []
     msg = f"Unsupported operation type: {type(op)!r}"
     raise FlowOperationValidationError(msg)
 
@@ -268,10 +262,6 @@ def _apply_field_update(
     """
     path = update.path
     parent, steps, missing_at = _walk(state, root, node, path, context=context)
-    exists, current = (False, None)
-    if missing_at is None:
-        exists, current = _read_last(state, node, parent, path, context=context)
-    _check_expectation(update, exists=exists, current=current, context=context)
     if missing_at is not None:
         part = path[missing_at]
         if isinstance(part, str):
@@ -335,25 +325,6 @@ def _walk(
     return value, steps, None
 
 
-def _read_last(
-    state: GraphState,
-    node: dict[str, Any] | None,
-    parent: Any,
-    path: NodeFieldPath,
-    *,
-    context: str,
-) -> tuple[bool, Any]:
-    """Return whether the last segment of ``path`` exists in ``parent``, and its value."""
-    last = path[-1]
-    if isinstance(last, str):
-        if not isinstance(parent, dict):
-            msg = f"{context}.path[{len(path) - 1}]: {last!r} reads a key of a value that is not an object"
-            raise FlowOperationValidationError(msg)
-        return last in parent, parent.get(last)
-    item = _keyed_list(state, node, path, len(path) - 1, parent, context=context).by_key.get(last.key)
-    return item is not None, item
-
-
 def _write_last(
     state: GraphState,
     node: dict[str, Any] | None,
@@ -411,21 +382,7 @@ def _keyed_list(
     return state.list_index(keyed, value, context=f"{context}.path[{index}]")
 
 
-def _check_expectation(update: UpdateNodeEntry, *, exists: bool, current: Any, context: str) -> None:
-    if update.expect is None:
-        return
-    if isinstance(update.expect, ExpectAbsent):
-        if exists:
-            msg = f"{context}: expected {_path_label(update.path)} to be absent, but it exists"
-            raise FlowOperationPreconditionError(msg)
-        return
-    if not exists or not values_equal(current, update.expect.value):
-        found = "a different value" if exists else "nothing"
-        msg = f"{context}: expected {_path_label(update.path)} to hold the given value, but found {found}"
-        raise FlowOperationPreconditionError(msg)
-
-
-# --- Nodes, edges and metadata -----------------------------------------------------------
+# --- Nodes and edges -----------------------------------------------------------
 
 
 def _apply_delete_nodes(state: GraphState, ids: list[str]) -> tuple[list[FlowOperation], list[str]]:
@@ -492,35 +449,3 @@ def _apply_delete_edges(state: GraphState, ids: list[str]) -> list[FlowOperation
     if not removed_edge_ids:
         return []
     return [DeleteEdgesOp(type="delete_edges", ids=removed_edge_ids)]
-
-
-def _apply_update_metadata(
-    state: GraphState,
-    fields: dict[str, Any],
-    delete_keys: list[str],
-) -> list[FlowOperation]:
-    for key in fields:
-        if key in GRAPH_COLLECTION_KEYS:
-            msg = f"update_metadata: cannot set graph collection key {key!r}"
-            raise FlowOperationValidationError(msg)
-    for key in delete_keys:
-        if key in GRAPH_COLLECTION_KEYS:
-            msg = f"update_metadata: cannot delete graph collection key {key!r}"
-            raise FlowOperationValidationError(msg)
-
-    keys_to_delete = deduplicate_delete_ids(delete_keys)
-    if not fields and not keys_to_delete:
-        return []
-
-    for key, value in fields.items():
-        state.flow_data[key] = copy_mutable_graph_value(value)
-    for key in keys_to_delete:
-        state.flow_data.pop(key, None)
-
-    return [
-        UpdateMetadataOp(
-            type="update_metadata",
-            fields=copy.deepcopy(fields),
-            delete_keys=keys_to_delete,
-        )
-    ]

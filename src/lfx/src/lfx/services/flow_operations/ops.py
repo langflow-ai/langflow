@@ -29,33 +29,11 @@ NodeFieldPathSegment = str | KeySelector
 NodeFieldPath = tuple[NodeFieldPathSegment, ...]
 
 
-class ExpectValue(BaseModel):
-    """The value a path must hold before a write, compared canonically."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    value: Any
-
-
-class ExpectAbsent(BaseModel):
-    """A write that requires its path not to exist yet."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    absent: Literal[True]
-
-
-Expectation = ExpectValue | ExpectAbsent
-
-
 class _NodeFieldUpdateBase(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     id: str
     path: NodeFieldPath
-    # What the path must hold before this write. On mismatch the whole batch
-    # fails with FlowOperationPreconditionError.
-    expect: Expectation | None = None
 
     @field_validator("id")
     @classmethod
@@ -132,18 +110,9 @@ class DeleteEdgesOp(BaseModel):
     ids: list[str]
 
 
-class UpdateMetadataOp(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    type: Literal["update_metadata"]
-    fields: dict[str, Any] = Field(default_factory=dict)
-    delete_keys: list[str] = Field(default_factory=list)
-
-
 # An edge never changes in place: a change to an edge is a delete and an add.
-FlowOperation = AddNodesOp | UpdateNodesOp | DeleteNodesOp | AddEdgesOp | DeleteEdgesOp | UpdateMetadataOp
-
-GRAPH_COLLECTION_KEYS = frozenset({"nodes", "edges"})
+# No operation writes a top-level key other than nodes and edges: those keys are view state.
+FlowOperation = AddNodesOp | UpdateNodesOp | DeleteNodesOp | AddEdgesOp | DeleteEdgesOp
 
 
 def normalize_requested_ops(operations: list[FlowOperation]) -> list[FlowOperation]:
@@ -177,8 +146,6 @@ def parse_flow_operation(operation: dict[str, Any]) -> FlowOperation:
             return AddEdgesOp.model_validate(operation)
         if operation_type == "delete_edges":
             return DeleteEdgesOp.model_validate(operation)
-        if operation_type == "update_metadata":
-            return UpdateMetadataOp.model_validate(operation)
     except ValidationError as exc:
         raise FlowOperationValidationError(str(exc)) from exc
 
@@ -192,9 +159,5 @@ def deduplicate_delete_ids(ids: list[str]) -> list[str]:
 
 
 def dump_flow_operation(operation: FlowOperation) -> dict[str, Any]:
-    """Serialize an operation to JSON-compatible data, omitting optional fields left unset.
-
-    ``exclude_defaults`` rather than ``exclude_none``: a ``set_field`` whose
-    value is ``null`` must keep that value.
-    """
-    return operation.model_dump(mode="json", exclude_defaults=True)
+    """Serialize an operation to JSON-compatible data."""
+    return operation.model_dump(mode="json")
