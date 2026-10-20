@@ -110,6 +110,38 @@ def test_rejects_environment_access_after_class_scope_shadowing(access: str, bod
 
 
 @pytest.mark.parametrize(
+    "access",
+    [
+        "process.environb",
+        "process.getenvb(b'SYNTHETIC')",
+        "process.get_exec_path()",
+        "getattr(process, 'environb')",
+        "process.system('true')",
+    ],
+)
+@pytest.mark.parametrize(
+    "wrapper",
+    [
+        # After ``del`` in a class body, reads resolve to module globals,
+        # never the enclosing function's shadow.
+        "import os as process\ndef build():\n    process = None\n    class Carrier:\n"
+        "        process = None\n        del process\n        value = {access}\n    return Carrier",
+        "import os as process\ndef build(process=None):\n    class Carrier:\n"
+        "        process = None\n        del process\n        value = {access}\n    return Carrier",
+        "import os as process\ndef build():\n    process = None\n    class Carrier:\n"
+        "        class Inner:\n            process = None\n            del process\n"
+        "            value = {access}\n    return Carrier",
+        "import os as process\ndef build():\n    class Carrier:\n"
+        "        def build_inner(self):\n            process = None\n            class Inner:\n"
+        "                process = None\n                del process\n"
+        "                value = {access}\n            return Inner\n    return Carrier",
+    ],
+)
+def test_rejects_environment_access_after_delete_in_function_nested_class(access: str, wrapper: str) -> None:
+    assert not scan_code_security(wrapper.format(access=access)).is_safe
+
+
+@pytest.mark.parametrize(
     "code",
     [
         "import tempfile\nwith tempfile.NamedTemporaryFile() as stream:\n    stream.write(b'data')",
@@ -119,6 +151,13 @@ def test_rejects_environment_access_after_class_scope_shadowing(access: str, bod
         "class Config:\n    def get_exec_path(self):\n        return []\npaths = Config().get_exec_path()",
         "import os as process\nclass Carrier:\n    process = None\n"
         "    def read(self, process):\n        return process.getenvb(b'SYNTHETIC')",
+        # Methods and comprehensions close over the enclosing function local,
+        # unlike direct class-body reads after ``del``.
+        "import os as process\ndef build():\n    process = None\n    class Carrier:\n"
+        "        process = None\n        def read(self):\n"
+        "            return process.getenvb(b'SYNTHETIC')\n    return Carrier",
+        "import os as process\ndef build():\n    process = None\n    class Carrier:\n"
+        "        process = None\n        values = [process.getenvb(b'SYNTHETIC') for _ in [1]]\n    return Carrier",
         "match [1, 2]:\n    case [first, second]:\n        value = first + second",
     ],
 )

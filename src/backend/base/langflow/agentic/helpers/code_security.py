@@ -932,6 +932,14 @@ class _SecurityChecker(ast.NodeVisitor):
         self.module_aliases: dict[str, frozenset[str]] = {
             name: frozenset({module}) for name, module in (module_aliases or {}).items()
         }
+        # Import bindings preserved before any scope shadowing. After ``del``
+        # in a class body, reads fall through to module globals, so these
+        # candidates must survive enclosing function scopes.
+        self._module_import_aliases: dict[str, frozenset[str]] = dict(self.module_aliases)
+        # Alias state at entry to the outermost enclosing function: the
+        # module-global state class-body reads resolve against after ``del``.
+        self._module_global_state: _AliasState | None = None
+        self._function_scope_depth = 0
         # Names explicitly rebound to non-module values must not fall back to
         # their spelling (e.g. ``os = object(); os.system()`` is not os.system).
         self.shadowed_aliases: set[str] = set()
@@ -960,6 +968,29 @@ class _SecurityChecker(ast.NodeVisitor):
         if name in self.shadowed_aliases:
             return frozenset()
         return self.module_aliases.get(name, frozenset({name}))
+
+    def _module_global_values(self, name: str) -> frozenset[str]:
+        """Return possible values of ``name`` in module globals (fail-closed union)."""
+        values = set(self._module_import_aliases.get(name, frozenset()))
+        if self._module_global_state is not None:
+            aliases, shadowed = self._module_global_state
+            if name in aliases:
+                values.update(aliases[name])
+            elif name not in shadowed:
+                values.add(name)
+        return frozenset(values)
+
+    def _capture_module_global_state(self, enclosing_state: _AliasState, *, in_class_body: bool) -> None:
+        """Record module-global aliases when entering the outermost function."""
+        if self._function_scope_depth == 0:
+            aliases, shadowed = self._class_scope_fallbacks[-1] if in_class_body else enclosing_state
+            self._module_global_state = (dict(aliases), set(shadowed))
+        self._function_scope_depth += 1
+
+    def _release_module_global_state(self) -> None:
+        self._function_scope_depth -= 1
+        if self._function_scope_depth == 0:
+            self._module_global_state = None
 
     def _resolved_member_names(self, base_names: frozenset[str], member_name: str) -> frozenset[str]:
         """Resolve a member while canonicalizing imported modules that re-export ``os``."""
@@ -1491,14 +1522,19 @@ class _SecurityChecker(ast.NodeVisitor):
             self._bind_assignment_target(node.target, node.value)
 
     def visit_Delete(self, node: ast.Delete):
-        """Restore enclosing aliases after deleting class attributes."""
+        """Restore enclosing aliases after deleting class attributes.
+
+        After ``del`` in a class body, reads resolve against module globals
+        (``LOAD_NAME``), never an enclosing function scope, so merge the
+        module-global candidates with the class fallback state.
+        """
         for target in node.targets:
             self.visit(target)
             if self._class_body_depth:
                 aliases, shadowed = self._class_scope_fallbacks[-1]
                 for name in self._assignment_target_names(target):
                     values = aliases.get(name, frozenset() if name in shadowed else frozenset({name}))
-                    self._bind_name(name, values)
+                    self._bind_name(name, values | self._module_global_values(name))
 
     def visit_NamedExpr(self, node: ast.NamedExpr):
         self.visit(node.value)
@@ -1795,6 +1831,7 @@ class _SecurityChecker(ast.NodeVisitor):
         enclosing_state = self._snapshot_alias_state()
         enclosing_class_body_depth = self._class_body_depth
         enclosing_escaping_names = self._escaping_names
+        self._capture_module_global_state(enclosing_state, in_class_body=bool(enclosing_class_body_depth))
         self._alias_scope_depth += 1
         # A function body is its own scope: names bound here are locals, not class
         # attributes, and ``global`` / ``nonlocal`` declarations do not carry in.
@@ -1809,6 +1846,7 @@ class _SecurityChecker(ast.NodeVisitor):
             for statement in node.body:
                 self.visit(statement)
         finally:
+            self._release_module_global_state()
             self._alias_scope_depth -= 1
             self._class_body_depth = enclosing_class_body_depth
             self._escaping_names = enclosing_escaping_names
@@ -1828,6 +1866,7 @@ class _SecurityChecker(ast.NodeVisitor):
         enclosing_state = self._snapshot_alias_state()
         enclosing_class_body_depth = self._class_body_depth
         enclosing_escaping_names = self._escaping_names
+        self._capture_module_global_state(enclosing_state, in_class_body=bool(enclosing_class_body_depth))
         self._alias_scope_depth += 1
         self._class_body_depth = 0
         self._escaping_names = set()
@@ -1838,6 +1877,7 @@ class _SecurityChecker(ast.NodeVisitor):
             self._check_opaque_reference(node.body)
             self.visit(node.body)
         finally:
+            self._release_module_global_state()
             self._alias_scope_depth -= 1
             self._class_body_depth = enclosing_class_body_depth
             self._escaping_names = enclosing_escaping_names
