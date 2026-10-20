@@ -61,6 +61,7 @@ from langflow.api.v1.flows_helpers import (
     _new_flow,
     _patch_flow,
     _read_flow,
+    _refuse_unreadable_graph,
     _resolve_flow_destination,
     _save_flow_to_fs,
     _update_existing_flow,
@@ -1208,6 +1209,7 @@ async def create_flows(
     # keeps a denial in a later item from partially applying an earlier item.
     for flow in flow_list.flows:
         await _validate_new_flow_id(session, flow.id)
+        _refuse_unreadable_graph(flow.data)
         _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
         await persist_and_strip_mcp_secrets(flow.data, current_user.id, session, flow_id=flow.id)
         # This endpoint bypasses _new_flow, so the fs_path containment check

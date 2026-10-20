@@ -54,6 +54,7 @@ from lfx.services.flow_operations import (
     graphs_equal,
     repair_flow_data,
 )
+from lfx.services.flow_operations.limits import check_graph_limits
 from sqlmodel import select
 
 from langflow.services.database.models.flow_operation import FlowOperation as FlowOperationRow
@@ -264,6 +265,18 @@ def _graph_violations(
         return find_graph_violations(flow_data, base=base)
     except FlowDataValidationError as exc:
         raise FlowGraphInvalidError(exc.violations, graph=graph, reason=str(exc)) from exc
+
+
+def refuse_unreadable_graph(flow_data: Any) -> None:
+    """Refuse a submitted graph that breaks the JSON limits, as a save refuses it.
+
+    Writes that record no history, such as creating a flow, store graphs that
+    every later save must read, so they check the limits too.
+    """
+    try:
+        check_graph_limits(flow_data)
+    except FlowDataValidationError as exc:
+        raise FlowGraphInvalidError([], graph="submitted", reason=str(exc)) from exc
 
 
 async def _username(session: AsyncSession, user_id: UUID | None) -> str | None:

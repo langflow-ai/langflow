@@ -501,13 +501,15 @@ async def test_a_graph_that_breaks_a_json_limit_is_refused_even_with_a_repair(
 
 
 async def test_a_stored_graph_that_breaks_a_json_limit_refuses_the_first_edit(client: AsyncClient, logged_in_headers):
-    headers = {**logged_in_headers, "Content-Type": "application/json"}
-    # Creating a flow records no history, so the engine first reads its graph at the first edit.
-    body = _body_with_value(JSON_LIMIT_VALUES["nesting 128 levels deep"], name=f"history-{uuid4().hex[:8]}")
-    created = await client.post("api/v1/flows/", content=body, headers=headers)
-    assert created.status_code == status.HTTP_201_CREATED, created.text
+    # Creating a flow refuses such a graph, so only a flow stored before that, or
+    # edited in the database, holds one; its history starts at the first edit.
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    async with session_scope() as session:
+        stored = await session.get(Flow, UUID(flow["id"]))
+        stored.data = json.loads(_body_with_value(JSON_LIMIT_VALUES["nesting 128 levels deep"]))["data"]
+        session.add(stored)
 
-    refused = await _patch(client, logged_in_headers, created.json()["id"], data=_graph(_node("a", "next")))
+    refused = await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "next")))
 
     assert refused.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, refused.text
     detail = refused.json()["detail"]
