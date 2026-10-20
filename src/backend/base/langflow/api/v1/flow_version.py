@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Header, HTTPException, Query, status
 from lfx.log import logger
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
+from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -51,6 +52,7 @@ from langflow.services.database.models.flow_version.model import (
 from langflow.services.deps import get_catalog_policy_service, get_settings_service
 from langflow.services.flow_history.errors import FlowHistoryError
 from langflow.services.flow_history.recorder import checkpoint_fields, write_flow_graph
+from langflow.services.flow_history.restore_fixes import RESTORE_FIXES_DESCRIPTION, RestoreFix, apply_restore_fixes
 
 router = APIRouter(prefix="/flows/{flow_id}/versions", tags=["Flow Versions"], include_in_schema=False)
 
@@ -181,7 +183,7 @@ async def list_flow_versions(
 
     max_entries = get_settings_service().settings.max_flow_version_entries_per_flow
     return FlowVersionListResponse(
-        entries=list(await attach_usernames(session, entries)),
+        entries=list(await attach_usernames(session, entries, author_id=lambda entry: entry.saved_by_user_id)),
         max_entries=max_entries,
     )
 
@@ -254,14 +256,19 @@ async def create_snapshot(
         entry = await create_flow_version_entry(
             session,
             flow_id=flow.id,
-            user_id=current_user.id,
+            user_id=flow.user_id,
             data=data,
             description=description,
+            saved_by_user_id=current_user.id,
             **checkpoint,
         )
     except FlowVersionError as exc:
         raise translate_version_error(exc) from exc
     return _version_to_read(entry)
+
+
+class VersionActivate(BaseModel):
+    fixes: list[RestoreFix] | None = Field(None, description=RESTORE_FIXES_DESCRIPTION)
 
 
 @router.post("/{version_id}/activate")
@@ -281,7 +288,14 @@ async def activate_version(
     if_match: Annotated[str | None, Header(alias="If-Match")] = None,
     repair_revision_mismatch: Annotated[bool, Query()] = False,
     repair_invalid_graph: Annotated[bool, Query()] = False,
+    body: VersionActivate | None = None,
 ) -> FlowWriteRead:
+    """Make a saved version the flow's current graph.
+
+    A version whose edges break rules only the client can fix is refused with
+    422; the client resends with ``fixes`` (``restore_fixes``), applied to the
+    version's data before it is saved. The version itself stays as it was.
+    """
     flow = await _get_user_flow(session, flow_id, current_user.id)
     expected_version_token = parse_if_match(if_match)
     # The write below shares this transaction; a decision the audit writer commits
@@ -332,6 +346,12 @@ async def activate_version(
                 detail="Flow data could not be copied. The data may be corrupted.",
             ) from exc
 
+        if body is not None and body.fixes:
+            try:
+                target_data = apply_restore_fixes(target_data, replaced_data or {}, body.fixes)
+            except FlowHistoryError as exc:
+                raise history_http_error(exc) from exc
+
         _validate_catalog_policy_for_write(
             target_data,
             snapshot=get_catalog_policy_service().snapshot,
@@ -349,9 +369,10 @@ async def activate_version(
                     await create_flow_version_entry(
                         session,
                         flow_id=flow.id,
-                        user_id=current_user.id,
+                        user_id=flow.user_id,
                         data=current_data,
                         description=f"Auto-saved before activating v{target_entry.version_number}",
+                        saved_by_user_id=current_user.id,
                         **await checkpoint_fields(session, flow),
                     )
 

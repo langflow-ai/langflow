@@ -43,6 +43,26 @@ async def lock_flow_for_update(session: AsyncSession, flow: Flow) -> None:
     await session.refresh(flow, with_for_update=True)
 
 
+async def lock_flow_for_read(session: AsyncSession, flow: Flow) -> None:
+    """Hold *flow*'s row in shared mode until transaction end, for a consistent read of its history.
+
+    On PostgreSQL, ``FOR SHARE`` lets readers proceed together while history
+    maintenance, which deletes old rows under the exclusive lock, waits for
+    them. Take it before any other read of the history: at READ COMMITTED
+    every later statement then sees the state the lock was granted on, and
+    nothing can delete rows under the read.
+
+    SQLite has no row locks and is left alone.
+    """
+    if session.get_bind().dialect.name == "sqlite":
+        return
+    from sqlmodel import select
+
+    from langflow.services.database.models.flow.model import Flow
+
+    await session.exec(select(Flow.id).where(Flow.id == flow.id).with_for_update(read=True))
+
+
 def ensure_flow_unlocked(flow: Flow) -> None:
     """Raise when *flow* is currently locked."""
     if getattr(flow, "locked", False) is True:
