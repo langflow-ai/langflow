@@ -1,0 +1,30 @@
+---
+title: Jsonify
+slug: /bundles-jsonify
+---
+
+import Icon from "@site/src/components/icon";
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+[Jsonify](https://www.jsonify.com/) keeps datasets from the live web current. A pipeline runs on a schedule, repairs itself when a source changes, and publishes the result as a dataset. Every dataset has a serve URL that returns its latest rows as JSON, so a flow reads maintained data instead of scraping at run time.
+
+## Use the Jsonify Dataset component in a flow
+
+1. In Jsonify, open a dataset, go to **Integrations**, choose **REST API**, and copy the serve URL. The URL is the only credential; keep it secret.
+
+2. Add a **Jsonify Dataset** component to your flow, and then configure it as follows:
+
+    * **Dataset Serve URL**: Paste the serve URL.
+    * **Columns**: Optional. Comma-separated column names to return. Leave empty to return all columns.
+    * **Filters**: Optional. A JSON object of exact, case-sensitive column matches, for example `{"competitor": "Klue"}`. Filters are combined with AND.
+    * **Max rows** and **Version** are under **Advanced**. `0` means all rows and the active version.
+
+3. Connect the component to other components in your flow.
+
+    * The **DataFrame** output returns the rows as a [`DataFrame`](/data-types#dataframe).
+    * The **Rows** output returns one [`Data`](/data-types#data) object per row.
+    * To use it with an agent, change the output to **Tool** and connect it to the **Tools** port on an **Agent** component. The agent can pass `filters`, `columns` and `max_rows`; the serve URL stays in the component.
+
+Every row carries a stable `_row_id`. The response metadata includes the dataset `version` and `updated_at`, and pages are pinned to one version so a republish during a run never mixes versions.
