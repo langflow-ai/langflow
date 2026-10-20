@@ -516,6 +516,27 @@ def _validation_inputs() -> list[dict[str, Any]]:
             "base": EMPTY,
         },
     ]
+    # A stored node the write keeps must carry its node objects: the edge rules
+    # read its template and outputs, so a broken one is an engine error.
+    for data, label in [
+        (..., "data missing"),
+        (None, "data null"),
+        ({"node": []}, "data.node a list"),
+        ({"node": {}}, "data.node.template missing"),
+        ({"node": {"template": "x"}}, "data.node.template a string"),
+    ]:
+        stored = _connectable(_edge_to("f"))
+        if data is ...:
+            del stored["nodes"][1]["data"]
+        else:
+            stored["nodes"][1]["data"] = data
+        cases.append(
+            {
+                "name": f"a stored node the write keeps must carry its node objects: {label}",
+                "flow": _connectable(_edge_to("f")),
+                "base": stored,
+            }
+        )
     one_form = _edge_to("f")
     del one_form["sourceHandle"]
     no_object = _edge_to("f")
@@ -680,7 +701,7 @@ def validation_cases() -> dict[str, Any]:
             "Graph rules: find_graph_violations(flow, check_values, base). Expected outputs come from "
             f"{REFERENCE}. A case gives `flow` (or `flow_json`, JSON text whose numbers matter), an optional "
             "`base` (the stored graph a write replaces) and `check_values` (default true), and the violations "
-            "in order, each with its code, path, message, resolution and edge_id."
+            "in order, each with its code, path, message, resolution and edge_id, or the `error` the check raises."
         ),
         "cases": cases,
     }
