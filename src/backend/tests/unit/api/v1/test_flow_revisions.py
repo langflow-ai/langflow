@@ -4,14 +4,19 @@ from __future__ import annotations
 
 import copy
 import json
+from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+import langflow.initial_setup
 from fastapi import status
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow_operation import FlowOperation
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_auth_service, session_scope
 from lfx.services.flow_operations import graphs_equal
+from lfx_docling.components.docling.docling_remote import DoclingRemoteComponent
+from sqlmodel import select
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
@@ -100,6 +105,117 @@ async def test_operations_are_included_on_request_without_secrets(client: AsyncC
     assert values[("data", "node", "template", "text", "value")] == "changed"
     assert values[("data", "node", "template", "api_key")]["value"] is None
     assert "sk-literal-secret" not in response.text
+
+
+AWS_KEY = "AKIAIOSFODNN7EXAMPLE"  # pragma: allowlist secret - AWS's documented example key
+
+
+async def test_a_key_pasted_into_a_password_field_reads_back_as_null(client: AsyncClient, logged_in_headers):
+    """The File component's ``aws_access_key_id`` is a password field whose name reads as ordinary."""
+    starters = Path(langflow.initial_setup.__file__).parent / "starter_projects"
+    starter = json.loads((starters / "Financial Report Parser.json").read_text())["data"]
+    pasted = copy.deepcopy(starter)
+    file_node = next(node for node in pasted["nodes"] if node["id"] == "File-NGW2N")
+    file_node["data"]["node"]["template"]["aws_access_key_id"]["value"] = AWS_KEY
+    flow = await _flow_with_history(client, logged_in_headers, starter, pasted)
+
+    response = await client.get(f"api/v1/flows/{flow['id']}/revisions?include=operations", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    (entry,) = response.json()["entries"]
+    (operation,) = entry["operations"]
+    value_path = ["data", "node", "template", "aws_access_key_id", "value"]
+    (update,) = [update for update in operation["operation"]["updates"] if update["path"] == value_path]
+    assert update["id"] == "File-NGW2N"
+    assert update["value"] is None
+    # The secret parts the history stored with the write stay on the server.
+    assert "secrets" not in update
+    assert AWS_KEY not in response.text
+
+
+PASTED_HEADER = "Bearer sk-docling-literal-0123456789"  # pragma: allowlist secret
+
+
+async def test_header_rows_read_back_with_literal_tokens_nulled_and_variable_names_kept(
+    client: AsyncClient, logged_in_headers
+):
+    """Docling Serve's ``api_headers`` is a table whose ``value`` column loads global variables."""
+    variable = {"name": "DOCLING_HEADER", "value": "a-secret", "type": "Credential", "default_fields": []}
+    created = await client.post("api/v1/variables/", json=variable, headers=logged_in_headers)
+    assert created.status_code == status.HTTP_201_CREATED, created.text
+    node = DoclingRemoteComponent().to_frontend_node()
+    node["position"] = {"x": 0, "y": 0}
+    before = _graph(node)
+    after = copy.deepcopy(before)
+    after["nodes"][0]["data"]["node"]["template"]["api_headers"]["value"] = [
+        {"__id__": "r1", "__pos__": 1, "key": "Authorization", "value": PASTED_HEADER},
+        {"__id__": "r2", "__pos__": 2, "key": "X-Api-Key", "value": "DOCLING_HEADER"},
+    ]
+    flow = await _flow_with_history(client, logged_in_headers, before, after)
+
+    response = await client.get(f"api/v1/flows/{flow['id']}/revisions?include=operations", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    (entry,) = response.json()["entries"]
+    (operation,) = entry["operations"]
+    rows = {update["path"][-1]["key"]: update for update in operation["operation"]["updates"]}
+    assert rows["r1"]["value"]["key"] == "Authorization"
+    assert rows["r1"]["value"]["value"] is None
+    assert rows["r2"]["value"]["value"] == "DOCLING_HEADER"
+    assert all("secrets" not in update for update in rows.values())
+    assert PASTED_HEADER not in response.text
+    # The row keeps the token, and the parts that hide it.
+    async with session_scope() as session:
+        stored = (await session.exec(select(FlowOperation).where(FlowOperation.flow_id == UUID(flow["id"])))).one()
+    stored_rows = {
+        update["path"][-1]["key"]: update
+        for update in stored.ops["batches"][0]["operations"][0]["operation"]["updates"]
+    }
+    assert stored_rows["r1"]["value"]["value"] == PASTED_HEADER
+    assert stored_rows["r1"]["secrets"] == [{"path": ["value"], "kind": "literal"}]
+    assert stored_rows["r2"]["secrets"] == [{"path": ["value"], "kind": "variable"}]
+
+
+PASTED_GROUP_VALUE = "sk-group-literal-0123456789"  # pragma: allowlist secret
+
+
+def _group(*inner: dict) -> dict:
+    flow = {"data": {"nodes": list(inner), "edges": []}, "name": "Group"}
+    return {
+        "id": "g",
+        "type": "genericNode",
+        "position": {"x": 0, "y": 0},
+        "data": {"id": "g", "type": "GroupNode", "node": {"display_name": "Group", "template": {}, "flow": flow}},
+    }
+
+
+async def test_a_secret_inside_a_group_reads_back_as_null_and_nothing_else_changes(
+    client: AsyncClient, logged_in_headers
+):
+    before = _graph(_group(_node("x"), _node("lm", api_key="")))
+    after = _graph(_group(_node("x"), _node("lm", api_key=PASTED_GROUP_VALUE)))
+    flow = await _flow_with_history(client, logged_in_headers, before, after)
+
+    response = await client.get(f"api/v1/flows/{flow['id']}/revisions?include=operations", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    (entry,) = response.json()["entries"]
+    (operation,) = entry["operations"]
+    (update,) = operation["operation"]["updates"]
+    assert update["path"] == ["data", "node", "flow"]
+    expected = copy.deepcopy(after["nodes"][0]["data"]["node"]["flow"])
+    expected["data"]["nodes"][1]["data"]["node"]["template"]["api_key"]["value"] = None
+    assert update["value"] == expected
+    assert "secrets" not in update
+    assert PASTED_GROUP_VALUE not in response.text
+    # The row keeps the secret, and names its part by the inner node's index.
+    async with session_scope() as session:
+        stored = (await session.exec(select(FlowOperation).where(FlowOperation.flow_id == UUID(flow["id"])))).one()
+    (stored_update,) = stored.ops["batches"][0]["operations"][0]["operation"]["updates"]
+    api_key = ["data", "node", "template", "api_key", "value"]
+    assert stored_update["secrets"] == [{"path": ["data", "nodes", 1, *api_key], "kind": "literal"}]
+    inner_template = stored_update["value"]["data"]["nodes"][1]["data"]["node"]["template"]
+    assert inner_template["api_key"]["value"] == PASTED_GROUP_VALUE
 
 
 async def test_operations_carry_the_cause_of_their_write(client: AsyncClient, logged_in_headers):

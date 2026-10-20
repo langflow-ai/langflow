@@ -13,7 +13,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from lfx.services.flow_operations import dump_flow_operation
 from sqlmodel import col, func, select
 
 from langflow.services.database.models.flow_operation import FlowOperation
@@ -109,7 +108,7 @@ def _timeline_operation(recorded: RecordedOperation, known_variable_names: Colle
         revision=recorded.revision,
         actor_user_id=recorded.actor_user_id,
         request_id=recorded.request_id,
-        operation=strip_operation_secrets(dump_flow_operation(recorded.operation), known_variable_names),
+        operation=strip_operation_secrets(recorded.operation, recorded.secrets, known_variable_names),
         cause=recorded.cause,
     )
 
