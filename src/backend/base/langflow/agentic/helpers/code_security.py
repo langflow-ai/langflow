@@ -213,6 +213,7 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     ("os", "dup", "os.dup() is forbidden in components"),
     ("os", "getenv", "os.getenv() is forbidden — use Langflow's variable/secret service"),
     ("os", "getenvb", "os.getenvb() is forbidden. Use Langflow's variable/secret service"),
+    ("os", "get_exec_path", "os.get_exec_path() is forbidden. Use Langflow's variable/secret service"),
     ("os", "putenv", "os.putenv() is forbidden in components"),
     ("shutil", "rmtree", "shutil.rmtree() is forbidden"),
     ("shutil", "move", "shutil.move() is forbidden in components"),

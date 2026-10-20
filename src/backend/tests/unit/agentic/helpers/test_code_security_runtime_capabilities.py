@@ -62,10 +62,28 @@ def test_rejects_byte_based_environment_access(code: str) -> None:
 @pytest.mark.parametrize(
     "code",
     [
+        "import os\npaths = os.get_exec_path()",
+        "import os as process\npaths = process.get_exec_path()",
+        "from os import get_exec_path as read_paths\npaths = read_paths()",
+        "from os import *\npaths = get_exec_path()",
+        "import os\npaths = getattr(os, 'get_exec_path')()",
+        "import os\nread_paths = os.get_exec_path\npaths = read_paths()",
+        "import tempfile\npaths = tempfile._os.get_exec_path()",
+        "import os\nreaders = [os.get_exec_path]\npaths = readers[0]()",
+    ],
+)
+def test_rejects_process_path_environment_access(code: str) -> None:
+    assert not scan_code_security(code).is_safe
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
         "import tempfile\nwith tempfile.NamedTemporaryFile() as stream:\n    stream.write(b'data')",
         "import os\nvalue = os.path.join('a', 'b')",
         "module_name = __name__\ndescription = __doc__",
         "class Config:\n    environb = {}\nvalue = Config().environb",
+        "class Config:\n    def get_exec_path(self):\n        return []\npaths = Config().get_exec_path()",
         "match [1, 2]:\n    case [first, second]:\n        value = first + second",
     ],
 )
