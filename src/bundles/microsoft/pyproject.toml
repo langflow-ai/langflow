@@ -14,7 +14,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "microsoft", "graph", "tea
 # HTTP through ``httpx``, which lfx already ships as a runtime dependency, so
 # the enterprise-hardened profile lock gains lfx-microsoft and nothing else.
 dependencies = [
-    "lfx>=1.13.0.dev0,<2.0.0",
+    "lfx>=1.14.0.dev0,<2.0.0",
 ]
 
 [project.urls]
