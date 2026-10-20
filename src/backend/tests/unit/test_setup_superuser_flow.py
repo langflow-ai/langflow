@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from secrets import token_urlsafe
 from unittest.mock import AsyncMock
 
 import filelock
@@ -188,6 +189,77 @@ async def test_setup_superuser_rotates_legacy_default_password_when_auto_login_f
         assert user is not None
         assert verify_password("rotated-production-password", user.password) is True
         assert verify_password(legacy_password, user.password) is False
+
+
+@pytest.mark.parametrize("username", [DEFAULT_SUPERUSER, "custom-bootstrap-owner"])
+@pytest.mark.parametrize("case", ["different", "matching", "legacy"])
+@pytest.mark.parametrize("auto_login", [False, True])
+async def test_existing_superuser_password_warning(
+    initialized_services,  # noqa: ARG001
+    monkeypatch,
+    username,
+    case,
+    auto_login,
+):
+    """Explain ignored startup credentials without changing an established account."""
+    from langflow.services.database.models.flow.model import Flow
+    from langflow.services.utils import logger
+
+    settings = get_settings_service()
+    auth = get_auth_service()
+    configured_password = token_urlsafe(32)
+    stored_password = {
+        "different": token_urlsafe(32),
+        "matching": configured_password,
+        "legacy": LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value(),
+    }[case]
+    settings.auth_settings.AUTO_LOGIN = True
+    settings.auth_settings.SUPERUSER = username
+
+    async with session_scope() as session:
+        user = (await session.exec(select(User).where(User.username == username))).first()
+        if user is None:
+            user = User(username=username, password="", is_active=True, is_superuser=True)
+            session.add(user)
+            await session.flush()
+        user.password = auth.get_password_hash(stored_password)
+        original_hash = user.password
+        user_id = user.id
+        flow = Flow(name="Existing auto-login flow", data={}, user_id=user_id)
+        session.add(flow)
+        await session.flush()
+        flow_id = flow.id
+        # Use the same token creation path as the auto-login endpoint.
+        await auth.create_user_longterm_token(session)
+        assert user.last_login_at is not None
+
+    settings.auth_settings.AUTO_LOGIN = auto_login
+    settings.auth_settings.SUPERUSER_PASSWORD = SecretStr(configured_password)
+    warning = AsyncMock()
+    monkeypatch.setattr(logger, "awarning", warning)
+    async with session_scope() as session:
+        await setup_superuser(settings, session)
+
+    async with session_scope() as session:
+        kept = await session.get(User, user_id)
+        assert kept.is_active
+        assert kept.is_superuser
+        assert (await session.get(Flow, flow_id)).user_id == user_id
+        if case == "legacy":
+            assert verify_password(configured_password, kept.password)
+        else:
+            assert kept.password == original_hash
+            assert verify_password(configured_password, kept.password) == (case == "matching")
+
+    warnings = " ".join(str(call.args[0]) for call in warning.await_args_list)
+    should_warn = not auto_login and case == "different"
+    assert ("LANGFLOW_SUPERUSER_PASSWORD was not applied" in warnings) == should_warn
+    if should_warn:
+        assert "existing password was preserved" in warnings
+        assert "https://docs.langflow.org/next/api-keys-and-authentication#recover-access-after-upgrading" in warnings
+    assert configured_password not in warnings
+    assert stored_password not in warnings
+    assert original_hash not in warnings
 
 
 @pytest.mark.asyncio
