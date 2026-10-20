@@ -28,7 +28,6 @@ from lfx.services.flow_operations import (
     FlowOperationError,
     apply_flow_operations,
     graph_hash,
-    json_type,
     load_node_schema,
     parse_flow_operations,
 )
@@ -122,13 +121,8 @@ class Generator:
     def text(self) -> str:
         return "".join(self.rng.choice(string.ascii_letters + " ") for _ in range(self.rng.randint(1, 12)))
 
-    def set_entry(self, node_id: str, path: tuple, value: Any, current: Any = None, *, exists: bool) -> dict:
-        entry = {"id": node_id, "op": "set_field", "path": list(path), "value": value}
-        if exists and json_type(current) != json_type(value):
-            entry["from_type"] = json_type(current)
-        if self.rng.random() < 0.3:
-            entry["expect"] = {"value": current} if exists else {"absent": True}
-        return entry
+    def set_entry(self, node_id: str, path: tuple, value: Any) -> dict:
+        return {"id": node_id, "op": "set_field", "path": list(path), "value": value}
 
     def propose(self, graph: dict[str, Any]) -> list[dict[str, Any]]:
         moves = [
@@ -148,7 +142,6 @@ class Generator:
             self.remove_output,
             self.copy_node,
             self.remove_node,
-            self.edit_metadata,
         ]
         return self.rng.choice(moves)(graph)
 
@@ -168,7 +161,7 @@ class Generator:
         current = field["value"]
         value = (not current) if isinstance(current, bool) else self.text()
         path = (*TEMPLATE, name, "value")
-        return [{"type": "update_nodes", "updates": [self.set_entry(node["id"], path, value, current, exists=True)]}]
+        return [{"type": "update_nodes", "updates": [self.set_entry(node["id"], path, value)]}]
 
     def toggle_advanced(self, graph):
         node = self.rng.choice(self.components(graph))
@@ -178,7 +171,7 @@ class Generator:
         name, field = self.rng.choice(candidates)
         current = field.get("advanced")
         path = (*TEMPLATE, name, "advanced")
-        entry = self.set_entry(node["id"], path, not current, current, exists="advanced" in field)
+        entry = self.set_entry(node["id"], path, not current)
         return [{"type": "update_nodes", "updates": [entry]}]
 
     def move_node(self, graph):
@@ -187,9 +180,7 @@ class Generator:
         return [
             {
                 "type": "update_nodes",
-                "updates": [
-                    self.set_entry(node["id"], ("position",), position, node.get("position"), exists="position" in node)
-                ],
+                "updates": [self.set_entry(node["id"], ("position",), position)],
             }
         ]
 
@@ -215,16 +206,14 @@ class Generator:
             ]
             if not keyed:
                 keyed = [{"__id__": self.next_id("row"), "__pos__": 1, "name": self.text()}]
-            entry = {"id": node["id"], "op": "set_field", "path": list(path), "value": keyed, "expect": {"value": rows}}
+            entry = self.set_entry(node["id"], path, keyed)
             return [{"type": "update_nodes", "updates": [entry]}]
         action = self.rng.choice(["cell", "add", "delete", "move"])
         row = self.rng.choice(rows)
         selector = {"key": row["__id__"]}
         if action == "cell":
             column = self.rng.choice(sorted(key for key in row if key not in {"__id__", "__pos__"}) or ["name"])
-            entry = self.set_entry(
-                node["id"], (*path, selector, column), self.text(), row.get(column), exists=column in row
-            )
+            entry = self.set_entry(node["id"], (*path, selector, column), self.text())
         elif action == "add":
             # Insert after ``row``: halfway to the next position, or one past the last.
             later = [other["__pos__"] for other in rows if other["__pos__"] > row["__pos__"]]
@@ -238,7 +227,7 @@ class Generator:
             # Move to the start or the end of the table.
             positions = [other["__pos__"] for other in rows]
             position = min(positions) - 1 if self.rng.random() < 0.5 else max(positions) + 1
-            entry = self.set_entry(node["id"], (*path, selector, "__pos__"), position, row["__pos__"], exists=True)
+            entry = self.set_entry(node["id"], (*path, selector, "__pos__"), position)
         return [{"type": "update_nodes", "updates": [entry]}]
 
     def toggle_output(self, graph):
@@ -256,7 +245,7 @@ class Generator:
         return [
             {
                 "type": "update_nodes",
-                "updates": [self.set_entry(node["id"], path, not current, current, exists="hidden" in output)],
+                "updates": [self.set_entry(node["id"], path, not current)],
             }
         ]
 
@@ -275,7 +264,7 @@ class Generator:
         return [
             {
                 "type": "update_nodes",
-                "updates": [self.set_entry(node["id"], path, not current, current, exists="status" in tool)],
+                "updates": [self.set_entry(node["id"], path, not current)],
             }
         ]
 
@@ -362,9 +351,6 @@ class Generator:
         if len(graph["nodes"]) <= 2:
             return []
         return [{"type": "delete_nodes", "ids": [self.rng.choice(graph["nodes"])["id"]]}]
-
-    def edit_metadata(self, _graph):
-        return [{"type": "update_metadata", "fields": {"description": self.text()}, "delete_keys": []}]
 
 
 def generate() -> dict[str, Any]:

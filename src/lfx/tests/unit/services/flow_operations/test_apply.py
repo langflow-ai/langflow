@@ -326,7 +326,6 @@ class TestApplyFlowOperations:
                             "op": "set_field",
                             "path": ["data", "node", "outputs", {"key": "y"}, "selected"],
                             "value": None,
-                            "from_type": "string",
                         }
                     ],
                 }

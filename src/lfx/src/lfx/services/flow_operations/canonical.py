@@ -39,7 +39,6 @@ from lfx.services.flow_operations.limits import broken_limit, check_graph_limits
 from lfx.services.flow_operations.schema import load_node_schema
 
 _SCHEMA = load_node_schema()
-FLOW_VIEW_STATE_KEYS = _SCHEMA.flow_view_state
 NODE_VIEW_STATE_KEYS = _SCHEMA.node_view_state
 EDGE_VIEW_STATE_KEYS = _SCHEMA.edge_view_state
 EDGE_HANDLE_KEYS = ("sourceHandle", "targetHandle")
@@ -286,7 +285,7 @@ def canonical_graph(flow_data: dict[str, Any], *, keyed: bool = True) -> dict[st
     shares nested values with ``flow_data``; it is meant to be compared or
     serialized, not mutated.
     """
-    graph = _without(flow_data, FLOW_VIEW_STATE_KEYS)
+    graph = {key: value for key, value in flow_data.items() if not _SCHEMA.is_flow_view_state(key)}
     for key, canonical in (("nodes", canonical_node), ("edges", canonical_edge)):
         entries = graph.get(key)
         if not isinstance(entries, list):
