@@ -149,6 +149,8 @@ OPENAI_MODELS_DETAILED = [
         provider="OpenAI", name="gpt-4o-mini-realtime-preview", icon="OpenAI", not_supported=True, preview=True
     ),
 ]
+DEPRECATED_MODELS = [metadata["name"] for metadata in OPENAI_MODELS_DETAILED if metadata.get("deprecated", False)]
+
 OPENAI_CHAT_MODEL_NAMES = [
     metadata["name"]
     for metadata in OPENAI_MODELS_DETAILED
@@ -162,6 +164,12 @@ OPENAI_REASONING_MODEL_NAMES = [
     for metadata in OPENAI_MODELS_DETAILED
     if metadata.get("reasoning", False) and not metadata.get("not_supported", False)
 ]
+
+# Selectable models for dropdowns. The full lists above keep deprecated models so saved flows
+# still resolve them (e.g. to tell reasoning models apart).
+OPENAI_CHAT_MODEL_OPTIONS = [name for name in OPENAI_CHAT_MODEL_NAMES if name not in DEPRECATED_MODELS]
+
+OPENAI_REASONING_MODEL_OPTIONS = [name for name in OPENAI_REASONING_MODEL_NAMES if name not in DEPRECATED_MODELS]
 
 OPENAI_SEARCH_MODEL_NAMES = [
     metadata["name"]
