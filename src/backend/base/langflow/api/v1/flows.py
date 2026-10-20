@@ -64,6 +64,7 @@ from langflow.api.v1.flows_helpers import (
     _save_flow_to_fs,
     _update_existing_flow,
     _validate_and_assign_folder,
+    _validate_new_flow_id,
     _verify_fs_path,
     destination_folder_owner_id,
 )
@@ -1151,6 +1152,7 @@ async def create_flows(
     # Validate the complete request before adding or flushing any rows. This
     # keeps a denial in a later item from partially applying an earlier item.
     for flow in flow_list.flows:
+        _validate_new_flow_id(flow.id)
         _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
         await persist_and_strip_mcp_secrets(flow.data, current_user.id, session, flow_id=flow.id)
         # This endpoint bypasses _new_flow, so the fs_path containment check
