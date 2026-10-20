@@ -27,12 +27,14 @@ if TYPE_CHECKING:
 from lfx.services.auth.base import BaseAuthService  # noqa: TC002
 from lfx.services.authorization.base import BaseAuthorizationService  # noqa: TC002
 from lfx.services.catalog_policy.base import BaseCatalogPolicyService  # noqa: TC002
+from lfx.services.connection.base import BaseConnectionResolverService  # noqa: TC002
 from lfx.services.policy_bundle.base import BasePolicyBundleService  # noqa: TC002
 from lfx.services.settings.service import SettingsService  # noqa: TC002
 
 from langflow.services.job_queue.service import JobQueueService  # noqa: TC001
 from langflow.services.storage.service import StorageService  # noqa: TC001
 from langflow.services.telemetry.service import TelemetryService  # noqa: TC001
+from langflow.services.triggers.service import TriggerService  # noqa: TC001
 
 
 def get_service(service_type: ServiceType, default=None):
@@ -298,6 +300,20 @@ def get_authorization_service() -> BaseAuthorizationService:
     from langflow.services.authorization.factory import AuthorizationServiceFactory
 
     return get_service(ServiceType.AUTHORIZATION_SERVICE, AuthorizationServiceFactory())
+
+
+def get_connection_resolver_service() -> BaseConnectionResolverService:
+    """Retrieve Langflow's active host-pluggable connection resolver."""
+    from langflow.services.connection.factory import ConnectionResolverServiceFactory
+
+    return get_service(ServiceType.CONNECTION_RESOLVER_SERVICE, ConnectionResolverServiceFactory())
+
+
+def get_trigger_service() -> TriggerService:
+    """Retrieve the trigger persistence service."""
+    from langflow.services.triggers.factory import TriggerServiceFactory
+
+    return get_service(ServiceType.TRIGGER_SERVICE, TriggerServiceFactory())
 
 
 def get_catalog_policy_service() -> BaseCatalogPolicyService:

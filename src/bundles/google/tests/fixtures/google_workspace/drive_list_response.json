@@ -1,0 +1,21 @@
+{
+  "nextPageToken": "page-token-2",
+  "incompleteSearch": false,
+  "files": [
+    {
+      "id": "drive-file-quarterly-report",
+      "name": "Quarterly report.pdf",
+      "mimeType": "application/pdf",
+      "modifiedTime": "2026-08-30T09:14:02.113Z",
+      "size": "184320",
+      "webViewLink": "https://drive.google.com/file/d/drive-file-quarterly-report/view"
+    },
+    {
+      "id": "drive-doc-meeting-notes",
+      "name": "Meeting notes",
+      "mimeType": "application/vnd.google-apps.document",
+      "modifiedTime": "2026-09-01T16:42:55.008Z",
+      "webViewLink": "https://docs.google.com/document/d/drive-doc-meeting-notes/edit"
+    }
+  ]
+}

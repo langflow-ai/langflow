@@ -110,6 +110,9 @@ CASE_CONVERTERS: dict[str, Any] = {
     "swapcase": str.swapcase,
 }
 
+# A markdown table's delimiter row (``|---|:--:|``) separates the header from the body.
+MARKDOWN_DELIMITER_CELL = re.compile(r":?-+:?")
+
 
 class OperationsComponent(Component):
     display_name = "Data Operations"
@@ -985,7 +988,7 @@ class OperationsComponent(Component):
                         [combined_data[key], value] if not isinstance(value, list) else [combined_data[key], *value]
                     )
 
-        return Data(**combined_data)
+        return Data(data=combined_data)
 
     def append_update(self) -> Data:
         """Append or update the data with new key-value pairs."""
@@ -1089,15 +1092,31 @@ class OperationsComponent(Component):
             raise ValueError(msg)
         return handler(df_copy)
 
+    @staticmethod
+    def _comparable_filter_value(column: pd.Series, filter_value: Any) -> Any:
+        """Return a text input as a number when the column is numeric.
+
+        Filter and Replace Value inputs arrive as text, and ``30 == "30"`` never matches in pandas.
+        A blank input stays text: ``pd.to_numeric("")`` is NaN, which would match missing cells.
+        """
+        if filter_value in (None, ""):
+            return filter_value
+        if pd.api.types.is_numeric_dtype(column) and not pd.api.types.is_bool_dtype(column):
+            try:
+                return pd.to_numeric(filter_value)
+            except (ValueError, TypeError):
+                return filter_value
+        return filter_value
+
     def filter_rows_by_value(self, df: DataFrame) -> DataFrame:
         column = df[self.column_name]
         filter_value = self.filter_value
         operator = getattr(self, "filter_operator", "equals")
 
         if operator == "equals":
-            mask = column == filter_value
+            mask = column == self._comparable_filter_value(column, filter_value)
         elif operator == "not equals":
-            mask = column != filter_value
+            mask = column != self._comparable_filter_value(column, filter_value)
         elif operator == "contains":
             mask = column.astype(str).str.contains(str(filter_value), na=False)
         elif operator == "not contains":
@@ -1119,7 +1138,7 @@ class OperationsComponent(Component):
             except (ValueError, TypeError):
                 mask = column.astype(str) < str(filter_value)
         else:
-            mask = column == filter_value
+            mask = column == self._comparable_filter_value(column, filter_value)
 
         return DataFrame(df[mask])
 
@@ -1147,7 +1166,24 @@ class OperationsComponent(Component):
         return DataFrame(df.tail(self.num_rows))
 
     def replace_values(self, df: DataFrame) -> DataFrame:
-        df[self.column_name] = df[self.column_name].replace(self.replace_value, self.replacement_value)
+        column = df[self.column_name]
+        replace_val = self._comparable_filter_value(column, self.replace_value)
+        replacement_val = self._comparable_filter_value(column, self.replacement_value)
+        try:
+            result = column.replace(replace_val, replacement_val)
+        except TypeError:
+            if not (
+                isinstance(column.dtype, pd.api.extensions.ExtensionDtype)
+                and pd.api.types.is_integer_dtype(column.dtype)
+            ):
+                raise
+            # Nullable integers reject fractional/text replacements instead of widening like NumPy columns.
+            widened = column.astype("Float64" if pd.api.types.is_float(replacement_val) else object)
+            # A float cannot represent every Int64 value. Preserve unrelated large integers exactly.
+            if not widened.astype(object).equals(column.astype(object)):
+                widened = column.astype(object)
+            result = widened.mask(column.eq(replace_val).fillna(value=False), replacement_val)
+        df[self.column_name] = result
         return DataFrame(df)
 
     def drop_duplicates(self, df: DataFrame) -> DataFrame:
@@ -1180,6 +1216,19 @@ class OperationsComponent(Component):
         merge_on = getattr(self, "merge_on_column", None)
         merge_how = getattr(self, "merge_how", "inner")
 
+        # Track only columns created by this merge, without colliding with input names.
+        right_columns = {}
+        used_columns = set(df_left.columns) | set(df_right.columns)
+        for col in df_left.columns.intersection(df_right.columns):
+            if merge_on and col == merge_on:
+                continue
+            right_col = f"{col}_right"
+            while right_col in used_columns:
+                right_col += "_right"
+            right_columns[col] = right_col
+            used_columns.add(right_col)
+        df_right = df_right.rename(columns=right_columns)
+
         if merge_on:
             if merge_on not in df_left.columns:
                 msg = f"Column '{merge_on}' not found in left DataFrame. Available: {list(df_left.columns)}"
@@ -1187,17 +1236,14 @@ class OperationsComponent(Component):
             if merge_on not in df_right.columns:
                 msg = f"Column '{merge_on}' not found in right DataFrame. Available: {list(df_right.columns)}"
                 raise ValueError(msg)
-            merged = df_left.merge(df_right, on=merge_on, how=merge_how, suffixes=("", "_right"))
+            merged = df_left.merge(df_right, on=merge_on, how=merge_how)
         else:
-            merged = df_left.merge(df_right, left_index=True, right_index=True, how=merge_how, suffixes=("", "_right"))
+            merged = df_left.merge(df_right, left_index=True, right_index=True, how=merge_how)
 
         cols_to_drop = []
-        for col in merged.columns:
-            if col.endswith("_right"):
-                original_col = col[:-6]
-                if original_col in merged.columns:
-                    merged[original_col] = merged[original_col].combine_first(merged[col])
-                    cols_to_drop.append(col)
+        for col, right_col in right_columns.items():
+            merged[col] = merged[col].combine_first(merged[right_col])
+            cols_to_drop.append(right_col)
 
         if cols_to_drop:
             merged = merged.drop(columns=cols_to_drop)
@@ -1279,7 +1325,7 @@ class OperationsComponent(Component):
         separator = getattr(self, "table_separator", "|")
         has_header = getattr(self, "has_header", True)
 
-        rows = self._parse_table_rows(lines, separator)
+        rows = self._parse_table_rows(lines, separator, has_header=has_header)
         if not rows:
             return DataFrame(pd.DataFrame())
 
@@ -1288,16 +1334,19 @@ class OperationsComponent(Component):
         self.log(f"Converted text to DataFrame: {len(df)} rows, {len(df.columns)} columns")
         return DataFrame(df)
 
-    def _parse_table_rows(self, lines: list[str], separator: str) -> list[list[str]]:
+    def _parse_table_rows(self, lines: list[str], separator: str, *, has_header: bool = True) -> list[list[str]]:
         rows = []
-        for line in lines:
+        for index, line in enumerate(lines):
             cleaned_line = line.strip(separator)
             cells = [cell.strip() for cell in cleaned_line.split(separator)]
+            # Skip the markdown delimiter row under the header instead of reading it as data.
+            if has_header and index == 1 and all(MARKDOWN_DELIMITER_CELL.fullmatch(cell) for cell in cells):
+                continue
             rows.append(cells)
         return rows
 
     def _create_dataframe(self, rows: list[list[str]], *, has_header: bool) -> pd.DataFrame:
-        if has_header and len(rows) > 1:
+        if has_header and rows:
             header = rows[0]
             data_rows = rows[1:]
             header_col_count = len(header)

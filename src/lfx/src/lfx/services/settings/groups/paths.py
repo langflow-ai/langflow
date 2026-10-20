@@ -13,6 +13,20 @@ class PathSettings(BaseModel):
     knowledge_bases_dir: str | None = "~/.langflow/knowledge_bases"
     """The directory to store knowledge bases."""
 
+    knowledge_base_auto_migrate: bool = True
+    """Upgrade supported local Chroma stores on first startup, retaining the source.
+
+    Set LANGFLOW_KNOWLEDGE_BASE_AUTO_MIGRATE=false to require operator recovery.
+    Automatic migration requires a single worker on a local filesystem.
+    """
+
+    knowledge_base_storage_pool_size: int = Field(default=20, gt=0)
+    """Per-process PostgreSQL connections reserved for remote KB coordination.
+
+    Set LANGFLOW_KNOWLEDGE_BASE_STORAGE_POOL_SIZE to match expected concurrent
+    operations. This pool is separate from the application database pool.
+    """
+
     kb_disk_reconcile_enabled: bool = False
     """Whether startup scans ``knowledge_bases_dir`` for KB directories lacking a DB row.
 

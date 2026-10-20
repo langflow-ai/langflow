@@ -23,19 +23,26 @@ export default function DBProvidersPage() {
   const localVectorStoreAvailable = useUtilityStore(
     (state) => state.localVectorStoreAvailable,
   );
-  // Local Chroma writes to the serving box's disk, which the production profile
+  const defaultVectorStoreBackend = useUtilityStore(
+    (state) => state.defaultVectorStoreBackend,
+  );
+  // Local SQLite writes to the serving box's disk, which the production profile
   // refuses. Hide it here too — this page sets the global default, so leaving it
   // selectable would let an operator re-enable the exact backend the create
   // endpoint rejects.
   const visibleProviders = useMemo(
     () =>
       DB_PROVIDER_OPTIONS.filter(
-        (provider) => localVectorStoreAvailable || provider.id !== "chroma",
+        (provider) => localVectorStoreAvailable || provider.id !== "sqlite",
       ),
     [localVectorStoreAvailable],
   );
   const [selectedProviderId, setSelectedProviderId] = useState<DBProviderId>(
-    getActiveDBProvider(globalVariables, localVectorStoreAvailable),
+    getActiveDBProvider(
+      globalVariables,
+      localVectorStoreAvailable,
+      defaultVectorStoreBackend,
+    ),
   );
   const [hasManuallySelectedProvider, setHasManuallySelectedProvider] =
     useState(false);
@@ -47,8 +54,13 @@ export default function DBProvidersPage() {
   );
 
   const activeProviderId = useMemo(
-    () => getActiveDBProvider(globalVariables, localVectorStoreAvailable),
-    [globalVariables, localVectorStoreAvailable],
+    () =>
+      getActiveDBProvider(
+        globalVariables,
+        localVectorStoreAvailable,
+        defaultVectorStoreBackend,
+      ),
+    [globalVariables, localVectorStoreAvailable, defaultVectorStoreBackend],
   );
 
   useEffect(() => {
@@ -70,7 +82,7 @@ export default function DBProvidersPage() {
   const {
     handleSave,
     handleTestConnection,
-    handleUseChroma,
+    handleUseSQLite,
     handleUsePostgres,
     isTesting,
     postgresStatus,
@@ -127,6 +139,7 @@ export default function DBProvidersPage() {
                   provider.id as AvailableDBProviderId,
                   globalVariables,
                   localVectorStoreAvailable,
+                  defaultVectorStoreBackend,
                 )
               }
               onSelect={() => {
@@ -156,8 +169,8 @@ export default function DBProvidersPage() {
                 setEditingSecret((prev) => ({ ...prev, [key]: editing }))
               }
               onSave={
-                selectedProvider.id === "chroma"
-                  ? handleUseChroma
+                selectedProvider.id === "sqlite"
+                  ? handleUseSQLite
                   : selectedProvider.id === "postgres"
                     ? handleUsePostgres
                     : () => {
@@ -165,7 +178,7 @@ export default function DBProvidersPage() {
                       }
               }
               onTestConnection={
-                selectedProvider.id === "chroma"
+                selectedProvider.id === "sqlite"
                   ? undefined
                   : handleTestConnection
               }

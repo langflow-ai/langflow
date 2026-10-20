@@ -29,10 +29,13 @@ export type FlowPoolObjectType = {
   buildId: string;
 };
 
+// A store write that is not the user's edit - a template refresh on mount, a
+// model-input refresh after load - still belongs on the canvas but must not
+// trigger a save. Autosaving it writes the flow on someone's behalf, which
+// under an edit precondition would also take their turn to write.
+export type FlowMutationOptions = { autoSave?: boolean };
+
 export type FlowPoolObjectTypeNew = {
-  //build
-  //1 - error->logs
-  //2 - success-> result
   timestamp: string;
   valid: boolean;
   data: {
@@ -72,9 +75,14 @@ export type ComponentsToUpdateType = {
 export type AutoSaveFlowType = ((flow?: FlowType) => void) & {
   cancel: () => void;
   flush: () => Promise<void> | void;
+  // Saves `flow` after every pending and in-flight save; later autosaves wait
+  // for it. Rejects when that save fails.
+  enqueue: (flow: FlowType) => Promise<void>;
 };
 
 export type FlowStoreType = {
+  /** True once a user-originated mutation has landed since this flow was loaded. */
+  userEditedSinceLoad: boolean;
   dismissedNodes: string[];
   addDismissedNodes: (dismissedNodes: string[]) => void;
   removeDismissedNodes: (dismissedNodes: string[]) => void;
@@ -159,16 +167,23 @@ export type FlowStoreType = {
   onEdgesChange: OnEdgesChange<EdgeType>;
   setNodes: (
     update: AllNodeType[] | ((oldState: AllNodeType[]) => AllNodeType[]),
+    options?: FlowMutationOptions,
   ) => void;
   setEdges: (
     update: EdgeType[] | ((oldState: EdgeType[]) => EdgeType[]),
+    options?: FlowMutationOptions,
   ) => void;
-  setNodesAndEdges: (nodes: AllNodeType[], edges: EdgeType[]) => void;
+  setNodesAndEdges: (
+    nodes: AllNodeType[],
+    edges: EdgeType[],
+    options?: FlowMutationOptions,
+  ) => void;
   setNode: (
     id: string,
     update: AllNodeType | ((oldState: AllNodeType) => AllNodeType),
     isUserChange?: boolean,
     callback?: () => void,
+    options?: FlowMutationOptions,
   ) => void;
   getNode: (id: string) => AllNodeType | undefined;
   deleteNode: (nodeId: string | Array<string>) => void;

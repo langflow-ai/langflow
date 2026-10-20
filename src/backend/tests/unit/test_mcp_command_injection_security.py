@@ -264,6 +264,14 @@ class TestMCPCommandInjectionSecurity:
         error_msg = str(exc_info.value)
         assert "not allowed" in error_msg.lower()
 
+    def test_node_import_data_url_rejected(self):
+        """The REST model applies the same runtime-option policy as the spawn sink."""
+        with pytest.raises(ValidationError, match=r"Node[.]js runtime options"):
+            MCPServerConfig(
+                command="node",
+                args=["--import=data:text/javascript,console.log%281%29", "--interactive"],
+            )
+
     def test_pip_install_rejected(self):
         """Test that pip install is rejected."""
         with pytest.raises(ValidationError) as exc_info:

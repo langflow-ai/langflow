@@ -324,7 +324,7 @@ def test_sambanova_build_blocks_metadata_url_before_sdk_client():
     component = SambaNovaComponent(base_url=BLOCKED_URL, model_name="model", api_key="test")
 
     with (
-        patch("lfx_bundles.sambanova.sambanova.ChatSambaNovaCloud") as mock_chat,
+        patch("lfx_bundles.sambanova.sambanova.ChatSambaNova") as mock_chat,
         pytest.raises(ValueError, match="SSRF Protection"),
     ):
         component.build_model()

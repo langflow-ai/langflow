@@ -300,6 +300,18 @@ storage_service = "nonexistent.module:NonexistentClass"
 class TestServiceCreation:
     """Tests for creating real services with dependency injection."""
 
+    def test_factory_creates_protocol_cache_without_readiness_lifecycle(self, service_manager):
+        """Factory-created caches must work before an application has initialized services."""
+        from lfx.services.shared_component_cache.factory import SharedComponentCacheServiceFactory
+
+        service_manager.register_factory(SharedComponentCacheServiceFactory())
+
+        cache = service_manager.get(ServiceType.SHARED_COMPONENT_CACHE_SERVICE)
+        cache.set("tools", ["tool"])
+
+        assert cache.get("tools") == ["tool"]
+        assert service_manager.get(ServiceType.SHARED_COMPONENT_CACHE_SERVICE) is cache
+
     def test_create_storage_service(self, service_manager):
         """Test creating LocalStorageService."""
         service_manager.register_service_class(ServiceType.STORAGE_SERVICE, LocalStorageService)

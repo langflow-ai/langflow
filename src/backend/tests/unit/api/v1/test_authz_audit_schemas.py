@@ -260,3 +260,69 @@ async def test_unknown_actor_filter_includes_legacy_null_and_explicit_unknown_ro
     count_sql = str(session.statements[0])
     assert "authz_audit_log.actor_type IS NULL" in count_sql
     assert "authz_audit_log.actor_type =" in count_sql
+
+
+def test_filter_vocabularies_match_audit_writer_constants():
+    from typing import get_args
+
+    from langflow.api.v1.authz_audit import AuditActorTypeFilter, AuditResultFilter
+    from langflow.services.authorization import audit
+    from lfx.services.authorization import AuthorizationPrincipal
+
+    assert set(get_args(AuditResultFilter)) == {
+        audit.AUDIT_ALLOW,
+        audit.AUDIT_DENY,
+        audit.AUDIT_OWNER_OVERRIDE,
+        audit.AUDIT_SKIP,
+    }
+    assert set(get_args(AuditActorTypeFilter)) == {
+        audit.AUDIT_ACTOR_USER,
+        audit.AUDIT_ACTOR_API_KEY,
+        audit.AUDIT_ACTOR_UNKNOWN,
+        AuthorizationPrincipal.public_anonymous().actor_type,
+    }
+
+
+@pytest.fixture
+def audit_client():
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from langflow.api.utils.core import injectable_session_scope
+    from langflow.api.v1.authz_audit import router
+    from langflow.services.auth.utils import get_current_active_superuser
+
+    app = FastAPI()
+    app.include_router(router, prefix="/api/v1")
+
+    async def _session():
+        yield _Session([])
+
+    app.dependency_overrides[injectable_session_scope] = _session
+    app.dependency_overrides[get_current_active_superuser] = lambda: SimpleNamespace()
+    return TestClient(app)
+
+
+@pytest.mark.parametrize(
+    ("param", "value", "accepted"),
+    [
+        ("result", "banana", "'allow', 'deny', 'owner_override' or 'skip'"),
+        ("result", "denied", "'allow', 'deny', 'owner_override' or 'skip'"),
+        ("result", "Deny", "'allow', 'deny', 'owner_override' or 'skip'"),
+        ("actor_type", "bogus", "'user', 'api_key', 'unknown' or 'anonymous_public'"),
+    ],
+)
+def test_invalid_filter_value_is_rejected_with_accepted_values(audit_client, param, value, accepted):
+    response = audit_client.get("/api/v1/authz/audit", params={param: value, "size": 1})
+
+    assert response.status_code == 422
+    [error] = response.json()["detail"]
+    assert error["loc"] == ["query", param]
+    assert accepted in error["msg"]
+
+
+@pytest.mark.parametrize(("param", "value"), [("result", "deny"), ("actor_type", "api_key")])
+def test_valid_filter_value_is_accepted(audit_client, param, value):
+    response = audit_client.get("/api/v1/authz/audit", params={param: value, "size": 1})
+
+    assert response.status_code == 200
+    assert response.json() == {"items": [], "total": 0, "page": 1, "size": 1, "pages": 0}

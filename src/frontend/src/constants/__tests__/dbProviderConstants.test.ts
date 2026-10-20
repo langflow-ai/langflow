@@ -2,9 +2,11 @@ import {
   ACTIVE_DB_PROVIDER_VARIABLE,
   CHROMA_CLOUD_VARIABLES,
   getActiveDBProvider,
+  getDBProviderOption,
   getDefaultDBProviderConfig,
   isDBProviderConfigured,
   OPENSEARCH_VARIABLES,
+  resolveUIBackendType,
 } from "../dbProviderConstants";
 
 const variable = (
@@ -22,18 +24,29 @@ const variable = (
 });
 
 describe("dbProviderConstants", () => {
-  it("defaults to Chroma when no provider is configured", () => {
-    expect(getActiveDBProvider([])).toBe("chroma");
+  it("keeps legacy stores visibly retired rather than normalizing them to SQLite", () => {
+    expect(resolveUIBackendType("chroma", {})).toBe("chroma");
+    expect(resolveUIBackendType("chroma", { mode: "cloud" })).toBe(
+      "chroma_cloud",
+    );
+    expect(getDBProviderOption("chroma").status).toBe("retired");
+    expect(getDBProviderOption("chroma_cloud").label).toContain(
+      "migration required",
+    );
+    expect(isDBProviderConfigured("chroma", [])).toBe(false);
+  });
+  it("defaults to SQLite when no provider is configured", () => {
+    expect(getActiveDBProvider([])).toBe("sqlite");
     expect(getDefaultDBProviderConfig([])).toEqual({
-      backendType: "chroma",
+      backendType: "sqlite",
       backendConfig: {},
     });
   });
 
-  it("falls back to Chroma for unsupported configured provider values", () => {
+  it("falls back to SQLite for unsupported configured provider values", () => {
     expect(
       getActiveDBProvider([variable(ACTIVE_DB_PROVIDER_VARIABLE, "astra")]),
-    ).toBe("chroma");
+    ).toBe("sqlite");
   });
 
   it("builds OpenSearch provider config from saved global variables", () => {
@@ -124,7 +137,7 @@ describe("dbProviderConstants", () => {
     ).toBe(true);
   });
 
-  it("requires a stored Chroma Cloud credential value", () => {
+  it("rejects retired Chroma Cloud even with a stored credential", () => {
     const blankCredential = variable(
       CHROMA_CLOUD_VARIABLES.API_KEY,
       undefined,
@@ -142,7 +155,7 @@ describe("dbProviderConstants", () => {
       true,
     );
     expect(isDBProviderConfigured("chroma_cloud", [configuredCredential])).toBe(
-      true,
+      false,
     );
   });
 
@@ -159,15 +172,15 @@ describe("dbProviderConstants", () => {
     );
   });
 
-  it("falls back to Chroma Local when the active remote provider is no longer configured", () => {
+  it("falls back to SQLite Local when the active remote provider is no longer configured", () => {
     const variables = [
       variable(ACTIVE_DB_PROVIDER_VARIABLE, "chroma_cloud"),
       variable(CHROMA_CLOUD_VARIABLES.API_KEY, undefined, "Credential", false),
     ];
 
-    expect(getActiveDBProvider(variables)).toBe("chroma");
+    expect(getActiveDBProvider(variables)).toBe("sqlite");
     expect(getDefaultDBProviderConfig(variables)).toEqual({
-      backendType: "chroma",
+      backendType: "sqlite",
       backendConfig: {},
     });
   });
@@ -198,18 +211,18 @@ describe("dbProviderConstants", () => {
   describe("when local vector storage is unavailable (production profile)", () => {
     const localUnavailable = false;
 
-    it("reports local Chroma as not configured", () => {
-      // Chroma is configured unconditionally when local storage is allowed…
-      expect(isDBProviderConfigured("chroma", [])).toBe(true);
+    it("reports local SQLite as not configured", () => {
+      // SQLite is configured unconditionally when local storage is allowed…
+      expect(isDBProviderConfigured("sqlite", [])).toBe(true);
       // …but the production profile can't host it on the serving box's disk,
       // so it must read as unconfigured — that's what disables it in pickers
       // and blocks create-time validation instead of a server-side 422.
-      expect(isDBProviderConfigured("chroma", [], localUnavailable)).toBe(
+      expect(isDBProviderConfigured("sqlite", [], localUnavailable)).toBe(
         false,
       );
     });
 
-    it("falls back to Postgres instead of Chroma", () => {
+    it("falls back to Postgres instead of SQLite", () => {
       expect(getActiveDBProvider([], localUnavailable)).toBe("postgres");
       expect(getDefaultDBProviderConfig([], localUnavailable)).toEqual({
         backendType: "postgres",
@@ -229,10 +242,114 @@ describe("dbProviderConstants", () => {
       );
     });
 
-    it("falls back to Postgres even when the active variable pins Chroma", () => {
+    describe("when the server resolves OpenSearch as the default backend", () => {
+      // OpenSearch-only deployment: OPENSEARCH_URL is an env var, so there are
+      // no Langflow variables for the UI to find.
+      it("defaults to OpenSearch instead of assuming pgVector", () => {
+        expect(getActiveDBProvider([], localUnavailable, "opensearch")).toBe(
+          "opensearch",
+        );
+        expect(
+          getDefaultDBProviderConfig([], localUnavailable, "opensearch")
+            .backendType,
+        ).toBe("opensearch");
+      });
+
+      it("defaults to OpenSearch even when local storage is available", () => {
+        expect(
+          getDefaultDBProviderConfig([], true, "opensearch"),
+        ).toMatchObject({
+          backendType: "opensearch",
+        });
+        expect(
+          isDBProviderConfigured("opensearch", [], true, "opensearch"),
+        ).toBe(true);
+      });
+
+      it("reports the env-provisioned OpenSearch as configured", () => {
+        expect(isDBProviderConfigured("opensearch", [], false)).toBe(false);
+        expect(
+          isDBProviderConfigured("opensearch", [], false, "opensearch"),
+        ).toBe(true);
+      });
+
+      it("does not hand the server's SSL default a hard-coded true", () => {
+        // The URL comes from the environment, so the scheme is invisible to
+        // the UI; forcing ``use_ssl: true`` would break an http:// cluster.
+        const { backendConfig } = getDefaultDBProviderConfig(
+          [],
+          localUnavailable,
+          "opensearch",
+        );
+        expect(backendConfig).not.toHaveProperty("use_ssl");
+        expect(backendConfig).not.toHaveProperty("verify_certs");
+        expect(backendConfig).toMatchObject({
+          url_variable: OPENSEARCH_VARIABLES.URL,
+        });
+      });
+
+      it("still sends toggles the operator saved", () => {
+        const { backendConfig } = getDefaultDBProviderConfig(
+          [variable(OPENSEARCH_VARIABLES.USE_SSL, "false")],
+          localUnavailable,
+          "opensearch",
+        );
+        expect(backendConfig).toMatchObject({ use_ssl: false });
+        expect(backendConfig).not.toHaveProperty("verify_certs");
+      });
+
+      it("keeps a SQLite pin where local storage is allowed", () => {
+        expect(
+          getActiveDBProvider(
+            [variable(ACTIVE_DB_PROVIDER_VARIABLE, "sqlite")],
+            true,
+            "opensearch",
+          ),
+        ).toBe("sqlite");
+      });
+
+      it("ignores a SQLite pin where local storage is refused", () => {
+        expect(
+          getActiveDBProvider(
+            [variable(ACTIVE_DB_PROVIDER_VARIABLE, "sqlite")],
+            localUnavailable,
+            "opensearch",
+          ),
+        ).toBe("opensearch");
+      });
+    });
+
+    it("does not treat an env pgVector default as pre-activated", () => {
+      // pgVector keeps its explicit test-and-activate flow in DB Providers.
+      expect(isDBProviderConfigured("postgres", [], false, "postgres")).toBe(
+        false,
+      );
+      expect(getActiveDBProvider([], localUnavailable, "postgres")).toBe(
+        "postgres",
+      );
+    });
+
+    it("follows the pgVector server default when local storage is allowed", () => {
+      expect(getDefaultDBProviderConfig([], true, "postgres")).toEqual({
+        backendType: "postgres",
+        backendConfig: {},
+      });
+      expect(isDBProviderConfigured("postgres", [], true, "postgres")).toBe(
+        false,
+      );
+      expect(
+        getActiveDBProvider(
+          [variable(ACTIVE_DB_PROVIDER_VARIABLE, "sqlite")],
+          true,
+          "postgres",
+        ),
+      ).toBe("sqlite");
+    });
+
+    it("falls back to Postgres even when the active variable pins SQLite", () => {
       // An explicit ``LANGFLOW_KNOWLEDGE_BACKEND=chroma`` must not resurrect a
-      // Chroma the create endpoint rejects on the production profile.
-      const variables = [variable(ACTIVE_DB_PROVIDER_VARIABLE, "chroma")];
+      // SQLite the create endpoint rejects on the production profile.
+      const variables = [variable(ACTIVE_DB_PROVIDER_VARIABLE, "sqlite")];
       expect(getActiveDBProvider(variables, localUnavailable)).toBe("postgres");
     });
   });

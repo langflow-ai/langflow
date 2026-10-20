@@ -196,6 +196,8 @@ export const lazyIconsMapping = {
     import("@/icons/FacebookMessenger").then((mod) => ({
       default: mod.FBIcon,
     })),
+  Figranium: () =>
+    import("@/icons/Figranium").then((mod) => ({ default: mod.FigraniumIcon })),
   Firecrawl: () =>
     import("@/icons/Firecrawl").then((mod) => ({ default: mod.FirecrawlIcon })),
   Finage: () =>
@@ -352,6 +354,8 @@ export const lazyIconsMapping = {
       default: mod.Mem0IconComposio,
     })),
   Meta: () => import("@/icons/Meta").then((mod) => ({ default: mod.MetaIcon })),
+  Microsoft: () =>
+    import("@/icons/Microsoft").then((mod) => ({ default: mod.MicrosoftIcon })),
   Midjourney: () =>
     import("@/icons/Midjorney").then((mod) => ({
       default: mod.MidjourneyIcon,
@@ -417,6 +421,8 @@ export const lazyIconsMapping = {
     })),
   Pinecone: () =>
     import("@/icons/Pinecone").then((mod) => ({ default: mod.PineconeIcon })),
+  Plivo: () =>
+    import("@/icons/Plivo").then((mod) => ({ default: mod.PlivoIcon })),
   Postgres: () =>
     import("@/icons/Postgres").then((mod) => ({ default: mod.PostgresIcon })),
   Python: () =>
@@ -467,6 +473,10 @@ export const lazyIconsMapping = {
     import("@/icons/Share").then((mod) => ({ default: mod.ShareIcon })),
   Share2: () =>
     import("@/icons/Share2").then((mod) => ({ default: mod.Share2Icon })),
+  SharePoint: () =>
+    import("@/icons/SharePoint").then((mod) => ({
+      default: mod.SharePointIcon,
+    })),
   Slack: () =>
     import("@/icons/Slack/SlackIcon").then((mod) => ({ default: mod.default })),
   SlackComposio: () =>
@@ -483,6 +493,8 @@ export const lazyIconsMapping = {
     import("@/icons/supabase").then((mod) => ({ default: mod.SupabaseIcon })),
   Tavily: () =>
     import("@/icons/Tavily").then((mod) => ({ default: mod.TavilyIcon })),
+  Teams: () =>
+    import("@/icons/Teams").then((mod) => ({ default: mod.TeamsIcon })),
   ThumbDownCustom: () =>
     import("@/icons/thumbs").then((mod) => ({
       default: mod.ThumbDownIconCustom,

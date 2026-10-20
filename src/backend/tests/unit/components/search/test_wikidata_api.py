@@ -26,6 +26,12 @@ class TestWikidataComponent(ComponentTestBaseWithoutClient):
         return []
 
     @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "dataframe": "queries the live Wikidata API",
+        }
+
+    @pytest.fixture
     def mock_query(self):
         """Fixture to provide a default query."""
         return "test query"

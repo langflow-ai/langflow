@@ -17,7 +17,7 @@ class DirectoryComponent(Component):
     icon = "folder"
     name = "Directory"
     legacy = True
-    replacement = ["data.File"]
+    replacement = ["files_and_knowledge.File"]
 
     inputs = [
         MessageTextInput(

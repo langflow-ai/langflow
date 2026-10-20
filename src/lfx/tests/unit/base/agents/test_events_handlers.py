@@ -9,6 +9,8 @@ These pin focused event-loop behaviors:
 - tool timing must exclude message-publication latency at both the start and
   end boundaries.
 - parallel tools must be timed from the matching run's own start event.
+- handle_on_chat_model_end must keep the plain-string items of a list content,
+  which a stream that mixes string and text-dict chunks aggregates into.
 
 The async callbacks are small in-memory harnesses. The timing regression test
 advances a deterministic clock while each callback runs.
@@ -18,9 +20,10 @@ from time import perf_counter
 
 import lfx.base.agents.events as agent_events
 import pytest
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, AIMessageChunk
 from lfx.base.agents.events import (
     handle_on_chain_stream,
+    handle_on_chat_model_end,
     handle_on_tool_end,
     handle_on_tool_error,
     handle_on_tool_start,
@@ -262,6 +265,49 @@ async def test_terminal_tool_event_restarts_narration_timer(monkeypatch, termina
 
     text_durations = [block.duration for block in result.content_blocks if isinstance(block, TextContent)]
     assert text_durations == [10000, 5000]
+
+
+@pytest.mark.parametrize(
+    "chunks",
+    [
+        [[{"type": "text", "text": "Echo: hello m", "extras": {"signature": "SIG"}}], "cp (probe-0-1)"],
+        ["Echo: hello m", "cp (probe-0-1)", [{"type": "text", "text": "", "extras": {"signature": "SIG"}}]],
+    ],
+    ids=["dict-then-string", "string-then-signed-empty-dict"],
+)
+async def test_chat_model_end_keeps_string_chunks_of_mixed_content(chunks):
+    """A stream mixing string and text-dict chunks aggregates into a mixed list; no part of the answer may be lost."""
+    aggregated = AIMessageChunk(content=chunks[0])
+    for chunk in chunks[1:]:
+        aggregated += AIMessageChunk(content=chunk)
+    assert any(isinstance(item, str) for item in aggregated.content)
+
+    message = Message(text="", content_blocks=[], sender="Machine")
+    result, _ = await handle_on_chat_model_end({"data": {"output": aggregated}}, message, _passthrough, None, 0.0)
+
+    assert result.text == "Echo: hello mcp (probe-0-1)"
+    # One block, not one per chunk: interleaved rendering paints each TextContent on its own.
+    assert [block.text for block in result.content_blocks] == ["Echo: hello mcp (probe-0-1)"]
+
+
+async def test_chat_model_end_does_not_merge_text_across_tool_use():
+    """String items join the text next to them, but a tool_use still separates the narration around it."""
+    output = AIMessage(
+        content=[
+            {"type": "text", "text": "Let me "},
+            "check",
+            {"type": "tool_use", "name": "search", "input": {}, "id": "tool-1"},
+            "Done",
+        ]
+    )
+    message = Message(text="", content_blocks=[], sender="Machine")
+    result, _ = await handle_on_chat_model_end({"data": {"output": output}}, message, _passthrough, None, 0.0)
+
+    assert [(block.type, getattr(block, "text", None)) for block in result.content_blocks] == [
+        ("text", "Let me check"),
+        ("tool_use", None),
+        ("text", "Done"),
+    ]
 
 
 async def _rehydrating_send(*, message: Message, **_kwargs) -> Message:

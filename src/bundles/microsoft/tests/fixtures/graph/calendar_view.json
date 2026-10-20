@@ -1,0 +1,13 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('me')/calendarView",
+  "value": [
+    {
+      "id": "AAMkAGV2Y2FsAAA=",
+      "subject": "Team sync",
+      "start": {"dateTime": "2026-09-01T09:00:00.0000000", "timeZone": "Pacific Standard Time"},
+      "end": {"dateTime": "2026-09-01T09:30:00.0000000", "timeZone": "Pacific Standard Time"},
+      "seriesMasterId": "AAMkAGV2c2VyaWVzAAA=",
+      "iCalUId": "040000008200E00074C5B7101A82E00800000000"
+    }
+  ]
+}

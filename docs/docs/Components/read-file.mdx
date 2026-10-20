@@ -73,12 +73,21 @@ For videos, see the **Twelve Labs** and **YouTube** <Icon name="Blocks" aria-hid
 | path | Files | Input parameter. The path to files to load. Can be local or in [Langflow file management](/concepts-file-management). Supports individual files and bundled archives. |
 | file_path | Server File Path | Input parameter. A `JSON` object with a `file_path` property pointing to a file in [Langflow file management](/concepts-file-management) or a `Message` object with a path to the file. Supersedes **Files** (`path`) but supports the same file types. |
 | separator | Separator | Input parameter. The separator to use between multiple outputs in `Message` format. |
+| text_encoding | Text Encoding | Optional encoding for standard text parsing and CSV, such as `cp1252` or `utf-8`. Leave blank for automatic detection. Does not apply to PDF, DOCX, or the Advanced Parser. |
 | silent_errors | Silent Errors | Input parameter. If `true`, errors in the component don't raise an exception. Default: Disabled (`false`). |
 | delete_server_file_after_processing | Delete Server File After Processing | Input parameter. If `true` (default), the **Server File Path** (`file_path`) is deleted after processing. |
 | ignore_unsupported_extensions | Ignore Unsupported Extensions | Input parameter. If enabled (`true`), files with unsupported extensions are accepted but not processed. If disabled (`false`), the **Read File** component either can throw an error if an unsupported file type is provided. The default is `true`. |
 | ignore_unspecified_files | Ignore Unspecified Files | Input parameter. If `true`, `JSON` with no `file_path` property is ignored. If `false` (default), the component errors when a file isn't specified. |
 | concurrency_multithreading | Processing Concurrency | Input parameter. The number of files to process concurrently if multiple files are uploaded. Default is 1. Values greater than 1 enable parallel processing for 2 or more files. Ignored for single-file uploads and advanced parsing. |
 | advanced_parser | Advanced Parser | Input parameter. If `true`, enables [advanced parsing](#advanced-parsing). Only available for single-file uploads of compatible file types. Default: Disabled (`false`). |
+
+## Text encoding
+
+Automatic encoding detection can misidentify short files. Read File reports the encoding actually used in component logs and in the `encoding` metadata of the **Raw Content** and **Files** outputs. For multiple text files, each entry in a Message output's `source_files` metadata also includes its encoding.
+
+If accents or punctuation look incorrect, open the component's advanced controls and set **Text Encoding** to the encoding used to save the file. For example, set `cp1252` for Windows-1252 files containing `Café résumé naïve` or smart quotes. An explicit encoding is used without fallback, so an unknown encoding or incompatible byte sequence raises an error unless **Silent Errors** is enabled.
+
+Python callers can also select an encoding with `read_text_file("cafe.txt", encoding="cp1252")` or `await read_text_file_async("cafe.txt", encoding="cp1252")`.
 
 ## Advanced parsing
 

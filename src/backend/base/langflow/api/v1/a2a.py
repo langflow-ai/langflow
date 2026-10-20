@@ -22,6 +22,7 @@ table so they survive restart and are visible across workers.
 
 import asyncio
 import hashlib
+import time
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -61,7 +62,11 @@ from lfx.schema.workflow import (
     WorkflowRunRequest,
 )
 from lfx.services.deps import get_settings_service, session_scope, session_scope_readonly
-from lfx.utils.flow_validation import prepare_public_flow_build, validate_public_flow_no_code_execution
+from lfx.utils.flow_validation import (
+    prepare_flow_build_for_user_from_cache,
+    prepare_public_flow_build,
+    validate_public_flow_no_code_execution,
+)
 from lfx.utils.ssrf_transport import create_ssrf_protected_client
 from lfx.workflow.converters import parse_workflow_run_request, run_response_to_workflow_response
 from sqlalchemy import case, delete, false
@@ -69,8 +74,13 @@ from sqlmodel import col, select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.utils.core import strip_secret_field_values
+from langflow.api.utils.execution_principal import (
+    FAMILY_A2A,
+    execution_principal_for,
+    stamp_execution_principal,
+)
 from langflow.api.utils.flow_utils import compute_virtual_flow_id, scope_session_to_namespace
-from langflow.api.v1.a2a_executor import FlowAgentExecutor, ResumeConflictError
+from langflow.api.v1.a2a_executor import FlowAgentExecutor, ResumeConflictError, task_saved
 from langflow.api.v1.a2a_utils import (
     A2A_APIKEY_HEADER,
     build_agent_card,
@@ -81,6 +91,7 @@ from langflow.api.v1.a2a_utils import (
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.services.auth.context import AuthCredentialContext, set_current_auth_context
+from langflow.services.auth.utils import set_authenticated_telemetry_user
 from langflow.services.authorization import (
     FlowAction,
     ensure_flow_permission,
@@ -164,6 +175,7 @@ async def _enforce_a2a_auth(flow: Flow, request: Request) -> User | None:
     if api_key_result is None or api_key_result.user.id != flow.user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
     user = api_key_result.user
+    set_authenticated_telemetry_user(user)
     set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
     try:
         await ensure_flow_permission(
@@ -235,7 +247,7 @@ async def _prepare_a2a_resume_checkpoint(
     request_host: str | None = None,
     admitted_user_id: str | None = None,
 ) -> tuple[GraphCheckpoint, Flow, User | UserRead]:
-    """Reauthorize and re-apply public policy before restoring a HITL graph."""
+    """Reauthorize and re-apply caller-specific policy before restoring a HITL graph."""
     flow = await get_flow_by_id_or_endpoint_name(str(flow_id))
     is_public_now = await _is_public_a2a_flow(flow)
     current_principal_id = _require_admitted_a2a_principal(
@@ -247,6 +259,12 @@ async def _prepare_a2a_resume_checkpoint(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
     if not is_public_now:
         user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
+        prepared_data = prepare_flow_build_for_user_from_cache(
+            checkpoint.flow_payload,
+            is_superuser=user.is_superuser,
+        )
+        if prepared_data is not None:
+            checkpoint = checkpoint.model_copy(update={"flow_payload": prepared_data}, deep=True)
         return checkpoint, flow, user
 
     await authorize_public_flow_access(
@@ -286,7 +304,7 @@ async def _run_flow(
     """
     # Lazy import: langflow.api.v2.workflow pulls in the execution stack and this
     # module is imported during router assembly.
-    from langflow.api.v2.workflow import execute_sync_workflow_with_timeout
+    from langflow.api.v2.workflow import _apply_execution_gates, execute_sync_workflow_with_timeout
 
     flow = await get_flow_by_id_or_endpoint_name(str(flow_id))
     is_public_now = await _is_public_a2a_flow(flow)
@@ -322,6 +340,11 @@ async def _run_flow(
     parsed = parse_workflow_run_request(
         WorkflowRunRequest(flow_id=str(flow_id), input_value=text, mode="sync", session_id=session_id)
     )
+    if not is_public_now:
+        # Authenticated A2A bypasses the REST host, so apply its caller-aware gates
+        # here and carry the trusted payload into the shared executor. Graph-level
+        # validation cannot enforce the administrator-only policy without the caller.
+        parsed = _apply_execution_gates(parsed, flow, user)
     try:
         job_id = UUID(task_id)
     except ValueError:
@@ -340,6 +363,12 @@ async def _run_flow(
             # response instead of running through. Resume happens in _resume_flow.
             checkpoint_store=A2ACheckpointStore(),
             expose_error_details=False,
+            # A2A is its own matrix family, and in 1.13 it resolves no user
+            # connection on EITHER sub-path: public admission arrives as the
+            # anonymous execution user, and the API-key/OAuth sub-path is held to
+            # the same floor rather than executing as the flow owner. Widening the
+            # authenticated sub-path is a contract change, not a code detail.
+            execution_family=FAMILY_A2A,
         )
 
 
@@ -368,6 +397,53 @@ def _suspended_response(flow_id: UUID, task_id: str, session_id: str | None, pen
         status=JobStatus.SUSPENDED,
         human_request=pending,
     )
+
+
+async def _log_a2a_resume_run(
+    *,
+    task_id: str,
+    run_seconds: int,
+    success: bool,
+    error_message: str | None = None,
+) -> None:
+    """Record a completed A2A resume segment as a run event.
+
+    The v2 sync and streaming paths already emit a ``RunPayload`` for every run they
+    finish, and both deliberately skip the emission when the run parks for human input
+    (the run is not over yet). Resume is the other half of that contract: it is the call
+    that actually finishes a HITL run, and it runs through ``run_graph_internal`` rather
+    than through ``execute_sync_workflow``, so without this the whole run was never
+    metered. ``log_package_run`` appends to ``run_event_store`` before the do-not-track
+    gate, so enterprise metering sees it even when outbound telemetry is off.
+
+    ``run_id`` is the A2A task id, normalized the way ``_run_flow`` derives its ``job_id``
+    (a UUID-shaped task id becomes its canonical string), so the two A2A segments of one
+    run carry the same id and a consumer that dedups by run id counts it exactly once.
+    """
+    try:
+        run_id = str(UUID(task_id))
+    except ValueError:
+        # A client task id that is not a UUID: the sync path mints a fresh job_id in that
+        # case, so there is nothing to line up with; key the event on the task id itself.
+        run_id = task_id
+    try:
+        from langflow.services.deps import get_telemetry_service
+        from langflow.services.telemetry.schema import RunPayload
+
+        telemetry = get_telemetry_service()
+        if telemetry is None:
+            return
+        await telemetry.log_package_run(
+            RunPayload(
+                run_is_webhook=False,
+                run_seconds=run_seconds,
+                run_success=success,
+                run_error_message="" if success else (error_message or "workflow error"),
+                run_id=run_id,
+            )
+        )
+    except Exception:  # noqa: BLE001
+        await logger.awarning("Telemetry hook failed for A2A resume %s", task_id, exc_info=True)
 
 
 async def _resume_flow(
@@ -421,6 +497,14 @@ async def _resume_flow(
     # Shared HITL resume seam (restore + inject decision + un-build the paused vertex), so this path
     # can't drift from the CLI resume loop; see lfx.run.hitl.resume_graph_with_decision.
     graph = resume_graph_with_decision(checkpoint, store, pending.get("request_id"), decision)
+    # A checkpoint carries a user_id but never an execution principal, so the restored
+    # graph is ``unknown()``. Recompute from the principal THIS resume was admitted
+    # under (``_prepare_a2a_resume_checkpoint`` re-ran the public/owner admission
+    # above), rather than trusting anything persisted with the pause.
+    stamp_execution_principal(
+        graph,
+        execution_principal_for(FAMILY_A2A, user=provider_policy_user, flow_owner_id=provider_policy_flow.user_id),
+    )
 
     from langflow.api.v2.workflow_execution import _resolve_execution_timeout
     from langflow.processing.process import run_graph_internal
@@ -437,6 +521,12 @@ async def _resume_flow(
         msg = f"A2A task {task_id} is already being resumed"
         raise ResumeConflictError(msg)
 
+    # Meter this segment: a re-pause emits nothing (the run is still going, mirroring
+    # execute_sync_workflow), while completion and failure each emit exactly one run event.
+    # Cancellation (client disconnect, shutdown) raises asyncio.CancelledError, which derives
+    # from BaseException and so never reaches the failure branch: like the streaming path, a
+    # closed connection is never metered as a failed run.
+    resume_start = time.perf_counter()
     try:
         # No flow_execution_span here: run_graph_internal reaches Graph.arun, which opens one.
         with (
@@ -460,10 +550,22 @@ async def _resume_flow(
     except GraphPausedException as exc:
         # Paused again (multi-step HITL): the new checkpoint is already saved under this run_id.
         return _suspended_response(flow_id, task_id, graph.session_id, exc.data or {})
-    except Exception:
+    except Exception as exc:
         # Failure/timeout: drop the now-unusable checkpoint so it doesn't orphan a terminal task.
         await store.delete_by_run_id(task_id)
+        await _log_a2a_resume_run(
+            task_id=task_id,
+            run_seconds=int(time.perf_counter() - resume_start),
+            success=False,
+            error_message=str(exc),
+        )
         raise
+    else:
+        await _log_a2a_resume_run(
+            task_id=task_id,
+            run_seconds=int(time.perf_counter() - resume_start),
+            success=True,
+        )
 
     await store.delete_by_run_id(task_id)
     from langflow.api.v1.schemas import RunResponse
@@ -610,6 +712,11 @@ class A2ACheckpointStore(CheckpointStore):
 
 # MessageToDict serializes the enum by name, so a stored blob's state is e.g. "TASK_STATE_CANCELED".
 _TERMINAL_STATE_NAMES = {pb.TaskState.Name(state) for state in TERMINAL_TASK_STATES}
+# The states a run ends with. One that waits for a person or for a sign-in has stopped as well, until it is answered.
+_RUN_OVER_STATE_NAMES = _TERMINAL_STATE_NAMES | {
+    pb.TaskState.Name(pb.TaskState.TASK_STATE_INPUT_REQUIRED),
+    pb.TaskState.Name(pb.TaskState.TASK_STATE_AUTH_REQUIRED),
+}
 
 
 def _task_state(blob: dict[str, Any] | None) -> str | None:
@@ -670,9 +777,13 @@ class DurableTaskStore(TaskStore):
                 # different state must not transition it. Covers both race orders of a cancel against
                 # a completion (a forced CANCELED arriving after COMPLETED persisted, or a late
                 # completion arriving after CANCELED). The state that landed first wins.
-                return
+                pass
             else:
                 row.task = blob  # fresh dict reference flags the JSON column dirty
+        state = _task_state(blob)
+        # Told to the run that holds a place in a migration pause for this task. The run decides whether
+        # this save is the one it ends with.
+        task_saved(task.id, state, run_over=state in _RUN_OVER_STATE_NAMES)
 
     async def get(self, task_id: str, context: ServerCallContext) -> pb.Task | None:
         owner = _task_scope(context)

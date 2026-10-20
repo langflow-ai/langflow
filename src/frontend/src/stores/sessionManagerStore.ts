@@ -55,10 +55,12 @@ export const useSessionManagerStore = create<SessionManagerStoreType>(
       set({ activeSessionId: sessionId });
     },
 
+    // New sessions go first: the server lists sessions newest first and older
+    // pages are appended below.
     addSession: (session: SessionInfo) => {
       const { sessions, flowId } = get();
       if (sessions.some((s) => s.id === session.id)) return;
-      const updated = [...sessions, session];
+      const updated = [session, ...sessions];
       set({ sessions: updated });
       if (flowId) saveLocalSessions(flowId, updated);
     },
@@ -87,35 +89,51 @@ export const useSessionManagerStore = create<SessionManagerStoreType>(
       if (flowId) saveLocalSessions(flowId, updated);
     },
 
+    // `serverSessionIds` is every page loaded so far, newest first. Known
+    // sessions keep their positions, so rows never move under the user. A new
+    // server id goes right below the known id before it in server order, or
+    // above the saved sessions if none precedes it (a new newest session lands
+    // on top, an older page at the bottom; the first sync is server order).
     syncFromServer: (serverSessionIds: string[]) => {
-      const { sessions, flowId } = get();
+      const { sessions, flowId, activeSessionId } = get();
+      const known = new Set(sessions.map((s) => s.id));
       const serverSet = new Set(serverSessionIds);
 
-      const merged: SessionInfo[] = [];
-      const seen = new Set<string>();
-
-      // Keep existing sessions in their current order, promoting local→server
-      for (const s of sessions) {
-        if (seen.has(s.id)) continue;
-        seen.add(s.id);
-        if (serverSet.has(s.id)) {
-          // Promote: was local, now on server
-          merged.push({ id: s.id, isLocal: false });
-        } else if (s.isLocal) {
-          // Still local-only, keep
-          merged.push(s);
-        }
-        // If not on server and not local, it was removed server-side — drop it
-      }
-
-      // Add new server sessions not already tracked
+      let newOnTop: string[] = [];
+      const newAfter = new Map<string, string[]>();
+      let previousKnown: string | undefined;
       for (const id of serverSessionIds) {
-        if (seen.has(id)) continue;
         // Skip the flowId itself — it's the default session, not in the list
         if (id === flowId) continue;
-        seen.add(id);
-        merged.push({ id, isLocal: false });
+        if (known.has(id)) {
+          previousKnown = id;
+        } else if (previousKnown === undefined) {
+          newOnTop.push(id);
+        } else {
+          const group = newAfter.get(previousKnown);
+          if (group) group.push(id);
+          else newAfter.set(previousKnown, [id]);
+        }
       }
+      const fromServer = (ids: string[] = []): SessionInfo[] =>
+        ids.map((id) => ({ id, isLocal: false }));
+
+      const merged: SessionInfo[] = [];
+      for (const s of sessions) {
+        if (serverSet.has(s.id)) {
+          merged.push(...fromServer(newOnTop));
+          newOnTop = [];
+          // Promote: was local, now on server
+          merged.push({ id: s.id, isLocal: false });
+          merged.push(...fromServer(newAfter.get(s.id)));
+        } else if (s.isLocal || s.id === activeSessionId) {
+          // Still local-only, or open in the chat — keep
+          merged.push(s);
+        }
+        // Otherwise it was deleted, or newer sessions pushed it onto a page
+        // that is not loaded — drop it
+      }
+      merged.push(...fromServer(newOnTop));
 
       set({ sessions: merged });
       if (flowId) saveLocalSessions(flowId, merged);

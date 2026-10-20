@@ -60,6 +60,16 @@ def _context_cache_value(value: Any) -> Any:
     return ("scalar", value_type.__module__, value_type.__qualname__, value)
 
 
+def policy_context_cache_value(value: Any) -> Any:
+    """Public alias for the shared policy-context cache identity.
+
+    The integration policy service caches snapshots keyed by the same frozen
+    request attributes, so both services share one identity implementation
+    instead of drifting apart.
+    """
+    return _context_cache_value(value)
+
+
 class ModelProviderPolicyPurpose(str, Enum):
     """Why the caller needs access to a provider."""
 

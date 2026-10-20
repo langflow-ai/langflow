@@ -16,7 +16,7 @@ class RSSReaderComponent(Component):
     icon = "rss"
     name = "RSSReaderSimple"
     legacy = True
-    replacement = "data.WebSearch"
+    replacement = ["data_source.UnifiedWebSearch"]
 
     inputs = [
         MessageTextInput(

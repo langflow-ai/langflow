@@ -64,6 +64,28 @@ describe("usePostTemplateValue scope continuity", () => {
     mockGetNode.mockReturnValue({ data: { node } });
   });
 
+  it("retains the selected class when refreshing a multi-class component", async () => {
+    const selectedNode = {
+      ...node,
+      metadata: { component_class_name: "Second" },
+    } as unknown as APIClassType;
+    mockApiPost.mockResolvedValueOnce({ data: selectedNode });
+    const mutation = usePostTemplateValue({
+      parameterId: "model",
+      nodeId: "shared-node",
+      node: selectedNode,
+    });
+
+    await mutation.mutateAsync({ value: "model-b" });
+
+    expect(mockApiPost).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        frontend_node: { metadata: { component_class_name: "Second" } },
+      }),
+    );
+  });
+
   it("does not start a request after the captured flow scope becomes stale", async () => {
     const mutation = usePostTemplateValue({
       parameterId: "model",

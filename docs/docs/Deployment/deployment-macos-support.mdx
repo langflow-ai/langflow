@@ -38,7 +38,6 @@ The following features require **Apple Silicon (ARM64)** and are **not available
 
 #### ❌ Not Available on Intel
 
-- **ALTK (Agent Lifecycle Toolkit)** - Requires PyTorch
 - **HuggingFace Transformers** - Requires PyTorch
 - **Sentence Transformers** - Requires PyTorch
 - **EasyOCR** - Requires PyTorch
@@ -76,7 +75,7 @@ pip install langflow
 Or with specific ML extras:
 
 ```bash
-pip install langflow[altk,langchain-huggingface,easyocr]
+pip install langflow[langchain-huggingface,easyocr]
 ```
 
 ### For Intel Mac Users
@@ -100,7 +99,7 @@ pip install langflow
 | 3.14 | ✅ Supported | ⚠️ Limited (no PyTorch) |
 
 :::note
-Python 3.13+ on Intel Macs cannot use PyTorch-dependent features due to the lack of PyTorch wheels for macOS x86_64. This affects ML components like ALTK, HuggingFace, EasyOCR, and Docling.
+Python 3.13+ on Intel Macs cannot use PyTorch-dependent features due to the lack of PyTorch wheels for macOS x86_64. This affects ML components like HuggingFace, EasyOCR, and Docling.
 :::
 
 ## Workarounds for Intel Mac Users
