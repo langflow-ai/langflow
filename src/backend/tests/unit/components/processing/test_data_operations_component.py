@@ -196,6 +196,37 @@ class TestDataOperationsComponent(ComponentTestBaseWithoutClient):
         normalized = component.get_normalized_data()
         assert normalized == {"key3": "value3"}
 
+    @pytest.mark.parametrize(
+        ("payload", "expected"),
+        [
+            ({"data": "hello"}, {"data": "hello"}),
+            ({"data": [1, 2, 3]}, {"data": [1, 2, 3]}),
+            ({"data": 5}, {"data": 5}),
+            ({"data": None}, {"data": None}),
+            ({"data": {"inner": 1}}, {"inner": 1}),
+            ({"data": {}}, {}),
+            ({"data": "hello", "other": 2}, {"data": "hello"}),
+        ],
+    )
+    def test_select_keys_non_dict_data_key(self, payload, expected):
+        """Selecting the sole ``data`` key keeps non-dictionary values as payload (#15691)."""
+        component = DataOperationsComponent(
+            data=Data(data=payload),
+            operations=[{"name": "Select Keys"}],
+            select_keys_input=["data"],
+        )
+        result = component.as_data()
+        assert result.data == expected
+
+    def test_select_keys_missing_data_key_raises_value_error(self):
+        component = DataOperationsComponent(
+            data=Data(data={"other": 1}),
+            operations=[{"name": "Select Keys"}],
+            select_keys_input=["data"],
+        )
+        with pytest.raises(ValueError, match="Select key not found in data"):
+            component.as_data()
+
     def test_validate_single_data_with_multiple_data(self):
         """Test that operations that don't support multiple data objects raise an error."""
         component = DataOperationsComponent(
