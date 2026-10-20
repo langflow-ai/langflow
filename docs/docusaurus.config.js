@@ -306,7 +306,11 @@ const config = {
           },
           {
             to: "/data-types",
-            from: ["/guides-data-message", "/configuration-objects"],
+            from: [
+              "/guides-data-message",
+              "/configuration-objects",
+              "/concepts-objects",
+            ],
           },
           {
             to: "/concepts-flows",
@@ -354,6 +358,7 @@ const config = {
               "/configuration-authentication",
               "/configuration-security-best-practices",
               "/Configuration/configuration-security-best-practices",
+              "/jwt-authentication",
             ],
           },
           {
@@ -370,6 +375,7 @@ const config = {
             from: [
               "/concepts-api",
               "/workspace-api",
+              "/embedded-chat-widget",
             ],
           },
           {
@@ -393,10 +399,6 @@ const config = {
             from: "/agents-tool-calling-agent-component",
           },
           {
-            to: "/concepts-publish",
-            from: "/embedded-chat-widget",
-          },
-          {
             to: "/bundles-google",
             from: [
               "/integrations-setup-google-oauth-langflow",
@@ -410,10 +412,6 @@ const config = {
           {
             to: "/develop-application",
             from: "/develop-overview",
-          },
-          {
-            to: "/data-types",
-            from: "/concepts-objects",
           },
           {
             to: "/bundles-apify",
@@ -453,10 +451,6 @@ const config = {
             ]
           },
           {
-            to: "/next/guardrails",
-            from: "/next/guardrails-legacy",
-          },
-          {
             to: "/legacy-core-components",
             from: [
               "/directory",
@@ -467,10 +461,6 @@ const config = {
             ]
           },
           {
-            to: "/api-keys-and-authentication",
-            from: "/jwt-authentication",
-          },
-          {
             to: "/api#tag/Workflow",
             from: "/api/workflow",
           },
@@ -479,8 +469,8 @@ const config = {
             from: "/bundles-altk",
           },
           {
-            to: "/next/components-bundle-components#altk",
-            from: "/next/bundles-altk",
+            to: "/macos-support",
+            from: "/deployment-macos-support",
           },
           // add more redirects like this
           // {
