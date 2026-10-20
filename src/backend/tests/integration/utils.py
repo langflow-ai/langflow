@@ -1,3 +1,4 @@
+import asyncio
 import dataclasses
 import os
 import uuid
@@ -129,7 +130,9 @@ async def run_json_flow(
 
 
 async def run_flow(graph: Graph, run_input: Any | None = None, session_id: str | None = None) -> dict[str, Any]:
-    graph.prepare()
+    # Source validation and parameter preparation are synchronous and can block
+    # the event loop on a cold or loaded runner.
+    await asyncio.to_thread(graph.prepare)
     graph_run_inputs = [InputValueRequest(input_value=run_input, type="chat")] if run_input else []
 
     flow_id = str(uuid.uuid4())
@@ -181,7 +184,7 @@ async def run_single_component(
         return component_id
 
     component_id = _add_component(clazz, inputs)
-    graph.prepare()
+    await asyncio.to_thread(graph.prepare)
     graph_run_inputs = [InputValueRequest(input_value=run_input, type=input_type)] if run_input else []
 
     _, _ = await run_graph_internal(

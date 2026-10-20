@@ -234,8 +234,8 @@ def _lfx_specifiers(requirements: Iterable[str]) -> tuple[str, ...]:
 def _lfx_series_admission(specifier: str, lfx_version: str) -> bool | None:
     """Whether ``specifier`` admits any lfx in ``lfx_version``'s minor series, or ``None`` if it cannot tell.
 
-    ``False`` means a comparable bound excludes the series. ``None`` means some clause has no comparable
-    bound (``==``, ``~=``, ``!=``, an unparsable version) or the requirement is a bare ``lfx``.
+    ``False`` means a comparable bound or exact pin excludes the series. ``None`` means some clause
+    cannot confirm admission (a same-series ``==`` pin, ``~=``, ``!=``, an unparsable version) or bare ``lfx``.
     """
     major, minor, _, _, _ = parse_version(lfx_version)
     series_start = parse_version(f"{major}.{minor}.0.dev0")
@@ -243,7 +243,7 @@ def _lfx_series_admission(specifier: str, lfx_version: str) -> bool | None:
     clauses = [clause for clause in specifier.split(",") if clause]
     known = bool(clauses)
     for clause in clauses:
-        match = re.fullmatch(r"(?P<op>>=|<=|>|<)(?P<bound>.+)", clause)
+        match = re.fullmatch(r"(?P<op>==|>=|<=|>|<)(?P<bound>.+)", clause)
         if match is None:
             known = False
             continue
@@ -253,6 +253,11 @@ def _lfx_series_admission(specifier: str, lfx_version: str) -> bool | None:
             known = False
             continue
         op = match["op"]
+        if op == "==":
+            if not series_start <= bound < series_end:
+                return False
+            known = False
+            continue
         if (
             (op in {">=", ">"} and bound >= series_end)
             or (op == "<" and bound <= series_start)
