@@ -54,7 +54,7 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.folder.utils import get_default_folder_id
 from langflow.services.deps import get_settings_service, get_variable_service
 from langflow.services.flow_history.errors import FlowHistoryError
-from langflow.services.flow_history.recorder import GraphWriteResult, write_flow_graph
+from langflow.services.flow_history.recorder import GraphWriteResult, refuse_unreadable_graph, write_flow_graph
 from langflow.services.storage.service import StorageService
 from langflow.utils.flow_secrets import HiddenFieldMetadataError, restore_redacted_flow_values
 
@@ -193,6 +193,14 @@ async def _write_graph(
             options=options,
             expected_version_token=expected_version_token,
         )
+    except FlowHistoryError as exc:
+        raise history_http_error(exc) from exc
+
+
+def _refuse_unreadable_graph(flow_data: Any) -> None:
+    """Answer 422, as a save does, for a new flow whose graph the flow engine cannot read."""
+    try:
+        refuse_unreadable_graph(flow_data)
     except FlowHistoryError as exc:
         raise history_http_error(exc) from exc
 
@@ -530,6 +538,7 @@ async def _new_flow(
     try:
         effective_id = flow_id if flow_id is not None else flow.id
         _validate_new_flow_id(effective_id)
+        _refuse_unreadable_graph(flow.data)
         # Ownership follows the destination project, so it has to be resolved
         # before anything keyed on the owner: the filesystem sandbox, the
         # ``(user_id, name)`` / ``(user_id, endpoint_name)`` de-duplication, and
