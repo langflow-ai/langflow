@@ -45,7 +45,10 @@ _GUIDANCE = {
         "Stop all old instances, then run one Langflow worker on the host with the original "
         "local data. Distributed deployments need administrator recovery."
     ),
-    "legacy_workers_running": "Stop the other Langflow instance using this data, then retry the upgrade.",
+    "legacy_workers_running": (
+        "Stop all other Langflow processes on this host, then retry the upgrade. "
+        "This includes instances using different databases or knowledge directories."
+    ),
     "local_filesystem_required": (
         "Copy the original data to a local filesystem and run one Langflow worker there. "
         "Shared filesystems require administrator recovery."
