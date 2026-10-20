@@ -14,6 +14,7 @@ use crate::ops::apply::{Applied, ApplyOptions, apply_flow_operations};
 use crate::ops::canonical;
 use crate::ops::diff::{derive_flow_operations, diff_flow_data};
 use crate::ops::error::{Error, invalid};
+use crate::ops::from_value::FromValue;
 use crate::ops::keyed::{self, Renumber};
 use crate::ops::ops::Operation;
 use crate::ops::repair::{Fix, repair_flow_data};
@@ -121,11 +122,10 @@ fn optional(text: Option<&str>) -> ApiResult<Option<Value>> {
     text.map(parse).transpose()
 }
 
-fn rows_of(value: Value) -> Vec<Value> {
-    match value {
-        Value::Array(rows) => rows,
-        _ => Vec::new(),
-    }
+/// Parse a list argument, naming it in the error when it is not a list or
+/// an item has the wrong type: `rows: must be a list`.
+fn list<T: FromValue>(text: &str, name: &str) -> ApiResult<Vec<T>> {
+    Ok(Vec::from_value(parse(text)?).map_err(|error| error.into_error(name))?)
 }
 
 fn renumber(editor: bool) -> Renumber {
@@ -369,9 +369,10 @@ pub fn apply_restore_fixes(revision: &str, stored: &str, fixes: &str) -> ApiResu
 ///
 /// # Errors
 ///
-/// The inputs do not parse, or a compared handle holds a number that is not finite.
+/// The inputs do not parse, an input is not a list, or a compared handle
+/// holds a number that is not finite.
 pub fn edge_fixes(read: &str, shown: &str) -> ApiResult {
-    let fixes = restore::edge_fixes(&rows_of(parse(read)?), &rows_of(parse(shown)?))?;
+    let fixes = restore::edge_fixes(&list(read, "read")?, &list(shown, "shown")?)?;
     Ok(operations_json(fixes).to_string())
 }
 
@@ -379,12 +380,9 @@ pub fn edge_fixes(read: &str, shown: &str) -> ApiResult {
 ///
 /// # Errors
 ///
-/// The inputs do not parse.
+/// The inputs do not parse, or `edge_ids` is not a list of strings.
 pub fn fixes_for_edges(fixes: &str, edge_ids: &str) -> ApiResult {
-    let ids: Vec<String> = rows_of(parse(edge_ids)?)
-        .into_iter()
-        .filter_map(|id| id.as_str().map(str::to_owned))
-        .collect();
+    let ids: Vec<String> = list(edge_ids, "edge_ids")?;
     Ok(operations_json(restore::fixes_for_edges(&operations(fixes)?, &ids)).to_string())
 }
 
@@ -414,9 +412,10 @@ pub fn strip_flow_table_row_keys(flow: &str) -> ApiResult {
 ///
 /// # Errors
 ///
-/// The inputs do not parse, or a compared row holds a number that is not finite.
+/// The inputs do not parse, `rows` is not a list, or a compared row holds a
+/// number that is not finite.
 pub fn assign_row_ids(rows: &str, previous: Option<&str>, editor: bool) -> ApiResult {
-    let mut rows = rows_of(parse(rows)?);
+    let mut rows = list(rows, "rows")?;
     keyed::assign_row_ids(&mut rows, optional(previous)?.as_ref(), renumber(editor))?;
     Ok(Value::Array(rows).to_string())
 }
@@ -448,10 +447,11 @@ pub fn assign_changed_table_row_ids(base: &str, target: &str, editor: bool) -> A
 ///
 /// # Errors
 ///
-/// The inputs do not parse, or a compared row holds a number that is not finite.
+/// The inputs do not parse, an input is not a list, or a compared row holds
+/// a number that is not finite.
 pub fn append_table_rows(rows: &str, new_rows: &str) -> ApiResult {
-    let mut rows = rows_of(parse(rows)?);
-    keyed::append_table_rows(&mut rows, &rows_of(parse(new_rows)?))?;
+    let mut rows = list(rows, "rows")?;
+    keyed::append_table_rows(&mut rows, &list(new_rows, "new_rows")?)?;
     Ok(Value::Array(rows).to_string())
 }
 
@@ -506,9 +506,9 @@ pub fn node_schema() -> &'static str {
 ///
 /// # Errors
 ///
-/// The rows do not parse.
+/// The rows do not parse, or are not a list.
 pub fn ordered_rows(rows: &str) -> ApiResult {
-    let rows = rows_of(parse(rows)?);
+    let rows: Vec<Value> = list(rows, "rows")?;
     Ok(Value::Array(
         canonical::ordered_rows(&rows)
             .into_iter()
@@ -516,4 +516,55 @@ pub fn ordered_rows(rows: &str) -> ApiResult {
             .collect(),
     )
     .to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn refused(result: ApiResult) -> ApiError {
+        result.expect_err("a non-list argument must be refused")
+    }
+
+    #[test]
+    fn list_arguments_refuse_a_value_that_is_not_a_list() {
+        for (error, message) in [
+            (
+                refused(assign_row_ids(r#"{"a": 1}"#, None, false)),
+                "rows: must be a list",
+            ),
+            (refused(ordered_rows("null")), "rows: must be a list"),
+            (
+                refused(append_table_rows("{}", "[]")),
+                "rows: must be a list",
+            ),
+            (
+                refused(append_table_rows("[]", r#""row""#)),
+                "new_rows: must be a list",
+            ),
+            (refused(edge_fixes("{}", "[]")), "read: must be a list"),
+            (refused(edge_fixes("[]", "5")), "shown: must be a list"),
+            (
+                refused(fixes_for_edges("[]", r#"{"id": "e1"}"#)),
+                "edge_ids: must be a list",
+            ),
+            (
+                refused(fixes_for_edges("[]", r#"["e1", 5]"#)),
+                "edge_ids[1]: must be a string",
+            ),
+        ] {
+            assert_eq!(error.kind(), "FlowOperationValidationError");
+            assert_eq!(error.code(), "FLOW_OPERATION_INVALID");
+            assert_eq!(error.message(), message);
+        }
+    }
+
+    #[test]
+    fn list_arguments_accept_lists() {
+        assert_eq!(assign_row_ids("[]", None, false).unwrap(), "[]");
+        assert_eq!(ordered_rows("[]").unwrap(), "[]");
+        assert_eq!(append_table_rows("[]", "[]").unwrap(), "[]");
+        assert_eq!(edge_fixes("[]", "[]").unwrap(), "[]");
+        assert_eq!(fixes_for_edges("[]", r#"["e1"]"#).unwrap(), "[]");
+    }
 }
