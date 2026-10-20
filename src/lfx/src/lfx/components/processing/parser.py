@@ -126,8 +126,15 @@ class ParserComponent(Component):
 
         lines = []
         if df is not None:
-            for _, row in df.iterrows():
-                formatted_text = self.pattern.format(**row.to_dict())
+            # Iterate by position instead of df.iterrows(): iterrows() upcasts
+            # rows with mixed dtypes to float, losing precision on large integer
+            # columns (e.g. 2**53) and breaking integer format specifiers such
+            # as {col:d}. Using df.iloc[index, col_idx] also keeps the value a
+            # scalar when column labels repeat (df[column] would return a
+            # DataFrame for duplicate labels).
+            for index in range(len(df)):
+                row = {column: df.iloc[index, col_idx] for col_idx, column in enumerate(df.columns)}
+                formatted_text = self.pattern.format(**row)
                 lines.append(formatted_text)
         elif data is not None:
             data_items = data if isinstance(data, list) else [data]

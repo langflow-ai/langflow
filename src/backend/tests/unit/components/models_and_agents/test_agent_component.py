@@ -647,6 +647,14 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert "{current_date}" not in result
         assert "{model_name}" not in result
         assert "gpt-4o" in result
+        # {current_date} must resolve to a plain date (YYYY-MM-DD): a
+        # second-precision timestamp makes the system prompt change every
+        # turn, which defeats provider prompt caching (OpenAI automatic,
+        # DeepSeek, Gemini implicit, Anthropic cache_control).
+        import re
+
+        date_match = re.search(r"Today is (\d{4}-\d{2}-\d{2})\.", result)
+        assert date_match is not None, f"expected a YYYY-MM-DD date, got: {result!r}"
 
     def test_should_leave_literal_braces_untouched_when_prompt_has_no_known_placeholders(self, component_class):
         """Adversarial: prompts with literal JSON like {"key": 1} must not raise and must stay intact."""
