@@ -37,7 +37,6 @@ def test_component_preserves_evidence_and_executes_once(component_class, kind, m
         kind=kind,
         context="sensitive context",
         question="What applies?",
-        api_key="secret",
         candidates=[{"id": "a", "label": "Low"}, {"id": "b", "label": "High"}],
         timeout=30,
     )
@@ -65,7 +64,6 @@ def test_component_preserves_evidence_and_executes_once(component_class, kind, m
     assert kwargs["timeout"] == 30
     assert result.data["model"] == "actual-model"
     assert "context" not in result.data["request"]
-    assert "secret" not in str(result.data)
     assert result.data["request"]["kind"] == kind.lower()
 
 
@@ -165,3 +163,9 @@ def test_invalid_options_table_is_a_clear_configuration_error(candidates, cause)
     )
     with pytest.raises(DecisionConfigurationError, match=cause):
         component.evaluate()
+
+
+@pytest.mark.parametrize("component_class", COMPONENTS)
+def test_component_takes_no_api_key_from_the_flow(component_class):
+    """Credentials come only from the provider's own settings, never from a flow field."""
+    assert "api_key" not in {component_input.name for component_input in component_class.inputs}

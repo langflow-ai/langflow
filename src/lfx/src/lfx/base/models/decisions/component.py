@@ -12,7 +12,7 @@ from lfx.base.models.decisions.schema import (
 from lfx.base.models.unified_models import handle_model_input_update
 from lfx.base.models.unified_models.model_catalog import get_decision_model_options
 from lfx.custom.custom_component.component import Component
-from lfx.io import DropdownInput, FloatInput, MessageTextInput, ModelInput, Output, SecretStrInput, TableInput
+from lfx.io import DropdownInput, FloatInput, MessageTextInput, ModelInput, Output, TableInput
 from lfx.schema.data import Data
 from lfx.schema.table import EditMode
 
@@ -25,7 +25,6 @@ class DecisionComponent(Component):
         ModelInput(
             model_type="decision", name="model", display_name="Decision Model", required=True, real_time_refresh=True
         ),
-        SecretStrInput(name="api_key", display_name="API Key", advanced=True, real_time_refresh=True),
         DropdownInput(
             name="kind",
             display_name="Decision Type",
@@ -79,7 +78,6 @@ class DecisionComponent(Component):
             request,
             model=self.model,
             user_id=self.user_id,
-            api_key=self.api_key,
             timeout=self.timeout,
         )
         data = Data(

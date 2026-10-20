@@ -2,6 +2,7 @@
 
 import httpx
 import pytest
+from lfx.base.models.decisions.providers import API_KEY_VARIABLES
 from lfx.components.llm_operations.openai_decision import OpenAIDecisionComponent
 from lfx.components.llm_operations.perplexity_decision import PerplexityDecisionComponent
 from lfx.components.llm_operations.typesafe_decision import TypeSafeDecisionComponent
@@ -34,7 +35,6 @@ class DecisionComponentContract(ComponentTestBaseWithoutClient):
     def default_kwargs(self, component_class):
         return {
             "model": [{"provider": component_class.provider, "name": MODELS[component_class.provider]}],
-            "api_key": "tenant-key",  # pragma: allowlist secret
             "kind": "Choice",
             "context": "The invoice was charged twice.",
             "question": "Which team handles this?",
@@ -50,6 +50,7 @@ class DecisionComponentContract(ComponentTestBaseWithoutClient):
 
     @pytest.fixture(autouse=True)
     def provider_http(self, monkeypatch, component_class):
+        monkeypatch.setenv(API_KEY_VARIABLES[component_class.provider], "tenant-key")  # pragma: allowlist secret
         sent = []
 
         def post(url, **kwargs):
