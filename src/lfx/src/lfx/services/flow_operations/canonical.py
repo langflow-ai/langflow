@@ -16,6 +16,7 @@ from decimal import Decimal
 from typing import Any
 
 from lfx.services.flow_operations.exceptions import FlowDataValidationError
+from lfx.services.flow_operations.limits import check_graph_limits
 
 # Largest integer a JavaScript number holds exactly. Larger integers are
 # printed as the double the editor would round them to.
@@ -133,7 +134,12 @@ def _write_canonical(value: Any, parts: list[str]) -> None:
 
 
 def canonical_json(value: Any) -> str:
-    """Serialize a JSON value in RFC 8785 canonical form."""
+    """Serialize a JSON value in RFC 8785 canonical form.
+
+    The value must meet the JSON limits (``limits.py``): RFC 8785 text cannot
+    hold a lone surrogate.
+    """
+    check_graph_limits(value)
     parts: list[str] = []
     _write_canonical(value, parts)
     return "".join(parts)
