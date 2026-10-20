@@ -244,3 +244,24 @@ async def test_raw_unresolved_model_is_checked_when_runtime_value_arrives(policy
     with pytest.raises(ModelProviderPolicyError):
         getattr(component, method)()
     assert calls == []
+
+
+def test_get_llm_preserves_policy_denial(policy, monkeypatch):
+    from types import SimpleNamespace
+
+    policy("openai::blocked-model")
+    outer, _, calls = _component(LCModelComponent)
+    inner_cls = type(outer)
+    fake_module = SimpleNamespace(FakeProvider=inner_cls)
+    monkeypatch.setattr("lfx.base.models.model.importlib.import_module", lambda _name: fake_module)
+    model_info = {"FakeProvider": {"display_name": "OpenAI", "inputs": inner_cls.inputs}}
+
+    with pytest.raises(ModelProviderPolicyError) as error:
+        outer.get_llm("OpenAI", model_info)
+
+    assert error.value.code == "policy_blocked"
+    assert error.value.model_name == "blocked-model"
+    assert calls == []
+    # Non-policy failures keep the legacy ValueError surface.
+    with pytest.raises(ValueError, match="Error building"):
+        outer.get_llm("Missing Provider", model_info)
