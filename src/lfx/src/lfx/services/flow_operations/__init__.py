@@ -1,7 +1,8 @@
 """Flow operation vocabulary and pure apply engine.
 
 Operations describe granular edits to ``flow.data``: nodes and edges added,
-updated field by field, or deleted, and top-level metadata changes. Paths
+updated field by field, or deleted. Every other top-level key is view state,
+which no operation writes. Paths
 address object keys, and items of the lists ``node_schema.json`` declares
 keyed by selector, never by index. The engine
 has no transport or database dependencies, so the same rules apply wherever an
@@ -13,7 +14,6 @@ from lfx.services.flow_operations.canonical import values_equal
 from lfx.services.flow_operations.exceptions import (
     FlowDataValidationError,
     FlowOperationError,
-    FlowOperationPreconditionError,
     FlowOperationValidationError,
 )
 from lfx.services.flow_operations.ops import (
@@ -22,15 +22,11 @@ from lfx.services.flow_operations.ops import (
     DeleteEdgesOp,
     DeleteNodeFieldUpdate,
     DeleteNodesOp,
-    ExpectAbsent,
-    Expectation,
-    ExpectValue,
     FlowOperation,
     KeySelector,
     NodeFieldPath,
     NodeFieldPathSegment,
     SetNodeFieldUpdate,
-    UpdateMetadataOp,
     UpdateNodeEntry,
     UpdateNodesOp,
     deduplicate_delete_ids,
@@ -51,13 +47,9 @@ __all__ = [
     "DeleteEdgesOp",
     "DeleteNodeFieldUpdate",
     "DeleteNodesOp",
-    "ExpectAbsent",
-    "ExpectValue",
-    "Expectation",
     "FlowDataValidationError",
     "FlowOperation",
     "FlowOperationError",
-    "FlowOperationPreconditionError",
     "FlowOperationValidationError",
     "FlowOperationsApplyResult",
     "GraphState",
@@ -68,7 +60,6 @@ __all__ = [
     "NodeSchema",
     "PythonFlowOperationService",
     "SetNodeFieldUpdate",
-    "UpdateMetadataOp",
     "UpdateNodeEntry",
     "UpdateNodesOp",
     "apply_flow_operations",

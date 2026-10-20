@@ -50,7 +50,8 @@ class KeyedList:
 @dataclass(frozen=True)
 class NodeSchema:
     version: int
-    flow_view_state: frozenset[str]
+    # The top-level flow keys that are not view state. Every other top-level key is.
+    flow_graph_keys: frozenset[str]
     node_view_state: frozenset[str]
     node_view_state_paths: tuple[SchemaPath, ...]
     template_view_state: frozenset[str]
@@ -62,6 +63,10 @@ class NodeSchema:
     table_path: SchemaPath
     table_when_field: tuple[dict[str, Any], ...]
     table: KeyedList
+
+    def is_flow_view_state(self, key: str) -> bool:
+        """Return whether a top-level flow key is view state."""
+        return key not in self.flow_graph_keys
 
     def keyed_list_at(self, node: dict[str, Any], path: tuple[Any, ...]) -> KeyedList | None:
         """Return the keyed list a node holds at ``path``, or None if the schema declares none there."""
@@ -109,7 +114,7 @@ def load_node_schema() -> NodeSchema:
     tables = keyed_lists["tables"]
     return NodeSchema(
         version=raw["version"],
-        flow_view_state=frozenset(view_state["flow"]),
+        flow_graph_keys=frozenset(view_state["flow"]["except"]),
         node_view_state=frozenset(view_state["node"]),
         node_view_state_paths=_paths(view_state["node_paths"]),
         template_view_state=frozenset(view_state["template"]),

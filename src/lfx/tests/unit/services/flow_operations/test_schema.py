@@ -23,7 +23,10 @@ def test_schema_file_is_versioned_json():
 def test_view_state_matches_the_protocol():
     schema = load_node_schema()
 
-    assert schema.flow_view_state == {"viewport"}
+    assert schema.flow_graph_keys == {"nodes", "edges"}
+    assert schema.is_flow_view_state("viewport")
+    assert schema.is_flow_view_state("description")
+    assert not schema.is_flow_view_state("nodes")
     assert schema.node_view_state == {"selected", "dragging", "resizing", "measured", "width", "height"}
     assert schema.node_view_state_paths == (("data", "node", "last_updated"), ("data", "node", "lf_version"))
     assert schema.edge_view_state == {"selected", "animated", "className"}

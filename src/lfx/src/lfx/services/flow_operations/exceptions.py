@@ -27,16 +27,6 @@ class FlowOperationValidationError(FlowOperationError):
         self.edge_id = edge_id
 
 
-class FlowOperationPreconditionError(FlowOperationError):
-    """Raised when a write's ``expect`` does not hold on the graph it is applied to.
-
-    The operation itself is well formed; the graph changed since the writer
-    read it. The whole batch is refused, so the writer can re-read and retry.
-    """
-
-    code = "EXPECTATION_FAILED"
-
-
 class FlowDataValidationError(FlowOperationError):
     """Raised when persisted flow data is malformed or violates graph invariants."""
 
