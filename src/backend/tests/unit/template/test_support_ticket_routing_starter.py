@@ -12,12 +12,14 @@ STARTER = (
 
 
 def _targets_by_route(data: dict) -> dict[str, str]:
-    """Map each router output handle to the Chat Output it feeds."""
-    return {
+    """Map each router output handle to the node it feeds, plus the review Chat Output behind Else's prompt."""
+    targets = {
         edge["data"]["sourceHandle"]["name"]: edge["target"]
         for edge in data["edges"]
         if edge["data"]["sourceHandle"]["dataType"] == "SmartRouter"
     }
+    targets["review"] = next(edge["target"] for edge in data["edges"] if edge["source"] == targets["default_result"])
+    return targets
 
 
 MESSAGE = "I was charged twice for my October invoice."
@@ -52,7 +54,8 @@ async def test_confident_answer_reaches_only_its_route(monkeypatch):
         monkeypatch, {"category_1_result": 0.92, "category_2_result": 0.05, "category_3_result": 0.03}
     )
     assert targets["category_1_result"] in ran
-    assert not {targets["category_2_result"], targets["category_3_result"], targets["default_result"]} & ran
+    losers = {targets["category_2_result"], targets["category_3_result"], targets["default_result"], targets["review"]}
+    assert not losers & ran
     criteria = sent[0]["questions"]["decision"]["criteria"]
     assert set(criteria) == {"category_1_result", "category_2_result", "category_3_result"}
     assert criteria["category_1_result"].startswith("Billing: ")
@@ -64,9 +67,11 @@ async def test_below_threshold_answer_goes_to_review(monkeypatch):
     graph, ran, targets, _ = await _route(
         monkeypatch, {"category_1_result": 0.5, "category_2_result": 0.3, "category_3_result": 0.2}
     )
-    assert targets["default_result"] in ran
+    assert {targets["default_result"], targets["review"]} <= ran
     assert not {targets["category_1_result"], targets["category_2_result"], targets["category_3_result"]} & ran
-    assert _text(graph, targets["default_result"]) == MESSAGE
+    assert _text(graph, targets["review"]) == (
+        f"No team was confident enough to take this one, so a person will review it.\n\nYour message: {MESSAGE}"
+    )
 
 
 def test_edge_handles_match_the_fields_they_connect():
