@@ -19,9 +19,11 @@ def _load_pyproject(path: Path) -> dict:
     return tomllib.loads(path.read_text(encoding="utf-8"))
 
 
-def _minor_compatibility_floor(version: str) -> str:
-    major, minor, *_ = version.split(".")
-    return f"{major}.{minor}.0"
+def _core_requirements(project: dict, dependency: str) -> list[Requirement]:
+    values = project["dependencies"] + [
+        value for requirements in project["optional-dependencies"].values() for value in requirements
+    ]
+    return [requirement for value in values if (requirement := Requirement(value)).name == dependency]
 
 
 def test_langflow_base_metadata_contract():
@@ -69,12 +71,25 @@ def test_full_langflow_consumes_base_workspace_distribution():
     assert "src/langflow-core" not in root["tool"]["uv"]["workspace"]["members"]
     assert root["tool"]["uv"]["sources"]["langflow-base"] == {"workspace": True}
     assert "langflow-core" not in root["tool"]["uv"]["sources"]
-    base_floor = _minor_compatibility_floor(root_project["version"])
-    assert f"langflow-base~={base_floor}" in root_project["dependencies"]
-    assert root_project["optional-dependencies"]["audio"] == [f"langflow-base[audio]~={base_floor}"]
-    assert root_project["optional-dependencies"]["postgresql"] == [f"langflow-base[postgresql]~={base_floor}"]
+    version = root_project["version"]
+    assert f"langflow-base=={version}" in root_project["dependencies"]
+    assert root_project["optional-dependencies"]["audio"] == [f"langflow-base[audio]=={version}"]
+    assert root_project["optional-dependencies"]["postgresql"] == [f"langflow-base[postgresql]=={version}"]
+    assert all(
+        str(requirement.specifier) == f"=={version}"
+        for requirement in _core_requirements(root_project, "langflow-base")
+    )
     assert "langflow-base" in {requirement.name for requirement in root_requirements}
     assert any(requirement.name.startswith("lfx-") for requirement in root_requirements)
+
+
+def test_langflow_base_pins_the_workspace_lfx_distribution():
+    project = _load_pyproject(BASE_ROOT / "pyproject.toml")["project"]
+    lfx_project = _load_pyproject(REPO_ROOT / "src/lfx/pyproject.toml")["project"]
+    requirements = _core_requirements(project, "lfx")
+
+    assert any(requirement.marker is None for requirement in requirements)
+    assert all(str(requirement.specifier) == f"=={lfx_project['version']}" for requirement in requirements)
 
 
 def test_langflow_base_is_the_only_langflow_console_script_owner():
@@ -108,8 +123,8 @@ def test_makefile_patch_keeps_full_base_and_lfx_versions_aligned():
 
     assert "Updating langflow-base pyproject.toml" in makefile
     assert "fname='src/backend/base/pyproject.toml'" in makefile
-    assert "langflow-base~=$$LANGFLOW_COMPAT_VERSION" in makefile
-    assert "langflow-base[audio]~=$$LANGFLOW_COMPAT_VERSION" in makefile
-    assert "langflow-base[postgresql]~=$$LANGFLOW_COMPAT_VERSION" in makefile
+    assert "langflow-base==$$LANGFLOW_VERSION" in makefile
+    assert "langflow-base[audio]==$$LANGFLOW_VERSION" in makefile
+    assert "langflow-base[postgresql]==$$LANGFLOW_VERSION" in makefile
     assert "LFX (synced): $$LANGFLOW_VERSION" in makefile
     assert "langflow-core" not in makefile
