@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
@@ -100,6 +101,27 @@ async def test_with_history_off_a_save_records_nothing_and_the_history_api_is_hi
     assert listed.status_code == status.HTTP_404_NOT_FOUND
     config = await client.get("api/v1/config", headers=logged_in_headers)
     assert config.json()["flow_history_enabled"] is False
+
+
+@pytest.mark.parametrize(
+    "value_json", ['"\\ud800"', "[" * 121 + "]" * 121], ids=["a lone surrogate", "nesting 128 levels deep"]
+)
+async def test_with_history_off_a_graph_that_breaks_a_json_limit_is_refused(
+    client: AsyncClient, logged_in_headers, history, value_json
+):
+    history.flow_history_enabled = False
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    # The node's value is level 8 of the graph's nesting.
+    body = json.dumps({"data": _graph(_node("a", "VALUE"))}).replace('"VALUE"', value_json)
+
+    refused = await client.patch(
+        f"api/v1/flows/{flow['id']}", content=body, headers={**logged_in_headers, "Content-Type": "application/json"}
+    )
+
+    assert refused.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, refused.text
+    detail = refused.json()["detail"]
+    assert (detail["code"], detail["graph"], detail["violations"]) == ("FLOW_GRAPH_INVALID", "submitted", [])
+    assert (await _flow(flow["id"])).data == _graph(_node("a"))
 
 
 async def test_with_history_off_a_stale_token_is_refused_only_when_the_graph_changed(

@@ -327,9 +327,12 @@ async def _write_without_history(
 
     As in multi-edit safety, only a graph that changed takes the writer's
     turn: its ``If-Match`` must name the current token, and the token rotates.
+    Only the JSON limits are checked, as when a flow is created, so a graph
+    that history could never read is not stored while history is off.
     """
     if target == flow.data:
         return
+    refuse_unreadable_graph(target)
     if (
         expected_version_token is not None
         and flow.version_token is not None
