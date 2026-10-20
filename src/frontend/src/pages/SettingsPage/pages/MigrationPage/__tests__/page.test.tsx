@@ -902,6 +902,7 @@ describe("what the admin needs before starting", () => {
       "Access to where the new instance runs, or someone who has it.",
       "A place off this server to keep the backup.",
       "A time when people can pause their changes.",
+      "Langflow running with one worker. The passwords and keys you enter stay in that worker's memory.",
     ]);
   });
 
@@ -918,6 +919,9 @@ describe("what the admin needs before starting", () => {
       "Access to where the new instance runs, or someone who has it.",
       "A place off this server to keep the backup.",
       "A time when people can pause their changes.",
+      // Other instances can share a PostgreSQL database, and the pause holds for this one only.
+      "No other Langflow instance or replica on this instance's database. The pause covers this instance only.",
+      "Langflow running with one worker. The passwords and keys you enter stay in that worker's memory.",
     ]);
   });
 

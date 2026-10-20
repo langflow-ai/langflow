@@ -5,6 +5,7 @@ import {
   type PaginatedIngestionRunResponse,
   useGetIngestionRuns,
 } from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-runs";
+import { parseApiTimestamp } from "@/utils/dateTime";
 import IngestionRunDetailModal from "./IngestionRunDetailModal";
 
 interface IngestionRunsSectionProps {
@@ -48,9 +49,10 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
-function formatRelativeTime(iso: string): string {
+export function formatRelativeTime(iso: string): string {
   const now = Date.now();
-  const then = new Date(iso).getTime();
+  // Not new Date(): it reads a time sent without a zone as local time, and these are UTC.
+  const then = parseApiTimestamp(iso)?.getTime() ?? now;
   const diffSec = Math.max(0, Math.floor((now - then) / 1000));
   if (diffSec < 60) return `${diffSec}s ago`;
   if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
