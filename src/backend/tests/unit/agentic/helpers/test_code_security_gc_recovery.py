@@ -89,6 +89,26 @@ def test_rejects_gc_recovery_after_class_scope_shadowing(method: str, body: str)
     assert not scan_code_security(code).is_safe
 
 
+@pytest.mark.parametrize("method", [*_RECOVERY_METHODS, "garbage"])
+@pytest.mark.parametrize(
+    "wrapper",
+    [
+        # After ``del`` in a class body, reads resolve to module globals,
+        # never the enclosing function's shadow.
+        "import gc as collector\ndef build():\n    collector = None\n    class Carrier:\n"
+        "        collector = None\n        del collector\n        values = collector.{access}\n    return Carrier",
+        "import gc as collector\ndef build(collector):\n    class Carrier:\n"
+        "        collector = None\n        del collector\n        values = collector.{access}\n    return Carrier",
+        "import gc as collector\ndef build():\n    collector = None\n    class Carrier:\n"
+        "        class Inner:\n            collector = None\n            del collector\n"
+        "            values = collector.{access}\n    return Carrier",
+    ],
+)
+def test_rejects_gc_recovery_after_delete_in_function_nested_class(method: str, wrapper: str) -> None:
+    access = method if method == "garbage" else f"{method}()"
+    assert not scan_code_security(wrapper.format(access=access)).is_safe
+
+
 @pytest.mark.parametrize(
     "code",
     [
@@ -99,6 +119,11 @@ def test_rejects_gc_recovery_after_class_scope_shadowing(method: str, body: str)
         "import gc as collector\nclass Carrier:\n    values = [collector.get_objects() for collector in []]",
         "def build(collector):\n    class Carrier:\n        collector = None\n"
         "        del collector\n        values = collector.get_objects()\n    return Carrier",
+        # Methods close over the enclosing function local, unlike direct
+        # class-body reads after ``del``.
+        "import gc as collector\ndef build():\n    collector = None\n    class Carrier:\n"
+        "        collector = None\n        def read(self):\n"
+        "            return collector.get_objects()\n    return Carrier",
         "class Local:\n    def get_objects(self):\n        return []\n"
         "class Carrier:\n    collector = Local()\n    values = collector.get_objects()",
     ],
