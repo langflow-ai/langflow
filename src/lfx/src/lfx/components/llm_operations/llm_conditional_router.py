@@ -226,33 +226,31 @@ class SmartRouterComponent(Component):
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """Create a dynamic output for each category in the categories table."""
-        if field_name in {"routes", "enable_else_output", "model"}:
-            frontend_node["outputs"] = []
+        # The update endpoint rebuilds this node from the class, which declares no outputs,
+        # so every field refresh must recreate them or the editor drops the route edges.
+        frontend_node["outputs"] = []
 
-            # Get the routes data - either from field_value (if routes field) or from component state
-            routes_data = field_value if field_name == "routes" else getattr(self, "routes", [])
+        # Get the routes data - either from field_value (if routes field) or from component state
+        routes_data = field_value if field_name == "routes" else getattr(self, "routes", [])
 
-            # Add a dynamic output for each category - all using the same method
-            for i, row in enumerate(routes_data):
-                route_category = row.get("route_category", f"Category {i + 1}")
-                frontend_node["outputs"].append(
-                    Output(
-                        display_name=route_category,
-                        name=f"category_{i + 1}_result",
-                        method="process_case",
-                        group_outputs=True,
-                    )
+        # Add a dynamic output for each category - all using the same method
+        for i, row in enumerate(routes_data):
+            route_category = row.get("route_category", f"Category {i + 1}")
+            frontend_node["outputs"].append(
+                Output(
+                    display_name=route_category,
+                    name=f"category_{i + 1}_result",
+                    method="process_case",
+                    group_outputs=True,
                 )
-            # Add default output only if enabled
-            if field_name == "enable_else_output":
-                enable_else = field_value
-            else:
-                enable_else = getattr(self, "enable_else_output", False)
+            )
+        # Add default output only if enabled
+        enable_else = field_value if field_name == "enable_else_output" else getattr(self, "enable_else_output", False)
 
-            if enable_else:
-                frontend_node["outputs"].append(
-                    Output(display_name="Else", name="default_result", method="default_response", group_outputs=True)
-                )
+        if enable_else:
+            frontend_node["outputs"].append(
+                Output(display_name="Else", name="default_result", method="default_response", group_outputs=True)
+            )
         return frontend_node
 
     def _get_categorization(self) -> str:

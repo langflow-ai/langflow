@@ -248,3 +248,16 @@ async def test_active_provider_denial_cannot_fall_back_to_else(monkeypatch):
     with pytest.raises(PermissionError, match="before credentials"):
         await component.arequire_model_provider_policy(ModelProviderPolicyPurpose.USE)
     assert seen == ["perplexity"]
+
+
+@pytest.mark.parametrize("field_name", [i.name for i in SmartRouterComponent.inputs if i.real_time_refresh])
+def test_every_field_refresh_keeps_the_route_outputs(field_name):
+    """The update endpoint passes a node with no outputs; losing them drops every route edge in the editor."""
+    router = SmartRouterComponent()
+    router.set(
+        routes=[{"route_category": "Billing"}, {"route_category": "Sales"}],
+        enable_else_output=True,
+        routing_mode="Decision Model",
+    )
+    node = router.update_outputs({"outputs": []}, field_name, getattr(router, field_name, None))
+    assert [output.name for output in node["outputs"]] == ["category_1_result", "category_2_result", "default_result"]
