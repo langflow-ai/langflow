@@ -8,6 +8,7 @@ import type {
   ResponseErrorDetailAPI,
 } from "@/types/api";
 import { withTemplateTableRowIds } from "@/utils/table-row-ids";
+import { withStoredRefreshFlag } from "@/utils/template-refresh-flag";
 import i18n from "../../i18n";
 import { updateHiddenOutputs } from "./update-hidden-outputs";
 
@@ -174,7 +175,10 @@ export const mutateTemplate = async (
               // into headers) are new rows: give them ids before the value
               // is remembered and stored.
               newNode.template = withTemplateTableRowIds(
-                keepUserEdits(nodeId, node.template, newTemplate.template),
+                withStoredRefreshFlag(
+                  node.template,
+                  keepUserEdits(nodeId, node.template, newTemplate.template),
+                ),
                 node.template,
               );
               rememberAppliedValues(nodeId, newNode.template);
