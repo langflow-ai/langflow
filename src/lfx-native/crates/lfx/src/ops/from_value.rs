@@ -15,9 +15,12 @@ use serde_json::{Map, Value};
 
 use crate::ops::error::{Error, quoted};
 
-/// A type that reads itself from an owned JSON value.
+/// A type that reads itself from a JSON value.
 pub(crate) trait FromValue: Sized {
-    /// Read the value, or say why it does not have this type's shape.
+    /// Read `value` as this type. It takes `value` and moves the parts it
+    /// keeps into the result, so nothing is copied; a part it does not keep
+    /// is dropped. On failure, it says why `value` does not have this type's
+    /// shape.
     fn from_value(value: Value) -> Result<Self, FromValueError>;
 }
 
@@ -31,8 +34,11 @@ enum Place {
 }
 
 /// Why a JSON value does not have the expected shape, and where.
+///
+/// It is `pub` because the public `FromStr` for `OperationKind` returns it.
+/// Its module is private, so code outside the crate cannot name it.
 #[derive(Debug)]
-pub(crate) struct FromValueError {
+pub struct FromValueError {
     /// The steps from the value that was read to the one that failed,
     /// innermost first. As in a stack trace, the error passes back up through
     /// the readers, and each one adds its own step on the way out, after the
@@ -64,14 +70,15 @@ impl FromValueError {
         self
     }
 
-    /// The error as an invalid-operation [`Error`], its location named from
-    /// `root` and printed outermost first, so it walks `places` in reverse.
+    /// Turn this error into an engine [`Error`] whose message starts with
+    /// where the bad value is, for example
+    /// `operations[0].ids[1]: must be a string`. `root` names the value that
+    /// was read, here `operations`.
     ///
-    /// For example, reading `[{"type": "delete_nodes", "ids": ["b", 5]}]`:
-    /// the `String` reader fails at `5` with no steps, `Vec<String>` adds
-    /// `[1]`, reading the key `ids` adds `ids`, and `Vec<Operation>` adds `[0]`. So
-    /// `places` holds `[1], ids, [0]`, and with root `operations` the error
-    /// reads `operations[0].ids[1]: must be a string`.
+    /// Each reader adds its own step to `places` when the error passes back
+    /// up through it, so the innermost step is first. The message names the
+    /// outermost step first, so this reads `places` in reverse. In the
+    /// example, `places` holds `[1]`, `ids`, `[0]`.
     pub(crate) fn into_error(self, root: &str) -> Error {
         let mut location = root.to_owned();
         for place in self.places.iter().rev() {
@@ -127,6 +134,7 @@ impl<T: FromValue> FromValue for Vec<T> {
 }
 
 /// Read the value of the object key `key` as `T`, naming the key in any error.
+/// It takes `value` (see [`FromValue::from_value`]).
 pub(crate) fn read<T: FromValue>(value: Value, key: &'static str) -> Result<T, FromValueError> {
     T::from_value(value).map_err(|error| error.at_key(key))
 }

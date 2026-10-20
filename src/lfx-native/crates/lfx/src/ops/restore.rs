@@ -132,7 +132,7 @@ pub fn check_restore_fixes(revision: &Value, stored: &Value, fixes: &[Operation]
             other => {
                 return Err(Error::restore_not_allowed(format!(
                     "a fix may only delete edges, or add back an edge it deleted with other handles, not {}",
-                    other.type_name()
+                    other.kind().as_str()
                 )));
             }
         }
