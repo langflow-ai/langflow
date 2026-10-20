@@ -1,7 +1,6 @@
----
-title: Trigger capacity and replica behavior
-slug: /deployment-trigger-capacity
----
+# Trigger capacity and replica behavior
+
+Reference notes for sizing trigger ingress, listeners, and dispatch. This is not a user guide.
 
 Trigger capacity depends on notification volume, source synchronization work, flow duration, and database latency. An active-trigger count alone does not describe the workload. There is no certified maximum trigger count or event rate; validate the workload you expect, including bursts and recovery from outages.
 
@@ -18,7 +17,7 @@ The figures on this page describe implementation defaults. They are sizing estim
 | Source maintenance | Expand hints, reconcile change feeds, renew subscriptions, and retry cleanup | A separate leased loop runs alongside dispatch. Slow providers can delay other sources, while ordinary job submission continues. |
 | Flow execution | Execute the submitted jobs | Capacity depends on the background execution configuration, flow duration, downstream quotas, and per-trigger concurrency. |
 
-Use a shared PostgreSQL database for deployments with multiple API or listener replicas. Subprocess listener mode still creates a second process; it does not remove SQLite write contention. Keep the database URL, encryption key, and OAuth registrations consistent across API and listener processes. See [listener deployment](./deployment-trigger-listeners.mdx).
+Use a shared PostgreSQL database for deployments with multiple API or listener replicas. Subprocess listener mode still creates a second process; it does not remove SQLite write contention. Keep the database URL, encryption key, and OAuth registrations consistent across API and listener processes.
 
 ## Estimate dispatch capacity
 
