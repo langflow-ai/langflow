@@ -176,8 +176,9 @@ jobs:
           git add pyproject.toml src/backend/base/pyproject.toml src/lfx/pyproject.toml \
             src/lfx/src/lfx/_assets/component_index.json src/sdk/pyproject.toml uv.lock \
             src/lfx/src/lfx/services/settings/auth.py
-          # The nightly keeps canonical package names and the stable `lfx-*` bundles
-          # are not modified (see src/bundles/NIGHTLY.md), so no bundle pyprojects ride this commit.
+          # Bundles requiring the matching final LFX release get a .devN version
+          # and exact runtime pin only on this tag (see src/bundles/NIGHTLY.md).
+          git add src/bundles/*/pyproject.toml src/bundles/*/src/*/extension.json
           git commit -m "Update version for nightly"
 
           echo "Tagging main with $RELEASE_TAG"

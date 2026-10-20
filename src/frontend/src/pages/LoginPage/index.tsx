@@ -16,6 +16,7 @@ import { useSanitizeRedirectUrl } from "@/hooks/use-sanitize-redirect-url";
 import {
   appendErrorSuggestion,
   getRequiredFieldError,
+  LOGIN_ERROR_KEYS,
 } from "@/utils/authErrorMessages";
 import InputComponent from "../../components/core/parameterRenderComponent/components/inputComponent";
 import { Button } from "../../components/ui/button";
@@ -30,6 +31,9 @@ import type {
 } from "../../types/components";
 import DotGridBackground from "./components/dot-grid-background";
 
+const UPGRADE_RECOVERY_URL =
+  "https://github.com/langflow-ai/langflow/blob/release-1.13.0/docs/docs/Develop/api-keys-and-authentication.mdx#recover-access-after-upgrading-recover-access-after-upgrading";
+
 export default function LoginPage(): JSX.Element {
   const [inputState, setInputState] =
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
@@ -38,6 +42,7 @@ export default function LoginPage(): JSX.Element {
   // error is programmatically associated with the credential fields
   // (WCAG 3.3.1) instead of living only in the transient toast.
   const [serverError, setServerError] = useState<string | null>(null);
+  const [showUpgradeRecovery, setShowUpgradeRecovery] = useState(false);
 
   const { password, username } = inputState;
 
@@ -54,6 +59,7 @@ export default function LoginPage(): JSX.Element {
   }: inputHandlerEventType): void {
     setInputState((prev) => ({ ...prev, [name]: value }));
     setServerError(null);
+    setShowUpgradeRecovery(false);
   }
 
   const { mutate } = useLoginUser();
@@ -72,16 +78,19 @@ export default function LoginPage(): JSX.Element {
         queryClient.clear();
       },
       onError: (error) => {
+        const detail = extractApiErrorMessage(
+          error as Parameters<typeof extractApiErrorMessage>[0],
+          t("errors.signin"),
+        );
+        const knownKey = LOGIN_ERROR_KEYS[detail.trim().replace(/\.$/, "")];
         const message = appendErrorSuggestion(
-          extractApiErrorMessage(
-            error as Parameters<typeof extractApiErrorMessage>[0],
-            t("errors.signin"),
-          ),
+          knownKey ? t(knownKey) : detail,
           t("errors.signinSuggestion", {
             defaultValue: "Check your username and password, then try again.",
           }),
         );
         setServerError(message);
+        setShowUpgradeRecovery(knownKey === "errors.signinInvalidCredentials");
         setErrorData({
           title: t("errors.signin"),
           list: [message],
@@ -166,6 +175,7 @@ export default function LoginPage(): JSX.Element {
                       [
                         usernameError && "login-username-error",
                         serverError && "login-form-error",
+                        showUpgradeRecovery && "login-upgrade-recovery",
                       ]
                         .filter(Boolean)
                         .join(" ") || undefined
@@ -214,6 +224,7 @@ export default function LoginPage(): JSX.Element {
                         [
                           passwordError && "login-password-error",
                           serverError && "login-form-error",
+                          showUpgradeRecovery && "login-upgrade-recovery",
                         ]
                           .filter(Boolean)
                           .join(" ") || undefined,
@@ -243,6 +254,23 @@ export default function LoginPage(): JSX.Element {
                   >
                     {serverError}
                   </p>
+                )}
+
+                {showUpgradeRecovery && (
+                  <div
+                    id="login-upgrade-recovery"
+                    className="space-y-2 text-sm text-muted-foreground [overflow-wrap:anywhere]"
+                  >
+                    <p>{t("auth.upgradeRecoveryHint")}</p>
+                    <a
+                      href={UPGRADE_RECOVERY_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline underline-offset-4"
+                    >
+                      {t("auth.upgradeRecoveryLink")}
+                    </a>
+                  </div>
                 )}
 
                 <Form.Submit asChild>

@@ -1,8 +1,4 @@
-"""Telemetry payload schemas.
-
-All payloads are sent as URL query parameters via GET requests (Scarf pixel
-tracking), so keep fields small. Max URL size is ~2KB.
-"""
+"""Telemetry payload schemas."""
 
 from __future__ import annotations
 
@@ -49,7 +45,7 @@ class ExceptionPayload(BasePayload):
 
 
 class MCPToolPayload(BasePayload):
-    """Tracks an MCP tool invocation. Kept small for URL query params."""
+    """Tracks an MCP tool invocation."""
 
     tool: str
     success: bool

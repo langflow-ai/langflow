@@ -104,6 +104,15 @@ async def get_or_create_super_user(
     if user and user.is_superuser:
         if rotate_legacy_default_password:
             await _rotate_legacy_default_superuser_password(session, user, password)
+        if not is_default and not auth.verify_password(password, user.password):
+            await logger.awarning(
+                "LANGFLOW_SUPERUSER_PASSWORD was not applied because the configured superuser "
+                "already exists with a different password. The existing password was preserved. "
+                "To recover access after upgrading, see "
+                "https://github.com/langflow-ai/langflow/blob/release-1.13.0/"
+                "docs/docs/Develop/api-keys-and-authentication.mdx"
+                "#recover-access-after-upgrading-recover-access-after-upgrading"
+            )
         return None  # Superuser already exists
 
     if user and is_default:
@@ -221,7 +230,12 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
     await logger.adebug(f"Setup superuser: username={username}, has_password={bool(password)}")
 
     if not username or not password:
-        msg = "Username and password must be set"
+        msg = (
+            "Username and password must be set. "
+            "Set LANGFLOW_SUPERUSER_PASSWORD before starting Langflow. "
+            "If you are upgrading an existing auto-login installation, "
+            "see https://docs.langflow.org/next/api-keys-and-authentication#upgrade-from-auto-login"
+        )
         await logger.aerror(f"Missing credentials: username={username}, password={'set' if password else 'not set'}")
         raise ValueError(msg)
 
@@ -439,7 +453,7 @@ async def teardown_superuser(settings_service: SettingsService, session: AsyncSe
       would otherwise bring it back usable by anyone who knows the default.
 
     A retired account is left alone on later restarts, so an admin who reactivates it or sets
-    its password from the Admin page is not undone. An account that has signed in
+    its password with ``PATCH /api/v1/users/<id>`` is not undone. An account that has signed in
     (``last_login_at`` set) is left alone.
     """
     if settings_service.auth_settings.AUTO_LOGIN:
@@ -486,8 +500,8 @@ async def teardown_superuser(settings_service: SettingsService, session: AsyncSe
         await logger.awarning(
             f"AUTO_LOGIN is off, so the default superuser '{DEFAULT_SUPERUSER}' was deactivated: its "
             f"password, API keys and tokens no longer work. It owns rows in '{owned}', so it was kept "
-            "rather than deleted. Another superuser can reactivate it and set a password from the Admin "
-            f"page or PATCH /api/v1/users/{user.id}."
+            "rather than deleted. Another superuser can reactivate it and set a password with "
+            f"PATCH /api/v1/users/{user.id}."
         )
     except Exception as exc:
         await logger.aexception("Could not retire default superuser.")
@@ -844,3 +858,6 @@ async def initialize_services(*, fix_migration: bool = False, skip_superuser_set
         await clean_transactions(settings_service, session)
         await clean_vertex_builds(settings_service, session)
         await clean_authz_audit_log(settings_service, session)
+        from langflow.services.audit.retention import clean_audit_events
+
+        await clean_audit_events(settings_service, session)

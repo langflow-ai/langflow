@@ -1,6 +1,6 @@
 import { useStartRecording } from "../use-start-recording";
 
-const makeRef = <T>(current: T) => ({ current }) as { current: T };
+const makeRef = <T>(current: T) => ({ current });
 
 function createAudioContext() {
   const analyser = { fftSize: 0, connect: jest.fn() };
@@ -14,8 +14,35 @@ function createAudioContext() {
 }
 
 let originalAudioWorkletNodeDescriptor: PropertyDescriptor | undefined;
+let originalMediaDevicesDescriptor: PropertyDescriptor | undefined;
+let originalCreateObjectURLDescriptor: PropertyDescriptor | undefined;
+
+function restoreProperty(
+  target: object,
+  key: string,
+  descriptor: PropertyDescriptor | undefined,
+) {
+  if (descriptor) {
+    Object.defineProperty(target, key, descriptor);
+  } else {
+    Reflect.deleteProperty(target, key);
+  }
+}
 
 beforeEach(() => {
+  originalMediaDevicesDescriptor = Object.getOwnPropertyDescriptor(
+    navigator,
+    "mediaDevices",
+  );
+  originalCreateObjectURLDescriptor = Object.getOwnPropertyDescriptor(
+    URL,
+    "createObjectURL",
+  );
+  Object.defineProperty(URL, "createObjectURL", {
+    configurable: true,
+    writable: true,
+    value: jest.fn(() => "blob:unexpected-worklet"),
+  });
   originalAudioWorkletNodeDescriptor = Object.getOwnPropertyDescriptor(
     globalThis,
     "AudioWorkletNode",
@@ -31,15 +58,13 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  if (originalAudioWorkletNodeDescriptor) {
-    Object.defineProperty(
-      globalThis,
-      "AudioWorkletNode",
-      originalAudioWorkletNodeDescriptor,
-    );
-  } else {
-    Reflect.deleteProperty(globalThis, "AudioWorkletNode");
-  }
+  restoreProperty(
+    globalThis,
+    "AudioWorkletNode",
+    originalAudioWorkletNodeDescriptor,
+  );
+  restoreProperty(navigator, "mediaDevices", originalMediaDevicesDescriptor);
+  restoreProperty(URL, "createObjectURL", originalCreateObjectURLDescriptor);
 });
 
 function setup(overrides?: { addModule?: jest.Mock }) {
@@ -67,7 +92,7 @@ function setup(overrides?: { addModule?: jest.Mock }) {
 }
 
 describe("useStartRecording", () => {
-  it("loads the packaged URL and starts recording", async () => {
+  it("loads the packaged URL, retains the stream, and starts recording without a Blob", async () => {
     const { audioContext, stream, refs } = setup();
     const setIsRecording = jest.fn();
 
@@ -89,6 +114,7 @@ describe("useStartRecording", () => {
     expect(audioContext.audioWorklet.addModule).toHaveBeenCalledWith(
       "/assets/audio-worklet-processor-123.js",
     );
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
     expect(refs.mediaStreamRef.current).toBe(stream);
     expect(setIsRecording).toHaveBeenCalledWith(true);
   });
@@ -99,6 +125,7 @@ describe("useStartRecording", () => {
       .mockRejectedValue(new Error("asset unavailable"));
     const { refs } = setup({ addModule });
     const setStatus = jest.fn();
+    const setIsRecording = jest.fn();
 
     await useStartRecording(
       refs.audioContextRef,
@@ -106,7 +133,7 @@ describe("useStartRecording", () => {
       refs.analyserRef,
       refs.wsRef,
       refs.mediaStreamRef,
-      jest.fn(),
+      setIsRecording,
       jest.fn(),
       makeRef(false),
       makeRef([]),
@@ -118,6 +145,8 @@ describe("useStartRecording", () => {
     expect(addModule).toHaveBeenCalledWith(
       "/assets/audio-worklet-processor-123.js",
     );
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
+    expect(setIsRecording).not.toHaveBeenCalled();
     expect(setStatus).toHaveBeenCalledWith(
       "Error initializing audio: asset unavailable",
     );

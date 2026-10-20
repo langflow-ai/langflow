@@ -3,21 +3,26 @@ import subprocess
 import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from uuid import UUID
 
 import pytest
+from langflow.services.telemetry.context import reset_current_telemetry_user, set_current_telemetry_user
 from langflow.services.telemetry.opentelemetry import (
     MetricType,
     OpenTelemetry,
     ThreadSafeSingletonMetaUsingWeakref,
 )
-from langflow.services.telemetry.schema import DeploymentPayload, IntegrationActionPayload, RunPayload
+from langflow.services.telemetry.schema import DeploymentPayload, IntegrationActionPayload, RunPayload, ShutdownPayload
 from langflow.services.telemetry.service import TelemetryService
+from lfx.services.telemetry.identity import get_installation_user_id
 
 
 @pytest.fixture
-def mock_settings_service(mocker):
+def mock_settings_service(mocker, tmp_path):
     settings = mocker.MagicMock()
-    settings.settings.telemetry_base_url = "http://test.telemetry"
+    settings.settings.config_dir = str(tmp_path)
+    settings.settings.segment_api_url = "https://api.segment.test/v1/track"
+    settings.settings.segment_write_key = "segment-test-key"
     settings.settings.prometheus_enabled = False
     settings.settings.do_not_track = False
     return settings
@@ -26,6 +31,15 @@ def mock_settings_service(mocker):
 @pytest.fixture
 def telemetry_service(mock_settings_service):
     return TelemetryService(mock_settings_service)
+
+
+def test_disabled_telemetry_does_not_create_identity(mock_settings_service, tmp_path):
+    mock_settings_service.settings.segment_write_key = None
+
+    service = TelemetryService(mock_settings_service)
+
+    assert service.anonymous_id == ""
+    assert not (tmp_path / "telemetry_id").exists()
 
 
 @pytest.mark.asyncio
@@ -52,10 +66,29 @@ async def test_log_package_deployment(telemetry_service):
         deployment_success=True,
     )
     await telemetry_service.log_package_deployment(payload)
-    func, queued_payload, path = await telemetry_service.telemetry_queue.get()
+    func, queued_payload, path, user_id = await telemetry_service.telemetry_queue.get()
     assert func == telemetry_service.send_telemetry_data
     assert queued_payload == payload
     assert path == "deployment"
+    assert user_id is None
+
+
+@pytest.mark.asyncio
+async def test_queue_captures_request_user_id(telemetry_service):
+    payload = DeploymentPayload(
+        deployment_action="deployment.create",
+        deployment_provider="test_provider",
+        deployment_seconds=1.0,
+        deployment_success=True,
+    )
+    token = set_current_telemetry_user(UUID(int=1), telemetry_service.anonymous_id)
+    try:
+        await telemetry_service.log_package_deployment(payload)
+    finally:
+        reset_current_telemetry_user(token)
+
+    _func, _queued_payload, _path, user_id = telemetry_service.telemetry_queue.get_nowait()
+    assert user_id == get_installation_user_id(UUID(int=1), telemetry_service.anonymous_id)
 
 
 @pytest.mark.asyncio
@@ -74,12 +107,12 @@ async def test_integration_action_uses_telemetry_queue(telemetry_service, do_not
     if do_not_track:
         assert telemetry_service.telemetry_queue.empty()
     else:
-        send, queued, path = telemetry_service.telemetry_queue.get_nowait()
+        send, queued, path, user_id = telemetry_service.telemetry_queue.get_nowait()
         assert send == telemetry_service.send_telemetry_data
         assert queued == payload
         assert path == "integration_action"
+        assert user_id is None
         telemetry_service.telemetry_queue.task_done()
-    await telemetry_service.client.aclose()
 
 
 @pytest.mark.asyncio
@@ -91,10 +124,11 @@ async def test_log_package_deployment_provider(telemetry_service):
         deployment_success=True,
     )
     await telemetry_service.log_package_deployment_provider(payload)
-    func, queued_payload, path = await telemetry_service.telemetry_queue.get()
+    func, queued_payload, path, user_id = await telemetry_service.telemetry_queue.get()
     assert func == telemetry_service.send_telemetry_data
     assert queued_payload == payload
     assert path == "deployment_provider"
+    assert user_id is None
 
 
 @pytest.mark.asyncio
@@ -106,10 +140,11 @@ async def test_log_package_deployment_run(telemetry_service):
         deployment_success=True,
     )
     await telemetry_service.log_package_deployment_run(payload)
-    func, queued_payload, path = await telemetry_service.telemetry_queue.get()
+    func, queued_payload, path, user_id = await telemetry_service.telemetry_queue.get()
     assert func == telemetry_service.send_telemetry_data
     assert queued_payload == payload
     assert path == "deployment_run"
+    assert user_id is None
 
 
 @pytest.mark.asyncio
@@ -125,6 +160,32 @@ async def test_log_package_deployment_do_not_track(telemetry_service):
     await telemetry_service.log_package_deployment_provider(payload)
     await telemetry_service.log_package_deployment_run(payload)
     assert telemetry_service.telemetry_queue.empty()
+
+
+@pytest.mark.asyncio
+async def test_log_package_deployment_without_segment_key(telemetry_service):
+    telemetry_service.segment_write_key = None
+    payload = DeploymentPayload(
+        deployment_action="deployment.create",
+        deployment_provider="test_provider",
+        deployment_seconds=1.0,
+        deployment_success=True,
+    )
+
+    await telemetry_service.log_package_deployment(payload)
+
+    assert telemetry_service.telemetry_queue.empty()
+
+
+@pytest.mark.asyncio
+async def test_log_package_shutdown_uses_telemetry_queue(telemetry_service):
+    await telemetry_service.log_package_shutdown()
+
+    send, payload, path, user_id = telemetry_service.telemetry_queue.get_nowait()
+    assert send == telemetry_service.send_telemetry_data
+    assert isinstance(payload, ShutdownPayload)
+    assert path == "shutdown"
+    assert user_id is None
 
 
 fixed_labels = {"flow_id": "this_flow_id", "service": "this", "user": "that"}

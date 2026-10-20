@@ -26,12 +26,14 @@ from bundle_release_plan import (
     PyPIClient,
     _admits_lfx_series,
     _lfx_range_is_compatible,
+    _lfx_series_admission,
     _lfx_specifiers,
     build_artifact_plan,
     build_change_plan,
     bump_version,
     publish_artifacts,
     read_wheel,
+    restamp_nightly_bundles,
     restamp_unpublished_bundles,
     restamp_version,
     update_changed_bundles,
@@ -335,10 +337,58 @@ def test_prerelease_versions_share_the_requested_restamp() -> None:
     assert bump_version("1.2.3", bump="minor", prerelease=".dev7") == "1.3.0.dev7"
 
 
-def test_prerelease_restamp_reuses_stable_and_changes_only_unpublished_bundle(tmp_path: Path) -> None:
+def test_nightly_restamps_only_bundles_requiring_the_matching_final_runtime(tmp_path: Path) -> None:
     repo = _create_repository(tmp_path, {"alpha": "0.1.1", "beta": "0.2.0"})
+    beta_path = repo / "src/bundles/beta/pyproject.toml"
+    beta_path.write_text(beta_path.read_text().replace("lfx>=1.11.0.dev0,<2.0.0", "lfx>=1.11.0,<1.12"))
+    alpha_path = repo / "src/bundles/alpha/pyproject.toml"
+    alpha_before = alpha_path.read_bytes()
+
+    plan = restamp_nightly_bundles("1.11.0.dev7", base_dir=repo)
+
+    assert [(entry.package, entry.build_version, entry.lfx_range) for entry in plan] == [
+        ("lfx-beta", "0.2.0.dev7", "==1.11.0.dev7"),
+    ]
+    assert alpha_path.read_bytes() == alpha_before
+    beta = tomllib.loads(beta_path.read_text())["project"]
+    assert beta["version"] == "0.2.0.dev7"
+    assert beta["dependencies"] == ["lfx==1.11.0.dev7"]
+    manifest = json.loads((repo / "src/bundles/beta/src/lfx_beta/extension.json").read_text())
+    assert manifest["version"] == beta["version"]
+    root = tomllib.loads((repo / "pyproject.toml").read_text())["project"]
+    assert "lfx-beta>=0.2.0.dev7,<1.0.0" in root["dependencies"]
+    assert restamp_nightly_bundles("1.11.0.dev7", base_dir=repo) == ()
+
+
+@pytest.mark.parametrize("requirement", ["lfx>=1.11.1,<2.0.0", "lfx>=1.12.0,<2.0.0", "lfx>=1.10.0,<1.11"])
+def test_nightly_does_not_lower_other_release_floors_or_partially_update(tmp_path: Path, requirement: str) -> None:
+    repo = _create_repository(tmp_path, {"alpha": "0.1.1", "beta": "0.2.0"})
+    for directory, replacement in [("alpha", "lfx>=1.11.0,<2.0.0"), ("beta", requirement)]:
+        path = repo / f"src/bundles/{directory}/pyproject.toml"
+        path.write_text(path.read_text().replace("lfx>=1.11.0.dev0,<2.0.0", replacement))
+    paths = [repo / "pyproject.toml", *(repo / "src/bundles").rglob("*.toml"), *(repo / "src/bundles").rglob("*.json")]
+    originals = {path: path.read_bytes() for path in paths}
+
+    with pytest.raises(PlanError, match="cannot restamp"):
+        restamp_nightly_bundles("1.11.0.dev7", base_dir=repo)
+
+    assert {path: path.read_bytes() for path in paths} == originals
+
+
+@pytest.mark.parametrize("version", ["1.11.0", "1.11.0rc1"])
+def test_nightly_requires_a_development_runtime_version(tmp_path: Path, version: str) -> None:
+    repo = _create_repository(tmp_path, {"alpha": "0.1.1"})
+    with pytest.raises(PlanError, match="development version"):
+        restamp_nightly_bundles(version, base_dir=repo)
+
+
+@pytest.mark.parametrize("minimum", ["1.11.0.dev0", "1.11.0"])
+def test_prerelease_restamp_reuses_stable_and_changes_only_unpublished_bundle(tmp_path: Path, minimum: str) -> None:
+    repo = _create_repository(tmp_path, {"alpha": "0.1.1", "beta": "0.2.0"})
+    beta_path = repo / "src/bundles/beta/pyproject.toml"
+    beta_path.write_text(beta_path.read_text().replace("lfx>=1.11.0.dev0", f"lfx>={minimum}"))
     index = FakeIndex()
-    index.queue("lfx-alpha", "0.1.1", {"urls": [{"packagetype": "bdist_wheel"}]})
+    index.queue("lfx-alpha", "0.1.1", _release_requiring("lfx<2.0.0,>=1.11.0.dev0"))
     index.queue("lfx-beta", "0.2.0", None)
 
     plan = restamp_unpublished_bundles(3, "1.11.0rc3", index, base_dir=repo)
@@ -384,12 +434,27 @@ def test_prerelease_restamp_ignores_newer_release_for_another_lfx_line(tmp_path:
     index.versions["lfx-alpha"] = ("0.1.0", "0.1.1", "0.2.0rc1", "0.2.0")
     index.queue("lfx-alpha", "0.2.0", _release_requiring("lfx<2.0.0,>=1.12.0.dev0"))
     index.queue("lfx-alpha", "0.2.0rc1", _release_requiring("lfx (<2.0.0,>=1.12.0rc1)"))
-    index.queue("lfx-alpha", "0.1.1", {"urls": [{"packagetype": "bdist_wheel"}]})
+    index.queue("lfx-alpha", "0.1.1", _release_requiring("lfx (<2.0.0,>=1.11.0.dev0)"))
 
     plan = restamp_unpublished_bundles(3, "1.11.0rc3", index, base_dir=repo)
 
     assert [(entry.package, entry.build_version, entry.action) for entry in plan] == [
         ("lfx-alpha", "0.1.1", "reuse-stable"),
+    ]
+
+
+def test_prerelease_restamp_ignores_newer_nightly_pinned_to_another_lfx_line(tmp_path: Path) -> None:
+    repo = _create_repository(tmp_path, {"alpha": "0.2.5"})
+    index = FakeIndex()
+    index.latest_versions["lfx-alpha"] = "0.3.2"
+    index.versions["lfx-alpha"] = ("0.2.5", "0.3.2", "0.3.3.dev47")
+    index.queue("lfx-alpha", "0.3.2", _release_requiring("lfx>=1.13.0.dev0,<2.0.0"))
+    index.queue("lfx-alpha", "0.3.3.dev47", _release_requiring("lfx==1.13.0.dev47"))
+
+    plan = restamp_unpublished_bundles(0, "1.12.7rc0", index, base_dir=repo)
+
+    assert [(entry.package, entry.build_version, entry.action) for entry in plan] == [
+        ("lfx-alpha", "0.2.5rc0", "publish-prerelease"),
     ]
 
 
@@ -406,6 +471,72 @@ def test_prerelease_restamp_rejects_newer_release_for_the_same_lfx_line(tmp_path
         match=r"lfx-alpha 0\.1\.1: source version trails public version 0\.1\.2 \(lfx<2\.0\.0,>=1\.11\.0\.dev0\)",
     ):
         restamp_unpublished_bundles(3, "1.11.0rc3", index, base_dir=repo)
+
+
+def test_prerelease_restamp_rejects_reusing_a_release_published_for_another_lfx_line(tmp_path: Path) -> None:
+    # The lfx 1.12 line already published 0.1.8, so the lfx 1.11 line cannot reuse that number.
+    repo = _create_repository(tmp_path, {"alpha": "0.2.0", "beta": "0.1.8"})
+    index = FakeIndex()
+    index.queue("lfx-alpha", "0.2.0", None)
+    index.latest_versions["lfx-beta"] = "0.1.8"
+    index.queue("lfx-beta", "0.1.8", _release_requiring("lfx (<2.0.0,>=1.12.0.dev0)"))
+
+    with pytest.raises(
+        PlanError,
+        match=r"lfx-beta 0\.1\.8: already published for lfx<2\.0\.0,>=1\.12\.0\.dev0, which excludes lfx 1\.11\.0rc3",
+    ):
+        restamp_unpublished_bundles(3, "1.11.0rc3", index, base_dir=repo)
+
+    # alpha was restamped before beta failed; the whole plan rolls back.
+    assert 'version = "0.2.0"' in (repo / "src" / "bundles" / "alpha" / "pyproject.toml").read_text()
+
+
+def test_prerelease_restamp_rejects_reusing_a_release_with_unknown_lfx_range(tmp_path: Path) -> None:
+    repo = _create_repository(tmp_path, {"alpha": "0.1.1"})
+    index = FakeIndex()
+    index.queue("lfx-alpha", "0.1.1", {"urls": [{"packagetype": "bdist_wheel"}]})
+
+    with pytest.raises(PlanError, match=r"lfx-alpha 0\.1\.1: already published for lfx range unknown"):
+        restamp_unpublished_bundles(3, "1.11.0rc3", index, base_dir=repo)
+
+
+@pytest.mark.parametrize("lfx_requirement", ["lfx==1.11.0", "lfx~=1.12.0", "lfx"])
+def test_prerelease_restamp_rejects_reusing_a_release_whose_lfx_range_cannot_be_evaluated(
+    tmp_path: Path, lfx_requirement: str
+) -> None:
+    # The newer-release guard treats these as admitting so it blocks; reuse must not treat them as safe.
+    repo = _create_repository(tmp_path, {"alpha": "0.1.1"})
+    index = FakeIndex()
+    index.queue("lfx-alpha", "0.1.1", _release_requiring(lfx_requirement))
+
+    with pytest.raises(
+        PlanError,
+        match=r"lfx-alpha 0\.1\.1: already published for .*, which this check cannot confirm admits lfx 1\.11\.0rc3",
+    ):
+        restamp_unpublished_bundles(3, "1.11.0rc3", index, base_dir=repo)
+
+
+@pytest.mark.parametrize(
+    ("specifier", "admission"),
+    [
+        (">=1.12.0.dev0,<2.0.0", True),
+        ("<2.0.0,>=1.13.0.dev0", False),
+        ("==1.13.0", False),
+        ("==1.13.0.dev47", False),
+        ("==1.11.9", False),
+        ("==1.12.0", None),
+        ("==1.12.4", None),
+        ("==1.12.*", None),
+        ("===1.13.0", None),
+        ("~=1.12.0", None),
+        ("!=1.12.4", None),
+        ("", None),  # A bare ``lfx`` requirement.
+        ("==1.11.5,<1.12.0.dev0", False),  # An excluding bound wins over an unevaluable clause.
+        (">=1.12.0.dev0,==1.12.4", None),
+    ],
+)
+def test_lfx_series_admission_reports_unevaluable_ranges(specifier: str, *, admission: bool | None) -> None:
+    assert _lfx_series_admission(specifier, "1.12.4") is admission
 
 
 @pytest.mark.parametrize(

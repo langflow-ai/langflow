@@ -35,6 +35,8 @@ const GUIDANCE_KEYS: Record<string, string> = {
   validation_failed: "storageUpgrade.validationFailed",
   interrupted: "storageUpgrade.interrupted",
   automatic_reader_limit: "storageUpgrade.readerLimit",
+  legacy_source_missing: "storageUpgrade.sourceMissing",
+  legacy_source_ambiguous: "storageUpgrade.sourceAmbiguous",
 };
 
 function UpgradeCard({
@@ -46,7 +48,9 @@ function UpgradeCard({
 }) {
   const { t } = useTranslation();
   const retry = usePostStorageRetry();
-  const [failed, setFailed] = useState(false);
+  const [retryFeedback, setRetryFeedback] = useState<
+    "scheduled" | "failed" | null
+  >(null);
   const isUpgrading = store.storage_state === "migrating";
   return (
     <section
@@ -74,18 +78,30 @@ function UpgradeCard({
           disabled={retry.isPending}
           data-testid="storage-upgrade-retry"
           onClick={() => {
-            setFailed(false);
+            setRetryFeedback(null);
             if (!store.migration_id) return;
             retry.mutate(
               { migrationId: store.migration_id },
-              { onError: () => setFailed(true) },
+              {
+                onSuccess: () => setRetryFeedback("scheduled"),
+                onError: () => setRetryFeedback("failed"),
+              },
             );
           }}
         >
-          {t("storageUpgrade.retry")}
+          {t(
+            retry.isPending
+              ? "storageUpgrade.retryScheduling"
+              : "storageUpgrade.retry",
+          )}
         </Button>
       )}
-      {failed && (
+      {retryFeedback === "scheduled" && !isUpgrading && (
+        <p role="status" className="text-xs text-muted-foreground">
+          {t("storageUpgrade.retryScheduled")}
+        </p>
+      )}
+      {retryFeedback === "failed" && (
         <p role="alert" className="text-xs text-destructive">
           {t("storageUpgrade.retryFailed")}
         </p>
@@ -104,7 +120,11 @@ export function StorageUpgradePanel({
   const { data } = useGetStorageStatus();
   const store = data?.stores.find((item) => item.kb_id === kbId);
   return store ? (
-    <UpgradeCard store={store} isAdmin={data?.is_admin ?? false} />
+    <UpgradeCard
+      key={store.kb_id}
+      store={store}
+      isAdmin={data?.is_admin ?? false}
+    />
   ) : (
     fallback
   );

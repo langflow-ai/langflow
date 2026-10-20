@@ -29,6 +29,8 @@ from langflow.api.utils import (
     strip_flow_secrets,
 )
 from langflow.api.v1.flow_conflict import claim_version_token
+from langflow.services.audit import vocabulary as audit_vocab
+from langflow.services.audit.operations import stage_flow_succeeded
 from langflow.services.authorization.fetch import authorized_or_owner_scoped
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_move_allowed
@@ -42,6 +44,7 @@ from langflow.services.database.models.flow.model import (
     FlowCreate,
     FlowRead,
     FlowUpdate,
+    is_virtual_flow_id,
 )
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.model import Folder
@@ -448,6 +451,12 @@ async def _canonicalize_flow_destination(
     return workspace_id, folder_id
 
 
+def _validate_new_flow_id(flow_id: UUID | None) -> None:
+    """Keep saved flow IDs separate from deterministic public execution IDs."""
+    if flow_id is not None and is_virtual_flow_id(flow_id):
+        raise HTTPException(status_code=400, detail="UUID5 flow IDs are reserved for public execution histories.")
+
+
 async def _new_flow(
     *,
     session: AsyncSession,
@@ -484,6 +493,8 @@ async def _new_flow(
         update_webhook: Recompute the webhook flag from the saved flow data.
     """
     try:
+        effective_id = flow_id if flow_id is not None else flow.id
+        _validate_new_flow_id(effective_id)
         # Ownership follows the destination project, so it has to be resolved
         # before anything keyed on the owner: the filesystem sandbox, the
         # ``(user_id, name)`` / ``(user_id, endpoint_name)`` de-duplication, and
@@ -528,7 +539,6 @@ async def _new_flow(
 
         # Apply the stable ID: explicit flow_id param (PUT upsert) takes precedence,
         # then flow.id (stable import from FlowCreate), then the uuid4 default.
-        effective_id = flow_id if flow_id is not None else flow.id
         if effective_id is not None:
             db_flow.id = effective_id
 
@@ -542,6 +552,15 @@ async def _new_flow(
         session.add(db_flow)
         await session.flush()
         await session.refresh(db_flow)
+        await stage_flow_succeeded(
+            session,
+            action=audit_vocab.FLOW_CREATE,
+            operation=audit_vocab.AuditOperation.CREATE,
+            flow_id=db_flow.id,
+            flow_name=db_flow.name,
+            written_fields=flow.model_fields_set,
+            project_after=db_flow.folder_id,
+        )
         if update_webhook:
             db_flow.webhook = get_webhook_component_in_flow(db_flow.data or {}) is not None
             session.add(db_flow)
@@ -800,6 +819,16 @@ async def _update_existing_flow(
     session.add(existing_flow)
     await session.flush()
     await session.refresh(existing_flow)
+    await stage_flow_succeeded(
+        session,
+        action=audit_vocab.FLOW_WRITE,
+        operation=audit_vocab.AuditOperation.REPLACE,
+        flow_id=existing_flow.id,
+        flow_name=existing_flow.name,
+        written_fields=update_data.keys() & _UPDATABLE_FLOW_FIELDS,
+        project_before=existing_folder_id,
+        project_after=existing_flow.folder_id,
+    )
     if reconcile_triggers:
         await _reconcile_flow_triggers(
             session, flow_id=existing_flow.id, owner_id=existing_flow.user_id, flow_data=existing_flow.data
@@ -935,6 +964,16 @@ async def _patch_flow(
     session.add(db_flow)
     await session.flush()
     await session.refresh(db_flow)
+    await stage_flow_succeeded(
+        session,
+        action=audit_vocab.FLOW_WRITE,
+        operation=audit_vocab.AuditOperation.PATCH,
+        flow_id=db_flow.id,
+        flow_name=db_flow.name,
+        written_fields=update_data.keys() & _UPDATABLE_FLOW_FIELDS,
+        project_before=existing_folder_id,
+        project_after=db_flow.folder_id,
+    )
     await _reconcile_flow_triggers(session, flow_id=db_flow.id, owner_id=db_flow.user_id, flow_data=db_flow.data)
     # Writes happen under the owner's storage namespace, not the actor's.
     await _save_flow_to_fs(db_flow, owner_user_id, storage_service)

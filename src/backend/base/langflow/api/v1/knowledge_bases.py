@@ -1104,6 +1104,8 @@ async def ingest_files_to_knowledge_base(
             asset_id=asset_id,
             asset_type="knowledge_base",
             user_id=current_user.id,
+            # Live from insert, so no sweep can catch it before the run heartbeats.
+            heartbeat=True,
         )
 
         # Always use async path: fire and forget the ingestion logic wrapped in status updates
@@ -1259,6 +1261,7 @@ async def ingest_folder_to_knowledge_base(
             asset_id=asset_id,
             asset_type="knowledge_base",
             user_id=current_user.id,
+            heartbeat=True,
         )
 
         task_service = get_task_service()
@@ -1348,12 +1351,11 @@ async def list_knowledge_bases(
 
             # Map job statuses back to knowledge bases
             # Normalize to frontend-expected values: ready, ingesting, failed, empty
+            # Ended runs do not determine whether the base remains usable.
+            # Preserve its stored failure or its existing chunk availability.
             job_status_map = {
                 "queued": "ingesting",
                 "in_progress": "ingesting",
-                "failed": "failed",
-                "cancelled": "failed",
-                "timed_out": "failed",
             }
             for kb_info in knowledge_bases:
                 try:
@@ -1364,7 +1366,6 @@ async def list_knowledge_bases(
                         mapped = job_status_map.get(raw_status)
                         if mapped:
                             kb_info.status = mapped
-                        # For "completed", keep the file-marker / chunk-count status already set
                         kb_info.last_job_id = str(job.job_id)
                 except (ValueError, AttributeError):
                     # If KB ID is not a valid UUID, skip job status update
@@ -1785,6 +1786,7 @@ async def ingest_via_connector(
                 asset_id=asset_id,
                 asset_type="knowledge_base",
                 user_id=current_user.id,
+                heartbeat=True,
                 dedupe_key=dedupe_key,
             )
         except DuplicateJobError as exc:

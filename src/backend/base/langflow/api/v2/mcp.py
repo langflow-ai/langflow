@@ -11,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.utils.mcp.discovery import discovery_clients, run_server_checks
 from langflow.api.v2.files import (
     MCP_SERVERS_FILE,
     download_file,
@@ -21,7 +22,12 @@ from langflow.api.v2.files import (
 )
 from langflow.api.v2.schemas import MCPServerConfig
 from langflow.logging import logger
-from langflow.services.auth.mcp_encryption import decrypt_mcp_config, encrypt_mcp_config
+from langflow.services.auth.mcp_encryption import (
+    decrypt_mcp_config,
+    encrypt_mcp_config,
+    redact_mcp_config,
+    restore_mcp_config_secrets,
+)
 from langflow.services.database.models import MCPServer
 from langflow.services.deps import get_settings_service, get_shared_component_cache_service, get_storage_service
 from langflow.services.settings.service import SettingsService
@@ -260,8 +266,6 @@ async def get_servers(
     """Get the list of available servers."""
     import asyncio
 
-    from lfx.base.mcp.util import MCPStdioClient, MCPStreamableHttpClient
-
     server_list = await get_server_list(current_user, session, storage_service, settings_service)
 
     if not action_count:
@@ -271,106 +275,98 @@ async def get_servers(
     for server_config in server_list["mcpServers"].values():
         ensure_mcp_stdio_access(server_config, current_user, settings_service.settings)
 
-    # Check all of the tool counts for each server concurrently
+    # Load variables once: AsyncSession cannot be used concurrently by discovery workers.
+    request_variables = {}
+    try:
+        from langflow.services.auth import utils as auth_utils
+        from langflow.services.database.models.variable.model import Variable
+
+        # Load variables directly from database and decrypt ALL types (including CREDENTIAL)
+        stmt = select(Variable).where(Variable.user_id == current_user.id)
+        variables = list((await session.exec(stmt)).all())
+
+        # Decrypt variables based on type (following the pattern from get_all_decrypted_variables)
+        for variable in variables:
+            if variable.name and variable.value:
+                # Prior to v1.8, both Generic and Credential variables were encrypted.
+                # As such, must attempt to decrypt both types to ensure backwards-compatibility.
+                try:
+                    decrypted_value = auth_utils.decrypt_api_key(variable.value)
+                    request_variables[variable.name] = decrypted_value
+                except Exception as e:  # noqa: BLE001
+                    await logger.aerror(
+                        f"Failed to decrypt credential variable '{variable.name}': {e}. "
+                        "This credential will not be available for MCP server."
+                    )
+    except Exception as e:  # noqa: BLE001
+        await logger.awarning(f"Failed to load global variables for MCP server test: {e}")
+
     async def check_server(server_name: str) -> dict:
         server_info: dict[str, str | int | None] = {"name": server_name, "mode": None, "toolsCount": None}
-        # Create clients that we control so we can clean them up after
-        mcp_stdio_client = MCPStdioClient()
-        mcp_streamable_http_client = MCPStreamableHttpClient()
-        try:
-            # Get global variables from database for header resolution
-            request_variables = {}
+        async with discovery_clients() as (mcp_stdio_client, mcp_streamable_http_client):
             try:
-                from sqlmodel import select
-
-                from langflow.services.auth import utils as auth_utils
-                from langflow.services.database.models.variable.model import Variable
-
-                # Load variables directly from database and decrypt ALL types (including CREDENTIAL)
-                stmt = select(Variable).where(Variable.user_id == current_user.id)
-                variables = list((await session.exec(stmt)).all())
-
-                # Decrypt variables based on type (following the pattern from get_all_decrypted_variables)
-                for variable in variables:
-                    if variable.name and variable.value:
-                        # Prior to v1.8, both Generic and Credential variables were encrypted.
-                        # As such, must attempt to decrypt both types to ensure backwards-compatibility.
-                        try:
-                            decrypted_value = auth_utils.decrypt_api_key(variable.value)
-                            request_variables[variable.name] = decrypted_value
-                        except Exception as e:  # noqa: BLE001
-                            await logger.aerror(
-                                f"Failed to decrypt credential variable '{variable.name}': {e}. "
-                                "This credential will not be available for MCP server."
-                            )
+                mode, tool_list, _ = await update_tools(
+                    server_name=server_name,
+                    server_config=server_list["mcpServers"][server_name],
+                    mcp_stdio_client=mcp_stdio_client,
+                    mcp_streamable_http_client=mcp_streamable_http_client,
+                    request_variables=request_variables,
+                    # These are read straight from the variable table above, so they are the
+                    # DB-backed set the URL is allowed to resolve from.
+                    url_variables=request_variables,
+                    current_user_id=current_user.id,
+                )
+                server_info["mode"] = mode.lower()
+                server_info["toolsCount"] = len(tool_list)
+                if len(tool_list) == 0:
+                    server_info["error"] = "No tools found"
+            except ValueError as e:
+                # Configuration validation errors, invalid URLs, etc.
+                await logger.aerror(f"Configuration error for server {server_name}: {e}")
+                server_info["error"] = f"Configuration error: {e}"
+            except ConnectionError as e:
+                # Network connection and timeout issues
+                await logger.aerror(f"Connection error for server {server_name}: {e}")
+                server_info["error"] = f"Connection failed: {e}"
+            except (TimeoutError, asyncio.TimeoutError) as e:
+                # Timeout errors
+                await logger.aerror(f"Timeout error for server {server_name}: {e}")
+                server_info["error"] = "Timeout when checking server tools"
+            except OSError as e:
+                # System-level errors (process execution, file access)
+                await logger.aerror(f"System error for server {server_name}: {e}")
+                server_info["error"] = f"System error: {e}"
+            except (KeyError, TypeError) as e:
+                # Data parsing and access errors
+                await logger.aerror(f"Data error for server {server_name}: {e}")
+                server_info["error"] = f"Configuration data error: {e}"
+            except (RuntimeError, ProcessLookupError, PermissionError) as e:
+                # Runtime and process-related errors
+                await logger.aerror(f"Runtime error for server {server_name}: {e}")
+                server_info["error"] = f"Runtime error: {e}"
             except Exception as e:  # noqa: BLE001
-                await logger.awarning(f"Failed to load global variables for MCP server test: {e}")
-
-            mode, tool_list, _ = await update_tools(
-                server_name=server_name,
-                server_config=server_list["mcpServers"][server_name],
-                mcp_stdio_client=mcp_stdio_client,
-                mcp_streamable_http_client=mcp_streamable_http_client,
-                request_variables=request_variables,
-                # These are read straight from the variable table above, so they are the
-                # DB-backed set the URL is allowed to resolve from.
-                url_variables=request_variables,
-                current_user_id=current_user.id,
-            )
-            server_info["mode"] = mode.lower()
-            server_info["toolsCount"] = len(tool_list)
-            if len(tool_list) == 0:
-                server_info["error"] = "No tools found"
-        except ValueError as e:
-            # Configuration validation errors, invalid URLs, etc.
-            await logger.aerror(f"Configuration error for server {server_name}: {e}")
-            server_info["error"] = f"Configuration error: {e}"
-        except ConnectionError as e:
-            # Network connection and timeout issues
-            await logger.aerror(f"Connection error for server {server_name}: {e}")
-            server_info["error"] = f"Connection failed: {e}"
-        except (TimeoutError, asyncio.TimeoutError) as e:
-            # Timeout errors
-            await logger.aerror(f"Timeout error for server {server_name}: {e}")
-            server_info["error"] = "Timeout when checking server tools"
-        except OSError as e:
-            # System-level errors (process execution, file access)
-            await logger.aerror(f"System error for server {server_name}: {e}")
-            server_info["error"] = f"System error: {e}"
-        except (KeyError, TypeError) as e:
-            # Data parsing and access errors
-            await logger.aerror(f"Data error for server {server_name}: {e}")
-            server_info["error"] = f"Configuration data error: {e}"
-        except (RuntimeError, ProcessLookupError, PermissionError) as e:
-            # Runtime and process-related errors
-            await logger.aerror(f"Runtime error for server {server_name}: {e}")
-            server_info["error"] = f"Runtime error: {e}"
-        except Exception as e:  # noqa: BLE001
-            # Generic catch-all for other exceptions (including ExceptionGroup)
-            if hasattr(e, "exceptions") and e.exceptions:
-                # Extract the first underlying exception for a more meaningful error message
-                underlying_error = e.exceptions[0]
-                if hasattr(underlying_error, "exceptions"):
-                    await logger.aerror(
-                        f"Error checking server {server_name}: {underlying_error}, {underlying_error.exceptions}"
-                    )
-                    underlying_error = underlying_error.exceptions[0]
+                # Generic catch-all for other exceptions (including ExceptionGroup)
+                if hasattr(e, "exceptions") and e.exceptions:
+                    # Extract the first underlying exception for a more meaningful error message
+                    underlying_error = e.exceptions[0]
+                    if hasattr(underlying_error, "exceptions"):
+                        await logger.aerror(
+                            f"Error checking server {server_name}: {underlying_error}, {underlying_error.exceptions}"
+                        )
+                        underlying_error = underlying_error.exceptions[0]
+                    else:
+                        await logger.aexception(f"Error checking server {server_name}: {underlying_error}")
+                    server_info["error"] = f"Error loading server: {underlying_error}"
                 else:
-                    await logger.aexception(f"Error checking server {server_name}: {underlying_error}")
-                server_info["error"] = f"Error loading server: {underlying_error}"
-            else:
-                await logger.aexception(f"Error checking server {server_name}: {e}")
-                server_info["error"] = f"Error loading server: {e}"
-        finally:
-            # Always disconnect clients to prevent mcp-proxy process leaks
-            # These clients spawn subprocesses that need to be explicitly terminated
-            await mcp_stdio_client.disconnect()
-            await mcp_streamable_http_client.disconnect()
+                    await logger.aexception(f"Error checking server {server_name}: {e}")
+                    server_info["error"] = f"Error loading server: {e}"
         return server_info
 
-    # Run all server checks concurrently
-    tasks = [check_server(server) for server in server_list["mcpServers"]]
-    return await asyncio.gather(*tasks, return_exceptions=True)
+    return await run_server_checks(
+        list(server_list["mcpServers"]),
+        check_server,
+        timeout=settings_service.settings.mcp_server_timeout,
+    )
 
 
 @router.get("/servers/{server_name}")
@@ -385,7 +381,7 @@ async def get_server_endpoint(
     server = await get_server(server_name, current_user, session, storage_service, settings_service)
     if server is None:
         raise HTTPException(status_code=404, detail="Server not found.")
-    return server
+    return redact_mcp_config(server)
 
 
 def _derive_transport(config: dict) -> str | None:
@@ -418,6 +414,14 @@ async def _persist(session, *, owns_transaction: bool) -> None:
         await session.commit()
     else:
         await session.flush()
+
+
+def _restore_config_secrets(server_config: dict, existing: dict | None) -> dict:
+    """Translate an invalid editor mask into an API validation error."""
+    try:
+        return restore_mcp_config_secrets(server_config, existing)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 async def update_server(
@@ -478,12 +482,13 @@ async def update_server(
             raise HTTPException(status_code=409, detail="Server already exists.")
 
         if existing is None:
+            resolved_config = _restore_config_secrets(server_config, None)
             session.add(
                 MCPServer(
                     user_id=user_id,
                     name=server_name,
-                    config=encrypt_mcp_config(server_config),
-                    transport=_derive_transport(server_config),
+                    config=encrypt_mcp_config(resolved_config),
+                    transport=_derive_transport(resolved_config),
                 )
             )
             try:
@@ -508,7 +513,9 @@ async def update_server(
             break
 
         if merge_existing:
-            merged = {**decrypt_mcp_config(existing.config or {}), **server_config}
+            previous = decrypt_mcp_config(existing.config or {})
+            resolved_config = _restore_config_secrets(server_config, previous)
+            merged = {**previous, **resolved_config}
             ensure_mcp_stdio_access(merged, current_user, settings)
             updated = await session.execute(
                 update(MCPServer)
@@ -537,12 +544,13 @@ async def update_server(
         # (version = version + 1) so it stays strictly monotonic even when our ORM copy
         # is stale. An ORM `+= 1` off a stale read could reuse a version a concurrent
         # PATCH already consumed, letting a later guarded PATCH pass its version check.
+        resolved_config = _restore_config_secrets(server_config, decrypt_mcp_config(existing.config or {}))
         replaced = await session.execute(
             update(MCPServer)
             .where(MCPServer.id == existing.id)
             .values(
-                config=encrypt_mcp_config(server_config),
-                transport=_derive_transport(server_config),
+                config=encrypt_mcp_config(resolved_config),
+                transport=_derive_transport(resolved_config),
                 version=MCPServer.version + 1,
                 updated_at=datetime.now(timezone.utc),
             )
@@ -577,13 +585,14 @@ async def add_server(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ):
+    """Create a server and return its configuration with credentials masked."""
     if is_mcp_servers_locked(settings_service.settings) and not current_user.is_superuser:
         raise HTTPException(
             status_code=403,
             detail="MCP server configuration is locked. Contact an administrator to manage external MCP servers.",
         )
 
-    return await update_server(
+    updated = await update_server(
         server_name,
         _enforce_immutable_server_name(server_name, server_config.model_dump(exclude_unset=True)),
         current_user,
@@ -592,6 +601,7 @@ async def add_server(
         settings_service,
         check_existing=True,
     )
+    return redact_mcp_config(updated)
 
 
 @router.patch("/servers/{server_name}")
@@ -604,13 +614,14 @@ async def update_server_endpoint(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ):
+    """Patch a server and return its configuration with credentials masked."""
     if is_mcp_servers_locked(settings_service.settings) and not current_user.is_superuser:
         raise HTTPException(
             status_code=403,
             detail="MCP server configuration is locked. Contact an administrator to manage external MCP servers.",
         )
 
-    return await update_server(
+    updated = await update_server(
         server_name,
         _enforce_immutable_server_name(server_name, server_config.model_dump(exclude_unset=True)),
         current_user,
@@ -619,6 +630,7 @@ async def update_server_endpoint(
         settings_service,
         merge_existing=True,
     )
+    return redact_mcp_config(updated)
 
 
 @router.delete("/servers/{server_name}")

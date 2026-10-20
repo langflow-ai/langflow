@@ -54,6 +54,21 @@ For example, `lfx-bundles[google]`, `lfx-bundles[azure]`, and
 `lfx-bundles[ollama]` now install their standalone bundles, but are excluded
 from the generated aggregate extras because Langflow installs them directly.
 
+## MrScraper
+
+Install `pip install "lfx-bundles[mrscraper]"` for the MrScraper SDK 0.6.x.
+The bundle exposes three components: **MrScraper Account** for subscription and
+usage, **MrScraper Scraper API** for HTML, Markdown, and screenshots, and
+**MrScraper Web Search** for Google results. Each accepts a secret API token
+from [the MrScraper app](https://app.mrscraper.com).
+
+The Scraper API retains the existing `MrscraperFetchHtml` identifier and plain
+text `html` output field. The seven legacy AI, crawling, batch, rerun, and
+results components have been removed. See the
+[component reference and migration guide](../../../docs/docs/Components/bundles-mrscraper.mdx)
+for parameters, output formats, and flow updates. Disable **Raw HTML** in Web
+Search to request structured JSON results.
+
 ### OpenDsStar: manual installation only
 
 Starting with `lfx-bundles` 1.1.24, OpenDsStar is no longer a managed dependency,
