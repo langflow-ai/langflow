@@ -469,6 +469,10 @@ const config = {
             from: "/bundles-altk",
           },
           {
+            to: "/components-bundle-components#legacy-bundles",
+            from: "/bundles-chroma",
+          },
+          {
             to: "/macos-support",
             from: "/deployment-macos-support",
           },

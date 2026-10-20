@@ -128,10 +128,14 @@ For more information, see [Administer users and teams with the API and CLI](./ad
 
 ### langflow api-key {#langflow-api-key}
 
-Creates a Langflow API key.
+Creates a Langflow API key for the auto-login superuser.
 
-You must be a superuser to create API keys with the CLI.
-For more information, see [Langflow API keys](/api-keys-and-authentication#langflow-api-keys).
+This command works only when automatic login is enabled (`LANGFLOW_AUTO_LOGIN=true`).
+Official Langflow packages and Docker images default to `LANGFLOW_AUTO_LOGIN=false`, and with that default the command doesn't create a key.
+To create a key on a server with authentication enabled, use Langflow **Settings** or the Langflow API.
+For more information, see [Create a Langflow API key](/api-keys-and-authentication#create-a-langflow-api-key).
+
+If the superuser already has an API key, the command deletes one existing key before it creates the new one.
 
 <Tabs groupId="Invocation">
   <TabItem value="uv (recommended)" label="uv (recommended)" default>
