@@ -1,0 +1,140 @@
+{
+  "boolean": {
+    "confidence": null,
+    "kind": "boolean",
+    "model": "gpt-6-luna",
+    "model_source": "response",
+    "probabilities": null,
+    "probability_true": 0.88,
+    "provider": "OpenAI",
+    "refusal": null,
+    "request": {
+      "kind": "boolean",
+      "levels": [],
+      "options": [],
+      "question": "Is the customer asking for a refund?"
+    },
+    "score": null,
+    "selected_option": null,
+    "status": "success",
+    "usage": {
+      "input_tokens": 296,
+      "output_tokens": 0,
+      "total_tokens": 296
+    }
+  },
+  "choice": {
+    "confidence": 0.71,
+    "kind": "choice",
+    "model": "pplx-decider-latest",
+    "model_source": "request",
+    "probabilities": {
+      "billing": 0.82,
+      "sales": 0.06,
+      "technical": 0.12
+    },
+    "probability_true": null,
+    "provider": "Perplexity",
+    "refusal": null,
+    "request": {
+      "kind": "choice",
+      "levels": [],
+      "options": [
+        {
+          "description": "Payments and invoices",
+          "id": "billing",
+          "label": "Billing"
+        },
+        {
+          "description": "Bugs and outages",
+          "id": "technical",
+          "label": "Technical Support"
+        },
+        {
+          "description": "Pricing and plans",
+          "id": "sales",
+          "label": "Sales"
+        }
+      ],
+      "question": "Which team should handle this message?"
+    },
+    "score": null,
+    "selected_option": "billing",
+    "status": "success",
+    "usage": {
+      "input_tokens": 296,
+      "output_tokens": 0,
+      "total_tokens": 296
+    }
+  },
+  "refusal": {
+    "confidence": null,
+    "kind": "boolean",
+    "model": "gpt-6-luna",
+    "model_source": "response",
+    "probabilities": null,
+    "probability_true": null,
+    "provider": "OpenAI",
+    "refusal": "I can't evaluate this request.",
+    "request": {
+      "kind": "boolean",
+      "levels": [],
+      "options": [],
+      "question": "Is the customer asking for a refund?"
+    },
+    "score": null,
+    "selected_option": null,
+    "status": "refusal",
+    "usage": null
+  },
+  "score": {
+    "confidence": 0.4,
+    "kind": "score",
+    "model": "jev-1.13.0",
+    "model_source": "response",
+    "probabilities": {
+      "delighted": 0.3,
+      "neutral": 0.15,
+      "satisfied": 0.5,
+      "upset": 0.05
+    },
+    "probability_true": null,
+    "provider": "TypeSafe",
+    "refusal": null,
+    "request": {
+      "kind": "score",
+      "levels": [
+        {
+          "description": "",
+          "id": "upset",
+          "label": "Upset"
+        },
+        {
+          "description": "",
+          "id": "neutral",
+          "label": "Neutral"
+        },
+        {
+          "description": "",
+          "id": "satisfied",
+          "label": "Satisfied"
+        },
+        {
+          "description": "",
+          "id": "delighted",
+          "label": "Delighted"
+        }
+      ],
+      "options": [],
+      "question": "How satisfied is the customer?"
+    },
+    "score": 2.05,
+    "selected_option": null,
+    "status": "success",
+    "usage": {
+      "input_tokens": 296,
+      "output_tokens": 0,
+      "total_tokens": 296
+    }
+  }
+}

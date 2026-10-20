@@ -1,6 +1,8 @@
-"""Decision evidence fixtures for the inspection UI, regenerated from the real Smart Router.
+"""Decision fixtures for the inspection UI, regenerated from the real Smart Router and Decision Model.
 
-Set UPDATE_DECISION_FIXTURES=1 to rewrite decision_evidence_fixtures.json after an intended change.
+decision_evidence_fixtures.json holds Smart Router evidence; decision_result_fixtures.json holds the
+Decision Model component's result for each decision type. Set UPDATE_DECISION_FIXTURES=1 to rewrite
+both after an intended change.
 """
 
 import contextlib
@@ -9,12 +11,16 @@ import os
 from pathlib import Path
 from types import SimpleNamespace
 
+import httpx
 import pytest
 from lfx.base.models.decisions.schema import DecisionConfigurationError, DecisionEvaluationError, DecisionResult
+from lfx.base.models.unified_models import get_provider_secret_variable_key
+from lfx.components.llm_operations.decision_model import DecisionModelComponent
 from lfx.components.llm_operations.llm_conditional_router import SmartRouterComponent
 from lfx.schema.message import Message
 
 FIXTURES = Path(__file__).with_name("decision_evidence_fixtures.json")
+RESULT_FIXTURES = Path(__file__).with_name("decision_result_fixtures.json")
 ROUTES = [
     {"route_category": "Billing", "route_description": "Payments and invoices", "output_value": ""},
     {"route_category": "Technical Support", "route_description": "Bugs and outages", "output_value": ""},
@@ -87,6 +93,102 @@ def _evidence(monkeypatch, error_action: str, evaluate) -> dict:
     return router._build_artifact(Message(text="I was charged twice for my October invoice."))["raw"]["decision"]
 
 
+TEAMS = [
+    {"id": "billing", "label": "Billing", "description": "Payments and invoices"},
+    {"id": "technical", "label": "Technical Support", "description": "Bugs and outages"},
+    {"id": "sales", "label": "Sales", "description": "Pricing and plans"},
+]
+SATISFACTION = [
+    {"id": "upset", "label": "Upset", "description": ""},
+    {"id": "neutral", "label": "Neutral", "description": ""},
+    {"id": "satisfied", "label": "Satisfied", "description": ""},
+    {"id": "delighted", "label": "Delighted", "description": ""},
+]
+USAGE = {"input_tokens": 296, "output_tokens": 0, "total_tokens": 296}
+# Documented response shapes; each provider's own wire format is translated by the real adapter.
+RESULT_SCENARIOS = {
+    "choice": (
+        "Perplexity",
+        "pplx-decider-latest",
+        "Choice",
+        "Which team should handle this message?",
+        TEAMS,
+        {
+            "model": "pplx-decider-latest",
+            "answers": {
+                "decision": {
+                    "type": "choice",
+                    "probabilities": {"billing": 0.82, "technical": 0.12, "sales": 0.06},
+                    "choice": "billing",
+                    "confidence": 0.71,
+                }
+            },
+            "usage": USAGE,
+        },
+    ),
+    "boolean": (
+        "OpenAI",
+        "gpt-6-luna",
+        "Boolean",
+        "Is the customer asking for a refund?",
+        [],
+        {
+            "model": "gpt-6-luna",
+            "answers": [{"name": "decision", "type": "predicate", "probability": 0.88}],
+            "usage": USAGE,
+        },
+    ),
+    "score": (
+        "TypeSafe",
+        "jev-latest",
+        "Score",
+        "How satisfied is the customer?",
+        SATISFACTION,
+        {
+            "model": "jev-1.13.0",
+            "answers": {
+                "decision": {
+                    "type": "score",
+                    "probabilities": {"0": 0.05, "1": 0.15, "2": 0.5, "3": 0.3},
+                    "legend": {"0": "Upset", "1": "Neutral", "2": "Satisfied", "3": "Delighted"},
+                    "score": 2.05,
+                    "confidence": 0.4,
+                }
+            },
+            "usage": USAGE,
+        },
+    ),
+    "refusal": (
+        "OpenAI",
+        "gpt-6-luna",
+        "Boolean",
+        "Is the customer asking for a refund?",
+        [],
+        {
+            "model": "gpt-6-luna",
+            "answers": [{"name": "decision", "type": "refusal", "refusal": "I can't evaluate this request."}],
+        },
+    ),
+}
+
+
+def _component_result(monkeypatch, provider, model, kind, question, candidates, body) -> dict:
+    monkeypatch.setenv(get_provider_secret_variable_key(provider), "fixture-key")  # pragma: allowlist secret
+    monkeypatch.setattr(
+        "lfx.base.models.decisions.providers.provider_safe_httpx_post",
+        lambda *_args, **_kwargs: httpx.Response(200, json=body),
+    )
+    component = DecisionModelComponent()
+    component.set(
+        model=[{"provider": provider, "name": model}],
+        kind=kind,
+        context="I was charged twice for my October invoice. Support fixed it quickly, thanks!",
+        question=question,
+        candidates=candidates,
+    )
+    return component.evaluate().data
+
+
 class TestDecisionEvidenceFixtures:
     """Fixtures for the inspection UI match what the real router produces."""
 
@@ -95,6 +197,25 @@ class TestDecisionEvidenceFixtures:
         if os.environ.get("UPDATE_DECISION_FIXTURES") == "1":
             FIXTURES.write_text(json.dumps(produced, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         assert produced == json.loads(FIXTURES.read_text(encoding="utf-8"))
+
+    def test_decision_result_fixtures_match_the_component(self, monkeypatch):
+        produced = {name: _component_result(monkeypatch, *scenario) for name, scenario in RESULT_SCENARIOS.items()}
+        if os.environ.get("UPDATE_DECISION_FIXTURES") == "1":
+            RESULT_FIXTURES.write_text(json.dumps(produced, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        assert produced == json.loads(RESULT_FIXTURES.read_text(encoding="utf-8"))
+
+    def test_result_fixtures_keep_each_kind_of_evidence_distinct(self):
+        results = json.loads(RESULT_FIXTURES.read_text(encoding="utf-8"))
+        assert results["boolean"]["probability_true"] == 0.88
+        assert results["boolean"]["probabilities"] is None
+        assert results["score"]["score"] == 2.05
+        assert [level["id"] for level in results["score"]["request"]["levels"]] == [r["id"] for r in SATISFACTION]
+        assert results["score"]["probabilities"]["satisfied"] == 0.5
+        assert results["choice"]["selected_option"] == "billing"
+        assert results["choice"]["confidence"] == 0.71
+        assert results["refusal"]["status"] == "refusal"
+        assert results["refusal"]["probability_true"] is None
+        assert results["refusal"]["refusal"] == "I can't evaluate this request."
 
     @pytest.mark.parametrize(
         ("name", "reason", "branch"),
