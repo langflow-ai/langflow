@@ -957,7 +957,8 @@ class OperationsComponent(Component):
         data_dict = self.get_normalized_data()
         filter_criteria: list[str] = self.select_keys_input
 
-        if len(filter_criteria) == 1 and filter_criteria[0] == "data":
+        # Only a dict can be unwrapped into Data; any other value keeps its key.
+        if filter_criteria == ["data"] and isinstance(data_dict.get("data"), dict):
             filtered = data_dict["data"]
         else:
             if not all(key in data_dict for key in filter_criteria):

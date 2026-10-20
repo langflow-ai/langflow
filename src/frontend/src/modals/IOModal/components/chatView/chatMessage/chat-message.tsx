@@ -8,6 +8,7 @@ import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import { CustomMarkdownField } from "@/customization/components/custom-markdown-field";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
+import { applyBasePath } from "@/customization/utils/urls";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { isGroupedBlock } from "@/types/chat";
@@ -65,7 +66,7 @@ export default function ChatMessage({
   const streamChunks = (url: string) => {
     setIsStreaming(true); // Streaming starts
     return new Promise<boolean>((resolve, reject) => {
-      eventSource.current = new EventSource(url);
+      eventSource.current = new EventSource(applyBasePath(url));
       eventSource.current.onmessage = (event) => {
         const parsedData = JSON.parse(event.data);
         if (parsedData.chunk) {
