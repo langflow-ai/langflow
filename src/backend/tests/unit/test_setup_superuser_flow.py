@@ -256,7 +256,11 @@ async def test_existing_superuser_password_warning(
     assert ("LANGFLOW_SUPERUSER_PASSWORD was not applied" in warnings) == should_warn
     if should_warn:
         assert "existing password was preserved" in warnings
-        assert "https://docs.langflow.org/next/api-keys-and-authentication#recover-access-after-upgrading" in warnings
+        assert (
+            "https://github.com/langflow-ai/langflow/blob/release-1.13.0/"
+            "docs/docs/Develop/api-keys-and-authentication.mdx"
+            "#recover-access-after-upgrading-recover-access-after-upgrading"
+        ) in warnings
     assert configured_password not in warnings
     assert stored_password not in warnings
     assert original_hash not in warnings

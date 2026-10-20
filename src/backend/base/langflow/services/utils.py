@@ -109,7 +109,9 @@ async def get_or_create_super_user(
                 "LANGFLOW_SUPERUSER_PASSWORD was not applied because the configured superuser "
                 "already exists with a different password. The existing password was preserved. "
                 "To recover access after upgrading, see "
-                "https://docs.langflow.org/next/api-keys-and-authentication#recover-access-after-upgrading"
+                "https://github.com/langflow-ai/langflow/blob/release-1.13.0/"
+                "docs/docs/Develop/api-keys-and-authentication.mdx"
+                "#recover-access-after-upgrading-recover-access-after-upgrading"
             )
         return None  # Superuser already exists
 
