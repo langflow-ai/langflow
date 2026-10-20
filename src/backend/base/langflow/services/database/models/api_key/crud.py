@@ -5,7 +5,7 @@ import os
 import secrets
 from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -31,6 +31,7 @@ class ApiKeyAuthResult:
     user: User
     api_key_source: str
     api_key_id: UUID | None = None
+    api_key_fingerprint: str | None = field(default=None, repr=False)
 
 
 SessionScopeFactory = Callable[[], AbstractAsyncContextManager[AsyncSession]]
@@ -252,7 +253,12 @@ async def _check_key_from_db_with_context(
             api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
             session.add(api_key_obj)
             await session.flush()
-        return ApiKeyAuthResult(user=user, api_key_source="db", api_key_id=api_key_obj.id)  # pragma: allowlist secret
+        return ApiKeyAuthResult(
+            user=user,
+            api_key_source="db",  # pragma: allowlist secret
+            api_key_id=api_key_obj.id,
+            api_key_fingerprint=incoming_hash,  # pragma: allowlist secret
+        )
 
     if len(matches) > 1:
         key_ids = [str(m.id) for m in matches]
@@ -302,6 +308,7 @@ async def _check_key_from_db_with_context(
                 user=user,
                 api_key_source="db",  # pragma: allowlist secret
                 api_key_id=api_key_obj.id,
+                api_key_fingerprint=incoming_hash,
             )
 
     return None

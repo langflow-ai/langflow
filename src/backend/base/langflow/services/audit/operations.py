@@ -46,6 +46,7 @@ from langflow.services.audit.writer import (
     stage_audit_event,
 )
 from langflow.services.authorization.refusal import is_authorization_refusal
+from langflow.services.creation_hooks import ERROR_CODE_HEADER
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Iterable, Mapping
@@ -159,7 +160,7 @@ def _unique_conflict_code(exc: BaseException, *, is_flow: bool) -> AuditErrorCod
 def classify_failure(exc: BaseException, resource_type: AuditResourceType) -> AuditErrorCode:
     """A safe, bounded code for a failure; the exception text is never stored."""
     if isinstance(exc, HTTPException):
-        replacement_code = (exc.headers or {}).get("X-Langflow-Error-Code", "")
+        replacement_code = (exc.headers or {}).get(ERROR_CODE_HEADER, "")
         if replacement_code.startswith("replacement_"):
             # Replacement reports Project and Flow conflicts through one route.
             # Its machine code is more precise than treating every 409 as a name collision.
