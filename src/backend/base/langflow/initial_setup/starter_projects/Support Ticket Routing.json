@@ -23,15 +23,15 @@
               "Table",
               "Message"
             ],
-            "type": "str"
+            "type": "other"
           }
         },
-        "id": "reactflow__edge-SmartRouter-4d826{œdataTypeœ:œSmartRouterœ,œidœ:œSmartRouter-4d826œ,œnameœ:œcategory_1_resultœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-27006{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-27006œ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-SmartRouter-4d826{œdataTypeœ:œSmartRouterœ,œidœ:œSmartRouter-4d826œ,œnameœ:œcategory_1_resultœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-27006{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-27006œ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "SmartRouter-4d826",
         "sourceHandle": "{œdataTypeœ: œSmartRouterœ, œidœ: œSmartRouter-4d826œ, œnameœ: œcategory_1_resultœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-27006",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-27006œ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-27006œ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -55,15 +55,15 @@
               "Table",
               "Message"
             ],
-            "type": "str"
+            "type": "other"
           }
         },
-        "id": "reactflow__edge-SmartRouter-4d826{œdataTypeœ:œSmartRouterœ,œidœ:œSmartRouter-4d826œ,œnameœ:œcategory_3_resultœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-f0150{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-f0150œ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-SmartRouter-4d826{œdataTypeœ:œSmartRouterœ,œidœ:œSmartRouter-4d826œ,œnameœ:œcategory_3_resultœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-f0150{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-f0150œ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "SmartRouter-4d826",
         "sourceHandle": "{œdataTypeœ: œSmartRouterœ, œidœ: œSmartRouter-4d826œ, œnameœ: œcategory_3_resultœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-f0150",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-f0150œ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-f0150œ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -87,15 +87,15 @@
               "Table",
               "Message"
             ],
-            "type": "str"
+            "type": "other"
           }
         },
-        "id": "reactflow__edge-SmartRouter-4d826{œdataTypeœ:œSmartRouterœ,œidœ:œSmartRouter-4d826œ,œnameœ:œcategory_2_resultœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-450f9{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-450f9œ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-SmartRouter-4d826{œdataTypeœ:œSmartRouterœ,œidœ:œSmartRouter-4d826œ,œnameœ:œcategory_2_resultœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-450f9{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-450f9œ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "SmartRouter-4d826",
         "sourceHandle": "{œdataTypeœ: œSmartRouterœ, œidœ: œSmartRouter-4d826œ, œnameœ: œcategory_2_resultœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-450f9",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-450f9œ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-450f9œ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -119,15 +119,15 @@
               "Table",
               "Message"
             ],
-            "type": "str"
+            "type": "other"
           }
         },
-        "id": "reactflow__edge-SmartRouter-4d826{œdataTypeœ:œSmartRouterœ,œidœ:œSmartRouter-4d826œ,œnameœ:œdefault_resultœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-3cacd{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-3cacdœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-SmartRouter-4d826{œdataTypeœ:œSmartRouterœ,œidœ:œSmartRouter-4d826œ,œnameœ:œdefault_resultœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-3cacd{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-3cacdœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "SmartRouter-4d826",
         "sourceHandle": "{œdataTypeœ: œSmartRouterœ, œidœ: œSmartRouter-4d826œ, œnameœ: œdefault_resultœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-3cacd",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-3cacdœ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-3cacdœ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
