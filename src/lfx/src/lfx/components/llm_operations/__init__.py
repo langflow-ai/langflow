@@ -6,37 +6,31 @@ from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
     from lfx.components.llm_operations.batch_run import BatchRunComponent
+    from lfx.components.llm_operations.decision_model import DecisionModelComponent
     from lfx.components.llm_operations.guardrails_v2 import GuardrailsV2Component
     from lfx.components.llm_operations.lambda_filter import SmartTransformComponent
     from lfx.components.llm_operations.llm_conditional_router import SmartRouterComponent
     from lfx.components.llm_operations.llm_selector import LLMSelectorComponent
-    from lfx.components.llm_operations.openai_decision import OpenAIDecisionComponent
-    from lfx.components.llm_operations.perplexity_decision import PerplexityDecisionComponent
     from lfx.components.llm_operations.structured_output import StructuredOutputComponent
-    from lfx.components.llm_operations.typesafe_decision import TypeSafeDecisionComponent
 
 _dynamic_imports = {
     "BatchRunComponent": "batch_run",
+    "DecisionModelComponent": "decision_model",
     "GuardrailsV2Component": "guardrails_v2",
     "SmartTransformComponent": "lambda_filter",
     "SmartRouterComponent": "llm_conditional_router",
     "LLMSelectorComponent": "llm_selector",
-    "OpenAIDecisionComponent": "openai_decision",
-    "PerplexityDecisionComponent": "perplexity_decision",
     "StructuredOutputComponent": "structured_output",
-    "TypeSafeDecisionComponent": "typesafe_decision",
 }
 
 __all__ = [
     "BatchRunComponent",
+    "DecisionModelComponent",
     "GuardrailsV2Component",
     "LLMSelectorComponent",
-    "OpenAIDecisionComponent",
-    "PerplexityDecisionComponent",
     "SmartRouterComponent",
     "SmartTransformComponent",
     "StructuredOutputComponent",
-    "TypeSafeDecisionComponent",
 ]
 
 

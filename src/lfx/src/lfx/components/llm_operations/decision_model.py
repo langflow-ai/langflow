@@ -1,5 +1,3 @@
-"""Shared input and output contract for the three standalone decision components."""
-
 from pydantic import ValidationError
 
 from lfx.base.models.decisions.runtime import evaluate_decision, request_variables_of
@@ -10,17 +8,22 @@ from lfx.base.models.decisions.schema import (
     validation_summary,
 )
 from lfx.base.models.unified_models import handle_model_input_update
-from lfx.base.models.unified_models.model_catalog import get_decision_model_options
 from lfx.custom.custom_component.component import Component
 from lfx.io import DropdownInput, FloatInput, MessageTextInput, ModelInput, Output, TableInput
 from lfx.schema.data import Data
 from lfx.schema.table import EditMode
 
 
-class DecisionComponent(Component):
-    """Provider-fixed evaluators share the same runtime as the Smart Router."""
+class DecisionModelComponent(Component):
+    """Evaluates one judgment through the same runtime as the Smart Router."""
 
-    provider: str = ""
+    display_name = "Decision Model"
+    description = (
+        "Evaluate a choice, Boolean probability, or ordered score with a TypeSafe, Perplexity or OpenAI decision model."
+    )
+    name = "DecisionModel"
+    icon = "Split"
+
     inputs = [
         ModelInput(
             model_type="decision", name="model", display_name="Decision Model", required=True, real_time_refresh=True
@@ -56,10 +59,6 @@ class DecisionComponent(Component):
     outputs = [Output(name="result", display_name="Decision Result", method="evaluate")]
 
     def evaluate(self) -> Data:
-        selected = self.model[0] if isinstance(self.model, list) and len(self.model) == 1 else self.model
-        if not isinstance(selected, dict) or selected.get("provider") != self.provider:
-            msg = f"Select a {self.provider} decision model."
-            raise DecisionConfigurationError(msg)
         kind = self.kind.lower()
         try:
             candidates = (
@@ -88,15 +87,7 @@ class DecisionComponent(Component):
         return data
 
     def update_build_config(self, build_config: dict, field_value, field_name: str | None = None) -> dict:
-        config = handle_model_input_update(
-            self,
-            build_config,
-            field_value,
-            field_name,
-            get_options_func=lambda user_id=None: [
-                item for item in get_decision_model_options(user_id=user_id) if item["provider"] == self.provider
-            ],
-        )
+        config = handle_model_input_update(self, build_config, field_value, field_name)
         kind = field_value if field_name == "kind" else config.get("kind", {}).get("value", "Choice")
         config["candidates"]["show"] = kind != "Boolean"
         return config

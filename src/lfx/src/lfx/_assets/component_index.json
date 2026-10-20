@@ -18146,6 +18146,268 @@
           },
           "tool_mode": false
         },
+        "DecisionModel": {
+          "base_classes": [
+            "JSON"
+          ],
+          "beta": false,
+          "conditional_paths": [],
+          "custom_fields": {},
+          "description": "Evaluate a choice, Boolean probability, or ordered score with a TypeSafe, Perplexity or OpenAI decision model.",
+          "display_name": "Decision Model",
+          "documentation": "",
+          "edited": false,
+          "field_order": [
+            "model",
+            "kind",
+            "context",
+            "question",
+            "candidates",
+            "timeout"
+          ],
+          "frozen": false,
+          "icon": "Split",
+          "legacy": false,
+          "metadata": {
+            "code_hash": "35e2ab090500",
+            "component_class_name": "DecisionModelComponent",
+            "dependencies": {
+              "dependencies": [
+                {
+                  "name": "pydantic",
+                  "version": "2.13.4"
+                },
+                {
+                  "name": "lfx",
+                  "version": null
+                }
+              ],
+              "total_dependencies": 2
+            },
+            "module": "lfx.components.llm_operations.decision_model.DecisionModelComponent"
+          },
+          "minimized": false,
+          "output_types": [],
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Decision Result",
+              "group_outputs": false,
+              "method": "evaluate",
+              "name": "result",
+              "selected": "JSON",
+              "tool_mode": true,
+              "types": [
+                "JSON"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ],
+          "pinned": false,
+          "template": {
+            "_type": "Component",
+            "candidates": {
+              "_input_type": "TableInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Options / Ordered Score Levels",
+              "dynamic": false,
+              "info": "Choice options or Score levels ordered from lowest (0) to highest. IDs must be unique.",
+              "input_types": [
+                "DataFrame",
+                "Table"
+              ],
+              "is_list": true,
+              "list_add_label": "Add More",
+              "name": "candidates",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "table_icon": "Table",
+              "table_schema": [
+                {
+                  "display_name": "ID",
+                  "edit_mode": "inline",
+                  "name": "id",
+                  "type": "str"
+                },
+                {
+                  "display_name": "Label",
+                  "edit_mode": "inline",
+                  "name": "label",
+                  "type": "str"
+                },
+                {
+                  "default": "",
+                  "display_name": "Description",
+                  "edit_mode": "popover",
+                  "name": "description",
+                  "type": "str"
+                }
+              ],
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "trigger_icon": "Table",
+              "trigger_text": "Open table",
+              "type": "table",
+              "value": []
+            },
+            "code": {
+              "advanced": true,
+              "api_editable": false,
+              "dynamic": true,
+              "fileTypes": [],
+              "file_path": "",
+              "info": "",
+              "list": false,
+              "load_from_db": false,
+              "multiline": true,
+              "name": "code",
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "type": "code",
+              "value": "from pydantic import ValidationError\n\nfrom lfx.base.models.decisions.runtime import evaluate_decision, request_variables_of\nfrom lfx.base.models.decisions.schema import (\n    DecisionConfigurationError,\n    DecisionOption,\n    DecisionRequest,\n    validation_summary,\n)\nfrom lfx.base.models.unified_models import handle_model_input_update\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import DropdownInput, FloatInput, MessageTextInput, ModelInput, Output, TableInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.table import EditMode\n\n\nclass DecisionModelComponent(Component):\n    \"\"\"Evaluates one judgment through the same runtime as the Smart Router.\"\"\"\n\n    display_name = \"Decision Model\"\n    description = (\n        \"Evaluate a choice, Boolean probability, or ordered score with a TypeSafe, Perplexity or OpenAI decision model.\"\n    )\n    name = \"DecisionModel\"\n    icon = \"Split\"\n\n    inputs = [\n        ModelInput(\n            model_type=\"decision\", name=\"model\", display_name=\"Decision Model\", required=True, real_time_refresh=True\n        ),\n        DropdownInput(\n            name=\"kind\",\n            display_name=\"Decision Type\",\n            options=[\"Choice\", \"Boolean\", \"Score\"],\n            value=\"Choice\",\n            real_time_refresh=True,\n        ),\n        MessageTextInput(name=\"context\", display_name=\"Context\", required=True),\n        MessageTextInput(name=\"question\", display_name=\"Question\", required=True),\n        TableInput(\n            name=\"candidates\",\n            display_name=\"Options / Ordered Score Levels\",\n            value=[],\n            info=\"Choice options or Score levels ordered from lowest (0) to highest. IDs must be unique.\",\n            table_schema=[\n                {\"name\": \"id\", \"display_name\": \"ID\", \"type\": \"str\", \"edit_mode\": EditMode.INLINE},\n                {\"name\": \"label\", \"display_name\": \"Label\", \"type\": \"str\", \"edit_mode\": EditMode.INLINE},\n                {\n                    \"name\": \"description\",\n                    \"display_name\": \"Description\",\n                    \"type\": \"str\",\n                    \"edit_mode\": EditMode.POPOVER,\n                    \"default\": \"\",\n                },\n            ],\n        ),\n        FloatInput(name=\"timeout\", display_name=\"Timeout (seconds)\", value=60, advanced=True),\n    ]\n    outputs = [Output(name=\"result\", display_name=\"Decision Result\", method=\"evaluate\")]\n\n    def evaluate(self) -> Data:\n        kind = self.kind.lower()\n        try:\n            candidates = (\n                tuple(DecisionOption.model_validate(item) for item in self.candidates) if kind != \"boolean\" else ()\n            )\n            request = DecisionRequest(\n                kind=kind,\n                question=self.question,\n                context=self.context,\n                options=candidates if kind == \"choice\" else (),\n                levels=candidates if kind == \"score\" else (),\n            )\n        except ValidationError as exc:\n            raise DecisionConfigurationError(validation_summary(exc)) from None\n        result = evaluate_decision(\n            request,\n            model=self.model,\n            user_id=self.user_id,\n            request_variables=request_variables_of(self),\n            timeout=self.timeout,\n        )\n        data = Data(\n            data={**result.model_dump(mode=\"json\"), \"request\": request.model_dump(mode=\"json\", exclude={\"context\"})}\n        )\n        self.status = data\n        return data\n\n    def update_build_config(self, build_config: dict, field_value, field_name: str | None = None) -> dict:\n        config = handle_model_input_update(self, build_config, field_value, field_name)\n        kind = field_value if field_name == \"kind\" else config.get(\"kind\", {}).get(\"value\", \"Choice\")\n        config[\"candidates\"][\"show\"] = kind != \"Boolean\"\n        return config\n"
+            },
+            "context": {
+              "_input_type": "MessageTextInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Context",
+              "dynamic": false,
+              "info": "",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "context",
+              "override_skip": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "kind": {
+              "_input_type": "DropdownInput",
+              "advanced": false,
+              "api_editable": false,
+              "combobox": false,
+              "dialog_inputs": {},
+              "display_name": "Decision Type",
+              "dynamic": false,
+              "external_options": {},
+              "info": "",
+              "name": "kind",
+              "options": [
+                "Choice",
+                "Boolean",
+                "Score"
+              ],
+              "options_metadata": [],
+              "override_skip": false,
+              "placeholder": "",
+              "real_time_refresh": true,
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "toggle": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "str",
+              "value": "Choice"
+            },
+            "model": {
+              "_input_type": "ModelInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Decision Model",
+              "dynamic": false,
+              "external_options": {},
+              "info": "",
+              "input_types": [],
+              "list": false,
+              "list_add_label": "Add More",
+              "model_type": "decision",
+              "name": "model",
+              "override_skip": false,
+              "placeholder": "Setup Provider",
+              "real_time_refresh": true,
+              "refresh_button": true,
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "track_in_telemetry": false,
+              "type": "model",
+              "value": ""
+            },
+            "question": {
+              "_input_type": "MessageTextInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Question",
+              "dynamic": false,
+              "info": "",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "question",
+              "override_skip": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "timeout": {
+              "_input_type": "FloatInput",
+              "advanced": true,
+              "api_editable": false,
+              "display_name": "Timeout (seconds)",
+              "dynamic": false,
+              "info": "",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "timeout",
+              "override_skip": false,
+              "placeholder": "",
+              "preserve_empty": false,
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "float",
+              "value": 60.0
+            }
+          },
+          "tool_mode": false
+        },
         "GuardrailValidator": {
           "base_classes": [
             "Data",
@@ -19698,522 +19960,6 @@
           },
           "tool_mode": false
         },
-        "OpenAIDecision": {
-          "base_classes": [
-            "JSON"
-          ],
-          "beta": false,
-          "conditional_paths": [],
-          "custom_fields": {},
-          "description": "Evaluate a choice, Boolean probability, or ordered score with OpenAI Decisions.",
-          "display_name": "OpenAI Decision Model",
-          "documentation": "",
-          "edited": false,
-          "field_order": [
-            "model",
-            "kind",
-            "context",
-            "question",
-            "candidates",
-            "timeout"
-          ],
-          "frozen": false,
-          "icon": "OpenAI",
-          "legacy": false,
-          "metadata": {
-            "code_hash": "ebdc36ba3390",
-            "component_class_name": "OpenAIDecisionComponent",
-            "dependencies": {
-              "dependencies": [
-                {
-                  "name": "lfx",
-                  "version": null
-                }
-              ],
-              "total_dependencies": 1
-            },
-            "module": "lfx.components.llm_operations.openai_decision.OpenAIDecisionComponent"
-          },
-          "minimized": false,
-          "output_types": [],
-          "outputs": [
-            {
-              "allows_loop": false,
-              "cache": true,
-              "display_name": "Decision Result",
-              "group_outputs": false,
-              "method": "evaluate",
-              "name": "result",
-              "selected": "JSON",
-              "tool_mode": true,
-              "types": [
-                "JSON"
-              ],
-              "value": "__UNDEFINED__"
-            }
-          ],
-          "pinned": false,
-          "template": {
-            "_type": "Component",
-            "candidates": {
-              "_input_type": "TableInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Options / Ordered Score Levels",
-              "dynamic": false,
-              "info": "Choice options or Score levels ordered from lowest (0) to highest. IDs must be unique.",
-              "input_types": [
-                "DataFrame",
-                "Table"
-              ],
-              "is_list": true,
-              "list_add_label": "Add More",
-              "name": "candidates",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": true,
-              "table_icon": "Table",
-              "table_schema": [
-                {
-                  "display_name": "ID",
-                  "edit_mode": "inline",
-                  "name": "id",
-                  "type": "str"
-                },
-                {
-                  "display_name": "Label",
-                  "edit_mode": "inline",
-                  "name": "label",
-                  "type": "str"
-                },
-                {
-                  "default": "",
-                  "display_name": "Description",
-                  "edit_mode": "popover",
-                  "name": "description",
-                  "type": "str"
-                }
-              ],
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "trigger_icon": "Table",
-              "trigger_text": "Open table",
-              "type": "table",
-              "value": []
-            },
-            "code": {
-              "advanced": true,
-              "api_editable": false,
-              "dynamic": true,
-              "fileTypes": [],
-              "file_path": "",
-              "info": "",
-              "list": false,
-              "load_from_db": false,
-              "multiline": true,
-              "name": "code",
-              "password": false,
-              "placeholder": "",
-              "required": true,
-              "show": true,
-              "title_case": false,
-              "type": "code",
-              "value": "from lfx.base.models.decisions.component import DecisionComponent\n\n\nclass OpenAIDecisionComponent(DecisionComponent):\n    display_name = \"OpenAI Decision Model\"\n    description = \"Evaluate a choice, Boolean probability, or ordered score with OpenAI Decisions.\"\n    name = \"OpenAIDecision\"\n    icon = \"OpenAI\"\n    provider = \"OpenAI\"\n"
-            },
-            "context": {
-              "_input_type": "MessageTextInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Context",
-              "dynamic": false,
-              "info": "",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "context",
-              "override_skip": false,
-              "placeholder": "",
-              "required": true,
-              "show": true,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            },
-            "kind": {
-              "_input_type": "DropdownInput",
-              "advanced": false,
-              "api_editable": false,
-              "combobox": false,
-              "dialog_inputs": {},
-              "display_name": "Decision Type",
-              "dynamic": false,
-              "external_options": {},
-              "info": "",
-              "name": "kind",
-              "options": [
-                "Choice",
-                "Boolean",
-                "Score"
-              ],
-              "options_metadata": [],
-              "override_skip": false,
-              "placeholder": "",
-              "real_time_refresh": true,
-              "required": false,
-              "show": true,
-              "title_case": false,
-              "toggle": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": true,
-              "type": "str",
-              "value": "Choice"
-            },
-            "model": {
-              "_input_type": "ModelInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Decision Model",
-              "dynamic": false,
-              "external_options": {},
-              "info": "",
-              "input_types": [],
-              "list": false,
-              "list_add_label": "Add More",
-              "model_type": "decision",
-              "name": "model",
-              "override_skip": false,
-              "placeholder": "Setup Provider",
-              "real_time_refresh": true,
-              "refresh_button": true,
-              "required": true,
-              "show": true,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "track_in_telemetry": false,
-              "type": "model",
-              "value": ""
-            },
-            "question": {
-              "_input_type": "MessageTextInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Question",
-              "dynamic": false,
-              "info": "",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "question",
-              "override_skip": false,
-              "placeholder": "",
-              "required": true,
-              "show": true,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            },
-            "timeout": {
-              "_input_type": "FloatInput",
-              "advanced": true,
-              "api_editable": false,
-              "display_name": "Timeout (seconds)",
-              "dynamic": false,
-              "info": "",
-              "list": false,
-              "list_add_label": "Add More",
-              "name": "timeout",
-              "override_skip": false,
-              "placeholder": "",
-              "preserve_empty": false,
-              "required": false,
-              "show": true,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": true,
-              "type": "float",
-              "value": 60.0
-            }
-          },
-          "tool_mode": false
-        },
-        "PerplexityDecision": {
-          "base_classes": [
-            "JSON"
-          ],
-          "beta": false,
-          "conditional_paths": [],
-          "custom_fields": {},
-          "description": "Evaluate a choice, Boolean probability, or ordered score with Perplexity Decider.",
-          "display_name": "Perplexity Decision Model",
-          "documentation": "",
-          "edited": false,
-          "field_order": [
-            "model",
-            "kind",
-            "context",
-            "question",
-            "candidates",
-            "timeout"
-          ],
-          "frozen": false,
-          "icon": "Perplexity",
-          "legacy": false,
-          "metadata": {
-            "code_hash": "de54ba7bea7e",
-            "component_class_name": "PerplexityDecisionComponent",
-            "dependencies": {
-              "dependencies": [
-                {
-                  "name": "lfx",
-                  "version": null
-                }
-              ],
-              "total_dependencies": 1
-            },
-            "module": "lfx.components.llm_operations.perplexity_decision.PerplexityDecisionComponent"
-          },
-          "minimized": false,
-          "output_types": [],
-          "outputs": [
-            {
-              "allows_loop": false,
-              "cache": true,
-              "display_name": "Decision Result",
-              "group_outputs": false,
-              "method": "evaluate",
-              "name": "result",
-              "selected": "JSON",
-              "tool_mode": true,
-              "types": [
-                "JSON"
-              ],
-              "value": "__UNDEFINED__"
-            }
-          ],
-          "pinned": false,
-          "template": {
-            "_type": "Component",
-            "candidates": {
-              "_input_type": "TableInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Options / Ordered Score Levels",
-              "dynamic": false,
-              "info": "Choice options or Score levels ordered from lowest (0) to highest. IDs must be unique.",
-              "input_types": [
-                "DataFrame",
-                "Table"
-              ],
-              "is_list": true,
-              "list_add_label": "Add More",
-              "name": "candidates",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": true,
-              "table_icon": "Table",
-              "table_schema": [
-                {
-                  "display_name": "ID",
-                  "edit_mode": "inline",
-                  "name": "id",
-                  "type": "str"
-                },
-                {
-                  "display_name": "Label",
-                  "edit_mode": "inline",
-                  "name": "label",
-                  "type": "str"
-                },
-                {
-                  "default": "",
-                  "display_name": "Description",
-                  "edit_mode": "popover",
-                  "name": "description",
-                  "type": "str"
-                }
-              ],
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "trigger_icon": "Table",
-              "trigger_text": "Open table",
-              "type": "table",
-              "value": []
-            },
-            "code": {
-              "advanced": true,
-              "api_editable": false,
-              "dynamic": true,
-              "fileTypes": [],
-              "file_path": "",
-              "info": "",
-              "list": false,
-              "load_from_db": false,
-              "multiline": true,
-              "name": "code",
-              "password": false,
-              "placeholder": "",
-              "required": true,
-              "show": true,
-              "title_case": false,
-              "type": "code",
-              "value": "from lfx.base.models.decisions.component import DecisionComponent\n\n\nclass PerplexityDecisionComponent(DecisionComponent):\n    display_name = \"Perplexity Decision Model\"\n    description = \"Evaluate a choice, Boolean probability, or ordered score with Perplexity Decider.\"\n    name = \"PerplexityDecision\"\n    icon = \"Perplexity\"\n    provider = \"Perplexity\"\n"
-            },
-            "context": {
-              "_input_type": "MessageTextInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Context",
-              "dynamic": false,
-              "info": "",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "context",
-              "override_skip": false,
-              "placeholder": "",
-              "required": true,
-              "show": true,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            },
-            "kind": {
-              "_input_type": "DropdownInput",
-              "advanced": false,
-              "api_editable": false,
-              "combobox": false,
-              "dialog_inputs": {},
-              "display_name": "Decision Type",
-              "dynamic": false,
-              "external_options": {},
-              "info": "",
-              "name": "kind",
-              "options": [
-                "Choice",
-                "Boolean",
-                "Score"
-              ],
-              "options_metadata": [],
-              "override_skip": false,
-              "placeholder": "",
-              "real_time_refresh": true,
-              "required": false,
-              "show": true,
-              "title_case": false,
-              "toggle": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": true,
-              "type": "str",
-              "value": "Choice"
-            },
-            "model": {
-              "_input_type": "ModelInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Decision Model",
-              "dynamic": false,
-              "external_options": {},
-              "info": "",
-              "input_types": [],
-              "list": false,
-              "list_add_label": "Add More",
-              "model_type": "decision",
-              "name": "model",
-              "override_skip": false,
-              "placeholder": "Setup Provider",
-              "real_time_refresh": true,
-              "refresh_button": true,
-              "required": true,
-              "show": true,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "track_in_telemetry": false,
-              "type": "model",
-              "value": ""
-            },
-            "question": {
-              "_input_type": "MessageTextInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Question",
-              "dynamic": false,
-              "info": "",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "question",
-              "override_skip": false,
-              "placeholder": "",
-              "required": true,
-              "show": true,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            },
-            "timeout": {
-              "_input_type": "FloatInput",
-              "advanced": true,
-              "api_editable": false,
-              "display_name": "Timeout (seconds)",
-              "dynamic": false,
-              "info": "",
-              "list": false,
-              "list_add_label": "Add More",
-              "name": "timeout",
-              "override_skip": false,
-              "placeholder": "",
-              "preserve_empty": false,
-              "required": false,
-              "show": true,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": true,
-              "type": "float",
-              "value": 60.0
-            }
-          },
-          "tool_mode": false
-        },
         "Smart Transform": {
           "base_classes": [
             "JSON",
@@ -21280,264 +21026,6 @@
               "track_in_telemetry": false,
               "type": "str",
               "value": "You are an AI that extracts structured JSON objects from unstructured text. Use a predefined schema with expected types (str, int, float, bool, dict). Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all. Fill missing or ambiguous values with defaults: null for missing values. Remove exact duplicates but keep variations that have different field values. Always return valid JSON in the expected format, never throw errors. If multiple objects can be extracted, return them all in the structured format."
-            }
-          },
-          "tool_mode": false
-        },
-        "TypeSafeDecision": {
-          "base_classes": [
-            "JSON"
-          ],
-          "beta": false,
-          "conditional_paths": [],
-          "custom_fields": {},
-          "description": "Evaluate a choice, Boolean probability, or ordered score with TypeSafe Jev.",
-          "display_name": "TypeSafe Decision Model",
-          "documentation": "",
-          "edited": false,
-          "field_order": [
-            "model",
-            "kind",
-            "context",
-            "question",
-            "candidates",
-            "timeout"
-          ],
-          "frozen": false,
-          "icon": "Split",
-          "legacy": false,
-          "metadata": {
-            "code_hash": "c043a7e99346",
-            "component_class_name": "TypeSafeDecisionComponent",
-            "dependencies": {
-              "dependencies": [
-                {
-                  "name": "lfx",
-                  "version": null
-                }
-              ],
-              "total_dependencies": 1
-            },
-            "module": "lfx.components.llm_operations.typesafe_decision.TypeSafeDecisionComponent"
-          },
-          "minimized": false,
-          "output_types": [],
-          "outputs": [
-            {
-              "allows_loop": false,
-              "cache": true,
-              "display_name": "Decision Result",
-              "group_outputs": false,
-              "method": "evaluate",
-              "name": "result",
-              "selected": "JSON",
-              "tool_mode": true,
-              "types": [
-                "JSON"
-              ],
-              "value": "__UNDEFINED__"
-            }
-          ],
-          "pinned": false,
-          "template": {
-            "_type": "Component",
-            "candidates": {
-              "_input_type": "TableInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Options / Ordered Score Levels",
-              "dynamic": false,
-              "info": "Choice options or Score levels ordered from lowest (0) to highest. IDs must be unique.",
-              "input_types": [
-                "DataFrame",
-                "Table"
-              ],
-              "is_list": true,
-              "list_add_label": "Add More",
-              "name": "candidates",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": true,
-              "table_icon": "Table",
-              "table_schema": [
-                {
-                  "display_name": "ID",
-                  "edit_mode": "inline",
-                  "name": "id",
-                  "type": "str"
-                },
-                {
-                  "display_name": "Label",
-                  "edit_mode": "inline",
-                  "name": "label",
-                  "type": "str"
-                },
-                {
-                  "default": "",
-                  "display_name": "Description",
-                  "edit_mode": "popover",
-                  "name": "description",
-                  "type": "str"
-                }
-              ],
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "trigger_icon": "Table",
-              "trigger_text": "Open table",
-              "type": "table",
-              "value": []
-            },
-            "code": {
-              "advanced": true,
-              "api_editable": false,
-              "dynamic": true,
-              "fileTypes": [],
-              "file_path": "",
-              "info": "",
-              "list": false,
-              "load_from_db": false,
-              "multiline": true,
-              "name": "code",
-              "password": false,
-              "placeholder": "",
-              "required": true,
-              "show": true,
-              "title_case": false,
-              "type": "code",
-              "value": "from lfx.base.models.decisions.component import DecisionComponent\n\n\nclass TypeSafeDecisionComponent(DecisionComponent):\n    display_name = \"TypeSafe Decision Model\"\n    description = \"Evaluate a choice, Boolean probability, or ordered score with TypeSafe Jev.\"\n    name = \"TypeSafeDecision\"\n    icon = \"Split\"\n    provider = \"TypeSafe\"\n"
-            },
-            "context": {
-              "_input_type": "MessageTextInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Context",
-              "dynamic": false,
-              "info": "",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "context",
-              "override_skip": false,
-              "placeholder": "",
-              "required": true,
-              "show": true,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            },
-            "kind": {
-              "_input_type": "DropdownInput",
-              "advanced": false,
-              "api_editable": false,
-              "combobox": false,
-              "dialog_inputs": {},
-              "display_name": "Decision Type",
-              "dynamic": false,
-              "external_options": {},
-              "info": "",
-              "name": "kind",
-              "options": [
-                "Choice",
-                "Boolean",
-                "Score"
-              ],
-              "options_metadata": [],
-              "override_skip": false,
-              "placeholder": "",
-              "real_time_refresh": true,
-              "required": false,
-              "show": true,
-              "title_case": false,
-              "toggle": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": true,
-              "type": "str",
-              "value": "Choice"
-            },
-            "model": {
-              "_input_type": "ModelInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Decision Model",
-              "dynamic": false,
-              "external_options": {},
-              "info": "",
-              "input_types": [],
-              "list": false,
-              "list_add_label": "Add More",
-              "model_type": "decision",
-              "name": "model",
-              "override_skip": false,
-              "placeholder": "Setup Provider",
-              "real_time_refresh": true,
-              "refresh_button": true,
-              "required": true,
-              "show": true,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "track_in_telemetry": false,
-              "type": "model",
-              "value": ""
-            },
-            "question": {
-              "_input_type": "MessageTextInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Question",
-              "dynamic": false,
-              "info": "",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "question",
-              "override_skip": false,
-              "placeholder": "",
-              "required": true,
-              "show": true,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            },
-            "timeout": {
-              "_input_type": "FloatInput",
-              "advanced": true,
-              "api_editable": false,
-              "display_name": "Timeout (seconds)",
-              "dynamic": false,
-              "info": "",
-              "list": false,
-              "list_add_label": "Add More",
-              "name": "timeout",
-              "override_skip": false,
-              "placeholder": "",
-              "preserve_empty": false,
-              "required": false,
-              "show": true,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": true,
-              "type": "float",
-              "value": 60.0
             }
           },
           "tool_mode": false
@@ -33479,9 +32967,9 @@
     ]
   ],
   "metadata": {
-    "num_components": 133,
+    "num_components": 131,
     "num_modules": 17
   },
-  "sha256": "dcd0a0b43c9e969d6841615b862f5cc3f3811eb4ba0f06c5793589ccc86ef1bc",
+  "sha256": "0b858b428845d086018e250659cdf1a1167b8e01531460a70ee66304d72e2084",
   "version": "1.13.0"
 }
