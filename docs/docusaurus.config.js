@@ -474,6 +474,14 @@ const config = {
             to: "/api#tag/Workflow",
             from: "/api/workflow",
           },
+          {
+            to: "/components-bundle-components#altk",
+            from: "/bundles-altk",
+          },
+          {
+            to: "/next/components-bundle-components#altk",
+            from: "/next/bundles-altk",
+          },
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',

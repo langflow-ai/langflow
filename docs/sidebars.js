@@ -527,7 +527,6 @@ module.exports = {
             "Components/components-bundles",
             "Components/bundles-agentics",
             "Components/bundles-aiml",
-            "Components/bundles-altk",
             "Components/bundles-amazon",
             "Components/bundles-anthropic",
             "Components/bundles-apify",
