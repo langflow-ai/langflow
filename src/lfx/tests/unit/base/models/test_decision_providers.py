@@ -131,6 +131,7 @@ def test_refusal_is_not_false():
         },
     )
     assert result.status == "refusal"
+    assert result.refusal is None  # no reason given, none invented
     assert result.probability_true is None
     assert result.probabilities is None
 
@@ -284,17 +285,46 @@ def test_credential_validation_uses_explicit_key_and_boolean_request(provider, m
     assert kwargs == {"api_key": "tenant-key", "timeout": 15}
 
 
-def test_ssrf_resolution_failure_is_operational(monkeypatch):
+def test_dns_failure_is_operational_but_ssrf_block_always_stops(monkeypatch):
+    import socket
+
     from lfx.utils.ssrf_protection import SSRFProtectionError
 
-    def post(*_args, **_kwargs):
+    def dns_failure(*_args, **_kwargs):
         msg = "DNS resolution failed for secret.internal"
+        raise SSRFProtectionError(msg) from socket.gaierror("nodename nor servname provided")
+
+    def blocked(*_args, **_kwargs):
+        msg = "Access to private IP 10.0.0.5 for secret.internal is blocked"
         raise SSRFProtectionError(msg)
 
-    monkeypatch.setattr(providers, "provider_safe_httpx_post", post)
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", dns_failure)
     with pytest.raises(DecisionEvaluationError) as caught:
         providers.evaluate_provider("TypeSafe", "jev-latest", request_for("choice"), api_key="key")
+    assert caught.value.category == "transport"
     assert "secret" not in str(caught.value)
+
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", blocked)
+    with pytest.raises(DecisionConfigurationError, match="blocked by SSRF protection") as caught:
+        providers.evaluate_provider("TypeSafe", "jev-latest", request_for("choice"), api_key="key")
+    assert "secret" not in str(caught.value)
+    assert "10.0.0.5" not in str(caught.value)
+
+
+def test_unpaid_account_stops_and_reports_only_a_safe_error_code(monkeypatch):
+    body = '{"error": {"code": "insufficient_quota", "message": "private user content"}}'
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: httpx.Response(402, text=body))
+    with pytest.raises(PermissionError, match=r"HTTP 402, insufficient_quota") as caught:
+        providers.evaluate_provider("OpenAI", "gpt-6-luna", request_for("choice"), api_key="key")
+    assert "private" not in str(caught.value)
+
+
+def test_unsafe_provider_error_code_is_dropped(monkeypatch):
+    body = '{"error": {"code": "has spaces and private user content"}}'
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: httpx.Response(500, text=body))
+    with pytest.raises(DecisionEvaluationError) as caught:
+        providers.evaluate_provider("OpenAI", "gpt-6-luna", request_for("choice"), api_key="key")
+    assert str(caught.value) == "OpenAI decision request failed (HTTP 500)."
 
 
 @pytest.mark.parametrize("provider", PROVIDERS)
@@ -331,3 +361,35 @@ def test_undocumented_refusal_type_is_invalid_not_refusal(provider):
     payload["answers"]["decision"] = {"type": "refusal", "refusal": "declined"}
     with pytest.raises(DecisionEvaluationError, match="invalid decision response"):
         providers.parse_response(provider, request_for("choice"), payload)
+
+
+@pytest.mark.parametrize(
+    ("status", "body"),
+    [(413, "too large"), (400, '{"error": {"code": "max_tokens_exceeded", "message": "private user content"}}')],
+)
+def test_oversized_input_is_operational_not_configuration(monkeypatch, status, body):
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: httpx.Response(status, text=body))
+    with pytest.raises(DecisionEvaluationError) as caught:
+        providers.evaluate_provider("TypeSafe", "jev-latest", request_for("choice"), api_key="key")
+    assert caught.value.category == "input_too_large"
+    assert "private" not in str(caught.value)
+
+
+@pytest.mark.parametrize(
+    ("mutate", "cause"),
+    [
+        (lambda answer: answer.update(probabilities={"a": 0.3, "b": 0.5}), "sum to one"),
+        (lambda answer: answer.update(probabilities={"a": 0.3, "z": 0.7}), "requested candidate IDs"),
+        (lambda answer: answer.pop("probabilities"), "missing field 'probabilities'"),
+        (lambda answer: answer.update(type="score"), "does not match"),
+    ],
+)
+def test_invalid_response_names_its_cause_without_provider_content(mutate, cause):
+    payload = response_for("TypeSafe", "choice")
+    mutate(payload["answers"]["decision"])
+    payload["answers"]["decision"]["note"] = "private user content"
+    with pytest.raises(DecisionEvaluationError, match="invalid decision response") as caught:
+        providers.parse_response("TypeSafe", request_for("choice"), payload)
+    assert cause in str(caught.value)
+    assert caught.value.category == "invalid_response"
+    assert "private" not in str(caught.value)

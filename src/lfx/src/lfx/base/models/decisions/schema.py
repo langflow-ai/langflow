@@ -6,7 +6,7 @@ import json
 import math
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError, field_validator, model_validator
 
 DecisionKind = Literal["choice", "boolean", "score"]
 Probability = Annotated[float, Field(strict=True, ge=0, le=1, allow_inf_nan=False)]
@@ -20,7 +20,22 @@ class DecisionConfigurationError(ValueError):
 
 
 class DecisionEvaluationError(RuntimeError):
-    """An operational or malformed-response failure; never valid uncertainty."""
+    """An operational or malformed-response failure; never valid uncertainty.
+
+    ``category`` names the failure for diagnostics: timeout, transport, http_error,
+    input_too_large, invalid_response or refusal.
+    """
+
+    def __init__(self, message: str, *, category: str = "invalid_response") -> None:
+        super().__init__(message)
+        self.category = category
+
+
+def validation_summary(exc: ValidationError) -> str:
+    """Field paths and messages only; pydantic's input values may carry provider or user content."""
+    return "; ".join(
+        f"{'.'.join(str(part) for part in error['loc']) or 'value'}: {error['msg']}" for error in exc.errors()
+    )
 
 
 class DecisionOption(BaseModel):
@@ -87,7 +102,8 @@ class DecisionResult(BaseModel):
     @model_validator(mode="after")
     def validate_evidence(self) -> DecisionResult:
         if self.status == "refusal":
-            if not self.refusal or any(
+            # The provider's reason is kept when given and never invented when absent.
+            if any(
                 value is not None
                 for value in (
                     self.probabilities,
@@ -97,7 +113,7 @@ class DecisionResult(BaseModel):
                     self.confidence,
                 )
             ):
-                msg = "Refusal requires a reason and cannot contain successful judgment evidence"
+                msg = "Refusal cannot contain successful judgment evidence"
                 raise ValueError(msg)
             return self
         if self.refusal is not None:
