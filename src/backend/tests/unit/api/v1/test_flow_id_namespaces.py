@@ -12,7 +12,25 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.traces.model import SpanTable, TraceTable
 from langflow.services.database.models.transactions.model import TransactionTable
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
+
+
+@pytest.fixture
+def project_delete_foreign_keys(client):  # noqa: ARG001
+    from langflow.services.deps import get_db_service
+    from sqlalchemy import event
+
+    engine = get_db_service().engine.sync_engine
+
+    def enable_foreign_keys(connection, _record, _proxy):
+        connection.execute("PRAGMA foreign_keys=ON")
+
+    event.listen(engine, "checkout", enable_foreign_keys)
+    try:
+        yield
+    finally:
+        event.remove(engine, "checkout", enable_foreign_keys)
 
 
 async def _create_with_id(client, headers, flow_id, entry_point):
@@ -139,13 +157,28 @@ async def test_preexisting_uuid5_flow_does_not_authorize_virtual_history(client,
         assert await session.get(TransactionTable, transaction_id) is not None
 
 
-async def test_project_delete_with_reserved_flow_returns_400_and_keeps_rows(client, logged_in_headers, active_user):
+@pytest.mark.parametrize("different_owner", [False, True])
+@pytest.mark.usefixtures("project_delete_foreign_keys")
+async def test_project_delete_with_reserved_flow_returns_400_and_keeps_rows(
+    client, logged_in_headers, active_user, different_owner
+):
     project_id = uuid4()
     flow_id = compute_virtual_flow_id(uuid4(), uuid4(), principal_type="user")
     async with session_scope() as session:
+        flow_owner_id = active_user.id
+        if different_owner:
+            contributor = User(username="project-contributor", password=uuid4().hex, is_active=True)
+            session.add(contributor)
+            await session.flush()
+            flow_owner_id = contributor.id
         session.add(Folder(id=project_id, name="Legacy collision project", user_id=active_user.id))
         await session.flush()
-        session.add(Flow(id=flow_id, user_id=active_user.id, folder_id=project_id, name="Existing collision", data={}))
+        ordinary_flow = Flow(user_id=active_user.id, folder_id=project_id, name="Ordinary flow", data={})
+        session.add(ordinary_flow)
+        session.add(Flow(id=flow_id, user_id=flow_owner_id, folder_id=project_id, name="Existing collision", data={}))
+        await session.flush()
+        trace = TraceTable(flow_id=flow_id, name="Public history")
+        session.add(trace)
         message = MessageTable(
             flow_id=flow_id,
             session_id="victim-session",
@@ -156,7 +189,7 @@ async def test_project_delete_with_reserved_flow_returns_400_and_keeps_rows(clie
         )
         session.add(message)
         await session.commit()
-        message_id = message.id
+        message_id, trace_id, ordinary_flow_id = message.id, trace.id, ordinary_flow.id
 
     response = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
 
@@ -165,7 +198,9 @@ async def test_project_delete_with_reserved_flow_returns_400_and_keeps_rows(clie
     async with session_scope() as session:
         assert await session.get(Folder, project_id) is not None
         assert await session.get(Flow, flow_id) is not None
+        assert await session.get(Flow, ordinary_flow_id) is not None
         assert await session.get(MessageTable, message_id) is not None
+        assert await session.get(TraceTable, trace_id) is not None
 
 
 async def test_reserved_flow_delete_preserves_foreign_key_histories():
