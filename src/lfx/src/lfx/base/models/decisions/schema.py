@@ -12,6 +12,8 @@ DecisionKind = Literal["choice", "boolean", "score"]
 Probability = Annotated[float, Field(strict=True, ge=0, le=1, allow_inf_nan=False)]
 FiniteNumber = Annotated[float, Field(strict=True, allow_inf_nan=False)]
 NonEmpty = Annotated[str, Field(strict=True, min_length=1, pattern=r"\S")]
+# Provider-reported model names are stored in evidence; anything longer is not a model name.
+ModelName = Annotated[str, Field(strict=True, min_length=1, max_length=128, pattern=r"\S")]
 MIN_CANDIDATES = 2
 
 
@@ -88,7 +90,7 @@ class DecisionResult(BaseModel):
     kind: DecisionKind
     question_id: NonEmpty = "decision"
     provider: NonEmpty
-    model: NonEmpty
+    model: ModelName
     model_source: Literal["response", "request"] = "response"
     status: Literal["success", "refusal"] = "success"
     probabilities: dict[str, Probability] | None = None

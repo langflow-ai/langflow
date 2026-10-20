@@ -529,8 +529,9 @@ def get_decision_model_options(
 ) -> list[dict[str, Any]]:
     """Return enabled decision models; configuration read failures propagate.
 
-    Without a user, standalone lfx can select a catalog model and supply its
-    credentials explicitly. With a user, saved provider and model settings apply.
+    Without a user, standalone lfx can select any catalog model; its credentials
+    come from request variables or the environment. With a user, saved provider
+    and model settings apply.
     """
     # A component outside a graph reports the placeholder user id "None".
     if isinstance(user_id, str) and user_id == "None":

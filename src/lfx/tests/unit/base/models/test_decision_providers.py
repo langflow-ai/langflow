@@ -393,3 +393,29 @@ def test_invalid_response_names_its_cause_without_provider_content(mutate, cause
     assert cause in str(caught.value)
     assert caught.value.category == "invalid_response"
     assert "private" not in str(caught.value)
+
+
+def test_key_check_refuses_a_proxy_base_url_from_the_environment(monkeypatch):
+    """A key meant for an OpenAI-compatible proxy is never posted to the official endpoint."""
+    monkeypatch.setenv("OPENAI_API_BASE", "https://proxy.example/v1")
+    sent = []
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *args, **_kwargs: sent.append(args))
+    with pytest.raises(ValueError, match="official hosted endpoint"):
+        providers.validate_decision_provider_key("OpenAI", {"OPENAI_API_KEY": "proxy-key"}, "gpt-6-luna")
+    assert not sent
+
+
+def test_unexpected_answer_type_is_not_echoed():
+    payload = response_for("TypeSafe", "choice")
+    payload["answers"]["decision"]["type"] = "private provider text"
+    with pytest.raises(DecisionEvaluationError, match="does not match") as caught:
+        providers.parse_response("TypeSafe", request_for("choice"), payload)
+    assert "private" not in str(caught.value)
+
+
+def test_overlong_model_name_is_an_invalid_response():
+    payload = response_for("TypeSafe", "choice")
+    payload["model"] = "m" * 129
+    with pytest.raises(DecisionEvaluationError, match="invalid decision response") as caught:
+        providers.parse_response("TypeSafe", request_for("choice"), payload)
+    assert "m" * 129 not in str(caught.value)

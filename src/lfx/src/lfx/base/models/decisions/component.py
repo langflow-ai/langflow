@@ -2,7 +2,7 @@
 
 from pydantic import ValidationError
 
-from lfx.base.models.decisions.runtime import evaluate_decision
+from lfx.base.models.decisions.runtime import evaluate_decision, request_variables_of
 from lfx.base.models.decisions.schema import (
     DecisionConfigurationError,
     DecisionOption,
@@ -78,6 +78,7 @@ class DecisionComponent(Component):
             request,
             model=self.model,
             user_id=self.user_id,
+            request_variables=request_variables_of(self),
             timeout=self.timeout,
         )
         data = Data(

@@ -129,8 +129,6 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
             value = secret_value_to_str(value, strip=True)
             if value:
                 return value
-        elif value := _get_standalone_variable(var_name):
-            return value
         # Honor the request's no-env-fallback contract: skip os.environ when disabled so a
         # served flow stays isolated from process-wide credentials (matches VariableService).
         if not is_env_fallback_disabled():

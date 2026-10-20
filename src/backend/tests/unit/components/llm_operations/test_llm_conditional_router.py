@@ -1,8 +1,9 @@
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
-from lfx.base.models.decisions.schema import DecisionConfigurationError
+from lfx.base.models.decisions.schema import DecisionConfigurationError, DecisionEvaluationError
 from lfx.components.llm_operations.llm_conditional_router import SmartRouterComponent, assign_route_ids
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
@@ -379,3 +380,33 @@ def test_unknown_routing_mode_fails_instead_of_running_as_language_model():
     router.set(routing_mode="Decison Model")
     with pytest.raises(DecisionConfigurationError, match="Unknown routing mode"):
         router._pre_run_setup()
+
+
+def test_decision_mode_passes_the_callers_request_variables(monkeypatch):
+    """Per-request credentials (X-LANGFLOW-GLOBAL-VAR-*) reach the decision runtime."""
+    seen = {}
+
+    def evaluate(_request, **kwargs):
+        seen.update(kwargs)
+        msg = "Timed out."
+        raise DecisionEvaluationError(msg, category="timeout")
+
+    monkeypatch.setattr("lfx.components.llm_operations.llm_conditional_router.evaluate_decision", evaluate)
+    router = SmartRouterComponent()
+    router.set(
+        input_text="I was charged twice.",
+        routes=[{"route_category": "Billing"}, {"route_category": "Sales"}],
+        routing_mode="Decision Model",
+        decision_model=[{"provider": "TypeSafe", "name": "jev-latest"}],
+        decision_question="Which team?",
+        minimum_probability=0.7,
+        evaluation_error_action="Route to Else",
+        enable_else_output=True,
+    )
+    graph = SimpleNamespace(context={"request_variables": {"TYPESAFE_API_KEY": "tenant-key"}}, user_id=None)
+    router._vertex = SimpleNamespace(
+        graph=graph, outgoing_edges=[SimpleNamespace(source_handle=SimpleNamespace(name="default_result"))]
+    )
+    router.log = lambda *_args, **_kwargs: None
+    router._get_categorization()
+    assert seen["request_variables"] == {"TYPESAFE_API_KEY": "tenant-key"}  # pragma: allowlist secret

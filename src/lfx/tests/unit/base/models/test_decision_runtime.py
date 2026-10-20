@@ -188,3 +188,15 @@ def test_standalone_request_endpoint_cannot_be_ignored(execution, monkeypatch):
         reset_request_variables(variables)
         reset_no_env_fallback(token)
     transport.assert_not_called()
+
+
+def test_callers_per_request_key_for_its_own_provider_comes_first(execution):
+    request, model, transport = execution
+    evaluate_decision(request, model=model, request_variables={"OPENAI_API_KEY": "sk-header-key"})
+    assert transport.call_args.kwargs["api_key"] == "sk-header-key"
+
+
+def test_per_request_keys_for_other_providers_are_ignored(execution):
+    request, model, transport = execution
+    evaluate_decision(request, model=model, request_variables={"ANTHROPIC_API_KEY": "sk-ant-other"})
+    assert transport.call_args.kwargs["api_key"] == "sk-explicit-test"

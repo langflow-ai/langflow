@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from lfx.base.models.decisions.runtime import evaluate_decision
+from lfx.base.models.decisions.runtime import evaluate_decision, request_variables_of
 from lfx.base.models.decisions.schema import (
     DecisionConfigurationError,
     DecisionEvaluationError,
@@ -66,7 +66,8 @@ def assign_route_ids(routes: list[dict], last_number: int) -> tuple[list[dict], 
         match = _ROUTE_ID.fullmatch(route_id) if isinstance(route_id, str) else None
         number = int(match.group(1)) if match else None
         numbers.append(number if number not in seen else None)
-        seen.add(number)
+        if number is not None:
+            seen.add(number)
     if last_number == 0 and not any(numbers):
         numbers = list(range(1, len(routes) + 1))
     highest = max([last_number, *(number for number in numbers if number)])
@@ -513,7 +514,12 @@ class SmartRouterComponent(Component):
         stop = self.evaluation_error_action == "Stop with error"
         try:
             # Never forward the Language Model's API key to a decision provider.
-            result = evaluate_decision(request, model=self.decision_model, user_id=self.user_id)
+            result = evaluate_decision(
+                request,
+                model=self.decision_model,
+                user_id=self.user_id,
+                request_variables=request_variables_of(self),
+            )
         except DecisionEvaluationError as exc:
             evidence.update(reason="evaluation_error", error={"category": exc.category, "message": str(exc)})
             if stop:

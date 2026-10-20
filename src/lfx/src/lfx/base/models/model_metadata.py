@@ -451,13 +451,6 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
                 "is_secret": True,
                 "is_list": False,
                 "options": [],
-                "langchain_param": "api_key",
-                "component_metadata": {
-                    "mapping_field": "api_key",
-                    "required": False,
-                    "advanced": True,
-                    "info": "Falls back to PERPLEXITY_API_KEY environment variable",
-                },
             }
         ],
         "api_docs_url": "https://docs.perplexity.ai/docs/decisions/quickstart",
@@ -474,13 +467,6 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
                 "is_secret": True,
                 "is_list": False,
                 "options": [],
-                "langchain_param": "api_key",
-                "component_metadata": {
-                    "mapping_field": "api_key",
-                    "required": False,
-                    "advanced": True,
-                    "info": "Falls back to TYPESAFE_API_KEY environment variable",
-                },
             }
         ],
         "api_docs_url": "https://docs.typesafe.ai/api",

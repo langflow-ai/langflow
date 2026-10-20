@@ -44,9 +44,19 @@ OFFICIAL_OPENAI_BASE_URL = "https://api.openai.com/v1"
 
 
 def require_official_openai_endpoint(variables: dict[str, Any]) -> None:
-    """OpenAI Decisions is only verified against the hosted API, never a custom base URL."""
+    """OpenAI Decisions is only verified against the hosted API, never a custom base URL.
+
+    The legacy OPENAI_API_BASE environment setting counts too, so a key meant for a proxy is
+    never sent to the official endpoint, whether by a run or by a key check.
+    """
+    from lfx.base.models.unified_models.credentials import provider_variable_from_env
+    from lfx.services.variable.request_scope import is_env_fallback_disabled
+
+    configured = dict(variables)
+    if not is_env_fallback_disabled() and "OPENAI_API_BASE" not in configured:
+        configured["OPENAI_API_BASE"] = provider_variable_from_env("OPENAI_API_BASE")
     for name in ("OPENAI_BASE_URL", "OPENAI_API_BASE"):
-        configured_url = str(variables.get(name) or "").rstrip("/")
+        configured_url = str(configured.get(name) or "").rstrip("/")
         if configured_url and configured_url != OFFICIAL_OPENAI_BASE_URL:
             msg = "OpenAI Decisions currently requires the official hosted endpoint."
             raise DecisionConfigurationError(msg)
@@ -182,7 +192,8 @@ def parse_response(provider: str, request: DecisionRequest, payload: Any) -> Dec
         if request.kind == "boolean":
             expected_type = "predicate" if provider == "OpenAI" else "noul"
         if answer["type"] != expected_type:
-            msg = f"answer type {answer['type']!r} does not match the requested {expected_type!r}"
+            # Never echo provider text: it reaches errors and evidence.
+            msg = f"the answer type does not match the requested {expected_type!r}"
             raise ValueError(msg)
         if request.kind == "boolean":
             result = DecisionResult(

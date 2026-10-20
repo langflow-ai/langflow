@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.models.decisions.schema import DecisionConfigurationError, DecisionRequest
@@ -12,11 +13,18 @@ if TYPE_CHECKING:
     from lfx.base.models.decisions.schema import DecisionResult
 
 
+def request_variables_of(component: Any) -> Mapping[str, Any] | None:
+    """The caller's per-request variables for this run (X-LANGFLOW-GLOBAL-VAR-* headers), if any."""
+    context = getattr(getattr(component, "graph", None), "context", None)
+    return context.get("request_variables") if isinstance(context, Mapping) else None
+
+
 def evaluate_decision(
     request: DecisionRequest,
     *,
     model: list[dict[str, Any]] | dict[str, Any],
     user_id: UUID | str | None = None,
+    request_variables: Mapping[str, Any] | None = None,
     timeout: float = 60,
 ) -> DecisionResult:
     """Authorize the canonical catalog identity before resolving credentials or invoking HTTP."""
@@ -63,14 +71,16 @@ def evaluate_decision(
 
     variables = unified_models.get_all_variables_for_provider(user_id, provider)
     if provider == "OpenAI":
-        from lfx.base.models.unified_models.credentials import provider_variable_from_env
-        from lfx.services.variable.request_scope import is_env_fallback_disabled
-
-        if not is_env_fallback_disabled() and "OPENAI_API_BASE" not in variables:
-            variables["OPENAI_API_BASE"] = provider_variable_from_env("OPENAI_API_BASE")
         require_official_openai_endpoint(variables)
-    # Only the provider's own credential is used; flows cannot supply or name a key.
-    resolved_key = unified_models.get_api_key_for_provider(user_id, provider)
+    from lfx.base.models.decisions.providers import API_KEY_VARIABLES
+    from lfx.utils.secrets import secret_value_to_str
+
+    # Only the provider's own credential is used; flows cannot supply or name a key. A caller's
+    # per-request value for it (X-LANGFLOW-GLOBAL-VAR-*) comes first, as for other variables.
+    own_variable = API_KEY_VARIABLES[provider]
+    resolved_key = secret_value_to_str(
+        (request_variables or {}).get(own_variable), strip=True
+    ) or unified_models.get_api_key_for_provider(user_id, provider)
     if not resolved_key:
         msg = f"Configure an API key for the {provider} decision model."
         raise DecisionConfigurationError(msg)
