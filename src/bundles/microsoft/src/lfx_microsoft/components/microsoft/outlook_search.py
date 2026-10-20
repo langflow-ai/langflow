@@ -23,7 +23,7 @@ class OutlookSearchComponent(MicrosoftGraphComponent):
 
     display_name = "Outlook: Search Mail"
     description = "Search the connected user's Outlook mailbox."
-    documentation = "https://learn.microsoft.com/en-us/graph/api/user-list-messages"
+    documentation = "https://docs.langflow.org/bundles-microsoft"
     name = "OutlookSearchMail"
     capability_id = "microsoft.outlook.search"
 
