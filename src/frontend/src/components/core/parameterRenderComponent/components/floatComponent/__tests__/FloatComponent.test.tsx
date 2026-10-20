@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { axe } from "@/utils/a11y-test";
 import FloatComponent from "../index";
@@ -15,7 +15,9 @@ type MockProps = {
 // Mock Chakra UI NumberInput as plain HTML equivalents, matching the pattern
 // used for IntComponent (Chakra swallows unrecognized/uncontrolled props).
 jest.mock("@chakra-ui/number-input", () => ({
-  NumberInput: ({ children, ...props }: MockProps) => (
+  // Chakra calls onChange with the value string, not a DOM event; drop it so the
+  // field's own onChange drives the value, as it does in the real component.
+  NumberInput: ({ children, onChange: _onChange, ...props }: MockProps) => (
     <div {...(props as Record<string, unknown>)}>{children}</div>
   ),
   NumberInputField: ({
@@ -91,5 +93,27 @@ describe("FloatComponent accessibility", () => {
     expect(screen.getByTestId("float-input")).not.toHaveAttribute(
       "aria-labelledby",
     );
+  });
+});
+
+describe("FloatComponent blank values", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("should_keep_a_cleared_field_blank_when_preserve_empty_is_set", () => {
+    render(<FloatComponent {...defaultProps} value={0.7} preserveEmpty />);
+    const input = screen.getByTestId("float-input");
+    fireEvent.change(input, { target: { value: "0.5" } });
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.blur(input);
+    expect(defaultProps.handleOnNewValue).toHaveBeenCalledWith({ value: "" });
+  });
+
+  it("should_turn_a_cleared_field_into_zero_without_preserve_empty", () => {
+    render(<FloatComponent {...defaultProps} value={0.7} />);
+    const input = screen.getByTestId("float-input");
+    fireEvent.change(input, { target: { value: "0.5" } });
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.blur(input);
+    expect(defaultProps.handleOnNewValue).toHaveBeenCalledWith({ value: 0 });
   });
 });

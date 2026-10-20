@@ -17,6 +17,7 @@ export default function FloatComponent({
   value,
   handleOnNewValue,
   rangeSpec,
+  preserveEmpty = false,
   disabled,
   editNode = false,
   id = "",
@@ -57,6 +58,11 @@ export default function FloatComponent({
   };
 
   const handleBlur = () => {
+    // Number("") is 0, which would silently satisfy a required threshold.
+    if (preserveEmpty && String(localValue).trim() === "") {
+      handleOnNewValue({ value: "" });
+      return;
+    }
     handleOnNewValue({ value: Number(localValue) });
   };
 
