@@ -27,6 +27,7 @@ from lfx.base.models.watsonx_constants import (
 )
 from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
+from lfx.services.variable.exceptions import RuntimeVariableError
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.secrets import unwrap_secret_value
 from lfx.utils.ssrf_httpx import ssrf_safe_httpx_get
@@ -489,6 +490,8 @@ def get_provider_variable_value(user_id: UUID | str | None, variable_key: str) -
                     field="",
                     session=session,
                 )
+            except RuntimeVariableError:
+                raise
             except ValueError:
                 # ``get_variable_object`` raises ValueError on missing var;
                 # treat absence as "no value" rather than propagating.

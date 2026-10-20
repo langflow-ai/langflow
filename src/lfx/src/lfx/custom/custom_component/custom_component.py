@@ -487,6 +487,15 @@ class CustomComponent(BaseComponent):
         Returns:
             The variable for the current user with the specified name.
         """
+        # Serving-plane execution accounts may require their own persisted
+        # credentials even when a request supplies a same-named override.
+        variable_service = get_variable_service()
+        resolve_bound = getattr(variable_service, "get_account_bound_variable", None)
+        if resolve_bound is not None and getattr(self, "_user_id", None):
+            bound = await resolve_bound(user_id=self.user_id, name=name, field=field, session=session)
+            if bound is not None:
+                return bound.value
+
         # Check graph context for request-level variable overrides first
         # This allows run_flow to work without user_id when variables are passed
         if hasattr(self, "graph") and self.graph and hasattr(self.graph, "context"):

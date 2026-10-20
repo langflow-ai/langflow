@@ -12,6 +12,7 @@ from uuid import UUID
 from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.services.variable import VariableNotFoundError
+from lfx.services.variable.exceptions import RuntimeVariableError
 from lfx.services.variable.request_scope import is_env_fallback_disabled
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.env_var_security import safe_getenv
@@ -218,6 +219,7 @@ def provider_variable_from_env(var_key: str) -> str | None:
 def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) -> dict[str, str]:
     """Get all configured variables for a provider from database or environment."""
     result: dict[str, str] = {}
+    account_absences: set[str] = set()
 
     # Get all variable definitions for this provider
     provider_vars = get_provider_all_variables(provider)
@@ -264,6 +266,13 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
                     value = secret_value_to_str(value, strip=True)
                     if value:
                         values[var_key] = value
+                except RuntimeVariableError as exc:
+                    if exc.reason not in {"absent", "variable_not_approved"}:
+                        raise
+                    # The provider catalog includes optional configuration names.
+                    # An authoritative absence leaves the option unset and must
+                    # not pick up a process-wide value in either fallback below.
+                    account_absences.add(var_key)
                 except VariableNotFoundError:
                     # Variable not found - check environment, unless the request disables
                     # env fallback (keeps served flows isolated from process-wide credentials).
@@ -284,7 +293,7 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
     # with "Missing required configuration" while the env var is present.
     for var_info in provider_vars:
         var_key = var_info.get("variable_key")
-        if not var_key or db_values.get(var_key):
+        if not var_key or db_values.get(var_key) or var_key in account_absences:
             continue
         # Honor the request's no-env-fallback contract: a served flow under
         # no_env_fallback must stay isolated from process-wide credentials even on
