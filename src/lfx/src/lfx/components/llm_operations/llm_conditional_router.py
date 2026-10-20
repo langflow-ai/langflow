@@ -37,6 +37,7 @@ from lfx.schema.table import EditMode
 from lfx.schema.token_usage import extract_usage_from_message
 
 _ROUTE_ID = re.compile(r"category_([1-9][0-9]{0,3})_result")
+_MAX_ROUTE_NUMBER = 9999
 _CUSTOM_PROMPT_INFO = (
     "Additional instructions for LLM-based categorization. "
     "These will be added to the base prompt. "
@@ -47,11 +48,6 @@ _CUSTOM_PROMPT_DECISION_INFO = (
 )
 
 
-def _route_number(route_id: object) -> int | None:
-    match = _ROUTE_ID.fullmatch(route_id) if isinstance(route_id, str) else None
-    return int(match.group(1)) if match else None
-
-
 def assign_route_ids(routes: list[dict], last_number: int) -> tuple[list[dict], int]:
     """Give every route a stable output name, so editing routes never moves an edge to another route.
 
@@ -60,10 +56,17 @@ def assign_route_ids(routes: list[dict], last_number: int) -> tuple[list[dict], 
     without one, such as a new row or a copy, takes the next number above ``last_number``,
     so a deleted route's name is never given to a new route.
     """
+    if isinstance(last_number, bool) or not isinstance(last_number, int) or not 0 <= last_number <= _MAX_ROUTE_NUMBER:
+        msg = f"Last Route Number must be a whole number from 0 to {_MAX_ROUTE_NUMBER}."
+        raise ValueError(msg)
     numbers: list[int | None] = []
+    seen: set[int] = set()
     for row in routes:
-        number = _route_number(row.get("route_id"))
-        numbers.append(number if number not in numbers else None)
+        route_id = row.get("route_id")
+        match = _ROUTE_ID.fullmatch(route_id) if isinstance(route_id, str) else None
+        number = int(match.group(1)) if match else None
+        numbers.append(number if number not in seen else None)
+        seen.add(number)
     if last_number == 0 and not any(numbers):
         numbers = list(range(1, len(routes) + 1))
     highest = max([last_number, *(number for number in numbers if number)])
@@ -71,6 +74,9 @@ def assign_route_ids(routes: list[dict], last_number: int) -> tuple[list[dict], 
         if number is None:
             highest += 1
             numbers[i] = highest
+    if highest > _MAX_ROUTE_NUMBER:
+        msg = f"A Smart Router can number at most {_MAX_ROUTE_NUMBER} routes over its lifetime."
+        raise ValueError(msg)
     keyed = [{**row, "route_id": f"category_{number}_result"} for row, number in zip(routes, numbers, strict=True)]
     return keyed, highest
 
@@ -188,6 +194,7 @@ class SmartRouterComponent(Component):
                     "name": "minimum_probability",
                     "display_name": "Minimum Probability (Optional)",
                     "type": "float",
+                    "formatter": "number",
                     "description": (
                         "Decision mode only: the probability this route needs, at least, from 0 to 1. "
                         "Leave empty to use the router's Minimum Probability."
@@ -246,6 +253,7 @@ class SmartRouterComponent(Component):
             value=0,
             show=False,
             advanced=True,
+            override_skip=True,
         ),
         MultilineInput(
             name="custom_prompt",
@@ -424,6 +432,12 @@ class SmartRouterComponent(Component):
 
     @staticmethod
     def _validate_probability(value: Any) -> float:
+        if isinstance(value, str):
+            # Table cells can hold the number as text.
+            try:
+                value = float(value.strip())
+            except ValueError:
+                value = None
         if isinstance(value, bool) or not isinstance(value, int | float) or not isfinite(value) or not 0 <= value <= 1:
             msg = "Minimum probability must be a number between 0 and 1."
             raise DecisionConfigurationError(msg)
@@ -470,7 +484,7 @@ class SmartRouterComponent(Component):
         thresholds = {
             option.id: (
                 threshold
-                if row.get("minimum_probability") in (None, "")
+                if row.get("minimum_probability") is None or not str(row["minimum_probability"]).strip()
                 else self._validate_probability(row["minimum_probability"])
             )
             for option, row in zip(options, self.routes, strict=True)
@@ -550,7 +564,11 @@ class SmartRouterComponent(Component):
         self._categorization_result = None
         self._excluded_outputs = set()
         self._decision_evidence = None
-        if getattr(self, "routing_mode", "Language Model") == "Decision Model":
+        mode = getattr(self, "routing_mode", "Language Model")
+        if mode not in {"Language Model", "Decision Model"}:
+            msg = "Unknown routing mode."
+            raise DecisionConfigurationError(msg)
+        if mode == "Decision Model":
             self._validate_decision_graph()
 
     def _route_ids(self) -> list[str]:

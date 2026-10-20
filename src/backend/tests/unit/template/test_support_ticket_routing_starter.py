@@ -86,3 +86,11 @@ def test_edge_handles_match_the_fields_they_connect():
         assert source["output_types"] == output["types"]
         field = nodes[edge["target"]]["template"][target["fieldName"]]
         assert (target["type"], target["inputTypes"]) == (field["type"], field["input_types"])
+
+
+def test_hidden_route_counter_reaches_the_run():
+    """Hidden fields are normally skipped when a flow runs; the route counter must not be."""
+    data = json.loads(STARTER.read_text(encoding="utf-8"))["data"]
+    router = next(node for node in data["nodes"] if node["data"]["type"] == "SmartRouter")
+    graph = Graph.from_payload(data)
+    assert graph.get_vertex(router["id"]).params["last_route_number"] == 3

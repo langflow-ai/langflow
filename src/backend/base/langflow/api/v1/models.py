@@ -22,6 +22,7 @@ from lfx.base.models.unified_models import (
     get_unified_models_detailed,
 )
 from lfx.base.models.unified_models.credentials import (
+    MODEL_STATUS_TYPES,
     model_status_contains,
     model_status_key,
     parse_model_status_key,
@@ -788,7 +789,7 @@ def _build_model_default_flags(
             legacy_key = model_status_key(provider, model_name)
             # OR defaults across typed rows sharing a provider/name identity.
             is_default_model[legacy_key] = is_default_model.get(legacy_key, False) or is_default
-            if model_type in {"llm", "embeddings", "decision"}:
+            if model_type in MODEL_STATUS_TYPES:
                 is_default_model[model_status_key(provider, model_name, model_type)] = is_default
 
     return is_default_model
@@ -814,7 +815,7 @@ def _build_model_types_by_identity(
             if not isinstance(model_name, str):
                 continue
             model_type = model.get("metadata", {}).get("model_type", "llm")
-            if model_type not in {"llm", "embeddings", "decision"}:
+            if model_type not in MODEL_STATUS_TYPES:
                 continue
             identity = model_status_key(provider, model_name)
             model_types_by_identity.setdefault(identity, set()).add(model_type)
@@ -1035,7 +1036,7 @@ async def _get_enabled_models_result(
             is_not_supported = metadata.get("not_supported", False)
             is_default = metadata.get("default", False)
             model_type = metadata.get("model_type", "llm")
-            if model_type not in {"llm", "embeddings", "decision"}:
+            if model_type not in MODEL_STATUS_TYPES:
                 model_type = "llm"
 
             # Foundry requires explicit enable; seed defaults are not auto-on.

@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
+from lfx.base.models.decisions.schema import DecisionConfigurationError
 from lfx.components.llm_operations.llm_conditional_router import SmartRouterComponent, assign_route_ids
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
@@ -186,9 +187,6 @@ def test_switching_mode_preserves_llm_configuration(monkeypatch):
     decision_config = component.update_build_config(config, "Decision Model", "routing_mode")
     assert decision_config["custom_prompt"]["value"] == "Use {routes} for {input_text}"
     assert decision_config["model"]["value"] == [{"provider": "Test", "name": "llm"}]
-    # A saved prompt stays in view, explained, rather than silently disappearing.
-    assert decision_config["custom_prompt"]["show"]
-    assert "Not used in Decision Model mode" in decision_config["custom_prompt"]["info"]
     assert not decision_config["api_key"]["show"]
     assert decision_config["minimum_probability"]["required"]
     llm_config = component.update_build_config(decision_config, "Language Model", "routing_mode")
@@ -352,3 +350,32 @@ def test_decision_mode_explains_a_saved_custom_prompt_instead_of_hiding_it(promp
     build_config = router.update_build_config(build_config, "Language Model", "routing_mode")
     assert build_config["custom_prompt"]["show"] is True
     assert build_config["custom_prompt"]["info"] == original_info
+
+
+@pytest.mark.parametrize("last_number", [-1, 10000, "3", True])
+def test_assign_route_ids_rejects_an_out_of_range_counter(last_number):
+    with pytest.raises(ValueError, match="Last Route Number"):
+        assign_route_ids(_rows(None), last_number)
+
+
+def test_assign_route_ids_fails_clearly_when_numbers_run_out():
+    with pytest.raises(ValueError, match="at most 9999 routes"):
+        assign_route_ids(_rows("category_9999_result", None), 9999)
+
+
+@pytest.mark.parametrize(("value", "expected"), [("0.8", 0.8), (" 0.75 ", 0.75), (0.5, 0.5), (1, 1.0)])
+def test_thresholds_typed_into_the_routes_table_are_numbers(value, expected):
+    assert SmartRouterComponent._validate_probability(value) == expected
+
+
+@pytest.mark.parametrize("value", ["high", "", "1.5", "nan", None, True])
+def test_invalid_thresholds_fail_clearly(value):
+    with pytest.raises(DecisionConfigurationError, match="between 0 and 1"):
+        SmartRouterComponent._validate_probability(value)
+
+
+def test_unknown_routing_mode_fails_instead_of_running_as_language_model():
+    router = SmartRouterComponent()
+    router.set(routing_mode="Decison Model")
+    with pytest.raises(DecisionConfigurationError, match="Unknown routing mode"):
+        router._pre_run_setup()
