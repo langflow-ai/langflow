@@ -1,31 +1,29 @@
-"""The cross-language property fixture replays to the hashes it was generated with.
+"""The fixed property sequences replay to their hashes.
 
-``property_cases.py`` generated random valid transactions over a small graph
-with this engine. Any change that makes a transaction replay differently
-changes what stored history means, so it must be deliberate: regenerate the
-fixture and update the editor's applier with it.
+``property_cases.json`` holds fixed, reviewed transactions over a small graph,
+with the hash of the graph each sequence replays to. Every engine runs the
+same file. A change that makes a transaction replay differently changes what
+stored history means, so it is a reviewed edit of the fixture that names its
+rule.
 """
 
 from __future__ import annotations
 
 import copy
 import json
+from pathlib import Path
 
 import pytest
 from lfx.services.flow_operations import apply_flow_operations, graph_hash, parse_flow_operations
 
-from tests.unit.services.flow_operations.property_cases import FIXTURE, generate
-
+FIXTURE = Path(__file__).resolve().parents[5] / "lfx-native" / "fixtures" / "property_cases.json"
 DOCUMENT = json.loads(FIXTURE.read_text(encoding="utf-8"))
 SEQUENCES = DOCUMENT["sequences"]
 
 
-def test_fixture_is_what_the_generator_produces():
-    assert generate() == DOCUMENT
-
-
 @pytest.mark.parametrize("sequence", SEQUENCES, ids=[sequence["name"] for sequence in SEQUENCES])
-def test_sequence_replays_to_the_recorded_hash(sequence):
+def test_sequence_replays_to_its_hash(sequence):
+    assert sequence.get("rule"), "every sequence names the rule it checks"
     graph = copy.deepcopy(DOCUMENT["base"])
     for transaction in sequence["transactions"]:
         graph = apply_flow_operations(graph, parse_flow_operations(copy.deepcopy(transaction))).flow_data

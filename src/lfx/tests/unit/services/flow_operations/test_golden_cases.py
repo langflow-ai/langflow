@@ -26,6 +26,7 @@ CASES = json.loads((FIXTURES / "apply_cases.json").read_text())["cases"]
 
 @pytest.mark.parametrize("case", CASES, ids=[case["name"] for case in CASES])
 def test_apply_case(case):
+    assert case.get("rule"), "every case names the rule it checks"
     base = copy.deepcopy(case["base"])
 
     if "error" in case:

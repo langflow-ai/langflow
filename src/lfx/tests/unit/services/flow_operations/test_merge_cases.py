@@ -23,6 +23,7 @@ CASES = DOCUMENT["cases"]
 
 @pytest.mark.parametrize("case", CASES, ids=[case["name"] for case in CASES])
 def test_merge_case(case):
+    assert case.get("rule"), "every case names the rule it checks"
     graph = copy.deepcopy(DOCUMENT["base"])
     outcomes = {}
     for name in case["order"]:
