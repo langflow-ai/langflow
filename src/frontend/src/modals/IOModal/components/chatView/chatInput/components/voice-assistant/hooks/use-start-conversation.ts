@@ -1,3 +1,4 @@
+import { BASE_URL_API } from "@/customization/config-constants";
 import i18n from "@/i18n";
 import { getLocalStorage } from "@/utils/local-storage-util";
 
@@ -10,11 +11,9 @@ export const useStartConversation = (
   stopRecording: () => void,
   currentSessionId: string,
 ) => {
-  const currentHost = window.location.hostname;
-  const currentPort = window.location.port;
+  const currentHost = window.location.host;
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const url = `${protocol}//${currentHost}:${currentPort}/api/v1/voice/ws/flow_tts/${flowId}/${currentSessionId?.toString()}`;
-  //const url = `${protocol}//${currentHost}:${currentPort}/api/v1/voice/ws/flow_as_tool/${flowId}/${currentSessionId?.toString()}`;
+  const url = `${protocol}//${currentHost}${BASE_URL_API}voice/ws/flow_tts/${flowId}/${currentSessionId?.toString()}`;
 
   try {
     if (wsRef.current?.readyState === WebSocket.CONNECTING) {
