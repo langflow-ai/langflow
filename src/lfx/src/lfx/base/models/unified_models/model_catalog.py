@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+from collections import Counter
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.models.model_metadata import EXPLICIT_ENABLE_ONLY_PROVIDERS, get_provider_param_mapping
@@ -121,15 +122,12 @@ def get_unified_models_detailed(
 
     for prov, models in provider_map.items():
         models.sort(key=_sort_key)
-        existing_index = 0
-        decision_index = 0
+        # Decision rows get their own defaults so they never displace a provider's chat defaults.
+        seen = Counter()
         for model in models:
-            if model["metadata"].get("model_type") == "decision":
-                model["metadata"]["default"] = decision_index < default_model_count
-                decision_index += 1
-            else:
-                model["metadata"]["default"] = existing_index < default_model_count
-                existing_index += 1
+            is_decision = model["metadata"].get("model_type") == "decision"
+            model["metadata"]["default"] = seen[is_decision] < default_model_count
+            seen[is_decision] += 1
 
         # If only_defaults is True, filter to only default models
         if only_defaults:

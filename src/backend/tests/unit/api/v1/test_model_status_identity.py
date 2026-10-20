@@ -820,3 +820,34 @@ async def test_list_decision_models_hides_policy_denied_model(client, logged_in_
     response = await client.get("api/v1/models", params={"model_type": "decision"}, headers=logged_in_headers)
     assert response.status_code == 200
     assert set(_decision_rows(response)) == DECISION_CATALOG - {("OpenAI", "gpt-6-luna")}
+
+
+@pytest.mark.parametrize(("validation_model_type", "validated"), [(None, False), ("decision", True)])
+async def test_perplexity_key_save_runs_a_decision_check_only_when_asked(monkeypatch, validation_model_type, validated):
+    """The Perplexity chat bundle shares PERPLEXITY_API_KEY; its keys may lack Decisions access."""
+    from unittest.mock import MagicMock, Mock
+
+    from langflow.api.v1 import variable as variable_api
+
+    user = SimpleNamespace(id=uuid4())
+    variable = variable_api.VariableCreate(name="PERPLEXITY_API_KEY", value="test-value", default_fields=[])
+    stored = variable_api.Variable(name=variable.name, value=variable.value, default_fields=[], user_id=user.id)
+    service = MagicMock(spec=variable_api.DatabaseVariableService)
+    service.list_variables = AsyncMock(return_value=[])
+    service.create_variable = AsyncMock(return_value=stored)
+    monkeypatch.setattr(variable_api, "get_variable_service", lambda: service)
+    monkeypatch.setattr(variable_api, "ensure_variable_permission", AsyncMock())
+    monkeypatch.setattr(variable_api, "_require_provider", AsyncMock())
+    monkeypatch.setattr(variable_api, "get_all_variables_for_provider", lambda *_: {})
+    validate = Mock()
+    monkeypatch.setattr(variable_api, "validate_model_provider_key", validate)
+    result = await variable_api.create_variable(
+        session=object(),
+        variable=variable,
+        current_user=user,
+        provider_policy_attributes={},
+        validation_model_type=validation_model_type,
+    )
+    assert result.id == stored.id
+    assert validate.called is validated
+    service.create_variable.assert_awaited_once()

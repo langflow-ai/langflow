@@ -408,15 +408,14 @@ async def _get_model_status(user_id: UUID | str, *, strict: bool = False) -> tup
     if strict:
         from lfx.services.variable.service import VariableService
 
-        # Standalone LFX has no persisted Model Providers preferences. Its
-        # represented caller still uses policy and request-scoped credentials.
-        if type(variable_service) is VariableService:
+        # Standalone LFX has no persisted Model Providers preferences: `lfx serve` uses the
+        # env-backed VariableService and `lfx run` has no variable service at all, only a
+        # generated user id. Policy and request-scoped credentials still apply. A variable
+        # service of any other type still fails closed below.
+        if variable_service is None or type(variable_service) is VariableService:
             return set(), set()
     async with session_scope() as session:
         if variable_service is None:
-            if strict:
-                msg = "Model configuration service is unavailable"
-                raise RuntimeError(msg)
             return set(), set()
         from langflow.services.variable.service import DatabaseVariableService
 
@@ -537,6 +536,20 @@ async def _fetch_enabled_providers_for_user(
         return _validate_and_get_enabled_providers(all_provider_variables, provider_candidates)
 
 
+def _is_decision_only_model(provider: str, model_name: str) -> bool:
+    """Whether the catalog lists this provider/model as a decision model and not as a chat model."""
+    from lfx.base.models.decision_constants import DECISION_MODELS_DETAILED
+
+    if not any(row["provider"] == provider and row["name"] == model_name for row in DECISION_MODELS_DETAILED):
+        return False
+    from .model_catalog import get_unified_models_detailed
+
+    chat_rows = get_unified_models_detailed(
+        providers=[provider], model_type="llm", include_deprecated=True, include_unsupported=True
+    )
+    return not any(row.get("model_name") == model_name for group in chat_rows for row in group.get("models", []))
+
+
 def validate_model_provider_key(
     provider: str,
     variables: dict[str, str],
@@ -552,6 +565,10 @@ def validate_model_provider_key(
 
     from lfx.base.models.decision_constants import DECISION_ONLY_PROVIDERS
 
+    if model_type is None and model_name and _is_decision_only_model(provider, model_name):
+        # An untyped request for a model that exists only as a decision model, such as a legacy
+        # status update, must not be validated as a chat completion.
+        model_type = "decision"
     if model_type == "decision" or provider in DECISION_ONLY_PROVIDERS:
         from lfx.base.models.decisions.providers import DEFAULT_MODELS, validate_decision_provider_key
         from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy

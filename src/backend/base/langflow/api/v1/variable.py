@@ -5,6 +5,7 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query
+from lfx.base.models.decision_constants import DECISION_ONLY_PROVIDERS
 from lfx.base.models.unified_models import (
     get_all_variables_for_provider,
     get_model_provider_variable_mapping,
@@ -135,6 +136,14 @@ async def _cleanup_provider_models(
     )
 
 
+def _validates_on_save(provider: str, validation_model_type: str | None) -> bool:
+    """Decision-only provider keys get a billable decision check only when the caller asks for one.
+
+    PERPLEXITY_API_KEY is also used by the Perplexity chat bundle, whose keys may lack Decisions access.
+    """
+    return provider not in DECISION_ONLY_PROVIDERS or validation_model_type == "decision"
+
+
 @router.post("/", response_model=VariableRead, status_code=201, include_in_schema=False)
 async def create_variable(
     *,
@@ -174,7 +183,11 @@ async def create_variable(
     if variable.name in await variable_service.list_variables(user_id=current_user.id, session=session):
         raise HTTPException(status_code=400, detail="Variable name already exists")
 
-    if provider is not None and variable.name == get_model_provider_variable_mapping().get(provider):
+    if (
+        provider is not None
+        and variable.name == get_model_provider_variable_mapping().get(provider)
+        and _validates_on_save(provider, validation_model_type)
+    ):
         provider_vars = await asyncio.to_thread(get_all_variables_for_provider, current_user.id, provider)
         try:
             await asyncio.to_thread(
@@ -343,7 +356,11 @@ async def update_variable(
                 ModelProviderPolicyPurpose.CONFIGURE,
                 provider_policy_attributes,
             )
-            if variable.value and effective_name == get_model_provider_variable_mapping().get(provider):
+            if (
+                variable.value
+                and effective_name == get_model_provider_variable_mapping().get(provider)
+                and _validates_on_save(provider, validation_model_type)
+            ):
                 # Run validation off the event loop; owner context (not caller) for share-aware updates.
                 provider_vars = await asyncio.to_thread(get_all_variables_for_provider, owner_id, provider)
                 try:

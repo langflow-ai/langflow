@@ -140,19 +140,15 @@ async def test_standalone_lfx_represented_user_needs_no_backend_preferences(monk
     assert await credentials._get_model_status("represented-caller", strict=True) == (set(), set())
 
 
-async def test_missing_variable_service_does_not_get_standalone_exemption(monkeypatch):
-    from contextlib import asynccontextmanager
+def test_lfx_run_generated_user_has_no_saved_settings_to_read(monkeypatch):
+    """`lfx run` stamps a random user id and registers no variable service; decisions must still resolve."""
+    from uuid import uuid4
 
     from lfx.base.models.unified_models import credentials
 
-    @asynccontextmanager
-    async def session():
-        yield object()
-
-    monkeypatch.setattr(credentials, "session_scope", session)
     monkeypatch.setattr(credentials, "get_variable_service", lambda: None)
-    with pytest.raises(RuntimeError, match="unavailable"):
-        await credentials._get_model_status("represented-caller", strict=True)
+    options = get_decision_model_options(user_id=uuid4().hex, provider_policy=policy(), require_configured=False)
+    assert ("TypeSafe", "jev-latest") in {(item["provider"], item["name"]) for item in options}
 
 
 def test_models_dev_chat_override_preserves_same_named_decision_capabilities():
@@ -178,3 +174,17 @@ def test_placeholder_user_id_is_standalone_not_a_user(monkeypatch):
     monkeypatch.setattr(model_catalog, "_get_model_status", no_saved_settings)
     options = get_decision_model_options(user_id="None", provider_policy=policy())
     assert ("TypeSafe", "jev-latest") in {(item["provider"], item["name"]) for item in options}
+
+
+def test_untyped_validation_of_a_decision_only_model_sends_a_decision(monkeypatch):
+    """A legacy untyped enable of gpt-6-luna must not be validated as a chat completion."""
+    from unittest.mock import Mock
+
+    from lfx.base.models.decisions import providers
+    from lfx.base.models.unified_models import credentials
+
+    decision = Mock()
+    monkeypatch.setattr(providers, "validate_decision_provider_key", decision)
+    variables = {"OPENAI_API_KEY": "tenant-key"}  # pragma: allowlist secret
+    credentials.validate_model_provider_key("OpenAI", variables, "gpt-6-luna")
+    decision.assert_called_once_with("OpenAI", variables, "gpt-6-luna")
