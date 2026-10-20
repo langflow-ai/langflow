@@ -252,8 +252,8 @@ def _validate_spec(spec: ProviderDescriptor) -> None:
         keys = ", ".join(sorted(reserved_metadata_keys))
         msg = f"ProviderDescriptor.metadata for {spec.name!r} contains reserved keys: {keys}"
         raise ValueError(msg)
-    if not spec.model_class_name():
-        msg = f"ProviderSpec.metadata for {spec.name!r} must set mapping.model_class"
+    if not spec.model_class_name() and not spec.catalog_loader:
+        msg = f"ProviderSpec.metadata for {spec.name!r} must set mapping.model_class or catalog_loader"
         raise ValueError(msg)
     if spec.live and spec.conditional_live:
         msg = f"ProviderSpec {spec.name!r} cannot be both live and conditional_live"
@@ -346,7 +346,7 @@ def register_provider(spec: ProviderDescriptor) -> bool:
         # never clobbers a core/earlier-extension mapping that clear() would then
         # remove.
         class_name = spec.model_class_name()
-        if class_name not in _MODEL_CLASS_IMPORTS and spec.model_class is None:
+        if class_name and class_name not in _MODEL_CLASS_IMPORTS and spec.model_class is None:
             msg = (
                 f"ProviderSpec {spec.name!r} references unknown model class "
                 f"{class_name!r} (no model_class import supplied)"
@@ -795,7 +795,7 @@ def _load_registered_catalog(provider: str) -> tuple[dict[str, Any], ...]:
             raise ValueError(msg)
         normalized_name = name.strip()
         model_type = row.get("model_type", "llm")
-        if model_type not in {"llm", "embeddings"}:
+        if model_type not in {"llm", "embeddings", "decision"}:
             msg = (
                 f"Catalog loader for provider {provider!r} returned unsupported model_type "
                 f"{model_type!r} at row {index}"

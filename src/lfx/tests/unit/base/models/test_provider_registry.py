@@ -746,3 +746,30 @@ def test_zero_registration_is_noop():
     provider_registry.clear()
     assert set(MODEL_PROVIDER_METADATA) == before
     assert provider_registry.registered_provider_names() == frozenset()
+
+
+def fake_decision_catalog_loader():
+    return [{"name": "fake-judge", "model_type": "decision", "capabilities": ["choice"]}]
+
+
+def test_decision_only_descriptor_does_not_require_chat_model_class():
+    register_provider(
+        ProviderSpec(
+            name="FakeDecision",
+            metadata={"icon": "Bot", "variables": []},
+            catalog_loader=f"{__name__}:fake_decision_catalog_loader",
+        )
+    )
+    provider_registry.validate_registered_provider_catalogs(["FakeDecision"])
+    catalog = provider_registry.get_registered_model_catalogs()
+    assert catalog == [
+        [
+            {
+                "provider": "FakeDecision",
+                "name": "fake-judge",
+                "model_type": "decision",
+                "capabilities": ["choice"],
+                "icon": "Bot",
+            }
+        ]
+    ]

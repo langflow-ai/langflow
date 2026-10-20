@@ -121,8 +121,15 @@ def get_unified_models_detailed(
 
     for prov, models in provider_map.items():
         models.sort(key=_sort_key)
-        for i, model in enumerate(models):
-            model["metadata"]["default"] = i < default_model_count
+        existing_index = 0
+        decision_index = 0
+        for model in models:
+            if model["metadata"].get("model_type") == "decision":
+                model["metadata"]["default"] = decision_index < default_model_count
+                decision_index += 1
+            else:
+                model["metadata"]["default"] = existing_index < default_model_count
+                existing_index += 1
 
         # If only_defaults is True, filter to only default models
         if only_defaults:
@@ -514,3 +521,55 @@ def normalize_model_names_to_dicts(
             )
 
     return result
+
+
+def get_decision_model_options(
+    user_id: UUID | str | None = None,
+    *,
+    provider_policy: ModelProviderPolicySnapshot | None = None,
+    require_configured: bool = True,
+) -> list[dict[str, Any]]:
+    """Return enabled decision models; configuration read failures propagate.
+
+    Without a user, standalone lfx can select a catalog model and supply its
+    credentials explicitly. With a user, saved provider and model settings apply.
+    """
+    if provider_policy is None:
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
+
+        provider_policy = resolve_model_provider_policy(
+            user_id=user_id,
+            providers=get_model_providers(),
+            purpose=ModelProviderPolicyPurpose.USE,
+        )
+    disabled: set[str] = set()
+    enabled: set[str] = set()
+    configured: set[str] | None = None
+    if user_id:
+        disabled, enabled = run_until_complete(_get_model_status(user_id, strict=True))
+        if require_configured:
+            configured = run_until_complete(_fetch_enabled_providers_for_user(user_id, provider_policy=provider_policy))
+    options: list[dict[str, Any]] = []
+    for group in get_unified_models_detailed(model_type="decision"):
+        provider = group["provider"]
+        if not provider_policy.allows(provider) or (configured is not None and provider not in configured):
+            continue
+        for row in group["models"]:
+            name, metadata = row["model_name"], row["metadata"]
+            if not provider_policy.allows_model(provider, name, model_type="decision"):
+                continue
+            if model_status_contains(disabled, provider, name, model_type="decision"):
+                continue
+            explicitly_on = model_status_contains(enabled, provider, name, model_type="decision")
+            if user_id and not (metadata.get("default", False) or explicitly_on):
+                continue
+            options.append(
+                {
+                    "name": name,
+                    "provider": provider,
+                    "category": provider,
+                    "icon": group.get("icon", "Bot"),
+                    "metadata": dict(metadata),
+                }
+            )
+    return options

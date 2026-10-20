@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from lfx.services.model_provider_policy import ModelProviderPolicySnapshot
 
 MODEL_STATUS_KEY_SEPARATOR = "::"
-MODEL_STATUS_TYPES = ("llm", "embeddings")
+MODEL_STATUS_TYPES = ("llm", "embeddings", "decision")
 
 
 def model_status_key(provider: str, model_name: str, model_type: str | None = None) -> str:
@@ -47,7 +47,7 @@ def parse_model_status_key(entry: str) -> tuple[str | None, str, str | None]:
 
     The split is deliberately bounded so deployment names containing ``::``
     survive intact. Legacy provider-qualified entries have no type; only the
-    canonical ``llm`` and ``embeddings`` second segments identify typed keys.
+    canonical ``llm``, ``embeddings`` and ``decision`` second segments identify typed keys.
     """
     parts = entry.split(MODEL_STATUS_KEY_SEPARATOR, 2)
     match parts:
@@ -77,6 +77,16 @@ def model_status_contains(
     return any(
         model_status_key(provider, model_name, candidate_type) in entries for candidate_type in MODEL_STATUS_TYPES
     )
+
+
+def _get_standalone_variable(name: str) -> str | None:
+    """Resolve native LFX request/in-memory variables without opening an owner-scoped DB lookup."""
+    from lfx.services.variable.service import VariableService
+
+    service = get_variable_service()
+    if type(service) is VariableService:
+        return secret_value_to_str(run_until_complete(service.get_variable(name=name)), strip=True)
+    return None
 
 
 def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key: Any = None) -> str | None:
@@ -119,6 +129,8 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
             value = secret_value_to_str(value, strip=True)
             if value:
                 return value
+        elif value := _get_standalone_variable(var_name):
+            return value
         # Honor the request's no-env-fallback contract: skip os.environ when disabled so a
         # served flow stays isolated from process-wide credentials (matches VariableService).
         if not is_env_fallback_disabled():
@@ -179,6 +191,8 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
                     return None
 
         api_key = run_until_complete(_get_variable())
+    else:
+        api_key = _get_standalone_variable(variable_name)
 
     api_key = secret_value_to_str(api_key, strip=True)
     if api_key:
@@ -224,19 +238,17 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
     if not provider_vars:
         return result
 
-    # If no user_id, only check environment variables. Honor the request's no-env-fallback
-    # contract: a served flow under no_env_fallback stays isolated from process-wide
-    # credentials, so return nothing rather than leaking os.environ into provider_vars
-    # (which would defeat the _env_if_allowed guards in instantiation.py).
+    # Native LFX request-scoped variables must win over ambient credentials,
+    # including requests with no represented user and no environment fallback.
     if user_id is None or (isinstance(user_id, str) and user_id == "None"):
-        if is_env_fallback_disabled():
-            return result
         for var_info in provider_vars:
             var_key = var_info.get("variable_key")
             if var_key:
-                env_value = provider_variable_from_env(var_key)
-                if env_value:
-                    result[var_key] = env_value
+                value = _get_standalone_variable(var_key)
+                if not value and not is_env_fallback_disabled():
+                    value = provider_variable_from_env(var_key)
+                if value:
+                    result[var_key] = value
         return result
 
     # Try to get from global variables (database)
@@ -386,19 +398,32 @@ class _VarWithValue:
         self.value = value
 
 
-async def _get_model_status(user_id: UUID | str) -> tuple[set[str], set[str]]:
+async def _get_model_status(user_id: UUID | str, *, strict: bool = False) -> tuple[set[str], set[str]]:
     """Fetch disabled and explicitly enabled model sets for a user.
 
     Returns:
         A tuple of (disabled_models, explicitly_enabled_models).
     """
+    variable_service = get_variable_service()
+    if strict:
+        from lfx.services.variable.service import VariableService
+
+        # Standalone LFX has no persisted Model Providers preferences. Its
+        # represented caller still uses policy and request-scoped credentials.
+        if type(variable_service) is VariableService:
+            return set(), set()
     async with session_scope() as session:
-        variable_service = get_variable_service()
         if variable_service is None:
+            if strict:
+                msg = "Model configuration service is unavailable"
+                raise RuntimeError(msg)
             return set(), set()
         from langflow.services.variable.service import DatabaseVariableService
 
         if not isinstance(variable_service, DatabaseVariableService):
+            if strict:
+                msg = "User model configuration cannot be read from this variable service"
+                raise RuntimeError(msg)
             return set(), set()
         all_vars = await variable_service.get_all(
             user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
@@ -407,6 +432,16 @@ async def _get_model_status(user_id: UUID | str) -> tuple[set[str], set[str]]:
         disabled: set[str] = set()
         enabled: set[str] = set()
         for var in all_vars:
+            if strict and var.name in {"__disabled_models__", "__enabled_models__"}:
+                parsed = json.loads(var.value)
+                if not isinstance(parsed, list) or any(not isinstance(item, str) for item in parsed):
+                    msg = "Invalid persisted model enablement configuration"
+                    raise ValueError(msg)
+                if var.name == "__disabled_models__":
+                    disabled = set(parsed)
+                else:
+                    enabled = set(parsed)
+                continue
             if var.name == "__disabled_models__" and var.value:
                 with contextlib.suppress(json.JSONDecodeError, TypeError):
                     disabled = set(json.loads(var.value))
@@ -502,9 +537,37 @@ async def _fetch_enabled_providers_for_user(
         return _validate_and_get_enabled_providers(all_provider_variables, provider_candidates)
 
 
-def validate_model_provider_key(provider: str, variables: dict[str, str], model_name: str | None = None) -> None:
+def validate_model_provider_key(
+    provider: str,
+    variables: dict[str, str],
+    model_name: str | None = None,
+    *,
+    model_type: str | None = None,
+    user_id: UUID | str | None = None,
+    policy_attributes: dict[str, Any] | None = None,
+) -> None:
     """Validate a model provider by making a minimal test call."""
     if not provider:
+        return
+
+    from lfx.base.models.decision_constants import DECISION_ONLY_PROVIDERS
+
+    if model_type == "decision" or provider in DECISION_ONLY_PROVIDERS:
+        from lfx.base.models.decisions.providers import DEFAULT_MODELS, validate_decision_provider_key
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
+
+        effective_model = model_name or DEFAULT_MODELS.get(provider)
+        if not effective_model:
+            msg = "Unsupported decision provider."
+            raise ValueError(msg)
+        policy = resolve_model_provider_policy(
+            user_id=user_id,
+            providers=[provider],
+            purpose=ModelProviderPolicyPurpose.USE,
+            attributes=policy_attributes,
+        )
+        policy.require_model(provider, effective_model, model_type="decision")
+        validate_decision_provider_key(provider, variables, effective_model)
         return
 
     first_model = None
@@ -512,7 +575,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
     try:
         from .model_catalog import get_unified_models_detailed
 
-        models = get_unified_models_detailed(providers=[provider])
+        models = get_unified_models_detailed(providers=[provider], model_type="llm")
         if models and models[0].get("models"):
             provider_models = models[0]["models"]
             first_model = provider_models[0]["model_name"]

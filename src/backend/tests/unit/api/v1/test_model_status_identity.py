@@ -511,3 +511,312 @@ async def test_provider_cleanup_ignores_non_string_model_entries():
     variable_service.delete_variable.assert_not_awaited()
     update = variable_service.update_variable_fields.await_args.kwargs["variable"]
     assert json.loads(update.value) == ["Anthropic::claude-3-5-sonnet-latest"]
+
+
+def test_decision_enablement_does_not_enable_same_named_chat():
+    rows = [
+        {
+            "provider": "OpenAI",
+            "models": [
+                {"model_name": "shared", "metadata": {"model_type": "llm", "default": True}},
+                {"model_name": "shared", "metadata": {"model_type": "decision", "default": False}},
+            ],
+        }
+    ]
+    flags = _build_model_default_flags(rows)
+    disabled = {"OpenAI::shared"}
+    enabled = set()
+    _update_model_sets(
+        [ModelStatusUpdate(provider="OpenAI", model_id="shared", model_type="decision", enabled=True)],
+        disabled,
+        enabled,
+        flags,
+        models_api._build_model_types_by_identity(rows),
+    )
+    assert disabled == {"OpenAI::llm::shared"}
+    assert enabled == {"OpenAI::decision::shared"}
+
+
+async def test_decision_validation_request_uses_decision_endpoint(monkeypatch):
+    from unittest.mock import Mock
+
+    from lfx.base.models import unified_models
+
+    monkeypatch.setattr(models_api, "_require_provider", AsyncMock())
+    validate = Mock()
+    monkeypatch.setattr(unified_models, "validate_model_provider_key", validate)
+    user = SimpleNamespace(id=uuid4())
+    result = await models_api.validate_provider(
+        models_api.ValidateProviderRequest(
+            provider="OpenAI",
+            variables={"OPENAI_API_KEY": "test-value"},
+            model_type="decision",
+            model_name="gpt-6-luna",
+        ),
+        current_user=user,
+        provider_policy_attributes={},
+    )
+    assert result.valid
+    validate.assert_called_once_with(
+        "OpenAI",
+        {"OPENAI_API_KEY": "test-value"},
+        "gpt-6-luna",
+        model_type="decision",
+        user_id=user.id,
+        policy_attributes={},
+    )
+
+
+@pytest.mark.parametrize(
+    ("provider", "model_type", "model_name", "effective_model"),
+    [
+        ("OpenAI", "decision", "gpt-6-luna", "gpt-6-luna"),
+        ("TypeSafe", None, None, "jev-latest"),
+        ("Perplexity", None, None, "pplx-decider-latest"),
+    ],
+)
+async def test_decision_credential_validation_never_invokes_denied_model(
+    monkeypatch, provider, model_type, model_name, effective_model
+):
+    from unittest.mock import Mock
+
+    from fastapi import HTTPException
+    from lfx.base.models.decisions import providers
+    from lfx.services import model_provider_policy
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicyPurpose,
+        ModelProviderPolicySnapshot,
+    )
+
+    provider_id = provider.lower()
+    policy = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(user_id="caller"),
+        purpose=ModelProviderPolicyPurpose.USE,
+        candidate_provider_ids=frozenset({provider_id}),
+        allowed_provider_ids=frozenset({provider_id}),
+        blocked_model_keys=frozenset({f"{provider_id}::decision::{effective_model}"}),
+    )
+    monkeypatch.setattr(models_api, "_require_provider", AsyncMock())
+    resolver = Mock(return_value=policy)
+    monkeypatch.setattr(model_provider_policy, "resolve_model_provider_policy", resolver)
+    validate = Mock()
+    monkeypatch.setattr(providers, "validate_decision_provider_key", validate)
+    user = SimpleNamespace(id=uuid4())
+    with pytest.raises(HTTPException) as error:
+        await models_api.validate_provider(
+            models_api.ValidateProviderRequest(
+                provider=provider, variables={}, model_type=model_type, model_name=model_name
+            ),
+            current_user=user,
+            provider_policy_attributes={"workspace_id": "workspace"},
+        )
+    assert error.value.status_code == 404
+    validate.assert_not_called()
+    assert resolver.call_args.kwargs["user_id"] == user.id
+    assert resolver.call_args.kwargs["attributes"] == {"workspace_id": "workspace"}
+
+
+async def test_narrowing_read_purpose_preserves_both_typed_model_denials(monkeypatch):
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicyPurpose,
+        ModelProviderPolicySnapshot,
+    )
+
+    def snapshot(purpose, model):
+        return ModelProviderPolicySnapshot(
+            context=ModelProviderPolicyContext(user_id="caller"),
+            purpose=purpose,
+            candidate_provider_ids=frozenset({"openai"}),
+            allowed_provider_ids=frozenset({"openai"}),
+            blocked_model_keys=frozenset({f"openai::decision::{model}"}),
+        )
+
+    monkeypatch.setattr(
+        models_api,
+        "_aresolve_policy_for_providers",
+        AsyncMock(
+            side_effect=[
+                snapshot(ModelProviderPolicyPurpose.DISCOVER, "gpt-6-luna"),
+                snapshot(ModelProviderPolicyPurpose.USE, "other-judge"),
+            ]
+        ),
+    )
+    policy = await models_api._aresolve_read_policy(
+        SimpleNamespace(id=uuid4()),
+        "use",
+        default=ModelProviderPolicyPurpose.DISCOVER,
+        attributes={},
+        providers=["OpenAI"],
+    )
+    assert not policy.allows_model("OpenAI", "gpt-6-luna", model_type="decision")
+    assert not policy.allows_model("OpenAI", "other-judge", model_type="decision")
+    assert policy.allows_model("OpenAI", "gpt-6-luna", model_type="llm")
+
+
+async def test_enable_decision_uses_typed_validation_despite_same_named_deprecated_chat(monkeypatch):
+    from unittest.mock import MagicMock, Mock
+
+    from lfx.base.models import unified_models
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicyPurpose,
+        ModelProviderPolicySnapshot,
+    )
+
+    user = SimpleNamespace(id=uuid4())
+    service = MagicMock(spec=models_api.DatabaseVariableService)
+    policy = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(user_id=user.id),
+        purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        candidate_provider_ids=frozenset({"openai"}),
+        allowed_provider_ids=frozenset({"openai"}),
+    )
+    monkeypatch.setattr(models_api, "ensure_variable_permission", AsyncMock())
+    monkeypatch.setattr(models_api, "get_variable_service", lambda: service)
+    monkeypatch.setattr(models_api, "_aresolve_policy", AsyncMock(return_value=policy))
+    monkeypatch.setattr(models_api, "_get_disabled_models", AsyncMock(return_value=set()))
+    monkeypatch.setattr(models_api, "_get_enabled_models", AsyncMock(return_value=set()))
+    monkeypatch.setattr(models_api, "_save_model_list_variable", AsyncMock())
+    monkeypatch.setattr(
+        models_api,
+        "get_unified_models_detailed",
+        lambda **_: [
+            {
+                "provider": "OpenAI",
+                "models": [
+                    {"model_name": "shared", "metadata": {"model_type": "llm", "deprecated": True}},
+                    {"model_name": "shared", "metadata": {"model_type": "decision"}},
+                ],
+            }
+        ],
+    )
+    monkeypatch.setattr(unified_models, "get_all_variables_for_provider", lambda *_: {})
+    validate = Mock()
+    monkeypatch.setattr(unified_models, "validate_model_provider_key", validate)
+    result = await models_api.update_enabled_models(
+        session=object(),
+        current_user=user,
+        provider_policy_attributes={},
+        updates=[ModelStatusUpdate(provider="OpenAI", model_id="shared", model_type="decision", enabled=True)],
+    )
+    validate.assert_called_once_with(
+        "OpenAI", {}, model_name="shared", model_type="decision", user_id=user.id, policy_attributes={}
+    )
+    assert result["enabled_models"] == ["OpenAI::decision::shared"]
+
+
+@pytest.mark.parametrize("denied", [False, True])
+@pytest.mark.parametrize("operation", ["create", "update"])
+async def test_openai_decision_credential_save_checks_model_policy_before_persistence(monkeypatch, denied, operation):
+    from unittest.mock import MagicMock, Mock
+
+    from fastapi import HTTPException
+    from langflow.api.v1 import variable as variable_api
+    from lfx.base.models.decisions import providers
+    from lfx.services import model_provider_policy
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicyPurpose,
+        ModelProviderPolicySnapshot,
+    )
+
+    user = SimpleNamespace(id=uuid4())
+    variable = variable_api.VariableCreate(name="OPENAI_API_KEY", value="test-value", default_fields=[])
+    stored = variable_api.Variable(name=variable.name, value=variable.value, default_fields=[], user_id=user.id)
+    service = MagicMock(spec=variable_api.DatabaseVariableService)
+    service.list_variables = AsyncMock(return_value=[])
+    service.create_variable = AsyncMock(return_value=stored)
+    service.update_variable_fields = AsyncMock(return_value=stored)
+    monkeypatch.setattr(variable_api, "authorized_or_owner_scoped", AsyncMock(return_value=stored))
+    monkeypatch.setattr(variable_api, "get_variable_service", lambda: service)
+    monkeypatch.setattr(variable_api, "ensure_variable_permission", AsyncMock())
+    monkeypatch.setattr(variable_api, "_require_provider", AsyncMock())
+    monkeypatch.setattr(variable_api, "get_all_variables_for_provider", lambda *_: {})
+    policy = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(user_id=user.id),
+        purpose=ModelProviderPolicyPurpose.USE,
+        candidate_provider_ids=frozenset({"openai"}),
+        allowed_provider_ids=frozenset({"openai"}),
+        blocked_model_keys=frozenset({"openai::decision::gpt-6-luna"}) if denied else frozenset(),
+    )
+    resolver = Mock(return_value=policy)
+    monkeypatch.setattr(model_provider_policy, "resolve_model_provider_policy", resolver)
+    validate = Mock()
+    monkeypatch.setattr(providers, "validate_decision_provider_key", validate)
+    args = {
+        "session": object(),
+        "variable": variable,
+        "current_user": user,
+        "provider_policy_attributes": {"workspace_id": "workspace"},
+        "validation_model_type": "decision",
+    }
+    save = variable_api.create_variable
+    persistence = service.create_variable
+    if operation == "update":
+        args["variable"] = variable_api.VariableUpdate(id=stored.id, value="test-value")
+        args["variable_id"] = stored.id
+        save = variable_api.update_variable
+        persistence = service.update_variable_fields
+    if denied:
+        with pytest.raises(HTTPException) as error:
+            await save(**args)
+        assert error.value.status_code == 404
+        persistence.assert_not_called()
+        validate.assert_not_called()
+    else:
+        result = await save(**args)
+        assert result.id == stored.id
+        validate.assert_called_once_with("OpenAI", {"OPENAI_API_KEY": "test-value"}, "gpt-6-luna")
+        persistence.assert_awaited_once()
+    assert resolver.call_args.kwargs["user_id"] == user.id
+    assert resolver.call_args.kwargs["attributes"] == {"workspace_id": "workspace"}
+
+
+DECISION_CATALOG = {
+    ("TypeSafe", "jev-latest"),
+    ("Perplexity", "pplx-decider-latest"),
+    ("Perplexity", "pplx-decider-flash-latest"),
+    ("OpenAI", "gpt-6-luna"),
+}
+
+
+def _decision_rows(response):
+    return {
+        (provider["provider"], model["model_name"]): model["metadata"]
+        for provider in response.json()
+        for model in provider["models"]
+    }
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_list_decision_models_returns_only_typed_decision_rows(client, logged_in_headers):
+    response = await client.get("api/v1/models", params={"model_type": "decision"}, headers=logged_in_headers)
+    assert response.status_code == 200
+    rows = _decision_rows(response)
+    assert set(rows) == DECISION_CATALOG
+    assert all(meta["model_type"] == "decision" for meta in rows.values())
+    assert all(meta["capabilities"] == ["choice", "boolean", "score"] for meta in rows.values())
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_list_decision_models_hides_policy_denied_model(client, logged_in_headers, monkeypatch):
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicyPurpose,
+        ModelProviderPolicySnapshot,
+    )
+
+    providers = frozenset({"openai", "typesafe", "perplexity"})
+    snapshot = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(user_id="caller"),
+        purpose=ModelProviderPolicyPurpose.DISCOVER,
+        candidate_provider_ids=providers,
+        allowed_provider_ids=providers,
+        blocked_model_keys=frozenset({"openai::decision::gpt-6-luna"}),
+    )
+    monkeypatch.setattr(models_api, "_aresolve_read_policy", AsyncMock(return_value=snapshot))
+    response = await client.get("api/v1/models", params={"model_type": "decision"}, headers=logged_in_headers)
+    assert response.status_code == 200
+    assert set(_decision_rows(response)) == DECISION_CATALOG - {("OpenAI", "gpt-6-luna")}

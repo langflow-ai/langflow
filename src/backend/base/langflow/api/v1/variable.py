@@ -1,9 +1,10 @@
 import asyncio
 import json
 import logging
+from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from lfx.base.models.unified_models import (
     get_all_variables_for_provider,
     get_model_provider_variable_mapping,
@@ -11,7 +12,7 @@ from lfx.base.models.unified_models import (
     get_provider_all_variables,
     validate_model_provider_key,
 )
-from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
 from sqlalchemy.exc import NoResultFound
 
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -141,6 +142,7 @@ async def create_variable(
     variable: VariableCreate,
     current_user: CurrentActiveUser,
     provider_policy_attributes: ProviderPolicyAttributesDependency,
+    validation_model_type: Annotated[Literal["decision"] | None, Query()] = None,
 ):
     """Create a new variable."""
     await ensure_variable_permission(
@@ -179,7 +181,12 @@ async def create_variable(
                 validate_model_provider_key,
                 provider,
                 {**provider_vars, variable.name: variable.value},
+                model_type=validation_model_type,
+                user_id=current_user.id,
+                policy_attributes=provider_policy_attributes,
             )
+        except ModelProviderPolicyError as exc:
+            raise HTTPException(status_code=404, detail="Model not found") from exc
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -290,6 +297,7 @@ async def update_variable(
     variable: VariableUpdate,
     current_user: CurrentActiveUser,
     provider_policy_attributes: ProviderPolicyAttributesDependency,
+    validation_model_type: Annotated[Literal["decision"] | None, Query()] = None,
 ):
     """Update a variable."""
     variable_service = get_variable_service()
@@ -343,7 +351,12 @@ async def update_variable(
                         validate_model_provider_key,
                         provider,
                         {**provider_vars, effective_name: variable.value},
+                        model_type=validation_model_type,
+                        user_id=current_user.id,
+                        policy_attributes=provider_policy_attributes,
                     )
+                except ModelProviderPolicyError as exc:
+                    raise HTTPException(status_code=404, detail="Model not found") from exc
                 except ValueError as e:
                     raise HTTPException(status_code=400, detail=str(e)) from e
 

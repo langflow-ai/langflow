@@ -588,17 +588,20 @@ def _mirror_model_value_into_options(flow: dict, component_id: str, params: dict
         field["options"] = options
 
 
-def _resolve_default_model_name(provider: str) -> str | None:
-    """Return the provider's catalog default model name, or None if unknown."""
+def _resolve_default_model_name(provider: str, model_type: str | None = None) -> str | None:
+    """Return the provider's catalog default model name of the field's kind, or None if unknown."""
     _require_allowed_model_providers({provider})
 
     from lfx.base.models.unified_models import get_unified_models_detailed
 
+    # ModelInput kinds map onto catalog model types; a decision model never fills a chat field.
+    catalog_type = {"embedding": "embeddings", "decision": "decision"}.get(model_type or "", "llm")
     detailed = get_unified_models_detailed(
         providers=[provider],
         only_defaults=True,
         include_unsupported=False,
         include_deprecated=False,
+        model_type=catalog_type,
     )
     for entry in detailed:
         for model in entry.get("models", []):
@@ -630,6 +633,6 @@ def _fill_missing_model_names(flow: dict, component_id: str, params: dict) -> No
         entry = value[0]
         if entry.get("name") or not entry.get("provider"):
             continue
-        default_name = _resolve_default_model_name(entry["provider"])
+        default_name = _resolve_default_model_name(entry["provider"], field.get("model_type"))
         if default_name:
             entry["name"] = default_name

@@ -286,6 +286,13 @@ class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTrace
         - "embedding" -> ["Embeddings"]
         - "language" (default) -> ["LanguageModel"]
         """
+        if self.model_type == "decision":
+            if self.value == "connect_other_models":
+                msg = "Decision models do not support model connection handles"
+                raise ValueError(msg)
+            object.__setattr__(self, "input_types", [])
+            object.__setattr__(self, "external_options", {})
+            return self
         # Always set input_types based on model_type if not explicitly provided
         if not self.input_types:
             default_input_type = "Embeddings" if self.model_type == "embedding" else "LanguageModel"

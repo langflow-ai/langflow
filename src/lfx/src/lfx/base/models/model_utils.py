@@ -1309,7 +1309,7 @@ def replace_with_live_models(
     Returns:
         The (possibly modified) provider_models list.
     """
-    if not user_id or not enabled_providers:
+    if not user_id or not enabled_providers or model_type == "decision":
         return provider_models
 
     for provider in (*LIVE_MODEL_PROVIDERS, *CONDITIONAL_LIVE_MODEL_PROVIDERS):
@@ -1332,8 +1332,14 @@ def replace_with_live_models(
         replaced = False
         for provider_dict in provider_models:
             if provider_dict.get("provider") == provider:
-                provider_dict["models"] = catalog_models
-                provider_dict["num_models"] = len(catalog_models)
+                # Chat/embedding discovery does not establish decision capability.
+                preserved_decisions = [
+                    row
+                    for row in provider_dict.get("models", [])
+                    if (row.get("metadata") or {}).get("model_type") == "decision"
+                ]
+                provider_dict["models"] = [*catalog_models, *preserved_decisions]
+                provider_dict["num_models"] = len(provider_dict["models"])
                 replaced = True
                 break
 
