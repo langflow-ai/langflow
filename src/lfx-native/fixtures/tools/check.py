@@ -14,8 +14,7 @@ file. Run it from the repository root of a checkout of the stack's top branch
 It exits with 1 when a case differs. It does not check what the Python engine
 does not have: inverses and the editor's table rules and edge fixes
 (``inverse_cases.json`` and ``editor_cases.json``, which ``check_editor.mjs``
-checks), and the refused cases of ``limit_cases.json``. The Python engine
-accepts lone surrogates and any depth, and the docs decide otherwise.
+checks).
 """
 
 from __future__ import annotations
@@ -367,6 +366,7 @@ CHECKS: list[tuple[str, str, Run]] = [
     ("canonical_cases.json", "equality_samples", equality_sample),
     ("canonical_cases.json", "graphs", graph_comparison),
     ("canonical_cases.json", "handles", handle_case),
+    ("limit_cases.json", "refused", canonical_text),
     ("limit_cases.json", "accepted", canonical_text),
     ("validation_cases.json", "cases", validation_case),
     ("repair_cases.json", "cases", repair_case),
