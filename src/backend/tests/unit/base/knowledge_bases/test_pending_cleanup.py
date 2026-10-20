@@ -388,6 +388,27 @@ async def test_migration_status_retry_and_detach(client, admin_headers, active_u
     assert await coordinator.readiness()
 
 
+@pytest.mark.parametrize("route", ["status", "migrations"])
+async def test_migration_guidance_covers_all_host_processes(client, admin_headers, active_user, storage_root, route):  # noqa: ARG001
+    """Both status views explain that unrelated Langflow processes also block upgrades."""
+    from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
+
+    record, run = await _attention_migration(active_user.id)
+    async with session_scope() as session:
+        row = await session.get(KnowledgeBaseStorageMigration, run.id)
+        row.error_code = "legacy_workers_running"
+        await session.commit()
+    response = await client.get(f"/api/v1/knowledge-base-storage/{route}", headers=admin_headers)
+    assert response.status_code == 200
+    entries = response.json()["stores"] if route == "status" else response.json()
+    entry = next(row for row in entries if row["kb_id"] == str(record.id))
+    assert entry["error_code"] == "legacy_workers_running"
+    assert entry["guidance"] == (
+        "Stop all other Langflow processes on this host, then retry the upgrade. "
+        "This includes instances using different databases or knowledge directories."
+    )
+
+
 @pytest.mark.parametrize("state", ["ready", "deleting", "detached"])
 async def test_migration_retry_rejects_changed_routing(client, admin_headers, active_user, state):
     """The ledger alone cannot authorize a retry after the routing fence changed."""
