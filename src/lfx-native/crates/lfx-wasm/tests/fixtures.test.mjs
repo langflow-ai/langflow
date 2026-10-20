@@ -262,11 +262,25 @@ cases("write_cases.json", "cases", (c) => {
   check(matches, "prepared write", actual, c.error ? { error: c.error } : { expected: c.expected });
 });
 
+const FIXTURE_FILES = [
+  "apply_cases.json", "canonical_cases.json", "diff_cases.json", "editor_cases.json", "inverse_cases.json",
+  "limit_cases.json", "merge_cases.json", "property_cases.json", "repair_cases.json", "restore_cases.json",
+  "table_cases.json", "validation_cases.json", "write_cases.json",
+];
+
 test("every fixture file is run", () => {
-  const run = [
-    "apply_cases.json", "canonical_cases.json", "diff_cases.json", "editor_cases.json", "inverse_cases.json",
-    "limit_cases.json", "merge_cases.json", "property_cases.json", "repair_cases.json", "restore_cases.json",
-    "table_cases.json", "validation_cases.json", "write_cases.json",
-  ];
-  assert.deepEqual(readdirSync(FIXTURES).filter((name) => name.endsWith(".json")).sort(), run);
+  assert.deepEqual(readdirSync(FIXTURES).filter((name) => name.endsWith(".json")).sort(), FIXTURE_FILES);
 });
+
+// Every case names the rule it checks; fixtures/README.md lists the rules.
+const RULE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+for (const name of FIXTURE_FILES) {
+  test(`${name}: every case names its rule`, () => {
+    const missing = Object.entries(load(name))
+      .filter(([, cases]) => Array.isArray(cases))
+      .flatMap(([section, cases]) =>
+        cases.flatMap((c, index) => (typeof c.rule === "string" && RULE.test(c.rule) ? [] : [`${section}: ${c.name ?? index}`])),
+      );
+    assert.deepEqual(missing, [], `${name}: cases without a rule`);
+  });
+}

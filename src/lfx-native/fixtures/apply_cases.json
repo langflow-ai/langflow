@@ -1,8 +1,9 @@
 {
-  "description": "Shared apply cases for every flow operation engine. Each case applies `operations` to `base` in order; it either yields `expected` and the normalized `forward_operations` (when absent they equal `operations`; the ids a delete reports are compared as a set, since node and edge order is not state), or raises the named `error` with its `code` and leaves `base` unchanged. Keyed lists follow node_schema.json. Edges carry each handle in both forms, the `data` object and the escaped string, as the editor writes them.",
+  "description": "Shared apply cases for every flow operation engine. Each case applies `operations` to `base` in order; it either yields `expected` and the normalized `forward_operations` (when absent they equal `operations`; the ids a delete reports are compared as a set, since node and edge order is not state), or raises the named `error` with its `code` and leaves `base` unchanged. Keyed lists follow node_schema.json. Edges carry each handle in both forms, the `data` object and the escaped string, as the editor writes them. Each case names the rule it checks in `rule`; README.md lists the rules. The expected outputs are reviewed data that every engine must meet.",
   "cases": [
     {
       "name": "empty operation list leaves the flow unchanged",
+      "rule": "operation-types",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -41,6 +42,7 @@
     },
     {
       "name": "add_nodes appends new nodes",
+      "rule": "operation-types",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -87,6 +89,7 @@
     },
     {
       "name": "add_nodes rejects an existing id",
+      "rule": "operation-types",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -117,6 +120,7 @@
     },
     {
       "name": "add_nodes rejects a duplicate id within the request",
+      "rule": "operation-types",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -148,6 +152,7 @@
     },
     {
       "name": "add_nodes rejects a node without an id",
+      "rule": "operation-types",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -171,6 +176,7 @@
     },
     {
       "name": "set_field replaces a template value",
+      "rule": "operation-paths",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -211,6 +217,7 @@
     },
     {
       "name": "set_field creates a missing final object key",
+      "rule": "operation-paths",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -253,6 +260,7 @@
     },
     {
       "name": "set_field writes an output selected by name",
+      "rule": "keyed-list-items-by-key",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -297,6 +305,7 @@
     },
     {
       "name": "set_field replaces a whole position",
+      "rule": "operation-paths",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -335,6 +344,7 @@
     },
     {
       "name": "set_field rejects an integer path segment",
+      "rule": "operation-paths",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -358,6 +368,7 @@
     },
     {
       "name": "set_field rejects a missing intermediate key",
+      "rule": "operation-paths",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -381,6 +392,7 @@
     },
     {
       "name": "set_field rejects changing the node id",
+      "rule": "operation-paths",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -404,6 +416,7 @@
     },
     {
       "name": "set_field rejects replacing data.node.template whole",
+      "rule": "node-objects",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -427,6 +440,7 @@
     },
     {
       "name": "set_field rejects an unknown node",
+      "rule": "existence-preconditions",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -450,6 +464,7 @@
     },
     {
       "name": "update_nodes rejects two updates to one path",
+      "rule": "operation-paths",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -481,6 +496,7 @@
     },
     {
       "name": "delete_field removes an object key",
+      "rule": "operation-paths",
       "base": {
         "nodes": [
           {
@@ -523,6 +539,7 @@
     },
     {
       "name": "delete_field of a missing key changes and records nothing",
+      "rule": "records-only-changes",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -562,6 +579,7 @@
     },
     {
       "name": "delete_field rejects an integer path segment",
+      "rule": "operation-paths",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -585,6 +603,7 @@
     },
     {
       "name": "delete_nodes removes incident edges",
+      "rule": "edge-cascade",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -614,6 +633,7 @@
     },
     {
       "name": "delete_nodes rejects an unknown node",
+      "rule": "existence-preconditions",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -637,6 +657,7 @@
     },
     {
       "name": "add_edges connects existing nodes",
+      "rule": "operation-types",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -697,6 +718,7 @@
     },
     {
       "name": "add_edges rejects a missing endpoint",
+      "rule": "existence-preconditions",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -734,6 +756,7 @@
     },
     {
       "name": "add_edges rejects an existing id",
+      "rule": "operation-types",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -771,6 +794,7 @@
     },
     {
       "name": "add_edges after add_nodes in one batch",
+      "rule": "operation-types",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -838,6 +862,7 @@
     },
     {
       "name": "delete_edges ignores unknown and repeated ids",
+      "rule": "records-only-changes",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -868,6 +893,7 @@
     },
     {
       "name": "base flow with duplicate node ids is rejected",
+      "rule": "base-graph-checked",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -891,6 +917,7 @@
     },
     {
       "name": "base flow with an edge missing its source is rejected",
+      "rule": "base-graph-checked",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -905,6 +932,7 @@
     },
     {
       "name": "set_field changes a value's JSON type",
+      "rule": "type-change-is-a-write",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -925,6 +953,7 @@
     },
     {
       "name": "set_field refuses secret parts, which only the history stores",
+      "rule": "secrets-not-in-operations",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -944,6 +973,7 @@
     },
     {
       "name": "add_nodes rejects a node without data.node.template",
+      "rule": "node-objects",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -958,6 +988,7 @@
     },
     {
       "name": "base flow with a node missing data.node is rejected",
+      "rule": "base-graph-checked",
       "base": {
         "nodes": [{"id": "a", "data": {}}],
         "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
@@ -969,6 +1000,7 @@
     },
     {
       "name": "base flow with an edge to an unknown node is rejected",
+      "rule": "base-graph-checked",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -983,6 +1015,7 @@
     },
     {
       "name": "list item: set_field edits one table cell by row id",
+      "rule": "keyed-list-items-by-key",
       "base": {
         "nodes": [
           {
@@ -1024,6 +1057,7 @@
     },
     {
       "name": "list item: set_field at a new row id appends the row",
+      "rule": "keyed-list-items-by-key",
       "base": {
         "nodes": [
           {
@@ -1075,6 +1109,7 @@
     },
     {
       "name": "list item: setting a row's __pos__ changes only its position",
+      "rule": "table-row-order",
       "base": {
         "nodes": [
           {
@@ -1116,6 +1151,7 @@
     },
     {
       "name": "list item: two rows may share a position",
+      "rule": "table-row-order",
       "base": {
         "nodes": [
           {
@@ -1162,6 +1198,7 @@
     },
     {
       "name": "list item: delete_field removes a table row by id",
+      "rule": "keyed-list-items-by-key",
       "base": {
         "nodes": [
           {
@@ -1195,6 +1232,7 @@
     },
     {
       "name": "list item: deleting a row lets the last row take its slot",
+      "rule": "table-row-order",
       "base": {
         "nodes": [
           {
@@ -1236,6 +1274,7 @@
     },
     {
       "name": "list item: delete_field of a missing row changes and records nothing",
+      "rule": "records-only-changes",
       "base": {
         "nodes": [
           {
@@ -1275,6 +1314,7 @@
     },
     {
       "name": "list item: editing a cell of a missing row fails",
+      "rule": "existence-preconditions",
       "base": {
         "nodes": [
           {
@@ -1302,6 +1342,7 @@
     },
     {
       "name": "list item: a row written at an id must carry that id",
+      "rule": "keyed-list-items-by-key",
       "base": {
         "nodes": [
           {
@@ -1331,6 +1372,7 @@
     },
     {
       "name": "list item: a row's __id__ cannot be changed",
+      "rule": "keyed-list-items-by-key",
       "base": {
         "nodes": [
           {
@@ -1358,6 +1400,7 @@
     },
     {
       "name": "list item: an item key needs a list the schema declares keyed",
+      "rule": "keyed-list-items-by-key",
       "base": {
         "nodes": [
           {
@@ -1385,6 +1428,7 @@
     },
     {
       "name": "list item: set_field edits an output selected by name",
+      "rule": "keyed-list-items-by-key",
       "base": {
         "nodes": [
           {
@@ -1419,6 +1463,7 @@
     },
     {
       "name": "list item: set_field at a new output name appends it",
+      "rule": "keyed-list-items-by-key",
       "base": {
         "nodes": [
           {
@@ -1453,6 +1498,7 @@
     },
     {
       "name": "list item: items are not selected by id",
+      "rule": "keyed-list-items-by-key",
       "base": {
         "nodes": [
           {
@@ -1475,6 +1521,7 @@
     },
     {
       "name": "list item: an output's name cannot be changed at its key",
+      "rule": "keyed-list-items-by-key",
       "base": {
         "nodes": [
           {
@@ -1497,6 +1544,7 @@
     },
     {
       "name": "list item: a tool action is selected by its first tag",
+      "rule": "keyed-list-items-by-key",
       "base": {
         "nodes": [
           {
@@ -1536,6 +1584,7 @@
     },
     {
       "name": "list item: a table stored out of position order is accepted",
+      "rule": "table-row-order",
       "base": {
         "nodes": [
           {
@@ -1567,6 +1616,7 @@
     },
     {
       "name": "list item: a table with two rows of one id is rejected",
+      "rule": "table-row-keys",
       "base": {
         "nodes": [
           {
@@ -1589,6 +1639,7 @@
     },
     {
       "name": "list item: a row written without a numeric __pos__ is rejected",
+      "rule": "table-row-keys",
       "base": {
         "nodes": [
           {
@@ -1618,6 +1669,7 @@
     },
     {
       "name": "list item: a row written with a __pos__ too large for a double is rejected",
+      "rule": "table-row-keys",
       "base": {
         "nodes": [
           {
@@ -1651,6 +1703,7 @@
     },
     {
       "name": "list item: a row's __pos__ cannot be deleted",
+      "rule": "table-row-keys",
       "base": {
         "nodes": [
           {
@@ -1673,6 +1726,7 @@
     },
     {
       "name": "list item: when one output has no name, no output can be written by key",
+      "rule": "keyed-list-items-by-key",
       "base": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"display_name": "unnamed"}]}}}], "edges": []},
       "operations": [
         {"type": "update_nodes", "updates": [{"id": "n", "op": "set_field", "path": ["data", "node", "outputs", {"key": "out"}, "hidden"], "value": true}]}
@@ -1682,6 +1736,7 @@
     },
     {
       "name": "set_field under a value that is not an object fails",
+      "rule": "operation-paths",
       "base": {
         "nodes": [
           {
@@ -1701,6 +1756,7 @@
     },
     {
       "name": "edge change: an edge's handles change by deleting and adding it, both forms together",
+      "rule": "edge-change-delete-add",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -1752,6 +1808,7 @@
     },
     {
       "name": "update_edges is not an operation: an edge changes by delete and add",
+      "rule": "edge-change-delete-add",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -1774,6 +1831,7 @@
     },
     {
       "name": "edge change: re-adding an edge onto a field that does not exist fails",
+      "rule": "edge-change-delete-add",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -1811,6 +1869,7 @@
     },
     {
       "name": "edge change: re-adding an edge onto a free field applies",
+      "rule": "edge-change-delete-add",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -1862,6 +1921,7 @@
     },
     {
       "name": "edge change: re-adding a stale edge with other handles checks it again",
+      "rule": "edge-change-delete-add",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -1907,6 +1967,7 @@
     },
     {
       "name": "edge change: re-adding a stale edge checks it, whatever changed",
+      "rule": "edge-change-delete-add",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -1952,6 +2013,7 @@
     },
     {
       "name": "edge change: an added edge whose handle forms disagree fails",
+      "rule": "edge-handle-forms",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -1997,6 +2059,7 @@
     },
     {
       "name": "edge rules: add_edges rejects a target field that does not exist",
+      "rule": "edge-handle-endpoint",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2033,6 +2096,7 @@
     },
     {
       "name": "edge rules: add_edges rejects a source output that does not exist",
+      "rule": "edge-handle-endpoint",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2069,6 +2133,7 @@
     },
     {
       "name": "edge rules: a single-input field takes one connection",
+      "rule": "edge-target-occupied",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2105,6 +2170,7 @@
     },
     {
       "name": "edge rules: a list field takes several connections",
+      "rule": "edge-target-occupied",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2179,6 +2245,7 @@
     },
     {
       "name": "edge rules: a handle given only as a string is missing its data form",
+      "rule": "edge-handle-forms",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2203,6 +2270,7 @@
     },
     {
       "name": "edge rules: a handle given only in data is missing its string form",
+      "rule": "edge-handle-forms",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2230,6 +2298,7 @@
     },
     {
       "name": "edge rules: a handle string that disagrees with its data fails",
+      "rule": "edge-handle-forms",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2266,6 +2335,7 @@
     },
     {
       "name": "edge rules: a handle string that does not parse fails",
+      "rule": "edge-handle-forms",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2302,6 +2372,7 @@
     },
     {
       "name": "edge rules: a handle string with a NaN token does not parse",
+      "rule": "edge-handle-forms",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2338,6 +2409,7 @@
     },
     {
       "name": "edge rules: an edge without handles fails",
+      "rule": "edge-handle-forms",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2360,6 +2432,7 @@
     },
     {
       "name": "edge rules: edge data that is not an object fails",
+      "rule": "edge-handle-forms",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2387,6 +2460,7 @@
     },
     {
       "name": "edge rules: edge data that is null fails",
+      "rule": "edge-handle-forms",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2414,6 +2488,7 @@
     },
     {
       "name": "edge rules: a target handle naming both a field and an output fails",
+      "rule": "edge-handle-endpoint",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2450,6 +2525,7 @@
     },
     {
       "name": "edge rules: a target handle with a field and a null output name names both",
+      "rule": "edge-handle-endpoint",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2489,6 +2565,7 @@
     },
     {
       "name": "edge rules: a target handle with an output and a null field name names both",
+      "rule": "edge-handle-endpoint",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2528,6 +2605,7 @@
     },
     {
       "name": "edge rules: replacing a connection deletes before it adds",
+      "rule": "edge-target-occupied",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2579,6 +2657,7 @@
     },
     {
       "name": "edge rules: group nodes are checked like any node",
+      "rule": "edge-handle-endpoint",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2626,6 +2705,7 @@
     },
     {
       "name": "edge rules: an edge into a group's own field applies",
+      "rule": "edge-handle-endpoint",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2706,6 +2786,7 @@
     },
     {
       "name": "edge rules: an edge may not touch a note",
+      "rule": "edge-touches-note",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2753,6 +2834,7 @@
     },
     {
       "name": "edge rules: a loop edge must target an output that allows loops",
+      "rule": "edge-handle-endpoint",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2800,6 +2882,7 @@
     },
     {
       "name": "edge rules: a loop output takes one connection",
+      "rule": "edge-target-occupied",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2847,6 +2930,7 @@
     },
     {
       "name": "edge rules: a node without outputs has no handle to leave from",
+      "rule": "edge-handle-endpoint",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2895,6 +2979,7 @@
     },
     {
       "name": "edge rules: a loop feedback edge must target an existing output",
+      "rule": "edge-handle-endpoint",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2942,6 +3027,7 @@
     },
     {
       "name": "cascade: deleting a template field deletes the edges into it",
+      "rule": "edge-cascade",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -2973,6 +3059,7 @@
     },
     {
       "name": "cascade: replacing the outputs list deletes the edges of the outputs it drops",
+      "rule": "edge-cascade",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -3004,6 +3091,7 @@
     },
     {
       "name": "cascade: an outputs list that keeps its names keeps its edges",
+      "rule": "edge-cascade",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -3042,6 +3130,7 @@
     },
     {
       "name": "cascade: deleting an output deletes the edges from it and into it",
+      "rule": "edge-cascade",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -3092,6 +3181,7 @@
     },
     {
       "name": "cascade: deleting a node deletes the edges at both its ends",
+      "rule": "edge-cascade",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -3133,6 +3223,7 @@
     },
     {
       "name": "cascade: an edge re-added earlier in the batch goes with its new field",
+      "rule": "edge-cascade",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -3194,6 +3285,7 @@
     },
     {
       "name": "edge rules: an edge added earlier in the batch takes its single input",
+      "rule": "edge-target-occupied",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},

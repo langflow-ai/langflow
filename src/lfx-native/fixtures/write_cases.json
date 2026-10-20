@@ -1,8 +1,9 @@
 {
-  "description": "The engine's part of a save: check, repair on request, and derive. Expected outputs come from the Python engine, composed from the recorder's write path (write_flow_graph) without its storage steps: the history service numbers the operations and packs them into rows. A case gives the stored graph, the submitted graph and the options, and either what the save stores or the graph whose violations refuse it. Random ids appear as `<generated edge id>` and `<generated row id>`.",
+  "description": "The engine's part of a save: check, repair on request, and derive. It is the recorder's write path (write_flow_graph) without its storage steps: the history service numbers the operations and packs them into rows. A case gives the stored graph, the submitted graph and the options, and either what the save stores or the graph whose violations refuse it. Random ids appear as `<generated edge id>` and `<generated row id>`. Each case names the rule it checks in `rule`; README.md lists the rules. The expected outputs are reviewed data that every engine must meet.",
   "cases": [
     {
       "name": "an edit records its operations",
+      "rule": "save-path",
       "stored": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -82,6 +83,7 @@
     },
     {
       "name": "a save that changes only view state records nothing",
+      "rule": "no-update-metadata",
       "stored": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -163,6 +165,7 @@
     },
     {
       "name": "a flow without history and without data starts empty",
+      "rule": "save-path",
       "stored": null,
       "target": {
         "nodes": [
@@ -230,6 +233,7 @@
     },
     {
       "name": "a stored graph that breaks the rules is refused",
+      "rule": "repair-on-request",
       "stored": {"nodes": [{"id": "a", "data": {"node": {"template": {}}}}, {"id": "a", "data": {"node": {"template": {}}}}], "edges": null},
       "target": {
         "nodes": [
@@ -256,6 +260,7 @@
     },
     {
       "name": "a stored graph that breaks the rules is repaired on request",
+      "rule": "repair-on-request",
       "stored": {"nodes": [{"id": "a", "data": {"node": {"template": {}}}}, {"id": "a", "data": {"node": {"template": {}}}}], "edges": null},
       "target": {
         "nodes": [
@@ -337,6 +342,7 @@
     },
     {
       "name": "a submitted legacy table is refused",
+      "rule": "repair-on-request",
       "stored": {"nodes": [], "edges": []},
       "target": {
         "nodes": [
@@ -387,6 +393,7 @@
     },
     {
       "name": "a submitted legacy table is repaired on request",
+      "rule": "repair-on-request",
       "stored": {"nodes": [], "edges": []},
       "target": {
         "nodes": [
@@ -486,6 +493,7 @@
     },
     {
       "name": "a submitted edge only the client can fix is refused even with repair",
+      "rule": "repair-direct-only",
       "stored": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
