@@ -1567,6 +1567,8 @@ class _SecurityChecker(ast.NodeVisitor):
     def visit_Match(self, node: ast.Match):
         """Merge successful cases and stateful guard fallthrough paths."""
         self.visit(node.subject)
+        # Capture patterns cannot retain restricted module or callable identities.
+        self._check_opaque_reference(node.subject)
         before_cases = self._snapshot_alias_state()
         fallthrough_states = [before_cases]
         completed_states: list[_AliasState] = []

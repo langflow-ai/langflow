@@ -43,6 +43,34 @@ def test_rejects_gc_object_recovery(method: str, code: str) -> None:
     assert not scan_code_security(code.format(method=method)).is_safe
 
 
+@pytest.mark.parametrize("method", _RECOVERY_METHODS)
+@pytest.mark.parametrize(
+    "code",
+    [
+        "import gc\nmatch gc:\n    case collector:\n        collector.{method}()",
+        "import gc\nmatch [gc]:\n    case [collector]:\n        collector.{method}()",
+        "import gc\nmatch {{'gc': gc}}:\n    case {{'gc': collector}}:\n        collector.{method}()",
+        "import gc\nmatch gc:\n    case collector if collector.{method}():\n        pass",
+        "import gc\nmatch gc.{method}:\n    case recover:\n        recover()",
+    ],
+)
+def test_rejects_gc_recovery_through_match_capture(method: str, code: str) -> None:
+    assert not scan_code_security(code.format(method=method)).is_safe
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        "match [1, 2]:\n    case [first, second]:\n        value = first + second",
+        "import gc\nmatch gc.get_count():\n    case counts:\n        total = sum(counts)",
+        "class Collector:\n    def get_objects(self):\n        return []\n"
+        "match Collector():\n    case collector:\n        collector.get_objects()",
+    ],
+)
+def test_preserves_matches_of_ordinary_values(code: str) -> None:
+    assert scan_code_security(code).is_safe
+
+
 @pytest.mark.parametrize(
     "code",
     [
