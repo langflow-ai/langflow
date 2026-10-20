@@ -166,3 +166,15 @@ def test_models_dev_chat_override_preserves_same_named_decision_capabilities():
     rows = [row for group in result for row in group]
     assert [row for row in rows if row.get("model_type") == "decision"] == DECISION_MODELS_DETAILED
     assert len([row for row in rows if row["name"] == "gpt-6-luna" and row["model_type"] == "llm"]) == 1
+
+
+def test_placeholder_user_id_is_standalone_not_a_user(monkeypatch):
+    """A component outside a graph reports user_id "None"; that must not trigger a saved-settings read."""
+
+    async def no_saved_settings(*_args, **_kwargs):
+        msg = "standalone lookup must not read saved model settings"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr(model_catalog, "_get_model_status", no_saved_settings)
+    options = get_decision_model_options(user_id="None", provider_policy=policy())
+    assert ("TypeSafe", "jev-latest") in {(item["provider"], item["name"]) for item in options}

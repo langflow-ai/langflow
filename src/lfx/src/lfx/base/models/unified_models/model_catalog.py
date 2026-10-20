@@ -534,6 +534,9 @@ def get_decision_model_options(
     Without a user, standalone lfx can select a catalog model and supply its
     credentials explicitly. With a user, saved provider and model settings apply.
     """
+    # A component outside a graph reports the placeholder user id "None".
+    if isinstance(user_id, str) and user_id == "None":
+        user_id = None
     if provider_policy is None:
         from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
 
