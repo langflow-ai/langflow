@@ -1,5 +1,5 @@
 {
-  "description": "Shared merge cases. Every case starts from the document's `base`. Apply each transaction in `transactions` in `order` to the graph the earlier ones left. A transaction is atomic: it is either applied whole or rejected whole with the named `error` and `code` (outcomes), leaving the graph as it was. The final graph must equal `expected`.",
+  "description": "Shared merge cases. Every case starts from the document's `base`. Apply each transaction in `transactions` in `order` to the graph the earlier ones left. A transaction is atomic: it is either applied whole or rejected whole with the named `error` and `code` (outcomes), leaving the graph as it was. The final graph must equal `expected`. Each case names the rule it checks in `rule`; README.md lists the rules. The expected outputs are reviewed data that every engine must meet.",
   "base": {
     "nodes": [
       {
@@ -39,6 +39,7 @@
   "cases": [
     {
       "name": "edits to different cells of one table both land",
+      "rule": "last-writer-wins",
       "transactions": {
         "A": [
           {
@@ -98,6 +99,7 @@
     },
     {
       "name": "two edits to one cell: the later one wins (B last)",
+      "rule": "last-writer-wins",
       "transactions": {
         "A": [
           {
@@ -157,6 +159,7 @@
     },
     {
       "name": "two edits to one cell: the later one wins (A last)",
+      "rule": "last-writer-wins",
       "transactions": {
         "A": [
           {
@@ -216,6 +219,7 @@
     },
     {
       "name": "an edit to a row someone deleted fails",
+      "rule": "existence-preconditions",
       "transactions": {
         "A": [
           {
@@ -270,6 +274,7 @@
     },
     {
       "name": "deleting a row after someone edited it removes the row",
+      "rule": "last-writer-wins",
       "transactions": {
         "A": [
           {
@@ -322,6 +327,7 @@
     },
     {
       "name": "moves of different rows both apply",
+      "rule": "last-writer-wins",
       "transactions": {
         "A": [
           {
@@ -381,6 +387,7 @@
     },
     {
       "name": "two moves of one row: the later one wins",
+      "rule": "last-writer-wins",
       "transactions": {
         "A": [
           {
@@ -440,6 +447,7 @@
     },
     {
       "name": "two inserts at one place both survive, ordered by id",
+      "rule": "table-row-order",
       "transactions": {
         "A": [
           {
@@ -515,6 +523,7 @@
     },
     {
       "name": "value units never mix: the later unit is stored whole",
+      "rule": "schema-units",
       "transactions": {
         "A": [
           {
@@ -580,6 +589,7 @@
     },
     {
       "name": "edits to different fields of one node both land",
+      "rule": "last-writer-wins",
       "transactions": {
         "A": [
           {
@@ -639,6 +649,7 @@
     },
     {
       "name": "two connections to one single-input field: the second fails",
+      "rule": "edge-target-occupied",
       "transactions": {
         "A": [
           {"type": "delete_edges", "ids": ["e-chat-model"]},
@@ -718,6 +729,7 @@
     },
     {
       "name": "hiding an output someone removed fails",
+      "rule": "existence-preconditions",
       "transactions": {
         "A": [{"type": "update_nodes", "updates": [{"id": "Model-1", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "model_output"}]}]}],
         "B": [
@@ -772,6 +784,7 @@
     },
     {
       "name": "re-adding an edge into a field someone removed fails",
+      "rule": "existence-preconditions",
       "transactions": {
         "A": [{"type": "update_nodes", "updates": [{"id": "Model-1", "op": "delete_field", "path": ["data", "node", "template", "input_value"]}]}],
         "B": [
@@ -826,6 +839,7 @@
     },
     {
       "name": "editing a node someone deleted fails",
+      "rule": "existence-preconditions",
       "transactions": {
         "A": [{"type": "delete_nodes", "ids": ["Model-1"]}],
         "B": [{"type": "update_nodes", "updates": [{"id": "Model-1", "op": "set_field", "path": ["position"], "value": {"x": 10, "y": 10}}]}]

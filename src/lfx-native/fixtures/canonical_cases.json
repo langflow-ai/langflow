@@ -1,42 +1,55 @@
 {
-  "description": "Canonical form (RFC 8785), value equality and graph equality. Expected outputs come from the Python engine. `numbers` and `values` give JSON text and its canonical text, or the error. Any two `equality_samples` are equal exactly when their canonical texts are equal. `graphs` give two graphs, whether they are equal, and each one's graph_hash. `handles` give a handle value and the object it parses to, or null.",
+  "description": "Canonical form (RFC 8785), value equality and graph equality. `numbers` and `values` give JSON text and its canonical text, or the error. Any two `equality_samples` are equal exactly when their canonical texts are equal. `graphs` give two graphs, whether they are equal, and each one's graph_hash. `handles` give a handle value and the object it parses to, or null. Each case names the rule it checks in `rule`; README.md lists the rules. The expected outputs are reviewed data that every engine must meet.",
   "numbers": [
-    {"name": "zero", "json": "0", "canonical": "0"},
-    {"name": "negative zero integer", "json": "-0", "canonical": "0"},
-    {"name": "negative zero float", "json": "-0.0", "canonical": "0"},
-    {"name": "an integral float", "json": "1.0", "canonical": "1"},
-    {"name": "a negative fraction", "json": "-1.5", "canonical": "-1.5"},
-    {"name": "one tenth", "json": "0.1", "canonical": "0.1"},
-    {"name": "a fraction", "json": "123.456", "canonical": "123.456"},
-    {"name": "an exponent that prints plainly", "json": "1e20", "canonical": "100000000000000000000"},
-    {"name": "the first exponent that prints with e", "json": "1e21", "canonical": "1e+21"},
-    {"name": "a mantissa with an exponent", "json": "1.5e21", "canonical": "1.5e+21"},
-    {"name": "the smallest plain fraction", "json": "0.000001", "canonical": "0.000001"},
-    {"name": "the largest small exponent", "json": "1e-7", "canonical": "1e-7"},
-    {"name": "a small mantissa", "json": "1.25e-7", "canonical": "1.25e-7"},
-    {"name": "the smallest double", "json": "5e-324", "canonical": "5e-324"},
-    {"name": "the largest double", "json": "1.7976931348623157e308", "canonical": "1.7976931348623157e+308"},
-    {"name": "many digits", "json": "333333333.3333333", "canonical": "333333333.3333333"},
-    {"name": "2^53", "json": "9007199254740992", "canonical": "9007199254740992"},
-    {"name": "2^53 + 1 rounds as a double", "json": "9007199254740993", "canonical": "9007199254740992"},
-    {"name": "a negative integer beyond 2^53", "json": "-9007199254740993", "canonical": "-9007199254740992"},
-    {"name": "a large integer", "json": "12345678901234567890123", "canonical": "1.2345678901234568e+22"},
-    {"name": "an upper-case exponent", "json": "1E2", "canonical": "100"},
-    {"name": "a float spelled with an exponent", "json": "2.5e-3", "canonical": "0.0025"},
+    {"name": "zero", "rule": "canonical-numbers", "json": "0", "canonical": "0"},
+    {"name": "negative zero integer", "rule": "canonical-numbers", "json": "-0", "canonical": "0"},
+    {"name": "negative zero float", "rule": "canonical-numbers", "json": "-0.0", "canonical": "0"},
+    {"name": "an integral float", "rule": "canonical-numbers", "json": "1.0", "canonical": "1"},
+    {"name": "a negative fraction", "rule": "canonical-numbers", "json": "-1.5", "canonical": "-1.5"},
+    {"name": "one tenth", "rule": "canonical-numbers", "json": "0.1", "canonical": "0.1"},
+    {"name": "a fraction", "rule": "canonical-numbers", "json": "123.456", "canonical": "123.456"},
+    {"name": "an exponent that prints plainly", "rule": "canonical-numbers", "json": "1e20", "canonical": "100000000000000000000"},
+    {"name": "the first exponent that prints with e", "rule": "canonical-numbers", "json": "1e21", "canonical": "1e+21"},
+    {"name": "a mantissa with an exponent", "rule": "canonical-numbers", "json": "1.5e21", "canonical": "1.5e+21"},
+    {"name": "the smallest plain fraction", "rule": "canonical-numbers", "json": "0.000001", "canonical": "0.000001"},
+    {"name": "the largest small exponent", "rule": "canonical-numbers", "json": "1e-7", "canonical": "1e-7"},
+    {"name": "a small mantissa", "rule": "canonical-numbers", "json": "1.25e-7", "canonical": "1.25e-7"},
+    {"name": "the smallest double", "rule": "canonical-numbers", "json": "5e-324", "canonical": "5e-324"},
+    {"name": "the largest double", "rule": "canonical-numbers", "json": "1.7976931348623157e308", "canonical": "1.7976931348623157e+308"},
+    {"name": "many digits", "rule": "canonical-numbers", "json": "333333333.3333333", "canonical": "333333333.3333333"},
+    {"name": "2^53", "rule": "canonical-numbers", "json": "9007199254740992", "canonical": "9007199254740992"},
+    {"name": "2^53 + 1 rounds as a double", "rule": "canonical-numbers", "json": "9007199254740993", "canonical": "9007199254740992"},
+    {"name": "a negative integer beyond 2^53", "rule": "canonical-numbers", "json": "-9007199254740993", "canonical": "-9007199254740992"},
+    {"name": "a large integer", "rule": "canonical-numbers", "json": "12345678901234567890123", "canonical": "1.2345678901234568e+22"},
+    {"name": "an upper-case exponent", "rule": "canonical-numbers", "json": "1E2", "canonical": "100"},
+    {"name": "a float spelled with an exponent", "rule": "canonical-numbers", "json": "2.5e-3", "canonical": "0.0025"},
     {
       "name": "the largest integer below the double overflow",
+      "rule": "canonical-numbers",
       "json": "179769313486231580793728971405303415079934132710037826936173778980444968292764750946649017977587207096330286416692887910946555547851940402630657488671505820681908902000708383676273854845817711531764475730270069855571366959622842914819860834936475292719074168444365510704342711559699508093042880177904174497791",
       "canonical": "1.7976931348623157e+308"
     },
-    {"name": "an exponent beyond the double range", "json": "1e400", "error": {"error": "FlowDataValidationError", "code": "FLOW_GRAPH_INVALID"}},
-    {"name": "a negative exponent beyond the double range", "json": "-1e400", "error": {"error": "FlowDataValidationError", "code": "FLOW_GRAPH_INVALID"}},
+    {
+      "name": "an exponent beyond the double range",
+      "rule": "finite-numbers",
+      "json": "1e400",
+      "error": {"error": "FlowDataValidationError", "code": "FLOW_GRAPH_INVALID"}
+    },
+    {
+      "name": "a negative exponent beyond the double range",
+      "rule": "finite-numbers",
+      "json": "-1e400",
+      "error": {"error": "FlowDataValidationError", "code": "FLOW_GRAPH_INVALID"}
+    },
     {
       "name": "the integer at the double overflow",
+      "rule": "finite-numbers",
       "json": "179769313486231580793728971405303415079934132710037826936173778980444968292764750946649017977587207096330286416692887910946555547851940402630657488671505820681908902000708383676273854845817711531764475730270069855571366959622842914819860834936475292719074168444365510704342711559699508093042880177904174497792",
       "error": {"error": "FlowDataValidationError", "code": "FLOW_GRAPH_INVALID"}
     },
     {
       "name": "an integer beyond the double range",
+      "rule": "finite-numbers",
       "json": "1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
       "error": {"error": "FlowDataValidationError", "code": "FLOW_GRAPH_INVALID"}
     }
@@ -44,56 +57,65 @@
   "values": [
     {
       "name": "keys sort by UTF-16 code units",
+      "rule": "canonical-form",
       "json": "{\"\\u20ac\": 1, \"\\r\": 2, \"\\ufb33\": 3, \"1\": 4, \"\\ud83d\\ude00\": 5, \"\\u0080\": 6, \"\\u00f6\": 7}",
       "canonical": "{\"\\r\":2,\"1\":4,\"\":6,\"ö\":7,\"€\":1,\"😀\":5,\"דּ\":3}"
     },
     {
       "name": "strings escape only what JSON requires",
+      "rule": "canonical-form",
       "json": "\"a\\\"b\\\\c\\n\\u0001\\u001f\\u00e9/\\u007f\\u2028\"",
       "canonical": "\"a\\\"b\\\\c\\n\\u0001\\u001fé/ \""
     },
-    {"name": "literals and containers", "json": "{\"b\": [true, false, null], \"a\": {}}", "canonical": "{\"a\":{},\"b\":[true,false,null]}"},
+    {
+      "name": "literals and containers",
+      "rule": "canonical-form",
+      "json": "{\"b\": [true, false, null], \"a\": {}}",
+      "canonical": "{\"a\":{},\"b\":[true,false,null]}"
+    },
     {
       "name": "nested objects sort at every level",
+      "rule": "canonical-form",
       "json": "{\"z\": {\"b\": 1, \"a\": [{\"d\": 1, \"c\": 2}]}, \"y\": []}",
       "canonical": "{\"y\":[],\"z\":{\"a\":[{\"c\":2,\"d\":1}],\"b\":1}}"
     }
   ],
   "equality_samples": [
-    {"json": "null", "canonical": "null"},
-    {"json": "true", "canonical": "true"},
-    {"json": "false", "canonical": "false"},
-    {"json": "0", "canonical": "0"},
-    {"json": "0.0", "canonical": "0"},
-    {"json": "-0.0", "canonical": "0"},
-    {"json": "1", "canonical": "1"},
-    {"json": "1.0", "canonical": "1"},
-    {"json": "1.5", "canonical": "1.5"},
-    {"json": "9007199254740992", "canonical": "9007199254740992"},
-    {"json": "9007199254740993", "canonical": "9007199254740992"},
-    {"json": "9007199254740992.0", "canonical": "9007199254740992"},
-    {"json": "1e21", "canonical": "1e+21"},
-    {"json": "\"\"", "canonical": "\"\""},
-    {"json": "\"a\"", "canonical": "\"a\""},
-    {"json": "\"1\"", "canonical": "\"1\""},
-    {"json": "[]", "canonical": "[]"},
-    {"json": "[1]", "canonical": "[1]"},
-    {"json": "[1.0]", "canonical": "[1]"},
-    {"json": "[1, 2]", "canonical": "[1,2]"},
-    {"json": "[2, 1]", "canonical": "[2,1]"},
-    {"json": "{}", "canonical": "{}"},
-    {"json": "{\"a\": 1}", "canonical": "{\"a\":1}"},
-    {"json": "{\"a\": 1.0}", "canonical": "{\"a\":1}"},
-    {"json": "{\"b\": 1}", "canonical": "{\"b\":1}"},
-    {"json": "{\"a\": 1, \"b\": [true, null]}", "canonical": "{\"a\":1,\"b\":[true,null]}"},
-    {"json": "{\"b\": [true, null], \"a\": 1}", "canonical": "{\"a\":1,\"b\":[true,null]}"},
-    {"json": "{\"a\": {\"b\": {\"c\": 0}}}", "canonical": "{\"a\":{\"b\":{\"c\":0}}}"},
-    {"json": "{\"a\": {\"b\": {\"c\": -0.0}}}", "canonical": "{\"a\":{\"b\":{\"c\":0}}}"},
-    {"json": "{\"a\": {\"b\": {\"c\": 1}}}", "canonical": "{\"a\":{\"b\":{\"c\":1}}}"}
+    {"rule": "canonical-equality", "json": "null", "canonical": "null"},
+    {"rule": "canonical-equality", "json": "true", "canonical": "true"},
+    {"rule": "canonical-equality", "json": "false", "canonical": "false"},
+    {"rule": "canonical-equality", "json": "0", "canonical": "0"},
+    {"rule": "canonical-equality", "json": "0.0", "canonical": "0"},
+    {"rule": "canonical-equality", "json": "-0.0", "canonical": "0"},
+    {"rule": "canonical-equality", "json": "1", "canonical": "1"},
+    {"rule": "canonical-equality", "json": "1.0", "canonical": "1"},
+    {"rule": "canonical-equality", "json": "1.5", "canonical": "1.5"},
+    {"rule": "canonical-equality", "json": "9007199254740992", "canonical": "9007199254740992"},
+    {"rule": "canonical-equality", "json": "9007199254740993", "canonical": "9007199254740992"},
+    {"rule": "canonical-equality", "json": "9007199254740992.0", "canonical": "9007199254740992"},
+    {"rule": "canonical-equality", "json": "1e21", "canonical": "1e+21"},
+    {"rule": "canonical-equality", "json": "\"\"", "canonical": "\"\""},
+    {"rule": "canonical-equality", "json": "\"a\"", "canonical": "\"a\""},
+    {"rule": "canonical-equality", "json": "\"1\"", "canonical": "\"1\""},
+    {"rule": "canonical-equality", "json": "[]", "canonical": "[]"},
+    {"rule": "canonical-equality", "json": "[1]", "canonical": "[1]"},
+    {"rule": "canonical-equality", "json": "[1.0]", "canonical": "[1]"},
+    {"rule": "canonical-equality", "json": "[1, 2]", "canonical": "[1,2]"},
+    {"rule": "canonical-equality", "json": "[2, 1]", "canonical": "[2,1]"},
+    {"rule": "canonical-equality", "json": "{}", "canonical": "{}"},
+    {"rule": "canonical-equality", "json": "{\"a\": 1}", "canonical": "{\"a\":1}"},
+    {"rule": "canonical-equality", "json": "{\"a\": 1.0}", "canonical": "{\"a\":1}"},
+    {"rule": "canonical-equality", "json": "{\"b\": 1}", "canonical": "{\"b\":1}"},
+    {"rule": "canonical-equality", "json": "{\"a\": 1, \"b\": [true, null]}", "canonical": "{\"a\":1,\"b\":[true,null]}"},
+    {"rule": "canonical-equality", "json": "{\"b\": [true, null], \"a\": 1}", "canonical": "{\"a\":1,\"b\":[true,null]}"},
+    {"rule": "canonical-equality", "json": "{\"a\": {\"b\": {\"c\": 0}}}", "canonical": "{\"a\":{\"b\":{\"c\":0}}}"},
+    {"rule": "canonical-equality", "json": "{\"a\": {\"b\": {\"c\": -0.0}}}", "canonical": "{\"a\":{\"b\":{\"c\":0}}}"},
+    {"rule": "canonical-equality", "json": "{\"a\": {\"b\": {\"c\": 1}}}", "canonical": "{\"a\":{\"b\":{\"c\":1}}}"}
   ],
   "graphs": [
     {
       "name": "node and edge order is not state",
+      "rule": "node-edge-order",
       "left": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -134,6 +156,7 @@
     },
     {
       "name": "view state is not state",
+      "rule": "view-state",
       "left": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -186,6 +209,7 @@
     },
     {
       "name": "top-level keys other than nodes and edges are view state",
+      "rule": "no-update-metadata",
       "left": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -228,6 +252,7 @@
     },
     {
       "name": "two spellings of one handle are one handle",
+      "rule": "handle-respelling",
       "left": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -268,6 +293,7 @@
     },
     {
       "name": "a position is state",
+      "rule": "view-state",
       "left": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -308,6 +334,7 @@
     },
     {
       "name": "1 and 1.0 are one number",
+      "rule": "canonical-equality",
       "left": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -348,6 +375,7 @@
     },
     {
       "name": "true and 1 differ",
+      "rule": "canonical-equality",
       "left": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -388,6 +416,7 @@
     },
     {
       "name": "table row order is not state",
+      "rule": "table-row-order",
       "left": {
         "nodes": [
           {
@@ -434,6 +463,7 @@
     },
     {
       "name": "a legacy table's array order is its order",
+      "rule": "legacy-tables",
       "left": {
         "nodes": [
           {
@@ -472,6 +502,7 @@
     },
     {
       "name": "graphs whose node ids repeat compare as lists",
+      "rule": "node-edge-order",
       "left": {"nodes": [{"id": "a", "data": {"node": {"template": {}}}}, {"id": "a", "data": {"node": {"template": {}}}}], "edges": []},
       "right": {"nodes": [{"id": "a", "data": {"node": {"template": {}}}}, {"id": "a", "data": {"node": {"template": {}}}}], "edges": []},
       "equal": true,
@@ -480,13 +511,13 @@
     }
   ],
   "handles": [
-    {"name": "a compact handle", "handle": "{œnameœ:œoutœ}", "parsed": {"name": "out"}},
-    {"name": "a spaced handle", "handle": "{œnameœ: œoutœ, œtypesœ: [œMessageœ]}", "parsed": {"name": "out", "types": ["Message"]}},
-    {"name": "an escaped quote inside a handle", "handle": "{œnameœ:œa\\œbœ}", "parsed": {"name": "a\"b"}},
-    {"name": "NaN does not parse", "handle": "{œxœ:NaN}", "parsed": null},
-    {"name": "Infinity does not parse", "handle": "{œxœ:Infinity}", "parsed": null},
-    {"name": "a list is not a handle", "handle": "[1]", "parsed": null},
-    {"name": "plain text is not a handle", "handle": "x|y", "parsed": null},
-    {"name": "an empty string is not a handle", "handle": "", "parsed": null}
+    {"name": "a compact handle", "rule": "handle-parsing", "handle": "{œnameœ:œoutœ}", "parsed": {"name": "out"}},
+    {"name": "a spaced handle", "rule": "handle-parsing", "handle": "{œnameœ: œoutœ, œtypesœ: [œMessageœ]}", "parsed": {"name": "out", "types": ["Message"]}},
+    {"name": "an escaped quote inside a handle", "rule": "handle-parsing", "handle": "{œnameœ:œa\\œbœ}", "parsed": {"name": "a\"b"}},
+    {"name": "NaN does not parse", "rule": "handle-parsing", "handle": "{œxœ:NaN}", "parsed": null},
+    {"name": "Infinity does not parse", "rule": "handle-parsing", "handle": "{œxœ:Infinity}", "parsed": null},
+    {"name": "a list is not a handle", "rule": "handle-parsing", "handle": "[1]", "parsed": null},
+    {"name": "plain text is not a handle", "rule": "handle-parsing", "handle": "x|y", "parsed": null},
+    {"name": "an empty string is not a handle", "rule": "handle-parsing", "handle": "", "parsed": null}
   ]
 }

@@ -379,6 +379,22 @@ def test_write(case):
     check(matches, "prepared write", actual, expected)
 
 
+RULE = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
+
+
+@pytest.mark.parametrize("name", sorted(path.name for path in FIXTURES.glob("*.json")))
+def test_every_case_names_its_rule(name):
+    """Every case names the rule it checks; fixtures/README.md lists the rules."""
+    missing = [
+        f"{section}: {case.get('name', index)}"
+        for section, cases in load(name).items()
+        if isinstance(cases, list)
+        for index, case in enumerate(cases)
+        if isinstance(case.get("rule"), Number) or not RULE.fullmatch(case.get("rule") or "")
+    ]
+    assert not missing, f"{name}: cases without a rule: {missing}"
+
+
 def test_every_fixture_file_is_run():
     run = {
         "apply_cases.json",

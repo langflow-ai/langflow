@@ -1,8 +1,9 @@
 {
-  "description": "Inverses: what undoes each operation of a batch. Expected outputs come from the editor's engine. Applying `operations` to `base` with inverses on gives `inverse`, one list per operation. Applying those lists last first, each in a call of its own with `restoring` set, gives back `base`. Ids a delete names and the entries an add lists compare as sets keyed by id; numbers compare by value.",
+  "description": "Inverses: what undoes each operation of a batch. Applying `operations` to `base` with inverses on gives `inverse`, one list per operation. Applying those lists last first, each in a call of its own with `restoring` set, gives back `base`. Ids a delete names and the entries an add lists compare as sets keyed by id; numbers compare by value. Each case names the rule it checks in `rule`; README.md lists the rules. The expected outputs are reviewed data that every engine must meet.",
   "cases": [
     {
       "name": "apply case: empty operation list leaves the flow unchanged",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -25,6 +26,7 @@
     },
     {
       "name": "apply case: add_nodes appends new nodes",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -54,6 +56,7 @@
     },
     {
       "name": "apply case: set_field replaces a template value",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -78,6 +81,7 @@
     },
     {
       "name": "apply case: set_field creates a missing final object key",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -100,6 +104,7 @@
     },
     {
       "name": "apply case: set_field writes an output selected by name",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -124,6 +129,7 @@
     },
     {
       "name": "apply case: set_field replaces a whole position",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -146,6 +152,7 @@
     },
     {
       "name": "apply case: delete_field removes an object key",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {
@@ -172,6 +179,7 @@
     },
     {
       "name": "apply case: delete_field of a missing key changes and records nothing",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -194,6 +202,7 @@
     },
     {
       "name": "apply case: delete_nodes removes incident edges",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -238,6 +247,7 @@
     },
     {
       "name": "apply case: add_edges connects existing nodes",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -274,6 +284,7 @@
     },
     {
       "name": "apply case: add_edges after add_nodes in one batch",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -316,6 +327,7 @@
     },
     {
       "name": "apply case: delete_edges ignores unknown and repeated ids",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -354,6 +366,7 @@
     },
     {
       "name": "apply case: set_field changes a value's JSON type",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -367,6 +380,7 @@
     },
     {
       "name": "apply case: list item: set_field edits one table cell by row id",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {
@@ -400,6 +414,7 @@
     },
     {
       "name": "apply case: list item: set_field at a new row id appends the row",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {
@@ -435,6 +450,7 @@
     },
     {
       "name": "apply case: list item: setting a row's __pos__ changes only its position",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {
@@ -468,6 +484,7 @@
     },
     {
       "name": "apply case: list item: two rows may share a position",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {
@@ -498,6 +515,7 @@
     },
     {
       "name": "apply case: list item: delete_field removes a table row by id",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {
@@ -535,6 +553,7 @@
     },
     {
       "name": "apply case: list item: deleting a row lets the last row take its slot",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {
@@ -575,6 +594,7 @@
     },
     {
       "name": "apply case: list item: delete_field of a missing row changes and records nothing",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {
@@ -598,6 +618,7 @@
     },
     {
       "name": "apply case: list item: set_field edits an output selected by name",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {
@@ -619,6 +640,7 @@
     },
     {
       "name": "apply case: list item: set_field at a new output name appends it",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {
@@ -640,6 +662,7 @@
     },
     {
       "name": "apply case: list item: a tool action is selected by its first tag",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {
@@ -673,6 +696,7 @@
     },
     {
       "name": "apply case: list item: a table stored out of position order is accepted",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {
@@ -701,6 +725,7 @@
     },
     {
       "name": "apply case: edge change: an edge's handles change by deleting and adding it, both forms together",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -754,6 +779,7 @@
     },
     {
       "name": "apply case: edge change: re-adding an edge onto a free field applies",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -807,6 +833,7 @@
     },
     {
       "name": "apply case: edge rules: a list field takes several connections",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -850,6 +877,7 @@
     },
     {
       "name": "apply case: edge rules: replacing a connection deletes before it adds",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -903,6 +931,7 @@
     },
     {
       "name": "apply case: edge rules: an edge into a group's own field applies",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -949,6 +978,7 @@
     },
     {
       "name": "apply case: cascade: deleting a template field deletes the edges into it",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -987,6 +1017,7 @@
     },
     {
       "name": "apply case: cascade: replacing the outputs list deletes the edges of the outputs it drops",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -1025,6 +1056,7 @@
     },
     {
       "name": "apply case: cascade: an outputs list that keeps its names keeps its edges",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -1048,6 +1080,7 @@
     },
     {
       "name": "apply case: cascade: deleting an output deletes the edges from it and into it",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -1121,6 +1154,7 @@
     },
     {
       "name": "apply case: cascade: deleting a node deletes the edges at both its ends",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -1183,6 +1217,7 @@
     },
     {
       "name": "apply case: cascade: an edge re-added earlier in the batch goes with its new field",
+      "rule": "inverses",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -1256,6 +1291,7 @@
     },
     {
       "name": "deleting a node puts it and its edges back",
+      "rule": "inverses",
       "base": {
         "name": "flow",
         "nodes": [
@@ -1370,6 +1406,7 @@
     },
     {
       "name": "deleting edges puts them back",
+      "rule": "inverses",
       "base": {
         "name": "flow",
         "nodes": [
@@ -1459,6 +1496,7 @@
     },
     {
       "name": "adding a node is undone by deleting it",
+      "rule": "inverses",
       "base": {
         "name": "flow",
         "nodes": [
@@ -1524,6 +1562,7 @@
     },
     {
       "name": "adding an edge is undone by deleting it",
+      "rule": "inverses",
       "base": {
         "name": "flow",
         "nodes": [
@@ -1603,6 +1642,7 @@
     },
     {
       "name": "a set of an existing value puts the value back",
+      "rule": "inverses",
       "base": {
         "name": "flow",
         "nodes": [
@@ -1668,6 +1708,7 @@
     },
     {
       "name": "a set of a new key is undone by deleting it",
+      "rule": "inverses",
       "base": {
         "name": "flow",
         "nodes": [
@@ -1733,6 +1774,7 @@
     },
     {
       "name": "a type change is undone by writing the old value back",
+      "rule": "inverses",
       "base": {
         "name": "flow",
         "nodes": [
@@ -1798,6 +1840,7 @@
     },
     {
       "name": "a delete of an existing key puts it back",
+      "rule": "inverses",
       "base": {
         "name": "flow",
         "nodes": [
@@ -1863,6 +1906,7 @@
     },
     {
       "name": "a delete that finds nothing has no inverse",
+      "rule": "inverses",
       "base": {
         "name": "flow",
         "nodes": [
@@ -1928,6 +1972,7 @@
     },
     {
       "name": "deleting a field puts back the edges into it",
+      "rule": "inverses",
       "base": {
         "name": "flow",
         "nodes": [
@@ -2013,6 +2058,7 @@
     },
     {
       "name": "deleting the last output is undone by a write at its key",
+      "rule": "inverses",
       "base": {
         "name": "flow",
         "nodes": [
@@ -2098,6 +2144,7 @@
     },
     {
       "name": "deleting an output that is not last writes the list back",
+      "rule": "inverses",
       "base": {
         "name": "flow",
         "nodes": [
@@ -2190,6 +2237,7 @@
     },
     {
       "name": "deleting two outputs that are not last splits the inverse",
+      "rule": "inverses",
       "base": {
         "name": "flow",
         "nodes": [
@@ -2317,6 +2365,7 @@
     },
     {
       "name": "replacing the outputs puts back the list and its edges",
+      "rule": "inverses",
       "base": {
         "name": "flow",
         "nodes": [
@@ -2417,6 +2466,7 @@
     },
     {
       "name": "adding a table row is undone by deleting it",
+      "rule": "inverses",
       "base": {
         "name": "flow",
         "nodes": [
@@ -2496,6 +2546,7 @@
     },
     {
       "name": "deleting a table row puts it back",
+      "rule": "inverses",
       "base": {
         "name": "flow",
         "nodes": [
@@ -2577,6 +2628,7 @@
     },
     {
       "name": "moving a table row puts its position back",
+      "rule": "inverses",
       "base": {
         "name": "flow",
         "nodes": [
@@ -2654,6 +2706,7 @@
     },
     {
       "name": "two writes of one path in one batch undo in order",
+      "rule": "inverses",
       "base": {
         "name": "flow",
         "nodes": [
@@ -2725,6 +2778,7 @@
     },
     {
       "name": "re-adding an edge with other handles puts it back",
+      "rule": "inverses",
       "base": {
         "name": "flow",
         "nodes": [
@@ -2822,6 +2876,7 @@
     },
     {
       "name": "a batch of several operations",
+      "rule": "inverses",
       "base": {
         "name": "flow",
         "nodes": [

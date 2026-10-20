@@ -1,9 +1,10 @@
 //! Loading fixture files and comparing what the engine returns with them.
 
+use std::collections::HashSet;
 use std::path::PathBuf;
 
 use libtest_mimic::{Failed, Trial};
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 /// The fixture files every runtime runs.
 pub const FIXTURE_FILES: [&str; 13] = [
@@ -162,8 +163,47 @@ pub fn compact(value: &Value) -> String {
     serde_json::to_string(value).unwrap_or_else(|error| format!("<{error}>"))
 }
 
-/// One trial per fixture file: the file parses and every case has a unique name.
-/// One more checks the comparison the other runners rely on.
+/// The rules the fixtures README lists: the first column of its rules table.
+pub fn listed_rules() -> HashSet<String> {
+    let path = fixtures_dir().join("README.md");
+    let text = std::fs::read_to_string(&path)
+        .unwrap_or_else(|error| panic!("cannot read {}: {error}", path.display()));
+    text.lines()
+        .filter_map(|line| line.strip_prefix("| `")?.split_once('`'))
+        .map(|(rule, _)| rule.to_owned())
+        .collect()
+}
+
+/// The rule each case of a fixture file names, by section and case.
+///
+/// Every case names the rule it checks, and the README lists that rule.
+fn case_rules(name: &str, document: &Map<String, Value>) -> Result<Vec<String>, Failed> {
+    let listed = listed_rules();
+    let mut rules = Vec::new();
+    for (section, cases) in document {
+        for (index, case) in cases.as_array().into_iter().flatten().enumerate() {
+            let label = case
+                .get("name")
+                .and_then(Value::as_str)
+                .map_or_else(|| format!("#{index}"), |case| format!("{case:?}"));
+            let Some(rule) = case.get("rule").and_then(Value::as_str) else {
+                return Err(format!("{name}: case {label} in {section} names no rule").into());
+            };
+            if !listed.contains(rule) {
+                return Err(format!(
+                    "{name}: case {label} in {section} names the rule {rule:?}, which README.md does not list"
+                )
+                .into());
+            }
+            rules.push(rule.to_owned());
+        }
+    }
+    Ok(rules)
+}
+
+/// One trial per fixture file: the file parses, every case has a unique name,
+/// and every case names a rule the README lists. One more checks that every
+/// listed rule has a case, and one checks the comparison the other runners rely on.
 pub fn trials() -> Vec<Trial> {
     let comparison = Trial::test("fixtures::comparison", || {
         let expected = serde_json::json!({"a": 1.0, "b": [1, 2]});
@@ -187,7 +227,7 @@ pub fn trials() -> Vec<Trial> {
                 return Err(format!("{name} is not an object").into());
             };
             for (section, cases) in document {
-                let mut names = std::collections::HashSet::new();
+                let mut names = HashSet::new();
                 for case in cases.as_array().into_iter().flatten() {
                     if let Some(case) = case.get("name").and_then(Value::as_str)
                         && !names.insert(case)
@@ -198,8 +238,27 @@ pub fn trials() -> Vec<Trial> {
                     }
                 }
             }
+            case_rules(name, document)?;
             Ok(())
         })
     });
-    std::iter::once(comparison).chain(files).collect()
+    let rules = Trial::test("fixtures::README.md::rules", || {
+        let mut used = HashSet::new();
+        for name in FIXTURE_FILES {
+            if let Some(document) = load(name).as_object() {
+                used.extend(case_rules(name, document)?);
+            }
+        }
+        let mut unused: Vec<String> = listed_rules().difference(&used).cloned().collect();
+        unused.sort();
+        if unused.is_empty() {
+            Ok(())
+        } else {
+            Err(format!("README.md lists rules no case checks: {unused:?}").into())
+        }
+    });
+    std::iter::once(comparison)
+        .chain(files)
+        .chain(std::iter::once(rules))
+        .collect()
 }

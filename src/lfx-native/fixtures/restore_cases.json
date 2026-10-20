@@ -1,8 +1,9 @@
 {
-  "description": "Restore fixes: apply_restore_fixes(revision, stored, fixes). Expected outputs come from the Python engine (langflow.services.flow_history.restore_fixes). A case gives the rebuilt revision, the stored flow it replaces and the client's fixes, and the fixed revision or the error.",
+  "description": "Restore fixes: apply_restore_fixes(revision, stored, fixes). A case gives the rebuilt revision, the stored flow it replaces and the client's fixes, and the fixed revision or the error. Each case names the rule it checks in `rule`; README.md lists the rules. The expected outputs are reviewed data that every engine must meet.",
   "cases": [
     {
       "name": "deleting an edge whose handle names nothing",
+      "rule": "restore-fixes",
       "revision": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -40,6 +41,7 @@
     },
     {
       "name": "rewriting the handles of an edge whose handle names nothing",
+      "rule": "restore-fixes",
       "revision": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -101,6 +103,7 @@
     },
     {
       "name": "giving data to an edge without it is not a fix: repair derives the missing form",
+      "rule": "restore-fixes",
       "revision": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -137,6 +140,7 @@
     },
     {
       "name": "re-adding an edge with another key in its data is an edit",
+      "rule": "restore-fixes",
       "revision": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -182,6 +186,7 @@
     },
     {
       "name": "an edge whose data is null may get data that holds only its handles",
+      "rule": "restore-fixes",
       "revision": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -234,6 +239,7 @@
     },
     {
       "name": "deleting either edge into an occupied input",
+      "rule": "restore-fixes",
       "revision": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -297,6 +303,7 @@
     },
     {
       "name": "deleting the edge that took an occupied input",
+      "rule": "restore-fixes",
       "revision": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -360,6 +367,7 @@
     },
     {
       "name": "re-adding an edge into an occupied input with other handles is not a fix",
+      "rule": "restore-fixes",
       "revision": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -422,6 +430,7 @@
     },
     {
       "name": "deleting an edge that breaks no rule is not a fix",
+      "rule": "restore-fixes",
       "revision": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -452,6 +461,7 @@
     },
     {
       "name": "a delete of a fixable edge with an unknown edge",
+      "rule": "restore-fixes",
       "revision": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -482,6 +492,7 @@
     },
     {
       "name": "re-adding an edge without one handle form fails the edge rules",
+      "rule": "restore-fixes",
       "revision": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -526,6 +537,7 @@
     },
     {
       "name": "a change to another key is not a handle rewrite",
+      "rule": "restore-fixes",
       "revision": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -572,6 +584,7 @@
     },
     {
       "name": "a fix the engine cannot apply keeps the engine's code",
+      "rule": "restore-fixes",
       "revision": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -617,6 +630,7 @@
     },
     {
       "name": "no fixes",
+      "rule": "restore-fixes",
       "revision": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -663,6 +677,7 @@
     },
     {
       "name": "adding an edge back without deleting it first is not a fix",
+      "rule": "restore-fixes",
       "revision": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
