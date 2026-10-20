@@ -4,9 +4,11 @@ The Rust engine reads JSON text, and its parser refuses two things that
 Python's ``json`` module accepts: a string that holds a lone surrogate, and
 nesting deeper than 127 levels. The Python engine refuses the same values, so
 both engines accept the same graphs (``limit_cases.json``). It checks the
-operations it parses, the value it serializes and the handle strings it reads.
-Apply and equality do not walk values, as they do not walk them for NaN: they
-read graphs that were checked when they were written.
+operations it parses, the graph it validates with its values or repairs (and
+so the target of a diff), the value it serializes and the handle strings it
+reads. Apply, equality and the stored graph a write replaces are not walked,
+as they are not walked for NaN: they hold graphs that were checked when they
+were written.
 """
 
 from __future__ import annotations
@@ -31,6 +33,11 @@ def has_lone_surrogate(text: str) -> bool:
     return not text.isascii() and _SURROGATE.search(text) is not None
 
 
+def any_key_has_lone_surrogate(mapping: dict[Any, Any]) -> bool:
+    """Return whether an object key holds a lone surrogate."""
+    return any(isinstance(key, str) and has_lone_surrogate(key) for key in mapping)
+
+
 def broken_limit(value: Any) -> str | None:
     """Return the limit ``value`` breaks, or None when it breaks none."""
     stack: list[tuple[Any, int]] = [(value, 1)]
@@ -43,7 +50,7 @@ def broken_limit(value: Any) -> str | None:
             if depth > MAX_DEPTH:
                 return TOO_DEEP
             if isinstance(item, dict):
-                if any(isinstance(key, str) and has_lone_surrogate(key) for key in item):
+                if any_key_has_lone_surrogate(item):
                     return LONE_SURROGATE
                 item = item.values()
             stack.extend((child, depth + 1) for child in item)

@@ -167,6 +167,10 @@ def canonical_json(value: Any) -> str:
     hold a lone surrogate.
     """
     check_graph_limits(value)
+    return _canonical_text(value)
+
+
+def _canonical_text(value: Any) -> str:
     parts: list[str] = []
     _write_canonical(value, parts)
     return "".join(parts)
@@ -320,13 +324,19 @@ def _id_sort_key(entry: Any) -> bytes:
 
 
 def canonical_graph_json(flow_data: dict[str, Any]) -> str:
-    """Serialize flow data in canonical graph form, as RFC 8785 text."""
-    return canonical_json(canonical_graph(flow_data, keyed=False))
+    """Serialize flow data in canonical graph form, as RFC 8785 text.
+
+    ``flow_data`` must meet the JSON limits (``limits.py``) as it is given: its
+    canonical form drops view state and reads handle strings, so the limits
+    are checked before it is built.
+    """
+    check_graph_limits(flow_data)
+    return _canonical_text(canonical_graph(flow_data, keyed=False))
 
 
 def graph_hash(flow_data: dict[str, Any]) -> str:
     """Return the SHA-256 hex digest of flow data's canonical graph form."""
-    encoded = canonical_graph_json(flow_data).encode("utf-8", "surrogatepass")
+    encoded = canonical_graph_json(flow_data).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
 
 
