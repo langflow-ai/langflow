@@ -10,6 +10,7 @@ import httpx
 import requests
 from cachetools import TTLCache
 
+from lfx.base.models.decision_constants import is_decision_row
 from lfx.base.models.model_metadata import (
     CONDITIONAL_LIVE_MODEL_PROVIDERS,
     EXPLICIT_ENABLE_ONLY_PROVIDERS,
@@ -1333,11 +1334,7 @@ def replace_with_live_models(
         for provider_dict in provider_models:
             if provider_dict.get("provider") == provider:
                 # Chat/embedding discovery does not establish decision capability.
-                preserved_decisions = [
-                    row
-                    for row in provider_dict.get("models", [])
-                    if (row.get("metadata") or {}).get("model_type") == "decision"
-                ]
+                preserved_decisions = [row for row in provider_dict.get("models", []) if is_decision_row(row)]
                 provider_dict["models"] = [*catalog_models, *preserved_decisions]
                 provider_dict["num_models"] = len(provider_dict["models"])
                 replaced = True

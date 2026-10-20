@@ -6,6 +6,7 @@ import contextlib
 from collections import Counter
 from typing import TYPE_CHECKING, Any
 
+from lfx.base.models.decision_constants import is_decision_row
 from lfx.base.models.model_metadata import EXPLICIT_ENABLE_ONLY_PROVIDERS, get_provider_param_mapping
 from lfx.base.models.model_utils import apply_metadata_filters, inject_custom_enabled_models, replace_with_live_models
 from lfx.utils.async_helpers import run_until_complete
@@ -125,7 +126,7 @@ def get_unified_models_detailed(
         # Decision rows get their own defaults so they never displace a provider's chat defaults.
         seen = Counter()
         for model in models:
-            is_decision = model["metadata"].get("model_type") == "decision"
+            is_decision = is_decision_row(model)
             model["metadata"]["default"] = seen[is_decision] < default_model_count
             seen[is_decision] += 1
 

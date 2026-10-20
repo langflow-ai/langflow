@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Collection
+from collections.abc import Collection, Iterator
+from contextlib import contextmanager
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query
@@ -118,6 +119,22 @@ def _require_provider_from_policy(provider_policy: ModelProviderPolicySnapshot, 
     except ModelProviderPolicyError as exc:
         # Do not confirm whether a hidden provider is registered or merely blocked.
         raise HTTPException(status_code=404, detail="Model provider not found") from exc
+
+
+@contextmanager
+def _policy_denial_as_not_found() -> Iterator[None]:
+    """Do not confirm whether a hidden model is registered or merely blocked."""
+    try:
+        yield
+    except ModelProviderPolicyError as exc:
+        raise HTTPException(status_code=404, detail="Model not found") from exc
+
+
+def _policy_allows_model(
+    provider_policy: ModelProviderPolicySnapshot, provider: str, model_name: str, model_type: str | None
+) -> bool:
+    """Decision models also honour per-model policy blocks."""
+    return model_type != "decision" or provider_policy.allows_model(provider, model_name, model_type="decision")
 
 
 async def _require_provider(
@@ -446,8 +463,9 @@ async def list_models(
         allowed = [
             row
             for row in provider_dict["models"]
-            if (row.get("metadata") or {}).get("model_type") != "decision"
-            or provider_policy.allows_model(prov_name, row["model_name"], model_type="decision")
+            if _policy_allows_model(
+                provider_policy, prov_name, row["model_name"], (row.get("metadata") or {}).get("model_type")
+            )
         ]
         if len(allowed) != len(provider_dict["models"]):
             provider_dict["models"] = allowed
@@ -643,17 +661,16 @@ async def validate_provider(
     try:
         # Validate the credentials
         # Decision models and decision-only providers are validated with a decision, never chat.
-        validate_model_provider_key(
-            request.provider,
-            request.variables,
-            request.model_name,
-            model_type=request.model_type,
-            user_id=current_user.id,
-            policy_attributes=provider_policy_attributes,
-        )
+        with _policy_denial_as_not_found():
+            validate_model_provider_key(
+                request.provider,
+                request.variables,
+                request.model_name,
+                model_type=request.model_type,
+                user_id=current_user.id,
+                policy_attributes=provider_policy_attributes,
+            )
         return ValidateProviderResponse(valid=True, error=None)
-    except ModelProviderPolicyError as exc:
-        raise HTTPException(status_code=404, detail="Model not found") from exc
     except ValueError as e:
         return ValidateProviderResponse(valid=False, error=str(e))
     except (ConnectionError, TimeoutError, RuntimeError, KeyError, AttributeError, TypeError) as e:
@@ -1063,10 +1080,7 @@ async def _get_enabled_models_result(
                 and not is_not_supported
                 and (explicitly_on if requires_explicit else (is_default or explicitly_on))
                 and not explicitly_off
-                and (
-                    model_type != "decision"
-                    or provider_policy.allows_model(provider, model_name, model_type="decision")
-                )
+                and _policy_allows_model(provider_policy, provider, model_name, model_type)
             )
             # Per-type map is exact; flat map ORs rows that share provider/name.
             models_for_type = enabled_models_by_type[provider].setdefault(model_type, {})
@@ -1227,16 +1241,17 @@ async def update_enabled_models(
 
             try:
                 # Validate the credentials
-                validate_model_provider_key(
-                    update.provider,
-                    variables,
-                    model_name=update.model_id,
-                    model_type=update.model_type,
-                    user_id=current_user.id,
-                    policy_attributes=provider_policy_attributes,
-                )
-            except ModelProviderPolicyError as exc:
-                raise HTTPException(status_code=404, detail="Model not found") from exc
+                with _policy_denial_as_not_found():
+                    validate_model_provider_key(
+                        update.provider,
+                        variables,
+                        model_name=update.model_id,
+                        model_type=update.model_type,
+                        user_id=current_user.id,
+                        policy_attributes=provider_policy_attributes,
+                    )
+            except HTTPException:
+                raise
             except ValueError as e:
                 # Validation failed - return 400 with error message
                 raise HTTPException(

@@ -2,7 +2,7 @@
 
 import httpx
 import pytest
-from lfx.base.models.decisions.providers import API_KEY_VARIABLES
+from lfx.base.models.unified_models import get_provider_secret_variable_key
 from lfx.components.llm_operations.decision_model import DecisionModelComponent
 
 from tests.base import ComponentTestBaseWithoutClient
@@ -56,7 +56,7 @@ class TestDecisionModelComponent(ComponentTestBaseWithoutClient):
 
     @pytest.fixture(autouse=True)
     def provider_http(self, monkeypatch, provider):
-        monkeypatch.setenv(API_KEY_VARIABLES[provider], "tenant-key")  # pragma: allowlist secret
+        monkeypatch.setenv(get_provider_secret_variable_key(provider), "tenant-key")  # pragma: allowlist secret
         sent = []
 
         def post(url, **kwargs):

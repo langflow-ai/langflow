@@ -3,15 +3,12 @@ from collections.abc import Mapping
 from math import isfinite
 from typing import Any
 
-from pydantic import ValidationError
-
 from lfx.base.models.decisions.runtime import evaluate_decision, request_variables_of
 from lfx.base.models.decisions.schema import (
     DecisionConfigurationError,
     DecisionEvaluationError,
-    DecisionOption,
     DecisionRequest,
-    validation_summary,
+    decision_request,
 )
 from lfx.base.models.unified_models import (
     get_llm,
@@ -268,18 +265,21 @@ class SmartRouterComponent(Component):
 
     def _selected_model_provider_policy_ids(self, parameters: Mapping[str, Any] | None = None) -> tuple[str, ...]:
         effective = dict(parameters if parameters is not None else self._parameters)
-        mode = effective.get("routing_mode", getattr(self, "routing_mode", "Language Model"))
+        effective.pop("model" if self._decision_mode(effective.get("routing_mode")) else "decision_model", None)
+        return super()._selected_model_provider_policy_ids(effective)
+
+    def _decision_mode(self, mode: Any = None) -> bool:
+        """Whether ``mode``, by default this router's Routing Mode, is Decision Model; an unknown mode stops."""
+        if mode is None:
+            mode = getattr(self, "routing_mode", "Language Model")
         if mode not in {"Language Model", "Decision Model"}:
             msg = "Unknown routing mode."
             raise DecisionConfigurationError(msg)
-        effective.pop("model" if mode == "Decision Model" else "decision_model", None)
-        return super()._selected_model_provider_policy_ids(effective)
+        return mode == "Decision Model"
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
-        decision_mode = (
-            field_value if field_name == "routing_mode" else getattr(self, "routing_mode", "Language Model")
-        ) == "Decision Model"
+        decision_mode = self._decision_mode(field_value if field_name == "routing_mode" else None)
         for name in ("decision_model", "decision_question", "minimum_probability", "evaluation_error_action"):
             if name in build_config:
                 build_config[name]["show"] = decision_mode
@@ -362,7 +362,7 @@ class SmartRouterComponent(Component):
         if self._categorization_result is not None:
             return self._categorization_result
 
-        if getattr(self, "routing_mode", "Language Model") == "Decision Model":
+        if self._decision_mode():
             return self._get_decision_categorization()
 
         categories = getattr(self, "routes", [])
@@ -468,30 +468,25 @@ class SmartRouterComponent(Component):
         if any(not str(row.get("route_category") or "").strip() for row in self.routes):
             msg = "Every route needs a name in decision mode."
             raise DecisionConfigurationError(msg)
-        try:
-            options = tuple(
-                DecisionOption(
-                    id=route_id,
-                    label=row["route_category"],
-                    description=row.get("route_description") or "",
-                )
+        request = decision_request(
+            kind="choice",
+            question=self.decision_question,
+            context=self.input_text,
+            options=[
+                {"id": route_id, "label": row["route_category"], "description": row.get("route_description") or ""}
                 for route_id, row in zip(self._route_ids(), self.routes, strict=True)
-            )
-            request = DecisionRequest(
-                kind="choice", question=self.decision_question, context=self.input_text, options=options
-            )
-        except ValidationError as exc:
-            raise DecisionConfigurationError(validation_summary(exc)) from None
+            ],
+        )
         thresholds = {
             option.id: (
                 threshold
                 if row.get("minimum_probability") is None or not str(row["minimum_probability"]).strip()
                 else self._validate_probability(row["minimum_probability"])
             )
-            for option, row in zip(options, self.routes, strict=True)
+            for option, row in zip(request.options, self.routes, strict=True)
         }
         evidence = {
-            "options": [option.model_dump() for option in options],
+            "options": [option.model_dump() for option in request.options],
             "minimum_probability": threshold,
             "route_thresholds": thresholds,
             "activated_branch": None,
@@ -499,7 +494,7 @@ class SmartRouterComponent(Component):
         }
         self._decision_evidence = evidence
         try:
-            self._categorization_result = self._apply_decision(request, options, thresholds, evidence)
+            self._categorization_result = self._apply_decision(request, thresholds, evidence)
         finally:
             # Any exception leaves the result unset, so a stopped build never activates Else.
             if self._categorization_result == "":
@@ -507,9 +502,7 @@ class SmartRouterComponent(Component):
             self.log(self._sanitize_secret_values(evidence), name="Decision evidence")
         return self._categorization_result
 
-    def _apply_decision(
-        self, request: DecisionRequest, options: tuple[DecisionOption, ...], thresholds: dict, evidence: dict
-    ) -> str:
+    def _apply_decision(self, request: DecisionRequest, thresholds: dict, evidence: dict) -> str:
         """Return the accepted route label, or "" for Else; raise when the policy says stop."""
         stop = self.evaluation_error_action == "Stop with error"
         try:
@@ -548,7 +541,7 @@ class SmartRouterComponent(Component):
             evidence["reason"] = "below_minimum_probability"
             return ""
         evidence.update(reason="accepted", activated_branch=winner)
-        return next(option.label for option in options if option.id == winner)
+        return next(option.label for option in request.options if option.id == winner)
 
     def _build_artifact(self, result):
         artifact = super()._build_artifact(result)
@@ -570,17 +563,25 @@ class SmartRouterComponent(Component):
         self._categorization_result = None
         self._excluded_outputs = set()
         self._decision_evidence = None
-        mode = getattr(self, "routing_mode", "Language Model")
-        if mode not in {"Language Model", "Decision Model"}:
-            msg = "Unknown routing mode."
-            raise DecisionConfigurationError(msg)
-        if mode == "Decision Model":
+        if self._decision_mode():
             self._validate_decision_graph()
 
     def _route_ids(self) -> list[str]:
-        """Each route's output name, in route order."""
-        routes, _ = assign_route_ids(getattr(self, "routes", []) or [], getattr(self, "last_route_number", 0) or 0)
-        return [row["route_id"] for row in routes]
+        """Each route's output name, in route order.
+
+        Routes sent without any IDs, such as an API tweak written before route IDs, keep their
+        positional names, as they always have. A route with no matching output on this router
+        stops the run instead of reaching a branch nothing is connected to.
+        """
+        rows = getattr(self, "routes", []) or []
+        has_ids = any(isinstance(row.get("route_id"), str) and _ROUTE_ID.fullmatch(row["route_id"]) for row in rows)
+        last = (getattr(self, "last_route_number", 0) or 0) if has_ids else 0
+        route_ids = [row["route_id"] for row in assign_route_ids(rows, last)[0]]
+        # Components built without a saved node (direct calls) have no outputs to compare with.
+        if self._outputs_map and any(route_id not in self._outputs_map for route_id in route_ids):
+            msg = "The Smart Router's routes don't match its outputs. Open the flow in the editor to update them."
+            raise DecisionConfigurationError(msg)
+        return route_ids
 
     def _deactivate_branches(self, output_names: list[str]) -> None:
         """Deactivate the given output branches so their downstream nodes do not execute.

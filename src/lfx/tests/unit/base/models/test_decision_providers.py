@@ -11,6 +11,7 @@ from lfx.base.models.decisions.schema import (
     DecisionOption,
     DecisionRequest,
 )
+from lfx.base.models.unified_models import get_provider_secret_variable_key
 
 PROVIDERS = tuple(providers.ENDPOINTS)
 
@@ -273,10 +274,10 @@ def test_invalid_timeout_fails_before_transport(timeout):
 @pytest.mark.parametrize("provider", PROVIDERS)
 def test_credential_validation_uses_explicit_key_and_boolean_request(provider, monkeypatch):
     calls = []
-    monkeypatch.setenv(providers.API_KEY_VARIABLES[provider], "server-secret")
+    monkeypatch.setenv(get_provider_secret_variable_key(provider), "server-secret")
     monkeypatch.setattr(providers, "evaluate_provider", lambda *args, **kwargs: calls.append((args, kwargs)))
     providers.validate_decision_provider_key(
-        provider, {providers.API_KEY_VARIABLES[provider]: "tenant-key"}, providers.DEFAULT_MODELS[provider]
+        provider, {get_provider_secret_variable_key(provider): "tenant-key"}, providers.DEFAULT_MODELS[provider]
     )
     args, kwargs = calls.pop()
     assert args[0] == provider
@@ -395,9 +396,10 @@ def test_invalid_response_names_its_cause_without_provider_content(mutate, cause
     assert "private" not in str(caught.value)
 
 
-def test_key_check_refuses_a_proxy_base_url_from_the_environment(monkeypatch):
+@pytest.mark.parametrize("variable", ["OPENAI_API_BASE", "OPENAI_BASE_URL", "LANGFLOW_OPENAI_BASE_URL"])
+def test_key_check_refuses_a_proxy_base_url_from_the_environment(monkeypatch, variable):
     """A key meant for an OpenAI-compatible proxy is never posted to the official endpoint."""
-    monkeypatch.setenv("OPENAI_API_BASE", "https://proxy.example/v1")
+    monkeypatch.setenv(variable, "https://proxy.example/v1")
     sent = []
     monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *args, **_kwargs: sent.append(args))
     with pytest.raises(ValueError, match="official hosted endpoint"):
@@ -410,6 +412,15 @@ def test_unexpected_answer_type_is_not_echoed():
     payload["answers"]["decision"]["type"] = "private provider text"
     with pytest.raises(DecisionEvaluationError, match="does not match") as caught:
         providers.parse_response("TypeSafe", request_for("choice"), payload)
+    assert "private" not in str(caught.value)
+
+
+def test_provider_chosen_probability_key_is_not_echoed():
+    payload = response_for("TypeSafe", "choice")
+    payload["answers"]["decision"]["probabilities"] = {"a": 0.3, "private provider key": 1.5}
+    with pytest.raises(DecisionEvaluationError, match="invalid decision response") as caught:
+        providers.parse_response("TypeSafe", request_for("choice"), payload)
+    assert "probabilities" in str(caught.value)
     assert "private" not in str(caught.value)
 
 

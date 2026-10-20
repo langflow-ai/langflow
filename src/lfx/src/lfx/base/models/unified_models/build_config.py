@@ -499,11 +499,9 @@ def handle_model_input_update(
         None,
     )
     if model_config.get("model_type") == "decision" or getattr(declared_input, "model_type", None) == "decision":
-        if field_value == "connect_other_models":
-            msg = "Decision models do not support model connection handles"
-            raise ValueError(msg)
-        model_config["input_types"] = []
-        model_config["external_options"] = {}
+        from lfx.inputs.inputs import decision_model_field_settings
+
+        model_config.update(decision_model_field_settings(field_value))
         options_func = get_options_func or unified_models_module.get_decision_model_options
         model_config["options"] = options_func(user_id=component.user_id)
         if field_name == model_field_name:

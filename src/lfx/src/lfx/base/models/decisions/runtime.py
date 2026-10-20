@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.models.decisions.schema import DecisionConfigurationError, DecisionRequest
+from lfx.utils.secrets import secret_value_to_str
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -72,14 +73,12 @@ def evaluate_decision(
     variables = unified_models.get_all_variables_for_provider(user_id, provider)
     if provider == "OpenAI":
         # A caller's per-request endpoint counts too, so a key meant for a proxy never reaches the hosted API.
-        require_official_openai_endpoint({**variables, **(request_variables or {})})
-    from lfx.base.models.decisions.providers import API_KEY_VARIABLES
-    from lfx.utils.secrets import secret_value_to_str
+        require_official_openai_endpoint(variables, request_variables or {})
 
     # Only the provider's own credential is used; flows cannot supply or name a key. A caller's
     # per-request value for it (X-LANGFLOW-GLOBAL-VAR-*) comes first, then the provider's configured
     # variable, which also accepts a LANGFLOW_-prefixed environment name.
-    own_variable = API_KEY_VARIABLES[provider]
+    own_variable = unified_models.get_provider_secret_variable_key(provider)
     resolved_key = secret_value_to_str((request_variables or {}).get(own_variable), strip=True) or secret_value_to_str(
         variables.get(own_variable), strip=True
     )

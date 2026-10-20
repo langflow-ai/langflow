@@ -107,9 +107,9 @@ def test_refusal_is_not_a_zero_probability():
         DecisionResult(**{**result.model_dump(), "probability_true": 0})
 
 
-def test_different_question_id_is_rejected():
-    request = DecisionRequest(kind="boolean", question="Safe?", context="x", question_id="wanted")
-    result = DecisionResult(kind="boolean", provider="OpenAI", model="gpt-6-luna", probability_true=0.9)
+def test_answer_of_a_different_kind_is_rejected():
+    request = DecisionRequest(kind="boolean", question="Safe?", context="x")
+    result = DecisionResult(kind="score", provider="OpenAI", model="gpt-6-luna", probabilities={"a": 1.0}, score=0.0)
     with pytest.raises(DecisionEvaluationError, match="different"):
         result.validate_for(request)
 

@@ -87,28 +87,30 @@ def _evidence(monkeypatch, error_action: str, evaluate) -> dict:
     return router._build_artifact(Message(text="I was charged twice for my October invoice."))["raw"]["decision"]
 
 
-def test_decision_evidence_fixtures_match_the_router(monkeypatch):
-    produced = {name: _evidence(monkeypatch, action, evaluate) for name, (action, evaluate) in SCENARIOS.items()}
-    if os.environ.get("UPDATE_DECISION_FIXTURES") == "1":
-        FIXTURES.write_text(json.dumps(produced, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    assert produced == json.loads(FIXTURES.read_text(encoding="utf-8"))
+class TestDecisionEvidenceFixtures:
+    """Fixtures for the inspection UI match what the real router produces."""
 
+    def test_decision_evidence_fixtures_match_the_router(self, monkeypatch):
+        produced = {name: _evidence(monkeypatch, action, evaluate) for name, (action, evaluate) in SCENARIOS.items()}
+        if os.environ.get("UPDATE_DECISION_FIXTURES") == "1":
+            FIXTURES.write_text(json.dumps(produced, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        assert produced == json.loads(FIXTURES.read_text(encoding="utf-8"))
 
-@pytest.mark.parametrize(
-    ("name", "reason", "branch"),
-    [
-        ("accepted", "accepted", "category_1_result"),
-        ("below_minimum_probability", "below_minimum_probability", "default_result"),
-        ("route_override_not_met", "below_minimum_probability", "default_result"),
-        ("tied_top_probability", "tied_top_probability", "default_result"),
-        ("refusal_routed_to_else", "refusal", "default_result"),
-        ("evaluation_error_routed_to_else", "evaluation_error", "default_result"),
-        ("evaluation_error_stopped", "evaluation_error", None),
-        ("permission_denied", "permission_denied", None),
-        ("configuration_error", "configuration_error", None),
-    ],
-)
-def test_each_fixture_has_the_expected_outcome(name, reason, branch):
-    evidence = json.loads(FIXTURES.read_text(encoding="utf-8"))[name]
-    assert evidence["reason"] == reason
-    assert evidence["activated_branch"] == branch
+    @pytest.mark.parametrize(
+        ("name", "reason", "branch"),
+        [
+            ("accepted", "accepted", "category_1_result"),
+            ("below_minimum_probability", "below_minimum_probability", "default_result"),
+            ("route_override_not_met", "below_minimum_probability", "default_result"),
+            ("tied_top_probability", "tied_top_probability", "default_result"),
+            ("refusal_routed_to_else", "refusal", "default_result"),
+            ("evaluation_error_routed_to_else", "evaluation_error", "default_result"),
+            ("evaluation_error_stopped", "evaluation_error", None),
+            ("permission_denied", "permission_denied", None),
+            ("configuration_error", "configuration_error", None),
+        ],
+    )
+    def test_each_fixture_has_the_expected_outcome(self, name, reason, branch):
+        evidence = json.loads(FIXTURES.read_text(encoding="utf-8"))[name]
+        assert evidence["reason"] == reason
+        assert evidence["activated_branch"] == branch

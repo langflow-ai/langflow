@@ -205,6 +205,16 @@ def test_callers_per_request_endpoint_cannot_be_ignored(execution, variable):
     transport.assert_not_called()
 
 
+@pytest.mark.parametrize("masking_value", ["", " ", "https://api.openai.com/v1", None])
+@pytest.mark.parametrize("variable", ["OPENAI_BASE_URL", "OPENAI_API_BASE"])
+def test_per_request_value_cannot_hide_a_configured_proxy(execution, monkeypatch, variable, masking_value):
+    request, model, transport = execution
+    monkeypatch.setenv(variable, "https://proxy.example/v1")
+    with pytest.raises(DecisionConfigurationError, match="official hosted"):
+        evaluate_decision(request, model=model, request_variables={variable: masking_value})
+    transport.assert_not_called()
+
+
 def test_prefixed_environment_key_is_used(execution, monkeypatch):
     request, model, transport = execution
     monkeypatch.delenv("OPENAI_API_KEY")

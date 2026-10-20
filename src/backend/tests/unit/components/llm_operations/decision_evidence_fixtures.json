@@ -33,7 +33,6 @@
         "category_3_result": 0.04
       },
       "provider": "TypeSafe",
-      "question_id": "decision",
       "status": "success",
       "usage": {
         "input_tokens": 312
@@ -80,7 +79,6 @@
         "category_3_result": 0.15
       },
       "provider": "TypeSafe",
-      "question_id": "decision",
       "status": "success",
       "usage": {
         "input_tokens": 312
@@ -248,7 +246,6 @@
       "model": "jev-1.13.0",
       "model_source": "response",
       "provider": "TypeSafe",
-      "question_id": "decision",
       "refusal": "Provider declined this question.",
       "status": "refusal",
       "usage": {
@@ -295,7 +292,6 @@
         "category_3_result": 0.85
       },
       "provider": "TypeSafe",
-      "question_id": "decision",
       "status": "success",
       "usage": {
         "input_tokens": 312
@@ -341,7 +337,6 @@
         "category_3_result": 0.1
       },
       "provider": "TypeSafe",
-      "question_id": "decision",
       "status": "success",
       "usage": {
         "input_tokens": 312

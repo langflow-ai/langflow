@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import math
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError, field_validator, model_validator
 
@@ -33,10 +33,15 @@ class DecisionEvaluationError(RuntimeError):
         self.category = category
 
 
-def validation_summary(exc: ValidationError) -> str:
-    """Field paths and messages only; pydantic's input values may carry provider or user content."""
+def validation_summary(exc: ValidationError, *, field_only: bool = False) -> str:
+    """Field paths and messages only; pydantic's input values may carry provider or user content.
+
+    ``field_only`` keeps just the top-level field, for provider responses whose nested keys the
+    provider chose and must never be echoed.
+    """
     return "; ".join(
-        f"{'.'.join(str(part) for part in error['loc']) or 'value'}: {error['msg']}" for error in exc.errors()
+        f"{'.'.join(str(part) for part in error['loc'][: 1 if field_only else None]) or 'value'}: {error['msg']}"
+        for error in exc.errors()
     )
 
 
@@ -54,7 +59,6 @@ class DecisionRequest(BaseModel):
     kind: DecisionKind
     question: NonEmpty
     context: str | dict[str, JsonValue]
-    question_id: NonEmpty = "decision"
     options: tuple[DecisionOption, ...] = ()
     levels: tuple[DecisionOption, ...] = ()
 
@@ -82,13 +86,20 @@ class DecisionRequest(BaseModel):
         return self
 
 
+def decision_request(**fields: Any) -> DecisionRequest:
+    """Build a request from flow configuration, reporting invalid configuration as a clear error."""
+    try:
+        return DecisionRequest(**fields)
+    except ValidationError as exc:
+        raise DecisionConfigurationError(validation_summary(exc)) from None
+
+
 class DecisionResult(BaseModel):
     """Evidence fields retain their meanings; no implicit Boolean/route policy."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     kind: DecisionKind
-    question_id: NonEmpty = "decision"
     provider: NonEmpty
     model: ModelName
     model_source: Literal["response", "request"] = "response"
@@ -145,7 +156,7 @@ class DecisionResult(BaseModel):
 
     def validate_for(self, request: DecisionRequest) -> DecisionResult:
         """Reject mismatched or incomplete evidence against the original question."""
-        if self.kind != request.kind or self.question_id != request.question_id:
+        if self.kind != request.kind:
             msg = "Provider answered a different decision question"
             raise DecisionEvaluationError(msg)
         if self.status == "refusal":

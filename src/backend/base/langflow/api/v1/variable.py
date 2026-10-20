@@ -13,7 +13,7 @@ from lfx.base.models.unified_models import (
     get_provider_all_variables,
     validate_model_provider_key,
 )
-from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 from sqlalchemy.exc import NoResultFound
 
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -22,6 +22,7 @@ from langflow.api.v1.models import (
     DISABLED_MODELS_VAR,
     ENABLED_MODELS_VAR,
     _aresolve_policy,
+    _policy_denial_as_not_found,
     _require_provider,
     build_model_providers_by_name,
     get_provider_from_variable_name,
@@ -190,16 +191,15 @@ async def create_variable(
     ):
         provider_vars = await asyncio.to_thread(get_all_variables_for_provider, current_user.id, provider)
         try:
-            await asyncio.to_thread(
-                validate_model_provider_key,
-                provider,
-                {**provider_vars, variable.name: variable.value},
-                model_type=validation_model_type,
-                user_id=current_user.id,
-                policy_attributes=provider_policy_attributes,
-            )
-        except ModelProviderPolicyError as exc:
-            raise HTTPException(status_code=404, detail="Model not found") from exc
+            with _policy_denial_as_not_found():
+                await asyncio.to_thread(
+                    validate_model_provider_key,
+                    provider,
+                    {**provider_vars, variable.name: variable.value},
+                    model_type=validation_model_type,
+                    user_id=current_user.id,
+                    policy_attributes=provider_policy_attributes,
+                )
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -364,16 +364,15 @@ async def update_variable(
                 # Run validation off the event loop; owner context (not caller) for share-aware updates.
                 provider_vars = await asyncio.to_thread(get_all_variables_for_provider, owner_id, provider)
                 try:
-                    await asyncio.to_thread(
-                        validate_model_provider_key,
-                        provider,
-                        {**provider_vars, effective_name: variable.value},
-                        model_type=validation_model_type,
-                        user_id=current_user.id,
-                        policy_attributes=provider_policy_attributes,
-                    )
-                except ModelProviderPolicyError as exc:
-                    raise HTTPException(status_code=404, detail="Model not found") from exc
+                    with _policy_denial_as_not_found():
+                        await asyncio.to_thread(
+                            validate_model_provider_key,
+                            provider,
+                            {**provider_vars, effective_name: variable.value},
+                            model_type=validation_model_type,
+                            user_id=current_user.id,
+                            policy_attributes=provider_policy_attributes,
+                        )
                 except ValueError as e:
                     raise HTTPException(status_code=400, detail=str(e)) from e
 

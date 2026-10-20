@@ -448,7 +448,6 @@ def _decision_result(positive=0.8, negative=0.2):
 
     return DecisionResult(
         kind="choice",
-        question_id="decision",
         provider="Test",
         model="test-model",
         probabilities={"category_1_result": positive, "category_2_result": negative},
@@ -835,6 +834,24 @@ async def test_language_model_routing_follows_route_ids_not_positions():
     assert not sinks["else"].did_run
 
 
+async def test_routes_without_ids_keep_their_positional_outputs():
+    """Rows sent without IDs, such as an API tweak written before route IDs, still route by position."""
+    router = _make_router(_StubbedSmartRouter, _TWO_ROUTES, last_route_number=2)
+    router.forced_category = "Negative"
+    positive, negative = RecordingSink(_id="positive"), RecordingSink(_id="negative")
+    graph = Graph()
+    graph.add_component(router, "router")
+    graph.add_component(positive, "positive")
+    graph.add_component(negative, "negative")
+    graph.add_component_edge("router", ("category_1_result", "input_value"), "positive")
+    graph.add_component_edge("router", ("category_2_result", "input_value"), "negative")
+
+    await _run(graph)
+
+    assert negative.received == "I love this product!"
+    assert not positive.did_run
+
+
 class _GapDecisionSmartRouter(SmartRouterComponent):
     outputs = _GapSmartRouter.outputs
 
@@ -848,7 +865,6 @@ async def test_decision_routing_follows_route_ids_not_positions(monkeypatch):
         asked.append([option.id for option in request.options])
         return DecisionResult(
             kind="choice",
-            question_id="decision",
             provider="Test",
             model="test-model",
             probabilities={"category_1_result": 0.1, "category_3_result": 0.9},

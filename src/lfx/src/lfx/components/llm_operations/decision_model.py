@@ -1,12 +1,5 @@
-from pydantic import ValidationError
-
 from lfx.base.models.decisions.runtime import evaluate_decision, request_variables_of
-from lfx.base.models.decisions.schema import (
-    DecisionConfigurationError,
-    DecisionOption,
-    DecisionRequest,
-    validation_summary,
-)
+from lfx.base.models.decisions.schema import decision_request
 from lfx.base.models.unified_models import handle_model_input_update
 from lfx.custom.custom_component.component import Component
 from lfx.io import DropdownInput, FloatInput, MessageTextInput, ModelInput, Output, TableInput
@@ -58,19 +51,13 @@ class DecisionModelComponent(Component):
 
     def evaluate(self) -> Data:
         kind = self.kind.lower()
-        try:
-            candidates = (
-                tuple(DecisionOption.model_validate(item) for item in self.candidates) if kind != "boolean" else ()
-            )
-            request = DecisionRequest(
-                kind=kind,
-                question=self.question,
-                context=self.context,
-                options=candidates if kind == "choice" else (),
-                levels=candidates if kind == "score" else (),
-            )
-        except ValidationError as exc:
-            raise DecisionConfigurationError(validation_summary(exc)) from None
+        request = decision_request(
+            kind=kind,
+            question=self.question,
+            context=self.context,
+            options=self.candidates if kind == "choice" else (),
+            levels=self.candidates if kind == "score" else (),
+        )
         result = evaluate_decision(
             request,
             model=self.model,

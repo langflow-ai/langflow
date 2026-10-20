@@ -6,7 +6,7 @@ import json
 import math
 import re
 import socket
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -21,8 +21,12 @@ from lfx.base.models.decisions.schema import (
     validation_summary,
 )
 from lfx.base.models.provider_ssrf import provider_safe_httpx_post
+from lfx.base.models.unified_models.provider_queries import get_provider_secret_variable_key
 from lfx.utils.secrets import secret_value_to_str
 from lfx.utils.ssrf_protection import SSRFProtectionError
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 ENDPOINTS = {
     "TypeSafe": "https://api.typesafe.ai/v1/systemone",
@@ -34,33 +38,38 @@ DEFAULT_MODELS = {row["provider"]: row["name"] for row in reversed(DECISION_MODE
 MAX_HOSTED_SCORE_LEVELS = 10
 MAX_CHOICES = 255
 MAX_TIMEOUT = 300
+# One question is sent per request, under this name.
+QUESTION_ID = "decision"
 
-API_KEY_VARIABLES = {
-    "TypeSafe": "TYPESAFE_API_KEY",
-    "Perplexity": "PERPLEXITY_API_KEY",
-    "OpenAI": "OPENAI_API_KEY",
-}
 OFFICIAL_OPENAI_BASE_URL = "https://api.openai.com/v1"
+_OPENAI_BASE_URL_NAMES = ("OPENAI_BASE_URL", "OPENAI_API_BASE")
 
 
-def require_official_openai_endpoint(variables: dict[str, Any]) -> None:
+def require_official_openai_endpoint(*sources: Mapping[str, Any]) -> None:
     """OpenAI Decisions is only verified against the hosted API, never a custom base URL.
 
-    The legacy OPENAI_API_BASE environment setting counts too, so a key meant for a proxy is
-    never sent to the official endpoint, whether by a run or by a key check.
+    Every source counts on its own, and so does the environment unless env fallback is off, so a
+    blank or official value in one never hides a custom URL in another. A key meant for a proxy is
+    therefore never sent to the official endpoint, whether by a run or by a key check.
     """
     from lfx.base.models.unified_models.credentials import provider_variable_from_env
     from lfx.services.variable.request_scope import is_env_fallback_disabled
-    from lfx.utils.secrets import secret_value_to_str
 
-    configured = dict(variables)
-    if not is_env_fallback_disabled() and "OPENAI_API_BASE" not in configured:
-        configured["OPENAI_API_BASE"] = provider_variable_from_env("OPENAI_API_BASE")
-    for name in ("OPENAI_BASE_URL", "OPENAI_API_BASE"):
-        configured_url = (secret_value_to_str(configured.get(name), strip=True) or "").rstrip("/")
+    urls = [source.get(name) for source in sources for name in _OPENAI_BASE_URL_NAMES]
+    if not is_env_fallback_disabled():
+        urls += [provider_variable_from_env(name) for name in _OPENAI_BASE_URL_NAMES]
+    for url in urls:
+        configured_url = (secret_value_to_str(url, strip=True) or "").rstrip("/")
         if configured_url and configured_url != OFFICIAL_OPENAI_BASE_URL:
             msg = "OpenAI Decisions currently requires the official hosted endpoint."
             raise DecisionConfigurationError(msg)
+
+
+def _answer_type(provider: str, kind: str) -> str:
+    """The provider's name for a decision kind; only Boolean differs."""
+    if kind != "boolean":
+        return kind
+    return "predicate" if provider == "OpenAI" else "noul"
 
 
 def _description(candidate: DecisionOption) -> str:
@@ -98,11 +107,11 @@ def build_payload(provider: str, model: str, request: DecisionRequest) -> dict[s
         msg = f"{provider} decisions support at most {MAX_HOSTED_SCORE_LEVELS} score levels."
         raise DecisionConfigurationError(msg)
     if len(request.options) > MAX_CHOICES:
-        msg = "Decision Choice supports at most 255 options."
+        msg = f"Decision Choice supports at most {MAX_CHOICES} options."
         raise DecisionConfigurationError(msg)
-    question: dict[str, Any] = {"instructions": request.question}
+    question: dict[str, Any] = {"instructions": request.question, "type": _answer_type(provider, request.kind)}
     if provider == "OpenAI":
-        question.update(type="predicate" if request.kind == "boolean" else request.kind, name=request.question_id)
+        question["name"] = QUESTION_ID
         if request.kind == "choice":
             question["choices"] = [
                 {"value": option.id, "description": _description(option)} for option in request.options
@@ -113,12 +122,11 @@ def build_payload(provider: str, model: str, request: DecisionRequest) -> dict[s
         if not isinstance(context, str):
             context = json.dumps(context, ensure_ascii=False, allow_nan=False)
         return {"model": model, "input": context, "questions": [question]}
-    question["type"] = "noul" if request.kind == "boolean" else request.kind
     if request.kind == "choice":
         question["criteria"] = {option.id: _description(option) for option in request.options}
     elif request.kind == "score":
         question["criteria"] = [_description(level) for level in request.levels]
-    return {"model": model, "state": request.context, "questions": {request.question_id: question}}
+    return {"model": model, "state": request.context, "questions": {QUESTION_ID: question}}
 
 
 Count = Annotated[int, Field(strict=True, ge=0)]
@@ -166,17 +174,16 @@ def parse_response(provider: str, request: DecisionRequest, payload: Any) -> Dec
                 msg = "answers must hold exactly one answer"
                 raise ValueError(msg)
             answer = answers[0]
-            if answer["name"] != request.question_id:
+            if answer["name"] != QUESTION_ID:
                 msg = "answer is for a different question"
                 raise ValueError(msg)
         else:
-            if not isinstance(answers, dict) or set(answers) != {request.question_id}:
+            if not isinstance(answers, dict) or set(answers) != {QUESTION_ID}:
                 msg = "answers must hold exactly the requested question"
                 raise ValueError(msg)
-            answer = answers[request.question_id]
+            answer = answers[QUESTION_ID]
         common: dict[str, Any] = {
             "kind": request.kind,
-            "question_id": request.question_id,
             "provider": provider,
             "model": model,
             # Perplexity explicitly documents that this field echoes the requested alias.
@@ -189,9 +196,7 @@ def parse_response(provider: str, request: DecisionRequest, payload: Any) -> Dec
             reason = answer.get("refusal")
             refusal = reason if isinstance(reason, str) and reason.strip() else None
             return DecisionResult(**common, status="refusal", refusal=refusal)
-        expected_type: str = request.kind
-        if request.kind == "boolean":
-            expected_type = "predicate" if provider == "OpenAI" else "noul"
+        expected_type = _answer_type(provider, request.kind)
         if answer["type"] != expected_type:
             # Never echo provider text: it reaches errors and evidence.
             msg = f"the answer type does not match the requested {expected_type!r}"
@@ -238,7 +243,7 @@ def parse_response(provider: str, request: DecisionRequest, payload: Any) -> Dec
             )
         result.validate_for(request)
     except ValidationError as exc:
-        detail = validation_summary(exc)
+        detail = validation_summary(exc, field_only=True)
     except DecisionEvaluationError as exc:
         detail = str(exc)
     except KeyError as exc:
@@ -262,7 +267,7 @@ def evaluate_provider(
     """Execute one request through the existing strict SSRF-protected transport."""
     payload = build_payload(provider, model, request)
     if not api_key or not math.isfinite(timeout) or timeout <= 0 or timeout > MAX_TIMEOUT:
-        msg = "A decision API key and timeout between 0 and 300 seconds are required."
+        msg = f"A decision API key and timeout between 0 and {MAX_TIMEOUT} seconds are required."
         raise DecisionConfigurationError(msg)
     try:
         response = provider_safe_httpx_post(
@@ -313,10 +318,10 @@ def evaluate_provider(
 
 def validate_decision_provider_key(provider: str, variables: dict, model_name: str) -> None:
     """Validate explicit credentials with a minimal decision, never a chat completion."""
-    if provider not in API_KEY_VARIABLES:
+    if provider not in ENDPOINTS:
         msg = "Unsupported decision provider."
         raise ValueError(msg)
-    api_key = secret_value_to_str(variables.get(API_KEY_VARIABLES[provider]), strip=True)
+    api_key = secret_value_to_str(variables.get(get_provider_secret_variable_key(provider)), strip=True)
     if not api_key:
         msg = f"{provider} API key is required."
         raise ValueError(msg)
