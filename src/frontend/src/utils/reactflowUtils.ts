@@ -37,6 +37,7 @@ import {
   LANGFLOW_SUPPORTED_TYPES,
   OUTPUT_TYPES,
   specialCharsRegex,
+  TYPE_MIGRATIONS,
 } from "../constants/constants";
 import { DESCRIPTIONS } from "../flow_constants";
 import i18n from "../i18n";
@@ -1199,15 +1200,6 @@ export function scapeJSONParse(json: string): any {
   const parsed = json.replace(/œ/g, '"');
   return JSON.parse(parsed);
 }
-
-/**
- * Map of old types to new types for migration compatibility.
- * Allows edges saved with old types (Data/DataFrame) to work with new types (JSON/Table).
- */
-const TYPE_MIGRATIONS: Record<string, string> = {
-  Data: "JSON",
-  DataFrame: "Table",
-};
 
 /**
  * Check if a single type is compatible with any type in a list, considering migrations.

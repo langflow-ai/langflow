@@ -2583,7 +2583,11 @@ class Component(CustomComponent):
 
         vertex_data = getattr(self._vertex, "data", None)
         context_note = (
-            explain_restricted_component_mismatch(vertex_data.get("type"), vertex_data.get("node"))
+            explain_restricted_component_mismatch(
+                vertex_data.get("type"),
+                vertex_data.get("node"),
+                {edge.target_param for edge in self._vertex.incoming_edges},
+            )
             if isinstance(vertex_data, Mapping)
             else None
         )
