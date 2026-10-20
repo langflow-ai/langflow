@@ -25,11 +25,11 @@ describe("validateModelValue", () => {
     expect(validateModelValue(template, "decision_model")).toBe(template);
   });
 
-  it("fills an empty decision field with the first option", () => {
+  it("leaves an empty decision field empty until the user picks a model", () => {
     const template = templateWith("decision", [openAiOption]);
     template.decision_model.value = [];
-    const result = validateModelValue(template, "decision_model");
-    expect(result.decision_model.value[0].name).toBe("gpt-6-luna");
+    expect(validateModelValue(template, "decision_model")).toBe(template);
+    expect(template.decision_model.value).toEqual([]);
   });
 
   it("still replaces an unavailable language model with the first option", () => {

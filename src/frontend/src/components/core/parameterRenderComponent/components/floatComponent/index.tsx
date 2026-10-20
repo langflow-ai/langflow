@@ -24,7 +24,7 @@ export default function FloatComponent({
   nodeId,
   showParameter = true,
   ariaLabelledBy,
-}: InputProps<number, FloatComponentType>): JSX.Element | null {
+}: InputProps<number | "" | null, FloatComponentType>): JSX.Element | null {
   const { t } = useTranslation();
   const step = rangeSpec?.step ?? 0.1;
   const min = rangeSpec?.min;
@@ -34,10 +34,11 @@ export default function FloatComponent({
   // A preserve_empty field holds null when unset; the Controls table passes it through as is.
   const [localValue, setLocalValue] = useState<string>(String(value ?? ""));
 
-  // Clear component state
+  // Clear component state; a preserve_empty field clears to blank, never to 0.
   useEffect(() => {
-    if (disabled && value !== 0) {
-      handleOnNewValue({ value: 0 }, { skipSnapshot: true });
+    const cleared = preserveEmpty ? "" : 0;
+    if (disabled && (value ?? "") !== cleared) {
+      handleOnNewValue({ value: cleared }, { skipSnapshot: true });
     }
   }, [disabled, handleOnNewValue]);
 

@@ -68,6 +68,10 @@ export function validateModelValue(
 ): APITemplateType {
   const modelField = template[modelFieldKey];
   if (!modelField) return template;
+  // Never fill, swap or clear a decision model on load: its provider receives the flow's
+  // messages, so only the user picks it, and a missing or unavailable one fails clearly
+  // when the flow runs.
+  if (modelField.model_type === "decision") return template;
 
   const options = modelField.options || [];
   const currentValue = modelField.value;
@@ -82,10 +86,6 @@ export function validateModelValue(
     : currentValue;
   const currentModelName = currentModel?.name;
   const currentProvider = currentModel?.provider;
-  // Never swap or clear a saved decision model: another provider would receive the
-  // flow's messages, and an unavailable one fails clearly when the flow runs. An empty
-  // decision field is filled like any other model field.
-  if (modelField.model_type === "decision" && currentModelName) return template;
   const currentProviderConfiguration = currentProvider
     ? providerConfiguration?.get(currentProvider)
     : undefined;

@@ -14,40 +14,53 @@ type MockProps = {
 
 // Mock Chakra UI NumberInput as plain HTML equivalents, matching the pattern
 // used for IntComponent (Chakra swallows unrecognized/uncontrolled props).
-jest.mock("@chakra-ui/number-input", () => ({
-  // Chakra calls onChange with the value string, not a DOM event; drop it so the
-  // field's own onChange drives the value, as it does in the real component.
-  NumberInput: ({ children, onChange: _onChange, ...props }: MockProps) => (
-    <div {...(props as Record<string, unknown>)}>{children}</div>
-  ),
-  NumberInputField: ({
-    onChange,
-    onKeyDown,
-    onInput,
-    disabled,
-    children: _children,
-    ...props
-  }: MockProps) => (
-    <input
-      onChange={onChange}
-      onKeyDown={onKeyDown}
-      onInput={onInput}
-      disabled={disabled}
-      {...(props as React.InputHTMLAttributes<HTMLInputElement>)}
-    />
-  ),
-  NumberInputStepper: ({ children }: MockProps) => <div>{children}</div>,
-  NumberIncrementStepper: ({ children, ...props }: MockProps) => (
-    <button type="button" {...(props as Record<string, unknown>)}>
-      {children}
-    </button>
-  ),
-  NumberDecrementStepper: ({ children, ...props }: MockProps) => (
-    <button type="button" {...(props as Record<string, unknown>)}>
-      {children}
-    </button>
-  ),
-}));
+jest.mock("@chakra-ui/number-input", () => {
+  const { createContext, useContext } = jest.requireActual("react");
+  // Like Chakra, NumberInput owns the value and its field displays it.
+  const ValueContext = createContext(undefined);
+  return {
+    // Chakra calls onChange with the value string, not a DOM event; drop it so the
+    // field's own onChange drives the value, as it does in the real component.
+    NumberInput: ({
+      children,
+      onChange: _onChange,
+      value,
+      ...props
+    }: MockProps) => (
+      <ValueContext.Provider value={value}>
+        <div {...(props as Record<string, unknown>)}>{children}</div>
+      </ValueContext.Provider>
+    ),
+    NumberInputField: ({
+      onChange,
+      onKeyDown,
+      onInput,
+      disabled,
+      children: _children,
+      ...props
+    }: MockProps) => (
+      <input
+        value={useContext(ValueContext)}
+        onChange={onChange}
+        onKeyDown={onKeyDown}
+        onInput={onInput}
+        disabled={disabled}
+        {...(props as React.InputHTMLAttributes<HTMLInputElement>)}
+      />
+    ),
+    NumberInputStepper: ({ children }: MockProps) => <div>{children}</div>,
+    NumberIncrementStepper: ({ children, ...props }: MockProps) => (
+      <button type="button" {...(props as Record<string, unknown>)}>
+        {children}
+      </button>
+    ),
+    NumberDecrementStepper: ({ children, ...props }: MockProps) => (
+      <button type="button" {...(props as Record<string, unknown>)}>
+        {children}
+      </button>
+    ),
+  };
+});
 
 jest.mock("lucide-react", () => ({
   MinusIcon: () => <span>-</span>,
@@ -109,14 +122,34 @@ describe("FloatComponent blank values", () => {
   });
 
   it("should_render_an_unset_preserve_empty_value_as_blank", () => {
+    render(<FloatComponent {...defaultProps} value={null} preserveEmpty />);
+    expect(screen.getByTestId("float-input")).toHaveValue("");
+  });
+
+  it("should_render_a_zero_preserve_empty_value_as_zero", () => {
+    render(<FloatComponent {...defaultProps} value={0} preserveEmpty />);
+    expect(screen.getByTestId("float-input")).toHaveValue("0");
+  });
+
+  it("should_clear_a_disabled_preserve_empty_field_to_blank_not_zero", () => {
     render(
-      <FloatComponent
-        {...defaultProps}
-        value={null as unknown as number}
-        preserveEmpty
-      />,
+      <FloatComponent {...defaultProps} value={0.7} preserveEmpty disabled />,
     );
-    expect(screen.getByTestId("float-input")).toBeInTheDocument();
+    expect(defaultProps.handleOnNewValue).toHaveBeenCalledWith(
+      { value: "" },
+      { skipSnapshot: true },
+    );
+    expect(defaultProps.handleOnNewValue).not.toHaveBeenCalledWith(
+      { value: 0 },
+      expect.anything(),
+    );
+  });
+
+  it("should_leave_a_disabled_blank_preserve_empty_field_alone", () => {
+    render(
+      <FloatComponent {...defaultProps} value={null} preserveEmpty disabled />,
+    );
+    expect(defaultProps.handleOnNewValue).not.toHaveBeenCalled();
   });
 
   it("should_turn_a_cleared_field_into_zero_without_preserve_empty", () => {
