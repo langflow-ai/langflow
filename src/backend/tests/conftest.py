@@ -105,6 +105,33 @@ def disable_mcp_auto_init():
         get_settings_service().set("skip_mcp_auto_init", previous_setting)
 
 
+@pytest.fixture(scope="session")
+def starter_project_writes_dir(tmp_path_factory):
+    """Directory that receives the starter project files that tests write."""
+    return tmp_path_factory.mktemp("starter-project-writes")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def keep_starter_projects_out_of_source_tree(starter_project_writes_dir):
+    """Write updated starter projects to a temporary directory, not to the source tree.
+
+    Startup updates each starter project to the installed component versions and
+    writes the result back to its JSON file. In a test run that file is in the
+    source tree, so startup gets temporary paths instead. The real write still runs.
+    """
+    from langflow.initial_setup import setup
+
+    load_starter_projects = setup.load_starter_projects
+
+    async def load_starter_projects_with_temporary_paths(*args, **kwargs):
+        projects = await load_starter_projects(*args, **kwargs)
+        return [(anyio.Path(starter_project_writes_dir) / path.name, project) for path, project in projects]
+
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(setup, "load_starter_projects", load_starter_projects_with_temporary_paths)
+        yield
+
+
 # TODO: Revert this to True once bb.functions[func].can_block_in("http/client.py", "_safe_read") is fixed
 @pytest.fixture(autouse=False)
 def blockbuster(request):
