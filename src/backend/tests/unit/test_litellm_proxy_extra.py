@@ -36,9 +36,9 @@ def _load_workspace_pyproject() -> dict:
         return tomllib.load(f)
 
 
-def _active_litellm_override(python_version: str) -> Requirement:
-    overrides = _load_workspace_pyproject()["tool"]["uv"]["override-dependencies"]
-    requirements = [Requirement(spec) for spec in overrides if Requirement(spec).name == "litellm"]
+def _active_litellm_constraint(python_version: str) -> Requirement:
+    constraints = _load_workspace_pyproject()["tool"]["uv"]["constraint-dependencies"]
+    requirements = [Requirement(spec) for spec in constraints if Requirement(spec).name == "litellm"]
     active = [
         requirement
         for requirement in requirements
@@ -91,11 +91,11 @@ def test_litellm_dependent_extras_are_available_on_python_314() -> None:
     assert toolguard.marker is None
 
 
-def test_litellm_override_requires_patched_versions_on_all_supported_pythons() -> None:
+def test_litellm_constraint_requires_patched_versions_on_all_supported_pythons() -> None:
     """GHSA-7hp6-4w63-5g45 affects multiple release branches and one prerelease."""
     vulnerable_versions = ("1.96.2", "1.101.2", "1.102.1", "1.103.0", "1.104.0rc1")
     for python_version in ("3.10", "3.11", "3.12", "3.13", "3.14"):
-        specifier = _active_litellm_override(python_version).specifier
+        specifier = _active_litellm_constraint(python_version).specifier
         assert Version("1.103.1") in specifier
         assert specifier.contains("1.104.0rc2", prereleases=True)
         assert Version("2.0.0") not in specifier
