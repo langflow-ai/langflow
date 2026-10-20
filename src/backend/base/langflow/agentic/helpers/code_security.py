@@ -944,6 +944,8 @@ class _SecurityChecker(ast.NodeVisitor):
         # Depth of enclosing class bodies. A name bound directly in a class body
         # also becomes a class attribute, read later as ``self.x`` / ``Cls.x``.
         self._class_body_depth = 0
+        # Class attributes do not bind names in methods or nested class bodies.
+        self._class_scope_fallbacks: list[_AliasState] = []
         # Names declared ``global`` / ``nonlocal`` in the current function scope:
         # their bindings outlive the alias state restored at scope exit.
         self._escaping_names: set[str] = set()
@@ -1485,6 +1487,16 @@ class _SecurityChecker(ast.NodeVisitor):
             self._check_assignment_value(node.target, node.value)
             self._bind_assignment_target(node.target, node.value)
 
+    def visit_Delete(self, node: ast.Delete):
+        """Restore enclosing aliases after deleting class attributes."""
+        for target in node.targets:
+            self.visit(target)
+            if self._class_body_depth:
+                aliases, shadowed = self._class_scope_fallbacks[-1]
+                for name in self._assignment_target_names(target):
+                    values = aliases.get(name, frozenset() if name in shadowed else frozenset({name}))
+                    self._bind_name(name, values)
+
     def visit_NamedExpr(self, node: ast.NamedExpr):
         self.visit(node.value)
         self.visit(node.target)
@@ -1720,17 +1732,28 @@ class _SecurityChecker(ast.NodeVisitor):
     ) -> None:
         """Visit comprehensions in evaluation order with isolated target bindings."""
         enclosing_state = self._snapshot_alias_state()
+        enclosing_class_body_depth = self._class_body_depth
         target_names: set[str] = set()
-        for generator in generators:
-            self.visit(generator.iter)
-            self.visit(generator.target)
-            self._bind_iterated_target(generator.target, generator.iter)
-            target_names.update(self._assignment_target_names(generator.target))
-            for condition in generator.ifs:
-                self.visit(condition)
-        for expression in expressions:
-            self.visit(expression)
-        self._restore_target_names(target_names, enclosing_state)
+        try:
+            for index, generator in enumerate(generators):
+                self.visit(generator.iter)
+                if index == 0 and enclosing_class_body_depth:
+                    # Only the first iterable is evaluated in the class namespace.
+                    self._restore_alias_state(self._class_scope_fallbacks[-1])
+                    self._class_body_depth = 0
+                self.visit(generator.target)
+                self._bind_iterated_target(generator.target, generator.iter)
+                target_names.update(self._assignment_target_names(generator.target))
+                for condition in generator.ifs:
+                    self.visit(condition)
+            for expression in expressions:
+                self.visit(expression)
+        finally:
+            self._class_body_depth = enclosing_class_body_depth
+            if enclosing_class_body_depth:
+                self._restore_alias_state(enclosing_state)
+            else:
+                self._restore_target_names(target_names, enclosing_state)
 
     def visit_ListComp(self, node: ast.ListComp):
         self._visit_comprehension_expression(node.generators, (node.elt,))
@@ -1775,7 +1798,10 @@ class _SecurityChecker(ast.NodeVisitor):
         self._class_body_depth = 0
         self._escaping_names = set()
         try:
-            self._bind_name(node.name, frozenset())
+            if enclosing_class_body_depth:
+                self._restore_alias_state(self._class_scope_fallbacks[-1])
+            else:
+                self._bind_name(node.name, frozenset())
             self._shadow_arguments(node.args)
             for statement in node.body:
                 self.visit(statement)
@@ -1803,6 +1829,8 @@ class _SecurityChecker(ast.NodeVisitor):
         self._class_body_depth = 0
         self._escaping_names = set()
         try:
+            if enclosing_class_body_depth:
+                self._restore_alias_state(self._class_scope_fallbacks[-1])
             self._shadow_arguments(node.args)
             self._check_opaque_reference(node.body)
             self.visit(node.body)
@@ -1829,6 +1857,9 @@ class _SecurityChecker(ast.NodeVisitor):
 
         enclosing_state = self._snapshot_alias_state()
         enclosing_escaping_names = self._escaping_names
+        fallback_state = self._class_scope_fallbacks[-1] if self._class_body_depth else enclosing_state
+        self._restore_alias_state(fallback_state)
+        self._class_scope_fallbacks.append(fallback_state)
         self._alias_scope_depth += 1
         # Names bound in a class body escape as class attributes; see _binding_escapes.
         self._class_body_depth += 1
@@ -1839,6 +1870,7 @@ class _SecurityChecker(ast.NodeVisitor):
         finally:
             self._alias_scope_depth -= 1
             self._class_body_depth -= 1
+            self._class_scope_fallbacks.pop()
             self._escaping_names = enclosing_escaping_names
             self._restore_alias_state(enclosing_state)
         self._bind_name(node.name, frozenset())

@@ -71,6 +71,42 @@ def test_preserves_matches_of_ordinary_values(code: str) -> None:
     assert scan_code_security(code).is_safe
 
 
+@pytest.mark.parametrize("method", _RECOVERY_METHODS)
+@pytest.mark.parametrize(
+    "body",
+    [
+        "    collector = None\n    del collector\n    values = collector.{method}()",
+        "    collector = None\n    del collector\n    recover = collector.{method}",
+        "    collector = None\n    def read(self):\n        return collector.{method}()",
+        "    collector = None\n    read = lambda self: collector.{method}()",
+        "    collector = None\n    values = [collector.{method}() for _ in [1]]",
+        "    collector = None\n    class Inner:\n        values = collector.{method}()",
+        "    def collector(self):\n        return collector.{method}()",
+    ],
+)
+def test_rejects_gc_recovery_after_class_scope_shadowing(method: str, body: str) -> None:
+    code = "import gc as collector\nclass Carrier:\n" + body.format(method=method)
+    assert not scan_code_security(code).is_safe
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        "import gc as collector\nclass Carrier:\n    collector = None\n"
+        "    def read(self):\n        return collector.collect()",
+        "import gc as collector\nclass Carrier:\n    collector = None\n"
+        "    def read(self, collector):\n        return collector.get_objects()",
+        "import gc as collector\nclass Carrier:\n    values = [collector.get_objects() for collector in []]",
+        "def build(collector):\n    class Carrier:\n        collector = None\n"
+        "        del collector\n        values = collector.get_objects()\n    return Carrier",
+        "class Local:\n    def get_objects(self):\n        return []\n"
+        "class Carrier:\n    collector = Local()\n    values = collector.get_objects()",
+    ],
+)
+def test_preserves_safe_class_scope_lookups(code: str) -> None:
+    assert scan_code_security(code).is_safe
+
+
 @pytest.mark.parametrize(
     "code",
     [
