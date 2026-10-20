@@ -167,6 +167,7 @@ describe("canonicalGraphJson", () => {
   it("drops view state, parses handles, orders nodes, edges and rows, and hashes as the engine does", () => {
     const graph = {
       viewport: { x: 1 },
+      description: "every top-level key but nodes and edges is view state",
       nodes: [
         {
           id: "b",

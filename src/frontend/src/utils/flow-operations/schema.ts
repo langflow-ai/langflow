@@ -61,7 +61,8 @@ const TABLE: KeyedList = {
 
 export const NODE_SCHEMA = {
   version: raw.version,
-  flowViewState: new Set<string>(raw.view_state.flow),
+  /** The top-level flow keys that are not view state. Every other top-level key is. */
+  flowGraphKeys: new Set<string>(raw.view_state.flow.except),
   nodeViewState: new Set<string>(raw.view_state.node),
   nodeViewStatePaths: raw.view_state.node_paths as string[][],
   templateViewState: new Set<string>(raw.view_state.template),
