@@ -68,6 +68,8 @@ jobs:
     if: needs.discover.outputs.bundles != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Python 3.15 is a preview lane: it reports ecosystem readiness without failing the run.
+    continue-on-error: ${{ matrix.python-version == '3.15' }}
     strategy:
       fail-fast: false
       matrix:
@@ -76,14 +78,16 @@ jobs:
         # Scheduled runs: every supported Python (the exhaustive grid).
         # The lfx-minor axis collapses to the in-repo lfx until the 1.10 line
         # publishes (see header).
-        python-version: ${{ github.event_name == 'schedule' && fromJson('["3.10", "3.11", "3.12", "3.13", "3.14"]') || fromJson('["3.10", "3.13"]') }}
+        python-version: ${{ github.event_name == 'schedule' && fromJson('["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]') || fromJson('["3.10", "3.13"]') }}
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@v10.0.0
         with:
-          version: latest-known
+          # The uv bundled with this setup-uv only knows CPython 3.15 release candidates;
+          # uv 0.13.0 is the first release that installs 3.15.0 final.
+          version: ${{ matrix.python-version == '3.15' && '0.13.0' || 'latest-known' }}
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}

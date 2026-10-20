@@ -2,7 +2,7 @@
 name = "langflow-base"
 version = "1.14.0"
 description = "A Python package with a built-in web application"
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.10,<3.16"
 license = "MIT"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 readme = "README.md"
@@ -47,7 +47,9 @@ dependencies = [
     "rich>=13.7.0,<14.0.0",
     "langchain-experimental~=0.4.1",
     "sqlmodel~=0.0.46",
-    "pydantic>=2.13.0,<2.14",
+    # pydantic-core ships cp315 wheels from 2.48 on, which only pydantic 2.14 pins.
+    "pydantic>=2.13.0,<2.14; python_version < '3.15'",
+    "pydantic>=2.14.1,<2.15; python_version >= '3.15'",
     "pydantic-settings>=2.2.0,<3.0.0",
     "email-validator>=2.0.0",
     "typer>=0.19.0,<1.0.0",
@@ -119,7 +121,8 @@ dependencies = [
     "jaraco-context>=6.1.0",
     "wheel>=0.46.2,<1.0.0",
     "onnxruntime>=1.20,<1.24; python_version<'3.14'", # >=1.24 does not support Python 3.10
-    "onnxruntime>=1.26; python_version>='3.14'",
+    # onnxruntime ships no cp315 wheels (and no sdist) yet; drop the gate once it does.
+    "onnxruntime>=1.26; python_version>='3.14' and python_version<'3.15'",
     "dynaconf>=3.2.13,<4.0.0",
     "pyasn1>=0.6.3,<0.7.0",
     "langgraph-checkpoint>4.0.0,<5.0.0",
@@ -420,8 +423,9 @@ cuga = [
     "litellm>=1.103.1,<2.0.0,!=1.104.0rc1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
 ]
 mlx = [
-    "mlx>=0.29.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
-    "mlx-vlm~=0.3.9; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
+    # mlx ships no cp315 wheels (and no sdist) yet.
+    "mlx>=0.29.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12' and python_version < '3.15'",
+    "mlx-vlm~=0.3.9; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12' and python_version < '3.15'",
 ]
 
 # MCP
