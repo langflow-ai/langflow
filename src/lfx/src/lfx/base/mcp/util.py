@@ -1063,7 +1063,8 @@ def describe_mcp_connection_failure(server_name: str, url: str, error: BaseExcep
     that authentication failed or which server rejected it.
     """
     target = sanitize_url_for_display(url) if urlparse(url).scheme else server_name
-    cause = redact_urls_in_text(str(error))
+    causes = [redact_urls_in_text(str(leaf)) for leaf in _iter_exception_leaves(error) if str(leaf)]
+    cause = "; ".join(causes) or redact_urls_in_text(str(error))
 
     status = extract_http_status(error)
     if status in (HTTP_UNAUTHORIZED, HTTP_FORBIDDEN):
@@ -2941,19 +2942,24 @@ async def update_tools(
         # `command` is a structured executable field, not a shell fragment. Keeping it
         # intact preserves legitimate executable paths that contain spaces.
         full_command = shlex.join([command, *args])
-        if is_agentic_server and headers:
-            tools = await mcp_stdio_client.connect_to_server(
-                full_command,
-                env,
-                current_user_id=current_user_id,
-                headers=headers,
-            )
-        elif is_agentic_server:
-            tools = await mcp_stdio_client.connect_to_server(full_command, env, current_user_id=current_user_id)
-        elif headers:
-            tools = await mcp_stdio_client.connect_to_server(full_command, env, headers=headers)
-        else:
-            tools = await mcp_stdio_client.connect_to_server(full_command, env)
+        try:
+            if is_agentic_server and headers:
+                tools = await mcp_stdio_client.connect_to_server(
+                    full_command,
+                    env,
+                    current_user_id=current_user_id,
+                    headers=headers,
+                )
+            elif is_agentic_server:
+                tools = await mcp_stdio_client.connect_to_server(full_command, env, current_user_id=current_user_id)
+            elif headers:
+                tools = await mcp_stdio_client.connect_to_server(full_command, env, headers=headers)
+            else:
+                tools = await mcp_stdio_client.connect_to_server(full_command, env)
+        except Exception as exc:
+            detail = describe_mcp_connection_failure(server_name, "", exc)
+            logger.error(detail)
+            raise ConnectionError(detail) from exc
         client = mcp_stdio_client
     elif mode in ["Streamable_HTTP", "SSE"]:
         # Streamable HTTP connection with SSE fallback

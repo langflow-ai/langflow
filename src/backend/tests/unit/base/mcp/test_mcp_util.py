@@ -1046,6 +1046,21 @@ class TestUpdateToolsStdioHeaders:
     """Test that update_tools injects component headers into stdio args."""
 
     @pytest.mark.asyncio
+    async def test_stdio_task_group_failure_preserves_leaf_error(self, stdio_client):
+        """TaskGroup failures should expose the underlying MCP connection error."""
+        exception_group_type = util._EXCEPTION_GROUP_TYPES[0]
+        stdio_client.connect_to_server = AsyncMock(
+            side_effect=exception_group_type("unhandled errors in a TaskGroup", [ConnectionError("server unavailable")])
+        )
+
+        with pytest.raises(ConnectionError, match="server unavailable"):
+            await update_tools(
+                "starter project",
+                {"mode": "Stdio", "command": "uvx", "args": ["mcp-server"]},
+                mcp_stdio_client=stdio_client,
+            )
+
+    @pytest.mark.asyncio
     async def test_stdio_headers_injected_with_existing_headers_flag(self, stdio_client):
         """Headers should be injected as --headers key value before the existing --headers flag."""
         server_config = {
