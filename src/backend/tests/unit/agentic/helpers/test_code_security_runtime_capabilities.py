@@ -90,6 +90,23 @@ def test_rejects_process_path_environment_access(code: str) -> None:
     assert not scan_code_security(code).is_safe
 
 
+@pytest.mark.parametrize("access", ["process.environb", "process.getenvb(b'SYNTHETIC')", "process.get_exec_path()"])
+@pytest.mark.parametrize(
+    "body",
+    [
+        "    process = None\n    del process\n    value = {access}",
+        "    process = None\n    def read(self):\n        return {access}",
+        "    process = None\n    read = lambda self: {access}",
+        "    process = None\n    values = [{access} for _ in [1]]",
+        "    process = None\n    class Inner:\n        value = {access}",
+        "    def process(self):\n        return {access}",
+    ],
+)
+def test_rejects_environment_access_after_class_scope_shadowing(access: str, body: str) -> None:
+    code = "import os as process\nclass Carrier:\n" + body.format(access=access)
+    assert not scan_code_security(code).is_safe
+
+
 @pytest.mark.parametrize(
     "code",
     [
@@ -98,6 +115,8 @@ def test_rejects_process_path_environment_access(code: str) -> None:
         "module_name = __name__\ndescription = __doc__",
         "class Config:\n    environb = {}\nvalue = Config().environb",
         "class Config:\n    def get_exec_path(self):\n        return []\npaths = Config().get_exec_path()",
+        "import os as process\nclass Carrier:\n    process = None\n"
+        "    def read(self, process):\n        return process.getenvb(b'SYNTHETIC')",
         "match [1, 2]:\n    case [first, second]:\n        value = first + second",
     ],
 )
