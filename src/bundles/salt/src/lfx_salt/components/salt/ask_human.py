@@ -29,9 +29,8 @@ from typing import Any
 from lfx.custom.custom_component.component import Component
 from lfx.io import MessageTextInput, MultilineSecretInput, Output, SecretStrInput, StrInput
 from lfx.schema.message import Message
+from lfx_salt.components.salt import _salt_common as sc
 from saltapp.errors import SaltApiError
-
-from . import _salt_common as sc
 
 HTTP_TOO_MANY_REQUESTS = 429
 

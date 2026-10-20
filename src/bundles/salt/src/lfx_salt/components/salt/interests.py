@@ -19,8 +19,7 @@ from __future__ import annotations
 from lfx.custom.custom_component.component import Component
 from lfx.io import DropdownInput, MessageTextInput, Output, SecretStrInput, StrInput
 from lfx.schema.data import Data
-
-from . import _salt_common as sc
+from lfx_salt.components.salt import _salt_common as sc
 
 VALID_ACTIONS = {"set", "get", "clear"}
 VALID_MODES = {"addressed", "keywords", "all"}

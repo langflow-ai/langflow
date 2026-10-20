@@ -8,8 +8,7 @@ from __future__ import annotations
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, MessageTextInput, MultilineSecretInput, Output, SecretStrInput, StrInput
 from lfx.schema.message import Message
-
-from . import _salt_common as sc
+from lfx_salt.components.salt import _salt_common as sc
 
 
 class SaltSendMessageComponent(Component):
