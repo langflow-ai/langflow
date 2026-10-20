@@ -18,6 +18,7 @@ from lfx.base.models.unified_models import (
     handle_model_input_update,
 )
 from lfx.custom import Component
+from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import (
     BoolInput,
     DropdownInput,
@@ -36,6 +37,14 @@ from lfx.schema.table import EditMode
 from lfx.schema.token_usage import extract_usage_from_message
 
 _ROUTE_ID = re.compile(r"category_([1-9][0-9]{0,3})_result")
+_CUSTOM_PROMPT_INFO = (
+    "Additional instructions for LLM-based categorization. "
+    "These will be added to the base prompt. "
+    "Use {input_text} for the input text and {routes} for the available categories."
+)
+_CUSTOM_PROMPT_DECISION_INFO = (
+    "Not used in Decision Model mode, which has no prompt. Kept so it applies again in Language Model mode."
+)
 
 
 def _route_number(route_id: object) -> int | None:
@@ -105,7 +114,12 @@ class SmartRouterComponent(Component):
             name="minimum_probability",
             preserve_empty=True,
             display_name="Minimum Probability",
-            info="Required in decision mode, from 0 to 1. A route can override this threshold.",
+            info=(
+                "Required in decision mode, from 0 to 1. The top route is chosen only when its probability is at "
+                "least this value; otherwise the message goes to Else. This is the route's probability, not the "
+                "provider's confidence score. A route can set its own threshold in the Routes table."
+            ),
+            range_spec=RangeSpec(min=0, max=1, step=0.01),
             show=False,
         ),
         DropdownInput(
@@ -145,13 +159,6 @@ class SmartRouterComponent(Component):
             ),
             table_schema=[
                 {
-                    "name": "minimum_probability",
-                    "display_name": "Minimum Probability (Optional)",
-                    "type": "float",
-                    "description": "Decision mode only: override the router threshold (0 to 1).",
-                    "edit_mode": EditMode.INLINE,
-                },
-                {
                     "name": "route_category",
                     "display_name": "Route Name",
                     "type": "str",
@@ -176,6 +183,16 @@ class SmartRouterComponent(Component):
                     ),
                     "default": "",
                     "edit_mode": EditMode.POPOVER,
+                },
+                {
+                    "name": "minimum_probability",
+                    "display_name": "Minimum Probability (Optional)",
+                    "type": "float",
+                    "description": (
+                        "Decision mode only: the probability this route needs, at least, from 0 to 1. "
+                        "Leave empty to use the router's Minimum Probability."
+                    ),
+                    "edit_mode": EditMode.INLINE,
                 },
                 {
                     "name": "route_id",
@@ -214,7 +231,10 @@ class SmartRouterComponent(Component):
         BoolInput(
             name="enable_else_output",
             display_name="Include Else Output",
-            info="Include an Else output for cases that don't match any route.",
+            info=(
+                "Include an Else output for cases that don't match any route. Decision mode requires it, "
+                "connected: messages no route is confident enough for go there."
+            ),
             value=False,
             advanced=True,
             real_time_refresh=True,
@@ -230,11 +250,7 @@ class SmartRouterComponent(Component):
         MultilineInput(
             name="custom_prompt",
             display_name="Additional Instructions",
-            info=(
-                "Additional instructions for LLM-based categorization. "
-                "These will be added to the base prompt. "
-                "Use {input_text} for the input text and {routes} for the available categories."
-            ),
+            info=_CUSTOM_PROMPT_INFO,
             advanced=True,
         ),
     ]
@@ -261,11 +277,21 @@ class SmartRouterComponent(Component):
                 build_config[name]["required"] = decision_mode
         # The API key overrides the Language Model's credentials only; decision
         # credentials come from that provider's own settings.
-        for name in ("model", "api_key", "custom_prompt"):
+        for name in ("model", "api_key"):
             if name in build_config:
                 build_config[name]["show"] = not decision_mode
         if "model" in build_config:
             build_config["model"]["required"] = not decision_mode
+        if "custom_prompt" in build_config:
+            # Decision mode ignores the prompt; show a saved one with an explanation instead of hiding it.
+            prompt = build_config["custom_prompt"]
+            prompt["show"] = not decision_mode or bool(str(prompt.get("value") or "").strip())
+            prompt["info"] = _CUSTOM_PROMPT_DECISION_INFO if decision_mode else _CUSTOM_PROMPT_INFO
+        if "enable_else_output" in build_config:
+            # Decision mode needs Else, so switching to it turns Else on and keeps the setting in view.
+            if decision_mode and field_name == "routing_mode":
+                build_config["enable_else_output"]["value"] = True
+            build_config["enable_else_output"]["advanced"] = not decision_mode
         if "routes" in build_config:
             rows = field_value if field_name == "routes" else build_config["routes"].get("value")
             last = (build_config.get("last_route_number") or {}).get("value") or 0
@@ -304,7 +330,12 @@ class SmartRouterComponent(Component):
                 )
             )
         # Add default output only if enabled
-        enable_else = field_value if field_name == "enable_else_output" else getattr(self, "enable_else_output", False)
+        if field_name == "enable_else_output":
+            enable_else = field_value
+        else:
+            enable_else = (template.get("enable_else_output") or {}).get(
+                "value", getattr(self, "enable_else_output", False)
+            )
 
         if enable_else:
             frontend_node["outputs"].append(

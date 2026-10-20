@@ -186,7 +186,9 @@ def test_switching_mode_preserves_llm_configuration(monkeypatch):
     decision_config = component.update_build_config(config, "Decision Model", "routing_mode")
     assert decision_config["custom_prompt"]["value"] == "Use {routes} for {input_text}"
     assert decision_config["model"]["value"] == [{"provider": "Test", "name": "llm"}]
-    assert not decision_config["custom_prompt"]["show"]
+    # A saved prompt stays in view, explained, rather than silently disappearing.
+    assert decision_config["custom_prompt"]["show"]
+    assert "Not used in Decision Model mode" in decision_config["custom_prompt"]["info"]
     assert not decision_config["api_key"]["show"]
     assert decision_config["minimum_probability"]["required"]
     llm_config = component.update_build_config(decision_config, "Language Model", "routing_mode")
@@ -317,3 +319,36 @@ def test_editor_route_edits_keep_every_other_routes_output():
         ("Else", "default_result"),
     ]
     assert build_config["last_route_number"]["value"] == 4
+
+
+def _fresh_build_config(router):
+    build_config = dotdict(router.to_frontend_node()["data"]["node"]["template"])
+    build_config["routes"]["value"] = [{"route_category": name} for name in ("Billing", "Sales")]
+    return build_config
+
+
+def test_switching_to_decision_mode_turns_else_on():
+    router = SmartRouterComponent()
+    build_config = router.update_build_config(_fresh_build_config(router), "Decision Model", "routing_mode")
+    node = router.update_outputs({"outputs": [], "template": build_config}, "routing_mode", "Decision Model")
+
+    assert build_config["enable_else_output"]["value"] is True
+    assert build_config["enable_else_output"]["advanced"] is False
+    assert [output.name for output in node["outputs"]][-1] == "default_result"
+
+
+@pytest.mark.parametrize(("prompt", "shown"), [("Prefer Billing for refunds.", True), ("", False)])
+def test_decision_mode_explains_a_saved_custom_prompt_instead_of_hiding_it(prompt, shown):
+    router = SmartRouterComponent()
+    build_config = _fresh_build_config(router)
+    build_config["custom_prompt"]["value"] = prompt
+    original_info = build_config["custom_prompt"]["info"]
+
+    build_config = router.update_build_config(build_config, "Decision Model", "routing_mode")
+    assert build_config["custom_prompt"]["show"] is shown
+    assert "Not used in Decision Model mode" in build_config["custom_prompt"]["info"]
+    assert build_config["custom_prompt"]["value"] == prompt
+
+    build_config = router.update_build_config(build_config, "Language Model", "routing_mode")
+    assert build_config["custom_prompt"]["show"] is True
+    assert build_config["custom_prompt"]["info"] == original_info
