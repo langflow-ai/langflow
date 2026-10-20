@@ -1425,6 +1425,9 @@ class _SecurityChecker(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_ImportFrom(self, node: ast.ImportFrom):
+        for alias in node.names:
+            if alias.name in _RUNTIME_LOADER_NAMES:
+                self.violations.append(f"Import of '{alias.name}' is forbidden in components (runtime loader)")
         if not node.module:
             return self.generic_visit(node)
 
@@ -1437,7 +1440,6 @@ class _SecurityChecker(ast.NodeVisitor):
                 RESTRICTED_IMPORT_NAMES.get(root_module, set())
                 | _DANGEROUS_READ_MEMBERS.get(node.module, set())
                 | _DANGEROUS_CALL_MEMBERS.get(node.module, set())
-                | _RUNTIME_LOADER_NAMES
             )
             for alias in node.names:
                 if alias.name in restricted:

@@ -40,6 +40,8 @@ def test_rejects_bare_runtime_loaders(code: str) -> None:
     [
         "from lfx.custom.validate import {name} as source",
         "class Carrier:\n    from lfx.custom.validate import {name} as source",
+        "from . import {name} as source",
+        "class Carrier:\n    from . import {name} as source",
         "class Carrier:\n    {name} = None\n    del {name}\n    source = {name}",
         "class Carrier:\n    {name} = None\n    del {name}\n    def read(self):\n        return {name}",
     ],
