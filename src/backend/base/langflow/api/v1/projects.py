@@ -61,7 +61,7 @@ from langflow.services.database.models.deployment.exceptions import (
 )
 from langflow.services.database.models.deployment.guards import check_project_has_deployments
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_moves_allowed
-from langflow.services.database.models.flow.model import Flow, FlowRead
+from langflow.services.database.models.flow.model import Flow, FlowRead, is_virtual_flow_id
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import (
     Folder,
@@ -1015,11 +1015,14 @@ async def delete_project(
 
     def _make_delete_operation(target: Folder):
         async def _delete_project_operation() -> None:
-            flows = (
-                await session.exec(select(Flow).where(Flow.folder_id == project_id, Flow.user_id == project_owner_id))
-            ).all()
-            if len(flows) > 0:
-                for flow in flows:
+            flows = (await session.exec(select(Flow).where(Flow.folder_id == project_id))).all()
+            # Folder deletion also cascades through flows owned by other contributors.
+            if any(is_virtual_flow_id(flow.id) for flow in flows):
+                raise HTTPException(
+                    status_code=400, detail="UUID5 flow IDs are reserved for public execution histories."
+                )
+            for flow in flows:
+                if flow.user_id == project_owner_id:
                     await cascade_delete_flow(session, flow.id)
 
             await check_project_has_deployments(session, project_id=project_id)
@@ -1052,6 +1055,10 @@ async def delete_project(
     try:
         await run_with_lock_retry(_delete_attempt, session=session, description=f"delete_project {project_id}")
         return Response(status_code=status.HTTP_204_NO_CONTENT)
+    except HTTPException:
+        # Preserve intentional client errors (e.g. the reserved UUID5 flow
+        # guard in cascade_delete_flow) instead of masking them as 500s.
+        raise
     except Exception as e:
         await araise_if_deployment_guard_error_or_skip(
             e,

@@ -41,6 +41,7 @@ from langflow.services.database.models.flow.model import (
     FlowCreate,
     FlowRead,
     FlowUpdate,
+    is_virtual_flow_id,
 )
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.model import Folder
@@ -405,6 +406,12 @@ async def _canonicalize_flow_destination(
     return workspace_id, folder_id
 
 
+def _validate_new_flow_id(flow_id: UUID | None) -> None:
+    """Keep saved flow IDs separate from deterministic public execution IDs."""
+    if flow_id is not None and is_virtual_flow_id(flow_id):
+        raise HTTPException(status_code=400, detail="UUID5 flow IDs are reserved for public execution histories.")
+
+
 async def _new_flow(
     *,
     session: AsyncSession,
@@ -431,6 +438,8 @@ async def _new_flow(
         propagate_unhandled_errors: Let the caller own retry and sanitization of unexpected failures.
     """
     try:
+        effective_id = flow_id if flow_id is not None else flow.id
+        _validate_new_flow_id(effective_id)
         await _verify_fs_path(flow.fs_path, user_id, storage_service)
 
         if validate_folder and flow.folder_id is not None:
@@ -458,7 +467,6 @@ async def _new_flow(
 
         # Apply the stable ID: explicit flow_id param (PUT upsert) takes precedence,
         # then flow.id (stable import from FlowCreate), then the uuid4 default.
-        effective_id = flow_id if flow_id is not None else flow.id
         if effective_id is not None:
             db_flow.id = effective_id
 
