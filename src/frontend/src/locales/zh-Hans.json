@@ -292,6 +292,8 @@
   "auth.saveApiKeySuccess": "API密钥已成功保存",
   "auth.saveWithApiCheckbox": "使用我的 API 密钥节省开支",
   "auth.signInButton": "登录",
+  "auth.upgradeRecoveryHint": "如果您从自动登录环境升级，即使设置了 LANGFLOW_SUPERUSER_PASSWORD，现有账户也可能保留原密码。请检查服务器启动日志并按照恢复指南操作。",
+  "auth.upgradeRecoveryLink": "升级后恢复访问",
   "auth.signInLink": "登录",
   "auth.signInPrompt": "已有账户？登录",
   "auth.signUpLink": "注册",

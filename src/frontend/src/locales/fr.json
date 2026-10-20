@@ -292,6 +292,8 @@
   "auth.saveApiKeySuccess": "La clé API a été enregistrée avec succès",
   "auth.saveWithApiCheckbox": "Enregistrez avec mes clés API",
   "auth.signInButton": "Connexion",
+  "auth.upgradeRecoveryHint": "Si vous avez effectué une mise à niveau depuis la connexion automatique, un compte existant peut conserver son mot de passe même si LANGFLOW_SUPERUSER_PASSWORD est défini. Consultez le journal de démarrage du serveur et suivez le guide de récupération.",
+  "auth.upgradeRecoveryLink": "Récupérer l’accès après la mise à niveau",
   "auth.signInLink": "Connexion",
   "auth.signInPrompt": "Vous avez déjà un compte? Connexion",
   "auth.signUpLink": "S'inscrire",

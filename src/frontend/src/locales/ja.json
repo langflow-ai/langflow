@@ -292,6 +292,8 @@
   "auth.saveApiKeySuccess": "APIキーの保存に成功しました",
   "auth.saveWithApiCheckbox": "私のAPIキーを使って節約しましょう",
   "auth.signInButton": "サインイン",
+  "auth.upgradeRecoveryHint": "自動ログインからアップグレードした場合、LANGFLOW_SUPERUSER_PASSWORD を設定しても、既存アカウントのパスワードが保持されることがあります。サーバーの起動ログを確認し、復旧ガイドに従ってください。",
+  "auth.upgradeRecoveryLink": "アップグレード後のアクセスを復旧する",
   "auth.signInLink": "サインイン",
   "auth.signInPrompt": "すでにアカウントをお持ちですか？サインイン",
   "auth.signUpLink": "登録",

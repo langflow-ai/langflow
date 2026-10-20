@@ -310,6 +310,8 @@
   "auth.passwordPlaceholder": "Password",
   "auth.passwordRequired": "Please enter your password",
   "auth.signInButton": "Sign in",
+  "auth.upgradeRecoveryHint": "If you upgraded from auto-login, an existing account can keep its password even when LANGFLOW_SUPERUSER_PASSWORD is set. Check the server startup log and follow the recovery guide.",
+  "auth.upgradeRecoveryLink": "Recover access after upgrading",
   "auth.noAccount": "Don't have an account?",
   "auth.signUpLink": "Sign Up",
   "auth.haveAccount": "Already have an account?",

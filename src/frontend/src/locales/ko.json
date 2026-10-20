@@ -310,6 +310,8 @@
   "auth.passwordPlaceholder": "비밀번호",
   "auth.passwordRequired": "비밀번호를 입력하세요",
   "auth.signInButton": "로그인",
+  "auth.upgradeRecoveryHint": "자동 로그인 환경에서 업그레이드한 경우 LANGFLOW_SUPERUSER_PASSWORD를 설정해도 기존 계정의 비밀번호가 유지될 수 있습니다. 서버 시작 로그를 확인하고 복구 가이드를 따르세요.",
+  "auth.upgradeRecoveryLink": "업그레이드 후 접근 권한 복구",
   "auth.noAccount": "계정이 없으신가요?",
   "auth.signUpLink": "가입하기",
   "auth.haveAccount": "이미 계정이 있으신가요?",

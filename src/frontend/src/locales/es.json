@@ -292,6 +292,8 @@
   "auth.saveApiKeySuccess": "La clave API se ha guardado correctamente",
   "auth.saveWithApiCheckbox": "Ahorra con mis claves API",
   "auth.signInButton": "Iniciar sesión",
+  "auth.upgradeRecoveryHint": "Si actualizaste desde el inicio de sesión automático, una cuenta existente puede conservar su contraseña aunque se configure LANGFLOW_SUPERUSER_PASSWORD. Revisa el registro de inicio del servidor y sigue la guía de recuperación.",
+  "auth.upgradeRecoveryLink": "Recuperar el acceso después de actualizar",
   "auth.signInLink": "Iniciar sesión",
   "auth.signInPrompt": "¿Ya tienes una cuenta? Iniciar sesión",
   "auth.signUpLink": "Registrarse",

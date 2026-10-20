@@ -292,6 +292,8 @@
   "auth.saveApiKeySuccess": "API-Schlüssel erfolgreich gespeichert",
   "auth.saveWithApiCheckbox": "Mit meinen API-Schlüsseln sparen",
   "auth.signInButton": "Anmelden",
+  "auth.upgradeRecoveryHint": "Wenn Sie von der automatischen Anmeldung aktualisiert haben, kann ein bestehendes Konto sein Passwort behalten, auch wenn LANGFLOW_SUPERUSER_PASSWORD gesetzt ist. Prüfen Sie das Startprotokoll des Servers und folgen Sie der Wiederherstellungsanleitung.",
+  "auth.upgradeRecoveryLink": "Zugriff nach dem Upgrade wiederherstellen",
   "auth.signInLink": "Anmelden",
   "auth.signInPrompt": "Haben Sie bereits ein Konto? Anmelden",
   "auth.signUpLink": "Anmelden",
