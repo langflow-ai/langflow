@@ -3,22 +3,16 @@ title: Authorization
 slug: /authorization
 ---
 
-Langflow includes a pluggable authorization layer for role-based access control (RBAC) over flows, projects, deployments, files, variables, and knowledge bases.
+Role-based access control on this page requires a plugin.
 
-The authorization infrastructure is present in all Langflow deployments, but the open-source build registers a pass-through service that **always allows** every action for every authenticated user.
+Langflow includes the same routes and database tables as the plugin, but _always allows_ every action for every authenticated user.
+Setting `LANGFLOW_AUTHZ_ENABLED=true` in Langflow _does not_ restrict access. Route guards still run, and audit rows can still be written, but no policies are applied.
 
-Setting `LANGFLOW_AUTHZ_ENABLED=true` without an enforcement plugin **does not** restrict access. Route guards still run and audit rows can still be written, but no policy is applied.
-
-Per-resource RBAC enforcement requires a registered authorization plugin.
-Langflow OSS **does not** include a registered authorization plugin.
-
-## Enable RBAC with an enforcement plugin
-
-The following steps apply when you have a registered enforcement plugin.
+## Enable RBAC with an authorization plugin
 
 1. Set `LANGFLOW_AUTHZ_AUDIT_ENABLED=true` and run Langflow in a staging environment. Review the [audit log](#audit-log-api) to understand what decisions would be made before enforcement is on.
 
-2. Install and register the enforcement plugin following its setup guide.
+2. Install and register the authorization plugin.
 
 3. Set `LANGFLOW_AUTHZ_ENABLED=true`. The plugin reads the role and share tables and applies its policy.
 
@@ -30,7 +24,7 @@ The following steps apply when you have a registered enforcement plugin.
 
 | Variable | Description | Default |
 |---|---|---|
-| `LANGFLOW_AUTHZ_ENABLED` | Enable authorization enforcement. Requires a registered enforcement plugin. When `false`, all requests pass regardless of roles or shares. | `false` |
+| `LANGFLOW_AUTHZ_ENABLED` | Enable authorization enforcement. Requires a registered authorization plugin. When `false`, or without that plugin, all requests pass regardless of roles or shares. | `false` |
 | `LANGFLOW_AUTHZ_SUPERUSER_BYPASS` | When `true`, active superusers bypass authorization checks. The plugin may still audit the decision. | `true` |
 | `LANGFLOW_AUTHZ_AUDIT_ENABLED` | Write an audit log row for every authorization decision and share-administration action. Works independently of `LANGFLOW_AUTHZ_ENABLED` — set this to `true` while enforcement is off to observe traffic before enabling enforcement. | `false` |
 | `LANGFLOW_AUTHZ_AUDIT_DURABLE` | Wait for each accepted audit row to commit. A full bounded queue applies backpressure and persistence failures fail the triggering request with a sanitized error. Enable this before treating the audit table as a compliance or external-delivery source. | `false` |
