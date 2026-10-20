@@ -242,14 +242,11 @@ describe("changesFrom", () => {
     expect(changes.nodes.get("a")!.operations).toHaveLength(1);
   });
 
-  it("ignores flow settings and empty input", () => {
-    const changes = changesFrom([
-      recorded(alice, { type: "update_metadata", name: "Renamed" }),
-    ]);
+  it("ignores empty input", () => {
+    const changes = changesFrom([]);
     expect(changes.nodes.size).toBe(0);
     expect(changes.edges.size).toBe(0);
     expect(changes.removedNodes).toEqual([]);
-    expect(changesFrom([]).nodes.size).toBe(0);
   });
 });
 

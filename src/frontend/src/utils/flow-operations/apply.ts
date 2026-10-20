@@ -16,9 +16,8 @@
  */
 
 import { cloneDeep } from "lodash";
-import { jsonType, valuesEqual } from "./canonical";
 import { checkEdge, inputKey, nodeOutputs, OUTPUTS_PATH } from "./edge-rules";
-import { failedExpectation, invalidOperation } from "./errors";
+import { invalidOperation } from "./errors";
 import { ListIndex } from "./keyed-lists";
 import { type KeyedList, keyedListAt, keyOf } from "./schema";
 import {
@@ -29,7 +28,6 @@ import {
   requireNodeObjects,
 } from "./state";
 
-export { jsonType } from "./canonical";
 export {
   FlowOperationError,
   type FlowOperationErrorName,
@@ -42,17 +40,11 @@ type JsonObject = Record<string, unknown>;
 export type Selector = { key: string };
 export type PathSegment = string | Selector;
 
-/** What a path must hold before a write: a value, or nothing at all. */
-export type Expectation = { value: unknown } | { absent: true };
-
 export type FieldUpdate = {
   id: string;
   op: "set_field" | "delete_field";
   path: PathSegment[];
   value?: unknown;
-  from_type?: string;
-  template_field?: JsonObject;
-  expect?: Expectation;
 };
 
 export type FlowOperation = JsonObject & { type: string };
@@ -68,20 +60,11 @@ export type ApplyResult = {
   inverseOperations?: FlowOperation[][];
 };
 
-const GRAPH_COLLECTION_KEYS = new Set(["nodes", "edges"]);
 // Replacing these whole objects would record an entire node as one opaque value.
 const FORBIDDEN_WHOLE_NODE_PATHS = new Set(
   NODE_OBJECT_PATHS.map((path) => JSON.stringify(path)),
 );
 const TEMPLATE_PATH = ["data", "node", "template"];
-const JSON_TYPE_NAMES = new Set([
-  "object",
-  "array",
-  "string",
-  "number",
-  "boolean",
-  "null",
-]);
 
 function isObject(value: unknown): value is JsonObject {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -146,18 +129,6 @@ function parseSegment(segment: unknown, context: string): PathSegment {
   throw invalidOperation(`${context}: invalid path segment`);
 }
 
-function parseExpectation(value: unknown, context: string): Expectation {
-  if (isObject(value)) {
-    const keys = Object.keys(value);
-    if (keys.length === 1 && keys[0] === "value") return { value: value.value };
-    if (keys.length === 1 && keys[0] === "absent" && value.absent === true)
-      return { absent: true };
-  }
-  throw invalidOperation(
-    `${context}.expect must be {"value": ...} or {"absent": true}`,
-  );
-}
-
 function parseUpdate(value: unknown, context: string): FieldUpdate {
   if (!isObject(value)) throw invalidOperation(`${context} must be an object`);
   if (value.op !== "set_field" && value.op !== "delete_field")
@@ -165,9 +136,7 @@ function parseUpdate(value: unknown, context: string): FieldUpdate {
   const setField = value.op === "set_field";
   onlyKeys(
     value,
-    setField
-      ? ["id", "op", "path", "value", "from_type", "template_field", "expect"]
-      : ["id", "op", "path", "expect"],
+    setField ? ["id", "op", "path", "value"] : ["id", "op", "path"],
     context,
   );
   if (!isNonEmptyString(value.id))
@@ -183,52 +152,42 @@ function parseUpdate(value: unknown, context: string): FieldUpdate {
     if (!("value" in value))
       throw invalidOperation(`${context}: set_field requires a value`);
     update.value = value.value;
-    if (value.from_type != null) {
-      if (
-        typeof value.from_type !== "string" ||
-        !JSON_TYPE_NAMES.has(value.from_type)
-      )
-        throw invalidOperation(`${context}: from_type must name a JSON type`);
-      update.from_type = value.from_type;
-    }
-    if (value.template_field != null) {
-      if (!isObject(value.template_field))
-        throw invalidOperation(`${context}: template_field must be an object`);
-      update.template_field = value.template_field;
-    }
   }
-  if (value.expect != null)
-    update.expect = parseExpectation(value.expect, context);
   return update;
 }
 
 // An edge never changes in place: a change to an edge is a delete_edges of it
-// and an add_edges of its new content, with the same id.
-const OPERATION_KEYS: Record<string, string[]> = {
+// and an add_edges of its new content, with the same id. No operation writes
+// a top-level key other than nodes and edges: those keys are view state.
+const OPERATION_KEYS = {
   add_nodes: ["type", "nodes"],
   update_nodes: ["type", "updates"],
   delete_nodes: ["type", "ids"],
   add_edges: ["type", "edges"],
   delete_edges: ["type", "ids"],
-  update_metadata: ["type", "fields", "delete_keys"],
-};
+} as const;
+
+type OperationType = keyof typeof OPERATION_KEYS;
 
 type ParsedOperation =
   | { type: "add_nodes"; nodes: JsonObject[] }
   | { type: "update_nodes"; updates: FieldUpdate[] }
   | { type: "delete_nodes" | "delete_edges"; ids: string[] }
-  | { type: "add_edges"; edges: JsonObject[] }
-  | { type: "update_metadata"; fields: JsonObject; delete_keys: string[] };
+  | { type: "add_edges"; edges: JsonObject[] };
+
+function isOperationType(type: unknown): type is OperationType {
+  return typeof type === "string" && Object.hasOwn(OPERATION_KEYS, type);
+}
 
 function parseOperation(operation: unknown): ParsedOperation {
-  if (!isObject(operation)) throw invalidOperation("operation must be a dict");
-  const type = operation.type as string;
-  const keys = OPERATION_KEYS[type];
-  if (typeof type !== "string" || !keys)
-    throw invalidOperation(
-      `Unsupported operation type: ${String(operation.type)}`,
-    );
-  onlyKeys(operation, keys, type);
+  if (!isObject(operation))
+    throw invalidOperation("operation must be an object");
+  if (!("type" in operation))
+    throw invalidOperation("operation type is missing");
+  const { type } = operation;
+  if (!isOperationType(type))
+    throw invalidOperation(`Unsupported operation type: ${String(type)}`);
+  onlyKeys(operation, [...OPERATION_KEYS[type]], type);
   switch (type) {
     case "add_nodes":
       return { type, nodes: parseObjectList(operation.nodes, "nodes") };
@@ -244,19 +203,6 @@ function parseOperation(operation: unknown): ParsedOperation {
         type,
         updates: operation.updates.map((update, index) =>
           parseUpdate(update, `${type}[${index}]`),
-        ),
-      };
-    }
-    default: {
-      const fields = operation.fields ?? {};
-      if (!isObject(fields))
-        throw invalidOperation("update_metadata.fields must be an object");
-      return {
-        type: "update_metadata",
-        fields,
-        delete_keys: parseStringList(
-          operation.delete_keys ?? [],
-          "update_metadata.delete_keys",
         ),
       };
     }
@@ -322,7 +268,7 @@ function walk(
   return { parent: value, steps, missingAt: null };
 }
 
-/** Whether the last segment of `path` exists in `parent`, and its value. */
+/** Whether the last segment of `path` exists in `parent`, and its value, for an inverse. */
 function readLast(
   state: GraphState,
   node: JsonObject,
@@ -368,53 +314,6 @@ function keyedList(
   return state.listIndex(list, value, `${context}.path[${index}]`);
 }
 
-function checkExpectation(
-  update: FieldUpdate,
-  current: { exists: boolean; value?: unknown },
-  context: string,
-): void {
-  if (!update.expect) return;
-  if ("absent" in update.expect) {
-    if (current.exists)
-      throw failedExpectation(
-        `${context}: expected ${pathLabel(update.path)} to be absent, but it exists`,
-      );
-    return;
-  }
-  if (!current.exists || !valuesEqual(current.value, update.expect.value))
-    throw failedExpectation(
-      `${context}: expected ${pathLabel(update.path)} to hold the given value, but found ${current.exists ? "a different value" : "nothing"}`,
-    );
-}
-
-/**
- * Refuse a set_field that silently changes a value's JSON type. A type change
- * is declared with `from_type`, which also makes it a precondition.
- */
-function checkTypeChange(
-  current: unknown,
-  update: FieldUpdate,
-  context: string,
-  redacted: boolean,
-): void {
-  // Types in a redacted graph are not reliable; see ApplyOptions.
-  if (redacted) return;
-  const exists = current !== ABSENT;
-  if (update.from_type == null) {
-    if (exists && jsonType(current) !== jsonType(update.value))
-      throw invalidOperation(
-        `${context}: set_field changes a ${jsonType(current)} to a ${jsonType(update.value)} without declaring from_type`,
-        "FIELD_TYPE_CHANGE_UNDECLARED",
-      );
-    return;
-  }
-  if (!exists || jsonType(current) !== update.from_type)
-    throw invalidOperation(
-      `${context}: set_field expected to replace a ${update.from_type} but found ${exists ? jsonType(current) : "nothing"}`,
-      "FIELD_TYPE_PRECONDITION_FAILED",
-    );
-}
-
 /** Write or delete the last segment of the update's path. Return what it replaced or removed, or ABSENT. */
 function writeLast(
   state: GraphState,
@@ -425,7 +324,6 @@ function writeLast(
 ): unknown {
   const { path } = update;
   const last = path[path.length - 1];
-  const redacted = state.options.redacted ?? false;
   if (!isSelector(last)) {
     if (!isObject(parent))
       throw invalidOperation(
@@ -436,7 +334,6 @@ function writeLast(
       delete parent[last];
       return before;
     }
-    checkTypeChange(before, update, context, redacted);
     parent[last] = clone(update.value);
     return before;
   }
@@ -448,12 +345,6 @@ function writeLast(
     throw invalidOperation(
       `${context}: a list item written at a selector must carry the same key: ${key}`,
     );
-  checkTypeChange(
-    exists ? items.items[items.slots.get(key)!] : ABSENT,
-    update,
-    context,
-    redacted,
-  );
   const value = clone(update.value);
   if (exists) return items.replace(key, value, context, invalidOperation);
   items.add(value, context, invalidOperation);
@@ -475,11 +366,6 @@ function applyFieldUpdate(
 ): unknown {
   const { path } = update;
   const { parent, steps, missingAt } = walk(state, node, path, context);
-  const current =
-    missingAt === null
-      ? readLast(state, node, parent, path, context)
-      : { exists: false };
-  checkExpectation(update, current, context);
   if (missingAt !== null) {
     const part = path[missingAt];
     throw invalidOperation(
@@ -488,7 +374,10 @@ function applyFieldUpdate(
         : `${context}.path[${missingAt}]: object path part must be an existing string key: ${part}`,
     );
   }
-  inverses?.record(state, node, parent, update, current, context);
+  if (inverses) {
+    const current = readLast(state, node, parent, path, context);
+    inverses.record(state, node, parent, update, current, context);
+  }
   const before = writeLast(state, node, parent, update, context);
   // A write inside a keyed list item must leave its key alone, and a table row its position.
   for (const step of [...steps].reverse()) {
@@ -552,18 +441,12 @@ class FieldInverses {
         this.entries.push({ id: update.id, op: "delete_field", path });
       return;
     }
-    const entry: FieldUpdate = {
+    this.entries.push({
       id: update.id,
       op: "set_field",
       path,
       value: current.value,
-    };
-    if (
-      update.op === "set_field" &&
-      jsonType(current.value) !== jsonType(update.value)
-    )
-      entry.from_type = jsonType(update.value);
-    this.entries.push(entry);
+    });
   }
 
   operations(type: string): FlowOperation[] {
@@ -832,46 +715,6 @@ function applyDeleteEdges(state: GraphState, ids: string[]): Applied {
   };
 }
 
-function applyUpdateMetadata(
-  state: GraphState,
-  fields: JsonObject,
-  requestedDeleteKeys: string[],
-): Applied {
-  for (const key of Object.keys(fields)) {
-    if (GRAPH_COLLECTION_KEYS.has(key))
-      throw invalidOperation(
-        `update_metadata: cannot set graph collection key ${key}`,
-      );
-  }
-  for (const key of requestedDeleteKeys) {
-    if (GRAPH_COLLECTION_KEYS.has(key))
-      throw invalidOperation(
-        `update_metadata: cannot delete graph collection key ${key}`,
-      );
-  }
-  const deleteKeys = dedupe(requestedDeleteKeys);
-  if (Object.keys(fields).length === 0 && deleteKeys.length === 0)
-    return NOTHING;
-
-  const restore: JsonObject = {};
-  const remove: string[] = [];
-  for (const key of new Set([...Object.keys(fields), ...deleteKeys])) {
-    if (key in state.flowData) restore[key] = state.flowData[key];
-    else remove.push(key);
-  }
-  for (const [key, value] of Object.entries(fields))
-    state.flowData[key] = clone(value);
-  for (const key of deleteKeys) delete state.flowData[key];
-
-  const forward: FlowOperation = { type: "update_metadata" };
-  if (Object.keys(fields).length > 0) forward.fields = cloneDeep(fields);
-  if (deleteKeys.length > 0) forward.delete_keys = deleteKeys;
-  const inverse: FlowOperation = { type: "update_metadata" };
-  if (Object.keys(restore).length > 0) inverse.fields = restore;
-  if (remove.length > 0) inverse.delete_keys = remove;
-  return { forward: [forward], inverse: [inverse] };
-}
-
 // --- Entry point -----------------------------------------------------------------------
 
 function applyOperation(
@@ -889,12 +732,6 @@ function applyOperation(
       return applyAddEdges(state, operation.edges);
     case "delete_edges":
       return applyDeleteEdges(state, operation.ids);
-    case "update_metadata":
-      return applyUpdateMetadata(
-        state,
-        operation.fields,
-        operation.delete_keys,
-      );
   }
 }
 

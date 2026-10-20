@@ -160,13 +160,12 @@ describe("describeOperation", () => {
     ]);
   });
 
-  it("names edited fields, moves, and type changes per node", () => {
-    const field = (name: string, value: unknown, from_type?: string) => ({
+  it("names edited fields and moves per node", () => {
+    const field = (name: string, value: unknown) => ({
       id: "a",
       op: "set_field",
       path: ["data", "node", "template", name, "value"],
       value,
-      ...(from_type && { from_type }),
     });
     expect(
       describeOperation(
@@ -191,12 +190,12 @@ describe("describeOperation", () => {
       describeOperation(
         recorded({
           type: "update_nodes",
-          updates: [field("seed", "7", "number")],
+          updates: [field("seed", "7")],
         }),
         t,
         { names },
       ),
-    ).toEqual(["Changed Seed on OpenAI from number to string"]);
+    ).toEqual(["Edited Seed on OpenAI"]);
   });
 
   it("uses a field's label from the flow when it has one", () => {

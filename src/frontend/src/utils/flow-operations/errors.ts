@@ -2,7 +2,6 @@
 
 export type FlowOperationErrorName =
   | "FlowOperationValidationError"
-  | "FlowOperationPreconditionError"
   | "FlowDataValidationError";
 
 export class FlowOperationError extends Error {
@@ -22,14 +21,6 @@ export function invalidOperation(
   code = "FLOW_OPERATION_INVALID",
 ): FlowOperationError {
   return new FlowOperationError("FlowOperationValidationError", code, message);
-}
-
-export function failedExpectation(message: string): FlowOperationError {
-  return new FlowOperationError(
-    "FlowOperationPreconditionError",
-    "EXPECTATION_FAILED",
-    message,
-  );
 }
 
 export function invalidGraph(message: string): FlowOperationError {

@@ -150,7 +150,7 @@ describe("buildHistoryTimeline", () => {
     expect(atOne).toEqual(snapshot);
   });
 
-  it("replays redacted secrets that change a value's type, both ways", () => {
+  it("replays secrets read as null that change a value's type, both ways", () => {
     // The history API returns a pasted key as null where the graph had "".
     const timeline = buildHistoryTimeline({
       flowId: "f",
