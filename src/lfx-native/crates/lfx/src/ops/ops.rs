@@ -6,6 +6,8 @@
 //! by its key, never by its index. An operation that is parsed and printed
 //! again reads as it was sent.
 
+use std::str::FromStr;
+
 use serde_json::{Map, Value, json};
 
 use crate::ops::error::{Error, Result, quoted};
@@ -84,8 +86,13 @@ impl AsKey for &str {
     }
 }
 
-/// Checks on a path that compare its object keys. A field path holds
-/// [`Segment`]s; a schema path holds only object keys.
+/// Compare a path with a list of object keys, such as
+/// `["data", "node", "template"]`.
+///
+/// A path is a list of parts. A part of a field path is a [`Segment`]: an
+/// object key or a list item. A part of a node-schema path is always an
+/// object key. Both kinds of path work here, because each part gives its
+/// object key through [`AsKey`].
 pub(crate) trait PathExt {
     /// Whether `self` is exactly the object keys `path`.
     fn equals<S: AsRef<str>>(&self, path: &[S]) -> bool;
@@ -196,17 +203,23 @@ pub enum Operation {
 
 /// An operation's `type`, without its payload.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum OperationKind {
+pub enum OperationKind {
+    /// `add_nodes`.
     AddNodes,
+    /// `update_nodes`.
     UpdateNodes,
+    /// `delete_nodes`.
     DeleteNodes,
+    /// `add_edges`.
     AddEdges,
+    /// `delete_edges`.
     DeleteEdges,
 }
 
 impl OperationKind {
     /// The `type` as the protocol spells it.
-    fn as_str(self) -> &'static str {
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
         match self {
             Self::AddNodes => "add_nodes",
             Self::UpdateNodes => "update_nodes",
@@ -216,8 +229,22 @@ impl OperationKind {
         }
     }
 
+    /// The kind an operation object names in its `type`. It only borrows the
+    /// object and reads its `type`, so the caller can consume the object after.
+    fn from_map(object: &Map<String, Value>) -> Result<Self, FromValueError> {
+        match object.get("type") {
+            None => Err(FromValueError::new("type is missing")),
+            Some(Value::String(name)) => name.parse(),
+            _ => Err(FromValueError::new("must be a string").at_key("type")),
+        }
+    }
+}
+
+impl FromStr for OperationKind {
+    type Err = FromValueError;
+
     /// The kind that a `type` names.
-    fn from_name(name: &str) -> Result<Self, FromValueError> {
+    fn from_str(name: &str) -> Result<Self, FromValueError> {
         match name {
             "add_nodes" => Ok(Self::AddNodes),
             "update_nodes" => Ok(Self::UpdateNodes),
@@ -230,20 +257,12 @@ impl OperationKind {
             }
         }
     }
-
-    /// The kind an operation object names in its `type`. It only borrows the
-    /// object, so the caller can consume the object after.
-    fn of(object: &Map<String, Value>) -> Result<Self, FromValueError> {
-        match object.get("type") {
-            None => Err(FromValueError::new("type is missing")),
-            Some(Value::String(name)) => Self::from_name(name),
-            _ => Err(FromValueError::new("must be a string").at_key("type")),
-        }
-    }
 }
 
 impl Operation {
-    fn kind(&self) -> OperationKind {
+    /// The operation's `type`, without its payload.
+    #[must_use]
+    pub fn kind(&self) -> OperationKind {
         match self {
             Self::AddNodes(_) => OperationKind::AddNodes,
             Self::UpdateNodes(_) => OperationKind::UpdateNodes,
@@ -253,17 +272,12 @@ impl Operation {
         }
     }
 
-    /// The operation's `type`.
-    #[must_use]
-    pub fn type_name(&self) -> &'static str {
-        self.kind().as_str()
-    }
-
     /// Parse a list of operations.
     ///
     /// # Errors
     ///
-    /// `operations` is not a list, or an operation does not parse.
+    /// Fails when `operations` is not a JSON list, or when one of its
+    /// operations is not a valid operation.
     pub fn list_from_value(operations: Value) -> Result<Vec<Self>> {
         Vec::from_value(operations).map_err(|error| error.into_error("operations"))
     }
@@ -274,13 +288,13 @@ impl Operation {
     pub fn to_value(&self) -> Value {
         match self {
             Self::AddNodes(nodes) => json!({"type": "add_nodes", "nodes": nodes}),
-            Self::AddEdges(edges) => json!({"type": "add_edges", "edges": edges}),
-            Self::DeleteNodes(ids) => json!({"type": "delete_nodes", "ids": ids}),
-            Self::DeleteEdges(ids) => json!({"type": "delete_edges", "ids": ids}),
             Self::UpdateNodes(updates) => json!({
                 "type": "update_nodes",
                 "updates": updates.iter().map(FieldUpdate::to_value).collect::<Vec<_>>(),
             }),
+            Self::DeleteNodes(ids) => json!({"type": "delete_nodes", "ids": ids}),
+            Self::AddEdges(edges) => json!({"type": "add_edges", "edges": edges}),
+            Self::DeleteEdges(ids) => json!({"type": "delete_edges", "ids": ids}),
         }
     }
 
@@ -289,14 +303,14 @@ impl Operation {
     pub fn into_value(self) -> Value {
         let (kind, key, payload) = match self {
             Self::AddNodes(nodes) => ("add_nodes", "nodes", objects(nodes)),
-            Self::AddEdges(edges) => ("add_edges", "edges", objects(edges)),
-            Self::DeleteNodes(ids) => ("delete_nodes", "ids", strings(ids)),
-            Self::DeleteEdges(ids) => ("delete_edges", "ids", strings(ids)),
             Self::UpdateNodes(updates) => (
                 "update_nodes",
                 "updates",
                 Value::Array(updates.into_iter().map(FieldUpdate::into_value).collect()),
             ),
+            Self::DeleteNodes(ids) => ("delete_nodes", "ids", strings(ids)),
+            Self::AddEdges(edges) => ("add_edges", "edges", objects(edges)),
+            Self::DeleteEdges(ids) => ("delete_edges", "ids", strings(ids)),
         };
         let mut operation = Map::new();
         operation.insert("type".into(), Value::from(kind));
@@ -326,12 +340,12 @@ impl TryFrom<Value> for Operation {
 impl FromValue for Operation {
     fn from_value(value: Value) -> Result<Self, FromValueError> {
         let object = Map::from_value(value)?;
-        Ok(match OperationKind::of(&object)? {
+        Ok(match OperationKind::from_map(&object)? {
             OperationKind::AddNodes => Self::AddNodes(payload(object, "nodes")?),
-            OperationKind::AddEdges => Self::AddEdges(payload(object, "edges")?),
-            OperationKind::DeleteNodes => Self::DeleteNodes(payload(object, "ids")?),
-            OperationKind::DeleteEdges => Self::DeleteEdges(payload(object, "ids")?),
             OperationKind::UpdateNodes => Self::UpdateNodes(payload(object, "updates")?),
+            OperationKind::DeleteNodes => Self::DeleteNodes(payload(object, "ids")?),
+            OperationKind::AddEdges => Self::AddEdges(payload(object, "edges")?),
+            OperationKind::DeleteEdges => Self::DeleteEdges(payload(object, "ids")?),
         })
     }
 }
@@ -458,16 +472,16 @@ mod tests {
     fn operations_round_trip() {
         for operation in [
             json!({"type": "add_nodes", "nodes": [{"id": "a"}]}),
-            json!({"type": "add_edges", "edges": [{"id": "e", "source": "a", "target": "b"}]}),
-            json!({"type": "delete_nodes", "ids": ["a"]}),
-            json!({"type": "delete_edges", "ids": ["e"]}),
             json!({"type": "update_nodes", "updates": [
                 {"id": "a", "path": ["data", "node", "outputs", {"key": "out"}], "op": "set_field", "value": {"name": "out", "size": 1.0}},
                 {"id": "a", "path": ["data", "node", "template", "rows", "value", {"key": "r"}], "op": "delete_field"},
             ]}),
+            json!({"type": "delete_nodes", "ids": ["a"]}),
+            json!({"type": "add_edges", "edges": [{"id": "e", "source": "a", "target": "b"}]}),
+            json!({"type": "delete_edges", "ids": ["e"]}),
         ] {
             let parsed = Operation::try_from(operation.clone()).unwrap();
-            assert_eq!(parsed.type_name(), operation["type"]);
+            assert_eq!(parsed.kind().as_str(), operation["type"]);
             assert_eq!(parsed.to_value(), operation);
             assert_eq!(parsed.into_value(), operation);
         }
