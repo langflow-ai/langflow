@@ -1,0 +1,394 @@
+"""Table rows: diff-aware validation, repair and stripping."""
+
+from __future__ import annotations
+
+import copy
+import re
+
+import pytest
+from lfx.services.flow_operations import (
+    FlowDataValidationError,
+    GraphViolationCode,
+    derive_flow_operations,
+    diff_flow_data,
+    find_graph_violations,
+    graphs_equal,
+    repair_flow_data,
+    validate_flow_data,
+)
+from lfx.services.flow_operations.table_rows import (
+    assign_changed_table_row_ids,
+    assign_table_row_ids,
+    strip_flow_table_row_keys,
+    strip_row_keys,
+)
+
+TABLE_PATH = ("nodes", 0, "data", "node", "template", "headers", "value")
+
+
+def _graph(rows) -> dict:
+    return {
+        "nodes": [
+            {
+                "id": "api",
+                "data": {
+                    "node": {
+                        "template": {
+                            "headers": {"type": "table", "_input_type": "TableInput", "value": rows},
+                            "url": {"type": "str", "value": "http://x"},
+                        }
+                    }
+                },
+            }
+        ],
+        "edges": [],
+    }
+
+
+LEGACY = [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]
+KEYED = [
+    {"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"},
+    {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"},
+]
+EMPTY = {"nodes": [], "edges": []}
+
+
+def _codes(violations) -> list[tuple[GraphViolationCode, tuple]]:
+    return [(violation.code, violation.path) for violation in violations]
+
+
+def test_tables_are_not_checked_without_a_base():
+    assert find_graph_violations(_graph(LEGACY)) == []
+
+
+def test_an_unchanged_legacy_table_is_accepted():
+    graph = _graph(LEGACY)
+    changed_elsewhere = copy.deepcopy(graph)
+    changed_elsewhere["nodes"][0]["data"]["node"]["template"]["url"]["value"] = "http://y"
+
+    assert find_graph_violations(changed_elsewhere, base=graph) == []
+
+
+def test_an_added_legacy_table_is_refused():
+    assert _codes(find_graph_violations(_graph(LEGACY), base=EMPTY)) == [
+        (GraphViolationCode.TABLE_ROW_ID_MISSING, (*TABLE_PATH, 0, "__id__")),
+        (GraphViolationCode.TABLE_ROW_POS_INVALID, (*TABLE_PATH, 0, "__pos__")),
+        (GraphViolationCode.TABLE_ROW_ID_MISSING, (*TABLE_PATH, 1, "__id__")),
+        (GraphViolationCode.TABLE_ROW_POS_INVALID, (*TABLE_PATH, 1, "__pos__")),
+    ]
+
+
+def test_a_keyed_table_is_accepted_when_added_or_changed():
+    changed = copy.deepcopy(KEYED)
+    changed[1]["value"] = "other"
+
+    assert find_graph_violations(_graph(KEYED), base=EMPTY) == []
+    assert find_graph_violations(_graph(changed), base=_graph(KEYED)) == []
+
+
+def test_replacing_a_keyed_table_with_id_less_rows_is_refused():
+    violations = find_graph_violations(_graph([*LEGACY[:1]]), base=_graph(KEYED))
+
+    assert {violation.code for violation in violations} == {
+        GraphViolationCode.TABLE_ROW_ID_MISSING,
+        GraphViolationCode.TABLE_ROW_POS_INVALID,
+    }
+
+
+def test_the_first_edit_of_a_legacy_table_writes_it_whole_with_ids():
+    assert find_graph_violations(_graph(KEYED), base=_graph(LEGACY)) == []
+
+
+def test_duplicate_ids_are_refused():
+    duplicate = [dict(KEYED[0]), {**KEYED[1], "__id__": "r1"}]
+
+    assert _codes(find_graph_violations(_graph(duplicate), base=EMPTY)) == [
+        (GraphViolationCode.TABLE_ROW_ID_DUPLICATE, (*TABLE_PATH, 1, "__id__"))
+    ]
+
+
+def test_the_stored_order_of_rows_is_not_checked():
+    assert find_graph_violations(_graph([KEYED[1], KEYED[0]]), base=EMPTY) == []
+
+
+@pytest.mark.parametrize("position", ["a0", True, None, float("inf")])
+def test_a_position_must_be_a_finite_number(position):
+    rows = [{**KEYED[0], "__pos__": position}]
+
+    assert _codes(find_graph_violations(_graph(rows), base=EMPTY, check_values=False)) == [
+        (GraphViolationCode.TABLE_ROW_POS_INVALID, (*TABLE_PATH, 0, "__pos__"))
+    ]
+
+
+SCHEMA_PATH = ("nodes", 0, "data", "node", "template", "headers", "table_schema")
+
+
+def _with_columns(rows, table_schema) -> dict:
+    graph = _graph(rows)
+    graph["nodes"][0]["data"]["node"]["template"]["headers"]["table_schema"] = table_schema
+    return graph
+
+
+@pytest.mark.parametrize("name", ["__id__", "__pos__"])
+def test_a_column_named_after_a_row_key_is_refused(name):
+    columns = [{"name": "key"}, {"name": name}]
+
+    violations = find_graph_violations(_with_columns(KEYED, columns), base=EMPTY)
+
+    assert _codes(violations) == [(GraphViolationCode.TABLE_COLUMN_RESERVED, (*SCHEMA_PATH, 1, "name"))]
+    assert violations[0].to_dict()["resolution"] == "manual"
+
+
+def test_reserved_columns_under_columns_are_refused():
+    table_schema = {"columns": [{"name": "__pos__"}, {"name": "key"}]}
+
+    assert _codes(find_graph_violations(_with_columns(KEYED, table_schema), base=EMPTY)) == [
+        (GraphViolationCode.TABLE_COLUMN_RESERVED, (*SCHEMA_PATH, "columns", 0, "name"))
+    ]
+
+
+def test_a_column_named_like_the_old_row_keys_is_ordinary():
+    rows = [{**KEYED[0], "_id": "a", "_pos": "x"}]
+
+    assert find_graph_violations(_with_columns(rows, [{"name": "_id"}, {"name": "_pos"}]), base=EMPTY) == []
+
+
+def test_an_unchanged_table_with_a_reserved_column_is_accepted():
+    graph = _with_columns(KEYED, [{"name": "__id__"}])
+
+    assert find_graph_violations(graph, base=copy.deepcopy(graph)) == []
+
+
+def test_repair_leaves_a_reserved_column_to_the_client():
+    with pytest.raises(FlowDataValidationError) as error:
+        repair_flow_data(_with_columns(LEGACY, [{"name": "__id__"}]), base=EMPTY)
+
+    assert _codes(error.value.violations) == [(GraphViolationCode.TABLE_COLUMN_RESERVED, (*SCHEMA_PATH, 0, "name"))]
+
+
+def test_rows_are_read_in_position_order_and_ties_by_id():
+    rows = [
+        {"__id__": "b", "__pos__": 2, "key": "third"},
+        {"__id__": "c", "__pos__": 1.5, "key": "first"},
+        {"__id__": "a", "__pos__": 2, "key": "second"},
+    ]
+
+    assert [row["key"] for row in strip_row_keys(rows)] == ["first", "second", "third"]
+
+
+def test_only_table_fields_are_checked():
+    graph = _graph(LEGACY)
+    field = graph["nodes"][0]["data"]["node"]["template"]["headers"]
+    field["type"] = "dict"
+    del field["_input_type"]
+
+    assert find_graph_violations(graph, base=EMPTY) == []
+
+
+def test_tool_actions_are_a_keyed_list_not_a_table():
+    # A component in tool mode holds its tool actions under a table-typed field;
+    # they are keyed by tag, so they never need row ids.
+    graph = _graph(copy.deepcopy(KEYED))
+    graph["nodes"][0]["data"]["node"]["template"]["tools_metadata"] = {
+        "type": "table",
+        "_input_type": "ToolsInput",
+        "value": [{"name": "fetch", "tags": ["fetch"]}],
+    }
+
+    assert find_graph_violations(graph, base=EMPTY) == []
+
+
+def test_validate_raises_with_the_table_violations():
+    with pytest.raises(FlowDataValidationError) as exc_info:
+        validate_flow_data(_graph(LEGACY), base=EMPTY)
+
+    assert exc_info.value.violations[0].code == GraphViolationCode.TABLE_ROW_ID_MISSING
+
+
+def test_repair_assigns_ids_and_evenly_spaced_positions_in_row_order():
+    result = repair_flow_data(_graph(LEGACY), base=EMPTY)
+    rows = result.flow_data["nodes"][0]["data"]["node"]["template"]["headers"]["value"]
+
+    assert [row["key"] for row in rows] == ["Accept", "Auth"]
+    assert [row["__pos__"] for row in rows] == [1, 2]
+    assert all(isinstance(row["__id__"], str) and len(row["__id__"]) == 10 for row in rows)
+    assert rows[0]["__id__"] != rows[1]["__id__"]
+    assert [fix.code for fix in result.fixes] == [
+        GraphViolationCode.TABLE_ROW_ID_MISSING,
+        GraphViolationCode.TABLE_ROW_ID_MISSING,
+        GraphViolationCode.TABLE_ROW_POS_INVALID,
+        GraphViolationCode.TABLE_ROW_POS_INVALID,
+    ]
+    assert find_graph_violations(result.flow_data, base=EMPTY) == []
+
+
+def test_repair_leaves_an_unchanged_legacy_table_alone():
+    graph = _graph(LEGACY)
+
+    assert repair_flow_data(graph, base=graph).fixes == []
+    assert repair_flow_data(graph).fixes == []
+
+
+def test_repair_fills_a_missing_position_between_its_neighbours():
+    rows = [KEYED[0], {"__id__": "r9", "key": "New"}, KEYED[1]]
+    result = repair_flow_data(_graph(rows), base=EMPTY)
+    repaired = result.flow_data["nodes"][0]["data"]["node"]["template"]["headers"]["value"]
+
+    assert [row["__id__"] for row in repaired] == ["r1", "r9", "r2"]
+    assert [row["__pos__"] for row in repaired] == [1, 1.5, 2]
+    assert [(fix.code, fix.path) for fix in result.fixes] == [
+        (GraphViolationCode.TABLE_ROW_POS_INVALID, (*TABLE_PATH, 1, "__pos__"))
+    ]
+
+
+def test_repair_regenerates_duplicate_ids_and_leaves_the_stored_order():
+    rows = [{**KEYED[1]}, {**KEYED[0], "__id__": "r2"}, "not a row"]
+    result = repair_flow_data(_graph(rows), base=EMPTY)
+    repaired = result.flow_data["nodes"][0]["data"]["node"]["template"]["headers"]["value"]
+
+    assert [row["key"] for row in repaired] == ["Auth", "Accept"]
+    assert repaired[0]["__id__"] == "r2"
+    assert repaired[1]["__id__"] != "r2"
+    assert [row["key"] for row in strip_row_keys(repaired)] == ["Accept", "Auth"]
+    assert [fix.code for fix in result.fixes] == [
+        GraphViolationCode.TABLE_ROW_NOT_OBJECT,
+        GraphViolationCode.TABLE_ROW_ID_DUPLICATE,
+    ]
+
+
+def test_repair_keeps_the_ids_of_rows_a_table_already_held():
+    # A writer that strips ids (an exported file) sends the stored rows back.
+    result = repair_flow_data(_graph(LEGACY), base=_graph(KEYED))
+
+    assert result.flow_data == _graph(KEYED)
+    assert [fix.code for fix in result.fixes] == [
+        GraphViolationCode.TABLE_ROW_ID_MISSING,
+        GraphViolationCode.TABLE_ROW_ID_MISSING,
+        GraphViolationCode.TABLE_ROW_POS_INVALID,
+        GraphViolationCode.TABLE_ROW_POS_INVALID,
+    ]
+
+
+def test_repair_gives_only_a_new_row_a_new_id():
+    rows = [{"key": "Trace", "value": "on"}, *LEGACY]
+
+    repaired = repair_flow_data(_graph(rows), base=_graph(KEYED)).flow_data
+    repaired_rows = repaired["nodes"][0]["data"]["node"]["template"]["headers"]["value"]
+
+    assert [row["key"] for row in strip_row_keys(repaired_rows)] == ["Trace", "Accept", "Auth"]
+    assert [row["__id__"] for row in repaired_rows[1:]] == ["r1", "r2"]
+    assert repaired_rows[0]["__id__"] not in {"r1", "r2"}
+    assert find_graph_violations(repaired, base=_graph(KEYED)) == []
+
+
+def test_strip_row_keys():
+    assert strip_row_keys(KEYED) == LEGACY
+    assert strip_row_keys(None) is None
+    assert strip_row_keys(["x"]) == ["x"]
+
+
+# --- Assigning ids to the rows of a node being added ------------------------------------
+
+
+def _rows(graph) -> list:
+    return graph["nodes"][0]["data"]["node"]["template"]["headers"]["value"]
+
+
+def test_assigning_ids_makes_a_new_node_pass_strict_validation_and_keeps_row_order():
+    graph = _graph(copy.deepcopy(LEGACY))
+    with pytest.raises(FlowDataValidationError):
+        validate_flow_data(graph, base=EMPTY)
+
+    assign_table_row_ids(graph["nodes"][0])
+
+    validate_flow_data(graph, base=EMPTY)
+    rows = _rows(graph)
+    assert strip_row_keys(rows) == LEGACY
+    assert all(re.fullmatch(r"[0-9A-Za-z]{10}", row["__id__"]) for row in rows)
+    assert rows[0]["__pos__"] < rows[1]["__pos__"]
+
+
+def test_assigning_ids_keeps_existing_ids_and_positions_and_fills_the_gaps():
+    rows = [
+        {"__id__": "r1", "__pos__": 1, "key": "first"},
+        {"key": "second"},
+        {"__id__": "r1", "__pos__": 2, "key": "duplicate id"},
+    ]
+    graph = _graph(rows)
+
+    assign_table_row_ids(graph["nodes"][0])
+
+    result = _rows(graph)
+    assert [row["key"] for row in result] == ["first", "second", "duplicate id"]
+    assert result[0] == {"__id__": "r1", "__pos__": 1, "key": "first"}
+    assert result[2]["__pos__"] == 2
+    assert 1 < result[1]["__pos__"] < 2
+    assert len({row["__id__"] for row in result}) == 3
+    validate_flow_data(graph, base=EMPTY)
+
+
+def test_assigning_ids_leaves_valid_tables_and_other_fields_alone():
+    graph = _graph(copy.deepcopy(KEYED))
+    graph["nodes"][0]["data"]["node"]["template"]["tools_metadata"] = {
+        "type": "table",
+        "value": [{"name": "tool", "tags": ["tool"]}],
+    }
+    before = copy.deepcopy(graph)
+
+    assign_table_row_ids(graph["nodes"][0])
+
+    assert graph == before
+
+
+def test_stripping_a_flow_removes_row_keys_from_every_table():
+    graph = _graph(copy.deepcopy(KEYED))
+
+    assert strip_flow_table_row_keys(graph) is graph
+    assert _rows(graph) == LEGACY
+    assert graph["nodes"][0]["data"]["node"]["template"]["url"]["value"] == "http://x"
+
+
+def test_assigning_changed_tables_keeps_the_ids_of_rows_the_table_still_holds():
+    stored = _graph(copy.deepcopy(KEYED))
+    target = _graph([*copy.deepcopy(LEGACY), {"key": "New", "value": "x"}])
+
+    assign_changed_table_row_ids(stored, target)
+
+    rows = _rows(target)
+    assert [row["__id__"] for row in rows[:2]] == ["r1", "r2"]
+    assert [row["__pos__"] for row in rows[:2]] == [1, 2]
+    assert rows[2]["key"] == "New"
+    assert rows[2]["__pos__"] > 2
+    validate_flow_data(target, base=stored)
+
+
+def test_assigning_changed_tables_leaves_unchanged_legacy_tables_alone():
+    stored = _graph(copy.deepcopy(LEGACY))
+    target = copy.deepcopy(stored)
+    target["nodes"][0]["data"]["node"]["template"]["url"]["value"] = "http://y"
+
+    assign_changed_table_row_ids(stored, target)
+
+    assert _rows(target) == LEGACY
+    validate_flow_data(target, base=stored)
+
+
+def test_assigning_changed_tables_gives_new_nodes_ids():
+    target = _graph(copy.deepcopy(LEGACY))
+
+    assign_changed_table_row_ids(EMPTY, target)
+
+    validate_flow_data(target, base=EMPTY)
+    assert strip_row_keys(_rows(target)) == LEGACY
+
+
+def test_a_stored_table_without_numeric_positions_is_written_whole():
+    # Rows with ids but no numeric positions (an older position format) are not
+    # a keyed table yet, so the write that brings them within the rules replaces it.
+    stored = _graph([{"__id__": "r1", "__pos__": "a0", "key": "Accept", "value": "json"}])
+    target = _graph([{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}])
+
+    (operation,) = diff_flow_data(stored, target)
+
+    assert [update.path for update in operation.updates] == [("data", "node", "template", "headers", "value")]
+    assert graphs_equal(derive_flow_operations(stored, target).flow_data, target)

@@ -20,11 +20,13 @@ from lfx.services.flow_operations import (
     parse_flow_operations,
 )
 
-CASES = json.loads((Path(__file__).parent / "fixtures" / "apply_cases.json").read_text())["cases"]
+FIXTURES = Path(__file__).resolve().parents[5] / "lfx-native" / "fixtures"
+CASES = json.loads((FIXTURES / "apply_cases.json").read_text())["cases"]
 
 
 @pytest.mark.parametrize("case", CASES, ids=[case["name"] for case in CASES])
 def test_apply_case(case):
+    assert case.get("rule"), "every case names the rule it checks"
     base = copy.deepcopy(case["base"])
 
     if "error" in case:

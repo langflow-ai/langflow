@@ -17,17 +17,21 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from lfx.services.flow_operations.edge_rules import Connections, Handles, read_handles
-from lfx.services.flow_operations.exceptions import (
-    FlowDataValidationError,
-    FlowOperationError,
-    FlowOperationValidationError,
-)
+from lfx.services.flow_operations.exceptions import FlowOperationValidationError
 from lfx.services.flow_operations.keyed_lists import ListIndex
 
 if TYPE_CHECKING:
     from lfx.services.flow_operations.schema import KeyedList
 
 _Container = TypeVar("_Container", dict[str, Any], list[Any])
+
+# Every node carries these as objects for its whole lifetime; operations patch
+# inside them instead of replacing them.
+NODE_OBJECT_PATHS: tuple[tuple[str, ...], ...] = (
+    ("data",),
+    ("data", "node"),
+    ("data", "node", "template"),
+)
 
 
 @dataclass
@@ -51,14 +55,6 @@ class GraphState:
     # Connections indexed so far, by node id. A node's entry, once built, covers
     # every edge at that node, and every one of those edges has its handles read.
     connections_by_node_id: dict[str, Connections] = field(default_factory=dict)
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.flow_data.get("nodes"), list):
-            msg = "flow.data.nodes must be a list"
-            raise FlowDataValidationError(msg)
-        if not isinstance(self.flow_data.get("edges"), list):
-            msg = "flow.data.edges must be a list"
-            raise FlowDataValidationError(msg)
 
     @property
     def nodes(self) -> list[Any]:
@@ -164,29 +160,22 @@ def _disconnect(connections: Connections, node_id: str, edge: dict[str, Any], ha
         connections.outputs[handles.output].discard(edge["id"])
 
 
-def build_graph_state(base_flow: dict[str, Any]) -> GraphState:
-    """Shallow-copy flow.data and index graph payloads by reference."""
-    state = GraphState(flow_data=dict(base_flow))
+def index_graph(flow_data: dict[str, Any]) -> GraphState:
+    """Shallow-copy flow.data and index its payloads by reference.
+
+    The graph must already pass structural validation: unique ids, and edges
+    whose endpoints exist.
+    """
+    state = GraphState(flow_data=dict(flow_data))
     for node in state.nodes:
-        node_id = require_node_id(node, context="flow.data.nodes", error_cls=FlowDataValidationError)
-        if node_id in state.nodes_by_id:
-            msg = f"flow.data.nodes: duplicate node id: {node_id!r}"
-            raise FlowDataValidationError(msg)
-        state.nodes_by_id[node_id] = node
-        state.base_flow_node_ids.add(node_id)
+        state.nodes_by_id[node["id"]] = node
+        state.base_flow_node_ids.add(node["id"])
 
     for edge in state.edges:
-        edge_id, source, target = require_edge_endpoints(
-            edge,
-            context="flow.data.edges",
-            error_cls=FlowDataValidationError,
-        )
-        if edge_id in state.edges_by_id:
-            msg = f"flow.data.edges: duplicate edge id: {edge_id!r}"
-            raise FlowDataValidationError(msg)
+        edge_id = edge["id"]
         state.edges_by_id[edge_id] = edge
-        state.edge_ids_by_node_id[source].add(edge_id)
-        state.edge_ids_by_node_id[target].add(edge_id)
+        state.edge_ids_by_node_id[edge["source"]].add(edge_id)
+        state.edge_ids_by_node_id[edge["target"]].add(edge_id)
 
     return state
 
@@ -212,41 +201,42 @@ def writable_node(state: GraphState, node_id: str) -> dict[str, Any]:
     return node
 
 
-def require_node_id(
-    node: Any,
-    *,
-    context: str,
-    error_cls: type[FlowOperationError] = FlowOperationValidationError,
-) -> str:
+def require_node_id(node: Any, *, context: str) -> str:
     if not isinstance(node, dict):
         msg = f"{context}: node must be a dict"
-        raise error_cls(msg)
+        raise FlowOperationValidationError(msg)
     node_id = node.get("id")
     if not isinstance(node_id, str) or not node_id:
         msg = f"{context}: node must have a non-empty string id"
-        raise error_cls(msg)
+        raise FlowOperationValidationError(msg)
     return node_id
 
 
-def require_edge_endpoints(
-    edge: Any,
-    *,
-    context: str,
-    error_cls: type[FlowOperationError] = FlowOperationValidationError,
-) -> tuple[str, str, str]:
+def require_node_objects(node: dict[str, Any], *, context: str) -> None:
+    """Check that a node carries ``data``, ``data.node`` and ``data.node.template`` as objects."""
+    value: Any = node
+    for object_path in NODE_OBJECT_PATHS:
+        value = value.get(object_path[-1]) if isinstance(value, dict) else None
+        if not isinstance(value, dict):
+            label = ".".join(str(part) for part in object_path)
+            msg = f"{context}: node {label} must be an object"
+            raise FlowOperationValidationError(msg)
+
+
+def require_edge_endpoints(edge: Any, *, context: str) -> tuple[str, str, str]:
     if not isinstance(edge, dict):
         msg = f"{context}: edge must be a dict"
-        raise error_cls(msg)
+        raise FlowOperationValidationError(msg)
     edge_id = edge.get("id")
     source = edge.get("source")
     target = edge.get("target")
     if not isinstance(edge_id, str) or not edge_id:
         msg = f"{context}: edge must have a non-empty string id"
-        raise error_cls(msg)
+        raise FlowOperationValidationError(msg)
     if not isinstance(source, str) or not source:
         msg = f"{context}: edge must have a non-empty string source"
-        raise error_cls(msg)
+        raise FlowOperationValidationError(msg)
     if not isinstance(target, str) or not target:
         msg = f"{context}: edge must have a non-empty string target"
-        raise error_cls(msg)
+        raise FlowOperationValidationError(msg)
     return edge_id, source, target

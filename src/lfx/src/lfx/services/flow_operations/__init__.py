@@ -9,13 +9,30 @@ has no transport or database dependencies, so the same rules apply wherever an
 operation comes from.
 """
 
-from lfx.services.flow_operations.apply import FlowOperationsApplyResult, apply_flow_operations
-from lfx.services.flow_operations.canonical import values_equal
+from lfx.services.flow_operations.apply import FlowOperationsApplyResult, apply_flow_operations, build_graph_state
+from lfx.services.flow_operations.canonical import (
+    canonical_edge,
+    canonical_graph,
+    canonical_graph_json,
+    canonical_json,
+    canonical_node,
+    graph_hash,
+    graphs_equal,
+    is_row_position,
+    json_type,
+    ordered_rows,
+    parse_handle,
+    values_equal,
+)
+from lfx.services.flow_operations.codes import MANUAL_CODES, GraphViolationCode, Resolution, resolution_of
+from lfx.services.flow_operations.diff import DerivedFlowOperations, derive_flow_operations, diff_flow_data
 from lfx.services.flow_operations.exceptions import (
     FlowDataValidationError,
     FlowOperationError,
+    FlowOperationReplayError,
     FlowOperationValidationError,
 )
+from lfx.services.flow_operations.ids import new_edge_id, new_table_row_id
 from lfx.services.flow_operations.ops import (
     AddEdgesOp,
     AddNodesOp,
@@ -36,40 +53,96 @@ from lfx.services.flow_operations.ops import (
     parse_flow_operations,
 )
 from lfx.services.flow_operations.python import PythonFlowOperationService
+from lfx.services.flow_operations.repair import REPAIRS, GraphFix, RepairResult, repair_flow_data
 from lfx.services.flow_operations.schema import KeyedList, NodeSchema, load_node_schema
 from lfx.services.flow_operations.service import BaseFlowOperationService
-from lfx.services.flow_operations.state import GraphState, build_graph_state, finalize_graph
+from lfx.services.flow_operations.state import GraphState, finalize_graph
+from lfx.services.flow_operations.table_rows import (
+    ROW_ID_KEY,
+    ROW_POSITION_KEY,
+    assign_changed_table_row_ids,
+    assign_row_ids,
+    assign_table_row_ids,
+    strip_flow_table_row_keys,
+    strip_node_table_row_keys,
+    strip_row_keys,
+)
+from lfx.services.flow_operations.validation import (
+    GraphViolation,
+    find_graph_violations,
+    find_table_violations,
+    remove_cut_edges,
+    validate_flow_data,
+)
 
 __all__ = [
+    "MANUAL_CODES",
+    "REPAIRS",
+    "ROW_ID_KEY",
+    "ROW_POSITION_KEY",
     "AddEdgesOp",
     "AddNodesOp",
     "BaseFlowOperationService",
     "DeleteEdgesOp",
     "DeleteNodeFieldUpdate",
     "DeleteNodesOp",
+    "DerivedFlowOperations",
     "FlowDataValidationError",
     "FlowOperation",
     "FlowOperationError",
+    "FlowOperationReplayError",
     "FlowOperationValidationError",
     "FlowOperationsApplyResult",
+    "GraphFix",
     "GraphState",
+    "GraphViolation",
+    "GraphViolationCode",
     "KeySelector",
     "KeyedList",
     "NodeFieldPath",
     "NodeFieldPathSegment",
     "NodeSchema",
     "PythonFlowOperationService",
+    "RepairResult",
+    "Resolution",
     "SetNodeFieldUpdate",
     "UpdateNodeEntry",
     "UpdateNodesOp",
     "apply_flow_operations",
+    "assign_changed_table_row_ids",
+    "assign_row_ids",
+    "assign_table_row_ids",
     "build_graph_state",
+    "canonical_edge",
+    "canonical_graph",
+    "canonical_graph_json",
+    "canonical_json",
+    "canonical_node",
     "deduplicate_delete_ids",
+    "derive_flow_operations",
+    "diff_flow_data",
     "dump_flow_operation",
     "finalize_graph",
+    "find_graph_violations",
+    "find_table_violations",
+    "graph_hash",
+    "graphs_equal",
+    "is_row_position",
+    "json_type",
     "load_node_schema",
+    "new_edge_id",
+    "new_table_row_id",
     "normalize_requested_ops",
+    "ordered_rows",
     "parse_flow_operation",
     "parse_flow_operations",
+    "parse_handle",
+    "remove_cut_edges",
+    "repair_flow_data",
+    "resolution_of",
+    "strip_flow_table_row_keys",
+    "strip_node_table_row_keys",
+    "strip_row_keys",
+    "validate_flow_data",
     "values_equal",
 ]
