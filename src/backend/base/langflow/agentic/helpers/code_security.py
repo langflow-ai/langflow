@@ -111,6 +111,7 @@ def _is_blocked_attribute(attr: str | None) -> bool:
 # Langflow's variable/secret service, never raw process env.
 DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
     ("os", "environ", "os.environ is forbidden — use Langflow's variable/secret service"),
+    ("gc", "garbage", "gc.garbage is forbidden in components (server object recovery)"),
     ("os.path", "os", "os.path.os is forbidden in components"),
     ("sys", "modules", "sys.modules is forbidden in components"),
     ("torch.package", "PackageImporter", "torch.package.PackageImporter is forbidden — external code loading"),
@@ -167,6 +168,9 @@ DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
 
 # Dangerous attribute calls: (module, method, violation_message)
 DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
+    ("gc", "get_objects", "gc.get_objects() is forbidden in components (server object recovery)"),
+    ("gc", "get_referrers", "gc.get_referrers() is forbidden in components (server object recovery)"),
+    ("gc", "get_referents", "gc.get_referents() is forbidden in components (server object recovery)"),
     ("asyncio", "create_subprocess_exec", "asyncio.create_subprocess_exec() is forbidden"),
     ("asyncio", "create_subprocess_shell", "asyncio.create_subprocess_shell() is forbidden"),
     ("asyncio.subprocess", "create_subprocess_exec", "asyncio.subprocess.create_subprocess_exec() is forbidden"),

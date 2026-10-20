@@ -1,0 +1,113 @@
+"""Generated components cannot recover objects from the server process."""
+
+from types import SimpleNamespace
+from unittest.mock import MagicMock
+
+import pytest
+from langflow.agentic.helpers.code_security import scan_code_security
+from langflow.agentic.helpers.validation import validate_component_runtime
+from langflow.agentic.services import user_components, user_components_overlay
+
+_RECOVERY_METHODS = ("get_objects", "get_referrers", "get_referents")
+_RECOVERY_CODE = """\
+import gc
+from lfx.custom import Component
+from lfx.io import Output
+from lfx.schema import Data
+
+class RecoveryComponent(Component):
+    outputs = [Output(name="result", method="build_output")]
+
+    def build_output(self) -> Data:
+        for candidate in gc.get_objects():
+            if callable(candidate) and getattr(candidate, "__name__", "") == "exec":
+                candidate("marker = True")
+        return Data(data={"done": True})
+"""
+
+
+@pytest.mark.parametrize("method", _RECOVERY_METHODS)
+@pytest.mark.parametrize(
+    "code",
+    [
+        "import gc\ngc.{method}()",
+        "import gc as collector\ncollector.{method}()",
+        "from gc import {method} as recover\nrecover()",
+        "from gc import *\n{method}()",
+        "import gc\nrecover = gc.{method}\nrecover()",
+        "import gc\ngetattr(gc, '{method}')()",
+        "import gc\nrecoverers = [gc.{method}]\nrecoverers[0]()",
+    ],
+)
+def test_rejects_gc_object_recovery(method: str, code: str) -> None:
+    assert not scan_code_security(code.format(method=method)).is_safe
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        "import gc\nobjects = gc.garbage",
+        "from gc import garbage as objects",
+        "from gc import *\nobjects = garbage",
+        "import gc\nobjects = getattr(gc, 'garbage')",
+    ],
+)
+def test_rejects_gc_garbage_object_pool(code: str) -> None:
+    assert not scan_code_security(code).is_safe
+
+
+def test_rejects_gc_callable_recovery_inside_component_output() -> None:
+    assert not scan_code_security(_RECOVERY_CODE).is_safe
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        "import gc\ngc.collect()",
+        "from gc import collect as collect_now\ncollect_now()",
+        "from gc import *\ncollect()",
+        "import gc\ncounts = gc.get_count()\nstats = gc.get_stats()",
+        "import gc\ntracked = gc.is_tracked([])\nenabled = gc.isenabled()",
+    ],
+)
+def test_preserves_gc_collection_and_statistics(code: str) -> None:
+    assert scan_code_security(code).is_safe
+
+
+async def test_runtime_validation_rejects_recovery_before_component_construction(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "lfx.services.deps.get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(allow_custom_components=True)),
+    )
+    builder = MagicMock(side_effect=AssertionError("unsafe code reached component construction"))
+    monkeypatch.setattr("lfx.custom.utils.build_custom_component_template", builder)
+
+    result = await validate_component_runtime(_RECOVERY_CODE, user_id="test-user")
+
+    assert result is not None
+    assert "failed security validation" in result
+    builder.assert_not_called()
+
+
+def test_registration_rejects_recovery_before_resolving_component_directory(monkeypatch) -> None:
+    resolve_directory = MagicMock(side_effect=AssertionError("unsafe code reached component persistence"))
+    monkeypatch.setattr(user_components, "_resolve_components_dir", resolve_directory)
+
+    with pytest.raises(user_components.UserComponentError, match="security validation"):
+        user_components.register_user_component(
+            user_id="test-user", class_name="RecoveryComponent", code=_RECOVERY_CODE
+        )
+
+    resolve_directory.assert_not_called()
+
+
+def test_overlay_rejects_persisted_recovery_before_component_construction(tmp_path, monkeypatch) -> None:
+    source = tmp_path / "RecoveryComponent.py"
+    source.write_text(_RECOVERY_CODE, encoding="utf-8")
+    builder = MagicMock(side_effect=AssertionError("unsafe code reached component construction"))
+    monkeypatch.setattr("lfx.custom.utils.build_custom_component_template", builder)
+
+    entry = user_components_overlay._build_overlay_entry(source, {})
+
+    assert entry is None
+    builder.assert_not_called()
