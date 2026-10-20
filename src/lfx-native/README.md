@@ -25,7 +25,7 @@ src/lfx-native/
     lfx-wasm/            the browser binding (wasm-bindgen)
       tests/             runs every shared fixture file through Node
   fixtures/              the shared golden fixtures: the engine's specification
-    tools/               the scripts that recorded their expected outputs
+    tools/               the scripts that check an engine against them
 ```
 
 The modules of `lfx::ops`:
@@ -126,4 +126,6 @@ npm --prefix crates/lfx-wasm test
 
 ## Fixtures
 
-The fixture files are the specification of the engine. Every runtime runs every file: the Rust runner, the Python runner and the Node runner. The expected outputs come from the Python engine and, for what only the editor has, from the editor's engine, never from the output of this crate. `fixtures/tools/README.md` says how they were recorded.
+The fixture files are the specification of the engine. Their expected outputs are written data that people review, and every engine must meet them. Every runtime runs every file: the Rust runner, the Python runner and the Node runner. Each case names the rule it checks, and every runner fails on a case without one.
+
+To add or change a case, write it by hand with its rule, as `fixtures/README.md` says. A rule change is a reviewed edit to the cases of that rule. The tools in `fixtures/tools/` only check an engine against the fixtures, and never write them.

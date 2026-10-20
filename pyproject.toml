@@ -452,8 +452,7 @@ external = ["RUF027"]
     "S101", # Use of assert (required for pytest)
 ]
 "src/lfx-native/fixtures/tools/*" = [
-    "INP",  # Standalone fixture generators, not a package
-    "S102", # exec runs the recorder's own functions, read from its source
+    "INP",  # Standalone fixture checkers, not a package
     "T201", # Print statements: these are CLI scripts
 ]
 "src/backend/tests/stress/*" = [
