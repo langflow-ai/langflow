@@ -201,7 +201,9 @@ class TestJqProgramSecurity:
     def _canary_env(self, monkeypatch):
         monkeypatch.setenv("LANGFLOW_SECRET_KEY", self.CANARY)
 
-    @pytest.mark.parametrize("payload", ["$ENV", "env", "env.LANGFLOW_SECRET_KEY", '"\\(env)"'])
+    @pytest.mark.parametrize(
+        "payload", ["$ENV", "env", "env.LANGFLOW_SECRET_KEY", '"\\(env)"', "{a: if true then 1, env else 2 end}"]
+    )
     def test_operations_json_query_rejects_env_access(self, payload):
         component = OperationsComponent(
             data=Data(data={"key1": "value1"}),
@@ -211,7 +213,7 @@ class TestJqProgramSecurity:
         with pytest.raises(ValueError, match="not allowed"):
             component.json_query()
 
-    @pytest.mark.parametrize("payload", ["$ENV", "env.LANGFLOW_SECRET_KEY"])
+    @pytest.mark.parametrize("payload", ["$ENV", "env.LANGFLOW_SECRET_KEY", "{a: if true then 1, env else 2 end}"])
     def test_operations_json_path_rejects_env_access(self, payload):
         component = OperationsComponent(
             data=Data(data={"key1": "value1"}),
@@ -232,7 +234,7 @@ class TestJqProgramSecurity:
         result = component.json_query()
         assert result.data == {"result": "value1"}
 
-    @pytest.mark.parametrize("payload", ["$ENV", "env"])
+    @pytest.mark.parametrize("payload", ["$ENV", "env", "{a: if true then 1, env else 2 end}"])
     def test_legacy_data_operations_json_query_rejects_env_access(self, payload):
         component = DataOperationsComponent(
             data=Data(data={"key1": "value1"}),
@@ -242,7 +244,7 @@ class TestJqProgramSecurity:
         with pytest.raises(ValueError, match="not allowed"):
             component.json_query()
 
-    @pytest.mark.parametrize("payload", ["$ENV", "env.LANGFLOW_SECRET_KEY"])
+    @pytest.mark.parametrize("payload", ["$ENV", "env.LANGFLOW_SECRET_KEY", "{a: if true then 1, env else 2 end}"])
     def test_legacy_parse_json_data_rejects_env_access(self, payload):
         component = ParseJSONDataComponent(
             input_value=Data(data={"key1": "value1"}),
@@ -855,6 +857,10 @@ class TestJqGuardLibjqConformance:
         "{a: .x, env: .y}",
         "{outer: {env: .a}}",
         ". as {env: $e} | $e",
+        "{a: if true then 1, 2 else 3 end, env: .a}",
+        "{a: if true then {env: .a} else {input: .b} end, inputs}",
+        "{if: .a, end: .b, env}",
+        "{a: .if, env: .end}",
         # getpath only indexes the value it is applied to.
         'getpath(["nested", "id"])',
         'getpath(["data", "id"])',
@@ -864,7 +870,18 @@ class TestJqGuardLibjqConformance:
     ]
 
     # Programs that demonstrably emit server environment data.
-    REJECTED = ["env", "$ENV", "{a: env}", "{(env.LF_JQ_CANARY_2550): 1}", "{$ENV}", '{"\\(env)": 1}']
+    REJECTED = [
+        "env",
+        "$ENV",
+        "{a: env}",
+        "{(env.LF_JQ_CANARY_2550): 1}",
+        "{$ENV}",
+        '{"\\(env)": 1}',
+        "{a: if true then 1, env else 2 end}",
+        "{a: if false then 1 else 2, env end}",
+        "{a: if true then if false then 0 else 1, env end else 2 end}",
+        "{a: if true then 1, {env: 2}, env else 3 end}",
+    ]
 
     # Programs the guard must reject that libjq evaluates but cannot emit --
     # ``{(env): 1}`` resolves the builtin and then fails on "object as object

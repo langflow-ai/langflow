@@ -1603,7 +1603,8 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
     graph dict for the caller to build from.
 
     Opt-in (``allow_public_custom_components`` is True): preserves stored custom code only when
-    the global custom-component policy is also permissive. When the global policy is restricted,
+    both global and admin-only custom-component policies permit anonymous execution.
+    When the global policy is restricted,
     this helper mirrors its trusted-code substitution. Both paths validate the expanded graph
     and return its grouped form, preserving group IDs in build status and graph snapshots.
 
@@ -1653,6 +1654,12 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
     except (AttributeError, IndexError, KeyError, TypeError, ValueError) as exc:
         msg = "Flow validation failed: malformed grouped graph."
         raise CustomComponentValidationError(msg) from exc
+
+    if settings.allow_public_custom_components and _admin_only_build_required(settings, is_superuser=False):
+        # Public execution never carries an administrator entitlement.
+        prepared = await prepare_flow_build_for_user(sanitized, is_superuser=False)
+        if prepared is not None:
+            sanitized = prepared
 
     if settings.allow_public_custom_components and settings.allow_custom_components:
         validate_flow_for_current_settings(sanitized)
@@ -1731,6 +1738,10 @@ def revalidate_public_executable_flow(flow_data: dict[str, Any]) -> None:
             )
             raise CustomComponentValidationError(message)
     else:
+        prepared = prepare_flow_build_for_user_from_cache(flow_data, is_superuser=False)
+        if prepared is not None:
+            flow_data.clear()
+            flow_data.update(prepared)
         substitute_outdated_component_code_in_place(flow_data, validate_public_execution=True)
         validate_flow_for_current_settings(flow_data)
 
