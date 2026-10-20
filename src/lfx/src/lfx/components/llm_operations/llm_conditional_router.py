@@ -2,12 +2,15 @@ from collections.abc import Mapping
 from math import isfinite
 from typing import Any
 
+from pydantic import ValidationError
+
 from lfx.base.models.decisions.runtime import evaluate_decision
 from lfx.base.models.decisions.schema import (
     DecisionConfigurationError,
     DecisionEvaluationError,
     DecisionOption,
     DecisionRequest,
+    validation_summary,
 )
 from lfx.base.models.unified_models import (
     get_llm,
@@ -356,14 +359,26 @@ class SmartRouterComponent(Component):
         if self.evaluation_error_action not in {"Stop with error", "Route to Else"}:
             msg = "Unknown evaluation error action."
             raise DecisionConfigurationError(msg)
-        options = tuple(
-            DecisionOption(
-                id=f"category_{i + 1}_result",
-                label=row.get("route_category", ""),
-                description=row.get("route_description", ""),
+        if len(self.routes) < 2:  # noqa: PLR2004 - a choice needs at least two options
+            msg = "Decision mode needs at least two routes; uncertain results already go to Else."
+            raise DecisionConfigurationError(msg)
+        if any(not str(row.get("route_category") or "").strip() for row in self.routes):
+            msg = "Every route needs a name in decision mode."
+            raise DecisionConfigurationError(msg)
+        try:
+            options = tuple(
+                DecisionOption(
+                    id=f"category_{i + 1}_result",
+                    label=row["route_category"],
+                    description=row.get("route_description") or "",
+                )
+                for i, row in enumerate(self.routes)
             )
-            for i, row in enumerate(self.routes)
-        )
+            request = DecisionRequest(
+                kind="choice", question=self.decision_question, context=self.input_text, options=options
+            )
+        except ValidationError as exc:
+            raise DecisionConfigurationError(validation_summary(exc)) from None
         thresholds = {
             option.id: (
                 threshold
@@ -372,9 +387,6 @@ class SmartRouterComponent(Component):
             )
             for option, row in zip(options, self.routes, strict=True)
         }
-        request = DecisionRequest(
-            kind="choice", question=self.decision_question, context=self.input_text, options=options
-        )
         evidence = {
             "options": [option.model_dump() for option in options],
             "minimum_probability": threshold,
@@ -401,16 +413,21 @@ class SmartRouterComponent(Component):
             # Never forward the Language Model's API key to a decision provider.
             result = evaluate_decision(request, model=self.decision_model, user_id=self.user_id)
         except DecisionEvaluationError as exc:
-            evidence.update(reason="evaluation_error", error={"category": type(exc).__name__, "message": str(exc)})
+            evidence.update(reason="evaluation_error", error={"category": exc.category, "message": str(exc)})
             if stop:
                 raise
             return ""
+        except (PermissionError, DecisionConfigurationError) as exc:
+            # Always stops; the evidence still records why.
+            category = "permission_denied" if isinstance(exc, PermissionError) else "configuration_error"
+            evidence.update(reason=category, error={"category": category, "message": str(exc)})
+            raise
         evidence["result"] = result.model_dump(exclude_none=True)
         if result.status == "refusal":
             evidence["reason"] = "refusal"
             if stop:
                 msg = "The decision provider refused the evaluation."
-                raise DecisionEvaluationError(msg)
+                raise DecisionEvaluationError(msg, category="refusal")
             return ""
         top_probability = max(result.probabilities.values())
         winners = [option_id for option_id, p in result.probabilities.items() if p == top_probability]

@@ -718,3 +718,77 @@ async def test_decision_router_hard_failure_never_records_or_caches_else(monkeyp
         router._get_categorization()
     assert router._categorization_result is None
     assert router._decision_evidence["activated_branch"] is None
+    assert router._decision_evidence["reason"] == "permission_denied"
+
+
+def _connected_router(**settings):
+    from types import SimpleNamespace
+
+    _, router, _ = _decision_graph(**settings)
+    router._vertex = SimpleNamespace(
+        outgoing_edges=[SimpleNamespace(source_handle=SimpleNamespace(name="default_result"))]
+    )
+    return router
+
+
+async def test_decision_router_accepts_a_route_with_no_description(monkeypatch):
+    seen = []
+
+    def evaluate(request, **_kwargs):
+        seen.append(request)
+        return _decision_result()
+
+    monkeypatch.setattr("lfx.components.llm_operations.llm_conditional_router.evaluate_decision", evaluate)
+    routes = [
+        {"route_category": "Positive", "route_description": None, "output_value": ""},
+        {"route_category": "Negative", "route_description": "bad", "output_value": ""},
+    ]
+    router = _connected_router(routes=routes)
+    assert router._get_categorization() == "Positive"
+    assert seen[0].options[0].description == ""
+
+
+async def test_decision_router_requires_named_routes_before_inference(monkeypatch):
+    import pytest
+    from lfx.base.models.decisions.schema import DecisionConfigurationError
+
+    calls = []
+    monkeypatch.setattr(
+        "lfx.components.llm_operations.llm_conditional_router.evaluate_decision",
+        lambda *args, **_kwargs: calls.append(args),
+    )
+    routes = [{"route_category": "", "route_description": "x"}, {"route_category": "Negative"}]
+    router = _connected_router(routes=routes)
+    with pytest.raises(DecisionConfigurationError, match="Every route needs a name"):
+        router._get_categorization()
+    assert not calls
+
+
+async def test_decision_router_evidence_keeps_the_error_category(monkeypatch):
+    from lfx.base.models.decisions.schema import DecisionEvaluationError
+
+    def evaluate(*_args, **_kwargs):
+        msg = "TypeSafe decision request timed out."
+        raise DecisionEvaluationError(msg, category="timeout")
+
+    monkeypatch.setattr("lfx.components.llm_operations.llm_conditional_router.evaluate_decision", evaluate)
+    router = _connected_router(evaluation_error_action="Route to Else")
+    assert router._get_categorization() == ""
+    assert router._decision_evidence["error"] == {
+        "category": "timeout",
+        "message": "TypeSafe decision request timed out.",
+    }
+    assert router._decision_evidence["activated_branch"] == "default_result"
+
+
+async def test_decision_router_needs_two_routes(monkeypatch):
+    import pytest
+    from lfx.base.models.decisions.schema import DecisionConfigurationError
+
+    monkeypatch.setattr(
+        "lfx.components.llm_operations.llm_conditional_router.evaluate_decision",
+        lambda *_args, **_kwargs: pytest.fail("inference must not run"),
+    )
+    router = _connected_router(routes=[{"route_category": "Positive", "route_description": "good"}])
+    with pytest.raises(DecisionConfigurationError, match="at least two routes"):
+        router._get_categorization()

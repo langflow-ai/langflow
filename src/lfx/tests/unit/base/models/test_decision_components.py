@@ -144,3 +144,24 @@ def test_row_added_in_the_editor_accepts_blank_description(component_class, monk
     monkeypatch.setattr(component_module, "evaluate_decision", evaluate)
     component.evaluate()
     assert [option.description for option in captured[0].options] == ["", ""]
+
+
+@pytest.mark.parametrize(
+    ("candidates", "cause"),
+    [
+        ([{"id": "a", "label": "Low"}, {"id": "a", "label": "High"}], "IDs must be unique"),
+        ([{"id": "a", "label": "Low"}], "at least two"),
+        ([{"id": "a", "label": "Low", "unexpected": 1}, {"id": "b", "label": "High"}], "unexpected"),
+    ],
+)
+def test_invalid_options_table_is_a_clear_configuration_error(candidates, cause):
+    component = TypeSafeDecisionComponent()
+    component.set(
+        model=[{"provider": "TypeSafe", "name": "jev-latest"}],
+        kind="Choice",
+        context="text",
+        question="Which applies?",
+        candidates=candidates,
+    )
+    with pytest.raises(DecisionConfigurationError, match=cause):
+        component.evaluate()

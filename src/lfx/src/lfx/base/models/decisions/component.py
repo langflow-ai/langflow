@@ -1,7 +1,14 @@
 """Shared input and output contract for the three standalone decision components."""
 
+from pydantic import ValidationError
+
 from lfx.base.models.decisions.runtime import evaluate_decision
-from lfx.base.models.decisions.schema import DecisionConfigurationError, DecisionOption, DecisionRequest
+from lfx.base.models.decisions.schema import (
+    DecisionConfigurationError,
+    DecisionOption,
+    DecisionRequest,
+    validation_summary,
+)
 from lfx.base.models.unified_models import handle_model_input_update
 from lfx.base.models.unified_models.model_catalog import get_decision_model_options
 from lfx.custom.custom_component.component import Component
@@ -55,14 +62,19 @@ class DecisionComponent(Component):
             msg = f"Select a {self.provider} decision model."
             raise DecisionConfigurationError(msg)
         kind = self.kind.lower()
-        candidates = tuple(DecisionOption.model_validate(item) for item in self.candidates) if kind != "boolean" else ()
-        request = DecisionRequest(
-            kind=kind,
-            question=self.question,
-            context=self.context,
-            options=candidates if kind == "choice" else (),
-            levels=candidates if kind == "score" else (),
-        )
+        try:
+            candidates = (
+                tuple(DecisionOption.model_validate(item) for item in self.candidates) if kind != "boolean" else ()
+            )
+            request = DecisionRequest(
+                kind=kind,
+                question=self.question,
+                context=self.context,
+                options=candidates if kind == "choice" else (),
+                levels=candidates if kind == "score" else (),
+            )
+        except ValidationError as exc:
+            raise DecisionConfigurationError(validation_summary(exc)) from None
         result = evaluate_decision(
             request,
             model=self.model,
