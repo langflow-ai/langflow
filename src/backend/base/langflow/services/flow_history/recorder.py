@@ -47,7 +47,6 @@ from lfx.services.flow_operations import (
     FlowOperation,
     FlowOperationError,
     GraphFix,
-    UpdateMetadataOp,
     UpdateNodesOp,
     dump_flow_operation,
     find_graph_violations,
@@ -421,14 +420,6 @@ def _items(operation: FlowOperation):
         return operation.ids, lambda chunk: DeleteEdgesOp(type="delete_edges", ids=chunk)
     if isinstance(operation, UpdateNodesOp):
         return operation.updates, lambda chunk: UpdateNodesOp(type="update_nodes", updates=chunk)
-    if isinstance(operation, UpdateMetadataOp):
-        entries = [("set", key, value) for key, value in operation.fields.items()]
-        entries += [("delete", key, None) for key in operation.delete_keys]
-        return entries, lambda chunk: UpdateMetadataOp(
-            type="update_metadata",
-            fields={key: value for kind, key, value in chunk if kind == "set"},
-            delete_keys=[key for kind, key, _ in chunk if kind == "delete"],
-        )
     return [], lambda _chunk: operation
 
 
