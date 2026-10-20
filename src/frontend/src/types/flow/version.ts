@@ -8,6 +8,10 @@ export type FlowVersionEntry = {
   created_at: string;
   /** Resolved server-side; absent for versions whose author was deleted. */
   username?: string | null;
+  /** The history revision this version's graph belongs to; null if saved before the flow had history. */
+  operation_revision?: number | null;
+  /** The kept original of a repaired flow: viewable and exportable, not restorable. */
+  view_only?: boolean;
 };
 
 export type FlowVersionEntryWithData = FlowVersionEntry & {

@@ -51,6 +51,9 @@ export type UtilityStoreType = {
   setA2aEnabled: (a2aEnabled: boolean) => void;
   agenticExperienceEnabled: boolean;
   setAgenticExperienceEnabled: (agenticExperienceEnabled: boolean) => void;
+  /** Whether graph writes are recorded, so the version sidebar shows the history timeline. */
+  flowHistoryEnabled: boolean;
+  setFlowHistoryEnabled: (flowHistoryEnabled: boolean) => void;
   // Mirror of LANGFLOW_ASSISTANT_MAX_MESSAGE_LENGTH — the Assistant composer enforces the
   // server's cap instead of a UI-local constant that can drift below it.
   assistantMaxMessageLength: number;

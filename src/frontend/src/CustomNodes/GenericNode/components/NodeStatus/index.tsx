@@ -297,6 +297,16 @@ export default function NodeStatus({
 
   useEffect(() => {
     if (buildStatus === BuildStatus.BUILT && !isBuilding && !isReadOnly) {
+      // Stamp the version a node was built with only when it changes: this
+      // also runs when a past build's status is restored on open, and a
+      // write that changes nothing would still mark the flow as edited.
+      const current = useFlowStore.getState().getNode(nodeId);
+      if (
+        !current ||
+        (current.data as NodeDataType).node?.lf_version === version
+      ) {
+        return;
+      }
       setNode(
         nodeId,
         (old) => {

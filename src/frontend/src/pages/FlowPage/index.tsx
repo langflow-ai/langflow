@@ -3,6 +3,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { useTranslation } from "react-i18next";
 import { useBlocker, useParams } from "react-router-dom";
 import { AssistantPanel } from "@/components/core/assistantPanel";
+import FlowHistoryRepairDialog from "@/components/core/flowHistoryRepairDialog";
 import { FlowPageSlidingContainerContent } from "@/components/core/playgroundComponent/sliding-container/components/flow-page-sliding-container";
 import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import {
@@ -396,6 +397,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
           )}
         </>
       )}
+      <FlowHistoryRepairDialog />
     </>
   );
 }

@@ -1,0 +1,407 @@
+import { createHash } from "crypto";
+import { readFileSync } from "fs";
+import { cloneDeep } from "lodash";
+import { join } from "path";
+import golden from "../../../../../lfx-native/fixtures/apply_cases.json";
+import mergeCases from "../../../../../lfx-native/fixtures/merge_cases.json";
+import propertyCases from "../../../../../lfx-native/fixtures/property_cases.json";
+import {
+  applyFlowOperations,
+  type FlowGraph,
+  type FlowOperation,
+  FlowOperationError,
+} from "../apply";
+import { canonicalGraphJson, graphsEqual } from "../canonical";
+import { keyedListAt, NODE_SCHEMA } from "../schema";
+
+type GoldenCase = {
+  name: string;
+  rule?: string;
+  base: unknown;
+  operations: FlowOperation[];
+  expected?: unknown;
+  forward_operations?: FlowOperation[];
+  error?: string;
+  code?: string;
+};
+
+type MergeCase = {
+  name: string;
+  rule?: string;
+  transactions: Record<string, FlowOperation[]>;
+  order: string[];
+  outcomes: Record<string, "applied" | { error: string; code: string }>;
+  expected: unknown;
+};
+
+type PropertySequence = {
+  name: string;
+  rule?: string;
+  transactions: FlowOperation[][];
+  graph_hash: string;
+};
+
+const ENGINE_DIR = join(
+  __dirname,
+  "../../../../../lfx/src/lfx/services/flow_operations",
+);
+
+function caught(run: () => unknown): FlowOperationError {
+  try {
+    run();
+  } catch (error) {
+    expect(error).toBeInstanceOf(FlowOperationError);
+    return error as FlowOperationError;
+  }
+  throw new Error("expected the operations to be refused");
+}
+
+/** Compare the ids a delete names as a set: node and edge order is not state. */
+function ignoringIdOrder(operations: unknown[]): unknown[] {
+  return operations.map((operation) => {
+    const { type, ids } = operation as { type: string; ids?: string[] };
+    return type === "delete_nodes" || type === "delete_edges"
+      ? { ...(operation as object), ids: [...ids!].sort() }
+      : operation;
+  });
+}
+
+/** Compare table rows as a collection keyed by `__id__`: a table's order is its rows' positions, not the array. */
+function ignoringRowOrder(flowData: unknown): unknown {
+  const graph = cloneDeep(flowData) as FlowGraph;
+  for (const node of graph.nodes ?? []) {
+    const template = (node.data as { node?: { template?: object } })?.node
+      ?.template as Record<string, { value?: unknown }> | undefined;
+    for (const [name, field] of Object.entries(template ?? {})) {
+      const path = ["data", "node", "template", name, "value"];
+      if (
+        Array.isArray(field?.value) &&
+        keyedListAt(node, path) === NODE_SCHEMA.table
+      )
+        field.value = [...(field.value as { __id__: string }[])].sort((a, b) =>
+          a.__id__ < b.__id__ ? -1 : a.__id__ > b.__id__ ? 1 : 0,
+        );
+    }
+  }
+  return graph;
+}
+
+function graphHash(graph: FlowGraph): string {
+  return createHash("sha256")
+    .update(canonicalGraphJson(graph), "utf8")
+    .digest("hex");
+}
+
+describe("node_schema.json", () => {
+  it("is a byte-identical copy of the engine's", () => {
+    const engine = readFileSync(join(ENGINE_DIR, "node_schema.json"));
+    const editor = readFileSync(join(__dirname, "../node_schema.json"));
+
+    expect(editor.equals(engine)).toBe(true);
+  });
+});
+
+// The same cases the server's engine runs: any disagreement between the two
+// appliers fails one side or the other.
+describe("applyFlowOperations matches the server engine", () => {
+  it.each((golden as { cases: GoldenCase[] }).cases.map((c) => [c.name, c]))(
+    "%s",
+    (_name, testCase) => {
+      expect(testCase.rule).toBeTruthy();
+      const base = cloneDeep(testCase.base);
+
+      if (testCase.error) {
+        const error = caught(() =>
+          applyFlowOperations(base, cloneDeep(testCase.operations)),
+        );
+        expect(error.name).toBe(testCase.error);
+        expect(error.code).toBe(testCase.code);
+      } else {
+        const result = applyFlowOperations(
+          base,
+          cloneDeep(testCase.operations),
+        );
+        expect(ignoringRowOrder(result.flowData)).toEqual(
+          ignoringRowOrder(testCase.expected),
+        );
+        // Cases whose normalized operations equal what they submit leave
+        // forward_operations out.
+        expect(ignoringIdOrder(result.forwardOperations)).toEqual(
+          ignoringIdOrder(testCase.forward_operations ?? testCase.operations),
+        );
+      }
+      expect(base).toEqual(testCase.base);
+    },
+  );
+});
+
+describe("transactions applied in order merge as on the server", () => {
+  const document = mergeCases as unknown as {
+    base: FlowGraph;
+    cases: MergeCase[];
+  };
+
+  it.each(document.cases.map((c) => [c.name, c]))("%s", (_name, testCase) => {
+    expect(testCase.rule).toBeTruthy();
+    let graph = cloneDeep(document.base);
+    const outcomes: MergeCase["outcomes"] = {};
+    for (const name of testCase.order) {
+      const before = cloneDeep(graph);
+      try {
+        graph = applyFlowOperations(
+          graph,
+          cloneDeep(testCase.transactions[name]),
+        ).flowData;
+        outcomes[name] = "applied";
+      } catch (error) {
+        expect(error).toBeInstanceOf(FlowOperationError);
+        const { name: errorName, code } = error as FlowOperationError;
+        outcomes[name] = { error: errorName, code };
+        expect(graph).toEqual(before);
+      }
+    }
+
+    expect(outcomes).toEqual(testCase.outcomes);
+    expect(graphsEqual(graph, testCase.expected as FlowGraph)).toBe(true);
+  });
+});
+
+describe("the fixed property sequences replay to their hashes", () => {
+  const document = propertyCases as unknown as {
+    base: FlowGraph;
+    sequences: PropertySequence[];
+  };
+
+  it.each(document.sequences.map((s) => [s.name, s]))(
+    "%s",
+    (_name, sequence) => {
+      expect(sequence.rule).toBeTruthy();
+      let graph = cloneDeep(document.base);
+      for (const transaction of sequence.transactions) {
+        graph = applyFlowOperations(graph, cloneDeep(transaction)).flowData;
+      }
+
+      expect(graphHash(graph)).toBe(sequence.graph_hash);
+    },
+  );
+});
+
+function deepFreeze<T>(value: T): T {
+  if (value !== null && typeof value === "object") {
+    for (const item of Object.values(value)) deepFreeze(item);
+    Object.freeze(value);
+  }
+  return value;
+}
+
+describe("applyFlowOperations copies on write", () => {
+  it("never changes the graph it is given", () => {
+    const document = propertyCases as unknown as {
+      base: FlowGraph;
+      sequences: PropertySequence[];
+    };
+    for (const sequence of document.sequences) {
+      let graph = deepFreeze(cloneDeep(document.base));
+      for (const transaction of sequence.transactions) {
+        graph = deepFreeze(
+          applyFlowOperations(graph, cloneDeep(transaction), { inverse: true })
+            .flowData,
+        );
+      }
+    }
+  });
+
+  const node = (id: string) => ({
+    id,
+    data: { node: { template: { text: { value: id } } } },
+  });
+
+  it("shares every node an operation did not touch", () => {
+    const base = { nodes: [node("a"), node("b")], edges: [] };
+
+    const { flowData } = applyFlowOperations(base, [
+      {
+        type: "update_nodes",
+        updates: [
+          {
+            id: "a",
+            op: "set_field",
+            path: ["data", "node", "template", "text", "value"],
+            value: "changed",
+          },
+        ],
+      },
+    ]);
+
+    expect(flowData.nodes[1]).toBe(base.nodes[1]);
+    expect(flowData.nodes[0]).not.toBe(base.nodes[0]);
+    expect(base.nodes[0].data.node.template.text.value).toBe("a");
+  });
+});
+
+describe("applyFlowOperations reads only the protocol's shapes", () => {
+  const base = () => ({
+    nodes: [
+      { id: "a", data: { node: { template: { api_key: { value: "" } } } } },
+    ],
+    edges: [],
+  });
+  const update = (extra: object = {}) => ({
+    id: "a",
+    op: "set_field",
+    path: ["data", "node", "template", "api_key", "value"],
+    value: null,
+    ...extra,
+  });
+
+  it("applies a write that changes a value's type", () => {
+    // History reads set literal secrets to null, so playback writes them as they are.
+    const { flowData } = applyFlowOperations(base(), [
+      { type: "update_nodes", updates: [update()] },
+    ]);
+
+    expect(flowData.nodes[0]).toEqual({
+      id: "a",
+      data: { node: { template: { api_key: { value: null } } } },
+    });
+  });
+
+  it.each(["from_type", "expect", "template_field", "secret", "secrets"])(
+    "refuses a write that carries %s",
+    (key) => {
+      const error = caught(() =>
+        applyFlowOperations(base(), [
+          { type: "update_nodes", updates: [update({ [key]: "string" })] },
+        ]),
+      );
+
+      expect(error.message).toBe(`update_nodes[0]: unexpected key ${key}`);
+    },
+  );
+
+  it("names an operation that is not an object", () => {
+    const error = caught(() =>
+      applyFlowOperations(base(), [[] as unknown as FlowOperation]),
+    );
+
+    expect(error.message).toBe("operation must be an object");
+  });
+
+  it("names an operation without a type", () => {
+    const error = caught(() =>
+      applyFlowOperations(base(), [{ ids: ["a"] } as unknown as FlowOperation]),
+    );
+
+    expect(error.message).toBe("operation type is missing");
+  });
+
+  it("refuses update_metadata as an unsupported operation type", () => {
+    const error = caught(() =>
+      applyFlowOperations(base(), [
+        { type: "update_metadata", fields: { name: "x" } },
+      ]),
+    );
+
+    expect(error.message).toBe("Unsupported operation type: update_metadata");
+  });
+});
+
+describe("applyFlowOperations while restoring", () => {
+  const graph = () => ({
+    nodes: [
+      { id: "s", data: { node: { template: {}, outputs: [{ name: "out" }] } } },
+      { id: "d", data: { node: { template: { one: { type: "str" } } } } },
+    ],
+    edges: [],
+  });
+  const stale = {
+    type: "add_edges",
+    edges: [
+      {
+        id: "e",
+        source: "s",
+        target: "d",
+        sourceHandle: "{œnameœ:œoutœ}",
+        targetHandle: "{œfieldNameœ:œgoneœ}",
+        data: {
+          sourceHandle: { name: "out" },
+          targetHandle: { fieldName: "gone" },
+        },
+      },
+    ],
+  };
+
+  it("puts back an edge the rules would refuse", () => {
+    expect(caught(() => applyFlowOperations(graph(), [stale])).code).toBe(
+      "EDGE_HANDLE_NOT_FOUND",
+    );
+    expect(
+      applyFlowOperations(graph(), [stale], { restoring: true }).flowData.edges,
+    ).toHaveLength(1);
+  });
+});
+
+describe("applyFlowOperations changes an edge only by delete and add", () => {
+  const edge = (field: string) => ({
+    id: "e",
+    source: "s",
+    target: "d",
+    sourceHandle: "{œnameœ:œoutœ}",
+    targetHandle: `{œfieldNameœ:œ${field}œ}`,
+    data: {
+      sourceHandle: { name: "out" },
+      targetHandle: { fieldName: field },
+    },
+  });
+  const graph = () => ({
+    nodes: [
+      { id: "s", data: { node: { template: {}, outputs: [{ name: "out" }] } } },
+      {
+        id: "d",
+        data: {
+          node: { template: { one: { type: "str" }, two: { type: "str" } } },
+        },
+      },
+    ],
+    edges: [edge("one")],
+  });
+
+  it("refuses update_edges as an unsupported operation type", () => {
+    const error = caught(() =>
+      applyFlowOperations(graph(), [
+        {
+          type: "update_edges",
+          updates: [
+            {
+              id: "e",
+              op: "set_field",
+              path: ["data", "targetHandle"],
+              value: { fieldName: "two" },
+            },
+          ],
+        },
+      ]),
+    );
+
+    expect(error.name).toBe("FlowOperationValidationError");
+    expect(error.code).toBe("FLOW_OPERATION_INVALID");
+    expect(error.message).toBe("Unsupported operation type: update_edges");
+  });
+
+  it("moves an edge to another input with a delete and an add of the same id", () => {
+    const { flowData, inverseOperations } = applyFlowOperations(
+      graph(),
+      [
+        { type: "delete_edges", ids: ["e"] },
+        { type: "add_edges", edges: [edge("two")] },
+      ],
+      { inverse: true },
+    );
+
+    expect(flowData.edges).toEqual([edge("two")]);
+    expect(inverseOperations).toEqual([
+      [{ type: "add_edges", edges: [edge("one")] }],
+      [{ type: "delete_edges", ids: ["e"] }],
+    ]);
+  });
+});

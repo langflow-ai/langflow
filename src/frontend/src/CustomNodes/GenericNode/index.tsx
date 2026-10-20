@@ -12,6 +12,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { CustomNodeStatus } from "@/customization/components/custom-NodeStatus";
+import { useNodeChange } from "@/hooks/use-history-changes";
 import UpdateComponentModal from "@/modals/updateComponentModal";
 import { useAlternate } from "@/shared/hooks/use-alternate";
 import type { FlowStoreType } from "@/types/zustand/flow";
@@ -30,11 +31,13 @@ import { useTypesStore } from "../../stores/typesStore";
 import { useUtilityStore } from "../../stores/utilityStore";
 import type { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
 import type { NodeDataType } from "../../types/flow";
+import { authorColor } from "../../utils/author-color";
 import { scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
 import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
 import NodeDescription from "./components/NodeDescription";
+import NodeHistoryChange from "./components/NodeHistoryChange";
 import NodeLegacyComponent from "./components/NodeLegacyComponent";
 import NodeName from "./components/NodeName";
 import NodeOutputs from "./components/NodeOutputParameter/NodeOutputs";
@@ -114,6 +117,8 @@ function GenericNode({
   );
   const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
   const isReadOnly = useIsFlowReadOnly(currentFlowId);
+  // Set only while a point in the flow's history is previewed.
+  const historyChange = useNodeChange(data.id);
 
   const blockedComponentTypes = useUtilityStore(
     (state) => state.blockedComponentTypes,
@@ -610,7 +615,24 @@ function GenericNode({
           "generic-node-div group/node relative rounded-xl border shadow-sm hover:shadow-md",
           !hasOutputs && "pb-4",
         )}
+        style={
+          historyChange
+            ? {
+                outline: `2px solid ${authorColor(historyChange.actor.id)}`,
+                outlineOffset: 3,
+              }
+            : undefined
+        }
+        data-history-change={
+          historyChange ? (historyChange.added ? "added" : "edited") : undefined
+        }
       >
+        {historyChange && (
+          <NodeHistoryChange
+            change={historyChange}
+            template={data.node?.template}
+          />
+        )}
         {openUpdateModal && !isReadOnly && (
           <UpdateComponentModal
             open={openUpdateModal}

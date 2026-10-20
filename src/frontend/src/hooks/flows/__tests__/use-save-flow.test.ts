@@ -1,5 +1,8 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: store mocks intentionally accept multiple selector shapes
 import { renderHook, waitFor } from "@testing-library/react";
+import useFlowHistoryRepairStore from "@/stores/flowHistoryRepairStore";
+import useFlowSaveCauseStore from "@/stores/flowSaveCauseStore";
+import useVersionPreviewStore from "@/stores/versionPreviewStore";
 import useSaveFlow from "../use-save-flow";
 
 const mockSetFlows = jest.fn();
@@ -630,5 +633,156 @@ describe("useSaveFlow", () => {
     await expect(result.current()).resolves.toBeUndefined();
 
     expect(mockSetCurrentFlow).toHaveBeenCalledTimes(1);
+  });
+
+  describe("while history is open", () => {
+    afterEach(() => useVersionPreviewStore.getState().clearPreview());
+
+    // The canvas then shows a point in the flow's past. A save that carried it
+    // wrote that point back over the flow.
+    it("sends no graph and no precondition, only settings", async () => {
+      useVersionPreviewStore
+        .getState()
+        .setPreview([], [], "Oct 9, 10:41 AM", "revision:2");
+      const { result } = renderHook(() => useSaveFlow());
+
+      await result.current();
+
+      const sent = mockMutate.mock.calls[0][0];
+      expect("data" in sent).toBe(false);
+      expect(sent.versionToken).toBeNull();
+      expect(sent.name).toBe("Saved Flow");
+    });
+
+    it("sends the graph again once history is closed", async () => {
+      const { result } = renderHook(() => useSaveFlow());
+
+      await result.current();
+
+      expect("data" in mockMutate.mock.calls[0][0]).toBe(true);
+    });
+  });
+
+  describe("history refusals the server can repair", () => {
+    const refusal = (detail: object) => ({ response: { data: { detail } } });
+
+    beforeEach(() => {
+      useFlowHistoryRepairStore.setState({ problem: null });
+    });
+
+    it("sends no request id: a retried save is recognized by its graph", async () => {
+      const { result } = renderHook(() => useSaveFlow());
+
+      await result.current();
+
+      expect(mockMutate.mock.calls[0][0]).not.toHaveProperty("request_id");
+    });
+
+    it.each([
+      ["FLOW_REVISION_MISMATCH", "repair_revision_mismatch"],
+      ["FLOW_GRAPH_INVALID", "repair_invalid_graph"],
+    ])(
+      "offers to repair a %s refusal and resends with %s",
+      async (code, flag) => {
+        mockMutate.mockImplementationOnce((_payload, options) =>
+          options.onError(
+            refusal({
+              code,
+              graph: "stored",
+              violations: [{ code: "EDGE_ENDPOINT_INVALID" }],
+            }),
+          ),
+        );
+        const { result } = renderHook(() => useSaveFlow());
+
+        await expect(result.current()).rejects.toBeDefined();
+
+        const problem = useFlowHistoryRepairStore.getState().problem;
+        expect(problem?.code).toBe(code);
+        // Offered instead of the generic save error.
+        expect(mockSetErrorData).not.toHaveBeenCalled();
+
+        await problem!.repair();
+
+        const resent = mockMutate.mock.calls[1][0];
+        expect(resent[flag]).toBe(true);
+      },
+    );
+
+    it("reports an invalid graph with no violations as a save error, not a repair", async () => {
+      const message =
+        "The submitted flow data is not valid JSON: it nests deeper than 127 levels.";
+      mockMutate.mockImplementationOnce((_payload, options) =>
+        options.onError(
+          refusal({
+            code: "FLOW_GRAPH_INVALID",
+            graph: "submitted",
+            violations: [],
+            message,
+          }),
+        ),
+      );
+      const { result } = renderHook(() => useSaveFlow());
+
+      await expect(result.current()).rejects.toBeDefined();
+
+      expect(useFlowHistoryRepairStore.getState().problem).toBeNull();
+      expect(mockSetErrorData).toHaveBeenCalledWith(
+        expect.objectContaining({ list: [message] }),
+      );
+      expect(mockMutate).toHaveBeenCalledTimes(1);
+    });
+
+    it("reports other refusals as a save error", async () => {
+      mockMutate.mockImplementationOnce((_payload, options) =>
+        options.onError(refusal({ code: "SOMETHING_ELSE", message: "nope" })),
+      );
+      const { result } = renderHook(() => useSaveFlow());
+
+      await expect(result.current()).rejects.toBeDefined();
+
+      expect(useFlowHistoryRepairStore.getState().problem).toBeNull();
+      expect(mockSetErrorData).toHaveBeenCalledWith(
+        expect.objectContaining({ list: ["nope"] }),
+      );
+    });
+  });
+
+  describe("cause", () => {
+    afterEach(() => useFlowSaveCauseStore.setState({ pending: null }));
+
+    it("sends a pending cause with the next save, and only that one", async () => {
+      useFlowSaveCauseStore
+        .getState()
+        .setPendingCause("flow-1", "upgrade_component");
+      const { result } = renderHook(() => useSaveFlow());
+
+      await result.current();
+      await result.current();
+
+      expect(mockMutate.mock.calls[0][0].cause).toBe("upgrade_component");
+      expect(mockMutate.mock.calls[1][0]).not.toHaveProperty("cause");
+    });
+
+    it("sends no cause left over from another flow", async () => {
+      useFlowSaveCauseStore.getState().setPendingCause("flow-2", "edit_code");
+      const { result } = renderHook(() => useSaveFlow());
+
+      await result.current();
+
+      expect(mockMutate.mock.calls[0][0]).not.toHaveProperty("cause");
+      expect(useFlowSaveCauseStore.getState().pending).toBeNull();
+    });
+
+    it("keeps the cause when a save has nothing to send", async () => {
+      useFlowSaveCauseStore.getState().setPendingCause("flow-1", "edit_code");
+      flowStoreState.currentFlow = flowsManagerState.currentFlow;
+      const { result } = renderHook(() => useSaveFlow());
+
+      await result.current();
+
+      expect(mockMutate).not.toHaveBeenCalled();
+      expect(useFlowSaveCauseStore.getState().pending?.cause).toBe("edit_code");
+    });
   });
 });

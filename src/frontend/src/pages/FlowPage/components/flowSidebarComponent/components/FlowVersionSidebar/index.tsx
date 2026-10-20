@@ -6,11 +6,28 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import type { RevisionEntry } from "@/types/flow/revision";
 import DeleteConfirmDialog from "./components/DeleteConfirmDialog";
+import TimelineEntryItem from "./components/TimelineEntryItem";
 import VersionListItem from "./components/VersionListItem";
 import { CURRENT_DRAFT_ID } from "./constants";
 import type { FlowVersionSidebarContentProps } from "./types";
 import { useFlowVersionSidebar } from "./use-flow-version-sidebar";
+import { dayLabel } from "./utils";
+
+function groupByDay(
+  entries: RevisionEntry[],
+  label: (dateStr: string | null) => string,
+): { day: string; entries: RevisionEntry[] }[] {
+  const groups: { day: string; entries: RevisionEntry[] }[] = [];
+  for (const entry of entries) {
+    const day = label(entry.created_at);
+    const last = groups[groups.length - 1];
+    if (last?.day === day) last.entries.push(entry);
+    else groups.push({ day, entries: [entry] });
+  }
+  return groups;
+}
 
 export default function FlowVersionSidebarContent({
   flowId,
@@ -23,6 +40,13 @@ export default function FlowVersionSidebarContent({
     animatingId,
     versions,
     maxEntries,
+    timelineEntries,
+    selectedTimelineEntryId,
+    describeOptions,
+    olderVersions,
+    hasOlderEntries,
+    isLoadingOlderEntries,
+    loadOlderEntries,
     isLoading,
     isListError,
     isEntryError,
@@ -32,6 +56,7 @@ export default function FlowVersionSidebarContent({
     handleSelectEntry,
     handleExport,
     handleDelete,
+    savedVersionEntry,
   } = useFlowVersionSidebar(flowId);
 
   return (
@@ -102,13 +127,56 @@ export default function FlowVersionSidebarContent({
             )}
             {!isLoading &&
               !isListError &&
+              timelineEntries.length === 0 &&
               (!versions || versions.length === 0) && (
                 <div className="px-2 py-6 text-center text-xs text-muted-foreground">
                   {t("flowVersion.noSavedVersions")}
                 </div>
               )}
 
-            {versions?.map((entry) => (
+            {groupByDay(timelineEntries, (dateStr) => dayLabel(dateStr, t)).map(
+              (group) => (
+                <div key={group.day} role="group" aria-label={group.day}>
+                  <div className="sticky top-0 z-10 bg-background/95 px-3 pb-1.5 pt-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur">
+                    {group.day}
+                  </div>
+                  {group.entries.map((entry) => (
+                    <TimelineEntryItem
+                      key={entry.id}
+                      entry={entry}
+                      isSelected={entry.id === selectedTimelineEntryId}
+                      onSelect={handleSelectEntry}
+                      describe={describeOptions}
+                      onExportVersion={(version) =>
+                        handleExport(savedVersionEntry(version))
+                      }
+                      onDeleteVersion={(version) =>
+                        setDeleteDialogEntry(savedVersionEntry(version))
+                      }
+                    />
+                  ))}
+                </div>
+              ),
+            )}
+
+            {hasOlderEntries && (
+              <button
+                type="button"
+                className="w-full px-3 py-2 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => loadOlderEntries()}
+                disabled={isLoadingOlderEntries}
+              >
+                {t("flowHistory.loadOlder")}
+              </button>
+            )}
+
+            {olderVersions.length > 0 && timelineEntries.length > 0 && (
+              <div className="px-3 pb-1.5 pt-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {t("flowHistory.olderHistory")}
+              </div>
+            )}
+
+            {olderVersions.map((entry) => (
               <VersionListItem
                 key={entry.id}
                 entry={entry}
