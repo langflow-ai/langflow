@@ -93,6 +93,15 @@ export function useCreateMemoryModal({
   const localVectorStoreAvailable = useUtilityStore(
     (state) => state.localVectorStoreAvailable,
   );
+  const defaultVectorStoreBackend = useUtilityStore(
+    (state) => state.defaultVectorStoreBackend,
+  );
+  const configuredVectorStoreBackends = useUtilityStore(
+    (state) => state.configuredVectorStoreBackends,
+  );
+  const vectorStoreConfigLoaded = useUtilityStore(
+    (state) => state.vectorStoreConfigLoaded,
+  );
 
   // Default to the platform's active DB provider (OpenSearch / Postgres when
   // configured), falling back to local SQLite — identical to Knowledge Bases.
@@ -100,19 +109,33 @@ export function useCreateMemoryModal({
   // pgVector instead so we never seed a local store the create endpoint rejects.
   const defaultBackendSelection = useMemo(
     () =>
-      getDefaultDBProviderConfig(globalVariables, localVectorStoreAvailable),
-    [globalVariables, localVectorStoreAvailable],
+      getDefaultDBProviderConfig(
+        globalVariables,
+        localVectorStoreAvailable,
+        defaultVectorStoreBackend,
+        configuredVectorStoreBackends,
+      ),
+    [
+      globalVariables,
+      localVectorStoreAvailable,
+      defaultVectorStoreBackend,
+      configuredVectorStoreBackends,
+    ],
   );
 
-  // Seed the selector from the active provider once global variables load.
+  // Both requests must settle before committing the one-shot default.
   useEffect(() => {
-    if (hasAppliedBackendDefaults.current || !globalVariablesReady) {
+    if (
+      hasAppliedBackendDefaults.current ||
+      !globalVariablesReady ||
+      !vectorStoreConfigLoaded
+    ) {
       return;
     }
     hasAppliedBackendDefaults.current = true;
     setBackendType(defaultBackendSelection.backendType);
     setBackendConfig(defaultBackendSelection.backendConfig);
-  }, [defaultBackendSelection, globalVariablesReady]);
+  }, [defaultBackendSelection, globalVariablesReady, vectorStoreConfigLoaded]);
 
   const handleBackendProviderChange = useCallback(
     (
@@ -128,11 +151,14 @@ export function useCreateMemoryModal({
   );
 
   const backendConfigured =
+    vectorStoreConfigLoaded &&
     globalVariablesReady &&
     isDBProviderConfigured(
       backendType,
       globalVariables,
       localVectorStoreAvailable,
+      defaultVectorStoreBackend,
+      configuredVectorStoreBackends,
     );
   const { setErrorData, setSuccessData } = useAlertStore((state) => ({
     setErrorData: state.setErrorData,

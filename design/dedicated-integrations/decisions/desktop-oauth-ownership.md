@@ -73,8 +73,18 @@ Option B. `oauth_app_owner_by_context.desktop` is `langflow` in all three matric
 `oauth_client_type_by_context.desktop` stays `public`. INT-5 ships Desktop entries in the named OAuth profiles
 (`connection-contract.md` section 8, `owner_by_context` and `client_type_by_context`) that point at the
 Langflow-owned public clients, with the customer-owned registration selectable per provider exactly as on
-self-managed. Slack bot actions remain absent from the `desktop` deployment context. The Desktop build embeds client
-ids only; it never embeds a client secret for any provider (facts 1 and 3).
+self-managed. Slack bot actions remain absent from the `desktop` deployment context.
+
+Desktop registrations remain public clients and always use PKCE. Google Desktop credentials may also
+require the generated `client_secret` parameter for token exchange and refresh. Installed applications
+cannot keep that value confidential, so it is provider configuration rather than proof of client identity.
+Keep it out of registration-list responses, consent URLs, logs, and source control. Microsoft and Slack
+public-client registrations still reject registration secrets. See the
+[Google native-app token exchange guide](https://developers.google.com/identity/protocols/oauth2/native-app).
+
+Desktop consent first opens a single-use loopback browser handoff. That route binds a fresh HttpOnly
+cookie in the system browser before redirecting to the provider. The callback requires that cookie and
+the original PKCE verifier. The WebView's separate cookie store cannot establish the callback binding.
 
 ## Consequences
 

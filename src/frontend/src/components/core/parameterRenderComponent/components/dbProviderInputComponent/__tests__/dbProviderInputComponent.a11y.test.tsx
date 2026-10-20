@@ -1,7 +1,16 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { axe } from "@/utils/a11y-test";
 import DBProviderInputComponent, { DBProviderInput } from "..";
+
+Element.prototype.scrollIntoView = jest.fn();
 
 type MockGlobalVariablesQuery = {
   data: never[];
@@ -68,6 +77,43 @@ const fieldProps = {
 };
 
 describe("DBProviderInput", () => {
+  it("selects both environment backends when only Postgres is the default", async () => {
+    const previousState = useUtilityStore.getState();
+    useUtilityStore.setState({
+      localVectorStoreAvailable: false,
+      defaultVectorStoreBackend: "postgres",
+      configuredVectorStoreBackends: ["postgres", "opensearch"],
+    });
+    const onValueChange = jest.fn();
+    try {
+      render(
+        <MemoryRouter>
+          <DBProviderInput
+            {...baseProps}
+            value="postgres"
+            onValueChange={onValueChange}
+          />
+        </MemoryRouter>,
+      );
+      expect(screen.queryByText("Needs setup")).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole("combobox"));
+      const postgres = await screen.findByTestId("postgres-provider-option");
+      const opensearch = screen.getByTestId("opensearch-provider-option");
+      expect(postgres).not.toHaveAttribute("aria-disabled", "true");
+      expect(opensearch).not.toHaveAttribute("aria-disabled", "true");
+      expect(
+        screen.queryByTestId("sqlite-provider-option"),
+      ).not.toBeInTheDocument();
+      fireEvent.click(opensearch);
+      expect(onValueChange).toHaveBeenCalledWith(
+        "opensearch",
+        expect.any(Object),
+      );
+    } finally {
+      useUtilityStore.setState(previousState);
+    }
+  });
+
   it("should_have_no_axe_violations", async () => {
     const { container } = render(
       <MemoryRouter>
@@ -134,6 +180,12 @@ describe("DBProviderInput", () => {
 
 describe("DBProviderInputComponent", () => {
   beforeEach(() => {
+    useUtilityStore.setState({
+      vectorStoreConfigLoaded: true,
+      localVectorStoreAvailable: true,
+      defaultVectorStoreBackend: undefined,
+      configuredVectorStoreBackends: [],
+    });
     mockCurrentFlowId = "flow-project-a";
     mockGlobalVariablesQuery = {
       data: [],
@@ -149,6 +201,32 @@ describe("DBProviderInputComponent", () => {
     };
     mockGetQueryState.mockClear();
     mockUseGetGlobalVariables.mockClear();
+  });
+
+  it("waits for server config before persisting the initial provider", () => {
+    useUtilityStore.setState({ vectorStoreConfigLoaded: false });
+    const handleOnNewValue = jest.fn();
+    render(
+      <MemoryRouter>
+        <DBProviderInputComponent
+          {...fieldProps}
+          value={undefined}
+          handleOnNewValue={handleOnNewValue}
+        />
+      </MemoryRouter>,
+    );
+    expect(handleOnNewValue).not.toHaveBeenCalled();
+    act(() => {
+      useUtilityStore.setState({
+        vectorStoreConfigLoaded: true,
+        localVectorStoreAvailable: false,
+        defaultVectorStoreBackend: "opensearch",
+      });
+    });
+    expect(handleOnNewValue).toHaveBeenCalledTimes(1);
+    expect(handleOnNewValue).toHaveBeenCalledWith({
+      value: expect.objectContaining({ backend_type: "opensearch" }),
+    });
   });
 
   // The canvas field label reaches the trigger only if the wrapper forwards

@@ -18,7 +18,7 @@ import sqlalchemy
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi_pagination import add_pagination
 from filelock import FileLock
 from lfx.interface.utils import setup_llm_caching
@@ -30,6 +30,7 @@ from lfx.observability import (
     start_event_loop_lag_monitor,
     stop_event_loop_lag_monitor,
 )
+from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -38,6 +39,9 @@ from starlette.middleware.gzip import DEFAULT_EXCLUDED_CONTENT_TYPES, GZipMiddle
 from langflow.api import log_router
 from langflow.api.health_check_router import health_check_router
 from langflow.api.router import router
+from langflow.api.utils.migration_pause import MigrationPauseMiddleware
+from langflow.api.v1 import connections
+from langflow.api.v1.audit_reads import VERBATIM_QUERY_PARAMS
 from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.api.validation_errors import request_validation_exception_handler
 from langflow.api.warm_graph import is_warm_registry_enabled
@@ -51,6 +55,7 @@ from langflow.initial_setup.setup import (
 )
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.plugin_routes import load_plugin_routes
+from langflow.services.audit.attribution import AuditRequestContextMiddleware
 from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.service import UnsupportedPostgreSQLVersionError
 from langflow.services.deps import (
@@ -65,6 +70,7 @@ from langflow.services.deps import (
 from langflow.services.schema import ServiceType
 from langflow.services.telemetry.opentelemetry import instrument_db_pool
 from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
+from langflow.utils.frontend import render_frontend_index
 from langflow.utils.mcp_cleanup import cleanup_mcp_sessions
 
 if TYPE_CHECKING:
@@ -346,6 +352,22 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await audit_log_cleanup_worker.start()
             except Exception as exc:  # noqa: BLE001 — never block startup on cleanup scheduling
                 await logger.awarning(f"Failed to start authz audit-log cleanup worker: {exc}")
+            try:
+                from langflow.services.audit.retention import audit_event_cleanup_worker
+
+                await audit_event_cleanup_worker.start()
+            except Exception as exc:  # noqa: BLE001
+                await logger.awarning(f"Failed to start audit event cleanup worker: {exc}")
+            from langflow.services.audit.exclusions import warn_about_ignored_exclusions
+
+            await warn_about_ignored_exclusions()
+
+            try:
+                from langflow.services.data_subjects.worker import data_subject_erase_worker
+
+                await data_subject_erase_worker.start()
+            except Exception as exc:  # noqa: BLE001 — never block startup on the erase worker
+                await logger.awarning(f"Failed to start the data subject erase worker: {exc}")
 
             # Keep the default OSS provider ceiling coherent across backend
             # worker processes after an administrator commits a replacement.
@@ -861,6 +883,18 @@ def get_lifespan(*, fix_migration=False, version=None):
                     except Exception as e:  # noqa: BLE001
                         await logger.aerror(f"Failed to stop authz audit-log cleanup worker: {e}")
                     try:
+                        from langflow.services.audit.retention import audit_event_cleanup_worker
+
+                        await audit_event_cleanup_worker.stop()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop audit event cleanup worker: {e}")
+                    try:
+                        from langflow.services.data_subjects.worker import data_subject_erase_worker
+
+                        await data_subject_erase_worker.stop()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop the data subject erase worker: {e}")
+                    try:
                         from langflow.services.task.model_provider_policy_refresh import (
                             model_provider_policy_refresh_worker,
                         )
@@ -999,6 +1033,9 @@ def create_app():
     app.add_middleware(
         ContentSizeLimitMiddleware,
     )
+    if FEATURE_FLAGS.instance_migration:
+        # Registered before CORS, which then wraps it: a browser on another origin can read the refusal.
+        app.add_middleware(MigrationPauseMiddleware)
 
     add_sentry_middleware(app)
 
@@ -1034,6 +1071,7 @@ def create_app():
         allow_headers=settings.cors_allow_headers,
     )
     app.add_middleware(JavaScriptMIMETypeMiddleware)
+    app.add_middleware(AuditRequestContextMiddleware)
 
     @app.middleware("http")
     async def bind_execution_client(request: Request, call_next):
@@ -1113,7 +1151,10 @@ def create_app():
         """Expand comma-separated query values into repeated query parameters."""
         flattened: list[tuple[str, str]] = []
         for key, value in request.query_params.multi_items():
-            flattened.extend((key, entry) for entry in value.split(","))
+            if key in VERBATIM_QUERY_PARAMS:
+                flattened.append((key, value))
+            else:
+                flattened.extend((key, entry) for entry in value.split(","))
 
         request.scope["query_string"] = urlencode(flattened, doseq=True).encode("utf-8")
 
@@ -1220,6 +1261,11 @@ def create_app():
             path=request.url.path,
             method=request.method,
         )
+        if request.scope.get("endpoint") in (
+            connections.complete_connection_oauth,
+            connections.bind_connection_oauth_browser,
+        ):
+            return connections.oauth_rate_limit_response(int(retry_after_seconds))
         return JSONResponse(
             status_code=HTTPStatus.TOO_MANY_REQUESTS,
             content={
@@ -1323,9 +1369,15 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
         app (FastAPI): FastAPI app.
         static_files_dir (str): Path to the static files directory.
     """
+    frontend_html = render_frontend_index((static_files_dir / "index.html").read_text(encoding="utf-8"), app.root_path)
 
-    # app.frontend() serves index.html for any unmatched GET, so an unknown
-    # /api/* GET would otherwise return the SPA shell instead of a JSON 404.
+    @app.api_route("/", include_in_schema=False, methods=["GET", "HEAD"])
+    @app.api_route("/index.html", include_in_schema=False, methods=["GET", "HEAD"])
+    async def frontend_index():
+        """Serve the frontend with the prefix selected at backend startup."""
+        return HTMLResponse(frontend_html, headers={"Cache-Control": "no-store"})
+
+    # Unknown /api/* GETs must return a JSON 404 instead of the SPA shell.
     # Reserve /api GET/HEAD to force a 404 that the handler below shapes as JSON.
     # Only GET/HEAD are claimed: wrong-method requests to real endpoints still
     # get a native 405, and real API routes are registered earlier so they win.
@@ -1353,16 +1405,19 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
 
     # FastAPI >=0.138 serves the frontend build as low-priority routes: path
     # operations are matched first, static files only if nothing else matched.
-    # fallback="index.html" returns the SPA entrypoint for extensionless
-    # client-side routes; the handler below covers the rest (e.g. deep links
-    # whose last segment contains a dot).
-    app.frontend("/", directory=str(static_files_dir), fallback="index.html")
+    # All client-side routes use the handler below so they receive the same
+    # runtime base as the entrypoint, including routes with dotted segments.
+    app.frontend("/", directory=str(static_files_dir), fallback=None)
 
     @app.exception_handler(404)
     async def custom_404_handler(_request, _exc):
         # Return JSON for all API endpoints to prevent HTML responses
         """Return JSON for missing API routes and preserve frontend page handling."""
-        if _request.url.path.startswith("/api"):
+        path = _request.url.path
+        root_path = _request.scope.get("root_path", "").rstrip("/")
+        if root_path and path.startswith(f"{root_path}/"):
+            path = path[len(root_path) :]
+        if path == "/api" or path.startswith("/api/"):
             # Extract detail from HTTPException if available
             detail = _exc.detail if isinstance(_exc, HTTPException) else "Not Found"
             return JSONResponse(
@@ -1370,12 +1425,7 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
                 content=detail if isinstance(detail, dict) else {"detail": detail},
             )
 
-        path = anyio.Path(static_files_dir) / "index.html"
-
-        if not await path.exists():
-            msg = f"File at path {path} does not exist."
-            raise RuntimeError(msg)
-        return FileResponse(path)
+        return await frontend_index()
 
 
 def get_static_files_dir():

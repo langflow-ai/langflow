@@ -21,7 +21,7 @@ import asyncio
 import contextlib
 import json
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator, AsyncIterator
 from copy import deepcopy
 from typing import Final
 from uuid import UUID, uuid4
@@ -39,6 +39,7 @@ from lfx.log.logger import logger
 from lfx.observability import execution_protocol, extract_trace_link, queued_trace_link, tracing_is_available
 from lfx.schema.schema import InputValueRequest
 from lfx.schema.workflow import JobStatus, WorkflowExecutionResponse
+from lfx.utils.async_helpers import RUN_CANCEL_GRACE_SECONDS, cancel_and_wait
 from lfx.utils.flow_validation import prepare_flow_build_for_user_from_cache
 from lfx.workflow.adapters import StreamAdapter, StreamEvent
 from lfx.workflow.adapters.langflow import (
@@ -78,6 +79,11 @@ from langflow.utils.flow_secrets import (
 
 # Configuration constants
 EXECUTION_TIMEOUT = 300  # 5 minutes default timeout for sync execution, used as a fallback
+
+# Keep idle HTTP streams below common proxy timeouts. Comments belong at the
+# response boundary so background jobs never persist or publish them as events.
+_STREAM_KEEPALIVE_INTERVAL_SECONDS = 15.0
+_STREAM_KEEPALIVE_FRAME = b": keepalive\n\n"
 
 
 def _resolve_execution_timeout() -> int:
@@ -172,6 +178,7 @@ class _WorkflowEventQueue:
     def __init__(self, maxsize: int) -> None:
         self._queue: asyncio.Queue[_QueueItem] = asyncio.Queue(maxsize=maxsize)
         self._overflowed = False
+        self._closed = False
         self._loop = asyncio.get_running_loop()
         self._overflow_task: asyncio.Task[None] | None = None
 
@@ -183,12 +190,12 @@ class _WorkflowEventQueue:
         return await self._queue.get()
 
     async def put(self, item: _QueueItem) -> None:
-        if self._overflowed:
+        if self._overflowed or self._closed:
             return
         await self._queue.put(item)
 
     def put_nowait(self, item: _QueueItem) -> None:
-        if self._overflowed:
+        if self._overflowed or self._closed:
             return
         try:
             self._queue.put_nowait(item)
@@ -205,6 +212,16 @@ class _WorkflowEventQueue:
         }
         await self._queue.put((f"error-{uuid4()}", json.dumps(payload).encode("utf-8"), time.time()))
         await self._queue.put((None, None, time.time()))
+
+    def close(self) -> None:
+        """Mark the consumer gone: later puts return at once and a blocked put is released.
+
+        Nothing reads the queue after the consumer stops, so the run's terminal sentinel
+        ``put`` on a full queue would otherwise block forever and pin the run task.
+        """
+        self._closed = True
+        while not self._queue.empty():
+            self._queue.get_nowait()
 
     async def aclose(self) -> None:
         if self._overflow_task is not None and not self._overflow_task.done():
@@ -258,7 +275,7 @@ async def _stream_event_frames(
     emit_output_capture: bool = False,
     expose_error_details: bool = False,
     execution_timeout: float | None | _CeilingFromSettings = _CEILING_FROM_SETTINGS,
-) -> AsyncIterator[tuple[bytes, str]]:
+) -> AsyncGenerator[tuple[bytes, str], None]:
     """Run a flow via the v1 build-vertex loop, dispatch its events through ``adapter``.
 
     Yields ``(sse_frame_bytes, event_type_str)`` pairs. The consumer
@@ -547,13 +564,16 @@ async def _stream_event_frames(
         _stream_cancelled = True
         raise
     finally:
-        if not run_task.done():
-            run_task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await run_task
-        await queue.aclose()
+        queue.close()
+        # One cancel, not one per event-loop tick from the cancelled response scope a
+        # client disconnect leaves this in; see cancel_and_wait for why a bare
+        # ``await run_task`` here re-cancels every running component.
+        try:
+            await cancel_and_wait(run_task, grace_seconds=RUN_CANCEL_GRACE_SECONDS)
+        finally:
+            await queue.aclose()
         # Emit a RunPayload so Enterprise metering (run_event_store) and the
-        # Scarf telemetry pipeline both see every v2 workflow run.
+        # Product telemetry pipeline both see every v2 workflow run.
         # Mirrors the v1 endpoints.py instrumentation for the streaming path.
         # Skip on: pause (run is resumable), client disconnect (not a failure).
         if not stream_paused and not _stream_cancelled:
@@ -577,6 +597,40 @@ async def _stream_event_frames(
                 await logger.awarning("Telemetry hook failed for streaming run %s", run_id or flow_id, exc_info=True)
 
 
+async def _with_transport_keepalive(frames: AsyncIterator[bytes]) -> AsyncIterator[bytes]:
+    """Keep an idle SSE response alive without cancelling or changing source events.
+
+    The same source read remains pending across heartbeat deadlines. Closing the
+    response cancels that read once, waits for its cleanup, and closes the source.
+    """
+    next_frame: asyncio.Task[bytes] | None = asyncio.create_task(anext(frames))
+    try:
+        while next_frame is not None:
+            done, _pending = await asyncio.wait({next_frame}, timeout=_STREAM_KEEPALIVE_INTERVAL_SECONDS)
+            if not done:
+                yield _STREAM_KEEPALIVE_FRAME
+                continue
+            ready = next_frame
+            next_frame = None
+            try:
+                frame = ready.result()
+            except StopAsyncIteration:
+                return
+            next_frame = asyncio.create_task(anext(frames))
+            yield frame
+    finally:
+        try:
+            if next_frame is not None:
+                # The source already bounds run cleanup. Shield this read's
+                # teardown from the response's level-triggered cancellation.
+                with contextlib.suppress(StopAsyncIteration):
+                    await cancel_and_wait(next_frame, grace_seconds=None)
+        finally:
+            close = getattr(frames, "aclose", None)
+            if close is not None:
+                await close()
+
+
 def _execute_streaming_workflow(
     *,
     adapter: StreamAdapter,
@@ -595,26 +649,30 @@ def _execute_streaming_workflow(
     """
 
     async def _frames_only() -> AsyncIterator[bytes]:
-        async for frame, _event_type in _stream_event_frames(
-            adapter=adapter,
-            flow_id=flow.id,
-            flow_name=flow.name,
-            background_tasks=background_tasks,
-            parsed=parsed,
-            current_user=current_user,
-            provider_policy_flow=flow,
-            source_flow_owner_id=flow.user_id,
-            run_id=run_id,
-            # The live v2 stream. Which client sent it is a separate attribute, read from the
-            # X-Langflow-Client header, because the playground calls this same public endpoint.
-            protocol="v2",
-            execution_family=FAMILY_WORKFLOW_V2,
-            expose_error_details=caller_owns_flow(flow, current_user),
-        ):
-            yield frame
+        """Strip internal event types while retaining ownership of the source."""
+        async with contextlib.aclosing(
+            _stream_event_frames(
+                adapter=adapter,
+                flow_id=flow.id,
+                flow_name=flow.name,
+                background_tasks=background_tasks,
+                parsed=parsed,
+                current_user=current_user,
+                provider_policy_flow=flow,
+                source_flow_owner_id=flow.user_id,
+                run_id=run_id,
+                # The live v2 stream. Which client sent it is a separate attribute, read from the
+                # X-Langflow-Client header, because the playground calls this same public endpoint.
+                protocol="v2",
+                execution_family=FAMILY_WORKFLOW_V2,
+                expose_error_details=caller_owns_flow(flow, current_user),
+            )
+        ) as frames:
+            async for frame, _event_type in frames:
+                yield frame
 
     return EventSourceResponse(
-        _frames_only(),
+        _with_transport_keepalive(_frames_only()),
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
@@ -899,6 +957,9 @@ async def execute_sync_workflow(
         # Keep the notice available to GET status even when sync result caching is off.
         initial_metadata={"component_substitution_warning": warning} if warning else None,
         status=JobStatus.IN_PROGRESS,
+        # Live from insert, then kept alive by execute_with_status, so an orphan sweep
+        # cannot fail it mid-run. Its own job_metadata write comes after the run ends.
+        heartbeat=True,
     )
     _sync_run_paused = False
     _sync_run_success = False
@@ -917,6 +978,7 @@ async def execute_sync_workflow(
                 job_id=job_id,
                 run_coro_func=run_graph_internal,
                 mark_in_progress=False,
+                keep_alive=True,
                 graph=graph,
                 flow_id=flow_id_str,
                 session_id=session_id,
@@ -1018,7 +1080,7 @@ async def execute_sync_workflow(
         return error_response
     finally:
         # Emit a RunPayload so Enterprise metering (run_event_store) and the
-        # Scarf telemetry pipeline both see every v2 sync workflow run.
+        # Product telemetry pipeline both see every v2 sync workflow run.
         # Mirrors the _stream_event_frames instrumentation for the SSE path.
         if not _sync_run_paused:
             try:

@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { DATASTAX_DOCS_URL, DOCS_URL } from "@/constants/constants";
 import { useLogout } from "@/controllers/API/queries/auth";
 import { CustomAccountMenuCommunityLinks } from "@/customization/components/custom-account-menu-community-links";
-import { CustomAdminPageMenuItem } from "@/customization/components/custom-admin-page-menu-item";
+import { CustomAccountMenuNavigationItems } from "@/customization/components/custom-account-menu-navigation-items";
 import { CustomHeaderMenuItemsTitle } from "@/customization/components/custom-header-menu-items-title";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
@@ -82,20 +82,9 @@ export const AccountMenu = () => {
           </div>
 
           <div>
-            <HeaderMenuItemButton
-              onClick={() => {
-                navigate("/settings");
-              }}
-            >
-              <span
-                data-testid="menu_settings_button"
-                id="menu_settings_button"
-              >
-                {t("account.settings")}
-              </span>
-            </HeaderMenuItemButton>
-
-            <CustomAdminPageMenuItem onNavigate={(path) => navigate(path)} />
+            <CustomAccountMenuNavigationItems
+              onNavigate={(path) => navigate(path)}
+            />
             <HeaderMenuItemLink
               newPage
               href={ENABLE_DATASTAX_LANGFLOW ? DATASTAX_DOCS_URL : DOCS_URL}
