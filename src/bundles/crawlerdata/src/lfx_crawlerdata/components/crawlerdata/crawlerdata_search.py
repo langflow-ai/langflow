@@ -214,7 +214,10 @@ class CrawlerDataSearchComponent(Component):
             payload = self._search()
         except httpx.HTTPStatusError as e:
             return self._error_result(_http_error_message(e))
-        except (httpx.HTTPError, ValueError) as e:
+        except httpx.HTTPError as e:
+            # Some transport errors (timeouts, connect errors) have an empty message, so name the exception type.
+            return self._error_result(f"CrawlerData API request failed: {type(e).__name__}: {e}".rstrip(": "))
+        except ValueError as e:
             return self._error_result(str(e))
 
         result = payload.get("result") if isinstance(payload, dict) else None

@@ -248,7 +248,15 @@ def test_fetch_content_wraps_http_error(component):
     with patch(POST_PATCH_TARGET, mock_post):
         results = component.fetch_content()
     assert len(results) == 1
-    assert "boom" in results[0].data["error"]
+    assert results[0].data["error"] == "CrawlerData API request failed: HTTPError: boom"
+
+
+def test_fetch_content_names_transport_errors_with_empty_message(component):
+    """A timeout whose message is empty still yields a readable error naming the exception type."""
+    mock_post = MagicMock(side_effect=httpx.ReadTimeout(""))
+    with patch(POST_PATCH_TARGET, mock_post):
+        results = component.fetch_content()
+    assert results[0].data["error"] == "CrawlerData API request failed: ReadTimeout"
 
 
 def test_fetch_content_surfaces_api_error_message(component):
