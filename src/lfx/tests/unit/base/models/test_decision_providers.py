@@ -109,7 +109,7 @@ def test_malformed_choice_never_becomes_uncertainty(provider, mutation):
     assert "secret" not in str(error.value)
 
 
-@pytest.mark.parametrize("provider", ["TypeSafe", "Perplexity"])
+@pytest.mark.parametrize("provider", PROVIDERS)
 def test_hosted_score_level_limit(provider):
     request = DecisionRequest(
         kind="score",
@@ -323,3 +323,11 @@ def test_openai_refusal_keeps_provider_reason():
         {"model": "gpt-6-luna", "answers": [{"type": "refusal", "name": "decision", "refusal": "Policy reason"}]},
     )
     assert (result.status, result.refusal) == ("refusal", "Policy reason")
+
+
+@pytest.mark.parametrize("provider", ["TypeSafe", "Perplexity"])
+def test_undocumented_refusal_type_is_invalid_not_refusal(provider):
+    payload = response_for(provider, "choice")
+    payload["answers"]["decision"] = {"type": "refusal", "refusal": "declined"}
+    with pytest.raises(DecisionEvaluationError, match="invalid decision response"):
+        providers.parse_response(provider, request_for("choice"), payload)

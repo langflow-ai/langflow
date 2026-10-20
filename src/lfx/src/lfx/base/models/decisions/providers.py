@@ -68,12 +68,10 @@ def build_payload(provider: str, model: str, request: DecisionRequest) -> dict[s
     if provider not in ENDPOINTS:
         msg = "Unsupported decision provider."
         raise DecisionConfigurationError(msg)
-    if (
-        provider in {"TypeSafe", "Perplexity"}
-        and request.kind == "score"
-        and len(request.levels) > MAX_HOSTED_SCORE_LEVELS
-    ):
-        msg = f"{provider} supports at most 10 score levels."
+    # TypeSafe and Perplexity document 10 levels. OpenAI publishes no cap, so the same
+    # verified bound applies until a larger one is confirmed against the live API.
+    if request.kind == "score" and len(request.levels) > MAX_HOSTED_SCORE_LEVELS:
+        msg = f"{provider} decisions support at most {MAX_HOSTED_SCORE_LEVELS} score levels."
         raise DecisionConfigurationError(msg)
     if len(request.options) > MAX_CHOICES:
         msg = "Decision Choice supports at most 255 options."
@@ -155,6 +153,8 @@ def parse_response(provider: str, request: DecisionRequest, payload: Any) -> Dec
             "model_source": "request" if provider == "Perplexity" else "response",
             "usage": _token_usage(payload.get("usage")),
         }
+        # Only OpenAI documents a refusal answer. TypeSafe and Perplexity always answer with the
+        # requested type, so any other type there is an invalid response, never a refusal.
         if provider == "OpenAI" and answer["type"] == "refusal":
             reason = answer.get("refusal")
             if not isinstance(reason, str) or not reason.strip():
