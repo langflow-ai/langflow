@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import json
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from lfx.utils.flow_code import normalize_code_for_import
 
 COMPONENTS_TO_IGNORE_UPDATE: frozenset[str] = frozenset({"CustomComponent"})
+# Template keys that are editor runtime metadata, not component fields. Must be the same set as
+# transientTemplateKeys in src/frontend/src/CustomNodes/helpers/check-code-validity.ts.
 TRANSIENT_TEMPLATE_KEYS: frozenset[str] = frozenset({"is_refresh", "tools_metadata"})
 
 # Synthetic output name a component receives when it is switched to tool mode. Must match
@@ -60,30 +63,37 @@ def build_registry_lookup(all_types_dict: Mapping[str, Any]) -> dict[str, dict]:
     return {k: dict(v) for k, v in flatten_components_with_aliases(all_types_dict).items() if isinstance(v, Mapping)}
 
 
-def _outputs_are_compatible(registry_outputs: list[dict], flow_outputs: list[dict]) -> bool:
-    """Return True if the saved flow's outputs are still valid against the registry's outputs.
+def _canonical_types(types: Any) -> set[str]:
+    """Return a type list as a set, with historical type names mapped to their current names.
 
-    Only *breaking* differences count:
-      - a changed output **name set** (a removed/renamed output breaks downstream edges),
-      - a changed ``method`` or ``allows_loop``,
-      - **narrowed** output types: the registry dropped a type the saved flow emitted.
-
-    A cosmetic ``display_name`` change (e.g. a typo fix in the registry) and **widened**
-    types (the registry now emits additional types) are not breaking and must not be flagged,
-    otherwise ``--upgrade-flow=safe`` would needlessly abort on a string edit.
+    ``Data`` and ``JSON``, ``DataFrame`` and ``Table`` are the same type: an edge saved with the
+    old name still connects (``lfx.graph.edge.base.TYPE_MIGRATIONS``, mirrored by
+    ``TYPE_MIGRATIONS`` in ``src/frontend/src/constants/constants.ts``).
     """
-    flow_map = {o["name"]: o for o in flow_outputs}
-    registry_names = {o["name"] for o in registry_outputs}
-    if registry_names != set(flow_map):
-        return False
-    for reg in registry_outputs:
-        flow_output = flow_map.get(reg["name"])
-        if flow_output is None:
-            return False
-        flow_types = set(flow_output.get("types") or [])
-        registry_types = set(reg.get("types") or [])
+    from lfx.graph.edge.base import TYPE_MIGRATIONS
+
+    return {TYPE_MIGRATIONS.get(t, t) for t in types or []}
+
+
+def _outputs_are_compatible(registry_outputs: list[dict], flow_outputs: list[dict]) -> bool:
+    """Return True if every output the saved node has still exists unchanged enough to keep its edges.
+
+    Breaking, for an output the saved node has:
+      - removed or renamed (a component that declares no outputs removes them all),
+      - a changed ``method`` or ``allows_loop``,
+      - **narrowed** types: the registry dropped a type the saved flow emitted.
+
+    An **added** output, a cosmetic ``display_name`` change, **widened** types, a reordered type
+    list, and a historical type name (``Data`` saved, ``JSON`` declared) are not breaking and must
+    not be flagged, otherwise ``--upgrade-flow=safe`` would needlessly abort on a string edit.
+    """
+    registry_map = {o["name"]: o for o in registry_outputs}
+    for flow_output in flow_outputs:
+        reg = registry_map.get(flow_output["name"])
         if (
-            not flow_types.issubset(registry_types)  # narrowing breaks edges; widening is safe
+            reg is None
+            # narrowing breaks edges; widening is safe
+            or not _canonical_types(flow_output.get("types")).issubset(_canonical_types(reg.get("types")))
             or reg.get("method") != flow_output.get("method")
             or reg.get("allows_loop") != flow_output.get("allows_loop")
         ):
@@ -106,20 +116,40 @@ def new_template_field_keys(registry_template: Mapping[str, Any], flow_template:
     return _structural_template_keys(registry_template) - _structural_template_keys(flow_template)
 
 
-def _template_keys_compatible(registry_template: dict, flow_template: dict) -> bool:
-    """Return True unless the registry grew a field a safe upgrade cannot fill.
+def _custom_field_names(node_info: Mapping[str, Any]) -> set[str]:
+    """Return the fields the saved node lists in ``custom_fields``.
+
+    A Prompt saves ``{"template": ["question", ...]}``: one field per template variable. The
+    component rebuilds those fields from the saved template text when the node is updated, so
+    they are not fields the component dropped.
+    """
+    custom_fields = node_info.get("custom_fields")
+    if not isinstance(custom_fields, Mapping):
+        return set()
+    return {name for names in custom_fields.values() if isinstance(names, list) for name in names}
+
+
+def _template_keys_compatible(
+    registry_template: dict, flow_template: dict, custom_field_names: Collection[str] = ()
+) -> bool:
+    """Return True unless the template key sets differ in a way an update cannot absorb.
 
     Template key sets are compared directionally, not for equality:
 
-    - A field only the *flow* has is one the registry dropped. Its stale value is not read
-      once the code is re-stamped, and ``apply_safe_upgrades`` leaves it in place, so an
-      edge into it keeps its target handle.
+    - A field only the *flow* has is one the registry dropped, or one the component added
+      while it was edited (Run Flow inputs, MCP Tools arguments). Updating the node drops the
+      field, its value, and any edge into it, so it is always breaking, connected or not. The
+      exception is a field the node lists in ``custom_fields`` (Prompt variables), which the
+      component rebuilds.
     - A field only the *registry* has is one the saved flow predates — the evolution the
       contributing docs recommend as non-breaking. ``apply_safe_upgrades`` introduces it
       exactly as the registry declares it, so it only breaks when that declared state is
       unusable: a *required* field with nothing to fill it, which would turn a flow that
       ran into one that fails asking for input.
     """
+    saved_only = _structural_template_keys(flow_template) - _structural_template_keys(registry_template)
+    if saved_only - set(custom_field_names):
+        return False
     for key in new_template_field_keys(registry_template, flow_template):
         field = registry_template.get(key)
         if isinstance(field, Mapping) and field.get("required") and field.get("value") in (None, ""):
@@ -127,28 +157,62 @@ def _template_keys_compatible(registry_template: dict, flow_template: dict) -> b
     return True
 
 
-def _input_types_contained(registry_template: dict, flow_template: dict) -> bool:
-    """Return True if no input field *narrowed* its accepted ``input_types``.
+def _holds_value(field: Mapping[str, Any]) -> bool:
+    """Return True when a saved field holds a value: anything but ``None``, ``""``, ``[]`` or ``{}``."""
+    return field.get("value") not in (None, "", [], {})
 
-    Narrowing (the registry no longer accepts a type the saved flow's edges feed into) is
-    breaking. Widening (the registry accepting *more* types than before) is safe and must
-    not be flagged.
+
+def retyped_field_keys(registry_template: Mapping[str, Any], flow_template: Mapping[str, Any]) -> set[str]:
+    """Return the fields both sides have whose ``type`` changed.
+
+    On a node the checker calls safe these fields are empty and unconnected, so
+    ``apply_safe_upgrades`` replaces each one with the registry's declaration, as the editor does.
     """
-    for key, registry_field in registry_template.items():
-        if not isinstance(registry_field, Mapping):
+    return {
+        key
+        for key in _structural_template_keys(flow_template) & _structural_template_keys(registry_template)
+        if isinstance(registry_template[key], Mapping)
+        and isinstance(flow_template[key], Mapping)
+        and registry_template[key].get("type") != flow_template[key].get("type")
+    }
+
+
+def _shared_fields_compatible(
+    registry_template: dict,
+    flow_template: dict,
+    connected_fields: Collection[str] | None,
+    *,
+    in_tool_mode: bool = False,
+) -> bool:
+    """Return True if every field both sides have keeps its saved edges and its saved value.
+
+    ``connected_fields`` of ``None`` means the connections are unknown, so every field counts as
+    connected.
+
+    - A changed field ``type`` is breaking when an edge goes into the field, because the editor
+      keeps an edge only when the handle's field ``type`` is equal. It is also breaking when the
+      saved field holds a value, because an update copies a saved value only when the field
+      ``type`` is equal (``lfx.template.utils.update_template_field``).
+    - Every type a connected field accepted must still be accepted (historical type names count
+      as the same type). Narrowing breaks the saved edges, and an emptied ``input_types`` list
+      means the field no longer takes connections at all. Widening is safe.
+    - On a node in tool mode, a connected field the component now marks ``tool_mode`` is
+      breaking: the editor drops edges into tool-mode fields of a tool-mode node.
+    """
+    for key in _structural_template_keys(flow_template) & _structural_template_keys(registry_template):
+        registry_field, flow_field = registry_template[key], flow_template[key]
+        if not isinstance(registry_field, Mapping) or not isinstance(flow_field, Mapping):
             continue
-        registry_types = registry_field.get("input_types")
-        if not registry_types:
+        connected = connected_fields is None or key in connected_fields
+        if registry_field.get("type") != flow_field.get("type") and (connected or _holds_value(flow_field)):
+            return False
+        if not connected:
             continue
-        flow_field = flow_template.get(key)
-        if not flow_field:
-            # A field the saved flow predates has no saved edges feeding it, and
-            # apply_safe_upgrades introduces it with the registry's declared input_types,
-            # so there is nothing to narrow.
-            continue
-        flow_types = flow_field.get("input_types") or []
-        # Every type the saved flow relied on must still be accepted by the registry.
-        if not all(t in registry_types for t in flow_types):
+        if not _canonical_types(flow_field.get("input_types")).issubset(
+            _canonical_types(registry_field.get("input_types"))
+        ):
+            return False
+        if in_tool_mode and registry_field.get("tool_mode") and not flow_field.get("tool_mode"):
             return False
     return True
 
@@ -186,17 +250,33 @@ def _registry_supports_tool_mode(registry_entry: Mapping[str, Any]) -> bool:
     return any(isinstance(field_data, Mapping) and field_data.get("tool_mode") for field_data in template.values())
 
 
-def has_breaking_change(registry_entry: Mapping[str, Any], node_info: Mapping[str, Any]) -> bool:
+def has_breaking_change(
+    registry_entry: Mapping[str, Any],
+    node_info: Mapping[str, Any],
+    connected_fields: Collection[str] | None = None,
+) -> bool:
     """Return True when re-stamping this node with the registry's code would break it.
+
+    A change is breaking when updating the node drops a connection, drops a value, or needs
+    input nobody gave. Must match ``codeHasBreakingChange`` in
+    ``src/frontend/src/CustomNodes/helpers/check-code-validity.ts``; both run the shared cases in
+    ``src/lfx/tests/data/component_compat/cases.json``.
 
     Public because the restricted-mode build path reports the same condition: there a saved
     node's code is replaced by this server's copy for the same component type, so a node the
     checker calls breaking is one whose saved configuration cannot drive the component that
     actually runs. See ``describe_restricted_component_mismatch``.
+
+    ``connected_fields`` names the fields a connection goes into. ``None`` (the default) means
+    the connections are unknown, so every field counts as connected.
     """
     registry_outputs = registry_entry.get("outputs") or []
+    if node_info.get("outputs") is None and registry_outputs:
+        # Without saved outputs nothing tells which outputs had edges, so assume they all did.
+        return True
     flow_outputs = node_info.get("outputs") or []
-    if _node_is_in_tool_mode(flow_outputs):
+    in_tool_mode = _node_is_in_tool_mode(flow_outputs)
+    if in_tool_mode:
         # A tool-mode node's saved outputs are the toolset projection, so they never match the
         # registry's declared outputs and comparing the two always reports a breaking change.
         # What matters for such a node is whether the component still supports tool mode. A
@@ -204,20 +284,31 @@ def has_breaking_change(registry_entry: Mapping[str, Any], node_info: Mapping[st
         # the toolset.
         if not _registry_supports_tool_mode(registry_entry):
             return True
-    elif registry_outputs and not _outputs_are_compatible(registry_outputs, flow_outputs):
+    elif not _outputs_are_compatible(registry_outputs, flow_outputs):
         return True
     registry_template = registry_entry.get("template") or {}
     flow_template = node_info.get("template") or {}
-    if registry_template and not _template_keys_compatible(registry_template, flow_template):
+    if registry_template and not _template_keys_compatible(
+        registry_template, flow_template, _custom_field_names(node_info)
+    ):
         return True
-    return bool(registry_template) and not _input_types_contained(registry_template, flow_template)
+    return bool(registry_template) and not _shared_fields_compatible(
+        registry_template, flow_template, connected_fields, in_tool_mode=in_tool_mode
+    )
 
 
-def _classify_node(node: dict, registry: dict[str, dict]) -> NodeStatus | None:
+def flow_node_id(node: Mapping[str, Any]) -> str:
+    """Return the id a flow's edges use for ``node``: its top-level ``id``, as the runtime and the editor read it."""
+    return node.get("id") or node.get("data", {}).get("id") or "unknown"
+
+
+def _classify_node(
+    node: dict, registry: dict[str, dict], connected_fields: Collection[str] | None = None
+) -> NodeStatus | None:
     data = node.get("data", {})
     node_info = data.get("node", {})
     component_type = data.get("type", "")
-    node_id = data.get("id") or node.get("id", "unknown")
+    node_id = flow_node_id(node)
     display_name = node_info.get("display_name") or component_type
 
     node_template = node_info.get("template", {})
@@ -240,7 +331,7 @@ def _classify_node(node: dict, registry: dict[str, dict]) -> NodeStatus | None:
     if registry_code is None or node_code == registry_code:
         return NodeStatus(node_id=node_id, component_type=component_type, display_name=display_name, status="ok")
 
-    if has_breaking_change(registry_entry, node_info):
+    if has_breaking_change(registry_entry, node_info, connected_fields):
         return NodeStatus(
             node_id=node_id, component_type=component_type, display_name=display_name, status="outdated_breaking"
         )
@@ -248,21 +339,84 @@ def _classify_node(node: dict, registry: dict[str, dict]) -> NodeStatus | None:
     return NodeStatus(node_id=node_id, component_type=component_type, display_name=display_name, status="outdated_safe")
 
 
-def _classify_nodes_recursive(nodes: list[dict], registry: dict[str, dict], statuses: list[NodeStatus]) -> None:
+def _target_handle(edge: Mapping[str, Any]) -> Mapping[str, Any] | None:
+    """Return the handle an edge goes into.
+
+    Read from ``data.targetHandle`` when it is a mapping, else from the escaped handle string the
+    editor writes, else from a legacy ``type|field|node id`` string, which
+    ``lfx.graph.edge.base.Edge`` still reads. Must match ``targetFieldName`` in
+    ``src/frontend/src/CustomNodes/helpers/check-code-validity.ts``.
+    """
+    handle = (edge.get("data") or {}).get("targetHandle")
+    if isinstance(handle, Mapping):
+        return handle
+    raw = edge.get("targetHandle")
+    if not isinstance(raw, str):
+        return None
+    try:
+        handle = json.loads(raw.replace("\u0153", '"'))
+    except ValueError:
+        parts = raw.split("|")
+        return {"fieldName": parts[1]} if len(parts) > 1 else None
+    return handle if isinstance(handle, Mapping) else None
+
+
+def _connected_fields_by_node(edges: list[dict] | None) -> dict[str, set[str]] | None:
+    """Map each node id to the fields a connection goes into. ``None`` when the edges are unknown."""
+    if edges is None:
+        return None
+    connected: dict[str, set[str]] = {}
+    for edge in edges:
+        field_name = (_target_handle(edge) or {}).get("fieldName")
+        if field_name:
+            connected.setdefault(edge.get("target"), set()).add(field_name)
+    return connected
+
+
+def _classify_nodes_recursive(
+    nodes: list[dict],
+    registry: dict[str, dict],
+    statuses: list[NodeStatus],
+    edges: list[dict] | None,
+) -> None:
     """Classify every node, recursing fully into nested grouped-component flows.
 
     Grouped components can nest arbitrarily deep (a group inside a group); each level lives
     under ``node.data.node.flow.data.nodes``. Walking only the first level would silently skip
     grandchildren, so we recurse all the way down, keeping the checker symmetric with the
     applier, which also recurses fully.
+
+    ``edges`` are the edges at this level, ``None`` when they are unknown. A nested level uses the
+    edges of its own flow, plus each edge into the group: it reaches the inner field that the
+    edge's own ``proxy`` names, or the group field's ``proxy`` when the edge has none, as
+    ``lfx.graph.graph.utils.update_target_handle`` resolves it.
     """
+    connected = _connected_fields_by_node(edges)
     for node in nodes:
-        status = _classify_node(node, registry)
+        node_id = flow_node_id(node)
+        status = _classify_node(node, registry, None if connected is None else connected.get(node_id, set()))
         if status is not None:
             statuses.append(status)
-        nested = node.get("data", {}).get("node", {}).get("flow", {}).get("data", {}).get("nodes")
+        node_info = node.get("data", {}).get("node", {})
+        nested_flow = node_info.get("flow", {}).get("data", {})
+        nested = nested_flow.get("nodes")
         if nested:
-            _classify_nodes_recursive(nested, registry, statuses)
+            nested_edges = None
+            if edges is not None and nested_flow.get("edges") is not None:
+                nested_edges = list(nested_flow["edges"])
+                for edge in edges:
+                    handle = _target_handle(edge) if edge.get("target") == node_id else None
+                    if handle is None:
+                        continue
+                    group_field = node_info.get("template", {}).get(handle.get("fieldName"))
+                    proxy = handle.get("proxy") or (
+                        group_field.get("proxy") if isinstance(group_field, Mapping) else None
+                    )
+                    if isinstance(proxy, Mapping):
+                        nested_edges.append(
+                            {"target": proxy.get("id"), "data": {"targetHandle": {"fieldName": proxy.get("field")}}}
+                        )
+            _classify_nodes_recursive(nested, registry, statuses, nested_edges)
 
 
 def check_flow_compatibility(
@@ -274,7 +428,8 @@ def check_flow_compatibility(
     """Check all nodes in flow_data against the component registry.
 
     Args:
-        flow_data: Parsed flow JSON with a ``nodes`` list.
+        flow_data: Parsed flow JSON with a ``nodes`` list. Its ``edges`` tell which fields a
+            connection goes into. Without an ``edges`` key every field counts as connected.
         all_types_dict: Component registry (categories -> components).
         registry: Optional pre-built lookup from ``build_registry_lookup``. Pass this to avoid
             rebuilding the lookup when the caller also runs ``apply_safe_upgrades`` on the same
@@ -284,5 +439,5 @@ def check_flow_compatibility(
     if registry is None:
         registry = build_registry_lookup(all_types_dict)
     statuses: list[NodeStatus] = []
-    _classify_nodes_recursive(flow_data.get("nodes", []), registry, statuses)
+    _classify_nodes_recursive(flow_data.get("nodes", []), registry, statuses, flow_data.get("edges"))
     return CompatibilityReport(nodes=statuses)

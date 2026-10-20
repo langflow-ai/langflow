@@ -224,6 +224,14 @@ the deserialize half is covered by
 
 ## Changelog
 
+- **Restricted-mode build note reads connections (2026-10-26).** When a build fails
+  with custom components blocked, `Component.send_error` now passes the vertex's
+  incoming connections to the compatibility rule, so its note about a saved
+  component that no longer matches the server's agrees with `lfx upgrade` and the
+  editor. `explain_restricted_component_mismatch` gains an optional
+  `connected_fields` argument; existing calls keep working. No existing symbol is
+  removed or renamed, so `BUNDLE_API_VERSION` remains `1`.
+
 - **Google Workspace network diagnostics (2026-10-15).** `lfx.integrations` exports
   `IntegrationNetworkError` with the additive `network-error` code. Google transport
   failures report a fixed reason and API hostname, with server-network guidance in
