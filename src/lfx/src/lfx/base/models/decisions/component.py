@@ -1,0 +1,91 @@
+"""Shared input and output contract for the three standalone decision components."""
+
+from lfx.base.models.decisions.runtime import evaluate_decision
+from lfx.base.models.decisions.schema import DecisionConfigurationError, DecisionOption, DecisionRequest
+from lfx.base.models.unified_models import handle_model_input_update
+from lfx.base.models.unified_models.model_catalog import get_decision_model_options
+from lfx.custom.custom_component.component import Component
+from lfx.io import DropdownInput, FloatInput, MessageTextInput, ModelInput, Output, SecretStrInput, TableInput
+from lfx.schema.data import Data
+from lfx.schema.table import EditMode
+
+
+class DecisionComponent(Component):
+    """Provider-fixed evaluators share the same runtime as the Smart Router."""
+
+    provider: str = ""
+    inputs = [
+        ModelInput(
+            model_type="decision", name="model", display_name="Decision Model", required=True, real_time_refresh=True
+        ),
+        SecretStrInput(name="api_key", display_name="API Key", advanced=True, real_time_refresh=True),
+        DropdownInput(
+            name="kind",
+            display_name="Decision Type",
+            options=["Choice", "Boolean", "Score"],
+            value="Choice",
+            real_time_refresh=True,
+        ),
+        MessageTextInput(name="context", display_name="Context", required=True),
+        MessageTextInput(name="question", display_name="Question", required=True),
+        TableInput(
+            name="candidates",
+            display_name="Options / Ordered Score Levels",
+            value=[],
+            info="Choice options or Score levels ordered from lowest (0) to highest. IDs must be unique.",
+            table_schema=[
+                {"name": "id", "display_name": "ID", "type": "str", "edit_mode": EditMode.INLINE},
+                {"name": "label", "display_name": "Label", "type": "str", "edit_mode": EditMode.INLINE},
+                {
+                    "name": "description",
+                    "display_name": "Description",
+                    "type": "str",
+                    "edit_mode": EditMode.POPOVER,
+                    "default": "",
+                },
+            ],
+        ),
+        FloatInput(name="timeout", display_name="Timeout (seconds)", value=60, advanced=True),
+    ]
+    outputs = [Output(name="result", display_name="Decision Result", method="evaluate")]
+
+    def evaluate(self) -> Data:
+        selected = self.model[0] if isinstance(self.model, list) and len(self.model) == 1 else self.model
+        if not isinstance(selected, dict) or selected.get("provider") != self.provider:
+            msg = f"Select a {self.provider} decision model."
+            raise DecisionConfigurationError(msg)
+        kind = self.kind.lower()
+        candidates = tuple(DecisionOption.model_validate(item) for item in self.candidates) if kind != "boolean" else ()
+        request = DecisionRequest(
+            kind=kind,
+            question=self.question,
+            context=self.context,
+            options=candidates if kind == "choice" else (),
+            levels=candidates if kind == "score" else (),
+        )
+        result = evaluate_decision(
+            request,
+            model=self.model,
+            user_id=self.user_id,
+            api_key=self.api_key,
+            timeout=self.timeout,
+        )
+        data = Data(
+            data={**result.model_dump(mode="json"), "request": request.model_dump(mode="json", exclude={"context"})}
+        )
+        self.status = data
+        return data
+
+    def update_build_config(self, build_config: dict, field_value, field_name: str | None = None) -> dict:
+        config = handle_model_input_update(
+            self,
+            build_config,
+            field_value,
+            field_name,
+            get_options_func=lambda user_id=None: [
+                item for item in get_decision_model_options(user_id=user_id) if item["provider"] == self.provider
+            ],
+        )
+        kind = field_value if field_name == "kind" else config.get("kind", {}).get("value", "Choice")
+        config["candidates"]["show"] = kind != "Boolean"
+        return config
