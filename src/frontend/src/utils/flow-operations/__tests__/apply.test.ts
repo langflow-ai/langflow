@@ -233,40 +233,70 @@ describe("applyFlowOperations copies on write", () => {
   });
 });
 
-describe("applyFlowOperations in redacted mode", () => {
-  const typeChange = {
-    type: "update_nodes",
-    updates: [
-      {
-        id: "a",
-        op: "set_field",
-        path: ["data", "node", "template", "api_key", "value"],
-        value: null,
-      },
-    ],
-  };
+describe("applyFlowOperations reads only the protocol's shapes", () => {
   const base = () => ({
     nodes: [
       { id: "a", data: { node: { template: { api_key: { value: "" } } } } },
     ],
     edges: [],
   });
-
-  it("rejects an undeclared type change by default", () => {
-    expect(caught(() => applyFlowOperations(base(), [typeChange])).code).toBe(
-      "FIELD_TYPE_CHANGE_UNDECLARED",
-    );
+  const update = (extra: object = {}) => ({
+    id: "a",
+    op: "set_field",
+    path: ["data", "node", "template", "api_key", "value"],
+    value: null,
+    ...extra,
   });
 
-  it("allows it when replaying operations read with secrets removed", () => {
-    const { flowData } = applyFlowOperations(base(), [typeChange], {
-      redacted: true,
-    });
+  it("applies a write that changes a value's type", () => {
+    // History reads set literal secrets to null, so playback writes them as they are.
+    const { flowData } = applyFlowOperations(base(), [
+      { type: "update_nodes", updates: [update()] },
+    ]);
 
     expect(flowData.nodes[0]).toEqual({
       id: "a",
       data: { node: { template: { api_key: { value: null } } } },
     });
+  });
+
+  it.each(["from_type", "expect", "template_field", "secret", "secrets"])(
+    "refuses a write that carries %s",
+    (key) => {
+      const error = caught(() =>
+        applyFlowOperations(base(), [
+          { type: "update_nodes", updates: [update({ [key]: "string" })] },
+        ]),
+      );
+
+      expect(error.message).toBe(`update_nodes[0]: unexpected key ${key}`);
+    },
+  );
+
+  it("names an operation that is not an object", () => {
+    const error = caught(() =>
+      applyFlowOperations(base(), [[] as unknown as FlowOperation]),
+    );
+
+    expect(error.message).toBe("operation must be an object");
+  });
+
+  it("names an operation without a type", () => {
+    const error = caught(() =>
+      applyFlowOperations(base(), [{ ids: ["a"] } as unknown as FlowOperation]),
+    );
+
+    expect(error.message).toBe("operation type is missing");
+  });
+
+  it("refuses update_metadata as an unsupported operation type", () => {
+    const error = caught(() =>
+      applyFlowOperations(base(), [
+        { type: "update_metadata", fields: { name: "x" } },
+      ]),
+    );
+
+    expect(error.message).toBe("Unsupported operation type: update_metadata");
   });
 });
 

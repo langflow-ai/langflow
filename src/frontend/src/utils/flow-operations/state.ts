@@ -29,14 +29,6 @@ export type FlowGraph = JsonObject & {
 
 export type ApplyOptions = {
   /**
-   * Skip the `from_type` checks. The history API redacts every secret
-   * field's value to null, whether it was set or not, so a reader can't tell
-   * which secrets are populated; in a redacted graph a value's JSON type no
-   * longer says anything, and replaying for display must not fail on it.
-   * Never set this when applying operations that will be stored.
-   */
-  redacted?: boolean;
-  /**
    * Apply inverses. Inverses put back a state the history already held,
    * whatever rules it broke (a stored flow may hold an edge into a field that
    * no longer exists), and they add and delete every edge they touch

@@ -16,7 +16,6 @@ type Update = {
   op: string;
   path: Segment[];
   value?: unknown;
-  from_type?: string;
 };
 
 export type DescribeOptions = {
@@ -156,8 +155,6 @@ export function describeOperation(
       });
     case "update_nodes":
       return describeUpdates(operation.updates as Update[], names, t, options);
-    case "update_metadata":
-      return [t("flowHistory.op.updatedFlowSettings")];
     default:
       return [];
   }
@@ -211,19 +208,7 @@ function describeUpdates(
         );
       }
     }
-    const typeChange = nodeUpdates.find(
-      (update) => update.from_type && templateFieldOf(update.path),
-    );
-    if (typeChange) {
-      sentences.push(
-        t("flowHistory.op.changedFieldType", {
-          field: label(id, templateFieldOf(typeChange.path) as string),
-          name,
-          from: typeChange.from_type,
-          to: jsonTypeName(typeChange.value),
-        }),
-      );
-    } else if (fields.size > 0) {
+    if (fields.size > 0) {
       sentences.push(
         t("flowHistory.op.editedFields", {
           fields: [...fields].join(", "),
@@ -249,12 +234,6 @@ function describeUpdates(
     }
   }
   return sentences;
-}
-
-function jsonTypeName(value: unknown): string {
-  if (value === null) return "null";
-  if (Array.isArray(value)) return "array";
-  return typeof value;
 }
 
 /** Summarize an entry's operations in one line: the first two changes and a count of the rest. */
