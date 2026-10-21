@@ -234,6 +234,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/instance-migration",
+          label: "Migrate to a new instance"
+        },
+        {
+          type: "doc",
           id: "Deployment/deployment-public-server",
           label: "Deploy a public Langflow server"
         },

@@ -58,9 +58,8 @@ Highlights of this release include the following changes. For all changes, see t
     Set `LANGFLOW_SUPERUSER_PASSWORD`, then sign in as `langflow` or the username in `LANGFLOW_SUPERUSER`.
 
     Before upgrading an auto-login installation, [prepare that account for password sign-in](/api-keys-and-authentication#upgrade-from-auto-login).
-    If you already upgraded and can't sign in, [recover access](/troubleshoot#recover-access-after-upgrading).
 
-    `LANGFLOW_AUTO_LOGIN` can still be set to `true` in trusted environments.
+    If you already upgraded and can't sign in, see [recover access](/troubleshoot#recover-access-after-upgrading).
 
     For more information, see [API keys and authentication](/api-keys-and-authentication#langflow-auto-login).
 
@@ -94,9 +93,10 @@ Highlights of this release include the following changes. For all changes, see t
 
 - Instance migration
 
-    Langflow can check an installation before a move and copy a SQLite database to PostgreSQL.
-    Superusers can run the move from the migration API when `LANGFLOW_FEATURE_INSTANCE_MIGRATION` is set to `true`.
-    For more information, see [Database migrations](./database-migrations).
+    Langflow provides a guided workflow to migrate users, projects, flows, settings, local files, and local knowledge bases to a new instance.
+    The workflow checks the source instance, pauses writes, creates a backup, copies applicable data to the target instance's storage, verifies the copy, and provides recovery steps.
+
+    For more information, see [Migrate a Langflow instance](/instance-migration).
 
 - Administration API and CLI
 

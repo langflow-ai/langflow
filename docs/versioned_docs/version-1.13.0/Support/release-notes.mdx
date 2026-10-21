@@ -54,46 +54,23 @@ Highlights of this release include the following changes. For all changes, see t
 
 - Official packages require authentication by default
 
-    Official Python packages, tagged source archives, and Docker images set `LANGFLOW_AUTO_LOGIN=false`.
+    Official Python packages, tagged source archives, and Docker images now set `LANGFLOW_AUTO_LOGIN=false`.
     Set `LANGFLOW_SUPERUSER_PASSWORD`, then sign in as `langflow` or the username in `LANGFLOW_SUPERUSER`.
-    That password does not replace an existing account's password.
 
     Before upgrading an auto-login installation, [prepare that account for password sign-in](/api-keys-and-authentication#upgrade-from-auto-login).
-    If you already upgraded and can't sign in, [recover access](/troubleshoot#recover-access-after-upgrading).
 
-    Development branches still sign in automatically. On a release package or Docker image, set `LANGFLOW_AUTO_LOGIN=true` to keep that behavior.
-    `langflow api-key` works only while automatic login is on. Otherwise, [create API keys](/api-keys-and-authentication#create-a-langflow-api-key) in **Settings** or with the API.
+    If you already upgraded and can't sign in, see [recover access](/troubleshoot#recover-access-after-upgrading).
 
     For more information, see [API keys and authentication](/api-keys-and-authentication#langflow-auto-login).
 
-- Chroma components are removed
+- Chroma and Local DB components are removed
 
     Langflow 1.13 stores local Knowledge and Memory in SQLite, instead of a local Chroma database.
     The [**Chroma DB**](/components-bundle-components#legacy-bundles) and [**Local DB**](/components-bundle-components#legacy-bundles) components are legacy.
 
     Replace **Chroma** and **Local DB** with a [knowledge base](/knowledge#knowledge-bases), or with a supported remote vector store.
-    At startup, Langflow copies supported local Chroma stores into SQLite.
-
-    Back up the application database and the knowledge-base directory before you upgrade.
 
     For more information, see [Upgrade Knowledge and Memory storage](/knowledge-storage-upgrade).
-
-- The ALTK component is removed
-
-    The [**ALTK**](/components-bundle-components) component is removed.
-
-    Replace **ALTK** with the [**Agent**](/components-agents) component.
-
-- Seven MrScraper components are removed
-
-    The [**MrScraper**](../Components/bundles-mrscraper.mdx) bundle now provides three components: **Account**, **Scraper API**, and **Web Search**.
-    The **AI Agent Scraper**, **Batch Scrape URLs**, **Crawl Website**, **Get Result Detail**, **Get Results**, **Run AI Scraper**, and **Run Manual Scraper** components are removed, and Langflow does not convert them automatically.
-    In saved flows, these nodes fail when the flow builds or runs.
-    Replace each removed node with **Scraper API** or **Web Search**, and then update downstream parsing.
-
-    **Fetch Rendered HTML** is renamed **Scraper API**. In saved flows, [update the component](/concepts-components#update-component-versions) when Langflow prompts you.
-
-    For more information, see [Updating existing flows](../Components/bundles-mrscraper.mdx#updating-existing-flows).
 
 ### New features
 
@@ -106,7 +83,7 @@ Highlights of this release include the following changes. For all changes, see t
 
 - Connections
 
-    Langflow stores Google Workspace, Microsoft 365, and Slack accounts as connections.
+    Langflow stores Google Workspace, Microsoft 365, and Slack accounts as persistent connections.
     For more information, see [Connections](./connections).
 
 - Concurrent editing
@@ -116,14 +93,31 @@ Highlights of this release include the following changes. For all changes, see t
 
 - Instance migration
 
-    Langflow can check an installation before a move and copy a SQLite database to PostgreSQL.
-    Superusers can run the move from the migration API when `LANGFLOW_FEATURE_INSTANCE_MIGRATION` is set to `true`.
-    For more information, see [Database migrations](./database-migrations).
+    Langflow provides a guided workflow to migrate users, projects, flows, settings, local files, and local knowledge bases to a new instance.
+    The workflow checks the source instance, pauses writes, creates a backup, copies applicable data to the target instance's storage, verifies the copy, and provides recovery steps.
+
+    For more information, see [Migrate a Langflow instance](/instance-migration).
 
 - Administration API and CLI
 
     Superusers can manage users, teams, and roles with the API or the `langflow admin` command.
     For more information, see [Administer users and teams with the API and CLI](./admin-api-cli).
+
+## Component changes
+
+- The ALTK component is removed
+
+    The [**ALTK**](/components-bundle-components) component is removed.
+
+    Replace **ALTK** with the [**Agent**](/components-agents) component.
+
+- MrScraper components are removed
+
+    The [**MrScraper**](/bundles-mrscraper) bundle now provides three components.
+
+    Instead, use the **Scraper API** or **Web Search** components.
+
+    For more information, see [Update existing flows](/bundles-mrscraper).
 
 ## 1.12.x
 
