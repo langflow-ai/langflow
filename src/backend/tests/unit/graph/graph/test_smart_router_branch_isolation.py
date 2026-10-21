@@ -944,3 +944,53 @@ async def test_boolean_router_runs_only_the_answer_it_reaches(monkeypatch, proba
 
     assert [name for name, sink in sinks.items() if sink.did_run] == [ran]
     assert sinks[ran].received == received
+
+
+class _ScoreSmartRouter(SmartRouterComponent):
+    """Mirrors what ``update_outputs`` produces for a Score router with three levels, and Else."""
+
+    outputs = [
+        Output(display_name=name, name=f"level_{i}_result", method="process_case", group_outputs=True)
+        for i, name in enumerate(("Low", "Medium", "High"), start=1)
+    ] + [Output(display_name="Else", name="default_result", method="default_response", group_outputs=True)]
+
+
+@pytest.mark.parametrize(("probabilities", "ran"), [((0.1, 0.4, 0.5), "medium"), ((0.0, 0.1, 0.9), "high")])
+async def test_score_router_runs_only_the_level_its_score_rounds_to(monkeypatch, probabilities, ran):
+    from lfx.base.models.decisions.schema import DecisionResult
+
+    ids = [f"level_{i}_result" for i in (1, 2, 3)]
+    monkeypatch.setattr(
+        "lfx.components.llm_operations.llm_conditional_router.evaluate_decision",
+        lambda *_args, **_kwargs: DecisionResult(
+            kind="score",
+            provider="Test",
+            model="test-model",
+            probabilities=dict(zip(ids, probabilities, strict=True)),
+            score=sum(i * p for i, p in enumerate(probabilities)),
+        ),
+    )
+    router = _make_router(
+        _ScoreSmartRouter,
+        _TWO_ROUTES,  # Choice's routes, which Score leaves alone
+        routing_mode="Decision Model",
+        decision_model=[{"name": "test-model", "provider": "Test"}],
+        decision_kind="Score",
+        decision_question="How urgent is this message?",
+        score_levels=[
+            {"route_category": name, "route_description": "", "output_value": ""} for name in ("Low", "Medium", "High")
+        ],
+        enable_else_output=True,
+    )
+    graph = Graph()
+    sinks = {name: RecordingSink(_id=name) for name in ("low", "medium", "high", "else")}
+    graph.add_component(router, "router")
+    for name, sink in sinks.items():
+        graph.add_component(sink, name)
+    for level, name in zip(ids, ("low", "medium", "high"), strict=True):
+        graph.add_component_edge("router", (level, "input_value"), name)
+    graph.add_component_edge("router", ("default_result", "input_value"), "else")
+
+    await _run(graph)
+
+    assert [name for name, sink in sinks.items() if sink.did_run] == [ran]

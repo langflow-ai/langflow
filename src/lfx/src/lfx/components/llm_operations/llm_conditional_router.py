@@ -33,8 +33,10 @@ from lfx.schema.message import Message
 from lfx.schema.table import EditMode
 from lfx.schema.token_usage import extract_usage_from_message
 
-_ROUTE_ID = re.compile(r"category_([1-9][0-9]{0,3})_result")
 _MAX_ROUTE_NUMBER = 9999
+# Choice and Language Model mode route through the routes table; Score keeps its own levels, so
+# switching between them never loses either's rows. Each table numbers its own outputs.
+_TABLES = {"routes": ("category", "last_route_number"), "score_levels": ("level", "last_level_number")}
 _CUSTOM_PROMPT_INFO = (
     "Additional instructions for LLM-based categorization. "
     "These will be added to the base prompt. "
@@ -69,16 +71,10 @@ _DECISION_QUESTION_INFO = {
     ),
     "score": "The question that places the input on the routes, read as levels from lowest to highest.",
 }
-_ROUTES_INFO = {
-    "choice": (
-        "Define the categories for routing. Each row should have a route/category name "
-        "and optionally a custom output value."
-    ),
-    "score": (
-        "Levels ordered from lowest to highest, at most 10. The message goes to the level its score rounds to; a "
-        "score exactly between two levels takes the higher one."
-    ),
-}
+_ROUTES_INFO = (
+    "Define the categories for routing. Each row should have a route/category name "
+    "and optionally a custom output value."
+)
 _MINIMUM_PROBABILITY_INFO = {
     "choice": (
         "Required in decision mode, from 0 to 1. The top route is chosen only when its probability is at "
@@ -92,13 +88,13 @@ _MINIMUM_PROBABILITY_INFO = {
 }
 
 
-def _route_number(route_id: Any) -> int | None:
-    """The number in a valid route ID such as ``category_3_result``, or None."""
-    match = _ROUTE_ID.fullmatch(route_id) if isinstance(route_id, str) else None
+def _route_number(route_id: Any, prefix: str = "category") -> int | None:
+    """The number in a valid route ID such as ``category_3_result`` (or ``level_3_result``), or None."""
+    match = re.fullmatch(rf"{prefix}_([1-9][0-9]{{0,3}})_result", route_id) if isinstance(route_id, str) else None
     return int(match.group(1)) if match else None
 
 
-def assign_route_ids(routes: list[dict], last_number: int) -> tuple[list[dict], int]:
+def assign_route_ids(routes: list[dict], last_number: int, prefix: str = "category") -> tuple[list[dict], int]:
     """Give every route a stable output name, so editing routes never moves an edge to another route.
 
     A row keeps a valid, unique ``route_id``. Rows saved before route IDs existed take their
@@ -112,7 +108,7 @@ def assign_route_ids(routes: list[dict], last_number: int) -> tuple[list[dict], 
     numbers: list[int | None] = []
     seen: set[int] = set()
     for row in routes:
-        number = _route_number(row.get("route_id"))
+        number = _route_number(row.get("route_id"), prefix)
         numbers.append(number if number not in seen else None)
         if number is not None:
             seen.add(number)
@@ -126,7 +122,7 @@ def assign_route_ids(routes: list[dict], last_number: int) -> tuple[list[dict], 
     if highest > _MAX_ROUTE_NUMBER:
         msg = f"A Smart Router can number at most {_MAX_ROUTE_NUMBER} routes over its lifetime."
         raise ValueError(msg)
-    keyed = [{**row, "route_id": f"category_{number}_result"} for row, number in zip(routes, numbers, strict=True)]
+    keyed = [{**row, "route_id": f"{prefix}_{number}_result"} for row, number in zip(routes, numbers, strict=True)]
     return keyed, highest
 
 
@@ -264,7 +260,7 @@ class SmartRouterComponent(Component):
         TableInput(
             name="routes",
             display_name="Routes",
-            info=_ROUTES_INFO["choice"],
+            info=_ROUTES_INFO,
             table_schema=[
                 {
                     "name": "route_category",
@@ -327,6 +323,57 @@ class SmartRouterComponent(Component):
             real_time_refresh=True,
             required=True,
         ),
+        TableInput(
+            name="score_levels",
+            display_name="Levels",
+            info=(
+                "Score only: levels ordered from lowest to highest, at most 10. The message goes to the level its "
+                "score rounds to; a score exactly between two levels takes the higher one."
+            ),
+            table_schema=[
+                {
+                    "name": "route_category",
+                    "display_name": "Level Name",
+                    "type": "str",
+                    "description": "Name for the level, shown on its output.",
+                    "edit_mode": EditMode.INLINE,
+                },
+                {
+                    "name": "route_description",
+                    "display_name": "Level Description",
+                    "type": "str",
+                    "description": "What this level means; the model places the input against it.",
+                    "default": "",
+                    "edit_mode": EditMode.POPOVER,
+                },
+                {
+                    "name": "output_value",
+                    "display_name": "Level Message (Optional)",
+                    "type": "str",
+                    "description": (
+                        "Optional message to send when this level is chosen. "
+                        "Leave empty to pass through the original input text."
+                    ),
+                    "default": "",
+                    "edit_mode": EditMode.POPOVER,
+                },
+                {
+                    "name": "route_id",
+                    "display_name": "Level ID",
+                    "type": "str",
+                    "description": "Set automatically. Keeps this level's connections when other levels change.",
+                    "hidden": True,
+                    "disable_edit": True,
+                },
+            ],
+            value=[
+                {"route_category": "Low", "route_description": "Can wait", "output_value": ""},
+                {"route_category": "Medium", "route_description": "Needs attention soon", "output_value": ""},
+                {"route_category": "High", "route_description": "Urgent", "output_value": ""},
+            ],
+            real_time_refresh=True,
+            show=False,
+        ),
         MessageInput(
             name="message",
             display_name="Override Output",
@@ -357,6 +404,15 @@ class SmartRouterComponent(Component):
             advanced=True,
             override_skip=True,
         ),
+        IntInput(
+            name="last_level_number",
+            display_name="Last Level Number",
+            info="Set automatically: the highest level number assigned, so a deleted level's output is never reused.",
+            value=0,
+            show=False,
+            advanced=True,
+            override_skip=True,
+        ),
         MultilineInput(
             name="custom_prompt",
             display_name="Additional Instructions",
@@ -381,9 +437,16 @@ class SmartRouterComponent(Component):
             raise DecisionConfigurationError(msg)
         return mode == "Decision Model"
 
-    def _is_boolean_mode(self) -> bool:
-        """Whether this router answers a yes/no question through its Yes and No outputs."""
-        return self._is_decision_mode() and self._decision_kind() == "boolean"
+    @staticmethod
+    def _table(*, decision_mode: bool, kind: str) -> str | None:
+        """The table whose rows are this router's outputs: none for Boolean's Yes and No."""
+        if decision_mode and kind == "boolean":
+            return None
+        return "score_levels" if decision_mode and kind == "score" else "routes"
+
+    def _rows_table(self) -> str | None:
+        """This router's table, as its saved settings say."""
+        return self._table(decision_mode=self._is_decision_mode(), kind=self._decision_kind())
 
     def _decision_kind(self, kind: Any = None) -> str:
         """``kind``, by default this router's Decision Type, as a request kind; an unknown type stops."""
@@ -442,21 +505,17 @@ class SmartRouterComponent(Component):
             if decision_mode and field_name == "routing_mode":
                 build_config["enable_else_output"]["value"] = True
             build_config["enable_else_output"]["advanced"] = not decision_mode
-        if "routes" in build_config:
-            routes = build_config["routes"]
-            score_mode = decision_mode and kind == "score"
-            routes["info"] = _ROUTES_INFO["score" if score_mode else "choice"]
-            routes["show"] = routes["required"] = not boolean_mode
-            schema = routes.get("table_schema") or []
-            # Score rounds to a level, so its routes have no thresholds.
-            for column in schema.get("columns", []) if isinstance(schema, dict) else schema:
-                if column.get("name") == "minimum_probability":
-                    column["hidden"] = score_mode
-            rows = field_value if field_name == "routes" else routes.get("value")
-            last = (build_config.get("last_route_number") or {}).get("value") or 0
-            routes["value"], last = assign_route_ids(rows or [], last)
-            if "last_route_number" in build_config:
-                build_config["last_route_number"]["value"] = last
+        shown_table = self._table(decision_mode=decision_mode, kind=kind)
+        for table, (prefix, counter) in _TABLES.items():
+            if table not in build_config:
+                continue
+            rows_input = build_config[table]
+            rows_input["show"] = rows_input["required"] = table == shown_table
+            rows = field_value if field_name == table else rows_input.get("value")
+            last = (build_config.get(counter) or {}).get("value") or 0
+            rows_input["value"], last = assign_route_ids(rows or [], last, prefix)
+            if counter in build_config:
+                build_config[counter]["value"] = last
         if decision_mode:
             return handle_model_input_update(
                 self, build_config, field_value, field_name, model_field_name="decision_model"
@@ -475,20 +534,24 @@ class SmartRouterComponent(Component):
                 return field_value
             return (template.get(name) or {}).get("value", getattr(self, name, default))
 
-        if self._is_decision_mode(current("routing_mode", default="Language Model")) and (
-            self._decision_kind(current("decision_kind", default="Choice")) == "boolean"
-        ):
-            # Switching to Boolean replaces the route outputs, so the editor drops their edges.
+        table = self._table(
+            decision_mode=self._is_decision_mode(current("routing_mode", default="Language Model")),
+            kind=self._decision_kind(current("decision_kind", default="Choice")),
+        )
+        # Switching type swaps the outputs (Yes and No, levels or routes), so the editor drops the old edges.
+        if table is None:
             frontend_node["outputs"] = [
                 Output(display_name="Yes", name=_YES_OUTPUT, method="process_case", group_outputs=True),
                 Output(display_name="No", name=_NO_OUTPUT, method="process_case", group_outputs=True),
             ]
         else:
-            # Prefer the template's routes: update_build_config has already given them their IDs.
-            fallback = field_value if field_name == "routes" else getattr(self, "routes", [])
+            # Prefer the template's rows: update_build_config has already given them their IDs.
+            prefix, counter = _TABLES[table]
+            fallback = field_value if field_name == table else getattr(self, table, [])
             routes_data, _ = assign_route_ids(
-                (template.get("routes") or {}).get("value", fallback) or [],
-                (template.get("last_route_number") or {}).get("value", getattr(self, "last_route_number", 0)) or 0,
+                (template.get(table) or {}).get("value", fallback) or [],
+                (template.get(counter) or {}).get("value", getattr(self, counter, 0)) or 0,
+                prefix,
             )
             # Add a dynamic output for each category - all using the same method
             for i, row in enumerate(routes_data):
@@ -669,21 +732,23 @@ class SmartRouterComponent(Component):
         return candidates, thresholds
 
     def _route_branches(self, kind: str, threshold: float | None) -> tuple[list[dict], dict]:
-        """One candidate per route, and the probability each Choice route needs; Score routes need none."""
-        if len(self.routes) < 2:  # noqa: PLR2004 - a choice needs at least two options
-            msg = "Decision mode needs at least two routes; uncertain results already go to Else."
+        """One candidate per route or level, and the probability each Choice route needs; levels need none."""
+        rows = getattr(self, self._rows_table(), []) or []
+        noun = "level" if kind == "score" else "route"
+        if len(rows) < 2:  # noqa: PLR2004 - a choice needs at least two options
+            msg = f"Decision mode needs at least two {noun}s; uncertain results already go to Else."
             raise DecisionConfigurationError(msg)
-        names = [str(row.get("route_category") or "").strip() for row in self.routes]
+        names = [str(row.get("route_category") or "").strip() for row in rows]
         if not all(names):
-            msg = "Every route needs a name in decision mode."
+            msg = f"Every {noun} needs a name in decision mode."
             raise DecisionConfigurationError(msg)
         candidates = [
             {"id": route_id, "label": row["route_category"], "description": row.get("route_description") or ""}
-            for route_id, row in zip(self._route_ids(), self.routes, strict=True)
+            for route_id, row in zip(self._route_ids(), rows, strict=True)
         ]
         thresholds = {}
         if kind == "choice":
-            for candidate, row, name in zip(candidates, self.routes, names, strict=True):
+            for candidate, row, name in zip(candidates, rows, names, strict=True):
                 own = row.get("minimum_probability")
                 blank = own is None or not str(own).strip()
                 minimum = f"Minimum probability for {name!r}"
@@ -766,29 +831,29 @@ class SmartRouterComponent(Component):
         self._excluded_outputs = set()
         self._decision_evidence = None
         # Checked before any model is called, so a mismatch never costs an inference. Boolean's
-        # Yes and No outputs don't come from the routes.
-        if not self._is_boolean_mode():
+        # Yes and No outputs don't come from a table.
+        if self._rows_table() is not None:
             self._route_ids()
         if self._is_decision_mode():
             self._validate_decision_graph()
 
     def _route_ids(self) -> list[str]:
-        """Each route's output name, in route order.
+        """Each route's (or Score level's) output name, in table order.
 
         Rows sent with no IDs at all, such as an API tweak written before route IDs, take this
         router's saved route outputs in order, as their position meant before. The routes must
         match the saved route outputs exactly: a route with no output would reach a branch nothing
         is connected to, and an output with no route would never be switched off.
         """
-        rows = getattr(self, "routes", []) or []
+        table = self._rows_table()
+        prefix, counter = _TABLES[table]
+        rows = getattr(self, table, []) or []
         # Components built without a saved node (direct calls) have no outputs to follow or check.
-        saved = [name for name in self._outputs_map if _route_number(name)]
-        if saved and not any(_route_number(row.get("route_id")) for row in rows):
+        saved = [name for name in self._outputs_map if _route_number(name, prefix)]
+        if saved and not any(_route_number(row.get("route_id"), prefix) for row in rows):
             route_ids = saved
         else:
-            route_ids = [
-                row["route_id"] for row in assign_route_ids(rows, getattr(self, "last_route_number", 0) or 0)[0]
-            ]
+            route_ids = [row["route_id"] for row in assign_route_ids(rows, getattr(self, counter, 0) or 0, prefix)[0]]
         if self._outputs_map and (len(route_ids) != len(rows) or set(route_ids) != set(saved)):
             msg = "The Smart Router's routes don't match its outputs. Open the flow in the editor to update them."
             raise DecisionConfigurationError(msg)
@@ -796,9 +861,10 @@ class SmartRouterComponent(Component):
 
     def _branches(self) -> list[tuple[str, str, Any]]:
         """Each branch output as (output name, label it is chosen by, its own message), in output order."""
-        if self._is_boolean_mode():
+        table = self._rows_table()
+        if table is None:
             return [(_YES_OUTPUT, "Yes", self.yes_message), (_NO_OUTPUT, "No", self.no_message)]
-        rows = getattr(self, "routes", []) or []
+        rows = getattr(self, table, []) or []
         return [
             (route_id, row.get("route_category") or "", row.get("output_value", ""))
             for route_id, row in zip(self._route_ids(), rows, strict=True)

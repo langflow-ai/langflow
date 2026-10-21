@@ -96,7 +96,7 @@ SCORE = {
     "decision_kind": "Score",
     "decision_question": "How urgent is this message?",
     "minimum_probability": None,
-    "routes": [
+    "score_levels": [
         {"route_category": "Low", "route_description": "Can wait", "output_value": ""},
         {"route_category": "Medium", "route_description": "Today", "output_value": ""},
         {"route_category": "High", "route_description": "Now", "output_value": ""},
@@ -297,8 +297,8 @@ class TestDecisionEvidenceFixtures:
             ("configuration_error", "configuration_error", None),
             ("boolean_accepted", "accepted", "yes_result"),
             ("boolean_unsure", "below_minimum_probability", "default_result"),
-            ("score_accepted", "accepted", "category_2_result"),
-            ("score_rounds_up_at_halfway", "accepted", "category_2_result"),
+            ("score_accepted", "accepted", "level_2_result"),
+            ("score_rounds_up_at_halfway", "accepted", "level_2_result"),
         ],
     )
     def test_each_fixture_has_the_expected_outcome(self, name, reason, branch):

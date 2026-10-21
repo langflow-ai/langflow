@@ -393,24 +393,24 @@
     "selected_outcome": "category_3_result"
   },
   "score_accepted": {
-    "activated_branch": "category_2_result",
+    "activated_branch": "level_2_result",
     "error_action": "Route to Else",
     "kind": "score",
     "minimum_probability": null,
     "options": [
       {
         "description": "Can wait",
-        "id": "category_1_result",
+        "id": "level_1_result",
         "label": "Low"
       },
       {
         "description": "Today",
-        "id": "category_2_result",
+        "id": "level_2_result",
         "label": "Medium"
       },
       {
         "description": "Now",
-        "id": "category_3_result",
+        "id": "level_3_result",
         "label": "High"
       }
     ],
@@ -432,27 +432,27 @@
       }
     },
     "route_thresholds": {},
-    "selected_outcome": "category_2_result"
+    "selected_outcome": "level_2_result"
   },
   "score_rounds_up_at_halfway": {
-    "activated_branch": "category_2_result",
+    "activated_branch": "level_2_result",
     "error_action": "Route to Else",
     "kind": "score",
     "minimum_probability": null,
     "options": [
       {
         "description": "Can wait",
-        "id": "category_1_result",
+        "id": "level_1_result",
         "label": "Low"
       },
       {
         "description": "Today",
-        "id": "category_2_result",
+        "id": "level_2_result",
         "label": "Medium"
       },
       {
         "description": "Now",
-        "id": "category_3_result",
+        "id": "level_3_result",
         "label": "High"
       }
     ],
@@ -474,7 +474,7 @@
       }
     },
     "route_thresholds": {},
-    "selected_outcome": "category_2_result"
+    "selected_outcome": "level_2_result"
   },
   "tied_top_probability": {
     "activated_branch": "default_result",
