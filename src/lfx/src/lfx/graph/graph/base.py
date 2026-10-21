@@ -51,6 +51,7 @@ from lfx.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
 from lfx.services.cache.utils import CacheMiss
 from lfx.services.deps import get_chat_service, get_tracing_service
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.flow_code import normalize_code_for_import
 
 try:
     from opentelemetry import trace as otel_trace
@@ -1837,6 +1838,7 @@ class Graph:
             validate_flow_for_current_settings,
         )
 
+        payload = normalize_code_for_import(payload)
         if "data" in payload:
             payload = payload["data"]
         # Catalog identity is the exact, case-sensitive stored node.data.type.
