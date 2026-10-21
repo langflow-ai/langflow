@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 from urllib.parse import parse_qsl, urlsplit
 
 if TYPE_CHECKING:
-    from collections.abc import Collection
+    from collections.abc import Collection, Mapping
 
 API_WORDS = ["api", "key", "token"]
 
@@ -257,6 +257,44 @@ def restore_redacted_flow_values(incoming_data: dict, stored_data: dict | None) 
     if restored_hidden_value_anywhere:
         _ensure_shared_graph_execution_unchanged(restored, stored_data)
     return restored
+
+
+def restore_request_variable_references(
+    source: object,
+    sanitized: object,
+    request_variables: Mapping[str, object],
+) -> None:
+    """Restore scrubbed variable names in place only when the current request supplies them.
+
+    The read scrubber nulls secret-looking values, including the variable *name* in a
+    ``load_from_db`` field or table cell. That name is not the stored secret, and a
+    shared or public run needs it to resolve a request-scoped override. Restore only
+    references that have a matching request value so the run cannot fall back to an
+    owner's database variables or ambient environment credentials.
+    """
+    if isinstance(source, dict) and isinstance(sanitized, dict):
+        source_value = source.get("value")
+        if source.get("load_from_db") is True and isinstance(source_value, str) and source_value in request_variables:
+            sanitized["value"] = source_value
+
+        row_load_from_db_fields = source.get(_TABLE_LOAD_FROM_DB_FIELDS)
+        if isinstance(row_load_from_db_fields, dict):
+            variable_fields = [name for name, enabled in row_load_from_db_fields.items() if enabled is True]
+        elif isinstance(row_load_from_db_fields, list):
+            variable_fields = row_load_from_db_fields
+        else:
+            variable_fields = []
+        for field_name in variable_fields:
+            variable_name = source.get(field_name)
+            if isinstance(field_name, str) and isinstance(variable_name, str) and variable_name in request_variables:
+                sanitized[field_name] = variable_name
+
+        for key, source_child in source.items():
+            if key in sanitized:
+                restore_request_variable_references(source_child, sanitized[key], request_variables)
+    elif isinstance(source, list) and isinstance(sanitized, list):
+        for source_item, sanitized_item in zip(source, sanitized, strict=False):
+            restore_request_variable_references(source_item, sanitized_item, request_variables)
 
 
 def _node_inner(node: dict) -> dict | None:
@@ -703,6 +741,7 @@ __all__ = [
     "HiddenFieldMetadataError",
     "has_api_terms",
     "remove_api_keys",
+    "restore_request_variable_references",
     "strip_flow_secrets",
     "strip_secret_field_values",
     "strip_secret_field_values_in_place",
