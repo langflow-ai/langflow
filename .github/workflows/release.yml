@@ -960,7 +960,7 @@ jobs:
           # TODO: Unsure why the whl is not built in src/backend/base/dist
           mkdir src/backend/base/dist
           mv dist/*.whl src/backend/base/dist
-          uv pip install src/backend/base/dist/*.whl
+          uv pip install lfx-dist/*.whl src/backend/base/dist/*.whl
           uv run --no-sync python - <<'PY'
           import re
           from importlib.metadata import distributions
