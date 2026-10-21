@@ -50,9 +50,11 @@ def validation_summary(exc: ValidationError, *, field_only: bool = False) -> str
 
 # What the component shows for each part of a decision request.
 _ROWS = {"options": "Option", "levels": "Level"}
-_CELLS = {"id": "an ID", "label": "a Label"}
+_CELLS = {"id": "ID", "label": "Label", "description": "Description"}
+_REQUIRED_CELLS = {"id": "an ID", "label": "a Label"}
 _FIELDS = {"question": "Question", "context": "Context"}
-_BLANK_ERRORS = {"missing", "string_type", "string_pattern_mismatch"}
+# A cell left empty, cleared to "", or holding only spaces.
+_BLANK_ERRORS = {"string_type", "string_too_short", "string_pattern_mismatch"}
 
 
 def configuration_summary(exc: ValidationError) -> str:
@@ -61,15 +63,18 @@ def configuration_summary(exc: ValidationError) -> str:
     problems: list[str] = []
     for error in exc.errors():
         loc = error["loc"]
-        blank = error["type"] in _BLANK_ERRORS and not str(error.get("input") or "").strip()
+        # A missing key reports the whole row as its input, so it is blank whatever that holds.
+        blank = error["type"] == "missing" or (
+            error["type"] in _BLANK_ERRORS and not str(error.get("input") or "").strip()
+        )
         if len(loc) == 3 and loc[0] in _ROWS and isinstance(loc[1], int):  # noqa: PLR2004 - (table, row, column)
             row = f"{_ROWS[loc[0]]} {loc[1] + 1}"
             if error["type"] == "extra_forbidden":
                 problems.append(f"{row} has an unexpected column {loc[2]!r}.")
-            elif blank and loc[2] in _CELLS:
-                missing.setdefault(row, []).append(_CELLS[loc[2]])
+            elif blank and loc[2] in _REQUIRED_CELLS:
+                missing.setdefault(row, []).append(_REQUIRED_CELLS[loc[2]])
             else:
-                problems.append(f"{row}'s {str(loc[2]).title()} must be text.")
+                problems.append(f"{row}'s {_CELLS.get(loc[2], loc[2])} must be text.")
         elif len(loc) == 1 and loc[0] in _FIELDS and blank:
             problems.append(f"{_FIELDS[loc[0]]} can't be empty.")
         elif not loc:

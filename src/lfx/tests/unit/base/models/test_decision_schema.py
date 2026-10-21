@@ -174,6 +174,23 @@ def test_probabilities_may_miss_one_by_their_rounding():
             {"kind": "choice", "question": "  ", "options": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}]},
             "Question can't be empty.",
         ),
+        # Cells typed into and cleared, and a row with no ID or Label at all.
+        (
+            {"kind": "choice", "options": [{"id": "a", "label": "A"}, {"id": "", "label": ""}]},
+            "Option 2 needs an ID and a Label.",
+        ),
+        (
+            {"kind": "choice", "options": [{"id": "a", "label": "A"}, {"description": "x"}]},
+            "Option 2 needs an ID and a Label.",
+        ),
+        (
+            {"kind": "choice", "question": "", "options": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}]},
+            "Question can't be empty.",
+        ),
+        (
+            {"kind": "choice", "options": [{"id": "a", "label": "A"}, {"id": 2, "label": "B"}]},
+            "Option 2's ID must be text.",
+        ),
         (
             {"kind": "choice", "options": [{"id": "a", "label": "A"}, {"id": "a", "label": "B"}]},
             "Each option or level needs a different ID.",
