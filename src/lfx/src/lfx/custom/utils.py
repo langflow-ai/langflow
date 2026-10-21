@@ -297,7 +297,12 @@ def run_build_inputs(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-def get_component_instance(custom_component: CustomComponent | Component, user_id: str | UUID | None = None):
+def get_component_instance(
+    custom_component: CustomComponent | Component,
+    user_id: str | UUID | None = None,
+    *,
+    class_name: str | None = None,
+):
     """Returns an instance of a custom component, evaluating its code if necessary.
 
     If the input is already an instance of `Component` or `CustomComponent`, it is returned directly.
@@ -316,7 +321,7 @@ def get_component_instance(custom_component: CustomComponent | Component, user_i
 
     # Only now, try to process expensive exception/log traceback only *if needed*
     try:
-        custom_class = eval_custom_component_code(code)
+        custom_class = eval_custom_component_code(code, class_name=class_name)
     except Exception as exc:
         # Only generate traceback if an error occurs (save time on success)
         tb = traceback.format_exc()
@@ -561,6 +566,7 @@ def build_component_metadata(
     frontend_node: CustomComponentFrontendNode, custom_component: CustomComponent, module_name: str, ctype_name: str
 ):
     """Build the metadata for a custom component."""
+    frontend_node.metadata["component_class_name"] = type(custom_component).__name__
     if module_name:
         frontend_node.metadata["module"] = module_name
     else:
@@ -639,6 +645,8 @@ def build_custom_component_template(
     custom_component: CustomComponent,
     user_id: str | UUID | None = None,
     module_name: str | None = None,
+    *,
+    class_name: str | None = None,
 ) -> tuple[dict[str, Any], CustomComponent | Component]:
     """Builds a frontend node template and instance for a custom component.
 
@@ -652,6 +660,10 @@ def build_custom_component_template(
                       template construction.
     """
     try:
+        if class_name is not None:
+            # Editor requests start with a generic Component containing source.
+            # Resolve its saved identity before deriving inputs and outputs.
+            custom_component = get_component_instance(custom_component, user_id=user_id, class_name=class_name)
         has_template_config = hasattr(custom_component, "template_config")
     except Exception as exc:
         raise HTTPException(

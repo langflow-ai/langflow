@@ -851,11 +851,12 @@ def _server_components() -> dict:
     }
 
 
-def _public_settings(*, allow_custom=True, allow_public_custom=False) -> SimpleNamespace:
+def _public_settings(*, allow_custom=True, allow_public_custom=False, admin_only=False) -> SimpleNamespace:
     return SimpleNamespace(
         settings=SimpleNamespace(
             allow_custom_components=allow_custom,
             allow_public_custom_components=allow_public_custom,
+            custom_component_admin_only=admin_only,
         )
     )
 
@@ -1458,6 +1459,68 @@ async def test_prepare_public_flow_build_opt_in_honors_global(monkeypatch):
     assert prepared is not flow
     assert prepared == flow
     assert seen.get("target") == prepared
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("grouped", [False, True])
+@pytest.mark.parametrize("component_type", ["ChatInput", "MyCustom"])
+async def test_public_opt_in_honors_admin_only_before_build(monkeypatch, grouped, component_type):
+    from lfx.interface.components import component_cache
+    from lfx.utils import flow_validation as fv
+
+    trusted = "# trusted ChatInput code"
+    hashes = _public_lookup_snapshot({"ChatInput": trusted})[1]
+    monkeypatch.setattr(
+        "lfx.services.deps.get_settings_service",
+        lambda: _public_settings(allow_public_custom=True, admin_only=True),
+    )
+    monkeypatch.setattr(fv, "ensure_component_hash_lookups_loaded", AsyncMock(return_value=hashes))
+    monkeypatch.setattr(component_cache, "type_to_code", {"ChatInput": trusted})
+    monkeypatch.setattr(component_cache, "type_to_current_hash", hashes)
+    monkeypatch.setattr(component_cache, "code_by_hash", {fv._compute_code_hash(trusted): trusted})
+    flow = {"nodes": [_node("child", component_type, "# untrusted stored source")], "edges": []}
+    if grouped:
+        flow = _group_with_proxy(_node("child", component_type, trusted), "code", "# untrusted stored source")
+
+    with pytest.raises(CustomComponentValidationError, match="Flow build blocked"):
+        await fv.prepare_public_flow_build(flow)
+
+    control = {"nodes": [_node("child", "ChatInput", trusted)], "edges": []}
+    prepared = await fv.prepare_public_flow_build(control)
+    assert prepared == control
+
+
+@pytest.mark.parametrize("grouped", [False, True])
+@pytest.mark.parametrize("component_type", ["ChatInput", "MyCustom"])
+def test_public_graph_opt_in_honors_admin_only_before_initialization(monkeypatch, grouped, component_type):
+    from lfx.graph.graph.base import Graph
+    from lfx.interface.components import component_cache
+    from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
+    from lfx.utils import flow_validation as fv
+
+    trusted = "# trusted ChatInput code"
+    monkeypatch.setattr(
+        "lfx.services.deps.get_settings_service",
+        lambda: _public_settings(allow_public_custom=True, admin_only=True),
+    )
+    monkeypatch.setattr(component_cache, "all_types_dict", {"inputs": {}})
+    monkeypatch.setattr(component_cache, "all_types_ready", True)
+    monkeypatch.setattr(component_cache, "type_to_code", {"ChatInput": trusted})
+    monkeypatch.setattr(component_cache, "type_to_current_hash", _public_lookup_snapshot({"ChatInput": trusted})[1])
+    monkeypatch.setattr(component_cache, "code_by_hash", {fv._compute_code_hash(trusted): trusted})
+    initialized = []
+    monkeypatch.setattr(Graph, "initialize", lambda self: initialized.append(self))
+    raw = {"nodes": [_node("child", component_type, "# untrusted stored source")], "edges": []}
+    if grouped:
+        raw = _group_with_proxy(_node("child", component_type, trusted), "code", "# untrusted stored source")
+    graph = Graph(user_id=str(PUBLIC_ANONYMOUS_ACTOR_ID), instantiate_components=False)
+
+    with pytest.raises(CustomComponentValidationError, match="Flow build blocked"):
+        graph.add_nodes_and_edges(raw["nodes"], raw["edges"])
+    assert initialized == []
+
+    graph.add_nodes_and_edges([_node("child", "ChatInput", trusted)], [])
+    assert initialized == [graph]
 
 
 @pytest.mark.asyncio

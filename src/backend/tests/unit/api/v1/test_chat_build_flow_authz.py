@@ -93,6 +93,13 @@ def patch_build_flow(monkeypatch):
     monkeypatch.setattr(flows_helpers, "_read_flow", fake_read_flow)
     monkeypatch.setattr(chat_module, "ensure_flow_permission", fake_ensure)
     monkeypatch.setattr(chat_module, "start_flow_build", fake_start_build)
+    from langflow.services.authorization import flow_data_override
+
+    authz = SimpleNamespace(
+        is_enabled=AsyncMock(return_value=True),
+        supports_cross_user_fetch=AsyncMock(return_value=True),
+    )
+    monkeypatch.setattr(flow_data_override, "get_authorization_service", lambda: authz, raising=False)
 
     # validate_flow_for_current_settings is called when flow.data exists; we
     # leave flow.data=None so it's not invoked. queue_service.register_job_owner
@@ -108,6 +115,38 @@ def _make_queue_service():
         return None
 
     return SimpleNamespace(register_job_owner=register)
+
+
+@pytest.mark.parametrize(("enabled", "cross_user"), [(False, False), (True, False), (False, True)])
+async def test_public_fallback_drops_graph_override_without_active_plugin(
+    patch_build_flow, monkeypatch, enabled, cross_user
+):
+    from langflow.api.v1 import chat as chat_module
+    from langflow.api.v1.schemas import FlowDataRequest
+    from langflow.services.authorization import flow_data_override
+
+    service = SimpleNamespace(
+        is_enabled=AsyncMock(return_value=enabled),
+        supports_cross_user_fetch=AsyncMock(return_value=cross_user),
+    )
+    monkeypatch.setattr(flow_data_override, "get_authorization_service", lambda: service, raising=False)
+    write_check = AsyncMock()
+    monkeypatch.setattr(flow_data_override, "ensure_flow_permission", write_check)
+    monkeypatch.setattr(chat_module, "prepare_flow_build_for_user", AsyncMock(return_value=None))
+    flow = _make_flow(owner_id=uuid4(), public=True, data={"nodes": [], "edges": []})
+    patch_build_flow["session_exec"] = [[flow]]
+
+    result = await chat_module.build_flow(
+        flow_id=flow.id,
+        background_tasks=None,
+        current_user=_make_user(),
+        queue_service=_make_queue_service(),
+        data=FlowDataRequest(nodes=[{"id": "alternate"}], edges=[]),
+    )
+
+    assert result == {"job_id": "fake-job-id"}
+    assert patch_build_flow["start_kwargs"]["data"] is None
+    write_check.assert_not_awaited()
 
 
 # --------------------------------------------------------------------- #

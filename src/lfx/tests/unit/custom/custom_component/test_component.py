@@ -27,6 +27,25 @@ def test_set_invalid_output():
         chatoutput.set(input_value=chatinput.build_config)
 
 
+@pytest.mark.parametrize("repr_value", ["", "Explicit preview", {"preview": "Explicit preview"}])
+def test_custom_repr_tracks_status_without_overwriting_explicit_value(repr_value):
+    component = Component()
+    component.repr_value = repr_value
+    component.status = "First output"
+    first_repr = component.custom_repr()
+
+    component.status = "Second output"
+    second_repr = component.custom_repr()
+
+    if repr_value == "":
+        assert first_repr == "First output"
+        assert second_repr == "Second output"
+    else:
+        assert first_repr == second_repr
+        assert "Explicit preview" in second_repr
+    assert component.repr_value == repr_value
+
+
 @pytest.mark.xfail(reason="CrewAI is not outdated")
 def test_set_component():
     from lfx.components.crewai import CrewAIAgentComponent, SequentialTaskComponent

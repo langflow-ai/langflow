@@ -45,7 +45,10 @@ _GUIDANCE = {
         "Stop all old instances, then run one Langflow worker on the host with the original "
         "local data. Distributed deployments need administrator recovery."
     ),
-    "legacy_workers_running": "Stop the other Langflow instance using this data, then retry the upgrade.",
+    "legacy_workers_running": (
+        "Stop all other Langflow processes on this host, then retry the upgrade. "
+        "This includes instances using different databases or knowledge directories."
+    ),
     "local_filesystem_required": (
         "Copy the original data to a local filesystem and run one Langflow worker there. "
         "Shared filesystems require administrator recovery."
@@ -53,8 +56,8 @@ _GUIDANCE = {
     "remote_source_requires_migration": "Migrate the remote collection to a configured pgVector or OpenSearch store.",
     "validation_failed": "The copy failed validation. Preserve the original source and inspect the upgrade logs.",
     "automatic_reader_limit": (
-        "This store exceeds the automatic reader's resource limits. Preserve the source and use the "
-        "managed controller with a qualified signed helper, or export it from an isolated old-release environment."
+        "This store exceeds the automatic reader's resource limits. Preserve the source and "
+        "export it from an isolated old-release environment."
     ),
     "storage_changed": "Routing changed during upgrade. Inspect the authoritative KB record before retrying.",
     "interrupted": "The upgrade was interrupted. Retry resumes the unpublished generation safely.",

@@ -64,6 +64,7 @@ from langflow.api.v1.flows_helpers import (
     _save_flow_to_fs,
     _update_existing_flow,
     _validate_and_assign_folder,
+    _validate_new_flow_id,
     _verify_fs_path,
     destination_folder_owner_id,
 )
@@ -282,7 +283,7 @@ def _handle_unique_constraint_error(exc: Exception, *, status_code: int = 400) -
     return HTTPException(status_code=500, detail=FLOW_PERSIST_FAILED)
 
 
-def _validate_catalog_policy_for_write(
+def validate_catalog_policy_for_write(
     flow_data: dict | None,
     *,
     snapshot: CatalogPolicySnapshot,
@@ -294,6 +295,9 @@ def _validate_catalog_policy_for_write(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except CatalogPolicyIdentityUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+_validate_catalog_policy_for_write = validate_catalog_policy_for_write
 
 
 # build router
@@ -334,7 +338,7 @@ async def create_flow(
     try:
         catalog_policy_snapshot = get_catalog_policy_service().snapshot
         _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
-        await persist_and_strip_mcp_secrets(flow.data, current_user.id, session)
+        await persist_and_strip_mcp_secrets(flow.data, current_user.id, session, flow_id=flow.id)
         # FastAPI builds the dependency's body model independently from the
         # handler's body model. Carry the exact destination that was authorized
         # into the row we persist so stale caller scope fields cannot retarget
@@ -696,7 +700,9 @@ async def update_flow(
         # only the reference it wrote itself and stage nothing. actor.id rather than
         # current_user.id: the rollback expires the ORM User.
         masked_targets: list[MCPSecretTarget] = []
-        carried_secrets, secret_variables = extract_and_strip_mcp_secrets(flow.data, masked_targets=masked_targets)
+        carried_secrets, secret_variables = extract_and_strip_mcp_secrets(
+            flow.data, masked_targets=masked_targets, flow_id=flow_id
+        )
 
         async def operation() -> FlowRead:
             # Re-load inside each attempt so retry after nested rollback never uses an expired ORM instance.
@@ -845,7 +851,9 @@ async def upsert_flow(
     # Extract once: a rollback between retry attempts discards the staged rows but not the
     # in-place rewrite, so a second extraction would find only its own reference.
     masked_targets: list[MCPSecretTarget] = []
-    carried_secrets, secret_variables = extract_and_strip_mcp_secrets(flow.data, masked_targets=masked_targets)
+    carried_secrets, secret_variables = extract_and_strip_mcp_secrets(
+        flow.data, masked_targets=masked_targets, flow_id=flow_id
+    )
 
     try:
         catalog_policy_snapshot = get_catalog_policy_service().snapshot
@@ -1144,8 +1152,9 @@ async def create_flows(
     # Validate the complete request before adding or flushing any rows. This
     # keeps a denial in a later item from partially applying an earlier item.
     for flow in flow_list.flows:
+        _validate_new_flow_id(flow.id)
         _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
-        await persist_and_strip_mcp_secrets(flow.data, current_user.id, session)
+        await persist_and_strip_mcp_secrets(flow.data, current_user.id, session, flow_id=flow.id)
         # This endpoint bypasses _new_flow, so the fs_path containment check
         # every sibling flow-write route applies must run here too. Without it
         # an absolute fs_path reaches the fs sync poller, which merges any
@@ -1351,7 +1360,12 @@ async def upload_file(
         if effective_flow_data is None and existing_flow is not None and existing_flow.user_id == current_user.id:
             effective_flow_data = existing_flow.data
         _validate_catalog_policy_for_write(effective_flow_data, snapshot=catalog_policy_snapshot)
-        await persist_and_strip_mcp_secrets(flow.data, current_user.id, session)
+        await persist_and_strip_mcp_secrets(
+            flow.data,
+            current_user.id,
+            session,
+            flow_id=None if flow.id in foreign_existing_ids else flow.id,
+        )
 
     try:
         flow_reads: list[FlowRead] = []
