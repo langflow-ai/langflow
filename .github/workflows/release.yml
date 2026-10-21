@@ -1690,7 +1690,13 @@ jobs:
 
   call_docker_build_main_backend:
     name: Call Docker Build Workflow for Langflow Backend
-    if: ${{ inputs.build_docker_main && !inputs.dry_run }}
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.reserve-final-release.result == 'success' &&
+      inputs.build_docker_main &&
+      !inputs.dry_run &&
+      needs.call_docker_build_main.result == 'success'
     needs: [reserve-final-release, call_docker_build_main, determine-main-version]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
@@ -1703,7 +1709,13 @@ jobs:
 
   call_docker_build_main_frontend:
     name: Call Docker Build Workflow for Langflow Frontend
-    if: ${{ inputs.build_docker_main && !inputs.dry_run }}
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.reserve-final-release.result == 'success' &&
+      inputs.build_docker_main &&
+      !inputs.dry_run &&
+      needs.call_docker_build_main.result == 'success'
     needs: [reserve-final-release, call_docker_build_main, determine-main-version]
     uses: ./.github/workflows/docker-build-v2.yml
     with:

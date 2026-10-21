@@ -7,6 +7,8 @@ the dynamic input/output routing, and the removal of the legacy "Filter
 Values" operation.
 """
 
+import copy
+
 import pandas as pd
 import pytest
 from lfx.components.processing.data_operations import DataOperationsComponent
@@ -20,6 +22,11 @@ from lfx.components.processing.operations import (
 )
 from lfx.components.processing.parse_json_data import ParseJSONDataComponent
 from lfx.components.processing.text_operations import TextOperations
+from lfx.custom.utils import build_custom_component_template
+from lfx.exceptions.component import ComponentBuildError
+from lfx.graph import Graph
+from lfx.inputs.inputs import instantiate_input
+from lfx.io import Output
 from lfx.schema import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.dotdict import dotdict
@@ -175,6 +182,46 @@ class TestJsonOperations:
         result = component.as_data()
         assert result.data["existing_key"] == "updated_value"
         assert result.data["new_key"] == "new_value"
+
+    @pytest.mark.parametrize("component_class", [OperationsComponent, DataOperationsComponent])
+    @pytest.mark.parametrize("value", ["hello", [1, 2], 3, 0.5, True, False, None])
+    def test_select_data_key_preserves_non_dict_value(self, component_class, value):
+        operation_field = "operation" if component_class is OperationsComponent else "operations"
+        component = component_class(
+            data=Data(data={"data": value, "other": "dropped"}),
+            select_keys_input=["data"],
+            **{operation_field: [{"name": "Select Keys"}]},
+        )
+
+        result = component.as_data()
+
+        assert result.data == {"data": value}
+
+    @pytest.mark.parametrize("component_class", [OperationsComponent, DataOperationsComponent])
+    @pytest.mark.parametrize("value", [{"inner": 1}, {}])
+    def test_select_data_key_unwraps_dict_value(self, component_class, value):
+        operation_field = "operation" if component_class is OperationsComponent else "operations"
+        component = component_class(
+            data=Data(data={"data": value}),
+            select_keys_input=["data"],
+            **{operation_field: [{"name": "Select Keys"}]},
+        )
+
+        result = component.as_data()
+
+        assert result.data == value
+
+    @pytest.mark.parametrize("component_class", [OperationsComponent, DataOperationsComponent])
+    def test_select_data_key_missing_raises_value_error(self, component_class):
+        operation_field = "operation" if component_class is OperationsComponent else "operations"
+        component = component_class(
+            data=Data(data={"other": 1}),
+            select_keys_input=["data"],
+            **{operation_field: [{"name": "Select Keys"}]},
+        )
+
+        with pytest.raises(ValueError, match="Select key not found in data"):
+            component.as_data()
 
     def test_select_keys_rejects_multiple_data(self):
         component = OperationsComponent(
@@ -548,19 +595,21 @@ class TestDynamicInputs:
         assert result["df"]["show"] is False
         assert result["count_words"]["show"] is True
 
-    def test_combine_sets_data_is_list(self):
+    def test_combine_sets_data_list(self):
         component = OperationsComponent()
         config = self._build_config("JSON")
-        config["data"]["is_list"] = False
+        config["data"]["list"] = False
         result = component.update_build_config(config, [{"name": "Combine"}], "operation")
-        assert result["data"]["is_list"] is True
+        assert result["data"]["list"] is True
+        assert "is_list" not in result["data"]
 
-    def test_non_combine_json_op_unsets_data_is_list(self):
+    def test_non_combine_json_op_unsets_data_list(self):
         component = OperationsComponent()
         config = self._build_config("JSON")
-        config["data"]["is_list"] = True
+        config["data"]["list"] = True
         result = component.update_build_config(config, [{"name": "Select Keys"}], "operation")
-        assert result["data"]["is_list"] is False
+        assert result["data"]["list"] is False
+        assert "is_list" not in result["data"]
 
     def test_no_operation_shows_only_type_input(self):
         """Clearing the operation leaves just the current input type's main input."""
@@ -922,3 +971,196 @@ class TestJqGuardLibjqConformance:
         """A builtin inside a computed key ``{(expr): v}`` is a call, not a key name."""
         with pytest.raises(ValueError, match="not allowed"):
             validate_jq_program(program)
+
+
+class TestUpdateFrontendNodeRestoresVisibility:
+    """A saved node must come back with the ``show``/``required`` flags of *its* input type and operation.
+
+    ``update_frontend_node`` rebuilds the template from class defaults (Text input
+    visible). Before the fix only options and outputs were re-synced, so a saved
+    JSON node returned with ``data`` hidden and the canvas dropped its edge.
+    """
+
+    async def _updated_template(self, input_type: str, operation: str = "") -> dict:
+        saved, _ = build_custom_component_template(OperationsComponent(), user_id="test-user")
+        fresh = copy.deepcopy(saved)
+        saved["template"]["input_type"]["value"] = input_type
+        if operation:
+            saved["template"]["operation"]["value"] = [{"name": operation}]
+        updated = await OperationsComponent().update_frontend_node(fresh, saved)
+        return updated["template"]
+
+    async def test_json_combine_shows_list_data_input(self):
+        template = await self._updated_template("JSON", "Combine")
+        assert template["data"]["show"] is True
+        assert template["data"]["required"] is True
+        assert template["data"]["list"] is True
+        assert "is_list" not in template["data"]
+        assert template["text_input"]["show"] is False
+        assert template["df"]["show"] is False
+        assert template["input_type"]["value"] == "JSON"
+        assert template["operation"]["value"] == [{"name": "Combine"}]
+
+    async def test_json_select_keys_shows_operation_fields_only(self):
+        template = await self._updated_template("JSON", "Select Keys")
+        assert template["data"]["show"] is True
+        assert template["data"]["list"] is False
+        assert "is_list" not in template["data"]
+        for field in OperationsComponent.ALL_OPERATION_FIELDS:
+            if field in template:
+                expected = field in OperationsComponent.OPERATION_FIELDS["Select Keys"]
+                assert template[field]["show"] is expected, field
+
+    async def test_saved_operation_field_values_survive(self):
+        saved, _ = build_custom_component_template(OperationsComponent(), user_id="test-user")
+        fresh = copy.deepcopy(saved)
+        saved["template"]["input_type"]["value"] = "JSON"
+        saved["template"]["operation"]["value"] = [{"name": "Select Keys"}]
+        saved["template"]["select_keys_input"]["value"] = ["a", "b"]
+        updated = await OperationsComponent().update_frontend_node(fresh, saved)
+        assert updated["template"]["select_keys_input"]["value"] == ["a", "b"]
+
+    async def test_table_operation_shows_df_input(self):
+        template = await self._updated_template("Table", OPERATIONS_BY_TYPE["Table"][0]["name"])
+        assert template["df"]["show"] is True
+        assert template["df"]["required"] is True
+        assert template["text_input"]["show"] is False
+        assert template["data"]["show"] is False
+
+    async def test_text_without_operation_shows_required_text_input(self):
+        template = await self._updated_template("Text")
+        assert template["text_input"]["show"] is True
+        assert template["text_input"]["required"] is True
+        assert template["data"]["show"] is False
+        assert template["df"]["show"] is False
+        for field in OperationsComponent.ALL_OPERATION_FIELDS:
+            if field in template:
+                assert template[field]["show"] is False, field
+
+    async def test_removed_operation_name_hides_all_operation_fields(self):
+        template = await self._updated_template("JSON", "Filter Values")
+        assert template["data"]["show"] is True
+        for field in OperationsComponent.ALL_OPERATION_FIELDS:
+            if field in template:
+                assert template[field]["show"] is False, field
+
+    async def test_table_merge_shows_both_dataframe_inputs(self):
+        template = await self._updated_template("Table", "Merge")
+        assert template["left_dataframe"]["show"] is True
+        assert template["right_dataframe"]["show"] is True
+
+    async def test_path_selection_rebuilds_selected_key_options(self):
+        saved, _ = build_custom_component_template(OperationsComponent(), user_id="test-user")
+        fresh = copy.deepcopy(saved)
+        saved["template"]["input_type"]["value"] = "JSON"
+        saved["template"]["operation"]["value"] = [{"name": "Path Selection"}]
+        saved["template"]["mapped_json_display"]["value"] = '{"a":{"b":1}}'
+        saved["template"]["selected_key"]["value"] = ".a.b"
+        template = (await OperationsComponent().update_frontend_node(fresh, saved))["template"]
+        assert template["selected_key"]["show"] is True
+        assert template["selected_key"]["value"] == ".a.b"
+        assert ".a.b" in template["selected_key"]["options"]
+
+    async def test_path_selection_with_invalid_saved_json_hides_selected_key(self):
+        saved, _ = build_custom_component_template(OperationsComponent(), user_id="test-user")
+        fresh = copy.deepcopy(saved)
+        saved["template"]["input_type"]["value"] = "JSON"
+        saved["template"]["operation"]["value"] = [{"name": "Path Selection"}]
+        saved["template"]["mapped_json_display"]["value"] = "{not json"
+        template = (await OperationsComponent().update_frontend_node(fresh, saved))["template"]
+        assert template["selected_key"]["show"] is False
+
+
+class TestDataListFlagOnSerializedTemplate:
+    """Only Combine lets the JSON input take several edges, checked on the template the canvas reads.
+
+    The serialized template stores ``Input.is_list`` under ``list``. The canvas
+    (``isValidConnection``) and the graph (``ParameterHandler``) read that key to
+    decide whether ``data`` accepts more than one edge. The component used to
+    write ``is_list`` instead, so ``list`` kept its class default (``True``) for
+    every operation and the stray key was saved into flows.
+    """
+
+    @staticmethod
+    def _json_template() -> dotdict:
+        node, _ = build_custom_component_template(OperationsComponent(), user_id="test-user")
+        template = dotdict(node["template"])
+        template["input_type"]["value"] = "JSON"
+        return template
+
+    def test_serialized_data_field_uses_list_key(self):
+        data_field = self._json_template()["data"]
+        assert data_field["list"] is True
+        assert "is_list" not in data_field
+
+    @pytest.mark.parametrize("operation", sorted(JSON_OPERATIONS))
+    def test_only_combine_accepts_many_edges(self, operation):
+        result = OperationsComponent().update_build_config(self._json_template(), [{"name": operation}], "operation")
+        assert result["data"]["list"] is (operation == "Combine")
+        assert "is_list" not in result["data"]
+
+    def test_switching_input_type_to_json_starts_single(self):
+        result = OperationsComponent().update_build_config(self._json_template(), "JSON", "input_type")
+        assert result["data"]["list"] is False
+
+    def test_stray_is_list_from_an_earlier_save_is_dropped(self):
+        template = self._json_template()
+        template["data"]["is_list"] = False
+        result = OperationsComponent().update_build_config(template, [{"name": "Combine"}], "operation")
+        assert result["data"]["list"] is True
+        assert "is_list" not in result["data"]
+
+    @pytest.mark.parametrize(("operation", "expected"), [("Combine", True), ("Select Keys", False)])
+    def test_updated_data_field_rebuilds_as_input_with_matching_flag(self, operation, expected):
+        """The flag reaches the input model, and no stray key breaks rebuilding the field."""
+        template = self._json_template()
+        template["data"]["is_list"] = not expected
+        result = OperationsComponent().update_build_config(template, [{"name": operation}], "operation")
+        field = copy.deepcopy(dict(result["data"]))
+        rebuilt = instantiate_input(field.pop("_input_type"), {**field, "name": "data"})
+        assert rebuilt.is_list is expected
+
+
+class TestExtraDataEdgesFailLoudly:
+    """A single-input JSON operation must refuse to run when several JSON edges feed the node.
+
+    A node keeps its edges when its operation changes, and nothing prunes extra edges when ``data``
+    stops being a list. With ``list`` false the graph passes only the last edge's data, so without
+    this check the run would use partial input and report no error.
+    """
+
+    class _JsonOperations(OperationsComponent):
+        # A saved JSON node advertises the JSON output; the class default is the Text one.
+        outputs = [Output(display_name="JSON", name="data_output", method="as_data")]
+
+    async def _run(self, operation: str, texts: list[str], *, list_flag: bool) -> dict:
+        sources = []
+        for index, text in enumerate(texts):
+            source = self._JsonOperations(_id=f"source-{index}")
+            source.set(input_type="Text", operation=[{"name": "Word Count"}], text_input=text)
+            sources.append(source)
+        target = self._JsonOperations(_id="target")
+        target.set(
+            input_type="JSON",
+            operation=[{"name": operation}],
+            select_keys_input=["word_count"],
+            data=[source.as_data for source in sources],
+        )
+        graph = Graph(start=sources[0], end=target)
+        # Mirror a saved node whose "list" flag follows its operation.
+        graph.get_vertex("target").data["node"]["template"]["data"]["list"] = list_flag
+        _ = [result async for result in graph.async_start()]
+        return graph.get_vertex("target").results
+
+    @pytest.mark.parametrize("list_flag", [False, True])
+    async def test_single_input_operation_with_two_edges_fails(self, list_flag):
+        with pytest.raises(ComponentBuildError, match="Select Keys operation is not supported for multiple data"):
+            await self._run("Select Keys", ["one two", "three"], list_flag=list_flag)
+
+    async def test_single_input_operation_with_one_edge_runs(self):
+        results = await self._run("Select Keys", ["one two"], list_flag=False)
+        assert results["data_output"].data == {"word_count": 2}
+
+    async def test_combine_with_two_edges_runs(self):
+        results = await self._run("Combine", ["one two", "three"], list_flag=True)
+        assert sorted(results["data_output"].data["word_count"]) == [1, 2]

@@ -103,6 +103,7 @@ class ErrorContent(BaseContent):
     field: str | None = None
     reason: str | None = None
     solution: str | None = None
+    code: str | None = None
     traceback: str | None = None
 
 

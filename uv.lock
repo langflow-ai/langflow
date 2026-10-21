@@ -9125,7 +9125,7 @@ integration = [
 
 [[package]]
 name = "lfx-amazon"
-version = "0.2.0"
+version = "0.2.2"
 source = { editable = "src/bundles/amazon" }
 dependencies = [
     { name = "boto3" },
@@ -9191,7 +9191,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.2.0"
+version = "1.2.3"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -9782,7 +9782,7 @@ requires-dist = [
     { name = "litellm", marker = "python_full_version < '3.14' and sys_platform != 'darwin' and extra == 'cuga'", specifier = ">=1.103.1,!=1.104.0rc1,<2.0.0" },
     { name = "markdown", marker = "extra == 'notion'", specifier = ">=3.8.0" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=2.0.2,<3.0.0" },
-    { name = "mrscraper-sdk", marker = "extra == 'mrscraper'", specifier = ">=0.2.1,<0.3.0" },
+    { name = "mrscraper-sdk", marker = "extra == 'mrscraper'", specifier = ">=0.6.0,<0.7.0" },
     { name = "needle-python", marker = "extra == 'needle'", specifier = ">=0.4.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nvidia'", specifier = ">=26.1.0,<26.3.0" },
     { name = "openai", marker = "extra == 'aiml'", specifier = ">=1.68.2,<3.0.0" },
@@ -10026,7 +10026,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-google"
-version = "0.3.2"
+version = "0.3.5"
 source = { editable = "src/bundles/google" }
 dependencies = [
     { name = "google-api-python-client" },
@@ -10095,7 +10095,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-microsoft"
-version = "0.1.2"
+version = "0.1.4"
 source = { editable = "src/bundles/microsoft" }
 dependencies = [
     { name = "lfx" },
@@ -10238,7 +10238,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-slack"
-version = "0.2.0"
+version = "0.2.2"
 source = { editable = "src/bundles/slack" }
 dependencies = [
     { name = "aiohttp" },
@@ -11400,14 +11400,14 @@ wheels = [
 
 [[package]]
 name = "mrscraper-sdk"
-version = "0.2.1"
+version = "0.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/66/b2/8082b588e11e8769b69dbe92d674996d8a3415d25c0634a8806deaa4a322/mrscraper_sdk-0.2.1.tar.gz", hash = "sha256:34ae2e5eba684536773132484daea65d889a878967650d82ee43ae96f67595e6", size = 10992, upload-time = "2026-06-02T06:59:58.512Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/02/cd/8ece7a9b0a64bf596b970f940dfa1ad1fd8fc0c93396811536b24946a811/mrscraper_sdk-0.6.0.tar.gz", hash = "sha256:b654376286e3442638790f50147e4ecd8e63e50021e685b121b0b98c242bc68f", size = 13967, upload-time = "2026-10-14T09:05:58.495Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8a/2f/6a67ad17bcd220b9e7ed2666f5f2cc5ffe1517be5cdd491ebb519b01395c/mrscraper_sdk-0.2.1-py3-none-any.whl", hash = "sha256:9d740d6516f4ca7efaad0a5540061a8c00b5fbe2d44566f486084cfc622be8c3", size = 11455, upload-time = "2026-06-02T06:59:57.221Z" },
+    { url = "https://files.pythonhosted.org/packages/60/49/12f7c452855a8b1b785066366d0bbd416561fc12367ae3c93e38c563a76b/mrscraper_sdk-0.6.0-py3-none-any.whl", hash = "sha256:62bc17807b0f4d04777727baf5e8259848541c585c469f64da16407e31d2ebcf", size = 11562, upload-time = "2026-10-14T09:05:57.434Z" },
 ]
 
 [[package]]
