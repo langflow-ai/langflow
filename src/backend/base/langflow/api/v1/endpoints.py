@@ -11,7 +11,7 @@ from uuid import UUID, uuid4
 
 import orjson
 import sqlalchemy as sa
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Query, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, StreamingResponse
 from lfx.custom.custom_component.component import Component
@@ -1886,12 +1886,27 @@ def _raw_component_parameters(
     return params
 
 
+def _bind_request_flow_id(component: Any, flow_id: UUID | None) -> None:
+    """Expose the request's flow to a component built for a design-time update.
+
+    The model-provider preflight runs on a freshly built instance, before the
+    template's ``_frontend_node_*`` values are applied, and no graph exists to
+    supply ``flow_id``. Components whose preflight reads persisted, flow-scoped
+    state (Memory Base) would otherwise fail with "flow_id is not available".
+    ``flow_id`` here is the query parameter ``ProviderPolicyAttributesDependency``
+    has already authorized, so it is safe to trust, unlike the template copy.
+    """
+    if flow_id is not None:
+        component._flow_id = str(flow_id)  # noqa: SLF001
+
+
 @router.post("/custom_component", status_code=HTTPStatus.OK, include_in_schema=False)
 async def custom_component(
     raw_code: CustomComponentRequest,
     user: CurrentActiveUser,
     request: Request,
     provider_policy_attributes: ProviderPolicyAttributesDependency,
+    flow_id: Annotated[UUID | None, Query()] = None,
 ) -> CustomComponentResponse:
     # Building a custom component instantiates (and partially executes) posted
     # code. That is a create/write-class action, so enforce the external access
@@ -1928,6 +1943,7 @@ async def custom_component(
         built_frontend_node, component_instance = build_custom_component_template(
             component, user_id=user.id, class_name=raw_code.get_class_name()
         )
+        _bind_request_flow_id(component_instance, flow_id)
         type_ = get_instance_name(component_instance)
         enforce_catalog_policy_for_component_type(type_, snapshot=catalog_policy_snapshot)
         # Posting the source of a blocked integration component must not
@@ -1990,6 +2006,7 @@ async def custom_component_update(
     user: CurrentActiveUser,
     request: Request,
     provider_policy_attributes: ProviderPolicyAttributesDependency,
+    flow_id: Annotated[UUID | None, Query()] = None,
 ):
     """Update an existing custom component with new code and configuration.
 
@@ -2034,6 +2051,7 @@ async def custom_component_update(
             user_id=user.id,
             class_name=code_request.get_class_name(),
         )
+        _bind_request_flow_id(cc_instance, flow_id)
         component_type = get_instance_name(cc_instance)
         enforce_catalog_policy_for_component_type(component_type, snapshot=catalog_policy_snapshot)
         await aenforce_integration_policy_for_component(

@@ -443,6 +443,21 @@ def test_prerelease_restamp_ignores_newer_release_for_another_lfx_line(tmp_path:
     ]
 
 
+def test_prerelease_restamp_ignores_newer_nightly_pinned_to_another_lfx_line(tmp_path: Path) -> None:
+    repo = _create_repository(tmp_path, {"alpha": "0.2.5"})
+    index = FakeIndex()
+    index.latest_versions["lfx-alpha"] = "0.3.2"
+    index.versions["lfx-alpha"] = ("0.2.5", "0.3.2", "0.3.3.dev47")
+    index.queue("lfx-alpha", "0.3.2", _release_requiring("lfx>=1.13.0.dev0,<2.0.0"))
+    index.queue("lfx-alpha", "0.3.3.dev47", _release_requiring("lfx==1.13.0.dev47"))
+
+    plan = restamp_unpublished_bundles(0, "1.12.7rc0", index, base_dir=repo)
+
+    assert [(entry.package, entry.build_version, entry.action) for entry in plan] == [
+        ("lfx-alpha", "0.2.5rc0", "publish-prerelease"),
+    ]
+
+
 def test_prerelease_restamp_rejects_newer_release_for_the_same_lfx_line(tmp_path: Path) -> None:
     repo = _create_repository(tmp_path, {"alpha": "0.1.1"})
     index = FakeIndex()
@@ -485,7 +500,7 @@ def test_prerelease_restamp_rejects_reusing_a_release_with_unknown_lfx_range(tmp
         restamp_unpublished_bundles(3, "1.11.0rc3", index, base_dir=repo)
 
 
-@pytest.mark.parametrize("lfx_requirement", ["lfx==1.12.0", "lfx~=1.12.0", "lfx"])
+@pytest.mark.parametrize("lfx_requirement", ["lfx==1.11.0", "lfx~=1.12.0", "lfx"])
 def test_prerelease_restamp_rejects_reusing_a_release_whose_lfx_range_cannot_be_evaluated(
     tmp_path: Path, lfx_requirement: str
 ) -> None:
@@ -506,7 +521,13 @@ def test_prerelease_restamp_rejects_reusing_a_release_whose_lfx_range_cannot_be_
     [
         (">=1.12.0.dev0,<2.0.0", True),
         ("<2.0.0,>=1.13.0.dev0", False),
-        ("==1.13.0", None),
+        ("==1.13.0", False),
+        ("==1.13.0.dev47", False),
+        ("==1.11.9", False),
+        ("==1.12.0", None),
+        ("==1.12.4", None),
+        ("==1.12.*", None),
+        ("===1.13.0", None),
         ("~=1.12.0", None),
         ("!=1.12.4", None),
         ("", None),  # A bare ``lfx`` requirement.
