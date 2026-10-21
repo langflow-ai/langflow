@@ -123,80 +123,84 @@ export function SessionMoreMenu({
             />
           </SelectTrigger>
         </ShadTooltip>
-        <SelectContent
-          side={side}
-          align={align}
-          sideOffset={sideOffset}
-          className={cn("min-w-[11.5rem] p-0", contentClassName)}
-          onCloseAutoFocus={(e) => {
-            e.preventDefault();
-            triggerRef.current?.focus();
-          }}
-        >
-          {showRename && (
-            <SelectItem
-              variant="plain"
-              value="rename"
-              className="session-more-menu-item"
-              data-testid="rename-session-option"
-            >
-              <div className="flex items-center">
-                <ForwardedIconComponent
-                  name="SquarePen"
-                  className="mr-2 h-4 w-4"
-                />
-                {t("playgroundComponent.rename")}
-              </div>
-            </SelectItem>
-          )}
-          {showMessageLogs && (
-            <SelectItem
-              variant="plain"
-              value="messageLogs"
-              className="session-more-menu-item"
-              data-testid="message-logs-option"
-            >
-              <div className="flex items-center">
-                <ForwardedIconComponent
-                  name="Scroll"
-                  className="mr-2 h-4 w-4"
-                />
-                {t("playgroundComponent.messageLogs")}
-              </div>
-            </SelectItem>
-          )}
-          {showClearChat && (
-            <SelectItem
-              variant="plain"
-              value="clearChat"
-              className="session-more-menu-item"
-              data-testid="clear-chat-option"
-            >
-              <div className="flex items-center text-status-red hover:text-status-red">
-                <ForwardedIconComponent name="X" className="mr-2 h-4 w-4" />
-                {t("playgroundComponent.clearChat")}
-              </div>
-            </SelectItem>
-          )}
-          {showDelete && (
-            <SelectItem
-              variant="plain"
-              value="delete"
-              className="session-more-menu-item"
-              data-testid="delete-session-option"
-            >
-              <div className="flex items-center text-status-red hover:text-status-red">
-                <ForwardedIconComponent
-                  name="Trash2"
-                  className="mr-2 h-4 w-4"
-                />
-                {isDefaultSession
-                  ? t("playgroundComponent.clearSession")
-                  : t("playgroundComponent.deleteSession")}
-              </div>
-            </SelectItem>
-          )}
-        </SelectContent>
+        {/* A closed Radix Select still renders its items off-DOM, which adds
+            up across one menu per session row; mount them only while open. */}
+        {open && (
+          <SelectContent
+            side={side}
+            align={align}
+            sideOffset={sideOffset}
+            className={cn("min-w-[11.5rem] p-0", contentClassName)}
+            onCloseAutoFocus={(e) => {
+              e.preventDefault();
+              triggerRef.current?.focus();
+            }}
+          >
+            {showRename && (
+              <SelectItem
+                variant="plain"
+                value="rename"
+                className="session-more-menu-item"
+                data-testid="rename-session-option"
+              >
+                <div className="flex items-center">
+                  <ForwardedIconComponent
+                    name="SquarePen"
+                    className="mr-2 h-4 w-4"
+                  />
+                  {t("playgroundComponent.rename")}
+                </div>
+              </SelectItem>
+            )}
+            {showMessageLogs && (
+              <SelectItem
+                variant="plain"
+                value="messageLogs"
+                className="session-more-menu-item"
+                data-testid="message-logs-option"
+              >
+                <div className="flex items-center">
+                  <ForwardedIconComponent
+                    name="Scroll"
+                    className="mr-2 h-4 w-4"
+                  />
+                  {t("playgroundComponent.messageLogs")}
+                </div>
+              </SelectItem>
+            )}
+            {showClearChat && (
+              <SelectItem
+                variant="plain"
+                value="clearChat"
+                className="session-more-menu-item"
+                data-testid="clear-chat-option"
+              >
+                <div className="flex items-center text-status-red hover:text-status-red">
+                  <ForwardedIconComponent name="X" className="mr-2 h-4 w-4" />
+                  {t("playgroundComponent.clearChat")}
+                </div>
+              </SelectItem>
+            )}
+            {showDelete && (
+              <SelectItem
+                variant="plain"
+                value="delete"
+                className="session-more-menu-item"
+                data-testid="delete-session-option"
+              >
+                <div className="flex items-center text-status-red hover:text-status-red">
+                  <ForwardedIconComponent
+                    name="Trash2"
+                    className="mr-2 h-4 w-4"
+                  />
+                  {isDefaultSession
+                    ? t("playgroundComponent.clearSession")
+                    : t("playgroundComponent.deleteSession")}
+                </div>
+              </SelectItem>
+            )}
+          </SelectContent>
+        )}
       </Select>
     </div>
   );

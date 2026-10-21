@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from lfx.graph.schema import RunOutputs
     from lfx.graph.vertex.base import Vertex
     from lfx.schema.data import Data
+    from lfx.services.authorization.base import ExecutionPrincipal
 
 
 def get_flow_inputs(graph: Graph) -> list[Vertex]:
@@ -265,6 +266,7 @@ async def run_flow(
     run_id: str | None = None,
     session_id: str | None = None,
     graph: Graph | None = None,
+    execution_principal: ExecutionPrincipal | None = None,
 ) -> list[RunOutputs]:
     """Run a flow with given inputs.
 
@@ -278,6 +280,9 @@ async def run_flow(
         run_id: Optional run ID.
         session_id: Optional session ID.
         graph: Optional pre-loaded graph.
+        execution_principal: Identity the child graph resolves connections under.
+            A sub-flow inherits its parent's principal; without it the child would
+            carry ``ExecutionPrincipal.unknown()`` and deny every connection.
 
     Returns:
         List of run outputs.
@@ -297,6 +302,8 @@ async def run_flow(
         graph.session_id = session_id
     if user_id:
         graph.user_id = user_id
+    if execution_principal is not None:
+        graph.execution_principal = execution_principal
 
     if inputs is None:
         inputs = []

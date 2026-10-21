@@ -15,6 +15,7 @@ type GlobalVariableFixture = {
 type WriteBehavior = {
   delayMs?: number;
   fail?: boolean;
+  failedRequestCount?: number;
 };
 
 type TestConnectionBehavior = {
@@ -112,7 +113,7 @@ async function mockGlobalVariables(
       method: "POST",
       path: "/api/v1/variables/",
       status: 500,
-      count: 1,
+      count: writeBehavior.failedRequestCount ?? 1,
     });
   }
   await page.route(/\/api\/v1\/variables\/?.*/, async (route: Route) => {
@@ -194,31 +195,31 @@ async function openDbProvidersRoute(
 
 test.describe("DB providers route accessibility", () => {
   test(
-    "scans default Chroma Local active state",
+    "scans default SQLite Local active state",
     { tag: ["@release", "@api"] },
     async ({ page }) => {
       await openDbProvidersRoute(page, emptyVariables);
-      await expect(page.getByTestId("db-provider-item-chroma")).toBeVisible();
+      await expect(page.getByTestId("db-provider-item-sqlite")).toBeVisible();
       await expect(
-        page.getByTestId("db-provider-item-chroma").getByText("Active"),
+        page.getByTestId("db-provider-item-sqlite").getByText("Active"),
       ).toBeVisible();
 
-      await page.runA11yScan("db-providers-chroma-default");
+      await page.runA11yScan("db-providers-sqlite-default");
     },
   );
 
   test(
-    "scans Chroma Cloud unconfigured configuration form",
+    "scans OpenSearch required configuration and disabled actions",
     { tag: ["@release", "@api"] },
     async ({ page }) => {
       await openDbProvidersRoute(page, emptyVariables);
-      await page.getByTestId("db-provider-item-chroma_cloud").click();
+      await page.getByTestId("db-provider-item-opensearch").click();
 
-      await expect(page.getByLabel("API Key")).toBeVisible();
-      await expect(page.getByLabel("Tenant")).toBeVisible();
-      await expect(page.getByLabel("Database")).toBeVisible();
-      await expect(page.getByLabel("Region")).toBeVisible();
-      // Required "API Key" is empty, so both actions must be disabled —
+      await expect(page.getByLabel("Cluster URL")).toBeVisible();
+      await expect(page.getByLabel("Username")).toBeVisible();
+      await expect(page.getByLabel("Password")).toBeVisible();
+      await expect(page.getByLabel("Default index name")).toBeVisible();
+      // Required connection fields are empty, so both actions must be disabled —
       // asserting this exercises the `disabled` path on real <button>s
       // rather than just their presence.
       await expect(
@@ -228,7 +229,7 @@ test.describe("DB providers route accessibility", () => {
         page.getByRole("button").filter({ hasText: "Save and use" }),
       ).toBeDisabled();
 
-      await page.runA11yScan("db-providers-chroma-cloud-form");
+      await page.runA11yScan("db-providers-opensearch-required-fields");
     },
   );
 
@@ -358,7 +359,7 @@ test.describe("DB providers route accessibility", () => {
     "scans save-pending loading state",
     { tag: ["@release", "@api"] },
     async ({ page }) => {
-      // Chroma Local's "Use Chroma" action fires a single activation
+      // SQLite Local's "Use SQLite" action fires a single activation
       // request (no preceding field-save call), so delaying it produces a
       // stable, gap-free pending window to scan — unlike the two-phase
       // save-then-activate flow used by the other providers.
@@ -373,17 +374,17 @@ test.describe("DB providers route accessibility", () => {
       // `loading` is true, which strips the accessible name from the a11y
       // tree — a real gap this scan is designed to surface — so a
       // name-based role query would stop matching mid-flight.
-      await page.getByTestId("db-provider-item-chroma").click();
-      const useChromaButton = page
+      await page.getByTestId("db-provider-item-sqlite").click();
+      const useSQLiteButton = page
         .getByRole("button")
-        .filter({ hasText: "Use Chroma" });
-      await expect(useChromaButton).toBeEnabled();
+        .filter({ hasText: "Use SQLite" });
+      await expect(useSQLiteButton).toBeEnabled();
 
       writeBehavior.delayMs = 1500;
-      await useChromaButton.click();
+      await useSQLiteButton.click();
       // Busy uses aria-disabled (not native disabled) so focus is retained.
-      await expect(useChromaButton).toHaveAttribute("aria-busy", "true");
-      await expect(useChromaButton).toHaveAttribute("aria-disabled", "true");
+      await expect(useSQLiteButton).toHaveAttribute("aria-busy", "true");
+      await expect(useSQLiteButton).toHaveAttribute("aria-disabled", "true");
 
       await page.runA11yScan("db-providers-save-pending");
     },
@@ -394,14 +395,18 @@ test.describe("DB providers route accessibility", () => {
     { tag: ["@release", "@api"] },
     async ({ page }) => {
       await openDbProvidersRoute(page, emptyVariables);
-      await page.getByTestId("db-provider-item-chroma_cloud").click();
-      await page.getByLabel("API Key").fill("ck-a11y-test-key");
+      await page.getByTestId("db-provider-item-opensearch").click();
       await page
-        .getByRole("button", { name: "Save and use Chroma Cloud" })
+        .getByLabel("Cluster URL")
+        .fill("https://search.example.com:9200");
+      await page.getByLabel("Username").fill("admin");
+      await page.getByLabel("Password").fill("a11y-test-password"); // pragma: allowlist secret
+      await page
+        .getByRole("button", { name: "Save and use OpenSearch" })
         .click();
 
       await expect(
-        page.getByText("Chroma Cloud configuration saved"),
+        page.getByText("OpenSearch configuration saved"),
       ).toBeVisible({ timeout: TIMEOUTS.standard });
 
       await page.runA11yScan("db-providers-save-success");
@@ -412,12 +417,19 @@ test.describe("DB providers route accessibility", () => {
     "scans save error toast state",
     { tag: ["@release", "@api"] },
     async ({ page }) => {
-      const writeBehavior: WriteBehavior = { fail: true };
+      const writeBehavior: WriteBehavior = {
+        fail: true,
+        failedRequestCount: 3,
+      };
       await openDbProvidersRoute(page, emptyVariables, writeBehavior);
-      await page.getByTestId("db-provider-item-chroma_cloud").click();
-      await page.getByLabel("API Key").fill("ck-a11y-test-key");
+      await page.getByTestId("db-provider-item-opensearch").click();
       await page
-        .getByRole("button", { name: "Save and use Chroma Cloud" })
+        .getByLabel("Cluster URL")
+        .fill("https://search.example.com:9200");
+      await page.getByLabel("Username").fill("admin");
+      await page.getByLabel("Password").fill("a11y-test-password"); // pragma: allowlist secret
+      await page
+        .getByRole("button", { name: "Save and use OpenSearch" })
         .click();
 
       await expect(page.getByText("Error saving DB Provider")).toBeVisible({

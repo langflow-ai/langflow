@@ -55,7 +55,9 @@ def instantiate_class(
         code,
         public_execution=str(user_id) == str(PUBLIC_ANONYMOUS_ACTOR_ID),
     )
-    class_object: type[CustomComponent | Component] = eval_custom_component_code(code)
+    class_object: type[CustomComponent | Component] = eval_custom_component_code(
+        code, class_name=_component_class_name(vertex)
+    )
     custom_component: CustomComponent | Component = class_object(
         _user_id=user_id,
         _parameters=custom_params,
@@ -68,6 +70,28 @@ def instantiate_class(
     return custom_component, custom_params
 
 
+def _component_class_name(vertex: Vertex) -> str:
+    """Class name a node refers to; extension types are addressed as ``ext:<bundle>:<Class>@<slot>``.
+
+    The node's own ``type`` comes first because tool mode swaps ``vertex_type`` for the template's base type.
+    """
+    data = getattr(vertex, "data", None) or {}
+    node_type = data.get("type") or vertex.vertex_type
+    if node_type == "CustomComponent":
+        from lfx.graph.flow_builder.component import FLOW_BUILDER_REGISTRY_TYPE_KEY
+
+        registry_type = data.get(FLOW_BUILDER_REGISTRY_TYPE_KEY)
+        metadata = (data.get("node") or {}).get("metadata")
+        class_name = metadata.get("component_class_name") if isinstance(metadata, dict) else None
+        if isinstance(class_name, str) and class_name:
+            node_type = class_name
+        elif isinstance(registry_type, str) and registry_type:
+            node_type = registry_type
+    if node_type.startswith("ext:"):
+        return node_type.rpartition(":")[2].partition("@")[0]
+    return node_type
+
+
 async def get_instance_results(
     custom_component,
     custom_params: dict,
@@ -76,6 +100,7 @@ async def get_instance_results(
     fallback_to_env_vars: bool = False,
     base_type: str = "component",
 ):
+    """Build a component within trusted message and attachment scopes, then restore them."""
     custom_params = await update_params_with_load_from_db_fields(
         custom_component,
         custom_params,
@@ -95,6 +120,7 @@ async def get_instance_results(
         set_messages_persist,
         should_persist_messages,
     )
+    from lfx.utils.file_path_security import component_file_access_scopes, file_access_scope
 
     graph = getattr(vertex, "graph", None)
     flow_id = getattr(graph, "flow_id", None)
@@ -119,7 +145,7 @@ async def get_instance_results(
         and owner_id is not None
     )
     try:
-        with warnings.catch_warnings():
+        with file_access_scope(component_file_access_scopes(custom_component)), warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
             if base_type == "custom_components":
                 return await build_custom_component(params=custom_params, custom_component=custom_component)

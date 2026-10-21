@@ -37,8 +37,22 @@ test(
 
     //add new folders
 
-    await page.getByTestId("add-project-button").click();
-    await page.getByTestId("add-project-button").click();
+    for (let project = 0; project < 2; project++) {
+      const createResponsePromise = page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          new URL(response.url()).pathname === "/api/v1/projects/",
+      );
+      await page.getByTestId("add-project-button").click();
+      const createResponse = await createResponsePromise;
+      expect(createResponse.ok()).toBeTruthy();
+      const createdProject = await createResponse.json();
+      // Creation refetches the sidebar before navigating to the new project.
+      // Let that navigation finish before opening Settings.
+      await expect(page).toHaveURL(
+        new RegExp(`/all/folder/${createdProject.id}$`),
+      );
+    }
 
     await navigateSettingsPages(page, "Settings", "MCP Servers");
 

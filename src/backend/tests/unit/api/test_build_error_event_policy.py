@@ -77,13 +77,60 @@ async def test_generate_flow_events_sanitizes_cooperative_and_queue_fallback_err
     assert sensitive_detail not in json.dumps(payloads)
 
 
+@pytest.mark.no_blockbuster
+async def test_anonymous_public_policy_error_stream_hides_policy_key_and_traceback(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    from lfx.services.integration_policy import IntegrationPolicyService
+    from lfx.services.policy_bundle import PolicyBundleService, PolicyBundleSnapshot
+
+    flow_data = json.loads(json_memory_chatbot_no_llm)
+    flow_data["access_type"] = "PUBLIC"
+    created = await client.post("api/v1/flows/", json=flow_data, headers=logged_in_headers)
+    assert created.status_code == 201, created.text
+    policy_key = "integrations.qaprobe.doc.search"
+    bundle = PolicyBundleService()
+    bundle.publish(PolicyBundleSnapshot(revision=1, blocked_integration_action_keys={policy_key}))
+    service = IntegrationPolicyService(policy_bundle_service=bundle)
+    monkeypatch.setattr("lfx.services.deps.get_integration_policy_service", lambda: service)
+    integration = SimpleNamespace(
+        provider_id="qaprobe",
+        capability_manifest=SimpleNamespace(
+            capabilities=(
+                SimpleNamespace(
+                    id="qaprobe.doc.search",
+                    policy_keys=(policy_key,),
+                    component_ref="ChatInput",
+                ),
+            )
+        ),
+    )
+    from lfx.extension.bundle_registry import get_default_registry
+
+    monkeypatch.setattr(get_default_registry(), "list_integrations", lambda: [integration])
+    client.cookies.clear()
+    client.cookies.set("client_id", str(uuid4()))
+    response = await client.post(f"api/v1/build_public_tmp/{created.json()['id']}/flow", json={})
+    assert response.status_code == 200, response.text
+    job_id = response.json()["job_id"]
+    events = await client.get(f"api/v1/build_public_tmp/{job_id}/events")
+    assert events.status_code == 200, events.text
+    payloads = [json.loads(line) for line in events.text.splitlines() if line.strip()]
+    errors = [payload for payload in payloads if payload.get("event") == "error"]
+    assert errors, events.text
+    assert "policy-blocked" in events.text
+    assert policy_key not in events.text
+    assert "Traceback" not in events.text
+    assert "/lfx/" not in events.text
+
+
 def test_shared_vertex_event_hides_restored_credential_params() -> None:
     """The raw V1 end_vertex payload must not echo the owner key used at runtime."""
     from langflow.api.build import _vertex_build_data_for_event
 
     response = SimpleNamespace(
         model_dump_json=lambda: json.dumps(
-            {"params": {"api_key": "owner-secret"}, "data": {"results": "visible-output"}}
+            {"params": {"api_key": "owner-secret"}, "data": {"results": "visible-output"}}  # pragma: allowlist secret
         )
     )
 
@@ -91,4 +138,4 @@ def test_shared_vertex_event_hides_restored_credential_params() -> None:
     owner_event = _vertex_build_data_for_event(response, redact_build_params=False)
 
     assert shared_event == {"params": None, "data": {"results": "visible-output"}}
-    assert owner_event["params"]["api_key"] == "owner-secret"
+    assert owner_event["params"]["api_key"] == "owner-secret"  # pragma: allowlist secret

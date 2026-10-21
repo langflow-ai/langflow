@@ -75,10 +75,10 @@ const STRINGS: Record<string, string> = {
   "settings.dbProviders.comingSoon": "Coming soon",
   "settings.dbProviders.comingSoonDescription":
     "This provider is stubbed in the Knowledge Base backend registry and will become configurable after the provider implementation is wired through end-to-end.",
-  "settings.dbProviders.chromaDescription":
-    "Chroma stores vectors on disk next to Langflow and is enabled by default. Selecting it here makes it the default provider for new Knowledge Bases.",
-  "settings.dbProviders.chromaSelected": "Chroma selected",
-  "settings.dbProviders.useChroma": "Use Chroma",
+  "settings.dbProviders.sqliteDescription":
+    "SQLite stores vectors on disk next to Langflow and is enabled by default. Selecting it here makes it the default provider for new Knowledge Bases.",
+  "settings.dbProviders.sqliteSelected": "SQLite selected",
+  "settings.dbProviders.useSQLite": "Use SQLite",
   "settings.dbProviders.save": "Save",
   "settings.dbProviders.useProvider": "Use {{provider}}",
   "settings.dbProviders.saveAndUseProvider": "Save and use {{provider}}",
@@ -94,6 +94,10 @@ const STRINGS: Record<string, string> = {
     "Not configured. Set PGVECTOR_CONNECTION_STRING in your server environment.",
   "settings.dbProviders.usePostgres": "Use Postgres pgVector",
   "settings.dbProviders.postgresSelected": "Postgres pgVector selected",
+  // Non-English copy proves these strings come from translation keys.
+  "settings.dbProviders.fields.OPENSEARCH_USE_SSL.label": "Usar TLS (HTTPS)",
+  "settings.dbProviders.fields.OPENSEARCH_PASSWORD.placeholder":
+    "Digite a senha do OpenSearch",
 };
 
 jest.mock("react-i18next", () => ({
@@ -151,12 +155,11 @@ beforeEach(() => {
 
 describe("DBProvidersPage characterization", () => {
   describe("provider list", () => {
-    it("renders the six providers in canonical order", () => {
+    it("renders supported and future providers in canonical order", () => {
       render(<DBProvidersPage />);
       const items = screen.getAllByTestId(/^db-provider-item-/);
       expect(items.map((item) => item.getAttribute("data-testid"))).toEqual([
-        "db-provider-item-chroma",
-        "db-provider-item-chroma_cloud",
+        "db-provider-item-sqlite",
         "db-provider-item-opensearch",
         "db-provider-item-astra",
         "db-provider-item-mongodb",
@@ -164,12 +167,12 @@ describe("DBProvidersPage characterization", () => {
       ]);
     });
 
-    it("marks chroma as the active provider when no backend variable exists", () => {
+    it("marks sqlite as the active provider when no backend variable exists", () => {
       render(<DBProvidersPage />);
-      const chromaItem = screen.getByTestId("db-provider-item-chroma");
-      expect(chromaItem).toHaveTextContent("Active");
+      const sqliteItem = screen.getByTestId("db-provider-item-sqlite");
+      expect(sqliteItem).toHaveTextContent("Active");
       expect(
-        chromaItem.querySelector('[data-testid="icon-Check"]'),
+        sqliteItem.querySelector('[data-testid="icon-Check"]'),
       ).toBeInTheDocument();
     });
 
@@ -183,7 +186,7 @@ describe("DBProvidersPage characterization", () => {
         screen.getByTestId("db-provider-item-opensearch"),
       ).toHaveTextContent("Active");
       expect(
-        screen.getByTestId("db-provider-item-chroma"),
+        screen.getByTestId("db-provider-item-sqlite"),
       ).not.toHaveTextContent("Active");
     });
 
@@ -197,34 +200,22 @@ describe("DBProvidersPage characterization", () => {
     });
   });
 
-  describe("chroma panel (default selection)", () => {
-    it("shows a disabled 'Chroma selected' action while chroma is active", () => {
+  describe("sqlite panel (default selection)", () => {
+    it("shows a disabled 'SQLite selected' action while sqlite is active", () => {
       render(<DBProvidersPage />);
-      const button = getSaveButton(/chroma selected/i);
+      const button = getSaveButton(/sqlite selected/i);
       expect(button).toBeDisabled();
       expect(screen.queryByTestId("db-provider-test-connection")).toBeNull();
     });
   });
 
-  describe("chroma cloud panel", () => {
-    it("does not treat an empty masked credential as configured", async () => {
-      mockGlobalVariables = [
-        variable(
-          "CHROMA_API_KEY",
-          undefined,
-          "id-CHROMA_API_KEY",
-          "Credential",
-          false,
-        ),
-      ];
-      const user = userEvent.setup();
-      render(<DBProvidersPage />);
-
-      await user.click(screen.getByTestId("db-provider-item-chroma_cloud"));
-
-      expect(document.querySelector('input[type="password"]')).toHaveValue("");
-      expect(getSaveButton(/save and use chroma cloud/i)).toBeDisabled();
-    });
+  it("does not offer retired Chroma providers even with saved credentials", () => {
+    mockGlobalVariables = [
+      variable("CHROMA_API_KEY", undefined, "key", "Credential", true),
+    ];
+    render(<DBProvidersPage />);
+    expect(screen.queryByTestId("db-provider-item-chroma")).toBeNull();
+    expect(screen.queryByTestId("db-provider-item-chroma_cloud")).toBeNull();
   });
 
   describe("postgres pgvector panel", () => {
@@ -279,6 +270,21 @@ describe("DBProvidersPage characterization", () => {
       expect(
         screen.getByTestId("db-provider-toggle-OPENSEARCH_VERIFY_CERTS"),
       ).toHaveAttribute("aria-checked", "true");
+    });
+
+    it("names the TLS switches and the password placeholder in the interface language", async () => {
+      await openOpenSearch();
+      // The switch's accessible name used to be the English field label.
+      expect(
+        screen.getByRole("switch", { name: "Usar TLS (HTTPS)" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText("Digite a senha do OpenSearch"),
+      ).toBeInTheDocument();
+      // Example-value placeholders have no key and stay as written.
+      expect(
+        screen.getByPlaceholderText("https://search.example.com:9200"),
+      ).toBeInTheDocument();
     });
 
     it("keeps Save and Test connection disabled until every required field has a value", async () => {

@@ -29,9 +29,11 @@ jest.mock(
   () => () => <div data-testid="custom-get-started-progress" />,
 );
 
+let mockUserData: { optins: Record<string, boolean> } | undefined;
+
 jest.mock("@/stores/authStore", () => ({
   __esModule: true,
-  default: () => undefined,
+  default: () => mockUserData,
 }));
 
 jest.mock("../add-folder-button", () => ({
@@ -68,6 +70,7 @@ describe("HeaderButtons", () => {
   });
 
   afterEach(() => {
+    mockUserData = undefined;
     act(() => {
       useUtilityStore.setState({
         hideGettingStartedProgress: false,
@@ -91,5 +94,19 @@ describe("HeaderButtons", () => {
 
     expect(screen.queryByTestId("add-folder-btn")).not.toBeInTheDocument();
     expect(screen.getByTestId("upload-folder-btn")).toBeInTheDocument();
+  });
+
+  it("leaves the checklist divider to the get-started seam", () => {
+    mockUserData = { optins: {} };
+    act(() => {
+      useUtilityStore.setState({ hideGettingStartedProgress: false });
+    });
+
+    const { container } = render(<HeaderButtons {...props} />);
+
+    expect(
+      screen.getByTestId("custom-get-started-progress"),
+    ).toBeInTheDocument();
+    expect(container.querySelector("hr")).not.toBeInTheDocument();
   });
 });

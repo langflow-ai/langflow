@@ -4,11 +4,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import yaml
+
 WORKFLOWS_DIR = Path(__file__).resolve().parents[2] / ".github" / "workflows"
 WORKFLOW_PATH = WORKFLOWS_DIR / "release.yml"
 RELEASE_INVENTORY_WORKFLOW_PATH = WORKFLOWS_DIR / "release-inventory-gate.yml"
 BUNDLE_WORKFLOW_PATH = WORKFLOWS_DIR / "release_bundles.yml"
 NIGHTLY_WORKFLOW_PATH = WORKFLOWS_DIR / "release_nightly.yml"
+LFX_WORKFLOW_PATH = WORKFLOWS_DIR / "release-lfx.yml"
 CROSS_PLATFORM_WORKFLOW_PATH = WORKFLOWS_DIR / "cross-platform-test.yml"
 DB_MIGRATION_WORKFLOW_PATH = WORKFLOWS_DIR / "db-migration-validation.yml"
 PYTHON_TEST_WORKFLOW_PATH = WORKFLOWS_DIR / "python_test.yml"
@@ -56,12 +59,36 @@ def test_full_release_requires_and_consumes_the_aligned_base_artifact() -> None:
     assert "langflow ($main_version) and langflow-base ($base_version) must be version-aligned" in validation
     assert "Please enable 'release_package_base' when releasing Langflow" in validation
     assert "Download base artifact" in main_build
-    assert "Update langflow-base dependency for pre-release" in main_build
+    assert "Pin langflow-base release dependency" in main_build
     assert "update_bundle_prerelease_dependencies.py" in main_build
     assert "path: dist/langflow-*.whl" in main_build
     assert "uv pip install dist/langflow-*.whl" in main_build
     assert "dist-core" not in validation + main_build
     assert "pypi/langflow-core" not in validation + main_build
+
+
+def test_core_pins_and_wheel_checks_run_for_stable_and_prerelease() -> None:
+    workflow = yaml.safe_load(WORKFLOW_PATH.read_text())
+    for job, step_name in [
+        ("build-base", "Pin LFX release dependency"),
+        ("build-main", "Pin langflow-base release dependency"),
+    ]:
+        steps = workflow["jobs"][job]["steps"]
+        pin = next(step for step in steps if step["name"] == step_name)
+        assert "if" not in pin
+        assert any("check_core_dependency_pins.py" in step.get("run", "") for step in steps)
+
+    nightly = yaml.safe_load(NIGHTLY_WORKFLOW_PATH.read_text())
+    for job in ["build-nightly-base", "build-nightly-main"]:
+        assert any("check_core_dependency_pins.py" in step.get("run", "") for step in nightly["jobs"][job]["steps"])
+
+    base_build = next(
+        step["run"]
+        for step in nightly["jobs"]["build-nightly-base"]["steps"]
+        if "check_core_dependency_pins.py" in step.get("run", "")
+    )
+    assert "src/lfx/pyproject.toml" in base_build
+    assert "inputs.nightly_tag_lfx" not in base_build
 
 
 def test_main_build_prefers_release_wheels_over_workspace_sources() -> None:
@@ -115,6 +142,16 @@ def test_nightly_publish_order_uses_the_same_dependency_chain() -> None:
     assert "build-nightly-core" not in workflow
     assert "publish-nightly-core" not in workflow
     assert "make sdk_publish" in sdk
+
+
+def test_lfx_docker_build_injects_production_segment_key() -> None:
+    docker_job = _job_block(LFX_WORKFLOW_PATH, "build-docker", "create-release")
+
+    injection = "python3 scripts/ci/inject_segment_write_key.py"
+    build = "uses: docker/build-push-action@v7"
+    assert "LANGFLOW_SEGMENT_WRITE_KEY: ${{ secrets.LANGFLOW_SEGMENT_WRITE_KEY }}" in docker_job
+    assert injection in docker_job
+    assert docker_job.index(injection) < docker_job.index(build)
 
 
 def test_cross_platform_run_has_a_base_runtime_gate() -> None:
@@ -232,3 +269,21 @@ def test_main_wheel_gate_derives_bundle_requirements_from_project_metadata() -> 
     assert 'root_metadata["project"]["optional-dependencies"]["bundles"]' in main_gate
     assert "opt_in_standalone" not in main_gate
     assert "bundle_requirement_names == expected_bundle_names" in main_gate
+
+
+def test_publication_requires_application_evidence_without_a_separate_migration_helper() -> None:
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+    reservation = _job_block(WORKFLOW_PATH, "reserve-final-release", "publish-base")
+    assert "migration_helper_release" not in workflow
+    assert "validate-migration-helper" not in workflow
+    needs = next(line for line in reservation.splitlines() if line.strip().startswith("needs:"))
+    jobs = {item.strip() for item in needs.split("[", 1)[1].rstrip("]").split(",")}
+    assert {"release-inventory", "test-cross-platform", "ci"} <= jobs
+
+
+def test_sqlite_runtime_workflow_references_existing_tests() -> None:
+    import re
+
+    workflow = (WORKFLOWS_DIR / "sqlite-runtime.yml").read_text(encoding="utf-8")
+    for path in re.findall(r"(?:src|scripts)/[\w/]+test_[\w]+\.py", workflow):
+        assert (WORKFLOWS_DIR.parents[1] / path).is_file(), path

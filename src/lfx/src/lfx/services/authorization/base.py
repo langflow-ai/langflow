@@ -5,7 +5,7 @@ from __future__ import annotations
 import abc
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, ClassVar, TypedDict
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypedDict
 from uuid import NAMESPACE_URL, uuid5
 from uuid import UUID as _UUID
 
@@ -30,6 +30,7 @@ class AuthzContext(TypedDict, total=False):
     file_user_id: _UUID | None
     share_user_id: _UUID | None
     provider_account_user_id: _UUID | None
+    connection_owner_id: _UUID | None
     voice_user_id: _UUID | None
     workspace_id: _UUID | None
     folder_id: _UUID | None
@@ -40,6 +41,17 @@ class AuthzContext(TypedDict, total=False):
 
 
 PUBLIC_ANONYMOUS_ACTOR_ID = uuid5(NAMESPACE_URL, "urn:langflow:principal:anonymous-public")
+
+AdministrationResource = Literal["user", "team", "role"]
+ExecutionPrincipalKind = Literal[
+    "actor",
+    "flow_owner",
+    "deployment_owner",
+    "job_owner",
+    "anonymous_public",
+    "headless_operator",
+    "unknown",
+]
 
 
 class PublicResourceAction(str, Enum):
@@ -66,6 +78,33 @@ class AuthorizationPrincipal:
     def public_anonymous(cls) -> AuthorizationPrincipal:
         """Return the stable, non-user identity used by anonymous direct links."""
         return cls(actor_type="anonymous_public", actor_id=PUBLIC_ANONYMOUS_ACTOR_ID)
+
+
+@dataclass(frozen=True, slots=True)
+class ExecutionPrincipal:
+    """Identity and route family used for dependency credential resolution.
+
+    ``allow_explicit_shares`` is the owner-only switch for route families whose
+    admission never admits a delegated caller (the legacy MCP transports). It is
+    additive and defaults to ``True`` so the
+    resolver keeps honoring explicit shares for every family that already did;
+    a host resolver that supports shares must skip its share branch when it is
+    ``False``. The portable deny floor is unaffected either way.
+    """
+
+    kind: ExecutionPrincipalKind
+    user_id: str | None = None
+    actor_id: str | None = None
+    family: str | None = None
+    interactive: bool = False
+    end_user_id: str | None = None
+    actor_label: str | None = None
+    allow_explicit_shares: bool = True
+
+    @classmethod
+    def unknown(cls) -> ExecutionPrincipal:
+        """Return the fail-closed principal for unstamped execution paths."""
+        return cls(kind="unknown")
 
 
 @dataclass(frozen=True, slots=True)
@@ -248,7 +287,23 @@ class ResourceVisibilityScope:
     explicit and logical workspace grants without affecting workspace-only
     resources in an explicit workspace.
     ``excluded_global_project_ids`` removes reserved projects from a global
-    wildcard while preserving owner and concrete resource grants.
+    wildcard while preserving owner, concrete resource, and explicit project
+    grants, matching the in-memory evaluator even for reserved projects.
+    ``exclude_personal_projects`` excludes marked personal projects from global
+    and workspace wildcards only in listings that supply ``project_column``:
+    projects, flows, deployments, and A2A agents. Memory bases, knowledge bases,
+    files, variables, and connections do not supply a project column and are
+    not filtered by this flag. Personal-project UUIDs are not bound as query
+    parameters. Explicit project grants, concrete resource grants, and ownership
+    remain additive.
+    ``excluded_resource_ids`` removes specific resources from every grant
+    mechanism above (``all_resources``, ``resource_ids``, ``workspace_ids``,
+    ``project_ids``) without expanding a wildcard to a concrete id list — a
+    plugin-level per-resource exception (e.g. "this user's role access to
+    this one resource is revoked") that must win over any of those, while
+    never suppressing the caller's own ownership (a resource visible only via
+    ``owner_clause`` is unaffected; exclusion applies solely to the plugin's
+    granted visibility).
     """
 
     all_resources: bool = False
@@ -258,6 +313,8 @@ class ResourceVisibilityScope:
     include_unassigned_workspace: bool = False
     excluded_workspace_project_ids: tuple[UUID, ...] = ()
     excluded_global_project_ids: tuple[UUID, ...] = ()
+    exclude_personal_projects: bool = False
+    excluded_resource_ids: tuple[UUID, ...] = ()
 
     @property
     def has_cross_user_access(self) -> bool:
@@ -306,6 +363,41 @@ class BaseAuthorizationService(Service, abc.ABC):
     async def supports_public_principals(self) -> bool:
         """Return whether this service can safely authorize anonymous principals."""
         return self.SUPPORTS_PUBLIC_PRINCIPALS
+
+    async def can_administer(self, *, user_id: UUID, resource: AdministrationResource) -> bool:
+        """Return whether ``user_id`` may administer a canonical identity resource.
+
+        This contract is deliberately separate from the OSS pass-through
+        ``enforce`` seam. Its default is deny so enabling routes or installing
+        an older authorization plugin cannot accidentally grant administrative
+        access to every authenticated user.
+        """
+        _ = (user_id, resource)
+        return False
+
+    async def supports_team_role_assignments(self) -> bool:
+        """Return whether the installed implementation supports team subjects."""
+        return False
+
+    async def get_feature_capabilities(self, *, user_id: UUID, is_superuser: bool) -> dict[str, Any]:
+        """Return caller-specific, plugin-owned feature capabilities.
+
+        The OSS contract is empty and therefore cannot advertise an installed
+        Enterprise surface accidentally. Plugins may add bounded, credential-
+        free capability documents that the shared discovery route exposes.
+        """
+        _ = (user_id, is_superuser)
+        return {}
+
+    async def is_user_credentials_managed_externally(self, *, session: Any, user_id: UUID) -> bool:
+        """Return whether local password creation and reset must be blocked.
+
+        The OSS default keeps credentials locally managed. Enterprise identity
+        providers opt individual linked users into source protection without
+        teaching the shared user routes about provider-owned persistence.
+        """
+        _ = (session, user_id)
+        return False
 
     async def resolve_public_tenant(self, request: PublicAuthorizationRequest) -> str | None:
         """Resolve the trusted tenant for an anonymous request, or deny by returning ``None``.

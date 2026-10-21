@@ -159,9 +159,15 @@ To connect an agent and create a flow on your Langflow server, follow these step
     * Batch several tool calls with `$N.field` references between steps
     * Call `notify_done` when edits are finished so that the Langflow UI refreshes
 
+The connected agent can also send the flow building task to Langflow Assistant by calling the `run_assistant` tool.
+The `run_assistant` tool sends one instruction to Langflow Assistant, and Langflow Assistant builds a complete flow by choosing and connecting components.
+
+For more information, see [Call Langflow Assistant with `lfx-mcp`](/langflow-assistant#call-langflow-assistant-with-lfx-mcp).
+
 ## See also
 
 * [Langflow MCP Client for coding agents](./langflow-mcp-client)
+* [Build flows and components with Langflow Assistant](/langflow-assistant)
 * [Use Langflow as an MCP server](./mcp-server)
 * [Use Langflow as an MCP client](./mcp-client)
 * [About LFX](./lfx-overview)

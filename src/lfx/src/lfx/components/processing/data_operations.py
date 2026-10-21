@@ -387,7 +387,7 @@ class DataOperationsComponent(Component):
         if evaluate:
             combined_data = self.recursive_eval(combined_data)
 
-        return Data(**combined_data)
+        return Data(data=combined_data)
 
     def append_update(self) -> Data:
         """Append or Update with new key-value pairs."""
