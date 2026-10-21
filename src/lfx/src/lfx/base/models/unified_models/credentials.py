@@ -590,12 +590,19 @@ def validate_model_provider_key(
         attributes=policy_attributes,
     )
     if model_type == "decision" or decision_provider in DECISION_ONLY_PROVIDERS:
-        from lfx.base.models.decisions.providers import DEFAULT_MODELS, validate_decision_provider_key
+        from lfx.base.models.decision_constants import DECISION_MODELS_DETAILED
+        from lfx.base.models.decisions.providers import validate_decision_provider_key
 
-        effective_model = model_name or DEFAULT_MODELS.get(decision_provider)
-        if not effective_model:
+        offered = [row["name"] for row in DECISION_MODELS_DETAILED if row["provider"] == decision_provider]
+        if not model_name and not offered:
             msg = "Unsupported decision provider."
             raise ValueError(msg)
+        # As for chat, the default is the first decision model policy allows, so one blocked model
+        # does not stop a key from being saved for the others.
+        effective_model = model_name or next(
+            (name for name in offered if policy.allows_model(decision_provider, name, model_type="decision")),
+            offered[0],
+        )
         policy.require_model(decision_provider, effective_model, model_type="decision")
         validate_decision_provider_key(decision_provider, variables, effective_model)
         return

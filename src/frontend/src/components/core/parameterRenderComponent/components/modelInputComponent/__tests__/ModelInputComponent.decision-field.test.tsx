@@ -213,11 +213,60 @@ describe("ModelInputComponent on a decision field (LE-3129)", () => {
     expect(handleOnNewValue).not.toHaveBeenCalled();
   });
 
-  it("keeps a saved decision model that is no longer offered", () => {
+  it("shows a saved decision model that is switched off, not another one", () => {
     const handleOnNewValue = jest.fn();
     renderPicker({ value: [LUNA], handleOnNewValue });
-    expect(screen.getByText("gpt-6-luna")).toBeInTheDocument();
+    const trigger = screen.getByRole("combobox");
+    expect(trigger).toHaveTextContent("gpt-6-luna");
+    expect(trigger).not.toHaveTextContent("jev-latest");
     expect(handleOnNewValue).not.toHaveBeenCalled();
+  });
+
+  it("names a saved decision model that policy blocks as unavailable", () => {
+    // The catalog leaves a blocked model out; the typed map keeps it as false.
+    (useGetEnabledModels as jest.Mock).mockReturnValue({
+      data: {
+        enabled_models: {},
+        enabled_models_by_type: {
+          TypeSafe: { decision: { "jev-latest": true } },
+          Perplexity: { decision: { "pplx-decider-flash-latest": false } },
+        },
+      },
+      isLoading: false,
+      isFetching: false,
+    });
+    const blocked = decision("pplx-decider-flash-latest", "Perplexity");
+    renderPicker({ value: [blocked] });
+    const trigger = screen.getByRole("combobox");
+    expect(trigger).toHaveTextContent("pplx-decider-flash-latest");
+    expect(trigger).not.toHaveTextContent("jev-latest");
+  });
+
+  it("ignores the node's connection mode, which belongs to the language field", () => {
+    const store = jest.requireMock("@/stores/flowStore").default.getState();
+    store.nodes = [{ id: "router", data: { _connectionMode: true } }];
+    try {
+      renderPicker({ value: [JEV] });
+      expect(screen.getByRole("combobox")).toHaveTextContent("jev-latest");
+    } finally {
+      store.nodes = [];
+    }
+  });
+
+  it("says why a load was refused", () => {
+    (useGetEnabledModels as jest.Mock).mockReturnValue({
+      data: undefined,
+      error: Object.assign(new Error("Request failed with status code 403"), {
+        isAxiosError: true,
+        response: { status: 403, data: { detail: "Model access is denied." } },
+      }),
+      isLoading: false,
+      isFetching: false,
+    });
+    renderPicker();
+    expect(screen.getByTestId("model-input-load-failed")).toHaveTextContent(
+      "Model access is denied.",
+    );
   });
 
   it("stores the picked model with its provider", async () => {
@@ -267,9 +316,10 @@ describe("ModelInputComponent on a decision field (LE-3129)", () => {
   it("refuses a model kind it does not know instead of guessing one", () => {
     renderPicker({ nodeClass: smartRouter("rerank") });
 
-    expect(
-      screen.getByTestId("model-input-unsupported-kind"),
-    ).toHaveTextContent("Unsupported model type");
+    const message = screen.getByTestId("model-input-unsupported-kind");
+    expect(message).toHaveTextContent("Unsupported model type");
+    // Reachable by keyboard, so screen-reader users hear why.
+    expect(message).not.toBeDisabled();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 });

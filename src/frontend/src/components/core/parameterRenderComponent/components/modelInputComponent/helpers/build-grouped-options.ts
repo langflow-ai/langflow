@@ -180,7 +180,11 @@ export function buildGroupedOptions({
     (providers?.some(
       (p) =>
         providerNamesMatch(p.provider, savedValue.provider) &&
-        (p.models ?? []).some((m) => m.model_name === savedValue.name),
+        (p.models ?? []).some(
+          (m) =>
+            m.model_name === savedValue.name &&
+            (modelType !== "decision" || m.metadata?.model_type === "decision"),
+        ),
     ) ??
       false);
   const shouldInjectSaved =

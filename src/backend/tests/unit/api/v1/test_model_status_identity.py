@@ -568,19 +568,18 @@ async def test_decision_validation_request_uses_decision_endpoint(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    ("provider", "model_type", "model_name", "effective_model"),
+    ("provider", "model_type", "model_name"),
     [
-        ("OpenAI", "decision", "gpt-6-luna", "gpt-6-luna"),
-        ("TypeSafe", None, None, "jev-latest"),
-        ("Perplexity", None, None, "pplx-decider-latest"),
+        ("OpenAI", "decision", "gpt-6-luna"),
+        ("TypeSafe", None, None),
+        ("Perplexity", None, None),
     ],
 )
-async def test_decision_credential_validation_never_invokes_denied_model(
-    monkeypatch, provider, model_type, model_name, effective_model
-):
+async def test_decision_credential_validation_never_invokes_denied_model(monkeypatch, provider, model_type, model_name):
     from unittest.mock import Mock
 
     from fastapi import HTTPException
+    from lfx.base.models.decision_constants import DECISION_MODELS_DETAILED
     from lfx.base.models.decisions import providers
     from lfx.services import model_provider_policy
     from lfx.services.model_provider_policy import (
@@ -590,12 +589,15 @@ async def test_decision_credential_validation_never_invokes_denied_model(
     )
 
     provider_id = provider.lower()
+    # A named model is checked as named; with none, the check falls back to any
+    # allowed decision model, so every one of them is blocked here.
+    denied = [model_name] if model_name else [r["name"] for r in DECISION_MODELS_DETAILED if r["provider"] == provider]
     policy = ModelProviderPolicySnapshot(
         context=ModelProviderPolicyContext(user_id="caller"),
         purpose=ModelProviderPolicyPurpose.USE,
         candidate_provider_ids=frozenset({provider_id}),
         allowed_provider_ids=frozenset({provider_id}),
-        blocked_model_keys=frozenset({f"{provider_id}::decision::{effective_model}"}),
+        blocked_model_keys=frozenset(f"{provider_id}::decision::{name}" for name in denied),
     )
     monkeypatch.setattr(models_api, "_require_provider", AsyncMock())
     resolver = Mock(return_value=policy)

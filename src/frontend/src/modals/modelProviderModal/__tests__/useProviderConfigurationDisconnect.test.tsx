@@ -1229,18 +1229,26 @@ describe("useProviderConfiguration.handleSaveAllVariables", () => {
   });
 
   it.each([
-    { view: "decision", check: { model_type: "decision" } },
-    { view: "all", check: {} },
+    {
+      view: "decision",
+      hasDecisionModels: true,
+      check: { model_type: "decision" },
+    },
+    // A provider with no decision models keeps its own chat check.
+    { view: "decision", hasDecisionModels: false, check: {} },
+    { view: "all", hasDecisionModels: true, check: {} },
   ] as const)(
-    "checks a key saved from the $view view once, for that view's kind",
-    async ({ view, check }) => {
+    "checks a key saved from the $view view once (decision models: $hasDecisionModels)",
+    async ({ view, hasDecisionModels, check }) => {
       mockProviderVariablesMapping.OpenAI = openAIProviderVariables;
       const openAI: Provider = {
         provider: "OpenAI",
         icon: "OpenAI",
         is_enabled: false,
         is_configured: false,
-        models: [],
+        models: hasDecisionModels
+          ? [{ model_name: "gpt-6-luna", metadata: { model_type: "decision" } }]
+          : [{ model_name: "gpt-5.6-sol", metadata: { model_type: "llm" } }],
       };
       mockModelProviders = [openAI];
       mockCreateMutateAsync.mockResolvedValue(undefined);

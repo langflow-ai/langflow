@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
@@ -14,20 +14,12 @@ import type { ModelType, ModelTypeFilter } from "@/types/models";
 import { cn } from "@/utils/utils";
 import {
   deploymentKindsOfFilter,
-  isModelOfKind,
   kindsOfFilter,
   modelsOfFilter,
-} from "../helpers/model-kinds";
+} from "../helpers/view-kinds";
 
 /** Providers where the callable model id is a user-chosen deployment name. */
 const CUSTOM_DEPLOYMENT_PROVIDERS = new Set(["Azure AI Foundry"]);
-
-/** Section title per model kind, in the order the kinds are listed. */
-const SECTION_TITLE_KEY: Record<ModelType, string> = {
-  llm: "modelProviders.languageModels",
-  embeddings: "modelProviders.embeddingModels",
-  decision: "modelProviders.decisionModels",
-};
 
 /**
  * Providers that render their own useful UI when no catalog models exist.
@@ -227,6 +219,13 @@ const ModelSelection = ({
   projectId,
 }: ModelProviderSelectionProps) => {
   const { t } = useTranslation();
+  const sectionIdPrefix = useId();
+  // Static keys, so the translation check can see each one.
+  const sectionTitles: Record<ModelType, string> = {
+    llm: t("modelProviders.languageModels"),
+    embeddings: t("modelProviders.embeddingModels"),
+    decision: t("modelProviders.decisionModels"),
+  };
   const {
     data: enabledModelsData,
     isSuccess: isEnabledModelsSuccess,
@@ -414,9 +413,19 @@ const ModelSelection = ({
   ) => {
     if (models.length === 0) return null;
     const [activeModels, deprecatedModels] = partitionDeprecated(models);
+    // A named group tells the same model's switches apart across sections:
+    // gpt-6-luna is both a language and a decision model.
+    const headingId = `${sectionIdPrefix}-${selectedModelType}`;
     return (
-      <div data-testid={`${selectedModelType}-models-section`}>
-        <div className="text-[13px] font-semibold text-muted-foreground">
+      <div
+        data-testid={`${selectedModelType}-models-section`}
+        role="group"
+        aria-labelledby={headingId}
+      >
+        <div
+          id={headingId}
+          className="text-[13px] font-semibold text-muted-foreground"
+        >
           {title}
         </div>
         <div className="flex flex-col gap-2 pt-4">
@@ -467,9 +476,11 @@ const ModelSelection = ({
     providerOwnsEmptyState && providerName?.toLowerCase() === "ollama";
   // Live-discovery providers have nothing to list until credentials are
   // configured; show a configure-credentials hint instead of the generic
-  // "no models" state. Ollama keeps its own specialized empty state.
+  // "no models" state. Ollama keeps its own specialized empty state, and a
+  // decision view the generic one: discovery finds only chat and embedding
+  // models.
   const awaitsCredentialDiscovery =
-    !!liveDiscovery && !isConfigured && !isOllama;
+    !!liveDiscovery && !isConfigured && !isOllama && modelType !== "decision";
   // Use the unfiltered list for the empty-state check so an
   // ollama-no-models warning still fires when the search field happens to be
   // populated.
@@ -641,8 +652,10 @@ const ModelSelection = ({
         visibleKinds.map((kind) => (
           <Fragment key={kind}>
             {renderModelSection(
-              t(SECTION_TITLE_KEY[kind]),
-              matchingModels.filter((model) => isModelOfKind(model, kind)),
+              sectionTitles[kind],
+              matchingModels.filter(
+                (model) => model.metadata?.model_type === kind,
+              ),
               kind,
             )}
           </Fragment>

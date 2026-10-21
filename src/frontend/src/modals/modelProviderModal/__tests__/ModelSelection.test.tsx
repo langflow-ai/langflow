@@ -175,6 +175,23 @@ describe("ModelSelection", () => {
   });
 
   describe("Model Display", () => {
+    it("tells the same model's switches apart by their section", () => {
+      render(
+        <ModelSelection
+          {...defaultProps}
+          availableModels={[
+            { model_name: "gpt-6-luna", metadata: { model_type: "llm" } },
+            { model_name: "gpt-6-luna", metadata: { model_type: "decision" } },
+          ]}
+        />,
+      );
+
+      for (const section of ["Language Models", "Decision Models"]) {
+        const group = screen.getByRole("group", { name: section });
+        expect(within(group).getAllByRole("switch")).toHaveLength(1);
+      }
+    });
+
     it("should render model names", () => {
       render(<ModelSelection {...defaultProps} />);
 

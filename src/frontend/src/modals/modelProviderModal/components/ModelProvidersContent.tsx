@@ -7,7 +7,7 @@ import ProviderList from "@/modals/modelProviderModal/components/ProviderList";
 import { Provider } from "@/modals/modelProviderModal/components/types";
 import type { ModelTypeFilter } from "@/types/models";
 import { cn } from "@/utils/utils";
-import { modelsOfFilter } from "../helpers/model-kinds";
+import { modelsOfFilter } from "../helpers/view-kinds";
 import { useProviderConfiguration } from "../hooks/useProviderConfiguration";
 import ModelSelection, { hasProviderOwnedEmptyState } from "./ModelSelection";
 import ProviderConfigurationForm from "./ProviderConfigurationForm";
@@ -97,7 +97,8 @@ const ModelProvidersContent = ({
   // configure-credentials hint for them instead of the generic empty state.
   const awaitingLiveDiscovery =
     !!syncedSelectedProvider?.live_discovery &&
-    !syncedSelectedProvider?.is_configured;
+    !syncedSelectedProvider?.is_configured &&
+    modelType !== "decision";
   const showNoAvailableModels =
     !!syncedSelectedProvider &&
     typedModelCount === 0 &&

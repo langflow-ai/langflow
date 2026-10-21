@@ -29,13 +29,6 @@ export function findModelFieldKeys(template: APITemplateType): string[] {
   return shown.length > 0 ? shown : keys.slice(0, 1);
 }
 
-/** The first model field a refresh covers; see findModelFieldKeys. */
-export function findModelFieldKey(
-  template: APITemplateType,
-): string | undefined {
-  return findModelFieldKeys(template)[0];
-}
-
 /** Builds the refresh API payload with flow context */
 export function buildRefreshPayload(
   template: APITemplateType,
@@ -78,9 +71,11 @@ export function validateModelValue(
 ): APITemplateType {
   const modelField = template[modelFieldKey];
   if (!modelField) return template;
-  // A missing or unavailable decision model stays as saved and fails clearly
-  // when the flow runs.
-  if (isUserOwnedModelKind(modelKindOfField(modelField))) return template;
+  // Only language and embedding fields are corrected on load. A missing or
+  // unavailable decision model stays as saved and fails clearly when the flow
+  // runs, and a field of unknown kind is left for the picker to refuse.
+  const kind = modelKindOfField(modelField);
+  if (kind === null || isUserOwnedModelKind(kind)) return template;
 
   const options = modelField.options || [];
   const currentValue = modelField.value;

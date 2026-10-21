@@ -277,17 +277,16 @@ async function refreshSingleNode(
     if (pickedInFlight) return;
 
     // Runs on every flow open, so the user has not asked for this write.
-    const validatedTemplate = refreshedTemplate;
     setNode(
       node.id,
       (currentNode) =>
-        createUpdatedNode(currentNode, validatedTemplate, refreshedOutputs),
+        createUpdatedNode(currentNode, refreshedTemplate, refreshedOutputs),
       false,
       undefined,
       { autoSave: false },
     );
     if (origin === "load") {
-      recordLoadRefresh(flowId, node.id, nodeData.template, validatedTemplate);
+      recordLoadRefresh(flowId, node.id, nodeData.template, refreshedTemplate);
     }
   } catch (error) {
     console.warn(`Failed to refresh model node ${node.id}:`, error);

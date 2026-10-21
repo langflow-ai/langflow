@@ -4,6 +4,7 @@ import copy
 
 import httpx
 import pytest
+from lfx.base.models.decision_constants import DECISION_MODELS_DETAILED
 from lfx.base.models.decisions import providers
 from lfx.base.models.decisions.schema import (
     DecisionConfigurationError,
@@ -14,6 +15,8 @@ from lfx.base.models.decisions.schema import (
 from lfx.base.models.unified_models import get_provider_secret_variable_key
 
 PROVIDERS = tuple(providers.ENDPOINTS)
+# Each provider's first catalog row, the model its key is checked with by default.
+DEFAULT_MODELS = {row["provider"]: row["name"] for row in reversed(DECISION_MODELS_DETAILED)}
 
 
 def request_for(kind):
@@ -46,7 +49,7 @@ def response_for(provider, kind):
     if provider == "OpenAI":
         answer["name"] = "decision"
     return {
-        "model": providers.DEFAULT_MODELS[provider],
+        "model": DEFAULT_MODELS[provider],
         "answers": [answer] if provider == "OpenAI" else {"decision": answer},
     }
 
@@ -55,7 +58,7 @@ def response_for(provider, kind):
 @pytest.mark.parametrize("kind", ["choice", "boolean", "score"])
 def test_wire_contract(provider, kind):
     request = request_for(kind)
-    payload = providers.build_payload(provider, providers.DEFAULT_MODELS[provider], request)
+    payload = providers.build_payload(provider, DEFAULT_MODELS[provider], request)
     if provider == "OpenAI":
         question = payload["questions"][0]
         assert payload["input"] == '{"text": "Example"}'
@@ -119,7 +122,7 @@ def test_hosted_score_level_limit(provider):
         levels=tuple(DecisionOption(id=str(i), label=f"Level {i}") for i in range(11)),
     )
     with pytest.raises(DecisionConfigurationError, match="10 score levels"):
-        providers.build_payload(provider, providers.DEFAULT_MODELS[provider], request)
+        providers.build_payload(provider, DEFAULT_MODELS[provider], request)
 
 
 def test_refusal_is_not_false():
@@ -242,7 +245,7 @@ def test_duplicate_wire_keys_rejected_before_json_collapses_them(provider, monke
 
     monkeypatch.setattr(providers, "provider_safe_httpx_post", post)
     with pytest.raises(DecisionEvaluationError, match="duplicate-key"):
-        providers.evaluate_provider(provider, providers.DEFAULT_MODELS[provider], request_for("choice"), api_key="key")
+        providers.evaluate_provider(provider, DEFAULT_MODELS[provider], request_for("choice"), api_key="key")
 
 
 @pytest.mark.parametrize("provider", ["TypeSafe", "Perplexity"])
@@ -262,7 +265,7 @@ def test_choice_option_limit(provider):
         options=tuple(DecisionOption(id=str(i), label=f"Option {i}") for i in range(256)),
     )
     with pytest.raises(DecisionConfigurationError, match="255 options"):
-        providers.build_payload(provider, providers.DEFAULT_MODELS[provider], request)
+        providers.build_payload(provider, DEFAULT_MODELS[provider], request)
 
 
 @pytest.mark.parametrize("timeout", [0, -1, 301, float("nan"), float("inf")])
@@ -277,13 +280,36 @@ def test_credential_validation_uses_explicit_key_and_boolean_request(provider, m
     monkeypatch.setenv(get_provider_secret_variable_key(provider), "server-secret")
     monkeypatch.setattr(providers, "evaluate_provider", lambda *args, **kwargs: calls.append((args, kwargs)))
     providers.validate_decision_provider_key(
-        provider, {get_provider_secret_variable_key(provider): "tenant-key"}, providers.DEFAULT_MODELS[provider]
+        provider, {get_provider_secret_variable_key(provider): "tenant-key"}, DEFAULT_MODELS[provider]
     )
     args, kwargs = calls.pop()
     assert args[0] == provider
-    assert args[1] == providers.DEFAULT_MODELS[provider]
+    assert args[1] == DEFAULT_MODELS[provider]
     assert args[2].kind == "boolean"
     assert kwargs == {"api_key": "tenant-key", "timeout": 15}
+
+
+def test_key_check_defaults_to_an_allowed_decision_model(monkeypatch):
+    """Blocking a provider's first decision model does not stop its key being checked with another."""
+    from lfx.base.models.unified_models import validate_model_provider_key
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicyPurpose,
+        ModelProviderPolicySnapshot,
+    )
+
+    policy = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(),
+        purpose=ModelProviderPolicyPurpose.USE,
+        candidate_provider_ids=frozenset({"perplexity"}),
+        allowed_provider_ids=frozenset({"perplexity"}),
+        blocked_model_keys=frozenset({"perplexity::decision::pplx-decider-latest"}),
+    )
+    monkeypatch.setattr("lfx.services.model_provider_policy.resolve_model_provider_policy", lambda **_: policy)
+    checked = []
+    monkeypatch.setattr(providers, "validate_decision_provider_key", lambda *args: checked.append(args))
+    validate_model_provider_key("Perplexity", {"PERPLEXITY_API_KEY": "tenant-key"})
+    assert checked == [("Perplexity", {"PERPLEXITY_API_KEY": "tenant-key"}, "pplx-decider-flash-latest")]
 
 
 def test_key_check_never_runs_a_chat_model_that_policy_blocks(monkeypatch):

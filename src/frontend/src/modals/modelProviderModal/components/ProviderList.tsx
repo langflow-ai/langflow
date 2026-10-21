@@ -5,7 +5,7 @@ import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-sco
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import CustomModelProvidersEmptyState from "@/customization/components/custom-model-providers-empty-state";
 import type { ModelTypeFilter } from "@/types/models";
-import { modelsOfFilter } from "../helpers/model-kinds";
+import { modelsOfFilter } from "../helpers/view-kinds";
 import ProviderListItem from "./ProviderListItem";
 import { Provider } from "./types";
 

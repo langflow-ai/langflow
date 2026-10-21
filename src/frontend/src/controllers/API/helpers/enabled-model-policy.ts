@@ -9,18 +9,24 @@ import type { ModelType } from "@/types/models";
  * Decision models never fall back: the flat map predates them and does not
  * record which kind a name was enabled for.
  */
+function enabledModelsOfProvider(
+  data: EnabledModelsResponse,
+  provider: string,
+  modelType: ModelType,
+): Record<string, boolean> {
+  const typedProvider = data.enabled_models_by_type?.[provider];
+  if (typedProvider !== undefined) return typedProvider[modelType] ?? {};
+  if (modelType === "decision") return {};
+  return data.enabled_models[provider] ?? {};
+}
+
 export function isModelEnabledForType(
   data: EnabledModelsResponse,
   provider: string,
   modelName: string,
   modelType: ModelType,
 ): boolean {
-  const typedProvider = data.enabled_models_by_type?.[provider];
-  if (typedProvider !== undefined) {
-    return typedProvider[modelType]?.[modelName] === true;
-  }
-  if (modelType === "decision") return false;
-  return data.enabled_models[provider]?.[modelName] === true;
+  return enabledModelsOfProvider(data, provider, modelType)[modelName] === true;
 }
 
 export function getEnabledModelsForType(
@@ -33,16 +39,9 @@ export function getEnabledModelsForType(
   ]);
 
   return Object.fromEntries(
-    Array.from(providerNames, (provider) => {
-      const typedProvider = data.enabled_models_by_type?.[provider];
-      return [
-        provider,
-        typedProvider !== undefined
-          ? (typedProvider[modelType] ?? {})
-          : modelType === "decision"
-            ? {}
-            : (data.enabled_models[provider] ?? {}),
-      ];
-    }),
+    Array.from(providerNames, (provider) => [
+      provider,
+      enabledModelsOfProvider(data, provider, modelType),
+    ]),
   );
 }

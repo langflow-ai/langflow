@@ -1,4 +1,5 @@
 import type { ModelProviderWithStatus } from "@/controllers/API/queries/models/use-get-model-providers";
+import type { ModelType } from "@/types/models";
 import type { ModelOption } from "../types";
 import { canonicalProviderName, providerNamesMatch } from "./provider-identity";
 import { recoverModelOption } from "./recover-model-option";
@@ -15,6 +16,8 @@ export interface SavedModelAvailabilityParams {
    * mid-flight fetch must not be read as "the saved model is gone".
    */
   modelStatusIsReliable: boolean;
+  /** The field's kind. A decision model is matched by kind too: a chat model can share its name. */
+  modelType?: ModelType;
 }
 
 /**
@@ -39,6 +42,7 @@ export function isSavedModelUnavailable({
   providers,
   enabledModels,
   modelStatusIsReliable,
+  modelType,
 }: SavedModelAvailabilityParams): boolean {
   if (!modelStatusIsReliable || !providers || enabledModels === undefined) {
     // Nothing can be judged unavailable until both server views have loaded.
@@ -64,11 +68,20 @@ export function isSavedModelUnavailable({
     // "configure the provider" affordance.
     return false;
   }
+  const isDecision = modelType === "decision";
   const listedInCatalog = (providerInfo.models ?? []).some(
-    (model) => model.model_name === saved.name,
+    (model) =>
+      model.model_name === saved.name &&
+      (!isDecision || model.metadata?.model_type === "decision"),
   );
   if (listedInCatalog) {
     return false;
+  }
+  // The typed enabled-models map keeps a decision model policy blocks, switched
+  // off, so it cannot tell a restriction from a deactivation: the catalog,
+  // which leaves blocked models out, decides.
+  if (isDecision) {
+    return true;
   }
   const knownToUserSettings =
     (enabledModels?.[saved.provider] !== undefined &&

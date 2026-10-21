@@ -1,8 +1,10 @@
+import axios from "axios";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { BUILD_PANEL_COLLISION_PADDING_PX } from "@/constants/constants";
 import { getEnabledModelsForType } from "@/controllers/API/helpers/enabled-model-policy";
+import { getAxiosErrorMessage } from "@/controllers/API/helpers/get-axios-error-message";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
@@ -11,7 +13,7 @@ import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { NodeDataType } from "@/types/flow";
 import type { ModelType } from "@/types/models";
-import { modelKindOfField } from "@/utils/model-kind";
+import { isUserOwnedModelKind, modelKindOfField } from "@/utils/model-kind";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { Command } from "../../../../ui/command";
 
@@ -49,7 +51,6 @@ import { ModelDropdownFooter } from "./components/ModelDropdownFooter";
 import {
   ModelInputErrorButton,
   ModelInputLoadingButton,
-  ModelInputUnsupportedKind,
 } from "./components/ModelInputStates";
 import ModelList from "./components/ModelList";
 import ModelTrigger, { isSetupProviderState } from "./components/ModelTrigger";
@@ -100,7 +101,7 @@ export default function ModelInputComponent({
   const showingBuildPanel =
     isBuilding || !!buildInfo?.error || !!buildInfo?.success;
 
-  const isConnectionMode = useFlowStore((state) => {
+  const nodeConnectionMode = useFlowStore((state) => {
     if (!nodeId) return false;
     const node = state.nodes.find((n) => n.id === nodeId);
     const data = node?.data as { _connectionMode?: boolean } | undefined;
@@ -140,6 +141,10 @@ export default function ModelInputComponent({
   const fieldKind = modelTypeProp ?? modelKindOfField(modelField);
   const isUnsupportedKind = fieldKind === null;
   const modelType: ModelType = fieldKind ?? "llm";
+  // Connection mode is stored per node, and a decision field never connects
+  // other models, so on Smart Router it belongs to the language field only.
+  const isConnectionMode =
+    nodeConnectionMode && !isUserOwnedModelKind(modelType);
 
   const modelFilters = useMemo(() => {
     const raw = (
@@ -275,6 +280,7 @@ export default function ModelInputComponent({
         providerStatusIsReliable,
         enabledModels: enabledModelsForType,
         modelStatusIsReliable,
+        modelType,
       }),
     [
       value,
@@ -285,6 +291,7 @@ export default function ModelInputComponent({
       providerStatusIsReliable,
       enabledModelsForType,
       modelStatusIsReliable,
+      modelType,
     ],
   );
 
@@ -305,7 +312,7 @@ export default function ModelInputComponent({
   const handleModelSelect = useCallback(
     (modelName: string, provider?: string) => {
       if (!modelStatusIsReliable) return;
-      setConnectionMode(false);
+      if (isConnectionMode) setConnectionMode(false);
       if (nodeId) {
         const store = useFlowStore.getState();
         const node = store.getNode(nodeId);
@@ -352,7 +359,14 @@ export default function ModelInputComponent({
       handleOnNewValue({ value: newValue });
       setOpen(false);
     },
-    [flatOptions, handleOnNewValue, modelStatusIsReliable, fieldName],
+    [
+      flatOptions,
+      handleOnNewValue,
+      modelStatusIsReliable,
+      fieldName,
+      isConnectionMode,
+      setConnectionMode,
+    ],
   );
 
   const handleRefreshButtonPress = useCallback(async () => {
@@ -434,10 +448,10 @@ export default function ModelInputComponent({
         <ModelDropdownFooter
           onRefresh={handleRefreshButtonPress}
           onManageProviders={() => setOpenManageProvidersDialog(true)}
-          // Decision models have no connection handle; the backend sends no
-          // external options for them, and the picker never offers one.
+          // A decision field never connects other models, whatever the
+          // template carries.
           externalNode={
-            modelType === "decision"
+            isUserOwnedModelKind(modelType)
               ? undefined
               : externalOptions?.fields?.data?.node
           }
@@ -456,16 +470,32 @@ export default function ModelInputComponent({
   if (isUnsupportedKind) {
     return (
       <div className="w-full">
-        <ModelInputUnsupportedKind />
+        <ModelInputErrorButton
+          label={t("modelInput.unsupportedKind")}
+          testId="model-input-unsupported-kind"
+        />
       </div>
     );
   }
 
   if (hasPolicyError && !isFetching) {
+    // A server refusal, such as a policy denial, says why; a network failure
+    // keeps the generic retry message.
+    const serverReason = [providersError, enabledModelsError]
+      .map((error) =>
+        axios.isAxiosError(error) && error.response
+          ? getAxiosErrorMessage(error, "")
+          : "",
+      )
+      .find(Boolean);
     return (
       <>
         <div className="w-full">
-          <ModelInputErrorButton onRetry={handleRetryLoad} />
+          <ModelInputErrorButton
+            label={serverReason || t("modelInput.loadFailed")}
+            onRetry={handleRetryLoad}
+            testId="model-input-load-failed"
+          />
         </div>
         {manageProvidersDialog}
       </>

@@ -446,20 +446,25 @@ export const useProviderConfiguration = ({
     try {
       // A key gets one billed check, for the kind of model it is about to serve,
       // never one per kind. Opened from a decision picker, ask for a decision
-      // check: for a mixed provider such as OpenAI the untyped check is a chat
-      // call, which passes for a key without Decisions access, and its default
-      // decision model would then fail on its first run. In the all-models view,
+      // check when this provider has decision models: for a mixed provider such
+      // as OpenAI the untyped check is a chat call, which passes for a key
+      // without Decisions access, and its default decision model would then fail
+      // on its first run. A provider with no decision models (Anthropic, Ollama)
+      // keeps its own chat check. In the all-models view,
       // send no kind: decision-only providers (TypeSafe, and Perplexity, whose
       // chat models live in its own component rather than Model Providers) still
       // get a decision check, and every other provider a chat check. Any other
       // kind is checked when one of its models is switched on, because
       // update_enabled_models validates each model with its own type.
+      const checksDecisionAccess =
+        modelType === "decision" &&
+        (trustedSelectedProvider?.models ?? []).some(
+          (model) => model.metadata?.model_type === "decision",
+        );
       const result = await validateProvider({
         provider: providerName,
         variables,
-        ...(modelType === "decision"
-          ? { model_type: "decision" as const }
-          : {}),
+        ...(checksDecisionAccess ? { model_type: "decision" as const } : {}),
         flowId,
         projectId,
       });

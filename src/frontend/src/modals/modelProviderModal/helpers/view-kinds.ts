@@ -1,11 +1,9 @@
 import type { ModelType, ModelTypeFilter } from "@/types/models";
 
+/** Which model kinds a Model Providers view lists, and which of its catalog rows. */
+
 /** Every model kind the Model Providers dialog lists, in display order. */
-export const MODEL_KINDS: readonly ModelType[] = [
-  "llm",
-  "embeddings",
-  "decision",
-];
+const MODEL_KINDS: readonly ModelType[] = ["llm", "embeddings", "decision"];
 
 /** Kinds that can be added as free-text deployments (Azure AI Foundry). */
 const DEPLOYMENT_KINDS: readonly ModelType[] = ["llm", "embeddings"];
@@ -22,14 +20,6 @@ export function deploymentKindsOfFilter(filter: ModelTypeFilter): ModelType[] {
   );
 }
 
-/** Whether a catalog row is of `kind`. */
-export function isModelOfKind(
-  model: { metadata?: Record<string, unknown> | null },
-  kind: ModelType,
-): boolean {
-  return model.metadata?.model_type === kind;
-}
-
 /**
  * The catalog rows the dialog lists for `filter`. Provider badges, the empty
  * state and the model sections all count from this, so a provider never
@@ -40,6 +30,6 @@ export function modelsOfFilter<
 >(models: readonly T[], filter: ModelTypeFilter): T[] {
   const kinds = kindsOfFilter(filter);
   return models.filter((model) =>
-    kinds.some((kind) => isModelOfKind(model, kind)),
+    kinds.includes(model.metadata?.model_type as ModelType),
   );
 }

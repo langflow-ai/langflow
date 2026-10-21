@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, Annotated, Any
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from lfx.base.models.decision_constants import DECISION_MODELS_DETAILED
 from lfx.base.models.decisions.schema import (
     DecisionConfigurationError,
     DecisionEvaluationError,
@@ -39,8 +38,6 @@ ENDPOINTS = {
     "Perplexity": "https://api.perplexity.ai/v1/decisions",
     "OpenAI": "https://api.openai.com/v1/decisions",
 }
-# Each provider's first catalog row is its default model.
-DEFAULT_MODELS = {row["provider"]: row["name"] for row in reversed(DECISION_MODELS_DETAILED)}
 MAX_HOSTED_SCORE_LEVELS = 10
 MAX_CHOICES = 255
 MAX_TIMEOUT = 300

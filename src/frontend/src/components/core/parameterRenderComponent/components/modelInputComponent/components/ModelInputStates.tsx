@@ -18,43 +18,27 @@ export function ModelInputLoadingButton(): JSX.Element {
   );
 }
 
-/** Error affordance shown when the initial provider/model load fails. */
+/**
+ * A picker that cannot offer models: the load failed (with `onRetry`), or the
+ * field asks for a model kind this picker does not know (without). It stays
+ * focusable either way, so keyboard and screen-reader users reach the message.
+ */
 export function ModelInputErrorButton({
+  label,
   onRetry,
+  testId,
 }: {
-  onRetry: () => void;
+  label: string;
+  onRetry?: () => void;
+  testId: string;
 }): JSX.Element {
-  const { t } = useTranslation();
   return (
     <Button
       className="dropdown-component-false-outline w-full justify-between py-2 font-normal"
       variant="primary"
       size="xs"
-      data-testid="model-input-load-failed"
+      data-testid={testId}
       onClick={onRetry}
-    >
-      <span className="flex items-center gap-2 truncate text-left">
-        <ForwardedIconComponent
-          name="AlertTriangle"
-          className="h-3.5 w-3.5 shrink-0 text-status-yellow"
-        />
-        <span className="truncate">{t("modelInput.loadFailed")}</span>
-      </span>
-      <ForwardedIconComponent name="RotateCw" className="h-3.5 w-3.5" />
-    </Button>
-  );
-}
-
-/** Shown when the field asks for a model kind this picker does not know. */
-export function ModelInputUnsupportedKind(): JSX.Element {
-  const { t } = useTranslation();
-  return (
-    <Button
-      className="dropdown-component-false-outline w-full justify-between py-2 font-normal"
-      variant="primary"
-      size="xs"
-      disabled
-      data-testid="model-input-unsupported-kind"
     >
       <span className="flex items-center gap-2 truncate text-left">
         <ForwardedIconComponent
@@ -62,8 +46,11 @@ export function ModelInputUnsupportedKind(): JSX.Element {
           aria-hidden="true"
           className="h-3.5 w-3.5 shrink-0 text-status-yellow"
         />
-        <span className="truncate">{t("modelInput.unsupportedKind")}</span>
+        <span className="truncate">{label}</span>
       </span>
+      {onRetry && (
+        <ForwardedIconComponent name="RotateCw" className="h-3.5 w-3.5" />
+      )}
     </Button>
   );
 }

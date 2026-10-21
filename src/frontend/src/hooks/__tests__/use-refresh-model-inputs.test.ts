@@ -101,7 +101,6 @@ import {
 import {
   buildRefreshPayload,
   createUpdatedNode,
-  findModelFieldKey,
   isModelNode,
   refreshAllModelInputs,
   useRefreshModelInputs,
@@ -159,67 +158,6 @@ describe("isModelNode", () => {
   });
 });
 
-describe("findModelFieldKey", () => {
-  it("should find the model field key in a template", () => {
-    const template: APITemplateType = {
-      model_name: {
-        type: "model",
-        value: "gpt-4",
-        required: true,
-        list: false,
-        show: true,
-        readonly: false,
-      },
-      temperature: {
-        type: "float",
-        value: 0.7,
-        required: false,
-        list: false,
-        show: true,
-        readonly: false,
-      },
-    };
-    expect(findModelFieldKey(template)).toBe("model_name");
-  });
-
-  it("should return undefined when no model field exists", () => {
-    const template: APITemplateType = {
-      text: {
-        type: "str",
-        value: "",
-        required: true,
-        list: false,
-        show: true,
-        readonly: false,
-      },
-    };
-    expect(findModelFieldKey(template)).toBeUndefined();
-  });
-
-  it("should return the first model field if multiple exist", () => {
-    const template: APITemplateType = {
-      primary_model: {
-        type: "model",
-        value: "gpt-4",
-        required: true,
-        list: false,
-        show: true,
-        readonly: false,
-      },
-      backup_model: {
-        type: "model",
-        value: "gpt-3.5",
-        required: false,
-        list: false,
-        show: true,
-        readonly: false,
-      },
-    };
-    const result = findModelFieldKey(template);
-    expect(result).toBeDefined();
-    expect(["primary_model", "backup_model"]).toContain(result);
-  });
-});
 
 describe("buildRefreshPayload", () => {
   const baseTemplate: APITemplateType = {
