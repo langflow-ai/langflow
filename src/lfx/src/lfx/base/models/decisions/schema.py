@@ -48,6 +48,38 @@ def validation_summary(exc: ValidationError, *, field_only: bool = False) -> str
     )
 
 
+# What the component shows for each part of a decision request.
+_ROWS = {"options": "Option", "levels": "Level"}
+_CELLS = {"id": "an ID", "label": "a Label"}
+_FIELDS = {"question": "Question", "context": "Context"}
+_BLANK_ERRORS = {"missing", "string_type", "string_pattern_mismatch"}
+
+
+def configuration_summary(exc: ValidationError) -> str:
+    """Name the option, level or field a flow must fix, in the component's words, never pydantic's paths."""
+    missing: dict[str, list[str]] = {}
+    problems: list[str] = []
+    for error in exc.errors():
+        loc = error["loc"]
+        blank = error["type"] in _BLANK_ERRORS and not str(error.get("input") or "").strip()
+        if len(loc) == 3 and loc[0] in _ROWS and isinstance(loc[1], int):  # noqa: PLR2004 - (table, row, column)
+            row = f"{_ROWS[loc[0]]} {loc[1] + 1}"
+            if error["type"] == "extra_forbidden":
+                problems.append(f"{row} has an unexpected column {loc[2]!r}.")
+            elif blank and loc[2] in _CELLS:
+                missing.setdefault(row, []).append(_CELLS[loc[2]])
+            else:
+                problems.append(f"{row}'s {str(loc[2]).title()} must be text.")
+        elif len(loc) == 1 and loc[0] in _FIELDS and blank:
+            problems.append(f"{_FIELDS[loc[0]]} can't be empty.")
+        elif not loc:
+            # A rule across the whole request, such as unique IDs.
+            problems.append(f"{error['msg'].removeprefix('Value error, ')}.")
+        else:
+            problems.append(f"{'.'.join(str(part) for part in loc)}: {error['msg']}.")
+    return " ".join([f"{row} needs {' and '.join(cells)}." for row, cells in missing.items()] + problems)
+
+
 class DecisionOption(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -84,7 +116,7 @@ class DecisionRequest(BaseModel):
     def validate_candidates(self) -> DecisionRequest:
         candidates = self.options if self.kind == "choice" else self.levels
         if self.kind in {"choice", "score"} and len(candidates) < MIN_CANDIDATES:
-            msg = "Choice and Score require at least two described candidates"
+            msg = "Choice needs at least two options, and Score at least two levels"
             raise ValueError(msg)
         if (self.kind != "choice" and self.options) or (self.kind != "score" and self.levels):
             msg = "Options belong to Choice and ordered levels belong to Score"
@@ -93,10 +125,10 @@ class DecisionRequest(BaseModel):
             msg = "Yes and No descriptions belong to Boolean"
             raise ValueError(msg)
         if len({candidate.id for candidate in candidates}) != len(candidates):
-            msg = "Decision candidate IDs must be unique"
+            msg = "Each option or level needs a different ID"
             raise ValueError(msg)
         if len({candidate.label.strip().casefold() for candidate in candidates}) != len(candidates):
-            msg = "Decision candidate labels must be unique"
+            msg = "Each option or level needs a different Label"
             raise ValueError(msg)
         return self
 
@@ -106,7 +138,7 @@ def decision_request(**fields: Any) -> DecisionRequest:
     try:
         return DecisionRequest(**fields)
     except ValidationError as exc:
-        raise DecisionConfigurationError(validation_summary(exc)) from None
+        raise DecisionConfigurationError(configuration_summary(exc)) from None
 
 
 class DecisionResult(BaseModel):

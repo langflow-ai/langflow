@@ -117,7 +117,7 @@ def test_answer_of_a_different_kind_is_rejected():
 @pytest.mark.parametrize(("ids", "labels"), [(("x", "x"), ("A", "B")), (("x", "y"), ("A", " a "))])
 def test_rejects_ambiguous_option_identities(ids, labels):
     options = tuple(DecisionOption(id=key, label=label) for key, label in zip(ids, labels, strict=True))
-    with pytest.raises(ValidationError, match="unique"):
+    with pytest.raises(ValidationError, match="needs a different"):
         DecisionRequest(kind="choice", question="Which?", context="x", options=options)
 
 
@@ -157,3 +157,32 @@ def test_probabilities_may_miss_one_by_their_rounding():
     assert DecisionResult(kind="choice", provider="TypeSafe", model="m", probabilities=thirds).probabilities == thirds
     with pytest.raises(ValidationError, match="sum to one"):
         DecisionResult(kind="choice", provider="TypeSafe", model="m", probabilities={"a": 0.33, "b": 0.33, "c": 0.3})
+
+
+@pytest.mark.parametrize(
+    ("fields", "message"),
+    [
+        (
+            {"kind": "choice", "options": [{"id": "a", "label": "A"}, {"id": None, "label": " ", "description": ""}]},
+            "Option 2 needs an ID and a Label.",
+        ),
+        (
+            {"kind": "score", "levels": [{"id": "a", "label": "A"}, {"id": "b", "label": 7}]},
+            "Level 2's Label must be text.",
+        ),
+        (
+            {"kind": "choice", "question": "  ", "options": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}]},
+            "Question can't be empty.",
+        ),
+        (
+            {"kind": "choice", "options": [{"id": "a", "label": "A"}, {"id": "a", "label": "B"}]},
+            "Each option or level needs a different ID.",
+        ),
+    ],
+)
+def test_configuration_errors_name_what_to_fix(fields, message):
+    from lfx.base.models.decisions.schema import DecisionConfigurationError, decision_request
+
+    with pytest.raises(DecisionConfigurationError) as caught:
+        decision_request(**{"question": "Which?", "context": "x", **fields})
+    assert str(caught.value) == message

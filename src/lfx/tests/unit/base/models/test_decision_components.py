@@ -129,9 +129,14 @@ def test_row_added_in_the_editor_accepts_blank_description(monkeypatch):
 @pytest.mark.parametrize(
     ("candidates", "cause"),
     [
-        ([{"id": "a", "label": "Low"}, {"id": "a", "label": "High"}], "IDs must be unique"),
+        ([{"id": "a", "label": "Low"}, {"id": "a", "label": "High"}], "needs a different ID"),
         ([{"id": "a", "label": "Low"}], "at least two"),
         ([{"id": "a", "label": "Low", "unexpected": 1}, {"id": "b", "label": "High"}], "unexpected"),
+        # A row added in the editor and left blank.
+        (
+            [{"id": "a", "label": "Low"}, {"id": None, "label": None, "description": ""}],
+            "Option 2 needs an ID and a Label",
+        ),
     ],
 )
 def test_invalid_options_table_is_a_clear_configuration_error(candidates, cause):
