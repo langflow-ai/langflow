@@ -25,6 +25,11 @@ _no_env_fallback: contextvars.ContextVar[bool] = contextvars.ContextVar(
 )
 
 
+def global_var_alias(name: str) -> str:
+    """The ``x-langflow-global-var-*`` name a request may send variable ``name`` under."""
+    return f"x-langflow-global-var-{name.lower().replace('_', '-')}"
+
+
 def normalize_parsed_variables(parsed: dict) -> dict[str, str]:
     """Flatten a parsed JSON variable map to ``str`` values.
 

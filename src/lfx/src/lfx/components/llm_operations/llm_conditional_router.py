@@ -576,8 +576,9 @@ class SmartRouterComponent(Component):
         """Each route's output name, in route order.
 
         Rows sent with no IDs at all, such as an API tweak written before route IDs, take this
-        router's saved route outputs in order, as their position meant before. A route with no
-        matching output stops the run instead of reaching a branch nothing is connected to.
+        router's saved route outputs in order, as their position meant before. The routes must
+        match the saved route outputs exactly: a route with no output would reach a branch nothing
+        is connected to, and an output with no route would never be switched off.
         """
         rows = getattr(self, "routes", []) or []
         # Components built without a saved node (direct calls) have no outputs to follow or check.
@@ -588,9 +589,7 @@ class SmartRouterComponent(Component):
             route_ids = [
                 row["route_id"] for row in assign_route_ids(rows, getattr(self, "last_route_number", 0) or 0)[0]
             ]
-        if self._outputs_map and (
-            len(route_ids) != len(rows) or any(route_id not in self._outputs_map for route_id in route_ids)
-        ):
+        if self._outputs_map and (len(route_ids) != len(rows) or set(route_ids) != set(saved)):
             msg = "The Smart Router's routes don't match its outputs. Open the flow in the editor to update them."
             raise DecisionConfigurationError(msg)
         return route_ids

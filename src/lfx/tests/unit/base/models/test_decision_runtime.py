@@ -215,6 +215,38 @@ def test_per_request_value_cannot_hide_a_configured_proxy(execution, monkeypatch
     transport.assert_not_called()
 
 
+@pytest.mark.parametrize("variable", ["x-langflow-global-var-openai-api-base", "x-langflow-global-var-openai-base-url"])
+def test_aliased_per_request_endpoint_cannot_be_ignored(execution, variable):
+    request, model, transport = execution
+    request_variables = {variable: "https://proxy.example/v1", "x-langflow-global-var-openai-api-key": "sk-proxy-key"}
+    with pytest.raises(DecisionConfigurationError, match="official hosted"):
+        evaluate_decision(request, model=model, request_variables=request_variables)
+    transport.assert_not_called()
+
+
+def test_aliased_endpoint_in_the_serve_request_scope_cannot_be_ignored(execution, monkeypatch):
+    """Lfx serve keeps x-langflow-global-var-* names and resolves the proxy key through them."""
+    from lfx.base.models.unified_models import credentials
+    from lfx.services.variable.service import VariableService
+
+    request, model, transport = execution
+    monkeypatch.setattr(credentials, "get_variable_service", lambda: VariableService())
+    token = activate_no_env_fallback(disabled=True)
+    variables = activate_request_variables(
+        {
+            "x-langflow-global-var-openai-api-base": "https://proxy.example/v1",
+            "x-langflow-global-var-openai-api-key": "sk-proxy-key",
+        }
+    )
+    try:
+        with pytest.raises(DecisionConfigurationError, match="official hosted"):
+            evaluate_decision(request, model=model)
+    finally:
+        reset_request_variables(variables)
+        reset_no_env_fallback(token)
+    transport.assert_not_called()
+
+
 def test_prefixed_environment_key_is_used(execution, monkeypatch):
     request, model, transport = execution
     monkeypatch.delenv("OPENAI_API_KEY")

@@ -420,6 +420,19 @@ class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
         with pytest.raises(DecisionConfigurationError, match="don't match its outputs"):
             router._route_ids()
 
+    def test_a_saved_route_output_without_a_route_fails_clearly(self):
+        """A tweak that drops route 2 would otherwise leave its connected branch running."""
+        router = self._router_with_outputs("category_1_result", "category_2_result", "category_3_result")
+        router.set(
+            routes=[
+                {"route_category": "A", "route_id": "category_1_result"},
+                {"route_category": "C", "route_id": "category_3_result"},
+            ],
+            last_route_number=3,
+        )
+        with pytest.raises(DecisionConfigurationError, match="don't match its outputs"):
+            router._route_ids()
+
     def test_rows_without_ids_follow_the_saved_route_order(self):
         """A tweak that sends routes in their saved order keeps each route on its own output."""
         router = self._router_with_outputs("category_1_result", "category_3_result", "category_2_result")
