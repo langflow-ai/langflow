@@ -54,12 +54,15 @@ Highlights of this release include the following changes. For all changes, see t
 
 - Official packages require authentication by default
 
-    Official Python packages, tagged source archives, and Docker images now set `LANGFLOW_AUTO_LOGIN=false`.
-    For a new installation, set `LANGFLOW_SUPERUSER_PASSWORD` before starting Langflow, then sign in with the username `langflow` (or your configured `LANGFLOW_SUPERUSER`).
-    Setting `LANGFLOW_SUPERUSER_PASSWORD` does not replace an existing account's non-legacy password. If you are upgrading an auto-login installation, [prepare that account for password sign-in](/api-keys-and-authentication#upgrade-from-auto-login) before you upgrade. If you already upgraded and can't sign in, [recover access after upgrading](/troubleshoot#recover-access-after-upgrading).
-    Development branches and local builds from those branches still default to automatic login.
-    For trusted local development with a release package or Docker image, set `LANGFLOW_AUTO_LOGIN=true`.
-    The `langflow api-key` CLI command works only with automatic login enabled. With the new default, [create API keys](/api-keys-and-authentication#create-a-langflow-api-key) in Langflow **Settings** or with the Langflow API.
+    Official Python packages, tagged source archives, and Docker images set `LANGFLOW_AUTO_LOGIN=false`.
+    Set `LANGFLOW_SUPERUSER_PASSWORD`, then sign in as `langflow` or the username in `LANGFLOW_SUPERUSER`.
+    That password does not replace an existing account's password.
+
+    Before upgrading an auto-login installation, [prepare that account for password sign-in](/api-keys-and-authentication#upgrade-from-auto-login).
+    If you already upgraded and can't sign in, [recover access](/troubleshoot#recover-access-after-upgrading).
+
+    Development branches still sign in automatically. On a release package or Docker image, set `LANGFLOW_AUTO_LOGIN=true` to keep that behavior.
+    `langflow api-key` works only while automatic login is on. Otherwise, [create API keys](/api-keys-and-authentication#create-a-langflow-api-key) in **Settings** or with the API.
 
     For more information, see [API keys and authentication](/api-keys-and-authentication#langflow-auto-login).
 

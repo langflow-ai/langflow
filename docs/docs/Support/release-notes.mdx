@@ -55,11 +55,12 @@ Highlights of this release include the following changes. For all changes, see t
 - Official packages require authentication by default
 
     Official Python packages, tagged source archives, and Docker images now set `LANGFLOW_AUTO_LOGIN=false`.
-    For a new installation, set `LANGFLOW_SUPERUSER_PASSWORD` before starting Langflow, then sign in with the username `langflow` (or your configured `LANGFLOW_SUPERUSER`).
-    Setting `LANGFLOW_SUPERUSER_PASSWORD` does not replace an existing account's non-legacy password. If you are upgrading an auto-login installation, [prepare that account for password sign-in](/api-keys-and-authentication#upgrade-from-auto-login) before you upgrade. If you already upgraded and can't sign in, [recover access after upgrading](/troubleshoot#recover-access-after-upgrading).
-    Development branches and local builds from those branches still default to automatic login.
-    For trusted local development with a release package or Docker image, set `LANGFLOW_AUTO_LOGIN=true`.
-    The `langflow api-key` CLI command works only with automatic login enabled. With the new default, [create API keys](/api-keys-and-authentication#create-a-langflow-api-key) in Langflow **Settings** or with the Langflow API.
+    Set `LANGFLOW_SUPERUSER_PASSWORD`, then sign in as `langflow` or the username in `LANGFLOW_SUPERUSER`.
+
+    Before upgrading an auto-login installation, [prepare that account for password sign-in](/api-keys-and-authentication#upgrade-from-auto-login).
+    If you already upgraded and can't sign in, [recover access](/troubleshoot#recover-access-after-upgrading).
+
+    `LANGFLOW_AUTO_LOGIN` can still be set to `true` in trusted environments.
 
     For more information, see [API keys and authentication](/api-keys-and-authentication#langflow-auto-login).
 
@@ -71,20 +72,6 @@ Highlights of this release include the following changes. For all changes, see t
     Replace **Chroma** and **Local DB** with a [knowledge base](/knowledge#knowledge-bases), or with a supported remote vector store.
 
     For more information, see [Upgrade Knowledge and Memory storage](/knowledge-storage-upgrade).
-
-- The ALTK component is removed
-
-    The [**ALTK**](/components-bundle-components) component is removed.
-
-    Replace **ALTK** with the [**Agent**](/components-agents) component.
-
-- MrScraper components are removed
-
-    The [**MrScraper**](/bundles-mrscraper) bundle now provides three components.
-
-    Instead, use the **Scraper API** or **Web Search** components.
-
-    For more information, see [Update existing flows](/bundles-mrscraper).
 
 ### New features
 
@@ -115,6 +102,22 @@ Highlights of this release include the following changes. For all changes, see t
 
     Superusers can manage users, teams, and roles with the API or the `langflow admin` command.
     For more information, see [Administer users and teams with the API and CLI](./admin-api-cli).
+
+## Component changes
+
+- The ALTK component is removed
+
+    The [**ALTK**](/components-bundle-components) component is removed.
+
+    Replace **ALTK** with the [**Agent**](/components-agents) component.
+
+- MrScraper components are removed
+
+    The [**MrScraper**](/bundles-mrscraper) bundle now provides three components.
+
+    Instead, use the **Scraper API** or **Web Search** components.
+
+    For more information, see [Update existing flows](/bundles-mrscraper).
 
 ## 1.12.x
 
