@@ -28,7 +28,7 @@ from lfx.services.storage.service import StorageService
 from lfx.template.utils import update_frontend_node_with_template_values
 from lfx.type_extraction import post_process_type
 from lfx.utils.async_helpers import run_until_complete
-from lfx.utils.file_path_security import validate_storage_key
+from lfx.utils.file_path_security import component_file_access_scopes, validate_storage_key
 from lfx.utils.flow_validation import is_protected_tweak_field
 
 if TYPE_CHECKING:
@@ -667,7 +667,9 @@ class CustomComponent(BaseComponent):
         This function is called after the code validation is done.
         """
         return update_frontend_node_with_template_values(
-            frontend_node=new_frontend_node, raw_frontend_node=current_frontend_node
+            frontend_node=new_frontend_node,
+            raw_frontend_node=current_frontend_node,
+            scope_ids=component_file_access_scopes(self),
         )
 
     def get_langchain_callbacks(self) -> list[BaseCallbackHandler]:
