@@ -129,7 +129,7 @@ def test_row_added_in_the_editor_accepts_blank_description(monkeypatch):
 @pytest.mark.parametrize(
     ("candidates", "cause"),
     [
-        ([{"id": "a", "label": "Low"}, {"id": "a", "label": "High"}], "needs a different ID"),
+        ([{"id": "a", "label": "Low"}, {"id": "a", "label": "High"}], "have the same ID"),
         ([{"id": "a", "label": "Low"}], "at least two"),
         ([{"id": "a", "label": "Low", "unexpected": 1}, {"id": "b", "label": "High"}], "unexpected"),
         # A row added in the editor and left blank.
@@ -183,9 +183,9 @@ def test_structured_context_reaches_the_model_as_json(monkeypatch):
 @pytest.mark.parametrize(
     ("fields", "cause"),
     [
-        ({}, "needs a Context or a Structured Context"),
-        ({"context": "  "}, "needs a Context or a Structured Context"),
-        ({"structured_context": Data(data={})}, "needs a Context or a Structured Context"),
+        ({}, "Enter a Context, or connect a Structured Context"),
+        ({"context": "  "}, "Enter a Context, or connect a Structured Context"),
+        ({"structured_context": Data(data={})}, "Enter a Context, or connect a Structured Context"),
         ({"context": "Charged twice", "structured_context": {"order": 1042}}, "not both"),
     ],
 )
@@ -227,3 +227,31 @@ async def test_an_agent_supplies_the_context_when_used_as_a_tool():
     component.set(model=[{"provider": "TypeSafe", "name": "jev-latest"}], kind="Boolean", question="Refund?")
     [tool] = await component.to_toolkit()
     assert set(tool.args) == {"context"}
+
+
+@pytest.mark.parametrize(("kind", "name"), [("Choice", "Options"), ("Score", "Levels")])
+def test_the_table_is_named_for_the_decision_type(monkeypatch, kind, name):
+    monkeypatch.setattr(component_module, "handle_model_input_update", lambda _c, config, *_a, **_k: config)
+    component = DecisionModelComponent()
+    config = {field: spec.model_dump() for field, spec in component._inputs.items()}
+    assert component.update_build_config(config, kind, "kind")["candidates"]["display_name"] == name
+
+
+async def test_an_agent_learns_what_the_tool_answers():
+    component = DecisionModelComponent()
+    component.set(model=[{"provider": "TypeSafe", "name": "jev-latest"}], kind="Boolean", question="Refund?")
+    [tool] = await component.to_toolkit()
+    assert "probability_true" in tool.description
+    assert "selected_option" in tool.description
+    assert tool.args["context"]["description"].startswith("The text the question is about")
+
+
+def test_the_result_leaves_out_what_this_decision_did_not_return(monkeypatch):
+    component = DecisionModelComponent()
+    component.set(model=[{"provider": "TypeSafe", "name": "jev-latest"}], kind="Boolean", question="Refund?")
+    component.set(context="I was charged twice.")
+    monkeypatch.setattr(component_module, "evaluate_decision", lambda *_a, **_k: BOOLEAN_RESULT)
+    data = component.evaluate().data
+    assert data["probability_true"] == 0.8
+    assert not {"probabilities", "score", "refusal", "request_id"} & data.keys()
+    assert not {"options", "levels", "yes_description", "no_description"} & data["request"].keys()

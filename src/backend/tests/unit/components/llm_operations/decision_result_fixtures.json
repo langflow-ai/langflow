@@ -1,24 +1,14 @@
 {
   "boolean": {
-    "confidence": null,
     "kind": "boolean",
     "model": "gpt-6-luna",
     "model_source": "response",
-    "probabilities": null,
     "probability_true": 0.88,
     "provider": "OpenAI",
-    "refusal": null,
     "request": {
       "kind": "boolean",
-      "levels": [],
-      "no_description": "",
-      "options": [],
-      "question": "Is the customer asking for a refund?",
-      "yes_description": ""
+      "question": "Is the customer asking for a refund?"
     },
-    "request_id": null,
-    "score": null,
-    "selected_option": null,
     "status": "success",
     "usage": {
       "input_tokens": 296,
@@ -36,13 +26,9 @@
       "sales": 0.06,
       "technical": 0.12
     },
-    "probability_true": null,
     "provider": "Perplexity",
-    "refusal": null,
     "request": {
       "kind": "choice",
-      "levels": [],
-      "no_description": "",
       "options": [
         {
           "description": "Payments and invoices",
@@ -60,11 +46,9 @@
           "label": "Sales"
         }
       ],
-      "question": "Which team should handle this message?",
-      "yes_description": ""
+      "question": "Which team should handle this message?"
     },
     "request_id": "req_5f0c9a",
-    "score": null,
     "selected_option": "billing",
     "status": "success",
     "usage": {
@@ -74,27 +58,16 @@
     }
   },
   "refusal": {
-    "confidence": null,
     "kind": "boolean",
     "model": "gpt-6-luna",
     "model_source": "response",
-    "probabilities": null,
-    "probability_true": null,
     "provider": "OpenAI",
     "refusal": "I can't evaluate this request.",
     "request": {
       "kind": "boolean",
-      "levels": [],
-      "no_description": "",
-      "options": [],
-      "question": "Is the customer asking for a refund?",
-      "yes_description": ""
+      "question": "Is the customer asking for a refund?"
     },
-    "request_id": null,
-    "score": null,
-    "selected_option": null,
-    "status": "refusal",
-    "usage": null
+    "status": "refusal"
   },
   "score": {
     "confidence": 0.4,
@@ -107,41 +80,30 @@
       "satisfied": 0.5,
       "upset": 0.05
     },
-    "probability_true": null,
     "provider": "TypeSafe",
-    "refusal": null,
     "request": {
       "kind": "score",
       "levels": [
         {
-          "description": "",
           "id": "upset",
           "label": "Upset"
         },
         {
-          "description": "",
           "id": "neutral",
           "label": "Neutral"
         },
         {
-          "description": "",
           "id": "satisfied",
           "label": "Satisfied"
         },
         {
-          "description": "",
           "id": "delighted",
           "label": "Delighted"
         }
       ],
-      "no_description": "",
-      "options": [],
-      "question": "How satisfied is the customer?",
-      "yes_description": ""
+      "question": "How satisfied is the customer?"
     },
-    "request_id": null,
     "score": 2.05,
-    "selected_option": null,
     "status": "success",
     "usage": {
       "input_tokens": 296,

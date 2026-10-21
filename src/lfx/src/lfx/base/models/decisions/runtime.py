@@ -32,15 +32,15 @@ def evaluate_decision(
     """Authorize the canonical catalog identity before resolving credentials or invoking HTTP."""
     if isinstance(model, list):
         if len(model) != 1:
-            msg = "Select exactly one decision model."
+            msg = "Pick one Decision Model."
             raise DecisionConfigurationError(msg)
         model = model[0]
     if not isinstance(model, dict):
-        msg = "A decision model selection is required."
+        msg = "Pick a Decision Model."
         raise DecisionConfigurationError(msg)
     provider, model_name = model.get("provider"), model.get("name")
     if any(not isinstance(value, str) or not value.strip() for value in (provider, model_name)):
-        msg = "The decision model selection requires a provider and model name."
+        msg = "Pick a Decision Model."
         raise DecisionConfigurationError(msg)
 
     from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
@@ -55,7 +55,7 @@ def evaluate_decision(
 
     provider = provider_name_for_id(resolve_provider_id(provider))
     if provider is None:
-        msg = "The decision provider is not registered."
+        msg = "The Decision Model's provider isn't available here. Pick another Decision Model."
         raise DecisionConfigurationError(msg)
     # Flow-supplied capabilities and endpoints are not authoritative.
     choices = unified_models.get_decision_model_options(
@@ -63,10 +63,16 @@ def evaluate_decision(
     )
     selected = next((row for row in choices if row["provider"] == provider and row["name"] == model_name), None)
     if selected is None:
-        msg = "The selected decision model is disabled or unavailable."
+        msg = (
+            "The selected Decision Model is turned off or no longer offered. "
+            "Turn it on in Model Providers, or pick another."
+        )
         raise DecisionConfigurationError(msg)
     if request.kind not in selected.get("metadata", {}).get("capabilities", []):
-        msg = "The selected decision model does not support this question kind."
+        msg = (
+            f"{model_name} doesn't support the {request.kind.title()} Decision Type. "
+            "Pick another Decision Type or Decision Model."
+        )
         raise DecisionConfigurationError(msg)
 
     from lfx.base.models.decisions.providers import evaluate_provider, require_official_openai_endpoint
@@ -91,7 +97,7 @@ def evaluate_decision(
         None,
     ) or secret_value_to_str(variables.get(own_variable), strip=True)
     if not resolved_key:
-        msg = f"Configure an API key for the {provider} decision model."
+        msg = f"Add the {provider} API key in Model Providers, or set {own_variable}."
         raise DecisionConfigurationError(msg)
 
     # parse_response already validates the evidence against this request.

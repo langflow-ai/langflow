@@ -6,6 +6,29 @@ from lfx.io import DropdownInput, FloatInput, HandleInput, MessageTextInput, Mod
 from lfx.schema.data import Data
 from lfx.schema.table import EditMode
 
+# The table's name and help follow the Decision Type.
+_TABLE = {
+    "Choice": (
+        "Options",
+        "The options to choose between, 2 to 255. ID is a short unique key the result uses, such as refund; "
+        "Label is the name the model reads.",
+    ),
+    "Score": (
+        "Levels",
+        "Levels ordered from lowest to highest, 2 to 10. The model scores the input from 0 (the first level) up "
+        "to one less than the number of levels. ID is a short unique key the result uses; Label is the name the "
+        "model reads.",
+    ),
+}
+# What an agent learns about this component when it is a tool.
+_RESULT_INFO = (
+    "Answers this component's fixed question about the text you pass as context, and returns JSON. Choice gives "
+    "selected_option (an option ID) and probabilities by option ID; Boolean gives probability_true, the "
+    "probability the answer is yes, from 0 to 1; Score gives score, from 0 (the first level) up to one less than "
+    "the number of levels, and probabilities by level ID. confidence is the provider's own measure, not an "
+    "option's probability."
+)
+
 # Follow-ups, deferred until there is demand:
 # - Several named questions in one request, answered as one typed object. All three providers take
 #   them, but Perplexity's full model answers grouped questions jointly (an answer can change with
@@ -33,27 +56,50 @@ class DecisionModelComponent(Component):
             display_name="Decision Type",
             options=["Choice", "Boolean", "Score"],
             value="Choice",
+            info="Choice picks one option. Boolean answers yes or no. Score places the input on ordered levels.",
             real_time_refresh=True,
         ),
         MessageTextInput(
             name="context",
             display_name="Context",
-            info="What the model judges. Used as a tool, the agent supplies it.",
+            info="The text the question is about, such as a message or a document.",
             tool_mode=True,
         ),
-        MessageTextInput(name="question", display_name="Question", required=True),
+        MessageTextInput(
+            name="question",
+            display_name="Question",
+            info='What to decide about the Context, such as "Which team should handle this message?"',
+            required=True,
+        ),
         TableInput(
             name="candidates",
-            display_name="Options / Ordered Score Levels",
-            value=[],
-            info="Choice options or Score levels ordered from lowest (0) to highest. IDs must be unique.",
+            display_name=_TABLE["Choice"][0],
+            value=[
+                {"id": "low", "label": "Low", "description": ""},
+                {"id": "medium", "label": "Medium", "description": ""},
+                {"id": "high", "label": "High", "description": ""},
+            ],
+            info=_TABLE["Choice"][1],
             table_schema=[
-                {"name": "id", "display_name": "ID", "type": "str", "edit_mode": EditMode.INLINE},
-                {"name": "label", "display_name": "Label", "type": "str", "edit_mode": EditMode.INLINE},
+                {
+                    "name": "id",
+                    "display_name": "ID",
+                    "type": "str",
+                    "description": "A short unique key, such as refund. The result uses it.",
+                    "edit_mode": EditMode.INLINE,
+                },
+                {
+                    "name": "label",
+                    "display_name": "Label",
+                    "type": "str",
+                    "description": "The name the model reads. Labels must differ, ignoring case.",
+                    "edit_mode": EditMode.INLINE,
+                },
                 {
                     "name": "description",
                     "display_name": "Description",
                     "type": "str",
+                    "description": "Optional: more about when this one applies.",
                     "edit_mode": EditMode.POPOVER,
                     "default": "",
                 },
@@ -61,20 +107,20 @@ class DecisionModelComponent(Component):
         ),
         MessageTextInput(
             name="yes_description",
-            display_name="What Yes Means",
+            display_name="What Yes Means (Optional)",
             info=(
-                "Boolean only: what a Yes answer means. A decision model that takes no descriptions "
-                "stops the run with a clear error."
+                "Optional: what a Yes answer means. Some decision models don't accept this; if yours "
+                "doesn't, the run stops and asks you to clear it."
             ),
             show=False,
             advanced=True,
         ),
         MessageTextInput(
             name="no_description",
-            display_name="What No Means",
+            display_name="What No Means (Optional)",
             info=(
-                "Boolean only: what a No answer means. A decision model that takes no descriptions "
-                "stops the run with a clear error."
+                "Optional: what a No answer means. Some decision models don't accept this; if yours "
+                "doesn't, the run stops and asks you to clear it."
             ),
             show=False,
             advanced=True,
@@ -82,13 +128,22 @@ class DecisionModelComponent(Component):
         HandleInput(
             name="structured_context",
             display_name="Structured Context",
-            info="JSON sent to the model as it is, in place of Context.",
+            info=(
+                "Optional: JSON to judge in place of Context, such as a record from another component. "
+                "Use Context or Structured Context, not both."
+            ),
             input_types=["Data", "JSON"],
             advanced=True,
         ),
-        FloatInput(name="timeout", display_name="Timeout (seconds)", value=60, advanced=True),
+        FloatInput(
+            name="timeout",
+            display_name="Timeout (seconds)",
+            info="How long to wait for the decision model: more than 0 and at most 300 seconds.",
+            value=60,
+            advanced=True,
+        ),
     ]
-    outputs = [Output(name="result", display_name="Decision Result", method="evaluate")]
+    outputs = [Output(name="result", display_name="Decision Result", method="evaluate", info=_RESULT_INFO)]
 
     def _context(self) -> str | dict:
         """Context as text, or Structured Context as JSON; exactly one of them."""
@@ -101,11 +156,11 @@ class DecisionModelComponent(Component):
             structured = None
         if structured is None:
             if not text:
-                msg = "Decision Model needs a Context or a Structured Context."
+                msg = "Enter a Context, or connect a Structured Context."
                 raise DecisionConfigurationError(msg)
             return self.context
         if text:
-            msg = "Set Context or Structured Context, not both."
+            msg = "Use Context or Structured Context, not both."
             raise DecisionConfigurationError(msg)
         return structured
 
@@ -129,8 +184,12 @@ class DecisionModelComponent(Component):
             request_variables=request_variables_of(self),
             timeout=self.timeout,
         )
+        # Only what this decision returned and asked: no empty fields from the other types.
         data = Data(
-            data={**result.model_dump(mode="json"), "request": request.model_dump(mode="json", exclude={"context"})}
+            data={
+                **result.model_dump(mode="json", exclude_none=True),
+                "request": request.model_dump(mode="json", exclude={"context"}, exclude_defaults=True),
+            }
         )
         self.status = data
         return data
@@ -139,6 +198,8 @@ class DecisionModelComponent(Component):
         config = handle_model_input_update(self, build_config, field_value, field_name)
         kind = field_value if field_name == "kind" else config.get("kind", {}).get("value", "Choice")
         config["candidates"]["show"] = kind != "Boolean"
+        if kind in _TABLE:
+            config["candidates"]["display_name"], config["candidates"]["info"] = _TABLE[kind]
         for name in ("yes_description", "no_description"):
             if name in config:
                 config[name]["show"] = kind == "Boolean"

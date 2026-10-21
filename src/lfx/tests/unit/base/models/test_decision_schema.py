@@ -117,7 +117,7 @@ def test_answer_of_a_different_kind_is_rejected():
 @pytest.mark.parametrize(("ids", "labels"), [(("x", "x"), ("A", "B")), (("x", "y"), ("A", " a "))])
 def test_rejects_ambiguous_option_identities(ids, labels):
     options = tuple(DecisionOption(id=key, label=label) for key, label in zip(ids, labels, strict=True))
-    with pytest.raises(ValidationError, match="needs a different"):
+    with pytest.raises(ValidationError, match="have the same"):
         DecisionRequest(kind="choice", question="Which?", context="x", options=options)
 
 
@@ -193,7 +193,7 @@ def test_probabilities_may_miss_one_by_their_rounding():
         ),
         (
             {"kind": "choice", "options": [{"id": "a", "label": "A"}, {"id": "a", "label": "B"}]},
-            "Each option or level needs a different ID.",
+            "Options 1 and 2 have the same ID. Each needs a different one.",
         ),
     ],
 )

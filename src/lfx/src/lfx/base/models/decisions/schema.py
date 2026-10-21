@@ -42,10 +42,12 @@ def validation_summary(exc: ValidationError, *, field_only: bool = False) -> str
     ``field_only`` keeps just the top-level field, for provider responses whose nested keys the
     provider chose and must never be echoed.
     """
-    return "; ".join(
-        f"{'.'.join(str(part) for part in error['loc'][: 1 if field_only else None]) or 'value'}: {error['msg']}"
-        for error in exc.errors()
-    )
+    problems = []
+    for error in exc.errors():
+        path = ".".join(str(part) for part in error["loc"][: 1 if field_only else None])
+        # A rule across the whole object has no path; pydantic prefixes its message with "Value error, ".
+        problems.append(f"{path}: {error['msg']}" if path else error["msg"].removeprefix("Value error, "))
+    return "; ".join(problems)
 
 
 # What the component shows for each part of a decision request.
@@ -77,12 +79,20 @@ def configuration_summary(exc: ValidationError) -> str:
                 problems.append(f"{row}'s {_CELLS.get(loc[2], loc[2])} must be text.")
         elif len(loc) == 1 and loc[0] in _FIELDS and blank:
             problems.append(f"{_FIELDS[loc[0]]} can't be empty.")
+        elif loc and loc[0] == "context":
+            # Only Structured Context can hold something other than text.
+            problems.append(
+                "Structured Context must be plain JSON: text, numbers, true or false, null, lists and objects."
+            )
         elif not loc:
             # A rule across the whole request, such as unique IDs.
             problems.append(f"{error['msg'].removeprefix('Value error, ')}.")
         else:
             problems.append(f"{'.'.join(str(part) for part in loc)}: {error['msg']}.")
-    return " ".join([f"{row} needs {' and '.join(cells)}." for row, cells in missing.items()] + problems)
+    # Union types report one error per branch; say each problem once.
+    return " ".join(
+        [f"{row} needs {' and '.join(cells)}." for row, cells in missing.items()] + list(dict.fromkeys(problems))
+    )
 
 
 class DecisionOption(BaseModel):
@@ -120,8 +130,9 @@ class DecisionRequest(BaseModel):
     @model_validator(mode="after")
     def validate_candidates(self) -> DecisionRequest:
         candidates = self.options if self.kind == "choice" else self.levels
+        noun = "Option" if self.kind == "choice" else "Level"
         if self.kind in {"choice", "score"} and len(candidates) < MIN_CANDIDATES:
-            msg = "Choice needs at least two options, and Score at least two levels"
+            msg = f"Add at least two {noun.lower()}s"
             raise ValueError(msg)
         if (self.kind != "choice" and self.options) or (self.kind != "score" and self.levels):
             msg = "Options belong to Choice and ordered levels belong to Score"
@@ -129,12 +140,17 @@ class DecisionRequest(BaseModel):
         if self.kind != "boolean" and (self.yes_description or self.no_description):
             msg = "Yes and No descriptions belong to Boolean"
             raise ValueError(msg)
-        if len({candidate.id for candidate in candidates}) != len(candidates):
-            msg = "Each option or level needs a different ID"
-            raise ValueError(msg)
-        if len({candidate.label.strip().casefold() for candidate in candidates}) != len(candidates):
-            msg = "Each option or level needs a different Label"
-            raise ValueError(msg)
+        for column, key in (("ID", lambda c: c.id), ("Label", lambda c: c.label.strip().casefold())):
+            first: dict[str, int] = {}
+            for position, candidate in enumerate(candidates, start=1):
+                if (value := key(candidate)) in first:
+                    ignoring = ", ignoring case" if column == "Label" else ""
+                    msg = (
+                        f"{noun}s {first[value]} and {position} have the same {column}{ignoring}. "
+                        "Each needs a different one"
+                    )
+                    raise ValueError(msg)
+                first[value] = position
         return self
 
 

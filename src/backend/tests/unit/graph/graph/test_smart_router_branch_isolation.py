@@ -524,7 +524,7 @@ async def test_decision_router_checks_real_else_before_inference(monkeypatch):
     )
     for settings in ({"connected_else": False}, {"enable_else_output": False}):
         graph, _, _ = _decision_graph(**settings)
-        with pytest.raises(Exception, match="enabled, connected Else"):
+        with pytest.raises(Exception, match="Include Else Output on and its Else output connected"):
             await _run(graph)
     assert calls == []
 
@@ -593,7 +593,7 @@ async def test_decision_router_refusal_uses_explicit_error_policy(monkeypatch):
         "lfx.components.llm_operations.llm_conditional_router.evaluate_decision", lambda *_args, **_kwargs: result
     )
     graph, router, sinks = _decision_graph()
-    with pytest.raises(Exception, match="refused"):
+    with pytest.raises(Exception, match="declined to answer"):
         await _run(graph)
     assert not any(sink.did_run for sink in sinks.values())
     assert router._decision_evidence["activated_branch"] is None
@@ -631,8 +631,8 @@ async def test_decision_router_checks_else_in_imported_graph(monkeypatch):
     from lfx.components.llm_operations import llm_conditional_router
 
     for settings, error in (
-        ({"connected_else": False}, "enabled, connected Else"),
-        ({"minimum_probability": None}, "Minimum probability must be a number"),
+        ({"connected_else": False}, "Include Else Output on and its Else output connected"),
+        ({"minimum_probability": None}, "Enter a Minimum Probability"),
     ):
         graph, _, _ = _decision_graph(**settings)
         graph.prepare()
@@ -760,7 +760,7 @@ async def test_decision_router_requires_named_routes_before_inference(monkeypatc
     )
     routes = [{"route_category": "", "route_description": "x"}, {"route_category": "Negative"}]
     router = _connected_router(routes=routes)
-    with pytest.raises(DecisionConfigurationError, match="Every route needs a name"):
+    with pytest.raises(DecisionConfigurationError, match="Every route needs a Route Name"):
         router._get_categorization()
     assert not calls
 
@@ -791,7 +791,7 @@ async def test_decision_router_needs_two_routes(monkeypatch):
         lambda *_args, **_kwargs: pytest.fail("inference must not run"),
     )
     router = _connected_router(routes=[{"route_category": "Positive", "route_description": "good"}])
-    with pytest.raises(DecisionConfigurationError, match="at least two routes"):
+    with pytest.raises(DecisionConfigurationError, match="Add at least two routes"):
         router._get_categorization()
 
 

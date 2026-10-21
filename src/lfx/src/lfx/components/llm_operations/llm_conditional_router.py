@@ -69,21 +69,20 @@ _DECISION_QUESTION_INFO = {
         'A yes/no question, such as "Is the customer asking for a refund?". A Yes answer goes to the Yes output '
         "and a No answer to the No output."
     ),
-    "score": "The question that places the input on the routes, read as levels from lowest to highest.",
+    "score": "The question that places the input on the Levels, from lowest to highest.",
 }
 _ROUTES_INFO = (
-    "Define the categories for routing. Each row should have a route/category name "
-    "and optionally a custom output value."
+    "The routes to choose between. Each needs a Route Name; its Route Description says when it applies, and its "
+    "Route Message, if set, is sent in place of the input."
 )
 _MINIMUM_PROBABILITY_INFO = {
     "choice": (
-        "Required in decision mode, from 0 to 1. The top route is chosen only when its probability is at "
-        "least this value; otherwise the message goes to Else. This is the route's probability, not the "
-        "provider's confidence score. A route can set its own threshold in the Routes table."
+        "From 0 to 1. The most likely route is used only when its probability is at least this value; otherwise "
+        "the message goes to Else. A route can set its own in the Routes table."
     ),
     "boolean": (
-        "Required in decision mode, from 0 to 1. Yes is chosen when P(yes) is at least this value, and No when "
-        "P(no) is; otherwise the message goes to Else. Yes and No can each set their own threshold."
+        "From 0 to 1. Yes is chosen when the probability of yes is at least this value, and No when the "
+        "probability of no is; otherwise the message goes to Else. Yes and No can each set their own."
     ),
 }
 
@@ -128,7 +127,7 @@ def assign_route_ids(routes: list[dict], last_number: int, prefix: str = "catego
 
 class SmartRouterComponent(Component):
     display_name = "Smart Router"
-    description = "Routes an input message using LLM-based categorization."
+    description = "Routes an input message with a language model or a decision model."
     icon = "route"
     name = "SmartRouter"
 
@@ -160,8 +159,9 @@ class SmartRouterComponent(Component):
             options=list(_DECISION_KINDS),
             value="Choice",
             info=(
-                "Choice picks one route. Boolean answers yes or no, with Yes and No outputs in place of the "
-                "routes. Score reads the routes as ordered levels."
+                "Choice picks one route. Boolean answers yes or no through Yes and No outputs. Score places the "
+                "input on its own ordered Levels. Changing the type replaces the outputs and removes their "
+                "connections; Else keeps its own."
             ),
             show=False,
             real_time_refresh=True,
@@ -183,19 +183,19 @@ class SmartRouterComponent(Component):
         ),
         MessageTextInput(
             name="yes_description",
-            display_name="What Yes Means",
+            display_name="What Yes Means (Optional)",
             info=(
-                "Boolean only: what a Yes answer means. A decision model that takes no descriptions "
-                "stops the run with a clear error."
+                "Optional: what a Yes answer means. Some decision models don't accept this; if yours "
+                "doesn't, the run stops and asks you to clear it."
             ),
             show=False,
         ),
         MessageTextInput(
             name="no_description",
-            display_name="What No Means",
+            display_name="What No Means (Optional)",
             info=(
-                "Boolean only: what a No answer means. A decision model that takes no descriptions "
-                "stops the run with a clear error."
+                "Optional: what a No answer means. Some decision models don't accept this; if yours "
+                "doesn't, the run stops and asks you to clear it."
             ),
             show=False,
         ),
@@ -234,6 +234,10 @@ class SmartRouterComponent(Component):
             display_name="Evaluation Error Action",
             options=["Stop with error", "Route to Else"],
             value="Stop with error",
+            info=(
+                "What to do when the decision model times out, fails or declines to answer: stop the run, or send "
+                "the message to Else. A missing or rejected key, or invalid settings, always stop the run."
+            ),
             show=False,
             advanced=True,
         ),
@@ -273,7 +277,7 @@ class SmartRouterComponent(Component):
                     "name": "route_description",
                     "display_name": "Route Description",
                     "type": "str",
-                    "description": "Description of when this route should be used (helps LLM understand the category)",
+                    "description": "When this route should be used; the model judges the input against it.",
                     "default": "",
                     "edit_mode": EditMode.POPOVER,
                 },
@@ -282,7 +286,7 @@ class SmartRouterComponent(Component):
                     "display_name": "Route Message (Optional)",
                     "type": "str",
                     "description": (
-                        "Optional message to send when this route is matched."
+                        "Optional message to send when this route is matched. "
                         "Leave empty to pass through the original input text."
                     ),
                     "default": "",
@@ -294,7 +298,7 @@ class SmartRouterComponent(Component):
                     "type": "float",
                     "formatter": "number",
                     "description": (
-                        "Decision mode only: the probability this route needs, at least, from 0 to 1. "
+                        "Decision Model mode only: the probability this route needs, at least, from 0 to 1. "
                         "Leave empty to use the router's Minimum Probability."
                     ),
                     "edit_mode": EditMode.INLINE,
@@ -389,8 +393,9 @@ class SmartRouterComponent(Component):
             name="enable_else_output",
             display_name="Include Else Output",
             info=(
-                "Include an Else output for cases that don't match any route. Decision mode requires it, "
-                "connected: messages no route is confident enough for go there."
+                "Include an Else output for cases that don't match any route. Decision Model mode needs it on and "
+                "connected: it gets answers that aren't sure enough, and evaluation errors when Evaluation Error "
+                "Action is Route to Else."
             ),
             value=False,
             advanced=True,
@@ -517,6 +522,12 @@ class SmartRouterComponent(Component):
             rows_input["value"], last = assign_route_ids(rows or [], last, prefix)
             if counter in build_config:
                 build_config[counter]["value"] = last
+        if "routes" in build_config:
+            # A route's own threshold only applies in Decision Model mode.
+            schema = build_config["routes"].get("table_schema") or []
+            for column in schema.get("columns", []) if isinstance(schema, dict) else schema:
+                if column.get("name") == "minimum_probability":
+                    column["hidden"] = not decision_mode
         if decision_mode:
             return handle_model_input_update(
                 self, build_config, field_value, field_name, model_field_name="decision_model"
@@ -653,7 +664,10 @@ class SmartRouterComponent(Component):
         return self._categorization_result
 
     @staticmethod
-    def _validate_probability(value: Any, name: str = "Minimum probability") -> float:
+    def _validate_probability(value: Any, name: str = "Minimum Probability") -> float:
+        if value is None or (isinstance(value, str) and not value.strip()):
+            msg = f"Enter a {name} from 0 to 1, such as 0.7."
+            raise DecisionConfigurationError(msg)
         if isinstance(value, str):
             # Table cells can hold the number as text.
             try:
@@ -661,7 +675,7 @@ class SmartRouterComponent(Component):
             except ValueError:
                 value = None
         if isinstance(value, bool) or not isinstance(value, int | float) or not isfinite(value) or not 0 <= value <= 1:
-            msg = f"{name} must be a number between 0 and 1."
+            msg = f"{name} must be a number from 0 to 1."
             raise DecisionConfigurationError(msg)
         return float(value)
 
@@ -674,7 +688,7 @@ class SmartRouterComponent(Component):
                 for edge in self._vertex.outgoing_edges
             )
         ):
-            msg = "Decision mode requires an enabled, connected Else output."
+            msg = "Decision Model mode needs Include Else Output on and its Else output connected."
             raise DecisionConfigurationError(msg)
 
     def _get_decision_categorization(self) -> str:
@@ -686,7 +700,7 @@ class SmartRouterComponent(Component):
             msg = "Unknown evaluation error action."
             raise DecisionConfigurationError(msg)
         if not str(self.decision_question or "").strip():
-            msg = "Decision mode needs a Decision Question."
+            msg = "Enter a Decision Question."
             raise DecisionConfigurationError(msg)
         candidates, thresholds = (
             self._boolean_branches(threshold) if kind == "boolean" else self._route_branches(kind, threshold)
@@ -728,21 +742,27 @@ class SmartRouterComponent(Component):
         thresholds = {}
         for candidate, own in zip(candidates, (self.yes_minimum_probability, self.no_minimum_probability), strict=True):
             blank = own is None or not str(own).strip()
-            name = f"{candidate['label']} minimum probability"
+            name = f"{candidate['label']} Minimum Probability"
             thresholds[candidate["id"]] = threshold if blank else self._validate_probability(own, name)
         return candidates, thresholds
 
     def _route_branches(self, kind: str, threshold: float | None) -> tuple[list[dict], dict]:
         """One candidate per route or level, and the probability each Choice route needs; levels need none."""
         rows = getattr(self, self._rows_table(), []) or []
-        noun = "level" if kind == "score" else "route"
+        noun, column = ("level", "Level Name") if kind == "score" else ("route", "Route Name")
         if len(rows) < 2:  # noqa: PLR2004 - a choice needs at least two options
-            msg = f"Decision mode needs at least two {noun}s; uncertain results already go to Else."
+            msg = f"Add at least two {noun}s."
             raise DecisionConfigurationError(msg)
         names = [str(row.get("route_category") or "").strip() for row in rows]
         if not all(names):
-            msg = f"Every {noun} needs a name in decision mode."
+            msg = f"Every {noun} needs a {column}."
             raise DecisionConfigurationError(msg)
+        seen: dict[str, str] = {}
+        for name in names:
+            if name.casefold() in seen:
+                msg = f"Every {noun} needs a different {column}; {name!r} is used twice."
+                raise DecisionConfigurationError(msg)
+            seen[name.casefold()] = name
         candidates = [
             {"id": route_id, "label": row["route_category"], "description": row.get("route_description") or ""}
             for route_id, row in zip(self._route_ids(), rows, strict=True)
@@ -752,7 +772,7 @@ class SmartRouterComponent(Component):
             for candidate, row, name in zip(candidates, rows, names, strict=True):
                 own = row.get("minimum_probability")
                 blank = own is None or not str(own).strip()
-                minimum = f"Minimum probability for {name!r}"
+                minimum = f"Minimum Probability for {name!r}"
                 thresholds[candidate["id"]] = threshold if blank else self._validate_probability(own, minimum)
         return candidates, thresholds
 
@@ -781,7 +801,10 @@ class SmartRouterComponent(Component):
         if result.status == "refusal":
             evidence["reason"] = "refusal"
             if stop:
-                msg = "The decision provider refused the evaluation."
+                msg = (
+                    f"{result.provider} declined to answer. Rephrase the Decision Question or the input, or set "
+                    "Evaluation Error Action to Route to Else."
+                )
                 raise DecisionEvaluationError(msg, category="refusal")
             return ""
         labels = {option["id"]: option["label"] for option in evidence["options"]}
@@ -856,7 +879,8 @@ class SmartRouterComponent(Component):
         else:
             route_ids = [row["route_id"] for row in assign_route_ids(rows, getattr(self, counter, 0) or 0, prefix)[0]]
         if self._outputs_map and (len(route_ids) != len(rows) or set(route_ids) != set(saved)):
-            msg = "The Smart Router's routes don't match its outputs. Open the flow in the editor to update them."
+            things = "levels" if table == "score_levels" else "routes"
+            msg = f"The Smart Router's {things} don't match its outputs. Open the flow in the editor to update them."
             raise DecisionConfigurationError(msg)
         return route_ids
 

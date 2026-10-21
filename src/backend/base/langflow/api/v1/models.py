@@ -1253,11 +1253,12 @@ async def update_enabled_models(
             except HTTPException:
                 raise
             except ValueError as e:
-                # Validation failed - return 400 with error message
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Validation failed for {update.provider}: {e}",
-                ) from e
+                # Validation failed - return 400 with error message. Decision messages already name
+                # the provider, so don't name it twice.
+                detail = (
+                    str(e) if str(e).startswith(update.provider) else f"Validation failed for {update.provider}: {e}"
+                )
+                raise HTTPException(status_code=400, detail=detail) from e
             except Exception as e:
                 logger.exception("Unexpected error validating provider %s", update.provider)
                 raise HTTPException(

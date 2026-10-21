@@ -27,7 +27,7 @@ def transport(monkeypatch):
 @pytest.mark.parametrize("header", ["X-LANGFLOW-GLOBAL-VAR-OPENAI-BASE-URL", "X-LANGFLOW-GLOBAL-VAR-OPENAI-API-BASE"])
 def test_a_proxy_endpoint_header_refuses_the_hosted_api(transport, header):
     headers = {header: "https://proxy.example/v1", "X-LANGFLOW-GLOBAL-VAR-OPENAI_API_KEY": "sk-proxy-key"}
-    with pytest.raises(DecisionConfigurationError, match="official hosted"):
+    with pytest.raises(DecisionConfigurationError, match="official OpenAI endpoint"):
         evaluate_decision(REQUEST, model=MODEL, request_variables=extract_global_variables_from_headers(headers))
     transport.assert_not_called()
 

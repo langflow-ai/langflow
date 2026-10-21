@@ -65,7 +65,10 @@ def require_official_openai_endpoint(*sources: Mapping[str, Any]) -> None:
     for url in urls:
         configured_url = (secret_value_to_str(url, strip=True) or "").rstrip("/")
         if configured_url and configured_url != OFFICIAL_OPENAI_BASE_URL:
-            msg = "OpenAI Decisions currently requires the official hosted endpoint."
+            msg = (
+                "OpenAI decision models only work with the official OpenAI endpoint. Clear the custom OpenAI "
+                "base URL, or pick another Decision Model."
+            )
             raise DecisionConfigurationError(msg)
 
 
@@ -96,6 +99,19 @@ def _request_id(response: httpx.Response) -> str | None:
     return value if value and re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", value) else None
 
 
+def _reference(status: int | None = None, code: str = "", request_id: str | None = None) -> str:
+    """A trailing reference such as " (HTTP 401, invalid_api_key, request ID req_1)", or nothing."""
+    parts = [f"HTTP {status}{code}"] if status else []
+    if request_id:
+        parts.append(f"request ID {request_id}")
+    return f" ({', '.join(parts)})" if parts else ""
+
+
+def _try_again(provider: str, request_id: str | None) -> str:
+    contact = f"contact {provider} with the request ID" if request_id else f"contact {provider}"
+    return f"Try again; if it keeps happening, {contact}."
+
+
 def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for key, value in pairs:
@@ -109,15 +125,15 @@ def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
 def build_payload(provider: str, model: str, request: DecisionRequest) -> dict[str, Any]:
     """Translate one typed question, retaining option identity independently of display text."""
     if provider not in ENDPOINTS:
-        msg = "Unsupported decision provider."
+        msg = f"{provider} has no decision models."
         raise DecisionConfigurationError(msg)
     # TypeSafe and Perplexity document 10 levels. OpenAI publishes no cap, so the same
     # verified bound applies until a larger one is confirmed against the live API.
     if request.kind == "score" and len(request.levels) > MAX_HOSTED_SCORE_LEVELS:
-        msg = f"{provider} decisions support at most {MAX_HOSTED_SCORE_LEVELS} score levels."
+        msg = f"{provider} supports at most {MAX_HOSTED_SCORE_LEVELS} Score levels."
         raise DecisionConfigurationError(msg)
     if len(request.options) > MAX_CHOICES:
-        msg = f"Decision Choice supports at most {MAX_CHOICES} options."
+        msg = f"Choice supports at most {MAX_CHOICES} options."
         raise DecisionConfigurationError(msg)
     question: dict[str, Any] = {"instructions": request.question, "type": _answer_type(provider, request.kind)}
     if request.yes_description or request.no_description:
@@ -275,9 +291,8 @@ def parse_response(
         detail = str(exc) or "unexpected answer shape"
     else:
         return result
-    reference = f" (request {request_id})" if request_id else ""
-    msg = f"{provider} returned an invalid decision response{reference}: {detail}."
-    raise DecisionEvaluationError(msg, category="invalid_response")
+    msg = f"{provider} sent an answer Langflow couldn't use{_reference(request_id=request_id)}: {detail}. "
+    raise DecisionEvaluationError(msg + _try_again(provider, request_id), category="invalid_response")
 
 
 def evaluate_provider(
@@ -290,8 +305,11 @@ def evaluate_provider(
 ) -> DecisionResult:
     """Execute one request through the existing strict SSRF-protected transport."""
     payload = build_payload(provider, model, request)
-    if not api_key or not math.isfinite(timeout) or timeout <= 0 or timeout > MAX_TIMEOUT:
-        msg = f"A decision API key and timeout between 0 and {MAX_TIMEOUT} seconds are required."
+    if not api_key:
+        msg = f"Add the {provider} API key in Model Providers."
+        raise DecisionConfigurationError(msg)
+    if not math.isfinite(timeout) or timeout <= 0 or timeout > MAX_TIMEOUT:
+        msg = f"Timeout (seconds) must be more than 0 and at most {MAX_TIMEOUT}."
         raise DecisionConfigurationError(msg)
     try:
         response = provider_safe_httpx_post(
@@ -302,57 +320,74 @@ def evaluate_provider(
             follow_redirects=False,
         )
     except httpx.TimeoutException:
-        msg = f"{provider} decision request timed out."
+        msg = f"{provider} didn't answer in time. Try again."
         raise DecisionEvaluationError(msg, category="timeout") from None
     except SSRFProtectionError as exc:
         if not isinstance(exc.__cause__, socket.gaierror):
             # The official host resolved to a blocked address: a deployment problem, never routed to Else.
-            msg = f"{provider} endpoint is blocked by SSRF protection."
+            msg = f"This server's network security settings block {provider}'s endpoint. Ask an administrator."
             raise DecisionConfigurationError(msg) from None
-        msg = f"{provider} decision request failed in transport (DNS resolution)."
+        msg = (
+            f"Langflow couldn't reach {provider} (the DNS lookup failed). Check this server's network, then try again."
+        )
         raise DecisionEvaluationError(msg, category="transport") from None
     except httpx.RequestError:
-        msg = f"{provider} decision request failed in transport."
+        msg = f"Langflow couldn't reach {provider}. Check this server's network, then try again."
         raise DecisionEvaluationError(msg, category="transport") from None
     status = response.status_code
     request_id = _request_id(response)
-    # Failures name the provider's request ID too, so they can be raised with the provider.
-    code = (_provider_error_code(response) if not response.is_success else "") + (
-        f", request {request_id}" if request_id else ""
-    )
+    # Failures end with the HTTP status, the provider's code and its request ID, to raise with the provider.
+    ref = "" if response.is_success else _reference(status, _provider_error_code(response), request_id)
     # 402 is an unpaid or exhausted account: like a rejected key, it must stop rather than route to Else.
-    if status in {401, 402, 403}:
-        msg = f"{provider} denied the decision request (HTTP {status}{code})."
+    if status == httpx.codes.UNAUTHORIZED:
+        msg = f"{provider} didn't accept the API key{ref}. Check the {provider} API key in Model Providers."
+        raise PermissionError(msg)
+    if status == httpx.codes.PAYMENT_REQUIRED:
+        msg = f"{provider} declined the request because of the account's billing or credit{ref}. Check your plan."
+        raise PermissionError(msg)
+    if status == httpx.codes.FORBIDDEN:
+        msg = f"This {provider} API key can't use decision models{ref}. Use a key with access to them."
         raise PermissionError(msg)
     # An oversized input is a property of this message, not of the router, so the error action applies.
     if status == httpx.codes.REQUEST_ENTITY_TOO_LARGE or (
         status == httpx.codes.BAD_REQUEST and b"max_tokens_exceeded" in response.content
     ):
-        msg = f"{provider} rejected the input as too large (HTTP {status}{code})."
+        msg = f"{provider} rejected the input as too large{ref}. Shorten the input."
         raise DecisionEvaluationError(msg, category="input_too_large")
-    if status in {400, 404, 422}:
-        msg = f"{provider} rejected the decision configuration (HTTP {status}{code})."
+    if status == httpx.codes.NOT_FOUND:
+        msg = (
+            f"{provider} doesn't offer this decision model to this API key{ref}. "
+            "Pick another Decision Model, or check the key's access."
+        )
         raise DecisionConfigurationError(msg)
+    if status in {400, 422}:
+        msg = f"{provider} couldn't accept this decision request{ref}. Check the question and the options or levels."
+        raise DecisionConfigurationError(msg)
+    if status == httpx.codes.TOO_MANY_REQUESTS:
+        msg = f"{provider} is rate-limiting this API key{ref}. Wait a moment, then try again."
+        raise DecisionEvaluationError(msg, category="http_error")
+    if status >= httpx.codes.INTERNAL_SERVER_ERROR:
+        msg = f"{provider} had a server problem{ref}. Try again later."
+        raise DecisionEvaluationError(msg, category="http_error")
     if not response.is_success:
-        msg = f"{provider} decision request failed (HTTP {status}{code})."
+        msg = f"{provider} decision request failed{ref}."
         raise DecisionEvaluationError(msg, category="http_error")
     try:
         body = json.loads(response.content, object_pairs_hook=_unique_json_object)
     except ValueError:
-        reference = f" (request {request_id})" if request_id else ""
-        msg = f"{provider} returned invalid or duplicate-key decision JSON{reference}."
-        raise DecisionEvaluationError(msg, category="invalid_response") from None
+        msg = f"{provider} sent an answer Langflow couldn't read{_reference(request_id=request_id)}. "
+        raise DecisionEvaluationError(msg + _try_again(provider, request_id), category="invalid_response") from None
     return parse_response(provider, request, body, request_id=request_id)
 
 
 def validate_decision_provider_key(provider: str, variables: dict, model_name: str) -> None:
     """Validate explicit credentials with a minimal decision, never a chat completion."""
     if provider not in ENDPOINTS:
-        msg = "Unsupported decision provider."
+        msg = f"{provider} has no decision models."
         raise ValueError(msg)
     api_key = secret_value_to_str(variables.get(get_provider_secret_variable_key(provider)), strip=True)
     if not api_key:
-        msg = f"{provider} API key is required."
+        msg = f"Enter the {provider} API key."
         raise ValueError(msg)
     request = DecisionRequest(kind="boolean", context="Connection check.", question="Does the text contain a check?")
     try:

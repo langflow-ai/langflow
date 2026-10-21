@@ -80,7 +80,12 @@ SCENARIOS = {
     "permission_denied": ("Route to Else", _raise(PermissionError("TypeSafe denied the decision request (HTTP 401)."))),
     "configuration_error": (
         "Route to Else",
-        _raise(DecisionConfigurationError("The selected decision model is disabled or unavailable.")),
+        _raise(
+            DecisionConfigurationError(
+                "The selected Decision Model is turned off or no longer offered. "
+                "Turn it on in Model Providers, or pick another."
+            )
+        ),
     ),
 }
 
@@ -271,16 +276,16 @@ class TestDecisionEvidenceFixtures:
     def test_result_fixtures_keep_each_kind_of_evidence_distinct(self):
         results = json.loads(RESULT_FIXTURES.read_text(encoding="utf-8"))
         assert results["boolean"]["probability_true"] == 0.88
-        assert results["boolean"]["probabilities"] is None
+        assert "probabilities" not in results["boolean"]
         assert results["score"]["score"] == 2.05
         assert [level["id"] for level in results["score"]["request"]["levels"]] == [r["id"] for r in SATISFACTION]
         assert results["score"]["probabilities"]["satisfied"] == 0.5
         assert results["choice"]["selected_option"] == "billing"
         assert results["choice"]["confidence"] == 0.71
         assert results["choice"]["request_id"] == "req_5f0c9a"
-        assert results["score"]["request_id"] is None
+        assert "request_id" not in results["score"]
         assert results["refusal"]["status"] == "refusal"
-        assert results["refusal"]["probability_true"] is None
+        assert "probability_true" not in results["refusal"]
         assert results["refusal"]["refusal"] == "I can't evaluate this request."
 
     @pytest.mark.parametrize(

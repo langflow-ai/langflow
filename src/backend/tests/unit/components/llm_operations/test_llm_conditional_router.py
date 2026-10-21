@@ -417,7 +417,7 @@ class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
 
     @pytest.mark.parametrize("value", ["high", "", "1.5", "nan", None, True])
     def test_invalid_thresholds_fail_clearly(self, value):
-        with pytest.raises(DecisionConfigurationError, match="between 0 and 1"):
+        with pytest.raises(DecisionConfigurationError, match="from 0 to 1"):
             SmartRouterComponent._validate_probability(value)
 
     def test_unknown_routing_mode_fails_instead_of_running_as_language_model(self):
@@ -654,7 +654,7 @@ class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
         assert evidence["activated_branch"] == "default_result"
 
     def test_a_blank_question_stops_before_any_model_call(self, monkeypatch):
-        with pytest.raises(DecisionConfigurationError, match="needs a Decision Question"):
+        with pytest.raises(DecisionConfigurationError, match="Enter a Decision Question"):
             _decide(monkeypatch, "Boolean", [], _boolean(0.9), question="  ")
 
     def test_a_boolean_router_runs_without_matching_routes_to_outputs(self):
@@ -691,3 +691,23 @@ class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
         assert [level.label for level in request.levels] == ["Low", "Medium", "High"]
         assert evidence["reason"] == "accepted"
         assert evidence["activated_branch"] == f"level_{['Low', 'Medium', 'High'].index(label) + 1}_result"
+
+    def test_duplicate_route_names_are_named(self, monkeypatch):
+        routes = [{"route_category": "Billing"}, {"route_category": "billing"}]
+        with pytest.raises(DecisionConfigurationError, match="needs a different Route Name; 'billing' is used twice"):
+            _decide(monkeypatch, "Choice", routes, _choice_result(0.9, 0.1))
+
+    def test_a_blank_threshold_says_it_is_empty(self):
+        with pytest.raises(
+            DecisionConfigurationError, match=r"Enter a Minimum Probability from 0 to 1, such as 0\.7\."
+        ):
+            SmartRouterComponent._validate_probability(None)
+
+    def test_language_model_mode_hides_the_route_threshold_column(self):
+        router = SmartRouterComponent()
+        build_config = router.update_build_config(_fresh_build_config(router), "Language Model", "routing_mode")
+        [column] = [c for c in build_config["routes"]["table_schema"] if c["name"] == "minimum_probability"]
+        assert column["hidden"] is True
+        router.set(routing_mode="Decision Model")
+        build_config = router.update_build_config(build_config, "Decision Model", "routing_mode")
+        assert column["hidden"] is False

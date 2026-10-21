@@ -93,7 +93,7 @@ def test_no_env_fallback_blocks_server_key(execution, monkeypatch):
 def test_configured_custom_endpoint_is_not_silently_ignored(execution, monkeypatch, variable):
     request, model, transport = execution
     monkeypatch.setenv(variable, "https://custom.example/v1")
-    with pytest.raises(DecisionConfigurationError, match="official hosted"):
+    with pytest.raises(DecisionConfigurationError, match="official OpenAI endpoint"):
         evaluate_decision(request, model=model)
     transport.assert_not_called()
 
@@ -126,7 +126,7 @@ def test_invalid_selection_fails_before_transport(execution, model):
 def test_generating_model_cannot_be_used_as_decision_model(execution):
     request, model, transport = execution
     model["name"] = "gpt-4o"
-    with pytest.raises(DecisionConfigurationError, match="unavailable"):
+    with pytest.raises(DecisionConfigurationError, match="no longer offered"):
         evaluate_decision(request, model=model)
     transport.assert_not_called()
 
@@ -135,10 +135,10 @@ def test_disabled_model_and_capability_are_authoritative(execution, monkeypatch)
     request, model, transport = execution
     options = Mock(return_value=[])
     monkeypatch.setattr(unified_models, "get_decision_model_options", options)
-    with pytest.raises(DecisionConfigurationError, match="disabled"):
+    with pytest.raises(DecisionConfigurationError, match="turned off"):
         evaluate_decision(request, model=model)
     options.return_value = [{**model, "metadata": {"capabilities": ["choice"]}}]
-    with pytest.raises(DecisionConfigurationError, match="question kind"):
+    with pytest.raises(DecisionConfigurationError, match="Decision Type"):
         evaluate_decision(request, model=model)
     transport.assert_not_called()
 
@@ -182,7 +182,7 @@ def test_standalone_request_endpoint_cannot_be_ignored(execution, monkeypatch):
     token = activate_no_env_fallback(disabled=True)
     variables = activate_request_variables({"OPENAI_BASE_URL": "https://custom.example/v1"})
     try:
-        with pytest.raises(DecisionConfigurationError, match="official hosted"):
+        with pytest.raises(DecisionConfigurationError, match="official OpenAI endpoint"):
             evaluate_decision(request, model=model)
     finally:
         reset_request_variables(variables)
@@ -200,7 +200,7 @@ def test_callers_per_request_key_for_its_own_provider_comes_first(execution):
 def test_callers_per_request_endpoint_cannot_be_ignored(execution, variable):
     request, model, transport = execution
     request_variables = {variable: "https://proxy.example/v1", "OPENAI_API_KEY": "sk-proxy-key"}
-    with pytest.raises(DecisionConfigurationError, match="official hosted"):
+    with pytest.raises(DecisionConfigurationError, match="official OpenAI endpoint"):
         evaluate_decision(request, model=model, request_variables=request_variables)
     transport.assert_not_called()
 
@@ -210,7 +210,7 @@ def test_callers_per_request_endpoint_cannot_be_ignored(execution, variable):
 def test_per_request_value_cannot_hide_a_configured_proxy(execution, monkeypatch, variable, masking_value):
     request, model, transport = execution
     monkeypatch.setenv(variable, "https://proxy.example/v1")
-    with pytest.raises(DecisionConfigurationError, match="official hosted"):
+    with pytest.raises(DecisionConfigurationError, match="official OpenAI endpoint"):
         evaluate_decision(request, model=model, request_variables={variable: masking_value})
     transport.assert_not_called()
 
@@ -228,7 +228,7 @@ def test_per_request_value_cannot_hide_a_configured_proxy(execution, monkeypatch
 def test_aliased_per_request_endpoint_cannot_be_ignored(execution, variable):
     request, model, transport = execution
     request_variables = {variable: "https://proxy.example/v1", "x-langflow-global-var-openai-api-key": "sk-proxy-key"}
-    with pytest.raises(DecisionConfigurationError, match="official hosted"):
+    with pytest.raises(DecisionConfigurationError, match="official OpenAI endpoint"):
         evaluate_decision(request, model=model, request_variables=request_variables)
     transport.assert_not_called()
 
@@ -248,7 +248,7 @@ def test_aliased_endpoint_in_the_serve_request_scope_cannot_be_ignored(execution
         }
     )
     try:
-        with pytest.raises(DecisionConfigurationError, match="official hosted"):
+        with pytest.raises(DecisionConfigurationError, match="official OpenAI endpoint"):
             evaluate_decision(request, model=model)
     finally:
         reset_request_variables(variables)

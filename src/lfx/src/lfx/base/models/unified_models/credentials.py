@@ -595,7 +595,7 @@ def validate_model_provider_key(
 
         offered = [row["name"] for row in DECISION_MODELS_DETAILED if row["provider"] == decision_provider]
         if not model_name and not offered:
-            msg = "Unsupported decision provider."
+            msg = f"{decision_provider} has no decision models."
             raise ValueError(msg)
         # As for chat, the default is the first decision model policy allows, so one blocked model
         # does not stop a key from being saved for the others.

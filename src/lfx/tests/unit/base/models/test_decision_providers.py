@@ -108,7 +108,7 @@ def test_malformed_choice_never_becomes_uncertainty(provider, mutation):
         answer["probabilities"]["secret"] = answer["probabilities"].pop("a")
     else:
         answer["probabilities"]["a"] = {"nan": float("nan"), "negative": -1, "sum": 0.9}[mutation]
-    with pytest.raises(DecisionEvaluationError, match="invalid decision response") as error:
+    with pytest.raises(DecisionEvaluationError, match="couldn't use") as error:
         providers.parse_response(provider, request_for("choice"), body)
     assert "secret" not in str(error.value)
 
@@ -121,7 +121,7 @@ def test_hosted_score_level_limit(provider):
         question="rate",
         levels=tuple(DecisionOption(id=str(i), label=f"Level {i}") for i in range(11)),
     )
-    with pytest.raises(DecisionConfigurationError, match="10 score levels"):
+    with pytest.raises(DecisionConfigurationError, match="10 Score levels"):
         providers.build_payload(provider, DEFAULT_MODELS[provider], request)
 
 
@@ -177,9 +177,9 @@ def test_transport_exceptions_redacted(monkeypatch, failure):
 
 def test_validator_never_uses_environment_or_custom_host(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "server-token")
-    with pytest.raises(ValueError, match="API key is required"):
+    with pytest.raises(ValueError, match="Enter the OpenAI API key"):
         providers.validate_decision_provider_key("OpenAI", {}, "gpt-6-luna")
-    with pytest.raises(ValueError, match="official hosted endpoint"):
+    with pytest.raises(ValueError, match="official OpenAI endpoint"):
         providers.validate_decision_provider_key(
             "OpenAI", {"OPENAI_API_KEY": "key", "OPENAI_BASE_URL": "https://other.example"}, "gpt-6-luna"
         )
@@ -200,7 +200,7 @@ def test_usage_only_emits_documented_token_counts():
 def test_openai_score_rejects_wrong_index():
     body = response_for("OpenAI", "score")
     body["answers"][0]["probabilities"][1]["value"] = 0
-    with pytest.raises(DecisionEvaluationError, match="invalid decision response"):
+    with pytest.raises(DecisionEvaluationError, match="couldn't use"):
         providers.parse_response("OpenAI", request_for("score"), body)
 
 
@@ -244,7 +244,7 @@ def test_duplicate_wire_keys_rejected_before_json_collapses_them(provider, monke
         )
 
     monkeypatch.setattr(providers, "provider_safe_httpx_post", post)
-    with pytest.raises(DecisionEvaluationError, match="duplicate-key"):
+    with pytest.raises(DecisionEvaluationError, match="couldn't read"):
         providers.evaluate_provider(provider, DEFAULT_MODELS[provider], request_for("choice"), api_key="key")
 
 
@@ -252,7 +252,7 @@ def test_duplicate_wire_keys_rejected_before_json_collapses_them(provider, monke
 def test_score_legend_must_preserve_requested_order(provider):
     body = response_for(provider, "score")
     body["answers"]["decision"]["legend"] = {"0": "High", "1": "Low"}
-    with pytest.raises(DecisionEvaluationError, match="invalid decision response"):
+    with pytest.raises(DecisionEvaluationError, match="couldn't use"):
         providers.parse_response(provider, request_for("score"), body)
 
 
@@ -270,7 +270,7 @@ def test_choice_option_limit(provider):
 
 @pytest.mark.parametrize("timeout", [0, -1, 301, float("nan"), float("inf")])
 def test_invalid_timeout_fails_before_transport(timeout):
-    with pytest.raises(DecisionConfigurationError, match="timeout"):
+    with pytest.raises(DecisionConfigurationError, match="Timeout"):
         providers.evaluate_provider("OpenAI", "gpt-6-luna", request_for("boolean"), api_key="key", timeout=timeout)
 
 
@@ -397,7 +397,7 @@ def test_dns_failure_is_operational_but_ssrf_block_always_stops(monkeypatch):
     assert "secret" not in str(caught.value)
 
     monkeypatch.setattr(providers, "provider_safe_httpx_post", blocked)
-    with pytest.raises(DecisionConfigurationError, match="blocked by SSRF protection") as caught:
+    with pytest.raises(DecisionConfigurationError, match="network security settings block") as caught:
         providers.evaluate_provider("TypeSafe", "jev-latest", request_for("choice"), api_key="key")
     assert "secret" not in str(caught.value)
     assert "10.0.0.5" not in str(caught.value)
@@ -416,7 +416,7 @@ def test_unsafe_provider_error_code_is_dropped(monkeypatch):
     monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: httpx.Response(500, text=body))
     with pytest.raises(DecisionEvaluationError) as caught:
         providers.evaluate_provider("OpenAI", "gpt-6-luna", request_for("choice"), api_key="key")
-    assert str(caught.value) == "OpenAI decision request failed (HTTP 500)."
+    assert str(caught.value) == "OpenAI had a server problem (HTTP 500). Try again later."
 
 
 @pytest.mark.parametrize("provider", PROVIDERS)
@@ -451,7 +451,7 @@ def test_openai_refusal_keeps_provider_reason():
 def test_undocumented_refusal_type_is_invalid_not_refusal(provider):
     payload = response_for(provider, "choice")
     payload["answers"]["decision"] = {"type": "refusal", "refusal": "declined"}
-    with pytest.raises(DecisionEvaluationError, match="invalid decision response"):
+    with pytest.raises(DecisionEvaluationError, match="couldn't use"):
         providers.parse_response(provider, request_for("choice"), payload)
 
 
@@ -480,7 +480,7 @@ def test_invalid_response_names_its_cause_without_provider_content(mutate, cause
     payload = response_for("TypeSafe", "choice")
     mutate(payload["answers"]["decision"])
     payload["answers"]["decision"]["note"] = "private user content"
-    with pytest.raises(DecisionEvaluationError, match="invalid decision response") as caught:
+    with pytest.raises(DecisionEvaluationError, match="couldn't use") as caught:
         providers.parse_response("TypeSafe", request_for("choice"), payload)
     assert cause in str(caught.value)
     assert caught.value.category == "invalid_response"
@@ -493,7 +493,7 @@ def test_key_check_refuses_a_proxy_base_url_from_the_environment(monkeypatch, va
     monkeypatch.setenv(variable, "https://proxy.example/v1")
     sent = []
     monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *args, **_kwargs: sent.append(args))
-    with pytest.raises(ValueError, match="official hosted endpoint"):
+    with pytest.raises(ValueError, match="official OpenAI endpoint"):
         providers.validate_decision_provider_key("OpenAI", {"OPENAI_API_KEY": "proxy-key"}, "gpt-6-luna")
     assert not sent
 
@@ -509,7 +509,7 @@ def test_unexpected_answer_type_is_not_echoed():
 def test_provider_chosen_probability_key_is_not_echoed():
     payload = response_for("TypeSafe", "choice")
     payload["answers"]["decision"]["probabilities"] = {"a": 0.3, "private provider key": 1.5}
-    with pytest.raises(DecisionEvaluationError, match="invalid decision response") as caught:
+    with pytest.raises(DecisionEvaluationError, match="couldn't use") as caught:
         providers.parse_response("TypeSafe", request_for("choice"), payload)
     assert "probabilities" in str(caught.value)
     assert "private" not in str(caught.value)
@@ -518,7 +518,7 @@ def test_provider_chosen_probability_key_is_not_echoed():
 def test_overlong_model_name_is_an_invalid_response():
     payload = response_for("TypeSafe", "choice")
     payload["model"] = "m" * 129
-    with pytest.raises(DecisionEvaluationError, match="invalid decision response") as caught:
+    with pytest.raises(DecisionEvaluationError, match="couldn't use") as caught:
         providers.parse_response("TypeSafe", request_for("choice"), payload)
     assert "m" * 129 not in str(caught.value)
 
@@ -562,7 +562,7 @@ def test_result_keeps_only_a_safe_request_id(monkeypatch, header, expected):
 def test_undecodable_answers_name_the_providers_request_id(monkeypatch):
     response = httpx.Response(200, content=b'{"model": "a", "model": "b"}', headers={"x-request-id": "req_5f0c9a"})
     monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: response)
-    with pytest.raises(DecisionEvaluationError, match=r"decision JSON \(request req_5f0c9a\)\."):
+    with pytest.raises(DecisionEvaluationError, match=r"couldn't read \(request ID req_5f0c9a\)\."):
         providers.evaluate_provider("Perplexity", "pplx-decider-latest", request_for("choice"), api_key="key")
 
 
@@ -571,4 +571,23 @@ def test_failures_name_the_providers_request_id(monkeypatch):
     monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: response)
     with pytest.raises(DecisionEvaluationError) as caught:
         providers.evaluate_provider("Perplexity", "pplx-decider-latest", request_for("choice"), api_key="key")
-    assert str(caught.value) == "Perplexity decision request failed (HTTP 503, request req_5f0c9a)."
+    assert str(caught.value) == "Perplexity had a server problem (HTTP 503, request ID req_5f0c9a). Try again later."
+
+
+@pytest.mark.parametrize(
+    ("status", "error", "says"),
+    [
+        (401, PermissionError, "didn't accept the API key"),
+        (402, PermissionError, "billing or credit"),
+        (403, PermissionError, "can't use decision models"),
+        (404, DecisionConfigurationError, "doesn't offer this decision model"),
+        (400, DecisionConfigurationError, "couldn't accept this decision request"),
+        (429, DecisionEvaluationError, "rate-limiting this API key"),
+        (503, DecisionEvaluationError, "server problem"),
+    ],
+)
+def test_each_failure_says_what_to_do(monkeypatch, status, error, says):
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: httpx.Response(status, text="{}"))
+    with pytest.raises(error, match=says) as caught:
+        providers.evaluate_provider("TypeSafe", "jev-latest", request_for("choice"), api_key="key")
+    assert f"(HTTP {status})" in str(caught.value)
