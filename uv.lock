@@ -10026,7 +10026,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-google"
-version = "0.3.3"
+version = "0.3.4"
 source = { editable = "src/bundles/google" }
 dependencies = [
     { name = "google-api-python-client" },
