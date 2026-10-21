@@ -102,4 +102,16 @@ describe("SIDEBAR_BUNDLES", () => {
       ]),
     );
   });
+
+  it("classifies Mailtrap as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Mailtrap",
+          icon: "Mailtrap",
+          name: "mailtrap",
+        }),
+      ]),
+    );
+  });
 });
