@@ -1680,6 +1680,7 @@
   "modelProviders.deactivateWarning": "Durch das Deaktivieren von „ {{provider}} “ werden alle Modelle des Anbieters deaktiviert, die in einem Ablauf verwendet werden.",
   "modelProviders.disconnectApiKeyWarning": "Durch das Deaktivieren eines API-Schlüssels werden alle Modelle des Anbieters deaktiviert, die in einem Ablauf verwendet werden.",
   "modelProviders.disconnectButton": "Verbindung trennen",
+  "modelProviders.decisionModels": "Entscheidungsmodelle",
   "modelProviders.embeddingModels": "Einbettung von Modellen",
   "modelProviders.enterVariable": "Geben Sie Ihre E-Mail-Adresse ein: {{variableName}}",
   "modelProviders.errorActivatingProvider": "Fehler beim Aktivieren des Anbieters",

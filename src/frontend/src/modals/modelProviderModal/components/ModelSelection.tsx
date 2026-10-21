@@ -1,23 +1,45 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { isModelEnabledForType } from "@/controllers/API/helpers/enabled-model-policy";
 import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 
 import { Model } from "@/modals/modelProviderModal/components/types";
 import type { ModelType, ModelTypeFilter } from "@/types/models";
 import { cn } from "@/utils/utils";
+import {
+  deploymentKindsOfFilter,
+  isModelOfKind,
+  kindsOfFilter,
+  modelsOfFilter,
+} from "../helpers/model-kinds";
 
 /** Providers where the callable model id is a user-chosen deployment name. */
 const CUSTOM_DEPLOYMENT_PROVIDERS = new Set(["Azure AI Foundry"]);
 
-/** Providers that render their own useful UI when no catalog models exist. */
-export const hasProviderOwnedEmptyState = (providerName?: string): boolean =>
+/** Section title per model kind, in the order the kinds are listed. */
+const SECTION_TITLE_KEY: Record<ModelType, string> = {
+  llm: "modelProviders.languageModels",
+  embeddings: "modelProviders.embeddingModels",
+  decision: "modelProviders.decisionModels",
+};
+
+/**
+ * Providers that render their own useful UI when no catalog models exist.
+ * They serve only language and embedding models, so a decision-only view
+ * gets the generic empty state instead.
+ */
+export const hasProviderOwnedEmptyState = (
+  providerName: string | undefined,
+  modelType: ModelTypeFilter,
+): boolean =>
   !!providerName &&
+  deploymentKindsOfFilter(modelType).length > 0 &&
   (CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName) ||
     providerName.toLowerCase() === "ollama");
 
@@ -190,7 +212,7 @@ const ModelRow = ({
 };
 
 /**
- * Displays lists of LLM and embedding models with toggle switches.
+ * Displays lists of language, embedding and decision models with toggle switches.
  * Allows users to enable/disable individual models for a provider.
  */
 const ModelSelection = ({
@@ -243,22 +265,23 @@ const ModelSelection = ({
       return false;
     }
 
-    const typedProvider =
-      enabledModelsData.enabled_models_by_type?.[providerName];
-    if (typedProvider !== undefined) {
-      return typedProvider[selectedModelType]?.[modelName] ?? false;
-    }
-
-    return enabledModelsData.enabled_models[providerName]?.[modelName] ?? false;
+    return isModelEnabledForType(
+      enabledModelsData,
+      providerName,
+      modelName,
+      selectedModelType,
+    );
   };
 
-  const supportsCustomDeployments =
-    !!providerName && CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName);
-
-  const visibleDeploymentTypes = useMemo<ModelType[]>(
-    () => (modelType === "all" ? ["llm", "embeddings"] : [modelType]),
+  const visibleKinds = kindsOfFilter(modelType);
+  const visibleDeploymentTypes = useMemo(
+    () => deploymentKindsOfFilter(modelType),
     [modelType],
   );
+  const supportsCustomDeployments =
+    !!providerName &&
+    CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName) &&
+    visibleDeploymentTypes.length > 0;
 
   // Merge enabled free-text deployments; typed API wins, legacy customs default to llm.
   const modelsWithCustomDeployments = useMemo(() => {
@@ -333,22 +356,13 @@ const ModelSelection = ({
     trimmedModelQueryLower.length === 0 ||
     model.model_name.toLowerCase().includes(trimmedModelQueryLower);
 
-  const llmModels = useMemo(
-    () =>
-      modelsWithCustomDeployments.filter(
-        (model) =>
-          model.metadata?.model_type === "llm" && matchesModelQuery(model),
-      ),
-    [modelsWithCustomDeployments, trimmedModelQueryLower],
+  const listedModels = useMemo(
+    () => modelsOfFilter(modelsWithCustomDeployments, modelType),
+    [modelsWithCustomDeployments, modelType],
   );
-  const embeddingModels = useMemo(
-    () =>
-      modelsWithCustomDeployments.filter(
-        (model) =>
-          model.metadata?.model_type === "embeddings" &&
-          matchesModelQuery(model),
-      ),
-    [modelsWithCustomDeployments, trimmedModelQueryLower],
+  const matchingModels = useMemo(
+    () => listedModels.filter(matchesModelQuery),
+    [listedModels, trimmedModelQueryLower],
   );
 
   const addableDeploymentTypes =
@@ -445,7 +459,10 @@ const ModelSelection = ({
     );
   };
 
-  const providerOwnsEmptyState = hasProviderOwnedEmptyState(providerName);
+  const providerOwnsEmptyState = hasProviderOwnedEmptyState(
+    providerName,
+    modelType,
+  );
   const isOllama =
     providerOwnsEmptyState && providerName?.toLowerCase() === "ollama";
   // Live-discovery providers have nothing to list until credentials are
@@ -456,26 +473,14 @@ const ModelSelection = ({
   // Use the unfiltered list for the empty-state check so an
   // ollama-no-models warning still fires when the search field happens to be
   // populated.
-  const llmAvailableCount = modelsWithCustomDeployments.filter(
-    (m) => m.metadata?.model_type === "llm",
-  ).length;
-  const embeddingAvailableCount = modelsWithCustomDeployments.filter(
-    (m) => m.metadata?.model_type === "embeddings",
-  ).length;
-  const noModelsAvailable =
-    (modelType === "llm" && llmAvailableCount === 0) ||
-    (modelType === "embeddings" && embeddingAvailableCount === 0) ||
-    (modelType === "all" && modelsWithCustomDeployments.length === 0);
+  const noModelsAvailable = listedModels.length === 0;
 
   const noModelsMatchQuery =
     !noModelsAvailable &&
     trimmedModelQueryLower.length > 0 &&
-    llmModels.length === 0 &&
-    embeddingModels.length === 0;
+    matchingModels.length === 0;
 
-  const showSearchInput =
-    supportsCustomDeployments ||
-    (!noModelsAvailable && modelsWithCustomDeployments.length > 0);
+  const showSearchInput = supportsCustomDeployments || !noModelsAvailable;
 
   const searchInputLabel = supportsCustomDeployments
     ? t("modelProviders.searchOrAddDeployment", {
@@ -633,34 +638,15 @@ const ModelSelection = ({
           </p>
         </div>
       ) : (
-        <>
-          {modelType === "all" ? (
-            <>
-              {renderModelSection(
-                t("modelProviders.languageModels"),
-                llmModels,
-                "llm",
-              )}
-              {renderModelSection(
-                t("modelProviders.embeddingModels"),
-                embeddingModels,
-                "embeddings",
-              )}
-            </>
-          ) : modelType === "llm" ? (
-            renderModelSection(
-              t("modelProviders.languageModels"),
-              llmModels,
-              "llm",
-            )
-          ) : (
-            renderModelSection(
-              t("modelProviders.embeddingModels"),
-              embeddingModels,
-              "embeddings",
-            )
-          )}
-        </>
+        visibleKinds.map((kind) => (
+          <Fragment key={kind}>
+            {renderModelSection(
+              t(SECTION_TITLE_KEY[kind]),
+              matchingModels.filter((model) => isModelOfKind(model, kind)),
+              kind,
+            )}
+          </Fragment>
+        ))
       )}
     </div>
   );

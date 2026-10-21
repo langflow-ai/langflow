@@ -1680,6 +1680,7 @@
   "modelProviders.deactivateWarning": "停用“ {{provider}} ”将禁用该提供商在流程中使用的所有模型。",
   "modelProviders.disconnectApiKeyWarning": "断开 API 密钥的连接将禁用流程中正在使用的该提供商的所有模型。",
   "modelProviders.disconnectButton": "断开连接",
+  "modelProviders.decisionModels": "决策模型",
   "modelProviders.embeddingModels": "模型嵌入",
   "modelProviders.enterVariable": "请输入您的 {{variableName}}",
   "modelProviders.errorActivatingProvider": "激活提供商时发生错误",

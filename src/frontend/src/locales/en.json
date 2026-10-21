@@ -1496,6 +1496,7 @@
   "modelProviders.cancelButton": "Cancel",
   "modelProviders.confirmButton": "Confirm",
   "modelProviders.languageModels": "Language Models",
+  "modelProviders.decisionModels": "Decision Models",
   "modelProviders.embeddingModels": "Embedding Models",
   "modelProviders.noModelsAvailable": "No models available",
   "modelProviders.ollamaNoModelsLlm": "It looks like you don't have any language models installed for Ollama. Please pull the models you want to use.",

@@ -1496,6 +1496,7 @@
   "modelProviders.cancelButton": "취소",
   "modelProviders.confirmButton": "확인",
   "modelProviders.languageModels": "Language Model",
+  "modelProviders.decisionModels": "Decision Model",
   "modelProviders.embeddingModels": "Embedding Model",
   "modelProviders.noModelsAvailable": "Model이 없습니다",
   "modelProviders.ollamaNoModelsLlm": "Ollama에 설치된 Language Model이 없습니다. 쓰려는 Model을 ollama pull 명령으로 내려받으세요.",

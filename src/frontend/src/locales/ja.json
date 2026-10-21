@@ -1680,6 +1680,7 @@
   "modelProviders.deactivateWarning": "{{provider}} を無効にすると、フローで使用されているそのプロバイダーのすべてのモデルが無効になります。",
   "modelProviders.disconnectApiKeyWarning": "APIキーを無効にすると、そのフローで使用されているプロバイダーのすべてのモデルが無効になります。",
   "modelProviders.disconnectButton": "切断",
+  "modelProviders.decisionModels": "意思決定モデル",
   "modelProviders.embeddingModels": "モデルの埋め込み",
   "modelProviders.enterVariable": "{{variableName}} を入力してください",
   "modelProviders.errorActivatingProvider": "プロバイダーの有効化に失敗しました",
