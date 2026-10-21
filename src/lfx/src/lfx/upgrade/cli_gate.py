@@ -2,8 +2,8 @@
 
 Both ``lfx run`` and ``lfx serve`` accept ``--upgrade-flow`` with identical semantics:
 
-  - ``check``: refuse to run if any component is outdated or blocked.
-  - ``safe``:  auto-apply safe upgrades, but abort on breaking or blocked components.
+  - ``check``: refuse to run unless every component is up to date.
+  - ``safe``:  auto-apply safe upgrades, but abort on breaking, blocked, or retired components.
 
 This module is the single source of truth for that behavior so the two entry points can
 never diverge. Callers translate :class:`UpgradeFlowError` into their own error channel
@@ -76,9 +76,9 @@ def apply_upgrade_gate(
         mode: ``"check"`` or ``"safe"`` (accepts the :class:`UpgradeFlowMode` enum too).
 
     Raises:
-        UpgradeFlowError: if ``check`` finds anything not ``ok``, if ``safe`` hits a breaking
-            or blocked component, if the bundled registry is unavailable, or if ``mode`` is not
-            a recognized value.
+        UpgradeFlowError: if ``check`` finds anything not ``ok``, if ``safe`` hits a breaking,
+            blocked, or retired component, if the bundled registry is unavailable, or if ``mode``
+            is not a recognized value.
     """
     # Validate the mode before any registry work so a typo fails fast and cheaply.
     if mode not in (UpgradeFlowMode.CHECK, UpgradeFlowMode.SAFE):
@@ -100,9 +100,11 @@ def apply_upgrade_gate(
         return flow_dict, 0
 
     # mode is SAFE.
-    if report.has_blocked or report.has_breaking:
+    if report.has_blocked or report.has_breaking or report.has_retired:
         names = ", ".join(
-            f"{n.display_name} ({n.status})" for n in report.nodes if n.status in ("blocked", "outdated_breaking")
+            f"{n.display_name} ({n.status})"
+            for n in report.nodes
+            if n.status in ("blocked", "outdated_breaking", "retired")
         )
         msg = f"flow has components that cannot be auto-upgraded: {names}"
         raise UpgradeFlowError(msg)

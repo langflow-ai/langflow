@@ -124,6 +124,22 @@ def test_upgrade_exits_nonzero_when_blocked(tmp_path):
     assert exc_info.value.exit_code != 0
 
 
+def test_upgrade_reports_retired_with_replacement_and_leaves_it(flow_file, capsys):
+    registry = _registry()
+    registry["Cat"]["MyComp"]["retired_in"] = "1.13.0"
+    registry["Cat"]["MyComp"]["replacement"] = ["models_and_agents.Agent"]
+    before = flow_file.read_text()
+
+    with pytest.raises(typer.Exit) as exc_info:
+        upgrade_command(flow_file, write=True, registry=registry)
+
+    assert exc_info.value.exit_code != 0
+    out = capsys.readouterr().out
+    assert "[RETIRED] My Component (MyComp)" in out
+    assert "retired in 1.13.0, replace with: models_and_agents.Agent" in out
+    assert flow_file.read_text() == before
+
+
 def test_upgrade_file_not_found():
     result = runner.invoke(app, ["upgrade", "/nonexistent/flow.json"])
     assert result.exit_code != 0
@@ -265,3 +281,11 @@ def test_strict_clean_exits_zero(clean_flow_file):
 def test_non_strict_pending_safe_exits_zero(flow_file):
     # Default (no --strict): pending safe upgrades do not fail the command.
     upgrade_command(flow_file, write=False, strict=False, registry=_registry())
+
+
+@pytest.mark.parametrize("command", ["upgrade", "run", "serve"])
+def test_help_says_retired_components_fail(command):
+    result = runner.invoke(app, [command, "--help"], env={"COLUMNS": "200"})
+
+    assert result.exit_code == 0
+    assert "retired" in result.output

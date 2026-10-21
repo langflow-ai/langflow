@@ -502,6 +502,7 @@ def _get_invalid_components(
     nodes: list[dict],
     type_to_current_hash: Mapping[str, set[str]],
     substitutable_types: Container[str] | None = None,
+    outdated_types: dict[str, str] | None = None,
 ) -> tuple[list[str], list[str]]:
     """Walk nodes and classify invalid components.
 
@@ -510,6 +511,7 @@ def _get_invalid_components(
     :func:`substitute_outdated_component_code_in_place`). A hash mismatch on one of those
     types is not reported as outdated, because the stored code is never what runs. It only
     ever suppresses the *outdated* classification — an unrecognized type is still blocked.
+    ``outdated_types``, when given, receives the label and component type of every outdated node.
     """
     blocked: list[str] = []
     outdated: list[str] = []
@@ -567,6 +569,8 @@ def _get_invalid_components(
                 is_substitutable = substitutable_types is not None and component_type in substitutable_types
                 if node_hash not in expected_hashes and not is_substitutable:
                     outdated.append(label)
+                    if outdated_types is not None:
+                        outdated_types[label] = component_type
 
         flow_data = node_info.get("flow", {})
         if isinstance(flow_data, dict):
@@ -583,6 +587,7 @@ def _get_invalid_components(
                     nested_nodes,
                     type_to_current_hash,
                     substitutable_types,
+                    outdated_types,
                 )
                 blocked.extend(nested_blocked)
                 outdated.extend(nested_outdated)
@@ -893,7 +898,8 @@ def check_flow_and_raise(
         )
         raise CustomComponentValidationError(INITIALIZING_COMPONENT_TEMPLATES_MESSAGE)
 
-    blocked, outdated = _get_invalid_components(nodes, type_to_current_hash, substitutable_types)
+    outdated_types: dict[str, str] = {}
+    blocked, outdated = _get_invalid_components(nodes, type_to_current_hash, substitutable_types, outdated_types)
 
     if blocked:
         blocked_names = ", ".join(blocked)
@@ -904,7 +910,17 @@ def check_flow_and_raise(
     if outdated:
         outdated_names = ", ".join(outdated)
         logger.warning(f"Flow build blocked: outdated components must be updated: {outdated_names}")
-        message = f"Flow build blocked: outdated components must be updated before running: {outdated_names}"
+        # A retired component fails whatever code runs, so updating it cannot help: name its
+        # replacement instead, as the build note and the v2 warning do.
+        retired = _retired_components(outdated_types)
+        sentences = [
+            _retired_sentence(label, entry["retired_in"], entry.get("replacement")) for label, entry in retired.items()
+        ]
+        stale_names = ", ".join(label for label in outdated if label not in retired)
+        if stale_names:
+            stale = f"outdated components must be updated before running: {stale_names}"
+            sentences.insert(0, f"{stale}." if sentences else stale)
+        message = f"Flow build blocked: {' '.join(sentences)}"
         raise CustomComponentValidationError(message)
 
 
@@ -1246,6 +1262,7 @@ def _substitute_outdated_node_code(
     nodes: list,
     type_to_code: Mapping[str, str],
     substitutable_types: SubstitutableComponentTypes,
+    node_types: dict[str, str] | None = None,
 ) -> list[str]:
     """Replace drifted built-in code with this server's copy for the node's component type.
 
@@ -1254,7 +1271,8 @@ def _substitute_outdated_node_code(
     are touched; every other node — one whose type is unknown, and one whose type is ambiguous
     across the registry — is left exactly as it was for :func:`check_flow_and_raise` to
     classify. Recurses into inlined sub-flow definitions. Returns ``display_name (id)`` labels
-    for swapped nodes.
+    for swapped nodes; ``node_types``, when given, receives the label and component type of every
+    node with code and a string type, swapped or not.
     """
     swapped: list[str] = []
 
@@ -1272,6 +1290,11 @@ def _substitute_outdated_node_code(
         code_field = template.get("code") if isinstance(template, dict) else None
         code = code_field.get("value") if isinstance(code_field, dict) else None
         component_type = node_data.get("type")
+        display_name = node_info.get("display_name") or component_type
+        node_id = node_data.get("id") or node.get("id", "unknown")
+        label = f"{display_name} ({node_id})"
+        if node_types is not None and isinstance(code, str) and code and isinstance(component_type, str):
+            node_types[label] = component_type
 
         if (
             isinstance(code, str)
@@ -1282,16 +1305,16 @@ def _substitute_outdated_node_code(
             trusted = type_to_code[component_type]
             if trusted != code:
                 code_field["value"] = trusted
-                display_name = node_info.get("display_name") or component_type
-                node_id = node_data.get("id") or node.get("id", "unknown")
-                swapped.append(f"{display_name} ({node_id})")
+                swapped.append(label)
 
         nested_flow = node_info.get("flow")
         if isinstance(nested_flow, dict):
             nested_data = nested_flow.get("data")
             nested_nodes = nested_data.get("nodes") if isinstance(nested_data, dict) else None
             if isinstance(nested_nodes, list) and nested_nodes:
-                swapped.extend(_substitute_outdated_node_code(nested_nodes, type_to_code, substitutable_types))
+                swapped.extend(
+                    _substitute_outdated_node_code(nested_nodes, type_to_code, substitutable_types, node_types)
+                )
 
     return swapped
 
@@ -1371,27 +1394,61 @@ def describe_component_code_substitution(flow_data: dict | None, *, include_comp
     """Describe the restricted-mode substitutions before sanitization discards the saved code.
 
     Use the same substitution rule as the build, including nested flows and ambiguous types.
+    Name every retired component too, substituted or not, in every mode.
     Work on a detached copy so collecting a warning never changes the saved flow or logs a build.
     """
     from copy import deepcopy
 
-    lookups = get_outdated_code_substitution_lookups()
-    if lookups is None or not flow_data or not isinstance(flow_data.get("nodes"), list):
+    if not flow_data or not isinstance(flow_data.get("nodes"), list):
         return None
-    swapped = _substitute_outdated_node_code(deepcopy(flow_data["nodes"]), *lookups)
-    if not swapped:
+    # Without substitution nothing is swapped, but the walk still collects the retired components.
+    lookups = get_outdated_code_substitution_lookups() or ({}, SubstitutableComponentTypes({}, {}))
+    node_types: dict[str, str] = {}
+    swapped = _substitute_outdated_node_code(deepcopy(flow_data["nodes"]), *lookups, node_types)
+    # A retired component fails whatever code runs, so updating it cannot help: name its
+    # replacement instead, whether or not its code was substituted.
+    retired = _retired_components(node_types)
+    substituted = [label for label in swapped if label not in retired]
+    if not substituted and not retired:
         return None
-    affected = f" for {', '.join(swapped)}" if include_component_names else ""
-    next_step = (
-        "Review and update the affected components in the flow editor to use the server version."
-        if include_component_names
-        else "Ask the flow owner to review and update the affected components to use the server version."
-    )
-    return (
-        "Custom components are disabled on this server (LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false). "
-        f"This run uses the server's component code instead of the code saved in the flow{affected}. "
-        f"The saved flow is unchanged. {next_step}"
-    )
+    parts = []
+    if substituted:
+        affected = f" for {', '.join(substituted)}" if include_component_names else ""
+        next_step = (
+            "Review and update the affected components in the flow editor to use the server version."
+            if include_component_names
+            else "Ask the flow owner to review and update the affected components to use the server version."
+        )
+        parts.append(
+            "Custom components are disabled on this server (LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false). "
+            f"This run uses the server's component code instead of the code saved in the flow{affected}. "
+            f"The saved flow is unchanged. {next_step}"
+        )
+    if retired and include_component_names:
+        parts.extend(
+            _retired_sentence(label, entry["retired_in"], entry.get("replacement")) for label, entry in retired.items()
+        )
+    elif retired:
+        parts.append(
+            "Some components in this flow were retired and fail when the flow runs. Ask the flow owner to replace them."
+        )
+    return " ".join(parts)
+
+
+def _retired_components(node_types: Mapping[str, str]) -> dict[str, dict]:
+    """Return this server's registry entry for each ``label: component type`` that is retired."""
+    registry = _registry_lookup()
+    return {
+        label: registry[component_type]
+        for label, component_type in node_types.items()
+        if registry.get(component_type, {}).get("retired_in")
+    }
+
+
+def _retired_sentence(subject: str, retired_in: str, replacement: list[str] | None) -> str:
+    """Say that ``subject`` was retired and name its replacement, as ``lfx upgrade`` does."""
+    sentence = f"{subject} was retired in {retired_in} and fails when the flow runs."
+    return f"{sentence} Replace it with {', '.join(replacement)}." if replacement else sentence
 
 
 RESTRICTED_MODE_MISMATCH_HINT = (
@@ -1403,16 +1460,21 @@ RESTRICTED_MODE_MISMATCH_HINT = (
 )
 
 
-def _registry_entry_for_component_type(component_type: str) -> Mapping[str, Any] | None:
-    """Return this server's registry entry for ``component_type``, aliases included."""
+def _registry_lookup() -> dict[str, dict]:
+    """Return this server's registry entries by component type, aliases included; empty until it loads."""
     from lfx.interface.components import component_cache
     from lfx.upgrade.checker import build_registry_lookup
 
     with component_cache.state_lock:
         all_types_dict = component_cache.all_types_dict if component_cache.all_types_ready else None
     if not all_types_dict:
-        return None
-    return build_registry_lookup(all_types_dict).get(component_type)
+        return {}
+    return build_registry_lookup(all_types_dict)
+
+
+def _registry_entry_for_component_type(component_type: str) -> Mapping[str, Any] | None:
+    """Return this server's registry entry for ``component_type``, aliases included."""
+    return _registry_lookup().get(component_type)
 
 
 def _unfillable_required_fields(registry_template: Mapping[str, Any], flow_template: Mapping[str, Any]) -> list[str]:
@@ -1446,9 +1508,11 @@ def describe_restricted_component_mismatch(
 
     Returns a sentence to append to the build error when the saved component is structurally
     incompatible with this server's component of the same type -- the same condition the upgrade
-    checker reports as a breaking change, and the frontend as "flow needs review". Returns ``None``
-    in permissive mode, for an unknown type (already refused by :func:`check_flow_and_raise`), when
-    the registry is unavailable, and for a node the checker does not call breaking.
+    checker reports as a breaking change, and the frontend as "flow needs review". For a retired
+    component the sentence names the retirement and the replacement instead, breaking or not, in
+    every mode. Returns ``None`` for any other component in permissive mode, for an unknown type
+    (already refused by :func:`check_flow_and_raise`), when the registry is unavailable, and for a
+    node that is neither retired nor called breaking by the checker.
 
     ``connected_fields`` names the node's fields an edge goes into, as the checker receives them.
     ``None`` means the connections are unknown, so every field counts as connected.
@@ -1456,13 +1520,21 @@ def describe_restricted_component_mismatch(
     from lfx.services.deps import get_settings_service
 
     settings_service = get_settings_service()
-    if settings_service is None or getattr(settings_service.settings, "allow_custom_components", True):
-        return None
+    permissive = settings_service is None or getattr(settings_service.settings, "allow_custom_components", True)
     if not isinstance(component_type, str) or not component_type or not isinstance(node_info, Mapping):
         return None
 
     registry_entry = _registry_entry_for_component_type(component_type)
     if registry_entry is None:
+        return None
+
+    # A retired component fails whatever code runs, so neither updating it nor running the saved
+    # code helps: name the retirement and the replacement in every mode, whether or not the saved
+    # node drifted.
+    if registry_entry.get("retired_in"):
+        subject = f'Note: the "{component_type}" component'
+        return _retired_sentence(subject, registry_entry["retired_in"], registry_entry.get("replacement"))
+    if permissive:
         return None
 
     from lfx.upgrade.checker import has_breaking_change

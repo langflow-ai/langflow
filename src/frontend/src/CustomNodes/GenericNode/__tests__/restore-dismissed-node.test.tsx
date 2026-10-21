@@ -1,5 +1,6 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useHotkeys } from "react-hotkeys-hook";
 import type { OutputFieldType } from "@/types/api";
 import GenericNode from "../index";
 
@@ -32,6 +33,7 @@ type MockFlowStoreState = {
     blocked: boolean;
     breakingChange: boolean;
     userEdited: boolean;
+    retired?: boolean;
   }>;
   nodes: Array<{ id: string; selected: boolean }>;
   rightClickedNodeId: null;
@@ -339,6 +341,44 @@ describe("GenericNode dismissed update recovery", () => {
       expect(mockRemoveDismissedNodes).toHaveBeenCalledWith(["node-1"]);
       expect(mockCompleteNodeUpdate).toHaveBeenCalledWith("node-1");
     });
+  });
+
+  it("offers no update for a retired component, from the toolbar or the shortcut", () => {
+    // A retired component has nothing to update to: its bar names the replacement.
+    mockFlowStoreState.componentsToUpdate[0].retired = true;
+
+    render(
+      <GenericNode
+        selected={true}
+        data={{
+          id: "node-1",
+          type: "Prompt",
+          node: {
+            display_name: "Prompt",
+            description: "Prompt node",
+            documentation: "",
+            template: {
+              code: {
+                type: "code",
+                required: true,
+                list: false,
+                show: true,
+                readonly: false,
+                value: "old_code",
+              },
+            },
+            outputs: [],
+          },
+        }}
+      />,
+    );
+
+    expect(screen.queryByText("Restore")).not.toBeInTheDocument();
+
+    // GenericNode registers one hotkey: the update shortcut.
+    const updateShortcut = (useHotkeys as jest.Mock).mock.calls.at(-1)[1];
+    act(() => updateShortcut());
+    expect(mockValidateComponentCode).not.toHaveBeenCalled();
   });
 
   it("selects the first visible output when no output is selected", async () => {

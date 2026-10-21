@@ -20,6 +20,7 @@ _STATUS_MARKERS = {
     "outdated_safe": "[SAFE]",
     "outdated_breaking": "[BREAKING]",
     "blocked": "[BLOCKED]",
+    "retired": "[RETIRED]",
 }
 
 
@@ -45,7 +46,11 @@ def _print_report(report: CompatibilityReport) -> None:
 
     for n in report.nodes:
         marker = _STATUS_MARKERS.get(n.status, "[?]")
-        typer.echo(f"  {marker} {n.display_name} ({n.component_type}) - id: {n.node_id}")
+        line = f"  {marker} {n.display_name} ({n.component_type}) - id: {n.node_id}"
+        if n.status == "retired":
+            replacement = ", ".join(n.replacement) if n.replacement else "no direct replacement"
+            line += f" - retired in {n.retired_in}, replace with: {replacement}"
+        typer.echo(line)
 
 
 def upgrade_command(
@@ -92,7 +97,7 @@ def upgrade_command(
         typer.echo(f"Wrote {count} safe upgrade(s) to {flow_path}")
         wrote_safe = True
 
-    if report.has_blocked or report.has_breaking:
+    if report.has_blocked or report.has_breaking or report.has_retired:
         raise typer.Exit(1)
 
     # --strict: any component left not up to date is drift. Safe upgrades that were just

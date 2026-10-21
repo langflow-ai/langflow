@@ -115,6 +115,30 @@ def _release_statuses(tag: str, all_types: dict, lookup: dict) -> dict[str, dict
     }
 
 
+def _retired_bundle_templates() -> dict:
+    """Templates of the retired components, keyed as lfx-bundles registers them.
+
+    The core index leaves these out: lfx-bundles discovers them at runtime from lfx's own
+    classes, and this test runs without lfx-bundles. Building the same templates here keeps
+    their saved nodes from reading as blocked.
+    """
+    from lfx.components.altk.altk_agent import ALTKAgentComponent
+    from lfx.components.chroma.chroma import ChromaVectorStoreComponent
+    from lfx.components.chroma.local_db import LocalDBComponent
+    from lfx.custom.utils import create_component_template
+
+    def template(cls) -> dict:
+        built = create_component_template(component_extractor=cls())[0]
+        # Discovery stamps the pre-bundle name (``Chroma``) so older saved types still resolve.
+        return {**built, "name": built.get("name") or cls.name}
+
+    bundles = {"chroma": [ChromaVectorStoreComponent, LocalDBComponent], "altk": [ALTKAgentComponent]}
+    return {
+        bundle: {f"ext:{bundle}:{cls.__name__}@official": template(cls) for cls in classes}
+        for bundle, classes in bundles.items()
+    }
+
+
 def test_source_release_statuses():
     """Every node saved on a supported source release keeps the result recorded for it.
 
@@ -122,6 +146,7 @@ def test_source_release_statuses():
     """
     _require_tags()
     all_types = _all_types(json.loads(files("lfx").joinpath("_assets/component_index.json").read_text()))
+    all_types.update(_retired_bundle_templates())
     lookup = build_registry_lookup(all_types)
     actual = {tag: _release_statuses(tag, all_types, lookup) for tag in SOURCE_RELEASES}
 
