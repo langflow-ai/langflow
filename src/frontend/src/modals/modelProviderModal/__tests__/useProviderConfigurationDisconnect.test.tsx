@@ -1228,6 +1228,47 @@ describe("useProviderConfiguration.handleSaveAllVariables", () => {
     mockRefreshAllModelInputs.mockClear();
   });
 
+  it.each([
+    { view: "decision", check: { model_type: "decision" } },
+    { view: "all", check: {} },
+  ] as const)(
+    "checks a key saved from the $view view once, for that view's kind",
+    async ({ view, check }) => {
+      mockProviderVariablesMapping.OpenAI = openAIProviderVariables;
+      const openAI: Provider = {
+        provider: "OpenAI",
+        icon: "OpenAI",
+        is_enabled: false,
+        is_configured: false,
+        models: [],
+      };
+      mockModelProviders = [openAI];
+      mockCreateMutateAsync.mockResolvedValue(undefined);
+      const { result } = renderHook(
+        ({ provider }: { provider: Provider }) =>
+          useProviderConfiguration({
+            selectedProvider: provider,
+            modelType: view,
+          }),
+        { initialProps: { provider: openAI } },
+      );
+
+      act(() => {
+        result.current.handleVariableChange("OPENAI_API_KEY", "sk-test");
+      });
+      await act(async () => {
+        await result.current.handleSaveAllVariables();
+      });
+
+      expect(mockValidateMutateAsync).toHaveBeenCalledTimes(1);
+      expect(mockValidateMutateAsync).toHaveBeenCalledWith(
+        "model_type" in check
+          ? expect.objectContaining(check)
+          : expect.not.objectContaining({ model_type: expect.anything() }),
+      );
+    },
+  );
+
   it("resets a configured optional variable without deleting its identity", async () => {
     const { result } = renderConfiguredOpenAI();
 

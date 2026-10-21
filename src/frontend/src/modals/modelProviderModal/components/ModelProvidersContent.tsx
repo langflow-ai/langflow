@@ -59,6 +59,7 @@ const ModelProvidersContent = ({
     selectedProvider,
     flowId,
     projectId,
+    modelType,
   });
 
   // Expose flushPendingChanges and hasUserMadeChanges to the parent

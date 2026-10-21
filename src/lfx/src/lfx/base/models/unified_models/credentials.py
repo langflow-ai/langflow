@@ -564,6 +564,14 @@ def validate_model_provider_key(
 
     from lfx.base.models.decision_constants import DECISION_ONLY_PROVIDERS
 
+    # A key gets one billed check, for the kind of model it is about to serve, never one per kind.
+    # Decision-only providers (TypeSafe, and Perplexity, whose chat models live in its own component
+    # rather than in Model Providers) always get a decision check. A mixed provider such as OpenAI is
+    # checked for the kind the caller names: Model Providers asks for "decision" when it was opened
+    # from a decision picker and otherwise names none, which means a chat check. Every other kind is
+    # checked when it is registered: update_enabled_models validates each model switched on with that
+    # model's own type. If Perplexity chat models join Model Providers, Perplexity becomes a mixed
+    # provider and follows the same rule.
     # Provider IDs such as "typesafe" and display names reach the same decision checks.
     decision_provider = _canonical_provider_name(provider)
     if model_type is None and model_name and _is_decision_only_model(decision_provider, model_name):
