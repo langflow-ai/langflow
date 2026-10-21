@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 import emoji
 from emoji import purely_emoji
 from lfx.log.logger import logger
+from lfx.utils.flow_code import normalize_code_for_import
 from pydantic import BaseModel, ValidationInfo, field_serializer, field_validator
 from sqlalchemy import Boolean, String, Text, UniqueConstraint, cast, false, func, or_, text
 from sqlalchemy import Enum as SQLEnum
@@ -280,6 +281,11 @@ class FlowCreate(FlowBase):
     workspace_id: UUID | None = None
     fs_path: str | None = None
 
+    @field_validator("data")
+    @classmethod
+    def normalize_code(cls, value: dict | None) -> dict | None:
+        return normalize_code_for_import(value) if value is not None else value
+
 
 class FlowRead(FlowBase):
     id: UUID
@@ -336,6 +342,11 @@ class FlowUpdate(SQLModel):
     a2a_enabled: bool | None = None
     a2a_card_overrides: dict | None = None
     fs_path: str | None = None
+
+    @field_validator("data")
+    @classmethod
+    def normalize_code(cls, value: dict | None) -> dict | None:
+        return normalize_code_for_import(value) if value is not None else value
 
     @field_validator("endpoint_name")
     @classmethod
