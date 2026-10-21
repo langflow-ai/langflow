@@ -578,24 +578,30 @@ def validate_model_provider_key(
         # An untyped request for a model that exists only as a decision model, such as a legacy
         # status update, must not be validated as a chat completion.
         model_type = "decision"
+
+    from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
+
+    # A check runs a real model, so it needs the same model-level permission as a flow run, for a
+    # model the caller names and for one chosen by default.
+    policy = resolve_model_provider_policy(
+        user_id=user_id,
+        providers=[decision_provider],
+        purpose=ModelProviderPolicyPurpose.USE,
+        attributes=policy_attributes,
+    )
     if model_type == "decision" or decision_provider in DECISION_ONLY_PROVIDERS:
         from lfx.base.models.decisions.providers import DEFAULT_MODELS, validate_decision_provider_key
-        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
 
         effective_model = model_name or DEFAULT_MODELS.get(decision_provider)
         if not effective_model:
             msg = "Unsupported decision provider."
             raise ValueError(msg)
-        policy = resolve_model_provider_policy(
-            user_id=user_id,
-            providers=[decision_provider],
-            purpose=ModelProviderPolicyPurpose.USE,
-            attributes=policy_attributes,
-        )
         policy.require_model(decision_provider, effective_model, model_type="decision")
         validate_decision_provider_key(decision_provider, variables, effective_model)
         return
 
+    if model_name:
+        policy.require_model(provider, model_name, model_type=model_type)
     first_model = None
     provider_models: list[dict[str, Any]] = []
     try:
@@ -604,7 +610,14 @@ def validate_model_provider_key(
         models = get_unified_models_detailed(providers=[provider], model_type="llm")
         if models and models[0].get("models"):
             provider_models = models[0]["models"]
-            first_model = provider_models[0]["model_name"]
+            first_model = next(
+                (
+                    row["model_name"]
+                    for row in provider_models
+                    if policy.allows_model(provider, row["model_name"], model_type="llm")
+                ),
+                None,
+            )
     except Exception as e:  # noqa: BLE001
         logger.error(f"Error getting unified models for provider {provider}: {e}")
 
@@ -698,11 +711,13 @@ def validate_model_provider_key(
                 # Static WatsonX seeds may all be deprecated and filtered out.
                 # Use a current regional chat model instead of skipping validation.
                 live_models = get_watsonx_llm_models(url, default_models=[])
-                if not live_models:
+                validation_model = next(
+                    (name for name in live_models if policy.allows_model(provider, name, model_type="llm")), None
+                )
+                if not validation_model:
                     msg = "No IBM WatsonX chat model is available to validate credentials"
                     logger.warning(msg)
                     raise ValueError(msg)
-                validation_model = live_models[0]
 
             from langchain_ibm import ChatWatsonx
 

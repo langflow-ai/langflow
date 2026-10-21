@@ -30,6 +30,15 @@ def global_var_alias(name: str) -> str:
     return f"x-langflow-global-var-{name.lower().replace('_', '-')}"
 
 
+def variable_name_forms(name: str) -> tuple[str, str, str]:
+    """Every name a request may send variable ``name`` under.
+
+    As is; as ``X-LANGFLOW-GLOBAL-VAR-*`` header extraction leaves a dashed header name
+    (``OPENAI-API-KEY``); and as the ``x-langflow-global-var-*`` alias that lfx serve keeps.
+    """
+    return (name, name.replace("_", "-"), global_var_alias(name))
+
+
 def normalize_parsed_variables(parsed: dict) -> dict[str, str]:
     """Flatten a parsed JSON variable map to ``str`` values.
 

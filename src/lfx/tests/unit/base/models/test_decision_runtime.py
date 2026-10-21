@@ -215,7 +215,16 @@ def test_per_request_value_cannot_hide_a_configured_proxy(execution, monkeypatch
     transport.assert_not_called()
 
 
-@pytest.mark.parametrize("variable", ["x-langflow-global-var-openai-api-base", "x-langflow-global-var-openai-base-url"])
+@pytest.mark.parametrize(
+    "variable",
+    [
+        "x-langflow-global-var-openai-api-base",
+        "x-langflow-global-var-openai-base-url",
+        # X-LANGFLOW-GLOBAL-VAR-OPENAI-BASE-URL as header extraction leaves it.
+        "OPENAI-BASE-URL",
+        "OPENAI-API-BASE",
+    ],
+)
 def test_aliased_per_request_endpoint_cannot_be_ignored(execution, variable):
     request, model, transport = execution
     request_variables = {variable: "https://proxy.example/v1", "x-langflow-global-var-openai-api-key": "sk-proxy-key"}
@@ -245,6 +254,13 @@ def test_aliased_endpoint_in_the_serve_request_scope_cannot_be_ignored(execution
         reset_request_variables(variables)
         reset_no_env_fallback(token)
     transport.assert_not_called()
+
+
+@pytest.mark.parametrize("name", ["OPENAI-API-KEY", "x-langflow-global-var-openai-api-key"])
+def test_callers_key_in_any_request_form_beats_the_ambient_key(execution, name):
+    request, model, transport = execution  # the fixture leaves an ambient OPENAI_API_KEY set
+    evaluate_decision(request, model=model, request_variables={name: "sk-caller-key"})
+    assert transport.call_args.kwargs["api_key"] == "sk-caller-key"
 
 
 def test_prefixed_environment_key_is_used(execution, monkeypatch):

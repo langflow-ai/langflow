@@ -25,8 +25,8 @@ from lfx.base.models.unified_models.credentials import provider_variable_from_en
 from lfx.base.models.unified_models.provider_queries import get_provider_secret_variable_key
 from lfx.services.variable.request_scope import (
     get_active_request_variables,
-    global_var_alias,
     is_env_fallback_disabled,
+    variable_name_forms,
 )
 from lfx.utils.secrets import secret_value_to_str
 from lfx.utils.ssrf_protection import SSRFProtectionError
@@ -48,9 +48,9 @@ MAX_TIMEOUT = 300
 QUESTION_ID = "decision"
 
 OFFICIAL_OPENAI_BASE_URL = "https://api.openai.com/v1"
-# Requests may send each name in its x-langflow-global-var-* form too.
+# Requests may send each name in any form a request variable takes (see variable_name_forms).
 _OPENAI_BASE_URL_NAMES = tuple(
-    name for base in ("OPENAI_BASE_URL", "OPENAI_API_BASE") for name in (base, global_var_alias(base))
+    name for base in ("OPENAI_BASE_URL", "OPENAI_API_BASE") for name in variable_name_forms(base)
 )
 
 

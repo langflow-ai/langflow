@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.models.decisions.schema import DecisionConfigurationError, DecisionRequest
+from lfx.services.variable.request_scope import variable_name_forms
 from lfx.utils.secrets import secret_value_to_str
 
 if TYPE_CHECKING:
@@ -76,12 +77,19 @@ def evaluate_decision(
         require_official_openai_endpoint(variables, request_variables or {})
 
     # Only the provider's own credential is used; flows cannot supply or name a key. A caller's
-    # per-request value for it (X-LANGFLOW-GLOBAL-VAR-*) comes first, then the provider's configured
-    # variable, which also accepts a LANGFLOW_-prefixed environment name.
+    # per-request value for it comes first, in any form a request sends it (X-LANGFLOW-GLOBAL-VAR-*
+    # headers arrive dashed, lfx serve keeps x-langflow-global-var-* aliases), then the provider's
+    # configured variable, which also accepts a LANGFLOW_-prefixed environment name.
     own_variable = unified_models.get_provider_secret_variable_key(provider)
-    resolved_key = secret_value_to_str((request_variables or {}).get(own_variable), strip=True) or secret_value_to_str(
-        variables.get(own_variable), strip=True
-    )
+    requested = request_variables or {}
+    resolved_key = next(
+        (
+            key
+            for name in variable_name_forms(own_variable)
+            if (key := secret_value_to_str(requested.get(name), strip=True))
+        ),
+        None,
+    ) or secret_value_to_str(variables.get(own_variable), strip=True)
     if not resolved_key:
         msg = f"Configure an API key for the {provider} decision model."
         raise DecisionConfigurationError(msg)

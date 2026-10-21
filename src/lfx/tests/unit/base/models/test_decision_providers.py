@@ -286,6 +286,48 @@ def test_credential_validation_uses_explicit_key_and_boolean_request(provider, m
     assert kwargs == {"api_key": "tenant-key", "timeout": 15}
 
 
+def test_key_check_never_runs_a_chat_model_that_policy_blocks(monkeypatch):
+    """A check runs a real model, so a named or default chat model needs model-level permission."""
+    from lfx.base.models.unified_models import get_unified_models_detailed, validate_model_provider_key
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicyError,
+        ModelProviderPolicyPurpose,
+        ModelProviderPolicySnapshot,
+    )
+
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    rows = get_unified_models_detailed(providers=["OpenAI"], model_type="llm")[0]["models"]
+    blocked, allowed = rows[0]["model_name"], rows[1]["model_name"]
+    policy = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(),
+        purpose=ModelProviderPolicyPurpose.USE,
+        candidate_provider_ids=frozenset({"openai"}),
+        allowed_provider_ids=frozenset({"openai"}),
+        blocked_model_keys=frozenset({f"openai::llm::{blocked}"}),
+    )
+    monkeypatch.setattr("lfx.services.model_provider_policy.resolve_model_provider_policy", lambda **_: policy)
+    ran = []
+
+    class Chat:
+        def __init__(self, **kwargs):
+            ran.append(kwargs["model_name"])
+
+        def invoke(self, _prompt):
+            return "ok"
+
+    import sys
+    import types
+
+    # langchain_openai may not be installed here; the check only needs its ChatOpenAI.
+    monkeypatch.setitem(sys.modules, "langchain_openai", types.SimpleNamespace(ChatOpenAI=Chat))
+    with pytest.raises(ModelProviderPolicyError):
+        validate_model_provider_key("OpenAI", {"OPENAI_API_KEY": "tenant-key"}, blocked, model_type="llm")
+    assert ran == []
+    validate_model_provider_key("OpenAI", {"OPENAI_API_KEY": "tenant-key"})
+    assert ran == [allowed]
+
+
 @pytest.mark.parametrize("provider", ["typesafe", "TypeSafe"])
 @pytest.mark.parametrize("model_type", [None, "decision"])
 def test_key_validation_treats_provider_ids_like_display_names(monkeypatch, provider, model_type):
