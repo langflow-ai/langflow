@@ -440,6 +440,7 @@ The following environment variables set base Langflow server configuration, such
 | `LANGFLOW_DANGEROUSLY_ALLOW_MULTI_WORKER_WITHOUT_SHARED_QUEUE` | Boolean | `False` | Allow startup with `LANGFLOW_WORKERS` greater than 1 while `LANGFLOW_JOB_QUEUE_TYPE` is `asyncio`. **Unsupported with the Langflow UI and with MCP over SSE.** See [Run multiple workers without Redis](./deployment-multi-worker#run-multiple-workers-without-redis). |
 | `LANGFLOW_SSL_CERT_FILE` | String | Not set | Path to the SSL certificate file for enabling HTTPS on the Langflow web server. This is separate from [database SSL connections](/configuration-custom-database#connect-langflow-to-a-local-postgresql-database). |
 | `LANGFLOW_SSL_KEY_FILE` | String | Not set | Path to the SSL key file for enabling HTTPS on the Langflow web server. This is separate from [database SSL connections](/configuration-custom-database#connect-langflow-to-a-local-postgresql-database). |
+| `LANGFLOW_ROOT_PATH` | String | Empty | ASGI path prefix for deployments behind a reverse proxy that removes the prefix before forwarding requests, such as `/langflow`. Enter a path only, without a scheme, query string, or fragment. |
 | `LANGFLOW_DEACTIVATE_TRACING` | Boolean | `False` | Deactivate tracing functionality. |
 | `LANGFLOW_CELERY_ENABLED` | Boolean | `False` | Enable Celery for distributed task processing. |
 | `LANGFLOW_ALEMBIC_LOG_TO_STDOUT` | Boolean | `False` | Whether to log Alembic database migration output to stdout instead of a log file. If `true`, Alembic logs to `stdout` and the default log file is ignored. |
@@ -449,6 +450,18 @@ The following environment variables set base Langflow server configuration, such
 For file storage environment variables, see [File storage environment variables](/concepts-file-management#file-storage-environment-variables).
 
 For database environment variables, including PostgreSQL configuration, see [Memory management options](/memory#configure-external-memory).
+
+#### Knowledge Base storage and local file access
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_KNOWLEDGE_BASES_DIR` | String | `~/.langflow/knowledge_bases` | Directory where local Knowledge Bases are stored. |
+| `LANGFLOW_KNOWLEDGE_BASE_AUTO_MIGRATE` | Boolean | `True` | Automatically migrate supported local Chroma stores on startup while retaining the source data. Automatic migration requires one worker and a local filesystem. See [Upgrade Knowledge Base storage](/knowledge-storage-upgrade). |
+| `LANGFLOW_KNOWLEDGE_BASE_STORAGE_POOL_SIZE` | Integer | `20` | Number of PostgreSQL connections reserved per process for remote Knowledge Base coordination. This pool is separate from the application database pool. |
+| `LANGFLOW_KB_DISK_RECONCILE_ENABLED` | Boolean | `False` | Scan the Knowledge Base directory at startup and adopt legacy directories that have no database row. The scan is idempotent and doesn't delete data. |
+| `LANGFLOW_KB_ALLOWED_FOLDER_ROOTS` | List[String] | `[]` | Comma-separated allowlist of directories the Knowledge Base folder-ingestion endpoint can read. An empty list blocks folder ingestion from server paths. |
+| `LANGFLOW_KB_FOLDER_MAX_FILE_SIZE_BYTES` | Integer | `26214400` | Maximum file size, in bytes, accepted by Knowledge Base folder ingestion. The default is 25 MiB. |
+| `LANGFLOW_DIRECTORY_COMPONENT_ALLOWED_ROOTS` | List[String] | `[]` | Comma-separated list of additional directories the legacy **Directory** component can read. The process working directory remains allowed. Parent traversal and symlink escapes are blocked. |
 
 ### Telemetry {#telemetry}
 

@@ -28,6 +28,16 @@ To replace the components, do the following:
 2. Replace **Chroma** and **Local DB** with a [knowledge base](/knowledge#knowledge-bases) or with a supported remote vector store.
 3. Run the flow.
 
+## Configure storage migration
+
+`LANGFLOW_KNOWLEDGE_BASE_AUTO_MIGRATE` defaults to `true` and starts supported local Chroma migrations when Langflow starts.
+Set it to `false` when multiple hosts share Knowledge Bases or when you want to migrate to pgvector or OpenSearch instead.
+
+`LANGFLOW_KB_DISK_RECONCILE_ENABLED` defaults to `false`.
+Enable it only to adopt legacy Knowledge Base directories that don't have matching database rows; it isn't required for a normal 1.13 upgrade.
+
+For defaults and related storage settings, see [Knowledge Base storage and local file access](/environment-variables#knowledge-base-storage-and-local-file-access).
+
 ## Prerequisites {#prerequisites}
 
 Complete this list before you change Langflow versions. The copy starts on the first start of 1.13, so these have to be true before that start.

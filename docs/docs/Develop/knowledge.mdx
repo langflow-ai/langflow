@@ -57,6 +57,18 @@ import PartialKbSummary from '@site/docs/_partial-kb-summary.mdx';
 
 <PartialKbSummary />
 
+### Configure Knowledge Base storage
+
+Operators can configure Knowledge Base storage with environment variables:
+
+* `LANGFLOW_KNOWLEDGE_BASES_DIR` sets the directory for local Knowledge Bases.
+* `LANGFLOW_KNOWLEDGE_BASE_STORAGE_POOL_SIZE` sets the per-process PostgreSQL connection pool for remote Knowledge Base coordination.
+* `LANGFLOW_KB_ALLOWED_FOLDER_ROOTS` controls which server directories folder ingestion can read.
+* `LANGFLOW_KB_FOLDER_MAX_FILE_SIZE_BYTES` limits files accepted through folder ingestion.
+
+For defaults and detailed descriptions, see [Knowledge Base storage and local file access](/environment-variables#knowledge-base-storage-and-local-file-access).
+For migration settings, see [Upgrade Knowledge and Memory storage](/knowledge-storage-upgrade).
+
 ### Create a knowledge base
 
 In this example, you'll create a knowledge base of chunked customer orders.
