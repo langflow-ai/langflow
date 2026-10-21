@@ -327,8 +327,9 @@ class SmartRouterComponent(Component):
             name="score_levels",
             display_name="Levels",
             info=(
-                "Score only: levels ordered from lowest to highest, at most 10. The message goes to the level its "
-                "score rounds to; a score exactly between two levels takes the higher one."
+                "Score only: levels ordered from lowest to highest, at most 10. The model scores the input from 0 "
+                "(the first level) up to one less than the number of levels, and the message goes to the level "
+                "that score rounds to. Exactly halfway goes to the higher level."
             ),
             table_schema=[
                 {

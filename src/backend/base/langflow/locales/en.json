@@ -3182,7 +3182,7 @@
   "components.smartrouter.inputs.routes.info.4f273a1b": "Define the categories for routing. Each row should have a route/category name and optionally a custom output value.",
   "components.smartrouter.inputs.routing_mode.display_name.5dc3ed50": "Routing Mode",
   "components.smartrouter.inputs.score_levels.display_name.b1482131": "Levels",
-  "components.smartrouter.inputs.score_levels.info.fcc96ea7": "Score only: levels ordered from lowest to highest, at most 10. The message goes to the level its score rounds to; a score exactly between two levels takes the higher one.",
+  "components.smartrouter.inputs.score_levels.info.419b21cf": "Score only: levels ordered from lowest to highest, at most 10. The model scores the input from 0 (the first level) up to one less than the number of levels, and the message goes to the level that score rounds to. Exactly halfway goes to the higher level.",
   "components.smartrouter.inputs.yes_description.display_name.2c357d49": "What Yes Means",
   "components.smartrouter.inputs.yes_description.info.9ba498f8": "Boolean only: what a Yes answer means. A decision model that takes no descriptions stops the run with a clear error.",
   "components.smartrouter.inputs.yes_message.display_name.1ab3f100": "Yes Message (Optional)",
