@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
-from lfx.base.models.decisions.schema import DecisionConfigurationError, DecisionEvaluationError
+from lfx.base.models.decisions.schema import DecisionConfigurationError, DecisionEvaluationError, DecisionResult
 from lfx.components.llm_operations.llm_conditional_router import SmartRouterComponent, assign_route_ids
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
@@ -19,6 +19,64 @@ def _fresh_build_config(router):
     build_config = dotdict(router.to_frontend_node()["data"]["node"]["template"])
     build_config["routes"]["value"] = [{"route_category": name} for name in ("Billing", "Sales")]
     return build_config
+
+
+def _threshold_column(build_config):
+    return next(column for column in build_config["routes"]["table_schema"] if column["name"] == "minimum_probability")
+
+
+def _decide(monkeypatch, kind, routes, result, *, minimum_probability=0.7, question="Is this a refund request?"):
+    """Route one message with ``result`` as the provider's answer; returns the label, evidence and request."""
+    sent = []
+
+    def evaluate(request, **_kwargs):
+        sent.append(request)
+        return result
+
+    monkeypatch.setattr("lfx.components.llm_operations.llm_conditional_router.evaluate_decision", evaluate)
+    router = SmartRouterComponent()
+    router.set(
+        input_text="I was charged twice.",
+        routes=routes,
+        routing_mode="Decision Model",
+        decision_model=[{"provider": "TypeSafe", "name": "jev-latest"}],
+        decision_kind=kind,
+        decision_question=question,
+        minimum_probability=minimum_probability,
+        evaluation_error_action="Route to Else",
+        enable_else_output=True,
+    )
+    router._vertex = SimpleNamespace(
+        outgoing_edges=[SimpleNamespace(source_handle=SimpleNamespace(name="default_result"))]
+    )
+    router.log = lambda *_args, **_kwargs: None
+    label = router._get_categorization()
+    return label, router._decision_evidence, sent[0] if sent else None
+
+
+def _boolean(probability_true):
+    return DecisionResult(kind="boolean", provider="TypeSafe", model="jev-1.13.0", probability_true=probability_true)
+
+
+def _score(*probabilities):
+    ids = [f"category_{i + 1}_result" for i in range(len(probabilities))]
+    score = sum(i * p for i, p in enumerate(probabilities))
+    return DecisionResult(
+        kind="score",
+        provider="TypeSafe",
+        model="jev-1.13.0",
+        probabilities=dict(zip(ids, probabilities, strict=True)),
+        score=score,
+    )
+
+
+REFUND_ROUTES = [{"route_category": "Refund"}, {"route_category": "No refund"}]
+# The tiers from the design discussion: A at 0.1, B at 0.5, C at 0.95.
+TIERS = [
+    {"route_category": "A", "minimum_probability": 0.1},
+    {"route_category": "B", "minimum_probability": 0.5},
+    {"route_category": "C", "minimum_probability": 0.95},
+]
 
 
 class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
@@ -451,3 +509,124 @@ class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
             pytest.raises(DecisionConfigurationError, match="don't match its outputs"),
         ):
             router._pre_run_setup()
+
+
+class TestSmartRouterDecisionTypes:
+    """Choice, Boolean and Score in Decision Model mode, and the fields each one shows."""
+
+    def test_decision_type_shows_only_in_decision_mode(self):
+        router = SmartRouterComponent()
+        build_config = router.update_build_config(_fresh_build_config(router), "Language Model", "routing_mode")
+        assert build_config["decision_kind"]["show"] is False
+        build_config = router.update_build_config(build_config, "Decision Model", "routing_mode")
+        assert build_config["decision_kind"]["show"] is True
+        assert build_config["decision_kind"]["value"] == "Choice"
+
+    def test_score_moves_each_threshold_onto_its_route(self):
+        router = SmartRouterComponent()
+        router.set(routing_mode="Decision Model")
+        build_config = router.update_build_config(_fresh_build_config(router), "Decision Model", "routing_mode")
+        choice_column = dict(_threshold_column(build_config))
+
+        build_config = router.update_build_config(build_config, "Score", "decision_kind")
+        assert build_config["minimum_probability"]["show"] is False
+        assert build_config["minimum_probability"]["required"] is False
+        assert _threshold_column(build_config)["display_name"] == "Minimum Score"
+        assert "Minimum Score" in build_config["routes"]["info"]
+
+        build_config = router.update_build_config(build_config, "Choice", "decision_kind")
+        assert build_config["minimum_probability"]["show"] is True
+        assert _threshold_column(build_config) == choice_column
+
+    def test_language_model_mode_keeps_probability_labels_whatever_the_type(self):
+        router = SmartRouterComponent()
+        build_config = _fresh_build_config(router)
+        build_config["decision_kind"]["value"] = "Score"
+        build_config = router.update_build_config(build_config, "Language Model", "routing_mode")
+        assert _threshold_column(build_config)["display_name"] == "Minimum Probability (Optional)"
+
+    @pytest.mark.parametrize(
+        ("question", "kind", "expected"),
+        [
+            ("Which route best matches the input?", "Score", "Which level best describes the input?"),
+            ("Which route best matches the input?", "Boolean", ""),
+            ("", "Choice", "Which route best matches the input?"),
+            ("Which team should take this?", "Boolean", "Which team should take this?"),
+        ],
+    )
+    def test_switching_type_swaps_only_a_stock_question(self, question, kind, expected):
+        router = SmartRouterComponent()
+        router.set(routing_mode="Decision Model")
+        build_config = _fresh_build_config(router)
+        build_config["decision_question"]["value"] = question
+        build_config = router.update_build_config(build_config, kind, "decision_kind")
+        assert build_config["decision_question"]["value"] == expected
+
+    def test_unknown_decision_type_fails_instead_of_running_as_choice(self):
+        router = SmartRouterComponent()
+        with pytest.raises(DecisionConfigurationError, match="Unknown decision type"):
+            router.update_build_config(_fresh_build_config(router), "Ranking", "decision_kind")
+
+    @pytest.mark.parametrize(("probability_true", "label"), [(0.9, "Refund"), (0.1, "No refund")])
+    def test_boolean_sends_yes_to_the_first_route_and_no_to_the_second(self, monkeypatch, probability_true, label):
+        routed, evidence, request = _decide(monkeypatch, "Boolean", REFUND_ROUTES, _boolean(probability_true))
+        assert routed == label
+        assert request.kind == "boolean"
+        assert not request.options
+        assert not request.levels
+        assert evidence["route_probabilities"] == pytest.approx(
+            {"category_1_result": probability_true, "category_2_result": 1 - probability_true}
+        )
+
+    @pytest.mark.parametrize(
+        ("probability_true", "reason"), [(0.5, "tied_top_probability"), (0.6, "below_minimum_probability")]
+    )
+    def test_an_unsure_boolean_goes_to_else(self, monkeypatch, probability_true, reason):
+        routed, evidence, _ = _decide(monkeypatch, "Boolean", REFUND_ROUTES, _boolean(probability_true))
+        assert routed == ""
+        assert evidence["reason"] == reason
+        assert evidence["activated_branch"] == "default_result"
+
+    @pytest.mark.parametrize(
+        "routes",
+        [
+            [*REFUND_ROUTES, {"route_category": "Unsure"}],
+            [{"route_category": "Refund"}, {"route_category": "refund"}],
+        ],
+    )
+    def test_boolean_needs_two_distinct_routes(self, monkeypatch, routes):
+        with pytest.raises(DecisionConfigurationError, match="exactly two routes"):
+            _decide(monkeypatch, "Boolean", routes, _boolean(0.9))
+
+    def test_a_blank_question_stops_before_any_model_call(self, monkeypatch):
+        with pytest.raises(DecisionConfigurationError, match="needs a Decision Question"):
+            _decide(monkeypatch, "Boolean", REFUND_ROUTES, _boolean(0.9), question="  ")
+
+    @pytest.mark.parametrize(
+        ("probabilities", "label"),
+        [
+            ((0.1, 0.4, 0.5), "B"),  # 0.7: above B's 0.5, below C's 0.95
+            ((0.9, 0.1, 0.0), ""),  # 0.05: below every route
+            ((0.0, 0.08, 0.92), "C"),  # 0.96
+        ],
+    )
+    def test_score_takes_the_highest_route_whose_minimum_it_reaches(self, monkeypatch, probabilities, label):
+        routed, evidence, request = _decide(
+            monkeypatch, "Score", TIERS, _score(*probabilities), minimum_probability=None
+        )
+        assert routed == label
+        assert [level.label for level in request.levels] == ["A", "B", "C"]
+        assert evidence["normalized_score"] == pytest.approx(sum(i * p for i, p in enumerate(probabilities)) / 2)
+        assert evidence["reason"] == ("accepted" if label else "below_minimum_score")
+
+    @pytest.mark.parametrize(
+        ("routes", "match"),
+        [
+            ([TIERS[0], {"route_category": "B"}, TIERS[2]], "Minimum Score on every route"),
+            ([TIERS[1], TIERS[0], TIERS[2]], "higher than the route before it"),
+            ([TIERS[0], {**TIERS[1], "minimum_probability": 0.1}, TIERS[2]], "higher than the route before it"),
+        ],
+    )
+    def test_score_minimums_must_rise_on_every_route(self, monkeypatch, routes, match):
+        with pytest.raises(DecisionConfigurationError, match=match):
+            _decide(monkeypatch, "Score", routes, _score(0.1, 0.4, 0.5), minimum_probability=None)

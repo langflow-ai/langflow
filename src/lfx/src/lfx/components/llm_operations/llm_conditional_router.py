@@ -1,5 +1,6 @@
 import re
 from collections.abc import Mapping
+from itertools import pairwise
 from math import isfinite
 from typing import Any
 
@@ -43,6 +44,59 @@ _CUSTOM_PROMPT_INFO = (
 _CUSTOM_PROMPT_DECISION_INFO = (
     "Not used in Decision Model mode, which has no prompt. Kept so it applies again in Language Model mode."
 )
+_DECISION_KINDS = {"Choice": "choice", "Boolean": "boolean", "Score": "score"}
+# Switching types swaps only these stock questions, never one the user wrote. Boolean has none:
+# a yes/no question has to name what it asks.
+_DECISION_QUESTIONS = {
+    "choice": "Which route best matches the input?",
+    "boolean": "",
+    "score": "Which level best describes the input?",
+}
+_DECISION_QUESTION_INFO = {
+    "choice": "Instructions for the decision model. Additional Instructions apply only to Language Model mode.",
+    "boolean": (
+        'A yes/no question, such as "Is the customer asking for a refund?". Yes takes the first route and No the '
+        "second. Route descriptions are not sent, so the question carries the whole meaning."
+    ),
+    "score": "The question that places the input on the routes, read as levels from lowest to highest.",
+}
+_ROUTES_INFO = {
+    "choice": (
+        "Define the categories for routing. Each row should have a route/category name "
+        "and optionally a custom output value."
+    ),
+    "boolean": "Exactly two routes: the first is Yes and the second No. Unsure answers go to Else.",
+    "score": (
+        "Levels ordered from lowest to highest, at most 10. Each route needs a Minimum Score: the input takes the "
+        "highest route whose minimum its score reaches, and a score below every route goes to Else."
+    ),
+}
+_MINIMUM_PROBABILITY_INFO = {
+    "choice": (
+        "Required in decision mode, from 0 to 1. The top route is chosen only when its probability is at "
+        "least this value; otherwise the message goes to Else. This is the route's probability, not the "
+        "provider's confidence score. A route can set its own threshold in the Routes table."
+    ),
+    "boolean": (
+        "Required in decision mode, from 0 to 1. Yes takes the first route when P(yes) is at least this value, and "
+        "No the second when P(no) is; otherwise the message goes to Else. A route can set its own threshold in "
+        "the Routes table."
+    ),
+}
+_PROBABILITY_COLUMN = {
+    "display_name": "Minimum Probability (Optional)",
+    "description": (
+        "Decision mode only: the probability this route needs, at least, from 0 to 1. "
+        "Leave empty to use the router's Minimum Probability."
+    ),
+}
+_SCORE_COLUMN = {
+    "display_name": "Minimum Score",
+    "description": (
+        "Score mode: the lowest score that takes this route. The score runs from 0, every level's weight on the "
+        "first route, to 1, all of it on the last. Required, and higher on each route than on the one before."
+    ),
+}
 
 
 def _route_number(route_id: Any) -> int | None:
@@ -111,22 +165,30 @@ class SmartRouterComponent(Component):
             show=False,
             real_time_refresh=True,
         ),
+        DropdownInput(
+            name="decision_kind",
+            display_name="Decision Type",
+            options=list(_DECISION_KINDS),
+            value="Choice",
+            info=(
+                "Choice picks one route. Boolean answers yes or no between two routes. "
+                "Score reads the routes as ordered levels."
+            ),
+            show=False,
+            real_time_refresh=True,
+        ),
         MultilineInput(
             name="decision_question",
             display_name="Decision Question",
-            value="Which route best matches the input?",
-            info="Instructions for the decision model. Additional Instructions apply only to Language Model mode.",
+            value=_DECISION_QUESTIONS["choice"],
+            info=_DECISION_QUESTION_INFO["choice"],
             show=False,
         ),
         FloatInput(
             name="minimum_probability",
             preserve_empty=True,
             display_name="Minimum Probability",
-            info=(
-                "Required in decision mode, from 0 to 1. The top route is chosen only when its probability is at "
-                "least this value; otherwise the message goes to Else. This is the route's probability, not the "
-                "provider's confidence score. A route can set its own threshold in the Routes table."
-            ),
+            info=_MINIMUM_PROBABILITY_INFO["choice"],
             range_spec=RangeSpec(min=0, max=1, step=0.01),
             show=False,
         ),
@@ -161,10 +223,7 @@ class SmartRouterComponent(Component):
         TableInput(
             name="routes",
             display_name="Routes",
-            info=(
-                "Define the categories for routing. Each row should have a route/category name "
-                "and optionally a custom output value."
-            ),
+            info=_ROUTES_INFO["choice"],
             table_schema=[
                 {
                     "name": "route_category",
@@ -194,13 +253,9 @@ class SmartRouterComponent(Component):
                 },
                 {
                     "name": "minimum_probability",
-                    "display_name": "Minimum Probability (Optional)",
+                    **_PROBABILITY_COLUMN,
                     "type": "float",
                     "formatter": "number",
-                    "description": (
-                        "Decision mode only: the probability this route needs, at least, from 0 to 1. "
-                        "Leave empty to use the router's Minimum Probability."
-                    ),
                     "edit_mode": EditMode.INLINE,
                 },
                 {
@@ -281,13 +336,41 @@ class SmartRouterComponent(Component):
             raise DecisionConfigurationError(msg)
         return mode == "Decision Model"
 
+    def _decision_kind(self, kind: Any = None) -> str:
+        """``kind``, by default this router's Decision Type, as a request kind; an unknown type stops."""
+        if kind is None:
+            kind = getattr(self, "decision_kind", "Choice")
+        if kind not in _DECISION_KINDS:
+            msg = "Unknown decision type."
+            raise DecisionConfigurationError(msg)
+        return _DECISION_KINDS[kind]
+
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
         decision_mode = self._is_decision_mode(field_value if field_name == "routing_mode" else None)
-        for name in ("decision_model", "decision_question", "minimum_probability", "evaluation_error_action"):
+        kind = self._decision_kind(
+            field_value if field_name == "decision_kind" else (build_config.get("decision_kind") or {}).get("value")
+        )
+        for name in ("decision_model", "decision_kind", "decision_question", "evaluation_error_action"):
             if name in build_config:
                 build_config[name]["show"] = decision_mode
                 build_config[name]["required"] = decision_mode
+        if "minimum_probability" in build_config:
+            # Score routes each carry their own minimum score instead.
+            uses_router_threshold = decision_mode and kind != "score"
+            build_config["minimum_probability"].update(
+                show=uses_router_threshold,
+                required=uses_router_threshold,
+                info=_MINIMUM_PROBABILITY_INFO.get(kind, _MINIMUM_PROBABILITY_INFO["choice"]),
+            )
+        if "decision_question" in build_config:
+            question = build_config["decision_question"]
+            question["info"] = _DECISION_QUESTION_INFO[kind]
+            if (
+                field_name == "decision_kind"
+                and str(question.get("value") or "").strip() in _DECISION_QUESTIONS.values()
+            ):
+                question["value"] = _DECISION_QUESTIONS[kind]
         # The API key overrides the Language Model's credentials only; decision
         # credentials come from that provider's own settings.
         for name in ("model", "api_key"):
@@ -306,9 +389,15 @@ class SmartRouterComponent(Component):
                 build_config["enable_else_output"]["value"] = True
             build_config["enable_else_output"]["advanced"] = not decision_mode
         if "routes" in build_config:
-            rows = field_value if field_name == "routes" else build_config["routes"].get("value")
+            routes = build_config["routes"]
+            routes["info"] = _ROUTES_INFO[kind if decision_mode else "choice"]
+            schema = routes.get("table_schema") or []
+            for column in schema.get("columns", []) if isinstance(schema, dict) else schema:
+                if column.get("name") == "minimum_probability":
+                    column.update(_SCORE_COLUMN if decision_mode and kind == "score" else _PROBABILITY_COLUMN)
+            rows = field_value if field_name == "routes" else routes.get("value")
             last = (build_config.get("last_route_number") or {}).get("value") or 0
-            build_config["routes"]["value"], last = assign_route_ids(rows or [], last)
+            routes["value"], last = assign_route_ids(rows or [], last)
             if "last_route_number" in build_config:
                 build_config["last_route_number"]["value"] = last
         if decision_mode:
@@ -436,7 +525,7 @@ class SmartRouterComponent(Component):
         return self._categorization_result
 
     @staticmethod
-    def _validate_probability(value: Any) -> float:
+    def _validate_probability(value: Any, name: str = "Minimum probability") -> float:
         if isinstance(value, str):
             # Table cells can hold the number as text.
             try:
@@ -444,7 +533,7 @@ class SmartRouterComponent(Component):
             except ValueError:
                 value = None
         if isinstance(value, bool) or not isinstance(value, int | float) or not isfinite(value) or not 0 <= value <= 1:
-            msg = "Minimum probability must be a number between 0 and 1."
+            msg = f"{name} must be a number between 0 and 1."
             raise DecisionConfigurationError(msg)
         return float(value)
 
@@ -462,35 +551,53 @@ class SmartRouterComponent(Component):
 
     def _get_decision_categorization(self) -> str:
         self._validate_decision_graph()
-        threshold = self._validate_probability(self.minimum_probability)
+        kind = self._decision_kind()
+        # Score routes each carry their own minimum score; the other types fall back to the router's.
+        threshold = None if kind == "score" else self._validate_probability(self.minimum_probability)
         if self.evaluation_error_action not in {"Stop with error", "Route to Else"}:
             msg = "Unknown evaluation error action."
             raise DecisionConfigurationError(msg)
         if len(self.routes) < 2:  # noqa: PLR2004 - a choice needs at least two options
             msg = "Decision mode needs at least two routes; uncertain results already go to Else."
             raise DecisionConfigurationError(msg)
-        if any(not str(row.get("route_category") or "").strip() for row in self.routes):
+        names = [str(row.get("route_category") or "").strip() for row in self.routes]
+        if not all(names):
             msg = "Every route needs a name in decision mode."
             raise DecisionConfigurationError(msg)
+        if kind == "boolean" and (len(names) != 2 or names[0].casefold() == names[1].casefold()):  # noqa: PLR2004
+            msg = "Boolean mode needs exactly two routes with different names: Yes first, then No."
+            raise DecisionConfigurationError(msg)
+        if not str(self.decision_question or "").strip():
+            msg = "Decision mode needs a Decision Question."
+            raise DecisionConfigurationError(msg)
+        candidates = [
+            {"id": route_id, "label": row["route_category"], "description": row.get("route_description") or ""}
+            for route_id, row in zip(self._route_ids(), self.routes, strict=True)
+        ]
         request = decision_request(
-            kind="choice",
+            kind=kind,
             question=self.decision_question,
             context=self.input_text,
-            options=[
-                {"id": route_id, "label": row["route_category"], "description": row.get("route_description") or ""}
-                for route_id, row in zip(self._route_ids(), self.routes, strict=True)
-            ],
+            options=candidates if kind == "choice" else (),
+            levels=candidates if kind == "score" else (),
         )
-        thresholds = {
-            option.id: (
-                threshold
-                if row.get("minimum_probability") is None or not str(row["minimum_probability"]).strip()
-                else self._validate_probability(row["minimum_probability"])
-            )
-            for option, row in zip(request.options, self.routes, strict=True)
-        }
+        thresholds = {}
+        for candidate, row in zip(candidates, self.routes, strict=True):
+            own = row.get("minimum_probability")
+            if own is not None and str(own).strip():
+                name = "Minimum score" if kind == "score" else "Minimum probability"
+                thresholds[candidate["id"]] = self._validate_probability(own, name)
+            elif threshold is None:
+                msg = "Score mode needs a Minimum Score on every route."
+                raise DecisionConfigurationError(msg)
+            else:
+                thresholds[candidate["id"]] = threshold
+        if kind == "score" and any(low >= high for low, high in pairwise(thresholds.values())):
+            msg = "In Score mode, each route's Minimum Score must be higher than the route before it."
+            raise DecisionConfigurationError(msg)
         evidence = {
-            "options": [option.model_dump() for option in request.options],
+            "kind": kind,
+            "options": candidates,
             "minimum_probability": threshold,
             "route_thresholds": thresholds,
             "activated_branch": None,
@@ -534,18 +641,40 @@ class SmartRouterComponent(Component):
                 msg = "The decision provider refused the evaluation."
                 raise DecisionEvaluationError(msg, category="refusal")
             return ""
-        top_probability = max(result.probabilities.values())
-        winners = [option_id for option_id, p in result.probabilities.items() if p == top_probability]
-        if len(winners) != 1:
-            evidence["reason"] = "tied_top_probability"
-            return ""
-        winner = winners[0]
-        evidence.update(selected_outcome=winner, applied_threshold=thresholds[winner])
-        if top_probability < thresholds[winner]:
-            evidence["reason"] = "below_minimum_probability"
-            return ""
-        evidence.update(reason="accepted", activated_branch=winner)
-        return next(option.label for option in request.options if option.id == winner)
+        labels = {option["id"]: option["label"] for option in evidence["options"]}
+        if request.kind == "score":
+            # From 0, every level's weight on the first route, to 1, all of it on the last, so route
+            # minimums read the same whatever the number of routes.
+            score = result.score / (len(request.levels) - 1)
+            evidence["normalized_score"] = score
+            reached = [route_id for route_id, minimum in thresholds.items() if score >= minimum]
+            if not reached:
+                evidence["reason"] = "below_minimum_score"
+                return ""
+            # Minimums rise with route order, so the last route reached is the highest tier.
+            winner = reached[-1]
+        else:
+            probabilities = result.probabilities
+            if request.kind == "boolean":
+                # Thresholds are in route order: the first route is Yes, the second No.
+                yes, no = thresholds
+                probabilities = {yes: result.probability_true, no: 1 - result.probability_true}
+                evidence["route_probabilities"] = probabilities
+            top_probability = max(probabilities.values())
+            winners = [option_id for option_id, p in probabilities.items() if p == top_probability]
+            if len(winners) != 1:
+                evidence["reason"] = "tied_top_probability"
+                return ""
+            winner = winners[0]
+            if top_probability < thresholds[winner]:
+                evidence.update(
+                    selected_outcome=winner, applied_threshold=thresholds[winner], reason="below_minimum_probability"
+                )
+                return ""
+        evidence.update(
+            selected_outcome=winner, applied_threshold=thresholds[winner], reason="accepted", activated_branch=winner
+        )
+        return labels[winner]
 
     def _build_artifact(self, result):
         artifact = super()._build_artifact(result)

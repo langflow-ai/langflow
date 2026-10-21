@@ -3,6 +3,7 @@
     "activated_branch": "category_1_result",
     "applied_threshold": 0.7,
     "error_action": "Route to Else",
+    "kind": "choice",
     "minimum_probability": 0.7,
     "options": [
       {
@@ -49,6 +50,7 @@
     "activated_branch": "default_result",
     "applied_threshold": 0.7,
     "error_action": "Route to Else",
+    "kind": "choice",
     "minimum_probability": 0.7,
     "options": [
       {
@@ -91,6 +93,86 @@
     },
     "selected_outcome": "category_1_result"
   },
+  "boolean_accepted": {
+    "activated_branch": "category_1_result",
+    "applied_threshold": 0.7,
+    "error_action": "Route to Else",
+    "kind": "boolean",
+    "minimum_probability": 0.7,
+    "options": [
+      {
+        "description": "",
+        "id": "category_1_result",
+        "label": "Refund"
+      },
+      {
+        "description": "",
+        "id": "category_2_result",
+        "label": "No refund"
+      }
+    ],
+    "reason": "accepted",
+    "result": {
+      "kind": "boolean",
+      "model": "jev-1.13.0",
+      "model_source": "response",
+      "probability_true": 0.88,
+      "provider": "TypeSafe",
+      "status": "success",
+      "usage": {
+        "input_tokens": 312
+      }
+    },
+    "route_probabilities": {
+      "category_1_result": 0.88,
+      "category_2_result": 0.12
+    },
+    "route_thresholds": {
+      "category_1_result": 0.7,
+      "category_2_result": 0.7
+    },
+    "selected_outcome": "category_1_result"
+  },
+  "boolean_unsure": {
+    "activated_branch": "default_result",
+    "applied_threshold": 0.7,
+    "error_action": "Route to Else",
+    "kind": "boolean",
+    "minimum_probability": 0.7,
+    "options": [
+      {
+        "description": "",
+        "id": "category_1_result",
+        "label": "Refund"
+      },
+      {
+        "description": "",
+        "id": "category_2_result",
+        "label": "No refund"
+      }
+    ],
+    "reason": "below_minimum_probability",
+    "result": {
+      "kind": "boolean",
+      "model": "jev-1.13.0",
+      "model_source": "response",
+      "probability_true": 0.55,
+      "provider": "TypeSafe",
+      "status": "success",
+      "usage": {
+        "input_tokens": 312
+      }
+    },
+    "route_probabilities": {
+      "category_1_result": 0.55,
+      "category_2_result": 0.44999999999999996
+    },
+    "route_thresholds": {
+      "category_1_result": 0.7,
+      "category_2_result": 0.7
+    },
+    "selected_outcome": "category_1_result"
+  },
   "configuration_error": {
     "activated_branch": null,
     "error": {
@@ -98,6 +180,7 @@
       "message": "The selected decision model is disabled or unavailable."
     },
     "error_action": "Route to Else",
+    "kind": "choice",
     "minimum_probability": 0.7,
     "options": [
       {
@@ -130,6 +213,7 @@
       "message": "TypeSafe decision request timed out."
     },
     "error_action": "Route to Else",
+    "kind": "choice",
     "minimum_probability": 0.7,
     "options": [
       {
@@ -162,6 +246,7 @@
       "message": "TypeSafe decision request failed (HTTP 503)."
     },
     "error_action": "Stop with error",
+    "kind": "choice",
     "minimum_probability": 0.7,
     "options": [
       {
@@ -194,6 +279,7 @@
       "message": "TypeSafe denied the decision request (HTTP 401)."
     },
     "error_action": "Route to Else",
+    "kind": "choice",
     "minimum_probability": 0.7,
     "options": [
       {
@@ -222,6 +308,7 @@
   "refusal_routed_to_else": {
     "activated_branch": "default_result",
     "error_action": "Route to Else",
+    "kind": "choice",
     "minimum_probability": 0.7,
     "options": [
       {
@@ -262,6 +349,7 @@
     "activated_branch": "default_result",
     "applied_threshold": 0.9,
     "error_action": "Route to Else",
+    "kind": "choice",
     "minimum_probability": 0.7,
     "options": [
       {
@@ -304,9 +392,104 @@
     },
     "selected_outcome": "category_3_result"
   },
+  "score_accepted": {
+    "activated_branch": "category_2_result",
+    "applied_threshold": 0.5,
+    "error_action": "Route to Else",
+    "kind": "score",
+    "minimum_probability": null,
+    "normalized_score": 0.7,
+    "options": [
+      {
+        "description": "Can wait",
+        "id": "category_1_result",
+        "label": "Low"
+      },
+      {
+        "description": "Today",
+        "id": "category_2_result",
+        "label": "Medium"
+      },
+      {
+        "description": "Now",
+        "id": "category_3_result",
+        "label": "High"
+      }
+    ],
+    "reason": "accepted",
+    "result": {
+      "kind": "score",
+      "model": "jev-1.13.0",
+      "model_source": "response",
+      "probabilities": {
+        "category_1_result": 0.1,
+        "category_2_result": 0.4,
+        "category_3_result": 0.5
+      },
+      "provider": "TypeSafe",
+      "score": 1.4,
+      "status": "success",
+      "usage": {
+        "input_tokens": 312
+      }
+    },
+    "route_thresholds": {
+      "category_1_result": 0.1,
+      "category_2_result": 0.5,
+      "category_3_result": 0.95
+    },
+    "selected_outcome": "category_2_result"
+  },
+  "score_below_every_route": {
+    "activated_branch": "default_result",
+    "error_action": "Route to Else",
+    "kind": "score",
+    "minimum_probability": null,
+    "normalized_score": 0.05,
+    "options": [
+      {
+        "description": "Can wait",
+        "id": "category_1_result",
+        "label": "Low"
+      },
+      {
+        "description": "Today",
+        "id": "category_2_result",
+        "label": "Medium"
+      },
+      {
+        "description": "Now",
+        "id": "category_3_result",
+        "label": "High"
+      }
+    ],
+    "reason": "below_minimum_score",
+    "result": {
+      "kind": "score",
+      "model": "jev-1.13.0",
+      "model_source": "response",
+      "probabilities": {
+        "category_1_result": 0.9,
+        "category_2_result": 0.1,
+        "category_3_result": 0.0
+      },
+      "provider": "TypeSafe",
+      "score": 0.1,
+      "status": "success",
+      "usage": {
+        "input_tokens": 312
+      }
+    },
+    "route_thresholds": {
+      "category_1_result": 0.1,
+      "category_2_result": 0.5,
+      "category_3_result": 0.95
+    }
+  },
   "tied_top_probability": {
     "activated_branch": "default_result",
     "error_action": "Route to Else",
+    "kind": "choice",
     "minimum_probability": 0.7,
     "options": [
       {

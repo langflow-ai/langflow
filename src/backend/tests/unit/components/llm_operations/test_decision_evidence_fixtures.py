@@ -1,6 +1,7 @@
 """Decision fixtures for the inspection UI, regenerated from the real Smart Router and Decision Model.
 
-decision_evidence_fixtures.json holds Smart Router evidence; decision_result_fixtures.json holds the
+decision_evidence_fixtures.json holds Smart Router evidence for each decision type;
+decision_result_fixtures.json holds the
 Decision Model component's result for each decision type. Set UPDATE_DECISION_FIXTURES=1 to rewrite
 both after an intended change.
 """
@@ -34,12 +35,25 @@ ROUTES = [
 ]
 
 
+COMMON = {"provider": "TypeSafe", "model": "jev-1.13.0", "usage": {"input_tokens": 312}}
+
+
 def _choice(*probabilities: float, refusal: bool = False) -> DecisionResult:
-    common = {"kind": "choice", "provider": "TypeSafe", "model": "jev-1.13.0", "usage": {"input_tokens": 312}}
+    common = {"kind": "choice", **COMMON}
     if refusal:
         return DecisionResult(**common, status="refusal", refusal="Provider declined this question.")
     ids = [f"category_{i + 1}_result" for i in range(len(probabilities))]
     return DecisionResult(**common, probabilities=dict(zip(ids, probabilities, strict=True)), confidence=0.6)
+
+
+def _boolean(probability_true: float) -> DecisionResult:
+    return DecisionResult(kind="boolean", **COMMON, probability_true=probability_true)
+
+
+def _score(*probabilities: float) -> DecisionResult:
+    ids = [f"category_{i + 1}_result" for i in range(len(probabilities))]
+    score = sum(i * p for i, p in enumerate(probabilities))
+    return DecisionResult(kind="score", **COMMON, probabilities=dict(zip(ids, probabilities, strict=True)), score=score)
 
 
 def _raise(error: Exception):
@@ -71,18 +85,49 @@ SCENARIOS = {
 }
 
 
-def _evidence(monkeypatch, error_action: str, evaluate) -> dict:
+# Boolean and Score routers; their routes and question replace the Choice router's.
+BOOLEAN = {
+    "decision_kind": "Boolean",
+    "decision_question": "Is the customer asking for a refund?",
+    "routes": [
+        {"route_category": "Refund", "route_description": "", "output_value": ""},
+        {"route_category": "No refund", "route_description": "", "output_value": ""},
+    ],
+}
+SCORE = {
+    "decision_kind": "Score",
+    "decision_question": "How urgent is this message?",
+    "minimum_probability": None,
+    "routes": [
+        {"route_category": "Low", "route_description": "Can wait", "output_value": "", "minimum_probability": 0.1},
+        {"route_category": "Medium", "route_description": "Today", "output_value": "", "minimum_probability": 0.5},
+        {"route_category": "High", "route_description": "Now", "output_value": "", "minimum_probability": 0.95},
+    ],
+}
+TYPE_SCENARIOS = {
+    "boolean_accepted": (BOOLEAN, lambda *_a, **_k: _boolean(0.88)),
+    "boolean_unsure": (BOOLEAN, lambda *_a, **_k: _boolean(0.55)),
+    # A score of 0.7 reaches Medium's 0.5 but not High's 0.95.
+    "score_accepted": (SCORE, lambda *_a, **_k: _score(0.1, 0.4, 0.5)),
+    "score_below_every_route": (SCORE, lambda *_a, **_k: _score(0.9, 0.1, 0.0)),
+}
+
+
+def _evidence(monkeypatch, error_action: str, evaluate, **settings) -> dict:
     monkeypatch.setattr("lfx.components.llm_operations.llm_conditional_router.evaluate_decision", evaluate)
     router = SmartRouterComponent()
     router.set(
-        input_text="I was charged twice for my October invoice.",
-        routes=ROUTES,
-        routing_mode="Decision Model",
-        decision_model=[{"provider": "TypeSafe", "name": "jev-latest"}],
-        decision_question="Which team should handle this message?",
-        minimum_probability=0.7,
-        evaluation_error_action=error_action,
-        enable_else_output=True,
+        **{
+            "input_text": "I was charged twice for my October invoice.",
+            "routes": ROUTES,
+            "routing_mode": "Decision Model",
+            "decision_model": [{"provider": "TypeSafe", "name": "jev-latest"}],
+            "decision_question": "Which team should handle this message?",
+            "minimum_probability": 0.7,
+            "evaluation_error_action": error_action,
+            "enable_else_output": True,
+            **settings,
+        }
     )
     router._vertex = SimpleNamespace(
         outgoing_edges=[SimpleNamespace(source_handle=SimpleNamespace(name="default_result"))]
@@ -212,6 +257,8 @@ class TestDecisionEvidenceFixtures:
 
     def test_decision_evidence_fixtures_match_the_router(self, monkeypatch):
         produced = {name: _evidence(monkeypatch, action, evaluate) for name, (action, evaluate) in SCENARIOS.items()}
+        for name, (settings, evaluate) in TYPE_SCENARIOS.items():
+            produced[name] = _evidence(monkeypatch, "Route to Else", evaluate, **settings)
         _check_fixture(FIXTURES, produced)
 
     def test_decision_result_fixtures_match_the_component(self, monkeypatch):
@@ -243,6 +290,10 @@ class TestDecisionEvidenceFixtures:
             ("evaluation_error_stopped", "evaluation_error", None),
             ("permission_denied", "permission_denied", None),
             ("configuration_error", "configuration_error", None),
+            ("boolean_accepted", "accepted", "category_1_result"),
+            ("boolean_unsure", "below_minimum_probability", "default_result"),
+            ("score_accepted", "accepted", "category_2_result"),
+            ("score_below_every_route", "below_minimum_score", "default_result"),
         ],
     )
     def test_each_fixture_has_the_expected_outcome(self, name, reason, branch):
