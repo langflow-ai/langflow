@@ -80,12 +80,7 @@ def _score(*probabilities):
     )
 
 
-# Three tiers with minimum scores of 0.1, 0.5 and 0.95.
-TIERS = [
-    {"route_category": "A", "minimum_score": 0.1},
-    {"route_category": "B", "minimum_score": 0.5},
-    {"route_category": "C", "minimum_score": 0.95},
-]
+LEVELS = [{"route_category": "Low"}, {"route_category": "Medium"}, {"route_category": "High"}]
 
 
 class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
@@ -527,46 +522,28 @@ class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
         assert build_config["decision_kind"]["show"] is True
         assert build_config["decision_kind"]["value"] == "Choice"
 
-    def test_score_shows_its_own_threshold_column(self):
+    def test_score_hides_every_threshold(self):
+        """Score rounds to a level, so neither the router's nor a route's threshold applies."""
         router = SmartRouterComponent()
         router.set(routing_mode="Decision Model")
         build_config = router.update_build_config(_fresh_build_config(router), "Decision Model", "routing_mode")
         assert _column(build_config, "minimum_probability").get("hidden") is False
-        assert _column(build_config, "minimum_score")["hidden"] is True
 
         build_config = router.update_build_config(build_config, "Score", "decision_kind")
         assert build_config["minimum_probability"]["show"] is False
         assert build_config["minimum_probability"]["required"] is False
         assert _column(build_config, "minimum_probability")["hidden"] is True
-        assert _column(build_config, "minimum_score")["hidden"] is False
-        assert "Minimum Score" in build_config["routes"]["info"]
+        assert "rounds to" in build_config["routes"]["info"]
 
         build_config = router.update_build_config(build_config, "Choice", "decision_kind")
         assert build_config["minimum_probability"]["show"] is True
         assert _column(build_config, "minimum_probability")["hidden"] is False
-        assert _column(build_config, "minimum_score")["hidden"] is True
 
-    def test_language_model_mode_hides_the_score_column_whatever_the_type(self):
-        router = SmartRouterComponent()
-        build_config = _fresh_build_config(router)
-        build_config["decision_kind"]["value"] = "Score"
-        build_config = router.update_build_config(build_config, "Language Model", "routing_mode")
-        assert _column(build_config, "minimum_score")["hidden"] is True
-        assert _column(build_config, "minimum_probability")["hidden"] is False
-
-    def test_a_threshold_set_for_one_type_never_applies_to_another(self, monkeypatch):
-        """Each column keeps its own meaning, so switching type reinterprets no number."""
-        rows = [
-            {"route_category": "A", "minimum_probability": 0.0, "minimum_score": 0.1},
-            {"route_category": "B", "minimum_probability": 0.0, "minimum_score": 0.5},
-            {"route_category": "C", "minimum_probability": 0.0, "minimum_score": 0.95},
-        ]
-        _, score_evidence, _ = _decide(monkeypatch, "Score", rows, _score(0.1, 0.4, 0.5), minimum_probability=None)
-        assert list(score_evidence["route_thresholds"].values()) == [0.1, 0.5, 0.95]
-        choice_rows = [{key: value for key, value in row.items() if key != "minimum_probability"} for row in rows]
-        _, choice_evidence, _ = _decide(monkeypatch, "Choice", choice_rows, _choice_result(0.5, 0.3, 0.2))
-        assert list(choice_evidence["route_thresholds"].values()) == [0.7, 0.7, 0.7]
-        assert choice_evidence["reason"] == "below_minimum_probability"
+    def test_score_ignores_route_thresholds_left_from_choice(self, monkeypatch):
+        rows = [{**row, "minimum_probability": 0.99} for row in LEVELS]
+        routed, evidence, _ = _decide(monkeypatch, "Score", rows, _score(0.1, 0.4, 0.5), minimum_probability=None)
+        assert routed == "Medium"
+        assert evidence["route_thresholds"] == {}
 
     @pytest.mark.parametrize(
         ("question", "kind", "expected"),
@@ -695,28 +672,20 @@ class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
     @pytest.mark.parametrize(
         ("probabilities", "label"),
         [
-            ((0.1, 0.4, 0.5), "B"),  # 0.7: above B's 0.5, below C's 0.95
-            ((0.9, 0.1, 0.0), ""),  # 0.05: below every route
-            ((0.0, 0.08, 0.92), "C"),  # 0.96
+            ((0.89, 0.0, 0.11), "Low"),  # score 0.22
+            ((0.1, 0.4, 0.5), "Medium"),  # 1.4
+            ((0.0, 0.08, 0.92), "High"),  # 1.92
+            ((0.0, 0.0, 1.0), "High"),  # 2.0, the top level
+            ((0.5, 0.5, 0.0), "Medium"),  # 0.5: halfway takes the higher level, where round() gives 0
+            ((0.0, 0.5, 0.5), "High"),  # 1.5: halfway again
+            ((0.25, 0.5, 0.25), "Medium"),  # 1.0
         ],
     )
-    def test_score_takes_the_highest_route_whose_minimum_it_reaches(self, monkeypatch, probabilities, label):
+    def test_score_takes_the_level_its_score_rounds_to(self, monkeypatch, probabilities, label):
         routed, evidence, request = _decide(
-            monkeypatch, "Score", TIERS, _score(*probabilities), minimum_probability=None
+            monkeypatch, "Score", LEVELS, _score(*probabilities), minimum_probability=None
         )
         assert routed == label
-        assert [level.label for level in request.levels] == ["A", "B", "C"]
-        assert evidence["normalized_score"] == pytest.approx(sum(i * p for i, p in enumerate(probabilities)) / 2)
-        assert evidence["reason"] == ("accepted" if label else "below_minimum_score")
-
-    @pytest.mark.parametrize(
-        ("routes", "match"),
-        [
-            ([TIERS[0], {"route_category": "B"}, TIERS[2]], "Minimum Score on every route; 'B' has none"),
-            ([TIERS[1], TIERS[0], TIERS[2]], "higher than the route before it"),
-            ([TIERS[0], {**TIERS[1], "minimum_score": 0.1}, TIERS[2]], "'B' is not higher than 'A'"),
-        ],
-    )
-    def test_score_minimums_must_rise_on_every_route(self, monkeypatch, routes, match):
-        with pytest.raises(DecisionConfigurationError, match=match):
-            _decide(monkeypatch, "Score", routes, _score(0.1, 0.4, 0.5), minimum_probability=None)
+        assert [level.label for level in request.levels] == ["Low", "Medium", "High"]
+        assert evidence["reason"] == "accepted"
+        assert evidence["activated_branch"] == request.levels[["Low", "Medium", "High"].index(label)].id

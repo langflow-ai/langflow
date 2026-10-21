@@ -97,17 +97,17 @@ SCORE = {
     "decision_question": "How urgent is this message?",
     "minimum_probability": None,
     "routes": [
-        {"route_category": "Low", "route_description": "Can wait", "output_value": "", "minimum_score": 0.1},
-        {"route_category": "Medium", "route_description": "Today", "output_value": "", "minimum_score": 0.5},
-        {"route_category": "High", "route_description": "Now", "output_value": "", "minimum_score": 0.95},
+        {"route_category": "Low", "route_description": "Can wait", "output_value": ""},
+        {"route_category": "Medium", "route_description": "Today", "output_value": ""},
+        {"route_category": "High", "route_description": "Now", "output_value": ""},
     ],
 }
 TYPE_SCENARIOS = {
     "boolean_accepted": (BOOLEAN, lambda *_a, **_k: _boolean(0.88)),
     "boolean_unsure": (BOOLEAN, lambda *_a, **_k: _boolean(0.55)),
-    # A score of 0.7 reaches Medium's 0.5 but not High's 0.95.
+    # A score of 1.4 rounds to Medium; 0.5, halfway between Low and Medium, takes the higher level.
     "score_accepted": (SCORE, lambda *_a, **_k: _score(0.1, 0.4, 0.5)),
-    "score_below_every_route": (SCORE, lambda *_a, **_k: _score(0.9, 0.1, 0.0)),
+    "score_rounds_up_at_halfway": (SCORE, lambda *_a, **_k: _score(0.5, 0.5, 0.0)),
 }
 
 
@@ -298,7 +298,7 @@ class TestDecisionEvidenceFixtures:
             ("boolean_accepted", "accepted", "yes_result"),
             ("boolean_unsure", "below_minimum_probability", "default_result"),
             ("score_accepted", "accepted", "category_2_result"),
-            ("score_below_every_route", "below_minimum_score", "default_result"),
+            ("score_rounds_up_at_halfway", "accepted", "category_2_result"),
         ],
     )
     def test_each_fixture_has_the_expected_outcome(self, name, reason, branch):

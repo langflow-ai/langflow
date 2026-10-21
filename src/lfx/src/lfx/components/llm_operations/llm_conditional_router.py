@@ -1,7 +1,6 @@
 import re
 from collections.abc import Mapping
-from itertools import pairwise
-from math import isfinite
+from math import floor, isfinite
 from typing import Any
 
 from lfx.base.models.decisions.runtime import evaluate_decision, request_variables_of
@@ -76,8 +75,8 @@ _ROUTES_INFO = {
         "and optionally a custom output value."
     ),
     "score": (
-        "Levels ordered from lowest to highest, at most 10. Each route needs a Minimum Score: the input takes the "
-        "highest route whose minimum its score reaches, and a score below every route goes to Else."
+        "Levels ordered from lowest to highest, at most 10. The message goes to the level its score rounds to; a "
+        "score exactly between two levels takes the higher one."
     ),
 }
 _MINIMUM_PROBABILITY_INFO = {
@@ -305,20 +304,6 @@ class SmartRouterComponent(Component):
                     "edit_mode": EditMode.INLINE,
                 },
                 {
-                    # Its own column, so a type switch never reads a probability as a score or back.
-                    "name": "minimum_score",
-                    "display_name": "Minimum Score",
-                    "type": "float",
-                    "formatter": "number",
-                    "description": (
-                        "Score mode: the lowest score that takes this route. The score runs from 0, every level's "
-                        "weight on the first route, to 1, all of it on the last. Required, and higher on each route "
-                        "than on the one before."
-                    ),
-                    "edit_mode": EditMode.INLINE,
-                    "hidden": True,
-                },
-                {
                     "name": "route_id",
                     "display_name": "Route ID",
                     "type": "str",
@@ -420,7 +405,7 @@ class SmartRouterComponent(Component):
                 build_config[name]["show"] = decision_mode
                 build_config[name]["required"] = decision_mode
         if "minimum_probability" in build_config:
-            # Score routes each carry their own minimum score instead.
+            # Score rounds to a level and needs no threshold.
             uses_router_threshold = decision_mode and kind != "score"
             build_config["minimum_probability"].update(
                 show=uses_router_threshold,
@@ -463,11 +448,10 @@ class SmartRouterComponent(Component):
             routes["info"] = _ROUTES_INFO["score" if score_mode else "choice"]
             routes["show"] = routes["required"] = not boolean_mode
             schema = routes.get("table_schema") or []
+            # Score rounds to a level, so its routes have no thresholds.
             for column in schema.get("columns", []) if isinstance(schema, dict) else schema:
                 if column.get("name") == "minimum_probability":
                     column["hidden"] = score_mode
-                elif column.get("name") == "minimum_score":
-                    column["hidden"] = not score_mode
             rows = field_value if field_name == "routes" else routes.get("value")
             last = (build_config.get("last_route_number") or {}).get("value") or 0
             routes["value"], last = assign_route_ids(rows or [], last)
@@ -632,7 +616,7 @@ class SmartRouterComponent(Component):
     def _get_decision_categorization(self) -> str:
         self._validate_decision_graph()
         kind = self._decision_kind()
-        # Score routes each carry their own minimum score; the other types fall back to the router's.
+        # Score rounds to a level and needs no threshold; the other types fall back to the router's.
         threshold = None if kind == "score" else self._validate_probability(self.minimum_probability)
         if self.evaluation_error_action not in {"Stop with error", "Route to Else"}:
             msg = "Unknown evaluation error action."
@@ -685,7 +669,7 @@ class SmartRouterComponent(Component):
         return candidates, thresholds
 
     def _route_branches(self, kind: str, threshold: float | None) -> tuple[list[dict], dict]:
-        """One candidate per route, and the probability or score each route needs."""
+        """One candidate per route, and the probability each Choice route needs; Score routes need none."""
         if len(self.routes) < 2:  # noqa: PLR2004 - a choice needs at least two options
             msg = "Decision mode needs at least two routes; uncertain results already go to Else."
             raise DecisionConfigurationError(msg)
@@ -697,27 +681,13 @@ class SmartRouterComponent(Component):
             {"id": route_id, "label": row["route_category"], "description": row.get("route_description") or ""}
             for route_id, row in zip(self._route_ids(), self.routes, strict=True)
         ]
-        column, measure = (
-            ("minimum_score", "Minimum score") if kind == "score" else ("minimum_probability", "Minimum probability")
-        )
         thresholds = {}
-        for candidate, row, name in zip(candidates, self.routes, names, strict=True):
-            own = row.get(column)
-            if own is not None and str(own).strip():
-                thresholds[candidate["id"]] = self._validate_probability(own, f"{measure} for {name!r}")
-            elif threshold is None:
-                msg = f"Score mode needs a Minimum Score on every route; {name!r} has none."
-                raise DecisionConfigurationError(msg)
-            else:
-                thresholds[candidate["id"]] = threshold
-        if kind == "score":
-            for (low_name, low), (high_name, high) in pairwise(zip(names, thresholds.values(), strict=True)):
-                if high <= low:
-                    msg = (
-                        "In Score mode, each route's Minimum Score must be higher than the route before it: "
-                        f"{high_name!r} is not higher than {low_name!r}."
-                    )
-                    raise DecisionConfigurationError(msg)
+        if kind == "choice":
+            for candidate, row, name in zip(candidates, self.routes, names, strict=True):
+                own = row.get("minimum_probability")
+                blank = own is None or not str(own).strip()
+                minimum = f"Minimum probability for {name!r}"
+                thresholds[candidate["id"]] = threshold if blank else self._validate_probability(own, minimum)
         return candidates, thresholds
 
     def _apply_decision(self, request: DecisionRequest, thresholds: dict, evidence: dict) -> str:
@@ -750,39 +720,29 @@ class SmartRouterComponent(Component):
             return ""
         labels = {option["id"]: option["label"] for option in evidence["options"]}
         if request.kind == "score":
-            # From 0, every level's weight on the first route, to 1, all of it on the last, so route
-            # minimums read the same whatever the number of routes.
-            # Rounded so float error never moves a score off a minimum it sits on.
-            score = round(result.score / (len(request.levels) - 1), 12)
-            evidence["normalized_score"] = score
-            reached = [route_id for route_id, minimum in thresholds.items() if score >= minimum]
-            if not reached:
-                evidence["reason"] = "below_minimum_score"
-                return ""
-            # Minimums rise with route order, so the last route reached is the highest tier.
-            winner = reached[-1]
-        else:
-            probabilities = result.probabilities
-            if request.kind == "boolean":
-                # The first candidate is Yes and the second No. P(no) is rounded so float error never drops it
-                # below a threshold it meets: 1 - 0.33 is 0.6699999999999999.
-                yes, no = evidence["options"][0]["id"], evidence["options"][1]["id"]
-                probabilities = {yes: result.probability_true, no: round(1 - result.probability_true, 12)}
-                evidence["route_probabilities"] = probabilities
-            top_probability = max(probabilities.values())
-            winners = [option_id for option_id, p in probabilities.items() if p == top_probability]
-            if len(winners) != 1:
-                evidence["reason"] = "tied_top_probability"
-                return ""
-            winner = winners[0]
-            if top_probability < thresholds[winner]:
-                evidence.update(
-                    selected_outcome=winner, applied_threshold=thresholds[winner], reason="below_minimum_probability"
-                )
-                return ""
-        evidence.update(
-            selected_outcome=winner, applied_threshold=thresholds[winner], reason="accepted", activated_branch=winner
-        )
+            # The level the probability-weighted score rounds to, as TypeSafe suggests for one outcome. A
+            # score exactly between two levels takes the higher one; Python's round() would take the even one.
+            winner = request.levels[min(floor(result.score + 0.5), len(request.levels) - 1)].id
+            evidence.update(selected_outcome=winner, reason="accepted", activated_branch=winner)
+            return labels[winner]
+        probabilities = result.probabilities
+        if request.kind == "boolean":
+            # The first candidate is Yes and the second No. P(no) is rounded so float error never drops it
+            # below a threshold it meets: 1 - 0.33 is 0.6699999999999999.
+            yes, no = evidence["options"][0]["id"], evidence["options"][1]["id"]
+            probabilities = {yes: result.probability_true, no: round(1 - result.probability_true, 12)}
+            evidence["route_probabilities"] = probabilities
+        top_probability = max(probabilities.values())
+        winners = [option_id for option_id, p in probabilities.items() if p == top_probability]
+        if len(winners) != 1:
+            evidence["reason"] = "tied_top_probability"
+            return ""
+        winner = winners[0]
+        evidence.update(selected_outcome=winner, applied_threshold=thresholds[winner])
+        if top_probability < thresholds[winner]:
+            evidence["reason"] = "below_minimum_probability"
+            return ""
+        evidence.update(reason="accepted", activated_branch=winner)
         return labels[winner]
 
     def _build_artifact(self, result):

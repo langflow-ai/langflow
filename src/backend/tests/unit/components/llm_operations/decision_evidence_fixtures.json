@@ -394,11 +394,9 @@
   },
   "score_accepted": {
     "activated_branch": "category_2_result",
-    "applied_threshold": 0.5,
     "error_action": "Route to Else",
     "kind": "score",
     "minimum_probability": null,
-    "normalized_score": 0.7,
     "options": [
       {
         "description": "Can wait",
@@ -433,19 +431,14 @@
         "input_tokens": 312
       }
     },
-    "route_thresholds": {
-      "category_1_result": 0.1,
-      "category_2_result": 0.5,
-      "category_3_result": 0.95
-    },
+    "route_thresholds": {},
     "selected_outcome": "category_2_result"
   },
-  "score_below_every_route": {
-    "activated_branch": "default_result",
+  "score_rounds_up_at_halfway": {
+    "activated_branch": "category_2_result",
     "error_action": "Route to Else",
     "kind": "score",
     "minimum_probability": null,
-    "normalized_score": 0.05,
     "options": [
       {
         "description": "Can wait",
@@ -463,28 +456,25 @@
         "label": "High"
       }
     ],
-    "reason": "below_minimum_score",
+    "reason": "accepted",
     "result": {
       "kind": "score",
       "model": "jev-1.13.0",
       "model_source": "response",
       "probabilities": {
-        "category_1_result": 0.9,
-        "category_2_result": 0.1,
+        "category_1_result": 0.5,
+        "category_2_result": 0.5,
         "category_3_result": 0.0
       },
       "provider": "TypeSafe",
-      "score": 0.1,
+      "score": 0.5,
       "status": "success",
       "usage": {
         "input_tokens": 312
       }
     },
-    "route_thresholds": {
-      "category_1_result": 0.1,
-      "category_2_result": 0.5,
-      "category_3_result": 0.95
-    }
+    "route_thresholds": {},
+    "selected_outcome": "category_2_result"
   },
   "tied_top_probability": {
     "activated_branch": "default_result",
