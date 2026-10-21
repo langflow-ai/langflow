@@ -322,7 +322,7 @@ async def test_streamable_http_session_creation_waits_with_configured_budget():
     assert 45.0 in observed
     assert 30.0 not in observed
     assert http_client_factory.call_args.kwargs["headers"] == {}
-    assert http_client_factory.call_args.kwargs["timeout"] == httpx.Timeout(5)
+    assert http_client_factory.call_args.kwargs["timeout"] == httpx.Timeout(5, read=300)
     assert transport_client.call_args.kwargs == {"url": connection_params["url"], "http_client": http_client}
 
 
