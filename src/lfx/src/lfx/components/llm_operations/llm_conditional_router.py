@@ -757,12 +757,12 @@ class SmartRouterComponent(Component):
         if not all(names):
             msg = f"Every {noun} needs a {column}."
             raise DecisionConfigurationError(msg)
-        seen: dict[str, str] = {}
+        seen: set[str] = set()
         for name in names:
             if name.casefold() in seen:
                 msg = f"Every {noun} needs a different {column}; {name!r} is used twice."
                 raise DecisionConfigurationError(msg)
-            seen[name.casefold()] = name
+            seen.add(name.casefold())
         candidates = [
             {"id": route_id, "label": row["route_category"], "description": row.get("route_description") or ""}
             for route_id, row in zip(self._route_ids(), rows, strict=True)

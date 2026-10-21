@@ -140,17 +140,13 @@ class DecisionRequest(BaseModel):
         if self.kind != "boolean" and (self.yes_description or self.no_description):
             msg = "Yes and No descriptions belong to Boolean"
             raise ValueError(msg)
-        for column, key in (("ID", lambda c: c.id), ("Label", lambda c: c.label.strip().casefold())):
-            first: dict[str, int] = {}
-            for position, candidate in enumerate(candidates, start=1):
-                if (value := key(candidate)) in first:
-                    ignoring = ", ignoring case" if column == "Label" else ""
-                    msg = (
-                        f"{noun}s {first[value]} and {position} have the same {column}{ignoring}. "
-                        "Each needs a different one"
-                    )
+        ids = [c.id for c in candidates]
+        labels = [c.label.strip().casefold() for c in candidates]
+        for column, values in (("ID", ids), ("Label, ignoring case", labels)):
+            for position, value in enumerate(values, start=1):
+                if (first := values.index(value) + 1) < position:
+                    msg = f"{noun}s {first} and {position} have the same {column}. Each needs a different one"
                     raise ValueError(msg)
-                first[value] = position
         return self
 
 

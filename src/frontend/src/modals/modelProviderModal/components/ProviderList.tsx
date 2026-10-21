@@ -52,13 +52,10 @@ const ProviderList = ({
     // The decision view lists only providers with decision models; the
     // language and embedding views leave out decision-only providers.
     const listsProvider = (models: ModelProviderInfo["models"]): boolean => {
-      if (modelType === "decision")
-        return modelsOfFilter(models, "decision").length > 0;
-      return (
-        modelType === "all" ||
-        models.length === 0 ||
-        modelsOfFilter(models, "decision").length < models.length
-      );
+      const decisions = modelsOfFilter(models, "decision").length;
+      return modelType === "decision"
+        ? decisions > 0
+        : modelType === "all" || decisions === 0 || decisions < models.length;
     };
 
     return rawProviders

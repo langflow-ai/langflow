@@ -709,6 +709,58 @@ async def test_enable_decision_uses_typed_validation_despite_same_named_deprecat
     assert result["enabled_models"] == ["OpenAI::decision::shared"]
 
 
+@pytest.mark.parametrize(
+    ("model_type", "detail"),
+    [
+        # Decision messages already name the provider.
+        ("decision", "Enter the OpenAI API key."),
+        ("llm", "Validation failed for OpenAI: Enter the OpenAI API key."),
+    ],
+)
+async def test_a_refused_key_names_the_provider_once(monkeypatch, model_type, detail):
+    from unittest.mock import MagicMock, Mock
+
+    from fastapi import HTTPException
+    from lfx.base.models import unified_models
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicyPurpose,
+        ModelProviderPolicySnapshot,
+    )
+
+    user = SimpleNamespace(id=uuid4())
+    policy = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(user_id=user.id),
+        purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        candidate_provider_ids=frozenset({"openai"}),
+        allowed_provider_ids=frozenset({"openai"}),
+    )
+    monkeypatch.setattr(models_api, "ensure_variable_permission", AsyncMock())
+    monkeypatch.setattr(models_api, "get_variable_service", lambda: MagicMock(spec=models_api.DatabaseVariableService))
+    monkeypatch.setattr(models_api, "_aresolve_policy", AsyncMock(return_value=policy))
+    monkeypatch.setattr(models_api, "_get_disabled_models", AsyncMock(return_value=set()))
+    monkeypatch.setattr(models_api, "_get_enabled_models", AsyncMock(return_value=set()))
+    monkeypatch.setattr(
+        models_api,
+        "get_unified_models_detailed",
+        lambda **_: [
+            {"provider": "OpenAI", "models": [{"model_name": "shared", "metadata": {"model_type": model_type}}]}
+        ],
+    )
+    monkeypatch.setattr(unified_models, "get_all_variables_for_provider", lambda *_: {})
+    monkeypatch.setattr(
+        unified_models, "validate_model_provider_key", Mock(side_effect=ValueError("Enter the OpenAI API key."))
+    )
+    with pytest.raises(HTTPException) as caught:
+        await models_api.update_enabled_models(
+            session=object(),
+            current_user=user,
+            provider_policy_attributes={},
+            updates=[ModelStatusUpdate(provider="OpenAI", model_id="shared", model_type=model_type, enabled=True)],
+        )
+    assert caught.value.detail == detail
+
+
 @pytest.mark.parametrize("denied", [False, True])
 @pytest.mark.parametrize("operation", ["create", "update"])
 async def test_openai_decision_credential_save_checks_model_policy_before_persistence(monkeypatch, denied, operation):

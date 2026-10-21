@@ -145,6 +145,7 @@ const ModelRow = ({
 }: ModelRowProps) => {
   const { t } = useTranslation();
   const tags = buildCapabilityTags(model, !!showEmbeddingTag, t);
+  const name = { modelName: model.model_name };
 
   return (
     <div className="flex flex-row items-center justify-between h-[24px]">
@@ -194,19 +195,11 @@ const ModelRow = ({
           aria-label={
             modelType === "decision"
               ? enabled
-                ? t("modelProvider.disableDecisionModel", {
-                    modelName: model.model_name,
-                  })
-                : t("modelProvider.enableDecisionModel", {
-                    modelName: model.model_name,
-                  })
+                ? t("modelProvider.disableDecisionModel", name)
+                : t("modelProvider.enableDecisionModel", name)
               : enabled
-                ? t("modelProvider.disableModel", {
-                    modelName: model.model_name,
-                  })
-                : t("modelProvider.enableModel", {
-                    modelName: model.model_name,
-                  })
+                ? t("modelProvider.disableModel", name)
+                : t("modelProvider.enableModel", name)
           }
           stopPropagation
         />
