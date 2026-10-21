@@ -461,12 +461,19 @@ export default function ModelInputComponent({
   }
 
   if (isUnsupportedKind) {
+    // Not a button: there is nothing to press, only something to read.
     return (
-      <div className="w-full">
-        <ModelInputErrorButton
-          label={t("modelInput.unsupportedKind")}
-          testId="model-input-unsupported-kind"
+      <div
+        role="status"
+        data-testid="model-input-unsupported-kind"
+        className="flex w-full items-center gap-2 py-2 text-xs"
+      >
+        <ForwardedIconComponent
+          name="AlertTriangle"
+          aria-hidden="true"
+          className="h-3.5 w-3.5 shrink-0 text-status-yellow"
         />
+        <span>{t("modelInput.unsupportedKind")}</span>
       </div>
     );
   }
@@ -541,8 +548,16 @@ export default function ModelInputComponent({
                 setOpenManageProvidersDialog(true);
               }}
               data-testid={`${id}-configure`}
-              aria-label={t("model.configureProvider")}
-              title={t("model.notEnabledTitle")}
+              aria-label={
+                selectedModel?.metadata?.switched_off === true
+                  ? t("model.turnOnInProviders")
+                  : t("model.configureProvider")
+              }
+              title={
+                selectedModel?.metadata?.switched_off === true
+                  ? t("model.switchedOffTitle")
+                  : t("model.notEnabledTitle")
+              }
               className="shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-primary"
             >
               <ForwardedIconComponent name="Wrench" className="h-3.5 w-3.5" />

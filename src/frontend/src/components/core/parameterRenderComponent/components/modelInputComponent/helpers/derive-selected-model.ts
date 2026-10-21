@@ -77,10 +77,26 @@ export function deriveSelectedModel({
     return null;
   }
 
+  const savedProviderConfigured =
+    saved && providerStatusIsReliable
+      ? providers?.some(
+          (p) =>
+            providerNamesMatch(p.provider, saved.provider) && p.is_configured,
+        )
+      : undefined;
+  // A decision model whose provider is set up, but that isn't on, was
+  // switched off by the user; the trigger says so.
+  const switchedOff =
+    savedProviderConfigured === true && isUserOwnedModelKind(modelType ?? null);
+
   const match = flatOptions.find((option) =>
     matchesModelIdentity(option, saved),
   );
-  if (match) return match;
+  // The saved value comes back as a sticky option tagged not_enabled_locally.
+  if (match)
+    return switchedOff && match.metadata?.not_enabled_locally === true
+      ? { ...match, metadata: { ...match.metadata, switched_off: true } }
+      : match;
 
   // A model that is no longer offered at all (restricted by an administrator,
   // removed from the catalog) keeps naming itself in the trigger, flagged so
@@ -105,12 +121,6 @@ export function deriveSelectedModel({
   }
 
   if (saved) {
-    const savedProviderConfigured = providerStatusIsReliable
-      ? providers?.some(
-          (p) =>
-            providerNamesMatch(p.provider, saved.provider) && p.is_configured,
-        )
-      : undefined;
     // A language or embedding field shows the option auto-select is about to
     // write. A decision field is never rewritten, so showing another option
     // would present a model it is not set to: it names its own, switched off.
@@ -118,6 +128,7 @@ export function deriveSelectedModel({
       return savedSelection(saved, {
         ...(saved.metadata ?? {}),
         not_enabled_locally: true,
+        ...(switchedOff && { switched_off: true }),
       });
     }
   }

@@ -330,11 +330,35 @@ describe("ProviderList", () => {
       );
     });
 
-    it("counts no decision models in the language view", () => {
+    it("leaves decision-only providers out of the language view", () => {
       renderWith("llm");
-      expect(screen.getByTestId("provider-item-TypeSafe")).toHaveTextContent(
-        "TypeSafe - 0 models",
+      expect(screen.queryByTestId("provider-item-TypeSafe")).toBeNull();
+      expect(screen.getByTestId("provider-item-OpenAI")).toHaveTextContent(
+        "OpenAI - 1 models",
       );
+    });
+
+    it("lists only providers with decision models in the decision view", () => {
+      const useGetModelProvidersMock =
+        require("@/controllers/API/queries/models/use-get-model-providers").useGetModelProviders;
+      useGetModelProvidersMock.mockReturnValueOnce({
+        data: [
+          ...decisionProviders,
+          {
+            provider: "Anthropic",
+            icon: "Anthropic",
+            is_enabled: true,
+            models: [
+              { model_name: "claude-3", metadata: { model_type: "llm" } },
+            ],
+          },
+        ],
+        isLoading: false,
+        isFetching: false,
+      });
+      render(<ProviderList modelType="decision" />);
+      expect(screen.getByTestId("provider-item-TypeSafe")).toBeInTheDocument();
+      expect(screen.queryByTestId("provider-item-Anthropic")).toBeNull();
     });
   });
 });

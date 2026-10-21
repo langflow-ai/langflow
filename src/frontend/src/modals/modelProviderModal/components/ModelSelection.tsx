@@ -192,9 +192,21 @@ const ModelRow = ({
           }
           data-testid={`${testIdPrefix}-toggle-${model.model_name}`}
           aria-label={
-            enabled
-              ? t("modelProvider.disableModel", { modelName: model.model_name })
-              : t("modelProvider.enableModel", { modelName: model.model_name })
+            modelType === "decision"
+              ? enabled
+                ? t("modelProvider.disableDecisionModel", {
+                    modelName: model.model_name,
+                  })
+                : t("modelProvider.enableDecisionModel", {
+                    modelName: model.model_name,
+                  })
+              : enabled
+                ? t("modelProvider.disableModel", {
+                    modelName: model.model_name,
+                  })
+                : t("modelProvider.enableModel", {
+                    modelName: model.model_name,
+                  })
           }
           stopPropagation
         />
@@ -233,6 +245,7 @@ const ModelSelection = ({
     isFetchedAfterMount: isEnabledModelsFetchedAfterMount,
     fetchStatus: enabledModelsFetchStatus,
     isError: isEnabledModelsError,
+    error: enabledModelsError,
     refetch: refetchEnabledModels,
   } = useGetEnabledModels({ flowId, projectId, purpose: "configure" });
   const [modelQuery, setModelQuery] = useState<string>("");
@@ -428,6 +441,11 @@ const ModelSelection = ({
         >
           {title}
         </div>
+        {selectedModelType === "decision" && (
+          <p className="pt-1 text-xs text-muted-foreground">
+            {t("modelProviders.decisionModelsNote")}
+          </p>
+        )}
         <div className="flex flex-col gap-2 pt-4">
           {activeModels.map((model) =>
             renderModelRow(model, selectedModelType),
@@ -501,19 +519,28 @@ const ModelSelection = ({
         defaultValue: "Search models…",
       });
 
+  // A 4xx won't change on retry: this user can't read the policy.
+  const loadStatus = (
+    enabledModelsError as { response?: { status?: number } } | null
+  )?.response?.status;
+  const isAccessError = !!loadStatus && loadStatus >= 400 && loadStatus < 500;
+
   if (!canUseEnabledModels) {
     return (
       <div
         data-testid="model-provider-selection"
         className="flex flex-col gap-3"
       >
-        {isEnabledModelsError ? (
+        {isEnabledModelsError && isAccessError ? (
+          <div role="alert">{t("modelProviders.errorNoAccess")}</div>
+        ) : isEnabledModelsError ? (
           <div role="alert" className="flex flex-col items-start gap-3">
             <span>{t("modelProviders.errorUnexpected")}</span>
             <Button
               type="button"
               variant="outline"
               size="sm"
+              aria-label={t("modelProviders.retryLoadingModels")}
               onClick={() => void refetchEnabledModels()}
             >
               {t("common.retry")}

@@ -185,6 +185,15 @@ const ModelTrigger = ({
                 />
                 {t("model.unavailable")}
               </span>
+            ) : !disabled && selectedModel?.metadata?.switched_off === true ? (
+              <span
+                data-testid={`${id}-switched-off`}
+                title={t("model.switchedOffTitle")}
+                aria-label={t("model.switchedOffTitle")}
+                className="inline-flex shrink-0 items-center text-[11px] text-muted-foreground"
+              >
+                {t("model.switchedOff")}
+              </span>
             ) : null}
           </span>
           <ForwardedIconComponent

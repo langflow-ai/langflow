@@ -219,6 +219,13 @@ describe("ModelInputComponent on a decision field (LE-3129)", () => {
     const trigger = screen.getByRole("combobox");
     expect(trigger).toHaveTextContent("gpt-6-luna");
     expect(trigger).not.toHaveTextContent("jev-latest");
+    // Its provider is set up, so it says the model is switched off.
+    expect(trigger).toHaveTextContent("Switched off");
+    expect(
+      screen.getByRole("button", {
+        name: "Turn this model on in Model Providers",
+      }),
+    ).toBeInTheDocument();
     expect(handleOnNewValue).not.toHaveBeenCalled();
   });
 
@@ -334,9 +341,12 @@ describe("ModelInputComponent on a decision field (LE-3129)", () => {
     renderPicker({ nodeClass: smartRouter("rerank") });
 
     const message = screen.getByTestId("model-input-unsupported-kind");
-    expect(message).toHaveTextContent("Unsupported model type");
-    // Reachable by keyboard, so screen-reader users hear why.
-    expect(message).not.toBeDisabled();
+    expect(message).toHaveTextContent(
+      "This field uses a model type Langflow doesn't support",
+    );
+    // Read out as a notice, not offered as a button that does nothing.
+    expect(message).toHaveAttribute("role", "status");
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 });

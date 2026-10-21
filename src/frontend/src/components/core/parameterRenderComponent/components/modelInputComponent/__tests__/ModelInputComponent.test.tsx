@@ -489,7 +489,11 @@ describe("ModelInputComponent", () => {
 
       await user.click(combobox);
       await waitFor(() => {
-        expect(screen.getByText("No Models Enabled")).toBeInTheDocument();
+        expect(
+          screen.getByText(
+            "No models enabled. Turn one on in Manage Model Providers.",
+          ),
+        ).toBeInTheDocument();
       });
     });
 
@@ -630,7 +634,11 @@ describe("ModelInputComponent", () => {
       await user.click(trigger);
 
       await waitFor(() => {
-        expect(screen.getByText("No Models Enabled")).toBeInTheDocument();
+        expect(
+          screen.getByText(
+            "No models enabled. Turn one on in Manage Model Providers.",
+          ),
+        ).toBeInTheDocument();
         expect(
           screen.getByTestId("manage-model-providers"),
         ).toBeInTheDocument();

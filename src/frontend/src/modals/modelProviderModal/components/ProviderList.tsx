@@ -2,7 +2,10 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
-import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
+import {
+  type ModelProviderInfo,
+  useGetModelProviders,
+} from "@/controllers/API/queries/models/use-get-model-providers";
 import CustomModelProvidersEmptyState from "@/customization/components/custom-model-providers-empty-state";
 import type { ModelTypeFilter } from "@/types/models";
 import { modelsOfFilter } from "../helpers/view-kinds";
@@ -46,8 +49,24 @@ const ProviderList = ({
       trimmedQuery.length === 0 ||
       providerName.toLowerCase().includes(trimmedQuery);
 
+    // The decision view lists only providers with decision models; the
+    // language and embedding views leave out decision-only providers.
+    const listsProvider = (models: ModelProviderInfo["models"]): boolean => {
+      if (modelType === "decision")
+        return modelsOfFilter(models, "decision").length > 0;
+      return (
+        modelType === "all" ||
+        models.length === 0 ||
+        modelsOfFilter(models, "decision").length < models.length
+      );
+    };
+
     return rawProviders
-      .filter((provider) => matchesQuery(provider.provider))
+      .filter(
+        (provider) =>
+          matchesQuery(provider.provider) &&
+          listsProvider(provider?.models ?? []),
+      )
       .map((provider) => {
         const matchingModels = modelsOfFilter(
           provider?.models ?? [],

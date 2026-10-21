@@ -332,8 +332,33 @@ describe("ModelSelection", () => {
         "An unexpected error occurred",
       );
       expect(screen.queryByText("gpt-4")).not.toBeInTheDocument();
-      await user.click(screen.getByRole("button", { name: "Retry" }));
+      await user.click(
+        screen.getByRole("button", { name: "Retry loading models" }),
+      );
       expect(mockRefetchEnabledModels).toHaveBeenCalledTimes(1);
+    });
+
+    it("asks for access instead of offering a retry that can't work", () => {
+      useGetEnabledModels.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        isSuccess: false,
+        isFetching: false,
+        isFetchedAfterMount: true,
+        fetchStatus: "idle",
+        isError: true,
+        error: Object.assign(new Error("forbidden"), {
+          response: { status: 403 },
+        }),
+        refetch: mockRefetchEnabledModels,
+      });
+
+      render(<ModelSelection {...defaultProps} />);
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Ask an administrator for access",
+      );
+      expect(screen.queryByRole("button")).not.toBeInTheDocument();
     });
   });
 
