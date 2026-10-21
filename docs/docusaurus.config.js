@@ -313,7 +313,7 @@ const config = {
             ],
           },
           {
-            to: "/concepts-flows",
+            to: "/agents",
             from: [
               "/travel-planning-agent",
               "/starter-projects-travel-planning-agent",
@@ -327,18 +327,43 @@ const config = {
               "/sequential-agent",
               "/starter-projects-sequential-agent",
               "/tutorials-sequential-agent",
+            ],
+          },
+          {
+            to: "/memory",
+            from: [
               "/memory-chatbot",
               "/starter-projects-memory-chatbot",
               "/tutorials-memory-chatbot",
+            ],
+          },
+          {
+            to: "/chat-with-files",
+            from: [
               "/financial-report-parser",
               "/document-qa",
               "/starter-projects-document-qa",
               "/tutorials-document-qa",
+            ],
+          },
+          {
+            to: "/components-prompts",
+            from: [
               "/blog-writer",
               "/starter-projects-blog-writer",
               "/tutorials-blog-writer",
+            ],
+          },
+          {
+            to: "/get-started-quickstart",
+            from: [
               "/basic-prompting",
               "/starter-projects-basic-prompting",
+            ],
+          },
+          {
+            to: "/chat-with-rag",
+            from: [
               "/vector-store-rag",
               "/starter-projects-vector-store-rag",
             ],
@@ -455,6 +480,11 @@ const config = {
             from: [
               "/directory",
               "/text-input-and-output",
+            ]
+          },
+          {
+            to: "/operations",
+            from: [
               "/data-operations",
               "/dataframe-operations",
               "/text-operations",
