@@ -30,6 +30,7 @@ from lfx.extension.bundle_registry import get_default_registry
 from lfx.log.logger import logger
 from lfx.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
 from lfx.utils.component_aliases import flatten_components_with_aliases
+from lfx.utils.flow_code import normalize_code_for_import
 from lfx.utils.util import escape_json_dump
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import selectinload
@@ -1251,7 +1252,7 @@ def _merge_variable_bindings(existing_data, incoming_data):
 
 
 async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: AsyncSession, user_id: UUID) -> None:
-    flow = orjson.loads(file_content)
+    flow = normalize_code_for_import(orjson.loads(file_content))
     flow_endpoint_name = flow.get("endpoint_name")
     if _is_valid_uuid(filename):
         flow["id"] = filename

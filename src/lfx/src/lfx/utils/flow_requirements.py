@@ -42,6 +42,8 @@ from functools import lru_cache
 from pathlib import Path
 from types import MappingProxyType
 
+from lfx.utils.flow_code import normalize_code_for_import
+
 # ---------------------------------------------------------------------------
 # Standard-library module names (3.10+)
 # ---------------------------------------------------------------------------
@@ -538,7 +540,7 @@ def generate_requirements_from_flow(
     all_packages: set[str] = set()
     all_providers: set[str] = set()
 
-    data = flow.get("data", {})
+    data = normalize_code_for_import(flow).get("data", {})
     nodes = data.get("nodes", [])
 
     for node in nodes:
