@@ -52,9 +52,11 @@ describe("checkCodeValidity shared cases", () => {
           ? "retired"
           : !result.outdated
             ? "ok"
-            : result.breakingChange
-              ? "outdated_breaking"
-              : "outdated_safe";
+            : result.userEdited
+              ? "customized"
+              : result.breakingChange
+                ? "outdated_breaking"
+                : "outdated_safe";
     expect(status).toBe(c.expected);
   });
 });

@@ -17,7 +17,7 @@ TRANSIENT_TEMPLATE_KEYS: frozenset[str] = frozenset({"is_refresh", "tools_metada
 # lfx.graph.flow_builder.connect does it: to keep this module free of lfx.base imports.
 TOOL_OUTPUT_NAME = "component_as_tool"
 
-NodeStatusLiteral = Literal["ok", "outdated_safe", "outdated_breaking", "blocked", "retired"]
+NodeStatusLiteral = Literal["ok", "outdated_safe", "outdated_breaking", "blocked", "retired", "customized"]
 
 
 @dataclass
@@ -41,6 +41,10 @@ class CompatibilityReport:
     @property
     def has_retired(self) -> bool:
         return any(n.status == "retired" for n in self.nodes)
+
+    @property
+    def has_customized(self) -> bool:
+        return any(n.status == "customized" for n in self.nodes)
 
     @property
     def has_breaking(self) -> bool:
@@ -346,6 +350,14 @@ def _classify_node(
 
     if registry_code is None or node_code == registry_code:
         return NodeStatus(node_id=node_id, component_type=component_type, display_name=display_name, status="ok")
+
+    # The saved ``edited`` flag marks code the user changed and updates the user dismissed. Such a
+    # node is never safe to overwrite, so it gets its own status before the breaking check. It comes
+    # after retired: an edit of a retired component usually keeps the retired imports or base class.
+    if node_info.get("edited") is True:
+        return NodeStatus(
+            node_id=node_id, component_type=component_type, display_name=display_name, status="customized"
+        )
 
     if has_breaking_change(registry_entry, node_info, connected_fields):
         return NodeStatus(
