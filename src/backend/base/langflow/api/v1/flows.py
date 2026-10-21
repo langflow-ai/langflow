@@ -31,7 +31,6 @@ from langflow.api.utils import (
     CurrentActiveUser,
     DbSession,
     cascade_delete_flow,
-    normalize_code_for_import,
     validate_is_component,
 )
 from langflow.api.utils.core import strip_secret_field_values
@@ -1266,8 +1265,6 @@ async def upload_file(
         except orjson.JSONDecodeError as e:
             raise HTTPException(status_code=400, detail=f"Invalid JSON file: {e}") from e
 
-    # Normalise code fields: if exported with code-as-lines format, rejoin to
-    # strings before creating the Pydantic models so the DB always stores strings.
     if not isinstance(data, dict):
         raise HTTPException(
             status_code=422,
@@ -1286,10 +1283,9 @@ async def upload_file(
                     status_code=422,
                     detail=f"Invalid JSON: flows[{non_dict[0]}] is not an object",
                 )
-            data = {**data, "flows": [normalize_code_for_import(f) for f in data["flows"]]}
             flow_list = FlowListCreate(**data)
         else:
-            flow_list = FlowListCreate(flows=[FlowCreate(**normalize_code_for_import(data))])
+            flow_list = FlowListCreate(flows=[FlowCreate(**data)])
     except HTTPException:
         raise
     except ValidationError as e:

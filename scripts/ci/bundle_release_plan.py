@@ -23,7 +23,7 @@ import urllib.error
 import urllib.request
 import zipfile
 from collections.abc import Callable, Iterable, Sequence
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -101,6 +101,7 @@ class WheelArtifact:
     sha256: str
     content_digest: str
     lfx_floor: str | None = None
+    lfx_range: str | None = None
 
 
 @dataclass(frozen=True)
@@ -329,6 +330,126 @@ def _ensure_reusable_for_lfx_line(package: str, version: str, release: dict[str,
         f"{package} {version}: already published for {observed}, {verdict} lfx {lfx_version}; bump "
         f"{package} to an unpublished version in this lfx line's bundle minor before building"
     )
+
+
+def _release_lfx_line(release: dict[str, Any]) -> tuple[int, int] | None:
+    """Return the lfx minor line a public release was built for, read from its lfx floor or exact pin."""
+    for specifier in _lfx_specifiers((release.get("info") or {}).get("requires_dist") or ()):
+        for clause in specifier.split(","):
+            match = re.fullmatch(r"(?:>=|==)\s*(?P<bound>\S+)", clause.strip())
+            if match is None:
+                continue
+            try:
+                major, minor, _, _, _ = _version_key(match["bound"])
+            except PlanError:
+                continue
+            return major, minor
+    return None
+
+
+def _public_release_lines(package: str, client: IndexClient) -> list[tuple[str, tuple[int, int] | None]]:
+    """Pair each orderable public release of ``package``, oldest first, with the lfx line that published it."""
+    lines: list[tuple[str, tuple[int, int] | None]] = []
+    for version in client.get_versions(package):
+        try:
+            parse_version(version)
+        except PlanError:
+            continue  # Forms this plan never publishes (e.g. post releases) cannot be ordered against it.
+        release = client.get_release(package, version)
+        if release is not None:
+            lines.append((version, _release_lfx_line(release)))
+    return sorted(lines, key=lambda item: parse_version(item[0]))
+
+
+def _ensure_new_version_fits_lfx_line(
+    package: str, version: str, lfx_range: str, lfx_version: str, client: IndexClient
+) -> None:
+    """Reject a bundle version, not yet public, that would share or shadow another lfx line's bundle minor.
+
+    Each lfx minor line publishes a bundle from its own minor, above every minor an older line has used:
+    with 0.3.x beside lfx 1.13, the lfx 1.14 line starts at 0.4.0. Lines that share a minor race for
+    patch numbers, as when an lfx 1.14 nightly published the lfx-google 0.3.4 that the lfx 1.13 release
+    had planned to ship. A final release from an older line must also stay below each newer line's
+    newest final release that its lfx range admits, or that line's installs resolve the older build.
+    Public versions keep their numbers; only versions about to be published are checked, and a release at
+    or above this bundle minor whose lfx line cannot be read blocks the build so it fails closed.
+    """
+    line = _version_key(lfx_version)[:2]
+    bundle_minor = parse_version(version)[:2]
+    releases = _public_release_lines(package, client)
+    at_or_above = [(public, published) for public, published in releases if parse_version(public)[:2] >= bundle_minor]
+    unknown = [public for public, published in at_or_above if published is None]
+    if unknown:
+        raise PlanError(
+            f"{package} {version}: cannot tell which lfx line published {', '.join(unknown)}; confirm their lfx "
+            "requirements before publishing a new version"
+        )
+    sharing = [(public, published) for public, published in at_or_above if published is not None and published < line]
+    if sharing:
+        top = max(parse_version(public)[:2] for public, _ in sharing)
+        observed = ", ".join(f"{public} for lfx {published[0]}.{published[1]}" for public, published in sharing)
+        raise PlanError(
+            f"{package} {version}: bundle minor {bundle_minor[0]}.{bundle_minor[1]} is not above older lfx lines' "
+            f"releases ({observed}); bump {package} to {top[0]}.{top[1] + 1}.0 or later so lfx "
+            f"{line[0]}.{line[1]} publishes from its own bundle minor"
+        )
+    if parse_version(version)[3] != 0:
+        return  # Installers skip pre-releases unless asked, so only a final version can shadow a newer line.
+    for newer in sorted({published for _, published in releases if published is not None and published > line}):
+        finals = [public for public, published in releases if published == newer and parse_version(public)[3] == 0]
+        if not finals or parse_version(finals[-1]) >= parse_version(version):
+            continue
+        if _admits_lfx_series(lfx_range, f"{newer[0]}.{newer[1]}.0"):
+            raise PlanError(
+                f"{package} {version}: lfx{lfx_range} admits lfx {newer[0]}.{newer[1]}, whose newest {package} is "
+                f"{finals[-1]}, so this release would replace that line's build; first move {package} on the lfx "
+                f"{newer[0]}.{newer[1]} line to a bundle minor above {bundle_minor[0]}.{bundle_minor[1]} and "
+                "publish it"
+            )
+
+
+def check_plan_against_index(
+    plan: Sequence[BundleChange], client: IndexClient, *, base_dir: Path = BASE_DIR
+) -> tuple[BundleChange, ...]:
+    """Add public-index errors for the bundle versions a repository change introduces."""
+    if not any(entry.version_changed for entry in plan):
+        return tuple(plan)
+    bundles = _discover_bundles(base_dir)
+    lfx_version = str(_read_toml(base_dir / "src" / "lfx" / "pyproject.toml")["project"]["version"])
+    checked: list[BundleChange] = []
+    for entry in plan:
+        if not entry.version_changed:
+            checked.append(entry)
+            continue
+        lfx_range = _requirement_parts(bundles[entry.directory].lfx_requirement)[1]
+        try:
+            release = client.get_release(entry.name, entry.version)
+            if release is None:
+                _ensure_new_version_fits_lfx_line(entry.name, entry.version, lfx_range, lfx_version, client)
+            else:
+                _ensure_reusable_for_lfx_line(entry.name, entry.version, release, lfx_version)
+        except PlanError as exc:
+            checked.append(replace(entry, errors=(*entry.errors, str(exc))))
+        else:
+            checked.append(entry)
+    return tuple(checked)
+
+
+def ensure_unpublished_bundles_fit_lfx_line(
+    lfx_version: str, client: IndexClient, *, base_dir: Path = BASE_DIR
+) -> None:
+    """Fail before a nightly publishes a stable bundle version into another lfx line's bundle minor."""
+    errors: list[str] = []
+    for bundle in _discover_bundles(base_dir).values():
+        if client.get_release(bundle.name, bundle.version) is not None:
+            continue
+        try:
+            lfx_range = _requirement_parts(bundle.lfx_requirement)[1]
+            _ensure_new_version_fits_lfx_line(bundle.name, bundle.version, lfx_range, lfx_version, client)
+        except PlanError as exc:
+            errors.append(str(exc))
+    if errors:
+        raise PlanError("Unpublished bundle versions conflict with another lfx line:\n" + "\n".join(errors))
 
 
 def bump_version(version: str, bump: str = "patch", prerelease: str | None = None) -> str:
@@ -905,6 +1026,8 @@ def restamp_unpublished_bundles(
                 )
                 continue
             target_version = restamp_version(bundle.version, f"rc{rc_number}")
+            target_range = f">={lfx_version},<{parse_version(lfx_version)[0] + 1}.0.0"
+            _ensure_new_version_fits_lfx_line(bundle.name, target_version, target_range, lfx_version, client)
             bundle_content = _replace_project_version(originals[bundle.pyproject], target_version)
             bundle_content = _replace_lfx_floor(bundle_content, lfx_version, exact=True)
             bundle.pyproject.write_text(bundle_content, encoding="utf-8")
@@ -919,7 +1042,7 @@ def restamp_unpublished_bundles(
                     source_version=bundle.version,
                     build_version=target_version,
                     action="publish-prerelease",
-                    lfx_range=f">={lfx_version},<{parse_version(lfx_version)[0] + 1}.0.0",
+                    lfx_range=target_range,
                 )
             )
         return tuple(sorted(targets, key=lambda item: item.package))
@@ -968,6 +1091,7 @@ def read_wheel(path: Path) -> WheelArtifact:
     package = canonicalize_name(str(metadata["Name"]))
     version = str(metadata["Version"])
     parse_version(version)
+    lfx_specifiers = _lfx_specifiers(metadata.get_all("Requires-Dist") or ())
     return WheelArtifact(
         path=path,
         package=package,
@@ -975,7 +1099,8 @@ def read_wheel(path: Path) -> WheelArtifact:
         filename=path.name,
         sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
         content_digest=wheel_content_digest(path),
-        lfx_floor=_lfx_floor(_lfx_specifiers(metadata.get_all("Requires-Dist") or ())),
+        lfx_floor=_lfx_floor(lfx_specifiers),
+        lfx_range=",".join(lfx_specifiers) or None,
     )
 
 
@@ -1063,10 +1188,28 @@ def observe_artifact(artifact: WheelArtifact, client: IndexClient) -> ArtifactOb
     )
 
 
+def _ensure_missing_artifacts_fit_lfx_lines(
+    artifacts: Sequence[WheelArtifact], observations: Sequence[ArtifactObservation], client: IndexClient
+) -> None:
+    """Check every wheel that is about to become public against the other lfx lines' bundle minors."""
+    for artifact, observation in zip(artifacts, observations, strict=True):
+        if observation.state != "missing":
+            continue
+        if artifact.lfx_floor is None or artifact.lfx_range is None:
+            raise PlanError(
+                f"{artifact.package} {artifact.version}: the wheel declares no lfx floor, so its lfx line is unknown"
+            )
+        _ensure_new_version_fits_lfx_line(
+            artifact.package, artifact.version, artifact.lfx_range, artifact.lfx_floor, client
+        )
+
+
 def build_artifact_plan(paths: Sequence[Path], client: IndexClient) -> tuple[ArtifactObservation, ...]:
     """Return deterministic public-index observations for built wheels."""
     artifacts = sorted((read_wheel(path) for path in paths), key=lambda item: (item.package, item.version))
-    return tuple(observe_artifact(artifact, client) for artifact in artifacts)
+    observations = tuple(observe_artifact(artifact, client) for artifact in artifacts)
+    _ensure_missing_artifacts_fit_lfx_lines(artifacts, observations, client)
+    return observations
 
 
 def _mismatch_message(observation: ArtifactObservation) -> str:
@@ -1133,6 +1276,7 @@ def publish_artifacts(
     mismatches = [item for item in initial if item.state == "mismatch"]
     if mismatches:
         raise PlanError("\n".join(_mismatch_message(item) for item in mismatches))
+    _ensure_missing_artifacts_fit_lfx_lines(artifacts, initial, client)
     missing_names = {(item.package, item.version) for item in initial if item.state == "missing"}
     missing = [artifact for artifact in artifacts if (artifact.package, artifact.version) in missing_names]
 
@@ -1281,7 +1425,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         if args.command == "plan":
-            plan = build_change_plan(args.base_ref, args.head_ref)
+            plan = check_plan_against_index(build_change_plan(args.base_ref, args.head_ref), PyPIClient())
             _print_change_summary(plan)
             _write_json(_plan_payload(plan), args.output)
             if args.check and any(entry.errors for entry in plan):
