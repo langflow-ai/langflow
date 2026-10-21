@@ -5,13 +5,13 @@ import { BUILD_PANEL_COLLISION_PADDING_PX } from "@/constants/constants";
 import { getEnabledModelsForType } from "@/controllers/API/helpers/enabled-model-policy";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
-import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import ModelProviderModal from "@/modals/modelProviderModal";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import type { APIClassType } from "@/types/api";
 import type { NodeDataType } from "@/types/flow";
+import type { ModelType } from "@/types/models";
+import { modelKindOfField } from "@/utils/model-kind";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { Command } from "../../../../ui/command";
 
@@ -49,6 +49,7 @@ import { ModelDropdownFooter } from "./components/ModelDropdownFooter";
 import {
   ModelInputErrorButton,
   ModelInputLoadingButton,
+  ModelInputUnsupportedKind,
 } from "./components/ModelInputStates";
 import ModelList from "./components/ModelList";
 import ModelTrigger, { isSetupProviderState } from "./components/ModelTrigger";
@@ -76,7 +77,7 @@ export default function ModelInputComponent({
   inspectionPanel,
   showEmptyState = false,
   modelType: modelTypeProp,
-  keepSavedValue = false,
+  fieldName = "model",
   providerScope,
   "aria-label": ariaLabel,
   ariaLabelledBy,
@@ -124,31 +125,25 @@ export default function ModelInputComponent({
 
   const { refreshAllModelInputs } = useRefreshModelInputs();
 
-  const _postTemplateValue = usePostTemplateValue({
-    parameterId: "model",
-    nodeId: nodeId || "",
-    node: (nodeClass as APIClassType) || null,
-  });
-
   const { handleExternalOptions } = useModelConnectionLogic({
     nodeId: nodeId || "",
+    fieldName,
     closePopover: () => setOpen(false),
     clearSelection: () => {
       setConnectionMode(true);
     },
   });
 
-  const modelType =
-    modelTypeProp ??
-    (nodeClass?.template?.model?.model_type === "language"
-      ? "llm"
-      : "embeddings");
+  const modelField = nodeClass?.template?.[fieldName];
+  // An unknown kind is refused below rather than guessed: a guess would offer
+  // models the field cannot run.
+  const fieldKind = modelTypeProp ?? modelKindOfField(modelField);
+  const isUnsupportedKind = fieldKind === null;
+  const modelType: ModelType = fieldKind ?? "llm";
 
   const modelFilters = useMemo(() => {
     const raw = (
-      nodeClass?.template?.model as
-        | { filters?: Record<string, unknown> }
-        | undefined
+      modelField as { filters?: Record<string, unknown> } | undefined
     )?.filters;
     if (!raw || typeof raw !== "object") return undefined;
     const entries = Object.entries(raw).filter(
@@ -156,7 +151,7 @@ export default function ModelInputComponent({
     );
     if (entries.length === 0) return undefined;
     return Object.fromEntries(entries) as Record<string, unknown>;
-  }, [nodeClass]);
+  }, [modelField]);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const hasExplicitProviderScope = providerScope !== undefined;
   const resolvedProviderScope = hasExplicitProviderScope
@@ -241,7 +236,7 @@ export default function ModelInputComponent({
     // Query data remains cached during background refreshes and after
     // refresh errors. Do not turn that potentially revoked snapshot into
     // selectable options until both policy queries have settled cleanly.
-    if (!modelStatusIsReliable) return {};
+    if (!modelStatusIsReliable || isUnsupportedKind) return {};
     return buildGroupedOptions({
       options,
       enabledModels: enabledModelsForType,
@@ -260,6 +255,7 @@ export default function ModelInputComponent({
     modelFilters,
     providerStatusIsReliable,
     modelStatusIsReliable,
+    isUnsupportedKind,
   ]);
 
   const flatOptions = useMemo(
@@ -300,7 +296,7 @@ export default function ModelInputComponent({
     providers: providersData,
     modelStatusIsReliable,
     enabledModels: enabledModelsForType,
-    keepSavedValue,
+    modelType,
   });
 
   /**
@@ -314,7 +310,7 @@ export default function ModelInputComponent({
         const store = useFlowStore.getState();
         const node = store.getNode(nodeId);
         const nodeData = node?.data as NodeDataType | undefined;
-        if (nodeData?.node?.template?.model?._connection_mode) {
+        if (nodeData?.node?.template?.[fieldName]?._connection_mode) {
           store.setNode(
             nodeId,
             (prev) => ({
@@ -326,8 +322,8 @@ export default function ModelInputComponent({
                   ...(prev.data as NodeDataType).node,
                   template: {
                     ...(prev.data as NodeDataType).node.template,
-                    model: {
-                      ...(prev.data as NodeDataType).node.template.model,
+                    [fieldName]: {
+                      ...(prev.data as NodeDataType).node.template[fieldName],
                       _connection_mode: false,
                     },
                   },
@@ -356,7 +352,7 @@ export default function ModelInputComponent({
       handleOnNewValue({ value: newValue });
       setOpen(false);
     },
-    [flatOptions, handleOnNewValue, modelStatusIsReliable],
+    [flatOptions, handleOnNewValue, modelStatusIsReliable, fieldName],
   );
 
   const handleRefreshButtonPress = useCallback(async () => {
@@ -389,7 +385,7 @@ export default function ModelInputComponent({
     <ModelProviderModal
       open={openManageProvidersDialog}
       onClose={handleManageProvidersDialogClose}
-      modelType={modelType || "llm"}
+      modelType={modelType}
       flowId={resolvedProviderScope.flowId}
       projectId={resolvedProviderScope.projectId}
     />
@@ -438,7 +434,13 @@ export default function ModelInputComponent({
         <ModelDropdownFooter
           onRefresh={handleRefreshButtonPress}
           onManageProviders={() => setOpenManageProvidersDialog(true)}
-          externalNode={externalOptions?.fields?.data?.node}
+          // Decision models have no connection handle; the backend sends no
+          // external options for them, and the picker never offers one.
+          externalNode={
+            modelType === "decision"
+              ? undefined
+              : externalOptions?.fields?.data?.node
+          }
           onConnectOtherModels={() =>
             handleExternalOptions("connect_other_models")
           }
@@ -449,6 +451,14 @@ export default function ModelInputComponent({
 
   if (!showParameter) {
     return null;
+  }
+
+  if (isUnsupportedKind) {
+    return (
+      <div className="w-full">
+        <ModelInputUnsupportedKind />
+      </div>
+    );
   }
 
   if (hasPolicyError && !isFetching) {

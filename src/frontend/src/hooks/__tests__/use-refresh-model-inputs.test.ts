@@ -475,6 +475,98 @@ describe("refreshAllModelInputs", () => {
     expect(mockSetNode).toHaveBeenCalled();
   });
 
+  describe("a node with two shown model fields", () => {
+    const JEV = [{ name: "jev-latest", provider: "TypeSafe", icon: "Bot" }];
+    const routerNode = (): AllNodeType => {
+      const node = createMockModelNodeWithValue("router", [
+        { name: "gpt-4", provider: "OpenAI", icon: "OpenAI" },
+      ]);
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
+      const template = (node.data as any).node.template;
+      template.model.model_type = "language";
+      template.decision_model = {
+        type: "model",
+        model_type: "decision",
+        value: JEV,
+        options: [],
+        show: true,
+      };
+      return node;
+    };
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
+    const respondWith = (template: any) => ({ data: { template } });
+
+    it("refreshes each field in turn, on top of the previous response", async () => {
+      mockNodes = [routerNode()];
+      (api.post as jest.Mock)
+        .mockImplementationOnce(async (_url, body) =>
+          respondWith({ ...body.template, marker: { value: "first" } }),
+        )
+        .mockImplementationOnce(async (_url, body) =>
+          respondWith({ ...body.template, marker2: { value: "second" } }),
+        );
+
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
+      await refreshAllModelInputs(undefined as any, { silent: true });
+
+      const calls = (api.post as jest.Mock).mock.calls;
+      expect(calls.map(([, body]) => body.field)).toEqual([
+        "model",
+        "decision_model",
+      ]);
+      expect(calls[1][1].template.marker).toEqual({ value: "first" });
+      expect(calls[1][1].field_value).toEqual(JEV);
+
+      expect(mockSetNode).toHaveBeenCalledTimes(1);
+      const updater = mockSetNode.mock.calls[0][1];
+      const updated = updater(routerNode());
+      const template = updated.data.node.template;
+      expect(template.marker2).toEqual({ value: "second" });
+      // A decision value is never filled or swapped, even with no options.
+      expect(template.decision_model.value).toEqual(JEV);
+    });
+
+    it("writes nothing when either field was picked while in flight", async () => {
+      mockNodes = [routerNode()];
+      (api.post as jest.Mock)
+        .mockImplementationOnce(async (_url, body) =>
+          respondWith(body.template),
+        )
+        .mockImplementationOnce(async (_url, body) => {
+          const picked = routerNode();
+          // biome-ignore lint/suspicious/noExplicitAny: legacy
+          (picked.data as any).node.template.decision_model.value = [
+            { name: "gpt-6-luna", provider: "OpenAI", icon: "OpenAI" },
+          ];
+          mockNodes = [picked];
+          return respondWith(body.template);
+        });
+
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
+      await refreshAllModelInputs(undefined as any, { silent: true });
+
+      expect(api.post).toHaveBeenCalledTimes(2);
+      expect(mockSetNode).not.toHaveBeenCalled();
+    });
+
+    it("skips a hidden model field", async () => {
+      const node = routerNode();
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
+      (node.data as any).node.template.decision_model.show = false;
+      mockNodes = [node];
+      (api.post as jest.Mock).mockImplementation(async (_url, body) =>
+        respondWith(body.template),
+      );
+
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
+      await refreshAllModelInputs(undefined as any, { silent: true });
+
+      expect(
+        (api.post as jest.Mock).mock.calls.map(([, body]) => body.field),
+      ).toEqual(["model"]);
+    });
+  });
+
   it("should not autosave the flow it refreshes", async () => {
     // The refresh runs on every flow open. Autosaving it writes the flow
     // nobody edited (#8995), which under an edit precondition also takes the

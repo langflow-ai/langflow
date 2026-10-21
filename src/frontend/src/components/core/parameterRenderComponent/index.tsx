@@ -383,10 +383,10 @@ export function ParameterRenderComponent({
         return (
           <ModelInputComponent
             {...baseInputProps}
+            fieldName={name}
             options={templateData?.options || []}
             placeholder={templateData?.placeholder}
             externalOptions={templateData?.external_options}
-            keepSavedValue={templateData?.model_type === "decision"}
           />
         );
       case "knowledge_backend":

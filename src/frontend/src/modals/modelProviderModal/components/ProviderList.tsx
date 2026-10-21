@@ -5,6 +5,7 @@ import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-sco
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import CustomModelProvidersEmptyState from "@/customization/components/custom-model-providers-empty-state";
 import type { ModelTypeFilter } from "@/types/models";
+import { modelsOfFilter } from "../helpers/model-kinds";
 import ProviderListItem from "./ProviderListItem";
 import { Provider } from "./types";
 
@@ -48,12 +49,10 @@ const ProviderList = ({
     return rawProviders
       .filter((provider) => matchesQuery(provider.provider))
       .map((provider) => {
-        const matchingModels =
-          provider?.models?.filter((model) =>
-            modelType === "all"
-              ? true
-              : model?.metadata?.model_type === modelType,
-          ) || [];
+        const matchingModels = modelsOfFilter(
+          provider?.models ?? [],
+          modelType,
+        );
 
         return {
           provider: provider.provider,

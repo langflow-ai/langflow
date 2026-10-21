@@ -1,5 +1,9 @@
 import type { APITemplateType } from "@/types/api";
-import { findModelFieldKey, validateModelValue } from "../model-node-helpers";
+import {
+  findModelFieldKey,
+  findModelFieldKeys,
+  validateModelValue,
+} from "../model-node-helpers";
 
 const openAiOption = { name: "gpt-6-luna", provider: "OpenAI", icon: "OpenAI" };
 
@@ -48,5 +52,40 @@ describe("findModelFieldKey", () => {
       model: { type: "model", show: true },
     } as unknown as APITemplateType;
     expect(findModelFieldKey(template)).toBe("model");
+  });
+});
+
+describe("findModelFieldKeys", () => {
+  it("returns every shown model field so each one is refreshed", () => {
+    const template = {
+      model: { type: "model", show: true },
+      prompt: { type: "str", show: true },
+      decision_model: { type: "model" },
+    } as unknown as APITemplateType;
+    expect(findModelFieldKeys(template)).toEqual(["model", "decision_model"]);
+  });
+
+  it("skips hidden model fields", () => {
+    const template = {
+      model: { type: "model", show: false },
+      decision_model: { type: "model", show: true },
+    } as unknown as APITemplateType;
+    expect(findModelFieldKeys(template)).toEqual(["decision_model"]);
+  });
+
+  it("falls back to the first model field when every one is hidden", () => {
+    const template = {
+      model: { type: "model", show: false },
+      decision_model: { type: "model", show: false },
+    } as unknown as APITemplateType;
+    expect(findModelFieldKeys(template)).toEqual(["model"]);
+  });
+
+  it("returns nothing for a node without model fields", () => {
+    const template = {
+      prompt: { type: "str" },
+    } as unknown as APITemplateType;
+    expect(findModelFieldKeys(template)).toEqual([]);
+    expect(findModelFieldKey(template)).toBeUndefined();
   });
 });

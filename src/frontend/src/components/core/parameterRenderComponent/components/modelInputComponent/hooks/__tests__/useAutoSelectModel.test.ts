@@ -40,6 +40,7 @@ const renderAutoSelect = (
       isConnectionMode: false,
       providers: PROVIDERS,
       modelStatusIsReliable: true,
+      modelType: "llm",
       ...overrides,
     }),
   );
@@ -58,6 +59,23 @@ describe("useAutoSelectModel", () => {
 
   it("should_not_select_a_model_when_the_value_is_undefined", () => {
     expect(renderAutoSelect({ value: undefined })).not.toHaveBeenCalled();
+  });
+
+  it("should_never_replace_a_stale_decision_model", () => {
+    // The replacement would be another provider, which would then receive the
+    // flow's messages; the user picks decision models (LE-3129).
+    const staleDecision = {
+      name: "jev-retired",
+      provider: "OpenAI",
+      icon: "OpenAI",
+      metadata: {},
+    };
+    expect(
+      renderAutoSelect({ value: [staleDecision], modelType: "decision" }),
+    ).not.toHaveBeenCalled();
+    expect(
+      renderAutoSelect({ value: [staleDecision], modelType: "llm" }),
+    ).toHaveBeenCalledWith({ value: [expect.objectContaining(ANTHROPIC)] });
   });
 
   it("should_keep_a_valid_selection_untouched", () => {
@@ -101,15 +119,6 @@ describe("useAutoSelectModel", () => {
     expect(handleOnNewValue.mock.calls[0][0].value[0].name).toBe(
       "claude-opus-5",
     );
-  });
-
-  it("never_replaces_a_saved_decision_model", () => {
-    const handleOnNewValue = renderAutoSelect({
-      value: [{ ...ANTHROPIC, name: "claude-retired" }],
-      keepSavedValue: true,
-    });
-
-    expect(handleOnNewValue).not.toHaveBeenCalled();
   });
 
   it("should_not_act_while_provider_status_is_still_loading", () => {

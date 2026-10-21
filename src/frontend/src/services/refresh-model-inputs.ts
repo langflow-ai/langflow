@@ -21,7 +21,7 @@ import { recordLoadRefresh } from "@/utils/load-refreshes";
 import {
   buildRefreshPayload,
   createUpdatedNode,
-  findModelFieldKey,
+  findModelFieldKeys,
   isModelNode,
   validateModelValue,
 } from "@/utils/model-node-helpers";
@@ -165,7 +165,7 @@ function buildProviderConfiguration(
   );
 }
 
-/** Refreshes a single node's model field via API */
+/** Refreshes every shown model field of a node via API */
 async function refreshSingleNode(
   node: AllNodeType,
   flowId: string | undefined,
@@ -177,8 +177,8 @@ async function refreshSingleNode(
   const nodeData = node.data?.node as APIClassType | undefined;
   if (!nodeData?.template) return;
 
-  const modelFieldKey = findModelFieldKey(nodeData.template);
-  if (!modelFieldKey) return;
+  const modelFieldKeys = findModelFieldKeys(nodeData.template);
+  if (modelFieldKeys.length === 0) return;
 
   // Skip refresh for outdated components when custom components are not allowed
   // (the old code would be rejected by the backend with 403)
@@ -191,54 +191,63 @@ async function refreshSingleNode(
     return;
   }
 
-  const currentModelValue = nodeData.template[modelFieldKey]?.value;
+  const savedModelValues = modelFieldKeys.map(
+    (key) => nodeData.template[key]?.value,
+  );
 
   try {
-    const requestPayload = buildRefreshPayload(
-      nodeData.template,
-      flowId,
-      folderId,
-    );
-
-    let response;
-    try {
-      const queryParams = new URLSearchParams();
-      appendProviderScope(queryParams, { flowId });
-      response = await api.post<APIClassType>(
-        `${getURL("CUSTOM_COMPONENT", { update: "update" })}${
-          queryParams.toString() ? `?${queryParams.toString()}` : ""
-        }`,
-        {
-          code: nodeData.template.code?.value,
-          frontend_node: { metadata: nodeData.metadata },
-          template: requestPayload,
-          field: modelFieldKey,
-          field_value: currentModelValue,
-          tool_mode: nodeData.tool_mode,
-        },
+    // One request per shown model field, in turn: each response is the whole
+    // template, so the next field refreshes on top of the previous result.
+    let refreshedTemplate = nodeData.template;
+    let refreshedOutputs: APIClassType["outputs"] | undefined;
+    for (const modelFieldKey of modelFieldKeys) {
+      const requestPayload = buildRefreshPayload(
+        refreshedTemplate,
+        flowId,
+        folderId,
       );
-      // biome-ignore lint/suspicious/noExplicitAny: legacy
-    } catch (e: any) {
-      // Fallback 403 suppression for races the outdated-state guards above miss.
-      if (!allowCustomComponents && isCustomComponentBlockError(e)) {
-        console.warn(
-          `Suppressed 403 for outdated component (node ${node.id}):`,
-          e.response.data.detail,
+
+      let response;
+      try {
+        const queryParams = new URLSearchParams();
+        appendProviderScope(queryParams, { flowId });
+        response = await api.post<APIClassType>(
+          `${getURL("CUSTOM_COMPONENT", { update: "update" })}${
+            queryParams.toString() ? `?${queryParams.toString()}` : ""
+          }`,
+          {
+            code: nodeData.template.code?.value,
+            frontend_node: { metadata: nodeData.metadata },
+            template: requestPayload,
+            field: modelFieldKey,
+            field_value: refreshedTemplate[modelFieldKey]?.value,
+            tool_mode: nodeData.tool_mode,
+          },
         );
-        return;
+        // biome-ignore lint/suspicious/noExplicitAny: legacy
+      } catch (e: any) {
+        // Fallback 403 suppression for races the outdated-state guards above miss.
+        if (!allowCustomComponents && isCustomComponentBlockError(e)) {
+          console.warn(
+            `Suppressed 403 for outdated component (node ${node.id}):`,
+            e.response.data.detail,
+          );
+          return;
+        }
+        throw e;
       }
-      throw e;
+
+      const responseData = response.data;
+      if (!responseData?.template) return;
+
+      // Validate and correct the model value against available options
+      refreshedTemplate = validateModelValue(
+        responseData.template,
+        modelFieldKey,
+        providerConfiguration,
+      );
+      refreshedOutputs = responseData.outputs;
     }
-
-    const responseData = response.data;
-    if (!responseData?.template) return;
-
-    // Validate and correct the model value against available options
-    const validatedTemplate = validateModelValue(
-      responseData.template,
-      modelFieldKey,
-      providerConfiguration,
-    );
 
     // Authorized for the flow/project scope captured at refresh start; a
     // navigation or project move while in flight must not reach a same-id node.
@@ -251,20 +260,28 @@ async function refreshSingleNode(
     }
 
     // A pick made in flight is newer; applying this response would swap it for options[0].
-    const liveNode = useFlowStore
-      .getState()
-      .nodes.find((candidate) => candidate.id === node.id);
-    const liveModelValue = (liveNode?.data?.node as APIClassType | undefined)
-      ?.template?.[modelFieldKey]?.value;
-    if (!isSameModelSelection(liveModelValue, currentModelValue)) {
-      return;
-    }
+    const liveTemplate = (
+      useFlowStore
+        .getState()
+        .nodes.find((candidate) => candidate.id === node.id)?.data?.node as
+        | APIClassType
+        | undefined
+    )?.template;
+    const pickedInFlight = modelFieldKeys.some(
+      (key, index) =>
+        !isSameModelSelection(
+          liveTemplate?.[key]?.value,
+          savedModelValues[index],
+        ),
+    );
+    if (pickedInFlight) return;
 
     // Runs on every flow open, so the user has not asked for this write.
+    const validatedTemplate = refreshedTemplate;
     setNode(
       node.id,
       (currentNode) =>
-        createUpdatedNode(currentNode, validatedTemplate, responseData.outputs),
+        createUpdatedNode(currentNode, validatedTemplate, refreshedOutputs),
       false,
       undefined,
       { autoSave: false },

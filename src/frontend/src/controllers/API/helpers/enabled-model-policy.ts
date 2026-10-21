@@ -5,7 +5,9 @@ import type { ModelType } from "@/types/models";
  * Resolves model authorization without collapsing same-name LLM and embedding
  * deployments. Once a provider has a typed map, that map is authoritative for
  * every model type; the flat map remains a compatibility fallback only for
- * providers that have no typed map at all.
+ * language and embedding models of providers that have no typed map at all.
+ * Decision models never fall back: the flat map predates them and does not
+ * record which kind a name was enabled for.
  */
 export function isModelEnabledForType(
   data: EnabledModelsResponse,
@@ -17,6 +19,7 @@ export function isModelEnabledForType(
   if (typedProvider !== undefined) {
     return typedProvider[modelType]?.[modelName] === true;
   }
+  if (modelType === "decision") return false;
   return data.enabled_models[provider]?.[modelName] === true;
 }
 
@@ -36,7 +39,9 @@ export function getEnabledModelsForType(
         provider,
         typedProvider !== undefined
           ? (typedProvider[modelType] ?? {})
-          : (data.enabled_models[provider] ?? {}),
+          : modelType === "decision"
+            ? {}
+            : (data.enabled_models[provider] ?? {}),
       ];
     }),
   );
