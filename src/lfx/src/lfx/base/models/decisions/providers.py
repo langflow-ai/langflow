@@ -140,8 +140,8 @@ def build_payload(provider: str, model: str, request: DecisionRequest) -> dict[s
         # Only TypeSafe and Perplexity document what a Boolean's outcomes mean.
         if provider == "OpenAI":
             msg = (
-                "OpenAI Decisions takes no descriptions of what Yes and No mean. Clear What Yes Means and "
-                "What No Means, or choose another decision model."
+                "OpenAI decision models take no descriptions of what Yes and No mean. Clear What Yes Means "
+                "and What No Means, or pick another Decision Model."
             )
             raise DecisionConfigurationError(msg)
         outcomes = (("true", request.yes_description), ("false", request.no_description))

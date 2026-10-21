@@ -149,14 +149,20 @@ class DecisionModelComponent(Component):
         """Context as text, or Structured Context as JSON; exactly one of them."""
         text = str(self.context or "").strip()
         structured = self.structured_context
+        # An unconnected handle holds an empty string.
+        connected = structured not in (None, "")
         if isinstance(structured, Data):
             structured = structured.data
-        # An unconnected handle holds an empty string, and empty JSON gives the model nothing to judge.
+        # Empty JSON gives the model nothing to judge.
         if not structured:
             structured = None
         if structured is None:
             if not text:
-                msg = "Enter a Context, or connect a Structured Context."
+                msg = (
+                    "Structured Context is empty. Give the component it comes from at least one field, or use Context."
+                    if connected
+                    else "Enter a Context, or connect a Structured Context."
+                )
                 raise DecisionConfigurationError(msg)
             return self.context
         if text:

@@ -302,6 +302,8 @@ class SmartRouterComponent(Component):
                         "Leave empty to use the router's Minimum Probability."
                     ),
                     "edit_mode": EditMode.INLINE,
+                    # Language Model mode is the default; update_build_config shows it in Decision Model mode.
+                    "hidden": True,
                 },
                 {
                     "name": "route_id",

@@ -540,7 +540,7 @@ def test_boolean_sends_what_yes_and_no_mean(provider, yes, no, criteria):
 
 def test_openai_refuses_yes_and_no_descriptions_instead_of_dropping_them():
     request = DecisionRequest(kind="boolean", question="Refund?", context="x", yes_description="Money back")
-    with pytest.raises(DecisionConfigurationError, match="takes no descriptions of what Yes and No mean"):
+    with pytest.raises(DecisionConfigurationError, match="take no descriptions of what Yes and No mean"):
         providers.build_payload("OpenAI", "gpt-6-luna", request)
 
 

@@ -705,6 +705,9 @@ class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
 
     def test_language_model_mode_hides_the_route_threshold_column(self):
         router = SmartRouterComponent()
+        # A router added from the sidebar starts in Language Model mode, before any refresh runs.
+        fresh = router.to_frontend_node()["data"]["node"]["template"]["routes"]["table_schema"]
+        assert next(c for c in fresh if c["name"] == "minimum_probability")["hidden"] is True
         build_config = router.update_build_config(_fresh_build_config(router), "Language Model", "routing_mode")
         [column] = [c for c in build_config["routes"]["table_schema"] if c["name"] == "minimum_probability"]
         assert column["hidden"] is True

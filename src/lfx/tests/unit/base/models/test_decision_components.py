@@ -185,7 +185,9 @@ def test_structured_context_reaches_the_model_as_json(monkeypatch):
     [
         ({}, "Enter a Context, or connect a Structured Context"),
         ({"context": "  "}, "Enter a Context, or connect a Structured Context"),
-        ({"structured_context": Data(data={})}, "Enter a Context, or connect a Structured Context"),
+        # Connected but empty, as from a Dynamic Create Data with no fields: say so, don't ask to connect it.
+        ({"structured_context": Data(data={})}, "Structured Context is empty"),
+        ({"structured_context": {}}, "Structured Context is empty"),
         ({"context": "Charged twice", "structured_context": {"order": 1042}}, "not both"),
     ],
 )

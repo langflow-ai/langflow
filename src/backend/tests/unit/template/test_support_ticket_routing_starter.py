@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import httpx
+import pytest
 from lfx.graph.graph.base import Graph
 
 STARTER = (
@@ -94,3 +95,19 @@ def test_hidden_route_counter_reaches_the_run():
     router = next(node for node in data["nodes"] if node["data"]["type"] == "SmartRouter")
     graph = Graph.from_payload(data)
     assert graph.get_vertex(router["id"]).params["last_route_number"] == 3
+
+
+@pytest.mark.parametrize("name", ["Support Ticket Routing", "LLM Gatekeeper"])
+def test_the_starter_router_shows_the_components_help(name):
+    """A starter keeps its own copy of the router's help text, which no code-hash check refreshes."""
+    from lfx.components.llm_operations.llm_conditional_router import SmartRouterComponent
+
+    fresh = SmartRouterComponent().to_frontend_node()["data"]["node"]
+    data = json.loads(STARTER.with_name(f"{name}.json").read_text(encoding="utf-8"))["data"]
+    node = next(n for n in data["nodes"] if n["data"]["type"] == "SmartRouter")["data"]["node"]
+    assert node["description"] == fresh["description"]
+    for field in ("decision_kind", "routes", "minimum_probability", "enable_else_output", "evaluation_error_action"):
+        assert node["template"][field]["info"] == fresh["template"][field]["info"], field
+    # Both starters are in Decision Model mode, where a route can set its own threshold.
+    columns = {column["name"]: column for column in node["template"]["routes"]["table_schema"]}
+    assert columns["minimum_probability"]["hidden"] is False
