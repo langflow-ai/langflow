@@ -33,6 +33,29 @@ export const useKnowledgeBaseActions = ({
   const [knowledgeBaseForAddSources, setKnowledgeBaseForAddSources] =
     useState<KnowledgeBaseInfo | null>(null);
 
+  const reportDeletion = (response: {
+    deleted_count?: number;
+    failed?: string;
+    not_found?: string;
+    memory_base_skipped?: string;
+  }) => {
+    const failures = [
+      response.failed,
+      response.not_found,
+      response.memory_base_skipped,
+    ].filter((name): name is string => !!name);
+    if (failures.length) {
+      setErrorData({
+        title: t("errors.failedToDeleteKnowledgeBase"),
+        list: failures,
+      });
+      refetch();
+    }
+    if ((response.deleted_count ?? 0) > 0) {
+      setSuccessData({ title: t("success.knowledgeBaseDeleted") });
+    }
+  };
+
   // --- Cancel ingestion ---
 
   const cancelIngestionMutation = useCancelIngestion({
@@ -55,9 +78,7 @@ export const useKnowledgeBaseActions = ({
   // --- Single delete ---
 
   const deleteKnowledgeBaseMutation = useDeleteKnowledgeBase({
-    onSuccess: () => {
-      setSuccessData({ title: t("success.knowledgeBaseDeleted") });
-    },
+    onSuccess: reportDeletion,
     onError: (error: AxiosError<{ detail?: string }>) => {
       setErrorData({
         title: t("errors.failedToDeleteKnowledgeBase"),
@@ -74,9 +95,7 @@ export const useKnowledgeBaseActions = ({
   // --- Bulk delete ---
 
   const deleteKnowledgeBasesMutation = useDeleteKnowledgeBase({
-    onSuccess: () => {
-      setSuccessData({ title: t("success.knowledgeBaseDeleted") });
-    },
+    onSuccess: reportDeletion,
     onError: (error: AxiosError<{ detail?: string }>) => {
       setErrorData({
         title: t("knowledge.failedToDelete"),
@@ -91,7 +110,7 @@ export const useKnowledgeBaseActions = ({
   });
 
   const deletableSelected = selectedFiles.filter(
-    (kb) => !isBusyStatus(kb.status),
+    (kb) => !isBusyStatus(kb.status) && kb.storage_state !== "migrating",
   );
 
   // --- Handlers ---

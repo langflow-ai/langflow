@@ -2,7 +2,6 @@ import { expect } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
-import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
@@ -37,7 +36,14 @@ withEventDeliveryModes(
     const stopButton = page.getByRole("button", { name: TEXTS.stop });
     await stopButton.waitFor({ state: "hidden", timeout: 90_000 });
 
-    const textContents = await getAllResponseMessage(page);
+    // The agent answers through content blocks, so the bubble body renders
+    // empty and reading the bubble alone finds nothing. The chat log holds
+    // the whole reply, code block included, which is what this asserts about.
+    const chatLog = page.getByRole("log", { name: /chat messages/i });
+    await expect(chatLog.getByText(/langflow/i).first()).toBeVisible({
+      timeout: 30_000,
+    });
+    const textContents = ((await chatLog.textContent()) ?? "").toLowerCase();
     expect(textContents.length).toBeGreaterThan(100);
     await expect(page.getByTestId("chat-code-tab").last()).toBeVisible();
     expect(textContents.toLowerCase()).toContain("langflow");

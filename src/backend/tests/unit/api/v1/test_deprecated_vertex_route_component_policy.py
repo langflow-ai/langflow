@@ -113,8 +113,11 @@ async def test_should_build_from_the_sanitized_copy_not_the_stored_bytes(
 
     built_from: dict = {}
 
-    async def fake_build(*, flow_id, chat_service, graph_data):  # noqa: ARG001
+    async def fake_build(*, flow_id, chat_service, graph_data, execution_principal=None):  # noqa: ARG001
         built_from["graph_data"] = graph_data
+        # INT-6: this deprecated route re-stamps the caller's family on every
+        # request, because its cache is keyed by flow id rather than principal.
+        built_from["execution_principal"] = execution_principal
         graph = MagicMock()
         graph.set_run_id = MagicMock()
         graph.initialize_run = AsyncMock()
@@ -132,6 +135,9 @@ async def test_should_build_from_the_sanitized_copy_not_the_stored_bytes(
     await client.post(_vertex_route(flow_id, vertex_id), headers=logged_in_headers)
 
     assert built_from.get("graph_data") is sanitized, "the seam compiled the stored bytes, not the trusted copy"
+    principal = built_from.get("execution_principal")
+    assert principal is not None, "the rebuilt graph must carry an execution principal, or it resolves no connection"
+    assert principal.family == "interactive_chat"
 
 
 @pytest.mark.security

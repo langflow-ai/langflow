@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any
 
 from lfx.upgrade.applier import apply_safe_upgrades
 from lfx.upgrade.checker import build_registry_lookup, check_flow_compatibility
+from lfx.upgrade.registry import UpgradeRegistryError, load_upgrade_registry
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -38,11 +39,10 @@ class UpgradeFlowError(Exception):
 
 
 def _load_bundled_registry() -> dict[str, Any]:
-    """Load the bundled component index as a flat ``all_types_dict``.
+    """Load core and installed bundle templates as an ``all_types_dict``.
 
-    This is the same source ``lfx upgrade`` reads, and the only registry that is reliably
-    populated when the gate runs: ``component_cache.all_types_dict`` is filled lazily *after*
-    services start, so at gate time it is empty and would classify every node as ``blocked``.
+    This is the same source ``lfx upgrade`` reads. The runtime component cache is
+    filled lazily after services start, so it cannot supply this early check.
 
     Raises:
         UpgradeFlowError: if the bundled registry is empty or missing. Checking against an
@@ -51,20 +51,10 @@ def _load_bundled_registry() -> dict[str, Any]:
             (rather than ``typer.Exit``) keeps the gate's error channel uniform so each caller
             translates it into its own (``RunError`` for ``run``; ``typer.Exit`` for ``serve``).
     """
-    from lfx.interface.components import _read_component_index
-
-    blob = _read_component_index(None)
-    if not blob or "entries" not in blob:
-        msg = (
-            "the bundled component registry is empty or missing, so --upgrade-flow "
-            "compatibility cannot be checked. Try reinstalling lfx "
-            "(e.g. `pip install --force-reinstall lfx`)."
-        )
-        raise UpgradeFlowError(msg)
-    all_types: dict[str, Any] = {}
-    for category, components in blob["entries"]:
-        all_types.setdefault(category, {}).update(components)
-    return all_types
+    try:
+        return load_upgrade_registry()
+    except UpgradeRegistryError as exc:
+        raise UpgradeFlowError(str(exc)) from exc
 
 
 def apply_upgrade_gate(
@@ -81,7 +71,7 @@ def apply_upgrade_gate(
     Args:
         flow_dict: The inner flow graph (``{"nodes": [...], "edges": [...]}``) to check.
         all_types_dict: The component registry to check against. When ``None`` (the default the
-            ``run``/``serve`` call sites use), the bundled component index is loaded — the same
+            ``run``/``serve`` call sites use), core and installed bundle templates are loaded — the same
             source ``lfx upgrade`` reads. Tests pass an explicit registry to control classification.
         mode: ``"check"`` or ``"safe"`` (accepts the :class:`UpgradeFlowMode` enum too).
 

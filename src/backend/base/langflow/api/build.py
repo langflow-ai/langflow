@@ -29,6 +29,11 @@ from langflow.api.utils import (
     parse_exception,
 )
 from langflow.api.utils.execution_errors import error_details_for_client, error_for_client
+from langflow.api.utils.execution_principal import (
+    FAMILY_INTERACTIVE_CHAT,
+    execution_principal_for,
+    stamp_execution_principal,
+)
 from langflow.api.v1.schemas import (
     FlowDataRequest,
     ResultDataResponse,
@@ -99,6 +104,14 @@ def _project_event_to_v1(raw: str) -> str:
     # and the co-located non-string text is coerced, matching what /run already does.
     event["data"] = project_payload_to_v1(data)
     return json.dumps(event) + "\n\n"
+
+
+def _vertex_build_data_for_event(response: VertexBuildResponse, *, redact_build_params: bool) -> dict:
+    """Serialize a vertex event while withholding raw parameters from shared callers."""
+    build_data = json.loads(response.model_dump_json())
+    if redact_build_params:
+        build_data["params"] = None
+    return build_data
 
 
 def _output_meta_for_vertex(graph: Graph, vertex_id: str) -> dict:
@@ -199,6 +212,8 @@ async def start_flow_build(
     source_flow_id: uuid.UUID | None = None,
     source_flow_owner_id: uuid.UUID | None = None,
     expose_error_details: bool = False,
+    execution_family: str = FAMILY_INTERACTIVE_CHAT,
+    redact_build_params: bool = False,
 ) -> str:
     """Start the flow build process by setting up the queue and starting the build task.
 
@@ -221,6 +236,10 @@ async def start_flow_build(
             but the flow data must be loaded from the original flow in the database.
         source_flow_owner_id: Stored owner of the source flow, used to gate owner-scoped side effects.
         expose_error_details: Whether client events may include component errors and tracebacks.
+        execution_family: The caller's row in ``scripts/ci/execution_principal_matrix.json``
+            (interactive_chat, legacy_public_chat, or voice). It decides the identity the
+            built graph resolves connections under.
+        redact_build_params: Hide raw vertex parameters from non-owner event consumers.
 
     Returns:
         the job_id.
@@ -249,6 +268,8 @@ async def start_flow_build(
             source_flow_id=source_flow_id,
             source_flow_owner_id=source_flow_owner_id,
             expose_error_details=expose_error_details,
+            execution_family=execution_family,
+            redact_build_params=redact_build_params,
         )
         queue_service.start_job(job_id, task_coro)
     except Exception as e:
@@ -469,8 +490,10 @@ async def _generate_flow_events(
     track_job_status: bool = True,
     tweaks: dict | None = None,
     expose_error_details: bool = False,
+    redact_build_params: bool = False,
     persist_messages: bool = True,
     end_user_id: str | None = None,
+    execution_family: str = FAMILY_INTERACTIVE_CHAT,
 ) -> None:
     """Generate events for flow building process.
 
@@ -487,6 +510,25 @@ async def _generate_flow_events(
     telemetry_service = get_telemetry_service()
     if not inputs:
         inputs = InputValueRequest(session=str(flow_id))
+
+    # Identity for dependency (connection) resolution, shared by the cold build and
+    # the HITL resume below. Public builds arrive with the stable anonymous execution
+    # user, so the helper collapses them to ``anonymous_public`` no matter which family
+    # name was passed; the flow-owner id is the SOURCE flow's owner, since a public
+    # visitor is never the owner.
+    #
+    # The job owner is deliberately NOT the flow owner: a background/HITL run reaches
+    # this function with ``current_user`` set to the job row's owner (the v2 runner
+    # re-enqueues a resume under a stub for ``job.user_id``), while the flow may belong
+    # to somebody who merely shared it. Passing ``source_flow_owner_id`` here would let
+    # a share holder's resumed run resolve the flow owner's connections.
+    execution_principal = execution_principal_for(
+        execution_family,
+        user=current_user,
+        flow_owner_id=source_flow_owner_id,
+        job_owner_id=getattr(current_user, "id", None),
+        end_user_id=end_user_id,
+    )
 
     async def build_resumed_graph_and_get_order() -> tuple[list[str], list[str], Graph]:
         """Resume a suspended HITL run from its durable checkpoint instead of building fresh.
@@ -508,6 +550,10 @@ async def _generate_flow_events(
             # or expired checkpoint is unrecoverable, so surface a clean 404 instead.
             raise HTTPException(status_code=404, detail="Checkpoint expired or not found; cannot resume this run.")
         graph = LfxGraph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
+        # A checkpoint stores flow payload + user_id and deliberately never persists an
+        # execution principal, so a restored graph carries ``unknown()`` and would deny
+        # every connection. Re-stamp from the principal admitted for THIS resume request.
+        stamp_execution_principal(graph, execution_principal)
         if not graph.user_id:
             graph.user_id = str(current_user.id)
         # F5: the in-memory end_user_id is lost when the graph is rebuilt from the durable
@@ -656,6 +702,7 @@ async def _generate_flow_events(
                 user_id=str(current_user.id),
                 session_id=effective_session_id,
                 run_id=str(job_id) if job_id is not None else run_id,
+                execution_principal=execution_principal,
             )
         else:
             if not flow_name:
@@ -675,6 +722,7 @@ async def _generate_flow_events(
                 flow_name=flow_name,
                 session_id=effective_session_id,
                 run_id=str(job_id) if job_id is not None else run_id,
+                execution_principal=execution_principal,
             )
 
         if source_flow_id is not None:
@@ -751,6 +799,13 @@ async def _generate_flow_events(
                 params = client_error.message
                 tb = client_error.stack_trace
                 message = {"errorMessage": params, "stackTrace": tb}
+                if client_error.code is not None:
+                    # An integration failure is machine-readable on every path:
+                    # the frontend turns the code into a "reconnect this
+                    # integration" call to action rather than showing a wall of
+                    # text. Only JSON-safe scalars, so the SSE frame still
+                    # serializes.
+                    message["integrationError"] = client_error.as_client_body()
                 valid = False
                 output_label = vertex.outputs[0]["name"] if vertex.outputs else "output"
                 outputs = {output_label: OutputValue(message=message, type="error")}
@@ -773,7 +828,7 @@ async def _generate_flow_events(
                     flow_id=flow_id_str,
                     vertex_id=vertex_id,
                     valid=valid,
-                    params=params,
+                    params=None if redact_build_params else params,
                     data=result_data_response,
                     artifacts=artifacts,
                     # Key the persisted build by the run id so job-tracked runs can
@@ -885,8 +940,7 @@ async def _generate_flow_events(
 
         # send built event or error event
         try:
-            vertex_build_response_json = vertex_build_response.model_dump_json()
-            build_data = json.loads(vertex_build_response_json)
+            build_data = _vertex_build_data_for_event(vertex_build_response, redact_build_params=redact_build_params)
         except Exception as exc:
             msg = f"Error serializing vertex build response: {exc}"
             raise ValueError(msg) from exc
@@ -911,6 +965,7 @@ async def _generate_flow_events(
 
     try:
         ids, vertices_to_run, graph = await build_graph_and_get_order()
+        graph.expose_error_details = expose_error_details
         # Serving-plane end-user scoping: an anonymous run is ephemeral, so mark the
         # graph non-persisting (astore_message honors this per component). Defaults
         # True, so the Playground and every other caller are unaffected.
@@ -946,6 +1001,10 @@ async def _generate_flow_events(
                     flow_id=flow_id,
                     user_id=current_user.id,
                     job_type=JobType.WORKFLOW,
+                    # Live from insert, then kept alive by execute_with_status, so an orphan
+                    # sweep cannot fail it mid-run. The pause path writes job_metadata only
+                    # for a runner-owned job, never for this one.
+                    heartbeat=True,
                 )
     except Exception:  # noqa: BLE001
         await logger.awarning(
@@ -1015,7 +1074,7 @@ async def _generate_flow_events(
         # still covers them, so the operator sees the request, just not a unit of work.
         with graph.flow_execution_span() as flow_span:
             if _build_job_svc and _build_run_id and not runner_owns_status:
-                await _build_job_svc.execute_with_status(_build_run_id, _run_vertex_build)
+                await _build_job_svc.execute_with_status(_build_run_id, _run_vertex_build, keep_alive=True)
             else:
                 await _run_vertex_build()
             if build_error_type is not None:

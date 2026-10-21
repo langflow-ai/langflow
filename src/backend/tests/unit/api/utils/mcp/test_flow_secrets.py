@@ -12,8 +12,8 @@ import pytest
 from fastapi import HTTPException
 from langflow.api.utils.mcp.flow_secrets import strip_config_secrets, variable_name_for
 
-AWS_ACCESS_KEY_ID = "AKIAIOSFODNN7EXAMPLE"
-UPPERCASE_HEX_TOKEN = "A3F5C9D2E1B8074F"  # noqa: S105
+AWS_ACCESS_KEY_ID = "AKIAIOSFODNN7EXAMPLE"  # pragma: allowlist secret
+UPPERCASE_HEX_TOKEN = "A3F5C9D2E1B8074F"  # noqa: S105  # pragma: allowlist secret
 
 
 class TestSecretsThatLookLikeIdentifiers:
@@ -361,6 +361,52 @@ class TestRotationIsScopedToAnInteractiveEdit:
         )
 
         assert self._headers_of(row) == {"Authorization": "Bearer UI-KEY-1"}
+
+    async def test_should_restore_the_latest_masked_value_on_a_retry(self, monkeypatch):
+        """A graph rewrite survives rollback, but the server's reference can change."""
+        from langflow.api.utils.mcp import flow_secrets as module
+        from langflow.services.auth.mcp_encryption import MCP_CONFIG_VALUE_MASK, encrypt_mcp_config
+
+        staged = []
+
+        async def record_variables(variables, user_id, session):  # noqa: ARG001
+            staged.append(dict(variables))
+            return set()
+
+        monkeypatch.setattr(module, "_ensure_variables", record_variables)
+        config = {"headers": {"Authorization": MCP_CONFIG_VALUE_MASK}}
+        value = {"name": "ui_svc", "config": config}
+        flow_data = {"nodes": [{"data": {"node": {"template": {"mcp_server": {"value": value}}}}}]}
+        masked_targets = []
+        carried, variables = module.extract_and_strip_mcp_secrets(flow_data, masked_targets=masked_targets)
+        row = self._stored("ui_svc", {"Authorization": "{{TOKEN_ONE}}"})
+        session = self._session_returning(row)
+
+        await module.stage_mcp_secrets(carried, variables, row.user_id, session, masked_targets=masked_targets)
+        assert value["config"]["headers"]["Authorization"] == "{{TOKEN_ONE}}"
+
+        # Simulate a rollback followed by a concurrent update before the next attempt.
+        row.config = encrypt_mcp_config({"headers": {"Authorization": "MCP_TOKEN_TWO"}})
+        await module.stage_mcp_secrets(carried, variables, row.user_id, session, masked_targets=masked_targets)
+
+        assert value["config"]["headers"]["Authorization"] == "MCP_TOKEN_TWO"
+        alias = variable_name_for("ui_svc", "Authorization")
+        row.config = encrypt_mcp_config({"headers": {"Authorization": "Bearer test-latest-credential"}})
+        await module.stage_mcp_secrets(carried, variables, row.user_id, session, masked_targets=masked_targets)
+
+        assert value["config"]["headers"]["Authorization"] == alias
+        row.config = encrypt_mcp_config({"headers": {"Authorization": ""}})
+        await module.stage_mcp_secrets(carried, variables, row.user_id, session, masked_targets=masked_targets)
+        assert value["config"]["headers"]["Authorization"] == ""
+
+        row.config = encrypt_mcp_config({"headers": {"Authorization": MCP_CONFIG_VALUE_MASK}})
+        with pytest.raises(HTTPException) as exc_info:
+            await module.stage_mcp_secrets(carried, variables, row.user_id, session, masked_targets=masked_targets)
+        assert exc_info.value.status_code == 422
+        assert staged == [{}, {}, {alias: "Bearer test-latest-credential"}, {}]
+        assert carried == [("ui_svc", config)]
+        assert config["headers"]["Authorization"] == MCP_CONFIG_VALUE_MASK
+        assert variables == {variable_name_for("ui_svc", "Authorization"): MCP_CONFIG_VALUE_MASK}
 
 
 class TestServerNamesAFlowIsBoundTo:

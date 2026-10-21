@@ -44,6 +44,13 @@ MIGRATION_TABLE = REPO_ROOT / "src" / "lfx" / "src" / "lfx" / "extension" / "mig
 # Release this consolidation ships in -- stamped on every migration entry.
 MIGRATION_RELEASE = "1.11.0"
 
+# Providers that were born in lfx-bundles: there is no ``lfx.components`` source
+# to move or shim, and their migration rows were written by hand at the release
+# that introduced them (one ``bare_class_name`` row per component).  They stay in
+# ``PROVIDER_DEPS`` so re-running the script keeps their extras managed, but the
+# move + migration-discovery steps are skipped for them.
+PRE_CONSOLIDATED_PROVIDERS: frozenset[str] = frozenset({"figranium", "mrscraper"})
+
 # Shared spec for providers whose components go through langchain_community
 # wrappers (the wrapper itself; whatever SDK the wrapper lazy-imports at
 # runtime is listed per provider alongside it).
@@ -59,17 +66,18 @@ _LC_COMMUNITY = "langchain-community>=0.4.1,<1.0.0"
 PROVIDER_DEPS: dict[str, list[str]] = {
     # --- tranche 1: search/tools ---
     "tavily": [],  # talks to the Tavily API via httpx (an lfx core dep)
+    "plivo": [],  # talks to the Plivo REST API via httpx (an lfx core dep)
     # "exa" graduated to the standalone lfx-exa bundle (src/bundles/exa) when
     # the component moved off the deprecated metaphor-python SDK onto exa-py.
     "wikipedia": ["wikipedia==1.4.0", _LC_COMMUNITY],
     "yahoosearch": ["yfinance==0.2.50"],
     "wolframalpha": ["wolframalpha==5.1.3", _LC_COMMUNITY],
     # --- tranche 2: vector stores ---
-    "chroma": ["chromadb>=1.0.0,<2.0.0", "langchain-chroma~=0.2.6"],
+    "chroma": [],  # Retired SDK, retained component compatibility alias.
     "clickhouse": ["clickhouse-connect==0.7.19", _LC_COMMUNITY],
     "couchbase": ["couchbase>=4.2.1", _LC_COMMUNITY],
     "milvus": ["langchain-milvus~=0.3.2"],
-    "mongodb": ["pymongo>=4.10.1", "langchain-mongodb>=0.11.0"],
+    "mongodb": ["pymongo>=4.18.2,<5.0.0", "langchain-mongodb>=0.11.0"],
     "pgvector": ["pgvector>=0.4.2", _LC_COMMUNITY],
     # Marker preserved from langflow-base: no py3.14 wheel yet; on 3.14 the
     # component degrades exactly as it does in today's published images.
@@ -134,13 +142,12 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "homeassistant": ["requests>=2.32.0"],  # REST via requests; no vendor SDK
     "olivya": [],  # httpx REST only (lfx core)
     "agentql": [],  # httpx REST only (lfx core)
+    "figranium": [],  # httpx REST only (lfx core); new in 1.13.0, never lived under lfx.components
     # --- tranche 7: google family + agent SDKs (markers preserved from base) ---
     # "google" graduated to the standalone lfx-google bundle so Gemini is
     # available in every default Langflow install.
     "vertexai": ["langchain-google-vertexai>=3.2.0"],
-    "altk": [
-        "agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
-    ],
+    "altk": [],  # Retired in 1.13.0. Keep saved-node and extra compatibility.
     "codeagents": [
         # OpenDsStar is a manual opt-in: its DiskCache dependency has no released fix.
         # Keep the component code, but never add it to managed extras or aggregates.
@@ -164,6 +171,8 @@ PROVIDER_DEPS: dict[str, list[str]] = {
         # Temporary compatibility valve: newer releases require cryptography<49.
         "langchain-litellm==0.5.1; sys_platform != 'darwin' and python_version < '3.14'",
         "langchain-litellm==0.5.1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",  # noqa: E501
+        "litellm>=1.103.1,<2.0.0,!=1.104.0rc1; sys_platform != 'darwin' and python_version < '3.14'",
+        "litellm>=1.103.1,<2.0.0,!=1.104.0rc1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",  # noqa: E501
     ],
     # --- tranche 9: langwatch evaluator (pure httpx REST; the langwatch SDK extra
     # is for the tracing service, not this component) ---
@@ -197,7 +206,7 @@ TORCH_EXTRAS = frozenset({"cuga", "codeagents"})
 # generated aggregate extras because Langflow already installs them directly.
 COMPATIBILITY_EXTRAS = {
     "azure": ["lfx-azure>=0.1.0,<1.0.0"],
-    "google": ["lfx-google>=0.1.0,<1.0.0"],
+    "google": ["lfx-google>=0.2.5,<1.0.0"],
     "ollama": ["lfx-ollama>=0.1.0,<1.0.0"],
 }
 
@@ -444,7 +453,11 @@ def main() -> int:
     new_extras: dict[str, list[str]] = {}
     print("== move providers + shims ==")
     for provider in selected:
-        plan[provider] = move_provider(provider, apply=args.apply)
+        if provider in PRE_CONSOLIDATED_PROVIDERS:
+            print(f"  {provider}: born in lfx-bundles; skipping move and migration discovery")
+            plan[provider] = []
+        else:
+            plan[provider] = move_provider(provider, apply=args.apply)
         new_extras[normalize_extra(provider)] = PROVIDER_DEPS[provider]
 
     print("== merge per-provider extras ==")

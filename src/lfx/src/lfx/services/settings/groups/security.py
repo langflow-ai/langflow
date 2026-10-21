@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -37,7 +38,8 @@ class SecuritySettings(BaseModel):
     connector_ssrf_validation_enabled: bool = True
     """SSRF validation for CONNECTOR components that take a tenant-controlled host/URL:
     vector stores (Chroma/Qdrant/Elasticsearch/OpenSearch/Milvus/Weaviate/Supabase/Upstash/
-    ClickHouse), the SQL Database components, the Glean and AstraDB-CQL tools, the DataStax
+    ClickHouse/MongoDB/Redis/PGVector/Couchbase/Valkey), the SQL Database components,
+    the Glean and AstraDB-CQL tools, the DataStax
     Astra DB / HCD API endpoint (shared by the Data API, tool, vector store, graph and chat-memory
     components), model-provider model discovery (LiteLLM/HuggingFace/xAI/DeepSeek/Groq/watsonx),
     the Ollama / LM Studio / Home Assistant base-URL fields, the A2A Agent agent URL, and the
@@ -68,7 +70,7 @@ class SecuritySettings(BaseModel):
 
     connector_ssrf_allow_loopback: bool = True
     """Whether a literal loopback host (localhost, 127.0.0.0/8, ::1) is allowed for ordinary HTTP
-    CONNECTOR URLs, even while connector SSRF validation is on.
+    CONNECTOR URLs, and local Redis/MongoDB Unix sockets, even while connector SSRF validation is on.
 
     Default True because connectors routinely target a *local* service: Ollama and LM Studio
     default to http://localhost:11434 / http://localhost:1234, and local vector stores bind to
@@ -250,6 +252,10 @@ class SecuritySettings(BaseModel):
     workloads, e.g. CI smoke tests or containers without /dev/kvm passthrough.
     Only used when sandbox_backend is not "none"."""
 
+    database_tls_files_dir: Path | None = None
+    """Operator-managed directory for database connector TLS certificate and key files.
+    Files in this directory may be referenced by tenant database URLs while local file
+    access remains restricted. Keep it outside tenant-writable storage."""
     restrict_local_file_access: bool = True
     """If set to True, the built-in file-reading components (File, Directory, JSON/CSV-to-Data)
     may only read paths that resolve inside the authenticated user's or executing flow's storage
@@ -388,6 +394,20 @@ class SecuritySettings(BaseModel):
     """Public-flow runs allowed per minute per IP on the unauthenticated v1 build and v2 workflow endpoints.
     V1 uses one bucket per flow; v2 uses its public-workflow bucket. Each run executes as the flow owner, so
     anonymous callers are throttled separately from and more generously than login. Gated by rate_limit_enabled."""
+    connection_metadata_rate_limit_per_minute: int = 60
+    """Connection and integration metadata reads allowed per minute per authenticated user.
+
+    These endpoints return no credential material and make no outbound provider call, and the UI polls
+    the connection listing every two seconds while an OAuth consent is pending, so they get their own
+    bucket sized for that poll rather than the login budget. Writes take
+    connection_write_rate_limit_per_minute; credential tests, health checks, and the OAuth endpoints
+    stay on the tighter per-endpoint buckets. Gated by rate_limit_enabled."""
+    connection_write_rate_limit_per_minute: int = 30
+    """Connection creates, updates, revokes, and deletes allowed per minute per authenticated user.
+
+    The four share one bucket, sized for a person managing connections in the UI rather than the login
+    budget, which cut a user off after five actions. Counting per user rather than per client IP keeps
+    users behind one NAT or proxy from throttling each other. Gated by rate_limit_enabled."""
 
     @field_validator("sandbox_allowed_domains", mode="after")
     @classmethod

@@ -1,6 +1,3 @@
-import socket
-import threading
-import time
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -20,6 +17,7 @@ from langflow.__main__ import (
     use_direct_uvicorn,
 )
 from lfx.services import deps
+from lfx.services.settings.service import SettingsService
 
 
 @pytest.fixture(scope="module")
@@ -30,45 +28,27 @@ def default_settings():
     ]
 
 
-def get_free_port():
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("", 0))
-        return s.getsockname()[1]
-
-
-def run_flow(runner, port, components_path, default_settings):
-    args = [
-        "run",
-        "--port",
-        str(port),
-        "--components-path",
-        str(components_path),
-        *default_settings,
-    ]
-    result = runner.invoke(app, args)
-    if result.exit_code != 0:
-        msg = f"CLI failed with exit code {result.exit_code}: {result.output}"
-        raise RuntimeError(msg)
-
-
 def test_components_path(runner, default_settings, tmp_path):
-    # create a "components" folder
+    """Process CLI settings synchronously without leaving a server or capture thread running."""
     temp_dir = tmp_path / "components"
     temp_dir.mkdir(exist_ok=True)
-
-    port = get_free_port()
-
-    thread = threading.Thread(
-        target=run_flow,
-        args=(runner, port, temp_dir, default_settings),
-        daemon=True,
+    original_settings = deps.get_settings_service()
+    settings_service = SettingsService(
+        settings=original_settings.settings.model_copy(deep=True),
+        auth_settings=original_settings.auth_settings.model_copy(deep=True),
     )
-    thread.start()
+    # Stop at app setup, after the real CLI option handling has updated settings.
+    # CliRunner replaces process-wide streams, so it must finish before another test starts.
+    with (
+        patch("langflow.__main__.get_settings_service", return_value=settings_service),
+        patch("langflow.__main__.configure"),
+        patch("langflow.__main__.use_direct_uvicorn", return_value=True),
+        patch("langflow.__main__.setup_app", side_effect=typer.Exit(code=0)) as setup_app,
+    ):
+        result = runner.invoke(app, ["run", "--components-path", str(temp_dir), *default_settings])
 
-    # Give the server some time to start
-    time.sleep(5)
-
-    settings_service = deps.get_settings_service()
+    assert result.exit_code == 0, result.output
+    setup_app.assert_called_once()
     assert str(temp_dir) in settings_service.settings.components_path
 
 

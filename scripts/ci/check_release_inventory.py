@@ -97,6 +97,7 @@ def collect_inventory(entry_point_groups: list[str]) -> tuple[dict[str, Any], di
     )
 
     actual = {
+        "all_distributions": dict(sorted(distributions.items())),
         "managed_distributions": managed_distributions,
         "entry_points": entry_points,
         "bundle_names": bundle_names,
@@ -152,7 +153,10 @@ def validate_inventory(
             errors.append(f"unexpected managed distributions: {unexpected}")
 
     forbidden = {normalize_name(name) for name in profile.get("forbidden_distributions", [])}
-    present_forbidden = sorted(forbidden & installed)
+    # Transitive retired SDKs are not Langflow-managed distributions. Checking
+    # only the tier inventory would silently miss them in a built release.
+    all_installed = set(actual.get("all_distributions", actual["managed_distributions"]))
+    present_forbidden = sorted(forbidden & all_installed)
     if present_forbidden:
         errors.append(f"forbidden distributions installed: {present_forbidden}")
 

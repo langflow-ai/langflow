@@ -11,6 +11,7 @@ import math
 from typing import TYPE_CHECKING, Any
 
 import sqlalchemy as sa
+from lfx.schema.validators import ensure_utc
 from lfx.utils.util_strings import escape_like_pattern
 from sqlmodel import col, func, select
 
@@ -20,7 +21,7 @@ if TYPE_CHECKING:
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow.model import Flow, persisted_flow_history_filter
 from langflow.services.database.models.traces.model import (
     SpanStatus,
     SpanTable,
@@ -149,13 +150,13 @@ async def fetch_traces(
             stmt = (
                 select(TraceTable)
                 .join(Flow, col(TraceTable.flow_id) == col(Flow.id))
-                .where(col(Flow.user_id) == user_id)
+                .where(col(Flow.user_id) == user_id, persisted_flow_history_filter())
             )
             count_stmt = (
                 select(func.count())
                 .select_from(TraceTable)
                 .join(Flow, col(TraceTable.flow_id) == col(Flow.id))
-                .where(col(Flow.user_id) == user_id)
+                .where(col(Flow.user_id) == user_id, persisted_flow_history_filter())
             )
 
             # Build filter expressions once and apply them to both statements,
@@ -177,9 +178,9 @@ async def fetch_traces(
                     )
                 )
             if start_time:
-                filters.append(TraceTable.start_time >= start_time)
+                filters.append(TraceTable.start_time >= ensure_utc(start_time))
             if end_time:
-                filters.append(TraceTable.start_time <= end_time)
+                filters.append(TraceTable.start_time <= ensure_utc(end_time))
 
             for f in filters:
                 stmt = stmt.where(f)
@@ -223,7 +224,7 @@ async def fetch_single_trace(user_id: UUID, trace_id: UUID) -> TraceRead | None:
             select(TraceTable)
             .join(Flow, col(TraceTable.flow_id) == col(Flow.id))
             .where(col(TraceTable.id) == trace_id)
-            .where(col(Flow.user_id) == user_id)
+            .where(col(Flow.user_id) == user_id, persisted_flow_history_filter())
         )
         trace = (await session.exec(stmt)).first()
 
