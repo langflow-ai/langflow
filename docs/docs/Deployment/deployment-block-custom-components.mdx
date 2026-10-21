@@ -72,7 +72,7 @@ With this set, an upgrade that changes a built-in component blocks every saved f
 Flow build blocked: outdated components must be updated before running: <display_name> (<node_id>)
 ```
 
-To update those components, open each flow in the visual editor and apply the component update, or update flow files with `lfx upgrade <flow.json>`. This setting has no effect while `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` is `true`, since the flow's own code runs as authored.
+To update those components, open each flow in the visual editor and apply the component update, or update flow files with `lfx upgrade <flow.json> --write`. `lfx upgrade --write` leaves a component marked `[CUSTOMIZED]` unchanged, because its code was edited or an update for it was dismissed in the visual editor, so update those components in the visual editor. This setting has no effect while `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` is `true`, since the flow's own code runs as authored.
 
 A retired component is refused with its own sentence instead, because the server's current copy of it fails when the flow runs, so updating it cannot help. The error names the release that retired the component and its replacement:
 

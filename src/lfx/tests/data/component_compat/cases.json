@@ -3339,5 +3339,320 @@
       ]
     },
     "expected": "retired"
+  },
+  {
+    "name": "customized component",
+    "description": "The user edited the code or dismissed an update, so nothing overwrites the node.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ],
+      "edited": true
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "customized"
+  },
+  {
+    "name": "edited flag that is an empty list",
+    "description": "Only edited set to true marks a customized node. Python and JavaScript disagree on whether an empty list is true, so neither copy reads it.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ],
+      "edited": []
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "edited flag that is a string",
+    "description": "Only edited set to true marks a customized node, not the string \"true\".",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ],
+      "edited": "true"
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "customized component, code unchanged",
+    "description": "Ok wins over customized: the saved code equals the current code.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ],
+      "edited": true
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "ok"
+  },
+  {
+    "name": "customized component with a breaking change",
+    "description": "Customized wins over breaking.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ],
+      "edited": true
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "result",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "customized"
   }
 ]

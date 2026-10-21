@@ -140,6 +140,24 @@ def test_upgrade_reports_retired_with_replacement_and_leaves_it(flow_file, capsy
     assert flow_file.read_text() == before
 
 
+@pytest.fixture
+def customized_flow_file(tmp_path):
+    flow = json.loads(_flow_json(code=NODE_CODE))
+    flow["nodes"][0]["data"]["node"]["edited"] = True
+    f = tmp_path / "flow.json"
+    f.write_text(json.dumps(flow))
+    return f
+
+
+def test_upgrade_reports_customized_and_leaves_it(customized_flow_file, capsys):
+    before = customized_flow_file.read_text()
+
+    upgrade_command(customized_flow_file, write=True, registry=_registry())
+
+    assert "[CUSTOMIZED] My Component (MyComp)" in capsys.readouterr().out
+    assert customized_flow_file.read_text() == before
+
+
 def test_upgrade_file_not_found():
     result = runner.invoke(app, ["upgrade", "/nonexistent/flow.json"])
     assert result.exit_code != 0
@@ -283,9 +301,31 @@ def test_non_strict_pending_safe_exits_zero(flow_file):
     upgrade_command(flow_file, write=False, strict=False, registry=_registry())
 
 
+@pytest.mark.parametrize("write", [False, True])
+def test_strict_exits_nonzero_on_customized(customized_flow_file, capsys, write):
+    # --write never updates a customized component, so it stays drift with or without it.
+    before = customized_flow_file.read_text()
+    with pytest.raises(typer.Exit) as exc_info:
+        upgrade_command(customized_flow_file, write=write, strict=True, registry=_registry())
+    assert exc_info.value.exit_code != 0
+    assert "customized components" in capsys.readouterr().err
+    assert customized_flow_file.read_text() == before
+
+
 @pytest.mark.parametrize("command", ["upgrade", "run", "serve"])
 def test_help_says_retired_components_fail(command):
     result = runner.invoke(app, [command, "--help"], env={"COLUMNS": "200"})
 
     assert result.exit_code == 0
     assert "retired" in result.output
+
+
+@pytest.mark.parametrize("command", ["run", "serve"])
+def test_help_says_safe_refuses_customized_components_when_custom_components_are_blocked(command):
+    result = runner.invoke(app, [command, "--help"], env={"COLUMNS": "200"})
+
+    assert result.exit_code == 0
+    # Rich wraps the help inside a box and colors it when CI forces a terminal (GITHUB_ACTIONS,
+    # FORCE_COLOR), so drop the ANSI codes, borders and line breaks before matching.
+    text = " ".join(typer.unstyle(result.output).replace("│", " ").split())
+    assert "and on customized components when custom components are blocked" in text

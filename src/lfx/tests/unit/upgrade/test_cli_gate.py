@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from lfx.services.deps import get_settings_service
 from lfx.upgrade.cli_gate import UpgradeFlowError, UpgradeFlowMode, _load_bundled_registry, apply_upgrade_gate
 from lfx.utils.flow_envelope import split_flow_envelope
 
@@ -94,6 +95,46 @@ def test_retired_component_is_refused(mode):
     """A retired component fails when the flow runs, so neither mode lets it through."""
     with pytest.raises(UpgradeFlowError, match=r"My Component \(retired\)"):
         apply_upgrade_gate(_flow(code=REGISTRY_CODE), _retired_registry(), mode)
+
+
+def _customized_flow():
+    flow = _flow(code=NODE_CODE)
+    flow["nodes"][0]["data"]["node"]["edited"] = True
+    return flow
+
+
+def test_check_refuses_a_customized_component():
+    with pytest.raises(UpgradeFlowError, match=r"My Component \(customized\)"):
+        apply_upgrade_gate(_customized_flow(), _registry(), "check")
+
+
+def test_safe_runs_a_customized_component_as_saved(monkeypatch):
+    monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
+    flow = _customized_flow()
+    out, count = apply_upgrade_gate(flow, _registry(), "safe")
+    assert count == 0
+    assert out["nodes"][0]["data"]["node"]["template"]["code"]["value"] == NODE_CODE
+
+
+def test_safe_refuses_a_customized_component_while_custom_components_are_blocked(monkeypatch):
+    """With custom components blocked the server runs its own code, so the edited code cannot run."""
+    monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", False)
+    with pytest.raises(UpgradeFlowError) as exc_info:
+        apply_upgrade_gate(_customized_flow(), _registry(), "safe")
+    assert str(exc_info.value).endswith(
+        "cannot run while custom components are blocked (LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false): My Component. "
+        "Allow custom components, or update them in the visual editor to use the current code "
+        "(this discards the edits)."
+    )
+
+
+@pytest.mark.parametrize("allowed", [True, False], ids=["custom-allowed", "custom-blocked"])
+@pytest.mark.parametrize("mode", ["check", "safe"])
+def test_edited_retired_component_is_refused_as_retired(monkeypatch, mode, allowed):
+    """An edit usually keeps the retired imports or base class, so retired wins over customized."""
+    monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", allowed)
+    with pytest.raises(UpgradeFlowError, match=r"My Component \(retired\)"):
+        apply_upgrade_gate(_customized_flow(), _retired_registry(), mode)
 
 
 def test_unknown_mode_raises():
