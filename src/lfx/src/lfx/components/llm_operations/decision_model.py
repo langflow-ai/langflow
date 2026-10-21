@@ -62,14 +62,20 @@ class DecisionModelComponent(Component):
         MessageTextInput(
             name="yes_description",
             display_name="What Yes Means",
-            info="Boolean only: what a Yes answer means. TypeSafe and Perplexity take it; OpenAI Decisions doesn't.",
+            info=(
+                "Boolean only: what a Yes answer means. A decision model that takes no descriptions "
+                "stops the run with a clear error."
+            ),
             show=False,
             advanced=True,
         ),
         MessageTextInput(
             name="no_description",
             display_name="What No Means",
-            info="Boolean only: what a No answer means. TypeSafe and Perplexity take it; OpenAI Decisions doesn't.",
+            info=(
+                "Boolean only: what a No answer means. A decision model that takes no descriptions "
+                "stops the run with a clear error."
+            ),
             show=False,
             advanced=True,
         ),
