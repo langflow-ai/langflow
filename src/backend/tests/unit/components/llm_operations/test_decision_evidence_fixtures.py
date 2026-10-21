@@ -85,14 +85,12 @@ SCENARIOS = {
 }
 
 
-# Boolean and Score routers; their routes and question replace the Choice router's.
+# Boolean and Score routers. Boolean answers through its Yes and No outputs, not the routes.
 BOOLEAN = {
     "decision_kind": "Boolean",
     "decision_question": "Is the customer asking for a refund?",
-    "routes": [
-        {"route_category": "Refund", "route_description": "", "output_value": ""},
-        {"route_category": "No refund", "route_description": "", "output_value": ""},
-    ],
+    "yes_description": "Asks for money back",
+    "no_description": "Anything else",
 }
 SCORE = {
     "decision_kind": "Score",
@@ -297,7 +295,7 @@ class TestDecisionEvidenceFixtures:
             ("evaluation_error_stopped", "evaluation_error", None),
             ("permission_denied", "permission_denied", None),
             ("configuration_error", "configuration_error", None),
-            ("boolean_accepted", "accepted", "category_1_result"),
+            ("boolean_accepted", "accepted", "yes_result"),
             ("boolean_unsure", "below_minimum_probability", "default_result"),
             ("score_accepted", "accepted", "category_2_result"),
             ("score_below_every_route", "below_minimum_score", "default_result"),

@@ -25,7 +25,9 @@ def _column(build_config, name):
     return next(column for column in build_config["routes"]["table_schema"] if column["name"] == name)
 
 
-def _decide(monkeypatch, kind, routes, result, *, minimum_probability=0.7, question="Is this a refund request?"):
+def _decide(
+    monkeypatch, kind, routes, result, *, minimum_probability=0.7, question="Is this a refund request?", **fields
+):
     """Route one message with ``result`` as the provider's answer; returns the label, evidence and request."""
     sent = []
 
@@ -45,6 +47,7 @@ def _decide(monkeypatch, kind, routes, result, *, minimum_probability=0.7, quest
         minimum_probability=minimum_probability,
         evaluation_error_action="Route to Else",
         enable_else_output=True,
+        **fields,
     )
     router._vertex = SimpleNamespace(
         outgoing_edges=[SimpleNamespace(source_handle=SimpleNamespace(name="default_result"))]
@@ -77,7 +80,6 @@ def _score(*probabilities):
     )
 
 
-REFUND_ROUTES = [{"route_category": "Refund"}, {"route_category": "No refund"}]
 # Three tiers with minimum scores of 0.1, 0.5 and 0.95.
 TIERS = [
     {"route_category": "A", "minimum_score": 0.1},
@@ -588,54 +590,107 @@ class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
         with pytest.raises(DecisionConfigurationError, match="Unknown decision type"):
             router.update_build_config(_fresh_build_config(router), "Ranking", "decision_kind")
 
-    @pytest.mark.parametrize(("probability_true", "label"), [(0.9, "Refund"), (0.1, "No refund")])
-    def test_boolean_sends_yes_to_the_first_route_and_no_to_the_second(self, monkeypatch, probability_true, label):
-        routed, evidence, request = _decide(monkeypatch, "Boolean", REFUND_ROUTES, _boolean(probability_true))
+    @pytest.mark.parametrize(("probability_true", "label"), [(0.9, "Yes"), (0.1, "No")])
+    def test_boolean_answers_through_its_yes_and_no_outputs(self, monkeypatch, probability_true, label):
+        # The routes table plays no part in Boolean.
+        routed, evidence, request = _decide(monkeypatch, "Boolean", [], _boolean(probability_true))
         assert routed == label
         assert request.kind == "boolean"
         assert not request.options
         assert not request.levels
         assert evidence["route_probabilities"] == pytest.approx(
-            {"category_1_result": probability_true, "category_2_result": 1 - probability_true}
+            {"yes_result": probability_true, "no_result": 1 - probability_true}
         )
 
-    def test_a_no_exactly_at_its_threshold_takes_the_no_route(self, monkeypatch):
+    def test_a_no_exactly_at_its_threshold_takes_the_no_output(self, monkeypatch):
         """1 - 0.33 is 0.6699999999999999 in floating point, just under a 0.67 threshold."""
-        routed, evidence, _ = _decide(monkeypatch, "Boolean", REFUND_ROUTES, _boolean(0.33), minimum_probability=0.67)
-        assert routed == "No refund"
-        assert evidence["route_probabilities"]["category_2_result"] == 0.67
+        routed, evidence, _ = _decide(monkeypatch, "Boolean", [], _boolean(0.33), minimum_probability=0.67)
+        assert routed == "No"
+        assert evidence["route_probabilities"]["no_result"] == 0.67
 
-    def test_boolean_tells_the_model_what_each_route_means(self, monkeypatch):
-        routes = [
-            {"route_category": "Refund", "route_description": "Asks for money back"},
-            {"route_category": "No refund", "route_description": "Anything else"},
-        ]
-        _, _, request = _decide(monkeypatch, "Boolean", routes, _boolean(0.9))
+    def test_boolean_tells_the_model_what_yes_and_no_mean(self, monkeypatch):
+        _, _, request = _decide(
+            monkeypatch,
+            "Boolean",
+            [],
+            _boolean(0.9),
+            yes_description="Asks for money back",
+            no_description="Anything else",
+        )
         assert (request.yes_description, request.no_description) == ("Asks for money back", "Anything else")
+
+    @pytest.mark.parametrize(
+        ("probability_true", "fields", "label"),
+        [
+            (0.85, {"yes_minimum_probability": 0.9}, ""),  # Yes needs more than the router's 0.7
+            (0.35, {"no_minimum_probability": 0.6}, "No"),  # No needs less
+            (0.35, {"no_minimum_probability": ""}, ""),  # blank falls back to the router's 0.7
+        ],
+    )
+    def test_yes_and_no_can_each_set_their_own_threshold(self, monkeypatch, probability_true, fields, label):
+        routed, evidence, _ = _decide(monkeypatch, "Boolean", [], _boolean(probability_true), **fields)
+        assert routed == label
+        expected = {"yes_result": 0.7, "no_result": 0.7}
+        expected.update({f"{key.split('_')[0]}_result": value for key, value in fields.items() if value != ""})
+        assert evidence["route_thresholds"] == expected
+
+    def test_switching_to_boolean_replaces_the_route_outputs_with_yes_and_no(self):
+        router = SmartRouterComponent()
+        router.set(routing_mode="Decision Model")
+        build_config = router.update_build_config(_fresh_build_config(router), "Decision Model", "routing_mode")
+        node = {"outputs": [], "template": build_config}
+
+        build_config = router.update_build_config(build_config, "Boolean", "decision_kind")
+        names = [output.name for output in router.update_outputs(node, "decision_kind", "Boolean")["outputs"]]
+        # Else keeps its edge: it still takes unsure answers.
+        assert names == ["yes_result", "no_result", "default_result"]
+        assert build_config["routes"]["show"] is False
+        assert build_config["routes"]["required"] is False
+        assert all(build_config[name]["show"] for name in ("yes_description", "no_description", "yes_message"))
+
+        build_config["decision_kind"]["value"] = "Boolean"
+        build_config = router.update_build_config(build_config, "Choice", "decision_kind")
+        names = [output.name for output in router.update_outputs(node, "decision_kind", "Choice")["outputs"]]
+        assert names == ["category_1_result", "category_2_result", "default_result"]
+        assert build_config["routes"]["show"] is True
+        assert not any(build_config[name]["show"] for name in ("yes_description", "no_description", "yes_message"))
+
+    def test_language_model_mode_keeps_the_route_outputs_whatever_the_type(self):
+        router = SmartRouterComponent()
+        build_config = _fresh_build_config(router)
+        build_config["decision_kind"]["value"] = "Boolean"
+        build_config = router.update_build_config(build_config, "Language Model", "routing_mode")
+        node = router.update_outputs({"outputs": [], "template": build_config}, "routing_mode", "Language Model")
+        assert [output.name for output in node["outputs"]] == ["category_1_result", "category_2_result"]
+        assert build_config["routes"]["show"] is True
+        assert build_config["yes_description"]["show"] is False
 
     @pytest.mark.parametrize(
         ("probability_true", "reason"), [(0.5, "tied_top_probability"), (0.6, "below_minimum_probability")]
     )
     def test_an_unsure_boolean_goes_to_else(self, monkeypatch, probability_true, reason):
-        routed, evidence, _ = _decide(monkeypatch, "Boolean", REFUND_ROUTES, _boolean(probability_true))
+        routed, evidence, _ = _decide(monkeypatch, "Boolean", [], _boolean(probability_true))
         assert routed == ""
         assert evidence["reason"] == reason
         assert evidence["activated_branch"] == "default_result"
 
-    @pytest.mark.parametrize(
-        "routes",
-        [
-            [*REFUND_ROUTES, {"route_category": "Unsure"}],
-            [{"route_category": "Refund"}, {"route_category": "refund"}],
-        ],
-    )
-    def test_boolean_needs_two_distinct_routes(self, monkeypatch, routes):
-        with pytest.raises(DecisionConfigurationError, match="exactly two routes"):
-            _decide(monkeypatch, "Boolean", routes, _boolean(0.9))
-
     def test_a_blank_question_stops_before_any_model_call(self, monkeypatch):
         with pytest.raises(DecisionConfigurationError, match="needs a Decision Question"):
-            _decide(monkeypatch, "Boolean", REFUND_ROUTES, _boolean(0.9), question="  ")
+            _decide(monkeypatch, "Boolean", [], _boolean(0.9), question="  ")
+
+    def test_a_boolean_router_runs_without_matching_routes_to_outputs(self):
+        """Its Yes and No outputs don't come from the routes, so the route check doesn't apply."""
+        router = self._router_with_outputs("yes_result", "no_result", "default_result")
+        router.set(
+            routing_mode="Decision Model",
+            decision_kind="Boolean",
+            routes=[{"route_category": "Leftover"}],
+            enable_else_output=True,
+        )
+        router._vertex = SimpleNamespace(
+            outgoing_edges=[SimpleNamespace(source_handle=SimpleNamespace(name="default_result"))]
+        )
+        router._pre_run_setup()
 
     @pytest.mark.parametrize(
         ("probabilities", "label"),

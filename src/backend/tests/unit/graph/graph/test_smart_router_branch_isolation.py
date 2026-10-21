@@ -16,6 +16,7 @@ shared path with the same reconvergence scenario: it would have failed before th
 because the merge node was excluded along with the unselected branch and never ran.
 """
 
+import pytest
 from lfx.components.flow_controls.conditional_router import ConditionalRouterComponent
 from lfx.components.llm_operations.llm_conditional_router import SmartRouterComponent
 from lfx.custom.custom_component.component import Component
@@ -890,3 +891,56 @@ async def test_decision_routing_follows_route_ids_not_positions(monkeypatch):
     assert not sinks["positive"].did_run
     assert not sinks["else"].did_run
     assert router._decision_evidence["activated_branch"] == "category_3_result"
+
+
+class _BooleanSmartRouter(SmartRouterComponent):
+    """Mirrors what ``update_outputs`` produces for a Boolean router: Yes, No and Else."""
+
+    outputs = [
+        Output(display_name="Yes", name="yes_result", method="process_case", group_outputs=True),
+        Output(display_name="No", name="no_result", method="process_case", group_outputs=True),
+        Output(display_name="Else", name="default_result", method="default_response", group_outputs=True),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("probability_true", "ran", "received"),
+    [
+        (0.9, "yes", "Refund team, here we come."),
+        (0.1, "no", "I love this product!"),  # No has no message, so the input passes through
+        (0.6, "else", "I love this product!"),
+    ],
+)
+async def test_boolean_router_runs_only_the_answer_it_reaches(monkeypatch, probability_true, ran, received):
+    from lfx.base.models.decisions.schema import DecisionResult
+
+    monkeypatch.setattr(
+        "lfx.components.llm_operations.llm_conditional_router.evaluate_decision",
+        lambda *_args, **_kwargs: DecisionResult(
+            kind="boolean", provider="Test", model="test-model", probability_true=probability_true
+        ),
+    )
+    router = _make_router(
+        _BooleanSmartRouter,
+        _TWO_ROUTES,  # left over from Choice, and ignored
+        routing_mode="Decision Model",
+        decision_model=[{"name": "test-model", "provider": "Test"}],
+        decision_kind="Boolean",
+        decision_question="Is the customer asking for a refund?",
+        yes_message="Refund team, here we come.",
+        minimum_probability=0.7,
+        enable_else_output=True,
+    )
+    graph = Graph()
+    sinks = {name: RecordingSink(_id=name) for name in ("yes", "no", "else")}
+    graph.add_component(router, "router")
+    for name, sink in sinks.items():
+        graph.add_component(sink, name)
+    graph.add_component_edge("router", ("yes_result", "input_value"), "yes")
+    graph.add_component_edge("router", ("no_result", "input_value"), "no")
+    graph.add_component_edge("router", ("default_result", "input_value"), "else")
+
+    await _run(graph)
+
+    assert [name for name, sink in sinks.items() if sink.did_run] == [ran]
+    assert sinks[ran].received == received

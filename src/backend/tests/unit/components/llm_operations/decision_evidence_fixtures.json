@@ -94,21 +94,21 @@
     "selected_outcome": "category_1_result"
   },
   "boolean_accepted": {
-    "activated_branch": "category_1_result",
+    "activated_branch": "yes_result",
     "applied_threshold": 0.7,
     "error_action": "Route to Else",
     "kind": "boolean",
     "minimum_probability": 0.7,
     "options": [
       {
-        "description": "",
-        "id": "category_1_result",
-        "label": "Refund"
+        "description": "Asks for money back",
+        "id": "yes_result",
+        "label": "Yes"
       },
       {
-        "description": "",
-        "id": "category_2_result",
-        "label": "No refund"
+        "description": "Anything else",
+        "id": "no_result",
+        "label": "No"
       }
     ],
     "reason": "accepted",
@@ -124,14 +124,14 @@
       }
     },
     "route_probabilities": {
-      "category_1_result": 0.88,
-      "category_2_result": 0.12
+      "no_result": 0.12,
+      "yes_result": 0.88
     },
     "route_thresholds": {
-      "category_1_result": 0.7,
-      "category_2_result": 0.7
+      "no_result": 0.7,
+      "yes_result": 0.7
     },
-    "selected_outcome": "category_1_result"
+    "selected_outcome": "yes_result"
   },
   "boolean_unsure": {
     "activated_branch": "default_result",
@@ -141,14 +141,14 @@
     "minimum_probability": 0.7,
     "options": [
       {
-        "description": "",
-        "id": "category_1_result",
-        "label": "Refund"
+        "description": "Asks for money back",
+        "id": "yes_result",
+        "label": "Yes"
       },
       {
-        "description": "",
-        "id": "category_2_result",
-        "label": "No refund"
+        "description": "Anything else",
+        "id": "no_result",
+        "label": "No"
       }
     ],
     "reason": "below_minimum_probability",
@@ -164,14 +164,14 @@
       }
     },
     "route_probabilities": {
-      "category_1_result": 0.55,
-      "category_2_result": 0.45
+      "no_result": 0.45,
+      "yes_result": 0.55
     },
     "route_thresholds": {
-      "category_1_result": 0.7,
-      "category_2_result": 0.7
+      "no_result": 0.7,
+      "yes_result": 0.7
     },
-    "selected_outcome": "category_1_result"
+    "selected_outcome": "yes_result"
   },
   "configuration_error": {
     "activated_branch": null,

@@ -45,6 +45,16 @@ _CUSTOM_PROMPT_DECISION_INFO = (
     "Not used in Decision Model mode, which has no prompt. Kept so it applies again in Language Model mode."
 )
 _DECISION_KINDS = {"Choice": "choice", "Boolean": "boolean", "Score": "score"}
+# Boolean's fixed outputs, in place of one output per route.
+_YES_OUTPUT, _NO_OUTPUT = "yes_result", "no_result"
+_BOOLEAN_FIELDS = (
+    "yes_description",
+    "no_description",
+    "yes_message",
+    "no_message",
+    "yes_minimum_probability",
+    "no_minimum_probability",
+)
 # Switching types swaps only these stock questions, never one the user wrote. Boolean has none:
 # a yes/no question has to name what it asks.
 _DECISION_QUESTIONS = {
@@ -55,8 +65,8 @@ _DECISION_QUESTIONS = {
 _DECISION_QUESTION_INFO = {
     "choice": "Instructions for the decision model. Additional Instructions apply only to Language Model mode.",
     "boolean": (
-        'A yes/no question, such as "Is the customer asking for a refund?". Yes takes the first route and No the '
-        "second."
+        'A yes/no question, such as "Is the customer asking for a refund?". A Yes answer goes to the Yes output '
+        "and a No answer to the No output."
     ),
     "score": "The question that places the input on the routes, read as levels from lowest to highest.",
 }
@@ -64,10 +74,6 @@ _ROUTES_INFO = {
     "choice": (
         "Define the categories for routing. Each row should have a route/category name "
         "and optionally a custom output value."
-    ),
-    "boolean": (
-        "Exactly two routes: the first is Yes and the second No, and each description says what its answer means. "
-        "OpenAI Decisions takes no descriptions. Unsure answers go to Else."
     ),
     "score": (
         "Levels ordered from lowest to highest, at most 10. Each route needs a Minimum Score: the input takes the "
@@ -81,9 +87,8 @@ _MINIMUM_PROBABILITY_INFO = {
         "provider's confidence score. A route can set its own threshold in the Routes table."
     ),
     "boolean": (
-        "Required in decision mode, from 0 to 1. Yes takes the first route when P(yes) is at least this value, and "
-        "No the second when P(no) is; otherwise the message goes to Else. A route can set its own threshold in "
-        "the Routes table."
+        "Required in decision mode, from 0 to 1. Yes is chosen when P(yes) is at least this value, and No when "
+        "P(no) is; otherwise the message goes to Else. Yes and No can each set their own threshold."
     ),
 }
 
@@ -160,8 +165,8 @@ class SmartRouterComponent(Component):
             options=list(_DECISION_KINDS),
             value="Choice",
             info=(
-                "Choice picks one route. Boolean answers yes or no between two routes. "
-                "Score reads the routes as ordered levels."
+                "Choice picks one route. Boolean answers yes or no, with Yes and No outputs in place of the "
+                "routes. Score reads the routes as ordered levels."
             ),
             show=False,
             real_time_refresh=True,
@@ -180,6 +185,48 @@ class SmartRouterComponent(Component):
             info=_MINIMUM_PROBABILITY_INFO["choice"],
             range_spec=RangeSpec(min=0, max=1, step=0.01),
             show=False,
+        ),
+        MessageTextInput(
+            name="yes_description",
+            display_name="What Yes Means",
+            info="Boolean only: what a Yes answer means. TypeSafe and Perplexity take it; OpenAI Decisions doesn't.",
+            show=False,
+        ),
+        MessageTextInput(
+            name="no_description",
+            display_name="What No Means",
+            info="Boolean only: what a No answer means. TypeSafe and Perplexity take it; OpenAI Decisions doesn't.",
+            show=False,
+        ),
+        MessageTextInput(
+            name="yes_message",
+            display_name="Yes Message (Optional)",
+            info="Boolean only: the message the Yes output sends. Leave empty to pass the input through.",
+            show=False,
+        ),
+        MessageTextInput(
+            name="no_message",
+            display_name="No Message (Optional)",
+            info="Boolean only: the message the No output sends. Leave empty to pass the input through.",
+            show=False,
+        ),
+        FloatInput(
+            name="yes_minimum_probability",
+            preserve_empty=True,
+            display_name="Yes Minimum Probability (Optional)",
+            info="Boolean only: the P(yes) the Yes output needs, from 0 to 1. Leave empty to use Minimum Probability.",
+            range_spec=RangeSpec(min=0, max=1, step=0.01),
+            show=False,
+            advanced=True,
+        ),
+        FloatInput(
+            name="no_minimum_probability",
+            preserve_empty=True,
+            display_name="No Minimum Probability (Optional)",
+            info="Boolean only: the P(no) the No output needs, from 0 to 1. Leave empty to use Minimum Probability.",
+            range_spec=RangeSpec(min=0, max=1, step=0.01),
+            show=False,
+            advanced=True,
         ),
         DropdownInput(
             name="evaluation_error_action",
@@ -343,6 +390,10 @@ class SmartRouterComponent(Component):
             raise DecisionConfigurationError(msg)
         return mode == "Decision Model"
 
+    def _is_boolean_mode(self) -> bool:
+        """Whether this router answers a yes/no question through its Yes and No outputs."""
+        return self._is_decision_mode() and self._decision_kind() == "boolean"
+
     def _decision_kind(self, kind: Any = None) -> str:
         """``kind``, by default this router's Decision Type, as a request kind; an unknown type stops."""
         if kind is None:
@@ -370,6 +421,11 @@ class SmartRouterComponent(Component):
                 required=uses_router_threshold,
                 info=_MINIMUM_PROBABILITY_INFO.get(kind, _MINIMUM_PROBABILITY_INFO["choice"]),
             )
+        # Boolean replaces the routes with its Yes and No fields; the routes are kept for the other types.
+        boolean_mode = decision_mode and kind == "boolean"
+        for name in _BOOLEAN_FIELDS:
+            if name in build_config:
+                build_config[name]["show"] = boolean_mode
         if "decision_question" in build_config:
             question = build_config["decision_question"]
             question["info"] = _DECISION_QUESTION_INFO[kind]
@@ -397,9 +453,10 @@ class SmartRouterComponent(Component):
             build_config["enable_else_output"]["advanced"] = not decision_mode
         if "routes" in build_config:
             routes = build_config["routes"]
-            routes["info"] = _ROUTES_INFO[kind if decision_mode else "choice"]
-            schema = routes.get("table_schema") or []
             score_mode = decision_mode and kind == "score"
+            routes["info"] = _ROUTES_INFO["score" if score_mode else "choice"]
+            routes["show"] = routes["required"] = not boolean_mode
+            schema = routes.get("table_schema") or []
             for column in schema.get("columns", []) if isinstance(schema, dict) else schema:
                 if column.get("name") == "minimum_probability":
                     column["hidden"] = score_mode
@@ -421,33 +478,40 @@ class SmartRouterComponent(Component):
         # The update endpoint rebuilds this node from the class, which declares no outputs,
         # so every field refresh must recreate them or the editor drops the route edges.
         frontend_node["outputs"] = []
-
-        # Prefer the template's routes: update_build_config has already given them their IDs.
         template = frontend_node.get("template") or {}
-        fallback = field_value if field_name == "routes" else getattr(self, "routes", [])
-        routes_data, _ = assign_route_ids(
-            (template.get("routes") or {}).get("value", fallback) or [],
-            (template.get("last_route_number") or {}).get("value", getattr(self, "last_route_number", 0)) or 0,
-        )
 
-        # Add a dynamic output for each category - all using the same method
-        for i, row in enumerate(routes_data):
-            route_category = row.get("route_category", f"Category {i + 1}")
-            frontend_node["outputs"].append(
-                Output(
-                    display_name=route_category,
-                    name=row["route_id"],
-                    method="process_case",
-                    group_outputs=True,
-                )
-            )
-        # Add default output only if enabled
-        if field_name == "enable_else_output":
-            enable_else = field_value
+        def current(name: str, *, default: Any) -> Any:
+            if field_name == name:
+                return field_value
+            return (template.get(name) or {}).get("value", getattr(self, name, default))
+
+        if self._is_decision_mode(current("routing_mode", default="Language Model")) and (
+            self._decision_kind(current("decision_kind", default="Choice")) == "boolean"
+        ):
+            # Switching to Boolean replaces the route outputs, so the editor drops their edges.
+            frontend_node["outputs"] = [
+                Output(display_name="Yes", name=_YES_OUTPUT, method="process_case", group_outputs=True),
+                Output(display_name="No", name=_NO_OUTPUT, method="process_case", group_outputs=True),
+            ]
         else:
-            enable_else = (template.get("enable_else_output") or {}).get(
-                "value", getattr(self, "enable_else_output", False)
+            # Prefer the template's routes: update_build_config has already given them their IDs.
+            fallback = field_value if field_name == "routes" else getattr(self, "routes", [])
+            routes_data, _ = assign_route_ids(
+                (template.get("routes") or {}).get("value", fallback) or [],
+                (template.get("last_route_number") or {}).get("value", getattr(self, "last_route_number", 0)) or 0,
             )
+            # Add a dynamic output for each category - all using the same method
+            for i, row in enumerate(routes_data):
+                route_category = row.get("route_category", f"Category {i + 1}")
+                frontend_node["outputs"].append(
+                    Output(
+                        display_name=route_category,
+                        name=row["route_id"],
+                        method="process_case",
+                        group_outputs=True,
+                    )
+                )
+        enable_else = current("enable_else_output", default=False)
 
         if enable_else:
             frontend_node["outputs"].append(
@@ -567,23 +631,12 @@ class SmartRouterComponent(Component):
         if self.evaluation_error_action not in {"Stop with error", "Route to Else"}:
             msg = "Unknown evaluation error action."
             raise DecisionConfigurationError(msg)
-        if len(self.routes) < 2:  # noqa: PLR2004 - a choice needs at least two options
-            msg = "Decision mode needs at least two routes; uncertain results already go to Else."
-            raise DecisionConfigurationError(msg)
-        names = [str(row.get("route_category") or "").strip() for row in self.routes]
-        if not all(names):
-            msg = "Every route needs a name in decision mode."
-            raise DecisionConfigurationError(msg)
-        if kind == "boolean" and (len(names) != 2 or names[0].casefold() == names[1].casefold()):  # noqa: PLR2004
-            msg = "Boolean mode needs exactly two routes with different names: Yes first, then No."
-            raise DecisionConfigurationError(msg)
         if not str(self.decision_question or "").strip():
             msg = "Decision mode needs a Decision Question."
             raise DecisionConfigurationError(msg)
-        candidates = [
-            {"id": route_id, "label": row["route_category"], "description": row.get("route_description") or ""}
-            for route_id, row in zip(self._route_ids(), self.routes, strict=True)
-        ]
+        candidates, thresholds = (
+            self._boolean_branches(threshold) if kind == "boolean" else self._route_branches(kind, threshold)
+        )
         boolean = kind == "boolean"
         request = decision_request(
             kind=kind,
@@ -591,10 +644,53 @@ class SmartRouterComponent(Component):
             context=self.input_text,
             options=candidates if kind == "choice" else (),
             levels=candidates if kind == "score" else (),
-            # The Yes and No routes' descriptions say what each answer means.
             yes_description=candidates[0]["description"] if boolean else "",
             no_description=candidates[1]["description"] if boolean else "",
         )
+        evidence = {
+            "kind": kind,
+            "options": candidates,
+            "minimum_probability": threshold,
+            "route_thresholds": thresholds,
+            "activated_branch": None,
+            "error_action": self.evaluation_error_action,
+        }
+        self._decision_evidence = evidence
+        try:
+            self._categorization_result = self._apply_decision(request, thresholds, evidence)
+        finally:
+            # Any exception leaves the result unset, so a stopped build never activates Else.
+            if self._categorization_result == "":
+                evidence["activated_branch"] = "default_result"
+            self.log(self._sanitize_secret_values(evidence), name="Decision evidence")
+        return self._categorization_result
+
+    def _boolean_branches(self, threshold: float) -> tuple[list[dict], dict]:
+        """Boolean's Yes and No outputs, what each answer means, and the probability each needs."""
+        candidates = [
+            {"id": _YES_OUTPUT, "label": "Yes", "description": self.yes_description or ""},
+            {"id": _NO_OUTPUT, "label": "No", "description": self.no_description or ""},
+        ]
+        thresholds = {}
+        for candidate, own in zip(candidates, (self.yes_minimum_probability, self.no_minimum_probability), strict=True):
+            blank = own is None or not str(own).strip()
+            name = f"{candidate['label']} minimum probability"
+            thresholds[candidate["id"]] = threshold if blank else self._validate_probability(own, name)
+        return candidates, thresholds
+
+    def _route_branches(self, kind: str, threshold: float | None) -> tuple[list[dict], dict]:
+        """One candidate per route, and the probability or score each route needs."""
+        if len(self.routes) < 2:  # noqa: PLR2004 - a choice needs at least two options
+            msg = "Decision mode needs at least two routes; uncertain results already go to Else."
+            raise DecisionConfigurationError(msg)
+        names = [str(row.get("route_category") or "").strip() for row in self.routes]
+        if not all(names):
+            msg = "Every route needs a name in decision mode."
+            raise DecisionConfigurationError(msg)
+        candidates = [
+            {"id": route_id, "label": row["route_category"], "description": row.get("route_description") or ""}
+            for route_id, row in zip(self._route_ids(), self.routes, strict=True)
+        ]
         column, measure = (
             ("minimum_score", "Minimum score") if kind == "score" else ("minimum_probability", "Minimum probability")
         )
@@ -616,23 +712,7 @@ class SmartRouterComponent(Component):
                         f"{high_name!r} is not higher than {low_name!r}."
                     )
                     raise DecisionConfigurationError(msg)
-        evidence = {
-            "kind": kind,
-            "options": candidates,
-            "minimum_probability": threshold,
-            "route_thresholds": thresholds,
-            "activated_branch": None,
-            "error_action": self.evaluation_error_action,
-        }
-        self._decision_evidence = evidence
-        try:
-            self._categorization_result = self._apply_decision(request, thresholds, evidence)
-        finally:
-            # Any exception leaves the result unset, so a stopped build never activates Else.
-            if self._categorization_result == "":
-                evidence["activated_branch"] = "default_result"
-            self.log(self._sanitize_secret_values(evidence), name="Decision evidence")
-        return self._categorization_result
+        return candidates, thresholds
 
     def _apply_decision(self, request: DecisionRequest, thresholds: dict, evidence: dict) -> str:
         """Return the accepted route label, or "" for Else; raise when the policy says stop."""
@@ -678,7 +758,7 @@ class SmartRouterComponent(Component):
         else:
             probabilities = result.probabilities
             if request.kind == "boolean":
-                # The first route is Yes and the second No. P(no) is rounded so float error never drops it
+                # The first candidate is Yes and the second No. P(no) is rounded so float error never drops it
                 # below a threshold it meets: 1 - 0.33 is 0.6699999999999999.
                 yes, no = evidence["options"][0]["id"], evidence["options"][1]["id"]
                 probabilities = {yes: result.probability_true, no: round(1 - result.probability_true, 12)}
@@ -719,8 +799,10 @@ class SmartRouterComponent(Component):
         self._categorization_result = None
         self._excluded_outputs = set()
         self._decision_evidence = None
-        # Checked before any model is called, so a mismatch never costs an inference.
-        self._route_ids()
+        # Checked before any model is called, so a mismatch never costs an inference. Boolean's
+        # Yes and No outputs don't come from the routes.
+        if not self._is_boolean_mode():
+            self._route_ids()
         if self._is_decision_mode():
             self._validate_decision_graph()
 
@@ -745,6 +827,16 @@ class SmartRouterComponent(Component):
             msg = "The Smart Router's routes don't match its outputs. Open the flow in the editor to update them."
             raise DecisionConfigurationError(msg)
         return route_ids
+
+    def _branches(self) -> list[tuple[str, str, Any]]:
+        """Each branch output as (output name, label it is chosen by, its own message), in output order."""
+        if self._is_boolean_mode():
+            return [(_YES_OUTPUT, "Yes", self.yes_message), (_NO_OUTPUT, "No", self.no_message)]
+        rows = getattr(self, "routes", []) or []
+        return [
+            (route_id, row.get("route_category") or "", row.get("output_value", ""))
+            for route_id, row in zip(self._route_ids(), rows, strict=True)
+        ]
 
     def _deactivate_branches(self, output_names: list[str]) -> None:
         """Deactivate the given output branches so their downstream nodes do not execute.
@@ -777,8 +869,8 @@ class SmartRouterComponent(Component):
         if self._categorization_result is None:
             self._matched_category = None
 
-        # Get categories and input text
-        categories = getattr(self, "routes", [])
+        # Get branches and input text
+        branches = self._branches()
         input_text = getattr(self, "input_text", "")
 
         # Get the cached categorization result (performs LLM call only once)
@@ -786,8 +878,7 @@ class SmartRouterComponent(Component):
 
         # Find matching category based on LLM response
         matched_category = None
-        for i, category in enumerate(categories):
-            route_category = category.get("route_category", "")
+        for i, (_, route_category, _) in enumerate(branches):
             if categorization.lower() == route_category.lower():
                 matched_category = i
                 self.status = f"MATCH FOUND! Category {i + 1} matched with '{categorization}'"
@@ -799,14 +890,14 @@ class SmartRouterComponent(Component):
 
             # Deactivate all category outputs except the matched one, plus the default
             # output if present, so only the matched branch continues downstream.
-            route_ids = self._route_ids()
+            route_ids = [output_name for output_name, _, _ in branches]
             outputs_to_deactivate = [route_id for i, route_id in enumerate(route_ids) if i != matched_category]
             enable_else = getattr(self, "enable_else_output", False)
             if enable_else:
                 outputs_to_deactivate.append("default_result")
             self._deactivate_branches(outputs_to_deactivate)
 
-            route_category = categories[matched_category].get("route_category", f"Category {matched_category + 1}")
+            route_category = branches[matched_category][1] or f"Category {matched_category + 1}"
             self.status = f"Categorized as {route_category}"
             matched_output_name = route_ids[matched_category]
             if self._current_output and self._current_output != matched_output_name:
@@ -825,7 +916,7 @@ class SmartRouterComponent(Component):
                 return Message(text=str(override_output))
 
             # Check if there's a custom output value for this category
-            custom_output = categories[matched_category].get("output_value", "")
+            custom_output = branches[matched_category][2]
             # Treat None, empty string, or whitespace as blank
             if custom_output and str(custom_output).strip() and str(custom_output).strip().lower() != "none":
                 # Use custom output value
@@ -835,7 +926,7 @@ class SmartRouterComponent(Component):
         # No match found: deactivate every category output so none continue downstream.
         # The default/Else output (if enabled) is intentionally left active and handled by
         # default_response.
-        self._deactivate_branches(self._route_ids())
+        self._deactivate_branches([output_name for output_name, _, _ in branches])
 
         # Check if else output is enabled
         enable_else = getattr(self, "enable_else_output", False)
@@ -854,7 +945,6 @@ class SmartRouterComponent(Component):
             self.status = "Else output is disabled"
             return Message(text="")
 
-        categories = getattr(self, "routes", [])
         input_text = getattr(self, "input_text", "")
 
         # Get the cached categorization result (performs LLM call only if not already done)
@@ -862,8 +952,7 @@ class SmartRouterComponent(Component):
 
         # Check if the categorization matches any category
         has_match = False
-        for i, category in enumerate(categories):
-            route_category = category.get("route_category", "")
+        for i, (_, route_category, _) in enumerate(self._branches()):
             if categorization.lower() == route_category.lower():
                 has_match = True
                 self.status = f"Match found for '{categorization}' (Category {i + 1}), stopping default_response"
