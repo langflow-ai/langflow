@@ -11,9 +11,12 @@
     "request": {
       "kind": "boolean",
       "levels": [],
+      "no_description": "",
       "options": [],
-      "question": "Is the customer asking for a refund?"
+      "question": "Is the customer asking for a refund?",
+      "yes_description": ""
     },
+    "request_id": null,
     "score": null,
     "selected_option": null,
     "status": "success",
@@ -39,6 +42,7 @@
     "request": {
       "kind": "choice",
       "levels": [],
+      "no_description": "",
       "options": [
         {
           "description": "Payments and invoices",
@@ -56,8 +60,10 @@
           "label": "Sales"
         }
       ],
-      "question": "Which team should handle this message?"
+      "question": "Which team should handle this message?",
+      "yes_description": ""
     },
+    "request_id": "req_5f0c9a",
     "score": null,
     "selected_option": "billing",
     "status": "success",
@@ -79,9 +85,12 @@
     "request": {
       "kind": "boolean",
       "levels": [],
+      "no_description": "",
       "options": [],
-      "question": "Is the customer asking for a refund?"
+      "question": "Is the customer asking for a refund?",
+      "yes_description": ""
     },
+    "request_id": null,
     "score": null,
     "selected_option": null,
     "status": "refusal",
@@ -125,9 +134,12 @@
           "label": "Delighted"
         }
       ],
+      "no_description": "",
       "options": [],
-      "question": "How satisfied is the customer?"
+      "question": "How satisfied is the customer?",
+      "yes_description": ""
     },
+    "request_id": null,
     "score": 2.05,
     "selected_option": null,
     "status": "success",

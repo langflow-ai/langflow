@@ -578,6 +578,14 @@ class TestSmartRouterDecisionTypes:
             {"category_1_result": probability_true, "category_2_result": 1 - probability_true}
         )
 
+    def test_boolean_tells_the_model_what_each_route_means(self, monkeypatch):
+        routes = [
+            {"route_category": "Refund", "route_description": "Asks for money back"},
+            {"route_category": "No refund", "route_description": "Anything else"},
+        ]
+        _, _, request = _decide(monkeypatch, "Boolean", routes, _boolean(0.9))
+        assert (request.yes_description, request.no_description) == ("Asks for money back", "Anything else")
+
     @pytest.mark.parametrize(
         ("probability_true", "reason"), [(0.5, "tied_top_probability"), (0.6, "below_minimum_probability")]
     )

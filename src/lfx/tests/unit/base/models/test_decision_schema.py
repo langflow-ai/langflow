@@ -130,3 +130,9 @@ def test_requires_at_least_two_candidates(kind):
 def test_context_must_be_serializable_finite_json():
     with pytest.raises(ValidationError):
         DecisionRequest(kind="boolean", question="Safe?", context={"number": float("nan")})
+
+
+@pytest.mark.parametrize("field", ["yes_description", "no_description"])
+def test_yes_and_no_descriptions_belong_to_boolean(options, field):
+    with pytest.raises(ValidationError, match="belong to Boolean"):
+        DecisionRequest(kind="choice", question="Which team?", context="x", options=options, **{field: "Refund"})

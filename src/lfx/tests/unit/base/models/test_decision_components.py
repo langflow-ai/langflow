@@ -149,3 +149,82 @@ def test_invalid_options_table_is_a_clear_configuration_error(candidates, cause)
 def test_component_takes_no_api_key_from_the_flow():
     """Credentials come only from the provider's own settings, never from a flow field."""
     assert "api_key" not in {component_input.name for component_input in DecisionModelComponent.inputs}
+
+
+def _captured(monkeypatch, kind="Boolean", **fields):
+    """Evaluate once with the provider replaced; returns the request the runtime received."""
+    component = DecisionModelComponent()
+    component.set(model=[{"provider": "TypeSafe", "name": "jev-latest"}], kind=kind, question="Refund?", **fields)
+    captured = []
+
+    def evaluate(request, **_kwargs):
+        captured.append(request)
+        return DecisionResult(kind="boolean", provider="TypeSafe", model="m", probability_true=0.8)
+
+    monkeypatch.setattr(component_module, "evaluate_decision", evaluate)
+    component.evaluate()
+    return captured[0]
+
+
+def test_structured_context_reaches_the_model_as_json(monkeypatch):
+    from lfx.schema.data import Data
+
+    request = _captured(monkeypatch, structured_context=Data(data={"order": 1042, "status": "charged twice"}))
+    assert request.context == {"order": 1042, "status": "charged twice"}
+
+
+@pytest.mark.parametrize(
+    ("fields", "cause"),
+    [
+        ({}, "needs a Context or a Structured Context"),
+        ({"context": "  "}, "needs a Context or a Structured Context"),
+        ({"context": "Charged twice", "structured_context": {"order": 1042}}, "not both"),
+    ],
+)
+def test_exactly_one_context_is_required(monkeypatch, fields, cause):
+    with pytest.raises(DecisionConfigurationError, match=cause):
+        _captured(monkeypatch, **fields)
+
+
+def test_boolean_sends_what_yes_and_no_mean(monkeypatch):
+    request = _captured(monkeypatch, context="text", yes_description="Asks for money back", no_description="Other")
+    assert (request.yes_description, request.no_description) == ("Asks for money back", "Other")
+
+
+def test_yes_and_no_left_from_boolean_never_apply_to_another_type(monkeypatch):
+    component = DecisionModelComponent()
+    component.set(
+        model=[{"provider": "TypeSafe", "name": "jev-latest"}],
+        kind="Choice",
+        context="text",
+        question="Which?",
+        candidates=[{"id": "a", "label": "Low"}, {"id": "b", "label": "High"}],
+        yes_description="Asks for money back",
+    )
+    captured = []
+
+    def evaluate(request, **_kwargs):
+        captured.append(request)
+        return DecisionResult(kind="choice", provider="TypeSafe", model="m", probabilities={"a": 0.4, "b": 0.6})
+
+    monkeypatch.setattr(component_module, "evaluate_decision", evaluate)
+    component.evaluate()
+    assert captured[0].yes_description == ""
+
+
+@pytest.mark.parametrize(("kind", "shown"), [("Boolean", True), ("Choice", False), ("Score", False)])
+def test_yes_and_no_fields_show_only_for_boolean(monkeypatch, kind, shown):
+    monkeypatch.setattr(component_module, "handle_model_input_update", lambda _c, config, *_a, **_k: config)
+    component = DecisionModelComponent()
+    config = {name: field.model_dump() for name, field in component._inputs.items()}
+    config = component.update_build_config(config, kind, "kind")
+    assert config["yes_description"]["show"] is shown
+    assert config["no_description"]["show"] is shown
+    assert config["candidates"]["show"] is not shown
+
+
+async def test_an_agent_supplies_the_context_when_used_as_a_tool():
+    component = DecisionModelComponent()
+    component.set(model=[{"provider": "TypeSafe", "name": "jev-latest"}], kind="Boolean", question="Refund?")
+    [tool] = await component.to_toolkit()
+    assert set(tool.args) == {"context"}

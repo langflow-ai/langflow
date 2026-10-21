@@ -232,7 +232,12 @@ def _component_result(monkeypatch, scenario: ResultScenario) -> dict:
     monkeypatch.setenv(get_provider_secret_variable_key(scenario.provider), "fixture-key")  # pragma: allowlist secret
     monkeypatch.setattr(
         "lfx.base.models.decisions.providers.provider_safe_httpx_post",
-        lambda *_args, **_kwargs: httpx.Response(200, json=scenario.response),
+        # Only Perplexity documents a request ID header.
+        lambda *_args, **_kwargs: httpx.Response(
+            200,
+            json=scenario.response,
+            headers={"x-request-id": "req_5f0c9a"} if scenario.provider == "Perplexity" else {},
+        ),
     )
     component = DecisionModelComponent()
     component.set(
@@ -274,6 +279,8 @@ class TestDecisionEvidenceFixtures:
         assert results["score"]["probabilities"]["satisfied"] == 0.5
         assert results["choice"]["selected_option"] == "billing"
         assert results["choice"]["confidence"] == 0.71
+        assert results["choice"]["request_id"] == "req_5f0c9a"
+        assert results["score"]["request_id"] is None
         assert results["refusal"]["status"] == "refusal"
         assert results["refusal"]["probability_true"] is None
         assert results["refusal"]["refusal"] == "I can't evaluate this request."

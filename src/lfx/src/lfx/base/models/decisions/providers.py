@@ -90,6 +90,12 @@ def _provider_error_code(response: httpx.Response) -> str:
     return f", {code}" if isinstance(code, str) and re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", code) else ""
 
 
+def _request_id(response: httpx.Response) -> str | None:
+    """The provider's ``x-request-id``, only when it is a short safe token; never other header content."""
+    value = response.headers.get("x-request-id")
+    return value if value and re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", value) else None
+
+
 def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for key, value in pairs:
@@ -114,6 +120,13 @@ def build_payload(provider: str, model: str, request: DecisionRequest) -> dict[s
         msg = f"Decision Choice supports at most {MAX_CHOICES} options."
         raise DecisionConfigurationError(msg)
     question: dict[str, Any] = {"instructions": request.question, "type": _answer_type(provider, request.kind)}
+    if request.yes_description or request.no_description:
+        # Only TypeSafe and Perplexity document what a Boolean's outcomes mean.
+        if provider == "OpenAI":
+            msg = "OpenAI Decisions takes no Yes or No descriptions. Clear them or choose another decision model."
+            raise DecisionConfigurationError(msg)
+        outcomes = (("true", request.yes_description), ("false", request.no_description))
+        question["criteria"] = {outcome: text for outcome, text in outcomes if text}
     if provider == "OpenAI":
         question["name"] = QUESTION_ID
         if request.kind == "choice":
@@ -165,7 +178,9 @@ def _token_usage(raw: Any) -> dict | None:
     return None if raw is None else _Usage.model_validate(raw).model_dump(exclude_none=True)
 
 
-def parse_response(provider: str, request: DecisionRequest, payload: Any) -> DecisionResult:
+def parse_response(
+    provider: str, request: DecisionRequest, payload: Any, *, request_id: str | None = None
+) -> DecisionResult:
     """Reject missing/mismatched evidence; never turn a malformed answer into uncertainty."""
     try:
         model = payload["model"]
@@ -193,6 +208,7 @@ def parse_response(provider: str, request: DecisionRequest, payload: Any) -> Dec
             # Perplexity explicitly documents that this field echoes the requested alias.
             "model_source": "request" if provider == "Perplexity" else "response",
             "usage": _token_usage(payload.get("usage")),
+            "request_id": request_id,
         }
         # Only OpenAI documents a refusal answer. TypeSafe and Perplexity always answer with the
         # requested type, so any other type there is an invalid response, never a refusal.
@@ -256,7 +272,8 @@ def parse_response(provider: str, request: DecisionRequest, payload: Any) -> Dec
         detail = str(exc) or "unexpected answer shape"
     else:
         return result
-    msg = f"{provider} returned an invalid decision response: {detail}."
+    reference = f" (request {request_id})" if request_id else ""
+    msg = f"{provider} returned an invalid decision response{reference}: {detail}."
     raise DecisionEvaluationError(msg, category="invalid_response")
 
 
@@ -295,7 +312,11 @@ def evaluate_provider(
         msg = f"{provider} decision request failed in transport."
         raise DecisionEvaluationError(msg, category="transport") from None
     status = response.status_code
-    code = _provider_error_code(response) if not response.is_success else ""
+    request_id = _request_id(response)
+    # Failures name the provider's request ID too, so they can be raised with the provider.
+    code = (_provider_error_code(response) if not response.is_success else "") + (
+        f", request {request_id}" if request_id else ""
+    )
     # 402 is an unpaid or exhausted account: like a rejected key, it must stop rather than route to Else.
     if status in {401, 402, 403}:
         msg = f"{provider} denied the decision request (HTTP {status}{code})."
@@ -317,7 +338,7 @@ def evaluate_provider(
     except ValueError:
         msg = f"{provider} returned invalid or duplicate-key decision JSON."
         raise DecisionEvaluationError(msg, category="invalid_response") from None
-    return parse_response(provider, request, body)
+    return parse_response(provider, request, body, request_id=request_id)
 
 
 def validate_decision_provider_key(provider: str, variables: dict, model_name: str) -> None:

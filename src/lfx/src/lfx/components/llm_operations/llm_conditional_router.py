@@ -56,7 +56,7 @@ _DECISION_QUESTION_INFO = {
     "choice": "Instructions for the decision model. Additional Instructions apply only to Language Model mode.",
     "boolean": (
         'A yes/no question, such as "Is the customer asking for a refund?". Yes takes the first route and No the '
-        "second. Route descriptions are not sent, so the question carries the whole meaning."
+        "second."
     ),
     "score": "The question that places the input on the routes, read as levels from lowest to highest.",
 }
@@ -65,7 +65,10 @@ _ROUTES_INFO = {
         "Define the categories for routing. Each row should have a route/category name "
         "and optionally a custom output value."
     ),
-    "boolean": "Exactly two routes: the first is Yes and the second No. Unsure answers go to Else.",
+    "boolean": (
+        "Exactly two routes: the first is Yes and the second No, and each description says what its answer means. "
+        "OpenAI Decisions takes no descriptions. Unsure answers go to Else."
+    ),
     "score": (
         "Levels ordered from lowest to highest, at most 10. Each route needs a Minimum Score: the input takes the "
         "highest route whose minimum its score reaches, and a score below every route goes to Else."
@@ -574,12 +577,16 @@ class SmartRouterComponent(Component):
             {"id": route_id, "label": row["route_category"], "description": row.get("route_description") or ""}
             for route_id, row in zip(self._route_ids(), self.routes, strict=True)
         ]
+        boolean = kind == "boolean"
         request = decision_request(
             kind=kind,
             question=self.decision_question,
             context=self.input_text,
             options=candidates if kind == "choice" else (),
             levels=candidates if kind == "score" else (),
+            # The Yes and No routes' descriptions say what each answer means.
+            yes_description=candidates[0]["description"] if boolean else "",
+            no_description=candidates[1]["description"] if boolean else "",
         )
         thresholds = {}
         for candidate, row in zip(candidates, self.routes, strict=True):

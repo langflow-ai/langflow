@@ -61,6 +61,9 @@ class DecisionRequest(BaseModel):
     context: str | dict[str, JsonValue]
     options: tuple[DecisionOption, ...] = ()
     levels: tuple[DecisionOption, ...] = ()
+    # Boolean only: what a Yes and a No answer mean.
+    yes_description: str = ""
+    no_description: str = ""
 
     @field_validator("context")
     @classmethod
@@ -76,6 +79,9 @@ class DecisionRequest(BaseModel):
             raise ValueError(msg)
         if (self.kind != "choice" and self.options) or (self.kind != "score" and self.levels):
             msg = "Options belong to Choice and ordered levels belong to Score"
+            raise ValueError(msg)
+        if self.kind != "boolean" and (self.yes_description or self.no_description):
+            msg = "Yes and No descriptions belong to Boolean"
             raise ValueError(msg)
         if len({candidate.id for candidate in candidates}) != len(candidates):
             msg = "Decision candidate IDs must be unique"
@@ -111,6 +117,8 @@ class DecisionResult(BaseModel):
     confidence: Probability | None = None
     refusal: NonEmpty | None = None
     usage: dict[str, JsonValue] | None = None
+    # The provider's ID for this request, to quote when asking it about an answer.
+    request_id: NonEmpty | None = None
 
     @model_validator(mode="after")
     def validate_evidence(self) -> DecisionResult:

@@ -521,3 +521,41 @@ def test_overlong_model_name_is_an_invalid_response():
     with pytest.raises(DecisionEvaluationError, match="invalid decision response") as caught:
         providers.parse_response("TypeSafe", request_for("choice"), payload)
     assert "m" * 129 not in str(caught.value)
+
+
+@pytest.mark.parametrize("provider", ["TypeSafe", "Perplexity"])
+@pytest.mark.parametrize(
+    ("yes", "no", "criteria"),
+    [
+        ("Asks for money back", "Anything else", {"true": "Asks for money back", "false": "Anything else"}),
+        ("Asks for money back", "", {"true": "Asks for money back"}),
+        ("", "", None),
+    ],
+)
+def test_boolean_sends_what_yes_and_no_mean(provider, yes, no, criteria):
+    request = DecisionRequest(kind="boolean", question="Refund?", context="x", yes_description=yes, no_description=no)
+    question = providers.build_payload(provider, DEFAULT_MODELS[provider], request)["questions"]["decision"]
+    assert question.get("criteria") == criteria
+
+
+def test_openai_refuses_yes_and_no_descriptions_instead_of_dropping_them():
+    request = DecisionRequest(kind="boolean", question="Refund?", context="x", yes_description="Money back")
+    with pytest.raises(DecisionConfigurationError, match="takes no Yes or No descriptions"):
+        providers.build_payload("OpenAI", "gpt-6-luna", request)
+
+
+@pytest.mark.parametrize(("header", "expected"), [("req_5f0c9a", "req_5f0c9a"), ("has spaces <b>", None), (None, None)])
+def test_result_keeps_only_a_safe_request_id(monkeypatch, header, expected):
+    headers = {"x-request-id": header} if header else {}
+    response = httpx.Response(200, json=response_for("Perplexity", "boolean"), headers=headers)
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: response)
+    result = providers.evaluate_provider("Perplexity", "pplx-decider-latest", request_for("boolean"), api_key="key")
+    assert result.request_id == expected
+
+
+def test_failures_name_the_providers_request_id(monkeypatch):
+    response = httpx.Response(503, text="private user content", headers={"x-request-id": "req_5f0c9a"})
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: response)
+    with pytest.raises(DecisionEvaluationError) as caught:
+        providers.evaluate_provider("Perplexity", "pplx-decider-latest", request_for("choice"), api_key="key")
+    assert str(caught.value) == "Perplexity decision request failed (HTTP 503, request req_5f0c9a)."
