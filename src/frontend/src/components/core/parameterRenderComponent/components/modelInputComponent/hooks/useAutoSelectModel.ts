@@ -20,6 +20,8 @@ export interface UseAutoSelectModelParams {
   modelStatusIsReliable: boolean;
   /** The user's enabled-models map; a model absent from it (and from the catalog) is restricted, not stale. */
   enabledModels?: Record<string, Record<string, boolean>>;
+  /** Leave the saved value alone, as a decision model field requires. */
+  keepSavedValue?: boolean;
 }
 
 /**
@@ -39,9 +41,11 @@ export function useAutoSelectModel({
   providers,
   modelStatusIsReliable,
   enabledModels,
+  keepSavedValue = false,
 }: UseAutoSelectModelParams): void {
   useEffect(() => {
     if (
+      keepSavedValue ||
       !modelStatusIsReliable ||
       flatOptions.length === 0 ||
       isConnectionMode
@@ -97,5 +101,6 @@ export function useAutoSelectModel({
     providers,
     modelStatusIsReliable,
     enabledModels,
+    keepSavedValue,
   ]);
 }

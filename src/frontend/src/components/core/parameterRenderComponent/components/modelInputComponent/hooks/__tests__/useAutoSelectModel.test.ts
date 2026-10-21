@@ -103,6 +103,15 @@ describe("useAutoSelectModel", () => {
     );
   });
 
+  it("never_replaces_a_saved_decision_model", () => {
+    const handleOnNewValue = renderAutoSelect({
+      value: [{ ...ANTHROPIC, name: "claude-retired" }],
+      keepSavedValue: true,
+    });
+
+    expect(handleOnNewValue).not.toHaveBeenCalled();
+  });
+
   it("should_not_act_while_provider_status_is_still_loading", () => {
     const handleOnNewValue = renderAutoSelect({
       value: [{ ...ANTHROPIC, name: "claude-retired" }],

@@ -286,6 +286,29 @@ def test_credential_validation_uses_explicit_key_and_boolean_request(provider, m
     assert kwargs == {"api_key": "tenant-key", "timeout": 15}
 
 
+@pytest.mark.parametrize("provider", ["typesafe", "TypeSafe"])
+@pytest.mark.parametrize("model_type", [None, "decision"])
+def test_key_validation_treats_provider_ids_like_display_names(monkeypatch, provider, model_type):
+    from lfx.base.models.unified_models import validate_model_provider_key
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicyPurpose,
+        ModelProviderPolicySnapshot,
+    )
+
+    policy = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(),
+        purpose=ModelProviderPolicyPurpose.USE,
+        candidate_provider_ids=frozenset({"typesafe"}),
+        allowed_provider_ids=frozenset({"typesafe"}),
+    )
+    monkeypatch.setattr("lfx.services.model_provider_policy.resolve_model_provider_policy", lambda **_: policy)
+    checked = []
+    monkeypatch.setattr(providers, "validate_decision_provider_key", lambda *args: checked.append(args))
+    validate_model_provider_key(provider, {"TYPESAFE_API_KEY": "tenant-key"}, model_type=model_type)
+    assert checked == [("TypeSafe", {"TYPESAFE_API_KEY": "tenant-key"}, "jev-latest")]
+
+
 def test_dns_failure_is_operational_but_ssrf_block_always_stops(monkeypatch):
     import socket
 

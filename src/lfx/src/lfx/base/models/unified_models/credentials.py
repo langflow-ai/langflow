@@ -19,6 +19,7 @@ from lfx.utils.secrets import secret_value_to_str
 from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 from .provider_queries import (
+    _canonical_provider_name,
     get_model_provider_variable_mapping,
     get_model_providers,
     get_provider_all_variables,
@@ -563,26 +564,28 @@ def validate_model_provider_key(
 
     from lfx.base.models.decision_constants import DECISION_ONLY_PROVIDERS
 
-    if model_type is None and model_name and _is_decision_only_model(provider, model_name):
+    # Provider IDs such as "typesafe" and display names reach the same decision checks.
+    decision_provider = _canonical_provider_name(provider)
+    if model_type is None and model_name and _is_decision_only_model(decision_provider, model_name):
         # An untyped request for a model that exists only as a decision model, such as a legacy
         # status update, must not be validated as a chat completion.
         model_type = "decision"
-    if model_type == "decision" or provider in DECISION_ONLY_PROVIDERS:
+    if model_type == "decision" or decision_provider in DECISION_ONLY_PROVIDERS:
         from lfx.base.models.decisions.providers import DEFAULT_MODELS, validate_decision_provider_key
         from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
 
-        effective_model = model_name or DEFAULT_MODELS.get(provider)
+        effective_model = model_name or DEFAULT_MODELS.get(decision_provider)
         if not effective_model:
             msg = "Unsupported decision provider."
             raise ValueError(msg)
         policy = resolve_model_provider_policy(
             user_id=user_id,
-            providers=[provider],
+            providers=[decision_provider],
             purpose=ModelProviderPolicyPurpose.USE,
             attributes=policy_attributes,
         )
-        policy.require_model(provider, effective_model, model_type="decision")
-        validate_decision_provider_key(provider, variables, effective_model)
+        policy.require_model(decision_provider, effective_model, model_type="decision")
+        validate_decision_provider_key(decision_provider, variables, effective_model)
         return
 
     first_model = None

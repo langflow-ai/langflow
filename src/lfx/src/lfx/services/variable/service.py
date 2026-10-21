@@ -7,6 +7,7 @@ from lfx.log.logger import logger
 from lfx.services.base import Service
 from lfx.services.variable.request_scope import (
     get_active_request_variables,
+    global_var_alias,
     is_env_fallback_disabled,
     normalize_parsed_variables,
 )
@@ -29,10 +30,6 @@ class VariableService(Service):
         self._variables: dict[str, str] = {}
         self.set_ready()
         logger.debug("Variable service initialized (env vars only)")
-
-    @staticmethod
-    def _normalize_global_var_key(name: str) -> str:
-        return f"x-langflow-global-var-{name.lower().replace('_', '-')}"
 
     @staticmethod
     def _get_request_variables() -> dict[str, str]:
@@ -89,7 +86,7 @@ class VariableService(Service):
             logger.debug(f"Variable '{name}' loaded from request-scoped variables")
             return request_variables[name]
 
-        global_alias = self._normalize_global_var_key(name)
+        global_alias = global_var_alias(name)
         if global_alias in request_variables:
             logger.debug(f"Variable '{name}' loaded from request-scoped alias '{global_alias}'")
             return request_variables[global_alias]

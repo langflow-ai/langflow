@@ -22,6 +22,11 @@ export interface ModelInputComponentType {
   externalOptions?: ExternalOptionsType;
   /** When true and options are empty, shows "No models enabled" in a clickable dropdown instead of loading state */
   showEmptyState?: boolean;
+  /**
+   * Never replace the saved value automatically. Decision model fields set this: the chosen
+   * provider receives the flow's messages, so only the user picks it.
+   */
+  keepSavedValue?: boolean;
   /** Explicitly set the model type filter ("llm" or "embeddings"). Overrides the nodeClass-derived default. */
   modelType?: "llm" | "embeddings";
   /**

@@ -386,6 +386,7 @@ export function ParameterRenderComponent({
             options={templateData?.options || []}
             placeholder={templateData?.placeholder}
             externalOptions={templateData?.external_options}
+            keepSavedValue={templateData?.model_type === "decision"}
           />
         );
       case "knowledge_backend":

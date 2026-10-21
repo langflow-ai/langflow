@@ -23,7 +23,11 @@ from lfx.base.models.decisions.schema import (
 from lfx.base.models.provider_ssrf import provider_safe_httpx_post
 from lfx.base.models.unified_models.credentials import provider_variable_from_env
 from lfx.base.models.unified_models.provider_queries import get_provider_secret_variable_key
-from lfx.services.variable.request_scope import is_env_fallback_disabled
+from lfx.services.variable.request_scope import (
+    get_active_request_variables,
+    global_var_alias,
+    is_env_fallback_disabled,
+)
 from lfx.utils.secrets import secret_value_to_str
 from lfx.utils.ssrf_protection import SSRFProtectionError
 
@@ -44,16 +48,20 @@ MAX_TIMEOUT = 300
 QUESTION_ID = "decision"
 
 OFFICIAL_OPENAI_BASE_URL = "https://api.openai.com/v1"
-_OPENAI_BASE_URL_NAMES = ("OPENAI_BASE_URL", "OPENAI_API_BASE")
+# Requests may send each name in its x-langflow-global-var-* form too.
+_OPENAI_BASE_URL_NAMES = tuple(
+    name for base in ("OPENAI_BASE_URL", "OPENAI_API_BASE") for name in (base, global_var_alias(base))
+)
 
 
 def require_official_openai_endpoint(*sources: Mapping[str, Any]) -> None:
     """OpenAI Decisions is only verified against the hosted API, never a custom base URL.
 
-    Every source counts on its own, and so does the environment unless env fallback is off, so a
-    blank or official value in one never hides a custom URL in another. A key meant for a proxy is
-    therefore never sent to the official endpoint, whether by a run or by a key check.
+    Every source counts on its own, as do the active request scope and, unless env fallback is off,
+    the environment, so a blank or official value in one never hides a custom URL in another. A key
+    meant for a proxy is therefore never sent to the official endpoint, by a run or by a key check.
     """
+    sources = (*sources, get_active_request_variables() or {})
     urls = [source.get(name) for source in sources for name in _OPENAI_BASE_URL_NAMES]
     if not is_env_fallback_disabled():
         urls += [provider_variable_from_env(name) for name in _OPENAI_BASE_URL_NAMES]

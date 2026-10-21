@@ -307,6 +307,21 @@ describe("ModelInputComponent — provider disconnected after a model was saved"
     expect(handleOnNewValue.mock.calls[0][0].value[0].name).toBe("gpt-5.6-sol");
   });
 
+  it("never_swaps_a_saved_decision_model_for_another_providers", () => {
+    mockConnectedOpenAiAndDisconnectedAnthropic();
+
+    const handleOnNewValue = jest.fn();
+    renderWithQueryClient(
+      <ModelInputComponent
+        {...baseProps}
+        handleOnNewValue={handleOnNewValue}
+        keepSavedValue
+      />,
+    );
+
+    expect(handleOnNewValue).not.toHaveBeenCalled();
+  });
+
   it("should_drop_the_configure_wrench_once_the_valid_model_is_applied", () => {
     mockConnectedOpenAiAndDisconnectedAnthropic();
 

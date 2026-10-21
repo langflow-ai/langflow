@@ -76,6 +76,7 @@ export default function ModelInputComponent({
   inspectionPanel,
   showEmptyState = false,
   modelType: modelTypeProp,
+  keepSavedValue = false,
   providerScope,
   "aria-label": ariaLabel,
   ariaLabelledBy,
@@ -299,6 +300,7 @@ export default function ModelInputComponent({
     providers: providersData,
     modelStatusIsReliable,
     enabledModels: enabledModelsForType,
+    keepSavedValue,
   });
 
   /**
