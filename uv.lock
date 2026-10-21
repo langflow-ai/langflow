@@ -9125,7 +9125,7 @@ integration = [
 
 [[package]]
 name = "lfx-amazon"
-version = "0.2.0"
+version = "0.2.2"
 source = { editable = "src/bundles/amazon" }
 dependencies = [
     { name = "boto3" },
@@ -9191,7 +9191,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.2.1"
+version = "1.2.3"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -10026,7 +10026,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-google"
-version = "0.3.4"
+version = "0.3.5"
 source = { editable = "src/bundles/google" }
 dependencies = [
     { name = "google-api-python-client" },

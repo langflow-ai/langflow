@@ -13,11 +13,11 @@ before constructing the graph.  The rewrite is intentionally tolerant:
     * Unknown shape (non-dict node, missing 'data' field) -> skipped, no
       error.  The caller's own validation handles malformed payloads.
 
-The rewriter mutates ``payload`` in place because the saved-flow object is
-already a freshly-decoded dict tree owned by the caller; copying every node
-just to swap one string per node is wasteful and would force callers to
-re-bind their reference.  This is the one mutation in the migration system;
-everything else is frozen Pydantic models.
+The rewriter mutates ``payload`` in place.  ``Graph.from_payload`` passes the
+normalized copy it builds from, so the caller's saved flow is never rewritten.
+Copying every node again just to swap one string per node would add a second
+copy and force callers to re-bind their reference.  This is the one mutation
+in the migration system, and everything else is frozen Pydantic models.
 
 The function returns a :class:`MigrationReport` with one record per node it
 visited so the caller (today: nothing; tomorrow: ``ExtensionEventsService``)
