@@ -13,7 +13,10 @@ import update_pyproject_version
 import update_uv_dependency
 
 
-def test_full_base_chain_uses_unprefixed_exact_dev_versions(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("operator", ["~=", "=="])
+def test_full_base_chain_uses_unprefixed_exact_dev_versions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, operator: str
+) -> None:
     (tmp_path / "src/backend/base").mkdir(parents=True)
     (tmp_path / "pyproject.toml").write_text(
         '[project]\nname = "langflow"\nversion = "1.12.0"\n'
@@ -31,6 +34,10 @@ def test_full_base_chain_uses_unprefixed_exact_dev_versions(tmp_path: Path, monk
     monkeypatch.setattr(update_pyproject_version, "BASE_DIR", tmp_path)
     monkeypatch.setattr(update_lf_base_dependency, "BASE_DIR", tmp_path)
     monkeypatch.setattr(update_uv_dependency, "BASE_DIR", tmp_path)
+
+    if operator == "==":
+        for path in [tmp_path / "pyproject.toml", tmp_path / "src/backend/base/pyproject.toml"]:
+            path.write_text(path.read_text().replace("~=1.12.0", "==1.12.0"))
 
     update_pyproject_combined.update_projects_for_nightly("v1.12.0.dev26", "v1.12.0.dev26", "v1.12.0.dev7")
 
