@@ -44,3 +44,26 @@ export function ModelInputErrorButton({
     </Button>
   );
 }
+
+/** Shown when the field asks for a model kind this picker does not know. */
+export function ModelInputUnsupportedKind(): JSX.Element {
+  const { t } = useTranslation();
+  return (
+    <Button
+      className="dropdown-component-false-outline w-full justify-between py-2 font-normal"
+      variant="primary"
+      size="xs"
+      disabled
+      data-testid="model-input-unsupported-kind"
+    >
+      <span className="flex items-center gap-2 truncate text-left">
+        <ForwardedIconComponent
+          name="AlertTriangle"
+          aria-hidden="true"
+          className="h-3.5 w-3.5 shrink-0 text-status-yellow"
+        />
+        <span className="truncate">{t("modelInput.unsupportedKind")}</span>
+      </span>
+    </Button>
+  );
+}

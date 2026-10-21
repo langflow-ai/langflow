@@ -1358,6 +1358,7 @@
   "modelInput.manageProviders": "Manage Model Providers",
   "modelInput.loadingModels": "Loading models",
   "modelInput.loadFailed": "Couldn't load models — click to retry",
+  "modelInput.unsupportedKind": "Unsupported model type — update this component",
   "modelInput.connectOtherModels": "Connect other models",
   "modelInput.optionPosition": "{{current}} of {{total}}",
   "knowledge.createTitle": "Create Knowledge Base",

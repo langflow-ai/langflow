@@ -1652,6 +1652,7 @@
   "modelInput.connectOtherModels": "他のモデルを接続する",
   "modelInput.optionPosition": "{{total}} 件中 {{current}} 件目",
   "modelInput.loadFailed": "モデルを読み込めませんでした — クリックして再試行してください",
+  "modelInput.unsupportedKind": "サポートされていないモデルタイプです — このコンポーネントを更新してください",
   "modelInput.loadingModels": "モデルを読み込み中",
   "modelInput.manageProviders": "モデルプロバイダーの管理",
   "modelInput.noModelsEnabled": "モデルが有効になっていません",

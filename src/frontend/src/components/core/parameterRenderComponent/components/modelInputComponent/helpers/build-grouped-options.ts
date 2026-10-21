@@ -1,4 +1,5 @@
 import type { ModelProviderWithStatus } from "@/controllers/API/queries/models/use-get-model-providers";
+import type { ModelType } from "@/types/models";
 import type { ModelOption } from "../types";
 import { canonicalProviderName, providerNamesMatch } from "./provider-identity";
 
@@ -8,7 +9,7 @@ export interface BuildGroupedOptionsParams {
   options: ModelOption[];
   enabledModels: EnabledModels | undefined;
   providers: ModelProviderWithStatus[] | undefined;
-  modelType: string;
+  modelType: ModelType;
   savedValue: ModelOption | undefined;
   modelFilters: Record<string, unknown> | undefined;
   /**
@@ -89,11 +90,16 @@ export function buildGroupedOptions({
     // an imported flow may include models from providers the current user
     // hasn't enabled (e.g. WatsonX). When the provider is tracked in
     // enabled_models, the model must be explicitly enabled (=== true); a
-    // `false` or missing entry means the model should be hidden.
+    // `false` or missing entry means the model should be hidden. A decision
+    // model must be enabled even when its provider is not tracked at all.
     if (enabledModels) {
       const providerModels =
         enabledModels[provider] ?? enabledModels[providerIdentity];
-      if (providerModels && providerModels[option.name] !== true) {
+      const mustBeTracked = modelType === "decision";
+      if (
+        (providerModels || mustBeTracked) &&
+        providerModels?.[option.name] !== true
+      ) {
         continue;
       }
     }

@@ -1652,6 +1652,7 @@
   "modelInput.connectOtherModels": "Conectar otros modelos",
   "modelInput.optionPosition": "{{current}} de {{total}}",
   "modelInput.loadFailed": "No se han podido cargar los modelos. Haz clic para volver a intentarlo",
+  "modelInput.unsupportedKind": "Tipo de modelo no compatible. Actualiza este componente",
   "modelInput.loadingModels": "Cargando modelos",
   "modelInput.manageProviders": "Gestionar proveedores de modelos",
   "modelInput.noModelsEnabled": "No hay modelos habilitados",

@@ -1652,6 +1652,7 @@
   "modelInput.connectOtherModels": "Andere Modelle verbinden",
   "modelInput.optionPosition": "{{current}} von {{total}}",
   "modelInput.loadFailed": "Modelle konnten nicht geladen werden – bitte klicken, um es erneut zu versuchen",
+  "modelInput.unsupportedKind": "Nicht unterstützter Modelltyp – aktualisieren Sie diese Komponente",
   "modelInput.loadingModels": "Modelle werden geladen",
   "modelInput.manageProviders": "Modellanbieter verwalten",
   "modelInput.noModelsEnabled": "Keine Modelle aktiviert",

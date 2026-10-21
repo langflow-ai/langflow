@@ -1652,6 +1652,7 @@
   "modelInput.connectOtherModels": "连接其他模型",
   "modelInput.optionPosition": "第 {{current}} 项，共 {{total}} 项",
   "modelInput.loadFailed": "无法加载模型——点击重试",
+  "modelInput.unsupportedKind": "不支持的模型类型——请更新此组件",
   "modelInput.loadingModels": "正在加载模型",
   "modelInput.manageProviders": "管理模型提供程序",
   "modelInput.noModelsEnabled": "未启用模型",
