@@ -11,10 +11,10 @@ If you use local Chroma knowledge bases or memory bases, complete the prerequisi
 
 If you use OpenSearch or Postgres pgvector, you don't need to upgrade, as those vector stores will continue using the same providers.
 
+Chroma Cloud is retired in Langflow 1.13 and doesn't reconnect automatically.
 If you use Chroma Cloud, follow the steps in [This remote Chroma store must be migrated](/troubleshoot#remote-source-requires-migration).
-Langflow connects to Chroma Cloud as it did in previous versions.
 
-If a flow uses a **Chroma** or **Local DB** component, you must be replace the components.
+If a flow uses a **Chroma** or **Local DB** component, you must replace the components.
 Follow the steps in [Replace retired components](#replace-retired-components).
 
 A new Langflow installation doesn't require an upgrade.
