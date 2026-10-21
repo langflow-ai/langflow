@@ -31988,6 +31988,6 @@
     "num_components": 128,
     "num_modules": 16
   },
-  "sha256": "27262d33ec0cc3552337820e8b198ccd00695c3fc5db3a3dfa48d3fac8ecf7bc",
-  "version": "1.12.7"
+  "sha256": "b9e61f75b17ef686662e4fbf12f9e4084cce5bd6accbfddfb30a9ce6ace68815",
+  "version": "1.12.8"
 }
