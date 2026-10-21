@@ -51,7 +51,7 @@ def _boolean(probability_true: float) -> DecisionResult:
 
 
 def _score(*probabilities: float) -> DecisionResult:
-    ids = [f"category_{i + 1}_result" for i in range(len(probabilities))]
+    ids = [f"level_{i + 1}_result" for i in range(len(probabilities))]
     score = sum(i * p for i, p in enumerate(probabilities))
     return DecisionResult(kind="score", **COMMON, probabilities=dict(zip(ids, probabilities, strict=True)), score=score)
 
@@ -272,6 +272,13 @@ class TestDecisionEvidenceFixtures:
     def test_decision_result_fixtures_match_the_component(self, monkeypatch):
         produced = {name: _component_result(monkeypatch, scenario) for name, scenario in RESULT_SCENARIOS.items()}
         _check_fixture(RESULT_FIXTURES, produced)
+
+    def test_probabilities_are_keyed_by_the_fixtures_own_options(self):
+        # The evidence view reads each probability by option ID, so a Score keyed by route IDs breaks it.
+        for name, evidence in json.loads(FIXTURES.read_text(encoding="utf-8")).items():
+            probabilities = (evidence.get("result") or {}).get("probabilities")
+            if probabilities:
+                assert list(probabilities) == [option["id"] for option in evidence["options"]], name
 
     def test_result_fixtures_keep_each_kind_of_evidence_distinct(self):
         results = json.loads(RESULT_FIXTURES.read_text(encoding="utf-8"))

@@ -420,9 +420,9 @@
       "model": "jev-1.13.0",
       "model_source": "response",
       "probabilities": {
-        "category_1_result": 0.1,
-        "category_2_result": 0.4,
-        "category_3_result": 0.5
+        "level_1_result": 0.1,
+        "level_2_result": 0.4,
+        "level_3_result": 0.5
       },
       "provider": "TypeSafe",
       "score": 1.4,
@@ -462,9 +462,9 @@
       "model": "jev-1.13.0",
       "model_source": "response",
       "probabilities": {
-        "category_1_result": 0.5,
-        "category_2_result": 0.5,
-        "category_3_result": 0.0
+        "level_1_result": 0.5,
+        "level_2_result": 0.5,
+        "level_3_result": 0.0
       },
       "provider": "TypeSafe",
       "score": 0.5,
