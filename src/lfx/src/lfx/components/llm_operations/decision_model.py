@@ -87,8 +87,12 @@ class DecisionModelComponent(Component):
     def _context(self) -> str | dict:
         """Context as text, or Structured Context as JSON; exactly one of them."""
         text = str(self.context or "").strip()
-        # An unconnected handle holds an empty string.
-        structured = self.structured_context or None
+        structured = self.structured_context
+        if isinstance(structured, Data):
+            structured = structured.data
+        # An unconnected handle holds an empty string, and empty JSON gives the model nothing to judge.
+        if not structured:
+            structured = None
         if structured is None:
             if not text:
                 msg = "Decision Model needs a Context or a Structured Context."
@@ -97,7 +101,7 @@ class DecisionModelComponent(Component):
         if text:
             msg = "Set Context or Structured Context, not both."
             raise DecisionConfigurationError(msg)
-        return structured.data if isinstance(structured, Data) else structured
+        return structured
 
     def evaluate(self) -> Data:
         kind = self.kind.lower()

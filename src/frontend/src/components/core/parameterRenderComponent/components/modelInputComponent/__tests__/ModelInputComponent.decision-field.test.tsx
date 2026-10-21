@@ -269,6 +269,22 @@ describe("ModelInputComponent on a decision field (LE-3129)", () => {
     );
   });
 
+  it("keeps the generic message when the server gives no reason", () => {
+    (useGetEnabledModels as jest.Mock).mockReturnValue({
+      data: undefined,
+      error: Object.assign(new Error("Request failed with status code 502"), {
+        isAxiosError: true,
+        response: { status: 502, data: "<html>Bad gateway</html>" },
+      }),
+      isLoading: false,
+      isFetching: false,
+    });
+    renderPicker();
+    expect(screen.getByTestId("model-input-load-failed")).toHaveTextContent(
+      "Couldn't load models",
+    );
+  });
+
   it("stores the picked model with its provider", async () => {
     const user = userEvent.setup();
     const handleOnNewValue = jest.fn();
@@ -291,7 +307,8 @@ describe("ModelInputComponent on a decision field (LE-3129)", () => {
 
   it("never offers Connect other models", async () => {
     const user = userEvent.setup();
-    renderPicker({ externalOptions: EXTERNAL_OPTIONS });
+    // What the backend sends a decision field.
+    renderPicker({ externalOptions: {} });
 
     await user.click(screen.getByRole("combobox"));
 

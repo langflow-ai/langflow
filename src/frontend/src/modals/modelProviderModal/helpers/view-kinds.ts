@@ -1,7 +1,5 @@
 import type { ModelType, ModelTypeFilter } from "@/types/models";
 
-/** Which model kinds a Model Providers view lists, and which of its catalog rows. */
-
 /** Every model kind the Model Providers dialog lists, in display order. */
 const MODEL_KINDS: readonly ModelType[] = ["llm", "embeddings", "decision"];
 

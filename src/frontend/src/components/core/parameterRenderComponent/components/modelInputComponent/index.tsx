@@ -1,10 +1,9 @@
-import axios from "axios";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { BUILD_PANEL_COLLISION_PADDING_PX } from "@/constants/constants";
 import { getEnabledModelsForType } from "@/controllers/API/helpers/enabled-model-policy";
-import { getAxiosErrorMessage } from "@/controllers/API/helpers/get-axios-error-message";
+import { getAxiosErrorDetail } from "@/controllers/API/helpers/get-axios-error-message";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
@@ -448,13 +447,7 @@ export default function ModelInputComponent({
         <ModelDropdownFooter
           onRefresh={handleRefreshButtonPress}
           onManageProviders={() => setOpenManageProvidersDialog(true)}
-          // A decision field never connects other models, whatever the
-          // template carries.
-          externalNode={
-            isUserOwnedModelKind(modelType)
-              ? undefined
-              : externalOptions?.fields?.data?.node
-          }
+          externalNode={externalOptions?.fields?.data?.node}
           onConnectOtherModels={() =>
             handleExternalOptions("connect_other_models")
           }
@@ -482,11 +475,7 @@ export default function ModelInputComponent({
     // A server refusal, such as a policy denial, says why; a network failure
     // keeps the generic retry message.
     const serverReason = [providersError, enabledModelsError]
-      .map((error) =>
-        axios.isAxiosError(error) && error.response
-          ? getAxiosErrorMessage(error, "")
-          : "",
-      )
+      .map((error) => getAxiosErrorDetail(error, ""))
       .find(Boolean);
     return (
       <>

@@ -65,6 +65,12 @@ class DecisionRequest(BaseModel):
     yes_description: str = ""
     no_description: str = ""
 
+    @field_validator("yes_description", "no_description")
+    @classmethod
+    def strip_description(cls, value: str) -> str:
+        # A blank description is no description.
+        return value.strip()
+
     @field_validator("context")
     @classmethod
     def validate_context(cls, value: str | dict[str, JsonValue]) -> str | dict[str, JsonValue]:

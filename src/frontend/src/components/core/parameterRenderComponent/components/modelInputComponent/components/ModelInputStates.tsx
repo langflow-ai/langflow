@@ -46,7 +46,9 @@ export function ModelInputErrorButton({
           aria-hidden="true"
           className="h-3.5 w-3.5 shrink-0 text-status-yellow"
         />
-        <span className="truncate">{label}</span>
+        <span className="truncate" title={label}>
+          {label}
+        </span>
       </span>
       {onRetry && (
         <ForwardedIconComponent name="RotateCw" className="h-3.5 w-3.5" />

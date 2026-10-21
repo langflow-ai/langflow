@@ -540,8 +540,14 @@ def test_boolean_sends_what_yes_and_no_mean(provider, yes, no, criteria):
 
 def test_openai_refuses_yes_and_no_descriptions_instead_of_dropping_them():
     request = DecisionRequest(kind="boolean", question="Refund?", context="x", yes_description="Money back")
-    with pytest.raises(DecisionConfigurationError, match="takes no Yes or No descriptions"):
+    with pytest.raises(DecisionConfigurationError, match="takes no descriptions of what Yes and No mean"):
         providers.build_payload("OpenAI", "gpt-6-luna", request)
+
+
+def test_a_blank_yes_or_no_description_is_none():
+    request = DecisionRequest(kind="boolean", question="Refund?", context="x", yes_description="  ", no_description="")
+    assert "criteria" not in providers.build_payload("TypeSafe", "jev-latest", request)["questions"]["decision"]
+    assert providers.build_payload("OpenAI", "gpt-6-luna", request)["questions"][0]["type"] == "predicate"
 
 
 @pytest.mark.parametrize(("header", "expected"), [("req_5f0c9a", "req_5f0c9a"), ("has spaces <b>", None), (None, None)])
@@ -551,6 +557,13 @@ def test_result_keeps_only_a_safe_request_id(monkeypatch, header, expected):
     monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: response)
     result = providers.evaluate_provider("Perplexity", "pplx-decider-latest", request_for("boolean"), api_key="key")
     assert result.request_id == expected
+
+
+def test_undecodable_answers_name_the_providers_request_id(monkeypatch):
+    response = httpx.Response(200, content=b'{"model": "a", "model": "b"}', headers={"x-request-id": "req_5f0c9a"})
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: response)
+    with pytest.raises(DecisionEvaluationError, match=r"decision JSON \(request req_5f0c9a\)\."):
+        providers.evaluate_provider("Perplexity", "pplx-decider-latest", request_for("choice"), api_key="key")
 
 
 def test_failures_name_the_providers_request_id(monkeypatch):

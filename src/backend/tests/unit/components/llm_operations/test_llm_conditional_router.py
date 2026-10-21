@@ -21,8 +21,8 @@ def _fresh_build_config(router):
     return build_config
 
 
-def _threshold_column(build_config):
-    return next(column for column in build_config["routes"]["table_schema"] if column["name"] == "minimum_probability")
+def _column(build_config, name):
+    return next(column for column in build_config["routes"]["table_schema"] if column["name"] == name)
 
 
 def _decide(monkeypatch, kind, routes, result, *, minimum_probability=0.7, question="Is this a refund request?"):
@@ -58,6 +58,13 @@ def _boolean(probability_true):
     return DecisionResult(kind="boolean", provider="TypeSafe", model="jev-1.13.0", probability_true=probability_true)
 
 
+def _choice_result(*probabilities):
+    ids = [f"category_{i + 1}_result" for i in range(len(probabilities))]
+    return DecisionResult(
+        kind="choice", provider="TypeSafe", model="jev-1.13.0", probabilities=dict(zip(ids, probabilities, strict=True))
+    )
+
+
 def _score(*probabilities):
     ids = [f"category_{i + 1}_result" for i in range(len(probabilities))]
     score = sum(i * p for i, p in enumerate(probabilities))
@@ -71,11 +78,11 @@ def _score(*probabilities):
 
 
 REFUND_ROUTES = [{"route_category": "Refund"}, {"route_category": "No refund"}]
-# The tiers from the design discussion: A at 0.1, B at 0.5, C at 0.95.
+# Three tiers with minimum scores of 0.1, 0.5 and 0.95.
 TIERS = [
-    {"route_category": "A", "minimum_probability": 0.1},
-    {"route_category": "B", "minimum_probability": 0.5},
-    {"route_category": "C", "minimum_probability": 0.95},
+    {"route_category": "A", "minimum_score": 0.1},
+    {"route_category": "B", "minimum_score": 0.5},
+    {"route_category": "C", "minimum_score": 0.95},
 ]
 
 
@@ -510,10 +517,6 @@ class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
         ):
             router._pre_run_setup()
 
-
-class TestSmartRouterDecisionTypes:
-    """Choice, Boolean and Score in Decision Model mode, and the fields each one shows."""
-
     def test_decision_type_shows_only_in_decision_mode(self):
         router = SmartRouterComponent()
         build_config = router.update_build_config(_fresh_build_config(router), "Language Model", "routing_mode")
@@ -522,28 +525,46 @@ class TestSmartRouterDecisionTypes:
         assert build_config["decision_kind"]["show"] is True
         assert build_config["decision_kind"]["value"] == "Choice"
 
-    def test_score_moves_each_threshold_onto_its_route(self):
+    def test_score_shows_its_own_threshold_column(self):
         router = SmartRouterComponent()
         router.set(routing_mode="Decision Model")
         build_config = router.update_build_config(_fresh_build_config(router), "Decision Model", "routing_mode")
-        choice_column = dict(_threshold_column(build_config))
+        assert _column(build_config, "minimum_probability").get("hidden") is False
+        assert _column(build_config, "minimum_score")["hidden"] is True
 
         build_config = router.update_build_config(build_config, "Score", "decision_kind")
         assert build_config["minimum_probability"]["show"] is False
         assert build_config["minimum_probability"]["required"] is False
-        assert _threshold_column(build_config)["display_name"] == "Minimum Score"
+        assert _column(build_config, "minimum_probability")["hidden"] is True
+        assert _column(build_config, "minimum_score")["hidden"] is False
         assert "Minimum Score" in build_config["routes"]["info"]
 
         build_config = router.update_build_config(build_config, "Choice", "decision_kind")
         assert build_config["minimum_probability"]["show"] is True
-        assert _threshold_column(build_config) == choice_column
+        assert _column(build_config, "minimum_probability")["hidden"] is False
+        assert _column(build_config, "minimum_score")["hidden"] is True
 
-    def test_language_model_mode_keeps_probability_labels_whatever_the_type(self):
+    def test_language_model_mode_hides_the_score_column_whatever_the_type(self):
         router = SmartRouterComponent()
         build_config = _fresh_build_config(router)
         build_config["decision_kind"]["value"] = "Score"
         build_config = router.update_build_config(build_config, "Language Model", "routing_mode")
-        assert _threshold_column(build_config)["display_name"] == "Minimum Probability (Optional)"
+        assert _column(build_config, "minimum_score")["hidden"] is True
+        assert _column(build_config, "minimum_probability")["hidden"] is False
+
+    def test_a_threshold_set_for_one_type_never_applies_to_another(self, monkeypatch):
+        """Each column keeps its own meaning, so switching type reinterprets no number."""
+        rows = [
+            {"route_category": "A", "minimum_probability": 0.0, "minimum_score": 0.1},
+            {"route_category": "B", "minimum_probability": 0.0, "minimum_score": 0.5},
+            {"route_category": "C", "minimum_probability": 0.0, "minimum_score": 0.95},
+        ]
+        _, score_evidence, _ = _decide(monkeypatch, "Score", rows, _score(0.1, 0.4, 0.5), minimum_probability=None)
+        assert list(score_evidence["route_thresholds"].values()) == [0.1, 0.5, 0.95]
+        choice_rows = [{key: value for key, value in row.items() if key != "minimum_probability"} for row in rows]
+        _, choice_evidence, _ = _decide(monkeypatch, "Choice", choice_rows, _choice_result(0.5, 0.3, 0.2))
+        assert list(choice_evidence["route_thresholds"].values()) == [0.7, 0.7, 0.7]
+        assert choice_evidence["reason"] == "below_minimum_probability"
 
     @pytest.mark.parametrize(
         ("question", "kind", "expected"),
@@ -577,6 +598,12 @@ class TestSmartRouterDecisionTypes:
         assert evidence["route_probabilities"] == pytest.approx(
             {"category_1_result": probability_true, "category_2_result": 1 - probability_true}
         )
+
+    def test_a_no_exactly_at_its_threshold_takes_the_no_route(self, monkeypatch):
+        """1 - 0.33 is 0.6699999999999999 in floating point, just under a 0.67 threshold."""
+        routed, evidence, _ = _decide(monkeypatch, "Boolean", REFUND_ROUTES, _boolean(0.33), minimum_probability=0.67)
+        assert routed == "No refund"
+        assert evidence["route_probabilities"]["category_2_result"] == 0.67
 
     def test_boolean_tells_the_model_what_each_route_means(self, monkeypatch):
         routes = [
@@ -630,9 +657,9 @@ class TestSmartRouterDecisionTypes:
     @pytest.mark.parametrize(
         ("routes", "match"),
         [
-            ([TIERS[0], {"route_category": "B"}, TIERS[2]], "Minimum Score on every route"),
+            ([TIERS[0], {"route_category": "B"}, TIERS[2]], "Minimum Score on every route; 'B' has none"),
             ([TIERS[1], TIERS[0], TIERS[2]], "higher than the route before it"),
-            ([TIERS[0], {**TIERS[1], "minimum_probability": 0.1}, TIERS[2]], "higher than the route before it"),
+            ([TIERS[0], {**TIERS[1], "minimum_score": 0.1}, TIERS[2]], "'B' is not higher than 'A'"),
         ],
     )
     def test_score_minimums_must_rise_on_every_route(self, monkeypatch, routes, match):

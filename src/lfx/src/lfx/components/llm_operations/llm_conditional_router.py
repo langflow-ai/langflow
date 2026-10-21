@@ -86,20 +86,6 @@ _MINIMUM_PROBABILITY_INFO = {
         "the Routes table."
     ),
 }
-_PROBABILITY_COLUMN = {
-    "display_name": "Minimum Probability (Optional)",
-    "description": (
-        "Decision mode only: the probability this route needs, at least, from 0 to 1. "
-        "Leave empty to use the router's Minimum Probability."
-    ),
-}
-_SCORE_COLUMN = {
-    "display_name": "Minimum Score",
-    "description": (
-        "Score mode: the lowest score that takes this route. The score runs from 0, every level's weight on the "
-        "first route, to 1, all of it on the last. Required, and higher on each route than on the one before."
-    ),
-}
 
 
 def _route_number(route_id: Any) -> int | None:
@@ -256,10 +242,28 @@ class SmartRouterComponent(Component):
                 },
                 {
                     "name": "minimum_probability",
-                    **_PROBABILITY_COLUMN,
+                    "display_name": "Minimum Probability (Optional)",
                     "type": "float",
                     "formatter": "number",
+                    "description": (
+                        "Decision mode only: the probability this route needs, at least, from 0 to 1. "
+                        "Leave empty to use the router's Minimum Probability."
+                    ),
                     "edit_mode": EditMode.INLINE,
+                },
+                {
+                    # Its own column, so a type switch never reads a probability as a score or back.
+                    "name": "minimum_score",
+                    "display_name": "Minimum Score",
+                    "type": "float",
+                    "formatter": "number",
+                    "description": (
+                        "Score mode: the lowest score that takes this route. The score runs from 0, every level's "
+                        "weight on the first route, to 1, all of it on the last. Required, and higher on each route "
+                        "than on the one before."
+                    ),
+                    "edit_mode": EditMode.INLINE,
+                    "hidden": True,
                 },
                 {
                     "name": "route_id",
@@ -395,9 +399,12 @@ class SmartRouterComponent(Component):
             routes = build_config["routes"]
             routes["info"] = _ROUTES_INFO[kind if decision_mode else "choice"]
             schema = routes.get("table_schema") or []
+            score_mode = decision_mode and kind == "score"
             for column in schema.get("columns", []) if isinstance(schema, dict) else schema:
                 if column.get("name") == "minimum_probability":
-                    column.update(_SCORE_COLUMN if decision_mode and kind == "score" else _PROBABILITY_COLUMN)
+                    column["hidden"] = score_mode
+                elif column.get("name") == "minimum_score":
+                    column["hidden"] = not score_mode
             rows = field_value if field_name == "routes" else routes.get("value")
             last = (build_config.get("last_route_number") or {}).get("value") or 0
             routes["value"], last = assign_route_ids(rows or [], last)
@@ -588,20 +595,27 @@ class SmartRouterComponent(Component):
             yes_description=candidates[0]["description"] if boolean else "",
             no_description=candidates[1]["description"] if boolean else "",
         )
+        column, measure = (
+            ("minimum_score", "Minimum score") if kind == "score" else ("minimum_probability", "Minimum probability")
+        )
         thresholds = {}
-        for candidate, row in zip(candidates, self.routes, strict=True):
-            own = row.get("minimum_probability")
+        for candidate, row, name in zip(candidates, self.routes, names, strict=True):
+            own = row.get(column)
             if own is not None and str(own).strip():
-                name = "Minimum score" if kind == "score" else "Minimum probability"
-                thresholds[candidate["id"]] = self._validate_probability(own, name)
+                thresholds[candidate["id"]] = self._validate_probability(own, f"{measure} for {name!r}")
             elif threshold is None:
-                msg = "Score mode needs a Minimum Score on every route."
+                msg = f"Score mode needs a Minimum Score on every route; {name!r} has none."
                 raise DecisionConfigurationError(msg)
             else:
                 thresholds[candidate["id"]] = threshold
-        if kind == "score" and any(low >= high for low, high in pairwise(thresholds.values())):
-            msg = "In Score mode, each route's Minimum Score must be higher than the route before it."
-            raise DecisionConfigurationError(msg)
+        if kind == "score":
+            for (low_name, low), (high_name, high) in pairwise(zip(names, thresholds.values(), strict=True)):
+                if high <= low:
+                    msg = (
+                        "In Score mode, each route's Minimum Score must be higher than the route before it: "
+                        f"{high_name!r} is not higher than {low_name!r}."
+                    )
+                    raise DecisionConfigurationError(msg)
         evidence = {
             "kind": kind,
             "options": candidates,
@@ -652,7 +666,8 @@ class SmartRouterComponent(Component):
         if request.kind == "score":
             # From 0, every level's weight on the first route, to 1, all of it on the last, so route
             # minimums read the same whatever the number of routes.
-            score = result.score / (len(request.levels) - 1)
+            # Rounded so float error never moves a score off a minimum it sits on.
+            score = round(result.score / (len(request.levels) - 1), 12)
             evidence["normalized_score"] = score
             reached = [route_id for route_id, minimum in thresholds.items() if score >= minimum]
             if not reached:
@@ -663,9 +678,10 @@ class SmartRouterComponent(Component):
         else:
             probabilities = result.probabilities
             if request.kind == "boolean":
-                # Thresholds are in route order: the first route is Yes, the second No.
-                yes, no = thresholds
-                probabilities = {yes: result.probability_true, no: 1 - result.probability_true}
+                # The first route is Yes and the second No. P(no) is rounded so float error never drops it
+                # below a threshold it meets: 1 - 0.33 is 0.6699999999999999.
+                yes, no = evidence["options"][0]["id"], evidence["options"][1]["id"]
+                probabilities = {yes: result.probability_true, no: round(1 - result.probability_true, 12)}
                 evidence["route_probabilities"] = probabilities
             top_probability = max(probabilities.values())
             winners = [option_id for option_id, p in probabilities.items() if p == top_probability]

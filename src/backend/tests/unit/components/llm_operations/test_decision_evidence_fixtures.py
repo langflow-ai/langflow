@@ -99,9 +99,9 @@ SCORE = {
     "decision_question": "How urgent is this message?",
     "minimum_probability": None,
     "routes": [
-        {"route_category": "Low", "route_description": "Can wait", "output_value": "", "minimum_probability": 0.1},
-        {"route_category": "Medium", "route_description": "Today", "output_value": "", "minimum_probability": 0.5},
-        {"route_category": "High", "route_description": "Now", "output_value": "", "minimum_probability": 0.95},
+        {"route_category": "Low", "route_description": "Can wait", "output_value": "", "minimum_score": 0.1},
+        {"route_category": "Medium", "route_description": "Today", "output_value": "", "minimum_score": 0.5},
+        {"route_category": "High", "route_description": "Now", "output_value": "", "minimum_score": 0.95},
     ],
 }
 TYPE_SCENARIOS = {

@@ -123,7 +123,10 @@ def build_payload(provider: str, model: str, request: DecisionRequest) -> dict[s
     if request.yes_description or request.no_description:
         # Only TypeSafe and Perplexity document what a Boolean's outcomes mean.
         if provider == "OpenAI":
-            msg = "OpenAI Decisions takes no Yes or No descriptions. Clear them or choose another decision model."
+            msg = (
+                "OpenAI Decisions takes no descriptions of what Yes and No mean (in Smart Router, the two route "
+                "descriptions). Clear them or choose another decision model."
+            )
             raise DecisionConfigurationError(msg)
         outcomes = (("true", request.yes_description), ("false", request.no_description))
         question["criteria"] = {outcome: text for outcome, text in outcomes if text}
@@ -336,7 +339,8 @@ def evaluate_provider(
     try:
         body = json.loads(response.content, object_pairs_hook=_unique_json_object)
     except ValueError:
-        msg = f"{provider} returned invalid or duplicate-key decision JSON."
+        reference = f" (request {request_id})" if request_id else ""
+        msg = f"{provider} returned invalid or duplicate-key decision JSON{reference}."
         raise DecisionEvaluationError(msg, category="invalid_response") from None
     return parse_response(provider, request, body, request_id=request_id)
 

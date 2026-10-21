@@ -165,7 +165,7 @@
     },
     "route_probabilities": {
       "category_1_result": 0.55,
-      "category_2_result": 0.44999999999999996
+      "category_2_result": 0.45
     },
     "route_thresholds": {
       "category_1_result": 0.7,

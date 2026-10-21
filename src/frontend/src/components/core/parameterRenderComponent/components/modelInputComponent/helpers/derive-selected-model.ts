@@ -111,22 +111,15 @@ export function deriveSelectedModel({
             providerNamesMatch(p.provider, saved.provider) && p.is_configured,
         )
       : undefined;
-    if (!savedProviderConfigured) {
+    // A language or embedding field shows the option auto-select is about to
+    // write. A decision field is never rewritten, so showing another option
+    // would present a model it is not set to: it names its own, switched off.
+    if (!savedProviderConfigured || isUserOwnedModelKind(modelType ?? null)) {
       return savedSelection(saved, {
         ...(saved.metadata ?? {}),
         not_enabled_locally: true,
       });
     }
-  }
-
-  // A language or embedding field shows the option auto-select is about to
-  // write. A decision field is never rewritten, so showing another option would
-  // present a model it is not set to: it names its own, switched off.
-  if (saved && isUserOwnedModelKind(modelType ?? null)) {
-    return savedSelection(saved, {
-      ...(saved.metadata ?? {}),
-      not_enabled_locally: true,
-    });
   }
 
   return flatOptions.length > 0 ? flatOptions[0] : null;

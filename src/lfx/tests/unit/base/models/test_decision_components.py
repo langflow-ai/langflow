@@ -6,6 +6,7 @@ from lfx.components.llm_operations import decision_model as component_module
 from lfx.components.llm_operations.decision_model import DecisionModelComponent
 from lfx.custom.eval import eval_custom_component_code
 from lfx.custom.utils import create_component_template
+from lfx.schema.data import Data
 
 
 def test_component_template_discoverable():
@@ -151,7 +152,10 @@ def test_component_takes_no_api_key_from_the_flow():
     assert "api_key" not in {component_input.name for component_input in DecisionModelComponent.inputs}
 
 
-def _captured(monkeypatch, kind="Boolean", **fields):
+BOOLEAN_RESULT = DecisionResult(kind="boolean", provider="TypeSafe", model="m", probability_true=0.8)
+
+
+def _captured(monkeypatch, kind="Boolean", result=BOOLEAN_RESULT, **fields):
     """Evaluate once with the provider replaced; returns the request the runtime received."""
     component = DecisionModelComponent()
     component.set(model=[{"provider": "TypeSafe", "name": "jev-latest"}], kind=kind, question="Refund?", **fields)
@@ -159,7 +163,7 @@ def _captured(monkeypatch, kind="Boolean", **fields):
 
     def evaluate(request, **_kwargs):
         captured.append(request)
-        return DecisionResult(kind="boolean", provider="TypeSafe", model="m", probability_true=0.8)
+        return result
 
     monkeypatch.setattr(component_module, "evaluate_decision", evaluate)
     component.evaluate()
@@ -167,8 +171,6 @@ def _captured(monkeypatch, kind="Boolean", **fields):
 
 
 def test_structured_context_reaches_the_model_as_json(monkeypatch):
-    from lfx.schema.data import Data
-
     request = _captured(monkeypatch, structured_context=Data(data={"order": 1042, "status": "charged twice"}))
     assert request.context == {"order": 1042, "status": "charged twice"}
 
@@ -178,6 +180,7 @@ def test_structured_context_reaches_the_model_as_json(monkeypatch):
     [
         ({}, "needs a Context or a Structured Context"),
         ({"context": "  "}, "needs a Context or a Structured Context"),
+        ({"structured_context": Data(data={})}, "needs a Context or a Structured Context"),
         ({"context": "Charged twice", "structured_context": {"order": 1042}}, "not both"),
     ],
 )
@@ -192,24 +195,15 @@ def test_boolean_sends_what_yes_and_no_mean(monkeypatch):
 
 
 def test_yes_and_no_left_from_boolean_never_apply_to_another_type(monkeypatch):
-    component = DecisionModelComponent()
-    component.set(
-        model=[{"provider": "TypeSafe", "name": "jev-latest"}],
+    request = _captured(
+        monkeypatch,
         kind="Choice",
+        result=DecisionResult(kind="choice", provider="TypeSafe", model="m", probabilities={"a": 0.4, "b": 0.6}),
         context="text",
-        question="Which?",
         candidates=[{"id": "a", "label": "Low"}, {"id": "b", "label": "High"}],
         yes_description="Asks for money back",
     )
-    captured = []
-
-    def evaluate(request, **_kwargs):
-        captured.append(request)
-        return DecisionResult(kind="choice", provider="TypeSafe", model="m", probabilities={"a": 0.4, "b": 0.6})
-
-    monkeypatch.setattr(component_module, "evaluate_decision", evaluate)
-    component.evaluate()
-    assert captured[0].yes_description == ""
+    assert request.yes_description == ""
 
 
 @pytest.mark.parametrize(("kind", "shown"), [("Boolean", True), ("Choice", False), ("Score", False)])
