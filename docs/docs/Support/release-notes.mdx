@@ -63,15 +63,12 @@ Highlights of this release include the following changes. For all changes, see t
 
     For more information, see [API keys and authentication](/api-keys-and-authentication#langflow-auto-login).
 
-- Chroma components are removed
+- Chroma and Local DB components are removed
 
     Langflow 1.13 stores local Knowledge and Memory in SQLite, instead of a local Chroma database.
     The [**Chroma DB**](/components-bundle-components#legacy-bundles) and [**Local DB**](/components-bundle-components#legacy-bundles) components are legacy.
 
     Replace **Chroma** and **Local DB** with a [knowledge base](/knowledge#knowledge-bases), or with a supported remote vector store.
-    At startup, Langflow copies supported local Chroma stores into SQLite.
-
-    Back up the application database and the knowledge-base directory before you upgrade.
 
     For more information, see [Upgrade Knowledge and Memory storage](/knowledge-storage-upgrade).
 
@@ -81,16 +78,13 @@ Highlights of this release include the following changes. For all changes, see t
 
     Replace **ALTK** with the [**Agent**](/components-agents) component.
 
-- Seven MrScraper components are removed
+- MrScraper components are removed
 
-    The [**MrScraper**](../Components/bundles-mrscraper.mdx) bundle now provides three components: **Account**, **Scraper API**, and **Web Search**.
-    The **AI Agent Scraper**, **Batch Scrape URLs**, **Crawl Website**, **Get Result Detail**, **Get Results**, **Run AI Scraper**, and **Run Manual Scraper** components are removed, and Langflow does not convert them automatically.
-    In saved flows, these nodes fail when the flow builds or runs.
-    Replace each removed node with **Scraper API** or **Web Search**, and then update downstream parsing.
+    The [**MrScraper**](/bundles-mrscraper) bundle now provides three components.
 
-    **Fetch Rendered HTML** is renamed **Scraper API**. In saved flows, [update the component](/concepts-components#update-component-versions) when Langflow prompts you.
+    Instead, use the **Scraper API** or **Web Search** components.
 
-    For more information, see [Updating existing flows](../Components/bundles-mrscraper.mdx#updating-existing-flows).
+    For more information, see [Update existing flows](/bundles-mrscraper).
 
 ### New features
 
@@ -103,7 +97,7 @@ Highlights of this release include the following changes. For all changes, see t
 
 - Connections
 
-    Langflow stores Google Workspace, Microsoft 365, and Slack accounts as connections.
+    Langflow stores Google Workspace, Microsoft 365, and Slack accounts as persistent connections.
     For more information, see [Connections](./connections).
 
 - Concurrent editing
