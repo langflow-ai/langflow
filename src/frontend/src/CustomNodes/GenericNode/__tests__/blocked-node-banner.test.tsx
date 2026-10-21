@@ -7,6 +7,9 @@ type ComponentUpdate = {
   blocked: boolean;
   breakingChange: boolean;
   userEdited: boolean;
+  retired?: boolean;
+  retiredIn?: string;
+  replacement?: string[];
 };
 
 let mockAllowCustomComponents: boolean;
@@ -159,9 +162,23 @@ jest.mock("../components/NodeUpdateComponent", () => ({
   ),
 }));
 
+// Like the update banner: this suite asserts what the legacy bar is told, and
+// the NodeLegacyComponent suite covers its copy.
 jest.mock("../components/NodeLegacyComponent", () => ({
   __esModule: true,
-  default: () => null,
+  default: ({
+    retiredIn,
+    replacement,
+  }: {
+    retiredIn?: string;
+    replacement?: string[];
+  }) => (
+    <div
+      data-testid="node-legacy-bar"
+      data-retired-in={retiredIn ?? ""}
+      data-replacement={(replacement ?? []).join(",")}
+    />
+  ),
 }));
 
 jest.mock("../components/nodeIcon", () => ({
@@ -314,6 +331,44 @@ describe("GenericNode blocked banner", () => {
 
     expect(screen.queryByTestId("node-update-banner")).not.toBeInTheDocument();
   });
+
+  // An edited component is retired in every mode too: an edit usually keeps
+  // the retired imports or base class, so it still fails when the flow runs.
+  it.each([
+    [true, false, true],
+    [false, false, true],
+    [false, true, true],
+    [true, true, true],
+    [true, true, false],
+  ])(
+    "shows the retired bar, with the replacement, on a component saved before it was retired (custom components allowed: %s, edited: %s, outdated: %s)",
+    (allowCustomComponents, userEdited, outdated) => {
+      // The saved node has neither legacy nor replacement: both come from the
+      // current component, and the bar replaces the update banner.
+      mockAllowCustomComponents = allowCustomComponents;
+      mockComponentsToUpdate = [
+        componentUpdate({
+          outdated,
+          userEdited,
+          retired: true,
+          retiredIn: "1.13.0",
+          replacement: ["files_and_knowledge.Knowledge"],
+        }),
+      ];
+
+      renderNode();
+
+      const bar = screen.getByTestId("node-legacy-bar");
+      expect(bar).toHaveAttribute("data-retired-in", "1.13.0");
+      expect(bar).toHaveAttribute(
+        "data-replacement",
+        "files_and_knowledge.Knowledge",
+      );
+      expect(
+        screen.queryByTestId("node-update-banner"),
+      ).not.toBeInTheDocument();
+    },
+  );
 
   it("shows no banner for a healthy node", () => {
     renderNode();

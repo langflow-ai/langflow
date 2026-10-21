@@ -70,6 +70,10 @@ export type ComponentsToUpdateType = {
   blocked: boolean;
   breakingChange: boolean;
   userEdited: boolean;
+  /** Retired components are reported on the component, never updated. */
+  retired?: boolean;
+  retiredIn?: string;
+  replacement?: string[];
 };
 
 export type AutoSaveFlowType = ((flow?: FlowType) => void) & {

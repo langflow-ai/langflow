@@ -53,6 +53,8 @@ export type APIClassType = {
   beta?: boolean;
   legacy?: boolean;
   replacement?: string[];
+  /** Release that retired the component. A retired component fails when the flow runs. */
+  retired_in?: string;
   documentation: string;
   error?: string;
   official?: boolean;
