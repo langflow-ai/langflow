@@ -6,7 +6,6 @@ import pytest
 pytest.importorskip("lfx_bundles")
 
 from lfx.utils.ssrf_protection import SSRFProtectionError
-
 from lfx_bundles.jsonify.jsonify_dataset import JsonifyDatasetComponent
 
 SERVE_URL = "https://factory.jsonify.com/api/serve/abc123"
