@@ -21,6 +21,43 @@ def _flow_data(template: dict) -> dict:
     }
 
 
+async def _call_public_tool(
+    monkeypatch, flow: Flow, request_variables: dict
+) -> tuple[list, MagicMock, SimpleNamespace]:
+    """Dispatch a public MCP tool call with graph building and job execution stubbed."""
+    graph = SimpleNamespace(vertices=[], set_run_id=MagicMock())
+    build_graph = MagicMock(return_value=graph)
+    jobs = SimpleNamespace(
+        create_job=AsyncMock(),
+        execute_with_status=AsyncMock(return_value=([], "public-session")),
+    )
+
+    monkeypatch.setattr(mcp_utils, "get_flow_snake_case", AsyncMock(return_value=flow))
+    monkeypatch.setattr(mcp_utils, "with_db_session", lambda operation: operation(None))
+    monkeypatch.setattr(mcp_utils, "prepare_public_flow_build", AsyncMock(return_value=None))
+    monkeypatch.setattr(mcp_utils.get_mcp_config(), "enable_progress_notifications", False)
+    monkeypatch.setattr(endpoints, "prepare_flow_build_for_user", AsyncMock(return_value=None))
+    monkeypatch.setattr(endpoints, "try_warm_run_graph", AsyncMock(return_value=None))
+    monkeypatch.setattr(endpoints, "apply_global_variable_defaults", AsyncMock(side_effect=lambda data, _user: data))
+    monkeypatch.setattr(endpoints.Graph, "from_payload", build_graph)
+    monkeypatch.setattr(endpoints, "get_job_service", lambda: jobs)
+
+    user_token = mcp_utils.current_user_ctx.set(SimpleNamespace(id=flow.user_id, is_superuser=False))
+    caller_token = mcp_utils.authenticated_caller_ctx.set(None)
+    variables_token = mcp_utils.current_request_variables_ctx.set(request_variables)
+    headers_token = mcp_utils.current_request_headers_ctx.set(None)
+    try:
+        result = await mcp_utils.handle_call_tool(
+            "public_tool", {"input_value": "hello"}, SimpleNamespace(), project_id=flow.folder_id
+        )
+    finally:
+        mcp_utils.current_request_headers_ctx.reset(headers_token)
+        mcp_utils.current_request_variables_ctx.reset(variables_token)
+        mcp_utils.authenticated_caller_ctx.reset(caller_token)
+        mcp_utils.current_user_ctx.reset(user_token)
+    return result, build_graph, jobs
+
+
 @pytest.mark.parametrize("location", ["field", "table-dict", "table-list"])
 @pytest.mark.parametrize(
     ("variable_name", "header_name"),
@@ -52,36 +89,7 @@ async def test_public_mcp_executes_with_caller_supplied_credentials(
     request_variables = extract_global_variables_from_headers(
         {header_name: "caller-only-value"}, include_auth_headers=True
     )
-    graph = SimpleNamespace(vertices=[], set_run_id=MagicMock())
-    build_graph = MagicMock(return_value=graph)
-    jobs = SimpleNamespace(
-        create_job=AsyncMock(),
-        execute_with_status=AsyncMock(return_value=([], "public-session")),
-    )
-
-    monkeypatch.setattr(mcp_utils, "get_flow_snake_case", AsyncMock(return_value=flow))
-    monkeypatch.setattr(mcp_utils, "with_db_session", lambda operation: operation(None))
-    monkeypatch.setattr(mcp_utils, "prepare_public_flow_build", AsyncMock(return_value=None))
-    monkeypatch.setattr(mcp_utils.get_mcp_config(), "enable_progress_notifications", False)
-    monkeypatch.setattr(endpoints, "prepare_flow_build_for_user", AsyncMock(return_value=None))
-    monkeypatch.setattr(endpoints, "try_warm_run_graph", AsyncMock(return_value=None))
-    monkeypatch.setattr(endpoints, "apply_global_variable_defaults", AsyncMock(side_effect=lambda data, _user: data))
-    monkeypatch.setattr(endpoints.Graph, "from_payload", build_graph)
-    monkeypatch.setattr(endpoints, "get_job_service", lambda: jobs)
-
-    user_token = mcp_utils.current_user_ctx.set(SimpleNamespace(id=flow.user_id, is_superuser=False))
-    caller_token = mcp_utils.authenticated_caller_ctx.set(None)
-    variables_token = mcp_utils.current_request_variables_ctx.set(request_variables)
-    headers_token = mcp_utils.current_request_headers_ctx.set(None)
-    try:
-        result = await mcp_utils.handle_call_tool(
-            "public_tool", {"input_value": "hello"}, SimpleNamespace(), project_id=flow.folder_id
-        )
-    finally:
-        mcp_utils.current_request_headers_ctx.reset(headers_token)
-        mcp_utils.current_request_variables_ctx.reset(variables_token)
-        mcp_utils.authenticated_caller_ctx.reset(caller_token)
-        mcp_utils.current_user_ctx.reset(user_token)
+    result, build_graph, jobs = await _call_public_tool(monkeypatch, flow, request_variables)
 
     assert result == []
     jobs.execute_with_status.assert_awaited_once()
@@ -98,6 +106,30 @@ async def test_public_mcp_executes_with_caller_supplied_credentials(
     resolved = await CustomComponent.get_variable(component, reference, "api_key", session=None)
     assert resolved == request_variables[variable_name]
     assert flow.data == stored_data
+
+
+@pytest.mark.parametrize("flow_shape", ["plain-binding", "caller-key-and-plain-binding"])
+async def test_public_mcp_request_variables_keep_plain_bindings(monkeypatch, flow_shape: str) -> None:
+    # MCP routes capture an Authorization header as a request variable, so this
+    # call sends variables even when the flow never asks for a caller credential.
+    with_caller_credential = flow_shape == "caller-key-and-plain-binding"
+    template = {"base_url": {"name": "base_url", "load_from_db": True, "value": "OLLAMA_BASE_URL"}}
+    if with_caller_credential:
+        template["api_key"] = {"name": "api_key", "password": True, "load_from_db": True, "value": "CALLER_TOKEN"}
+    flow = Flow(id=uuid4(), name="Public tool", user_id=uuid4(), folder_id=uuid4(), data=_flow_data(template))
+    request_variables = extract_global_variables_from_headers(
+        {"Authorization": "Bearer client-token", "X-Langflow-Global-Var-CALLER_TOKEN": "caller-only-value"},
+        include_auth_headers=True,
+    )
+
+    result, build_graph, jobs = await _call_public_tool(monkeypatch, flow, request_variables)
+
+    assert result == []
+    jobs.execute_with_status.assert_awaited_once()
+    built_template = build_graph.call_args.args[0]["nodes"][0]["data"]["node"]["template"]
+    assert built_template["base_url"]["value"] == "OLLAMA_BASE_URL"
+    if with_caller_credential:
+        assert built_template["api_key"]["value"] == "CALLER_TOKEN"
 
 
 @pytest.mark.parametrize(

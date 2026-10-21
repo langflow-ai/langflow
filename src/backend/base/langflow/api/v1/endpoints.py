@@ -117,7 +117,7 @@ from langflow.services.deps import (
 from langflow.services.event_manager import create_webhook_event_manager, webhook_event_manager
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.compression import compress_response
-from langflow.utils.flow_secrets import strip_secret_field_values_in_place
+from langflow.utils.flow_secrets import restore_request_variable_references, strip_secret_field_values
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
@@ -152,12 +152,11 @@ def _reject_shared_secret_variable_overrides(
     """Keep request variables from redirecting a shared flow's hidden credential."""
     if not variables or _caller_owns_flow(flow, user):
         return
-    # Request-backed references resolve to the caller's value rather than an owner's secret.
-    scrubbed_data = strip_secret_field_values_in_place(
-        deepcopy(flow.data),
-        variable_references=set(),
-        known_variable_names=variables if isinstance(variables, Mapping) else frozenset(),
-    )
+    scrubbed_data = strip_secret_field_values(flow.data)
+    if isinstance(variables, Mapping):
+        # Request-backed references resolve to the caller's value rather than an owner's
+        # secret. Bindings on ordinary fields are not hidden, so they never block a run.
+        restore_request_variable_references(flow.data, scrubbed_data, variables)
     if scrubbed_data != flow.data:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
