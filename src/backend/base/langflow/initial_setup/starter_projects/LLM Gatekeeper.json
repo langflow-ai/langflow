@@ -1049,58 +1049,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": {
-                  "category": "message",
-                  "content_blocks": [],
-                  "context_id": "",
-                  "data": {
-                    "category": "message",
-                    "content_blocks": [],
-                    "context_id": "",
-                    "duration": null,
-                    "edit": false,
-                    "error": false,
-                    "files": [],
-                    "flow_id": null,
-                    "properties": {
-                      "allow_markdown": false,
-                      "edited": false,
-                      "source": {
-                        "display_name": null,
-                        "id": null,
-                        "source": null
-                      },
-                      "state": "complete",
-                      "targets": []
-                    },
-                    "run_id": null,
-                    "sender": null,
-                    "sender_name": null,
-                    "session_id": "",
-                    "session_metadata": null,
-                    "text": "",
-                    "timestamp": "2026-10-21 13:37:02.549771 UTC"
-                  },
-                  "default_value": "",
-                  "edit": false,
-                  "error": false,
-                  "files": [],
-                  "properties": {
-                    "allow_markdown": false,
-                    "edited": false,
-                    "source": {
-                      "display_name": null,
-                      "id": null,
-                      "source": null
-                    },
-                    "state": "complete",
-                    "targets": []
-                  },
-                  "session_id": "",
-                  "text": "",
-                  "text_key": "text",
-                  "timestamp": "2026-10-21 13:37:02.549771 UTC"
-                }
+                "value": ""
               },
               "minimum_probability": {
                 "_input_type": "FloatInput",
