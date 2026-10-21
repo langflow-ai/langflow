@@ -136,3 +136,24 @@ def test_context_must_be_serializable_finite_json():
 def test_yes_and_no_descriptions_belong_to_boolean(options, field):
     with pytest.raises(ValidationError, match="belong to Boolean"):
         DecisionRequest(kind="choice", question="Which team?", context="x", options=options, **{field: "Refund"})
+
+
+def test_score_allows_the_providers_two_decimal_rounding():
+    """Rounded to two decimals, these probabilities average 1.21; the provider's own score was 1.20."""
+    levels = tuple(DecisionOption(id=name, label=name.title()) for name in ("low", "medium", "high"))
+    request = DecisionRequest(kind="score", question="How urgent?", context="x", levels=levels)
+    rounded = {"low": 0.12, "medium": 0.55, "high": 0.33}
+    result = DecisionResult(kind="score", provider="TypeSafe", model="jev-1.13.0", probabilities=rounded, score=1.2)
+    assert result.validate_for(request).score == 1.2
+    beyond_rounding = DecisionResult(
+        kind="score", provider="TypeSafe", model="jev-1.13.0", probabilities=rounded, score=1.3
+    )
+    with pytest.raises(DecisionEvaluationError, match="Score disagrees"):
+        beyond_rounding.validate_for(request)
+
+
+def test_probabilities_may_miss_one_by_their_rounding():
+    thirds = {"a": 0.33, "b": 0.33, "c": 0.33}
+    assert DecisionResult(kind="choice", provider="TypeSafe", model="m", probabilities=thirds).probabilities == thirds
+    with pytest.raises(ValidationError, match="sum to one"):
+        DecisionResult(kind="choice", provider="TypeSafe", model="m", probabilities={"a": 0.33, "b": 0.33, "c": 0.3})

@@ -15,6 +15,9 @@ NonEmpty = Annotated[str, Field(strict=True, min_length=1, pattern=r"\S")]
 # Provider-reported model names are stored in evidence; anything longer is not a model name.
 ModelName = Annotated[str, Field(strict=True, min_length=1, max_length=128, pattern=r"\S")]
 MIN_CANDIDATES = 2
+# Providers report rounded numbers: TypeSafe's probabilities only "roughly" sum to 1, and its answers
+# come back to two decimals, so each reported probability and score can be off by up to 0.005.
+REPORTED_ROUNDING = 0.005
 
 
 class DecisionConfigurationError(ValueError):
@@ -156,8 +159,9 @@ class DecisionResult(BaseModel):
             if not self.probabilities or self.probability_true is not None:
                 msg = "Choice and Score results require a probability distribution"
                 raise ValueError(msg)
-            # Accept serialization rounding, never normalize malformed provider evidence.
-            if not math.isclose(sum(self.probabilities.values()), 1.0, rel_tol=0, abs_tol=1e-5):
+            # Accept the providers' rounding, never normalize malformed provider evidence.
+            rounding = REPORTED_ROUNDING * len(self.probabilities)
+            if not math.isclose(sum(self.probabilities.values()), 1.0, rel_tol=0, abs_tol=rounding):
                 msg = "Decision probabilities must sum to one"
                 raise ValueError(msg)
             if self.kind == "choice" and self.score is not None:
@@ -193,7 +197,9 @@ class DecisionResult(BaseModel):
                 msg = "Score is outside the requested zero-based rubric"
                 raise DecisionEvaluationError(msg)
             expected_score = sum(index * self.probabilities[level.id] for index, level in enumerate(request.levels))
-            if not math.isclose(self.score, expected_score, rel_tol=0, abs_tol=1e-4):
+            # The score was rounded once, and each probability's rounding error is weighted by its level.
+            rounding = REPORTED_ROUNDING * (1 + sum(range(len(request.levels))))
+            if not math.isclose(self.score, expected_score, rel_tol=0, abs_tol=rounding):
                 msg = "Score disagrees with its ordered-level probability distribution"
                 raise DecisionEvaluationError(msg)
         return self
