@@ -213,7 +213,7 @@ module.exports = {
         {
           type: "doc",
           id: "Develop/concepts-voice-mode",
-          label: "Use voice mode"
+          label: "Use speech input"
         },
         {
           type: "doc",
