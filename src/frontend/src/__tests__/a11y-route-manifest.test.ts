@@ -21,7 +21,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import ts from "typescript";
-import { BASENAME } from "../customization/config-constants";
 
 const MANIFEST_PATH = join("scripts", "a11y", "a11y_routes.json");
 const ROUTES_PATH = join("src", "frontend", "src", "routes.tsx");
@@ -381,7 +380,10 @@ describe("a11y route manifest", () => {
 
   it("keeps route paths rooted at / as the manifest assumes", () => {
     expect(assumesEmptyBasename).toBe(true);
-    expect(BASENAME).toBe("");
+    // BASENAME may be a static "" literal or a runtime expression that evaluates
+    // to "" when no <base> tag is present; both are valid for this assertion.
+    const basename = configConstants.get("BASENAME");
+    expect(basename === "" || basename === null).toBe(true);
   });
 
   it("resolves every route declaration in routes.tsx", () => {

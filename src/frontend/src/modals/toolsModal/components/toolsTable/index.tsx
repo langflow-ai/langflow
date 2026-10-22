@@ -373,16 +373,6 @@ export default function ToolsTable({
     const target = event.event?.target as HTMLElement | undefined;
     if (target?.closest("[data-hitl-cell]")) return;
 
-    // Checkbox clicks are handled natively by AG Grid — don't double-toggle.
-    if (target?.closest(".ag-selection-checkbox")) return;
-
-    // Toggle only this row's selection without disturbing others.
-    // suppressRowClickSelection={true} prevents AG Grid from replacing the
-    // whole selection on a row click; we handle it here instead so a click
-    // anywhere in the row acts like clicking the checkbox for that row only.
-    const node = event.node;
-    node.setSelected(!node.isSelected(), false);
-
     setFocusedRow(event.data);
     setSidebarOpen(true);
   };
