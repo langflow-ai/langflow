@@ -72,7 +72,7 @@ class TriggerProvider:
 
     def __post_init__(self) -> None:
         if (
-            not _KIND.fullmatch(self.provider_id)
+            not _IDENTIFIER.fullmatch(self.provider_id)
             or len(self.provider_id) > _MAX_PROVIDER_ID_LENGTH
             or self.provider_id in _BUILTINS
         ):
