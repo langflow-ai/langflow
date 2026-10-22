@@ -12,6 +12,7 @@ import { create } from "zustand";
 import {
   blockedStopsExecution,
   checkCodeValidity,
+  connectedFieldsByNode,
 } from "@/CustomNodes/helpers/check-code-validity";
 import { queryClient } from "@/contexts";
 import {
@@ -162,17 +163,19 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       typeof change === "function" ? change(get().componentsToUpdate) : change;
     set({ componentsToUpdate: newChange });
   },
-  updateComponentsToUpdate: (nodes) => {
+  updateComponentsToUpdate: (nodes, edges = get().edges) => {
     const outdatedNodes: ComponentsToUpdateType[] = [];
     const templates = useTypesStore.getState().templates;
     const allowCustomComponents =
       useUtilityStore.getState().allowCustomComponents;
+    const connectedFields = connectedFieldsByNode(edges);
     nodes.forEach((node) => {
       if (node.type === "genericNode") {
         const codeValidity = checkCodeValidity(
           node.data,
           templates,
           allowCustomComponents,
+          connectedFields.get(node.id) ?? new Set(),
         );
         if (codeValidity && (codeValidity.outdated || codeValidity.blocked))
           outdatedNodes.push({
@@ -363,7 +366,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       });
     }
     const { inputs, outputs } = getInputsAndOutputs(nodes);
-    get().updateComponentsToUpdate(nodes);
+    get().updateComponentsToUpdate(nodes, newEdges);
     set({
       // A freshly loaded flow carries no edits of the user's, whatever hydration
       // does to the nodes on the way in.
@@ -440,8 +443,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   onEdgesChange: (changes: EdgeChange<EdgeType>[]) => {
+    const newEdges = applyEdgeChanges(changes, get().edges);
+    // Whether an update is breaking depends on the edges into each node.
+    get().updateComponentsToUpdate(get().nodes, newEdges);
     set({
-      edges: applyEdgeChanges(changes, get().edges),
+      edges: newEdges,
     });
   },
   setNodes: (change, options) => {
@@ -449,7 +455,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       typeof change === "function" ? change(get().nodes) : change;
     const { edges: newEdges } = cleanEdges(newChange, get().edges);
     const { inputs, outputs } = getInputsAndOutputs(newChange);
-    get().updateComponentsToUpdate(newChange);
+    get().updateComponentsToUpdate(newChange, newEdges);
     set({
       edges: newEdges,
       nodes: newChange,
@@ -466,6 +472,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setEdges: (change, options) => {
     const newChange =
       typeof change === "function" ? change(get().edges) : change;
+    // Whether an update is breaking depends on the edges into each node.
+    get().updateComponentsToUpdate(get().nodes, newChange);
     set({
       edges: newChange,
       flowState: undefined,
@@ -480,7 +488,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     // split setNodes+setEdges draws loop/dynamic-handle edges only after refresh.
     const { edges: newEdges } = cleanEdges(nodes, edges);
     const { inputs, outputs } = getInputsAndOutputs(nodes);
-    get().updateComponentsToUpdate(nodes);
+    get().updateComponentsToUpdate(nodes, newEdges);
     set({
       nodes,
       edges: newEdges,
@@ -523,6 +531,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
 
     const { edges: newEdges, brokenEdges } = cleanEdges(newNodes, get().edges);
+    // Whether an update is breaking depends on the node's saved values.
+    get().updateComponentsToUpdate(newNodes, newEdges);
 
     // An edit that reshapes a node's handles (e.g. disabling Human Input's fallback
     // with a wired branch) strands the downstream node; surface it like resetFlow does.
@@ -990,7 +1000,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     // then immediately clicked "Run") before checking outdated state.
     await waitForNodeUpdates();
 
-    // Recalculate from current nodes (setNode does not run updateComponentsToUpdate).
+    // Recalculate from current nodes.
     // Unknown code-bearing types always block in restricted mode; known drift only blocks when
     // the server-side trusted-code substitution policy is disabled.
     get().updateComponentsToUpdate(get().nodes);

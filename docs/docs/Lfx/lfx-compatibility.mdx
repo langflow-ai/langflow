@@ -49,8 +49,8 @@ Example output:
 | CLI output | What it means | Example |
 |---|---|---|
 | `[OK]` | Component matches the current registry. | No action needed. |
-| `[SAFE]` | Component code changed, but ports and fields your flow uses still line up. `lfx upgrade --write` can apply this update automatically. | An output that previously emitted only `Message` now also supports `Data`. |
-| `[BREAKING]` | A port or field your flow relies on was removed. | An input that accepted `Message` and `Data` now accepts only `Message` and your flow uses a `Data` component. |
+| `[SAFE]` | Component code changed, and updating the component keeps every connection and saved value in your flow. `lfx upgrade --write` can apply this update automatically. | An output that previously emitted only `Message` now also supports `Data`, or the component gained an output or an optional input. |
+| `[BREAKING]` | Updating the component would drop a connection or a saved value, or needs an input that nobody gave. | A field or output your flow has was removed or renamed, or an input that accepted `Message` and `Data` now accepts only `Message` and your flow connects a `Data` component to it. |
 | `[BLOCKED]` | The component type no longer exists in this LFX build. | A bundle-only component is not installed in your environment. |
 
 To apply fixes or enforce stricter checks, run:

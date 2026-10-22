@@ -105,7 +105,7 @@ export type FlowStoreType = {
       | ComponentsToUpdateType[]
       | ((oldState: ComponentsToUpdateType[]) => ComponentsToUpdateType[]),
   ) => void;
-  updateComponentsToUpdate: (nodes: AllNodeType[]) => void;
+  updateComponentsToUpdate: (nodes: AllNodeType[], edges?: EdgeType[]) => void;
   onFlowPage: boolean;
   setOnFlowPage: (onFlowPage: boolean) => void;
   flowPool: FlowPoolType;

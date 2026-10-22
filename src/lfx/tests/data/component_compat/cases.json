@@ -1,0 +1,3104 @@
+[
+  {
+    "name": "code unchanged",
+    "description": "The saved code equals the current code.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "ok"
+  },
+  {
+    "name": "unknown component",
+    "description": "No current component has the saved node's type.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": null,
+    "expected": "blocked"
+  },
+  {
+    "name": "code changed only",
+    "description": "Only the code changed.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "new optional input",
+    "description": "The component gained an optional input.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        },
+        "extra": {
+          "type": "str",
+          "required": false,
+          "value": ""
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "new required input with a default",
+    "description": "The component gained a required input that has a usable default.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        },
+        "extra": {
+          "type": "int",
+          "required": true,
+          "value": 3
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "new required input, no default",
+    "description": "The component gained a required input that nobody gave a value.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        },
+        "extra": {
+          "type": "str",
+          "required": true,
+          "value": ""
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_breaking"
+  },
+  {
+    "name": "output renamed",
+    "description": "The output name changed, so edges from the old name drop.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "result",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_breaking"
+  },
+  {
+    "name": "output added",
+    "description": "The component gained an output. No saved edge uses it.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        },
+        {
+          "name": "out2",
+          "display_name": "Out 2",
+          "types": [
+            "Data"
+          ],
+          "method": "b2",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "output removed",
+    "description": "The component dropped an output the saved node has.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        },
+        {
+          "name": "out2",
+          "display_name": "Out 2",
+          "types": [
+            "Data"
+          ],
+          "method": "b2",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_breaking"
+  },
+  {
+    "name": "output method changed",
+    "description": "The output calls a different method.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "run",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_breaking"
+  },
+  {
+    "name": "output loop turned on",
+    "description": "The output now allows loops.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": true
+        }
+      ]
+    },
+    "expected": "outdated_breaking"
+  },
+  {
+    "name": "output loop turned off",
+    "description": "The output no longer allows loops.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": true
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_breaking"
+  },
+  {
+    "name": "component declares no outputs",
+    "description": "The saved node has an output, and the component declares none (Run Flow, Smart Router, Text Operations).",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": []
+    },
+    "expected": "outdated_breaking"
+  },
+  {
+    "name": "saved node has no outputs key",
+    "description": "The saved node carries no outputs, so nothing tells which outputs had edges.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      }
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_breaking"
+  },
+  {
+    "name": "output display_name changed",
+    "description": "Only the output display name changed.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Output",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "output types widened",
+    "description": "The output can produce more types.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message",
+            "Data"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "output types narrowed",
+    "description": "The output no longer produces a type the saved node produced.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message",
+            "Data"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_breaking"
+  },
+  {
+    "name": "output type order changed",
+    "description": "The output type list was reordered.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message",
+            "Data"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Data",
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "output type Data is now JSON",
+    "description": "The output declares JSON where the saved node had Data.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Data"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "JSON"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "output type DataFrame is now Table",
+    "description": "The output declares Table where the saved node had DataFrame.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "DataFrame"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Table"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "input_types widened",
+    "description": "The input accepts more types.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [
+      "input_value"
+    ],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message",
+            "Data"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "input_types narrowed, connected",
+    "description": "The connected input no longer accepts a type the saved node accepted.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message",
+            "Data"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [
+      "input_value"
+    ],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_breaking"
+  },
+  {
+    "name": "input_types narrowed, not connected",
+    "description": "The input no longer accepts a type the saved node accepted, and no edge goes into it.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message",
+            "Data"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "input_types emptied, connected",
+    "description": "The connected input no longer accepts connections.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [
+      "input_value"
+    ],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": []
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_breaking"
+  },
+  {
+    "name": "input_types emptied, not connected",
+    "description": "The input no longer accepts connections, and no edge goes into it.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": []
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "input type Data is now JSON",
+    "description": "The input accepts JSON where the saved node accepted Data.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message",
+            "Data"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [
+      "input_value"
+    ],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message",
+            "JSON"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "input type DataFrame is now Table",
+    "description": "The input accepts Table where the saved node accepted DataFrame.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "DataFrame"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [
+      "input_value"
+    ],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Table"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "input field removed, connected",
+    "description": "The component dropped a field the saved node has, and an edge goes into it.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [
+      "input_value"
+    ],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_breaking"
+  },
+  {
+    "name": "input field removed, not connected",
+    "description": "The component dropped a field the saved node has. No edge goes into it.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_breaking"
+  },
+  {
+    "name": "field added while editing",
+    "description": "The saved node has a field a Run Flow node added for its selected flow.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        },
+        "ChatInput-a1b2c~input_value": {
+          "type": "str",
+          "value": "hi",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_breaking"
+  },
+  {
+    "name": "input field type changed, connected",
+    "description": "The connected field type changed from str to dict, so its edge drops.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [
+      "input_value"
+    ],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "dict",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_breaking"
+  },
+  {
+    "name": "input field type changed, not connected",
+    "description": "The field type changed from str to dict, no edge goes into it, and it is empty.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "dict",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "input field type changed, not connected, holds a value",
+    "description": "The field type changed from str to dict, and the update drops its saved value.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "hello",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "dict",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_breaking"
+  },
+  {
+    "name": "input field type changed, not connected, empty dict",
+    "description": "An empty dict counts as no value, like None, an empty string or an empty list.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "dict",
+          "required": false,
+          "value": {},
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "prompt variable fields",
+    "description": "The saved node lists its extra field in custom_fields, so the component rebuilds it.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        },
+        "question": {
+          "type": "str",
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ],
+      "custom_fields": {
+        "template": [
+          "question"
+        ]
+      }
+    },
+    "connected_fields": [
+      "question"
+    ],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "prompt variable plus a removed field",
+    "description": "custom_fields covers the variable, not the other field the component dropped.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        },
+        "question": {
+          "type": "str",
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        },
+        "legacy": {
+          "type": "str",
+          "value": "x"
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ],
+      "custom_fields": {
+        "template": [
+          "question"
+        ]
+      }
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_breaking"
+  },
+  {
+    "name": "editor metadata on the saved node",
+    "description": "The saved node carries editor runtime keys the component does not declare.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        },
+        "_frontend_node_flow_id": {
+          "value": "flow-1"
+        },
+        "is_refresh": true,
+        "tools_metadata": {
+          "value": []
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "tool mode, component still supports it",
+    "description": "The saved node is in tool mode and the component still has a tool-mode input.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ],
+          "tool_mode": true
+        },
+        "tools_metadata": {
+          "value": []
+        }
+      },
+      "outputs": [
+        {
+          "name": "component_as_tool",
+          "display_name": "Toolset",
+          "types": [
+            "Tool"
+          ],
+          "method": "to_toolkit",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ],
+          "tool_mode": true
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "tool mode, component dropped it",
+    "description": "The saved node is in tool mode and the component has no tool-mode input.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ],
+          "tool_mode": true
+        },
+        "tools_metadata": {
+          "value": []
+        }
+      },
+      "outputs": [
+        {
+          "name": "component_as_tool",
+          "display_name": "Toolset",
+          "types": [
+            "Tool"
+          ],
+          "method": "to_toolkit",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_breaking"
+  },
+  {
+    "name": "input field type changed, not connected, empty list",
+    "description": "An empty list counts as no value, like None, an empty string or an empty dict.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": [],
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "dict",
+          "required": false,
+          "value": {},
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "saved-only field named constructor",
+    "description": "A field only the saved node has is removed, even when its name is an object property name in JavaScript.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        },
+        "constructor": {
+          "type": "str",
+          "required": false,
+          "value": "v"
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_breaking"
+  },
+  {
+    "name": "new required field named toString, no default",
+    "description": "A new required field with nothing to fill it needs input, even when its name is an object property name in JavaScript.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        },
+        "toString": {
+          "type": "str",
+          "required": true,
+          "value": ""
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_breaking"
+  },
+  {
+    "name": "connected field now hidden",
+    "description": "The component now declares the connected field hidden. The update keeps connected fields shown, so the edge stays.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ],
+          "show": true
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [
+      "input_value"
+    ],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ],
+          "show": false
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "field now hidden, not connected",
+    "description": "The component now declares the field hidden, and no edge goes into it, so the update drops nothing.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ],
+          "show": true
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ],
+          "show": false
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "connected field hidden on both sides",
+    "description": "The saved node already has the connected field hidden. The editor drops an edge into a hidden field when the flow loads, before any update, so the update itself drops nothing more.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ],
+          "show": false
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [
+      "input_value"
+    ],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ],
+          "show": false
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "tool mode, connected field now marked tool_mode",
+    "description": "The saved node is in tool mode and the component now marks a connected field tool_mode. The editor drops edges into tool-mode fields of a tool-mode node.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ],
+          "tool_mode": true
+        },
+        "tools_metadata": {
+          "value": []
+        },
+        "query": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "component_as_tool",
+          "display_name": "Toolset",
+          "types": [
+            "Tool"
+          ],
+          "method": "to_toolkit",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [
+      "query"
+    ],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ],
+          "tool_mode": true
+        },
+        "query": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ],
+          "tool_mode": true
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_breaking"
+  },
+  {
+    "name": "tool mode, field now marked tool_mode, not connected",
+    "description": "The saved node is in tool mode and the component now marks a field tool_mode, but no edge goes into it.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ],
+          "tool_mode": true
+        },
+        "tools_metadata": {
+          "value": []
+        },
+        "query": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "component_as_tool",
+          "display_name": "Toolset",
+          "types": [
+            "Tool"
+          ],
+          "method": "to_toolkit",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ],
+          "tool_mode": true
+        },
+        "query": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ],
+          "tool_mode": true
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "connected field now marked tool_mode, not in tool mode",
+    "description": "The component now marks a connected field tool_mode, but the saved node is not in tool mode, so the edge stays.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        },
+        "query": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [
+      "query"
+    ],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        },
+        "query": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ],
+          "tool_mode": true
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_safe"
+  }
+]
