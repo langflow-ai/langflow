@@ -165,11 +165,9 @@ def registered_revokers() -> set[str]:
 async def _revoke_remote(session: AsyncSession, row: TriggerSubscription) -> None:
     """Ask the provider to delete the subscription, best effort.
 
-    With no registered revoker - OSS today, before TRG-6 - this is a no-op and
-    the remote object is left to expire on the provider's own schedule. That is
-    a real gap and it is named here rather than hidden: the local row is retired
-    regardless, so Langflow stops acting on the subscription immediately, but
-    the provider may keep delivering until its TTL runs out.
+    When a provider is temporarily unavailable, retain a durable cleanup
+    intent. Local retirement still stops deliveries immediately, and the
+    remote operation can finish after its installed handler is available.
     """
     if row.provider in {"microsoft", "google"}:
         from langflow.services.triggers.source_cleanup import enqueue_cleanup
@@ -179,6 +177,9 @@ async def _revoke_remote(session: AsyncSession, row: TriggerSubscription) -> Non
     _ensure_source_handlers(row.provider)
     revoker = _REVOKERS.get(row.provider)
     if revoker is None:
+        from langflow.services.triggers.source_cleanup import enqueue_cleanup
+
+        await enqueue_cleanup(session, row)
         return
     try:
         await revoker(session, row)
