@@ -107,7 +107,7 @@ class JobRunner:
         heartbeat_task = self._start_heartbeat(job_id)
         paused = False
         try:
-            await self._jobs.execute_with_status(job_id, _wrapped)
+            await self._jobs.execute_with_status(job_id, _wrapped, owner=self._owner)
         except PauseRequested as exc:
             # Stop the heartbeat BEFORE stamping suspend metadata: both are whole-blob
             # read-modify-writes, so a beat racing the stamp would clobber the request id.

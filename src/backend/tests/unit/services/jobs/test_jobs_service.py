@@ -143,7 +143,9 @@ async def test_job_created_in_progress_runs_without_the_queued_flip():
 
     assert result == "done"
     assert seen == {"kwargs": {"value": 1}, "status": JobStatus.IN_PROGRESS}
-    assert update_calls == [JobStatus.COMPLETED]
+    # No status write at all on this path now: the QUEUED flip is skipped as before,
+    # and the terminal write goes through the guarded complete_live_job instead.
+    assert update_calls == []
     assert (await service.get_job_by_job_id(job_id)).status == JobStatus.COMPLETED
 
 
