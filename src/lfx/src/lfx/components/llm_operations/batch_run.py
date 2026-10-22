@@ -131,7 +131,13 @@ class BatchRunComponent(Component):
         return row
 
     def _add_metadata(
-        self, row: dict[str, Any], *, success: bool = True, system_msg: str = "", error: str | None = None
+        self,
+        row: dict[str, Any],
+        *,
+        success: bool = True,
+        system_msg: str = "",
+        input_text: str = "",
+        error: str | None = None,
     ) -> None:
         """Add metadata to a row if enabled."""
         if not self.enable_metadata:
@@ -140,7 +146,7 @@ class BatchRunComponent(Component):
         if success:
             row["metadata"] = {
                 "has_system_message": bool(system_msg),
-                "input_length": len(row.get("text_input", "")),
+                "input_length": len(input_text),
                 "response_length": len(row[self.output_column_name]),
                 "processing_status": "success",
             }
@@ -238,7 +244,7 @@ class BatchRunComponent(Component):
                 row = self._create_base_row(
                     cast("dict[str, Any]", original_row), model_response=response_text, batch_index=idx
                 )
-                self._add_metadata(row, success=True, system_msg=system_msg)
+                self._add_metadata(row, success=True, system_msg=system_msg, input_text=user_texts[idx])
                 rows.append(row)
 
                 # Log progress
