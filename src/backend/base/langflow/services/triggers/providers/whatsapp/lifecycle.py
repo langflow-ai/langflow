@@ -113,18 +113,15 @@ async def prepare(session: AsyncSession, trigger: Trigger) -> None:
         raise SourceConfigurationError(msg) from None
 
 
-async def subscription(session: AsyncSession, trigger: Trigger) -> TriggerSubscription | None:
-    return (
-        await session.exec(
-            select(TriggerSubscription)
-            .where(
-                TriggerSubscription.provider == "whatsapp",
-                TriggerSubscription.trigger_id == trigger.id,
-                TriggerSubscription.state.in_(["pending", "active"]),
-            )
-            .with_for_update()
-        )
-    ).first()
+async def subscription(session: AsyncSession, trigger: Trigger, *, lock: bool = True) -> TriggerSubscription | None:
+    statement = select(TriggerSubscription).where(
+        TriggerSubscription.provider == "whatsapp",
+        TriggerSubscription.trigger_id == trigger.id,
+        TriggerSubscription.state.in_(["pending", "active"]),
+    )
+    if lock:
+        statement = statement.with_for_update()
+    return (await session.exec(statement)).first()
 
 
 async def current_override(client: WhatsAppClient, *, require_app: bool = True) -> str | None:
@@ -190,7 +187,9 @@ async def provision(session: AsyncSession, trigger: Trigger) -> TriggerSubscript
 
 
 async def ingress_secrets(session: AsyncSession, trigger: Trigger) -> IngressSecrets:
-    row = await subscription(session, trigger)
+    # Meta verifies the callback while provisioning still holds the mutation
+    # lock. Reading the committed reservation must not wait for that POST.
+    row = await subscription(session, trigger, lock=False)
     config = settings()
     if (
         row is None
