@@ -279,3 +279,60 @@ async def test_resume_discards_paused_interval_and_starts_new_baseline(trigger_o
         await TriggerService().enable(session, row=row)
         assert row.provider_state == {}
     assert await source_runtime.sync_source(trigger.id) == 0
+
+
+async def test_registered_salesforce_poll_adapter_delivers_changes_and_rechecks_consent(
+    salesforce, trigger_owner, owned_flow, monkeypatch
+):
+    import asyncio
+
+    from langflow.services.triggers.listeners import adapters
+
+    connection_id = await connection(trigger_owner)
+    trigger = await reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable(session, row=row)
+        snapshot = adapters.ListenerTrigger(
+            id=row.id,
+            flow_id=row.flow_id,
+            user_id=row.user_id,
+            kind=row.kind,
+            provider=row.provider,
+            mechanism_id=row.config["mechanism_id"],
+            config=dict(row.config),
+            provider_state=dict(row.provider_state),
+        )
+    monkeypatch.setattr(adapters, "_REGISTRY", {})
+    adapters.register_builtin_adapters()
+    adapter = adapters.build_adapter(snapshot)
+    assert isinstance(adapter, adapters.ProviderSourcePollAdapter)
+
+    async def unexpected_callback(*_args, **_kwargs):
+        pytest.fail("The adapter bypassed shared source collection and cursor commits")
+
+    context = adapters.ListenerContext(
+        connection_id=connection_id,
+        triggers=[snapshot],
+        emit=unexpected_callback,
+        save_cursor=unexpected_callback,
+        resolve_credential=unexpected_callback,
+        stopping=asyncio.Event(),
+    )
+    assert await adapter.poll(context) == 0
+    assert len(salesforce.requests) == 3
+    await set_due_cursor(trigger.id)
+    salesforce.version = "2026-10-22T12:01:00.000Z"
+    assert await adapter.poll(context) == 1
+    await set_due_cursor(trigger.id)
+    assert await adapter.poll(context) == 0
+    async with session_scope() as session:
+        events = (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger.id))).all()
+        assert len(events) == 1
+        row = await session.get(Connection, connection_id)
+        row.allow_non_interactive = False
+        session.add(row)
+    requests_before = len(salesforce.requests)
+    with pytest.raises(ValueError, match="background"):
+        await adapter.poll(context)
+    assert len(salesforce.requests) == requests_before
