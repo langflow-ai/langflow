@@ -35,10 +35,33 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+async def configured_ingress_origin(session: AsyncSession, connection_id) -> str | None:
+    """Resolve the advertised origin from operator settings, never a request."""
+    from langflow.services.deps import get_settings_service
+    from langflow.services.triggers.source_arming import public_ingress_origin
+
+    configured = get_settings_service().settings.trigger_ingress_origin
+    if configured:
+        return public_ingress_origin(configured)
+    binding = await session.get(ConnectionOAuth, connection_id)
+    if binding is None:
+        return None
+    registration = get_oauth_settings().registration(binding.registration_id)
+    return public_ingress_origin(registration.redirect_uri)
+
+
 async def source_ingress_url(session: AsyncSession, trigger: Trigger) -> str:
     if not trigger.connection_id or not trigger.public_id:
         msg = "A push source requires a connection and a public ingress address."
         raise SourceConfigurationError(msg)
+    from langflow.services.triggers.providers.registry import get_provider
+
+    if get_provider(trigger.provider or "") is not None:
+        origin = await configured_ingress_origin(session, trigger.connection_id)
+        if origin is None:
+            msg = "Provider push requires a configured public HTTPS ingress origin."
+            raise SourceConfigurationError(msg)
+        return f"{origin}/api/v1/triggers/ingress/{trigger.provider}/{trigger.public_id}"
     binding = await session.get(ConnectionOAuth, trigger.connection_id)
     if binding is None:
         msg = "A push source requires an OAuth connection with a configured public callback."
@@ -172,8 +195,13 @@ async def gmail_mailbox_key(lease) -> str:
     return hashlib.sha256(address.casefold().encode()).hexdigest()
 
 
-async def provision_source(session: AsyncSession, trigger: Trigger) -> TriggerSubscription:
+async def provision_source(session: AsyncSession, trigger: Trigger) -> TriggerSubscription | None:
     """Create a watch once, or return the live one on an idempotent enable."""
+    from langflow.services.triggers.providers.registry import get_provider
+
+    extension = get_provider(trigger.provider or "")
+    if extension is not None:
+        return await extension.provision(session, trigger) if extension.provision else None
     existing = (
         await session.exec(
             select(TriggerSubscription).where(
@@ -252,6 +280,14 @@ async def provision_source(session: AsyncSession, trigger: Trigger) -> TriggerSu
 
 
 async def renew_source(session: AsyncSession, subscription: TriggerSubscription) -> datetime:
+    from langflow.services.triggers.providers.registry import get_provider
+
+    extension = get_provider(subscription.provider)
+    if extension is not None:
+        if extension.renew is None:
+            msg = "The trigger provider does not support subscription renewal."
+            raise ValueError(msg)
+        return await extension.renew(session, subscription)
     trigger = await session.get(Trigger, subscription.trigger_id)
     if trigger is None:
         msg = "The trigger behind this subscription no longer exists."

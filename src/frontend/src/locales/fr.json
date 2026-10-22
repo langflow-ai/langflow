@@ -1,4 +1,5 @@
 {
+  "connections.add.tokenGenericHelp": "Collez un jeton d'accès pour ce fournisseur. Langflow vérifie le jeton avant de l'enregistrer.",
   "storageUpgrade.unavailable": "Stockage indisponible",
   "storageUpgrade.title": "Mise à niveau de vos données",
   "storageUpgrade.queued": "En attente de mise à niveau",
