@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { StorageUpgradeStatus } from "@/controllers/API/queries/knowledge-base-storage/use-get-storage-status";
 import { useGetStorageStatus } from "@/controllers/API/queries/knowledge-base-storage/use-get-storage-status";
 import { usePostStorageRetry } from "@/controllers/API/queries/knowledge-base-storage/use-post-storage-retry";
+import { axe } from "@/utils/a11y-test";
 import { StorageUpgradeNotice, StorageUpgradePanel } from "..";
 
 jest.mock("react-i18next", () => ({
@@ -79,6 +80,114 @@ function wrapper(queryClient = new QueryClient()) {
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 }
+
+it("names orphaned folders and retries discovery without a migration ID", async () => {
+  status = {
+    ...status,
+    running: false,
+    stores: [],
+    inventory: {
+      complete: false,
+      issues: 17,
+      storage_directory: "C:/Users/test/.langflow/knowledge_bases",
+      details: [
+        { source: "former-owner/my-base", code: "missing_source_owner" },
+      ],
+    },
+  };
+  const { container, rerender } = render(<StorageUpgradeNotice />, {
+    wrapper: wrapper(),
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: /view upgrade progress/i }),
+  );
+  expect(
+    screen.getByText(status.inventory!.storage_directory!),
+  ).toBeInTheDocument();
+  expect(screen.getByText("former-owner/my-base")).toBeInTheDocument();
+  expect(screen.getByText(/another Langflow database/)).toBeInTheDocument();
+  expect(await axe(document.body)).toHaveNoViolations();
+  fireEvent.click(screen.getByRole("button", { name: /retry storage check/i }));
+  expect(mutate).toHaveBeenCalledWith({ inventory: true }, expect.any(Object));
+  act(() => mutate.mock.calls[0][1].onError());
+  expect(screen.getByText(/Could not schedule/)).toHaveAttribute(
+    "role",
+    "alert",
+  );
+  fireEvent.click(screen.getByRole("button", { name: /retry storage check/i }));
+  act(() => mutate.mock.calls[1][1].onSuccess());
+  expect(screen.getByText(/Retry scheduled/)).toHaveAttribute("role", "status");
+  status = { ...status, inventory: { complete: true, issues: 0 } };
+  rerender(<StorageUpgradeNotice />);
+  expect(
+    container.querySelector('[data-testid="storage-upgrade-notice"]'),
+  ).toBeNull();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
+it("explains an unfinished storage check instead of naming earlier folders", () => {
+  status = {
+    ...status,
+    running: false,
+    stores: [],
+    inventory: {
+      complete: false,
+      issues: 2,
+      storage_directory: "/srv/langflow/knowledge_bases",
+      details: [],
+      scan_failed: true,
+    },
+  };
+  render(<StorageUpgradeNotice />, { wrapper: wrapper() });
+  fireEvent.click(
+    screen.getByRole("button", { name: /view upgrade progress/i }),
+  );
+  expect(
+    screen.getByText(/last storage check did not finish/i),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByText(/another Langflow database/),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByRole("list")).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: /retry storage check/i }),
+  ).toBeEnabled();
+});
+
+it("keeps an empty fresh instance free of storage warnings", () => {
+  status = { ...status, running: false, stores: [] };
+  render(<StorageUpgradeNotice />, { wrapper: wrapper() });
+  expect(
+    screen.queryByTestId("storage-upgrade-notice"),
+  ).not.toBeInTheDocument();
+});
+
+it("offers an inventory retry for older scans without folder details", () => {
+  status = {
+    ...status,
+    running: false,
+    stores: [],
+    inventory: { complete: false, issues: 1 },
+  };
+  render(<StorageUpgradeNotice />, { wrapper: wrapper() });
+  fireEvent.click(
+    screen.getByRole("button", { name: /view upgrade progress/i }),
+  );
+  expect(
+    screen.getByRole("button", { name: /retry storage check/i }),
+  ).toBeEnabled();
+});
+
+it("disables inventory retries during discovery", () => {
+  status = { ...status, inventory: { complete: false, issues: 1 } };
+  render(<StorageUpgradeNotice />, { wrapper: wrapper() });
+  fireEvent.click(
+    screen.getByRole("button", { name: /view upgrade progress/i }),
+  );
+  expect(
+    screen.getByRole("button", { name: /retry storage check/i }),
+  ).toBeDisabled();
+});
 
 it("shows automatic background progress and source retention from any screen", () => {
   render(<StorageUpgradeNotice />, { wrapper: wrapper() });

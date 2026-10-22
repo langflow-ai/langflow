@@ -96,7 +96,7 @@ sandbox = [
 # Relocated out of langflow-base[complete], where they were the de-facto provider
 # for these components after the bundle split.
 cassandra = ["lfx-datastax>=0.1.3,<1.0.0"]  # Compatibility alias for the Cassandra extension
-toolguard = ["lfx-toolguard>=0.1.0,<1.0.0"]  # Compatibility alias for the Policies extension
+toolguard = ["lfx-toolguard>=0.3.0,<1.0.0"]  # Compatibility alias for the Policies extension
 # Application observability: OTLP export of traces, metrics and logs for ``lfx serve`` / ``lfx
 # run``. lfx.observability guards every import, so a bare ``pip install lfx`` skips these and
 # the whole path no-ops; installing this extra turns it on. The full ``langflow`` distribution
