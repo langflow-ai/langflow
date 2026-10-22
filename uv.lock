@@ -47,6 +47,7 @@ members = [
     "lfx-bundles",
     "lfx-cohere",
     "lfx-confluent",
+    "lfx-confluence",
     "lfx-datastax",
     "lfx-docling",
     "lfx-duckduckgo",
@@ -8869,6 +8870,7 @@ dependencies = [
     { name = "lfx-anthropic" },
     { name = "lfx-azure" },
     { name = "lfx-cohere" },
+    { name = "lfx-confluence" },
     { name = "lfx-datastax" },
     { name = "lfx-docling" },
     { name = "lfx-google" },
@@ -9003,6 +9005,7 @@ requires-dist = [
     { name = "lfx-azure", editable = "src/bundles/azure" },
     { name = "lfx-bundles", extras = ["all-no-torch"], marker = "extra == 'bundles'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-cohere", editable = "src/bundles/cohere" },
+    { name = "lfx-confluence", editable = "src/bundles/confluence" },
     { name = "lfx-confluent", marker = "extra == 'bundles'", editable = "src/bundles/confluent" },
     { name = "lfx-datastax", editable = "src/bundles/datastax" },
     { name = "lfx-docling", editable = "src/bundles/docling" },
@@ -11071,6 +11074,21 @@ requires-dist = [
     { name = "lfx", editable = "src/lfx" },
     { name = "pyarrow", specifier = ">=17" },
     { name = "pyiceberg", specifier = ">=0.10,<1" },
+]
+
+[[package]]
+name = "lfx-confluence"
+version = "0.1.0"
+source = { editable = "src/bundles/confluence" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.27,<1" },
+    { name = "lfx", editable = "src/lfx" },
 ]
 
 [[package]]

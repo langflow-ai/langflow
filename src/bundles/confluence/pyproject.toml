@@ -1,0 +1,25 @@
+[project]
+name = "lfx-confluence"
+version = "0.1.0"
+description = "Confluence Cloud page actions and bounded latest-state polling triggers."
+readme = "README.md"
+requires-python = ">=3.10,<3.16"
+license = { text = "MIT" }
+dependencies = ["lfx>=1.14.0.dev0,<2.0.0", "httpx>=0.27,<1"]
+
+[project.entry-points."langflow.extensions"]
+lfx-confluence = "lfx_confluence"
+
+[project.entry-points."langflow.trigger_providers"]
+confluence = "langflow.services.triggers.providers.confluence:PROVIDER"
+
+[build-system]
+requires = ["hatchling==1.31.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lfx_confluence"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
