@@ -5,6 +5,8 @@ was exact whole-value only, so a base URL could not be composed with a preserved
 id. A flow therefore had to be edited by hand on every promotion between planes.
 """
 
+from contextlib import asynccontextmanager
+
 import httpx
 import pytest
 from lfx.base.mcp import util
@@ -208,10 +210,12 @@ class TestRunToolReachesTheDescriber:
             async def call_tool(self, *_args, **_kwargs):
                 raise exc
 
-        async def _session(*_args, **_kwargs):
-            return _Session()
+        @asynccontextmanager
+        async def _session():
+            """Stub session activity so the rejected call reaches the auth describer."""
+            yield _Session()
 
-        monkeypatch.setattr(client, "_get_or_create_session", _session)
+        monkeypatch.setattr(client, "_session_in_use", _session)
         return client
 
     @pytest.mark.parametrize("status", [401, 403])

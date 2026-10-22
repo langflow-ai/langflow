@@ -7,10 +7,17 @@ Related to customer issue TS021996258 (Verizon).
 """
 
 import asyncio
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from lfx.base.mcp.util import MCPStdioClient, MCPStreamableHttpClient, update_tools
+
+
+@asynccontextmanager
+async def _session_in_use(session):
+    """Stub the pool boundary for tests of timeout configuration and retry policy."""
+    yield session
 
 
 class TestMCPTimeoutConfiguration:
@@ -74,7 +81,7 @@ class TestMCPTimeoutConfiguration:
         mock_session.call_tool = AsyncMock(return_value={"result": "success"})
 
         with (
-            patch.object(client, "_get_or_create_session", return_value=mock_session),
+            patch.object(client, "_session_in_use", new=lambda: _session_in_use(mock_session)),
             patch("asyncio.wait_for") as mock_wait_for,
         ):
             mock_wait_for.return_value = {"result": "success"}
@@ -97,7 +104,7 @@ class TestMCPTimeoutConfiguration:
         mock_session.call_tool = AsyncMock(return_value={"result": "success"})
 
         with (
-            patch.object(client, "_get_or_create_session", return_value=mock_session),
+            patch.object(client, "_session_in_use", new=lambda: _session_in_use(mock_session)),
             patch("asyncio.wait_for") as mock_wait_for,
         ):
             mock_wait_for.return_value = {"result": "success"}
@@ -121,7 +128,7 @@ class TestMCPTimeoutConfiguration:
         mock_session.call_tool = AsyncMock(return_value={"result": "success"})
 
         with (
-            patch.object(client, "_get_or_create_session", return_value=mock_session),
+            patch.object(client, "_session_in_use", new=lambda: _session_in_use(mock_session)),
             patch("asyncio.wait_for") as mock_wait_for,
         ):
             mock_wait_for.return_value = {"result": "success"}
@@ -144,7 +151,7 @@ class TestMCPTimeoutConfiguration:
         mock_session.call_tool = AsyncMock(return_value={"result": "success"})
 
         with (
-            patch.object(client, "_get_or_create_session", return_value=mock_session),
+            patch.object(client, "_session_in_use", new=lambda: _session_in_use(mock_session)),
             patch("asyncio.wait_for") as mock_wait_for,
         ):
             mock_wait_for.return_value = {"result": "success"}
@@ -222,7 +229,7 @@ class TestMCPTimeoutBehavior:
         mock_session.call_tool = AsyncMock(side_effect=[asyncio.TimeoutError(), {"result": "success"}])
 
         with (
-            patch.object(client, "_get_or_create_session", return_value=mock_session),
+            patch.object(client, "_session_in_use", new=lambda: _session_in_use(mock_session)),
             patch("asyncio.wait_for") as mock_wait_for,
         ):
             mock_wait_for.side_effect = [asyncio.TimeoutError(), {"result": "success"}]
@@ -288,7 +295,7 @@ class TestMCPTimeoutBehavior:
         mock_session.call_tool = AsyncMock(return_value={"result": "success"})
 
         with (
-            patch.object(client, "_get_or_create_session", return_value=mock_session),
+            patch.object(client, "_session_in_use", new=lambda: _session_in_use(mock_session)),
             patch("asyncio.wait_for") as mock_wait_for,
         ):
             mock_wait_for.return_value = {"result": "success"}

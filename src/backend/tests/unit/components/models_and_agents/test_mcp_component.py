@@ -7,6 +7,7 @@ This test suite validates the MCP component functionality using real MCP servers
 
 import re
 import shutil
+from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -18,6 +19,12 @@ from lfx.inputs.inputs import BoolInput, MessageTextInput, NestedDictInput
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
+
+
+@asynccontextmanager
+async def _session_in_use(session):
+    """Stub the pool boundary for isolated component connection and execution tests."""
+    yield session
 
 
 class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
@@ -264,7 +271,7 @@ class TestMCPComponentErrorHandling:
 
     async def test_connect_to_server_with_command(self, stdio_client):
         """Test connecting to server via Stdio with command."""
-        with patch.object(stdio_client, "_get_or_create_session") as mock_get_session:
+        with patch.object(stdio_client, "_session_in_use") as mock_session_in_use:
             # Mock session
             mock_session = AsyncMock()
             mock_tool = MagicMock()
@@ -272,7 +279,7 @@ class TestMCPComponentErrorHandling:
             list_tools_result = MagicMock()
             list_tools_result.tools = [mock_tool]
             mock_session.list_tools = AsyncMock(return_value=list_tools_result)
-            mock_get_session.return_value = mock_session
+            mock_session_in_use.side_effect = lambda: _session_in_use(mock_session)
 
             tools = await stdio_client.connect_to_server("uvx test-command")
 
@@ -288,11 +295,11 @@ class TestMCPComponentErrorHandling:
         stdio_client._connection_params = MagicMock()
         stdio_client._session_context = "test_context"
 
-        with patch.object(stdio_client, "_get_or_create_session") as mock_get_session:
+        with patch.object(stdio_client, "_session_in_use") as mock_session_in_use:
             mock_session = AsyncMock()
             mock_result = MagicMock()
             mock_session.call_tool = AsyncMock(return_value=mock_result)
-            mock_get_session.return_value = mock_session
+            mock_session_in_use.side_effect = lambda: _session_in_use(mock_session)
 
             result = await stdio_client.run_tool("test_tool", {"param": "value"})
 

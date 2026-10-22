@@ -1434,7 +1434,8 @@ class MCPSessionManager:
                 sessions_to_remove = [
                     session_id
                     for session_id, session_info in list(sessions.items())
-                    if current_time - session_info["last_used"] > get_session_idle_timeout()
+                    if not session_info.get("active_requests", 0)
+                    and current_time - session_info["last_used"] > get_session_idle_timeout()
                 ]
 
                 for session_id in sessions_to_remove:
@@ -1446,6 +1447,28 @@ class MCPSessionManager:
                 # once this lock's pin count hits zero.
                 if not sessions:
                     self.sessions_by_server.pop(server_key, None)
+
+    @contextlib.asynccontextmanager
+    async def session_activity(self, server_key: str, session: ClientSession) -> AsyncIterator[None]:
+        """Keep a pooled session alive until its last in-flight request finishes."""
+        session_info = None
+        try:
+            async with self._server_lock(server_key):
+                session_info = next(
+                    (info for info in self._sessions_for(server_key).values() if info["session"] is session), None
+                )
+                if session_info is None:
+                    # A sweep may have won the lock after acquisition. No request has
+                    # been sent yet, so the client's closed-session recovery is safe.
+                    raise ClosedResourceError
+                session_info["active_requests"] = session_info.get("active_requests", 0) + 1
+            yield
+        finally:
+            # No await here: cancellation must release activity too. The original
+            # entry can have been discarded, but cannot update its replacement.
+            if session_info is not None:
+                session_info["active_requests"] -= 1
+                session_info["last_used"] = asyncio.get_running_loop().time()
 
     def _get_server_key(self, connection_params, transport_type: str) -> str:
         """Generate a consistent server key based on connection parameters."""
@@ -2122,16 +2145,25 @@ class _PooledSessionClient:
 
     async def _list_tools(self) -> list:
         """List the server's tools, starting a new session once if the pooled one is dead."""
-        session = await self._get_or_create_session()
+        session: ClientSession | None = None
         try:
-            return (await session.list_tools()).tools
+            async with self._session_in_use() as session:
+                return (await session.list_tools()).tools
         except Exception as e:
             if not _is_mcp_session_bust_error(e):
                 raise
             await logger.awarning(f"MCP session for {self._TRANSPORT} server is closed; starting a new one: {e!r}")
             await self._discard_dead_session(session)
+        async with self._session_in_use() as session:
+            return (await session.list_tools()).tools
+
+    @contextlib.asynccontextmanager
+    async def _session_in_use(self) -> AsyncIterator[ClientSession]:
+        """Acquire a pooled session and protect it from idle cleanup during the request."""
         session = await self._get_or_create_session()
-        return (await session.list_tools()).tools
+        manager = self._get_session_manager()
+        async with manager.session_activity(self._server_key(manager), session):
+            yield session
 
     def _use_generated_context(self, prefix: str) -> None:
         if not self._session_context:
@@ -2347,12 +2379,11 @@ class MCPStdioClient(_PooledSessionClient):
             try:
                 await logger.adebug(f"Attempting to run tool '{tool_name}' (attempt {attempt + 1}/{max_retries})")
                 # Get or create persistent session
-                session = await self._get_or_create_session()
-
-                result = await asyncio.wait_for(
-                    session.call_tool(tool_name, arguments=arguments),
-                    timeout=effective_timeout,
-                )
+                async with self._session_in_use() as session:
+                    result = await asyncio.wait_for(
+                        session.call_tool(tool_name, arguments=arguments),
+                        timeout=effective_timeout,
+                    )
             except Exception as e:
                 last_error = e
                 current_error_type = type(e).__name__
@@ -2682,12 +2713,11 @@ class MCPStreamableHttpClient(_PooledSessionClient):
             try:
                 await logger.adebug(f"Attempting to run tool '{tool_name}' (attempt {attempt + 1}/{max_retries})")
                 # Get or create persistent session
-                session = await self._get_or_create_session()
-
-                result = await asyncio.wait_for(
-                    session.call_tool(tool_name, arguments=arguments),
-                    timeout=effective_timeout,
-                )
+                async with self._session_in_use() as session:
+                    result = await asyncio.wait_for(
+                        session.call_tool(tool_name, arguments=arguments),
+                        timeout=effective_timeout,
+                    )
             except Exception as e:
                 last_error = e
                 current_error_type = type(e).__name__

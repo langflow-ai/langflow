@@ -81,8 +81,20 @@ async def test_webhook_endpoint_requires_api_key_when_auto_login_false(client, a
         settings_service.auth_settings.WEBHOOK_AUTH_ENABLE = original_webhook_auth_enable
 
 
-async def test_webhook_endpoint_with_valid_api_key(client, added_webhook_test, created_api_key):
+async def test_webhook_endpoint_with_valid_api_key(client, added_webhook_test, created_api_key, monkeypatch):
     """Test that webhook works when valid API key is provided."""
+    from langflow.api.v1 import endpoints
+
+    completed = asyncio.Event()
+    run_flow_task = endpoints.simple_run_flow_task
+
+    async def run_to_completion(*args, **kwargs):
+        try:
+            return await run_flow_task(*args, **kwargs)
+        finally:
+            completed.set()
+
+    monkeypatch.setattr(endpoints, "simple_run_flow_task", run_to_completion)
     endpoint_name = added_webhook_test["endpoint_name"]
     endpoint = f"api/v1/webhook/{endpoint_name}"
 
@@ -95,8 +107,8 @@ async def test_webhook_endpoint_with_valid_api_key(client, added_webhook_test, c
         response = await client.post(endpoint, headers={"x-api-key": created_api_key.api_key}, json=payload)
         assert response.status_code == 202
 
-        # Wait for background task to complete (webhook returns 202 immediately)
-        await asyncio.sleep(2)
+        # Keep the directory alive until the real background task finishes, even on a slow runner.
+        await asyncio.wait_for(completed.wait(), timeout=10)
         assert await file_path.exists(), f"File {file_path} does not exist"
 
     file_does_not_exist = not await file_path.exists()

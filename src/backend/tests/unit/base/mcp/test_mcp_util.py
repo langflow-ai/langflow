@@ -11,7 +11,7 @@ import os
 import re
 import shutil
 import sys
-from contextlib import suppress
+from contextlib import asynccontextmanager, suppress
 from typing import get_type_hints
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -57,6 +57,12 @@ def test_validate_mcp_stdio_env_allows_regular_env():
 _SHELL_INTERPRETERS = frozenset({"bash", "sh", "zsh", "cmd", "cmd.exe", "powershell", "powershell.exe", "/bin/sh"})
 
 
+@asynccontextmanager
+async def _session_in_use(get_session):
+    """Stub the pool boundary while retaining acquisition and security assertions."""
+    yield await get_session()
+
+
 def _stdio_client_with_mocked_session() -> tuple[MCPStdioClient, AsyncMock]:
     """Return a real stdio client whose session creation cannot spawn a process."""
     client = MCPStdioClient()
@@ -64,6 +70,7 @@ def _stdio_client_with_mocked_session() -> tuple[MCPStdioClient, AsyncMock]:
     mock_session.list_tools = AsyncMock(return_value=MagicMock(tools=[]))
     get_session = AsyncMock(return_value=mock_session)
     client._get_or_create_session = get_session  # type: ignore[method-assign]
+    client._session_in_use = lambda: _session_in_use(get_session)  # type: ignore[method-assign]
     return client, get_session
 
 
@@ -2607,6 +2614,7 @@ class TestMCPSseClientUnit:
         with (
             patch.object(sse_client, "validate_url", return_value=(True, "")),
             patch.object(sse_client, "_get_or_create_session") as mock_get_session,
+            patch.object(sse_client, "_session_in_use", new=lambda: _session_in_use(mock_get_session)),
         ):
             # Mock session
             mock_session = AsyncMock()
@@ -2680,6 +2688,7 @@ class TestMCPSseClientUnit:
 
         with (
             patch.object(sse_client, "_get_or_create_session", side_effect=mock_get_session_side_effect),
+            patch.object(sse_client, "_session_in_use", new=lambda: _session_in_use(sse_client._get_or_create_session)),
             patch.object(sse_client, "_get_session_manager") as mock_get_manager,
         ):
             mock_manager = MagicMock()
