@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 
+from lfx.integrations.errors import InvalidRequestError
 from lfx.integrations.models import ConnectionRef
 from lfx_jira.client import JiraClient
 from lfx_jira.schema import cloud_id, invalid, issue_data, numeric_id, project_key, search_body, timestamp
@@ -32,7 +33,7 @@ def normalize_config(kind, config):
             raise ValueError
         project = project_key(config.get("project"))
         issue_type = numeric_id(config["issue_type_id"]) if config.get("issue_type_id") else ""
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, InvalidRequestError):
         msg = "Choose an owned Jira connection and a valid project key."
         raise ValueError(msg) from None
     return {**config, "connection": str(ref), "project": project, "issue_type_id": issue_type, "delivery_mode": "poll"}

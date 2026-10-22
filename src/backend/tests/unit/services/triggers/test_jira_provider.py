@@ -125,12 +125,15 @@ async def test_unrelated_duplicate_and_broken_pages_fail_without_advancing(monke
     [
         {"connection": "other/work", "project": "DEMO"},
         {"connection": "jira/work", "project": 'DEMO" OR 1=1'},
+        {"connection": "jira/work", "project": "DEMO", "issue_type_id": "not-numeric"},
         {"connection": "jira/work", "project": "DEMO", "delivery_mode": "push"},
         {"connection": "jira/work", "project": "DEMO", "token": "bad"},
     ],
 )
 def test_invalid_trigger_targets_and_push_modes_rejected(raw):
-    with pytest.raises((ValueError, InvalidRequestError)):
+    with pytest.raises(
+        ValueError, match=r"^(Choose an owned Jira connection|Unsupported Jira trigger|Jira issue sources)"
+    ):
         collector.normalize_config("jira.issue_created", raw)
 
 
