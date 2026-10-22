@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 from lfx_telegram._client import TelegramClient
@@ -9,8 +10,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from langflow.services.auth.utils import decrypt_api_key
+from langflow.services.database.models.connection.model import Connection
 from langflow.services.database.models.trigger.model import TriggerCleanup, TriggerSubscription
-from langflow.services.triggers.constants import FAMILY_TRIGGER_LISTENER, FAMILY_TRIGGER_PUSH
+from langflow.services.triggers.constants import FAMILY_TRIGGER_PUSH
 from langflow.services.triggers.ingress.verifiers import IngressSecrets
 from langflow.services.triggers.source_clients import source_lease
 from langflow.services.triggers.source_errors import SourceConfigurationError
@@ -118,16 +120,24 @@ async def prepare(session: AsyncSession, trigger: Trigger) -> None:
         raise SourceConfigurationError(msg)
     push = mechanism == "telegram.webhook"
     address = await source_ingress_url(session, trigger) if push else None
-    lease = await source_lease(session, trigger, family=FAMILY_TRIGGER_PUSH if push else FAMILY_TRIGGER_LISTENER)
-    async with TelegramClient(lease) as client:
-        bot = await client.identity()
-        info = await client.call("getWebhookInfo")
-    if not isinstance(info, dict) or not isinstance(info.get("url"), str):
-        msg = "Telegram returned invalid receiver information."
+    connection = await session.get(Connection, trigger.connection_id) if trigger.connection_id else None
+    identity = connection.executing_identity if connection is not None else {}
+    account = identity.get("account")
+    if (
+        connection is None
+        or connection.provider_key != "telegram"
+        or identity.get("identity") != "bot"
+        or not isinstance(account, dict)
+        or not re.fullmatch(r"[1-9][0-9]{0,15}", str(account.get("id", "")))
+        or not re.fullmatch(r"[A-Za-z0-9_]{5,32}", str(account.get("display", "")))
+    ):
+        msg = "Reconnect Telegram to verify the bot identity before enabling a trigger."
         raise SourceConfigurationError(msg)
-    if info["url"] and info["url"] != address:
-        msg = "This Telegram bot has another webhook. Remove its existing receiver first."
-        raise SourceConfigurationError(msg)
+    # Connection creation verifies getMe before storing this account metadata.
+    # Resolving a credential here would open a second SQLite writer while
+    # enable already holds the trigger writer. Network checks run in the
+    # subsequent provisioning or collection phase instead.
+    bot = {"id": account["id"], "username": account["display"]}
     await _claim(session, trigger, bot=bot, address=address)
     trigger.provider_state = {**(trigger.provider_state or {}), "bot_id": bot["id"], "bot_username": bot["username"]}
     session.add(trigger)
@@ -201,14 +211,14 @@ async def ingress_secrets(session: AsyncSession, trigger: Trigger) -> IngressSec
     ).first()
     if row is None or row.provider_state.get("transport") != "telegram.webhook" or not trigger.signing_secret_encrypted:
         return IngressSecrets()
+    # Internal resource and channel slots carry the verified bot identity.
+    # Keep target_config identical to the persisted commit precondition.
     return IngressSecrets(
         signing_secret=decrypt_api_key(trigger.signing_secret_encrypted),
         target_kind=trigger.kind,
-        target_config={
-            **trigger.config,
-            "receiver_bot_id": row.provider_state["bot_id"],
-            "receiver_bot_username": row.provider_state["bot_username"],
-        },
+        target_config=dict(trigger.config),
+        resource_id=row.provider_state["bot_id"],
+        channel_id=row.provider_state["bot_username"],
     )
 
 

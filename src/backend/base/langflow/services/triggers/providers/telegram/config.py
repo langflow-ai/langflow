@@ -35,7 +35,7 @@ def normalize_config(kind: str, raw: dict[str, Any]) -> dict[str, Any]:
         msg = "Unsupported Telegram trigger configuration."
         raise ValueError(msg)
     connection = raw.get("connection")
-    if connection:
+    if connection is not None and connection != "":
         ref = ConnectionRef.parse(connection)
         if ref.provider != "telegram":
             msg = "Choose a Telegram connection for this trigger."
@@ -43,8 +43,10 @@ def normalize_config(kind: str, raw: dict[str, Any]) -> dict[str, Any]:
         connection = ref.to_handle()
     chats = _ids(raw.get("allowed_chats"))
     senders = _ids(raw.get("allowed_senders"), positive=True)
-    mode = raw.get("delivery_mode") or "auto"
-    scope = raw.get("session_scope") or "thread"
+    mode = raw.get("delivery_mode")
+    mode = "auto" if mode is None or mode == "" else mode
+    scope = raw.get("session_scope")
+    scope = "thread" if scope is None or scope == "" else scope
     if (
         not isinstance(mode, str)
         or mode not in {"auto", "push", "poll"}
@@ -61,7 +63,8 @@ def normalize_config(kind: str, raw: dict[str, Any]) -> dict[str, Any]:
         "delivery_mode": mode,
     }
     if kind == "telegram.command":
-        commands = raw.get("commands") or []
+        commands = raw.get("commands")
+        commands = [] if commands is None else commands
         if (
             not isinstance(commands, list)
             or len(commands) > MAX_FILTERS

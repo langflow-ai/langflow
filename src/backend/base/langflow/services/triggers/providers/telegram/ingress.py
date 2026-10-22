@@ -33,8 +33,8 @@ def verify(request: IngressRequest, secrets: IngressSecrets, *, tolerance_s: int
         msg = "bad_payload"
         raise IngressRejected(msg) from None
     config = secrets.target_config or {}
-    if not re.fullmatch(r"[1-9][0-9]{0,15}", str(config.get("receiver_bot_id", ""))) or not re.fullmatch(
-        r"[A-Za-z0-9_]{5,32}", str(config.get("receiver_bot_username", ""))
+    if not re.fullmatch(r"[1-9][0-9]{0,15}", str(secrets.resource_id or "")) or not re.fullmatch(
+        r"[A-Za-z0-9_]{5,32}", str(secrets.channel_id or "")
     ):
         msg = "bad_receiver"
         raise IngressRejected(msg)
@@ -42,8 +42,8 @@ def verify(request: IngressRequest, secrets: IngressSecrets, *, tolerance_s: int
         body,
         kind=secrets.target_kind or "",
         config=config,
-        bot_id=str(config.get("receiver_bot_id", "")),
-        bot_username=str(config.get("receiver_bot_username", "")),
+        bot_id=str(secrets.resource_id or ""),
+        bot_username=str(secrets.channel_id or ""),
     )
     if event is None:
         # Telegram retries non-2xx deliveries. Valid but filtered events are

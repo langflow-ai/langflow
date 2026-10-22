@@ -182,3 +182,41 @@ async def test_webhook_provision_is_owned_and_retains_pending_updates(database, 
             "max_connections": 1,
         },
     )
+
+
+async def test_two_replica_sessions_admit_only_one_bot_receiver(tmp_path):
+    import asyncio
+
+    from langflow.services.triggers.locking import lock_trigger
+
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'telegram-claims.db'}")
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(
+                lambda sync: SQLModel.metadata.create_all(
+                    sync, tables=[Trigger.__table__, TriggerSubscription.__table__, TriggerCleanup.__table__]
+                )
+            )
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            first = await saved_trigger(session)
+            second = await saved_trigger(session)
+            ids = [first.id, second.id]
+            await session.commit()
+
+        async def reserve(trigger_id):
+            async with AsyncSession(engine) as session:
+                trigger = await lock_trigger(session, trigger_id)
+                try:
+                    await _claim(session, trigger, bot={"id": "123456789", "username": "example_bot"}, address=None)
+                    await session.commit()
+                except SourceConfigurationError:
+                    await session.rollback()
+                    return False
+                return True
+
+        outcomes = await asyncio.gather(*(reserve(trigger_id) for trigger_id in ids))
+        assert sorted(outcomes) == [False, True]
+        async with AsyncSession(engine) as session:
+            assert len((await session.exec(select(TriggerSubscription))).all()) == 1
+    finally:
+        await engine.dispose()

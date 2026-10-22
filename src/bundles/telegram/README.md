@@ -26,7 +26,7 @@ Add the bot to the required group or start its private conversation first. Revie
 
 For push delivery, configure LANGFLOW_TRIGGER_INGRESS_ENABLED and an operator-owned LANGFLOW_TRIGGER_INGRESS_ORIGIN. Use public HTTPS on a Telegram-supported port. The server generates an opaque receiver URL and a separate secret header value. The flow never contains the bot token or webhook secret. Each delivery must provide the matching X-Telegram-Bot-Api-Secret-Token header before its body can enter the ledger.
 
-The default delivery mode follows the deployment's available transport. Explicit polling refuses any existing webhook. Webhook setup refuses an unrelated existing URL. Langflow never clears an existing webhook merely to make polling work.
+The default delivery mode follows the deployment's available transport. Polling checks receiver ownership on its first collection and refuses any existing webhook before calling getUpdates. Webhook setup refuses an unrelated existing URL. Langflow never clears an existing webhook merely to make polling work.
 
 ## Messages, replies, and sessions
 
