@@ -63,6 +63,7 @@ class ManualTokenProfileRead(BaseModel):
     id: str
     identity: str
     required_scopes: list[str]
+    requires_expiry: bool = False
 
 
 class IntegrationProviderRead(BaseModel):
@@ -208,6 +209,7 @@ async def list_integrations(
                             id=profile.id,
                             identity=profile.identity,
                             required_scopes=sorted({scope for item in available for scope in item.required_scopes}),
+                            requires_expiry=runtime.manual_token_requires_expiry,
                         )
                     )
         providers.append(
