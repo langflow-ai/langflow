@@ -199,9 +199,6 @@ async def provision_source(session: AsyncSession, trigger: Trigger) -> TriggerSu
     """Create a watch once, or return the live one on an idempotent enable."""
     from langflow.services.triggers.providers.registry import get_provider
 
-    extension = get_provider(trigger.provider or "")
-    if extension is not None:
-        return await extension.provision(session, trigger) if extension.provision else None
     existing = (
         await session.exec(
             select(TriggerSubscription).where(
@@ -214,6 +211,9 @@ async def provision_source(session: AsyncSession, trigger: Trigger) -> TriggerSu
         return existing
     if existing is not None:
         await revoke_for_trigger(session, trigger_id=trigger.id)
+    extension = get_provider(trigger.provider or "")
+    if extension is not None:
+        return await extension.provision(session, trigger) if extension.provision else None
     address = await source_ingress_url(session, trigger)
     if trigger.provider == PROVIDER_MICROSOFT:
         return await _graph_create(session, trigger, address)
