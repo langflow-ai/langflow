@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
+from lfx.integrations.errors import ConnectionNotAuthorizedError
+from lfx.integrations.models import ConnectionAccount
 from lfx_whatsapp._client import WhatsAppClient, settings
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
@@ -18,7 +21,7 @@ from langflow.services.triggers.source_errors import SourceConfigurationError
 from langflow.services.triggers.source_subscription import source_ingress_url
 
 if TYPE_CHECKING:
-    from lfx.integrations.models import CredentialLease
+    from lfx.integrations.models import CredentialLease, ResolvedCredential
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.database.models.trigger.model import Trigger
@@ -206,6 +209,20 @@ async def ingress_secrets(session: AsyncSession, trigger: Trigger) -> IngressSec
     )
 
 
+class _RetainedCleanupLease:
+    """Add sealed account metadata after the original lease resolves authority."""
+
+    def __init__(self, lease: CredentialLease, account: ConnectionAccount) -> None:
+        self._lease = lease
+        self._account = account
+
+    async def get_credential(self) -> ResolvedCredential:
+        credential = await self._lease.get_credential()
+        if credential.provider != "whatsapp":
+            raise ConnectionNotAuthorizedError(provider="whatsapp")
+        return replace(credential, identity="service", account=self._account)
+
+
 async def revoke(task: TriggerCleanup, lease: CredentialLease) -> None:
     config = settings()
     state = task.provider_state or {}
@@ -220,7 +237,14 @@ async def revoke(task: TriggerCleanup, lease: CredentialLease) -> None:
     ):
         msg = "The original WhatsApp receiver cannot be verified for cleanup."
         raise SourceConfigurationError(msg)
-    async with WhatsAppClient(lease) as client:
+    cleanup_lease = (
+        _RetainedCleanupLease(
+            lease, ConnectionAccount(id=state["phone_id"], tenant_id=f"{state['app_id']}:{state['waba_id']}")
+        )
+        if task.encrypted_credential is not None
+        else lease
+    )
+    async with WhatsAppClient(cleanup_lease) as client:
         await client.verify_account()
         if await current_override(client, require_app=False) != address:
             return

@@ -1,5 +1,6 @@
 """Real database reservation and HTTP provisioning and cleanup contracts."""
 
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
@@ -9,6 +10,9 @@ from langflow.services.database.models.trigger.model import Trigger, TriggerClea
 from langflow.services.triggers.providers.whatsapp import lifecycle
 from langflow.services.triggers.providers.whatsapp.credentials import validate_manual_credential
 from langflow.services.triggers.source_errors import SourceConfigurationError
+from lfx.integrations.errors import ConnectionNotAuthorizedError
+from lfx.integrations.models import ConnectionAccount, ResolvedCredential
+from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -233,3 +237,43 @@ async def test_manual_validation_replaces_untrusted_account_scopes_and_expiry(mo
 async def test_manual_validation_rejects_unsupported_context(context):
     with pytest.raises(ValueError, match="system-user"):
         await validate_manual_credential(connection_payload(), context=context)
+
+
+async def test_retained_adapter_delegates_each_read_without_caching_or_extending_authority():
+    deadline = datetime.now(timezone.utc) + timedelta(minutes=20)
+
+    class OriginalLease:
+        calls = 0
+
+        async def get_credential(self):
+            self.calls += 1
+            return ResolvedCredential(
+                access_token=SecretStr(f"synthetic-{self.calls}"),
+                provider="whatsapp",
+                expires_at=deadline,
+                connection_id="original-deleted-connection",
+                owner_kind="user",
+            )
+
+    original = OriginalLease()
+    account = ConnectionAccount(id="333", tenant_id="111:222")
+    wrapped = lifecycle._RetainedCleanupLease(original, account)
+    for expected in range(1, 5):
+        credential = await wrapped.get_credential()
+        assert original.calls == expected
+        assert credential.access_token.get_secret_value() == f"synthetic-{expected}"
+        assert credential.expires_at == deadline
+        assert credential.connection_id == "original-deleted-connection"
+        assert credential.owner_kind == "user"
+        assert credential.identity == "service"
+        assert credential.account == account
+
+
+async def test_retained_adapter_rejects_a_foreign_provider_credential():
+    class OriginalLease:
+        async def get_credential(self):
+            return ResolvedCredential(access_token=SecretStr("synthetic"), provider="github")
+
+    wrapped = lifecycle._RetainedCleanupLease(OriginalLease(), ConnectionAccount(id="333", tenant_id="111:222"))
+    with pytest.raises(ConnectionNotAuthorizedError):
+        await wrapped.get_credential()

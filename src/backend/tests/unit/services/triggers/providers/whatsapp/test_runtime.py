@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import json
 from dataclasses import replace
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from uuid import uuid4
@@ -12,11 +13,13 @@ import httpx
 import lfx_whatsapp
 import pytest
 from langflow.services.connection.service import DatabaseConnectionResolverService
+from langflow.services.database.models.connection.model import Connection, ConnectionSecret
 from langflow.services.database.models.connection.schemas import ConnectionCreate
 from langflow.services.database.models.trigger.model import Trigger, TriggerCleanup, TriggerEvent
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
-from langflow.services.triggers import dispatcher, source_runtime
+from langflow.services.triggers import dispatcher, source_cleanup, source_runtime
+from langflow.services.triggers.cleanup import delete_triggers
 from langflow.services.triggers.providers import registry
 from langflow.services.triggers.providers.whatsapp.provider import PROVIDER
 from langflow.services.triggers.reconciliation import reconcile_flow_triggers
@@ -214,6 +217,7 @@ async def test_owner_and_policy_denials_precede_callback_writes(installed, trigg
             )
         )
         get_integration_policy_service().invalidate()
+
     try:
         async with session_scope() as session:
             row = await session.get(Trigger, trigger.id)
@@ -223,3 +227,90 @@ async def test_owner_and_policy_denials_precede_callback_writes(installed, trigg
     finally:
         bundle.publish(replace(original, revision=bundle.snapshot.revision + 1))
         get_integration_policy_service().invalidate()
+
+
+async def retained_cleanup_after_owner_deletion(owner_id, flow_id):
+    created = await connection(owner_id)
+    trigger = await reconcile(flow_id, owner_id)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+    async with session_scope() as session:
+        await delete_triggers(session, trigger_ids=[trigger.id])
+        await source_cleanup.preserve_user_cleanup_credentials(session, user_id=owner_id)
+        task = (await session.exec(select(TriggerCleanup).where(TriggerCleanup.trigger_id == trigger.id))).one()
+        assert task.encrypted_credential is not None
+        task_id = task.id
+        await session.delete(await session.get(Connection, created.id))
+        await session.delete(await session.get(User, owner_id))
+    async with session_scope() as session:
+        assert await session.get(User, owner_id) is None
+        assert await session.get(Connection, created.id) is None
+        assert await session.get(ConnectionSecret, created.id) is None
+        assert await session.get(Trigger, trigger.id) is None
+    return task_id
+
+
+@pytest.mark.parametrize("callback", ["own", "foreign"])
+async def test_deleted_owner_retained_cleanup_uses_only_bound_fixed_operations(
+    installed, trigger_owner, owned_flow, callback
+):
+    task_id = await retained_cleanup_after_owner_deletion(trigger_owner, owned_flow)
+    if callback == "foreign":
+        installed["callback"] = "https://another-receiver.example/hook"
+    original_callback = installed["callback"]
+    installed["requests"].clear()
+    assert await run_cleanup_pass() == 1
+    requests = installed["requests"]
+    expected = [
+        ("GET", "/v25.0/debug_token"),
+        ("GET", "/v25.0/222/phone_numbers"),
+        ("GET", "/v25.0/222/subscribed_apps"),
+    ]
+    if callback == "own":
+        expected.append(("POST", "/v25.0/222/subscribed_apps"))
+        assert requests[-1].content == b"{}"
+        assert installed["callback"] is None
+    else:
+        assert installed["callback"] == original_callback
+    assert [(request.method, request.url.path) for request in requests] == expected
+    assert all(not request.url.path.endswith("/messages") for request in requests)
+    async with session_scope() as session:
+        assert await session.get(TriggerCleanup, task_id) is None
+
+
+@pytest.mark.parametrize("failure", ["tampered-callback", "tampered-phone", "extended-deadline", "expired", "policy"])
+async def test_deleted_owner_cleanup_denies_invalid_retained_authority_before_http(
+    installed, trigger_owner, owned_flow, monkeypatch, failure
+):
+    task_id = await retained_cleanup_after_owner_deletion(trigger_owner, owned_flow)
+    async with session_scope() as session:
+        task = await session.get(TriggerCleanup, task_id)
+        if failure == "tampered-callback":
+            task.provider_state = {**task.provider_state, "callback_url": "https://tampered.example/hook"}
+        elif failure == "tampered-phone":
+            task.provider_state = {**task.provider_state, "phone_id": "999"}
+        elif failure == "extended-deadline":
+            task.credential_expires_at += timedelta(hours=1)
+        elif failure == "expired":
+            task.credential_expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+        session.add(task)
+    if failure == "policy":
+
+        async def denied(provider, *, user_id):
+            assert provider == "whatsapp"
+            assert user_id == str(trigger_owner)
+            raise IntegrationPolicyBlockedError(provider=provider, policy_key="integration:whatsapp")
+
+        monkeypatch.setattr(source_cleanup, "enforce_integration_policy_for_provider", denied)
+    installed["requests"].clear()
+    original_callback = installed["callback"]
+    assert await run_cleanup_pass() == 0
+    assert installed["requests"] == []
+    assert installed["callback"] == original_callback
+    async with session_scope() as session:
+        task = await session.get(TriggerCleanup, task_id)
+        assert task is not None
+        assert task.attempt == 1
+        if failure == "expired":
+            assert task.encrypted_credential is None

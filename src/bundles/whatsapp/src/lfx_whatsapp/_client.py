@@ -7,7 +7,7 @@ import re
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 import httpx
 from lfx.integrations.errors import (
@@ -19,7 +19,7 @@ from lfx.integrations.errors import (
 )
 
 if TYPE_CHECKING:
-    from lfx.integrations.models import CredentialLease
+    from lfx.integrations.models import ResolvedCredential
 
 ORIGIN = "https://graph.facebook.com"
 SCOPES = ("whatsapp_business_management", "whatsapp_business_messaging")
@@ -82,10 +82,14 @@ def redact(value: Any, *secrets: str) -> Any:
     return value
 
 
+class _CredentialReader(Protocol):
+    async def get_credential(self) -> ResolvedCredential: ...
+
+
 class WhatsAppClient:
     """Keep token-debug URLs below HTTP request logging and never retry sends."""
 
-    def __init__(self, lease: CredentialLease, *, transport: httpx.AsyncBaseTransport | None = None) -> None:
+    def __init__(self, lease: _CredentialReader, *, transport: httpx.AsyncBaseTransport | None = None) -> None:
         self.lease = lease
         self.config = settings()
         self.transport = transport if transport is not None else httpx.AsyncHTTPTransport(retries=0)

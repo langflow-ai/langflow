@@ -3,6 +3,7 @@
 import copy
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import httpx
 import lfx_whatsapp
@@ -16,6 +17,7 @@ from lfx.integrations.errors import (
     ProviderUnavailableError,
     RateLimitedError,
 )
+from lfx.integrations.models import ResolvedCredential
 from lfx.schema.data import Data
 from lfx_whatsapp import (
     WhatsAppOnEventTriggerComponent,
@@ -25,6 +27,7 @@ from lfx_whatsapp import (
 )
 from lfx_whatsapp._client import WhatsAppClient, settings
 from lfx_whatsapp._components import recipient, text_body
+from pydantic import SecretStr
 
 
 def test_installed_bundle_loads_all_four_components():
@@ -203,3 +206,15 @@ def test_trigger_declaration_preserves_conversation_session():
     message = value.build_message()
     assert message.text == "Hello"
     assert message.session_id == "whatsapp:222:333:15551234567"
+
+
+@pytest.mark.parametrize(("provider", "identity"), [("whatsapp", None), ("whatsapp", "bot"), ("github", "service")])
+async def test_normal_client_keeps_strict_provider_and_service_identity_checks(monkeypatch, provider, identity):
+    async def credential():
+        return ResolvedCredential(access_token=SecretStr(TOKEN), provider=provider, identity=identity)
+
+    transport = GraphTransport([]).install(monkeypatch)
+    async with WhatsAppClient(SimpleNamespace(get_credential=credential)) as client:
+        with pytest.raises(ConnectionNotAuthorizedError):
+            await client.request("GET", "debug_token")
+    assert transport.requests == []

@@ -35,6 +35,8 @@ System-user tokens have no automatic refresh here. Validation records Meta's act
 
 Disable a receiver and let durable cleanup finish before enabling it again or replacing it. Admission rejects a WABA with outstanding cleanup, including cleanup retained after a trigger is deleted. This prevents an old cleanup task from removing a replacement callback. Cleanup proves the original account, checks that the current WABA override still equals the recorded callback, and resets only that override to the app default. It leaves a replacement callback unchanged. Preserve the original app and account settings until cleanup completes. An operator changing callbacks externally can race the provider's read and write operations because Meta does not provide a conditional update in this contract.
 
+Owner deletion can retain a sealed access token for this fixed cleanup operation until the shared retention deadline. It retains no refresh token and does not recreate the deleted connection. The sealed app, WABA, phone and callback binding must remain intact. Cleanup still verifies the token with Meta and checks WABA phone membership before resetting the original override. An expired, altered or policy-denied cleanup credential cannot authorize a provider request.
+
 If Meta accepted an override but the response was lost, provisioning retries the reserved callback and verification token. It refuses another callback. The receiver has no expiry or renewal timer. External callback drift is not detected by periodic polling in this version. Check Meta's webhook dashboard and repair routing before re-enabling after external changes.
 
 ## Evidence and acceptance
