@@ -7,6 +7,7 @@ import hashlib
 import hmac
 import json
 from dataclasses import replace
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from uuid import uuid4
@@ -770,3 +771,52 @@ async def test_source_http_rejects_foreign_origin_before_credential_resolution()
     ) as source:
         with pytest.raises(ValueError, match="left its API origin"):
             await source.request("GET", "https://attacker.example/private")
+
+
+@pytest.mark.parametrize("requires_expiry", [False, True])
+async def test_catalog_advertises_only_the_trusted_manual_expiry_requirement(
+    pilot, client, logged_in_headers, monkeypatch, requires_expiry
+):
+    provider = replace(pilot.provider, manual_token_requires_expiry=requires_expiry)
+    monkeypatch.setattr(registry, "all_providers", lambda: (provider,))
+    response = await client.get("/api/v1/integrations", headers=logged_in_headers)
+    assert response.status_code == 200, response.text
+    listed = next(item for item in response.json()["providers"] if item["provider_id"] == "pilot")
+    assert listed["manual_token_profiles"] == [
+        {"id": "pilot-token", "identity": "service", "required_scopes": [], "requires_expiry": requires_expiry}
+    ]
+
+
+@pytest.mark.parametrize("invalid_expiry", [None, "2000-01-01T00:00:00Z", "2100-01-01T00:00:00"])
+async def test_expiring_manual_credentials_require_a_future_timezone_aware_expiration(
+    pilot, trigger_owner, monkeypatch, invalid_expiry
+):
+    from langflow.services.connection.slack_credentials import ManualCredentialError
+    from langflow.services.database.models.connection.model import Connection
+
+    provider = replace(pilot.provider, manual_token_requires_expiry=True)
+    monkeypatch.setattr(registry, "all_providers", lambda: (provider,))
+    fields = {
+        "provider_key": "pilot",
+        "name": "expiring",
+        "display_name": "Expiring token",
+        "executing_identity": {"identity": "service"},
+    }
+    async with session_scope() as session:
+        user = await session.get(User, trigger_owner)
+        payload = ConnectionCreate(
+            **fields, credentials={"access_token": "synthetic-expiring-credential", "expires_at": invalid_expiry}
+        )
+        with pytest.raises(ManualCredentialError, match="future token expiration time with a time zone"):
+            await DatabaseConnectionResolverService().create(session, user=user, payload=payload)
+        assert not (await session.exec(select(Connection).where(Connection.owner_id == trigger_owner))).all()
+        valid = datetime.now(timezone.utc) + timedelta(hours=1)
+        connection = await DatabaseConnectionResolverService().create(
+            session,
+            user=user,
+            payload=ConnectionCreate(
+                **fields, credentials={"access_token": "synthetic-expiring-credential", "expires_at": valid}
+            ),
+        )
+        assert connection.status == "ready"
+        assert connection.has_credentials
