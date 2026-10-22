@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "provider_id": "whatsapp",
+  "display_name": "WhatsApp Business",
+  "icon": "MessageCircle",
+  "docs_url": "https://www.postman.com/meta/whatsapp-business-platform/collection/wlk6lh4/whatsapp-cloud-api",
+  "auth_profiles": [
+    {
+      "id": "whatsapp-system-user",
+      "kind": "api_key",
+      "identity": "service",
+      "supports_pkce": false,
+      "supports_refresh": false,
+      "default_scopes": [
+        "whatsapp_business_management",
+        "whatsapp_business_messaging"
+      ],
+      "client_type_by_context": {
+        "hosted": "external",
+        "self_managed": "external"
+      },
+      "owner_by_context": {
+        "hosted": "customer",
+        "self_managed": "customer"
+      }
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "whatsapp.message.send",
+      "display_name": "WhatsApp Send Text",
+      "auth_profile_id": "whatsapp-system-user",
+      "identity": "service",
+      "required_scopes": [
+        "whatsapp_business_management",
+        "whatsapp_business_messaging"
+      ],
+      "policy_keys": [
+        "integrations.whatsapp.message.send"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed"
+      ],
+      "risk": "write",
+      "component_ref": "WhatsAppSendTextComponent"
+    },
+    {
+      "id": "whatsapp.template.send",
+      "display_name": "WhatsApp Send Template",
+      "auth_profile_id": "whatsapp-system-user",
+      "identity": "service",
+      "required_scopes": [
+        "whatsapp_business_management",
+        "whatsapp_business_messaging"
+      ],
+      "policy_keys": [
+        "integrations.whatsapp.template.send"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed"
+      ],
+      "risk": "write",
+      "component_ref": "WhatsAppSendTemplateComponent"
+    },
+    {
+      "id": "whatsapp.message.reply",
+      "display_name": "WhatsApp Reply to Message",
+      "auth_profile_id": "whatsapp-system-user",
+      "identity": "service",
+      "required_scopes": [
+        "whatsapp_business_management",
+        "whatsapp_business_messaging"
+      ],
+      "policy_keys": [
+        "integrations.whatsapp.message.reply"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed"
+      ],
+      "risk": "write",
+      "component_ref": "WhatsAppReplyComponent"
+    },
+    {
+      "id": "whatsapp.trigger.event.webhook",
+      "display_name": "WhatsApp On Message or Status",
+      "auth_profile_id": "whatsapp-system-user",
+      "identity": "service",
+      "required_scopes": [
+        "whatsapp_business_management",
+        "whatsapp_business_messaging"
+      ],
+      "policy_keys": [
+        "integrations.whatsapp.trigger.event.webhook"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed"
+      ],
+      "risk": "read",
+      "component_ref": "WhatsAppOnEventTriggerComponent"
+    }
+  ]
+}
