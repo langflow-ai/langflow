@@ -1098,17 +1098,30 @@ async def test_source_http_rejects_foreign_origin_before_credential_resolution()
 
 
 @pytest.mark.parametrize("requires_expiry", [False, True])
+@pytest.mark.parametrize("capability_context", ["desktop", "self_managed"])
 async def test_catalog_advertises_only_the_trusted_manual_expiry_requirement(
-    pilot, client, logged_in_headers, monkeypatch, requires_expiry
+    pilot, client, logged_in_headers, monkeypatch, requires_expiry, capability_context
 ):
+    from lfx.extension import bundle_registry
+
+    record = bundle_registry.get_default_registry().snapshot()["pilot"]
+    owner = record.integrations[0]
+    manifest = owner.capability_manifest
+    capability = manifest.capabilities[0].model_copy(update={"deployment_contexts": (capability_context,)})
+    owner = replace(owner, capability_manifest=manifest.model_copy(update={"capabilities": (capability,)}))
+    record = replace(record, integrations=(owner,))
+    monkeypatch.setattr(
+        bundle_registry,
+        "get_default_registry",
+        lambda: SimpleNamespace(snapshot=lambda: {"pilot": record}, list_integrations=lambda: [owner]),
+    )
     provider = replace(pilot.provider, manual_token_requires_expiry=requires_expiry)
     monkeypatch.setattr(registry, "all_providers", lambda: (provider,))
     response = await client.get("/api/v1/integrations", headers=logged_in_headers)
     assert response.status_code == 200, response.text
     listed = next(item for item in response.json()["providers"] if item["provider_id"] == "pilot")
-    assert listed["manual_token_profiles"] == [
-        {"id": "pilot-token", "identity": "service", "required_scopes": [], "requires_expiry": requires_expiry}
-    ]
+    expected = [{"id": "pilot-token", "identity": "service", "required_scopes": [], "requires_expiry": requires_expiry}]
+    assert listed["manual_token_profiles"] == (expected if capability_context == "self_managed" else [])
 
 
 @pytest.mark.parametrize("invalid_expiry", [None, "2000-01-01T00:00:00Z", "2100-01-01T00:00:00"])
