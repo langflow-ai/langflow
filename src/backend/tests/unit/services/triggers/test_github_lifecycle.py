@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import hmac
 import json
 from dataclasses import replace
+from datetime import datetime, timezone
 from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
@@ -15,7 +17,7 @@ import httpx
 import pytest
 from langflow.services.connection.service import DatabaseConnectionResolverService
 from langflow.services.database.models.connection.schemas import ConnectionCreate
-from langflow.services.database.models.trigger.model import Trigger, TriggerCleanup, TriggerEvent
+from langflow.services.database.models.trigger.model import Trigger, TriggerCleanup, TriggerEvent, TriggerSubscription
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.triggers import dispatcher
@@ -23,7 +25,7 @@ from langflow.services.triggers.providers import registry
 from langflow.services.triggers.providers.github import credentials, runtime
 from langflow.services.triggers.reconciliation import reconcile_flow_triggers
 from langflow.services.triggers.service import TriggerService
-from langflow.services.triggers.source_cleanup import run_cleanup_pass
+from langflow.services.triggers.source_cleanup import preserve_user_cleanup_credentials, run_cleanup_pass
 from langflow.services.triggers.source_errors import SourceConfigurationError
 from lfx.extension.bundle_registry import BundleRecord
 from lfx.extension.loader import LoadedIntegration
@@ -72,8 +74,16 @@ def github_runtime(monkeypatch, client):  # noqa: ARG001
     monkeypatch.setattr(get_settings_service().settings, "trigger_ingress_enabled", True)
     hooks = {}
     calls = []
+    controls = SimpleNamespace(
+        fail_create_once=False,
+        create_started=None,
+        create_release=None,
+        delete_started=None,
+        delete_release=None,
+        next_id=44,
+    )
 
-    def handle(request):
+    async def handle(request):
         calls.append((request.method, request.url.path))
         path = request.url.path
         if path == "/installation/repositories":
@@ -83,14 +93,27 @@ def github_runtime(monkeypatch, client):  # noqa: ARG001
         if request.method == "GET" and path.endswith("/hooks"):
             return httpx.Response(200, json=list(hooks.values()))
         if request.method == "POST" and path.endswith("/hooks"):
-            hook_id = max(hooks, default=43) + 1
+            hook_id = controls.next_id
+            controls.next_id += 1
+            if controls.create_started is not None:
+                controls.create_started.set()
+                await controls.create_release.wait()
             hooks[hook_id] = {"id": hook_id, **json.loads(request.content)}
+            if controls.fail_create_once:
+                controls.fail_create_once = False
+                msg = "The response was lost after GitHub accepted the hook"
+                raise httpx.ReadTimeout(msg, request=request)
             return httpx.Response(201, json={"id": hook_id})
         hook_id = int(path.rsplit("/", 1)[-1])
+        if request.method == "GET":
+            return httpx.Response(200, json=hooks[hook_id]) if hook_id in hooks else httpx.Response(404)
         if request.method == "PATCH" and hook_id in hooks:
             hooks[hook_id].update(json.loads(request.content))
             return httpx.Response(200, json={"id": hook_id})
         if request.method == "DELETE":
+            if controls.delete_started is not None:
+                controls.delete_started.set()
+                await controls.delete_release.wait()
             hooks.pop(hook_id, None)
             return httpx.Response(204)
         pytest.fail("Unexpected GitHub HTTP operation")
@@ -98,7 +121,7 @@ def github_runtime(monkeypatch, client):  # noqa: ARG001
     factory = partial(GitHubClient, transport=httpx.MockTransport(handle))
     monkeypatch.setattr(runtime, "GitHubClient", factory)
     monkeypatch.setattr(credentials, "GitHubClient", factory)
-    return SimpleNamespace(hooks=hooks, calls=calls)
+    return SimpleNamespace(hooks=hooks, calls=calls, controls=controls)
 
 
 async def create_connection(user_id, *, background=True):
@@ -263,3 +286,195 @@ async def test_blocked_github_capability_never_creates_webhook(github_runtime, t
     finally:
         bundle.publish(replace(original, revision=bundle.snapshot.revision + 1))
         get_integration_policy_service().invalidate()
+
+
+async def pending_subscription(trigger_id):
+    async with session_scope() as session:
+        rows = (
+            await session.exec(select(TriggerSubscription).where(TriggerSubscription.trigger_id == trigger_id))
+        ).all()
+        assert len(rows) == 1
+        return rows[0]
+
+
+@pytest.mark.parametrize("remove", ["pause", "delete", "owner_delete"])
+async def test_uncertain_create_keeps_cleanup_intent_after_pause_or_delete(
+    github_runtime, trigger_owner, owned_flow, remove
+):
+    connection = await create_connection(trigger_owner)
+    trigger = await save_trigger(owned_flow, trigger_owner)
+    github_runtime.controls.fail_create_once = True
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        with pytest.raises(ValueError, match="Source activation failed"):
+            await TriggerService().enable_and_activate(session, row=row)
+    reservation = await pending_subscription(trigger.id)
+    assert reservation.state == "pending"
+    assert reservation.provider_subscription_id == f"pending:{reservation.id}"
+    assert reservation.connection_id == connection.id
+    assert set(reservation.provider_state) == {"repository", "callback"}
+    assert len(github_runtime.hooks) == 1
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        if remove == "pause":
+            await TriggerService().disable(session, row=row)
+        else:
+            await TriggerService().delete(session, row=row)
+        await session.flush()
+        task = await session.get(TriggerCleanup, reservation.id)
+        assert task is not None
+        assert task.provider_subscription_id == reservation.provider_subscription_id
+        if remove == "owner_delete":
+            await preserve_user_cleanup_credentials(session, user_id=trigger_owner)
+            assert task.encrypted_credential is not None
+            await session.delete(await session.get(User, trigger_owner))
+    assert await run_cleanup_pass() == 1
+    assert github_runtime.hooks == {}
+    async with session_scope() as session:
+        assert await session.get(TriggerCleanup, reservation.id) is None
+
+
+async def test_retry_after_uncertain_create_promotes_same_reservation_without_duplicate(
+    github_runtime, trigger_owner, owned_flow
+):
+    await create_connection(trigger_owner)
+    trigger = await save_trigger(owned_flow, trigger_owner)
+    github_runtime.controls.fail_create_once = True
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        with pytest.raises(ValueError, match="Source activation failed"):
+            await TriggerService().enable_and_activate(session, row=row)
+    reservation_id = (await pending_subscription(trigger.id)).id
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        assert row.state == "active"
+    subscription = await pending_subscription(trigger.id)
+    assert subscription.id == reservation_id
+    assert subscription.state == "active"
+    assert subscription.provider_subscription_id == "org/repo:44"
+    assert len(github_runtime.hooks) == 1
+    assert github_runtime.calls.count(("POST", "/repos/org/repo/hooks")) == 1
+    assert ("PATCH", "/repos/org/repo/hooks/44") in github_runtime.calls
+
+
+async def test_successful_create_then_local_rollback_is_still_cleaned_up(github_runtime, trigger_owner, owned_flow):
+    await create_connection(trigger_owner)
+    trigger = await save_trigger(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable(session, row=row)
+    reservation_id = (await pending_subscription(trigger.id)).id
+
+    async def failed_transaction():
+        async with session_scope() as session:
+            row = await session.get(Trigger, trigger.id)
+            result = await runtime.provision(session, row)
+            assert result.id == reservation_id
+            assert result.state == "active"
+            msg = "local transaction failed"
+            raise RuntimeError(msg)
+
+    with pytest.raises(RuntimeError, match="local transaction failed"):
+        await failed_transaction()
+    assert len(github_runtime.hooks) == 1
+    assert (await pending_subscription(trigger.id)).state == "pending"
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().disable(session, row=row)
+    assert await run_cleanup_pass() == 1
+    assert github_runtime.hooks == {}
+
+
+async def test_cleanup_never_deletes_hook_reassigned_to_foreign_callback(github_runtime, trigger_owner, owned_flow):
+    await create_connection(trigger_owner)
+    trigger = await save_trigger(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+    github_runtime.hooks[44]["config"]["url"] = "https://foreign.example/unrelated"
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().disable(session, row=row)
+    before = len(github_runtime.calls)
+    assert await run_cleanup_pass() == 0
+    assert 44 in github_runtime.hooks
+    assert ("GET", "/repos/org/repo/hooks/44") in github_runtime.calls[before:]
+    assert ("DELETE", "/repos/org/repo/hooks/44") not in github_runtime.calls[before:]
+    async with session_scope() as session:
+        tasks = (await session.exec(select(TriggerCleanup).where(TriggerCleanup.trigger_id == trigger.id))).all()
+        assert len(tasks) == 1
+        assert tasks[0].attempt == 1
+
+
+@pytest.mark.parametrize("remove", ["pause", "delete"])
+async def test_cleanup_defers_until_inflight_create_settles(github_runtime, trigger_owner, owned_flow, remove):
+    await create_connection(trigger_owner)
+    trigger = await save_trigger(owned_flow, trigger_owner)
+    controls = github_runtime.controls
+    controls.create_started = asyncio.Event()
+    controls.create_release = asyncio.Event()
+
+    async def activate():
+        async with session_scope() as session:
+            row = await session.get(Trigger, trigger.id)
+            await TriggerService().enable_and_activate(session, row=row)
+
+    activation = asyncio.create_task(activate())
+    try:
+        await asyncio.wait_for(controls.create_started.wait(), timeout=10)
+        async with session_scope() as session:
+            row = await session.get(Trigger, trigger.id)
+            if remove == "pause":
+                await TriggerService().disable(session, row=row)
+            else:
+                await TriggerService().delete(session, row=row)
+        assert github_runtime.hooks == {}
+        assert await run_cleanup_pass() == 0
+        async with session_scope() as session:
+            task = (await session.exec(select(TriggerCleanup).where(TriggerCleanup.trigger_id == trigger.id))).one()
+            assert task.attempt == 1
+            if remove == "pause":
+                row = await session.get(Trigger, trigger.id)
+                with pytest.raises(SourceConfigurationError, match="still being removed"):
+                    await TriggerService().enable(session, row=row)
+        assert github_runtime.hooks == {}
+    finally:
+        controls.create_release.set()
+        with pytest.raises(ValueError, match=r"superseded|changed"):
+            await activation
+    async with session_scope() as session:
+        task = (await session.exec(select(TriggerCleanup).where(TriggerCleanup.trigger_id == trigger.id))).one()
+        task.available_at = datetime.now(timezone.utc)
+        session.add(task)
+    assert await run_cleanup_pass() == 1
+    assert github_runtime.hooks == {}
+
+
+async def test_claimed_cleanup_blocks_replacement_until_delete_finishes(github_runtime, trigger_owner, owned_flow):
+    await create_connection(trigger_owner)
+    trigger = await save_trigger(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        await TriggerService().disable(session, row=row)
+    controls = github_runtime.controls
+    controls.delete_started = asyncio.Event()
+    controls.delete_release = asyncio.Event()
+    cleanup = asyncio.create_task(run_cleanup_pass())
+    try:
+        await asyncio.wait_for(controls.delete_started.wait(), timeout=10)
+        async with session_scope() as session:
+            row = await session.get(Trigger, trigger.id)
+            with pytest.raises(SourceConfigurationError, match="still being removed"):
+                await TriggerService().enable(session, row=row)
+        assert len(github_runtime.hooks) == 1
+    finally:
+        controls.delete_release.set()
+        assert await cleanup == 1
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+    assert set(github_runtime.hooks) == {45}
+    assert await run_cleanup_pass() == 0
+    assert set(github_runtime.hooks) == {45}

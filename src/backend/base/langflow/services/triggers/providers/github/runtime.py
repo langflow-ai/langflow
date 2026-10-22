@@ -3,15 +3,19 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from uuid import uuid4
 
 from lfx.integrations.errors import ProviderUnavailableError, ResourceNotFoundError
+from lfx.services.deps import session_scope_readonly
 from lfx_github.client import GitHubClient, positive_id, repository_path
 from sqlmodel import select
 
 from langflow.services.auth.utils import decrypt_api_key
 from langflow.services.database.models.trigger.model import Trigger, TriggerCleanup, TriggerSubscription
+from langflow.services.triggers import leases
 from langflow.services.triggers.constants import FAMILY_TRIGGER_PUSH
 from langflow.services.triggers.ingress.verifiers import IngressSecrets
+from langflow.services.triggers.locking import lock_trigger
 from langflow.services.triggers.providers.github.config import normalize_config
 from langflow.services.triggers.providers.github.credentials import validate_manual_credential
 from langflow.services.triggers.providers.github.events import verify
@@ -19,7 +23,6 @@ from langflow.services.triggers.providers.registry import TriggerKind, TriggerPr
 from langflow.services.triggers.source_clients import source_lease
 from langflow.services.triggers.source_errors import SourceConfigurationError
 from langflow.services.triggers.source_subscription import source_ingress_url
-from langflow.services.triggers.subscriptions import upsert_subscription
 
 if TYPE_CHECKING:
     from lfx.integrations.models import CredentialLease
@@ -33,11 +36,7 @@ def _event(trigger: Trigger) -> str:
     return "issues" if trigger.kind == "github.issue" else "pull_request"
 
 
-def _hook_id(value: str) -> int:
-    return positive_id(value.rsplit(":", 1)[-1])
-
-
-async def prepare(session: AsyncSession, trigger: Trigger) -> None:
+async def _check_cleanup(session: AsyncSession, trigger: Trigger) -> None:
     pending = (
         await session.exec(
             select(TriggerCleanup.id).where(
@@ -51,11 +50,84 @@ async def prepare(session: AsyncSession, trigger: Trigger) -> None:
         raise SourceConfigurationError(msg)
 
 
+async def _reservation(session: AsyncSession, trigger: Trigger) -> TriggerSubscription | None:
+    rows = (
+        await session.exec(
+            select(TriggerSubscription).where(
+                TriggerSubscription.trigger_id == trigger.id,
+                TriggerSubscription.provider == "github",
+                TriggerSubscription.state != "expired",
+            )
+        )
+    ).all()
+    if len(rows) > 1:
+        msg = "Multiple GitHub webhook reservations require cleanup before enabling this trigger."
+        raise SourceConfigurationError(msg)
+    return rows[0] if rows else None
+
+
+def _matches(subscription: TriggerSubscription, trigger: Trigger, address: str) -> bool:
+    return (
+        subscription.connection_id == trigger.connection_id
+        and subscription.provider_state.get("repository") == trigger.config["repository"]
+        and subscription.provider_state.get("callback") == address
+    )
+
+
+async def prepare(session: AsyncSession, trigger: Trigger) -> None:
+    """Reserve cleanup ownership in the committed enable transaction, before remote I/O."""
+    await _check_cleanup(session, trigger)
+    repository = trigger.config["repository"]
+    repository_path(repository)
+    address = await source_ingress_url(session, trigger)
+    existing = await _reservation(session, trigger)
+    if existing is not None:
+        if not _matches(existing, trigger, address):
+            msg = "The original GitHub webhook must be cleaned up before changing its connection or repository."
+            raise SourceConfigurationError(msg)
+        return
+    reservation_id = uuid4()
+    session.add(
+        TriggerSubscription(
+            id=reservation_id,
+            trigger_id=trigger.id,
+            connection_id=trigger.connection_id,
+            provider="github",
+            provider_subscription_id=f"pending:{reservation_id}",
+            provider_state={"repository": repository, "callback": address},
+            state="pending",
+        )
+    )
+    await session.flush()
+
+
+async def _matching_hooks(client: GitHubClient, path: str, address: str) -> list[int]:
+    matches = []
+    for page in range(1, 11):
+        hooks = await client.request("GET", path + "/hooks", params={"per_page": WEBHOOK_PAGE_SIZE, "page": page})
+        if not isinstance(hooks, list):
+            raise ProviderUnavailableError(provider="github")
+        matches.extend(
+            positive_id(hook.get("id"))
+            for hook in hooks
+            if isinstance(hook, dict) and isinstance(hook.get("config"), dict) and hook["config"].get("url") == address
+        )
+        if len(hooks) < WEBHOOK_PAGE_SIZE:
+            return matches
+    msg = "The repository webhook list exceeded the bounded setup scan."
+    raise SourceConfigurationError(msg)
+
+
 async def provision(session: AsyncSession, trigger: Trigger) -> TriggerSubscription:
-    await prepare(session, trigger)
+    await _check_cleanup(session, trigger)
     repository = trigger.config["repository"]
     path = repository_path(repository)
     address = await source_ingress_url(session, trigger)
+    subscription = await _reservation(session, trigger)
+    if subscription is None or subscription.state != "pending" or not _matches(subscription, trigger, address):
+        msg = "Enable the GitHub trigger to reserve its webhook before setup."
+        raise SourceConfigurationError(msg)
+    expected_config = dict(trigger.config)
     if not trigger.signing_secret_encrypted:
         msg = "The GitHub webhook signing secret has not been initialized."
         raise ValueError(msg)
@@ -65,29 +137,12 @@ async def provision(session: AsyncSession, trigger: Trigger) -> TriggerSubscript
         repo = await client.request("GET", path)
         if not isinstance(repo, dict) or type(repo.get("id")) is not int:
             raise ProviderUnavailableError(provider="github")
-        hook_id = None
-        # Reconcile a timed-out create by its opaque per-trigger callback before creating another hook.
-        for page in range(1, 11):
-            hooks = await client.request("GET", path + "/hooks", params={"per_page": 100, "page": page})
-            if not isinstance(hooks, list):
-                raise ProviderUnavailableError(provider="github")
-            matching = [
-                hook
-                for hook in hooks
-                if isinstance(hook, dict)
-                and isinstance(hook.get("config"), dict)
-                and hook["config"].get("url") == address
-            ]
-            if len(matching) > 1 or (matching and hook_id is not None):
-                msg = "Duplicate GitHub callbacks require administrator cleanup before rearming."
-                raise ValueError(msg)
-            if matching:
-                hook_id = positive_id(matching[0].get("id"))
-            if len(hooks) < WEBHOOK_PAGE_SIZE:
-                break
-        else:
-            msg = "The repository webhook list exceeded the bounded setup scan."
-            raise ValueError(msg)
+        # An earlier POST may have succeeded even when its response or local commit failed.
+        matching = await _matching_hooks(client, path, address)
+        if len(matching) > 1:
+            msg = "Duplicate GitHub callbacks require administrator cleanup before rearming."
+            raise SourceConfigurationError(msg)
+        hook_id = matching[0] if matching else None
         body = {
             "name": "web",
             "active": True,
@@ -102,22 +157,30 @@ async def provision(session: AsyncSession, trigger: Trigger) -> TriggerSubscript
         if not isinstance(response, dict):
             raise ProviderUnavailableError(provider="github")
         hook_id = positive_id(response.get("id"))
-    subscription = await upsert_subscription(
-        session,
-        trigger_id=trigger.id,
-        connection_id=trigger.connection_id,
-        provider="github",
-        provider_subscription_id=f"{repository}:{hook_id}",
-        client_state_digest=None,
-        expires_at=None,
-        provider_state={
-            "repository": repository,
-            "repository_id": str(repo["id"]),
-            "hook_id": hook_id,
-            "callback": address,
-        },
-    )
+    # Follow the shared trigger -> subscription lock order only after provider I/O.
+    current = await lock_trigger(session, trigger.id)
+    subscription = await session.get(TriggerSubscription, subscription.id, populate_existing=True, with_for_update=True)
+    if (
+        current is None
+        or current.state not in {"pending", "active"}
+        or current.config != expected_config
+        or subscription is None
+        or subscription.state != "pending"
+        or not _matches(subscription, current, address)
+    ):
+        msg = "GitHub webhook setup was superseded. Its original cleanup reservation is retained."
+        raise SourceConfigurationError(msg)
+    await _check_cleanup(session, current)
+    subscription.provider_subscription_id = f"{repository}:{hook_id}"
+    subscription.provider_state = {
+        "repository": repository,
+        "repository_id": str(repo["id"]),
+        "hook_id": hook_id,
+        "callback": address,
+    }
+    subscription.state = "active"
     session.add(subscription)
+    await session.flush()
     return subscription
 
 
@@ -141,13 +204,46 @@ async def ingress_secrets(session: AsyncSession, trigger: Trigger) -> IngressSec
     )
 
 
+async def _setup_in_progress(task: TriggerCleanup) -> bool:
+    async with session_scope_readonly() as session:
+        return await leases.holder(session, name=f"trigger-source:{task.trigger_id}") is not None
+
+
 async def revoke(task: TriggerCleanup, lease: CredentialLease) -> None:
-    path = repository_path(task.provider_state["repository"]) + f"/hooks/{_hook_id(task.provider_subscription_id)}"
-    try:
-        async with GitHubClient(lease) as client:
-            await client.request("DELETE", path)
-    except ResourceNotFoundError:
-        return
+    # Do not finish an empty scan while an initializer can still create the hook.
+    if await _setup_in_progress(task):
+        msg = "GitHub webhook setup is still settling. Cleanup will retry after its source lease is released."
+        raise SourceConfigurationError(msg)
+    path = repository_path(task.provider_state["repository"])
+    address = task.provider_state.get("callback")
+    if not isinstance(address, str) or not address.startswith("https://"):
+        msg = "The original GitHub callback cannot be verified."
+        raise SourceConfigurationError(msg)
+    async with GitHubClient(lease) as client:
+        if task.provider_subscription_id == f"pending:{task.id}":
+            hook_ids = await _matching_hooks(client, path, address)
+        else:
+            prefix = task.provider_state["repository"] + ":"
+            if not task.provider_subscription_id.startswith(prefix):
+                msg = "The original GitHub repository cannot be verified."
+                raise SourceConfigurationError(msg)
+            hook_ids = [positive_id(task.provider_subscription_id[len(prefix) :])]
+        for hook_id in hook_ids:
+            hook_path = path + f"/hooks/{hook_id}"
+            try:
+                hook = await client.request("GET", hook_path)
+                if (
+                    not isinstance(hook, dict)
+                    or type(hook.get("id")) is not int
+                    or hook["id"] != hook_id
+                    or not isinstance(hook.get("config"), dict)
+                    or hook["config"].get("url") != address
+                ):
+                    msg = "The GitHub hook no longer belongs to this callback. Administrator cleanup is required."
+                    raise SourceConfigurationError(msg)
+                await client.request("DELETE", hook_path)
+            except ResourceNotFoundError:
+                continue
 
 
 PROVIDER = TriggerProvider(

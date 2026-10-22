@@ -230,7 +230,7 @@ async def test_provision_reconciles_exact_callback_and_pins_repository(monkeypat
     from langflow.services.triggers.providers.github import runtime
 
     requests = []
-    stored = {}
+    row = trigger()
     address = "https://langflow.example/api/v1/triggers/ingress/github/opaque"
 
     def handle(request):
@@ -249,24 +249,42 @@ async def test_provision_reconciles_exact_callback_and_pins_repository(monkeypat
     async def ingress(*_args):
         return address
 
-    async def upsert(_session, **fields):
-        stored.update(fields)
-        return SimpleNamespace(**fields)
+    from langflow.services.database.models.trigger.model import TriggerSubscription
+
+    reservation = TriggerSubscription(
+        trigger_id=row.id,
+        connection_id=row.connection_id,
+        provider="github",
+        provider_subscription_id="pending:test",
+        provider_state={"repository": "org/repo", "callback": address},
+        state="pending",
+    )
+
+    async def lock(_session, _trigger_id):
+        return row
 
     class Session:
         def add(self, _row):
             return None
 
         async def exec(self, _statement):
-            return SimpleNamespace(first=lambda: None)
+            return SimpleNamespace(first=lambda: None, all=lambda: [reservation])
+
+        async def get(self, *_args, **_kwargs):
+            return reservation
+
+        async def flush(self):
+            return None
 
     session = Session()
     monkeypatch.setattr(runtime, "GitHubClient", partial(GitHubClient, transport=httpx.MockTransport(handle)))
     monkeypatch.setattr(runtime, "source_lease", lease)
     monkeypatch.setattr(runtime, "source_ingress_url", ingress)
     monkeypatch.setattr(runtime, "decrypt_api_key", lambda _value: SECRET)
-    monkeypatch.setattr(runtime, "upsert_subscription", upsert)
-    await runtime.provision(session, trigger())
+    monkeypatch.setattr(runtime, "lock_trigger", lock)
+    result = await runtime.provision(session, row)
+    assert result is reservation
+    stored = reservation.model_dump()
     request = requests[-1]
     assert request.method == ("PATCH" if existing else "POST")
     assert request.url.path == ("/repos/org/repo/hooks/44" if existing else "/repos/org/repo/hooks")
@@ -285,17 +303,30 @@ async def test_remote_cleanup_is_fixed_operation_and_missing_hook_succeeds(monke
 
     requests = []
 
+    address = "https://langflow.example/api/v1/triggers/ingress/github/opaque"
+
     def handle(request):
         requests.append(request)
-        return (
-            httpx.Response(200, json={}) if request.url.path == "/installation/repositories" else httpx.Response(status)
-        )
+        if request.url.path == "/installation/repositories":
+            return httpx.Response(200, json={})
+        if request.method == "GET":
+            return httpx.Response(200, json={"id": 44, "config": {"url": address}})
+        return httpx.Response(status)
 
+    async def idle(_task):
+        return False
+
+    monkeypatch.setattr(runtime, "_setup_in_progress", idle)
     monkeypatch.setattr(runtime, "GitHubClient", partial(GitHubClient, transport=httpx.MockTransport(handle)))
-    task = SimpleNamespace(provider_state={"repository": "org/repo"}, provider_subscription_id="org/repo:44")
+    task = SimpleNamespace(
+        id=uuid4(),
+        provider_state={"repository": "org/repo", "callback": address},
+        provider_subscription_id="org/repo:44",
+    )
     await runtime.revoke(task, credential_lease())
     assert requests[-1].method == "DELETE"
     assert requests[-1].url.path == "/repos/org/repo/hooks/44"
+    assert requests[-2].method == "GET"
 
 
 def manual_payload(**credentials):
@@ -392,3 +423,54 @@ def test_provider_credentials_are_removed_from_signed_event_outputs():
     value["repository"]["temp_clone_token"] = "test-only-provider-value"  # noqa: S105  # pragma: allowlist secret
     result = verify(signed(value), secrets(), tolerance_s=300)
     assert "temp_clone_token" not in result.payload["repository"]
+
+
+@pytest.mark.parametrize("changed", [False, True])
+async def test_pending_cleanup_paginates_original_repository_and_rechecks_each_callback(monkeypatch, changed):
+    from langflow.services.triggers.providers.github import runtime
+    from langflow.services.triggers.source_errors import SourceConfigurationError
+
+    address = "https://langflow.example/api/v1/triggers/ingress/github/opaque"
+    foreign = "https://foreign.example/unrelated"
+    requests = []
+    task_id = uuid4()
+
+    async def idle(_task):
+        return False
+
+    def handle(request):
+        requests.append(request)
+        if request.url.path == "/installation/repositories":
+            return httpx.Response(200, json={})
+        assert request.url.host == "api.github.com"
+        assert request.url.path.startswith("/repos/org/repo/hooks")
+        if request.url.path.endswith("/hooks"):
+            if request.url.params["page"] == "1":
+                return httpx.Response(
+                    200,
+                    json=[{"id": i, "config": {"url": foreign}} for i in range(1, 101)],
+                    headers={"Link": '<https://foreign.example/secrets>; rel="next"'},
+                )
+            assert request.url.params["page"] == "2"
+            return httpx.Response(200, json=[{"id": 101, "config": {"url": address}}])
+        assert request.url.path.endswith("/101")
+        if request.method == "GET":
+            return httpx.Response(200, json={"id": 101, "config": {"url": foreign if changed else address}})
+        return httpx.Response(204)
+
+    monkeypatch.setattr(runtime, "_setup_in_progress", idle)
+    monkeypatch.setattr(runtime, "GitHubClient", partial(GitHubClient, transport=httpx.MockTransport(handle)))
+    task = SimpleNamespace(
+        id=task_id,
+        provider_state={"repository": "org/repo", "callback": address},
+        provider_subscription_id=f"pending:{task_id}",
+    )
+    if changed:
+        with pytest.raises(SourceConfigurationError, match="no longer belongs"):
+            await runtime.revoke(task, credential_lease())
+        assert all(request.method != "DELETE" for request in requests)
+    else:
+        await runtime.revoke(task, credential_lease())
+        assert [(request.method, request.url.path) for request in requests if request.method == "DELETE"] == [
+            ("DELETE", "/repos/org/repo/hooks/101")
+        ]
