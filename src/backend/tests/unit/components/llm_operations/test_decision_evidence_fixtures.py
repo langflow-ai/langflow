@@ -279,6 +279,13 @@ class TestDecisionEvidenceFixtures:
         assert evidence["activated_branch"] == "default_result"
         assert "selected_outcome" not in evidence
 
+    def test_score_names_no_top_outcome(self):
+        # Score has no threshold to check a top outcome against; activated_branch names the level.
+        fixtures = json.loads(FIXTURES.read_text(encoding="utf-8"))
+        for name in ("score_accepted", "score_rounds_up_at_halfway"):
+            assert "top_outcome" not in fixtures[name], name
+            assert fixtures[name]["activated_branch"] == "level_2_result"
+
     def test_probabilities_are_keyed_by_the_fixtures_own_options(self):
         # The evidence view reads each probability by option ID, so a Score keyed by route IDs breaks it.
         for name, evidence in json.loads(FIXTURES.read_text(encoding="utf-8")).items():

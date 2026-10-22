@@ -23,7 +23,8 @@ _TABLE = {
 # What an agent learns about this component when it is a tool.
 _RESULT_INFO = (
     "Answers this component's fixed question about the text you pass as context, and returns JSON. Choice gives "
-    "selected_option (an option ID) and probabilities by option ID; Boolean gives probability_true, the "
+    "probabilities by option ID and, when the provider names one, selected_option (otherwise take the most "
+    "probable option); Boolean gives probability_true, the "
     "probability the answer is yes, from 0 to 1; Score gives score, from 0 (the first level) up to one less than "
     "the number of levels, and probabilities by level ID. confidence is the provider's own measure, not an "
     "option's probability."
@@ -74,6 +75,8 @@ class DecisionModelComponent(Component):
         TableInput(
             name="candidates",
             display_name=_TABLE["Choice"][0],
+            # Options are typed in, not connected: connected rows arrive with NaN cells and number IDs.
+            input_types=[],
             value=[
                 {"id": "low", "label": "Low", "description": ""},
                 {"id": "medium", "label": "Medium", "description": ""},

@@ -82,7 +82,8 @@ def configuration_summary(exc: ValidationError) -> str:
         elif loc and loc[0] == "context":
             # Only Structured Context can hold something other than text.
             problems.append(
-                "Structured Context must be plain JSON: text, numbers, true or false, null, lists and objects."
+                "Structured Context must be one JSON object, such as a single record, whose values are plain "
+                "JSON: text, numbers, true or false, null, lists and objects."
             )
         elif not loc:
             # A rule across the whole request, such as unique IDs.

@@ -714,3 +714,49 @@ class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
         router.set(routing_mode="Decision Model")
         build_config = router.update_build_config(build_config, "Decision Model", "routing_mode")
         assert column["hidden"] is False
+
+
+class TestSmartRouterUpdate:
+    """Update rebuilds the node from the class defaults and copies back only values."""
+
+    @staticmethod
+    async def _update(saved_template: dict) -> dict:
+        router = SmartRouterComponent()
+        fresh = router.to_frontend_node()["data"]["node"]
+        saved = {**fresh, "template": {**fresh["template"], **saved_template}}
+        return await router.update_frontend_node(router.to_frontend_node()["data"]["node"], saved)
+
+    async def test_a_decision_router_keeps_its_decision_fields(self):
+        node = await self._update(
+            {
+                "routing_mode": {"type": "str", "value": "Decision Model"},
+                "decision_kind": {"type": "str", "value": "Boolean"},
+                "routes": {"type": "table", "value": [{"route_category": "Billing"}]},
+            }
+        )
+        template = node["template"]
+        for name in ("decision_model", "decision_question", "minimum_probability", "yes_message"):
+            assert template[name]["show"] is True, name
+        assert template["model"]["show"] is False
+        assert template["routes"]["show"] is False
+
+    async def test_routes_saved_without_ids_get_them(self):
+        rows = [{"route_category": name} for name in ("A", "B", "C")]
+        node = await self._update({"routes": {"type": "table", "value": rows}})
+        template = node["template"]
+        assert [row["route_id"] for row in template["routes"]["value"]] == [
+            "category_1_result",
+            "category_2_result",
+            "category_3_result",
+        ]
+        assert template["last_route_number"]["value"] == 3
+
+
+def test_else_help_says_what_it_gets_for_each_type():
+    router = SmartRouterComponent()
+    router.set(routing_mode="Decision Model")
+    config = _fresh_build_config(router)
+    config = router.update_build_config(config, "Score", "decision_kind")
+    assert "Every Score answer reaches a level" in config["enable_else_output"]["info"]
+    config = router.update_build_config(config, "Choice", "decision_kind")
+    assert "aren't sure enough" in config["enable_else_output"]["info"]

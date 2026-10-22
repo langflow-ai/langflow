@@ -994,3 +994,19 @@ async def test_score_router_runs_only_the_level_its_score_rounds_to(monkeypatch,
     await _run(graph)
 
     assert [name for name, sink in sinks.items() if sink.did_run] == [ran]
+
+
+async def test_a_boolean_tweak_on_a_routes_flow_stops_before_inference(monkeypatch):
+    """Boolean's Yes and No outputs must be the saved ones, or every route branch would run."""
+    import pytest
+
+    calls = []
+    monkeypatch.setattr(
+        "lfx.components.llm_operations.llm_conditional_router.evaluate_decision",
+        lambda *args, **_kwargs: calls.append(args),
+    )
+    graph, _, sinks = _decision_graph(decision_kind="Boolean", decision_question="Is this a refund?")
+    with pytest.raises(Exception, match="outputs don't match its Decision Type"):
+        await _run(graph)
+    assert not calls
+    assert not any(sink.did_run for sink in sinks.values())

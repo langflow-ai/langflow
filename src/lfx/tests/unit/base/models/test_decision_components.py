@@ -257,3 +257,13 @@ def test_the_result_leaves_out_what_this_decision_did_not_return(monkeypatch):
     assert data["probability_true"] == 0.8
     assert not {"probabilities", "score", "refusal", "request_id"} & data.keys()
     assert not {"options", "levels", "yes_description", "no_description"} & data["request"].keys()
+
+
+def test_options_are_typed_in_not_connected():
+    candidates = next(field for field in DecisionModelComponent().inputs if field.name == "candidates")
+    assert candidates.input_types == []
+
+
+def test_a_structured_context_that_is_a_list_says_it_must_be_one_object(monkeypatch):
+    with pytest.raises(DecisionConfigurationError, match="must be one JSON object"):
+        _captured(monkeypatch, structured_context=[{"order": 1042}, {"order": 1043}])

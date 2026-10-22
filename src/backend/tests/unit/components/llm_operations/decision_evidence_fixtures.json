@@ -431,8 +431,7 @@
         "input_tokens": 312
       }
     },
-    "route_thresholds": {},
-    "top_outcome": "level_2_result"
+    "route_thresholds": {}
   },
   "score_rounds_up_at_halfway": {
     "activated_branch": "level_2_result",
@@ -473,8 +472,7 @@
         "input_tokens": 312
       }
     },
-    "route_thresholds": {},
-    "top_outcome": "level_2_result"
+    "route_thresholds": {}
   },
   "tied_top_probability": {
     "activated_branch": "default_result",

@@ -1101,7 +1101,7 @@
   "components.decisionmodel.inputs.yes_description.display_name.185f2dad": "What Yes Means (Optional)",
   "components.decisionmodel.inputs.yes_description.info.d4f45073": "Optional: what a Yes answer means. Some decision models don't accept this; if yours doesn't, the run stops and asks you to clear it.",
   "components.decisionmodel.outputs.result.display_name.afd9b62e": "Decision Result",
-  "components.decisionmodel.outputs.result.info.d936778a": "Answers this component's fixed question about the text you pass as context, and returns JSON. Choice gives selected_option (an option ID) and probabilities by option ID; Boolean gives probability_true, the probability the answer is yes, from 0 to 1; Score gives score, from 0 (the first level) up to one less than the number of levels, and probabilities by level ID. confidence is the provider's own measure, not an option's probability.",
+  "components.decisionmodel.outputs.result.info.a3f2ab33": "Answers this component's fixed question about the text you pass as context, and returns JSON. Choice gives probabilities by option ID and, when the provider names one, selected_option (otherwise take the most probable option); Boolean gives probability_true, the probability the answer is yes, from 0 to 1; Score gives score, from 0 (the first level) up to one less than the number of levels, and probabilities by level ID. confidence is the provider's own measure, not an option's probability.",
   "components.directory.description.38e75eb9": "Recursively load files from a directory.",
   "components.directory.display_name.c8f84c3c": "Directory",
   "components.directory.inputs.depth.display_name.f1dbc339": "Depth",

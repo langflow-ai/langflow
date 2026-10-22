@@ -195,7 +195,11 @@ class _Usage(BaseModel):
 
 
 def _token_usage(raw: Any) -> dict | None:
-    return None if raw is None else _Usage.model_validate(raw).model_dump(exclude_none=True)
+    # Usage isn't decision evidence: a block Langflow can't read is dropped, never the decision.
+    try:
+        return None if raw is None else _Usage.model_validate(raw).model_dump(exclude_none=True)
+    except ValidationError:
+        return None
 
 
 def parse_response(
@@ -309,6 +313,10 @@ def evaluate_provider(
     if not api_key:
         msg = f"Add the {provider} API key in Model Providers."
         raise DecisionConfigurationError(msg)
+    if not api_key.isascii():
+        # httpx can't send it, and its error would name the character's position in the key.
+        msg = f"The {provider} API key contains a character a key can't have. Paste it again."
+        raise DecisionConfigurationError(msg)
     if not math.isfinite(timeout) or timeout <= 0 or timeout > MAX_TIMEOUT:
         msg = f"Timeout (seconds) must be more than 0 and at most {MAX_TIMEOUT}."
         raise DecisionConfigurationError(msg)
@@ -355,8 +363,10 @@ def evaluate_provider(
         msg = f"This {provider} API key can't use decision models{ref}. Use a key with access to them."
         raise PermissionError(msg)
     # An oversized input is a property of this message, not of the router, so the error action applies.
+    # TypeSafe reports it as 400 max_tokens_exceeded; OpenAI's other APIs as 400 context_length_exceeded,
+    # assumed for its Decisions API too.
     if status == httpx.codes.REQUEST_ENTITY_TOO_LARGE or (
-        status == httpx.codes.BAD_REQUEST and b"max_tokens_exceeded" in response.content
+        status == httpx.codes.BAD_REQUEST and code in {", max_tokens_exceeded", ", context_length_exceeded"}
     ):
         msg = f"{provider} rejected the input as too large{ref}. Shorten the input."
         raise DecisionEvaluationError(msg, category="input_too_large")
@@ -367,7 +377,7 @@ def evaluate_provider(
         )
         raise DecisionConfigurationError(msg)
     if status in {400, 422}:
-        msg = f"{provider} couldn't accept this decision request{ref}. Check the question and the options or levels."
+        msg = f"{provider} couldn't accept this decision request{ref}. Check the Decision Model and its settings."
         raise DecisionConfigurationError(msg)
     if status == httpx.codes.TOO_MANY_REQUESTS:
         msg = f"{provider} is rate-limiting this API key{ref}. Wait a moment, then try again."

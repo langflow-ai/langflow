@@ -1,6 +1,7 @@
 """Documented provider fixtures exercise wire translation without paid inference."""
 
 import copy
+import json
 
 import httpx
 import pytest
@@ -624,3 +625,37 @@ def test_a_mixed_providers_decision_models_start_off():
     assert defaults[("TypeSafe", "jev-latest")] is True
     assert defaults[("Perplexity", "pplx-decider-latest")] is True
     assert defaults[("OpenAI", "gpt-6-luna")] is False
+
+
+def test_a_key_httpx_cant_send_is_refused_without_naming_its_characters(monkeypatch):
+    sent = []
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *a, **_k: sent.append(a))
+    with pytest.raises(DecisionConfigurationError, match="contains a character a key can't have") as caught:
+        providers.evaluate_provider("TypeSafe", "jev-latest", request_for("boolean"), api_key="sk-key\u200b")
+    assert "position" not in str(caught.value)
+    assert sent == []
+
+
+@pytest.mark.parametrize(
+    ("code", "error"),
+    [
+        ("max_tokens_exceeded", DecisionEvaluationError),
+        ("context_length_exceeded", DecisionEvaluationError),
+        # Quoted text that mentions the code is not the code.
+        ("invalid_value", DecisionConfigurationError),
+    ],
+)
+def test_an_oversized_input_is_judged_by_its_error_code(monkeypatch, code, error):
+    body = json.dumps({"error": {"code": code, "message": "instructions mention max_tokens_exceeded"}})
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: httpx.Response(400, text=body))
+    with pytest.raises(error) as caught:
+        providers.evaluate_provider("TypeSafe", "jev-latest", request_for("boolean"), api_key="key")
+    assert (getattr(caught.value, "category", None) == "input_too_large") is (error is DecisionEvaluationError)
+
+
+@pytest.mark.parametrize("usage", [{"input_tokens": 290.0}, {"input_tokens": -1}, "not usage"])
+def test_a_usage_block_langflow_cant_read_keeps_the_decision(usage):
+    payload = {**response_for("TypeSafe", "boolean"), "usage": usage}
+    result = providers.parse_response("TypeSafe", request_for("boolean"), payload)
+    assert result.probability_true == 0.7
+    assert result.usage is None

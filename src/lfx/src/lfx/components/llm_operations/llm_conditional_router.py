@@ -48,6 +48,19 @@ _CUSTOM_PROMPT_DECISION_INFO = (
 _DECISION_KINDS = {"Choice": "choice", "Boolean": "boolean", "Score": "score"}
 # Boolean's fixed outputs, in place of one output per route.
 _YES_OUTPUT, _NO_OUTPUT = "yes_result", "no_result"
+# What Else receives, which differs only for Score: every Score answer reaches a level.
+_ELSE_INFO = {
+    "choice": (
+        "Include an Else output for cases that don't match any route. Decision Model mode needs it on and "
+        "connected: it gets answers that aren't sure enough, and evaluation errors when Evaluation Error "
+        "Action is Route to Else."
+    ),
+    "score": (
+        "Include an Else output for cases that don't match any route. Decision Model mode needs it on and "
+        "connected. Every Score answer reaches a level, so Else gets only evaluation errors and refusals, "
+        "when Evaluation Error Action is Route to Else."
+    ),
+}
 _BOOLEAN_FIELDS = (
     "yes_description",
     "no_description",
@@ -394,11 +407,7 @@ class SmartRouterComponent(Component):
         BoolInput(
             name="enable_else_output",
             display_name="Include Else Output",
-            info=(
-                "Include an Else output for cases that don't match any route. Decision Model mode needs it on and "
-                "connected: it gets answers that aren't sure enough, and evaluation errors when Evaluation Error "
-                "Action is Route to Else."
-            ),
+            info=_ELSE_INFO["choice"],
             value=False,
             advanced=True,
             real_time_refresh=True,
@@ -465,8 +474,28 @@ class SmartRouterComponent(Component):
             raise DecisionConfigurationError(msg)
         return _DECISION_KINDS[kind]
 
+    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):
+        """Re-apply the saved mode's fields and route IDs after a code update.
+
+        Update rebuilds the node from the class, which shows Language Model mode's fields, and copies only
+        values back. Without this a Decision Model router came back with its decision settings hidden, so
+        the run dropped them, and routes saved before route IDs stayed without them.
+        """
+        await super().update_frontend_node(new_frontend_node, current_frontend_node)
+        template = new_frontend_node.get("template", {})
+        self._show_fields(template, (template.get("routing_mode") or {}).get("value"), "routing_mode")
+        return new_frontend_node
+
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
+        if self._show_fields(build_config, field_value, field_name):
+            return handle_model_input_update(
+                self, build_config, field_value, field_name, model_field_name="decision_model"
+            )
+        return handle_model_input_update(self, build_config, field_value, field_name)
+
+    def _show_fields(self, build_config: dict, field_value: Any, field_name: str | None) -> bool:
+        """Show the fields, table and threshold column of the mode and type; return whether it's Decision Model."""
         decision_mode = self._is_decision_mode(field_value if field_name == "routing_mode" else None)
         kind = self._decision_kind(
             field_value if field_name == "decision_kind" else (build_config.get("decision_kind") or {}).get("value")
@@ -513,6 +542,7 @@ class SmartRouterComponent(Component):
             if decision_mode and field_name == "routing_mode":
                 build_config["enable_else_output"]["value"] = True
             build_config["enable_else_output"]["advanced"] = not decision_mode
+            build_config["enable_else_output"]["info"] = _ELSE_INFO["score" if kind == "score" else "choice"]
         shown_table = self._table(decision_mode=decision_mode, kind=kind)
         for table, (prefix, counter) in _TABLES.items():
             if table not in build_config:
@@ -530,11 +560,7 @@ class SmartRouterComponent(Component):
             for column in schema.get("columns", []) if isinstance(schema, dict) else schema:
                 if column.get("name") == "minimum_probability":
                     column["hidden"] = not decision_mode
-        if decision_mode:
-            return handle_model_input_update(
-                self, build_config, field_value, field_name, model_field_name="decision_model"
-            )
-        return handle_model_input_update(self, build_config, field_value, field_name)
+        return decision_mode
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """Create a dynamic output for each category in the categories table."""
@@ -814,7 +840,7 @@ class SmartRouterComponent(Component):
             # The level the probability-weighted score rounds to, as TypeSafe suggests for one outcome. A
             # score exactly between two levels takes the higher one; Python's round() would take the even one.
             winner = request.levels[min(floor(result.score + 0.5), len(request.levels) - 1)].id
-            evidence.update(top_outcome=winner, reason="accepted", activated_branch=winner)
+            evidence.update(reason="accepted", activated_branch=winner)
             return labels[winner]
         probabilities = result.probabilities
         if request.kind == "boolean":
@@ -858,9 +884,15 @@ class SmartRouterComponent(Component):
         self._excluded_outputs = set()
         self._decision_evidence = None
         # Checked before any model is called, so a mismatch never costs an inference. Boolean's
-        # Yes and No outputs don't come from a table.
+        # Yes and No outputs don't come from a table, but must be the saved ones: a tweak that switches
+        # a routes flow to Boolean would otherwise run every route branch.
         if self._rows_table() is not None:
             self._route_ids()
+        elif self._outputs_map and set(self._outputs_map) - {"default_result"} != {_YES_OUTPUT, _NO_OUTPUT}:
+            msg = (
+                "The Smart Router's outputs don't match its Decision Type. Open the flow in the editor to update them."
+            )
+            raise DecisionConfigurationError(msg)
         if self._is_decision_mode():
             self._validate_decision_graph()
 

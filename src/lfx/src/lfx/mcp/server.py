@@ -630,6 +630,27 @@ _TRUTHY_STRINGS = {"true", "yes", "1", "on"}
 _FALSY_STRINGS = {"false", "no", "0", "off", ""}
 
 
+# The hidden column that ties a Smart Router route (or Score level) to its output and its edges.
+_ROW_ID_KEY = "route_id"
+
+
+def _keep_row_ids(current: Any, incoming: Any) -> Any:
+    """Table rows sent without IDs keep the IDs of the rows they replace, by position.
+
+    A caller that sends plain rows, such as a renamed route, would otherwise get new outputs and orphan
+    every edge. A run reads rows without IDs by position too.
+    """
+    if not (isinstance(current, list) and isinstance(incoming, list)):
+        return incoming
+    if any(isinstance(row, dict) and row.get(_ROW_ID_KEY) for row in incoming):
+        return incoming
+    ids = [row.get(_ROW_ID_KEY) if isinstance(row, dict) else None for row in current]
+    return [
+        {**row, _ROW_ID_KEY: ids[i]} if isinstance(row, dict) and i < len(ids) and ids[i] else row
+        for i, row in enumerate(incoming)
+    ]
+
+
 def _coerce_param_value(value: Any, field_type: str | None) -> Any:
     """Coerce a spec-supplied value to the field's declared type.
 
@@ -774,6 +795,7 @@ async def configure_component(
             else:
                 # Set value in template before sending
                 if key in template and isinstance(template[key], dict):
+                    value = _keep_row_ids(template[key].get("value"), value)
                     template[key]["value"] = value
                     # A value explicitly supplied to this tool is a literal.
                     # Preserve component defaults, but do not let the refresh
