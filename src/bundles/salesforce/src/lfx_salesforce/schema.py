@@ -30,7 +30,9 @@ REQUIRED = {
     "Case": set(),
 }
 _ID = re.compile(r"^[A-Za-z0-9]{15}(?:[A-Za-z0-9]{3})?$")
-_HOST = re.compile(r"^[a-z0-9][a-z0-9-]*(?:--[a-z0-9-]+)?\.(?:sandbox\.)?my\.salesforce\.com$")
+_HOST = re.compile(
+    r"^[a-z0-9][a-z0-9-]*(?:--[a-z0-9-]+)?\.(?:(?:demo|develop|patch|sandbox|scratch|trailblaze)\.)?my\.salesforce\.com$"
+)
 
 
 def invalid(message: str) -> InvalidRequestError:

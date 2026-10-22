@@ -1,7 +1,6 @@
 """Salesforce HTTP contract fixtures with synthetic credentials."""
 
 from dataclasses import replace
-from types import SimpleNamespace
 
 import pytest
 from lfx.integrations.models import (
@@ -73,20 +72,3 @@ def metadata(obj="Account"):
 @pytest.fixture(autouse=True)
 def configured_org(monkeypatch):
     monkeypatch.setenv("LANGFLOW_SALESFORCE_ORIGIN", ORG)
-
-
-@pytest.fixture
-def source_trigger():
-    return SimpleNamespace(
-        kind="salesforce.record",
-        provider="salesforce",
-        connection_id=None,
-        config={
-            "connection": "salesforce/work",
-            "object_name": "Account",
-            "fields": ["Name"],
-            "delivery_mode": "poll",
-            "mechanism_id": "salesforce.record.poll",
-        },
-        provider_state={},
-    )

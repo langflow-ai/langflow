@@ -18,7 +18,7 @@ There are no arbitrary SOQL, relationship fields, custom objects, custom fields,
 
 ## Authentication and deployment
 
-An operator configures one Salesforce My Domain org for the deployment. Set LANGFLOW_SALESFORCE_ORIGIN to its exact HTTPS origin, such as https://example.my.salesforce.com or https://example--uat.sandbox.my.salesforce.com. Configure the same origin and OAuth registrations on the API and every listener process. Restart those processes after changing the origin. A connection's account tenant metadata binds its tokens to this exact origin. Both authorization and refresh reject a different instance_url. Redirects are never followed.
+An operator configures one Salesforce My Domain org for the deployment. Set LANGFLOW_SALESFORCE_ORIGIN to its exact HTTPS origin, such as https://example.my.salesforce.com or https://example--uat.sandbox.my.salesforce.com. The documented demo, develop, patch, sandbox, scratch, and trailblaze My Domain partitions are accepted. The exact configured origin still binds the connection. Configure the same origin and OAuth registrations on the API and every listener process. Restart those processes after changing the origin. A connection's account tenant metadata binds its tokens to this exact origin. Both authorization and refresh reject a different instance_url. Redirects are never followed.
 
 Create a Salesforce external client app, or use an existing connected app. Salesforce restricts creation of new connected apps starting in Spring 2026. The app owner configures an authorization code flow, PKCE, a client secret, and the exact Langflow callback. Enable api, id, and refresh_token scopes. These are OAuth scopes. They do not grant object or field permissions by themselves. Use an API-enabled integration user with the required sharing and object permissions. Enterprise, Unlimited, Performance, and Developer editions include API access. Professional requires its API add-on. Group and Essentials are unsupported.
 
@@ -36,7 +36,7 @@ Salesforce retains at most 30 days of replication history. This adapter rejects 
 
 ## Verification limits
 
-Contract tests use synthetic credentials and HTTP responses. Lifecycle tests use the shared trigger runtime and database. A real external client app, tenant OAuth callback, Salesforce API request, edition-specific object permissions, token rotation, and multi-process Salesforce traffic remain unverified. This bundle must be installed before its entry points can expose the components and server adapter. It is not added to the full distribution's reviewed profile by this change.
+Contract tests use synthetic credentials and HTTP responses. Lifecycle tests use the shared trigger runtime and database. A real external client app, tenant OAuth callback, Salesforce API request, edition-specific object permissions, token rotation, and multi-process Salesforce traffic remain unverified. This bundle must be installed before its entry points can expose the components and server adapter. The full distribution and reviewed Enterprise profile register this preview bundle. Its capability maturity remains preview.
 
 ## Provider references
 
@@ -50,3 +50,5 @@ The API contract was checked against current Salesforce documentation on October
 - [sObject record actions](https://developer.salesforce.com/docs/platform/api-rest/guide/resources-sobject-retrieve.html)
 - [Create records](https://developer.salesforce.com/docs/platform/api-rest/guide/resources-sobject-basic-info-post.html)
 - [Salesforce warning about timestamp SOQL replication](https://help.salesforce.com/s/articleView?id=000391120&language=en_US&type=1)
+
+- [Official My Domain partitions](https://help.salesforce.com/s/articleView?id=sf.domain_name_partitioned_domains.htm&language=en_US&type=5)

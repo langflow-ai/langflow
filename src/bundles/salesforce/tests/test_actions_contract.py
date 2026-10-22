@@ -322,3 +322,27 @@ async def test_read_matches_15_character_id_without_folding_case(monkeypatch, re
             await run_component(
                 monkeypatch, SalesforceReadRecordComponent, handler, record_id=identifier, fields="Name"
             )
+
+
+@pytest.mark.parametrize("partition", ["", "demo.", "develop.", "patch.", "sandbox.", "scratch.", "trailblaze."])
+def test_operator_origin_accepts_documented_domain_partitions(monkeypatch, partition):
+    target = f"https://example.{partition}my.salesforce.com"
+    monkeypatch.setenv("LANGFLOW_SALESFORCE_ORIGIN", target)
+    assert origin() == target
+
+
+@pytest.mark.parametrize(
+    "target",
+    [
+        "https://example.free.my.salesforce.com",
+        "https://example.unknown.my.salesforce.com",
+        "https://example.scratch.my.salesforce.com.evil.example",
+        "https://example.scratch.evil.my.salesforce.com",
+        "https://example.scratch.my.salesforce.com/path",
+        "https://example.scratch.my.salesforce.com?redirect=https://evil.example",
+    ],
+)
+def test_operator_origin_rejects_unsupported_or_forged_partitions(monkeypatch, target):
+    monkeypatch.setenv("LANGFLOW_SALESFORCE_ORIGIN", target)
+    with pytest.raises(InvalidRequestError):
+        origin()

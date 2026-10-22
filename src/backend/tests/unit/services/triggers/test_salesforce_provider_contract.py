@@ -5,12 +5,38 @@ from types import SimpleNamespace
 
 import httpx
 import pytest
-from conftest import ORG, RECORD, lease_for, metadata
 from langflow.services.connection.oauth.config import OAuthError
 from langflow.services.triggers.providers.salesforce import PROVIDER, collector, oauth
 from lfx.integrations.errors import InvalidRequestError, ProviderUnavailableError
 from lfx_salesforce.client import SalesforceClient
 from lfx_salesforce.schema import iso
+
+from tests.unit.services.triggers.salesforce_testkit import ORG, RECORD, lease_for, metadata
+
+
+@pytest.fixture(autouse=True)
+def configured_org(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_SALESFORCE_ORIGIN", ORG)
+
+
+@pytest.fixture
+def source_trigger():
+    return SimpleNamespace(
+        kind="salesforce.record",
+        provider="salesforce",
+        connection_id=None,
+        config={
+            "connection": "salesforce/work",
+            "object_name": "Account",
+            "fields": ["Name"],
+            "delivery_mode": "poll",
+            "mechanism_id": "salesforce.record.poll",
+        },
+        provider_state={},
+    )
+
+
+pytestmark = pytest.mark.no_blockbuster
 
 
 def registration(**changes):
