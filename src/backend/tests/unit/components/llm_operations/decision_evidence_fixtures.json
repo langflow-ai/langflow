@@ -177,7 +177,7 @@
     "activated_branch": null,
     "error": {
       "category": "configuration_error",
-      "message": "The selected Decision Model is turned off or no longer offered. Turn it on in Model Providers, or pick another."
+      "message": "The selected Decision Model is no longer offered. Pick another Decision Model."
     },
     "error_action": "Route to Else",
     "kind": "choice",

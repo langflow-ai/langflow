@@ -57,16 +57,12 @@ def evaluate_decision(
     if provider is None:
         msg = "The Decision Model's provider isn't available here. Pick another Decision Model."
         raise DecisionConfigurationError(msg)
-    # Flow-supplied capabilities and endpoints are not authoritative.
-    choices = unified_models.get_decision_model_options(
-        user_id=user_id, provider_policy=policy, require_configured=False
-    )
+    # Flow-supplied capabilities and endpoints are not authoritative. As for a language model, a run
+    # checks policy and the catalog, not Model Providers' on/off switches: those only shape the picker.
+    choices = unified_models.get_decision_model_options(provider_policy=policy, require_configured=False)
     selected = next((row for row in choices if row["provider"] == provider and row["name"] == model_name), None)
     if selected is None:
-        msg = (
-            "The selected Decision Model is turned off or no longer offered. "
-            "Turn it on in Model Providers, or pick another."
-        )
+        msg = "The selected Decision Model is no longer offered. Pick another Decision Model."
         raise DecisionConfigurationError(msg)
     if request.kind not in selected.get("metadata", {}).get("capabilities", []):
         msg = (

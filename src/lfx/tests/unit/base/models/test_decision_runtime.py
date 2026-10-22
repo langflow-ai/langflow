@@ -131,11 +131,28 @@ def test_generating_model_cannot_be_used_as_decision_model(execution):
     transport.assert_not_called()
 
 
-def test_disabled_model_and_capability_are_authoritative(execution, monkeypatch):
+def test_switched_off_model_still_runs_like_a_language_model(execution, monkeypatch):
+    """Model Providers' switches shape the picker only, so lfx run and serve, which have none, can run any model."""
+    from lfx.base.models.unified_models import model_catalog
+
+    async def switched_off(*_args, **_kwargs):
+        return {"gpt-6-luna"}, set()
+
+    request, model, transport = execution
+    monkeypatch.setattr(model_catalog, "_get_model_status", switched_off)
+    variables = activate_request_variables({"OPENAI_API_KEY": "sk-request-key"})
+    try:
+        evaluate_decision(request, model=model, user_id="00000000-0000-0000-0000-000000000001")
+    finally:
+        reset_request_variables(variables)
+    transport.assert_called_once()
+
+
+def test_unoffered_model_and_capability_are_authoritative(execution, monkeypatch):
     request, model, transport = execution
     options = Mock(return_value=[])
     monkeypatch.setattr(unified_models, "get_decision_model_options", options)
-    with pytest.raises(DecisionConfigurationError, match="turned off"):
+    with pytest.raises(DecisionConfigurationError, match="no longer offered"):
         evaluate_decision(request, model=model)
     options.return_value = [{**model, "metadata": {"capabilities": ["choice"]}}]
     with pytest.raises(DecisionConfigurationError, match="Decision Type"):

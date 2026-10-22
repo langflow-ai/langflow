@@ -614,7 +614,7 @@ def test_a_key_check_only_runs_catalogued_decision_models(monkeypatch, provider,
 
 
 def test_decision_models_start_on():
-    """Every decision model starts on: lfx run and serve have no Model Providers to switch one on."""
+    """Decision models start on by the language-model rule, each provider's first five, OpenAI's too."""
     from lfx.base.models.unified_models import get_unified_models_detailed
 
     defaults = {

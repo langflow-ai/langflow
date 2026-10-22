@@ -123,9 +123,8 @@ def get_unified_models_detailed(
 
     for prov, models in provider_map.items():
         models.sort(key=_sort_key)
-        # Decision rows get their own defaults so they never displace a provider's chat defaults. They
-        # start on, OpenAI's too: lfx run and serve have no Model Providers to switch one on, and a key
-        # without Decisions access fails its first run with a message that says so.
+        # Decision rows get their own first five, as language models do, so they never displace a
+        # provider's chat defaults.
         seen = Counter()
         for model in models:
             is_decision = is_decision_row(model)

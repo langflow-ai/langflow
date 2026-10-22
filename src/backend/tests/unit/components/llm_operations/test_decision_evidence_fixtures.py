@@ -104,10 +104,7 @@ SCENARIOS = {
     "configuration_error": (
         "Route to Else",
         _raise(
-            DecisionConfigurationError(
-                "The selected Decision Model is turned off or no longer offered. "
-                "Turn it on in Model Providers, or pick another."
-            )
+            DecisionConfigurationError("The selected Decision Model is no longer offered. Pick another Decision Model.")
         ),
     ),
 }
