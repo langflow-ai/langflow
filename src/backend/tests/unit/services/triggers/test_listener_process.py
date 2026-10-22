@@ -175,7 +175,9 @@ async def test_the_self_test_dedupe_key_is_the_interval_bucket_not_the_clock(cli
     trigger = _trigger()
     emitted: list[str] = []
 
-    async def emit(*, trigger_id, dedupe_key, payload) -> bool:  # noqa: ARG001
+    async def emit(*, trigger_id, dedupe_key, payload, expected_config, expected_kind) -> bool:  # noqa: ARG001
+        assert expected_config == trigger.config
+        assert expected_kind == trigger.kind
         first = dedupe_key not in emitted
         emitted.append(dedupe_key)
         return first
