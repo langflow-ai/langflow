@@ -362,7 +362,11 @@ def register_builtin_adapters() -> None:
         for spec in provider.kinds:
             if spec.poll_mechanism and (spec.kind, spec.poll_mechanism) not in _REGISTRY:
                 register_adapter(kind=spec.kind, mechanism=spec.poll_mechanism, factory=_provider_source_factory)
-            if spec.listener_mechanism and (spec.kind, spec.listener_mechanism) not in _REGISTRY:
+            if (
+                spec.listener_mechanism
+                and spec.listener_factory
+                and (spec.kind, spec.listener_mechanism) not in _REGISTRY
+            ):
                 register_adapter(kind=spec.kind, mechanism=spec.listener_mechanism, factory=spec.listener_factory)
 
 
