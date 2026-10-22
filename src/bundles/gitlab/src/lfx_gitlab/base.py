@@ -57,22 +57,30 @@ class GitLabActionComponent(Component):
         if operation == "comment":
             path += "/notes"
             body = {"body": bounded_text(self.body, required=True)}
-        elif operation in {"create", "update"}:
+        elif operation == "create":
             body = {
                 "title": bounded_text(self.title, required=True, maximum=255),
                 "description": bounded_text(self.body_content),
             }
-            if operation == "update":
-                if self.state_event not in {"unchanged", "close", "reopen"}:
-                    msg = "Choose a supported state change."
-                    raise InvalidRequestError(msg, provider="gitlab")
-                if self.state_event != "unchanged":
-                    body["state_event"] = self.state_event
-            if operation == "create" and self.resource == "merge_request":
+            if self.resource == "merge_request":
                 body.update(
                     source_branch=bounded_text(self.source_branch, required=True, maximum=255),
                     target_branch=bounded_text(self.target_branch, required=True, maximum=255),
                 )
+        elif operation == "update":
+            body = {}
+            if self.title not in (None, ""):
+                body["title"] = bounded_text(self.title, required=True, maximum=255)
+            if self.body_content not in (None, ""):
+                body["description"] = bounded_text(self.body_content)
+            if self.state_event not in {"unchanged", "close", "reopen"}:
+                msg = "Choose a supported state change."
+                raise InvalidRequestError(msg, provider="gitlab")
+            if self.state_event != "unchanged":
+                body["state_event"] = self.state_event
+            if not body:
+                msg = "Provide a new title, description, or state change."
+                raise InvalidRequestError(msg, provider="gitlab")
         lease = self.resolve_connection("connection")
         credential = await lease.get_credential()
         method = "POST" if operation in {"create", "comment"} else "PUT" if operation == "update" else "GET"

@@ -16,8 +16,13 @@ class GitLabUpdateMergeRequestComponent(GitLabActionComponent):
         connection_input(capability_id),
         project_input(),
         IntInput(name="number", display_name="Issue or Merge Request Number", required=True),
-        StrInput(name="title", display_name="Title", required=True),
-        MultilineInput(name="body_content", display_name="Description", value=""),
+        StrInput(name="title", display_name="Title", value="", info="Leave blank to keep the existing title."),
+        MultilineInput(
+            name="body_content",
+            display_name="Description",
+            value="",
+            info="Leave blank to keep the existing description.",
+        ),
         DropdownInput(
             name="state_event", display_name="State Change", options=["unchanged", "close", "reopen"], value="unchanged"
         ),

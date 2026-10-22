@@ -2,6 +2,8 @@
 
 This preview bundle adds nine actions and two project webhook triggers. Actions read projects and read, create, update, and comment on issues and merge requests. Triggers filter issue and merge request events by project ID and selected action.
 
+Update actions send only supplied changes. Leaving Title or Description blank preserves the existing field, so closing or reopening an item does not require restating its title or description. Supply at least one new value or state change. Clearing an existing description is outside this preview.
+
 ## Setup
 
 Install the bundle with the matching Langflow release and provider runtime. The deployment operator configures LANGFLOW_GITLAB_ORIGIN before startup. It defaults to https://gitlab.com. Self-Managed instances need one public HTTPS DNS origin without a path prefix or custom port. Redirects and private network destinations are rejected. Changing this origin requires restoring it for old webhook cleanup before replacing connections.

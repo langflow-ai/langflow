@@ -7,6 +7,7 @@ from pathlib import Path
 import httpx
 import pytest
 from lfx.integrations.capabilities import IntegrationCapabilityManifest
+from lfx.integrations.errors import InvalidRequestError
 from lfx_gitlab.client import GitLabClient
 from lfx_gitlab.components import gitlab
 
@@ -67,6 +68,39 @@ async def test_action_requests_and_per_run_cache(monkeypatch, lease, cls, method
         }
     component._pre_run_setup()
     assert (await component.build_result()).data == {"id": 2}
+
+
+@pytest.mark.parametrize("cls", [gitlab.GitLabUpdateIssueComponent, gitlab.GitLabUpdateMergeRequestComponent])
+@pytest.mark.parametrize(
+    ("fields", "expected"),
+    [
+        ({"title": "Rename only"}, {"title": "Rename only"}),
+        ({"body_content": "New description"}, {"description": "New description"}),
+        ({"state_event": "close"}, {"state_event": "close"}),
+    ],
+)
+async def test_partial_updates_preserve_unspecified_fields(monkeypatch, lease, cls, fields, expected):
+    requests = []
+
+    def handle(request):
+        requests.append(request)
+        return httpx.Response(200, json={"id": 4})
+
+    monkeypatch.setattr("lfx_gitlab.base.GitLabClient", partial(GitLabClient, transport=httpx.MockTransport(handle)))
+    monkeypatch.setattr(cls, "resolve_connection", lambda _self, _field: lease)
+    component = cls(connection="gitlab/work", project_id=80, number=4, **fields)
+    await component.build_result()
+    assert len(requests) == 1
+    assert requests[0].method == "PUT"
+    assert json.loads(requests[0].content) == expected
+
+
+@pytest.mark.parametrize("cls", [gitlab.GitLabUpdateIssueComponent, gitlab.GitLabUpdateMergeRequestComponent])
+async def test_empty_updates_do_not_resolve_credentials_or_send_requests(monkeypatch, cls):
+    monkeypatch.setattr(cls, "resolve_connection", lambda *_args: pytest.fail("Empty update resolved credentials"))
+    component = cls(connection="gitlab/work", project_id=80, number=4)
+    with pytest.raises(InvalidRequestError, match="Provide a new title, description, or state change"):
+        await component.build_result()
 
 
 def test_manifest_stable_classes_and_scope_contract():
