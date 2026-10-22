@@ -488,9 +488,16 @@ async def get_trigger_ingress(
     row = await _authorized_trigger(
         service=service, session=session, user=current_user, trigger_id=trigger_id, action=FlowAction.READ
     )
-    from langflow.services.triggers.providers.registry import push_mechanisms, source_kinds
+    from langflow.services.triggers.providers.registry import get_kind, push_mechanisms, source_kinds
 
-    if row.kind in source_kinds() and row.public_id and (row.config or {}).get("mechanism_id") in push_mechanisms():
+    mechanism = (row.config or {}).get("mechanism_id")
+    kind = get_kind(row.kind)
+    supports_push = (
+        bool(kind.push_mechanism) and mechanism == kind.push_mechanism
+        if kind is not None
+        else mechanism in push_mechanisms()
+    )
+    if row.kind in source_kinds() and row.public_id and supports_push:
         from langflow.services.triggers.source_subscription import source_ingress_url
 
         return TriggerIngressRead(
