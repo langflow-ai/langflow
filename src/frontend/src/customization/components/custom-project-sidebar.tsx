@@ -15,6 +15,7 @@ export interface CustomProjectSidebarState {
   itemActionClassName?: string;
   itemClassName?: string;
   projects: FolderType[];
+  secondaryNavigationState?: "open" | "closed";
   tools: ReactNode;
 }
 

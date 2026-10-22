@@ -478,10 +478,16 @@ const SideBarFoldersButtonsComponent = ({
 
   return (
     <Sidebar
+      aria-hidden={
+        projectSidebar.secondaryNavigationState === "closed" || undefined
+      }
+      data-secondary-navigation-state={projectSidebar.secondaryNavigationState}
       collapsible={isMobile ? "offcanvas" : "none"}
       className={projectSidebar.className}
       data-testid="project-sidebar"
       aria-labelledby="project-sidebar-title"
+      id="project-sidebar"
+      inert={projectSidebar.secondaryNavigationState === "closed" || undefined}
     >
       <SidebarHeader
         className={cn("px-4 py-1", projectSidebar.headerContainerClassName)}
