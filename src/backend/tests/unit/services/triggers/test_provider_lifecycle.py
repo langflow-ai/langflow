@@ -1079,6 +1079,72 @@ async def test_provider_dispatch_policy_block_does_not_require_reconnecting_cred
 
 
 @pytest.mark.usefixtures("pilot")
+@pytest.mark.parametrize("source_hint", [False, True])
+async def test_unloaded_provider_keeps_queued_delivery_until_reload(
+    pilot, trigger_owner, owned_flow, client, fake_background_service, monkeypatch, source_hint
+):
+    from langflow.services.auth.utils import decrypt_api_key
+    from langflow.services.database.models.connection.model import Connection
+    from langflow.services.triggers.source_delivery import SOURCE_HINT_FIELD
+
+    connection = await _connection(trigger_owner)
+    trigger = await _reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        secret = decrypt_api_key(row.signing_secret_encrypted)
+        public_id = row.public_id
+    body = json.dumps({"repository": "acme/widgets", "id": "before-provider-unload"}).encode()
+    signature = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+    response = await client.post(
+        f"/api/v1/triggers/ingress/pilot/{public_id}", content=body, headers={"x-pilot-signature": signature}
+    )
+    assert response.status_code == 202
+    async with session_scope() as session:
+        event = (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger.id))).one()
+        if source_hint:
+            event.payload = {**event.payload, SOURCE_HINT_FIELD: True}
+            session.add(event)
+        event_id = event.id
+    monkeypatch.setattr(registry, "all_providers", lambda: ())
+    for _ in range(2):
+        assert await dispatcher.run_once(owner="pilot-reload-test") == 0
+        async with session_scope() as session:
+            row = await session.get(Trigger, trigger.id)
+            assert row.state == "active"
+            assert row.last_error == "provider-unavailable"
+            assert (await session.get(Connection, connection.id)).status == "ready"
+            event = await session.get(TriggerEvent, event_id)
+            assert event.state == "pending"
+            assert event.error == "provider-unavailable"
+            assert event.attempt == 0
+            assert event.lease_owner is None
+            assert event.available_at.replace(tzinfo=timezone.utc) > datetime.now(timezone.utc)
+            event.available_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+            session.add(event)
+    assert fake_background_service.submits == []
+    monkeypatch.setattr(registry, "all_providers", lambda: (pilot.provider,))
+    if source_hint:
+        # Observe the same queued wakeup reaching its registered collector after reload.
+        expanded = []
+
+        async def reconcile(trigger_id, **_kwargs):
+            expanded.append(trigger_id)
+
+        monkeypatch.setattr(source_runtime, "reconcile_source", reconcile)
+    assert await dispatcher.run_once(owner="pilot-reload-test") == (0 if source_hint else 1)
+    async with session_scope() as session:
+        event = await session.get(TriggerEvent, event_id)
+        assert event.state == ("completed" if source_hint else "dispatched")
+        assert event.error is None
+        assert (await session.get(Trigger, trigger.id)).last_error is None
+    if source_hint:
+        assert expanded == [trigger.id]
+    else:
+        assert len(fake_background_service.submits) == 1
+
+
+@pytest.mark.usefixtures("pilot")
 async def test_source_http_rejects_foreign_origin_before_credential_resolution():
     class Lease:
         ref = ConnectionRef(provider="pilot", name="work")
