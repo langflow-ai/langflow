@@ -30,6 +30,7 @@ export default function SessionSelector({
   setActiveSession,
   menuOpen,
   onMenuOpenChange,
+  canRename = true,
 }: {
   deleteSession: (session: string) => void;
   session: string;
@@ -43,6 +44,7 @@ export default function SessionSelector({
   setActiveSession: (session: string) => void;
   menuOpen?: boolean;
   onMenuOpenChange?: (open: boolean) => void;
+  canRename?: boolean;
 }) {
   const { t } = useTranslation();
   const currentFlowId = useGetFlowId();
@@ -259,6 +261,7 @@ export default function SessionSelector({
             <SelectItem
               variant="plain"
               value="rename"
+              disabled={!canRename}
               className="cursor-pointer px-3 py-2 focus:bg-muted"
             >
               <div className="flex items-center">

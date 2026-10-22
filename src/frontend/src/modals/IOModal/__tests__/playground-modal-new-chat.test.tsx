@@ -50,12 +50,8 @@ jest.mock("../components/selected-view-field", () => ({
 
 jest.mock("../components/sidebar-open-view", () => ({
   __esModule: true,
-  SidebarOpenView: ({
-    setvisibleSession,
-  }: {
-    setvisibleSession: (session: string | undefined) => void;
-  }) => (
-    <button type="button" onClick={() => setvisibleSession(undefined)}>
+  SidebarOpenView: ({ onNewSession }: { onNewSession: () => void }) => (
+    <button type="button" onClick={onNewSession}>
       new chat
     </button>
   ),
@@ -229,10 +225,12 @@ describe("IOModal (playground) new chat", () => {
     expect(storedSessionId).toMatch(/^test-flow-id:Session /);
     expect(sentSessionId).toBe(storedSessionId);
 
-    // Opening the new chat loads history first; that must not select it yet.
+    // History from the previous chat preserves the newly selected session.
     receiveMessage("test-flow-id");
     expect(sessionsQueryResult.refetch).not.toHaveBeenCalled();
-    expect(screen.getByTestId("visible-session")).toBeEmptyDOMElement();
+    expect(screen.getByTestId("visible-session")).toHaveTextContent(
+      storedSessionId,
+    );
 
     // Newest first, as the server lists them after the send.
     sessionsQueryResult.data = [
@@ -247,7 +245,7 @@ describe("IOModal (playground) new chat", () => {
         storedSessionId,
       ),
     );
-    expect(sessionsQueryResult.refetch).toHaveBeenCalled();
+    expect(sessionsQueryResult.refetch).not.toHaveBeenCalled();
   });
 
   it("keeps the new session unprefixed outside the playground page", () => {

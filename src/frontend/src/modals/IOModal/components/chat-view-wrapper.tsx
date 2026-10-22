@@ -10,14 +10,13 @@ import ChatView from "./chatView/components/chat-view";
 import { MessageHistoryLoader } from "./message-history-loader";
 
 export const ChatViewWrapper = ({
+  onNewSession,
   selectedViewField,
   visibleSession,
   sessions,
   sidebarOpen,
   currentFlowId,
   setSidebarOpen,
-  setvisibleSession,
-  setSelectedViewField,
   messagesFetched,
   messageHistory,
   sessionId,
@@ -86,10 +85,7 @@ export const ChatViewWrapper = ({
               className="mr-2 h-[32px] w-[32px] hover:bg-secondary-hover"
               variant="ghost"
               size="icon"
-              onClick={() => {
-                setvisibleSession(undefined);
-                setSelectedViewField(undefined);
-              }}
+              onClick={onNewSession}
               aria-label={t("modal.io.newChat")}
             >
               <IconComponent
