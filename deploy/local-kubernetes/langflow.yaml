@@ -1,0 +1,132 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: langflow-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: langflow
+  labels:
+    app.kubernetes.io/name: langflow
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: langflow
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: langflow
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: langflow
+          image: docker.io/langflowai/langflow:1.13.0rc4
+          imagePullPolicy: Never
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: http
+              containerPort: 7860
+              protocol: TCP
+          env:
+            - name: LANGFLOW_HOST
+              value: 0.0.0.0
+            - name: LANGFLOW_PORT
+              value: "7860"
+            - name: LANGFLOW_AUTO_LOGIN
+              value: "false"
+            - name: LANGFLOW_ALLOW_CUSTOM_COMPONENTS
+              value: "false"
+            - name: LANGFLOW_SUPERUSER
+              value: langflow
+            - name: LANGFLOW_SUPERUSER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: langflow-runtime
+                  key: SUPERUSER_PASSWORD
+            - name: LANGFLOW_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: langflow-runtime
+                  key: SECRET_KEY
+            - name: LANGFLOW_CONFIG_DIR
+              value: /app/langflow
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: langflow-data
+              mountPath: /app/langflow
+      volumes:
+        - name: langflow-data
+          persistentVolumeClaim:
+            claimName: langflow-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: langflow
+  labels:
+    app.kubernetes.io/name: langflow
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: langflow
+  ports:
+    - name: http
+      port: 7860
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: langflow-deny-egress
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: langflow
+  policyTypes:
+    - Egress
+  egress: []

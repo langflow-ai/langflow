@@ -1,4 +1,4 @@
-.PHONY: all init format_backend format lint build backend backend_base install_backend setup_env run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help docs docs_build docs_install api_examples_local api_examples_local_syntax
+.PHONY: all init format_backend format lint build backend backend_base install_backend setup_env run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help docs docs_build docs_install api_examples_local api_examples_local_syntax k8s-local k8s-local-image k8s-local-up k8s-local-status k8s-local-forward k8s-local-k9s k8s-local-egress-on k8s-local-egress-off k8s-local-fix-fernet-key k8s-local-clean
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
@@ -52,6 +52,15 @@ help: ## show basic help message with common commands
 	@echo "  $(GREEN)make init$(NC)                - Initialize project (install all dependencies)"
 	@echo "  $(GREEN)make run_cli$(NC)             - Run Langflow CLI"
 	@echo "  $(GREEN)make run_clic$(NC)            - Run CLI with fresh frontend build"
+	@echo "  $(GREEN)make k8s-local$(NC)           - Deploy Langflow locally and open port-forward"
+	@echo "  $(GREEN)make k8s-local-image$(NC)    - Preload the pinned image into local Kubernetes"
+	@echo "  $(GREEN)make k8s-local-up$(NC)       - Deploy Langflow in the local langflow namespace"
+	@echo "  $(GREEN)make k8s-local-forward$(NC)  - Access Langflow on 127.0.0.1:7860"
+	@echo "  $(GREEN)make k8s-local-k9s$(NC)      - Inspect the local namespace in k9s"
+	@echo "  $(GREEN)make k8s-local-egress-on$(NC)  - Allow outbound network access for providers"
+	@echo "  $(GREEN)make k8s-local-egress-off$(NC) - Restore default outbound network isolation"
+	@echo "  $(GREEN)make k8s-local-fix-fernet-key$(NC) - Fix an invalid local encryption key"
+	@echo "  $(GREEN)make k8s-local-clean$(NC)    - Delete the namespace and all its data"
 	@echo "  $(GREEN)make format$(NC)              - Format all code (backend + frontend)"
 	@echo "  $(GREEN)make tests$(NC)               - Run all tests"
 	@echo "  $(GREEN)make build$(NC)               - Build the project"
@@ -1124,6 +1133,44 @@ api_examples_local: ## run docs API sample files against a local Langflow server
 api_examples_local_syntax: ## syntax-check docs API sample files locally without execution
 	@echo "$(GREEN)Running docs API example syntax checks locally...$(NC)"
 	@SUITES="$(suites)" EXECUTE_MODE=false ./scripts/test-api-examples-local.sh
+
+######################
+# LOCAL KUBERNETES
+######################
+
+LANGFLOW_IMAGE ?= docker.io/langflowai/langflow:1.13.0rc4
+
+k8s-local: ## preload image, deploy Langflow, and open local port-forward
+	@$(MAKE) k8s-local-image
+	@$(MAKE) k8s-local-up
+	@$(MAKE) k8s-local-forward
+
+k8s-local-image: ## preload the pinned Langflow image into the local Kubernetes node
+	@LANGFLOW_IMAGE="$(LANGFLOW_IMAGE)" ./scripts/kubernetes/langflow-local.sh image
+
+k8s-local-up: ## deploy Langflow into the local langflow namespace
+	@LANGFLOW_IMAGE="$(LANGFLOW_IMAGE)" ./scripts/kubernetes/langflow-local.sh up
+
+k8s-local-status: ## show resources in the local langflow namespace
+	@./scripts/kubernetes/langflow-local.sh status
+
+k8s-local-forward: ## forward Langflow to 127.0.0.1:7860
+	@./scripts/kubernetes/langflow-local.sh forward
+
+k8s-local-k9s: ## open k9s in the local langflow namespace
+	@./scripts/kubernetes/langflow-local.sh k9s
+
+k8s-local-egress-on: ## allow all outbound network access from Langflow
+	@./scripts/kubernetes/langflow-local.sh egress-on
+
+k8s-local-egress-off: ## restore default deny-egress policy for Langflow
+	@./scripts/kubernetes/langflow-local.sh egress-off
+
+k8s-local-fix-fernet-key: ## replace the local Fernet key and restart Langflow
+	@./scripts/kubernetes/langflow-local.sh fix-fernet-key
+
+k8s-local-clean: ## delete the local langflow namespace and its data
+	@./scripts/kubernetes/langflow-local.sh down
 
 ######################
 # INCLUDE FRONTEND MAKEFILE
