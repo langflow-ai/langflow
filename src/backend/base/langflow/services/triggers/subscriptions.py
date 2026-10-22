@@ -116,6 +116,21 @@ _RENEWERS: dict[str, SubscriptionRenewer] = {}
 _REVOKERS: dict[str, SubscriptionRevoker] = {}
 
 
+class _ProviderUnavailableError(RuntimeError):
+    """A catalog reload removed a renewal handler before it was invoked."""
+
+
+async def _renew_extension(session: AsyncSession, subscription: TriggerSubscription) -> datetime:
+    """Resolve the current trusted hook instead of retaining an old descriptor."""
+    from langflow.services.triggers.providers.registry import get_provider
+
+    extension = get_provider(subscription.provider)
+    if extension is None or extension.renew is None:
+        msg = "The trigger provider's subscription renewal handler is unavailable."
+        raise _ProviderUnavailableError(msg)
+    return await extension.renew(session, subscription)
+
+
 def _ensure_source_handlers(provider: str) -> None:
     """Install the built-in source handlers after import cycles have settled."""
     from langflow.services.triggers.providers.registry import get_provider
@@ -125,10 +140,14 @@ def _ensure_source_handlers(provider: str) -> None:
         from langflow.services.triggers.source_subscription import revoke_source
 
         if extension.renew is not None:
-            _RENEWERS.setdefault(provider, extension.renew)
+            _RENEWERS.setdefault(provider, _renew_extension)
+        elif _RENEWERS.get(provider) is _renew_extension:
+            _RENEWERS.pop(provider)
         _REVOKERS.setdefault(provider, revoke_source)
         return
     if provider not in {"microsoft", "google"}:
+        if _RENEWERS.get(provider) is _renew_extension:
+            _RENEWERS.pop(provider)
         return
     from langflow.services.triggers.source_subscription import renew_source, revoke_source
 
@@ -449,6 +468,12 @@ async def renew_one(session: AsyncSession, *, subscription_id: UUID, owner: str)
         return False
     try:
         expires_at = await renewer(session, row)
+    except _ProviderUnavailableError:
+        row.lease_owner = None
+        row.lease_until = None
+        session.add(row)
+        await session.flush()
+        return False
     except Exception as exc:  # noqa: BLE001 - a provider failure is retried, not raised
         with session.no_autoflush:
             if not await _refresh_claim(session, subscription_id=subscription_id, owner=owner):
