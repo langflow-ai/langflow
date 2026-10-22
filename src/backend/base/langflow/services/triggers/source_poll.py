@@ -411,9 +411,9 @@ async def collect_source(trigger: Trigger, lease: CredentialLease) -> SourceRoun
         if not isinstance(result, SourceRound):
             msg = "The trigger provider returned an invalid source round."
             raise ValueError(msg)
-        if any(item.get("provider") != trigger.provider for item in result.items):
-            msg = "The trigger provider returned items from a different provider."
-            raise ValueError(msg)
+        from langflow.services.triggers.source_items import validate_source_items
+
+        validate_source_items(result.items, provider=trigger.provider)
         from dataclasses import replace
 
         return replace(
