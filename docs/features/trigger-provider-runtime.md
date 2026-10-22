@@ -75,6 +75,9 @@ filters. `IngressSecrets` includes the internal signing secret, `target_kind`,
 and nonsecret `target_config`. A provider can supply
 `ingress_secrets(session, trigger)` when its provider requires other internal
 verification material. Verifiers receive no session or HTTP client.
+`target_config` is the exact persisted configuration snapshot used when
+committing canonical items. Treat it as read-only and keep provider metadata
+in the other internal verification fields.
 
 Ordinary verified payloads go directly to the durable event ledger. Providers
 with change-feed wakeups set `ingress_is_hint=True` and supply a collector.
