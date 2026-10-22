@@ -279,3 +279,63 @@ async def test_telegram_admission_enforces_owner_consent_identity_and_policy(
     finally:
         policy.publish(replace(original, revision=policy.snapshot.revision + 1))
         get_integration_policy_service().invalidate()
+
+
+@pytest.mark.usefixtures("telegram_provider")
+async def test_registered_telegram_poll_adapter_commits_before_confirming_cursor(
+    trigger_owner, owned_flow, monkeypatch
+):
+    import asyncio
+
+    from langflow.services.triggers.listeners.adapters import (
+        ListenerContext,
+        ListenerTrigger,
+        build_adapter,
+        register_builtin_adapters,
+    )
+
+    transport = BotTransport([BOT, BOT, {"url": ""}, [UPDATE], BOT, {"url": ""}, []]).install(monkeypatch)
+    await connection(trigger_owner)
+    row = await reconcile(owned_flow, trigger_owner, delivery="poll")
+    async with session_scope() as session:
+        row = await session.get(Trigger, row.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        snapshot = ListenerTrigger(
+            id=row.id,
+            flow_id=row.flow_id,
+            user_id=row.user_id,
+            kind=row.kind,
+            provider=row.provider,
+            mechanism_id=row.config["mechanism_id"],
+            config=dict(row.config),
+            provider_state=dict(row.provider_state),
+        )
+        connection_id = row.connection_id
+
+    async def unused(**_kwargs):
+        pytest.fail("The source adapter must commit its canonical items through the shared source runtime.")
+
+    register_builtin_adapters()
+    adapter = build_adapter(snapshot)
+    assert adapter is not None
+    context = ListenerContext(
+        connection_id=connection_id,
+        triggers=[snapshot],
+        emit=unused,
+        save_cursor=unused,
+        resolve_credential=unused,
+        stopping=asyncio.Event(),
+    )
+    assert await adapter.poll(context) == 1
+    async with session_scope() as session:
+        current = await session.get(Trigger, snapshot.id)
+        assert current.provider_state["offset"] == 10
+        assert len((await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == snapshot.id))).all()) == 1
+    assert await adapter.poll(context) == 0
+    async with session_scope() as session:
+        current = await session.get(Trigger, snapshot.id)
+        assert current.provider_state["offset"] is None
+    calls = [payload for method, payload in transport.calls if method == "getUpdates"]
+    assert len(calls) == 2
+    assert "offset" not in calls[0]
+    assert calls[1]["offset"] == 10

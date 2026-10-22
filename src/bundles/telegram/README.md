@@ -12,7 +12,7 @@ Create a bot through BotFather. Add its token as your own Telegram connection wi
 
 Before enabling a trigger, allow background runs on its connection. Set at least one allowed chat ID. Numeric IDs are required because an incoming update identifies a chat numerically. Usernames and request URLs are not target inputs. An optional sender allowlist excludes messages with unrecognized or anonymous senders.
 
-Add the bot to the required group or start its private conversation first. Review the bot's BotFather privacy settings and group permissions. A chat allowlist filters updates Telegram actually sends. It cannot grant visibility to other messages. Messages from bots and anonymous senders, channel posts, edits, attachments, callbacks, and business-account events do not start these triggers. The command trigger requires a leading bot_command entity. A command addressed to another bot is ignored.
+Add the bot to the required group or start its private conversation first. Review the bot's BotFather privacy settings and group permissions. A chat allowlist filters updates Telegram actually sends. It cannot grant visibility to other messages. Messages from bots and anonymous senders, channel posts, edits, attachments, callbacks, and business-account events do not start these triggers. The command trigger requires a leading bot_command entity. A command addressed to another bot is ignored. Re-enable a webhook trigger after changing its bot username so named commands use the new name.
 
 ## Supported transports
 

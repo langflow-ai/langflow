@@ -191,6 +191,9 @@ async def provision(session: AsyncSession, trigger: Trigger) -> TriggerSubscript
         if accepted is not True:
             msg = "Telegram did not accept the webhook."
             raise SourceConfigurationError(msg)
+    row.provider_state = {**row.provider_state, "bot_username": bot["username"]}
+    trigger.provider_state = {**trigger.provider_state, "bot_username": bot["username"]}
+    session.add(trigger)
     row.state = "active"
     row.renew_after = None
     row.expires_at = None
