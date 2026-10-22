@@ -294,6 +294,11 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                 if provider.validate_manual_credential is None:
                     msg = "This integration does not support manually entered credentials."
                     raise ManualCredentialError(msg)
+                if provider.manual_token_requires_expiry:
+                    expiry = payload.credentials.expires_at
+                    if expiry is None or expiry.tzinfo is None or expiry <= _utc_now():
+                        msg = "This integration requires a future token expiration time with a time zone."
+                        raise ManualCredentialError(msg)
                 original = (payload.provider_key, payload.name, payload.ownership_mode, payload.allow_non_interactive)
                 payload = await provider.validate_manual_credential(payload, context=deployment_context())
                 if (

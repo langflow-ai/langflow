@@ -3075,5 +3075,7 @@
   "connections.identity.user_delegated": "O usuário conectado",
   "connections.identity.bot": "Um bot",
   "connections.identity.service": "Uma conta de serviço",
-  "settings.dbProviders.serverConfiguration": "Configurado pelo ambiente do servidor. Deixe os campos inalterados para usar essa configuração."
+  "settings.dbProviders.serverConfiguration": "Configurado pelo ambiente do servidor. Deixe os campos inalterados para usar essa configuração.",
+  "connections.add.tokenExpiresAt": "Expiração do token",
+  "connections.add.tokenExpiresAtHelp": "Insira uma data de expiração futura no seu fuso horário atual."
 }

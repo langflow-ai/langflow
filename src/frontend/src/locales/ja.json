@@ -3075,5 +3075,7 @@
   "connections.identity.user_delegated": "サインイン中のユーザー",
   "connections.identity.bot": "ボット",
   "connections.identity.service": "サービスアカウント",
-  "settings.dbProviders.serverConfiguration": "サーバー環境で設定済みです。この設定を使用するには、フィールドを変更しないでください。"
+  "settings.dbProviders.serverConfiguration": "サーバー環境で設定済みです。この設定を使用するには、フィールドを変更しないでください。",
+  "connections.add.tokenExpiresAt": "トークンの有効期限",
+  "connections.add.tokenExpiresAtHelp": "現在のタイムゾーンで、将来の有効期限を入力してください。"
 }

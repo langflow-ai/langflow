@@ -9,6 +9,10 @@ export interface SlackTokenFieldsProps {
   providerId?: string;
   token: string;
   onTokenChange: (token: string) => void;
+  requiresExpiry?: boolean;
+  expiresAt?: string;
+  onExpiresAtChange?: (expiresAt: string) => void;
+  expiresAtValid?: boolean;
   allowBackgroundRuns: boolean;
   onAllowBackgroundRunsChange: (allow: boolean) => void;
 }
@@ -53,6 +57,10 @@ export function SlackTokenFields({
   providerId = "slack",
   token,
   onTokenChange,
+  requiresExpiry = false,
+  expiresAt = "",
+  onExpiresAtChange,
+  expiresAtValid = true,
   allowBackgroundRuns,
   onAllowBackgroundRunsChange,
 }: SlackTokenFieldsProps) {
@@ -97,6 +105,30 @@ export function SlackTokenFields({
               )}
         </p>
       </div>
+
+      {requiresExpiry && (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="connection-token-expires-at">
+            {t("connections.add.tokenExpiresAt")}
+          </Label>
+          <Input
+            id="connection-token-expires-at"
+            type="datetime-local"
+            required
+            value={expiresAt}
+            onChange={(event) => onExpiresAtChange?.(event.target.value)}
+            aria-invalid={expiresAt.length > 0 && !expiresAtValid}
+            aria-describedby="connection-token-expires-at-help"
+            data-testid="connection-token-expires-at"
+          />
+          <p
+            id="connection-token-expires-at-help"
+            className="text-xs text-muted-foreground"
+          >
+            {t("connections.add.tokenExpiresAtHelp")}
+          </p>
+        </div>
+      )}
 
       <div className="flex flex-col gap-1">
         <label className="flex items-center gap-2 text-sm">
