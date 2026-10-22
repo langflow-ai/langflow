@@ -44,6 +44,7 @@ dependencies = [
     "lfx-openai-compatible>=0.2.1,<1.0.0",
     "lfx-google>=0.4.0,<1.0.0",
     "lfx-microsoft>=0.1.5,<1.0.0",
+    "lfx-jira>=0.1.0,<1.0.0",
     "lfx-slack>=0.2.3,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
@@ -132,6 +133,7 @@ lfx-confluent = { workspace = true }
 lfx-serply = { workspace = true }
 lfx-serpingapi = { workspace = true }
 lfx-microsoft = { workspace = true }
+lfx-jira = { workspace = true }
 lfx-slack = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
@@ -172,6 +174,7 @@ members = [
     "src/bundles/serply",
     "src/bundles/serpingapi",
     "src/bundles/microsoft",
+    "src/bundles/jira",
     "src/bundles/slack",
     # langflow-extensions:bundle-members-end
 ]
