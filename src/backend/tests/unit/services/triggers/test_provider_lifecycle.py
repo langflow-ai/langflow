@@ -353,6 +353,92 @@ async def test_get_handshake_requires_provider_proof_and_never_queues_events(tri
     assert paused.json() == bad_proof.json()
 
 
+@pytest.mark.parametrize("failure", ["missing-id", "oversized-version", "foreign-provider"])
+async def test_ingress_rejects_invalid_canonical_items_without_partial_delivery(
+    pilot, trigger_owner, owned_flow, client, monkeypatch, failure
+):
+    from langflow.services.auth.utils import decrypt_api_key
+    from langflow.services.database.models.trigger.model import TriggerSourceVersion
+
+    good = {"provider": "pilot", "resource": "items", "id": "1", "version": "1", "data": {}}
+    malformed = {**good, "id": "2"}
+    if failure == "missing-id":
+        malformed.pop("id")
+    elif failure == "oversized-version":
+        malformed["version"] = "x" * 256
+    else:
+        malformed["provider"] = "other"
+
+    def verify(request, secrets, *, tolerance_s):
+        result = pilot.provider.verify(request, secrets, tolerance_s=tolerance_s)
+        return replace(result, source_items=(good, malformed))
+
+    provider = replace(pilot.provider, verify=verify)
+    monkeypatch.setattr(registry, "all_providers", lambda: (provider,))
+    await _connection(trigger_owner)
+    trigger = await _reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        secret = decrypt_api_key(row.signing_secret_encrypted)
+        public_id = row.public_id
+    body = json.dumps({"repository": "acme/widgets", "id": "delivery-7"}).encode()
+    signature = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+    response = await client.post(
+        f"/api/v1/triggers/ingress/pilot/{public_id}", content=body, headers={"x-pilot-signature": signature}
+    )
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Not found"}
+    async with session_scope() as session:
+        assert not (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger.id))).all()
+        assert not (
+            await session.exec(select(TriggerSourceVersion).where(TriggerSourceVersion.trigger_id == trigger.id))
+        ).all()
+        assert (await session.get(Trigger, trigger.id)).provider_state == {}
+
+
+@pytest.mark.parametrize("failure", ["missing-id", "oversized-version", "foreign-provider"])
+async def test_collector_rejects_invalid_canonical_items(pilot, monkeypatch, failure):
+    from langflow.services.triggers.source_poll import SourceRound, collect_source
+
+    item = {"provider": "pilot", "resource": "items", "id": "1", "version": "1", "data": {}}
+    if failure == "missing-id":
+        item.pop("id")
+    elif failure == "oversized-version":
+        item["version"] = "x" * 256
+    else:
+        item["provider"] = "other"
+
+    async def collect(trigger, _lease):
+        return SourceRound(
+            items=[item],
+            cursor={"offset": 2},
+            previous_cursor={},
+            baseline=False,
+            snapshot_resource=None,
+            connection_id=trigger.connection_id,
+            mechanism_id="pilot.poll",
+        )
+
+    provider = replace(
+        pilot.provider, collect=collect, kinds=(replace(pilot.provider.kinds[0], poll_mechanism="pilot.poll"),)
+    )
+    monkeypatch.setattr(registry, "all_providers", lambda: (provider,))
+    trigger = Trigger(
+        id=uuid4(),
+        flow_id=uuid4(),
+        user_id=uuid4(),
+        name="Pilot",
+        kind="pilot.item",
+        provider="pilot",
+        config={"mechanism_id": "pilot.poll"},
+        provider_state={},
+    )
+    with pytest.raises(ValueError, match="source item"):
+        await collect_source(trigger, None)
+    assert trigger.provider_state == {}
+
+
 async def test_polling_prepare_claim_is_cleaned_up_on_pause(pilot, trigger_owner, owned_flow, monkeypatch):
     async def collect(_trigger, _lease):
         pytest.fail("Enabling a polling source should not collect inside its write transaction")
