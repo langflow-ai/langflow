@@ -543,6 +543,8 @@ async def test_decision_validation_request_uses_decision_endpoint(monkeypatch):
     from lfx.base.models import unified_models
 
     monkeypatch.setattr(models_api, "_require_provider", AsyncMock())
+    # Saved and environment settings are merged in; none here, so the check sees exactly what was sent.
+    monkeypatch.setattr(unified_models, "get_all_variables_for_provider", lambda *_: {})
     validate = Mock()
     monkeypatch.setattr(unified_models, "validate_model_provider_key", validate)
     user = SimpleNamespace(id=uuid4())
@@ -579,6 +581,7 @@ async def test_decision_credential_validation_never_invokes_denied_model(monkeyp
     from unittest.mock import Mock
 
     from fastapi import HTTPException
+    from lfx.base.models import unified_models
     from lfx.base.models.decision_constants import DECISION_MODELS_DETAILED
     from lfx.base.models.decisions import providers
     from lfx.services import model_provider_policy
@@ -600,6 +603,7 @@ async def test_decision_credential_validation_never_invokes_denied_model(monkeyp
         blocked_model_keys=frozenset(f"{provider_id}::decision::{name}" for name in denied),
     )
     monkeypatch.setattr(models_api, "_require_provider", AsyncMock())
+    monkeypatch.setattr(unified_models, "get_all_variables_for_provider", lambda *_: {})
     resolver = Mock(return_value=policy)
     monkeypatch.setattr(model_provider_policy, "resolve_model_provider_policy", resolver)
     validate = Mock()
@@ -939,6 +943,9 @@ async def test_a_decision_picker_saves_a_decisions_only_openai_key_with_one_chec
             raise RuntimeError(msg)
 
     monkeypatch.setitem(sys.modules, "langchain_openai", types.SimpleNamespace(ChatOpenAI=NoChatAccess))
+    # The checks under count, not endpoints: an environment base URL would stop the chat check early.
+    for name in ("OPENAI_BASE_URL", "OPENAI_API_BASE", "LANGFLOW_OPENAI_BASE_URL"):
+        monkeypatch.delenv(name, raising=False)
     key = "sk-decisions-only"  # pragma: allowlist secret
     check = await client.post(
         "api/v1/models/validate-provider",
