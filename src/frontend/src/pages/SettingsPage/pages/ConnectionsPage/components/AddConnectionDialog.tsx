@@ -161,10 +161,13 @@ export function AddConnectionDialog({
   const identities = useMemo<IntegrationIdentity[]>(
     () => [
       ...new Set(
-        (provider?.capabilities ?? []).map((capability) => capability.identity),
+        (usesToken
+          ? (provider?.manual_token_profiles ?? [])
+          : (provider?.capabilities ?? [])
+        ).map((profile) => profile.identity),
       ),
     ],
-    [provider],
+    [provider, usesToken],
   );
 
   useEffect(() => {
@@ -652,28 +655,29 @@ export function AddConnectionDialog({
                 />
               )}
 
-              {!usesToken && identities.length > 1 && (
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="connection-identity">
-                    {t("connections.add.identity")}
-                  </Label>
-                  <select
-                    id="connection-identity"
-                    className="h-9 rounded-md border border-border bg-background px-2 text-sm"
-                    value={identity}
-                    onChange={(event) =>
-                      setIdentity(event.target.value as IntegrationIdentity)
-                    }
-                    data-testid="connection-identity"
-                  >
-                    {identities.map((option) => (
-                      <option key={option} value={option}>
-                        {t(`connections.identity.${option}`)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+              {(!usesToken || tokenProfile !== undefined) &&
+                identities.length > 1 && (
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="connection-identity">
+                      {t("connections.add.identity")}
+                    </Label>
+                    <select
+                      id="connection-identity"
+                      className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+                      value={identity}
+                      onChange={(event) =>
+                        setIdentity(event.target.value as IntegrationIdentity)
+                      }
+                      data-testid="connection-identity"
+                    >
+                      {identities.map((option) => (
+                        <option key={option} value={option}>
+                          {t(`connections.identity.${option}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
               {!usesToken && registrationSelect}
 
