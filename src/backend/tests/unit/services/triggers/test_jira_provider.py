@@ -339,3 +339,108 @@ async def test_filtered_snapshot_rejects_an_unrelated_issue_type(monkeypatch):
     with pytest.raises(InvalidRequestError, match="outside the selected"):
         await collector.collect(node, lease_for()[0])
     assert node.provider_state == {}
+
+
+@pytest.mark.parametrize("policy", ["all", "read", "write"])
+@pytest.mark.parametrize("refresh", [False, True])
+async def test_dialog_scope_defaults_authorize_and_exchange_without_overgrant(monkeypatch, policy, refresh):
+    import json
+    from pathlib import Path
+    from urllib.parse import parse_qs, urlsplit
+
+    from langflow.services.connection.oauth import providers
+    from langflow.services.connection.oauth.config import OAuthRegistration
+    from langflow.services.triggers.providers import registry
+    from lfx.integrations.errors import ScopeMissingError
+    from lfx_jira.client import JiraClient
+    from lfx_jira.schema import READ, USER, WRITE
+
+    from tests.unit.services.triggers.jira_testkit import credential, lease_for
+
+    root = Path(__file__).resolve().parents[6]
+    scenarios = json.loads((root / "src/bundles/jira/tests/fixtures/consent-scopes.json").read_text())
+    selected_scopes = next(item["scopes"] for item in scenarios if item["policy"] == policy)
+    monkeypatch.setattr(registry, "all_providers", lambda: (PROVIDER,))
+    selected = OAuthRegistration(
+        provider="jira",
+        client_id="operator-app",
+        client_secret="synthetic-client-secret",  # noqa: S106  # pragma: allowlist secret
+        redirect_uri="https://langflow.example/api/v1/connections/oauth/jira/callback",
+        tenant=SITE,
+        allowed_tenants=[SITE],
+        scopes=list(SCOPES),
+    )
+    query = parse_qs(
+        urlsplit(
+            providers.authorization_url(
+                selected,
+                state="opaque",
+                verifier="verifier",
+                scopes=selected_scopes,
+            )
+        ).query
+    )
+    assert set(query["scope"][0].split()) == set(selected_scopes)
+
+    async def exchange(*_args, **_kwargs):
+        return {
+            "access_token": "synthetic-access",
+            "refresh_token": "synthetic-refresh",
+            "expires_in": 3600,
+            "scope": " ".join(selected_scopes),
+        }
+
+    def handler(request):
+        if request.url.path == "/oauth/token/accessible-resources":
+            return httpx.Response(200, json=[{"id": SITE, "scopes": selected_scopes}])
+        return httpx.Response(200, json={"accountId": "user-1", "active": True})
+
+    monkeypatch.setattr(providers, "_request", exchange)
+    monkeypatch.setattr(oauth, "http_client", lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    exchange_args = (
+        {"refresh_token": "synthetic-previous"} if refresh else {"code": "synthetic-code", "verifier": "verifier"}
+    )
+    _, granted, account = await providers.exchange(selected, previous_scopes=selected_scopes, **exchange_args)
+    assert set(granted) == set(selected_scopes)
+    assert account == {"id": "user-1", "tenant_id": SITE}
+    assert {READ, USER} <= set(granted)
+    if policy == "read":
+        calls = []
+        client = JiraClient(
+            lease_for(credential(granted_scopes=frozenset(granted)))[0],
+            transport=httpx.MockTransport(lambda request: calls.append(request)),
+        )
+        try:
+            with pytest.raises(ScopeMissingError):
+                await client.request("PUT", "/rest/api/3/issue/DEMO-1", body={}, scopes=frozenset({WRITE}))
+        finally:
+            await client.aclose()
+        assert calls == []
+
+
+async def test_site_grant_cannot_borrow_write_scope_from_another_site(monkeypatch):
+    from lfx_jira.schema import READ, USER, WRITE
+
+    def handler(request):
+        if request.url.path == "/oauth/token/accessible-resources":
+            return httpx.Response(
+                200,
+                json=[
+                    {"id": SITE, "scopes": [READ, USER]},
+                    {"id": "other-site", "scopes": [READ, USER, WRITE]},
+                ],
+            )
+        return httpx.Response(200, json={"accountId": "user-1", "active": True})
+
+    monkeypatch.setattr(oauth, "http_client", lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    token, _ = await oauth.parse_token(
+        registration(),
+        {
+            "access_token": "synthetic-access",
+            "refresh_token": "synthetic-refresh",
+            "expires_in": 3600,
+            "scope": " ".join(SCOPES),
+        },
+        refresh=False,
+    )
+    assert set(token["scope"].split()) == {READ, USER, "offline_access"}

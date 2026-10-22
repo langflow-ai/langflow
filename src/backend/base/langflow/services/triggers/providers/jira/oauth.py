@@ -2,7 +2,7 @@
 
 from lfx.integrations.errors import IntegrationError
 from lfx_jira.client import http_client, send
-from lfx_jira.schema import SCOPES, cloud_id
+from lfx_jira.schema import READ, SCOPES, USER, cloud_id
 
 from langflow.services.connection.oauth.adapter import OAuthAdapter
 from langflow.services.connection.oauth.config import OAuthError
@@ -48,26 +48,39 @@ async def parse_token(registration, body, *, refresh):  # noqa: ARG001 - initial
         or type(body.get("expires_in")) is not int
         or not 0 < body["expires_in"] <= MAX_TOKEN_LIFETIME
         or not isinstance(body.get("scope"), str)
-        or not (SCOPES - {"offline_access"}) <= set(body["scope"].split())
+        or not {READ, USER} <= set(body["scope"].split())
     ):
         msg = "Atlassian did not return a valid refreshable Jira grant."
         raise OAuthError(msg, reason="provider-unavailable")
     token = {key: body[key] for key in ("access_token", "refresh_token", "expires_in", "scope")}
     # offline_access grants refresh credentials but need not appear in token scope echoes.
-    token["scope"] = " ".join(sorted(set(body["scope"].split()) | {"offline_access"}))
     try:
         async with http_client() as http:
             resources = await send(http, "GET", "/oauth/token/accessible-resources", body["access_token"])
-            valid = isinstance(resources, list) and any(
-                isinstance(resource, dict)
-                and resource.get("id") == cloud_id()
-                and isinstance(resource.get("scopes"), list)
-                and {"read:jira-work", "write:jira-work", "read:jira-user"} <= set(resource["scopes"])
-                for resource in resources
+            site_grant = (
+                next(
+                    (
+                        resource
+                        for resource in resources
+                        if (
+                            isinstance(resource, dict)
+                            and resource.get("id") == cloud_id()
+                            and isinstance(resource.get("scopes"), list)
+                            and all(isinstance(scope, str) for scope in resource["scopes"])
+                            and {READ, USER} <= set(resource["scopes"])
+                        )
+                    ),
+                    None,
+                )
+                if isinstance(resources, list)
+                else None
             )
-            if not valid:
+            if site_grant is None:
                 msg = "The Jira grant does not cover the configured site."
                 raise OAuthError(msg, reason="provider-unavailable")
+            token["scope"] = " ".join(
+                sorted(set(body["scope"].split()) & set(site_grant["scopes"]) | {"offline_access"})
+            )
             account = await send(http, "GET", f"/ex/jira/{cloud_id()}/rest/api/3/myself", body["access_token"])
             if (
                 not isinstance(account, dict)

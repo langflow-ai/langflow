@@ -12,7 +12,8 @@ from lfx.integrations.errors import InvalidRequestError
 API_ORIGIN = "https://api.atlassian.com"
 READ = "read:jira-work"
 WRITE = "write:jira-work"
-SCOPES = frozenset({READ, WRITE, "read:jira-user", "offline_access"})
+USER = "read:jira-user"
+SCOPES = frozenset({READ, WRITE, USER, "offline_access"})
 FIELDS = ["summary", "status", "created", "updated", "project", "issuetype"]
 
 

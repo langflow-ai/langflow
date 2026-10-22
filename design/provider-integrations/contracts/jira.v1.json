@@ -38,7 +38,8 @@
         "auth_profile_id": "user",
         "identity": "user_delegated",
         "required_scopes": [
-          "read:jira-work"
+          "read:jira-work",
+          "read:jira-user"
         ],
         "policy_keys": [
           "integrations.jira.issue.search"
@@ -58,7 +59,8 @@
         "auth_profile_id": "user",
         "identity": "user_delegated",
         "required_scopes": [
-          "read:jira-work"
+          "read:jira-work",
+          "read:jira-user"
         ],
         "policy_keys": [
           "integrations.jira.issue.read"
@@ -79,7 +81,8 @@
         "identity": "user_delegated",
         "required_scopes": [
           "read:jira-work",
-          "write:jira-work"
+          "write:jira-work",
+          "read:jira-user"
         ],
         "policy_keys": [
           "integrations.jira.issue.create"
@@ -100,7 +103,8 @@
         "identity": "user_delegated",
         "required_scopes": [
           "read:jira-work",
-          "write:jira-work"
+          "write:jira-work",
+          "read:jira-user"
         ],
         "policy_keys": [
           "integrations.jira.issue.update"
@@ -121,7 +125,8 @@
         "identity": "user_delegated",
         "required_scopes": [
           "read:jira-work",
-          "write:jira-work"
+          "write:jira-work",
+          "read:jira-user"
         ],
         "policy_keys": [
           "integrations.jira.issue.transition"
@@ -142,7 +147,8 @@
         "identity": "user_delegated",
         "required_scopes": [
           "read:jira-work",
-          "offline_access"
+          "offline_access",
+          "read:jira-user"
         ],
         "policy_keys": [
           "integrations.jira.trigger.created"
@@ -162,7 +168,8 @@
         "identity": "user_delegated",
         "required_scopes": [
           "read:jira-work",
-          "offline_access"
+          "offline_access",
+          "read:jira-user"
         ],
         "policy_keys": [
           "integrations.jira.trigger.updated"
@@ -182,7 +189,8 @@
         "identity": "user_delegated",
         "required_scopes": [
           "read:jira-work",
-          "offline_access"
+          "offline_access",
+          "read:jira-user"
         ],
         "policy_keys": [
           "integrations.jira.trigger.status"
