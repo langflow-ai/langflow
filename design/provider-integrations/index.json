@@ -1,4 +1,9 @@
 {
   "schema_version": 1,
-  "providers": []
+  "providers": [
+    {
+      "provider_id": "confluence",
+      "contract": "contracts/confluence.v1.json"
+    }
+  ]
 }
