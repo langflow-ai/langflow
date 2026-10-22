@@ -28,6 +28,7 @@ import {
   copyCounts,
   copyProgress,
   DECISIONS,
+  databaseCopied,
   formatTime,
   hasStarted,
   ITEM_CODES,
@@ -155,6 +156,13 @@ export function CopyStep({
             )}
           {stale && (
             <p className="text-sm">{t("settings.migration.copy.stale")}</p>
+          )}
+          {stale && step === "copy_database" && databaseCopied(migration) && (
+            <p className="text-sm">
+              {t("settings.migration.copy.newDatabase", {
+                step: destinations,
+              })}
+            </p>
           )}
         </>
       )}

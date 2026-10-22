@@ -588,6 +588,34 @@ class TestS3DeleteAfterProcessingSecurity:
         storage_service.delete_file.assert_not_awaited()
 
 
+class TestLocalDeleteAfterProcessingSecurity:
+    @pytest.mark.parametrize("target", ["own", "foreign", "flow", "outside", "symlink"])
+    def test_authenticated_cleanup_uses_only_user_storage(self, monkeypatch, tmp_path, target):
+        storage_root = tmp_path / "storage"
+        user_root = storage_root / "user-id"
+        user_root.mkdir(parents=True)
+        namespace = "user-id" if target in ("own", "symlink") else target
+        path = (tmp_path if target == "outside" else storage_root / namespace) / "file.txt"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("synthetic input", encoding="utf-8")
+        if target == "symlink":
+            foreign = storage_root / "foreign" / "file.txt"
+            foreign.parent.mkdir()
+            foreign.write_text("synthetic input", encoding="utf-8")
+            path.unlink()
+            path.symlink_to(foreign)
+        settings = SimpleNamespace(storage_type="local", config_dir=str(storage_root))
+        monkeypatch.setattr("lfx.base.data.base_file.get_settings_service", lambda: SimpleNamespace(settings=settings))
+        component = TestFileComponent()
+        component._user_id = "user-id"
+        component._vertex = SimpleNamespace(graph=SimpleNamespace(user_id="user-id", flow_id=namespace))
+        file = BaseFileComponent.BaseFile(Data(), path, delete_after_processing=True)
+
+        component._delete_after_processing(file)
+
+        assert path.exists() is (target != "own")
+
+
 class TestStorageKeyNamespaceOwnership:
     """Regression tests for cross-user reads through the ``<namespace>/<file>`` storage key.
 

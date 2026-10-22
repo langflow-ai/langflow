@@ -538,7 +538,9 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         if not prompt:
             return prompt
         replacements = {
-            "{current_date}": datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+            # Day precision keeps the system prompt byte-identical across turns so
+            # providers can serve the chat history from their prompt cache.
+            "{current_date}": datetime.now(tz=timezone.utc).date().isoformat(),
             "{model_name}": self._get_resolved_model_name(),
             "{optional_user_context}": "",
         }
