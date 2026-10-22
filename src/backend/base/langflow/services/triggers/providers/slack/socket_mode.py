@@ -68,6 +68,7 @@ from langflow.services.triggers.constants import (
     SLACK_TRIGGER_KINDS,
     TRANSPORT_SOCKET,
 )
+from langflow.services.triggers.listeners.adapters import ListenerDeliveryRejectedError
 from langflow.services.triggers.ownership import UNUSABLE_CONNECTION_STATUSES, owned_by_trigger_owner
 from langflow.services.triggers.providers.slack.events import SlackControl, SlackEvent, normalize
 from langflow.services.triggers.providers.slack.filters import matches
@@ -520,11 +521,11 @@ class SlackSocketModeAdapter:
             )
         if isinstance(event, SlackEvent):
             await self._record_app_id(ctx)
-            for trigger_id in await self._targets(ctx, event):
+            for target in await self._targets(ctx, event):
                 # Committed before the envelope is acknowledged (see module docstring).
-                await self._emit(ctx, trigger_id, event)
+                await self._emit(ctx, target, event)
 
-    async def _emit(self, ctx: ListenerContext, trigger_id: UUID, event: SlackEvent) -> None:
+    async def _emit(self, ctx: ListenerContext, target: _SameAppTrigger, event: SlackEvent) -> None:
         """Write one trigger's ledger row, skipping a trigger deleted since it was targeted.
 
         Targets come from the last reconcile and from a same-app read up to
@@ -535,9 +536,18 @@ class SlackSocketModeAdapter:
         trigger that no longer exists, so only that trigger is skipped. Any other
         write failure still raises, and the envelope stays unacknowledged.
         """
+        trigger_id = target.id
         try:
-            await ctx.emit(trigger_id=trigger_id, dedupe_key=event.dedupe_key, payload=event.payload)
-        except IntegrityError:
+            await ctx.emit(
+                trigger_id=trigger_id,
+                dedupe_key=event.dedupe_key,
+                payload=event.payload,
+                expected_config=target.config,
+                expected_kind=target.kind,
+            )
+        except (IntegrityError, ListenerDeliveryRejectedError) as exc:
+            if isinstance(exc, ListenerDeliveryRejectedError) and exc.reason != "target_removed":
+                raise
             if await _trigger_exists(trigger_id):
                 raise
             self._same_app_cache = None
@@ -552,15 +562,15 @@ class SlackSocketModeAdapter:
     # Targets
     # ------------------------------------------------------------------ #
 
-    async def _targets(self, ctx: ListenerContext, event: SlackEvent) -> list[UUID]:
+    async def _targets(self, ctx: ListenerContext, event: SlackEvent) -> list[_SameAppTrigger]:
         own = {trigger.id for trigger in ctx.triggers}
         targets = [
-            trigger.id
+            _SameAppTrigger(id=trigger.id, kind=trigger.kind, config=dict(trigger.config))
             for trigger in list(ctx.triggers)
             if trigger.mechanism_id == MECHANISM_SLACK_SOCKET_MODE and matches(trigger.kind, trigger.config, event)
         ]
         elsewhere = [
-            row.id
+            row
             for row in await self._same_app_triggers(ctx)
             if row.id not in own and matches(row.kind, row.config, event)
         ]
