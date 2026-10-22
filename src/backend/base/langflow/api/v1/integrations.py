@@ -202,7 +202,13 @@ async def list_integrations(
         manual_profiles = []
         if runtime is not None and runtime.validate_manual_credential is not None:
             for profile in manifest.auth_profiles:
-                available = [item for item in capabilities if item.auth_profile_id == profile.id and item.allowed]
+                available = [
+                    item
+                    for item in capabilities
+                    if item.auth_profile_id == profile.id
+                    and item.allowed
+                    and deployment_context() in item.deployment_contexts
+                ]
                 if profile.kind == "api_key" and available and deployment_context() in profile.client_type_by_context:
                     manual_profiles.append(
                         ManualTokenProfileRead(
