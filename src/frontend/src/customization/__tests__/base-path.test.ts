@@ -36,8 +36,14 @@ describe("frontend URL prefix", () => {
       );
       expect(getBaseUrl()).toBe(`${window.location.origin}${prefix}`);
       const { customA2aPublishOrigin } = require("../utils/custom-a2a-address");
+      const {
+        suggestedCallbackUrl,
+      } = require("@/pages/SettingsPage/pages/ConnectionsPage/helpers/setup-guide");
       expect(customA2aPublishOrigin()).toBe(
         `${window.location.origin}${prefix}`,
+      );
+      expect(suggestedCallbackUrl("google", "https://example.com")).toBe(
+        `https://example.com${prefix}/api/v1/connections/oauth/google/callback`,
       );
       const {
         getNewJsApiCode,

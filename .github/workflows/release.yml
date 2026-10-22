@@ -1003,7 +1003,11 @@ jobs:
           # TODO: Unsure why the whl is not built in src/backend/base/dist
           mkdir src/backend/base/dist
           mv dist/*.whl src/backend/base/dist
-          uv pip install src/backend/base/dist/*.whl
+          FIND_LINKS=(--find-links ./lfx-dist)
+          if [ -d "./sdk-dist" ]; then
+            FIND_LINKS+=(--find-links ./sdk-dist)
+          fi
+          uv pip install "${FIND_LINKS[@]}" --prerelease=allow src/backend/base/dist/*.whl
           # Workspace sources take precedence over --find-links during dependency
           # installation. Replace LFX last so startup tests the published artifact.
           uv pip install --force-reinstall --no-deps lfx-dist/*.whl
@@ -1690,7 +1694,13 @@ jobs:
 
   call_docker_build_main_backend:
     name: Call Docker Build Workflow for Langflow Backend
-    if: ${{ inputs.build_docker_main && !inputs.dry_run }}
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.reserve-final-release.result == 'success' &&
+      inputs.build_docker_main &&
+      !inputs.dry_run &&
+      needs.call_docker_build_main.result == 'success'
     needs: [reserve-final-release, call_docker_build_main, determine-main-version]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
@@ -1703,7 +1713,13 @@ jobs:
 
   call_docker_build_main_frontend:
     name: Call Docker Build Workflow for Langflow Frontend
-    if: ${{ inputs.build_docker_main && !inputs.dry_run }}
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.reserve-final-release.result == 'success' &&
+      inputs.build_docker_main &&
+      !inputs.dry_run &&
+      needs.call_docker_build_main.result == 'success'
     needs: [reserve-final-release, call_docker_build_main, determine-main-version]
     uses: ./.github/workflows/docker-build-v2.yml
     with:

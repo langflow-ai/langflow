@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from typing import Annotated, Any, cast
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Response, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Response, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
@@ -22,6 +22,8 @@ from langflow.api.utils import (
     CurrentActiveUser,
     DbSession,
     DbSessionReadOnly,
+    PageQuery,
+    SizeQuery,
     cascade_delete_flow,
     custom_params,
 )
@@ -665,8 +667,8 @@ async def read_project(
     project_id: UUID,
     current_user: CurrentActiveUser,
     params: Annotated[Params | None, Depends(custom_params)],
-    page: Annotated[int | None, Query()] = None,
-    size: Annotated[int | None, Query()] = None,
+    page: PageQuery = None,
+    size: SizeQuery = None,
     is_component: bool = False,
     is_flow: bool = False,
     search: str = "",
@@ -1447,7 +1449,7 @@ async def _replace_project_operation_once(
         catalog_policy_snapshot = get_catalog_policy_service().snapshot
         carried_secrets_by_id: dict[UUID, tuple[list[tuple[str, dict]], dict[str, str]]] = {}
         for flow in request_body.flows:
-            carried, variables = extract_and_strip_mcp_secrets(flow.data)
+            carried, variables = extract_and_strip_mcp_secrets(flow.data, flow_id=flow.id)
             if variables and current_user.id != project.user_id:
                 # MCP credentials are staged as the project owner's global
                 # variables, which rotation would overwrite for every flow the
