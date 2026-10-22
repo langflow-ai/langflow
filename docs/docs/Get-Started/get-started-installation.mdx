@@ -93,6 +93,9 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
 1. Make sure you have the required dependencies and infrastructure:
 
     - [Python](https://www.python.org/downloads/release/python-3100/) version 3.10 to 3.14
+
+        Python 3.15 support is in preview: Langflow allows Python 3.15, but some dependencies don't publish Python 3.15 packages yet, so installation can fail until they do.
+
     - [uv](https://docs.astral.sh/uv/getting-started/installation/)
     - Sufficient infrastructure:
        - Minimum: Dual-core CPU and 2 GB RAM
@@ -224,6 +227,13 @@ To install a specific version of the Langflow package, add the required version 
 
 To reinstall Langflow and all of its dependencies, run `uv pip install langflow --force-reinstall`.
 
+:::warning Upgrading from an auto-login installation
+Langflow 1.13 disables auto-login by default.
+Before you upgrade an installation that signs in automatically, [prepare the existing account for password sign-in](/api-keys-and-authentication#upgrade-from-auto-login).
+If you already upgraded and can't sign in, see [Recover access after upgrading](/api-keys-and-authentication#recover-access-after-upgrading).
+Don't delete or reinstall Langflow to regain access, because that can permanently remove your flows.
+:::
+
 #### Roll back to an earlier release
 
 Before rolling back, stop Langflow and restore the database and application files from a backup taken with the target version.
@@ -251,13 +261,6 @@ Starting with Langflow 1.12, all three core packages use the same version number
 Specify all three versions when rolling back an older installation from that release line, too.
 To reproduce the complete environment, restore its lockfile or dependency snapshot as well.
 Core package pins do not freeze independently versioned provider extensions or other dependencies.
-
-:::warning Upgrading from an auto-login installation
-Langflow 1.13 disables auto-login by default.
-Before you upgrade an installation that signs in automatically, [prepare the existing account for password sign-in](/api-keys-and-authentication#upgrade-from-auto-login).
-If you already upgraded and can't sign in, see [Recover access after upgrading](/api-keys-and-authentication#recover-access-after-upgrading).
-Don't delete or reinstall Langflow to regain access, because that can permanently remove your flows.
-:::
 
 :::note Langflow 1.12 package migration
 The new runnable `langflow-base` package starts at version `1.12.0` and stays

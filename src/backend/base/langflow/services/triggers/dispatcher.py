@@ -41,6 +41,7 @@ from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.triggers import leases
 from langflow.services.triggers.binding import resolve_binding
 from langflow.services.triggers.constants import (
+    CONNECTION_NOT_AUTHORIZED_ERROR,
     DISPATCHER_LEASE_NAME,
     FAMILY_TRIGGER_LISTENER,
     GOOGLE_SOURCE_KINDS,
@@ -600,9 +601,9 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
     if denial is not None:
         # Fail closed, and say so on the trigger: an unattended run must never
         # fall back to a weaker identity when its connection refuses one.
-        await _terminalize(session, event=event, state=TriggerEventState.FAILED, error="connection_not_authorized")
+        await _terminalize(session, event=event, state=TriggerEventState.FAILED, error=CONNECTION_NOT_AUTHORIZED_ERROR)
         trigger.state = TriggerState.NEEDS_RECONNECT.value
-        trigger.last_error = "connection_not_authorized"
+        trigger.last_error = CONNECTION_NOT_AUTHORIZED_ERROR
         session.add(trigger)
         await session.flush()
         await logger.awarning(
