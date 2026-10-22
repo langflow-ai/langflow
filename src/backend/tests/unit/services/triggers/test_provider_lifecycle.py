@@ -254,6 +254,62 @@ async def _reconcile(flow_id, owner_id):
         return (await session.exec(select(Trigger).where(Trigger.flow_id == flow_id))).one()
 
 
+@pytest.mark.parametrize("error_type", [TypeError, KeyError, ValueError])
+async def test_provider_normalization_failure_stays_with_its_node(
+    pilot, trigger_owner, owned_flow, monkeypatch, error_type
+):
+    from langflow.services.triggers.reconciliation import reconcile_flow_triggers_safely
+
+    await _connection(trigger_owner)
+    trigger = await _reconcile(owned_flow, trigger_owner)
+
+    def normalize(_kind, _config):
+        msg = "synthetic-private-detail"
+        raise error_type(msg)
+
+    monkeypatch.setattr(registry, "all_providers", lambda: (replace(pilot.provider, normalize_config=normalize),))
+    data = {
+        "nodes": [
+            {
+                "id": "schedule-source",
+                "data": {
+                    "type": "ScheduleTrigger",
+                    "node": {"template": {"cron_expression": {"value": "0 8 * * *"}}},
+                },
+            },
+            {
+                "id": "pilot-source",
+                "data": {
+                    "type": "ext:pilot:PilotOnItemTriggerComponent@official",
+                    "node": {
+                        "template": {
+                            "connection": {"value": "pilot/work"},
+                            "repository": {"value": "acme/widgets"},
+                        }
+                    },
+                },
+            },
+        ],
+        "edges": [],
+    }
+    async with session_scope() as session:
+        await reconcile_flow_triggers_safely(session, flow_id=owned_flow, owner_id=trigger_owner, flow_data=data)
+    expected = (
+        "synthetic-private-detail"
+        if error_type is ValueError
+        else "The trigger provider could not validate this source configuration."
+    )
+    async with session_scope() as session:
+        rows = (await session.exec(select(Trigger).where(Trigger.flow_id == owned_flow))).all()
+        assert len(rows) == 2, "One provider failure must not roll back the other node's reconciliation"
+        assert next(row for row in rows if row.kind == "schedule").last_error is None
+        row = await session.get(Trigger, trigger.id)
+        assert row.last_error == expected
+        with pytest.raises(ValueError, match=expected):
+            await TriggerService().enable_and_activate(session, row=row)
+    assert pilot.provisions == []
+
+
 async def test_save_enable_signed_delivery_dispatch_and_cleanup(
     pilot,
     trigger_owner,
