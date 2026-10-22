@@ -50,3 +50,29 @@ def test_rows_that_carry_ids_are_left_alone():
 def test_values_that_are_not_tables_pass_through():
     assert _keep_row_ids("old", "new") == "new"
     assert _keep_row_ids([1, 2], [3]) == [3]
+
+
+def test_a_description_two_saved_routes_share_never_hands_over_an_edge():
+    # Billing is deleted and Support renamed to Help: which one Help was can't be told.
+    saved = [
+        {"route_category": "Billing", "route_description": "Tickets", "route_id": "category_1_result"},
+        {"route_category": "Support", "route_description": "Tickets", "route_id": "category_2_result"},
+    ]
+    assert _ids(_keep_row_ids(saved, [{"route_category": "Help", "route_description": "Tickets"}])) == [("Help", None)]
+
+
+def test_a_description_two_sent_routes_share_never_hands_over_an_edge():
+    sent = [
+        {"route_category": "Payments", "route_description": "Invoices and refunds"},
+        {"route_category": "Refunds", "route_description": "Invoices and refunds"},
+    ]
+    assert _ids(_keep_row_ids(SAVED, sent)) == [("Payments", None), ("Refunds", None)]
+
+
+def test_names_the_router_tells_apart_keep_their_own_ids():
+    saved = [
+        {"route_category": "Straße", "route_id": "category_1_result"},
+        {"route_category": "Strasse", "route_id": "category_2_result"},
+    ]
+    reordered = [{"route_category": "Strasse"}, {"route_category": "Straße"}]
+    assert _ids(_keep_row_ids(saved, reordered)) == [("Strasse", "category_2_result"), ("Straße", "category_1_result")]

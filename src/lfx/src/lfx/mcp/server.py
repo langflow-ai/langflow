@@ -637,17 +637,18 @@ _ROW_MATCH_KEYS = ("route_category", "route_description")
 
 
 def _row_text(row: Any, key: str) -> str:
-    # The router compares route names ignoring case and surrounding spaces.
-    return str(row.get(key) or "").strip().casefold() if isinstance(row, dict) else ""
+    # The router compares route names with lower(), so "Straße" and "Strasse" stay two routes.
+    return str(row.get(key) or "").strip().lower() if isinstance(row, dict) else ""
 
 
 def _keep_row_ids(current: Any, incoming: Any) -> Any:
     """Table rows sent without IDs keep the IDs of the saved rows they stand for.
 
     A caller that sends plain rows would otherwise get new outputs and orphan every edge. A row keeps
-    the ID of the saved row with the same name or, for a renamed route, the same description. Rows
-    matching neither get new outputs: guessing by position would hand a new route a deleted route's
-    edge, which routes messages to the wrong place without any error.
+    the ID of the saved row with the same name or, for a renamed route, the same description, when
+    exactly one saved row and one sent row share it. Every other row gets a new output: guessing, by
+    position or between rows that share a description, would hand one route another's edge, which
+    routes messages to the wrong place without any error. Callers keep those edges by sending IDs.
     """
     if not (isinstance(current, list) and isinstance(incoming, list)):
         return incoming
@@ -657,15 +658,18 @@ def _keep_row_ids(current: Any, incoming: Any) -> Any:
     ids: list[str | None] = [None] * len(incoming)
     used: set[str] = set()
     for key in _ROW_MATCH_KEYS:
-        by_text: dict[str, str] = {}
+        saved_ids: dict[str, list[str]] = {}
         for row in saved:
             if (text := _row_text(row, key)) and row[_ROW_ID_KEY] not in used:
-                by_text.setdefault(text, row[_ROW_ID_KEY])
+                saved_ids.setdefault(text, []).append(row[_ROW_ID_KEY])
+        positions: dict[str, list[int]] = {}
         for i, row in enumerate(incoming):
-            row_id = by_text.get(_row_text(row, key))
-            if ids[i] is None and row_id and row_id not in used:
-                ids[i] = row_id
-                used.add(row_id)
+            if ids[i] is None and (text := _row_text(row, key)):
+                positions.setdefault(text, []).append(i)
+        for text, sent in positions.items():
+            if len(sent) == 1 and len(matches := saved_ids.get(text, [])) == 1:
+                ids[sent[0]] = matches[0]
+                used.add(matches[0])
     return [{**row, _ROW_ID_KEY: row_id} if row_id else row for row, row_id in zip(incoming, ids, strict=True)]
 
 
