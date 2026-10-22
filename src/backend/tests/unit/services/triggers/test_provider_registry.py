@@ -148,6 +148,22 @@ def test_provider_cannot_claim_foreign_or_malformed_mechanisms(provider, mechani
         replace(provider, kinds=(replace(provider.kinds[0], push_mechanism=mechanism),))
 
 
+@pytest.mark.parametrize("provider_id", ["pilot.child", "pilot-id", "1pilot", "pilot\n", "p" * 33])
+def test_provider_id_uses_the_ingress_identifier_grammar(provider, provider_id):
+    with pytest.raises(ValueError, match="distinct provider id"):
+        replace(provider, provider_id=provider_id)
+
+
+def test_provider_id_allows_lowercase_underscores_and_digits(provider):
+    identifier = "pilot_2"
+    valid = replace(
+        provider,
+        provider_id=identifier,
+        kinds=(replace(provider.kinds[0], kind=f"{identifier}.item", push_mechanism=f"{identifier}.webhook"),),
+    )
+    assert valid.provider_id == identifier
+
+
 def test_push_and_poll_hooks_are_required_for_their_declared_transports(provider):
     with pytest.raises(ValueError, match="signature verifier"):
         replace(provider, verify=None)
