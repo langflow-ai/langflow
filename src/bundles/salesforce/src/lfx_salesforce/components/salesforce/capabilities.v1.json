@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "provider_id": "salesforce",
+  "display_name": "Salesforce",
+  "icon": "Cloud",
+  "docs_url": "https://developer.salesforce.com/docs/platform/api-rest/guide/resources-getupdated.html",
+  "auth_profiles": [
+    {
+      "id": "user",
+      "kind": "oauth2_authorization_code",
+      "identity": "user_delegated",
+      "supports_pkce": true,
+      "supports_refresh": true,
+      "scope_separator": " ",
+      "default_scopes": [
+        "api",
+        "id",
+        "refresh_token"
+      ],
+      "client_type_by_context": {
+        "hosted": "confidential",
+        "self_managed": "confidential"
+      },
+      "owner_by_context": {
+        "hosted": "either",
+        "self_managed": "customer"
+      }
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "salesforce.record.read",
+      "display_name": "Salesforce Read Record",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "api"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.salesforce.record.read"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed"
+      ],
+      "risk": "read",
+      "component_ref": "SalesforceReadRecordComponent"
+    },
+    {
+      "id": "salesforce.record.create",
+      "display_name": "Salesforce Create Record",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "api"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.salesforce.record.create"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed"
+      ],
+      "risk": "write",
+      "component_ref": "SalesforceCreateRecordComponent"
+    },
+    {
+      "id": "salesforce.record.update",
+      "display_name": "Salesforce Update Record",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "api"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.salesforce.record.update"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed"
+      ],
+      "risk": "write",
+      "component_ref": "SalesforceUpdateRecordComponent"
+    },
+    {
+      "id": "salesforce.trigger.record",
+      "display_name": "Salesforce On Record Change",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "api",
+        "refresh_token"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.salesforce.trigger.record"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "self_managed"
+      ],
+      "risk": "read",
+      "component_ref": "SalesforceOnRecordTriggerComponent"
+    }
+  ]
+}
