@@ -144,7 +144,6 @@ async def _reconcile(flow_id, owner_id, *, status=False):
                             for key, value in {
                                 "connection": "servicenow/work",
                                 "table": "incident",
-                                "delivery_mode": "poll",
                             }.items()
                         }
                     },

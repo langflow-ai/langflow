@@ -3,7 +3,7 @@
   "provider_id": "servicenow",
   "display_name": "ServiceNow",
   "icon": "Server",
-  "docs_url": "https://github.com/langflow-ai/langflow/blob/release-1.14.0/design/dedicated-integrations/servicenow.md",
+  "docs_url": "https://github.com/langflow-ai/langflow/blob/release-1.14.0/design/provider-integrations/servicenow.md",
   "auth_profiles": [
     {
       "id": "user",

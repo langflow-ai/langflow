@@ -27,7 +27,7 @@ def normalize_config(kind: str, raw: dict) -> dict:
     if set(raw) - {"connection", "table", "delivery_mode", "mechanism_id"}:
         msg = "Unsupported ServiceNow source settings."
         raise ValueError(msg)
-    if raw.get("delivery_mode", "poll") not in {"auto", "poll"}:
+    if (raw.get("delivery_mode") or "poll") not in {"auto", "poll"}:
         msg = "ServiceNow triggers require polling in this release."
         raise ValueError(msg)
     if raw.get("mechanism_id") not in {None, "servicenow.poll"}:
