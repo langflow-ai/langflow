@@ -209,6 +209,7 @@ def test_integration_catalog_schemas_are_frozen() -> None:
         "enabled",
         "connection_count",
         "capabilities",
+        "manual_token_profiles",
     }
     # ``deployment_context`` (TRG-5) is additive: the connection dialog reads it
     # to keep Slack's app-level-token option off hosted.

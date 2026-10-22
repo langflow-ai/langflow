@@ -48,6 +48,7 @@ from langflow.services.triggers.constants import (
     PROVIDER_SLACK,
     SLACK_TRIGGER_KINDS,
 )
+from langflow.services.triggers.providers.registry import component_kind, get_kind, source_kinds
 from langflow.services.triggers.schedule_config import (
     InvalidScheduleError,
     schedule_timing_changed,
@@ -252,9 +253,13 @@ def find_trigger_nodes(flow_data: dict[str, Any] | None) -> list[tuple[str, str,
         node_id = node.get("id")
         if not isinstance(node_id, str) or not node_id:
             continue
-        config = {
-            key: _template_value(node_data, field, default) for field, key, default in _CONFIG_FIELDS.get(kind, ())
-        }
+        extension = get_kind(kind)
+        fields = (
+            tuple((field, field, None) for field in extension.config_fields)
+            if extension is not None
+            else _CONFIG_FIELDS.get(kind, ())
+        )
+        config = {key: _template_value(node_data, field, default) for field, key, default in fields}
         found.append((node_id, kind, config))
     return found
 
@@ -269,13 +274,16 @@ def _node_kind(node_type: Any) -> str | None:
     match = _BUNDLE_NODE_TYPE.match(node_type)
     if match is None:
         return None
-    return BUNDLE_TRIGGER_COMPONENT_KINDS.get((match["bundle"], match["cls"]))
+    return BUNDLE_TRIGGER_COMPONENT_KINDS.get((match["bundle"], match["cls"])) or component_kind(
+        match["bundle"], match["cls"]
+    )
 
 
 def _display_name(config: dict[str, Any], kind: str) -> str:
     if kind == "schedule" and config.get("cron"):
         return f"Schedule {config['cron']}"
-    return _KIND_DISPLAY_NAMES.get(kind) or kind.replace("_", " ").title()
+    extension = get_kind(kind)
+    return extension.display_name if extension else _KIND_DISPLAY_NAMES.get(kind) or kind.replace("_", " ").title()
 
 
 async def _reconcile_slack(
@@ -378,7 +386,7 @@ async def reconcile_flow_triggers(
         if kind in SLACK_TRIGGER_KINDS:
             provider = PROVIDER_SLACK
             config, connection_id, error = await _reconcile_slack(session, kind=kind, owner_id=owner_id, raw=raw_config)
-        elif kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS:
+        elif kind in source_kinds():
             from langflow.services.triggers.source_arming import normalize_source_config, resolve_arming
 
             provider = kind.split(".", 1)[0]
@@ -414,9 +422,7 @@ async def reconcile_flow_triggers(
                     provider=provider,
                     node_id=node_id,
                     connection_id=connection_id,
-                    public_id=secrets.token_urlsafe(24)
-                    if kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS
-                    else None,
+                    public_id=secrets.token_urlsafe(24) if kind in source_kinds() else None,
                     config=config,
                     provider_state={},
                     state=TriggerState.PENDING.value,
@@ -428,7 +434,7 @@ async def reconcile_flow_triggers(
             )
             touched += 1
             continue
-        if kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS and not row.public_id:
+        if kind in source_kinds() and not row.public_id:
             row.public_id = secrets.token_urlsafe(24)
             session.add(row)
             touched += 1
@@ -461,7 +467,7 @@ async def reconcile_flow_triggers(
         elif kind in SLACK_TRIGGER_KINDS:
             verdict = await _apply_slack_verdict(session, row, error=error, moved=moved, filters_changed=config_changed)
             changed = verdict or changed
-        elif kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS:
+        elif kind in source_kinds():
             if row.state == TriggerState.ACTIVE.value and (error or config_changed or moved):
                 from langflow.services.triggers.subscriptions import revoke_for_trigger
 

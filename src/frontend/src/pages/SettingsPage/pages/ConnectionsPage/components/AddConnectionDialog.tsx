@@ -110,6 +110,10 @@ export function AddConnectionDialog({
   const requestedScopes = useRef<string[]>([]);
 
   const provider = providers.find((item) => item.provider_id === providerId);
+  const tokenProfile =
+    provider?.manual_token_profiles?.find(
+      (profile) => profile.identity === identity,
+    ) ?? provider?.manual_token_profiles?.[0];
   const create = useCreateConnectionMutation();
   const startOAuth = useStartOAuthMutation();
   const remove = useDeleteConnectionMutation();
@@ -121,6 +125,7 @@ export function AddConnectionDialog({
     deploymentContext,
     reauthorizing: !!reauthorize,
     create: create.mutateAsync,
+    tokenProfile,
   });
   const { usesToken } = slackToken;
 
@@ -390,7 +395,11 @@ export function AddConnectionDialog({
     !!provider &&
     handleValid &&
     displayName.trim().length > 0 &&
-    (usesToken ? slackToken.tokenKind !== null : !noRegistration);
+    (usesToken
+      ? providerId === "slack"
+        ? slackToken.tokenKind !== null
+        : slackToken.token.trim().length > 0
+      : !noRegistration);
 
   /** The server validates pasted tokens before returning the connection. */
   const onCreateWithToken = async () => {
@@ -621,6 +630,7 @@ export function AddConnectionDialog({
 
               {usesToken && (
                 <SlackTokenFields
+                  providerId={providerId}
                   token={slackToken.token}
                   onTokenChange={(value) => {
                     slackToken.setToken(value);
