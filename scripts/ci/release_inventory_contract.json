@@ -292,6 +292,7 @@
         "huggingface",
         "icosacomputing",
         "jigsawstack",
+        "jsonify",
         "langwatch",
         "litellm",
         "lmstudio",
