@@ -3100,5 +3100,244 @@
       ]
     },
     "expected": "outdated_safe"
+  },
+  {
+    "name": "retired component",
+    "description": "The component was retired; the saved node fails when the flow runs.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ],
+      "retired_in": "1.13.0",
+      "replacement": [
+        "models_and_agents.Agent"
+      ]
+    },
+    "expected": "retired"
+  },
+  {
+    "name": "retired component, code unchanged",
+    "description": "Retired wins over ok: the code equals the current code.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ],
+      "retired_in": "1.13.0",
+      "replacement": [
+        "models_and_agents.Agent"
+      ]
+    },
+    "expected": "retired"
+  },
+  {
+    "name": "retired component, edited",
+    "description": "Retired wins over a node the user edited.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ],
+      "edited": true
+    },
+    "connected_fields": [],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ],
+      "retired_in": "1.13.0",
+      "replacement": [
+        "models_and_agents.Agent"
+      ]
+    },
+    "expected": "retired"
+  },
+  {
+    "name": "retired component without a template",
+    "description": "The retired entry carries no template. Retired still wins: the component exists and fails when the flow runs.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [],
+    "component": {
+      "retired_in": "1.13.0",
+      "replacement": [
+        "models_and_agents.Agent"
+      ]
+    },
+    "expected": "retired"
   }
 ]

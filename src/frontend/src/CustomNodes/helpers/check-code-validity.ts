@@ -14,6 +14,12 @@ export type CodeValidityType = {
   blocked: boolean;
   breakingChange: boolean;
   userEdited: boolean;
+  // The current component is retired. The editor refuses to run it in every mode, edited or not: an
+  // edit usually keeps the retired imports or base class, and a dismissed update keeps shipped code
+  // that the runtime maps to the retired class.
+  retired: boolean;
+  retiredIn?: string;
+  replacement?: string[];
 };
 
 // Template keys that are editor runtime metadata, not component fields. Must be the same set as
@@ -213,7 +219,13 @@ export const checkCodeValidity = (
   const userTemplate = data.node?.template;
   const hasNodeCode =
     typeof thisNodesCode === "string" && thisNodesCode.length > 0;
-  const isBlocked = hasNodeCode && !template;
+  // As in _classify_node in src/lfx/src/lfx/upgrade/checker.py: only a node with code and a type
+  // that is not ignored can be retired, and a retired entry wins before its template is read.
+  const retiredIn =
+    hasNodeCode && !componentsToIgnoreUpdate.includes(data.type)
+      ? templates[data.type]?.retired_in
+      : undefined;
+  const isBlocked = hasNodeCode && !template && !retiredIn;
 
   if (isBlocked) {
     return {
@@ -221,6 +233,7 @@ export const checkCodeValidity = (
       blocked: true,
       breakingChange: false,
       userEdited: data.node?.edited ?? false,
+      retired: false,
     };
   }
 
@@ -242,6 +255,11 @@ export const checkCodeValidity = (
     blocked: false,
     breakingChange: hasBreakingChange,
     userEdited: data.node?.edited ?? false,
+    retired: !!retiredIn,
+    ...(retiredIn && {
+      retiredIn,
+      replacement: templates[data.type]?.replacement ?? [],
+    }),
   };
 };
 

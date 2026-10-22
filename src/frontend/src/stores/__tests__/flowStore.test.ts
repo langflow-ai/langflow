@@ -36,6 +36,7 @@ jest.mock("@/customization/utils/analytics", () => ({
 }));
 
 const mockSetNoticeData = jest.fn();
+const mockSetErrorData = jest.fn();
 const mockCheckFlowVersion = jest.fn(
   async (_flowId: string, _userId: string | null) => ({ outcome: "current" }),
 );
@@ -50,7 +51,7 @@ jest.mock("../alertStore", () => ({
   __esModule: true,
   default: {
     getState: () => ({
-      setErrorData: jest.fn(),
+      setErrorData: mockSetErrorData,
       setSuccessData: jest.fn(),
       setNoticeData: mockSetNoticeData,
     }),
@@ -161,6 +162,38 @@ import useFlowStore, {
   waitForNodeUpdates,
 } from "../flowStore";
 import { useUtilityStore } from "../utilityStore";
+
+const { checkCodeValidity: realCheckCodeValidity } = jest.requireActual(
+  "@/CustomNodes/helpers/check-code-validity",
+) as typeof import("@/CustomNodes/helpers/check-code-validity");
+
+// Chroma DB as 1.13 ships it: retired, with Knowledge as its replacement.
+const retiredChromaTemplates = {
+  Chroma: {
+    template: { code: { type: "code", value: "NEW" } },
+    outputs: [],
+    retired_in: "1.13.0",
+    replacement: ["files_and_knowledge.Knowledge"],
+  },
+  Knowledge: { display_name: "Knowledge", template: {}, outputs: [] },
+};
+
+const chromaNode = (code: string, edited = false) =>
+  ({
+    id: "chroma-1",
+    type: "genericNode",
+    position: { x: 0, y: 0 },
+    data: {
+      id: "chroma-1",
+      type: "Chroma",
+      node: {
+        display_name: "Chroma DB",
+        template: { code: { type: "code", value: code } },
+        outputs: [],
+        edited,
+      },
+    },
+  }) as unknown as AllNodeType;
 
 describe("useFlowStore", () => {
   // Mock data
@@ -1025,6 +1058,28 @@ describe("useFlowStore", () => {
       });
     });
 
+    it("updateComponentsToUpdate should list a retired component whose code is current", () => {
+      // Its code needs no update, but the editor still shows its retired bar.
+      mockTemplates = retiredChromaTemplates;
+      (checkCodeValidity as jest.Mock).mockImplementationOnce(
+        realCheckCodeValidity,
+      );
+
+      act(() => {
+        useFlowStore.getState().updateComponentsToUpdate([chromaNode("NEW")]);
+      });
+
+      expect(useFlowStore.getState().componentsToUpdate).toEqual([
+        expect.objectContaining({
+          id: "chroma-1",
+          outdated: false,
+          retired: true,
+          retiredIn: "1.13.0",
+          replacement: ["files_and_knowledge.Knowledge"],
+        }),
+      ]);
+    });
+
     it("updateComponentsToUpdate should pass the custom-component policy flag into code validation", () => {
       const { result } = renderHook(() => useFlowStore());
       const mockedCheckCodeValidity = checkCodeValidity as jest.Mock;
@@ -1693,6 +1748,57 @@ describe("useFlowStore", () => {
       );
       expect(mockedRunFlow).not.toHaveBeenCalled();
     });
+
+    // A retired component fails when the flow runs in every mode, so it blocks
+    // the run whether or not its code is current. An edited one is blocked too:
+    // an edit usually keeps the retired imports or base class.
+    it.each([
+      [false, false, "OLD", false],
+      [false, false, "NEW", false],
+      [false, true, "OLD", false],
+      [false, true, "NEW", false],
+      [true, false, "OLD", false],
+      [true, false, "NEW", false],
+      [true, true, "OLD", false],
+      [true, true, "NEW", false],
+      [false, false, "OLD", true],
+      [false, false, "NEW", true],
+      [false, true, "OLD", true],
+      [false, true, "NEW", true],
+      [true, false, "OLD", true],
+      [true, false, "NEW", true],
+      [true, true, "OLD", true],
+      [true, true, "NEW", true],
+    ])(
+      "names a retired component and its replacement instead of running it (custom components allowed: %s, substitution: %s, code: %s, edited: %s)",
+      async (
+        allowCustomComponents,
+        substituteOutdatedComponentCode,
+        code,
+        edited,
+      ) => {
+        useUtilityStore.setState({
+          allowCustomComponents,
+          substituteOutdatedComponentCode,
+        });
+        mockTemplates = retiredChromaTemplates;
+        (checkCodeValidity as jest.Mock).mockImplementationOnce(
+          realCheckCodeValidity,
+        );
+        useFlowStore.setState({ nodes: [chromaNode(code, edited)] });
+
+        await expect(useFlowStore.getState().buildFlow({})).rejects.toThrow(
+          "Retired components must be replaced",
+        );
+        expect(mockSetErrorData).toHaveBeenCalledWith({
+          title: "Retired components must be replaced before building",
+          list: [
+            "Chroma DB was retired in 1.13.0 and fails when the flow runs. Use Knowledge.",
+          ],
+        });
+        expect(mockedRunFlow).not.toHaveBeenCalled();
+      },
+    );
 
     it("blocks a run when a component was disabled by an administrator", async () => {
       // The catalog drops a blocked component from /all, so its node loses its

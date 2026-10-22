@@ -231,6 +231,56 @@ describe("UpdateAllComponents", () => {
     };
   });
 
+  it("leaves retired components out of Update All and Review All", () => {
+    configureUpdatableNodes(["node-1"]);
+    flowStoreState = {
+      ...flowStoreState,
+      componentsToUpdate: flowStoreState.componentsToUpdate.map((c) => ({
+        ...c,
+        breakingChange: true,
+        retired: true,
+        retiredIn: "1.13.0",
+      })),
+      dismissedNodes: [],
+    };
+
+    const { container } = render(<UpdateAllComponents />);
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("counts every component but the retired ones as dismissed", () => {
+    // Dismiss never takes a retired component, so it must not hold the banner
+    // in its undismissed state.
+    configureUpdatableNodes(["node-1"]);
+    flowStoreState = {
+      ...flowStoreState,
+      componentsToUpdate: [
+        ...(flowStoreState.componentsToUpdate as unknown[]),
+        {
+          id: "chroma-1",
+          display_name: "Chroma DB",
+          icon: "Chroma",
+          outdated: false,
+          blocked: false,
+          breakingChange: false,
+          userEdited: false,
+          retired: true,
+          retiredIn: "1.13.0",
+        },
+      ],
+    };
+
+    render(<UpdateAllComponents />);
+
+    expect(
+      screen.getByText("Upgrade is required to execute flow"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /dismiss/i }),
+    ).not.toBeInTheDocument();
+  });
+
   it("dismiss marks nodes as edited via setNodes", async () => {
     const user = userEvent.setup();
 

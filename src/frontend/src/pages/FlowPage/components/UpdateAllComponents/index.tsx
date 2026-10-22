@@ -53,26 +53,33 @@ export default function UpdateAllComponents() {
     (state) => state.allowCustomComponents,
   );
 
+  // A retired component has nothing to update to; its own bar on the canvas names the
+  // replacement, so Update All, Review All and Dismiss leave it out.
+  const componentsNotRetired = useMemo(
+    () => componentsToUpdate.filter((component) => !component.retired),
+    [componentsToUpdate],
+  );
+
   const allDismissed = useMemo(
     () =>
-      componentsToUpdate.length > 0 &&
-      componentsToUpdate.every((component) =>
+      componentsNotRetired.length > 0 &&
+      componentsNotRetired.every((component) =>
         dismissedNodes.includes(component.id),
       ),
-    [dismissedNodes, componentsToUpdate],
+    [dismissedNodes, componentsNotRetired],
   );
 
   const componentsToUpdateFiltered = useMemo(
     () =>
       allowCustomComponents
-        ? componentsToUpdate.filter(
+        ? componentsNotRetired.filter(
             (component) =>
               !component.blocked &&
               !dismissedNodes.includes(component.id) &&
               !component.userEdited,
           )
-        : componentsToUpdate,
-    [componentsToUpdate, dismissedNodes, allowCustomComponents],
+        : componentsNotRetired,
+    [componentsNotRetired, dismissedNodes, allowCustomComponents],
   );
 
   const blockedComponents = useMemo(

@@ -18,6 +18,8 @@ class LocalDBComponent(LCVectorStoreComponent):
     name = "LocalDB"
     icon = "database"
     legacy = True
+    retired_in = "1.13.0"
+    replacement = ["files_and_knowledge.Knowledge"]
 
     inputs = [
         TabInput(
