@@ -1,7 +1,7 @@
 """add worker_registry table for the background worker fleet roster.
 
 Revision ID: d9f4b2e7c508
-Revises: c7d2b9e4f813
+Revises: a4e8c2b6d931
 Create Date: 2026-06-05 12:48:44.856568
 
 Phase: EXPAND
@@ -14,7 +14,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "d9f4b2e7c508"  # pragma: allowlist secret
-down_revision: str | None = "c7d2b9e4f813"  # pragma: allowlist secret
+down_revision: str | None = "a4e8c2b6d931"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
