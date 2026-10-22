@@ -195,6 +195,45 @@ async def test_oauth_initial_and_refresh_bind_issuing_instance(provider):
     assert account is None
 
 
+@pytest.mark.parametrize("policy", ["all", "read", "write"])
+async def test_dialog_scope_defaults_include_connection_prerequisite(provider, policy):
+    import json
+    from pathlib import Path
+    from urllib.parse import parse_qs, urlsplit
+
+    from langflow.services.connection.oauth import providers
+
+    root = Path(__file__).resolve().parents[6]
+    scenarios = json.loads((root / "src/bundles/servicenow/tests/fixtures/consent-scopes.json").read_text())
+    scopes = next(item["scopes"] for item in scenarios if item["policy"] == policy)
+    selected = registration()
+    query = parse_qs(
+        urlsplit(
+            providers.authorization_url(
+                selected,
+                state="opaque",
+                verifier="verifier",
+                scopes=scopes,
+            )
+        ).query
+    )
+    assert set(query["scope"][0].split()) == set(scopes)
+    token, _ = await provider.oauth.parse_token(
+        selected,
+        {
+            "access_token": "synthetic-access",
+            "refresh_token": "synthetic-refresh",
+            "token_type": "Bearer",
+            "expires_in": 1800,
+            "scope": " ".join(scopes),
+        },
+        refresh=False,
+    )
+    assert set(token["scope"].split()) == set(scopes)
+    assert READ_SCOPE in scopes
+    assert (WRITE_SCOPE in scopes) == (policy != "read")
+
+
 @pytest.mark.parametrize(
     "body",
     [

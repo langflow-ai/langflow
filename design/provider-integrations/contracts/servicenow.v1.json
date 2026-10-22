@@ -78,7 +78,8 @@
         "auth_profile_id": "user",
         "identity": "user_delegated",
         "required_scopes": [
-          "langflow_table_write"
+          "langflow_table_write",
+          "langflow_table_read"
         ],
         "policy_keys": [
           "integrations.servicenow.records.create"
@@ -98,7 +99,8 @@
         "auth_profile_id": "user",
         "identity": "user_delegated",
         "required_scopes": [
-          "langflow_table_write"
+          "langflow_table_write",
+          "langflow_table_read"
         ],
         "policy_keys": [
           "integrations.servicenow.records.update"
