@@ -7,12 +7,6 @@ on:
       - "design/dedicated-integrations/**"
       - "design/dedicated-integrations-triggers/**"
       - ".github/workflows/ci-scripts-test.yml"
-      - ".github/workflows/cross-bundle-test.yml"
-      - ".github/workflows/cross-platform-test.yml"
-      - ".github/workflows/release_bundles.yml"
-      - ".github/workflows/release_nightly.yml"
-      - ".github/workflows/release-inventory-gate.yml"
-      - "src/backend/base/pyproject.toml"
       - ".github/workflows/backend-unit-tests.yml"
       - ".github/workflows/python_test.yml"
       - ".github/workflows/store_pytest_durations.yml"
@@ -102,12 +96,6 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: "3.13"
-
-      - name: Set up uv for offline resolver regression tests
-        uses: astral-sh/setup-uv@v10.0.0
-        with:
-          version: latest-known
-          enable-cache: false
 
       - name: Install dependencies
         run: pip install jsonschema orjson packaging pytest pytest-xdist pytest-rerunfailures pytest-timeout pyyaml requests

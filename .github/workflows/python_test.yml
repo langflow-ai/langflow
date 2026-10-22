@@ -50,9 +50,6 @@ permissions:
   contents: read
 
 env:
-  # Apply to isolated installs as well as workspace installs.
-  UV_CONSTRAINT: "${{ github.workspace }}/scripts/ci/security-constraints.txt"
-  PIP_CONSTRAINT: "${{ github.workspace }}/scripts/ci/security-constraints.txt"
   POETRY_VERSION: "1.8.2"
   NODE_VERSION: "22"
   PYTEST_RUN_PATH: "src/backend/tests"
@@ -95,11 +92,8 @@ jobs:
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
-          cache-suffix: litellm-20261022
           enable-cache: true
-          cache-dependency-glob: |
-            uv.lock
-            scripts/ci/security-constraints.txt
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
           prune-cache: false
 
@@ -178,12 +172,9 @@ jobs:
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v10.0.0
         with:
-          cache-suffix: litellm-20261022
           version: latest-known
           enable-cache: true
-          cache-dependency-glob: |
-            uv.lock
-            scripts/ci/security-constraints.txt
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
           prune-cache: false
       - name: Install the project
@@ -207,12 +198,9 @@ jobs:
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v10.0.0
         with:
-          cache-suffix: litellm-20261022
           version: latest-known
           enable-cache: true
-          cache-dependency-glob: |
-            uv.lock
-            scripts/ci/security-constraints.txt
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
           prune-cache: false
       - name: Run lfx tests
@@ -255,12 +243,9 @@ jobs:
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v10.0.0
         with:
-          cache-suffix: litellm-20261022
           version: latest-known
           enable-cache: true
-          cache-dependency-glob: |
-            uv.lock
-            scripts/ci/security-constraints.txt
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
           prune-cache: false
           # This job intentionally exits before invoking uv when langflow-base

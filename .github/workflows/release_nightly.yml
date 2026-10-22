@@ -44,9 +44,6 @@ on:
         type: boolean
 
 env:
-  # Apply to isolated installs as well as workspace installs.
-  UV_CONSTRAINT: "${{ github.workspace }}/scripts/ci/security-constraints.txt"
-  PIP_CONSTRAINT: "${{ github.workspace }}/scripts/ci/security-constraints.txt"
   POETRY_VERSION: "1.8.3"
   PYTHON_VERSION: "3.13"
 
@@ -69,12 +66,9 @@ jobs:
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v10.0.0
         with:
-          cache-suffix: litellm-20261022
           version: latest-known
           enable-cache: true
-          cache-dependency-glob: |
-            uv.lock
-            scripts/ci/security-constraints.txt
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ env.PYTHON_VERSION }}
           prune-cache: false
       - name: Install LFX dependencies
@@ -179,12 +173,9 @@ jobs:
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v10.0.0
         with:
-          cache-suffix: litellm-20261022
           version: latest-known
           enable-cache: true
-          cache-dependency-glob: |
-            uv.lock
-            scripts/ci/security-constraints.txt
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ env.PYTHON_VERSION }}
           prune-cache: false
 
@@ -292,12 +283,9 @@ jobs:
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v10.0.0
         with:
-          cache-suffix: litellm-20261022
           version: latest-known
           enable-cache: true
-          cache-dependency-glob: |
-            uv.lock
-            scripts/ci/security-constraints.txt
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ env.PYTHON_VERSION }}
           prune-cache: false
 

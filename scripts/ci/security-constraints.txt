@@ -1,3 +1,0 @@
-# Keep isolated CI installs on the reviewed lockfile version while the incident is investigated.
-# https://docs.litellm.ai/blog/security-incident-oct-21-2026
-litellm==1.103.2
