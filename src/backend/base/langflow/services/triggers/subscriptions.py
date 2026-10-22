@@ -118,6 +118,16 @@ _REVOKERS: dict[str, SubscriptionRevoker] = {}
 
 def _ensure_source_handlers(provider: str) -> None:
     """Install the built-in source handlers after import cycles have settled."""
+    from langflow.services.triggers.providers.registry import get_provider
+
+    extension = get_provider(provider)
+    if extension is not None:
+        from langflow.services.triggers.source_subscription import revoke_source
+
+        if extension.renew is not None:
+            _RENEWERS.setdefault(provider, extension.renew)
+        _REVOKERS.setdefault(provider, revoke_source)
+        return
     if provider not in {"microsoft", "google"}:
         return
     from langflow.services.triggers.source_subscription import renew_source, revoke_source
@@ -198,7 +208,7 @@ async def upsert_subscription(
     provider: str,
     provider_subscription_id: str,
     client_state_digest: str | None,
-    expires_at: datetime,
+    expires_at: datetime | None,
     provider_state: dict[str, Any] | None = None,
 ) -> TriggerSubscription:
     """Record (or refresh) the provider-side object backing a push trigger."""
@@ -218,7 +228,7 @@ async def upsert_subscription(
     row.client_state_digest = client_state_digest
     row.provider_state = provider_state or {}
     row.expires_at = expires_at
-    row.renew_after = renew_after_for(created_at=now, expires_at=expires_at)
+    row.renew_after = renew_after_for(created_at=now, expires_at=expires_at) if expires_at is not None else None
     row.state = TriggerSubscriptionState.ACTIVE.value
     row.updated_at = now
     session.add(row)

@@ -31,17 +31,12 @@ from langflow.services.database.models.trigger.schemas import (
 )
 from langflow.services.triggers.cleanup import delete_triggers
 from langflow.services.triggers.constants import (
-    CANVAS_ONLY_KINDS,
-    GOOGLE_SOURCE_KINDS,
-    MICROSOFT_SOURCE_KINDS,
-    PROVIDER_GOOGLE,
-    PROVIDER_MICROSOFT,
-    PUSH_MECHANISMS,
     SLACK_TRIGGER_KINDS,
 )
 from langflow.services.triggers.errors import TriggerNotFoundError
 from langflow.services.triggers.locking import lock_trigger
 from langflow.services.triggers.ownership import require_owned_connection
+from langflow.services.triggers.providers.registry import canvas_only_kinds, push_mechanisms, source_kinds
 from langflow.services.triggers.reconciliation import apply_config_verdict
 from langflow.services.triggers.schedule_config import schedule_timing_changed, validate_schedule_config
 
@@ -181,7 +176,7 @@ class TriggerService(Service):
         return (await session.exec(statement)).first()
 
     async def create(self, session: AsyncSession, *, payload: TriggerCreate, owner_id: UUID) -> Trigger:
-        if payload.kind in CANVAS_ONLY_KINDS:
+        if payload.kind in canvas_only_kinds():
             msg = f"A {payload.kind!r} trigger is created by adding its component to the flow, not through this API."
             raise ValueError(msg)
         _reject_mechanism(payload.config)
@@ -222,7 +217,7 @@ class TriggerService(Service):
         an explicit null, without every other omitted field being nulled too.
         """
         changes = payload.model_dump(exclude_unset=True)
-        if row.kind in CANVAS_ONLY_KINDS and ({"config", "connection_id"} & changes.keys()):
+        if (row.kind in canvas_only_kinds() or "." in row.kind) and ({"config", "connection_id"} & changes.keys()):
             msg = "This trigger's configuration and connection are set on its component in the flow."
             raise ValueError(msg)
         if "config" in changes:
@@ -260,11 +255,14 @@ class TriggerService(Service):
         if row.state not in _ENABLEABLE_STATES:
             msg = f"Trigger in state {row.state!r} cannot be enabled."
             raise ValueError(msg)
+        if "." in row.kind and row.kind not in source_kinds() | SLACK_TRIGGER_KINDS:
+            msg = "This trigger provider is unavailable. Install its integration bundle before enabling it."
+            raise ValueError(msg)
         if row.kind == "schedule":
             validate_schedule_config(row.config or {})
         if row.kind in SLACK_TRIGGER_KINDS:
             await _arm_slack(session, row)
-        if row.kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS:
+        if row.kind in source_kinds():
             from langflow.services.triggers.source_arming import check_ready, normalize_source_config, resolve_arming
 
             config = normalize_source_config(row.kind, row.config or {})
@@ -278,7 +276,20 @@ class TriggerService(Service):
             row.config = {**config, "mechanism_id": arming.mechanism_id}
             if changed:
                 row.provider_state = {}
-            if arming.mechanism_id in PUSH_MECHANISMS:
+            from langflow.services.triggers.providers.registry import get_provider
+
+            extension = get_provider(row.provider or "")
+            if extension is not None:
+                if arming.mechanism_id in push_mechanisms():
+                    if not row.public_id:
+                        row.public_id = mint_public_id()
+                    if not row.signing_secret_encrypted:
+                        from langflow.services.auth.utils import encrypt_api_key
+
+                        row.signing_secret_encrypted = encrypt_api_key(mint_signing_secret())
+                if extension.prepare is not None:
+                    await extension.prepare(session, row)
+            if arming.mechanism_id in push_mechanisms():
                 if not row.public_id:
                     row.public_id = mint_public_id()
                 # The route commits this intent before any provider I/O. The
@@ -308,9 +319,7 @@ class TriggerService(Service):
         Commits ``session`` first, so callers must not hold a savepoint open
         across this call.
         """
-        if row.provider not in {PROVIDER_MICROSOFT, PROVIDER_GOOGLE} or (
-            (row.config or {}).get("mechanism_id") not in PUSH_MECHANISMS
-        ):
+        if row.kind not in source_kinds() or (row.config or {}).get("mechanism_id") not in push_mechanisms():
             return row
         from langflow.services.triggers.source_runtime import initialize_source
 

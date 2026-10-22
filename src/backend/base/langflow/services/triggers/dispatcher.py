@@ -44,15 +44,13 @@ from langflow.services.triggers.constants import (
     CONNECTION_NOT_AUTHORIZED_ERROR,
     DISPATCHER_LEASE_NAME,
     FAMILY_TRIGGER_LISTENER,
-    GOOGLE_SOURCE_KINDS,
-    MICROSOFT_SOURCE_KINDS,
-    PUSH_MECHANISMS,
     TRIGGER_EVENT_FIELD,
 )
 from langflow.services.triggers.correlation import derive_session_id
 from langflow.services.triggers.errors import BindingUnsupportedError
 from langflow.services.triggers.ledger import purge_events
 from langflow.services.triggers.principal import connection_preflight, family_for
+from langflow.services.triggers.providers.registry import collecting_kinds, push_mechanisms, source_kinds
 from langflow.services.triggers.source_delivery import SOURCE_HINT_FIELD
 
 if TYPE_CHECKING:
@@ -129,7 +127,7 @@ async def _due_trigger_ids(session: AsyncSession, *, limit: int, source_hints: b
     # Pending source activations may receive hints, but cannot execute until
     # baseline collection and watch creation have both committed.
     statement = statement.where(
-        ~col(Trigger.kind).in_(MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS)
+        ~col(Trigger.kind).in_(source_kinds())
         | ~col(Trigger.state).in_(
             [TriggerState.PENDING.value, TriggerState.ERROR.value, TriggerState.NEEDS_RECONNECT.value]
         )
@@ -219,7 +217,7 @@ async def claim_batch(
         trigger = await _lock_trigger(session, trigger_id)
         if trigger is None:  # pragma: no cover - FK cascade makes this unreachable
             continue
-        if trigger.kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS and trigger.state in {
+        if trigger.kind in source_kinds() and trigger.state in {
             TriggerState.PENDING.value,
             TriggerState.ERROR.value,
             TriggerState.NEEDS_RECONNECT.value,
@@ -535,7 +533,7 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
     if await _recover_submitted_job(session, trigger=trigger, event=event):
         return
 
-    if trigger.kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS and trigger.state in {
+    if trigger.kind in source_kinds() and trigger.state in {
         TriggerState.PENDING.value,
         TriggerState.ERROR.value,
         TriggerState.NEEDS_RECONNECT.value,
@@ -677,9 +675,9 @@ async def reconcile_push_sources(*, limit: int = 5) -> int:
                 .outerjoin(TriggerSubscription, TriggerSubscription.trigger_id == Trigger.id)
                 .where(
                     Trigger.state == TriggerState.ACTIVE.value,
-                    col(Trigger.kind).in_(MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS),
+                    col(Trigger.kind).in_(collecting_kinds()),
                     (col(TriggerSubscription.state) == TriggerSubscriptionState.ACTIVE.value)
-                    | Trigger.config["mechanism_id"].as_string().in_(PUSH_MECHANISMS),
+                    | Trigger.config["mechanism_id"].as_string().in_(push_mechanisms()),
                     (col(Trigger.next_fire_at).is_(None)) | (Trigger.next_fire_at <= now),
                 )
                 .group_by(Trigger.id, Trigger.next_fire_at)
