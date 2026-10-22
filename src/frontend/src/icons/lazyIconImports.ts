@@ -513,6 +513,10 @@ export const lazyIconsMapping = {
     import("@/icons/Twitter X").then((mod) => ({
       default: mod.TwitterXIcon,
     })),
+  TwittrAPI: () =>
+    import("@/icons/TwittrAPI").then((mod) => ({
+      default: mod.TwittrAPIIcon,
+    })),
   VLMRun: () =>
     import("@/icons/VLMRun").then((mod) => ({
       default: mod.VLMRunIcon,

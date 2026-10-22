@@ -5057,6 +5057,36 @@
       "added_in": "1.13.0"
     },
     {
+      "bare_class_name": "TwittrAPIFollowersComponent",
+      "target": "ext:twittrapi:TwittrAPIFollowersComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "TwittrAPIGetUserComponent",
+      "target": "ext:twittrapi:TwittrAPIGetUserComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "TwittrAPIListTweetsComponent",
+      "target": "ext:twittrapi:TwittrAPIListTweetsComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "TwittrAPISearchTweetsComponent",
+      "target": "ext:twittrapi:TwittrAPISearchTweetsComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "TwittrAPITrendsComponent",
+      "target": "ext:twittrapi:TwittrAPITrendsComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "TwittrAPIUserTweetsComponent",
+      "target": "ext:twittrapi:TwittrAPIUserTweetsComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
       "bare_class_name": "GmailSendComponent",
       "target": "ext:google:GmailSendComponent@official",
       "added_in": "1.13.0"
