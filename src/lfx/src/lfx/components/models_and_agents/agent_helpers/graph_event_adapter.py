@@ -19,8 +19,11 @@ different run_ids and are passed through verbatim.
 from collections.abc import AsyncIterator
 from typing import Any
 
+import anyio
 from langchain_core.agents import AgentFinish
 from langchain_core.messages import AIMessage, HumanMessage
+
+from lfx.log.logger import logger
 
 
 async def adapt_graph_events_to_executor_shape(
@@ -29,31 +32,48 @@ async def adapt_graph_events_to_executor_shape(
     """Re-shape outermost graph events; pass everything else through unchanged."""
     outer_run_id: str | None = None
     last_model_output: AIMessage | None = None
-    async for event in stream:
-        if outer_run_id is None and event.get("event") == "on_chain_start":
-            outer_run_id = event.get("run_id")
-        if event.get("event") == "on_chat_model_end":
-            output = (event.get("data") or {}).get("output")
-            if isinstance(output, AIMessage):
-                last_model_output = output
-        if event.get("run_id") == outer_run_id:
-            if event.get("event") == "on_chain_start":
-                yield _reshape_chain_start(event)
-                continue
-            if event.get("event") == "on_chain_stream":
-                model_output = _model_message_from_graph_update(event)
-                if model_output is not None and not _same_message(model_output, last_model_output):
-                    # Python 3.10: LangGraph can't propagate callbacks into the model node, so no
-                    # on_chat_model_end fires; narration then reaches Message.text, matching 3.11+.
-                    yield _synthetic_model_end(event, model_output)
-                    last_model_output = model_output
-            if event.get("event") == "on_chain_end":
-                unstreamed = _final_message_without_model_call(event, last_model_output)
-                if unstreamed is not None:
-                    yield _synthetic_model_end(event, unstreamed)
-                yield _reshape_chain_end(event)
-                continue
-        yield event
+    primary_error: BaseException | None = None
+    try:
+        async for event in stream:
+            if outer_run_id is None and event.get("event") == "on_chain_start":
+                outer_run_id = event.get("run_id")
+            if event.get("event") == "on_chat_model_end":
+                output = (event.get("data") or {}).get("output")
+                if isinstance(output, AIMessage):
+                    last_model_output = output
+            if event.get("run_id") == outer_run_id:
+                if event.get("event") == "on_chain_start":
+                    yield _reshape_chain_start(event)
+                    continue
+                if event.get("event") == "on_chain_stream":
+                    model_output = _model_message_from_graph_update(event)
+                    if model_output is not None and not _same_message(model_output, last_model_output):
+                        # Python 3.10: LangGraph can't propagate callbacks into the model node, so no
+                        # on_chat_model_end fires; narration then reaches Message.text, matching 3.11+.
+                        yield _synthetic_model_end(event, model_output)
+                        last_model_output = model_output
+                if event.get("event") == "on_chain_end":
+                    unstreamed = _final_message_without_model_call(event, last_model_output)
+                    if unstreamed is not None:
+                        yield _synthetic_model_end(event, unstreamed)
+                    yield _reshape_chain_end(event)
+                    continue
+            yield event
+    except BaseException as e:
+        primary_error = e
+        raise
+    finally:
+        # Closing this wrapper must also cancel and drain LangChain's run task.
+        aclose = getattr(stream, "aclose", None)
+        if aclose is not None:
+            try:
+                with anyio.CancelScope(shield=True):
+                    await aclose()
+            except BaseException:
+                # GeneratorExit represents an explicit aclose(), not a failed consumer.
+                if primary_error is None or isinstance(primary_error, GeneratorExit):
+                    raise
+                logger.exception("Failed to close the graph event stream while handling an error")
 
 
 def _model_message_from_graph_update(event: dict[str, Any]) -> AIMessage | None:
