@@ -95,3 +95,41 @@ def test_trigger_declaration_stores_reference_and_filters(cls):
         "include_bot_events": False,
     }
     assert node.build_event().data == {}
+
+
+@pytest.mark.parametrize(
+    ("cls", "resource"),
+    [(github.GitHubUpdateIssueComponent, "issues"), (github.GitHubUpdatePullRequestComponent, "pulls")],
+)
+@pytest.mark.parametrize("changes", [{"title": "Changed title"}, {"body": "Changed body"}, {"state": "open"}])
+async def test_partial_updates_preserve_omitted_fields(monkeypatch, lease, cls, resource, changes):
+    requests = []
+    stored = {"id": 4, "title": "Existing title", "body": "Existing body", "state": "closed"}
+
+    def handle(request):
+        requests.append(request)
+        if request.method == "PATCH":
+            stored.update(json.loads(request.content))
+        return httpx.Response(200, json=stored)
+
+    monkeypatch.setattr("lfx_github.base.GitHubClient", partial(GitHubClient, transport=httpx.MockTransport(handle)))
+    monkeypatch.setattr(cls, "resolve_connection", lambda _self, _field: lease)
+    component = cls(connection="github/work", repository="org/repo", number=4, **changes)
+    result = await component.build_result()
+
+    assert requests[-1].method == "PATCH"
+    assert requests[-1].url.path == f"/repos/org/repo/{resource}/4"
+    assert json.loads(requests[-1].content) == changes
+    assert result.data == {"id": 4, "title": "Existing title", "body": "Existing body", "state": "closed", **changes}
+
+
+@pytest.mark.parametrize("cls", [github.GitHubUpdateIssueComponent, github.GitHubUpdatePullRequestComponent])
+async def test_empty_update_fails_before_resolving_credentials(monkeypatch, cls):
+    from lfx.integrations.errors import InvalidRequestError
+
+    monkeypatch.setattr(
+        cls, "resolve_connection", lambda _self, _field: pytest.fail("An empty update resolved credentials")
+    )
+    component = cls(connection="github/work", repository="org/repo", number=4)
+    with pytest.raises(InvalidRequestError, match="Provide a new title, body, or state"):
+        await component.build_result()

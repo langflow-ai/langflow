@@ -273,7 +273,8 @@
     "Triggers require public HTTPS ingress. Desktop and no-ingress deployments support actions only. No lossy event polling fallback.",
     "Manual installation tokens expire after one hour. Rotation requires a host resolver or delete/recreate plus trigger rebinding. Automatic token minting is unavailable.",
     "Signed-body dedupe remains subject to durable ledger retention. GitHub does not sign delivery timestamps or delivery headers.",
-    "Real GitHub App installation and live webhook delivery are unverified. Owner acceptance is pending."
+    "Real GitHub App installation and live webhook delivery are unverified. Owner acceptance is pending.",
+    "Update actions preserve omitted fields and require at least one nonempty title, body, or explicit state change. Clearing text is unsupported."
   ],
   "evidence_paths": [
     "src/bundles/github",

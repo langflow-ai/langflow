@@ -23,8 +23,15 @@ class GitHubUpdateIssueComponent(GitHubActionComponent):
         connection_input("github.issue_update"),
         repository_input(),
         IntInput(name="number", display_name="Issue or Pull Request Number", required=True, value=1),
-        StrInput(name="title", display_name="Title", required=True),
-        MultilineInput(name="body", display_name="Body", value="", info="At most 60,000 UTF-8 bytes."),
-        DropdownInput(name="state", display_name="State", options=["open", "closed"], value="open"),
+        StrInput(name="title", display_name="Title", value="", info="Leave empty to keep the existing title."),
+        MultilineInput(
+            name="body",
+            display_name="Body",
+            value="",
+            info="Leave empty to keep the existing body. Nonempty text is limited to 60,000 UTF-8 bytes.",
+        ),
+        DropdownInput(
+            name="state", display_name="State Change", options=["unchanged", "open", "closed"], value="unchanged"
+        ),
     ]
     outputs = [Output(display_name="Result", name="result", method="build_result")]

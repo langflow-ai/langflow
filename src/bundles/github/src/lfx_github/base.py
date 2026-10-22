@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import ClassVar
 
 from lfx.custom.custom_component.component import Component
+from lfx.integrations.errors import InvalidRequestError
 from lfx.integrations.telemetry import integration_action
 from lfx.io import ConnectionRefInput, DropdownInput, IntInput, MultilineInput, Output, StrInput
 from lfx.schema.data import Data
@@ -65,20 +66,28 @@ class GitHubActionComponent(Component):
         if operation == "comment":
             path += "/comments"
             body = {"body": bounded_text(self.body, required=True)}
-        elif operation in {"create", "update"}:
+        elif operation == "create":
             body = {"title": bounded_text(self.title, required=True, maximum=256), "body": bounded_text(self.body)}
-            if self.resource == "pulls" and operation == "create":
+            if self.resource == "pulls":
                 body.update(
                     head=bounded_text(self.head, required=True, maximum=256),
                     base=bounded_text(self.base, required=True, maximum=256),
                 )
-            if operation == "update":
-                if self.state not in {"open", "closed"}:
-                    from lfx.integrations.errors import InvalidRequestError
-
-                    msg = "State must be open or closed."
-                    raise InvalidRequestError(msg, provider="github")
-                body["state"] = self.state
+        elif operation == "update":
+            body = {}
+            if self.title not in (None, ""):
+                body["title"] = bounded_text(self.title, required=True, maximum=256)
+            if self.body not in (None, ""):
+                body["body"] = bounded_text(self.body, required=True)
+            state = self.state or "unchanged"
+            if state not in {"unchanged", "open", "closed"}:
+                msg = "State must be unchanged, open, or closed."
+                raise InvalidRequestError(msg, provider="github")
+            if state != "unchanged":
+                body["state"] = state
+            if not body:
+                msg = "Provide a new title, body, or state change."
+                raise InvalidRequestError(msg, provider="github")
         lease = self.resolve_connection("connection")
         credential = await lease.get_credential()
         method = "POST" if operation in {"create", "comment"} else "PATCH" if operation == "update" else "GET"
