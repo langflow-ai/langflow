@@ -3075,5 +3075,7 @@
   "connections.identity.user_delegated": "Angemeldete Person",
   "connections.identity.bot": "Ein Bot",
   "connections.identity.service": "Ein Dienstkonto",
-  "settings.dbProviders.serverConfiguration": "Über die Serverumgebung konfiguriert. Lassen Sie die Felder unverändert, um diese Konfiguration zu verwenden."
+  "settings.dbProviders.serverConfiguration": "Über die Serverumgebung konfiguriert. Lassen Sie die Felder unverändert, um diese Konfiguration zu verwenden.",
+  "connections.add.tokenExpiresAt": "Ablaufzeit des Tokens",
+  "connections.add.tokenExpiresAtHelp": "Geben Sie eine zukünftige Ablaufzeit in Ihrer aktuellen Zeitzone ein."
 }
