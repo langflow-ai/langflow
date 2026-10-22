@@ -1,4 +1,5 @@
 {
+  "connections.add.tokenGenericHelp": "このプロバイダーのアクセストークンを貼り付けてください。Langflow は保存する前にトークンを確認します。",
   "storageUpgrade.unavailable": "ストレージを利用できません",
   "storageUpgrade.title": "データをアップグレード中",
   "storageUpgrade.queued": "アップグレード待ち",

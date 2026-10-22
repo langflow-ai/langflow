@@ -211,6 +211,18 @@ async def _revoke(task: TriggerCleanup) -> None:
 
 
 async def _revoke_existing(task: TriggerCleanup) -> None:
+    from langflow.services.triggers.providers.registry import get_provider
+
+    extension = get_provider(task.provider)
+    if extension is not None:
+        if extension.revoke is None:
+            msg = "The trigger provider cannot revoke this subscription."
+            raise ValueError(msg)
+        await extension.revoke(task, await _cleanup_lease(task))
+        return
+    if task.provider not in {"microsoft", "google"}:
+        msg = "The trigger provider required for subscription cleanup is unavailable."
+        raise ValueError(msg)
     from langflow.services.triggers.source_clients import (
         GOOGLE_CALENDAR_ORIGIN,
         GOOGLE_DRIVE_ORIGIN,

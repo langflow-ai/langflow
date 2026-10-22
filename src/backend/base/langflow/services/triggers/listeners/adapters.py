@@ -337,6 +337,8 @@ def _provider_source_factory(_trigger: ListenerTrigger) -> ListenerAdapter:
 
 def register_builtin_adapters() -> None:
     """Register the adapters langflow-base owns. Idempotent."""
+    from langflow.services.triggers.providers.registry import all_providers
+
     if (LISTENER_FAKE_KIND, None) not in _REGISTRY:
         register_adapter(kind=LISTENER_FAKE_KIND, mechanism=None, factory=_selftest_factory)
     # One factory for both Slack kinds: a message trigger and a reaction trigger
@@ -356,6 +358,12 @@ def register_builtin_adapters() -> None:
         for mechanism in sorted(GOOGLE_POLL_MECHANISMS):
             if (kind, mechanism) not in _REGISTRY:
                 register_adapter(kind=kind, mechanism=mechanism, factory=_provider_source_factory)
+    for provider in all_providers():
+        for spec in provider.kinds:
+            if spec.poll_mechanism and (spec.kind, spec.poll_mechanism) not in _REGISTRY:
+                register_adapter(kind=spec.kind, mechanism=spec.poll_mechanism, factory=_provider_source_factory)
+            if spec.listener_mechanism and (spec.kind, spec.listener_mechanism) not in _REGISTRY:
+                register_adapter(kind=spec.kind, mechanism=spec.listener_mechanism, factory=spec.listener_factory)
 
 
 __all__ = [
