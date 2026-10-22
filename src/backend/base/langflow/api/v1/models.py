@@ -656,12 +656,20 @@ async def validate_provider(
         provider_policy_attributes,
     )
 
-    from lfx.base.models.unified_models import get_all_variables_for_provider, validate_model_provider_key
+    from lfx.base.models.unified_models import (
+        get_all_variables_for_provider,
+        get_provider_all_variables,
+        validate_model_provider_key,
+    )
 
-    # Check the configuration the key will run with: saved values the dialog can't read back, such as a
-    # Credential-type OPENAI_BASE_URL, count as they do when the key is saved and when a flow runs. What
-    # the dialog sends wins, including "" for a value it is clearing.
-    variables = {**get_all_variables_for_provider(current_user.id, request.provider), **request.variables}
+    # Check the configuration the key will run with: a saved setting the dialog can't read back, such as a
+    # Credential-type OPENAI_BASE_URL, counts, as it does when the key is saved and when a flow runs. A
+    # secret never comes from storage here: only a key the caller sends is checked, so a saved or server
+    # key can't be sent to an endpoint the caller names. What the dialog sends wins, including "" for a
+    # value it is clearing.
+    secrets = {row.get("variable_key") for row in get_provider_all_variables(request.provider) if row.get("is_secret")}
+    saved = get_all_variables_for_provider(current_user.id, request.provider)
+    variables = {**{name: value for name, value in saved.items() if name not in secrets}, **request.variables}
     try:
         # Validate the credentials
         # Decision models and decision-only providers are validated with a decision, never chat.

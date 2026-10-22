@@ -8,12 +8,25 @@ SAVED = [
 ]
 
 
-def test_rows_without_ids_keep_the_ids_of_the_rows_they_replace():
+def _ids(rows):
+    return [(row["route_category"], row.get("route_id")) for row in rows]
+
+
+def test_a_renamed_route_keeps_its_id():
     renamed = [{"route_category": "Payments"}, {"route_category": "Support"}, {"route_category": "Sales"}]
-    assert [row.get("route_id") for row in _keep_row_ids(SAVED, renamed)] == [
-        "category_1_result",
-        "category_2_result",
-        None,
+    assert _ids(_keep_row_ids(SAVED, renamed)) == [
+        ("Payments", "category_1_result"),
+        ("Support", "category_2_result"),
+        ("Sales", None),
+    ]
+
+
+def test_deleting_or_reordering_never_hands_a_route_another_ones_edge():
+    assert _ids(_keep_row_ids(SAVED, [{"route_category": "Support"}])) == [("Support", "category_2_result")]
+    reordered = [{"route_category": "Support"}, {"route_category": "Billing"}]
+    assert _ids(_keep_row_ids(SAVED, reordered)) == [
+        ("Support", "category_2_result"),
+        ("Billing", "category_1_result"),
     ]
 
 

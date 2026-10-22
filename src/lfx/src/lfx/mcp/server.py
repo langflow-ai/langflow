@@ -630,25 +630,41 @@ _TRUTHY_STRINGS = {"true", "yes", "1", "on"}
 _FALSY_STRINGS = {"false", "no", "0", "off", ""}
 
 
-# The hidden column that ties a Smart Router route (or Score level) to its output and its edges.
-_ROW_ID_KEY = "route_id"
+# The hidden column that ties a Smart Router route (or Score level) to its output and its edges, and
+# the column that names the route.
+_ROW_ID_KEY, _ROW_NAME_KEY = "route_id", "route_category"
 
 
 def _keep_row_ids(current: Any, incoming: Any) -> Any:
-    """Table rows sent without IDs keep the IDs of the rows they replace, by position.
+    """Table rows sent without IDs keep the IDs of the saved rows they stand for.
 
-    A caller that sends plain rows, such as a renamed route, would otherwise get new outputs and orphan
-    every edge. A run reads rows without IDs by position too.
+    A caller that sends plain rows would otherwise get new outputs and orphan every edge. A row keeps
+    the ID of the saved row with the same name, so deleting or reordering routes never hands one
+    route another's edge; rows left over, such as a renamed route, take the remaining IDs in order.
     """
     if not (isinstance(current, list) and isinstance(incoming, list)):
         return incoming
     if any(isinstance(row, dict) and row.get(_ROW_ID_KEY) for row in incoming):
         return incoming
-    ids = [row.get(_ROW_ID_KEY) if isinstance(row, dict) else None for row in current]
-    return [
-        {**row, _ROW_ID_KEY: ids[i]} if isinstance(row, dict) and i < len(ids) and ids[i] else row
-        for i, row in enumerate(incoming)
-    ]
+    saved = [row for row in current if isinstance(row, dict) and row.get(_ROW_ID_KEY)]
+    by_name: dict[Any, str] = {}
+    for row in saved:
+        by_name.setdefault(row.get(_ROW_NAME_KEY), row[_ROW_ID_KEY])
+    used: set[str] = set()
+    ids: list[str | None] = []
+    for row in incoming:
+        row_id = by_name.get(row.get(_ROW_NAME_KEY)) if isinstance(row, dict) else None
+        if row_id in used:
+            row_id = None
+        if row_id:
+            used.add(row_id)
+        ids.append(row_id)
+    leftover = iter(row[_ROW_ID_KEY] for row in saved if row[_ROW_ID_KEY] not in used)
+    result = []
+    for row, row_id in zip(incoming, ids, strict=True):
+        kept = row_id or (next(leftover, None) if isinstance(row, dict) else None)
+        result.append({**row, _ROW_ID_KEY: kept} if kept else row)
+    return result
 
 
 def _coerce_param_value(value: Any, field_type: str | None) -> Any:

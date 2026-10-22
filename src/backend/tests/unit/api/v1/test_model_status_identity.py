@@ -953,6 +953,8 @@ async def test_openai_key_save_checks_the_kind_the_picker_names(monkeypatch, val
         ({"OPENAI_API_KEY": "sk-typed"}, "https://proxy.example/v1"),
         # Clearing it in the dialog sends "", which wins over the saved value.
         ({"OPENAI_API_KEY": "sk-typed", "OPENAI_BASE_URL": ""}, ""),
+        # A saved or server key never rides with an endpoint the caller names.
+        ({"OPENAI_BASE_URL": "https://attacker.example/v1"}, "https://attacker.example/v1"),
     ],
 )
 async def test_a_key_check_sees_the_saved_configuration(monkeypatch, sent, checked_base_url):
@@ -974,5 +976,5 @@ async def test_a_key_check_sees_the_saved_configuration(monkeypatch, sent, check
         provider_policy_attributes={},
     )
     checked = validate.call_args.args[1]
-    assert checked["OPENAI_API_KEY"] == "sk-typed"
+    assert checked.get("OPENAI_API_KEY") == sent.get("OPENAI_API_KEY")
     assert checked["OPENAI_BASE_URL"] == checked_base_url
