@@ -63,18 +63,30 @@ describe("FormKeyRender", () => {
     );
   });
 
-  it("calls setExpiresAt with empty string when the active preset is clicked again", async () => {
-    const user = userEvent.setup();
-    const setExpiresAt = jest.fn();
-    const d = new Date();
-    d.setDate(d.getDate() + 7);
-    const activeDate = d.toISOString().split("T")[0];
-    render(
-      <FormKeyRender {...makeProps({ expiresAt: activeDate, setExpiresAt })} />,
-    );
-    await user.click(screen.getByText(PRESET_WEEK));
-    expect(setExpiresAt).toHaveBeenCalledWith("");
-  });
+  it.each(["2026-10-20T01:30:00Z", "2026-10-20T12:00:00Z"])(
+    "clears the active preset across UTC day boundaries (%s)",
+    async (now) => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date(now));
+      try {
+        const user = userEvent.setup({
+          advanceTimers: jest.advanceTimersByTime,
+        });
+        const setExpiresAt = jest.fn();
+        const props = makeProps({ setExpiresAt });
+        const { rerender } = render(<FormKeyRender {...props} />);
+        await user.click(screen.getByText(PRESET_WEEK));
+        const [activeDate] = setExpiresAt.mock.calls[0];
+        expect(activeDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        rerender(<FormKeyRender {...props} expiresAt={activeDate} />);
+        setExpiresAt.mockClear();
+        await user.click(screen.getByText(PRESET_WEEK));
+        expect(setExpiresAt).toHaveBeenCalledWith("");
+      } finally {
+        jest.useRealTimers();
+      }
+    },
+  );
 
   it("renders preset buttons even when modalProps is undefined", () => {
     render(<FormKeyRender {...makeProps({ modalProps: undefined })} />);
