@@ -20,6 +20,7 @@ from langflow.api.v1.integrations import (
     IntegrationCapabilityRead,
     IntegrationListRead,
     IntegrationProviderRead,
+    ManualTokenProfileRead,
 )
 from langflow.services.database.models.connection.schemas import (
     ConnectionCreate,
@@ -67,6 +68,15 @@ def test_connection_read_fields_are_frozen() -> None:
         "created_at",
         "updated_at",
     }
+
+
+def test_manual_token_expiry_requirement_is_explicit_and_defaults_to_false() -> None:
+    assert _fields(ManualTokenProfileRead) == {"id", "identity", "required_scopes", "requires_expiry"}
+    profile = ManualTokenProfileRead(id="pilot-token", identity="service", required_scopes=[])
+    assert profile.requires_expiry is False
+    required = ManualTokenProfileRead(id="pilot-token", identity="service", required_scopes=[], requires_expiry=True)
+    assert required.model_dump()["requires_expiry"] is True
+    assert SECRET_FIELD_NAMES.isdisjoint(_fields(ManualTokenProfileRead))
 
 
 @pytest.mark.parametrize(
