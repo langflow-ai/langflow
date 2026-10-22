@@ -67,6 +67,7 @@ class TriggerProvider:
     ingress_is_hint: bool = False
     api_origins: tuple[str, ...] = ()
     validate_manual_credential: Callable[..., Awaitable[ConnectionCreate]] | None = None
+    manual_token_requires_expiry: bool = False
     oauth: OAuthAdapter | None = None
     prepare: Callable[[AsyncSession, Trigger], Awaitable[None]] | None = None
 

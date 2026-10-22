@@ -134,6 +134,12 @@ profiles only when the manifest declares an applicable `api_key` profile and
 the provider supplies this validator. The Connections dialog then supports
 token entry without an OAuth registration.
 
+Providers whose pasted tokens expire set `manual_token_requires_expiry=True`.
+The catalog exposes `requires_expiry` on those manual profiles. The dialog asks
+for a future expiration in the user's local time zone and sends UTC ISO
+`credentials.expires_at`; the server requires a future, timezone-aware value.
+Closing the dialog or switching providers clears the entered expiration.
+
 API permissions that are not OAuth scopes must not become invented OAuth
 scope grants. The provider still enforces its real permissions on each API
 request. Tokens that expire need an explicit expiration and a documented
@@ -157,10 +163,11 @@ operator configuration, never from flow inputs or provider response URLs.
 ## Packaging and verification
 
 Each provider PR owns its bundle directory, provider server module, fixtures,
-and focused tests. Keep root dependency and lockfile changes in one collective
-integration change after the provider bundles exist. That change updates
-`pyproject.toml`, `uv.lock`, and the selected profiles in
-`scripts/ci/bundle_profiles.json`. Run the profile generator through
+and focused tests. Register the bundle's bounded root dependency, workspace
+membership, and uv source in `pyproject.toml`, then regenerate `uv.lock` so the
+full distribution installs it. The final integration change reconciles selected
+profiles in `scripts/ci/bundle_profiles.json` and their generated locks after
+the provider packages are combined. Run the profile generator through
 `uv run python scripts/ci/manage_bundle_profiles.py --help` before choosing the
 appropriate lock commands. Generated catalogs and indexes must come from the
 repository's bundle tooling rather than hand edits.
