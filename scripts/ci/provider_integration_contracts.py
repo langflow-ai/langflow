@@ -162,8 +162,9 @@ def validate_contracts(
         if provider not in paths:
             errors.append(f"shipped provider {provider!r} has no indexed provider contract")
             continue
+        error_count = len(errors)
         contract = _read(paths[provider], errors)
-        if contract is not None:
+        if len(errors) == error_count:
             extension_path, manifest_path = discovered[provider]
             errors.extend(
                 _validate_contract(
