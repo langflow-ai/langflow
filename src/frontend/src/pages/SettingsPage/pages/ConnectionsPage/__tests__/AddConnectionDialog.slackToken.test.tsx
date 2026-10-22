@@ -342,6 +342,34 @@ describe("AddConnectionDialog: pasted Slack tokens", () => {
     expect(screen.getByTestId("connection-continue")).toBeDisabled();
   });
 
+  it("rejects a nonexistent local expiration instead of shifting it across a DST gap", async () => {
+    // Jest normally uses Sao Paulo. Also exercise the reported Los Angeles
+    // transition when this suite is run with the targeted timezone config.
+    const gap =
+      Intl.DateTimeFormat().resolvedOptions().timeZone === "America/Los_Angeles"
+        ? "2027-03-14T02:30"
+        : "2018-11-04T00:30";
+    jest.spyOn(Date, "now").mockReturnValue(Date.parse("2018-10-01T00:00:00Z"));
+    const user = userEvent.setup();
+    renderDialog([expiringPilot()], "self_managed");
+    await user.type(screen.getByTestId("connection-name"), "work");
+    await user.type(
+      screen.getByTestId("connection-display-name"),
+      "Pilot work",
+    );
+    await user.type(screen.getByTestId("connection-token"), "provider-token");
+    const expiration = screen.getByLabelText("Token expiration");
+    fireEvent.change(expiration, { target: { value: gap } });
+    expect(expiration).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByTestId("connection-continue")).toBeDisabled();
+    await user.click(screen.getByTestId("connection-continue"));
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(await axe(document.body)).toHaveNoViolations();
+    fireEvent.change(expiration, { target: { value: "2027-03-14T03:30" } });
+    expect(expiration).toHaveAttribute("aria-invalid", "false");
+    expect(screen.getByTestId("connection-continue")).toBeEnabled();
+  });
+
   it("clears provider expiration when switching the selected provider", async () => {
     const user = userEvent.setup();
     renderDialog([expiringPilot(), slack], "self_managed");
