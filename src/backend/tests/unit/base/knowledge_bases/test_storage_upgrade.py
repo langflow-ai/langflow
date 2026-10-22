@@ -74,6 +74,7 @@ async def database(tmp_path, monkeypatch):
     monkeypatch.setattr(coordinator, "_inventory_complete", True)
     monkeypatch.setattr(coordinator, "_inventory_scanned", False)
     monkeypatch.setattr(coordinator, "_inventory_issue_count", 0)
+    monkeypatch.setattr(coordinator, "_inventory_scan_failed", False)
     monkeypatch.delenv("LANGFLOW_KB_UPGRADE_RECEIPT", raising=False)
     user = User(username="owner", password=uuid4().hex, is_active=True)
     async with sessions() as session:

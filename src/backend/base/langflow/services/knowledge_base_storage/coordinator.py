@@ -63,6 +63,7 @@ _tasks: set[asyncio.Task] = set()
 _inventory_complete = True
 _inventory_scanned = False
 _inventory_issue_count = 0
+_inventory_scan_failed = False
 _retry_requested = False
 _MAX_BINDING_BYTES = 4096
 _SOURCE_PATH_PARTS = 2
@@ -682,8 +683,9 @@ async def reconcile_legacy_inventory() -> None:
     folder name ties to an account is adopted only with a recorded base id and
     no sign that another account held that name.
     """
-    global _inventory_complete, _inventory_issue_count  # noqa: PLW0603 -- process-local readiness during inventory
+    global _inventory_complete, _inventory_issue_count, _inventory_scan_failed  # noqa: PLW0603 -- discovery status
     _inventory_complete = False
+    _inventory_scan_failed = False
     receipt_name = os.environ.get("LANGFLOW_KB_UPGRADE_RECEIPT")
     if receipt_name:
         database = get_sqlite_database_file_path(get_db_service().database_url)
@@ -765,7 +767,11 @@ def _write_inventory(inventory: dict) -> None:
 
 def inventory_status() -> dict:
     """Report discovery completion and the number of unresolved source identities."""
-    return {"complete": _inventory_complete, "issues": _inventory_issue_count}
+    return {
+        "complete": _inventory_complete,
+        "issues": _inventory_issue_count,
+        **({"scan_failed": True} if _inventory_scan_failed else {}),
+    }
 
 
 def upgrade_in_progress() -> bool:
@@ -802,10 +808,11 @@ async def published_inventory_status() -> dict:
         value = json.loads(await _worker(read_regular_file, path, limit=4096))
         if (
             type(value) is not dict
-            or set(value) != {"complete", "issues"}
+            or set(value) not in ({"complete", "issues"}, {"complete", "issues", "scan_failed"})
             or type(value["complete"]) is not bool
             or type(value["issues"]) is not int
             or value["issues"] < 0
+            or type(value.get("scan_failed", False)) is not bool
         ):
             raise ValueError
     except (ValueError, MaintenanceRequiredError):
@@ -828,17 +835,18 @@ async def run_pending() -> None:
 
 async def _resume_pending() -> None:
     """Reconcile legacy inventory and resume eligible storage migrations."""
-    global _inventory_scanned, _inventory_issue_count  # noqa: PLW0603 -- process-local discovery status
+    global _inventory_scanned, _inventory_issue_count, _inventory_scan_failed  # noqa: PLW0603 -- discovery status
     try:
         await reconcile_legacy_inventory()
     except Exception:  # noqa: BLE001 -- still persist actionable errors on registered KBs
         _inventory_issue_count = max(1, _inventory_issue_count)
+        _inventory_scan_failed = True
         await logger.awarning("Legacy storage inventory requires administrator recovery")
         if get_settings_service().settings.knowledge_bases_dir:
             try:
                 # An earlier scan's folders may already be recovered, so stop naming them.
                 await _worker(_write_inventory, {"issues": [], "scan_failed": True})
-            except Exception:  # noqa: BLE001 -- unreadable storage already withholds recovery details
+            except Exception:  # noqa: BLE001 -- the shared status independently withholds stale details
                 await logger.awarning("The unfinished legacy storage inventory could not be recorded")
     finally:
         if get_settings_service().settings.knowledge_bases_dir:

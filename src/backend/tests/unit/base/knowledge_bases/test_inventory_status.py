@@ -94,6 +94,45 @@ async def test_a_failed_rescan_stops_naming_folders_from_an_earlier_scan(databas
     assert recovered["inventory"] == {"complete": True, "issues": 0}
 
 
+async def test_a_read_only_report_cannot_republish_recovered_folders(database, monkeypatch):
+    source = database.root / "former-owner" / "recovered-base"
+    source.mkdir(parents=True)
+    (source / "chroma.sqlite3").write_bytes(b"retained legacy data")
+    await coordinator.run_pending()
+    database.user.is_superuser = True
+    report = database.root / ".migration" / "inventory.json"
+    previous_report = report.read_bytes()
+    shutil.move(database.root / "former-owner", database.root.parent / "preserved-sources")
+    report.chmod(0o400)
+    try:
+        await retry_inventory(database.user)
+        await coordinator.wait_for_upgrade()
+        async with database.sessions() as session:
+            failed = await storage_status(session, database.user)
+        assert failed["inventory"]["details"] == []
+        assert failed["inventory"]["scan_failed"]
+        assert report.read_bytes() == previous_report
+
+        # A different worker must not need the failed coordinator's process state.
+        with monkeypatch.context() as peer:
+            peer.setattr(coordinator, "_inventory_scan_failed", False)
+            async with database.sessions() as session:
+                shared = await storage_status(session, database.user)
+            assert shared["inventory"]["details"] == []
+            assert shared["inventory"]["scan_failed"]
+    finally:
+        report.chmod(0o600)
+
+    await retry_inventory(database.user)
+    await coordinator.wait_for_upgrade()
+    async with database.sessions() as session:
+        recovered = await storage_status(session, database.user)
+    assert recovered["inventory"] == {"complete": True, "issues": 0}
+    assert (database.root.parent / "preserved-sources" / "recovered-base" / "chroma.sqlite3").read_bytes() == (
+        b"retained legacy data"
+    )
+
+
 @pytest.mark.parametrize("contents", ["{", "[]", '{"issues": null}', '{"issues": [null]}'])
 async def test_unreadable_inventory_details_leave_retry_available(database, contents):
     directory = database.root / ".migration"

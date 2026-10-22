@@ -125,7 +125,7 @@ async def storage_status(session: DbSession, current_user: CurrentActiveUser):
             memory_names.setdefault(kb_id, name)
     inventory = await published_inventory_status() if current_user.is_superuser else None
     if inventory and inventory["issues"]:
-        inventory = {**inventory, **(await inventory_recovery_details())}
+        inventory = {**inventory, **(await inventory_recovery_details(scan_failed=inventory.get("scan_failed", False)))}
     return {
         "stores": [
             {
