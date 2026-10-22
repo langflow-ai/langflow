@@ -60,7 +60,7 @@ async def test_automatic_legacy_encoding_is_reported(tmp_path, caplog, reader, c
 async def test_automatic_windows_1254_is_used_when_detected(tmp_path, reader):
     # Regression test for #15869: a genuine cp1254 (Turkish) file whose chardet
     # guess is Windows-1254 must be decoded as cp1254, not silently as cp1252.
-    text = "Pijamalı hasta yağız şoföre çabucak güvendi.\n"
+    text = "Pijamalı hasta yağız şoföre çabucak güvendi.\n"  # noqa: RUF001
     file_path = tmp_path / "turkish.txt"
     file_path.write_bytes(text.encode("cp1254"))
 
