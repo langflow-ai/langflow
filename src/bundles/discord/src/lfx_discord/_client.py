@@ -45,10 +45,14 @@ def redact(value: Any, token: str = "") -> Any:
     return value
 
 
+def _http_transport() -> httpx.AsyncBaseTransport:
+    return httpx.AsyncHTTPTransport(retries=0)
+
+
 class DiscordClient:
     def __init__(self, lease: CredentialLease):
         self.lease = lease
-        self.http = httpx.AsyncClient(transport=httpx.AsyncHTTPTransport(retries=0), timeout=15, follow_redirects=False)
+        self.http = httpx.AsyncClient(transport=_http_transport(), timeout=15, follow_redirects=False)
 
     async def __aenter__(self):
         return self

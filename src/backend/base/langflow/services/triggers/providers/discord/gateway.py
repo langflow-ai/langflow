@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import logging
 import random
 import time
 from urllib.parse import urlsplit
@@ -22,6 +23,12 @@ from websockets.asyncio.client import connect as ws_connect
 from websockets.exceptions import ConnectionClosed
 
 from langflow.services.triggers.providers.discord.events import normalize
+
+# Gateway frames contain bot credentials and private message content.
+# Keep this logger private and detached from application logging settings.
+_WEBSOCKET_LOGGER = logging.Logger("langflow.discord.gateway.transport", level=logging.CRITICAL + 1)  # noqa: LOG001
+_WEBSOCKET_LOGGER.addHandler(logging.NullHandler())
+_WEBSOCKET_LOGGER.propagate = False
 
 OP_HELLO = 10
 OP_HEARTBEAT_ACK = 11
@@ -146,7 +153,12 @@ class DiscordGatewayAdapter:
             settled = None
             try:
                 self.ws = await ws_connect(
-                    url, open_timeout=10, close_timeout=5, max_size=1024 * 1024, ping_interval=None
+                    url,
+                    open_timeout=10,
+                    close_timeout=5,
+                    max_size=1024 * 1024,
+                    ping_interval=None,
+                    logger=_WEBSOCKET_LOGGER,
                 )
                 if self.halt.is_set() or ctx.stopping.is_set():
                     return
@@ -271,6 +283,8 @@ class DiscordGatewayAdapter:
                             trigger_id=trigger.id,
                             dedupe_key=f"discord:message:{event['message_id']}",
                             payload={"data": redact(event, token), "session_key": event["session_key"]},
+                            expected_config=trigger.config,
+                            expected_kind=trigger.kind,
                         )
                 self.state["seq"] = frame["s"]
                 await self._save(ctx, trigger)

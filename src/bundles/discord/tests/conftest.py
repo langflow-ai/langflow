@@ -69,9 +69,7 @@ class BotTransport:
         return httpx.Response(200, json=response)
 
     def install(self, monkeypatch):
-        monkeypatch.setattr(
-            "lfx_discord._client.httpx.AsyncHTTPTransport", lambda **_kwargs: httpx.MockTransport(self.handler)
-        )
+        monkeypatch.setattr("lfx_discord._client._http_transport", lambda: httpx.MockTransport(self.handler))
         return self
 
 

@@ -132,6 +132,7 @@ async def test_identify_commits_event_before_sequence_and_discards_interaction_t
     assert "must-not-persist" not in json.dumps(events, default=str)
     assert TOKEN not in json.dumps(saved)
     assert dialed[0][0] == "wss://gateway.discord.gg/?v=10&encoding=json"
+    assert dialed[0][1]["logger"].isEnabledFor(10) is False
     assert socket.closed == [4000]
 
 
@@ -339,3 +340,27 @@ async def test_malformed_hello_closes_socket_before_auth(monkeypatch, hello):
         await adapter.start(ctx)
     assert not socket.sent
     assert socket.closed == [4000]
+
+
+async def test_rejected_fenced_delivery_does_not_advance_resume_sequence(monkeypatch):
+    from langflow.services.triggers.listeners.adapters import ListenerDeliveryRejectedError
+
+    adapter, ctx, _socket, _events, saved, *_ = await execute(
+        monkeypatch,
+        [
+            {"op": 0, "t": "READY", "s": 1, "d": READY},
+            {"op": 0, "t": "MESSAGE_CREATE", "s": 2, "d": MESSAGE},
+        ],
+    )
+
+    async def rejected(**kwargs):
+        assert kwargs["expected_kind"] == ctx.triggers[0].kind
+        assert kwargs["expected_config"] == ctx.triggers[0].config
+        ctx.stopping.set()
+        raise ListenerDeliveryRejectedError(reason="stale-lease")
+
+    ctx.emit = rejected
+    with pytest.raises(ListenerDeliveryRejectedError):
+        await adapter.start(ctx)
+    assert saved[-1]["seq"] == 1
+    assert ctx.stopping.is_set()

@@ -16,9 +16,11 @@ Run the API and the separate langflow listeners process with the same database, 
 
 ## Receiver ownership and recovery
 
-One active trigger may reserve a verified bot on this Langflow database. Duplicate bot connections cannot create additional receivers. Disable a receiver and finish its durable cleanup before enabling a replacement. Cleanup never deletes or mutates the Discord application. The supervisor closes the old leased socket and fences cursor writes against the captured generation. Event emission also needs the shared runtime fence fix before this provider is ready to ship.
+One active trigger may reserve a verified bot on this Langflow database. Duplicate bot connections cannot create additional receivers. Disable a receiver and finish its durable cleanup before enabling a replacement. Cleanup never deletes or mutates the Discord application. The supervisor closes the old leased socket. Event and cursor writes check the captured lease generation. Event writes also check the active trigger, owner, connection, and exact configuration before committing.
 
 The client sends protocol heartbeats and reconnects through the supervisor's bounded backoff. Resume uses the saved session and last durably handled sequence. Message IDs deduplicate replayed creates. The resume cursor advances after the event commit, so a crash between those writes can replay a message but cannot advance past an uncommitted event. Discord can invalidate sessions and discard its replay window. A new Identify starts with current events. This preview does not backfill missed history after invalidation, long downtime, pause, or bot removal.
+
+Protocol frame logging is disabled even when application logging uses DEBUG. Operational errors still use the supervisor's sanitized error reporting.
 
 The receiver checks Discord's session start allowance before Identify and spaces its own repeated Identify attempts. Only single-shard bots are supported. Other processes using the same bot token still consume its Discord-wide allowance. Do not run another Gateway client with this token. Authentication and disallowed-intent close codes require reconnecting the connection after fixing the bot settings. Rate limits return a typed error with the provider's retry delay.
 
