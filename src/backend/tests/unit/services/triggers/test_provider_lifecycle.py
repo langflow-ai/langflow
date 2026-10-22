@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import hmac
 import json
@@ -347,6 +348,91 @@ async def test_polling_prepare_claim_is_cleaned_up_on_pause(pilot, trigger_owner
     assert pilot.provisions == []
     assert await run_cleanup_pass() == 1
     assert pilot.deleted == [f"pilot:{trigger.id}"]
+
+
+async def test_loaded_poll_provider_runs_through_supervisor_and_commits_cursor(
+    pilot, trigger_owner, owned_flow, monkeypatch
+):
+    from langflow.services.triggers.listeners import adapters
+    from langflow.services.triggers.listeners.supervisor import ListenerSupervisor
+    from langflow.services.triggers.source_poll import SourceRound
+
+    collected = asyncio.Event()
+
+    async def collect(trigger, lease):
+        assert lease.ref.provider == "pilot"
+        collected.set()
+        return SourceRound(
+            items=[{"provider": "pilot", "resource": "items", "id": "7", "version": "1", "data": {"name": "Item"}}],
+            cursor={"offset": 8},
+            previous_cursor={},
+            baseline=False,
+            snapshot_resource=None,
+            connection_id=trigger.connection_id,
+            mechanism_id=trigger.config["mechanism_id"],
+        )
+
+    provider = replace(
+        pilot.provider, collect=collect, kinds=(replace(pilot.provider.kinds[0], poll_mechanism="pilot.poll"),)
+    )
+    monkeypatch.setattr(registry, "all_providers", lambda: (provider,))
+    monkeypatch.setattr(adapters, "_REGISTRY", {})
+    connection = await _connection(trigger_owner)
+    trigger = await _reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        row.config = {**row.config, "delivery_mode": "poll"}
+        session.add(row)
+        await session.flush()
+        await TriggerService().enable_and_activate(session, row=row)
+
+    adapters.register_builtin_adapters()
+    supervisor = ListenerSupervisor(holder="pilot-listener")
+
+    async def wait_for_delivery():
+        while True:
+            async with session_scope() as session:
+                events = (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger.id))).all()
+                if events:
+                    row = await session.get(Trigger, trigger.id)
+                    assert row.provider_state == {"offset": 8}
+                    assert len(events) == 1
+                    assert events[0].payload["id"] == "7"
+                    return
+            await asyncio.sleep(0.01)
+
+    try:
+        await supervisor.reconcile()
+        assert connection.id in supervisor.workers
+        assert isinstance(supervisor.workers[connection.id].adapter, adapters.ProviderSourcePollAdapter)
+        await asyncio.wait_for(collected.wait(), timeout=5)
+        await asyncio.wait_for(wait_for_delivery(), timeout=5)
+    finally:
+        await supervisor.stop()
+
+
+@pytest.mark.parametrize("failure", ["unknown-provider", "wrong-kind", "unsupported-mechanism", "unloaded-provider"])
+async def test_poll_adapter_rejects_unsupported_or_unloaded_extension_before_io(pilot, monkeypatch, failure):
+    from langflow.services.triggers.listeners import adapters
+
+    async def collect(_trigger, _lease):
+        pytest.fail("An unsupported snapshot reached its provider")
+
+    provider = replace(
+        pilot.provider, collect=collect, kinds=(replace(pilot.provider.kinds[0], poll_mechanism="pilot.poll"),)
+    )
+    monkeypatch.setattr(registry, "all_providers", lambda: (provider,) if failure != "unloaded-provider" else ())
+    snapshot = adapters.ListenerTrigger(
+        id=uuid4(),
+        flow_id=uuid4(),
+        user_id=uuid4(),
+        kind="pilot.unknown" if failure == "wrong-kind" else "pilot.item",
+        provider="unknown" if failure == "unknown-provider" else "pilot",
+        mechanism_id="pilot.webhook" if failure == "unsupported-mechanism" else "pilot.poll",
+    )
+    # No connection_id or callbacks: any attempt to touch the database fails.
+    ctx = SimpleNamespace(triggers=[snapshot], stopping=asyncio.Event())
+    assert await adapters.ProviderSourcePollAdapter(interval_s=30).poll(ctx) == 0
 
 
 @pytest.mark.parametrize("failure", ["foreign-owner", "consent", "identity", "policy"])
