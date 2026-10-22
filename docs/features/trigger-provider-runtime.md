@@ -49,6 +49,13 @@ selection, identity, scopes, background consent, policy, state, and execution.
 
 ## Hook contracts
 
+`prepare(session, trigger)` runs inside the enable transaction after shared
+authorization and mechanism selection. It can reserve a durable account-wide
+receiver claim using already verified connection metadata. Keep this callback
+limited to database work. Resolving credentials through the database resolver
+opens another transaction and can deadlock the enable writer on SQLite.
+Credential resolution and remote provisioning belong after enable commits.
+
 `normalize_config(kind, raw)` validates the declared nonsecret canvas fields and
 returns a dictionary containing only those fields. `collect(trigger, lease)`
 returns the existing `SourceRound` model. Each canonical item has `provider`,
