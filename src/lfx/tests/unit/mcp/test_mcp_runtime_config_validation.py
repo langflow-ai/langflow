@@ -395,7 +395,9 @@ async def test_stdio_client_rejects_shell_syntax_in_injected_headers(monkeypatch
     assert client._connection_params is None
 
 
-async def test_stdio_client_preserves_safe_headers_with_cmd_wrapper():
+@pytest.mark.parametrize("header_value", ["Bearer token-._~+/=", "Bearer install", "Bearer pip", "Bearer -e"])
+@pytest.mark.parametrize("header_name", ["Authorization", "Install"])
+async def test_stdio_client_preserves_safe_headers_with_cmd_wrapper(header_name, header_value):
     """A validated shell wrapper can still pass ordinary proxy credentials."""
     client = MCPStdioClient()
     session = MagicMock()
@@ -404,7 +406,7 @@ async def test_stdio_client_preserves_safe_headers_with_cmd_wrapper():
 
     await client._connect_to_server(
         "cmd /d /c uvx mcp-proxy https://mcp.example.com",
-        headers={"Authorization": "Bearer token-._~+/="},
+        headers={header_name: header_value},
     )
 
     assert client._connection_params.command == "cmd"
@@ -414,8 +416,8 @@ async def test_stdio_client_preserves_safe_headers_with_cmd_wrapper():
         "uvx",
         "mcp-proxy",
         "--headers",
-        "authorization",
-        "Bearer token-._~+/=",
+        header_name.lower(),
+        header_value,
         "https://mcp.example.com",
     ]
 

@@ -2205,21 +2205,17 @@ class MCPStdioClient(_PooledSessionClient):
             if resolved_command.lower().endswith((".cmd", ".bat")):
                 is_windows_batch = True
                 command = resolved_command
-        try:
-            if is_windows_batch:
-                # The original launcher already passed command-specific policy.
-                # Check every final argument for cmd syntax without reclassifying
-                # legitimate launcher flags such as npx -y as cmd flags.
-                shell_chars = mcp_security.DANGEROUS_SHELL_CHARS | CMD_TOKEN_TRANSFORM_CHARS
-                if any(char in arg for arg in final_args for char in shell_chars):
-                    raise mcp_security.MCPStdioSecurityError
-            elif mcp_security.extract_base_command(command) in mcp_security.SHELL_WRAPPERS:
-                validate_mcp_stdio_config(command, final_args, env)
-        except mcp_security.MCPStdioSecurityError:
-            # Policy errors can include the offending argument. Header values
-            # may contain credentials, so do not expose the original exception.
-            msg = "MCP stdio arguments are unsafe for a shell wrapper; use a direct executable instead"
-            raise mcp_security.MCPStdioSecurityError(msg) from None
+        base_command = mcp_security.extract_base_command(command)
+        if is_windows_batch or base_command in mcp_security.SHELL_WRAPPERS:
+            # The original arguments already passed command-specific policy.
+            # Header values need shell syntax checks without keyword restrictions.
+            shell_chars = mcp_security.DANGEROUS_SHELL_CHARS
+            if is_windows_batch or base_command == "cmd":
+                shell_chars |= CMD_TOKEN_TRANSFORM_CHARS
+            if any(char in arg for arg in final_args for char in shell_chars):
+                # Header values may contain credentials, so omit the offending argument.
+                msg = "MCP stdio arguments are unsafe for a shell wrapper; use a direct executable instead"
+                raise mcp_security.MCPStdioSecurityError(msg)
         safe_env = _validate_mcp_stdio_env(env)
         if AGENTIC_MCP_MODULE in command or any(AGENTIC_MCP_MODULE in arg for arg in args):
             if not current_user_id:
