@@ -233,6 +233,25 @@ def test_aliased_per_request_endpoint_cannot_be_ignored(execution, variable):
     transport.assert_not_called()
 
 
+def test_a_proxy_endpoint_in_the_request_variables_json_cannot_be_ignored(execution, monkeypatch):
+    """With no request scope, lfx reads the LANGFLOW_REQUEST_VARIABLES JSON for the key, so the guard reads it too."""
+    import json
+
+    from lfx.base.models.unified_models import credentials
+    from lfx.services.variable.service import VariableService
+
+    request, model, transport = execution
+    monkeypatch.setattr(credentials, "get_variable_service", lambda: VariableService())
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv(
+        "LANGFLOW_REQUEST_VARIABLES",
+        json.dumps({"OPENAI_API_KEY": "sk-proxy-key", "OPENAI_API_BASE": "https://proxy.example/v1"}),
+    )
+    with pytest.raises(DecisionConfigurationError, match="official OpenAI endpoint"):
+        evaluate_decision(request, model=model)
+    transport.assert_not_called()
+
+
 def test_aliased_endpoint_in_the_serve_request_scope_cannot_be_ignored(execution, monkeypatch):
     """Lfx serve keeps x-langflow-global-var-* names and resolves the proxy key through them."""
     from lfx.base.models.unified_models import credentials

@@ -162,7 +162,9 @@ export function buildGroupedOptions({
   }
 
   // Keeps an Assistant-applied registry model selectable while it is missing
-  // from enabled_models; a disconnected provider must inject nothing.
+  // from enabled_models; a disconnected provider must inject nothing. Never
+  // for a decision field: its saved model is only listed when switched on, and
+  // the trigger names it, marked switched off, without offering it.
   const savedKey = savedValue?.name
     ? `${canonicalProviderName(savedValue.provider || "Unknown")}::${savedValue.name}`
     : null;
@@ -188,6 +190,7 @@ export function buildGroupedOptions({
     ) ??
       false);
   const shouldInjectSaved =
+    modelType !== "decision" &&
     !!savedValue?.name &&
     !!savedKey &&
     !seen.has(savedKey) &&

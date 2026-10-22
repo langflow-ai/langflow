@@ -1277,6 +1277,55 @@ describe("useProviderConfiguration.handleSaveAllVariables", () => {
     },
   );
 
+  it.each([
+    // A mixed provider's key is checked again on save; from a decision picker,
+    // that check must be for Decisions, or a Decisions-only key can't save.
+    { view: "decision", kinds: ["llm", "decision"], asks: true },
+    // A decision-only provider isn't checked on save, so asking would bill twice.
+    { view: "decision", kinds: ["decision"], asks: false },
+    { view: "llm", kinds: ["llm", "decision"], asks: false },
+  ] as const)(
+    "saves from the $view view asking for a Decisions check: $asks ($kinds)",
+    async ({ view, kinds, asks }) => {
+      mockProviderVariablesMapping.OpenAI = openAIProviderVariables;
+      const openAI: Provider = {
+        provider: "OpenAI",
+        icon: "OpenAI",
+        is_enabled: false,
+        is_configured: false,
+        models: kinds.map((kind) => ({
+          model_name: "gpt-6-luna",
+          metadata: { model_type: kind },
+        })),
+      };
+      mockModelProviders = [openAI];
+      mockCreateMutateAsync.mockResolvedValue(undefined);
+      const { result } = renderHook(
+        ({ provider }: { provider: Provider }) =>
+          useProviderConfiguration({
+            selectedProvider: provider,
+            modelType: view,
+          }),
+        { initialProps: { provider: openAI } },
+      );
+
+      act(() => {
+        result.current.handleVariableChange("OPENAI_API_KEY", "sk-test");
+      });
+      await act(async () => {
+        await result.current.handleSaveAllVariables();
+      });
+
+      expect(mockCreateMutateAsync).toHaveBeenCalledWith(
+        asks
+          ? expect.objectContaining({ validationModelType: "decision" })
+          : expect.not.objectContaining({
+              validationModelType: expect.anything(),
+            }),
+      );
+    },
+  );
+
   it("resets a configured optional variable without deleting its identity", async () => {
     const { result } = renderConfiguredOpenAI();
 

@@ -609,6 +609,10 @@ def validate_model_provider_key(
 
     if model_name:
         policy.require_model(provider, model_name, model_type=model_type)
+    # The check below is a chat call, so it only runs a chat model. A model named for another kind,
+    # such as an embedding model, was authorized for its own kind above; the key is then checked with
+    # the first chat model policy allows, never with that name as a chat model.
+    chat_model_name = model_name if model_type in (None, "llm") else None
     first_model = None
     provider_models: list[dict[str, Any]] = []
     try:
@@ -630,7 +634,7 @@ def validate_model_provider_key(
 
     # WatsonX's static catalog is not region-specific. When no model was
     # requested, select one from the configured endpoint below instead.
-    validation_model = model_name if provider == "IBM WatsonX" else model_name or first_model
+    validation_model = chat_model_name if provider == "IBM WatsonX" else chat_model_name or first_model
     validation_metadata = next(
         (model.get("metadata", {}) for model in provider_models if model.get("model_name") == validation_model),
         {},

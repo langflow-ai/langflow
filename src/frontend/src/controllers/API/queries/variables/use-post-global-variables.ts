@@ -18,6 +18,8 @@ interface PostGlobalVariablesParams extends ProviderScopeParams {
   type?: string;
   default_fields?: string[];
   category?: VariableCategory;
+  /** Check a provider key for this kind on save, instead of the default chat check. */
+  validationModelType?: "decision";
 }
 
 interface PostGlobalVariablesResponse {
@@ -40,9 +42,12 @@ export const usePostGlobalVariables: useMutationFunctionType<
     category,
     flowId,
     projectId,
+    validationModelType,
   }: PostGlobalVariablesParams): Promise<PostGlobalVariablesResponse> => {
     const queryParams = new URLSearchParams();
     appendProviderScope(queryParams, { flowId, projectId });
+    if (validationModelType)
+      queryParams.set("validation_model_type", validationModelType);
     const res = await api.post(
       `${getURL("VARIABLES")}/${
         queryParams.toString() ? `?${queryParams.toString()}` : ""

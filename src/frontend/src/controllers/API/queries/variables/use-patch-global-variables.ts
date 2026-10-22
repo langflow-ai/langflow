@@ -16,6 +16,8 @@ interface PatchGlobalVariablesParams extends ProviderScopeParams {
   id: string;
   default_fields?: string[];
   category?: string;
+  /** Check a provider key for this kind on save, instead of the default chat check. */
+  validationModelType?: "decision";
 }
 
 export const usePatchGlobalVariables: useMutationFunctionType<
@@ -27,9 +29,11 @@ export const usePatchGlobalVariables: useMutationFunctionType<
   async function patchGlobalVariables(
     globalVariable: PatchGlobalVariablesParams,
   ): Promise<GlobalVariable> {
-    const { flowId, projectId, ...body } = globalVariable;
+    const { flowId, projectId, validationModelType, ...body } = globalVariable;
     const queryParams = new URLSearchParams();
     appendProviderScope(queryParams, { flowId, projectId });
+    if (validationModelType)
+      queryParams.set("validation_model_type", validationModelType);
     const res = await api.patch(
       `${getURL("VARIABLES")}/${globalVariable.id}${
         queryParams.toString() ? `?${queryParams.toString()}` : ""

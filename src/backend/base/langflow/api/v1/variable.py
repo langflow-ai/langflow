@@ -141,9 +141,11 @@ def _validates_on_save(provider: str, validation_model_type: str | None) -> bool
     """Decision-only provider keys get a billable decision check only when the caller asks for one.
 
     PERPLEXITY_API_KEY is also used by the Perplexity chat bundle, whose keys may lack Decisions access.
-    Model Providers never asks: it has already checked the key with /models/validate-provider, and a
-    second check here would bill the same key twice. The parameter is for callers that save a key
-    without validating it first.
+    Model Providers never asks for a decision-only provider: it has already checked the key with
+    /models/validate-provider, and a second check here would bill the same key twice. Every other
+    provider's key is checked here, as a chat call unless the caller names "decision"; Model Providers
+    names it when a decision picker saves a mixed provider's key such as OpenAI's, so a key with only
+    Decisions access can be saved.
     """
     return provider not in DECISION_ONLY_PROVIDERS or validation_model_type == "decision"
 

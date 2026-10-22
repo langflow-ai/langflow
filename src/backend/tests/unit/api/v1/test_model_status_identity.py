@@ -914,3 +914,33 @@ async def test_perplexity_key_save_runs_a_decision_check_only_when_asked(monkeyp
     assert result.id == stored.id
     assert validate.called is validated
     service.create_variable.assert_awaited_once()
+
+
+@pytest.mark.parametrize(("validation_model_type", "checked_as"), [(None, None), ("decision", "decision")])
+async def test_openai_key_save_checks_the_kind_the_picker_names(monkeypatch, validation_model_type, checked_as):
+    """Saved from a decision picker, an OpenAI key is checked for Decisions, not chat, so a Decisions-only key saves."""
+    from unittest.mock import MagicMock, Mock
+
+    from langflow.api.v1 import variable as variable_api
+
+    user = SimpleNamespace(id=uuid4())
+    variable = variable_api.VariableCreate(name="OPENAI_API_KEY", value="sk-test", default_fields=[])
+    stored = variable_api.Variable(name=variable.name, value=variable.value, default_fields=[], user_id=user.id)
+    service = MagicMock(spec=variable_api.DatabaseVariableService)
+    service.list_variables = AsyncMock(return_value=[])
+    service.create_variable = AsyncMock(return_value=stored)
+    monkeypatch.setattr(variable_api, "get_variable_service", lambda: service)
+    monkeypatch.setattr(variable_api, "ensure_variable_permission", AsyncMock())
+    monkeypatch.setattr(variable_api, "_require_provider", AsyncMock())
+    monkeypatch.setattr(variable_api, "get_all_variables_for_provider", lambda *_: {})
+    validate = Mock()
+    monkeypatch.setattr(variable_api, "validate_model_provider_key", validate)
+    await variable_api.create_variable(
+        session=object(),
+        variable=variable,
+        current_user=user,
+        provider_policy_attributes={},
+        validation_model_type=validation_model_type,
+    )
+    validate.assert_called_once()
+    assert validate.call_args.kwargs["model_type"] == checked_as

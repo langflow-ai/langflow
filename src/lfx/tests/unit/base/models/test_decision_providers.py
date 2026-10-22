@@ -352,6 +352,10 @@ def test_key_check_never_runs_a_chat_model_that_policy_blocks(monkeypatch):
     assert ran == []
     validate_model_provider_key("OpenAI", {"OPENAI_API_KEY": "tenant-key"})
     assert ran == [allowed]
+    # Naming the blocked chat model as another kind doesn't run it as a chat call.
+    ran.clear()
+    validate_model_provider_key("OpenAI", {"OPENAI_API_KEY": "tenant-key"}, blocked, model_type="embeddings")
+    assert ran == [allowed]
 
 
 @pytest.mark.parametrize("provider", ["typesafe", "TypeSafe"])

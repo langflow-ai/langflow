@@ -101,6 +101,29 @@ describe("buildGroupedOptions", () => {
     ]);
   });
 
+  it("never offers a decision field's saved model that is switched off", () => {
+    const luna = opt("gpt-6-luna", "OpenAI", { model_type: "decision" });
+    const grouped = buildGroupedOptions({
+      ...base,
+      modelType: "decision",
+      options: [],
+      savedValue: luna,
+      providers: [
+        {
+          provider: "OpenAI",
+          is_enabled: true,
+          is_configured: true,
+          models: [
+            { model_name: "gpt-6-luna", metadata: { model_type: "decision" } },
+          ],
+        },
+      ],
+      enabledModels: { OpenAI: {} },
+      providerStatusIsReliable: true,
+    });
+    expect(grouped.OpenAI).toBeUndefined();
+  });
+
   it("drops a sticky not_enabled_locally option — it is never selectable", () => {
     const options = [opt("legacy", "OpenAI", { not_enabled_locally: true })];
     expect(buildGroupedOptions({ ...base, options })).toEqual({});

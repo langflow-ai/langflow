@@ -105,6 +105,38 @@ describe("global-variable mutation scope", () => {
     });
   });
 
+  it("asks for a Decisions key check in the query, never in the body", async () => {
+    mockApiPost.mockResolvedValue({
+      data: { id: "var-1", name: "OPENAI_API_KEY" },
+    });
+    mockApiPatch.mockResolvedValue({
+      data: { id: "var-1", name: "OPENAI_API_KEY" },
+    });
+    usePostGlobalVariables();
+    usePatchGlobalVariables();
+
+    await registeredMutation("usePostGlobalVariables").mutationFn({
+      name: "OPENAI_API_KEY",
+      value: "sk-test",
+      flowId: "flow-a",
+      validationModelType: "decision",
+    });
+    await registeredMutation("usePatchGlobalVariables").mutationFn({
+      id: "var-1",
+      value: "sk-test",
+      validationModelType: "decision",
+    });
+
+    expect(mockApiPost).toHaveBeenCalledWith(
+      "/api/v1/variables/?flow_id=flow-a&validation_model_type=decision",
+      expect.not.objectContaining({ validationModelType: expect.anything() }),
+    );
+    expect(mockApiPatch).toHaveBeenCalledWith(
+      "/api/v1/variables/var-1?validation_model_type=decision",
+      { id: "var-1", value: "sk-test" },
+    );
+  });
+
   it("deletes in the requested flow and refetches only that scoped list", async () => {
     mockApiDelete.mockResolvedValue(undefined);
     useDeleteGlobalVariables();

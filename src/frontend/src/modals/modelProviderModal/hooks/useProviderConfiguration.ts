@@ -574,10 +574,18 @@ export const useProviderConfiguration = ({
       const isValid = await validateCredentials();
       if (!isValid || !canUseCurrentProviderPolicy(providerName)) return;
     }
-    // The variables below are saved without ?validation_model_type=decision:
-    // validateCredentials just made this key's one billed check, and asking the
-    // variables API for a decision check too would bill a decision provider
-    // twice. That parameter is for callers that save a key without validating.
+    // Saving checks a mixed provider's key again, as a chat call unless told
+    // otherwise. From a decision picker, ask for the same Decisions check
+    // validateCredentials just made, so a key with only Decisions access saves.
+    // A decision-only provider's key is not checked on save at all, so asking
+    // would bill it twice.
+    const providerModels = trustedSelectedProvider?.models ?? [];
+    const saveValidation =
+      modelType === "decision" &&
+      providerModels.some((m) => m.metadata?.model_type === "decision") &&
+      providerModels.some((m) => m.metadata?.model_type !== "decision")
+        ? { validationModelType: "decision" as const }
+        : {};
     setIsSaving(true);
     setValidationFailed(false);
     let hasPersistedVariable = false;
@@ -639,6 +647,7 @@ export const useProviderConfiguration = ({
             value,
             flowId,
             projectId,
+            ...saveValidation,
           });
         } else {
           await createGlobalVariable({
@@ -649,6 +658,7 @@ export const useProviderConfiguration = ({
             default_fields: [],
             flowId,
             projectId,
+            ...saveValidation,
           });
         }
         hasPersistedVariable = true;
@@ -727,6 +737,7 @@ export const useProviderConfiguration = ({
     updateGlobalVariable,
     flowId,
     projectId,
+    modelType,
     queryClient,
     globalVariablesQueryKey,
     validateCredentials,
