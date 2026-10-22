@@ -104,8 +104,9 @@ jobs:
           python-version: "3.13"
 
       - name: Set up uv for offline resolver regression tests
-        uses: astral-sh/setup-uv@v10
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: false
 
       - name: Install dependencies
