@@ -738,16 +738,16 @@ async def reconcile_legacy_inventory() -> None:
             continue
         if relative in attribution.claims:
             if issue := _claimed_source_issue(attribution.claims[relative], relative, fingerprint, rows, runs):
-                issues.append(issue)
+                issues.append({**issue, "source": relative})
             continue
         # Nothing but its folder name ties the directory to an account.
         owner_id = attribution.holder(parts[0])
         adoption = attribution.adoption(relative, owner_id)
         if isinstance(adoption, str):
-            issues.append({"code": adoption, **({"owner_id": str(owner_id)} if owner_id else {})})
+            issues.append({"code": adoption, "source": relative, **({"owner_id": str(owner_id)} if owner_id else {})})
             continue
         if issue := await _adopt(relative, fingerprint, *adoption):
-            issues.append(issue)
+            issues.append({**issue, "source": relative})
     _inventory_issue_count = len(issues)
     directory = private_directory(storage_root() / ".migration")
     path = directory / "inventory.json"

@@ -16,7 +16,12 @@ export interface StorageUpgrade {
 
 export interface StorageUpgradeStatus {
   stores: StorageUpgrade[];
-  inventory: { complete: boolean; issues: number } | null;
+  inventory: {
+    complete: boolean;
+    issues: number;
+    storage_directory?: string;
+    details?: { source: string; code: string }[];
+  } | null;
   is_admin: boolean;
   running: boolean;
   revision: string;
