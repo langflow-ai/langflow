@@ -155,7 +155,7 @@ async def overwrite_flow(
     except FlowVersionError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    await persist_and_strip_mcp_secrets(overwrite.data, current_user.id, session)
+    await persist_and_strip_mcp_secrets(overwrite.data, current_user.id, session, flow_id=flow.id)
     return await _patch_flow(
         session=session,
         db_flow=flow,

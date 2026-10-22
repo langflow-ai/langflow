@@ -3,6 +3,7 @@ import clsx, { type ClassValue } from "clsx";
 import moment from "moment";
 import TableAutoCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableAutoCellRender";
 import TableDropdownCellEditor from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableDropdownCellEditor";
+import { BASENAME } from "@/customization/config-constants";
 import i18n from "@/i18n";
 import useAlertStore from "@/stores/alertStore";
 import { type ColumnField, FormatterType } from "@/types/utils/functions";
@@ -1061,7 +1062,7 @@ export const setAuthCookie = (
     typeof window !== "undefined" && window.location.protocol === "https:";
 
   cookies.set(tokenName, value, {
-    path: "/",
+    path: `${BASENAME}/`,
     secure: isSecure,
     sameSite: isSecure ? "strict" : "lax",
   });

@@ -3,6 +3,8 @@
 import asyncio
 import hashlib
 import json
+import os
+import sys
 import threading
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
@@ -404,6 +406,31 @@ def test_denied_same_user_process_is_rechecked_for_exit(monkeypatch, exited):
         with pytest.raises(maintenance.MaintenanceRequiredError, match="application account"):
             maintenance._legacy_process(denied)
         assert pauses == [0.01] * 3
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows has no effective user ids")
+@pytest.mark.parametrize("runs_as_the_account", [True, False])
+def test_denied_process_blocks_the_upgrade_only_when_it_runs_as_the_account(runs_as_the_account):
+    # macOS leaves a setuid login process for each extra Terminal tab. It keeps the account as its real
+    # user but runs as root, and its command line cannot be read. Only a process that runs as the account
+    # can be one of its Langflow workers.
+    import psutil
+
+    other = 0 if os.geteuid() else 1  # root, or another user when the tests run as root
+    effective = os.geteuid() if runs_as_the_account else other
+    denied = SimpleNamespace(
+        cmdline=lambda: (_ for _ in ()).throw(psutil.AccessDenied(1042)),
+        username=psutil.Process().username,
+        uids=lambda: SimpleNamespace(real=os.getuid(), effective=effective, saved=effective),
+        status=lambda: psutil.STATUS_RUNNING,
+        is_running=lambda: True,
+    )
+
+    if runs_as_the_account:
+        with pytest.raises(maintenance.MaintenanceRequiredError, match="application account"):
+            maintenance._legacy_process(denied)
+    else:
+        assert not maintenance._legacy_process(denied)
 
 
 async def test_fenced_session_purge_is_durable_and_replayed_before_retrieval(database, monkeypatch):

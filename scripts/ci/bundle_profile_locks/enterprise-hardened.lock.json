@@ -18,9 +18,9 @@
       "providers": [
         "lfx-amazon"
       ],
-      "requested": ">=0.2.0,<1.0.0",
-      "requirement": "lfx-amazon==0.2.0",
-      "resolved_version": "0.2.0"
+      "requested": ">=0.2.2,<1.0.0",
+      "requirement": "lfx-amazon==0.2.2",
+      "resolved_version": "0.2.2"
     },
     {
       "distribution": "lfx-anthropic",
@@ -78,9 +78,9 @@
       "providers": [
         "lfx-google"
       ],
-      "requested": ">=0.3.3,<1.0.0",
-      "requirement": "lfx-google==0.3.3",
-      "resolved_version": "0.3.3"
+      "requested": ">=0.3.5,<1.0.0",
+      "requirement": "lfx-google==0.3.5",
+      "resolved_version": "0.3.5"
     },
     {
       "distribution": "lfx-ibm",
@@ -98,9 +98,9 @@
       "providers": [
         "lfx-microsoft"
       ],
-      "requested": ">=0.1.3,<1.0.0",
-      "requirement": "lfx-microsoft==0.1.3",
-      "resolved_version": "0.1.3"
+      "requested": ">=0.1.4,<1.0.0",
+      "requirement": "lfx-microsoft==0.1.4",
+      "resolved_version": "0.1.4"
     },
     {
       "distribution": "lfx-ollama",
@@ -148,9 +148,9 @@
       "providers": [
         "lfx-slack"
       ],
-      "requested": ">=0.2.1,<1.0.0",
-      "requirement": "lfx-slack==0.2.1",
-      "resolved_version": "0.2.1"
+      "requested": ">=0.2.2,<1.0.0",
+      "requirement": "lfx-slack==0.2.2",
+      "resolved_version": "0.2.2"
     },
     {
       "distribution": "lfx-toolguard",
@@ -180,7 +180,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:38f16208aed110ad",
+  "profile_digest": "sha256:f668394b03a1ec2e",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",

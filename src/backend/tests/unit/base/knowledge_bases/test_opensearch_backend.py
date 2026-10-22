@@ -881,7 +881,7 @@ class TestOpenSearchSSRFProtection:
         from lfx.utils.ssrf_protection import SSRFProtectionError
 
         backend = self._backend(tmp_path, "http://169.254.169.254/latest/meta-data/")
-        with pytest.raises(SSRFProtectionError, match="blocked"):
+        with pytest.raises(SSRFProtectionError, match="not allowed"):
             await backend._resolve_secrets()
 
     @pytest.mark.usefixtures("ssrf_env")
@@ -889,7 +889,7 @@ class TestOpenSearchSSRFProtection:
         from lfx.utils.ssrf_protection import SSRFProtectionError
 
         backend = self._backend(tmp_path, "http://10.0.0.5:9200")
-        with pytest.raises(SSRFProtectionError, match="blocked"):
+        with pytest.raises(SSRFProtectionError, match="not allowed"):
             await backend._resolve_secrets()
 
     @pytest.mark.usefixtures("ssrf_env")
@@ -899,7 +899,7 @@ class TestOpenSearchSSRFProtection:
         backend = self._backend(tmp_path, "http://opensearch.internal:9200")
         with (
             patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["10.1.2.3"]),
-            pytest.raises(SSRFProtectionError, match="blocked"),
+            pytest.raises(SSRFProtectionError, match="not allowed"),
         ):
             await backend._resolve_secrets()
 
@@ -928,7 +928,7 @@ class TestOpenSearchSSRFProtection:
         result = await backend.test_connection()
         assert result.ok is False
         assert result.details["type"] == "SSRFProtectionError"
-        assert "blocked" in result.message
+        assert "not allowed" in result.message
 
     @pytest.mark.usefixtures("ssrf_env")
     async def test_blocked_url_is_never_stashed_for_later_paths(self, tmp_path: Path) -> None:
@@ -979,7 +979,7 @@ class TestOpenSearchDestinationPolicy:
         backend = self._backend(tmp_path, "https://rebind.attacker.example:9200", "variable")
         with (
             patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]),
-            pytest.raises(SSRFProtectionError, match="not an approved destination"),
+            pytest.raises(SSRFProtectionError, match="not allowed"),
         ):
             await backend._resolve_secrets()
         assert getattr(backend, "_resolved_url", None) is None
@@ -1006,4 +1006,4 @@ class TestOpenSearchDestinationPolicy:
             result = await backend.test_connection()
         assert result.ok is False
         assert result.details["type"] == "SSRFProtectionError"
-        assert "not an approved destination" in result.message
+        assert "not allowed" in result.message

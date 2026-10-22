@@ -1,90 +1,82 @@
 class StreamProcessor extends AudioWorkletProcessor {
-  constructor(options) {
+  constructor() {
     super();
-    this.bufferSize = 4096;
-    this.buffer = new Float32Array(this.bufferSize);
-    this.bufferIndex = 0;
-    // Increase threshold for much less sensitivity
-    this.noiseThreshold = 0.15;
-    // Require more consecutive frames above threshold to trigger speech detection
-    this.activationThreshold = 8;
-    this.silenceFrameCount = 0;
-    this.activationCount = 0;
-    this.isSpeaking = false;
-    this.port.onmessage = this.handleMessage.bind(this);
-  }
+    // Keep the input block size and PCM conversion aligned with the original
+    // inline worklet used by the voice assistant.
+    this.inputBuffer = new Float32Array(128);
+    this.inputOffset = 0;
+    this.outputBuffers = [];
+    this.isPlaying = false;
 
-  handleMessage(event) {
-    if (event.data.type === "updateNoiseGate") {
-      this.noiseThreshold = event.data.threshold;
-    }
-  }
-
-  calculateRMS(buffer) {
-    let sum = 0;
-    for (let i = 0; i < buffer.length; i++) {
-      sum += buffer[i] * buffer[i];
-    }
-    return Math.sqrt(sum / buffer.length);
+    this.port.onmessage = (event) => {
+      if (event.data.type === "playback") {
+        this.outputBuffers.push(event.data.audio);
+        this.isPlaying = true;
+      } else if (event.data.type === "stop_playback") {
+        this.outputBuffers = [];
+        this.isPlaying = false;
+        this.port.postMessage({ type: "done" });
+      }
+    };
   }
 
   process(inputs, outputs) {
     const input = inputs[0];
-    if (!input || !input.length) return true;
+    if (input && input.length > 0) {
+      const inputData = input[0];
+      for (let i = 0; i < inputData.length; i++) {
+        this.inputBuffer[this.inputOffset++] = inputData[i];
 
-    const channel = input[0];
-
-    // Calculate RMS volume
-    const rms = this.calculateRMS(channel);
-
-    // Scale the RMS value to match the scale used in use-bar-controls.ts
-    // This makes the threshold more comparable to the "3" value
-    const scaledRMS = rms * 10;
-
-    // Use scaled value for detection
-    const isSilent = scaledRMS < 3;
-
-    // Voice activity detection logic with stricter requirements
-    if (isSilent) {
-      this.activationCount = 0;
-      this.silenceFrameCount++;
-      // Require more silent frames before deciding speech has ended
-      if (this.silenceFrameCount > 20 && this.isSpeaking) {
-        this.isSpeaking = false;
-      }
-    } else {
-      this.silenceFrameCount = 0;
-      if (!this.isSpeaking) {
-        // Require multiple consecutive frames above threshold to start speech
-        this.activationCount++;
-        if (this.activationCount >= this.activationThreshold) {
-          this.isSpeaking = true;
+        if (this.inputOffset >= this.inputBuffer.length) {
+          const outputData = new Int16Array(this.inputBuffer.length);
+          for (let j = 0; j < this.inputBuffer.length; j++) {
+            outputData[j] =
+              Math.max(-1, Math.min(1, this.inputBuffer[j])) * 0x7fff;
+          }
+          this.port.postMessage({
+            type: "input",
+            audio: outputData,
+          });
+          this.inputBuffer = new Float32Array(128);
+          this.inputOffset = 0;
         }
       }
     }
 
-    // Fill buffer with audio data
-    for (let i = 0; i < channel.length; i++) {
-      if (this.bufferIndex < this.bufferSize) {
-        // Apply noise gate - zero out audio when not speaking
-        this.buffer[this.bufferIndex++] = !this.isSpeaking ? 0 : channel[i];
+    const output = outputs[0];
+    if (output && output.length > 0 && this.isPlaying) {
+      if (this.outputBuffers.length > 0) {
+        const currentBuffer = this.outputBuffers[0];
+        const chunkSize = Math.min(output[0].length, currentBuffer.length);
+
+        const gain = 0.8;
+        for (let channel = 0; channel < output.length; channel++) {
+          const outputChannel = output[channel];
+          for (let i = 0; i < chunkSize; i++) {
+            outputChannel[i] = currentBuffer[i] * gain;
+          }
+        }
+
+        if (chunkSize === currentBuffer.length) {
+          this.outputBuffers.shift();
+        } else {
+          this.outputBuffers[0] = currentBuffer.slice(chunkSize);
+        }
+      }
+
+      if (this.outputBuffers.length === 0) {
+        this.isPlaying = false;
+        this.port.postMessage({ type: "done" });
       }
     }
-
-    // When buffer is full, send it to the main thread
-    if (this.bufferIndex >= this.bufferSize) {
-      const audioData = this.buffer.slice(0);
-      this.port.postMessage({
-        type: "input",
-        audio: audioData,
-        isSilent: !this.isSpeaking,
-        volume: scaledRMS, // Send scaled volume for consistency
-      });
-      this.bufferIndex = 0;
-    }
-
     return true;
   }
 }
 
-registerProcessor("stream_processor", StreamProcessor);
+try {
+  registerProcessor("stream_processor", StreamProcessor);
+} catch (error) {
+  if (!error?.message?.includes("is already registered")) {
+    throw error;
+  }
+}
