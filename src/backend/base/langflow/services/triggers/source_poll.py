@@ -392,6 +392,37 @@ class SourceRound:
 
 async def collect_source(trigger: Trigger, lease: CredentialLease) -> SourceRound:
     """Fetch a complete provider round without holding a database transaction."""
+    from langflow.services.triggers.providers.registry import get_kind, get_provider
+
+    extension = get_provider(trigger.provider or "")
+    if extension is not None:
+        spec = get_kind(trigger.kind)
+        if (
+            spec is not None
+            and (trigger.config or {}).get("mechanism_id") == spec.push_mechanism
+            and not extension.ingress_is_hint
+        ):
+            msg = "Direct webhook deliveries cannot enter source polling."
+            raise ValueError(msg)
+        if extension.collect is None:
+            msg = "This trigger provider does not expose a source collector."
+            raise ValueError(msg)
+        result = await extension.collect(trigger, lease)
+        if not isinstance(result, SourceRound):
+            msg = "The trigger provider returned an invalid source round."
+            raise ValueError(msg)
+        if any(item.get("provider") != trigger.provider for item in result.items):
+            msg = "The trigger provider returned items from a different provider."
+            raise ValueError(msg)
+        from dataclasses import replace
+
+        return replace(
+            result,
+            previous_cursor=dict(trigger.provider_state or {}),
+            connection_id=trigger.connection_id,
+            mechanism_id=(trigger.config or {}).get("mechanism_id"),
+            config=dict(trigger.config or {}),
+        )
     previous = dict(trigger.provider_state or {})
     expected_connection_id = trigger.connection_id
     expected_mechanism_id = (trigger.config or {}).get("mechanism_id")

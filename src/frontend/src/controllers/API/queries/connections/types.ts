@@ -149,6 +149,13 @@ export interface IntegrationProviderRead {
   enabled: boolean;
   connection_count: number;
   capabilities: IntegrationCapabilityRead[];
+  manual_token_profiles?: ManualTokenProfileRead[];
+}
+
+export interface ManualTokenProfileRead {
+  id: string;
+  identity: IntegrationIdentity;
+  required_scopes: string[];
 }
 
 /** Which deployment this instance is (`LANGFLOW_CONNECTION_OAUTH_CONTEXT`). */

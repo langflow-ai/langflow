@@ -1,4 +1,5 @@
 {
+  "connections.add.tokenGenericHelp": "Cole um token de acesso para este provedor. O Langflow verifica o token antes de salvá-lo.",
   "storageUpgrade.unavailable": "Armazenamento indisponível",
   "storageUpgrade.title": "Atualizando seus dados",
   "storageUpgrade.queued": "Aguardando atualização",
