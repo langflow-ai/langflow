@@ -53,6 +53,7 @@ members = [
     "lfx-empiriolabs",
     "lfx-exa",
     "lfx-firecrawl",
+    "lfx-gitlab",
     "lfx-google",
     "lfx-ibm",
     "lfx-microsoft",
@@ -8871,6 +8872,7 @@ dependencies = [
     { name = "lfx-cohere" },
     { name = "lfx-datastax" },
     { name = "lfx-docling" },
+    { name = "lfx-gitlab" },
     { name = "lfx-google" },
     { name = "lfx-ibm" },
     { name = "lfx-microsoft" },
@@ -9013,6 +9015,7 @@ requires-dist = [
     { name = "lfx-empiriolabs", marker = "extra == 'bundles'", editable = "src/bundles/empiriolabs" },
     { name = "lfx-exa", marker = "extra == 'bundles'", editable = "src/bundles/exa" },
     { name = "lfx-firecrawl", marker = "extra == 'bundles'", editable = "src/bundles/firecrawl" },
+    { name = "lfx-gitlab", editable = "src/bundles/gitlab" },
     { name = "lfx-google", editable = "src/bundles/google" },
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
     { name = "lfx-microsoft", editable = "src/bundles/microsoft" },
@@ -11240,6 +11243,21 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "firecrawl-py", specifier = ">=4.0.0,<5.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-gitlab"
+version = "0.1.0"
+source = { editable = "src/bundles/gitlab" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.27,<1.0" },
     { name = "lfx", editable = "src/lfx" },
 ]
 
