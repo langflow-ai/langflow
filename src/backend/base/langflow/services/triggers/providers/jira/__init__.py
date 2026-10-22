@@ -12,7 +12,7 @@ PROVIDER = TriggerProvider(
             kind=kind,
             component=component,
             display_name=name,
-            config_fields=("connection", "project", "delivery_mode"),
+            config_fields=("connection", "project", "issue_type_id", "delivery_mode"),
             required_scopes=("read:jira-work", "offline_access"),
             poll_mechanism="jira.issue.poll",
         )

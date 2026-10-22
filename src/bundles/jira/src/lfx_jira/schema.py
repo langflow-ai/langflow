@@ -13,7 +13,7 @@ API_ORIGIN = "https://api.atlassian.com"
 READ = "read:jira-work"
 WRITE = "write:jira-work"
 SCOPES = frozenset({READ, WRITE, "read:jira-user", "offline_access"})
-FIELDS = ["summary", "status", "created", "updated", "project"]
+FIELDS = ["summary", "status", "created", "updated", "project", "issuetype"]
 
 
 def invalid(message: str) -> InvalidRequestError:
@@ -104,16 +104,21 @@ def issue_data(value: dict, *, project: str | None = None, key: str | None = Non
         "summary": text(fields.get("summary"), maximum=32768, required=False),
         "project": found_project["key"],
         "status_id": numeric_id(status.get("id")),
+        "issue_type_id": numeric_id(fields.get("issuetype", {}).get("id"))
+        if isinstance(fields.get("issuetype"), dict)
+        else numeric_id(None),
         "status": text(status.get("name"), maximum=1024),
         "created": created.isoformat(),
         "updated": updated.isoformat(),
     }
 
 
-def search_body(project: str, status: str = "", page: str = "") -> dict:
+def search_body(project: str, status: str = "", page: str = "", *, issue_type_id: str = "") -> dict:
     query = f'project = "{project_key(project)}"'
     if status:
         query += f' AND status = "{numeric_id(status)}"'
+    if issue_type_id:
+        query += f' AND issuetype = "{numeric_id(issue_type_id)}"'
     result = {"jql": query + " ORDER BY key ASC", "fields": FIELDS, "maxResults": 100}
     if page:
         result["nextPageToken"] = text(page, maximum=8192)

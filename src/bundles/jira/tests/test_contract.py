@@ -54,7 +54,7 @@ async def run(monkeypatch, cls, method, handler, **inputs):
 async def test_read_issue_explicit_fields_and_safe_output(monkeypatch):
     def handler(request):
         assert request.url.path.endswith("/issue/DEMO-1")
-        assert request.url.params["fields"] == "summary,status,created,updated,project"
+        assert request.url.params["fields"] == "summary,status,created,updated,project,issuetype"
         return httpx.Response(200, json=issue())
 
     result, calls = await run(monkeypatch, JiraReadIssueComponent, "read_issue", handler, issue="DEMO-1")
@@ -70,7 +70,7 @@ async def test_search_uses_enhanced_api_and_structured_jql(monkeypatch):
         assert request.method == "POST"
         assert json.loads(request.content) == {
             "jql": 'project = "DEMO" AND status = "1" ORDER BY key ASC',
-            "fields": ["summary", "status", "created", "updated", "project"],
+            "fields": ["summary", "status", "created", "updated", "project", "issuetype"],
             "maxResults": 100,
             "nextPageToken": "opaque-page",
         }

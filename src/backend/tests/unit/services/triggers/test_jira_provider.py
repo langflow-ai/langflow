@@ -310,6 +310,29 @@ async def test_snapshot_limit_fails_without_cursor_mutation(monkeypatch):
 
     patch_client(monkeypatch, handler)
     node = trigger()
-    with pytest.raises(InvalidRequestError, match="1000"):
+    with pytest.raises(InvalidRequestError, match="5000"):
+        await collector.collect(node, lease_for()[0])
+    assert node.provider_state == {}
+
+
+def test_optional_issue_type_filter_is_numeric_and_query_scoped():
+    from lfx_jira.schema import search_body
+
+    config = collector.normalize_config(
+        "jira.issue_status", {"connection": "jira/work", "project": "DEMO", "issue_type_id": "10001"}
+    )
+    assert config["issue_type_id"] == "10001"
+    assert (
+        search_body("DEMO", issue_type_id="10001")["jql"] == 'project = "DEMO" AND issuetype = "10001" ORDER BY key ASC'
+    )
+    with pytest.raises(InvalidRequestError):
+        search_body("DEMO", issue_type_id='10001" OR 1=1')
+
+
+async def test_filtered_snapshot_rejects_an_unrelated_issue_type(monkeypatch):
+    patch_client(monkeypatch, lambda _request: httpx.Response(200, json={"issues": [issue()], "isLast": True}))
+    node = trigger()
+    node.config["issue_type_id"] = "10002"
+    with pytest.raises(InvalidRequestError, match="outside the selected"):
         await collector.collect(node, lease_for()[0])
     assert node.provider_state == {}

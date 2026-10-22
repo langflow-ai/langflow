@@ -14,6 +14,11 @@ class JiraOnIssueCreatedTriggerComponent(JiraIssueTriggerComponent):
     inputs = [
         connection_input("jira.trigger.created", required=False),
         MessageTextInput(name="project", display_name="Project Key", required=True),
+        MessageTextInput(
+            name="issue_type_id",
+            display_name="Issue Type ID",
+            info="Optional numeric issue type filter. At most 5000 matching issues can be observed.",
+        ),
     ]
 
 
@@ -25,6 +30,11 @@ class JiraOnIssueUpdatedTriggerComponent(JiraIssueTriggerComponent):
     inputs = [
         connection_input("jira.trigger.updated", required=False),
         MessageTextInput(name="project", display_name="Project Key", required=True),
+        MessageTextInput(
+            name="issue_type_id",
+            display_name="Issue Type ID",
+            info="Optional numeric issue type filter. At most 5000 matching issues can be observed.",
+        ),
     ]
 
 
@@ -36,4 +46,9 @@ class JiraOnIssueStatusChangedTriggerComponent(JiraIssueTriggerComponent):
     inputs = [
         connection_input("jira.trigger.status", required=False),
         MessageTextInput(name="project", display_name="Project Key", required=True),
+        MessageTextInput(
+            name="issue_type_id",
+            display_name="Issue Type ID",
+            info="Optional numeric issue type filter. At most 5000 matching issues can be observed.",
+        ),
     ]

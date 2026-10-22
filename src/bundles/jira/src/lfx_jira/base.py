@@ -37,8 +37,11 @@ class JiraIssueTriggerComponent(BaseTriggerComponent):
     icon = "Ticket"
 
     def trigger_config(self):
-        return {
+        config = {
             "connection": getattr(self, "connection", None),
             "project": getattr(self, "project", ""),
             "delivery_mode": "poll",
         }
+        if getattr(self, "issue_type_id", ""):
+            config["issue_type_id"] = self.issue_type_id
+        return config

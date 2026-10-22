@@ -4,11 +4,12 @@ from datetime import datetime, timezone
 
 from lfx.integrations.models import ConnectionRef
 from lfx_jira.client import JiraClient
-from lfx_jira.schema import cloud_id, invalid, issue_data, project_key, search_body, timestamp
+from lfx_jira.schema import cloud_id, invalid, issue_data, numeric_id, project_key, search_body, timestamp
 
 from langflow.services.triggers.source_poll import SourceRound
 
-MAX_ISSUES = 1000
+MAX_ISSUES = 5000
+MAX_PAGES = 50
 PAGE_SIZE = 100
 MAX_PAGE_TOKEN = 8192
 KINDS = {"jira.issue_created", "jira.issue_updated", "jira.issue_status"}
@@ -18,7 +19,7 @@ def normalize_config(kind, config):
     if (
         kind not in KINDS
         or not isinstance(config, dict)
-        or config.keys() - {"connection", "project", "delivery_mode", "mechanism_id"}
+        or config.keys() - {"connection", "project", "delivery_mode", "mechanism_id", "issue_type_id"}
     ):
         msg = "Unsupported Jira trigger configuration."
         raise ValueError(msg)
@@ -30,10 +31,11 @@ def normalize_config(kind, config):
         if ref.provider != "jira":
             raise ValueError
         project = project_key(config.get("project"))
+        issue_type = numeric_id(config["issue_type_id"]) if config.get("issue_type_id") else ""
     except (ValueError, TypeError):
         msg = "Choose an owned Jira connection and a valid project key."
         raise ValueError(msg) from None
-    return {**config, "connection": str(ref), "project": project, "delivery_mode": "poll"}
+    return {**config, "connection": str(ref), "project": project, "issue_type_id": issue_type, "delivery_mode": "poll"}
 
 
 async def prepare(_session, trigger):
@@ -58,9 +60,11 @@ async def collect(trigger, lease):
     tokens = set()
     client = JiraClient(lease)
     try:
-        for _ in range(10):
+        for _ in range(MAX_PAGES):
             result = await client.request(
-                "POST", "/rest/api/3/search/jql", body=search_body(config["project"], page=page)
+                "POST",
+                "/rest/api/3/search/jql",
+                body=search_body(config["project"], page=page, issue_type_id=config["issue_type_id"]),
             )
             if (
                 not isinstance(result, dict)
@@ -71,6 +75,9 @@ async def collect(trigger, lease):
                 raise invalid(msg)
             for raw in result["issues"]:
                 issue = issue_data(raw, project=config["project"])
+                if config["issue_type_id"] and issue["issue_type_id"] != config["issue_type_id"]:
+                    msg = "Jira returned an issue outside the selected issue type."
+                    raise invalid(msg)
                 identifier = issue["id"]
                 if identifier in current:
                     msg = "The Jira project changed during pagination. Retry the complete snapshot."
@@ -110,13 +117,13 @@ async def collect(trigger, lease):
                 raise invalid(msg)
             tokens.add(page)
         else:
-            msg = "The Jira project exceeds the 1000-issue snapshot limit."
+            msg = "The Jira project exceeds the 5000-issue snapshot limit."
             raise invalid(msg)
     finally:
         await client.aclose()
     updated = {**seen, **current}
     if len(updated) > MAX_ISSUES:
-        msg = "The Jira source exceeded 1000 observed issues. Re-enable it for a fresh baseline."
+        msg = "The Jira source exceeded 5000 observed issues. Re-enable it for a fresh baseline."
         raise invalid(msg)
     return SourceRound(
         items=rows,

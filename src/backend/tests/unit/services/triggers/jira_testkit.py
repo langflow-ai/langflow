@@ -65,6 +65,7 @@ def issue(
             "created": created,
             "updated": updated,
             "project": {"key": project},
+            "issuetype": {"id": "10001"},
             "unexpected_secret": "must-not-escape",  # pragma: allowlist secret
         },
     }
