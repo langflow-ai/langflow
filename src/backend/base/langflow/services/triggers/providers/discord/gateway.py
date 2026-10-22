@@ -77,7 +77,7 @@ class DiscordGatewayAdapter:
         self.halt.set()
         self.connected = False
         if self.ws is not None:
-            await self.ws.close(code=1000)
+            await self.ws.close(code=4000)
 
     async def _save(self, ctx, trigger):
         await ctx.save_cursor(trigger_id=trigger.id, provider_state=dict(self.state))
@@ -218,7 +218,7 @@ class DiscordGatewayAdapter:
                             await task
                 if self.ws:
                     with contextlib.suppress(Exception):
-                        await self.ws.close(code=4000 if not self.halt.is_set() and not ctx.stopping.is_set() else 1000)
+                        await self.ws.close(code=4000)
                     self.ws = None
 
     async def _settle(self, ctx):

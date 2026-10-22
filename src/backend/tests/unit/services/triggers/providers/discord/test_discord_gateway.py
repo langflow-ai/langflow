@@ -219,7 +219,7 @@ async def test_stop_cancels_receiver_and_never_reconnects(monkeypatch):
     await asyncio.wait_for(task, 1)
     await adapter.stop()
     await adapter.stop()
-    assert socket.closed == [1000]
+    assert socket.closed == [4000]
     assert not adapter.healthy()
 
 
