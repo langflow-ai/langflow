@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "provider_id": "servicenow",
+  "display_name": "ServiceNow",
+  "icon": "Server",
+  "docs_url": "https://github.com/langflow-ai/langflow/blob/release-1.14.0/design/dedicated-integrations/servicenow.md",
+  "auth_profiles": [
+    {
+      "id": "user",
+      "kind": "oauth2_authorization_code",
+      "identity": "user_delegated",
+      "authorization_url": "https://{tenant}/oauth_auth.do",
+      "token_url": "https://{tenant}/oauth_token.do",
+      "supports_pkce": true,
+      "supports_refresh": true,
+      "default_scopes": [
+        "langflow_table_read"
+      ],
+      "client_type_by_context": {
+        "hosted": "confidential",
+        "self_managed": "confidential"
+      },
+      "owner_by_context": {
+        "hosted": "langflow",
+        "self_managed": "customer"
+      },
+      "tenant_param": "tenant"
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "servicenow.records.search",
+      "display_name": "ServiceNow Search Tickets",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "langflow_table_read"
+      ],
+      "policy_keys": [
+        "integrations.servicenow.records.search"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed"
+      ],
+      "risk": "read",
+      "component_ref": "ServiceNowSearchRecordsComponent"
+    },
+    {
+      "id": "servicenow.records.read",
+      "display_name": "ServiceNow Read Ticket",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "langflow_table_read"
+      ],
+      "policy_keys": [
+        "integrations.servicenow.records.read"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed"
+      ],
+      "risk": "read",
+      "component_ref": "ServiceNowReadRecordComponent"
+    },
+    {
+      "id": "servicenow.records.create",
+      "display_name": "ServiceNow Create Ticket",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "langflow_table_write"
+      ],
+      "policy_keys": [
+        "integrations.servicenow.records.create"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed"
+      ],
+      "risk": "write",
+      "component_ref": "ServiceNowCreateRecordComponent"
+    },
+    {
+      "id": "servicenow.records.update",
+      "display_name": "ServiceNow Update Ticket",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "langflow_table_write"
+      ],
+      "policy_keys": [
+        "integrations.servicenow.records.update"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed"
+      ],
+      "risk": "write",
+      "component_ref": "ServiceNowUpdateRecordComponent"
+    },
+    {
+      "id": "servicenow.trigger.ticket_created",
+      "display_name": "ServiceNow On Ticket Created",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "langflow_table_read"
+      ],
+      "policy_keys": [
+        "integrations.servicenow.trigger.ticket_created"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "self_managed"
+      ],
+      "risk": "read",
+      "component_ref": "ServiceNowOnTicketCreatedTriggerComponent"
+    },
+    {
+      "id": "servicenow.trigger.status_changed",
+      "display_name": "ServiceNow On Observed Status Change",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "langflow_table_read"
+      ],
+      "policy_keys": [
+        "integrations.servicenow.trigger.status_changed"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "self_managed"
+      ],
+      "risk": "read",
+      "component_ref": "ServiceNowOnStatusChangeTriggerComponent"
+    }
+  ]
+}
