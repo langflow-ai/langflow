@@ -297,6 +297,8 @@ async def receive_provider_delivery(
     if extension is not None and (
         verified.response_status not in {200, 202, 204}
         or verified.response_media_type not in {"application/json", "text/plain"}
+        or (verified.handshake is not None and verified.handshake_media_type not in {"application/json", "text/plain"})
+        or (verified.response_status == status.HTTP_204_NO_CONTENT and verified.response_body is not None)
         or (verified.response_body is not None and len(verified.response_body.encode()) > _MAX_PROVIDER_RESPONSE_BYTES)
         or (verified.handshake is not None and len(verified.handshake.encode()) > _MAX_PROVIDER_RESPONSE_BYTES)
     ):
