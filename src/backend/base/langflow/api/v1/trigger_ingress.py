@@ -290,7 +290,9 @@ async def receive_provider_delivery(
         )
         return _reject()
 
-    if request.method == "GET" and verified.handshake is None:
+    if request.method == "GET" and (
+        verified.handshake is None or verified.lifecycle or verified.source_items is not None or verified.payload
+    ):
         return _reject()
     if extension is not None and (
         verified.response_status not in {200, 202, 204}
@@ -299,6 +301,13 @@ async def receive_provider_delivery(
         or (verified.handshake is not None and len(verified.handshake.encode()) > _MAX_PROVIDER_RESPONSE_BYTES)
     ):
         return _reject()
+
+    if request.method == "GET":
+        # A verified GET only proves this callback address. Event and
+        # subscription lifecycle mutations are POST-only, including when a
+        # provider hook accidentally returns both a handshake and an event.
+        await intake.audit_ingress(accepted=True, provider=provider, public_id=public_id, target=target)
+        return PlainTextResponse(content=verified.handshake, media_type=verified.handshake_media_type)
 
     if verified.lifecycle:
         # Graph is telling us the subscription needs attention, not that

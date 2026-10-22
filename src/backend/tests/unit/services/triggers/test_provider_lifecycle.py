@@ -326,7 +326,10 @@ async def test_direct_webhook_with_poll_fallback_never_collects_on_push(
 
 
 @pytest.mark.usefixtures("pilot")
-async def test_get_handshake_requires_provider_proof_and_never_queues_events(trigger_owner, owned_flow, client):
+@pytest.mark.parametrize("migration_paused", [False, True])
+async def test_get_handshake_requires_provider_proof_and_never_queues_events(
+    trigger_owner, owned_flow, client, monkeypatch, tmp_path, migration_paused
+):
     from langflow.services.auth.utils import decrypt_api_key
 
     await _connection(trigger_owner)
@@ -336,6 +339,14 @@ async def test_get_handshake_requires_provider_proof_and_never_queues_events(tri
         await TriggerService().enable_and_activate(session, row=row)
         secret = decrypt_api_key(row.signing_secret_encrypted)
         public_id = row.public_id
+    if migration_paused:
+        from langflow.services.deps import get_settings_service
+
+        monkeypatch.setattr(get_settings_service().settings, "config_dir", str(tmp_path))
+        (tmp_path / "migrations").mkdir()
+        (tmp_path / "migrations" / "migration.json").write_text(
+            json.dumps({"pause": {"frozen_at": "2026-10-22T12:00:00+00:00", "frozen_by": "operator"}})
+        )
     url = f"/api/v1/triggers/ingress/pilot/{public_id}"
     accepted = await client.get(url, params={"proof": secret, "challenge": "verified-challenge"})
     assert accepted.status_code == 200
@@ -351,6 +362,43 @@ async def test_get_handshake_requires_provider_proof_and_never_queues_events(tri
     paused = await client.get(url, params={"proof": secret, "challenge": "bad"})
     assert paused.status_code == 404
     assert paused.json() == bad_proof.json()
+
+
+@pytest.mark.parametrize("extra", ["lifecycle", "source_items", "payload"])
+async def test_get_handshake_cannot_apply_provider_event_side_effects(
+    pilot, trigger_owner, owned_flow, client, monkeypatch, extra
+):
+    from langflow.services.auth.utils import decrypt_api_key
+
+    def verify_get(request, secrets, *, tolerance_s):
+        result = pilot.provider.verify_get(request, secrets, tolerance_s=tolerance_s)
+        changes = {
+            "lifecycle": ((f"pilot:{trigger.id}", "subscriptionRemoved"),),
+            "source_items": ({"provider": "pilot", "resource": "items", "id": "1", "version": "1", "data": {}},),
+            "payload": {"unexpected": "event"},
+        }
+        return replace(result, **{extra: changes[extra]})
+
+    monkeypatch.setattr(registry, "all_providers", lambda: (replace(pilot.provider, verify_get=verify_get),))
+    await _connection(trigger_owner)
+    trigger = await _reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        secret = decrypt_api_key(row.signing_secret_encrypted)
+        public_id = row.public_id
+    response = await client.get(
+        f"/api/v1/triggers/ingress/pilot/{public_id}", params={"proof": secret, "challenge": "verified-challenge"}
+    )
+    assert response.status_code == 404
+    async with session_scope() as session:
+        assert not (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger.id))).all()
+        subscription = (
+            await session.exec(select(TriggerSubscription).where(TriggerSubscription.trigger_id == trigger.id))
+        ).one()
+        assert subscription.state == "active"
+        assert subscription.renew_after is None
+        assert not (await session.exec(select(TriggerCleanup).where(TriggerCleanup.trigger_id == trigger.id))).all()
 
 
 @pytest.mark.parametrize("failure", ["missing-id", "oversized-version", "foreign-provider"])
