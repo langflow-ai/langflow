@@ -3074,5 +3074,7 @@
   "connections.identity.user_delegated": "已登录的用户",
   "connections.identity.bot": "机器人",
   "connections.identity.service": "服务账号",
-  "settings.dbProviders.serverConfiguration": "已通过服务器环境配置。保持字段不变以使用该配置。"
+  "settings.dbProviders.serverConfiguration": "已通过服务器环境配置。保持字段不变以使用该配置。",
+  "connections.add.tokenExpiresAt": "令牌到期时间",
+  "connections.add.tokenExpiresAtHelp": "请输入当前时区的未来到期时间。"
 }

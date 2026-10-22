@@ -3075,5 +3075,7 @@
   "connections.identity.user_delegated": "L'utilisateur connecté",
   "connections.identity.bot": "Un bot",
   "connections.identity.service": "Un compte de service",
-  "settings.dbProviders.serverConfiguration": "Configuré depuis l’environnement du serveur. Laissez les champs inchangés pour utiliser cette configuration."
+  "settings.dbProviders.serverConfiguration": "Configuré depuis l’environnement du serveur. Laissez les champs inchangés pour utiliser cette configuration.",
+  "connections.add.tokenExpiresAt": "Expiration du jeton",
+  "connections.add.tokenExpiresAtHelp": "Saisissez une date d’expiration future dans votre fuseau horaire actuel."
 }

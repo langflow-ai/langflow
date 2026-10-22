@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
 import type {
@@ -153,6 +153,14 @@ const pilot: IntegrationProviderRead = {
   ],
 };
 
+const expiringPilot = (): IntegrationProviderRead => ({
+  ...pilot,
+  manual_token_profiles: pilot.manual_token_profiles?.map((profile) => ({
+    ...profile,
+    requires_expiry: true,
+  })),
+});
+
 const created = (overrides: Partial<ConnectionRead> = {}): ConnectionRead => ({
   id: "conn-1",
   owner_id: "user-1",
@@ -286,6 +294,70 @@ describe("AddConnectionDialog: pasted Slack tokens", () => {
     );
     expect(screen.getByTestId("connection-method")).toHaveValue("oauth");
     expect(screen.queryByTestId("connection-token")).not.toBeInTheDocument();
+  });
+
+  it("requires future token expiration and sends the local time as UTC", async () => {
+    const user = userEvent.setup();
+    mockCreate.mockResolvedValue(created({ provider_key: "pilot" }));
+    renderDialog([expiringPilot()], "self_managed");
+    await user.type(screen.getByTestId("connection-name"), "work");
+    await user.type(
+      screen.getByTestId("connection-display-name"),
+      "Pilot work",
+    );
+    await user.type(screen.getByTestId("connection-token"), "provider-token");
+    const expiration = screen.getByLabelText("Token expiration");
+    expect(expiration).toBeRequired();
+    expect(screen.getByTestId("connection-continue")).toBeDisabled();
+    fireEvent.change(expiration, { target: { value: "2000-06-15T12:30" } });
+    expect(expiration).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByTestId("connection-continue")).toBeDisabled();
+    fireEvent.change(expiration, { target: { value: "2100-06-15T12:30" } });
+    expect(expiration).toHaveAttribute("aria-invalid", "false");
+    expect(screen.getByTestId("connection-continue")).toBeEnabled();
+    expect(await axe(document.body)).toHaveNoViolations();
+    await user.click(screen.getByTestId("connection-continue"));
+    const sent = mockCreate.mock.calls[0][0].credentials.expires_at;
+    expect(sent).toMatch(/Z$/);
+    const localTime = new Date(sent);
+    expect(localTime.getFullYear()).toBe(2100);
+    expect(localTime.getMonth()).toBe(5);
+    expect(localTime.getDate()).toBe(15);
+    expect(localTime.getHours()).toBe(12);
+    expect(localTime.getMinutes()).toBe(30);
+  });
+
+  it("clears expiration when the token dialog closes and reopens", async () => {
+    const user = userEvent.setup();
+    const provider = expiringPilot();
+    const view = renderDialog([provider], "self_managed");
+    fireEvent.change(screen.getByLabelText("Token expiration"), {
+      target: { value: "2100-06-15T12:30" },
+    });
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    view.rerender(dialog([provider], "self_managed", false));
+    view.rerender(dialog([provider], "self_managed"));
+    expect(screen.getByLabelText("Token expiration")).toHaveValue("");
+    expect(screen.getByTestId("connection-token")).toHaveValue("");
+    expect(screen.getByTestId("connection-continue")).toBeDisabled();
+  });
+
+  it("clears provider expiration when switching the selected provider", async () => {
+    const user = userEvent.setup();
+    renderDialog([expiringPilot(), slack], "self_managed");
+    fireEvent.change(screen.getByLabelText("Token expiration"), {
+      target: { value: "2100-06-15T12:30" },
+    });
+    await user.selectOptions(
+      screen.getByTestId("connection-provider"),
+      "slack",
+    );
+    expect(screen.queryByLabelText("Token expiration")).not.toBeInTheDocument();
+    await user.selectOptions(
+      screen.getByTestId("connection-provider"),
+      "pilot",
+    );
+    expect(screen.getByLabelText("Token expiration")).toHaveValue("");
   });
 
   it("offers a pasted token for Slack off hosted, and only for Slack", () => {

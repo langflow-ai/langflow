@@ -396,9 +396,10 @@ export function AddConnectionDialog({
     handleValid &&
     displayName.trim().length > 0 &&
     (usesToken
-      ? providerId === "slack"
-        ? slackToken.tokenKind !== null
-        : slackToken.token.trim().length > 0
+      ? slackToken.expiresAtValid &&
+        (providerId === "slack"
+          ? slackToken.tokenKind !== null
+          : slackToken.token.trim().length > 0)
       : !noRegistration);
 
   /** The server validates pasted tokens before returning the connection. */
@@ -632,6 +633,13 @@ export function AddConnectionDialog({
                 <SlackTokenFields
                   providerId={providerId}
                   token={slackToken.token}
+                  requiresExpiry={slackToken.requiresExpiry}
+                  expiresAt={slackToken.expiresAt}
+                  expiresAtValid={slackToken.expiresAtValid}
+                  onExpiresAtChange={(value) => {
+                    slackToken.setExpiresAt(value);
+                    setFieldError(null);
+                  }}
                   onTokenChange={(value) => {
                     slackToken.setToken(value);
                     // The server refused the token that was there; it no longer is.
