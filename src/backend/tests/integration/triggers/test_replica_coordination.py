@@ -389,11 +389,13 @@ async def test_stale_listener_cannot_rewind_cursor_and_duplicate_delivery_is_col
     await second.call("capture")
     args = {"connection": str(trigger.connection_id), "trigger": str(trigger.id)}
     await second.call("cursor", **args, state={"cursor": "new"})
+    # A unique stale delivery proves fencing independently of deduplication.
+    # Child-process exceptions cross the pipe as explicit error records.
+    with pytest.raises(AssertionError, match="ListenerDeliveryRejectedError"):
+        await first.call("emit", **args, key="stale-only-event")
     await first.call("cursor", **args, state={"cursor": "old"})
-    results = await asyncio.gather(
-        first.call("emit", **args, key="same-event"), second.call("emit", **args, key="same-event")
-    )
-    assert sorted(results) == [False, True]
+    assert await second.call("emit", **args, key="same-event") is True
+    assert await second.call("emit", **args, key="same-event") is False
     async with database.scope() as session:
         assert (await session.get(Trigger, trigger.id)).provider_state == {"cursor": "new"}
         assert len((await session.exec(select(TriggerEvent))).all()) == 1
@@ -411,6 +413,8 @@ async def test_stale_listener_generation_cannot_rewind_cursor(database, replicas
     await second.call("capture")
     args = {"connection": str(trigger.connection_id), "trigger": str(trigger.id)}
     await second.call("cursor", **args, state={"cursor": "new"})
+    with pytest.raises(AssertionError, match="ListenerDeliveryRejectedError"):
+        await first.call("emit", **args, key="stale-generation-event")
     await first.call("cursor", **args, state={"cursor": "old"})
     async with database.scope() as session:
         assert (await session.get(Trigger, trigger.id)).provider_state == {"cursor": "new"}
