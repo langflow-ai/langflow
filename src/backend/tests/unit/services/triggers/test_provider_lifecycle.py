@@ -464,6 +464,61 @@ async def test_polling_prepare_claim_is_cleaned_up_on_pause(pilot, trigger_owner
     assert pilot.deleted == [f"pilot:{trigger.id}"]
 
 
+@pytest.mark.parametrize("node_status", ["present", "removed", "replaced-with-core-node"])
+async def test_save_with_unavailable_provider_preserves_only_present_bundle_nodes(
+    pilot, trigger_owner, owned_flow, monkeypatch, node_status
+):
+    from langflow.services.triggers import subscriptions
+    from langflow.services.triggers.reconciliation import NODE_REMOVED_ERROR
+
+    await _connection(trigger_owner)
+    trigger = await _reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        before = row.model_dump()
+    available = registry.all_providers
+    monkeypatch.setattr(registry, "all_providers", lambda: ())
+    monkeypatch.setattr(subscriptions, "_REVOKERS", {})
+    data = {"nodes": [], "edges": []}
+    if node_status != "removed":
+        data["nodes"] = [
+            {
+                "id": "pilot-source",
+                "data": {
+                    "type": "ext:pilot:PilotOnItemTriggerComponent@official"
+                    if node_status == "present"
+                    else "TextInput",
+                    "node": {"template": {}},
+                },
+            }
+        ]
+    async with session_scope() as session:
+        touched = await reconcile_flow_triggers(session, flow_id=owned_flow, owner_id=trigger_owner, flow_data=data)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        subscription = (
+            await session.exec(select(TriggerSubscription).where(TriggerSubscription.trigger_id == trigger.id))
+        ).one()
+        cleanup = (await session.exec(select(TriggerCleanup).where(TriggerCleanup.trigger_id == trigger.id))).all()
+        if node_status == "present":
+            assert touched == 0
+            assert row.model_dump() == before
+            assert subscription.state == "active"
+            assert cleanup == []
+        else:
+            assert touched == 1
+            assert row.state == "paused"
+            assert row.last_error == NODE_REMOVED_ERROR
+            assert subscription.state == "expired"
+            assert len(cleanup) == 1
+            assert cleanup[0].provider_subscription_id == f"pilot:{trigger.id}"
+    monkeypatch.setattr(registry, "all_providers", available)
+    if node_status != "present":
+        assert await run_cleanup_pass() == 1
+        assert pilot.deleted == [f"pilot:{trigger.id}"]
+
+
 async def test_loaded_poll_provider_runs_through_supervisor_and_commits_cursor(
     pilot, trigger_owner, owned_flow, monkeypatch
 ):

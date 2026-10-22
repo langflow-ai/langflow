@@ -373,6 +373,15 @@ async def reconcile_flow_triggers(
     from sqlmodel import select
 
     nodes = {node_id: (kind, config) for node_id, kind, config in find_trigger_nodes(flow_data)}
+    unclassified_bundle_nodes = {
+        node.get("id")
+        for node in (flow_data or {}).get("nodes", []) or []
+        if isinstance(node.get("id"), str)
+        and isinstance((node.get("data") or {}).get("type"), str)
+        and _BUNDLE_NODE_TYPE.fullmatch((node.get("data") or {})["type"])
+        and _node_kind((node.get("data") or {})["type"]) is None
+    }
+    known_sources = source_kinds() | SLACK_TRIGGER_KINDS
     statement = select(Trigger).where(Trigger.flow_id == flow_id, Trigger.node_id.is_not(None))  # type: ignore[union-attr]
     existing = {row.node_id: row for row in (await session.exec(statement)).all()}
 
@@ -489,6 +498,11 @@ async def reconcile_flow_triggers(
 
     for node_id, row in existing.items():
         if node_id in nodes or row.state == TriggerState.DEAD.value:
+            continue
+        if node_id in unclassified_bundle_nodes and "." in row.kind and row.kind not in known_sources:
+            # Missing runtime metadata cannot prove that an existing bundle
+            # node was deleted. Preserve its last known binding and remote
+            # subscription until it can be classified again.
             continue
         # A pause the owner chose stays theirs. An operator's pause does not:
         # removing the node is the owner's own off switch, and the operator's
