@@ -33,6 +33,10 @@ export interface SlackTokenConnection {
   setMethod: (method: ConnectionMethod) => void;
   token: string;
   setToken: (token: string) => void;
+  requiresExpiry: boolean;
+  expiresAt: string;
+  setExpiresAt: (expiresAt: string) => void;
+  expiresAtValid: boolean;
   tokenKind: SlackTokenKind | null;
   allowBackgroundRuns: boolean;
   setAllowBackgroundRuns: (allow: boolean) => void;
@@ -55,6 +59,7 @@ export function useSlackTokenConnection({
 }: UseSlackTokenConnectionOptions): SlackTokenConnection {
   const [selectedMethod, setMethod] = useState<ConnectionMethod | null>(null);
   const [token, setToken] = useState("");
+  const [expiresAt, setExpiresAt] = useState("");
   // Consent to unattended use is explicit and off by default: pasting a token
   // is not the same as allowing a trigger to run with it.
   const [allowBackgroundRuns, setAllowBackgroundRuns] = useState(false);
@@ -71,6 +76,9 @@ export function useSlackTokenConnection({
       : (selectedMethod ?? defaultMethod);
   const usesToken = offersToken && method === "token";
   const tokenKind = slackTokenKind(token);
+  const requiresExpiry = tokenProfile?.requires_expiry === true;
+  const expiresAtValid =
+    !requiresExpiry || new Date(expiresAt).getTime() > Date.now();
 
   const createWithToken = useCallback(
     ({ name, displayName }: { name: string; displayName: string }) =>
@@ -83,14 +91,28 @@ export function useSlackTokenConnection({
         // The server validates the token and replaces untrusted grant claims.
         granted_scopes: tokenProfile?.required_scopes ?? [],
         allow_non_interactive: allowBackgroundRuns,
-        credentials: { access_token: token.trim() },
+        credentials: {
+          access_token: token.trim(),
+          ...(requiresExpiry
+            ? { expires_at: new Date(expiresAt).toISOString() }
+            : {}),
+        },
       }),
-    [create, providerId, allowBackgroundRuns, token, tokenProfile],
+    [
+      create,
+      providerId,
+      allowBackgroundRuns,
+      token,
+      tokenProfile,
+      requiresExpiry,
+      expiresAt,
+    ],
   );
 
   const reset = useCallback(() => {
     setMethod(null);
     setToken("");
+    setExpiresAt("");
     setAllowBackgroundRuns(false);
   }, []);
 
@@ -101,6 +123,10 @@ export function useSlackTokenConnection({
     setMethod,
     token,
     setToken,
+    requiresExpiry,
+    expiresAt,
+    setExpiresAt,
+    expiresAtValid,
     tokenKind,
     allowBackgroundRuns,
     setAllowBackgroundRuns,
