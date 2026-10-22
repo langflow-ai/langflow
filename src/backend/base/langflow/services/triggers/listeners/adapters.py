@@ -244,6 +244,7 @@ class ProviderSourcePollAdapter(PollingListenerAdapter):
 #: What a bundle hands :func:`register_adapter`: given one trigger snapshot,
 #: build the adapter that will hold its connection.
 AdapterFactory: TypeAlias = "Callable[[ListenerTrigger], ListenerAdapter]"
+AdapterSpec: TypeAlias = "tuple[AdapterFactory | str, str | None, str]"
 
 
 @dataclass(frozen=True)
@@ -289,11 +290,34 @@ def unregister_adapter(*, kind: str, mechanism: str | None) -> None:
 
 
 def registered_adapter_keys() -> set[tuple[str, str | None]]:
-    return set(_REGISTRY)
+    from langflow.services.triggers.providers.registry import all_providers
+
+    return set(_REGISTRY) | {
+        (spec.kind, mechanism)
+        for provider in all_providers()
+        for spec in provider.kinds
+        for mechanism in (spec.poll_mechanism, spec.listener_mechanism)
+        if mechanism
+    }
 
 
 def _registration(trigger: ListenerTrigger) -> _Registration | None:
-    return _REGISTRY.get((trigger.kind, trigger.mechanism_id)) or _REGISTRY.get((trigger.kind, None))
+    registration = _REGISTRY.get((trigger.kind, trigger.mechanism_id)) or _REGISTRY.get((trigger.kind, None))
+    if registration is not None:
+        return registration
+    from langflow.services.triggers.providers.registry import get_provider
+
+    provider = get_provider(trigger.provider or "")
+    if provider is None:
+        return None
+    for spec in provider.kinds:
+        if spec.kind != trigger.kind:
+            continue
+        if spec.poll_mechanism and spec.poll_mechanism == trigger.mechanism_id:
+            return _Registration(factory=_provider_source_factory)
+        if spec.listener_mechanism == trigger.mechanism_id and spec.listener_factory:
+            return _Registration(factory=spec.listener_factory)
+    return None
 
 
 def build_adapter(trigger: ListenerTrigger) -> ListenerAdapter | None:
@@ -312,7 +336,7 @@ def is_listener_kind(trigger: ListenerTrigger) -> bool:
     return _registration(trigger) is not None
 
 
-def adapter_spec(trigger: ListenerTrigger) -> tuple[str, str | None, str]:
+def adapter_spec(trigger: ListenerTrigger) -> AdapterSpec:
     """What an adapter built from ``trigger`` depends on, as a comparable value.
 
     The factory rather than the kind, so two kinds served by one adapter (a
@@ -323,12 +347,12 @@ def adapter_spec(trigger: ListenerTrigger) -> tuple[str, str | None, str]:
     registration = _registration(trigger)
     if registration is None:
         return (trigger.kind, trigger.mechanism_id, "")
-    factory = registration.factory
-    identity = f"{getattr(factory, '__module__', '')}.{getattr(factory, '__qualname__', repr(factory))}"
     config = (
         json.dumps(trigger.config or {}, sort_keys=True, default=str) if registration.rebuild_on_config_change else ""
     )
-    return (identity, trigger.mechanism_id, config)
+    # Retain the callable itself: a replacement may have the same qualified
+    # name, and retaining its reference also prevents object-id reuse.
+    return (registration.factory, trigger.mechanism_id, config)
 
 
 def _selftest_factory(trigger: ListenerTrigger) -> ListenerAdapter:
@@ -364,8 +388,6 @@ def _provider_source_factory(_trigger: ListenerTrigger) -> ListenerAdapter:
 
 def register_builtin_adapters() -> None:
     """Register the adapters langflow-base owns. Idempotent."""
-    from langflow.services.triggers.providers.registry import all_providers
-
     if (LISTENER_FAKE_KIND, None) not in _REGISTRY:
         register_adapter(kind=LISTENER_FAKE_KIND, mechanism=None, factory=_selftest_factory)
     # One factory for both Slack kinds: a message trigger and a reaction trigger
@@ -385,22 +407,15 @@ def register_builtin_adapters() -> None:
         for mechanism in sorted(GOOGLE_POLL_MECHANISMS):
             if (kind, mechanism) not in _REGISTRY:
                 register_adapter(kind=kind, mechanism=mechanism, factory=_provider_source_factory)
-    for provider in all_providers():
-        for spec in provider.kinds:
-            if spec.poll_mechanism and (spec.kind, spec.poll_mechanism) not in _REGISTRY:
-                register_adapter(kind=spec.kind, mechanism=spec.poll_mechanism, factory=_provider_source_factory)
-            if (
-                spec.listener_mechanism
-                and spec.listener_factory
-                and (spec.kind, spec.listener_mechanism) not in _REGISTRY
-            ):
-                register_adapter(kind=spec.kind, mechanism=spec.listener_mechanism, factory=spec.listener_factory)
+    # Extension factories are resolved from the current validated descriptor
+    # by _registration, so a catalog reload cannot retain obsolete callbacks.
 
 
 __all__ = [
     "TRANSPORT_POLL",
     "TRANSPORT_SOCKET",
     "AdapterFactory",
+    "AdapterSpec",
     "ListenerAdapter",
     "ListenerContext",
     "ListenerTrigger",
