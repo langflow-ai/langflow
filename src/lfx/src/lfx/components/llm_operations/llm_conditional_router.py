@@ -814,7 +814,7 @@ class SmartRouterComponent(Component):
             # The level the probability-weighted score rounds to, as TypeSafe suggests for one outcome. A
             # score exactly between two levels takes the higher one; Python's round() would take the even one.
             winner = request.levels[min(floor(result.score + 0.5), len(request.levels) - 1)].id
-            evidence.update(selected_outcome=winner, reason="accepted", activated_branch=winner)
+            evidence.update(top_outcome=winner, reason="accepted", activated_branch=winner)
             return labels[winner]
         probabilities = result.probabilities
         if request.kind == "boolean":
@@ -829,7 +829,8 @@ class SmartRouterComponent(Component):
             evidence["reason"] = "tied_top_probability"
             return ""
         winner = winners[0]
-        evidence.update(selected_outcome=winner, applied_threshold=thresholds[winner])
+        # The top route the threshold is checked against; activated_branch says where the message went.
+        evidence.update(top_outcome=winner, applied_threshold=thresholds[winner])
         if top_probability < thresholds[winner]:
             evidence["reason"] = "below_minimum_probability"
             return ""

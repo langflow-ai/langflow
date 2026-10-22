@@ -273,6 +273,12 @@ class TestDecisionEvidenceFixtures:
         produced = {name: _component_result(monkeypatch, scenario) for name, scenario in RESULT_SCENARIOS.items()}
         _check_fixture(RESULT_FIXTURES, produced)
 
+    def test_a_route_below_its_threshold_is_the_top_outcome_not_a_selection(self):
+        evidence = json.loads(FIXTURES.read_text(encoding="utf-8"))["below_minimum_probability"]
+        assert evidence["top_outcome"] == "category_1_result"
+        assert evidence["activated_branch"] == "default_result"
+        assert "selected_outcome" not in evidence
+
     def test_probabilities_are_keyed_by_the_fixtures_own_options(self):
         # The evidence view reads each probability by option ID, so a Score keyed by route IDs breaks it.
         for name, evidence in json.loads(FIXTURES.read_text(encoding="utf-8")).items():
