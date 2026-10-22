@@ -3075,5 +3075,7 @@
   "connections.identity.user_delegated": "El usuario que inició sesión",
   "connections.identity.bot": "Un bot",
   "connections.identity.service": "Una cuenta de servicio",
-  "settings.dbProviders.serverConfiguration": "Configurado desde el entorno del servidor. Deja los campos sin cambios para usar esa configuración."
+  "settings.dbProviders.serverConfiguration": "Configurado desde el entorno del servidor. Deja los campos sin cambios para usar esa configuración.",
+  "connections.add.tokenExpiresAt": "Vencimiento del token",
+  "connections.add.tokenExpiresAtHelp": "Introduce una fecha de vencimiento futura en tu zona horaria actual."
 }
