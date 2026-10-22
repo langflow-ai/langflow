@@ -55,6 +55,7 @@ from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from pydantic import ValidationError
 from sqlmodel import col, select
 
+from langflow.services.connection.oauth.locking import lock_connection
 from langflow.services.database.models.connection.model import Connection
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import TriggerState
@@ -614,6 +615,26 @@ class ListenerSupervisor:
             target = next((target for target in worker.triggers if target.id == trigger_id), None)
             config = expected_config if expected_config is not None else target.config if target else None
             kind = expected_kind if expected_kind is not None else target.kind if target else None
+            if stopping.is_set():
+                raise ListenerDeliveryRejectedError(reason="lease_changed")
+            # Connection deletion locks its parent before updating trigger and
+            # lease FKs. Use that same order, including a fanout destination,
+            # so neither transaction can hold a child while waiting on its
+            # parent's deleter. Reserve SQLite's writer before the first read.
+            connections: dict[UUID, Connection | None] = {}
+            if session.get_bind().dialect.name == "sqlite":
+                connections[worker.connection_id] = await lock_connection(session, worker.connection_id)
+            connection_id = (await session.exec(select(Trigger.connection_id).where(Trigger.id == trigger_id))).first()
+            connection_ids = {worker.connection_id}
+            if connection_id is not None:
+                connection_ids.add(connection_id)
+            # Two Slack sockets can fan out in opposite directions. Acquire
+            # every parent in the same order before taking either child lock.
+            for identifier in sorted(connection_ids, key=str):
+                if identifier not in connections:
+                    connections[identifier] = await lock_connection(session, identifier)
+            if connections[worker.connection_id] is None:
+                raise ListenerDeliveryRejectedError(reason="connection_changed")
             if (
                 stopping.is_set()
                 or not await connection_leases.guard_generation(
@@ -631,9 +652,11 @@ class ListenerSupervisor:
                 raise ListenerDeliveryRejectedError(reason="target_removed")
             if row.state != TriggerState.ACTIVE.value or config is None or row.config != config or row.kind != kind:
                 raise ListenerDeliveryRejectedError(reason="target_changed")
-            connection = (
-                await session.get(Connection, row.connection_id, with_for_update=True) if row.connection_id else None
-            )
+            if row.connection_id != connection_id:
+                # The preliminary read only discovers lock candidates. A
+                # concurrent rebind must never authorize an unlocked parent.
+                raise ListenerDeliveryRejectedError(reason="target_changed")
+            connection = connections.get(row.connection_id)
             if (
                 connection is None
                 or not is_owned_by(connection, row.user_id)
@@ -664,7 +687,7 @@ class ListenerSupervisor:
                 and row.config.get("mechanism_id") == MECHANISM_SLACK_SOCKET_MODE
                 and app_id
             ):
-                source_connection = await session.get(Connection, worker.connection_id)
+                source_connection = connections[worker.connection_id]
                 for source in worker.triggers:
                     if (
                         source.kind not in SLACK_TRIGGER_KINDS
