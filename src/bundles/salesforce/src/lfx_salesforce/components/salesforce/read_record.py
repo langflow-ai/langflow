@@ -29,7 +29,7 @@ class SalesforceReadRecordComponent(SalesforceAction):
             path=f"{API_ROOT}/sobjects/{obj}/{identifier}",
             params={"fields": ",".join(fields)},
         )
-        if not isinstance(result, dict) or result.get("Id") != identifier:
+        if not isinstance(result, dict) or record_id(result.get("Id"))[: len(identifier)] != identifier:
             msg = "Salesforce returned an unrelated record."
             raise invalid(msg)
         output = Data(data={key: value for key, value in result.items() if key in fields})

@@ -292,3 +292,33 @@ def test_extension_loads_components_and_manifest():
     assert len(load_manifest().capabilities) == 4
     trigger = SalesforceOnRecordTriggerComponent(connection="salesforce/work", object_name="Account")
     assert trigger.trigger_config()["delivery_mode"] == "poll"
+
+
+@pytest.mark.parametrize(
+    ("returned_id", "accepted"),
+    [
+        ("001D000000INjVeIAL", True),
+        ("001D000000INjVfIAL", False),
+        ("001d000000INjVeIAL", False),
+        ("001D000000INjVe$AL", False),
+    ],
+)
+async def test_read_matches_15_character_id_without_folding_case(monkeypatch, returned_id, accepted):
+    identifier = "001D000000INjVe"
+
+    def handler(request):
+        if request.url.path.endswith("describe"):
+            return httpx.Response(200, json=metadata())
+        assert request.url.path == f"{API_ROOT}/sobjects/Account/{identifier}"
+        return httpx.Response(200, json={"Id": returned_id, "Name": "Example"})
+
+    if accepted:
+        result, _ = await run_component(
+            monkeypatch, SalesforceReadRecordComponent, handler, record_id=identifier, fields="Name"
+        )
+        assert result.data == {"Id": returned_id, "Name": "Example"}
+    else:
+        with pytest.raises(InvalidRequestError):
+            await run_component(
+                monkeypatch, SalesforceReadRecordComponent, handler, record_id=identifier, fields="Name"
+            )
