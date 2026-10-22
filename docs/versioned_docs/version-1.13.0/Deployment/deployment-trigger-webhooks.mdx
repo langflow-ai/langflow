@@ -1,0 +1,109 @@
+---
+title: Receive provider events with trigger webhooks
+slug: /deployment-trigger-webhooks
+---
+
+A trigger runs a flow when something happens outside Langflow. This page is for providers that post that event to a Langflow URL: Slack, Microsoft, Google, or your own system.
+
+Langflow must be reachable over public HTTPS. If it is not, use [trigger listeners](./deployment-trigger-listeners.mdx). Listeners call out and hold the connection, and they need no public URL.
+
+The request records the event and returns. It does not run the flow. The flow runs afterward, as the trigger's owner.
+
+## Prerequisites
+
+1. Langflow is reachable at a public HTTPS URL.
+2. The flow is saved, and the trigger is enabled.
+3. The connection on the trigger belongs to the flow owner, and **Allow background runs** is on.
+4. For Slack, Microsoft, or Google, the provider app is already registered. Slack setup is on [Slack triggers](../Components/bundles-slack.mdx#slack-triggers). Google setup is on [Google Workspace source triggers](../Components/bundles-google.mdx#google-workspace-source-triggers).
+
+## Send events from your own system
+
+Use an **Inbound Webhook** trigger for a system that is not Slack, Microsoft, or Google.
+
+1. Add an **Inbound Webhook** trigger to the flow and save the flow.
+2. Enable the trigger.
+3. Mint its address and secret. The secret is shown once. If you lose it, mint a new one. The address stays the same, and the old secret stops working immediately.
+
+    ```bash
+    curl -X POST "$LANGFLOW_URL/api/v1/triggers/$TRIGGER_ID/signing-secret" \
+      -H "x-api-key: $LANGFLOW_API_KEY"
+    ```
+
+4. Sign each request. The signature covers `v1`, the timestamp, and the raw body:
+
+    ```python
+    import hashlib, hmac, json, time, requests
+
+    secret = "<signing_secret>"
+    ingress_url = "<ingress_url>"
+
+    body = json.dumps({"order": 42}).encode()
+    timestamp = str(int(time.time()))
+    basestring = f"v1:{timestamp}:".encode() + body
+    signature = "v1=" + hmac.new(secret.encode(), basestring, hashlib.sha256).hexdigest()
+
+    requests.post(
+        ingress_url,
+        data=body,
+        headers={
+            "Content-Type": "application/json",
+            "X-Langflow-Signature": signature,
+            "X-Langflow-Timestamp": timestamp,
+        },
+    )
+    ```
+
+5. Treat `202` as accepted. The flow runs after that. `404` means the delivery was not accepted.
+
+To send two events, send two different bodies. Two identical bodies in the same second count as one event.
+
+## Point a provider at Langflow
+
+Most providers use one URL per trigger:
+
+```text
+POST /api/v1/triggers/ingress/{provider}/{public_id}
+```
+
+`provider` is `webhook`, `microsoft`, or `google`. `public_id` is created for that trigger.
+
+Slack uses one URL for the whole app, not one URL per trigger:
+
+```text
+POST /api/v1/triggers/ingress/slack/apps/{registration_id}
+```
+
+`registration_id` is the app's name in `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS`. Put that app's signing secret on the registration as `signing_secret`.
+
+Each provider proves the delivery in its own way:
+
+- **Slack:** `X-Slack-Signature` over the raw body, and a timestamp no more than five minutes old.
+- **Microsoft:** the `clientState` Langflow set when it created the subscription.
+- **Google:** the `X-Goog-Channel-Token` Langflow set when it created the channel.
+- **Your system:** `X-Langflow-Signature` over the raw body, with the trigger's secret.
+
+A failed check returns `404` with the same body every time. The reason is in the authorization audit log. Turn that on with `LANGFLOW_AUTHZ_AUDIT_ENABLED=true`.
+
+Microsoft's subscription handshake is the exception. It returns `200` and echoes `validationToken` before Langflow looks up the trigger.
+
+## Troubleshoot
+
+**Every delivery returns 404.**
+Check, in order: the trigger is enabled, the URL's provider matches the trigger, Slack's URL names a registration that has `signing_secret`, the sender's clock is within five minutes of Langflow, the signature covers the raw body, and the body is under the size cap. The audit log names the check that failed.
+
+**Slack keeps retrying a delivery Langflow accepted.**
+Slack retries when it does not get a success response in three seconds. Langflow answers after the event is saved, so a slow database or a proxy in front of Langflow makes Slack retry. The flow still runs once.
+
+**Events stopped, and the trigger looks fine.**
+If the state is **Needs reconnect**, reconnect the connection. If the trigger is still active, the subscription may have expired while the API was down. Enable the trigger again to subscribe.
+
+**One event ran the flow twice.**
+Two triggers are armed on the same source. One trigger does not run twice for one provider event.
+
+## Reference
+
+| Variable | Default | Description |
+|---|---|---|
+| `LANGFLOW_TRIGGER_INGRESS_ENABLED` | `true` | Set to `false` to refuse every inbound delivery. Those requests return `404`. |
+| `LANGFLOW_TRIGGER_INGRESS_MAX_BODY_BYTES` | `1048576` | Largest request body Langflow accepts on these routes. |
+| `LANGFLOW_TRIGGER_INGRESS_SIGNATURE_TOLERANCE_S` | `300` | How old a signed timestamp may be, in seconds. |
