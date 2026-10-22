@@ -580,6 +580,61 @@ async def test_push_provisioning_recovers_pending_claims_and_reuses_completed_su
     assert len(remote_callbacks) == 1
 
 
+@pytest.mark.parametrize("provider_change", ["removed", "replaced", "renewal-removed"])
+async def test_renewal_uses_only_the_current_installed_provider(
+    pilot, trigger_owner, owned_flow, monkeypatch, provider_change
+):
+    from langflow.services.triggers import subscriptions
+
+    calls = []
+
+    async def old_renew(_session, _subscription):
+        calls.append("old")
+        return datetime.now(timezone.utc) + timedelta(days=1)
+
+    async def current_renew(_session, _subscription):
+        calls.append("current")
+        return datetime.now(timezone.utc) + timedelta(days=2)
+
+    available = [replace(pilot.provider, renew=old_renew)]
+    monkeypatch.setattr(registry, "all_providers", lambda: tuple(available))
+    monkeypatch.setattr(subscriptions, "_RENEWERS", {})
+    monkeypatch.setattr(subscriptions, "_REVOKERS", {})
+    await _connection(trigger_owner)
+    trigger = await _reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        subscription = (
+            await session.exec(select(TriggerSubscription).where(TriggerSubscription.trigger_id == trigger.id))
+        ).one()
+        subscription.expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+        subscription.renew_after = datetime.now(timezone.utc) - timedelta(minutes=1)
+        session.add(subscription)
+        previous_expiry = subscription.expires_at
+        subscription_id = subscription.id
+
+    # A long-lived process already discovered this provider before the
+    # operator reloads the validated bundle catalog.
+    subscriptions._ensure_source_handlers("pilot")
+    assert "pilot" in subscriptions.registered_renewers()
+    available[:] = (
+        []
+        if provider_change == "removed"
+        else [replace(pilot.provider, renew=current_renew if provider_change == "replaced" else None)]
+    )
+    assert await subscriptions.run_renewal_pass(owner="replica-a") == (provider_change == "replaced")
+    assert calls == (["current"] if provider_change == "replaced" else [])
+    async with session_scope() as session:
+        subscription = await session.get(TriggerSubscription, subscription_id)
+        assert subscription.state == "active"
+        assert subscription.lease_owner is None
+        assert subscription.lease_until is None
+        assert "renew_failures" not in subscription.provider_state
+        if provider_change != "replaced":
+            assert subscription.expires_at.replace(tzinfo=timezone.utc) == previous_expiry
+
+
 @pytest.mark.parametrize("node_status", ["present", "removed", "replaced-with-core-node"])
 async def test_save_with_unavailable_provider_preserves_only_present_bundle_nodes(
     pilot, trigger_owner, owned_flow, monkeypatch, node_status
