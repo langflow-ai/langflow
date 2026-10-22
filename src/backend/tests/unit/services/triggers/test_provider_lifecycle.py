@@ -988,6 +988,67 @@ async def test_activation_enforces_owner_consent_identity_and_policy(pilot, trig
 
 
 @pytest.mark.usefixtures("pilot")
+async def test_provider_dispatch_policy_block_does_not_require_reconnecting_credentials(
+    trigger_owner, owned_flow, client, fake_background_service
+):
+    from langflow.services.auth.utils import decrypt_api_key
+    from langflow.services.database.models.connection.model import Connection
+
+    connection = await _connection(trigger_owner)
+    trigger = await _reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        secret = decrypt_api_key(row.signing_secret_encrypted)
+        public_id = row.public_id
+    bundle = get_policy_bundle_service()
+    original = bundle.snapshot
+
+    async def deliver(item_id):
+        body = json.dumps({"repository": "acme/widgets", "id": item_id}).encode()
+        signature = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+        response = await client.post(
+            f"/api/v1/triggers/ingress/pilot/{public_id}", content=body, headers={"x-pilot-signature": signature}
+        )
+        assert response.status_code == 202
+
+    try:
+        bundle.publish(
+            replace(
+                original,
+                revision=original.revision + 1,
+                initialized=True,
+                blocked_integration_action_keys=frozenset({"integrations.pilot.trigger.item"}),
+            )
+        )
+        get_integration_policy_service().invalidate()
+        await deliver("while-blocked")
+        assert await dispatcher.run_once(owner="pilot-policy-test") == 0
+        assert fake_background_service.submits == []
+        async with session_scope() as session:
+            row = await session.get(Trigger, trigger.id)
+            assert row.state == "active"
+            assert row.last_error == "policy-blocked"
+            assert (await session.get(Connection, connection.id)).status == "ready"
+            event = (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger.id))).one()
+            assert event.state == "failed"
+            assert event.error == "policy-blocked"
+        bundle.publish(replace(original, revision=bundle.snapshot.revision + 1))
+        get_integration_policy_service().invalidate()
+        await deliver("after-unblock")
+        assert await dispatcher.run_once(owner="pilot-policy-test") == 1
+        assert len(fake_background_service.submits) == 1
+        async with session_scope() as session:
+            row = await session.get(Trigger, trigger.id)
+            assert row.state == "active"
+            assert row.last_error is None
+            assert (await session.get(Connection, connection.id)).status == "ready"
+    finally:
+        bundle.publish(replace(original, revision=bundle.snapshot.revision + 1))
+        get_integration_policy_service().invalidate()
+
+
+@pytest.mark.usefixtures("pilot")
 async def test_source_http_rejects_foreign_origin_before_credential_resolution():
     class Lease:
         ref = ConnectionRef(provider="pilot", name="work")
