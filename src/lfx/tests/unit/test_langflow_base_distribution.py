@@ -58,7 +58,13 @@ def test_langflow_base_default_is_service_complete_without_extensions_or_torch()
         "openlayer",
     } <= requirement_names
     assert not any(name.startswith("lfx-") for name in requirement_names)
-    assert requirement_names.isdisjoint({"torch", "torchvision", "litellm", "chromadb", "langchain-chroma", "altk"})
+    assert requirement_names.isdisjoint({"torch", "torchvision", "chromadb", "langchain-chroma", "altk"})
+
+    # Opik brings in LiteLLM, so the default metadata must publish its security guard.
+    litellm = next(requirement for requirement in requirements if requirement.name == "litellm")
+    assert litellm.marker is None
+    assert "1.107.0" not in litellm.specifier
+    assert "1.103.2" in litellm.specifier
 
 
 def test_full_langflow_consumes_base_workspace_distribution():
