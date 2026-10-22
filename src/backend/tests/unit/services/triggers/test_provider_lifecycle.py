@@ -472,6 +472,128 @@ async def test_get_handshake_cannot_apply_provider_event_side_effects(
         assert not (await session.exec(select(TriggerCleanup).where(TriggerCleanup.trigger_id == trigger.id))).all()
 
 
+@pytest.mark.parametrize("method", ["GET", "POST"])
+@pytest.mark.parametrize(
+    ("media_type", "accepted"),
+    [("text/plain", True), ("application/json", True), ("text/html", False), ("text/plain\r\nx-extra: yes", False)],
+)
+async def test_provider_handshake_media_is_bounded_before_any_side_effect(
+    pilot, trigger_owner, owned_flow, client, monkeypatch, method, media_type, accepted
+):
+    from langflow.services.auth.utils import decrypt_api_key
+
+    def verify(request, secrets, *, tolerance_s):
+        original = pilot.provider.verify_get if method == "GET" else pilot.provider.verify
+        result = original(request, secrets, tolerance_s=tolerance_s)
+        return replace(result, handshake="verified-challenge", handshake_media_type=media_type)
+
+    provider = replace(pilot.provider, **{"verify_get" if method == "GET" else "verify": verify})
+    monkeypatch.setattr(registry, "all_providers", lambda: (provider,))
+    await _connection(trigger_owner)
+    trigger = await _reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        secret = decrypt_api_key(row.signing_secret_encrypted)
+        public_id = row.public_id
+    body = json.dumps({"repository": "acme/widgets", "id": "delivery-7"}).encode()
+    signature = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+    response = await client.request(
+        method,
+        f"/api/v1/triggers/ingress/pilot/{public_id}",
+        params={"proof": secret},
+        content=body,
+        headers={"x-pilot-signature": signature},
+    )
+    assert response.status_code == (200 if accepted else 404)
+    if accepted:
+        assert response.headers["content-type"].startswith(media_type)
+    async with session_scope() as session:
+        assert not (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger.id))).all()
+        assert (await session.get(Trigger, trigger.id)).provider_state == {}
+
+
+@pytest.mark.parametrize("method", ["GET", "POST"])
+async def test_provider_204_body_is_rejected_before_durable_delivery(
+    pilot, trigger_owner, owned_flow, client, monkeypatch, method
+):
+    from langflow.services.auth.utils import decrypt_api_key
+    from langflow.services.database.models.trigger.model import TriggerSourceVersion
+
+    def verify(request, secrets, *, tolerance_s):
+        original = pilot.provider.verify_get if method == "GET" else pilot.provider.verify
+        result = original(request, secrets, tolerance_s=tolerance_s)
+        changes = {"response_status": 204, "response_body": "invalid-body"}
+        if method == "POST":
+            changes["source_items"] = (
+                {"provider": "pilot", "resource": "items", "id": "1", "version": "1", "data": {}},
+            )
+        return replace(result, **changes)
+
+    provider = replace(pilot.provider, **{"verify_get" if method == "GET" else "verify": verify})
+    monkeypatch.setattr(registry, "all_providers", lambda: (provider,))
+    await _connection(trigger_owner)
+    trigger = await _reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        secret = decrypt_api_key(row.signing_secret_encrypted)
+        public_id = row.public_id
+    body = json.dumps({"repository": "acme/widgets", "id": "delivery-7"}).encode()
+    signature = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+    response = await client.request(
+        method,
+        f"/api/v1/triggers/ingress/pilot/{public_id}",
+        params={"proof": secret, "challenge": "verified-challenge"},
+        content=body,
+        headers={"x-pilot-signature": signature},
+    )
+    assert response.status_code == 404
+    async with session_scope() as session:
+        assert not (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger.id))).all()
+        assert not (
+            await session.exec(select(TriggerSourceVersion).where(TriggerSourceVersion.trigger_id == trigger.id))
+        ).all()
+        assert (await session.get(Trigger, trigger.id)).provider_state == {}
+
+
+@pytest.mark.parametrize("mechanism", ["microsoft.graph_change_notifications", "pilot.other_webhook"])
+async def test_ingress_url_requires_this_kinds_push_mechanism(
+    pilot, trigger_owner, owned_flow, client, monkeypatch, mechanism
+):
+    from langflow.services.auth.utils import create_token
+    from langflow.services.triggers.ingress.intake import resolve_target
+    from langflow.services.triggers.providers.registry import push_mechanisms
+
+    other_kind = replace(
+        pilot.provider.kinds[0],
+        kind="pilot.other",
+        component="PilotOnOtherTriggerComponent",
+        push_mechanism="pilot.other_webhook",
+    )
+    provider = replace(pilot.provider, kinds=(*pilot.provider.kinds, other_kind))
+    monkeypatch.setattr(registry, "all_providers", lambda: (provider,))
+    assert mechanism in push_mechanisms(), "The regression must use a registered push mechanism"
+    await _connection(trigger_owner)
+    trigger = await _reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        public_id = row.public_id
+    token = create_token(data={"sub": str(trigger_owner), "type": "access"}, expires_delta=timedelta(minutes=5))
+    headers = {"Authorization": f"Bearer {token}"}
+    assert (await client.get(f"/api/v1/triggers/{trigger.id}/ingress", headers=headers)).status_code == 200
+    async with session_scope() as session:
+        assert await resolve_target(session, provider="pilot", public_id=public_id) is not None
+        row = await session.get(Trigger, trigger.id)
+        row.config = {**row.config, "mechanism_id": mechanism}
+        session.add(row)
+    response = await client.get(f"/api/v1/triggers/{trigger.id}/ingress", headers=headers)
+    assert response.status_code == 409
+    async with session_scope() as session:
+        assert await resolve_target(session, provider="pilot", public_id=public_id) is None
+
+
 @pytest.mark.parametrize("failure", ["missing-id", "oversized-version", "foreign-provider"])
 async def test_ingress_rejects_invalid_canonical_items_without_partial_delivery(
     pilot, trigger_owner, owned_flow, client, monkeypatch, failure
