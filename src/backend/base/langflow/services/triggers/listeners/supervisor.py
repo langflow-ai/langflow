@@ -77,7 +77,7 @@ if TYPE_CHECKING:
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
-    from langflow.services.triggers.listeners.adapters import ListenerAdapter
+    from langflow.services.triggers.listeners.adapters import AdapterSpec, ListenerAdapter
 
 #: Connection statuses that no amount of retrying fixes. The owner has to
 #: re-consent, so the triggers say so and the listener stops dialling.
@@ -224,7 +224,7 @@ async def clear_listener_error(session: AsyncSession, *, trigger_ids: list[UUID]
     await session.flush()
 
 
-def _adapter_spec(trigger: ListenerTrigger) -> tuple[str, str | None, str]:
+def _adapter_spec(trigger: ListenerTrigger) -> AdapterSpec:
     """What ``build_adapter`` reads off a trigger, as a comparable value.
 
     An adapter is constructed once from the connection's first trigger, so a
@@ -245,7 +245,7 @@ class ConnectionWorker:
     triggers: list[ListenerTrigger]
     adapter: ListenerAdapter
     stopping: asyncio.Event
-    adapter_spec: tuple[str, str | None, str] | None = None
+    adapter_spec: AdapterSpec | None = None
     #: ``trigger_listener_lease.acquired_at`` for the period of ownership this
     #: adapter is running under. Fences writes that outlive a handover.
     lease_generation: datetime | None = None
@@ -508,7 +508,7 @@ class ListenerSupervisor:
         if not worker.running and not worker.resting():
             self._spawn(worker)
 
-    async def _rebuild_adapter(self, worker: ConnectionWorker, spec: tuple[str, str | None, str]) -> None:
+    async def _rebuild_adapter(self, worker: ConnectionWorker, spec: AdapterSpec) -> None:
         """Swap in an adapter built from the edited configuration, keeping the lease.
 
         Dropping the connection instead would hand it to another replica for a
