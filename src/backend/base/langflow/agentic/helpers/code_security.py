@@ -1823,6 +1823,8 @@ class _SecurityChecker(ast.NodeVisitor):
         # Decorators, defaults, and annotations are evaluated in the enclosing
         # scope; the function body receives an isolated alias state.
         for decorator in node.decorator_list:
+            # Applying a decorator implicitly calls it, even without an ast.Call.
+            self._check_opaque_reference(decorator)
             self.visit(decorator)
         self.visit(node.args)
         if node.returns:
@@ -1889,6 +1891,8 @@ class _SecurityChecker(ast.NodeVisitor):
 
     def visit_ClassDef(self, node: ast.ClassDef):
         for decorator in node.decorator_list:
+            # Applying a decorator implicitly calls it, even without an ast.Call.
+            self._check_opaque_reference(decorator)
             self.visit(decorator)
         for base in node.bases:
             if self._resolved_assignment_value(base) & _NUMPY_NPZ_CLASSES:
@@ -1898,6 +1902,8 @@ class _SecurityChecker(ast.NodeVisitor):
             self._check_opaque_reference(base)
             self.visit(base)
         for keyword in node.keywords:
+            # Class keywords reach metaclasses and __init_subclass__ through implicit calls.
+            self._check_opaque_reference(keyword.value)
             self.visit(keyword)
         for type_parameter in getattr(node, "type_params", ()):
             self.visit(type_parameter)
