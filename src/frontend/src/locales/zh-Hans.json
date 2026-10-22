@@ -1,4 +1,5 @@
 {
+  "connections.add.tokenGenericHelp": "粘贴此提供商的访问令牌。Langflow 会在保存前验证令牌。",
   "storageUpgrade.unavailable": "存储不可用",
   "storageUpgrade.title": "正在升级数据",
   "storageUpgrade.queued": "等待升级",

@@ -62,6 +62,17 @@ async def sync_source(trigger_id: UUID) -> int:
         row = await session.get(Trigger, trigger_id)
         if row is None or row.state not in {"active", "pending"}:
             return 0
+        from langflow.services.triggers.providers.registry import get_kind, get_provider
+
+        extension = get_provider(row.provider or "")
+        if extension is not None:
+            spec = get_kind(row.kind)
+            if extension.collect is None or (
+                spec is not None
+                and (row.config or {}).get("mechanism_id") == spec.push_mechanism
+                and not extension.ingress_is_hint
+            ):
+                return 0
         lease = await source_lease(session, row, family=FAMILY_TRIGGER_PUSH)
         snapshot = Trigger(**row.model_dump())
     result = await collect_source(snapshot, lease)
@@ -127,10 +138,11 @@ async def ensure_subscription(trigger_id: UUID) -> None:
                 # Preserve compensation even if a pause raced the remote create.
                 from langflow.services.triggers.source_cleanup import enqueue_cleanup
 
-                await enqueue_cleanup(session, subscription)
-                subscription.state = "expired"
-                subscription.renew_after = None
-                session.add(subscription)
+                if subscription is not None:
+                    await enqueue_cleanup(session, subscription)
+                    subscription.state = "expired"
+                    subscription.renew_after = None
+                    session.add(subscription)
 
     if key:
         from langflow.services.triggers.source_cleanup import with_mailbox_lease
