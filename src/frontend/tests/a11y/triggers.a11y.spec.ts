@@ -10,6 +10,7 @@ import {
   type MockTriggerEvent,
   type TriggerMockOptions,
 } from "../utils/trigger-mocks";
+import { navigateToTriggersSettings } from "../utils/trigger-settings";
 
 const SCHEDULE_ID = "a11y-schedule";
 const WEBHOOK_ID = "a11y-webhook";
@@ -100,7 +101,7 @@ async function openTriggersRoute(
 ) {
   const server = await installTriggerMocks(page, options);
   await awaitBootstrapTest(page, { skipModal: true });
-  await page.goto("/settings/triggers");
+  await navigateToTriggersSettings(page);
   await disableAnimations(page);
   await expect(page.getByTestId("triggers-search")).toBeVisible({
     timeout: TIMEOUTS.standard,

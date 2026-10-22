@@ -6,16 +6,14 @@ import {
   CONNECTION_NOT_AUTHORIZED_ERROR,
   installTriggerMocks,
 } from "../../utils/trigger-mocks";
+import { navigateToTriggersSettings } from "../../utils/trigger-settings";
 
 const SLACK_TRIGGER_ID = "trg-slack-e2e";
 const SLACK_CONNECTION_ID = "conn-slack-e2e";
 
 async function openTriggersSettings(page: LangflowPage) {
   await awaitBootstrapTest(page, { skipModal: true });
-  await page.goto("/settings/triggers");
-  await expect(
-    page.getByRole("heading", { name: "Triggers", exact: true }),
-  ).toBeVisible();
+  await navigateToTriggersSettings(page);
 }
 
 test.describe("Provider trigger (mocked Slack)", () => {

@@ -9,6 +9,7 @@ import {
   installTriggerMocks,
   type MockTriggerEvent,
 } from "../../utils/trigger-mocks";
+import { navigateToTriggersSettings } from "../../utils/trigger-settings";
 
 const TRIGGER_ID = "trg-schedule-e2e";
 
@@ -100,7 +101,7 @@ test.describe("Schedule trigger lifecycle", () => {
       await expect(enabled).toHaveAttribute("aria-checked", "false");
 
       // Resume and delete from Settings › Triggers
-      await page.goto("/settings/triggers");
+      await navigateToTriggersSettings(page);
       const row = page.getByTestId(`trigger-row-${TRIGGER_ID}`);
       await expect(row).toContainText("Daily digest");
       await expect(row).toContainText("Paused");
@@ -160,7 +161,7 @@ test.describe("Schedule trigger lifecycle", () => {
         ],
       });
       await awaitBootstrapTest(page, { skipModal: true });
-      await page.goto("/settings/triggers");
+      await navigateToTriggersSettings(page);
 
       const testButton = page.getByTestId(`trigger-test-${TRIGGER_ID}`);
       await expect(testButton).toHaveAttribute("aria-disabled", "true");
@@ -213,7 +214,7 @@ test.describe("Schedule trigger lifecycle", () => {
         events,
       });
       await awaitBootstrapTest(page, { skipModal: true });
-      await page.goto("/settings/triggers");
+      await navigateToTriggersSettings(page);
       await page.getByTestId(`trigger-menu-${TRIGGER_ID}`).click();
       await page.getByTestId("trigger-action-view_events").click();
       await page.getByTestId("trigger-events-filter-failed").click();
