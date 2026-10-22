@@ -491,6 +491,49 @@ The following issues can occur when upgrading your Langflow version.
 
 For information about managing Langflow versions, see [Install Langflow](/get-started-installation).
 
+### Recover access after upgrading {#recover-access-after-upgrading}
+
+Langflow 1.13 disables auto-login by default.
+After you upgrade an installation that signed in automatically, one of the following can occur:
+
+* Startup exits with `Username and password must be set`.
+* Langflow starts, but sign-in fails with `Incorrect username or password` even after you set `LANGFLOW_SUPERUSER_PASSWORD`.
+* The sign-up page creates a new account that doesn't have your existing flows.
+
+Your flows are still in the database. They belong to the account that auto-login used, which has a generated password that `LANGFLOW_SUPERUSER_PASSWORD` doesn't replace.
+
+If startup exits, set `LANGFLOW_SUPERUSER_PASSWORD` before you start Langflow. If sign-in still fails, temporarily re-enable auto-login and set a password on that same account:
+
+1. Back up the database and configuration directory.
+2. Stop Langflow. Set `LANGFLOW_AUTO_LOGIN=true` in the environment or `.env` file, then start Langflow with the same database and configuration directory. Keep the instance restricted to trusted local access until you finish.
+3. Request an auto-login token, and copy the `access_token` value from the response:
+
+    ```bash
+    curl -s http://localhost:7860/api/v1/auto_login
+    ```
+
+4. Get the account's ID, and copy the `id` value from the response:
+
+    ```bash
+    curl -s http://localhost:7860/api/v1/users/whoami \
+      -H "Authorization: Bearer ACCESS_TOKEN"
+    ```
+
+5. Set a strong password on that account. Don't use the legacy default value `langflow`. Read the password into a variable so that it isn't stored in your shell history, and avoid `"` and `\` characters, which break the JSON body.
+
+    ```bash
+    read -rs NEW_PASSWORD
+    curl -s -X PATCH http://localhost:7860/api/v1/users/USER_ID \
+      -H "Authorization: Bearer ACCESS_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "{\"password\": \"$NEW_PASSWORD\"}"
+    ```
+
+6. Stop Langflow. Remove `LANGFLOW_AUTO_LOGIN=true` or set it to `false`. If the account's username isn't `langflow`, set `LANGFLOW_SUPERUSER` to it. Set `LANGFLOW_SUPERUSER_PASSWORD` to the password from step 5. Startup requires this variable, but it doesn't overwrite the password you just set.
+7. Start Langflow, sign in with that username and password, and verify that your existing flows are present.
+
+Don't delete the database or reinstall Langflow to regain access, because that can permanently remove your flows.
+
 ### There's a mismatch between the models and the database
 
 The following error can occur during Langflow upgrades when the database schema doesn't match the current version's models:
@@ -541,6 +584,211 @@ If you're experiencing this issue, update your Langflow installation to version 
 ```bash
 uv pip install langflow -U
 ```
+
+### Can't sign in after upgrading from an auto-login installation {#cant-sign-in-after-upgrade}
+
+Langflow 1.13 disables auto-login by default.
+After you upgrade an installation that signed in automatically, one of the following can occur:
+
+* Startup exits with `Username and password must be set`.
+* Langflow starts, but sign-in fails with `Incorrect username or password` even after you set `LANGFLOW_SUPERUSER_PASSWORD`.
+* The sign-up page creates a new account that doesn't have your existing flows.
+
+Your flows are still in the database. They belong to the account that auto-login used, which has a generated password that `LANGFLOW_SUPERUSER_PASSWORD` doesn't replace.
+
+To resolve this issue:
+
+1. If startup exits, set `LANGFLOW_SUPERUSER_PASSWORD` before you start Langflow.
+2. If sign-in still fails, follow [Recover access after upgrading](/api-keys-and-authentication#recover-access-after-upgrading).
+
+Don't delete the database or reinstall Langflow to regain access, because that can permanently remove your flows.
+
+## Knowledge base storage upgrade {#knowledge-base-storage-upgrade}
+
+If a **Storage upgrade needs attention** error message appears, it means Langflow could not finish copying that knowledge base or memory base to SQLite. The base shows **Storage upgrade needs attention** instead of **Ready**. Some other blocked states show **Storage unavailable**. The original files stay in the knowledge base directory. The upgrade steps are in [Upgrade Knowledge and Memory storage](/knowledge-storage-upgrade).
+
+1. Open **View upgrade progress**.
+2. Read the message on the base. Find that message in the sections below.
+3. Complete the steps in that section. Leave the original Chroma folder in place.
+4. Select **Retry upgrade**. Only a superuser sees that button. Retry continues the same copy.
+5. Return to [step 6 of the upgrade](/knowledge-storage-upgrade#upgrade-one-langflow-instance) and wait until the base shows **Ready**.
+
+If you are not a superuser, stop after step 2 and contact a superuser. The progress card says:
+
+> This base needs a storage upgrade. Your data is preserved. Contact your administrator, or open the upgrade notice if you administer this instance.
+
+A flow that uses the base stops with:
+
+> This knowledge or memory base needs a storage upgrade. Your original data is preserved. Open the upgrade notice in Langflow, or contact your administrator.
+
+A health check that waits for storage (`/healthz?require_storage_ready=true`) returns:
+
+> Knowledge base storage upgrade requires attention
+
+If **Retry upgrade** fails, the card says **Could not schedule the upgrade. Refresh and try again.** Refresh the page and select **Retry upgrade** again.
+
+Langflow logs `Knowledge base storage upgrade <id> requires attention: code=<error code>`. Each section includes that code, so a log line pasted into search lands here.
+
+### No directory from the previous version could be tied to this base {#legacy-source-missing}
+
+Error code: `legacy_source_missing`
+
+> No directory from the previous version could be tied to this base. If its owner was renamed, move its directory to `<current username>/<base name>` in the knowledge base directory, then retry.
+
+Each old store is a folder named `<username>/<base name>` inside the knowledge base directory. The username is the one the owner had when the folder was written. Renaming the account leaves the folder where it is.
+
+1. Find the folder. Look under the owner's previous username.
+2. Move it to `<current username>/<base name>` inside the knowledge base directory.
+3. Move every other copy of that base out of the knowledge base directory.
+4. Select **Retry upgrade**.
+
+Langflow keeps the files where they are when it cannot tell which folder belongs to the base. It does not assign them to another account.
+
+### More than one directory from the previous version could hold this base {#legacy-source-ambiguous}
+
+Error code: `legacy_source_ambiguous`
+
+> More than one directory from the previous version could hold this base. Leave only its own directory at `<current username>/<base name>`, move any other copy out of the knowledge base directory, then retry. Your original data is preserved.
+
+1. Leave one folder at `<current username>/<base name>` inside the knowledge base directory.
+2. Move every other copy out of the knowledge base directory.
+3. If another base of the same name has no files of its own, detach that base so Langflow stops treating its folder as a second copy. A superuser sends `POST /api/v1/knowledge-base-storage/attention/{kb_id}/detach` with that base's current storage generation.
+4. Select **Retry upgrade**.
+
+### Some old storage folders could not be matched safely {#unmatched-storage-folders}
+
+The progress dialog shows:
+
+> Some old storage folders could not be matched safely. An administrator needs to check the storage inventory and upgrade logs.
+
+Langflow found a Chroma folder and could not tie it to one base. The folder stays where it is.
+
+1. If the folder belongs to a base Langflow already lists, move it to `<current username>/<base name>` inside the knowledge base directory.
+2. If the folder is a knowledge base that has no row in Langflow yet, register it for the account that owns it:
+
+    ```bash
+    langflow reconcile-kb-from-disk --username <username>
+    ```
+
+    Add `--dry-run` first to list what would be registered. The command does not delete folders.
+
+3. Restart Langflow.
+4. Select **Retry upgrade** for any base that still needs attention.
+
+A folder left behind by an account that no longer has that username stays unmatched, so a new account with the same username does not receive it.
+
+### Stop the other Langflow instance using this data {#legacy-workers-running}
+
+Error code: `legacy_workers_running`
+
+> Stop the other Langflow instance using this data, then retry.
+
+1. Stop the other Langflow process.
+2. Confirm only one Langflow process is running.
+3. Select **Retry upgrade**.
+
+### Stop all old instances, then run a single Langflow worker {#single-host-required}
+
+Error code: `single_host_required`
+
+> Stop all old instances, then run a single Langflow worker on the host with the original local data. Distributed deployments require administrator recovery.
+
+1. Stop every Langflow process.
+2. Follow [Upgrade one Langflow instance](/knowledge-storage-upgrade#upgrade-one-langflow-instance) on the host that has the original local data. If several hosts must serve the same bases, move those stores to pgvector or OpenSearch instead, and leave `LANGFLOW_KNOWLEDGE_BASE_AUTO_MIGRATE` set to `false`.
+
+### Copy the original data to a local filesystem {#local-filesystem-required}
+
+Error code: `local_filesystem_required`
+
+> Copy the original data to a local filesystem and run one Langflow worker there. Shared filesystems require administrator recovery.
+
+1. Stop Langflow.
+2. Move the knowledge base directory to a local disk. A Docker Desktop bind mount that reports `fuse.grpcfuse` needs a local named volume. VirtioFS mounts are supported.
+3. Start one Langflow process on that disk.
+4. Select **Retry upgrade**.
+
+### Enable LANGFLOW_KNOWLEDGE_BASE_AUTO_MIGRATE {#automatic-upgrade-disabled}
+
+Error code: `automatic_upgrade_disabled`
+
+> Enable LANGFLOW_KNOWLEDGE_BASE_AUTO_MIGRATE and restart Langflow to upgrade your local data.
+
+1. Unset `LANGFLOW_KNOWLEDGE_BASE_AUTO_MIGRATE`, or set it to `true`.
+2. Confirm the [prerequisites](/knowledge-storage-upgrade#prerequisites) are still true: one process, files on a local disk.
+3. Restart Langflow.
+
+Leave the variable `false` when these stores must move to pgvector or OpenSearch instead.
+
+### This remote Chroma store must be migrated {#remote-source-requires-migration}
+
+Error code: `remote_source_requires_migration`
+
+> This remote Chroma store must be migrated to pgvector or OpenSearch by an administrator.
+
+Langflow leaves a Chroma Cloud collection where it is.
+
+1. Configure [pgvector or OpenSearch](/knowledge#configure-vector-database-providers).
+2. Move the collection's data into that provider.
+3. Create the knowledge base or memory base on that provider.
+4. Update flows to use the new base.
+
+### The copy failed validation {#validation-failed}
+
+Error code: `validation_failed`
+
+> The copy failed validation. Your original data is preserved. Check the upgrade logs before retrying.
+
+1. Read the Langflow logs for this base.
+2. Fix the problem the log names.
+3. Leave the original Chroma folder in place.
+4. Select **Retry upgrade**.
+
+### The upgrade was interrupted {#interrupted}
+
+Error code: `interrupted`
+
+> The upgrade was interrupted. Retry to resume safely.
+
+1. Start Langflow if it is stopped.
+2. Select **Retry upgrade**.
+
+The copy continues. The unfinished copy is not used as an empty replacement for the old base.
+
+### Check storage access, free disk space and the upgrade logs {#check-storage}
+
+Error codes: `migration_failed`, `maintenance_required`, `storage_changed`
+
+> Check storage access, free disk space and the upgrade logs, then retry. Your original data is preserved.
+
+1. Confirm Langflow can read and write the knowledge base directory.
+2. Free about four times the store's size on that disk.
+3. Read the upgrade logs. For `storage_changed`, confirm this is still the base you expect. Its routing changed while the copy was running.
+4. Select **Retry upgrade**.
+
+### This store exceeds the automatic reader limits {#automatic-reader-limit}
+
+Error code: `automatic_reader_limit`
+
+> This store exceeds the automatic reader limits. Preserve the source and export it from an isolated old-release environment.
+
+The automatic copy cannot read a store this large.
+
+1. Leave the original Chroma folder in place.
+2. Open the store from a Langflow 1.12 environment.
+3. Move the data to pgvector or OpenSearch.
+4. Use that provider in 1.13.
+
+### Storage for this base was detached {#storage-detached}
+
+A flow that uses the base stops with:
+
+> Storage for this base was detached. Contact your administrator to recover it, or delete the base and create a replacement.
+
+Detaching stops Langflow from serving the base and leaves the original files on disk.
+
+1. Copy the data you still need from the original folder, or from the backup you took in the [prerequisites](/knowledge-storage-upgrade#prerequisites).
+2. Delete the detached base in Langflow.
+3. Create a new knowledge base or memory base and load that data into it.
 
 ## Langflow MCP issues {#mcp}
 
@@ -766,12 +1014,12 @@ If the deployment is headless and never uses the visual editor or MCP over SSE, 
 
 The polling watchdog reclaims builds whose client heartbeat has gone stale. The default threshold is 90 seconds (`LANGFLOW_REDIS_QUEUE_POLLING_STALE_THRESHOLD_S=90`). If legitimate long-running builds are being cancelled, increase this value or set it to `0` to disable the watchdog entirely.
 
-## Voice mode {#voice-mode}
+## Voice input {#voice-mode}
 
-Voice mode is deprecated as of Langflow 1.10.
-The Playground microphone now provides speech-to-text only.
+If the **Voice input** button is disabled, your browser doesn't support the required speech-recognition API.
+If recording doesn't start, allow microphone access for the Langflow site in your browser settings.
 
-For setup, remaining WebSocket endpoints, and current behavior, see [Use voice mode](/concepts-voice-mode).
+For setup and information about the deprecated voice WebSocket endpoints, see [Use speech input](/concepts-voice-mode).
 
 ## Intel Mac issues {#intel-mac-issues}
 

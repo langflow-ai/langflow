@@ -25,7 +25,14 @@ import {
   useResumeMutation,
 } from "@/controllers/API/queries/migration";
 import ConfirmationModal from "@/modals/confirmationModal";
-import { CHECK_TOTAL, formatTime, hasStarted, JOB_STATES } from "./catalog";
+import {
+  CHECK_TOTAL,
+  databaseCopied,
+  formatTime,
+  hasStarted,
+  JOB_STATES,
+  STEP_SLUGS,
+} from "./catalog";
 
 /** The body of "Pause changes": the pause, what it still waits for, and the check that has to pass again once it is on. */
 export function PauseStep({
@@ -342,6 +349,7 @@ export function PausedBanner({ migration }: { migration: MigrationState }) {
   // no pause yet for the backup or a copy, so the banner does not call it one.
   const { pause, pausing } = migration.record;
   const refused = pause ?? pausing;
+  const again = useNewDatabaseNote(migration);
   return (
     // Stays in the accessibility tree while empty, so the pause is announced when it starts.
     <div role="status" className="sticky top-0 z-10 empty:-mt-6">
@@ -366,11 +374,21 @@ export function PausedBanner({ migration }: { migration: MigrationState }) {
             )}
           </p>
           {/* Once the new instance has started, going back takes more than a click: see "If something goes wrong". */}
-          {!hasStarted(migration) && <ResumeButton />}
+          {!hasStarted(migration) && <ResumeButton again={again} />}
         </div>
       )}
     </div>
   );
+}
+
+/** Before the admin gives up a pause, what copying the database again will take. */
+function useNewDatabaseNote(migration: MigrationState) {
+  const { t } = useTranslation();
+  return databaseCopied(migration)
+    ? t("settings.migration.copy.newDatabase", {
+        step: t(`settings.migration.step.${STEP_SLUGS.connect_target}.title`),
+      })
+    : undefined;
 }
 
 /** "If something goes wrong": the way back from where the move stands now. */
@@ -378,6 +396,7 @@ export function Recovery({ migration }: { migration: MigrationState }) {
   const { t } = useTranslation();
   const refused = migration.record.pause ?? migration.record.pausing;
   const started = Boolean(refused) && hasStarted(migration);
+  const again = useNewDatabaseNote(migration);
   return (
     // Once the new instance has started, this is where the admin has to look, so it opens by itself.
     <details className="rounded-lg border p-4" open={started || undefined}>
@@ -396,8 +415,9 @@ export function Recovery({ migration }: { migration: MigrationState }) {
             {refused
               ? t("settings.migration.recovery.paused")
               : t("settings.migration.recovery.none")}
+            {refused && again && ` ${again}`}
           </p>
-          {refused && <ResumeButton />}
+          {refused && <ResumeButton again={again} />}
         </div>
       )}
     </details>

@@ -24,7 +24,7 @@ from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
 )
 from langflow.services.database.models.deployment.guards import check_flow_has_deployed_versions
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow.model import Flow, is_virtual_flow_id
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.traces.model import SpanTable, TraceTable
@@ -134,6 +134,9 @@ async def cascade_delete_flow(
     :func:`~langflow.services.memory_base.flow_cleanup.finalize_flow_memory_base_cleanup`
     only after the transaction commits, and discard them if it rolls back.
     """
+    if is_virtual_flow_id(flow_id):
+        # Deleting a colliding Flow would also cascade through database foreign keys.
+        raise HTTPException(status_code=400, detail="UUID5 flow IDs are reserved for public execution histories.")
     # Imported lazily so this module (loaded early, via ``api.utils``) stays free
     # of the memory-base service import chain.
     from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError
@@ -161,9 +164,7 @@ async def cascade_delete_flow(
         # by default (requires PRAGMA foreign_keys = ON), and this function follows
         # the existing pattern of explicitly deleting all child records.
         await session.exec(delete(FlowVersion).where(FlowVersion.flow_id == flow_id))
-        # span.trace_id FK lacks ON DELETE CASCADE in the DDL, so spans must
-        # be removed before traces to avoid an FK violation under
-        # PRAGMA foreign_keys=ON.
+        # span.trace_id lacks ON DELETE CASCADE, so remove spans first.
         trace_ids = (await session.exec(select(TraceTable.id).where(TraceTable.flow_id == flow_id))).all()
         if trace_ids:
             await session.exec(delete(SpanTable).where(col(SpanTable.trace_id).in_(trace_ids)))

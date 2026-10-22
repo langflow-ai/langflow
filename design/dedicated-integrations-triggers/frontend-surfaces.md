@@ -2,7 +2,7 @@
 
 Status: accepted
 Owners (sign-off roles): frontend owner, release owner
-Last verified: 2026-09-10 (connection consent ownership and recovery path)
+Last verified: 2026-10-15 (TRG-7 list, operator, and capability API; `dead` state decision)
 
 TRG-1 exit criterion 8. Every surface the triggers release needs, tagged with the ticket that owns it and whether it
 extends something that exists or is net new. Paths are under `src/frontend/src/`. TRG-7 builds these on the TRG-2 API
@@ -40,7 +40,7 @@ so the two never collide alphabetically in a provider group.
 | A2 | Node status header | `CustomNodes/GenericNode/components/NodeStatus/index.tsx` | a trigger state badge beside the existing status, following the `HumanInputNodeBadge` pattern; must not disturb the Composio `auth` polling block that INT-8 is generalizing | TRG-7 |
 | A3 | Single-trigger-per-flow gating | `flowSidebarComponent/sidebarItemsList.tsx` and its helpers | port the drop-gating from `origin/feat-native-triggers-v2`, but detect a trigger by the base-class marker TRG-2's base trigger component sets rather than by a literal class name; tooltip text moves into the locale catalogs | TRG-7 |
 | A4 | Settings navigation and route | `pages/SettingsPage/index.tsx` (`sidebarNavItems`), `routes.tsx` | one nav entry `/settings/triggers` and one `<Route>`, gated on the config flag | TRG-7 |
-| A5 | Query layer | `controllers/API/queries/`, `helpers/constants.ts` (`URLs`), `types.ts` | a `triggers/` query group with react-query keys and invalidation on every mutation; poll interval read from `GET /api/v1/config` (`trigger_polling_interval`, default 5 s) rather than hard-coded | TRG-7 |
+| A5 | Query layer | `controllers/API/queries/`, `helpers/constants.ts` (`URLs`), `types.ts` | a `triggers/` query group with react-query keys and invalidation on every mutation; poll interval read from `GET /api/v1/config` (`trigger_polling_interval`, milliseconds, default 5000) rather than hard-coded | TRG-7 |
 | A6 | Show-once secret dialog | the `secretKeyModal` pattern | reuse for a trigger's inbound signing secret: show once on create, copy, rotate; rotation invalidates the old secret immediately | TRG-7 behind TRG-4's API |
 | A7 | Icon registry | `icons/lazyIconImports.ts`, `icons/eagerIconImports.ts` | `Gmail`, `GoogleDrive`, `Googlecalendar`, `OneDrive` and `outlook` already exist; a `Clock`-style icon covers the schedule and webhook triggers | TRG-2, TRG-7 |
 | A8 | a11y harness | `tests/a11y/*.a11y.spec.ts` with baselines, repo-root `scripts/a11y/a11y_routes.json` | one static route entry plus a stateful `triggers.a11y.spec.ts`; keyboard-only paths for the badge popover, the row menu, the drawer, and the dialogs | TRG-7 |
@@ -52,8 +52,8 @@ so the two never collide alphabetically in a provider group.
 | # | Surface | Why nothing exists | Ticket |
 |---|---|---|---|
 | B1 | Trigger state badge with reason | node status today expresses `validated`, `error`, or a URL; there is no concept of a resource that is live, paused, expired, or needs reconnecting | TRG-7 |
-| B2 | `/settings/triggers` table: flow, kind, provider, connection, state, transport, last event, last error, with row actions pause, resume, test, reconnect, delete | no page lists a background resource owned by a flow | TRG-7 |
-| B3 | Operator view within B2: provider filter, bulk pause and resume, visible only to `useAuthStore.isAdmin` | no settings surface exposes cross-user background resources | TRG-7 |
+| B2 | `/settings/triggers` table: flow, kind, provider, connection, state, transport, last event, last error, with row actions pause, resume, test, reconnect, delete | no page lists a background resource owned by a flow; `GET /api/v1/triggers` without `flow_id` now lists across flows (see API contract below) | TRG-7 |
+| B3 | Operator view within B2: provider filter, bulk pause and resume, visible only to `useAuthStore.isAdmin` | no settings surface exposes cross-user background resources; `scope=all` and `POST /api/v1/triggers/bulk/{pause,resume}` now exist, superuser only | TRG-7 |
 | B4 | Per-trigger event inspector: ledger rows with state, attempts, dedupe key, and a link to the run, plus event detail showing the **normalized** payload the API returns | nothing lists a delivery history; the raw provider payload is deliberately never fetched into the browser | TRG-7 |
 | B5 | Replay action with lineage: confirm, post, and render the linked new row (`replay_of_event_id`) rather than implying the original re-ran | replay does not exist anywhere in the product | TRG-7 |
 | B6 | Transport and latency-class label on a trigger ("push" versus "poll every N") | the self-managed-ingress decision makes the transport context-dependent, so hiding it would make poll latency read as a bug | TRG-7 |
@@ -63,12 +63,14 @@ so the two never collide alphabetically in a provider group.
 
 ## Constraints the design must record
 
-1. **Actions are server-driven.** `TriggerRead` carries `allowed_actions` and a `reason` code; the frontend renders
-   what the API allows and never re-derives permission from the trigger's state. A disabled row action shows the
-   `reason` in its tooltip, from the locale catalog.
+1. **Actions are server-driven.** `TriggerRead` carries `allowed_actions`, `blocked_actions` and a `reason` code;
+   the frontend renders what the API allows and never re-derives permission from the trigger's state. A disabled
+   row action shows its `blocked_actions` reason in the tooltip, from the locale catalog; an action in neither
+   collection does not apply to that trigger and is not rendered. Vocabulary in the API contract below.
 2. **Polling, not SSE.** State converges through react-query polling at the interval `GET /api/v1/config` reports
-   (`trigger_polling_interval`, 5 s). There is no event stream for triggers in this release, and the Playwright
-   assertion is "converges within one polling interval", not "updates instantly".
+   (`trigger_polling_interval`, in milliseconds like `webhook_polling_interval`; default 5000, minimum 1000). There
+   is no event stream for triggers in this release, and the Playwright assertion is "converges within one polling
+   interval", not "updates instantly".
 3. **The normalized payload only.** The event inspector renders what the API returns. The browser never calls a
    provider, and a thin-payload mechanism's raw notification is not exposed.
 4. **One trigger per flow in wave 1.** A3's gating enforces it; the tooltip explains it rather than the drop silently
@@ -90,6 +92,114 @@ so the two never collide alphabetically in a provider group.
    credentials and policy. A failed update leaves the trigger blocked. Withdrawal takes effect on subsequent
    credential resolutions. Test default-off, opt-in and retry, withdrawal, failed save, and non-owner denial.
    TRG-7 cannot ship provider-trigger enablement without both the interim control and INT-4's update API.
+
+## API contract for TRG-7
+
+Verified 2026-10-15 against `src/backend/base/langflow/api/v1/triggers.py`. Every route below is in
+`scripts/ci/authz_endpoint_matrix.json` (family `triggers`).
+
+### Listing (B2, B3)
+
+`GET /api/v1/triggers` returns `TriggerRead[]`, newest first, every row with `flow_name`.
+
+| Query | Meaning |
+|---|---|
+| no `flow_id` (default) | triggers on every flow the caller can read, including shared flows when an authorization plugin supports cross-user fetch |
+| `flow_id=<uuid>` | triggers on that flow; 404 when the caller cannot read it (unchanged) |
+| `scope=all` | operator view: every user's triggers, each with `owner_username`; 403 unless superuser. Combines with `flow_id`, `provider`, `state` |
+| `provider`, `state` | exact-match filters (`provider=slack`, `state=needs_reconnect`); core triggers (schedule, inbound webhook) have no provider |
+| `limit` (1-200, default 50), `offset` | page window; there is no total count, so fetch `limit + 1` to know whether a next page exists |
+
+In the operator view, a row on someone else's flow carries no allowed per-trigger actions: the per-trigger routes are
+flow-scoped, so the operator acts on those rows through the bulk routes with `trigger_ids`.
+
+When a cross-user authorization plugin supplies no SQL visibility prefilter, the list checks read permission in
+bounded candidate batches before applying the page window. Denied rows do not consume the offset or limit.
+Without cross-user fetch support, including the OSS pass-through, the fallback remains owner-scoped.
+
+### Server-computed actions on every `TriggerRead`
+
+| Field | Content |
+|---|---|
+| `allowed_actions` | actions the server accepts from this caller now, in display order |
+| `blocked_actions` | `{action: reason}` for actions that apply to this trigger but are refused now; render disabled with the reason's tooltip |
+| `reason` | one state reason (below) or `null` for a trigger running cleanly; the badge popover's headline. `last_error` stays the human detail |
+| `admin_paused_at` | when an operator's bulk pause paused it; null once anything else changes its state |
+
+An action in neither collection does not apply (no secret to rotate on a Slack trigger, nothing to resume on a running
+one) and is not rendered. Action to route:
+
+| Action | Route |
+|---|---|
+| `pause` | `POST /triggers/{id}/disable` |
+| `resume` | `POST /triggers/{id}/enable` (also the "enable" of a never-enabled `pending` trigger, and the retry after B9 consent) |
+| `test` | `POST /triggers/{id}/test` |
+| `reconnect` | client navigation: the connection's OAuth reconnect, or B9 when the reason is `consent_required`; then `resume` |
+| `replay` | `POST /triggers/{id}/replay` (the replay window is still checked per event; an expired event answers 409) |
+| `delete` | `DELETE /triggers/{id}` |
+| `rotate_secret` | `POST /triggers/{id}/signing-secret` (inbound webhook triggers only) |
+
+State reasons (`reason`, and `blocked_actions` values):
+
+| Reason | When |
+|---|---|
+| `pending` | created by a canvas save, not yet enabled; or a push source still subscribing |
+| `config_invalid` | `pending` with a configuration error in `last_error` |
+| `degraded` | `active`, but `last_error` reports a problem (for example a listener that cannot connect) |
+| `paused` | paused by someone with write on the flow |
+| `paused_by_admin` | paused by an operator's bulk pause; the owner can still resume it |
+| `node_removed` | paused because its node was removed from the canvas |
+| `source_settings_changed` | a Microsoft or Google source paused because a save changed its settings; resume to resubscribe |
+| `error` | `error` state; clears when the cause is fixed |
+| `needs_reconnect` | the connection was revoked or expired; reconnect, then resume |
+| `consent_required` | `needs_reconnect` because the connection does not allow background runs; route to B9, not OAuth |
+| `expired` | `expired` state |
+| `dead` | `dead` state; see below |
+
+Caller reasons, which appear only in `blocked_actions`: `insufficient_permission` (no write, or no execute for test
+and replay), `not_connection_owner` (only the trigger owner can reconnect its connection or grant consent),
+`reconnect_not_needed` (the connection is healthy; shown so the disabled Reconnect explains itself). A state reason
+outranks a caller reason. Test and replay are blocked while a trigger is `paused`, `expired` or `dead` because the
+dispatcher retires those events without running them.
+
+### Operator bulk pause and resume (B3)
+
+`POST /api/v1/triggers/bulk/pause` and `POST /api/v1/triggers/bulk/resume`, superuser only (403 otherwise), body
+`{"provider": "slack", "trigger_ids": [...], "dry_run": false}`. At least one of `provider` and `trigger_ids` is
+required (422 otherwise); both together select their intersection. `dry_run: true` returns the same answer and
+changes nothing, so the confirmation dialog's counts come from the server.
+
+| Route | Changes | Leaves alone |
+|---|---|---|
+| pause | armed triggers (`active`, `error`, `needs_reconnect`): paused exactly as the owner's pause does, and marked `paused_by_admin` | `pending` (never consented to, so a resume must not arm it), already `paused`, `expired`, `dead` |
+| resume | triggers still held by an operator's pause: enabled exactly as the owner's resume does | anything the owner paused, including an operator-paused trigger the owner then paused again |
+
+The response is `{action, dry_run, matched, changed, unchanged, failed, owners}`: every matched id lands in exactly
+one of `changed`, `unchanged`, or `failed` (`{trigger_id, detail}`), and `owners` counts distinct owners of the
+changed triggers. Each trigger commits on its own with its audit row (`trigger:admin_pause`, `trigger:admin_resume`,
+naming the operator), independently of `AUTHZ_AUDIT_ENABLED` and `AUTHZ_AUDIT_DURABLE`. Audit staging or persistence
+failure rolls back that trigger's change and is reported in `failed`, while earlier commits remain in place. A resume the
+server refuses releases the operator's hold and leaves the trigger paused with the reason in `last_error`. That release
+commits with an audit row recording `outcome=enable_refused` and the refusal reason. A push
+source whose subscription fails records that failure on the trigger, as the owner's own resume would. Each row is
+re-read under a lock just before it changes, so an owner acting during the batch is seen rather than overwritten.
+
+The owner may resume an operator-paused trigger at any time; the marker exists so the owner sees who paused it and so
+the operator's resume never re-arms what an owner chose to pause. Any move out of `paused` clears the marker, and
+removing the trigger's node hands the pause to the owner (`node_removed`), so a bulk resume never re-arms a trigger
+whose node is gone.
+
+### How `dead` surfaces
+
+`dead` is the seventh trigger state and is not one of the six badge states. Decision: render it with the **Error**
+badge treatment and the `dead` reason, never as a seventh badge. Copy says the trigger stopped permanently and cannot
+be resumed, and that deleting it and adding the node again creates a fresh trigger. The server enforces the rest:
+`delete` is the only allowed action; `resume`, `test` and `replay` are blocked with `dead`; `pause` does not apply.
+The settings table's state filter groups `dead` with `error` under "Needs attention", and the event inspector stays
+readable so the ledger history explains what happened. No 1.13 code path moves a trigger to `dead` (the ledger's
+dead-letter state is a per-event state, shown in the event inspector), so this is a guard for a terminal state the
+contract reserves, not a common case. Nothing sets trigger-level `expired` today either: a removed subscription is
+resubscribed while the trigger stays `active`, and an unusable connection moves it to `needs_reconnect`.
 
 ## MVP versus defer
 
