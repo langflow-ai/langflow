@@ -103,6 +103,45 @@ async def _create_flow(
 
 
 @pytest.mark.usefixtures("client")
+@pytest.mark.parametrize("existing", [False, True])
+async def test_upsert_flow_from_file_normalizes_exported_code(existing) -> None:
+    user_id = uuid4()
+    flow_id = uuid4()
+    code = "def build(self):\n    return 'exported'\n"
+    if existing:
+        await _create_flow(name="ExportedFlow", user_id=user_id, flow_id=flow_id)
+    file_content = orjson.dumps(
+        {
+            "id": str(flow_id),
+            "name": "ExportedFlow",
+            "data": {
+                "nodes": [
+                    {
+                        "id": "n1",
+                        "data": {
+                            "node": {
+                                "template": {
+                                    "code": {"type": "code", "value": code.split("\n")},
+                                }
+                            }
+                        },
+                    }
+                ],
+                "edges": [],
+            },
+        }
+    )
+
+    async with session_scope() as session:
+        await upsert_flow_from_file(file_content, "ExportedFlow", session, user_id)
+        await session.commit()
+
+    async with session_scope() as session:
+        stored = await session.get(Flow, flow_id)
+        assert stored.data["nodes"][0]["data"]["node"]["template"]["code"]["value"] == code
+
+
+@pytest.mark.usefixtures("client")
 async def test_find_existing_flow_by_name_when_id_differs() -> None:
     """Match by (user_id, name) when the file's id doesn't exist in the DB."""
     user_id = uuid4()

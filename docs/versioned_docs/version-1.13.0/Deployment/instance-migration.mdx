@@ -1,0 +1,135 @@
+---
+title: Migrate to a new Langflow instance
+slug: /instance-migration
+---
+
+The instance migration workflow moves users, flows, files, and knowledge bases from one Langflow instance to another.
+Use it when moving to new infrastructure or from SQLite to PostgreSQL.
+
+This workflow is different from [database schema migrations](/database-migrations), which update an existing database when Langflow starts.
+
+Instance migration is disabled by default. To enable it, do the following:
+
+1. On the source instance, set the following environment variable, and then restart Langflow:
+
+   ```bash
+   LANGFLOW_FEATURE_INSTANCE_MIGRATION=true
+   ```
+
+2. Sign in as a superuser, and then select **Settings** > **Migration**.
+   Only superusers can run an instance migration.
+
+## Prerequisites
+
+Before starting, prepare the following:
+
+- Prepare a [target instance](/get-started-installation) with the _same or newer_ Langflow version.
+- If the source instance uses SQLite, provision an [empty PostgreSQL database](/configuration-custom-database).
+- If the source instance has local knowledge bases, enable the [pgvector extension in PostgreSQL](/knowledge#postgres-pgvector).
+- If the source instance uses PostgreSQL and has local knowledge bases, set `PGVECTOR_CONNECTION_STRING` on the source instance to that database, and then restart Langflow before you start the migration. Enabling the extension alone leaves the knowledge base test and copy blocked with `pgvector_env_missing`.
+- Create an [S3-compatible bucket and access keys](/concepts-file-management#configure-file-storage) if the source instance has locally stored files.
+- Locate the source instance's [`LANGFLOW_SECRET_KEY`](/api-keys-and-authentication#langflow-secret-key).
+- Choose storage outside the source instance for [backups](/database-migrations#upgrade-langflow-safely).
+- Schedule a maintenance window during which Langflow can pause changes.
+
+Run the source instance with one worker during the migration.
+Destination passwords and keys are held only in that worker's memory.
+If the process restarts, enter them again.
+
+If the source instance uses PostgreSQL, stop every other Langflow instance or replica that uses the same database before pausing changes.
+The migration pause applies only to the source instance where you enable it.
+
+## Migrate the instance
+
+To migrate a Langflow instance, do the following:
+
+1. Sign  in to the source instance as a superuser, and then select **Settings** > **Migration**.
+2. Click **Prepare** > **Check this instance**, and then do the following:
+   1. In **New instance's Langflow version**, enter the version installed on the target instance, such as `1.13.0`.
+      Find the version in the target instance's image tag or installed package.
+      The target instance version must be the _same as or newer_ than the source instance version.
+   2. Click **Run the check**.
+   3. Review the results under **Fix these**, **Fix or accept**, **Read these**, and **Passed**.
+      Resolve every finding under **Fix these**.
+3. Test the target instance's PostgreSQL database, pgvector store, and S3-compatible bucket connected to your source instance configuration.
+4. To set the source instance's `LANGFLOW_SECRET_KEY` on the target instance, do the following:
+   1. Find the source instance's key in the environment variable or file path displayed under **Hand over the secret key**.
+   2. Set the same value as `LANGFLOW_SECRET_KEY` in the target instance's `.env` file, container environment, or secret manager.
+      Don't paste the key into the migration page.
+   3. In a shell where the target instance's key is set, generate its fingerprint:
+
+      ```bash
+      printf '%s' "$LANGFLOW_SECRET_KEY" | sha256sum | cut -c1-12
+      ```
+
+      On macOS, replace `sha256sum` with `shasum -a 256`.
+   4. In **What the command printed**, paste the 12-character fingerprint, and then click **Verify**.
+
+   Without the verified key, the target instance cannot decrypt saved credentials.
+5. To pause changes while data is copied, do the following:
+   1. Click **Pause changes**, and then confirm you want to pause changes in the dialog.
+   2. If Langflow lists active requests, jobs, or trigger listeners, wait for or stop them, and then click **Check again**.
+      When the checks pass, **Pause changes** displays a green checkmark and the **Back up this instance** button becomes available.
+      While changes are paused, users can sign in and view their work, but they can't run flows, edit, upload files, or sign up.
+6. To back up the source instance, click **Back up this instance** and do the following:
+   1. If the source instance uses SQLite, click **Download the database**.
+      If the source instance uses PostgreSQL, run the `pg_dump` command displayed in the UI.
+   2. Copy any listed knowledge base and file directories to storage outside the source instance.
+   3. In **Where is the backup?**, enter the backup location, and then click **I've backed up everything**.
+7. If the source instance uses SQLite, click **Copy the database** to copy users, projects, flows, settings, and other application records into the empty PostgreSQL database.
+   If the source instance already uses PostgreSQL, this step is skipped and the target instance reuses that same database. Instance migration does not copy data between two PostgreSQL databases.
+8. To preview the knowledge base copy, click **Test run**.
+   To copy local knowledge bases to pgvector, click **Copy knowledge bases**.
+   This step is skipped if the source instance has no local knowledge bases.
+9. To preview the file copy, click **Test run**.
+   To copy local uploads and chat attachments to the S3-compatible bucket configured for the target instance, click **Copy files**.
+   This step is skipped if files are already in object storage or no local files exist.
+10. To compare the source instance with the copied database, knowledge bases, and files, click **Check the copy**.
+    Resolve or accept any differences.
+11. Start the target instance with the settings displayed in the migration page.
+
+    The migration page provides the target instance environment variables but does not display passwords or secret keys.
+
+12. In the target instance, verify that you can sign in, open a saved credential, download a migrated flow, and open a migrated knowledge base.
+    When the source instance has them, also download a migrated uploaded file and a chat attachment. Downloading a flow only exports its records and can succeed when the target instance cannot read files from S3.
+13. To complete the migration, click **The new instance is running**. No more data can be copied to the target instance without starting a new migration.
+
+## Cancel or recover a migration
+
+If you can't complete the migration, the recovery procedure depends on whether the target instance has started or not.
+Either cancel the migration starting the target instance, or recover the source instance after the migration completes.
+
+### Cancel before starting the target instance
+
+Before starting a target instance, you can cancel a migration by clicking **Turn changes back on** in the source Langflow instance.
+This resumes writes on the source instance without deleting its data.
+Any backup or copy already created won't include subsequent changes from the source instance.
+
+After starting a target instance, to stop using the target instance and recover the source instance after completing the migration:
+
+1. Stop the target instance.
+2. If the source instance uses PostgreSQL, restore its database from the migration backup.
+   A SQLite database on the source instance is unchanged and doesn't require restoration.
+3. In the **Migration** page, confirm that the target instance is stopped and, when required, that the database is restored.
+4. Turn changes back on for the source instance.
+
+Changes made on the target instance after the migration completes are lost when you return to the source instance.
+
+## Migration record path
+
+Langflow stores migration progress in:
+
+```text
+LANGFLOW_CONFIG_DIR/migrations/migration.json
+```
+
+This progress record is stored on the server. It contains step results and decisions, but not destination passwords, access keys, or `LANGFLOW_SECRET_KEY`.
+
+To save a copy for support, navigate to **Settings** > **Migration**, and then click **Download the migration record (for support)**.
+The browser downloads `langflow-migration-YYYYMMDD.json`. That download is saved by the browser and is not written into `LANGFLOW_CONFIG_DIR`.
+
+## See also
+
+- [Database migrations](/database-migrations)
+- [Configure an external PostgreSQL database](/configuration-custom-database)
+- [Manage vector data](/knowledge)

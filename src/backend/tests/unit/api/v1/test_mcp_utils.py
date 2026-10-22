@@ -853,7 +853,7 @@ async def test_handle_call_tool_forwards_only_advertised_input_fields(monkeypatc
             ]
 
         @classmethod
-        def from_payload(cls, _flow_data):
+        def from_payload(cls, _flow_data, **_kwargs):
             return cls()
 
     import lfx.graph.graph.base as graph_base_module
@@ -895,7 +895,7 @@ def test_json_schema_from_flow_includes_optional_session_id(monkeypatch):
             self.vertices = []  # No input nodes — exercises the empty-properties path.
 
         @classmethod
-        def from_payload(cls, _flow_data):
+        def from_payload(cls, _flow_data, **_kwargs):
             return cls()
 
     # Patch the lazy import inside json_schema_from_flow.
@@ -942,7 +942,7 @@ def test_json_schema_from_flow_preserves_flow_defined_session_id(monkeypatch):
             self.vertices = [_FakeNode()]
 
         @classmethod
-        def from_payload(cls, _flow_data):
+        def from_payload(cls, _flow_data, **_kwargs):
             return cls()
 
     import lfx.graph.graph.base as graph_base_module
@@ -998,7 +998,7 @@ def test_json_schema_from_flow_only_advertises_api_exposed_fields(monkeypatch):
         vertices = [_FakeNode()]
 
         @classmethod
-        def from_payload(cls, _flow_data):
+        def from_payload(cls, _flow_data, **_kwargs):
             return cls()
 
     import lfx.graph.graph.base as graph_base_module
@@ -1024,7 +1024,7 @@ def _patch_graph_with_input_nodes(monkeypatch, templates):
         vertices = [_FakeNode(f"input-{index}", template) for index, template in enumerate(templates)]
 
         @classmethod
-        def from_payload(cls, _flow_data):
+        def from_payload(cls, _flow_data, **_kwargs):
             return cls()
 
     import lfx.graph.graph.base as graph_base_module
@@ -1188,7 +1188,7 @@ def test_json_schema_from_flow_maps_structured_and_list_field_types(monkeypatch)
         vertices = [_FakeNode()]
 
         @classmethod
-        def from_payload(cls, _flow_data):
+        def from_payload(cls, _flow_data, **_kwargs):
             return cls()
 
     import lfx.graph.graph.base as graph_base_module

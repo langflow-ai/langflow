@@ -3,6 +3,8 @@
 import asyncio
 import hashlib
 import json
+import os
+import sys
 import threading
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
@@ -24,7 +26,7 @@ from sqlmodel import SQLModel
 from . import test_storage_upgrade as storage_tests
 
 database = storage_tests.database
-export_helper = storage_tests.export_helper
+legacy_export = storage_tests.legacy_export
 make_kb = storage_tests.make_kb
 read_kb = storage_tests.read_kb
 frozen_source = storage_tests.frozen_source
@@ -406,6 +408,31 @@ def test_denied_same_user_process_is_rechecked_for_exit(monkeypatch, exited):
         assert pauses == [0.01] * 3
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows has no effective user ids")
+@pytest.mark.parametrize("runs_as_the_account", [True, False])
+def test_denied_process_blocks_the_upgrade_only_when_it_runs_as_the_account(runs_as_the_account):
+    # macOS leaves a setuid login process for each extra Terminal tab. It keeps the account as its real
+    # user but runs as root, and its command line cannot be read. Only a process that runs as the account
+    # can be one of its Langflow workers.
+    import psutil
+
+    other = 0 if os.geteuid() else 1  # root, or another user when the tests run as root
+    effective = os.geteuid() if runs_as_the_account else other
+    denied = SimpleNamespace(
+        cmdline=lambda: (_ for _ in ()).throw(psutil.AccessDenied(1042)),
+        username=psutil.Process().username,
+        uids=lambda: SimpleNamespace(real=os.getuid(), effective=effective, saved=effective),
+        status=lambda: psutil.STATUS_RUNNING,
+        is_running=lambda: True,
+    )
+
+    if runs_as_the_account:
+        with pytest.raises(maintenance.MaintenanceRequiredError, match="application account"):
+            maintenance._legacy_process(denied)
+    else:
+        assert not maintenance._legacy_process(denied)
+
+
 async def test_fenced_session_purge_is_durable_and_replayed_before_retrieval(database, monkeypatch):
     monkeypatch.setattr(ingestion, "session_scope", database.sessions)
     # Include the normal history tables for the real deletion transaction.
@@ -434,7 +461,7 @@ async def test_fenced_session_purge_is_durable_and_replayed_before_retrieval(dat
         assert await db.get(MemoryBaseSession, tracking.id) is None
 
 
-@pytest.mark.usefixtures("export_helper")
+@pytest.mark.usefixtures("legacy_export")
 async def test_migration_replays_pending_purge_and_crash_retry_keeps_valid_manifest(database, monkeypatch):
     monkeypatch.setattr(ingestion, "session_scope", database.sessions)
     row = await make_kb(database)
@@ -465,9 +492,9 @@ async def test_migration_replays_pending_purge_and_crash_retry_keeps_valid_manif
         assert await db.get(MemoryBaseSession, tracking.id) is None
 
 
-@pytest.mark.parametrize("runner", ["opensearch", "importer", "helper", "coordinator", "runtime"])
+@pytest.mark.parametrize("runner", ["opensearch", "importer", "migration_io", "coordinator", "runtime"])
 async def test_failed_worker_cannot_replace_received_cancellation(runner):
-    from langflow.services.knowledge_base_storage import helper
+    from langflow.services.knowledge_base_storage import migration_io
     from lfx.base.knowledge_bases.backends.opensearch import _drained_worker
     from lfx.base.knowledge_bases.migration.importer import _run_worker
 
@@ -482,7 +509,7 @@ async def test_failed_worker_cannot_replace_received_cancellation(runner):
     runners = {
         "opensearch": _drained_worker,
         "importer": _run_worker,
-        "helper": helper._disk_call,
+        "migration_io": migration_io.run_worker,
         "coordinator": coordinator._worker,
     }
     if runner == "runtime":

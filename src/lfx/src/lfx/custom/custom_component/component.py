@@ -6,8 +6,10 @@ import inspect
 import logging
 from collections.abc import AsyncIterator, Iterator, Mapping
 from copy import deepcopy
+from functools import WRAPPER_ASSIGNMENTS, update_wrapper
 from pathlib import Path
 from textwrap import dedent
+from types import FunctionType
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple
 from uuid import UUID
 
@@ -125,6 +127,37 @@ def _copy_component_template(items: list[Any]) -> list[Any]:
     return [item.model_copy(deep=True) if isinstance(item, BaseModel) else deepcopy(item) for item in items]
 
 
+def check_model_provider_policy(method):
+    """Apply the shared standalone gate to direct model-builder calls."""
+    from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+    if inspect.iscoroutinefunction(method):
+
+        async def checked_async(self, *args, **kwargs):
+            await self.arequire_model_provider_policy(ModelProviderPolicyPurpose.USE)
+            return await method(self, *args, **kwargs)
+
+        wrapper = checked_async
+
+    else:
+
+        def checked(self, *args, **kwargs):
+            self.require_model_provider_policy(ModelProviderPolicyPurpose.USE)
+            return method(self, *args, **kwargs)
+
+        wrapper = checked
+
+    # Return annotations resolve against the original provider module. Keep
+    # deferred annotations lazy so wrapping a builder cannot execute them.
+    wrapper = FunctionType(wrapper.__code__, method.__globals__, closure=wrapper.__closure__)
+    update_wrapper(wrapper, method, assigned=tuple(name for name in WRAPPER_ASSIGNMENTS if name != "__annotations__"))
+    if annotator := getattr(method, "__annotate__", None):
+        wrapper.__annotate__ = annotator
+    else:
+        wrapper.__annotations__ = method.__annotations__
+    return wrapper
+
+
 class PlaceholderGraph(NamedTuple):
     """A placeholder graph structure for components, providing backwards compatibility.
 
@@ -169,6 +202,13 @@ class Component(CustomComponent):
     outputs: list[Output] = []
     selected_output: str | None = None
     code_class_base_inheritance: ClassVar[str] = "Component"
+
+    def __init_subclass__(cls, **kwargs):
+        """Protect direct builders, including saved nodes with explicit provider IDs."""
+        super().__init_subclass__(**kwargs)
+        for name in ("build_model", "build_embeddings"):
+            if method := cls.__dict__.get(name):
+                setattr(cls, name, check_model_provider_policy(method))
 
     def __init__(self, **kwargs) -> None:
         self.inputs = _copy_component_template(getattr(self.__class__, "inputs", []))
@@ -1354,7 +1394,11 @@ class Component(CustomComponent):
         from lfx.base.models.model import LCModelComponent
 
         if not isinstance(self, LCModelComponent | LCEmbeddingsModel):
-            return None
+            explicit_id = getattr(self, "model_provider_id", None)
+            if not isinstance(explicit_id, str) or not explicit_id.strip():
+                return None
+            if not any(output.method in {"build_model", "build_embeddings"} for output in self.outputs):
+                return None
 
         from lfx.base.models.provider_registry import (
             model_component_provider_id,
@@ -1423,6 +1467,57 @@ class Component(CustomComponent):
         """Return the first selected ModelInput provider for compatibility."""
         return next(iter(self._selected_model_provider_policy_ids(parameters)), None)
 
+    def _standalone_model_policy_selection(
+        self, parameters: Mapping[str, Any] | None = None
+    ) -> tuple[tuple[str, ...], str | None]:
+        """Read a standalone model's public identity without hydrating its inputs."""
+        from lfx.base.embeddings.model import LCEmbeddingsModel
+
+        methods = {output.method for output in self.outputs}
+        # Historical embedding nodes also inherit LCModelComponent. Their
+        # declared builder, rather than their base class alone, identifies the
+        # model type. Mixed outputs check both typed identities.
+        model_type: str | None = (
+            "embeddings" if isinstance(self, LCEmbeddingsModel) or "build_embeddings" in methods else "llm"
+        )
+        if {"build_model", "build_embeddings"}.issubset(methods):
+            model_type = None
+
+        model_names: list[str] = []
+
+        def read_input(name):
+            return parameters[name] if parameters is not None and name in parameters else getattr(self, name, None)
+
+        for name in ("model_name", "model", "model_id"):
+            input_ = self._inputs.get(name)
+            if input_ is None:
+                continue
+            # Explicit vertex parameters win over the component's saved default.
+            # An unresolved upstream value is checked again by the builder after
+            # hydration; it must never be reinterpreted as a default model.
+            value = read_input(name)
+            if isinstance(value, str) and value:
+                model_names.append(value)
+                if name == "model_id" and value == "custom" and "custom_model" in self._inputs:
+                    custom_model = read_input("custom_model")
+                    if isinstance(custom_model, str) and custom_model:
+                        model_names.append(custom_model)
+
+        # SDK kwargs can override the serialized request model even when the
+        # visible selector is allowed (OpenAI's extra_body is merged last).
+        # Check every configured identity rather than replacing the selector.
+        kwargs = read_input("model_kwargs") if "model_kwargs" in self._inputs else None
+        if isinstance(kwargs, Mapping):
+            extra_body = kwargs.get("extra_body")
+            for overrides in (kwargs, extra_body):
+                if not isinstance(overrides, Mapping):
+                    continue
+                for name in ("model", "model_name", "model_id"):
+                    value = overrides.get(name)
+                    if isinstance(value, str) and value and value not in model_names:
+                        model_names.append(value)
+        return tuple(model_names), model_type
+
     async def _additional_model_provider_policy_ids(
         self,
         purpose: ModelProviderPolicyPurpose,
@@ -1446,11 +1541,14 @@ class Component(CustomComponent):
 
         from lfx.services.model_provider_policy import require_model_provider
 
-        require_model_provider(
+        snapshot = require_model_provider(
             user_id=self.user_id,
             provider=provider_id,
             purpose=purpose,
         )
+        model_names, model_type = self._standalone_model_policy_selection()
+        for model_name in model_names:
+            snapshot.require_model(provider_id, model_name, model_type=model_type)
 
     async def arequire_model_provider_policy(
         self,
@@ -1478,6 +1576,10 @@ class Component(CustomComponent):
         )
         for provider_id in provider_ids:
             snapshot.require(provider_id)
+        if standalone_provider_id:
+            model_names, model_type = self._standalone_model_policy_selection(parameters)
+            for model_name in model_names:
+                snapshot.require_model(standalone_provider_id, model_name, model_type=model_type)
 
     def _integration_policy_inputs(self):
         """Return every connection-reference input this component declares."""
@@ -1851,15 +1953,14 @@ class Component(CustomComponent):
             self.tracing_service.set_outputs(self.trace_name, results)
 
     def custom_repr(self):
-        if self.repr_value == "":
-            self.repr_value = self.status
-        if isinstance(self.repr_value, dict):
-            return yaml.dump(self.repr_value)
-        if isinstance(self.repr_value, str):
-            return self.repr_value
-        if isinstance(self.repr_value, BaseModel) and not isinstance(self.repr_value, Data):
-            return str(self.repr_value)
-        return self.repr_value
+        repr_value = self.status if self.repr_value == "" else self.repr_value
+        if isinstance(repr_value, dict):
+            return yaml.dump(repr_value)
+        if isinstance(repr_value, str):
+            return repr_value
+        if isinstance(repr_value, BaseModel) and not isinstance(repr_value, Data):
+            return str(repr_value)
+        return repr_value
 
     def build_inputs(self):
         """Builds the inputs for the custom component.
