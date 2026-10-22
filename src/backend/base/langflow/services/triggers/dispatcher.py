@@ -27,7 +27,7 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 from uuid import NAMESPACE_URL, uuid5
 
-from lfx.integrations.errors import IntegrationPolicyBlockedError
+from lfx.integrations.errors import IntegrationPolicyBlockedError, ProviderUnavailableError
 from lfx.log.logger import logger
 from sqlmodel import col, func, select, update
 
@@ -50,7 +50,7 @@ from langflow.services.triggers.constants import (
 from langflow.services.triggers.correlation import derive_session_id
 from langflow.services.triggers.errors import BindingUnsupportedError
 from langflow.services.triggers.ledger import purge_events
-from langflow.services.triggers.principal import connection_preflight, family_for
+from langflow.services.triggers.principal import connection_preflight, family_for, provider_availability_denial
 from langflow.services.triggers.providers.registry import collecting_kinds, push_mechanisms, source_kinds
 from langflow.services.triggers.source_delivery import SOURCE_HINT_FIELD
 
@@ -459,7 +459,7 @@ async def _record_dispatched(
     event.lease_expires_at = None
     event.updated_at = _now()
     trigger.last_fired_at = _now()
-    if trigger.last_error == IntegrationPolicyBlockedError.code:
+    if trigger.last_error in {IntegrationPolicyBlockedError.code, ProviderUnavailableError.code}:
         trigger.last_error = None
     session.add_all([event, trigger])
     await session.flush()
@@ -558,6 +558,10 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
         await _terminalize(session, event=event, state=TriggerEventState.FAILED, error="owner_inactive")
         return
 
+    if provider_availability_denial(trigger) is not None:
+        await _defer_unavailable_provider(session, trigger=trigger, event=event)
+        return
+
     if (event.payload or {}).get(SOURCE_HINT_FIELD):
         # A thin Graph/Google notification is a durable wakeup. Expanding it
         # through the owner's connection produces canonical ledger rows; it
@@ -585,6 +589,9 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
             return
         await _fence_event(session, event)
         await _terminalize(session, event=event, state=TriggerEventState.COMPLETED)
+        if trigger.last_error == ProviderUnavailableError.code:
+            trigger.last_error = None
+            session.add(trigger)
         return
 
     try:
@@ -600,6 +607,9 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
 
     denial = await connection_preflight(session, trigger, family=family)
     if denial is not None:
+        if isinstance(denial, ProviderUnavailableError):
+            await _defer_unavailable_provider(session, trigger=trigger, event=event)
+            return
         if isinstance(denial, IntegrationPolicyBlockedError):
             # Policy approval cannot be repaired by reconnecting credentials.
             # Refuse this event but leave the trigger armed so later deliveries
@@ -645,6 +655,20 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
 
     await _fence_event(session, event)
     await _record_dispatched(session, trigger=trigger, event=event, job_id=job_id, session_id=session_id)
+
+
+async def _defer_unavailable_provider(session: AsyncSession, *, trigger: Trigger, event: TriggerEvent) -> None:
+    """Keep queued work while an operator reloads the provider, without consuming attempts."""
+    await _fence_event(session, event)
+    event.state = TriggerEventState.PENDING.value
+    event.error = ProviderUnavailableError.code
+    event.lease_owner = None
+    event.lease_expires_at = None
+    event.available_at = _now() + timedelta(seconds=30)
+    event.updated_at = _now()
+    trigger.last_error = ProviderUnavailableError.code
+    session.add_all([event, trigger])
+    await session.flush()
 
 
 async def run_once(*, owner: str, source_hints: bool | None = None) -> int:
