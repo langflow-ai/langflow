@@ -1,11 +1,31 @@
 """Deterministic credentials and an authenticated graph for bundle tests."""
 
-from types import SimpleNamespace
+import importlib.abc
+import sys
 
 import pytest
-from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest, CredentialLease, ResolvedCredential
-from lfx.services.authorization.base import ExecutionPrincipal
-from pydantic import SecretStr
+
+
+class _NoBackend(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, _path=None, _target=None):
+        if fullname == "langflow" or fullname.startswith("langflow."):
+            msg = "The standalone GitHub bundle cannot import langflow"
+            raise ModuleNotFoundError(msg, name=fullname)
+
+
+_BACKEND_BLOCKER = _NoBackend()
+sys.meta_path.insert(0, _BACKEND_BLOCKER)
+
+from lfx.integrations.models import (  # noqa: E402 - block the optional backend before lfx imports
+    ConnectionRef,
+    ConnectionResolutionRequest,
+    CredentialLease,
+    ResolvedCredential,
+)
+from lfx.services.authorization.base import (  # noqa: E402 - block the optional backend before lfx imports
+    ExecutionPrincipal,
+)
+from pydantic import SecretStr  # noqa: E402 - block the optional backend before lfx imports
 
 
 class Resolver:
@@ -19,16 +39,7 @@ class Resolver:
             access_token=SecretStr(f"test-installation-{self.calls}"),
             provider="github",
             identity=self.identity,
-            granted_scopes=frozenset(
-                {
-                    "metadata:read",
-                    "issues:read",
-                    "issues:write",
-                    "pull_requests:read",
-                    "pull_requests:write",
-                    "webhooks:write",
-                }
-            ),
+            granted_scopes=frozenset(),
             scopes_verified=True,
         )
 
@@ -43,9 +54,10 @@ def lease():
     return CredentialLease(resolver, request)
 
 
-def component_graph():
-    return SimpleNamespace(
-        execution_principal=ExecutionPrincipal(kind="actor", user_id="owner", interactive=True),
-        flow_id=None,
-        run_id=None,
-    )
+@pytest.fixture(scope="session", autouse=True)
+def backend_unavailable():
+    try:
+        yield
+        assert not any(name == "langflow" or name.startswith("langflow.") for name in sys.modules)
+    finally:
+        sys.meta_path.remove(_BACKEND_BLOCKER)

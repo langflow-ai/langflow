@@ -9,7 +9,7 @@ from lfx_github.client import GitHubClient, positive_id, repository_path
 from sqlmodel import select
 
 from langflow.services.auth.utils import decrypt_api_key
-from langflow.services.database.models.trigger.model import Trigger, TriggerSubscription
+from langflow.services.database.models.trigger.model import Trigger, TriggerCleanup, TriggerSubscription
 from langflow.services.triggers.constants import FAMILY_TRIGGER_PUSH
 from langflow.services.triggers.ingress.verifiers import IngressSecrets
 from langflow.services.triggers.providers.github.config import normalize_config
@@ -17,14 +17,13 @@ from langflow.services.triggers.providers.github.credentials import validate_man
 from langflow.services.triggers.providers.github.events import verify
 from langflow.services.triggers.providers.registry import TriggerKind, TriggerProvider
 from langflow.services.triggers.source_clients import source_lease
+from langflow.services.triggers.source_errors import SourceConfigurationError
 from langflow.services.triggers.source_subscription import source_ingress_url
 from langflow.services.triggers.subscriptions import upsert_subscription
 
 if TYPE_CHECKING:
     from lfx.integrations.models import CredentialLease
     from sqlmodel.ext.asyncio.session import AsyncSession
-
-    from langflow.services.database.models.trigger.model import TriggerCleanup
 
 
 WEBHOOK_PAGE_SIZE = 100
@@ -38,7 +37,22 @@ def _hook_id(value: str) -> int:
     return positive_id(value.rsplit(":", 1)[-1])
 
 
+async def prepare(session: AsyncSession, trigger: Trigger) -> None:
+    pending = (
+        await session.exec(
+            select(TriggerCleanup.id).where(
+                TriggerCleanup.provider == "github",
+                TriggerCleanup.trigger_id == trigger.id,
+            )
+        )
+    ).first()
+    if pending is not None:
+        msg = "The previous GitHub webhook is still being removed. Wait for cleanup before enabling this trigger."
+        raise SourceConfigurationError(msg)
+
+
 async def provision(session: AsyncSession, trigger: Trigger) -> TriggerSubscription:
+    await prepare(session, trigger)
     repository = trigger.config["repository"]
     path = repository_path(repository)
     address = await source_ingress_url(session, trigger)
@@ -166,4 +180,6 @@ PROVIDER = TriggerProvider(
     ingress_secrets=ingress_secrets,
     api_origins=("https://api.github.com",),
     validate_manual_credential=validate_manual_credential,
+    manual_token_requires_expiry=True,
+    prepare=prepare,
 )

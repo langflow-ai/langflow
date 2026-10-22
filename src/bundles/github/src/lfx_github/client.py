@@ -71,15 +71,15 @@ def bounded_text(value: Any, *, required: bool = False, maximum: int = 60000) ->
     return value
 
 
-def _without_credentials(value: Any) -> Any:
+def without_credentials(value: Any) -> Any:
     if isinstance(value, dict):
         return {
-            key: _without_credentials(item)
+            key: without_credentials(item)
             for key, item in value.items()
             if key not in {"temp_clone_token", "access_token", "refresh_token", "token", "client_secret"}
         }
     if isinstance(value, list):
-        return [_without_credentials(item) for item in value]
+        return [without_credentials(item) for item in value]
     return value
 
 
@@ -178,7 +178,7 @@ class GitHubClient:
                         raise ProviderUnavailableError(provider=PROVIDER_ID) from None
                     if not isinstance(payload, (dict, list)):
                         raise ProviderUnavailableError(provider=PROVIDER_ID)
-                    return _without_credentials(payload)
+                    return without_credentials(payload)
             except httpx.TimeoutException:
                 raise IntegrationNetworkError(reason="timeout", provider=PROVIDER_ID, host="api.github.com") from None
             except httpx.TransportError:

@@ -69,6 +69,7 @@
         "lfx-cohere",
         "lfx-datastax",
         "lfx-docling",
+        "lfx-github",
         "lfx-google",
         "lfx-ibm",
         "lfx-microsoft",
@@ -105,6 +106,7 @@
           "lfx-cohere",
           "lfx-datastax",
           "lfx-docling",
+          "lfx-github",
           "lfx-google",
           "lfx-ibm",
           "lfx-microsoft",
@@ -158,6 +160,11 @@
         "lfx-toolguard": [
           "lfx_toolguard/extension.json",
           "lfx_toolguard/components/models_and_agents/policies_component.py"
+        ],
+        "lfx-github": [
+          "lfx_github/extension.json",
+          "lfx_github/components/github/capabilities.v1.json",
+          "lfx_github/components/github/issue_trigger.py"
         ]
       },
       "module_checks": [
@@ -242,6 +249,7 @@
           "lfx-empiriolabs",
           "lfx-exa",
           "lfx-firecrawl",
+          "lfx-github",
           "lfx-google",
           "lfx-ibm",
           "lfx-microsoft",

@@ -134,7 +134,11 @@ def test_forgery_mismatch_and_unknown_events_reject(change):
         verify(request, secrets(), tolerance_s=300)
 
 
-@pytest.mark.parametrize("body", [b"null", b"[]", b"not-json", b"\xff", b"x" * (1024 * 1024 + 1)])
+@pytest.mark.parametrize(
+    "body",
+    [b"null", b"[]", b"not-json", b"\xff", b"x" * (1024 * 1024 + 1)],
+    ids=["null", "list", "garbage", "bad-utf8", "oversize"],
+)
 def test_malformed_or_oversized_signed_payloads_reject(body):
     with pytest.raises(IngressRejected):
         verify(signed(body=body), secrets(), tolerance_s=300)
@@ -249,7 +253,14 @@ async def test_provision_reconciles_exact_callback_and_pins_repository(monkeypat
         stored.update(fields)
         return SimpleNamespace(**fields)
 
-    session = SimpleNamespace(add=lambda _row: None)
+    class Session:
+        def add(self, _row):
+            return None
+
+        async def exec(self, _statement):
+            return SimpleNamespace(first=lambda: None)
+
+    session = Session()
     monkeypatch.setattr(runtime, "GitHubClient", partial(GitHubClient, transport=httpx.MockTransport(handle)))
     monkeypatch.setattr(runtime, "source_lease", lease)
     monkeypatch.setattr(runtime, "source_ingress_url", ingress)
@@ -358,3 +369,26 @@ def test_bot_event_requires_explicit_opt_in(include):
     settings.target_config["include_bot_events"] = include
     result = verify(signed(value), settings, tolerance_s=300)
     assert bool(result.payload) is include
+
+
+def test_missing_optional_canvas_values_use_supported_defaults():
+    result = normalize_config(
+        "github.issue",
+        {
+            "connection": "github/work",
+            "repository": "org/repo",
+            "delivery_mode": None,
+            "actions": None,
+            "include_bot_events": None,
+        },
+    )
+    assert result["delivery_mode"] == "push"
+    assert result["actions"] == ["closed", "opened", "reopened"]
+    assert result["include_bot_events"] is False
+
+
+def test_provider_credentials_are_removed_from_signed_event_outputs():
+    value = payload()
+    value["repository"]["temp_clone_token"] = "test-only-provider-value"  # noqa: S105  # pragma: allowlist secret
+    result = verify(signed(value), secrets(), tolerance_s=300)
+    assert "temp_clone_token" not in result.payload["repository"]

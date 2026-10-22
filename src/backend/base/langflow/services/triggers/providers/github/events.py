@@ -8,6 +8,8 @@ import json
 import re
 from uuid import UUID
 
+from lfx_github.client import without_credentials
+
 from langflow.services.triggers.ingress.verifiers import IngressRejected, IngressRequest, IngressSecrets, Verified
 from langflow.services.triggers.providers.github.config import ACTIONS
 
@@ -82,13 +84,15 @@ def verify(request: IngressRequest, secrets: IngressSecrets, *, tolerance_s: int
     digest = hashlib.sha256(request.body).hexdigest()
     return Verified(
         dedupe_suffix=f"github:{digest}",
-        payload={
-            "provider": "github",
-            "event": event,
-            "action": action,
-            "repository": repository,
-            _OBJECT[kind]: item,
-            "sender": payload.get("sender"),
-            "delivery_id": delivery,
-        },
+        payload=without_credentials(
+            {
+                "provider": "github",
+                "event": event,
+                "action": action,
+                "repository": repository,
+                _OBJECT[kind]: item,
+                "sender": payload.get("sender"),
+                "delivery_id": delivery,
+            }
+        ),
     )
