@@ -20,6 +20,17 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 
+async def cross_user_fetch_enabled() -> bool:
+    """Whether share-aware routes load a resource by id alone rather than by owner.
+
+    Requires both the plugin's capability and ``AUTHZ_ENABLED``; anything that
+    predicts whether a fetch below will find a row must ask this, not the
+    plugin directly.
+    """
+    authz = get_authorization_service()
+    return await authz.supports_cross_user_fetch() and await authz.is_enabled()
+
+
 async def authorized_or_owner_scoped(
     session: AsyncSession,
     model: type[T],
@@ -36,9 +47,8 @@ async def authorized_or_owner_scoped(
     locks the selected row through the caller's transaction. Write paths use
     this to keep authorization of the current scope atomic with the mutation.
     """
-    authz = get_authorization_service()
     # Require both plugin capability and AUTHZ_ENABLED before widening the query.
-    if await authz.supports_cross_user_fetch() and await authz.is_enabled():
+    if await cross_user_fetch_enabled():
         stmt = select(model).where(id_column == resource_id)
     else:
         stmt = select(model).where(id_column == resource_id).where(owner_column == owner_id)

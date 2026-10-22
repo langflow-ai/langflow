@@ -1,0 +1,88 @@
+---
+title: Sandbox backends
+slug: /sandbox-backends
+---
+
+`LANGFLOW_SANDBOX_BACKEND` names the backend that runs code for the
+[**Python Interpreter**](../Components/python-interpreter.mdx) Component and the
+legacy **Python REPL** tool. The name is not limited to a fixed in-tree list.
+Each backend registers itself under a name, and Langflow looks the configured
+name up in that registry.
+
+The layer around the registry is vendor-neutral. It holds the operator settings,
+the result and error types, and the policy decision. It does not know which
+backend runs. A backend supplies the execution implementation and declares the
+isolation capabilities it supports.
+
+## Built-in backends
+
+| Name | Where the code runs |
+|---|---|
+| `none` | In the Langflow process. No isolation. |
+| `exec-sandbox` | A QEMU microVM on the Langflow host. Needs a hypervisor (KVM or HVF). |
+
+`none` is the default. Under `exec-sandbox`, a sandbox that is configured but
+unavailable fails with an error. It never falls back to in-process execution.
+
+For the built-in backend setup, see
+[Environment variables](../Develop/environment-variables.mdx).
+
+## How a backend and your settings are matched
+
+A backend declares what it can enforce. Langflow decides whether that is enough.
+The backend never approves its own policy, so a backend cannot exempt itself
+from your settings.
+
+Langflow refuses the run when a setting asks for more than the backend declares:
+
+* The backend does not report a hardware-virtualized boundary.
+* `LANGFLOW_SANDBOX_ALLOW_NETWORK` is false, but the backend cannot block all
+  egress.
+* `LANGFLOW_SANDBOX_ALLOWED_DOMAINS` is set, but the backend cannot restrict
+  egress by domain.
+* `LANGFLOW_SANDBOX_TIMEOUT_SECONDS` is higher than the longest execution the
+  backend accepts. The 1-300 second range is the range Langflow accepts. A
+  backend can declare a lower cap, and a value inside the Langflow range is
+  still refused when it exceeds that cap.
+
+## Third-party backends
+
+A package outside Langflow can add a backend through the `lfx.sandbox_backends`
+entry point group.
+
+The entry point value must be a zero-argument factory that returns an object
+implementing `SandboxBackend`: a `name`, `capabilities()`, `run()`, `shutdown()`,
+and `reset_after_fork()`. For example:
+
+```toml
+[project.entry-points."lfx.sandbox_backends"]
+acme = "acme_sandbox:create_backend"
+```
+
+The entry-point name (`acme` above) is the value operators use for both
+`LANGFLOW_SANDBOX_BACKEND` and `LANGFLOW_SANDBOX_BACKEND_PLUGINS`.
+
+Discovery is not automatic. Langflow loads only the names listed in
+`LANGFLOW_SANDBOX_BACKEND_PLUGINS`, and that variable is empty by default. With
+an empty list, no third-party backend code is imported at all.
+
+:::warning
+Loading a plugin imports its code into the Langflow process, on the path that
+decides whether user code is isolated. A backend's declared capabilities are
+configuration metadata, not proof that it enforces them. Naming a plugin here is
+a statement that you trust that package.
+:::
+
+A plugin that reuses the name of a built-in backend is refused, not loaded in
+its place.
+
+If two installed packages publish the same entry-point name, that name is
+refused and neither package is imported. `LANGFLOW_SANDBOX_BACKEND_PLUGINS`
+names a backend, not a distribution, so it cannot say which of the two you
+meant. Langflow logs both distribution names. Uninstall one of them.
+
+## Related
+
+* [Environment variables](../Develop/environment-variables.mdx) — every
+  `LANGFLOW_SANDBOX_*` variable
+* [Security](./security.mdx)

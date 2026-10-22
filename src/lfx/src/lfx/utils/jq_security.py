@@ -130,9 +130,10 @@ def _mask_object_keys(scanned: str) -> str:
     (never key position) and is still rejected.
     """
     out = list(scanned)
-    # Open containers, innermost last. Each entry is [opening char, expecting_key].
+    # Open containers/conditionals, innermost last: [opening token, expecting_key].
     # ``expecting_key`` only means anything for "{" frames: it is True at "{" and
-    # after a ",", and False after the ":" that starts the value.
+    # after an object-entry comma. An if/elif/else branch is a full jq expression,
+    # so its commas are stream operators, not separators in the enclosing object.
     stack: list[list] = []
     i, n = 0, len(scanned)
     while i < n:
@@ -154,6 +155,13 @@ def _mask_object_keys(scanned: str) -> str:
                 qualified = i > 0 and scanned[i - 1] in ".$"
                 if in_key_position and not qualified:
                     out[match.start() : match.end()] = " " * (match.end() - match.start())
+                    stack[-1][1] = False
+                elif not qualified:
+                    identifier = match.group(0)
+                    if identifier == "if":
+                        stack.append(["if", False])
+                    elif identifier == "end" and stack and stack[-1][0] == "if":
+                        stack.pop()
                 i = match.end()
                 continue
         i += 1

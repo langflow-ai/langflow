@@ -208,6 +208,21 @@ describe("AddConnectionDialog: pasted Slack tokens", () => {
     expect(screen.queryByTestId("connection-method")).not.toBeInTheDocument();
   });
 
+  it("switches setup guidance with the Slack connection method", async () => {
+    const user = userEvent.setup();
+    renderDialog([slack]);
+    expect(screen.getByTestId("connection-callback-url")).toBeVisible();
+    await user.selectOptions(screen.getByTestId("connection-method"), "token");
+    expect(screen.getByRole("link", { name: "Setup guide" })).toHaveAttribute(
+      "href",
+      "https://docs.langflow.org/bundles-slack#two-executing-identities",
+    );
+    expect(
+      screen.queryByTestId("connection-callback-url"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("does not offer a pasted token before the deployment says what it is", () => {
     // Not ``renderDialog``: its default would stand in for the missing context.
     render(dialog([slack], undefined));
@@ -215,22 +230,15 @@ describe("AddConnectionDialog: pasted Slack tokens", () => {
     expect(screen.queryByTestId("connection-method")).not.toBeInTheDocument();
   });
 
-  it("keeps a scope the person unchecked when the component types refetch", async () => {
+  it("does not let pasted tokens claim scopes from checkboxes", async () => {
     mockCreate.mockResolvedValueOnce(created({ granted_scopes: [] }));
     const user = userEvent.setup();
-    const { rerender } = renderDialog([slack]);
+    renderDialog([slack]);
 
     await choosePastedToken(user, "xoxb-1111-2222-secret");
-    const scope = screen.getByTestId("connection-scope-chat:write");
-    expect(scope).toBeChecked();
-    await user.click(scope);
-    expect(scope).not.toBeChecked();
-
-    // A refetch (window focus, say) hands back equal types in a new object.
-    mockTypesState.data = JSON.parse(JSON.stringify(mockTypesState.data));
-    rerender(dialog([slack], "desktop"));
-
-    expect(screen.getByTestId("connection-scope-chat:write")).not.toBeChecked();
+    expect(
+      screen.queryByTestId("connection-scope-chat:write"),
+    ).not.toBeInTheDocument();
     await user.click(screen.getByTestId("connection-continue"));
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({ granted_scopes: [] }),
@@ -278,7 +286,7 @@ describe("AddConnectionDialog: pasted Slack tokens", () => {
     );
   });
 
-  it("records the bot actions' scopes for a bot token, never the user actions'", async () => {
+  it("shows the server-verified scopes after connecting a bot token", async () => {
     mockCreate.mockResolvedValueOnce(
       created({ granted_scopes: ["chat:write"] }),
     );
@@ -293,10 +301,34 @@ describe("AddConnectionDialog: pasted Slack tokens", () => {
 
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
-        granted_scopes: ["chat:write"],
+        granted_scopes: [],
         credentials: { access_token: "xoxb-1111-2222-secret" },
       }),
     );
+    expect(await screen.findByText("Connected")).toBeInTheDocument();
+    expect(screen.getByText("chat:write")).toBeInTheDocument();
+    expect(screen.queryByText("search:read")).not.toBeInTheDocument();
+  });
+
+  it("keeps a rejected bot token out of the connected step", async () => {
+    mockCreate.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: {
+        data: {
+          detail:
+            "Slack rejected this token. Paste a valid token and try again.",
+        },
+      },
+    });
+    const user = userEvent.setup();
+    renderDialog([slack]);
+    await choosePastedToken(user, "xoxb-123");
+    await user.click(screen.getByTestId("connection-continue"));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Slack rejected this token",
+    );
+    expect(screen.queryByText("Connected")).not.toBeInTheDocument();
+    expect(screen.getByTestId("connection-continue")).toBeEnabled();
   });
 
   it("refuses anything that is not a Slack app-level or bot token", async () => {

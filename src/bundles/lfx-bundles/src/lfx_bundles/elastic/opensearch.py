@@ -9,6 +9,7 @@ from lfx.base.vectorstores.vector_store_connection_decorator import vector_store
 from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput, TableInput
 from lfx.log import logger
 from lfx.schema.data import Data
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 from opensearchpy import OpenSearch, helpers
 from opensearchpy.exceptions import RequestError
 
@@ -459,6 +460,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         Returns:
             Configured OpenSearch client ready for operations
         """
+        validate_connector_url_for_ssrf(self.opensearch_url)
         auth_kwargs = self._build_auth_kwargs()
         return OpenSearch(
             hosts=[self.opensearch_url],
