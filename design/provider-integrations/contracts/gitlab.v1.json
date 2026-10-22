@@ -333,7 +333,8 @@
     "Personal access token with actual api scope and provider expiration. No automatic refresh, project tokens, or generic environment credentials.",
     "Public webhook ingress only. No Desktop triggers, polling backfill, exact event replay, or exactly-once guarantee.",
     "Confidential issues are excluded. Own-actor events and bot-marked events are filtered by default.",
-    "No live GitLab tenant delivery or deployment acceptance has been verified."
+    "No live GitLab tenant delivery or deployment acceptance has been verified.",
+    "Callback admission is durable before provider I/O. Unknown hook IDs are reconciled only by the original project, account, exact callback and HMAC ownership marker. Cleanup retains its reservation until it finishes, and owner deletion uses only the existing bounded sealed access token."
   ],
   "evidence_paths": [
     "src/bundles/gitlab/tests/test_gitlab_client.py",

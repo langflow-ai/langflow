@@ -11,6 +11,7 @@ from uuid import uuid4
 import httpx
 import pytest
 from langflow.services.connection.service import DatabaseConnectionResolverService
+from langflow.services.data_subjects.stop import stop_builder
 from langflow.services.database.models.connection.model import Connection, ConnectionSecret
 from langflow.services.database.models.connection.schemas import ConnectionCreate
 from langflow.services.database.models.trigger.model import Trigger, TriggerCleanup, TriggerEvent, TriggerSubscription
@@ -102,7 +103,9 @@ def gitlab(monkeypatch, client):  # noqa: ARG001
             return httpx.Response(200, json={"id": 80})
         if path == "/projects/80/hooks" and request.method == "GET":
             hooks = list(remote.hooks.values())
-            return httpx.Response(200, json=hooks + hooks if remote.duplicate else hooks)
+            return httpx.Response(
+                200, json=hooks + [{**hook, "id": 999} for hook in hooks] if remote.duplicate else hooks
+            )
         if path == "/projects/80/hooks" and request.method == "POST":
             body = json.loads(request.content)
             remote.created += 1
@@ -382,4 +385,145 @@ async def test_duplicate_remote_callbacks_stop_recovery(gitlab, trigger_owner, o
         row = await session.get(Trigger, trigger.id)
         with pytest.raises(ValueError, match="Duplicate GitLab callbacks"):
             await TriggerService().enable_and_activate(session, row=row)
+    assert gitlab.created == 1
+
+
+@pytest.mark.parametrize("operation", ["pause", "delete", "owner-delete"])
+async def test_unknown_remote_id_still_has_durable_cleanup_after_timeout(gitlab, trigger_owner, owned_flow, operation):
+    created = await connection(trigger_owner)
+    trigger = await reconcile(owned_flow, trigger_owner)
+    gitlab.timeout_once = True
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        with pytest.raises(ValueError, match="Source activation failed"):
+            await TriggerService().enable_and_activate(session, row=row)
+    assert gitlab.created == 1
+    async with session_scope() as session:
+        reservation = (
+            await session.exec(
+                select(TriggerSubscription).where(
+                    TriggerSubscription.trigger_id == trigger.id,
+                    TriggerSubscription.state == "pending",
+                )
+            )
+        ).one()
+        assert reservation.provider_subscription_id == f"pending:{trigger.id}"
+        assert reservation.provider_state["hook_id"] is None
+        assert "synthetic-gitlab-token" not in json.dumps(reservation.provider_state)
+        row = await session.get(Trigger, trigger.id)
+        if operation == "pause":
+            await TriggerService().disable(session, row=row)
+        elif operation == "owner-delete":
+            user = await session.get(User, trigger_owner)
+            await stop_builder(session, user)
+            assert user.is_active is False
+        else:
+            await TriggerService().delete(session, row=row)
+        task = (await session.exec(select(TriggerCleanup).where(TriggerCleanup.trigger_id == trigger.id))).one()
+        assert task.provider_subscription_id == f"pending:{trigger.id}"
+        if operation == "owner-delete":
+            assert task.encrypted_credential is not None
+            secret = await session.get(ConnectionSecret, created.id)
+            await session.delete(secret)
+            stored = await session.get(Connection, created.id)
+            await session.delete(stored)
+    assert await run_cleanup_pass() == 1
+    assert gitlab.deleted == [1]
+    assert gitlab.hooks == {}
+
+
+@pytest.mark.parametrize("fault", ["foreign-url", "foreign-proof", "wrong-account"])
+async def test_unknown_id_cleanup_leaves_unrelated_hooks_unchanged(gitlab, trigger_owner, owned_flow, fault):
+    await connection(trigger_owner)
+    trigger = await reconcile(owned_flow, trigger_owner)
+    gitlab.timeout_once = True
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        with pytest.raises(ValueError, match="Source activation failed"):
+            await TriggerService().enable_and_activate(session, row=row)
+    gitlab.hooks[77] = {**gitlab.hooks[1], "id": 77, "url": "https://unrelated.example/callback"}
+    if fault == "foreign-url":
+        gitlab.hooks[1]["url"] = "https://other.example/callback"
+    elif fault == "foreign-proof":
+        gitlab.hooks[1]["description"] = "foreign-owned-hook"
+    else:
+        gitlab.account_id = 10
+    before = json.loads(json.dumps(gitlab.hooks))
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().disable(session, row=row)
+    assert await run_cleanup_pass() == (1 if fault == "foreign-url" else 0)
+    assert gitlab.deleted == []
+    assert json.loads(json.dumps(gitlab.hooks)) == before
+
+
+async def test_pending_intent_blocks_reenable_until_cleanup_finishes(gitlab, trigger_owner, owned_flow):
+    await connection(trigger_owner)
+    trigger = await reconcile(owned_flow, trigger_owner)
+    gitlab.timeout_once = True
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        with pytest.raises(ValueError, match="Source activation failed"):
+            await TriggerService().enable_and_activate(session, row=row)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().disable(session, row=row)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        with pytest.raises(ValueError, match="previous GitLab webhook cleanup"):
+            await TriggerService().enable_and_activate(session, row=row)
+    assert await run_cleanup_pass() == 1
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        assert row.state == "active"
+    assert gitlab.created == 2
+    assert gitlab.deleted == [1]
+    assert list(gitlab.hooks) == [2]
+
+
+async def test_unproven_callback_cannot_be_adopted_during_retry(gitlab, trigger_owner, owned_flow):
+    await connection(trigger_owner)
+    trigger = await reconcile(owned_flow, trigger_owner)
+    gitlab.timeout_once = True
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        with pytest.raises(ValueError, match="Source activation failed"):
+            await TriggerService().enable_and_activate(session, row=row)
+    gitlab.hooks[1]["description"] = "foreign-owned-hook"
+    before = json.loads(json.dumps(gitlab.hooks))
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        with pytest.raises(ValueError, match="ownership proof"):
+            await TriggerService().enable_and_activate(session, row=row)
+    assert json.loads(json.dumps(gitlab.hooks)) == before
+    assert gitlab.created == 1
+    assert not any(request.method == "PUT" for request in gitlab.requests)
+
+
+async def test_callback_reservation_is_durable_before_provider_creation(gitlab, trigger_owner, owned_flow):
+    await connection(trigger_owner)
+    trigger = await reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable(session, row=row)
+    assert gitlab.created == 0
+    async with session_scope() as session:
+        reservation = (
+            await session.exec(
+                select(TriggerSubscription).where(
+                    TriggerSubscription.trigger_id == trigger.id,
+                )
+            )
+        ).one()
+        assert reservation.state == "pending"
+        reservation_id = reservation.id
+        assert reservation.provider_state["callback"].endswith(row.public_id)
+        assert reservation.provider_state["ownership_tag"].startswith("langflow-owner-v1-")
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().activate_push_source(session, row=row)
+    async with session_scope() as session:
+        reservation = await session.get(TriggerSubscription, reservation_id)
+        assert reservation.state == "active"
+        assert reservation.provider_subscription_id == "80:1"
     assert gitlab.created == 1
