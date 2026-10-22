@@ -38,7 +38,8 @@
         "auth_profile_id": "user",
         "identity": "user_delegated",
         "required_scopes": [
-          "read:page:confluence"
+          "read:page:confluence",
+          "read:confluence-user"
         ],
         "policy_keys": [
           "integrations.confluence.page.search"
@@ -58,7 +59,8 @@
         "auth_profile_id": "user",
         "identity": "user_delegated",
         "required_scopes": [
-          "read:page:confluence"
+          "read:page:confluence",
+          "read:confluence-user"
         ],
         "policy_keys": [
           "integrations.confluence.page.read"
@@ -79,7 +81,8 @@
         "identity": "user_delegated",
         "required_scopes": [
           "read:page:confluence",
-          "write:page:confluence"
+          "write:page:confluence",
+          "read:confluence-user"
         ],
         "policy_keys": [
           "integrations.confluence.page.create"
@@ -100,7 +103,8 @@
         "identity": "user_delegated",
         "required_scopes": [
           "read:page:confluence",
-          "write:page:confluence"
+          "write:page:confluence",
+          "read:confluence-user"
         ],
         "policy_keys": [
           "integrations.confluence.page.update"
@@ -121,7 +125,8 @@
         "identity": "user_delegated",
         "required_scopes": [
           "read:page:confluence",
-          "offline_access"
+          "offline_access",
+          "read:confluence-user"
         ],
         "policy_keys": [
           "integrations.confluence.trigger.created"
@@ -141,7 +146,8 @@
         "identity": "user_delegated",
         "required_scopes": [
           "read:page:confluence",
-          "offline_access"
+          "offline_access",
+          "read:confluence-user"
         ],
         "policy_keys": [
           "integrations.confluence.trigger.updated"

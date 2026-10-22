@@ -4,7 +4,7 @@ import re
 
 from lfx.integrations.errors import IntegrationError
 from lfx_confluence.client import http_client, send
-from lfx_confluence.schema import READ, SCOPES, USER, WRITE, cloud_id
+from lfx_confluence.schema import READ, SCOPES, USER, cloud_id
 
 from langflow.services.connection.oauth.adapter import OAuthAdapter
 from langflow.services.connection.oauth.config import OAuthError
@@ -51,24 +51,38 @@ async def parse_token(registration, body, *, refresh):  # noqa: ARG001 - rotatin
         or type(body.get("expires_in")) is not int
         or not 0 < body["expires_in"] <= MAX_TOKEN_LIFETIME
         or not isinstance(body.get("scope"), str)
-        or not (SCOPES - {"offline_access"}) <= set(body["scope"].split())
+        or not {READ, USER} <= set(body["scope"].split())
     ):
         msg = "Atlassian did not return a valid refreshable Confluence grant."
         raise OAuthError(msg, reason="provider-unavailable")
     token = {key: body[key] for key in ("access_token", "refresh_token", "expires_in", "scope")}
-    token["scope"] = " ".join(sorted(set(body["scope"].split()) | {"offline_access"}))
     try:
         async with http_client() as http:
             resources = await send(http, "GET", "/oauth/token/accessible-resources", body["access_token"])
-            if not isinstance(resources, list) or not any(
-                isinstance(resource, dict)
-                and resource.get("id") == cloud_id()
-                and isinstance(resource.get("scopes"), list)
-                and {READ, WRITE, USER} <= {scope for scope in resource["scopes"] if isinstance(scope, str)}
-                for resource in resources
-            ):
+            site_grant = (
+                next(
+                    (
+                        resource
+                        for resource in resources
+                        if (
+                            isinstance(resource, dict)
+                            and resource.get("id") == cloud_id()
+                            and isinstance(resource.get("scopes"), list)
+                            and all(isinstance(scope, str) for scope in resource["scopes"])
+                            and {READ, USER} <= set(resource["scopes"])
+                        )
+                    ),
+                    None,
+                )
+                if isinstance(resources, list)
+                else None
+            )
+            if site_grant is None:
                 msg = "The Confluence grant does not cover the configured Cloud site."
                 raise OAuthError(msg, reason="provider-unavailable")
+            token["scope"] = " ".join(
+                sorted(set(body["scope"].split()) & set(site_grant["scopes"]) | {"offline_access"})
+            )
             account = await send(
                 http, "GET", f"/ex/confluence/{cloud_id()}/wiki/rest/api/user/current", body["access_token"]
             )
