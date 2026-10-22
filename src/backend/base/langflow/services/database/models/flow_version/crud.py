@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from lfx.log import logger
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import defer
 from sqlmodel import col, delete, func, select, update
 
 from langflow.services.database.models.deployment.model import Deployment
@@ -187,6 +188,8 @@ async def get_flow_version_list_simple(
     """
     stmt = (
         select(FlowVersion)
+        # List responses only need metadata; reject accidental payload lazy loads.
+        .options(defer(FlowVersion.data, raiseload=True))
         .where(FlowVersion.flow_id == flow_id, FlowVersion.user_id == user_id)
         .order_by(col(FlowVersion.version_number).desc())
         .offset(offset)
@@ -227,6 +230,7 @@ async def get_flow_versions_with_provider_status(
             FlowVersion,
             deployed_subquery.c.flow_version_id.isnot(None).label("is_deployed"),
         )
+        .options(defer(FlowVersion.data, raiseload=True))
         .outerjoin(deployed_subquery, deployed_subquery.c.flow_version_id == FlowVersion.id)
         .where(FlowVersion.flow_id == flow_id, FlowVersion.user_id == user_id)
     )
