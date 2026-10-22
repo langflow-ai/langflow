@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { isEqual } from "lodash";
+import { isEqual, isEqualWith } from "lodash";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import { appendProviderScope } from "@/controllers/API/helpers/provider-scope";
@@ -148,10 +148,9 @@ const isEmptyModelValue = (value: unknown): boolean =>
   value === "" ||
   (Array.isArray(value) && value.length === 0);
 
-function isSameModelSelection(left: unknown, right: unknown): boolean {
-  if (isEmptyModelValue(left) && isEmptyModelValue(right)) return true;
-  return isEqual(left, right);
-}
+// isEqualWith customizer: undefined defers to the default comparison.
+const sameEmptyValue = (left: unknown, right: unknown): true | undefined =>
+  isEmptyModelValue(left) && isEmptyModelValue(right) ? true : undefined;
 
 function buildProviderConfiguration(
   providers: ModelProviderWithStatus[],
@@ -190,10 +189,6 @@ async function refreshSingleNode(
   ) {
     return;
   }
-
-  const savedModelValues = modelFieldKeys.map(
-    (key) => nodeData.template[key]?.value,
-  );
 
   try {
     // One request per shown model field, in turn: each response is the whole
@@ -259,26 +254,17 @@ async function refreshSingleNode(
       return;
     }
 
-    // A pick made in flight is newer; applying this response would swap it for
-    // options[0]. So is a switch that shows other model fields, such as Smart
-    // Router's to Decision Model mode: the response still has the old mode.
-    const liveTemplate = (
-      useFlowStore
-        .getState()
-        .nodes.find((candidate) => candidate.id === node.id)?.data?.node as
-        | APIClassType
-        | undefined
-    )?.template;
+    // An edit made in flight is newer: a model pick, a mode switch, or a
+    // Decision Type change that replaces the outputs. The response carries the
+    // template and outputs the request started from and would undo it.
+    const liveNode = useFlowStore
+      .getState()
+      .nodes.find((candidate) => candidate.id === node.id)?.data?.node as
+      | APIClassType
+      | undefined;
     const changedInFlight =
-      !liveTemplate ||
-      !isEqual(findModelFieldKeys(liveTemplate), modelFieldKeys) ||
-      modelFieldKeys.some(
-        (key, index) =>
-          !isSameModelSelection(
-            liveTemplate[key]?.value,
-            savedModelValues[index],
-          ),
-      );
+      !isEqualWith(liveNode?.template, nodeData.template, sameEmptyValue) ||
+      !isEqual(liveNode?.outputs, nodeData.outputs);
     if (changedInFlight) return;
 
     // Runs on every flow open, so the user has not asked for this write.

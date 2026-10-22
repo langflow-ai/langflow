@@ -509,6 +509,33 @@ describe("refreshAllModelInputs", () => {
       expect(mockSetNode).not.toHaveBeenCalled();
     });
 
+    it("writes nothing when the Decision Type changed in flight", async () => {
+      const withKind = (kind: string, outputs: string[]) => {
+        const node = routerNode();
+        // biome-ignore lint/suspicious/noExplicitAny: legacy
+        const data = (node.data as any).node;
+        data.template.decision_kind = { type: "str", value: kind, show: true };
+        data.outputs = outputs.map((name) => ({ name, types: ["Message"] }));
+        return node;
+      };
+      mockNodes = [withKind("Choice", ["category_1_result", "default_result"])];
+      (api.post as jest.Mock)
+        .mockImplementationOnce(async (_url, body) =>
+          respondWith(body.template),
+        )
+        .mockImplementationOnce(async (_url, body) => {
+          // Switched to Boolean, which replaces the outputs; no model changed.
+          mockNodes = [withKind("Boolean", ["true_result", "false_result"])];
+          return respondWith(body.template);
+        });
+
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
+      await refreshAllModelInputs(undefined as any, { silent: true });
+
+      expect(api.post).toHaveBeenCalledTimes(2);
+      expect(mockSetNode).not.toHaveBeenCalled();
+    });
+
     it("skips a hidden model field", async () => {
       const node = routerNode();
       // biome-ignore lint/suspicious/noExplicitAny: legacy
