@@ -6,6 +6,7 @@ import { type SlackTokenKind, slackTokenKind } from "../helpers/slack-token";
 import type { ConnectionMethod } from "../hooks/useSlackTokenConnection";
 
 export interface SlackTokenFieldsProps {
+  providerId?: string;
   token: string;
   onTokenChange: (token: string) => void;
   allowBackgroundRuns: boolean;
@@ -49,14 +50,16 @@ const HINT_KEY: Record<SlackTokenKind, string> = {
 
 /** The token and background-runs fields of a pasted-token Slack connection. */
 export function SlackTokenFields({
+  providerId = "slack",
   token,
   onTokenChange,
   allowBackgroundRuns,
   onAllowBackgroundRunsChange,
 }: SlackTokenFieldsProps) {
   const { t } = useTranslation();
-  const kind = slackTokenKind(token);
-  const invalid = token.trim().length > 0 && kind === null;
+  const kind = providerId === "slack" ? slackTokenKind(token) : null;
+  const invalid =
+    providerId === "slack" && token.trim().length > 0 && kind === null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -85,7 +88,13 @@ export function SlackTokenFields({
         >
           {invalid
             ? t("connections.add.tokenInvalid")
-            : t(kind ? HINT_KEY[kind] : "connections.add.tokenHelp")}
+            : t(
+                providerId !== "slack"
+                  ? "connections.add.tokenGenericHelp"
+                  : kind
+                    ? HINT_KEY[kind]
+                    : "connections.add.tokenHelp",
+              )}
         </p>
       </div>
 

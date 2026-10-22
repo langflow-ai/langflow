@@ -7,6 +7,7 @@ import type {
   IntegrationProviderRead,
 } from "@/controllers/API/queries/connections";
 import i18n from "@/i18n";
+import { axe } from "@/utils/a11y-test";
 import AddConnectionDialog from "../components/AddConnectionDialog";
 
 jest.unmock("react-i18next");
@@ -191,6 +192,58 @@ describe("AddConnectionDialog: pasted Slack tokens", () => {
   afterEach(async () => {
     jest.restoreAllMocks();
     await act(() => i18n.changeLanguage("en"));
+  });
+
+  it("creates a provider-validated service token without an OAuth registration", async () => {
+    const user = userEvent.setup();
+    const provider: IntegrationProviderRead = {
+      ...google,
+      provider_id: "pilot",
+      display_name: "Pilot",
+      capabilities: [
+        {
+          ...capability(
+            "pilot.trigger.item",
+            "bot",
+            "pilot-token",
+            "PilotOnItemTriggerComponent",
+          ),
+          identity: "service",
+        },
+      ],
+      manual_token_profiles: [
+        { id: "pilot-token", identity: "service", required_scopes: [] },
+      ],
+    };
+    mockCreate.mockResolvedValue(
+      created({
+        provider_key: "pilot",
+        executing_identity: { identity: "service" },
+      }),
+    );
+    renderDialog([provider], "self_managed");
+    expect(await screen.findByTestId("connection-token")).toBeInTheDocument();
+    expect(screen.getByTestId("connection-token-help")).toHaveTextContent(
+      "Langflow checks the token",
+    );
+    await user.type(screen.getByTestId("connection-name"), "work");
+    await user.type(
+      screen.getByTestId("connection-display-name"),
+      "Pilot work",
+    );
+    await user.type(screen.getByTestId("connection-token"), "provider-token");
+    expect(await axe(document.body)).toHaveNoViolations();
+    await user.click(screen.getByTestId("connection-continue"));
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider_key: "pilot",
+        name: "work",
+        executing_identity: { identity: "service" },
+        granted_scopes: [],
+        allow_non_interactive: false,
+        credentials: { access_token: "provider-token" },
+      }),
+    );
   });
 
   it("offers a pasted token for Slack off hosted, and only for Slack", () => {
