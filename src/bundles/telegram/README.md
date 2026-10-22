@@ -6,7 +6,7 @@ This release supports one active trigger per validated bot account in a Langflow
 
 ## Installation and connection
 
-Install lfx-telegram alongside a Langflow build containing the trigger-provider runtime. The bundle registers its components through langflow.extensions and its server adapter through langflow.trigger_providers. Standalone actions require lfx. Server triggers also require langflow-base.
+The curated Langflow distribution includes lfx-telegram. Install it alongside a bundle-free Langflow build to add the same components and server adapter. The bundle registers its components through langflow.extensions and its server adapter through langflow.trigger_providers. Standalone actions require lfx. Server triggers also require langflow-base.
 
 Create a bot through BotFather. Add its token as your own Telegram connection with the bot identity. Langflow verifies getMe before saving the connection and replaces caller-supplied account metadata with Telegram's bot ID and username. Telegram bot tokens have no OAuth scopes, refresh tokens, or automatic refresh. The capability manifest declares no invented scope grants.
 
@@ -34,7 +34,7 @@ Send Message and Send Notification call sendMessage as the connected bot. The no
 
 Reply to Message accepts a Telegram trigger event and preserves its chat, topic, and message ID. It verifies that the selected connection belongs to the receiving bot before sending. A missing reply target fails rather than becoming an unrelated top-level message.
 
-Thread sessions use the bot, chat, and Telegram topic ID. Sender sessions use the bot, chat, and sender ID. Chat sessions use the bot and chat. The normalized payload includes these IDs, the update and message IDs, text, command arguments, and the stable session key. Bot credentials embedded in message text are redacted. Unknown raw update fields are omitted.
+Thread sessions use the bot, chat, and Telegram topic ID only when Telegram marks the message as a topic message. This includes forum supergroups and private chats with bot forum mode enabled. Ordinary replies keep the default chat session and use the original message ID without a forum destination. Sender sessions use the bot, chat, and sender ID. Chat sessions use the bot and chat. The normalized payload includes these IDs, the update and message IDs, text, command arguments, and the stable session key. Bot credentials embedded in message text are redacted. Unknown raw update fields are omitted.
 
 ## Delivery and recovery
 

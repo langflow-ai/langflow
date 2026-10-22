@@ -77,6 +77,7 @@
         "lfx-openai-compatible",
         "lfx-oracle",
         "lfx-slack",
+        "lfx-telegram",
         "lfx-toolguard",
         "lfx-vllm"
       ],
@@ -113,6 +114,7 @@
           "lfx-openai-compatible",
           "lfx-oracle",
           "lfx-slack",
+          "lfx-telegram",
           "lfx-toolguard",
           "lfx-vllm"
         ],
@@ -158,6 +160,11 @@
         "lfx-toolguard": [
           "lfx_toolguard/extension.json",
           "lfx_toolguard/components/models_and_agents/policies_component.py"
+        ],
+        "lfx-telegram": [
+          "lfx_telegram/extension.json",
+          "lfx_telegram/components/telegram/capabilities.v1.json",
+          "lfx_telegram/components/telegram/telegram_reply.py"
         ]
       },
       "module_checks": [
@@ -254,6 +261,7 @@
           "lfx-serpingapi",
           "lfx-serply",
           "lfx-slack",
+          "lfx-telegram",
           "lfx-toolguard",
           "lfx-valkey",
           "lfx-vllm"
@@ -372,6 +380,11 @@
         "lfx-bundles": [
           "lfx_bundles/mongodb/mongodb_atlas.py",
           "lfx_bundles/youtube/starter_projects/Youtube Analysis.json"
+        ],
+        "lfx-telegram": [
+          "lfx_telegram/extension.json",
+          "lfx_telegram/components/telegram/capabilities.v1.json",
+          "lfx_telegram/components/telegram/telegram_reply.py"
         ]
       },
       "module_checks": [

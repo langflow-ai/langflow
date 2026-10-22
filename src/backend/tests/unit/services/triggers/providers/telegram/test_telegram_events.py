@@ -17,6 +17,7 @@ UPDATE = {
         "from": {"id": 42, "is_bot": False},
         "text": "/help@example_bot details",
         "message_thread_id": 4,
+        "is_topic_message": True,
         "entities": [{"type": "bot_command", "offset": 0, "length": 17}],
     },
 }
@@ -103,3 +104,42 @@ def test_configuration_remains_credential_free_and_manual_builds_allow_empty_cha
     config = normalize_config("telegram.message", {"connection": "telegram/bot", "allowed_chats": [-1001234]})
     assert config["allowed_chats"] == ["-1001234"]
     assert normalize_config("telegram.message", {})["allowed_chats"] == []
+
+
+@pytest.mark.parametrize(
+    ("chat_type", "topic", "expected_thread"),
+    [("supergroup", False, None), ("supergroup", True, "4"), ("private", False, None), ("private", True, "4")],
+)
+async def test_only_forum_topics_become_reply_destinations(monkeypatch, chat_type, topic, expected_thread):
+    from lfx.schema.data import Data
+    from lfx_telegram import TelegramReplyComponent
+
+    from .telegram_test_support import BOT, BotTransport, Resolver, component
+
+    update = deepcopy(UPDATE)
+    update["message"]["chat"]["type"] = chat_type
+    if topic:
+        update["message"]["is_topic_message"] = True
+    else:
+        update["message"].pop("is_topic_message", None)
+        update["message"]["reply_to_message"] = {"message_id": 4}
+    if chat_type == "private":
+        update["message"]["chat"]["id"] = 42
+    config = {**CONFIG, "allowed_chats": [str(update["message"]["chat"]["id"])]}
+    normalized = event(update, config=config)
+    assert normalized["thread_id"] == expected_thread
+    assert normalized["session_key"].endswith(f":thread:{expected_thread or 0}")
+
+    resolver = Resolver()
+    monkeypatch.setattr("lfx.services.deps.get_connection_resolver", lambda: resolver)
+    transport = BotTransport([BOT, {"message_id": 8, "text": "reply"}]).install(monkeypatch)
+    reply = component(TelegramReplyComponent, event=Data(data=canonical(normalized)), text="reply")
+    await reply.build_message()
+    method, payload = transport.calls[-1]
+    assert method == "sendMessage"
+    assert payload["chat_id"] == update["message"]["chat"]["id"]
+    assert payload["reply_parameters"] == {"message_id": 7, "allow_sending_without_reply": False}
+    if expected_thread is None:
+        assert "message_thread_id" not in payload
+    else:
+        assert payload["message_thread_id"] == int(expected_thread)

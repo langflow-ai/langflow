@@ -51,6 +51,10 @@ def normalize(update: Any, *, kind: str, config: dict, bot_id: str, bot_username
     thread = message.get("message_thread_id")
     if thread is not None and not _identifier(thread, positive=True):
         return None
+    # Ordinary supergroup replies also have message_thread_id. Only topic
+    # messages may reuse it as sendMessage's forum destination.
+    if message.get("is_topic_message") is not True or chat.get("type") not in {"supergroup", "private"}:
+        thread = None
     command = None
     arguments = None
     entities = message.get("entities")
