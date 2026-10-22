@@ -1,0 +1,25 @@
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-telegram",
+  "version": "0.1.0",
+  "name": "Telegram",
+  "description": "Telegram bot message and command triggers, messages, replies, and notifications.",
+  "lfx": {
+    "compat": [
+      "1"
+    ]
+  },
+  "bundles": [
+    {
+      "name": "telegram",
+      "path": "components/telegram"
+    }
+  ],
+  "integrations": [
+    {
+      "provider_id": "telegram",
+      "bundle": "telegram",
+      "path": "capabilities.v1.json"
+    }
+  ]
+}

@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "provider_id": "telegram",
+  "display_name": "Telegram",
+  "icon": "Send",
+  "docs_url": "https://core.telegram.org/bots/api",
+  "auth_profiles": [
+    {
+      "id": "telegram-bot-token",
+      "kind": "api_key",
+      "identity": "bot",
+      "supports_pkce": false,
+      "supports_refresh": false,
+      "default_scopes": [],
+      "client_type_by_context": {
+        "hosted": "external",
+        "self_managed": "external",
+        "desktop": "external",
+        "headless": "external"
+      },
+      "owner_by_context": {
+        "hosted": "customer",
+        "self_managed": "customer",
+        "desktop": "customer",
+        "headless": "customer"
+      }
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "telegram.trigger.message.webhook",
+      "display_name": "Telegram: On Message",
+      "auth_profile_id": "telegram-bot-token",
+      "identity": "bot",
+      "required_scopes": [],
+      "policy_keys": [
+        "integrations.telegram.trigger.message"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed"
+      ],
+      "risk": "read",
+      "component_ref": "TelegramOnMessageTriggerComponent"
+    },
+    {
+      "id": "telegram.trigger.message.poll",
+      "display_name": "Telegram: On Message",
+      "auth_profile_id": "telegram-bot-token",
+      "identity": "bot",
+      "required_scopes": [],
+      "policy_keys": [
+        "integrations.telegram.trigger.message"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "self_managed",
+        "desktop"
+      ],
+      "risk": "read",
+      "component_ref": "TelegramOnMessageTriggerComponent"
+    },
+    {
+      "id": "telegram.trigger.command.webhook",
+      "display_name": "Telegram: On Command",
+      "auth_profile_id": "telegram-bot-token",
+      "identity": "bot",
+      "required_scopes": [],
+      "policy_keys": [
+        "integrations.telegram.trigger.command"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed"
+      ],
+      "risk": "read",
+      "component_ref": "TelegramOnCommandTriggerComponent"
+    },
+    {
+      "id": "telegram.trigger.command.poll",
+      "display_name": "Telegram: On Command",
+      "auth_profile_id": "telegram-bot-token",
+      "identity": "bot",
+      "required_scopes": [],
+      "policy_keys": [
+        "integrations.telegram.trigger.command"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "self_managed",
+        "desktop"
+      ],
+      "risk": "read",
+      "component_ref": "TelegramOnCommandTriggerComponent"
+    },
+    {
+      "id": "telegram.bot.send",
+      "display_name": "Telegram: Send Message",
+      "auth_profile_id": "telegram-bot-token",
+      "identity": "bot",
+      "required_scopes": [],
+      "policy_keys": [
+        "integrations.telegram.bot.send"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "write",
+      "component_ref": "TelegramSendMessageComponent"
+    },
+    {
+      "id": "telegram.bot.reply",
+      "display_name": "Telegram: Reply to Message",
+      "auth_profile_id": "telegram-bot-token",
+      "identity": "bot",
+      "required_scopes": [],
+      "policy_keys": [
+        "integrations.telegram.bot.reply"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "write",
+      "component_ref": "TelegramReplyComponent"
+    },
+    {
+      "id": "telegram.bot.notify",
+      "display_name": "Telegram: Send Notification",
+      "auth_profile_id": "telegram-bot-token",
+      "identity": "bot",
+      "required_scopes": [],
+      "policy_keys": [
+        "integrations.telegram.bot.notify"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "write",
+      "component_ref": "TelegramNotifyComponent"
+    }
+  ]
+}
