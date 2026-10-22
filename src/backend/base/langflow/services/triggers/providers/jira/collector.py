@@ -23,7 +23,7 @@ def normalize_config(kind, config):
     ):
         msg = "Unsupported Jira trigger configuration."
         raise ValueError(msg)
-    if config.get("delivery_mode", "poll") not in {"poll", "auto"}:
+    if (config.get("delivery_mode") or "poll") not in {"poll", "auto"}:
         msg = "Jira issue sources support authenticated polling only."
         raise ValueError(msg)
     try:

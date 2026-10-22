@@ -122,7 +122,6 @@ async def reconcile(flow_id, owner_id):
                             for name, value in {
                                 "connection": "jira/work",
                                 "project": "DEMO",
-                                "delivery_mode": "poll",
                             }.items()
                         }
                     },
