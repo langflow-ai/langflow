@@ -54,7 +54,6 @@ from langflow.services.triggers import ledger, operator
 from langflow.services.triggers.constants import (
     KIND_INBOUND_WEBHOOK,
     PROVIDER_WEBHOOK,
-    PUSH_MECHANISMS,
     TEST_DEDUPE_PREFIX,
 )
 from langflow.services.triggers.errors import (
@@ -489,18 +488,16 @@ async def get_trigger_ingress(
     row = await _authorized_trigger(
         service=service, session=session, user=current_user, trigger_id=trigger_id, action=FlowAction.READ
     )
-    if (
-        row.provider in {"microsoft", "google"}
-        and row.public_id
-        and (row.config or {}).get("mechanism_id") in PUSH_MECHANISMS
-    ):
+    from langflow.services.triggers.providers.registry import push_mechanisms, source_kinds
+
+    if row.kind in source_kinds() and row.public_id and (row.config or {}).get("mechanism_id") in push_mechanisms():
         from langflow.services.triggers.source_subscription import source_ingress_url
 
         return TriggerIngressRead(
             trigger_id=row.id,
             public_id=row.public_id,
             ingress_url=await source_ingress_url(session, row),
-            has_signing_secret=False,
+            has_signing_secret=bool(row.signing_secret_encrypted),
         )
     _require_ingress_kind(row)
     return _ingress_read(row, request)

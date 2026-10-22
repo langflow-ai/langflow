@@ -77,6 +77,7 @@ from langflow.services.triggers.providers.slack import ingress as slack_ingress
 from langflow.services.triggers.providers.slack.events import SlackControl, normalize
 
 router = APIRouter(prefix="/triggers/ingress", tags=["Triggers"])
+_MAX_PROVIDER_RESPONSE_BYTES = 4096
 
 #: Counter namespaces, kept apart so a busy Slack workspace cannot exhaust the
 #: budget that bounds id probing, and so probing cannot exhaust the budget Graph
@@ -161,6 +162,7 @@ async def _bounded_body(request: Request, limit: int) -> bytes | None:
 
 
 @router.post("/{provider}/{public_id}")
+@router.get("/{provider}/{public_id}")
 async def receive_provider_delivery(
     request: Request,
     session: DbSession,
@@ -171,7 +173,14 @@ async def receive_provider_delivery(
     settings = get_settings_service().settings
     unknown_limit = settings.trigger_ingress_unknown_rate_limit_per_minute
 
-    if not settings.trigger_ingress_enabled or provider not in INGRESS_PROVIDERS:
+    from langflow.services.triggers.providers.registry import get_provider
+
+    extension = get_provider(provider)
+    if request.method == "GET" and (extension is None or extension.verify_get is None):
+        return _reject()
+    if not settings.trigger_ingress_enabled or (
+        provider not in INGRESS_PROVIDERS and (extension is None or extension.verify is None)
+    ):
         # Charged before the audit row is written: the audit queue is bounded
         # and single-writer, so a flood of garbage-provider requests would
         # otherwise starve the pipeline that carries legitimate audit signal.
@@ -267,7 +276,7 @@ async def receive_provider_delivery(
 
     try:
         ingress_request = IngressRequest(
-            provider=provider, body=body, headers=request.headers, query=request.query_params
+            provider=provider, body=body, headers=request.headers, query=request.query_params, method=request.method
         )
         verified = (
             await verify_gmail_pubsub(ingress_request, target.secrets)
@@ -278,6 +287,16 @@ async def receive_provider_delivery(
         await intake.audit_ingress(
             accepted=False, provider=provider, public_id=public_id, target=target, reason=rejection.reason
         )
+        return _reject()
+
+    if request.method == "GET" and verified.handshake is None:
+        return _reject()
+    if extension is not None and (
+        verified.response_status not in {200, 202, 204}
+        or verified.response_media_type not in {"application/json", "text/plain"}
+        or (verified.response_body is not None and len(verified.response_body.encode()) > _MAX_PROVIDER_RESPONSE_BYTES)
+        or (verified.handshake is not None and len(verified.handshake.encode()) > _MAX_PROVIDER_RESPONSE_BYTES)
+    ):
         return _reject()
 
     if verified.lifecycle:
@@ -317,14 +336,29 @@ async def receive_provider_delivery(
         return PlainTextResponse(content=verified.handshake, media_type=verified.handshake_media_type)
 
     fallback = hashlib.sha256(body).hexdigest()[:32]
-    _row, created = await intake.record_event(
-        session,
-        target=target,
-        provider=provider,
-        payload=verified.payload,
-        suffix=verified.dedupe_suffix,
-        fallback=fallback,
-    )
+    if extension is not None and verified.source_items is not None:
+        from langflow.services.triggers.source_delivery import append_and_advance
+
+        if any(item.get("provider") != provider for item in verified.source_items):
+            return _reject()
+        created = bool(
+            await append_and_advance(
+                session,
+                trigger_id=target.trigger_id,
+                items=list(verified.source_items),
+                cursor=None,
+                expected_config=target.secrets.target_config,
+            )
+        )
+    else:
+        _row, created = await intake.record_event(
+            session,
+            target=target,
+            provider=provider,
+            payload=verified.payload,
+            suffix=verified.dedupe_suffix,
+            fallback=fallback,
+        )
     # Commit before auditing. A durable audit waits for the writer's own
     # connection to commit, and on SQLite that cannot happen past this
     # request's open write - the delivery would hang, answer 500, and roll the
@@ -337,7 +371,11 @@ async def receive_provider_delivery(
         await logger.adebug("Trigger %s: ingress redelivery collapsed by the ledger", target.trigger_id)
     # 2xx for a duplicate too. Answering an error would teach the provider that
     # its retry failed, and it would keep retrying.
-    return Response(status_code=status.HTTP_202_ACCEPTED)
+    return Response(
+        content=verified.response_body,
+        media_type=verified.response_media_type if verified.response_body is not None else None,
+        status_code=verified.response_status,
+    )
 
 
 async def _refuse_slack_request(request: Request, registration_id: str, *, reason: str) -> None:
