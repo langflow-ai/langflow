@@ -407,10 +407,12 @@ def test_dns_failure_is_operational_but_ssrf_block_always_stops(monkeypatch):
     assert "10.0.0.5" not in str(caught.value)
 
 
-def test_unpaid_account_stops_and_reports_only_a_safe_error_code(monkeypatch):
+# OpenAI reports an exhausted account as 429 insufficient_quota, not 402.
+@pytest.mark.parametrize("status", [402, 429])
+def test_unpaid_account_stops_and_reports_only_a_safe_error_code(monkeypatch, status):
     body = '{"error": {"code": "insufficient_quota", "message": "private user content"}}'
-    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: httpx.Response(402, text=body))
-    with pytest.raises(PermissionError, match=r"HTTP 402, insufficient_quota") as caught:
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: httpx.Response(status, text=body))
+    with pytest.raises(PermissionError, match=rf"billing or credit \(HTTP {status}, insufficient_quota\)") as caught:
         providers.evaluate_provider("OpenAI", "gpt-6-luna", request_for("choice"), api_key="key")
     assert "private" not in str(caught.value)
 
@@ -595,3 +597,30 @@ def test_each_failure_says_what_to_do(monkeypatch, status, error, says):
     with pytest.raises(error, match=says) as caught:
         providers.evaluate_provider("TypeSafe", "jev-latest", request_for("choice"), api_key="key")
     assert f"(HTTP {status})" in str(caught.value)
+
+
+@pytest.mark.parametrize(
+    ("provider", "model_type"), [("OpenAI", "decision"), ("TypeSafe", None), ("Perplexity", "llm")]
+)
+def test_a_key_check_only_runs_catalogued_decision_models(monkeypatch, provider, model_type):
+    from lfx.base.models.unified_models import validate_model_provider_key
+
+    sent = []
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda url, **_kwargs: sent.append(url))
+    with pytest.raises(ValueError, match="has no decision model by that name"):
+        validate_model_provider_key(provider, {f"{provider.upper()}_API_KEY": "key"}, "gpt-4o", model_type=model_type)
+    assert sent == []
+
+
+def test_a_mixed_providers_decision_models_start_off():
+    """OpenAI's key is checked for chat when saved, so its decision model waits to be switched on."""
+    from lfx.base.models.unified_models import get_unified_models_detailed
+
+    defaults = {
+        (group["provider"], row["model_name"]): row["metadata"]["default"]
+        for group in get_unified_models_detailed(model_type="decision")
+        for row in group["models"]
+    }
+    assert defaults[("TypeSafe", "jev-latest")] is True
+    assert defaults[("Perplexity", "pplx-decider-latest")] is True
+    assert defaults[("OpenAI", "gpt-6-luna")] is False

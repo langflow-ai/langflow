@@ -3,11 +3,15 @@ import { useTranslation } from "react-i18next";
 
 import { BUILD_PANEL_COLLISION_PADDING_PX } from "@/constants/constants";
 import { getEnabledModelsForType } from "@/controllers/API/helpers/enabled-model-policy";
-import { getAxiosErrorDetail } from "@/controllers/API/helpers/get-axios-error-message";
+import {
+  getAxiosErrorDetail,
+  isAccessRefusal,
+} from "@/controllers/API/helpers/get-axios-error-message";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import ModelProviderModal from "@/modals/modelProviderModal";
+import { providerServesFilter } from "@/modals/modelProviderModal/helpers/view-kinds";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { NodeDataType } from "@/types/flow";
@@ -50,6 +54,7 @@ import { ModelDropdownFooter } from "./components/ModelDropdownFooter";
 import {
   ModelInputErrorButton,
   ModelInputLoadingButton,
+  ModelInputNotice,
 } from "./components/ModelInputStates";
 import ModelList from "./components/ModelList";
 import ModelTrigger, { isSetupProviderState } from "./components/ModelTrigger";
@@ -227,14 +232,18 @@ export default function ModelInputComponent({
     [enabledModelsData, modelType],
   );
 
+  // A provider counts only when it serves this field's kind: a TypeSafe key
+  // alone leaves a language field nothing to pick, so it still says Setup Provider.
   const hasEnabledProviders = useMemo(() => {
     return (
       modelStatusIsReliable &&
       providersData?.some(
-        (provider) => provider.is_enabled || provider.is_configured,
+        (provider) =>
+          (provider.is_enabled || provider.is_configured) &&
+          providerServesFilter(provider.models ?? [], modelType),
       )
     );
-  }, [modelStatusIsReliable, providersData]);
+  }, [modelStatusIsReliable, providersData, modelType]);
 
   const groupedOptions = useMemo(() => {
     // Query data remains cached during background refreshes and after
@@ -461,20 +470,11 @@ export default function ModelInputComponent({
   }
 
   if (isUnsupportedKind) {
-    // Not a button: there is nothing to press, only something to read.
     return (
-      <div
-        role="status"
-        data-testid="model-input-unsupported-kind"
-        className="flex w-full items-center gap-2 py-2 text-xs"
-      >
-        <ForwardedIconComponent
-          name="AlertTriangle"
-          aria-hidden="true"
-          className="h-3.5 w-3.5 shrink-0 text-status-yellow"
-        />
-        <span>{t("modelInput.unsupportedKind")}</span>
-      </div>
+      <ModelInputNotice
+        label={t("modelInput.unsupportedKind")}
+        testId="model-input-unsupported-kind"
+      />
     );
   }
 
@@ -484,14 +484,22 @@ export default function ModelInputComponent({
     const serverReason = [providersError, enabledModelsError]
       .map((error) => getAxiosErrorDetail(error, ""))
       .find(Boolean);
+    // A refusal fails the same way on retry, so it is a notice, as in Model Providers.
+    const refused = [providersError, enabledModelsError].some(isAccessRefusal);
     return (
       <>
         <div className="w-full">
-          <ModelInputErrorButton
-            label={serverReason || t("modelInput.loadFailed")}
-            onRetry={handleRetryLoad}
-            testId="model-input-load-failed"
-          />
+          {refused ? (
+            <ModelInputNotice
+              label={serverReason || t("modelProviders.errorNoAccess")}
+              testId="model-input-load-failed"
+            />
+          ) : (
+            <ModelInputErrorButton
+              label={serverReason || t("modelInput.loadFailed")}
+              onRetry={handleRetryLoad}
+            />
+          )}
         </div>
         {manageProvidersDialog}
       </>
@@ -509,13 +517,16 @@ export default function ModelInputComponent({
     );
   }
 
+  const keepsSavedModel =
+    isUserOwnedModelKind(modelType) && !!selectedModel?.name;
   const showConfigureAffordance =
     selectedModel?.metadata?.not_enabled_locally === true &&
-    !isSetupProviderState({
-      hasEnabledProviders: hasEnabledProviders ?? false,
-      showEmptyState,
-      optionCount: flatOptions.length,
-    });
+    (keepsSavedModel ||
+      !isSetupProviderState({
+        hasEnabledProviders: hasEnabledProviders ?? false,
+        showEmptyState,
+        optionCount: flatOptions.length,
+      }));
 
   // Main render
   return (
@@ -531,6 +542,7 @@ export default function ModelInputComponent({
               placeholder={resolvedPlaceholder}
               hasEnabledProviders={hasEnabledProviders ?? false}
               onOpenManageProviders={() => setOpenManageProvidersDialog(true)}
+              keepsSavedModel={keepsSavedModel}
               id={id}
               refButton={refButton}
               showEmptyState={showEmptyState}

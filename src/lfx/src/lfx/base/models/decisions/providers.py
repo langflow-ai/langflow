@@ -338,12 +338,17 @@ def evaluate_provider(
     status = response.status_code
     request_id = _request_id(response)
     # Failures end with the HTTP status, the provider's code and its request ID, to raise with the provider.
-    ref = "" if response.is_success else _reference(status, _provider_error_code(response), request_id)
-    # 402 is an unpaid or exhausted account: like a rejected key, it must stop rather than route to Else.
+    code = "" if response.is_success else _provider_error_code(response)
+    ref = "" if response.is_success else _reference(status, code, request_id)
+    # 402 is an unpaid or exhausted account, which OpenAI reports as 429 insufficient_quota: like a
+    # rejected key, it must stop rather than route to Else.
+    out_of_credit = status == httpx.codes.PAYMENT_REQUIRED or (
+        status == httpx.codes.TOO_MANY_REQUESTS and code == ", insufficient_quota"
+    )
     if status == httpx.codes.UNAUTHORIZED:
         msg = f"{provider} didn't accept the API key{ref}. Check the {provider} API key in Model Providers."
         raise PermissionError(msg)
-    if status == httpx.codes.PAYMENT_REQUIRED:
+    if out_of_credit:
         msg = f"{provider} declined the request because of the account's billing or credit{ref}. Check your plan."
         raise PermissionError(msg)
     if status == httpx.codes.FORBIDDEN:

@@ -597,6 +597,11 @@ def validate_model_provider_key(
         if not model_name and not offered:
             msg = f"{decision_provider} has no decision models."
             raise ValueError(msg)
+        # The caller names the kind, so a name that isn't a catalogued decision model, such as a chat
+        # model policy blocks, never reaches a decisions endpoint or gets switched on as one.
+        if model_name and model_name not in offered:
+            msg = f"{decision_provider} has no decision model by that name."
+            raise ValueError(msg)
         # As for chat, the default is the first decision model policy allows, so one blocked model
         # does not stop a key from being saved for the others.
         effective_model = model_name or next(

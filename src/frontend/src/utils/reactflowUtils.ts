@@ -139,7 +139,10 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       // For ModelInput types, default based on model_type:
       // - "embedding" -> ["Embeddings"]
       // - "language" (default) -> ["LanguageModel"]
-      const isModelType = templateFieldType === "model";
+      // A decision field takes no connection, so it gets no default and an
+      // edge into it is dropped.
+      const isModelType =
+        templateFieldType === "model" && modelType !== "decision";
       const defaultModelInputType =
         modelType === "embedding" ? "Embeddings" : "LanguageModel";
       const inputTypes = rawInputTypes?.length

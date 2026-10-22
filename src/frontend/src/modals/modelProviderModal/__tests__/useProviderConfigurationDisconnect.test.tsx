@@ -1369,7 +1369,8 @@ describe("useProviderConfiguration.handleSaveAllVariables", () => {
 
       expect(mockValidateMutateAsync).toHaveBeenCalledWith({
         provider: "OpenAI",
-        variables: { OPENAI_API_KEY: replacementApiKey },
+        // The cleared URL is sent as "", so the server's saved one can't stand in for it.
+        variables: { OPENAI_API_KEY: replacementApiKey, OPENAI_BASE_URL: "" },
       });
       expect(mockUpdateMutateAsync).toHaveBeenNthCalledWith(1, {
         id: "var-url",

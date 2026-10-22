@@ -18,26 +18,22 @@ export function ModelInputLoadingButton(): JSX.Element {
   );
 }
 
-/**
- * A picker that cannot offer models: the load failed (with `onRetry`), or the
- * field asks for a model kind this picker does not know (without). It stays
- * focusable either way, so keyboard and screen-reader users reach the message.
- */
+/** A picker whose models failed to load; pressing it loads them again. */
 export function ModelInputErrorButton({
   label,
   onRetry,
-  testId,
 }: {
   label: string;
-  onRetry?: () => void;
-  testId: string;
+  onRetry: () => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   return (
     <Button
       className="dropdown-component-false-outline w-full justify-between py-2 font-normal"
       variant="primary"
       size="xs"
-      data-testid={testId}
+      data-testid="model-input-load-failed"
+      aria-label={`${label} (${t("common.retry")})`}
       onClick={onRetry}
     >
       <span className="flex items-center gap-2 truncate text-left">
@@ -50,9 +46,35 @@ export function ModelInputErrorButton({
           {label}
         </span>
       </span>
-      {onRetry && (
-        <ForwardedIconComponent name="RotateCw" className="h-3.5 w-3.5" />
-      )}
+      <ForwardedIconComponent
+        name="RotateCw"
+        aria-hidden="true"
+        className="h-3.5 w-3.5"
+      />
     </Button>
+  );
+}
+
+/** A picker that can't offer models and has nothing to press, read out as a notice. */
+export function ModelInputNotice({
+  label,
+  testId,
+}: {
+  label: string;
+  testId: string;
+}): JSX.Element {
+  return (
+    <div
+      role="status"
+      data-testid={testId}
+      className="flex w-full items-center gap-2 py-2 text-xs"
+    >
+      <ForwardedIconComponent
+        name="AlertTriangle"
+        aria-hidden="true"
+        className="h-3.5 w-3.5 shrink-0 text-status-yellow"
+      />
+      <span>{label}</span>
+    </div>
   );
 }

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { isModelEnabledForType } from "@/controllers/API/helpers/enabled-model-policy";
+import { isAccessRefusal } from "@/controllers/API/helpers/get-axios-error-message";
 import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 
@@ -512,11 +513,8 @@ const ModelSelection = ({
         defaultValue: "Search models…",
       });
 
-  // A 4xx won't change on retry: this user can't read the policy.
-  const loadStatus = (
-    enabledModelsError as { response?: { status?: number } } | null
-  )?.response?.status;
-  const isAccessError = !!loadStatus && loadStatus >= 400 && loadStatus < 500;
+  // A refusal won't change on retry: this user can't read the policy.
+  const isAccessError = isAccessRefusal(enabledModelsError);
 
   if (!canUseEnabledModels) {
     return (

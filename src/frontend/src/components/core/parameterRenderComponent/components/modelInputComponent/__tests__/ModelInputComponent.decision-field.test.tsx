@@ -274,6 +274,12 @@ describe("ModelInputComponent on a decision field (LE-3129)", () => {
     expect(screen.getByTestId("model-input-load-failed")).toHaveTextContent(
       "Model access is denied.",
     );
+    // A refusal fails the same way again, so there is no retry to offer.
+    expect(screen.getByTestId("model-input-load-failed")).toHaveAttribute(
+      "role",
+      "status",
+    );
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
   it("keeps the generic message when the server gives no reason", () => {
@@ -290,6 +296,9 @@ describe("ModelInputComponent on a decision field (LE-3129)", () => {
     expect(screen.getByTestId("model-input-load-failed")).toHaveTextContent(
       "Couldn't load models",
     );
+    expect(
+      screen.getByRole("button", { name: /Couldn't load models.*\(Retry\)/ }),
+    ).toBeInTheDocument();
   });
 
   it("stores the picked model with its provider", async () => {
@@ -370,5 +379,51 @@ describe("ModelInputComponent on the language field of the same node", () => {
 
     expect(screen.getByTestId("OpenAI-gpt-6-luna-option")).toBeVisible();
     expect(screen.getByTestId("connect-other-models")).toBeInTheDocument();
+  });
+});
+
+describe("ModelInputComponent when only a decision provider is set up", () => {
+  const onlyTypeSafe = (configured: boolean) =>
+    (useGetModelProviders as jest.Mock).mockReturnValue({
+      data: [
+        {
+          provider: "TypeSafe",
+          is_enabled: configured,
+          is_configured: configured,
+          icon: "TypeSafe",
+          models: [{ model_name: "jev-latest", metadata: JEV.metadata }],
+        },
+        {
+          provider: "OpenAI",
+          is_enabled: false,
+          is_configured: false,
+          icon: "OpenAI",
+          models: [
+            { model_name: "gpt-6-luna", metadata: { model_type: "llm" } },
+          ],
+        },
+      ],
+      isLoading: false,
+      isFetching: false,
+    });
+
+  it("still asks a language field to set up a provider", () => {
+    onlyTypeSafe(true);
+    renderPicker({
+      fieldName: "model",
+      options: [],
+      externalOptions: EXTERNAL_OPTIONS,
+    });
+    expect(screen.getByText("Setup Provider")).toBeInTheDocument();
+  });
+
+  it("names a decision field's saved model even with no provider set up", () => {
+    onlyTypeSafe(false);
+    renderPicker({ value: [JEV] });
+    expect(screen.getByRole("combobox")).toHaveTextContent("jev-latest");
+    expect(screen.queryByText("Setup Provider")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Configure this model's provider" }),
+    ).toBeInTheDocument();
   });
 });

@@ -11,7 +11,8 @@ export interface ModelOption {
 }
 
 export type ExternalOptionsType = {
-  fields: { data: { node: APIClassType } };
+  // A decision field sends `{}`: it offers no other models to connect.
+  fields?: { data: { node: APIClassType } };
   functionality?: string;
 };
 

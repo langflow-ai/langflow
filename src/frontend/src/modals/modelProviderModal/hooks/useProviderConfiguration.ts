@@ -417,6 +417,9 @@ export const useProviderConfiguration = ({
       const newValue = variableValues[v.variable_key]?.trim();
       if (newValue) {
         variables[v.variable_key] = newValue;
+      } else if (isConfiguredOptionalVariableCleared(v)) {
+        // Say it is being cleared, or the server's saved value would stand in for it.
+        variables[v.variable_key] = "";
       } else if (!(v.variable_key in variableValues)) {
         // Use existing configured value
         const existing = globalVariables.find(
@@ -428,7 +431,12 @@ export const useProviderConfiguration = ({
       }
     }
     return variables;
-  }, [providerVariables, variableValues, globalVariables]);
+  }, [
+    providerVariables,
+    variableValues,
+    globalVariables,
+    isConfiguredOptionalVariableCleared,
+  ]);
 
   // Validate credentials with the backend
   const validateCredentials = useCallback(async (): Promise<boolean> => {

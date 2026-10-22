@@ -338,6 +338,26 @@ describe("ModelSelection", () => {
       expect(mockRefetchEnabledModels).toHaveBeenCalledTimes(1);
     });
 
+    it("still offers a retry for a rate limit", () => {
+      useGetEnabledModels.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        isSuccess: false,
+        isFetching: false,
+        isFetchedAfterMount: true,
+        fetchStatus: "idle",
+        isError: true,
+        error: Object.assign(new Error("busy"), { response: { status: 429 } }),
+        refetch: mockRefetchEnabledModels,
+      });
+
+      render(<ModelSelection {...defaultProps} />);
+
+      expect(
+        screen.getByRole("button", { name: "Retry loading models" }),
+      ).toBeInTheDocument();
+    });
+
     it("asks for access instead of offering a retry that can't work", () => {
       useGetEnabledModels.mockReturnValue({
         data: undefined,

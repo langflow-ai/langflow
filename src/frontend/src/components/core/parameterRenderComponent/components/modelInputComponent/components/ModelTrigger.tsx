@@ -28,6 +28,8 @@ interface ModelTriggerProps {
   placeholder?: string;
   hasEnabledProviders: boolean;
   onOpenManageProviders: () => void;
+  /** A decision field's saved model: never replaced, so it is always named. */
+  keepsSavedModel?: boolean;
   id: string;
   refButton: RefObject<HTMLButtonElement | null>;
   showEmptyState?: boolean;
@@ -45,6 +47,7 @@ const ModelTrigger = ({
   placeholder = "Setup Provider",
   hasEnabledProviders,
   onOpenManageProviders,
+  keepsSavedModel = false,
   id,
   refButton,
   showEmptyState = false,
@@ -76,9 +79,11 @@ const ModelTrigger = ({
   // A selected-but-unavailable model outranks the setup-provider call to
   // action: replacing it with "Setup Provider" would hide both the saved
   // selection and the reason it cannot be used (the footer still offers
-  // provider management).
+  // provider management). So does a decision field's saved model, the only
+  // hint of which provider the flow needs.
   if (
     !isUnavailable &&
+    !(keepsSavedModel && selectedModel?.name) &&
     isSetupProviderState({
       hasEnabledProviders,
       showEmptyState,

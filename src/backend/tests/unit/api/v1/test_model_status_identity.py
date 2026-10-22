@@ -944,3 +944,35 @@ async def test_openai_key_save_checks_the_kind_the_picker_names(monkeypatch, val
     )
     validate.assert_called_once()
     assert validate.call_args.kwargs["model_type"] == checked_as
+
+
+@pytest.mark.parametrize(
+    ("sent", "checked_base_url"),
+    [
+        # The dialog can't read back a Credential-type base URL, so the saved one counts.
+        ({"OPENAI_API_KEY": "sk-typed"}, "https://proxy.example/v1"),
+        # Clearing it in the dialog sends "", which wins over the saved value.
+        ({"OPENAI_API_KEY": "sk-typed", "OPENAI_BASE_URL": ""}, ""),
+    ],
+)
+async def test_a_key_check_sees_the_saved_configuration(monkeypatch, sent, checked_base_url):
+    from unittest.mock import Mock
+
+    from lfx.base.models import unified_models
+
+    monkeypatch.setattr(models_api, "_require_provider", AsyncMock())
+    monkeypatch.setattr(
+        unified_models,
+        "get_all_variables_for_provider",
+        lambda *_: {"OPENAI_API_KEY": "sk-saved", "OPENAI_BASE_URL": "https://proxy.example/v1"},
+    )
+    validate = Mock()
+    monkeypatch.setattr(unified_models, "validate_model_provider_key", validate)
+    await models_api.validate_provider(
+        models_api.ValidateProviderRequest(provider="OpenAI", variables=sent, model_type="decision"),
+        current_user=SimpleNamespace(id=uuid4()),
+        provider_policy_attributes={},
+    )
+    checked = validate.call_args.args[1]
+    assert checked["OPENAI_API_KEY"] == "sk-typed"
+    assert checked["OPENAI_BASE_URL"] == checked_base_url
