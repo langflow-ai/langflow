@@ -178,7 +178,7 @@ class GitHubClient:
                         raise ProviderUnavailableError(provider=PROVIDER_ID) from None
                     if not isinstance(payload, (dict, list)):
                         raise ProviderUnavailableError(provider=PROVIDER_ID)
-                    return payload
+                    return _without_credentials(payload)
             except httpx.TimeoutException:
                 raise IntegrationNetworkError(reason="timeout", provider=PROVIDER_ID, host="api.github.com") from None
             except httpx.TransportError:
