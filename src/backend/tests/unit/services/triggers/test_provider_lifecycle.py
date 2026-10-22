@@ -140,7 +140,17 @@ def pilot(monkeypatch, client):  # noqa: ARG001
 
     async def prepare(session, trigger):
         prepared.append(trigger.id)
-        await upsert_subscription(
+        existing = (
+            await session.exec(
+                select(TriggerSubscription).where(
+                    TriggerSubscription.trigger_id == trigger.id,
+                    TriggerSubscription.state != "expired",
+                )
+            )
+        ).first()
+        if existing is not None:
+            return
+        claim = await upsert_subscription(
             session,
             trigger_id=trigger.id,
             connection_id=trigger.connection_id,
@@ -150,6 +160,10 @@ def pilot(monkeypatch, client):  # noqa: ARG001
             expires_at=None,
             provider_state={"repository": trigger.config["repository"]},
         )
+        if trigger.config.get("mechanism_id") == "pilot.webhook":
+            claim.state = "pending"
+            session.add(claim)
+            await session.flush()
 
     async def revoke(task, lease):
         assert lease.ref.provider == "pilot"
@@ -510,6 +524,59 @@ async def test_polling_prepare_claim_is_cleaned_up_on_pause(pilot, trigger_owner
     assert pilot.provisions == []
     assert await run_cleanup_pass() == 1
     assert pilot.deleted == [f"pilot:{trigger.id}"]
+
+
+@pytest.mark.parametrize("uncertain_first_create", [False, True])
+async def test_push_provisioning_recovers_pending_claims_and_reuses_completed_subscriptions(
+    pilot, trigger_owner, owned_flow, monkeypatch, uncertain_first_create
+):
+    remote_callbacks = set()
+    provisions = []
+
+    async def provision(session, trigger):
+        provisions.append(trigger.id)
+        claim = (
+            await session.exec(select(TriggerSubscription).where(TriggerSubscription.trigger_id == trigger.id))
+        ).one()
+        assert claim.state == "pending"
+        # A provider must reconcile an uncertain create by stable callback
+        # identity before creating another remote object.
+        remote_callbacks.add(trigger.public_id)
+        if uncertain_first_create and len(provisions) == 1:
+            msg = "The provider accepted the callback but its response timed out."
+            raise TimeoutError(msg)
+        return await pilot.provider.provision(session, trigger)
+
+    monkeypatch.setattr(registry, "all_providers", lambda: (replace(pilot.provider, provision=provision),))
+    await _connection(trigger_owner)
+    trigger = await _reconcile(owned_flow, trigger_owner)
+    if uncertain_first_create:
+        async with session_scope() as session:
+            row = await session.get(Trigger, trigger.id)
+            with pytest.raises(ValueError, match="Source activation failed"):
+                await TriggerService().enable_and_activate(session, row=row)
+        async with session_scope() as session:
+            assert (await session.get(Trigger, trigger.id)).state == "error"
+            claim = (
+                await session.exec(select(TriggerSubscription).where(TriggerSubscription.trigger_id == trigger.id))
+            ).one()
+            assert claim.state == "pending"
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        assert row.state == "active"
+    completed_calls = len(provisions)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        assert row.state == "active"
+        subscriptions = (
+            await session.exec(select(TriggerSubscription).where(TriggerSubscription.trigger_id == trigger.id))
+        ).all()
+        assert len(subscriptions) == 1
+        assert subscriptions[0].state == "active"
+    assert len(provisions) == completed_calls == (2 if uncertain_first_create else 1)
+    assert len(remote_callbacks) == 1
 
 
 @pytest.mark.parametrize("node_status", ["present", "removed", "replaced-with-core-node"])
