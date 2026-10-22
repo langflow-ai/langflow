@@ -27,6 +27,7 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 from uuid import NAMESPACE_URL, uuid5
 
+from lfx.integrations.errors import IntegrationPolicyBlockedError
 from lfx.log.logger import logger
 from sqlmodel import col, func, select, update
 
@@ -458,6 +459,8 @@ async def _record_dispatched(
     event.lease_expires_at = None
     event.updated_at = _now()
     trigger.last_fired_at = _now()
+    if trigger.last_error == IntegrationPolicyBlockedError.code:
+        trigger.last_error = None
     session.add_all([event, trigger])
     await session.flush()
 
@@ -597,6 +600,15 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
 
     denial = await connection_preflight(session, trigger, family=family)
     if denial is not None:
+        if isinstance(denial, IntegrationPolicyBlockedError):
+            # Policy approval cannot be repaired by reconnecting credentials.
+            # Refuse this event but leave the trigger armed so later deliveries
+            # resume after the operator unblocks its capability.
+            await _terminalize(session, event=event, state=TriggerEventState.FAILED, error=denial.code)
+            trigger.last_error = denial.code
+            session.add(trigger)
+            await session.flush()
+            return
         # Fail closed, and say so on the trigger: an unattended run must never
         # fall back to a weaker identity when its connection refuses one.
         await _terminalize(session, event=event, state=TriggerEventState.FAILED, error=CONNECTION_NOT_AUTHORIZED_ERROR)
