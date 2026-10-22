@@ -48,6 +48,7 @@ members = [
     "lfx-cohere",
     "lfx-confluent",
     "lfx-datastax",
+    "lfx-discord",
     "lfx-docling",
     "lfx-duckduckgo",
     "lfx-empiriolabs",
@@ -8870,6 +8871,7 @@ dependencies = [
     { name = "lfx-azure" },
     { name = "lfx-cohere" },
     { name = "lfx-datastax" },
+    { name = "lfx-discord" },
     { name = "lfx-docling" },
     { name = "lfx-google" },
     { name = "lfx-ibm" },
@@ -9005,6 +9007,7 @@ requires-dist = [
     { name = "lfx-cohere", editable = "src/bundles/cohere" },
     { name = "lfx-confluent", marker = "extra == 'bundles'", editable = "src/bundles/confluent" },
     { name = "lfx-datastax", editable = "src/bundles/datastax" },
+    { name = "lfx-discord", editable = "src/bundles/discord" },
     { name = "lfx-docling", editable = "src/bundles/docling" },
     { name = "lfx-docling", extras = ["chunking"], marker = "extra == 'docling-chunking'", editable = "src/bundles/docling" },
     { name = "lfx-docling", extras = ["image-description"], marker = "extra == 'docling-image-description'", editable = "src/bundles/docling" },
@@ -11098,6 +11101,21 @@ requires-dist = [
     { name = "langchain-graph-retriever", specifier = "==0.8.0" },
     { name = "lfx", editable = "src/lfx" },
     { name = "requests", specifier = ">=2.32.0" },
+]
+
+[[package]]
+name = "lfx-discord"
+version = "0.1.0"
+source = { editable = "src/bundles/discord" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.27.0,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
 ]
 
 [[package]]
