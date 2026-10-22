@@ -101,6 +101,27 @@ describe("buildGroupedOptions", () => {
     ]);
   });
 
+  it("never offers a language field a saved decision-only model", () => {
+    const grouped = buildGroupedOptions({
+      ...base,
+      options: [],
+      savedValue: opt("jev-latest", "TypeSafe"),
+      providers: [
+        {
+          provider: "TypeSafe",
+          is_enabled: true,
+          is_configured: true,
+          models: [
+            { model_name: "jev-latest", metadata: { model_type: "decision" } },
+          ],
+        },
+      ],
+      enabledModels: {},
+      providerStatusIsReliable: true,
+    });
+    expect(grouped.TypeSafe).toBeUndefined();
+  });
+
   it("never offers a decision field's saved model that is switched off", () => {
     const luna = opt("gpt-6-luna", "OpenAI", { model_type: "decision" });
     const grouped = buildGroupedOptions({

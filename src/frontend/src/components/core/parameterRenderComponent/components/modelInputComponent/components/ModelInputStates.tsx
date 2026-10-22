@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
@@ -55,26 +56,35 @@ export function ModelInputErrorButton({
   );
 }
 
-/** A picker that can't offer models and has nothing to press, read out as a notice. */
+/**
+ * A picker that can't offer models and has nothing to press. It stays in the
+ * tab order, named by its message and its field, so keyboard and screen-reader
+ * users reach it like the picker it replaces.
+ */
 export function ModelInputNotice({
   label,
   testId,
+  ariaLabelledBy,
 }: {
   label: string;
   testId: string;
+  ariaLabelledBy?: string;
 }): JSX.Element {
+  const textId = useId();
   return (
     <div
       role="status"
+      tabIndex={0}
+      aria-labelledby={[textId, ariaLabelledBy].filter(Boolean).join(" ")}
       data-testid={testId}
-      className="flex w-full items-center gap-2 py-2 text-xs"
+      className="flex w-full items-center gap-2 rounded-md py-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
     >
       <ForwardedIconComponent
         name="AlertTriangle"
         aria-hidden="true"
         className="h-3.5 w-3.5 shrink-0 text-status-yellow"
       />
-      <span>{label}</span>
+      <span id={textId}>{label}</span>
     </div>
   );
 }

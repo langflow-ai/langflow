@@ -19,26 +19,30 @@ export function deploymentKindsOfFilter(filter: ModelTypeFilter): ModelType[] {
 }
 
 /**
+ * Whether a provider with these catalog rows belongs in `filter`'s view: the
+ * decision view needs decision models, and the language and embedding views
+ * leave out decision-only providers. An empty list belongs there only when the
+ * provider discovers its models live: policy can empty a decision-only
+ * provider's list too. A provider sent without a list is taken to serve
+ * language and embedding models, as before decision models.
+ */
+export function providerServesFilter(
+  models: readonly { metadata?: Record<string, unknown> | null }[] | undefined,
+  filter: ModelTypeFilter,
+  liveDiscovery = false,
+): boolean {
+  if (filter === "all") return true;
+  if (models === undefined) return filter !== "decision";
+  if (models.length === 0) return filter !== "decision" && liveDiscovery;
+  const decisions = modelsOfFilter(models, "decision").length;
+  return filter === "decision" ? decisions > 0 : decisions < models.length;
+}
+
+/**
  * The catalog rows the dialog lists for `filter`. Provider badges, the empty
  * state and the model sections all count from this, so a provider never
  * claims models the dialog does not show.
  */
-/**
- * Whether a provider with these catalog rows belongs in `filter`'s view: the
- * decision view needs decision models, and the language and embedding views
- * leave out decision-only providers. A provider with no catalog rows yet, such
- * as one discovered live, belongs everywhere but the decision view.
- */
-export function providerServesFilter(
-  models: readonly { metadata?: Record<string, unknown> | null }[],
-  filter: ModelTypeFilter,
-): boolean {
-  const decisions = modelsOfFilter(models, "decision").length;
-  return filter === "decision"
-    ? decisions > 0
-    : filter === "all" || decisions === 0 || decisions < models.length;
-}
-
 export function modelsOfFilter<
   T extends { metadata?: Record<string, unknown> | null },
 >(models: readonly T[], filter: ModelTypeFilter): T[] {

@@ -50,7 +50,11 @@ const ProviderList = ({
       .filter(
         (provider) =>
           matchesQuery(provider.provider) &&
-          providerServesFilter(provider?.models ?? [], modelType),
+          providerServesFilter(
+            provider?.models,
+            modelType,
+            provider?.live_discovery,
+          ),
       )
       .map((provider) => {
         const matchingModels = modelsOfFilter(

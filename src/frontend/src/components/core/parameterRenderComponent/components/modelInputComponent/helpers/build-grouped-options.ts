@@ -183,9 +183,11 @@ export function buildGroupedOptions({
       (p) =>
         providerNamesMatch(p.provider, savedValue.provider) &&
         (p.models ?? []).some(
+          // A decision row never stands in for a language model, nor the reverse.
           (m) =>
             m.model_name === savedValue.name &&
-            (modelType !== "decision" || m.metadata?.model_type === "decision"),
+            (m.metadata?.model_type === "decision") ===
+              (modelType === "decision"),
         ),
     ) ??
       false);

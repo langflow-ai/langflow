@@ -240,7 +240,11 @@ export default function ModelInputComponent({
       providersData?.some(
         (provider) =>
           (provider.is_enabled || provider.is_configured) &&
-          providerServesFilter(provider.models ?? [], modelType),
+          providerServesFilter(
+            provider.models,
+            modelType,
+            provider.live_discovery,
+          ),
       )
     );
   }, [modelStatusIsReliable, providersData, modelType]);
@@ -484,15 +488,20 @@ export default function ModelInputComponent({
     const serverReason = [providersError, enabledModelsError]
       .map((error) => getAxiosErrorDetail(error, ""))
       .find(Boolean);
-    // A refusal fails the same way on retry, so it is a notice, as in Model Providers.
-    const refused = [providersError, enabledModelsError].some(isAccessRefusal);
+    // A refusal fails the same way on retry, so it is a notice, as in Model Providers, naming the
+    // refusal's own reason.
+    const refusal = [providersError, enabledModelsError].find(isAccessRefusal);
     return (
       <>
         <div className="w-full">
-          {refused ? (
+          {refusal ? (
             <ModelInputNotice
-              label={serverReason || t("modelProviders.errorNoAccess")}
+              label={
+                getAxiosErrorDetail(refusal, "") ||
+                t("modelProviders.errorNoAccess")
+              }
               testId="model-input-load-failed"
+              ariaLabelledBy={ariaLabelledBy}
             />
           ) : (
             <ModelInputErrorButton

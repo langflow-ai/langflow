@@ -70,9 +70,10 @@ export function isSavedModelUnavailable({
   }
   const isDecision = modelType === "decision";
   const listedInCatalog = (providerInfo.models ?? []).some(
+    // A decision row never stands in for a language model, nor the reverse.
     (model) =>
       model.model_name === saved.name &&
-      (!isDecision || model.metadata?.model_type === "decision"),
+      (model.metadata?.model_type === "decision") === isDecision,
   );
   if (listedInCatalog) {
     return false;

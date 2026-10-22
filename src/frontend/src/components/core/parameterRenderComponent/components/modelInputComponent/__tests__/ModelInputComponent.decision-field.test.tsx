@@ -280,6 +280,36 @@ describe("ModelInputComponent on a decision field (LE-3129)", () => {
       "status",
     );
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    // Still reachable by keyboard, like the picker it replaces.
+    expect(screen.getByTestId("model-input-load-failed")).toHaveAttribute(
+      "tabindex",
+      "0",
+    );
+  });
+
+  it("names the refusal's own reason when another request also failed", () => {
+    (useGetModelProviders as jest.Mock).mockReturnValue({
+      data: undefined,
+      error: Object.assign(new Error("502"), {
+        isAxiosError: true,
+        response: { status: 502, data: { detail: "Database is unavailable" } },
+      }),
+      isLoading: false,
+      isFetching: false,
+    });
+    (useGetEnabledModels as jest.Mock).mockReturnValue({
+      data: undefined,
+      error: Object.assign(new Error("403"), {
+        isAxiosError: true,
+        response: { status: 403, data: { detail: "Model access is denied." } },
+      }),
+      isLoading: false,
+      isFetching: false,
+    });
+    renderPicker();
+    expect(screen.getByTestId("model-input-load-failed")).toHaveTextContent(
+      "Model access is denied.",
+    );
   });
 
   it("keeps the generic message when the server gives no reason", () => {
@@ -409,6 +439,29 @@ describe("ModelInputComponent when only a decision provider is set up", () => {
 
   it("still asks a language field to set up a provider", () => {
     onlyTypeSafe(true);
+    renderPicker({
+      fieldName: "model",
+      options: [],
+      externalOptions: EXTERNAL_OPTIONS,
+    });
+    expect(screen.getByText("Setup Provider")).toBeInTheDocument();
+  });
+
+  it("still asks when policy blocks every decision model it has", () => {
+    // The catalog then sends TypeSafe with an empty list, which is not live discovery.
+    (useGetModelProviders as jest.Mock).mockReturnValue({
+      data: [
+        {
+          provider: "TypeSafe",
+          is_enabled: true,
+          is_configured: true,
+          icon: "TypeSafe",
+          models: [],
+        },
+      ],
+      isLoading: false,
+      isFetching: false,
+    });
     renderPicker({
       fieldName: "model",
       options: [],
