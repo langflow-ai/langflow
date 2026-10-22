@@ -221,6 +221,14 @@ class Replica:
         self.pipe.close()
 
 
+async def _guard_settled(replica: Replica) -> str:
+    deadline = asyncio.get_running_loop().time() + 5
+    while (status := await replica.call("guard_status")) == "running":
+        assert asyncio.get_running_loop().time() < deadline, status
+        await asyncio.sleep(0.05)
+    return status
+
+
 @pytest.fixture
 async def database():
     configured = os.environ.get("LANGFLOW_TEST_DATABASE_URI")
@@ -391,6 +399,23 @@ async def test_stale_listener_cannot_rewind_cursor_and_duplicate_delivery_is_col
         assert len((await session.exec(select(TriggerEvent))).all()) == 1
 
 
+async def test_stale_listener_generation_cannot_rewind_cursor(database, replicas):
+    trigger = (await _arm(database, connections=1))[0]
+    first, second = replicas("listener-same"), replicas("listener-same")
+    await first.call("reconcile")
+    await first.call("capture")
+    # Releasing and reclaiming starts a new generation even with the same
+    # holder identity. Keep the captured old context to simulate a late callback.
+    await first.call("stop_listener")
+    await second.call("reconcile")
+    await second.call("capture")
+    args = {"connection": str(trigger.connection_id), "trigger": str(trigger.id)}
+    await second.call("cursor", **args, state={"cursor": "new"})
+    await first.call("cursor", **args, state={"cursor": "old"})
+    async with database.scope() as session:
+        assert (await session.get(Trigger, trigger.id)).provider_state == {"cursor": "new"}
+
+
 async def test_subscription_claims_have_one_owner_and_expire_after_process_death(database, replicas):
     trigger = (await _arm(database))[0]
     async with database.scope() as session:
@@ -427,8 +452,7 @@ async def test_heartbeat_blocks_takeover_and_database_outage_cancels_guarded_wor
                 text("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = :name"),
                 {"name": database.name},
             )
-        await asyncio.sleep(TTL)
-        assert await first.call("guard_status") == "LeaseLostError"
+        assert await _guard_settled(first) == "LeaseLostError"
     finally:
         with admin.connect() as connection:
             connection.execute(text(f"ALTER DATABASE {database.name} ALLOW_CONNECTIONS true"))
@@ -447,5 +471,4 @@ async def test_stalled_owner_is_fenced_after_takeover(replicas):
         assert await second.call("guard") is True
     finally:
         os.kill(first.process.pid, signal.SIGCONT)
-    await asyncio.sleep(TTL / 2)
-    assert await first.call("guard_status") == "LeaseLostError"
+    assert await _guard_settled(first) == "LeaseLostError"
