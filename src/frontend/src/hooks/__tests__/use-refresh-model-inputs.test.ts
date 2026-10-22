@@ -486,6 +486,29 @@ describe("refreshAllModelInputs", () => {
       expect(mockSetNode).not.toHaveBeenCalled();
     });
 
+    it("writes nothing when a mode switch in flight shows other model fields", async () => {
+      // Language Model mode: only the language model is shown when the refresh starts.
+      const start = routerNode();
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
+      (start.data as any).node.template.decision_model.show = false;
+      mockNodes = [start];
+      (api.post as jest.Mock).mockImplementationOnce(async (_url, body) => {
+        // Switched to Decision Model mode, with a decision model picked; the
+        // language model's value is untouched.
+        const switched = routerNode();
+        // biome-ignore lint/suspicious/noExplicitAny: legacy
+        (switched.data as any).node.template.model.show = false;
+        mockNodes = [switched];
+        return respondWith(body.template);
+      });
+
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
+      await refreshAllModelInputs(undefined as any, { silent: true });
+
+      expect(api.post).toHaveBeenCalledTimes(1);
+      expect(mockSetNode).not.toHaveBeenCalled();
+    });
+
     it("skips a hidden model field", async () => {
       const node = routerNode();
       // biome-ignore lint/suspicious/noExplicitAny: legacy

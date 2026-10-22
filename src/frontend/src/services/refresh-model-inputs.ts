@@ -259,7 +259,9 @@ async function refreshSingleNode(
       return;
     }
 
-    // A pick made in flight is newer; applying this response would swap it for options[0].
+    // A pick made in flight is newer; applying this response would swap it for
+    // options[0]. So is a switch that shows other model fields, such as Smart
+    // Router's to Decision Model mode: the response still has the old mode.
     const liveTemplate = (
       useFlowStore
         .getState()
@@ -267,14 +269,17 @@ async function refreshSingleNode(
         | APIClassType
         | undefined
     )?.template;
-    const pickedInFlight = modelFieldKeys.some(
-      (key, index) =>
-        !isSameModelSelection(
-          liveTemplate?.[key]?.value,
-          savedModelValues[index],
-        ),
-    );
-    if (pickedInFlight) return;
+    const changedInFlight =
+      !liveTemplate ||
+      !isEqual(findModelFieldKeys(liveTemplate), modelFieldKeys) ||
+      modelFieldKeys.some(
+        (key, index) =>
+          !isSameModelSelection(
+            liveTemplate[key]?.value,
+            savedModelValues[index],
+          ),
+      );
+    if (changedInFlight) return;
 
     // Runs on every flow open, so the user has not asked for this write.
     setNode(
