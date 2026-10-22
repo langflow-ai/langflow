@@ -11,10 +11,7 @@ class MrscraperFetchHtml(Component):
     """Fetch HTML, Markdown, and screenshots through the current SDK."""
 
     display_name: str = "MrScraper Scraper API"
-    description: str = (
-        "Fetch HTML, Markdown, and screenshots with optional browser rendering, "
-        "proxy geolocation, and real device routing."
-    )
+    description: str = "Fetch a public web page as rendered HTML, Markdown, screenshot, or a combination"
     name = "MrscraperFetchHtml"
     icon: str = "MrScraper"
     documentation: str = "https://docs.mrscraper.com"
