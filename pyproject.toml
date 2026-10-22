@@ -32,7 +32,7 @@ dependencies = [
     "lfx-ibm>=0.3.0,<1.0.0",
     "lfx-docling>=0.2.1,<1.0.0",
     "lfx-datastax>=0.2.0,<1.0.0",
-    "lfx-toolguard>=0.2.0,<1.0.0",
+    "lfx-toolguard>=0.2.2,<1.0.0",
     "lfx-openai>=0.2.0,<1.0.0",
     "lfx-anthropic>=0.2.0,<1.0.0",
     "lfx-azure>=0.2.0,<1.0.0",
@@ -183,7 +183,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 bundles = [
-    "lfx-bundles[all-no-torch]>=1.2.3,<2.0",
+    "lfx-bundles[all-no-torch]>=1.2.4,<2.0",
     "lfx-arxiv>=0.2.0,<1.0.0",
     "lfx-confluent>=0.2.0,<1.0.0",
     "lfx-duckduckgo>=0.2.0,<1.0.0",
@@ -261,7 +261,7 @@ constraint-dependencies = [
     "langgraph-sdk>=0.4.6",  # GHSA-fvww-7h3r-vfhp / CVE-2026-104873, GHSA-3fx2-cqw9-xr3c
     # GHSA-7hp6-4w63-5g45 is fixed in 1.103.1 and 1.104.0rc2.
     # Keep Opik's upper bound while enforcing the patched LiteLLM floor.
-    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1",
+    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1,!=1.107.0",
     "multidict>=6.9.1",  # GHSA-54p9-h82j-f925 / CVE-2026-104874
     # Security floors for every workspace dependency path, including optional bundles.
     "oauthlib>=4.0.0,<5.0.0",  # CVE-2026-49264, CVE-2026-49265

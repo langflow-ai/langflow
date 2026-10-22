@@ -305,7 +305,7 @@ async def test_storage_status_requires_superuser(client, logged_in_headers, rout
     assert response.status_code == 403
 
 
-@pytest.mark.parametrize("route", ["migrations/{id}/retry", "attention/{id}/detach"])
+@pytest.mark.parametrize("route", ["migrations/{id}/retry", "attention/{id}/detach", "inventory/retry"])
 async def test_storage_recovery_requires_superuser(client, logged_in_headers, route):
     """Recovery authorization precedes lookup and mutation."""
     response = await client.post(
@@ -325,6 +325,35 @@ async def test_inventory_and_empty_status_routes(client, admin_headers, storage_
         response = await client.get(f"/api/v1/knowledge-base-storage/{route}", headers=admin_headers)
         assert response.status_code == 200
         assert response.json() == []
+
+
+async def test_admin_can_rescan_orphaned_storage_without_a_migration(
+    client, admin_headers, logged_in_headers, storage_root
+):
+    from langflow.services.knowledge_base_storage import coordinator
+
+    source = storage_root / "former-owner" / "orphaned-base"
+    source.mkdir(parents=True)
+    (source / "chroma.sqlite3").write_bytes(b"preserved legacy data")
+    await coordinator.run_pending()
+    response = await client.get("/api/v1/knowledge-base-storage/status", headers=admin_headers)
+    assert response.status_code == 200
+    status = response.json()
+    assert status["stores"] == []
+    assert status["inventory"]["issues"] == 1
+    assert status["inventory"]["storage_directory"] == str(storage_root)
+    assert status["inventory"]["details"] == [{"source": "former-owner/orphaned-base", "code": "missing_source_owner"}]
+    response = await client.get("/api/v1/knowledge-base-storage/status", headers=logged_in_headers)
+    assert response.status_code == 200
+    assert response.json()["inventory"] is None
+    source.rename(storage_root.parent / "retained-base")
+    response = await client.post("/api/v1/knowledge-base-storage/inventory/retry", headers=admin_headers)
+    assert response.status_code == 202
+    assert response.json() == {"status": "scheduled"}
+    await coordinator.wait_for_upgrade()
+    response = await client.get("/api/v1/knowledge-base-storage/status", headers=admin_headers)
+    assert response.json()["inventory"] == {"complete": True, "issues": 0}
+    assert (storage_root.parent / "retained-base" / "chroma.sqlite3").read_bytes() == b"preserved legacy data"
 
 
 async def _attention_migration(user_id):
