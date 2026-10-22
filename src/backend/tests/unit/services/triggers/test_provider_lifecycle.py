@@ -92,6 +92,7 @@ def pilot(monkeypatch, client):  # noqa: ARG001
         lambda: SimpleNamespace(snapshot=lambda: {"pilot": record}, list_integrations=lambda: [owner]),
     )
     monkeypatch.setattr(registry, "_cache_key", None)
+    monkeypatch.setattr(registry, "_cache_records", ())
     monkeypatch.setattr(registry, "_providers", {})
     deleted = []
     provisions = []

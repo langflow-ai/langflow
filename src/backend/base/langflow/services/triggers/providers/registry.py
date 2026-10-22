@@ -29,7 +29,7 @@ _MAX_KIND_LENGTH = 64
 _IDENTIFIER = re.compile(r"^[a-z][a-z0-9_]*$")
 _KIND = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 _COMPONENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-_SECRET_FIELDS = re.compile(r"token|secret|password|private_key|api_key|credential", re.IGNORECASE)
+_SECRET_FIELDS = re.compile(r"token|secret|password|privatekey|apikey|credential", re.IGNORECASE)
 _BUILTINS = frozenset({"slack", "microsoft", "google", "webhook"})
 
 
@@ -95,7 +95,10 @@ class TriggerProvider:
                 or not spec.display_name.strip()
                 or "connection" not in spec.config_fields
                 or len(set(spec.config_fields)) != len(spec.config_fields)
-                or any(not _IDENTIFIER.fullmatch(field) or _SECRET_FIELDS.search(field) for field in spec.config_fields)
+                or any(
+                    not _IDENTIFIER.fullmatch(field) or _SECRET_FIELDS.search(field.replace("_", ""))
+                    for field in spec.config_fields
+                )
                 or spec.identity not in {"user_delegated", "bot", "service"}
                 or not any(mechanisms)
                 or any(
@@ -122,6 +125,7 @@ class TriggerProvider:
 
 
 _cache_key: tuple[tuple[str, int], ...] | None = None
+_cache_records: tuple[object, ...] = ()
 _providers: dict[str, TriggerProvider] = {}
 
 
@@ -133,7 +137,7 @@ def all_providers() -> tuple[TriggerProvider, ...]:
     """Discover hooks only for successfully loaded integration owners."""
     from lfx.extension.bundle_registry import get_default_registry
 
-    global _cache_key, _providers  # noqa: PLW0603
+    global _cache_key, _cache_records, _providers  # noqa: PLW0603
     snapshot = get_default_registry().snapshot()
     key = tuple(sorted((name, id(record)) for name, record in snapshot.items()))
     if key == _cache_key:
@@ -150,7 +154,7 @@ def all_providers() -> tuple[TriggerProvider, ...]:
         owner = owners.get(entry.name)
         distribution = getattr(entry, "dist", None)
         name = distribution.metadata.get("Name", "") if distribution is not None else ""
-        if owner is None or not name or _distribution_name(name) != _distribution_name(owner.distribution):
+        if owner is None or not name or _distribution_name(name) != _distribution_name(owner.distribution or ""):
             continue
         try:
             provider = entry.load()
@@ -181,6 +185,8 @@ def all_providers() -> tuple[TriggerProvider, ...]:
         discovered[provider.provider_id] = provider
     _providers = {name: provider for name, provider in discovered.items() if name not in conflicts}
     _cache_key = key
+    # Retain records so a later reload cannot reuse their object ids.
+    _cache_records = tuple(snapshot.values())
     return tuple(_providers.values())
 
 
