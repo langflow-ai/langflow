@@ -6,7 +6,7 @@ import contextlib
 from collections import Counter
 from typing import TYPE_CHECKING, Any
 
-from lfx.base.models.decision_constants import DECISION_ONLY_PROVIDERS, is_decision_row
+from lfx.base.models.decision_constants import is_decision_row
 from lfx.base.models.model_metadata import EXPLICIT_ENABLE_ONLY_PROVIDERS, get_provider_param_mapping
 from lfx.base.models.model_utils import apply_metadata_filters, inject_custom_enabled_models, replace_with_live_models
 from lfx.utils.async_helpers import run_until_complete
@@ -123,15 +123,13 @@ def get_unified_models_detailed(
 
     for prov, models in provider_map.items():
         models.sort(key=_sort_key)
-        # Decision rows get their own defaults so they never displace a provider's chat defaults. A
-        # provider that also serves chat, such as OpenAI, gets its key checked for chat when saved, so
-        # its decision models start off: switching one on checks the key for Decisions access.
+        # Decision rows get their own defaults so they never displace a provider's chat defaults. They
+        # start on, OpenAI's too: lfx run and serve have no Model Providers to switch one on, and a key
+        # without Decisions access fails its first run with a message that says so.
         seen = Counter()
         for model in models:
             is_decision = is_decision_row(model)
-            model["metadata"]["default"] = seen[is_decision] < default_model_count and (
-                not is_decision or prov in DECISION_ONLY_PROVIDERS
-            )
+            model["metadata"]["default"] = seen[is_decision] < default_model_count
             seen[is_decision] += 1
 
         # If only_defaults is True, filter to only default models

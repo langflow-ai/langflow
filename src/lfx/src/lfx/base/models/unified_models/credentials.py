@@ -9,6 +9,7 @@ import re
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed
 from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.services.variable import VariableNotFoundError
@@ -691,6 +692,12 @@ def validate_model_provider_key(
 
                 transformed_base_url = transform_localhost_url(base_url)
                 validate_connector_url_for_ssrf(transformed_base_url)
+                # A key from the server's environment may only go to OpenAI's own endpoint or an
+                # operator-allowlisted host, as for a flow's OpenAI components: a user's saved base URL
+                # must not receive it when they switch a model on without a key of their own.
+                ensure_credential_endpoint_allowed(
+                    api_key, transformed_base_url, default_url="https://api.openai.com/v1"
+                )
                 llm_kwargs["base_url"] = transformed_base_url
             llm = ChatOpenAI(**llm_kwargs)
             llm.invoke("test")

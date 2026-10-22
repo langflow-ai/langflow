@@ -77,10 +77,7 @@ def get_effective_request_variables() -> dict[str, str]:
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError:
-        from lfx.log.logger import logger
-
-        logger.debug("Invalid LANGFLOW_REQUEST_VARIABLES JSON; skipping request-scoped lookup")
-        return {}
+        parsed = None
     if not isinstance(parsed, dict):
         from lfx.log.logger import logger
 

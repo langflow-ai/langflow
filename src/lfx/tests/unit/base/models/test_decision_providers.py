@@ -613,8 +613,8 @@ def test_a_key_check_only_runs_catalogued_decision_models(monkeypatch, provider,
     assert sent == []
 
 
-def test_a_mixed_providers_decision_models_start_off():
-    """OpenAI's key is checked for chat when saved, so its decision model waits to be switched on."""
+def test_decision_models_start_on():
+    """Every decision model starts on: lfx run and serve have no Model Providers to switch one on."""
     from lfx.base.models.unified_models import get_unified_models_detailed
 
     defaults = {
@@ -624,7 +624,7 @@ def test_a_mixed_providers_decision_models_start_off():
     }
     assert defaults[("TypeSafe", "jev-latest")] is True
     assert defaults[("Perplexity", "pplx-decider-latest")] is True
-    assert defaults[("OpenAI", "gpt-6-luna")] is False
+    assert defaults[("OpenAI", "gpt-6-luna")] is True
 
 
 def test_a_key_httpx_cant_send_is_refused_without_naming_its_characters(monkeypatch):
@@ -659,3 +659,62 @@ def test_a_usage_block_langflow_cant_read_keeps_the_decision(usage):
     result = providers.parse_response("TypeSafe", request_for("boolean"), payload)
     assert result.probability_true == 0.7
     assert result.usage is None
+
+
+@pytest.mark.parametrize(("timeout", "ok"), [("30", True), ("", False), ("abc", False), (None, False)])
+def test_a_timeout_sent_as_text_is_read_or_refused_plainly(monkeypatch, timeout, ok):
+    monkeypatch.setattr(
+        providers,
+        "provider_safe_httpx_post",
+        lambda *_a, **_k: httpx.Response(200, json=response_for("TypeSafe", "boolean")),
+    )
+    if ok:
+        assert providers.evaluate_provider(
+            "TypeSafe", "jev-latest", request_for("boolean"), api_key="k", timeout=timeout
+        )
+    else:
+        with pytest.raises(DecisionConfigurationError, match="Timeout"):
+            providers.evaluate_provider("TypeSafe", "jev-latest", request_for("boolean"), api_key="k", timeout=timeout)
+
+
+@pytest.mark.parametrize(("key", "refused"), [("sk-server-env-key", True), ("sk-users-own-key", False)])
+def test_a_key_check_never_sends_the_servers_key_to_a_saved_endpoint(monkeypatch, key, refused):
+    """Switching a chat model on with only a saved base URL must not send the server's key there."""
+    import sys
+    import types
+
+    from lfx.base.models.unified_models import validate_model_provider_key
+
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-server-env-key")
+    monkeypatch.setattr("lfx.base.models.unified_models.credentials.validate_connector_url_for_ssrf", lambda _url: None)
+    sent = []
+
+    class Chat:
+        def __init__(self, **kwargs):
+            sent.append(kwargs.get("base_url"))
+
+        def invoke(self, _prompt):
+            return "ok"
+
+    monkeypatch.setitem(sys.modules, "langchain_openai", types.SimpleNamespace(ChatOpenAI=Chat))
+    variables = {"OPENAI_API_KEY": key, "OPENAI_BASE_URL": "https://attacker.example/v1"}
+    if refused:
+        with pytest.raises(ValueError, match="server-provisioned"):
+            validate_model_provider_key("OpenAI", variables, "gpt-4o-mini", model_type="llm")
+        assert sent == []
+    else:
+        validate_model_provider_key("OpenAI", variables, "gpt-4o-mini", model_type="llm")
+        assert sent == ["https://attacker.example/v1"]
+
+
+def test_a_key_with_a_line_break_is_refused_not_sent(monkeypatch):
+    sent = []
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *a, **_k: sent.append(a))
+    with pytest.raises(DecisionConfigurationError, match="contains a character a key can't have"):
+        providers.evaluate_provider("TypeSafe", "jev-latest", request_for("boolean"), api_key="ts-abc\nts-abc")
+    assert sent == []
+
+
+def test_a_boolean_timeout_is_refused():
+    with pytest.raises(DecisionConfigurationError, match="Timeout"):
+        providers.evaluate_provider("TypeSafe", "jev-latest", request_for("boolean"), api_key="k", timeout=True)

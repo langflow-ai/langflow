@@ -3,8 +3,8 @@
 from lfx.mcp.server import _keep_row_ids
 
 SAVED = [
-    {"route_category": "Billing", "route_id": "category_1_result"},
-    {"route_category": "Support", "route_id": "category_2_result"},
+    {"route_category": "Billing", "route_description": "Invoices and refunds", "route_id": "category_1_result"},
+    {"route_category": "Support", "route_description": "Bugs and errors", "route_id": "category_2_result"},
 ]
 
 
@@ -13,12 +13,24 @@ def _ids(rows):
 
 
 def test_a_renamed_route_keeps_its_id():
-    renamed = [{"route_category": "Payments"}, {"route_category": "Support"}, {"route_category": "Sales"}]
-    assert _ids(_keep_row_ids(SAVED, renamed)) == [
-        ("Payments", "category_1_result"),
+    renamed = [
+        {"route_category": "Payments", "route_description": "Invoices and refunds"},
+        {"route_category": "Support"},
+    ]
+    assert _ids(_keep_row_ids(SAVED, renamed)) == [("Payments", "category_1_result"), ("Support", "category_2_result")]
+
+
+def test_a_route_added_alongside_a_deletion_gets_a_new_output():
+    # Sales is new, not Billing renamed: it must not take Billing's edge.
+    assert _ids(_keep_row_ids(SAVED, [{"route_category": "Support"}, {"route_category": "Sales"}])) == [
         ("Support", "category_2_result"),
         ("Sales", None),
     ]
+
+
+def test_names_match_ignoring_case_as_the_router_does():
+    swapped = [{"route_category": " support"}, {"route_category": "BILLING"}]
+    assert _ids(_keep_row_ids(SAVED, swapped)) == [(" support", "category_2_result"), ("BILLING", "category_1_result")]
 
 
 def test_deleting_or_reordering_never_hands_a_route_another_ones_edge():

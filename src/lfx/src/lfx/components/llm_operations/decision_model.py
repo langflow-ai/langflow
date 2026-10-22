@@ -6,6 +6,7 @@ from lfx.io import DropdownInput, FloatInput, HandleInput, MessageTextInput, Mod
 from lfx.schema.data import Data
 from lfx.schema.table import EditMode
 
+_KINDS = ("Choice", "Boolean", "Score")
 # The table's name and help follow the Decision Type.
 _TABLE = {
     "Choice": (
@@ -55,7 +56,7 @@ class DecisionModelComponent(Component):
         DropdownInput(
             name="kind",
             display_name="Decision Type",
-            options=["Choice", "Boolean", "Score"],
+            options=list(_KINDS),
             value="Choice",
             info="Choice picks one option. Boolean answers yes or no. Score places the input on ordered levels.",
             real_time_refresh=True,
@@ -175,7 +176,7 @@ class DecisionModelComponent(Component):
 
     def evaluate(self) -> Data:
         # A tweak can send anything here; the dropdown only offers these three.
-        if self.kind not in {"Choice", "Boolean", "Score"}:
+        if self.kind not in _KINDS:
             msg = "Pick a Decision Type: Choice, Boolean or Score."
             raise DecisionConfigurationError(msg)
         kind = self.kind.lower()
@@ -207,13 +208,31 @@ class DecisionModelComponent(Component):
         self.status = data
         return data
 
+    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):
+        """Re-apply the saved Decision Type's fields after a code update.
+
+        Update rebuilds the node from the class, which shows Choice's fields, and copies only values back.
+        Without this a Boolean node came back with What Yes Means and What No Means hidden, so the run
+        dropped them.
+        """
+        await super().update_frontend_node(new_frontend_node, current_frontend_node)
+        template = new_frontend_node.get("template", {})
+        self._show_fields(template, (template.get("kind") or {}).get("value", "Choice"))
+        return new_frontend_node
+
     def update_build_config(self, build_config: dict, field_value, field_name: str | None = None) -> dict:
         config = handle_model_input_update(self, build_config, field_value, field_name)
-        kind = field_value if field_name == "kind" else config.get("kind", {}).get("value", "Choice")
+        self._show_fields(
+            config, field_value if field_name == "kind" else config.get("kind", {}).get("value", "Choice")
+        )
+        return config
+
+    @staticmethod
+    def _show_fields(config: dict, kind: str) -> None:
+        """Show the table and the Yes/No meanings for this Decision Type, and name the table for it."""
         config["candidates"]["show"] = kind != "Boolean"
         if kind in _TABLE:
             config["candidates"]["display_name"], config["candidates"]["info"] = _TABLE[kind]
         for name in ("yes_description", "no_description"):
             if name in config:
                 config[name]["show"] = kind == "Boolean"
-        return config

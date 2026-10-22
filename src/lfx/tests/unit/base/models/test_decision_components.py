@@ -273,3 +273,13 @@ def test_a_structured_context_that_is_a_list_says_it_must_be_one_object(monkeypa
 def test_an_unknown_decision_type_says_which_ones_exist(monkeypatch, kind):
     with pytest.raises(DecisionConfigurationError, match="Pick a Decision Type: Choice, Boolean or Score"):
         _captured(monkeypatch, kind=kind, context="text")
+
+
+async def test_update_keeps_a_boolean_nodes_yes_and_no_meanings_shown():
+    component = DecisionModelComponent()
+    fresh = component.to_frontend_node()["data"]["node"]
+    saved = {**fresh, "template": {**fresh["template"], "kind": {**fresh["template"]["kind"], "value": "Boolean"}}}
+    node = await component.update_frontend_node(component.to_frontend_node()["data"]["node"], saved)
+    assert node["template"]["yes_description"]["show"] is True
+    assert node["template"]["no_description"]["show"] is True
+    assert node["template"]["candidates"]["show"] is False

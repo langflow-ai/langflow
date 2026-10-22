@@ -313,10 +313,15 @@ def evaluate_provider(
     if not api_key:
         msg = f"Add the {provider} API key in Model Providers."
         raise DecisionConfigurationError(msg)
-    if not api_key.isascii():
+    if not (api_key.isascii() and api_key.isprintable()):
         # httpx can't send it, and its error would name the character's position in the key.
         msg = f"The {provider} API key contains a character a key can't have. Paste it again."
         raise DecisionConfigurationError(msg)
+    # An API tweak can send the timeout as text; a Boolean is not a number of seconds.
+    try:
+        timeout = math.nan if isinstance(timeout, bool) else float(timeout)
+    except (TypeError, ValueError):
+        timeout = math.nan
     if not math.isfinite(timeout) or timeout <= 0 or timeout > MAX_TIMEOUT:
         msg = f"Timeout (seconds) must be more than 0 and at most {MAX_TIMEOUT}."
         raise DecisionConfigurationError(msg)
