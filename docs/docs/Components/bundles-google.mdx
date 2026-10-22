@@ -202,7 +202,7 @@ In advanced **Delivery Mode**, `auto` uses Google push channels when ingress is 
 
 Gmail triggers are unavailable on hosted Langflow. On a customer deployment, use a customer-owned OAuth registration and a public HTTPS ingress. Create a Pub/Sub topic in the customer's Google Cloud project, grant Gmail permission to publish to it, and configure an authenticated **push subscription** to the trigger's URL. Use `GET /api/v1/triggers/{trigger_id}/ingress` to get that URL after saving the Flow. Set **Customer Pub/Sub Topic** to the full `projects/.../topics/...` name and **Pub/Sub Push Service Account** to the service account email whose Google-signed identity token Pub/Sub sends. Configure the push subscription's audience as that exact ingress URL. Langflow verifies the token and audience before recording a delivery, renews the Gmail watch daily, and acknowledges only after the hint is in the ledger. Gmail's restricted `gmail.readonly` scope must be approved for the customer's OAuth app.
 
-All Gmail triggers for the same mailbox must use the same Pub/Sub topic, even across separate connections. Configure a push subscription to each trigger URL. Disabling one trigger preserves the mailbox watch while another local trigger uses it. See [capacity and replica behavior](../Deployment/deployment-trigger-capacity.mdx) for lifecycle and recovery limits.
+All Gmail triggers for the same mailbox must use the same Pub/Sub topic, even across separate connections. Configure a push subscription to each trigger URL. Disabling one trigger preserves the mailbox watch while another local trigger uses it.
 
 If Gmail history expires before Langflow reads it, Langflow resumes from the current watermark; changes in the expired gap cannot be recovered.
 

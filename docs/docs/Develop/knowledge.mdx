@@ -34,7 +34,7 @@ Most additional vector store providers are not in the default Langflow installat
 The Chroma components are retired in 1.13.
 In Langflow 1.13, knowledge bases use local SQLite storage by default.
 Existing local Chroma knowledge bases upgrade automatically on supported single-host installations.
-For progress and recovery options, see [Upgrade knowledge and memory storage](./knowledge-storage-upgrade.mdx).
+For progress and recovery options, see [Upgrade Knowledge and Memory storage](/knowledge-storage-upgrade).
 You will have to install any additional vector store providers.
 For more information, see [Additional bundles](/extensions-bundle-list#additional-bundles).
 
@@ -56,6 +56,18 @@ import PartialVectorRagFlow from '@site/docs/_partial-vector-rag-flow.mdx';
 import PartialKbSummary from '@site/docs/_partial-kb-summary.mdx';
 
 <PartialKbSummary />
+
+### Configure Knowledge Base storage
+
+Operators can configure Knowledge Base storage with environment variables:
+
+* `LANGFLOW_KNOWLEDGE_BASES_DIR` sets the directory for local Knowledge Bases.
+* `LANGFLOW_KNOWLEDGE_BASE_STORAGE_POOL_SIZE` sets the per-process PostgreSQL connection pool for remote Knowledge Base coordination.
+* `LANGFLOW_KB_ALLOWED_FOLDER_ROOTS` controls which server directories folder ingestion can read.
+* `LANGFLOW_KB_FOLDER_MAX_FILE_SIZE_BYTES` limits files accepted through folder ingestion.
+
+For defaults and detailed descriptions, see [Knowledge Base storage and local file access](/environment-variables#knowledge-base-storage-and-local-file-access).
+For migration settings, see [Upgrade Knowledge and Memory storage](/knowledge-storage-upgrade).
 
 ### Create a knowledge base
 
@@ -138,7 +150,7 @@ Only a superuser can create a knowledge base that uses a specific existing index
 :::warning Upgrading from Chroma
 Chroma local storage and Chroma Cloud are retired in 1.13.
 Existing stores remain fenced until migrated or explicitly retired, and their sources are preserved.
-Read [Upgrade Knowledge and Memory storage](./knowledge-storage-upgrade.mdx) before updating an existing installation.
+Read [Upgrade Knowledge and Memory storage](/knowledge-storage-upgrade) before updating an existing installation.
 :::
 
 #### SQLite (default)
