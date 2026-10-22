@@ -34,6 +34,8 @@ On October 22, 2026, the strengthened process tests reproduced a stale listener 
 
 The dispatcher processes call the production dispatcher directly. They do not boot HTTP servers. Listener processes use the production supervisor with an idle adapter. The background sink persists real Job rows with the submitted identity without executing a flow. Lease election, row locking, event claims, ledger uniqueness, cursor fencing, process kills, process stalls, and database connection failures use the real database.
 
+The final listener follow-up also reproduced a PostgreSQL deadlock between delivery and connection deletion. Delivery now locks connection parents in deterministic order before its lease and trigger, then rechecks the target binding. The seven process checks plus three concurrent deletion cases passed all 10 tests in 137.02 seconds. The deletion cases exercise event emission, cursor writes, and cross-connection Slack fanout through actual listener contexts.
+
 ## What the checks establish
 
 | Case | Assertions |
@@ -41,6 +43,7 @@ The dispatcher processes call the production dispatcher directly. They do not bo
 | Competing dispatcher processes | Two processes claim one shared concurrency slot across twelve waiting events. A job committed before event accounting is recovered with its original stable identity. After the elected dispatcher dies, its successor drains fifty additional events in two batches of twenty-five. |
 | Listener scale-up and scale-down | One listener owns four connections. A second listener receives two. Killing the first permits the survivor to own all four after expiry. Starting a replacement restores disjoint ownership. Cleanly stopping a peer releases its share. |
 | Late listener writes | The old listener's captured context cannot append a unique event or replace its successor's cursor. The current owner can append once and suppress a duplicate. A released and reclaimed lease also rejects the old generation when both processes use the same holder identity. |
+| Concurrent connection deletion | Event and cursor writes finish or reject a removed target while connection deletion completes without a deadlock. Slack fanout also locks both connection parents in the same order. |
 | Subscription ownership | Concurrent processes claim one due subscription only once. The surviving process can claim it after the winner is killed and its claim expires. |
 | Slow work and database outage | Heartbeats prevent a second process taking ownership after the original TTL. Rejecting database connections cancels guarded work. Ownership can be acquired after connectivity returns and the lease expires. |
 | Stalled process | SIGSTOP suspends an owner beyond its TTL. Its peer takes ownership. After SIGCONT, the old process cancels its guarded work rather than renewing the replacement owner's lease. |
