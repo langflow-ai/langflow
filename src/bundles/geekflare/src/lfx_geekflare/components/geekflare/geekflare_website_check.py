@@ -28,7 +28,7 @@ class GeekflareWebsiteCheckComponent(Component):
         "broken links, load time, mixed content, or a Lighthouse audit."
     )
     documentation = "https://docs.geekflare.com"
-    icon = "shield-check"
+    icon = "Geekflare"
 
     inputs = [
         MessageTextInput(

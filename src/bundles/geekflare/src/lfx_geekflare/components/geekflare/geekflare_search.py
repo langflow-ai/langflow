@@ -18,7 +18,7 @@ class GeekflareSearchComponent(Component):
     display_name = "Geekflare Search"
     description = "Search the live web, news, or images with Geekflare, or get the full Google results page."
     documentation = "https://docs.geekflare.com/guides/search"
-    icon = "search"
+    icon = "Geekflare"
 
     inputs = [
         MessageTextInput(

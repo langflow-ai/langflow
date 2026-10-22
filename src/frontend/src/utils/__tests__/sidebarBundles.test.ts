@@ -30,7 +30,7 @@ describe("SIDEBAR_BUNDLES", () => {
       expect.arrayContaining([
         expect.objectContaining({
           display_name: "Geekflare",
-          icon: "Globe",
+          icon: "Geekflare",
           name: "geekflare",
         }),
       ]),

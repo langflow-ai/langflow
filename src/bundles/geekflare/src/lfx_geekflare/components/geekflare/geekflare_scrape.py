@@ -15,7 +15,7 @@ class GeekflareScrapeComponent(Component):
     display_name = "Geekflare Scrape"
     description = "Fetch a public web page with Geekflare and return its content as Markdown, text, or HTML."
     documentation = "https://docs.geekflare.com/endpoint/webscraping"
-    icon = "globe"
+    icon = "Geekflare"
 
     inputs = [
         MessageTextInput(
