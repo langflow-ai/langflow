@@ -163,3 +163,18 @@ def test_website_check_unknown_check(check):
         result = check.geekflare_website_check()
     post.assert_not_called()
     assert "Unknown check" in result.data["error"]
+
+
+def test_redirect_status_is_an_error(search):
+    with patch(POST_PATCH_TARGET, MagicMock(return_value=_response(302, {"message": "Moved"}))):
+        rows = search.fetch_content()
+    assert "302" in rows[0].data["error"]
+
+
+def test_non_json_success_body_is_an_error(search):
+    html = httpx.Response(
+        200, request=httpx.Request("POST", "https://api.geekflare.com/search"), text="<html>gateway</html>"
+    )
+    with patch(POST_PATCH_TARGET, MagicMock(return_value=html)):
+        rows = search.fetch_content()
+    assert "malformed response" in rows[0].data["error"]

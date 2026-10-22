@@ -48,11 +48,15 @@ def call_api(api_key: str | None, path: str, payload: dict[str, Any]) -> dict[st
     try:
         data: Any = response.json()
     except ValueError:
+        if response.is_success:
+            # A 2xx with a non-JSON body (e.g. a proxy or gateway page) is not a usable result.
+            msg = f"Geekflare API returned a malformed response (HTTP {response.status_code}, not JSON)."
+            raise GeekflareAPIError(msg) from None
         data = {"message": response.text}
     if not isinstance(data, dict):
         data = {"data": data}
 
-    if response.status_code >= httpx.codes.BAD_REQUEST or data.get("apiStatus") == "failure":
+    if not response.is_success or data.get("apiStatus") == "failure":
         reason = data.get("message") or response.reason_phrase or "request failed"
         msg = f"Geekflare API error {response.status_code}: {reason}"
         raise GeekflareAPIError(msg)

@@ -8,3 +8,5 @@ export const GeekflareIcon = forwardRef<
 >((props, ref) => {
   return <SvgGeekflareLogo ref={ref} {...props} />;
 });
+
+GeekflareIcon.displayName = "GeekflareIcon";
