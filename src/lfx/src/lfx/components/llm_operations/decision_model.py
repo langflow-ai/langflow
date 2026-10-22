@@ -174,6 +174,10 @@ class DecisionModelComponent(Component):
         return structured
 
     def evaluate(self) -> Data:
+        # A tweak can send anything here; the dropdown only offers these three.
+        if self.kind not in {"Choice", "Boolean", "Score"}:
+            msg = "Pick a Decision Type: Choice, Boolean or Score."
+            raise DecisionConfigurationError(msg)
         kind = self.kind.lower()
         boolean = kind == "boolean"
         request = decision_request(

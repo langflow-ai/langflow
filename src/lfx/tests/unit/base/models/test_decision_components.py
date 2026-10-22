@@ -267,3 +267,9 @@ def test_options_are_typed_in_not_connected():
 def test_a_structured_context_that_is_a_list_says_it_must_be_one_object(monkeypatch):
     with pytest.raises(DecisionConfigurationError, match="must be one JSON object"):
         _captured(monkeypatch, structured_context=[{"order": 1042}, {"order": 1043}])
+
+
+@pytest.mark.parametrize("kind", ["Ranking", None, "boolean"])
+def test_an_unknown_decision_type_says_which_ones_exist(monkeypatch, kind):
+    with pytest.raises(DecisionConfigurationError, match="Pick a Decision Type: Choice, Boolean or Score"):
+        _captured(monkeypatch, kind=kind, context="text")

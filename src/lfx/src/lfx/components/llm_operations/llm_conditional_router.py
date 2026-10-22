@@ -94,8 +94,8 @@ _MINIMUM_PROBABILITY_INFO = {
         "the message goes to Else. A route can set its own in the Routes table."
     ),
     "boolean": (
-        "From 0 to 1. Yes is chosen when the probability of yes is at least this value, and No when the "
-        "probability of no is; otherwise the message goes to Else. Yes and No can each set their own."
+        "From 0 to 1. The more likely answer, Yes or No, is used only when its probability is at least this "
+        "value; otherwise the message goes to Else. Yes and No can each set their own."
     ),
 }
 
@@ -228,7 +228,10 @@ class SmartRouterComponent(Component):
             name="yes_minimum_probability",
             preserve_empty=True,
             display_name="Yes Minimum Probability (Optional)",
-            info="Boolean only: the P(yes) the Yes output needs, from 0 to 1. Leave empty to use Minimum Probability.",
+            info=(
+                "Boolean only: the probability Yes needs, from 0 to 1, when Yes is the more likely answer. Leave "
+                "empty to use Minimum Probability."
+            ),
             range_spec=RangeSpec(min=0, max=1, step=0.01),
             show=False,
             advanced=True,
@@ -237,7 +240,10 @@ class SmartRouterComponent(Component):
             name="no_minimum_probability",
             preserve_empty=True,
             display_name="No Minimum Probability (Optional)",
-            info="Boolean only: the P(no) the No output needs, from 0 to 1. Leave empty to use Minimum Probability.",
+            info=(
+                "Boolean only: the probability No needs, from 0 to 1, when No is the more likely answer. Leave "
+                "empty to use Minimum Probability."
+            ),
             range_spec=RangeSpec(min=0, max=1, step=0.01),
             show=False,
             advanced=True,

@@ -210,7 +210,7 @@
     "activated_branch": "default_result",
     "error": {
       "category": "timeout",
-      "message": "TypeSafe decision request timed out."
+      "message": "TypeSafe didn't answer in time. Try again."
     },
     "error_action": "Route to Else",
     "kind": "choice",
@@ -243,7 +243,7 @@
     "activated_branch": null,
     "error": {
       "category": "http_error",
-      "message": "TypeSafe decision request failed (HTTP 503)."
+      "message": "TypeSafe had a server problem (HTTP 503). Try again later."
     },
     "error_action": "Stop with error",
     "kind": "choice",
@@ -276,7 +276,7 @@
     "activated_branch": null,
     "error": {
       "category": "permission_denied",
-      "message": "TypeSafe denied the decision request (HTTP 401)."
+      "message": "TypeSafe didn't accept the API key (HTTP 401). Check the TypeSafe API key in Model Providers."
     },
     "error_action": "Route to Else",
     "kind": "choice",

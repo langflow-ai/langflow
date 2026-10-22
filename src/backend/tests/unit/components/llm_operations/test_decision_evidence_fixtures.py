@@ -63,6 +63,29 @@ def _raise(error: Exception):
     return evaluate
 
 
+def _adapter_error(outcome: httpx.Response | Exception) -> Exception:
+    """The error TypeSafe's adapter raises for this transport outcome, so the fixtures carry real messages."""
+    from lfx.base.models.decisions import providers
+    from lfx.base.models.decisions.schema import DecisionRequest
+
+    def post(*_args, **_kwargs):
+        if isinstance(outcome, Exception):
+            raise outcome
+        return outcome
+
+    request = DecisionRequest(kind="boolean", question="Is this a refund?", context="x")
+    original = providers.provider_safe_httpx_post
+    providers.provider_safe_httpx_post = post
+    try:
+        providers.evaluate_provider("TypeSafe", "jev-latest", request, api_key="fixture-key")
+    except Exception as exc:  # The adapter's own error is the fixture.
+        return exc
+    finally:
+        providers.provider_safe_httpx_post = original
+    msg = "the adapter accepted a failure"
+    raise AssertionError(msg)
+
+
 SCENARIOS = {
     "accepted": ("Route to Else", lambda *_a, **_k: _choice(0.86, 0.1, 0.04)),
     "below_minimum_probability": ("Route to Else", lambda *_a, **_k: _choice(0.55, 0.3, 0.15)),
@@ -71,13 +94,13 @@ SCENARIOS = {
     "refusal_routed_to_else": ("Route to Else", lambda *_a, **_k: _choice(refusal=True)),
     "evaluation_error_routed_to_else": (
         "Route to Else",
-        _raise(DecisionEvaluationError("TypeSafe decision request timed out.", category="timeout")),
+        _raise(_adapter_error(httpx.ReadTimeout("timed out", request=httpx.Request("POST", "https://typesafe.test")))),
     ),
     "evaluation_error_stopped": (
         "Stop with error",
-        _raise(DecisionEvaluationError("TypeSafe decision request failed (HTTP 503).", category="http_error")),
+        _raise(_adapter_error(httpx.Response(503, json={}))),
     ),
-    "permission_denied": ("Route to Else", _raise(PermissionError("TypeSafe denied the decision request (HTTP 401)."))),
+    "permission_denied": ("Route to Else", _raise(_adapter_error(httpx.Response(401, json={})))),
     "configuration_error": (
         "Route to Else",
         _raise(
