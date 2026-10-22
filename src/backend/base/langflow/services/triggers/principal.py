@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from lfx.integrations.errors import ConnectionNotAuthorizedError, IntegrationError
+from lfx.integrations.errors import ConnectionNotAuthorizedError, IntegrationError, ProviderUnavailableError
 from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest
 from lfx.services.authorization.base import ExecutionPrincipal
 from pydantic import ValidationError
@@ -87,6 +87,8 @@ async def connection_preflight(
     resolves connections by handle is authorized inside the run, by the same
     resolver, with the same principal.
     """
+    if unavailable := provider_availability_denial(trigger):
+        return unavailable
     if trigger.connection_id is None:
         return None
     row = await session.get(Connection, trigger.connection_id)
@@ -104,8 +106,6 @@ async def connection_preflight(
             await enforce_integration_policy_for_provider(
                 row.provider_key, user_id=trigger.user_id, capability_ids=capability_ids(trigger.kind)
             )
-        elif "." in trigger.kind and trigger.provider not in {None, "slack", "google", "microsoft"}:
-            return ConnectionNotAuthorizedError(provider=trigger.provider)
         request = ConnectionResolutionRequest(
             ref=ConnectionRef(provider=row.provider_key, name=row.name),
             principal=trigger_execution_principal(trigger, family=family),
@@ -124,3 +124,13 @@ async def connection_preflight(
         owner_kind=row.ownership_mode,
         allow_non_interactive=row.allow_non_interactive,
     )
+
+
+def provider_availability_denial(trigger: Trigger) -> ProviderUnavailableError | None:
+    """Refuse a saved extension source while its trusted descriptor is unloaded."""
+    from langflow.services.triggers.providers.registry import get_kind
+
+    prefix = trigger.kind.partition(".")[0]
+    if "." in trigger.kind and prefix not in {"slack", "google", "microsoft"} and get_kind(trigger.kind) is None:
+        return ProviderUnavailableError(provider=trigger.provider or prefix)
+    return None
