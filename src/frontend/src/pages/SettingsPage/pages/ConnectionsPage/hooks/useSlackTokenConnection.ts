@@ -49,6 +49,25 @@ export interface SlackTokenConnection {
   reset: () => void;
 }
 
+function isExactFutureLocalTime(value: string): boolean {
+  const match =
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?$/.exec(
+      value,
+    );
+  if (!match) return false;
+  const parsed = new Date(value);
+  return (
+    parsed.getTime() > Date.now() &&
+    parsed.getFullYear() === Number(match[1]) &&
+    parsed.getMonth() + 1 === Number(match[2]) &&
+    parsed.getDate() === Number(match[3]) &&
+    parsed.getHours() === Number(match[4]) &&
+    parsed.getMinutes() === Number(match[5]) &&
+    parsed.getSeconds() === Number(match[6] ?? 0) &&
+    parsed.getMilliseconds() === Number((match[7] ?? "").padEnd(3, "0"))
+  );
+}
+
 /** Token entry shared by Slack and installed providers with a validator. */
 export function useSlackTokenConnection({
   providerId,
@@ -77,8 +96,7 @@ export function useSlackTokenConnection({
   const usesToken = offersToken && method === "token";
   const tokenKind = slackTokenKind(token);
   const requiresExpiry = tokenProfile?.requires_expiry === true;
-  const expiresAtValid =
-    !requiresExpiry || new Date(expiresAt).getTime() > Date.now();
+  const expiresAtValid = !requiresExpiry || isExactFutureLocalTime(expiresAt);
 
   const createWithToken = useCallback(
     ({ name, displayName }: { name: string; displayName: string }) =>
