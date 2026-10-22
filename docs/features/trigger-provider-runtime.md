@@ -6,6 +6,13 @@ provider id. Its distribution must already own that provider's validated
 integration manifest and loaded components. Conflicting registrations are
 unavailable. Removing or reloading a bundle invalidates its runtime hooks.
 
+The standalone listener loads installed distributions declaring this entry
+point before registering adapters. It uses the normal extension validator for
+manifest, catalog, and component ownership, and skips invalid bundles. It does
+not load unrelated bundles or build component palette templates. Poll adapters
+check the currently loaded kind's declared polling mechanism on every pass;
+an unloaded provider or a direct webhook cannot enter polling.
+
 ```toml
 [project.entry-points."langflow.trigger_providers"]
 example = "langflow.services.triggers.providers.example.runtime:PROVIDER"
