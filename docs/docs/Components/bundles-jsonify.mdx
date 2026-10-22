@@ -17,7 +17,7 @@ import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-ins
 2. Add a **Jsonify Dataset** component to your flow, and then configure it as follows:
 
     * **Dataset Serve URL**: Paste the serve URL.
-    * **Columns**: Optional. Comma-separated column names to return. Leave empty to return all columns.
+    * **Columns**: Optional. Comma-separated column names to return. Leave empty to return all columns. `_row_id` is always included.
     * **Filters**: Optional. A JSON object of exact, case-sensitive column matches, for example `{"competitor": "Klue"}`. Filters are combined with AND.
     * **Max rows** and **Version** are under **Advanced**. `0` means all rows and the active version.
 
@@ -25,6 +25,6 @@ import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-ins
 
     * The **DataFrame** output returns the rows as a [`DataFrame`](/data-types#dataframe).
     * The **Rows** output returns one [`Data`](/data-types#data) object per row.
-    * To use it with an agent, change the output to **Tool** and connect it to the **Tools** port on an **Agent** component. The agent can pass `filters`, `columns` and `max_rows`; the serve URL stays in the component.
+    * To use it with an agent, change the output to **Tool** and connect it to the **Tools** port on an **Agent** component. The agent can pass `filters`, `columns` and `max_rows` (1 to 10,000, default 100); the serve URL stays in the component. Filters set on the component always apply, the agent can only narrow the configured columns, and the component's **Max rows** caps the agent's limit. Tool results include a `truncated` flag when more rows matched than were returned. Errors never include the serve URL.
 
 Every row carries a stable `_row_id`. The response metadata includes the dataset `version` and `updated_at`, and pages are pinned to one version so a republish during a run never mixes versions.
