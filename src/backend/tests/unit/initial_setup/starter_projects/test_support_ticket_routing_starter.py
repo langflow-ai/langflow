@@ -8,7 +8,7 @@ import pytest
 from lfx.graph.graph.base import Graph
 
 STARTER = (
-    Path(__file__).resolve().parents[3] / "base/langflow/initial_setup/starter_projects/Support Ticket Routing.json"
+    Path(__file__).resolve().parents[4] / "base/langflow/initial_setup/starter_projects/Support Ticket Routing.json"
 )
 
 

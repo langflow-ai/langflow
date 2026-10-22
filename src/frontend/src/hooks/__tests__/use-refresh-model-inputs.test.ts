@@ -158,7 +158,6 @@ describe("isModelNode", () => {
   });
 });
 
-
 describe("buildRefreshPayload", () => {
   const baseTemplate: APITemplateType = {
     model: {

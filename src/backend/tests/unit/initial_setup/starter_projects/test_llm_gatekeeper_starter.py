@@ -7,7 +7,7 @@ import httpx
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
 from lfx.graph.graph.base import Graph
 
-STARTER = Path(__file__).resolve().parents[3] / "base/langflow/initial_setup/starter_projects/LLM Gatekeeper.json"
+STARTER = Path(__file__).resolve().parents[4] / "base/langflow/initial_setup/starter_projects/LLM Gatekeeper.json"
 LLM_REPLY = "Here is a migration plan for your billing system."
 
 
