@@ -274,6 +274,67 @@ describe("AddConnectionDialog: pasted Slack tokens", () => {
     ).not.toBeChecked();
   });
 
+  it("selects the identity and scopes of an advertised manual token profile", async () => {
+    const user = userEvent.setup();
+    const provider: IntegrationProviderRead = {
+      ...pilot,
+      capabilities: [
+        ...pilot.capabilities,
+        capability(
+          "pilot.user.read",
+          "user_delegated",
+          "pilot-user",
+          "PilotReadComponent",
+        ),
+      ],
+      manual_token_profiles: [
+        {
+          id: "pilot-token",
+          identity: "service",
+          required_scopes: ["items:read"],
+        },
+        {
+          id: "pilot-user",
+          identity: "user_delegated",
+          required_scopes: ["profile:read"],
+        },
+      ],
+    };
+    mockCreate.mockResolvedValue(created({ provider_key: "pilot" }));
+    const view = renderDialog([provider], "self_managed");
+    const identity = await screen.findByLabelText("Runs as");
+    await user.selectOptions(identity, "service");
+    await user.selectOptions(identity, "user_delegated");
+    view.rerender(
+      dialog(
+        [
+          {
+            ...provider,
+            manual_token_profiles: provider.manual_token_profiles?.map(
+              (profile) => ({ ...profile }),
+            ),
+          },
+        ],
+        "self_managed",
+      ),
+    );
+    expect(identity).toHaveValue("user_delegated");
+    await user.type(screen.getByTestId("connection-name"), "work");
+    await user.type(
+      screen.getByTestId("connection-display-name"),
+      "Pilot user",
+    );
+    await user.type(screen.getByTestId("connection-token"), "provider-token");
+    expect(await axe(document.body)).toHaveNoViolations();
+    await user.click(screen.getByTestId("connection-continue"));
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        executing_identity: { identity: "user_delegated" },
+        granted_scopes: ["profile:read"],
+      }),
+    );
+  });
+
   it("preserves an explicit OAuth choice after the provider catalog refetches", async () => {
     const user = userEvent.setup();
     const view = renderDialog([pilot], "self_managed");
