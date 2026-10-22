@@ -100,7 +100,7 @@ async def collect(trigger, lease) -> SourceRound:
     items = []
     after = None
     async with ServiceNowClient(lease) as client:
-        for _ in range(_MAX_PAGES):
+        for page_index in range(_MAX_PAGES + 1):
             clauses = [f"{timestamp_field}<={cutoff}"]
             if lower:
                 clauses.append(f"{timestamp_field}>={lower}")
@@ -117,6 +117,11 @@ async def collect(trigger, lease) -> SourceRound:
             rows = response["result"]
             if not isinstance(rows, list) or len(rows) > _PAGE_SIZE:
                 msg = "ServiceNow returned an invalid ticket page."
+                raise ValueError(msg)
+            # After the data-page budget, only an empty exhaustion probe is
+            # allowed. This keeps the advertised record limit inclusive.
+            if rows and page_index == _MAX_PAGES:
+                msg = "ServiceNow polling exceeded its page limit. The cursor was not advanced."
                 raise ValueError(msg)
             for raw in rows:
                 record = result_record(raw)
@@ -166,9 +171,6 @@ async def collect(trigger, lease) -> SourceRound:
                     msg = "ServiceNow did not prove an exhausted page. Check table ACLs and count headers."
                     raise ValueError(msg)
                 break
-        else:
-            msg = "ServiceNow polling exceeded its page limit. The cursor was not advanced."
-            raise ValueError(msg)
     cursor = {"watermark": cutoff, "baseline_complete": True}
     if creation:
         cursor["started_at"] = _stamp(previous.get("started_at", previous.get("watermark")))

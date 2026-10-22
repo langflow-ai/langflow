@@ -420,6 +420,43 @@ class FixedLease:
         )
 
 
+@pytest.mark.parametrize("record_count", [10000, 10001])
+async def test_status_record_limit_allows_an_exhaustion_probe(provider, monkeypatch, record_count):
+    row = SimpleNamespace(
+        kind="servicenow.status_changed", config={"table": "incident"}, provider_state={}, connection_id=uuid4()
+    )
+    requests = []
+
+    def handler(request):
+        query = request.url.params["sysparm_query"]
+        requests.append(query)
+        after = int(query.split("sys_id>", 1)[1].split("^", 1)[0], 16) if "sys_id>" in query else 0
+        rows = [
+            {
+                "sys_id": f"{index:032x}",
+                "state": "1",
+                "sys_mod_count": "1",
+                "sys_updated_on": "2026-10-22 11:59:40",
+            }
+            for index in range(after + 1, min(after + 100, record_count) + 1)
+        ]
+        return httpx.Response(200, json={"result": rows}, headers={"X-Total-Count": str(len(rows))})
+
+    monkeypatch.setattr(
+        provider.runtime, "ServiceNowClient", partial(ServiceNowClient, transport=httpx.MockTransport(handler))
+    )
+    if record_count == 10000:
+        result = await provider.runtime.collect(row, FixedLease())
+        assert len(result.cursor["observed_states"]) == 10000
+        assert result.cursor["baseline_complete"] is True
+        assert result.items == []
+    else:
+        with pytest.raises(ValueError, match="page limit"):
+            await provider.runtime.collect(row, FixedLease())
+    assert len(requests) == 101
+    assert row.provider_state == {}
+
+
 @pytest.mark.parametrize(
     "failure", ["empty-acl", "missing-count", "unsorted", "wrong-time", "page-budget", "record-budget"]
 )
@@ -442,7 +479,7 @@ async def test_incomplete_rounds_preserve_cursor(provider, monkeypatch, failure)
             return httpx.Response(
                 200, json={"result": []}, headers={} if failure == "missing-count" else {"X-Total-Count": "2"}
             )
-        rows = [record] if failure == "unsorted" or "sys_id>" not in query else []
+        rows = [record] if failure in {"unsorted", "page-budget"} or "sys_id>" not in query else []
         return httpx.Response(200, json={"result": rows}, headers={"X-Total-Count": str(len(rows))})
 
     monkeypatch.setattr(
