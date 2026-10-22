@@ -473,6 +473,36 @@ async def test_get_handshake_cannot_apply_provider_event_side_effects(
 
 
 @pytest.mark.parametrize("method", ["GET", "POST"])
+@pytest.mark.parametrize("failure", ["exception", "malformed_state", "invalid_result"])
+async def test_ingress_secret_hook_failures_do_not_reveal_the_target(
+    pilot, trigger_owner, owned_flow, client, monkeypatch, caplog, method, failure
+):
+    async def secrets(_session, row):
+        if failure == "invalid_result":
+            return {}
+        if failure == "malformed_state":
+            return row.provider_state["synthetic-private-detail"]
+        msg = "synthetic-private-detail"
+        raise RuntimeError(msg)
+
+    await _connection(trigger_owner)
+    trigger = await _reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        public_id = row.public_id
+    monkeypatch.setattr(registry, "all_providers", lambda: (replace(pilot.provider, ingress_secrets=secrets),))
+    response = await client.request(method, f"/api/v1/triggers/ingress/pilot/{public_id}")
+    unknown = await client.request(method, "/api/v1/triggers/ingress/pilot/unknown-trigger")
+    assert response.status_code == unknown.status_code == 404
+    assert response.json() == unknown.json() == {"detail": "Not found"}
+    assert "synthetic-private-detail" not in caplog.text
+    async with session_scope() as session:
+        assert not (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger.id))).all()
+        assert (await session.get(Trigger, trigger.id)).provider_state == {}
+
+
+@pytest.mark.parametrize("method", ["GET", "POST"])
 @pytest.mark.parametrize(
     ("media_type", "accepted"),
     [("text/plain", True), ("application/json", True), ("text/html", False), ("text/plain\r\nx-extra: yes", False)],
