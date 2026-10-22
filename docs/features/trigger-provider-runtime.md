@@ -62,6 +62,9 @@ receiver claim using already verified connection metadata. Keep this callback
 limited to database work. Resolving credentials through the database resolver
 opens another transaction and can deadlock the enable writer on SQLite.
 Credential resolution and remote provisioning belong after enable commits.
+Remote admission claims must stay `pending` until provisioning succeeds;
+poll-only receiver claims can be `active` once admission completes. Repeated
+preparation must preserve an already completed subscription.
 
 `normalize_config(kind, raw)` validates the declared nonsecret canvas fields and
 returns a dictionary containing only those fields. `collect(trigger, lease)`
@@ -77,6 +80,9 @@ runtime binds the result to its original connection, cursor, mechanism, and
 configuration before atomically committing events and the new cursor.
 
 `provision(session, trigger)` returns a `TriggerSubscription` or `None`.
+The shared runtime reuses an active subscription on the same connection.
+Pending or failed setup still calls the hook, which must reconcile uncertain
+remote creates by stable callback identity before creating another object.
 `renew(session, subscription)` returns the provider's new expiration.
 `revoke(cleanup_task, lease)` deletes the remote subscription. Cleanup intents
 survive local pause and deletion. Nonexpiring remote hooks use
