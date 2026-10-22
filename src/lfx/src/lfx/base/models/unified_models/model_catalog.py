@@ -12,7 +12,12 @@ from lfx.base.models.model_utils import apply_metadata_filters, inject_custom_en
 from lfx.utils.async_helpers import run_until_complete
 
 from .class_registry import EMBEDDING_PARAM_MAPPINGS, EMBEDDING_PROVIDER_CLASS_MAPPING
-from .credentials import _fetch_enabled_providers_for_user, _get_model_status, model_status_contains
+from .credentials import (
+    _fetch_enabled_providers_for_user,
+    _get_model_status,
+    _keeps_model_settings,
+    model_status_contains,
+)
 from .provider_queries import get_model_providers, get_models_detailed, model_provider_metadata
 
 if TYPE_CHECKING:
@@ -531,9 +536,9 @@ def get_decision_model_options(
 ) -> list[dict[str, Any]]:
     """Return enabled decision models; configuration read failures propagate.
 
-    Without a user, standalone lfx can select any catalog model; its credentials
-    come from request variables or the environment. With a user, saved provider
-    and model settings apply.
+    Without a user, and in standalone lfx, which keeps no Model Providers settings, any
+    catalog model policy allows can be selected; its credentials come from request
+    variables or the environment. With saved settings, a user's providers and switches apply.
     """
     # A component outside a graph reports the placeholder user id "None".
     if isinstance(user_id, str) and user_id == "None":
@@ -549,7 +554,8 @@ def get_decision_model_options(
     disabled: set[str] = set()
     enabled: set[str] = set()
     configured: set[str] | None = None
-    if user_id:
+    saved_settings = bool(user_id) and _keeps_model_settings()
+    if saved_settings:
         disabled, enabled = run_until_complete(_get_model_status(user_id, strict=True))
         if require_configured:
             configured = run_until_complete(_fetch_enabled_providers_for_user(user_id, provider_policy=provider_policy))
@@ -565,7 +571,7 @@ def get_decision_model_options(
             if model_status_contains(disabled, provider, name, model_type="decision"):
                 continue
             explicitly_on = model_status_contains(enabled, provider, name, model_type="decision")
-            if user_id and not (metadata.get("default", False) or explicitly_on):
+            if saved_settings and not (metadata.get("default", False) or explicitly_on):
                 continue
             options.append(
                 {

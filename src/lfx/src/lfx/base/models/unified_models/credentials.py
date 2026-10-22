@@ -398,6 +398,19 @@ class _VarWithValue:
         self.value = value
 
 
+def _keeps_model_settings() -> bool:
+    """Whether Model Providers settings are saved anywhere.
+
+    Standalone LFX has none: `lfx serve` uses the env-backed VariableService and `lfx run` has no
+    variable service at all, only a generated user id. Policy and request-scoped credentials
+    still apply there.
+    """
+    from lfx.services.variable.service import VariableService
+
+    variable_service = get_variable_service()
+    return not (variable_service is None or type(variable_service) is VariableService)
+
+
 async def _get_model_status(user_id: UUID | str, *, strict: bool = False) -> tuple[set[str], set[str]]:
     """Fetch disabled and explicitly enabled model sets for a user.
 
@@ -405,15 +418,9 @@ async def _get_model_status(user_id: UUID | str, *, strict: bool = False) -> tup
         A tuple of (disabled_models, explicitly_enabled_models).
     """
     variable_service = get_variable_service()
-    if strict:
-        from lfx.services.variable.service import VariableService
-
-        # Standalone LFX has no persisted Model Providers preferences: `lfx serve` uses the
-        # env-backed VariableService and `lfx run` has no variable service at all, only a
-        # generated user id. Policy and request-scoped credentials still apply. A variable
-        # service of any other type still fails closed below.
-        if variable_service is None or type(variable_service) is VariableService:
-            return set(), set()
+    # A variable service of any type but standalone LFX's still fails closed below.
+    if strict and not _keeps_model_settings():
+        return set(), set()
     async with session_scope() as session:
         if variable_service is None:
             return set(), set()

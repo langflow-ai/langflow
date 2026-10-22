@@ -46,6 +46,13 @@ def test_typed_status_and_policy_isolate_decision_from_chat():
     assert not snapshot.allows_model("OpenAI", "shared::name")
 
 
+@pytest.fixture
+def saved_settings(monkeypatch):
+    """A Langflow backend, which keeps Model Providers settings; standalone lfx keeps none."""
+    monkeypatch.setattr(model_catalog, "_keeps_model_settings", lambda: True)
+
+
+@pytest.mark.usefixtures("saved_settings")
 def test_decision_options_apply_enabled_typed_status_and_policy(monkeypatch):
     monkeypatch.setattr(
         model_catalog, "_get_model_status", AsyncMock(return_value=({"OpenAI::decision::gpt-6-luna"}, set()))
@@ -58,12 +65,14 @@ def test_decision_options_apply_enabled_typed_status_and_policy(monkeypatch):
     assert get_decision_model_options("user", provider_policy=policy(allowed=())) == []
 
 
+@pytest.mark.usefixtures("saved_settings")
 def test_configuration_read_failure_is_not_catalog_allow_all(monkeypatch):
     monkeypatch.setattr(model_catalog, "_get_model_status", AsyncMock(side_effect=RuntimeError("database unavailable")))
     with pytest.raises(RuntimeError, match="database unavailable"):
         get_decision_model_options("user", provider_policy=policy())
 
 
+@pytest.mark.usefixtures("saved_settings")
 def test_unconfigured_provider_is_not_available(monkeypatch):
     monkeypatch.setattr(model_catalog, "_get_model_status", AsyncMock(return_value=(set(), set())))
     monkeypatch.setattr(model_catalog, "_fetch_enabled_providers_for_user", AsyncMock(return_value=set()))
@@ -98,6 +107,7 @@ def test_decision_model_input_has_no_connection_handle_or_implicit_default(monke
         ModelInput(name="decision_model", model_type="decision", value="connect_other_models")
 
 
+@pytest.mark.usefixtures("saved_settings")
 def test_component_credentials_still_honor_model_disable(monkeypatch):
     monkeypatch.setattr(
         model_catalog, "_get_model_status", AsyncMock(return_value=({"OpenAI::decision::gpt-6-luna"}, set()))
@@ -188,3 +198,14 @@ def test_untyped_validation_of_a_decision_only_model_sends_a_decision(monkeypatc
     variables = {"OPENAI_API_KEY": "tenant-key"}  # pragma: allowlist secret
     credentials.validate_model_provider_key("OpenAI", variables, "gpt-6-luna")
     decision.assert_called_once_with("OpenAI", variables, "gpt-6-luna")
+
+
+@pytest.mark.parametrize("service", [None, "env"], ids=["lfx run", "lfx serve"])
+def test_standalone_lfx_offers_every_catalog_decision_model(monkeypatch, service):
+    """The lfx run and serve commands generate a user id but keep no Model Providers settings to read."""
+    from lfx.base.models.unified_models import credentials
+    from lfx.services.variable.service import VariableService
+
+    monkeypatch.setattr(credentials, "get_variable_service", lambda: VariableService() if service else None)
+    options = get_decision_model_options(user_id="00000000-0000-0000-0000-000000000001", provider_policy=policy())
+    assert {("TypeSafe", "jev-latest"), ("OpenAI", "gpt-6-luna")} <= {(o["provider"], o["name"]) for o in options}
