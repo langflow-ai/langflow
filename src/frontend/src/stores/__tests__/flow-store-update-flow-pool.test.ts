@@ -164,6 +164,27 @@ describe("updateFlowPool", () => {
     },
   );
 
+  it.each([undefined, null])(
+    "should preserve the no-op for a missing root pool: %s",
+    (missingPool) => {
+      act(() =>
+        useFlowStore.setState({
+          flowPool: missingPool as unknown as FlowPoolType,
+        }),
+      );
+      const before = useFlowStore.getState();
+
+      act(() => useFlowStore.getState().updateFlowPool("target", messages[0]));
+      act(() =>
+        useFlowStore
+          .getState()
+          .updateFlowPool("target", createEntry("replacement")),
+      );
+
+      expect(useFlowStore.getState()).toBe(before);
+    },
+  );
+
   describe.each([
     { label: "empty latest", empty: true, buildId: undefined },
     { label: "empty explicit", empty: true, buildId: "absent" },

@@ -316,7 +316,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     buildId?: string,
   ) => {
     const prevPool = get().flowPool;
-    const prevEntries = prevPool[nodeId];
+    const prevEntries = prevPool?.[nodeId];
     if (!prevEntries) {
       return;
     }
