@@ -1,8 +1,9 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type {
   ConnectionCreate,
   ConnectionRead,
   DeploymentContext,
+  ManualTokenProfileRead,
 } from "@/controllers/API/queries/connections";
 import {
   offersSlackToken,
@@ -10,7 +11,7 @@ import {
   slackTokenKind,
 } from "../helpers/slack-token";
 
-/** Sign in through the provider, or paste a token (Slack only). */
+/** Sign in through the provider, or use a provider-validated token. */
 export type ConnectionMethod = "oauth" | "token";
 
 export interface UseSlackTokenConnectionOptions {
@@ -21,6 +22,7 @@ export interface UseSlackTokenConnectionOptions {
   reauthorizing: boolean;
   /** Creates the connection row (`POST /connections`). */
   create: (payload: ConnectionCreate) => Promise<ConnectionRead>;
+  tokenProfile?: ManualTokenProfileRead;
 }
 
 export interface SlackTokenConnection {
@@ -43,12 +45,13 @@ export interface SlackTokenConnection {
   reset: () => void;
 }
 
-/** The "paste a token" method of the add-connection dialog, for Slack. */
+/** Token entry shared by Slack and installed providers with a validator. */
 export function useSlackTokenConnection({
   providerId,
   deploymentContext,
   reauthorizing,
   create,
+  tokenProfile,
 }: UseSlackTokenConnectionOptions): SlackTokenConnection {
   const [method, setMethod] = useState<ConnectionMethod>("oauth");
   const [token, setToken] = useState("");
@@ -57,9 +60,14 @@ export function useSlackTokenConnection({
   const [allowBackgroundRuns, setAllowBackgroundRuns] = useState(false);
 
   const offersToken =
-    !reauthorizing && offersSlackToken(providerId, deploymentContext);
+    !reauthorizing &&
+    (offersSlackToken(providerId, deploymentContext) ||
+      tokenProfile !== undefined);
   const usesToken = offersToken && method === "token";
   const tokenKind = slackTokenKind(token);
+  useEffect(() => {
+    if (providerId !== "slack" && tokenProfile) setMethod("token");
+  }, [providerId, tokenProfile]);
 
   const createWithToken = useCallback(
     ({ name, displayName }: { name: string; displayName: string }) =>
@@ -68,13 +76,13 @@ export function useSlackTokenConnection({
         name,
         display_name: displayName,
         ownership_mode: "user",
-        executing_identity: { identity: "bot" },
-        // The server records scopes from Slack, never from a client claim.
-        granted_scopes: [],
+        executing_identity: { identity: tokenProfile?.identity ?? "bot" },
+        // The server validates the token and replaces untrusted grant claims.
+        granted_scopes: tokenProfile?.required_scopes ?? [],
         allow_non_interactive: allowBackgroundRuns,
         credentials: { access_token: token.trim() },
       }),
-    [create, providerId, allowBackgroundRuns, token],
+    [create, providerId, allowBackgroundRuns, token, tokenProfile],
   );
 
   const reset = useCallback(() => {

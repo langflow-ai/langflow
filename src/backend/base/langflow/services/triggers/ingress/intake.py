@@ -17,7 +17,7 @@ raising, and the route renders every outcome the same way.
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
@@ -79,6 +79,11 @@ class IngressTarget:
 
 
 def _kind_matches(provider: str, kind: str) -> bool:
+    from langflow.services.triggers.providers.registry import get_kind
+
+    extension = get_kind(kind)
+    if extension is not None:
+        return kind.startswith(f"{provider}.")
     prefixes = _PROVIDER_KINDS.get(provider, ())
     return any(kind == prefix or kind.startswith(prefix) for prefix in prefixes)
 
@@ -140,7 +145,20 @@ async def resolve_target(session: AsyncSession, *, provider: str, public_id: str
     if row is None or not _kind_matches(provider, row.kind):
         return None
 
-    if provider == PROVIDER_WEBHOOK:
+    from langflow.services.triggers.providers.registry import get_kind, get_provider
+
+    extension = get_provider(provider)
+    if extension is not None:
+        spec = get_kind(row.kind)
+        if spec is None or not spec.push_mechanism or (row.config or {}).get("mechanism_id") != spec.push_mechanism:
+            return None
+        secrets = (
+            await extension.ingress_secrets(session, row)
+            if extension.ingress_secrets
+            else IngressSecrets(signing_secret=await _webhook_secret(row))
+        )
+        secrets = replace(secrets, target_config=dict(row.config or {}), target_kind=row.kind)
+    elif provider == PROVIDER_WEBHOOK:
         secrets = IngressSecrets(signing_secret=await _webhook_secret(row))
     else:
         secrets = await _subscription_secrets(session, row)
@@ -200,7 +218,12 @@ async def record_event(
         # An identical thin wakeup is not evidence of an identical change.
         fallback = str(uuid4())
     key = dedupe_key(provider=provider, suffix=suffix, fallback=fallback)
-    is_source_hint = provider in {PROVIDER_MICROSOFT, PROVIDER_GOOGLE}
+    from langflow.services.triggers.providers.registry import get_provider
+
+    extension = get_provider(provider)
+    is_source_hint = provider in {PROVIDER_MICROSOFT, PROVIDER_GOOGLE} or (
+        extension is not None and extension.ingress_is_hint
+    )
     envelope = {"provider": provider, "delivery": payload}
     if is_source_hint:
         envelope[SOURCE_HINT_FIELD] = True

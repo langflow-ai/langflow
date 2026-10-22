@@ -1,4 +1,5 @@
 {
+  "connections.add.tokenGenericHelp": "이 공급자의 액세스 토큰을 붙여넣으세요. Langflow는 저장하기 전에 토큰을 확인합니다.",
   "storageUpgrade.unavailable": "저장소를 사용할 수 없습니다",
   "storageUpgrade.title": "데이터 업그레이드 중",
   "storageUpgrade.queued": "업그레이드 대기 중",
