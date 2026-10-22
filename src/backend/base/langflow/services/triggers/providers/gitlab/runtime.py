@@ -15,7 +15,7 @@ from lfx_gitlab.client import GitLabClient, api_origin, positive_id
 from sqlmodel import select
 
 from langflow.services.auth.utils import decrypt_api_key
-from langflow.services.database.models.trigger.model import TriggerSubscription
+from langflow.services.database.models.trigger.model import TriggerCleanup, TriggerSubscription
 from langflow.services.triggers.constants import FAMILY_TRIGGER_PUSH
 from langflow.services.triggers.ingress.verifiers import IngressSecrets
 from langflow.services.triggers.providers.gitlab.config import normalize_config
@@ -27,6 +27,20 @@ from langflow.services.triggers.source_subscription import source_ingress_url
 from langflow.services.triggers.subscriptions import upsert_subscription
 
 WEBHOOK_PAGE_SIZE = 100
+
+
+async def prepare(session, trigger):
+    pending_cleanup = (
+        await session.exec(
+            select(TriggerCleanup.id).where(
+                TriggerCleanup.trigger_id == trigger.id,
+                TriggerCleanup.provider == "gitlab",
+            )
+        )
+    ).first()
+    if pending_cleanup is not None:
+        msg = "Finish the previous GitLab webhook cleanup before enabling this trigger again."
+        raise ValueError(msg)
 
 
 async def provision(session, trigger):
@@ -205,6 +219,7 @@ PROVIDER = TriggerProvider(
         for kind, label in (("issue", "Issue"), ("merge_request", "MergeRequest"))
     ),
     normalize_config=normalize_config,
+    prepare=prepare,
     provision=provision,
     revoke=revoke,
     verify=verify,

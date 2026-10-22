@@ -342,3 +342,44 @@ async def test_sealed_cleanup_snapshot_survives_connection_removal(gitlab, trigg
         gitlab.hooks[1]["url"] = "https://other.example/callback"
     assert await run_cleanup_pass() == (1 if fault is None else 0)
     assert gitlab.deleted == ([1] if fault is None else [])
+
+
+async def test_pause_reenable_waits_for_old_cleanup_before_replacing_hook(gitlab, trigger_owner, owned_flow):
+    await connection(trigger_owner)
+    trigger = await reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        await TriggerService().disable(session, row=row)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        with pytest.raises(ValueError, match="previous GitLab webhook cleanup"):
+            await TriggerService().enable_and_activate(session, row=row)
+    assert gitlab.created == 1
+    assert gitlab.deleted == []
+    assert await run_cleanup_pass() == 1
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        assert row.state == "active"
+    assert gitlab.created == 2
+    assert gitlab.deleted == [1]
+    assert list(gitlab.hooks) == [2]
+    assert await run_cleanup_pass() == 0
+    assert list(gitlab.hooks) == [2]
+
+
+async def test_duplicate_remote_callbacks_stop_recovery(gitlab, trigger_owner, owned_flow):
+    await connection(trigger_owner)
+    trigger = await reconcile(owned_flow, trigger_owner)
+    gitlab.timeout_once = True
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        with pytest.raises(ValueError, match="Source activation failed"):
+            await TriggerService().enable_and_activate(session, row=row)
+    gitlab.duplicate = True
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        with pytest.raises(ValueError, match="Duplicate GitLab callbacks"):
+            await TriggerService().enable_and_activate(session, row=row)
+    assert gitlab.created == 1
