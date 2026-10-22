@@ -46,6 +46,7 @@ def discovery(monkeypatch):
     snapshot = {}
     entries = []
     monkeypatch.setattr(registry, "_cache_key", None)
+    monkeypatch.setattr(registry, "_cache_records", ())
     monkeypatch.setattr(registry, "_providers", {})
     monkeypatch.setattr(bundle_registry, "get_default_registry", lambda: SimpleNamespace(snapshot=lambda: snapshot))
     original_entry_points = registry.metadata.entry_points
@@ -123,7 +124,19 @@ def test_conflicting_or_mismatched_hooks_fail_closed(discovery, provider, reason
     assert registry.get_provider("pilot") is None
 
 
-@pytest.mark.parametrize("field", ["bot_token", "private_key", "password", "access_token", "signing_secret", "api_key"])
+@pytest.mark.parametrize(
+    "field",
+    [
+        "bot_token",
+        "private_key",
+        "privatekey",
+        "password",
+        "access_token",
+        "signing_secret",
+        "api_key",
+        "apikey",
+    ],
+)
 def test_credentials_cannot_be_canvas_configuration(provider, field):
     with pytest.raises(ValueError, match="invalid or duplicate"):
         replace(provider, kinds=(replace(provider.kinds[0], config_fields=("connection", field)),))
