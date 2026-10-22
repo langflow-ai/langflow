@@ -155,6 +155,7 @@ export function StorageUpgradeNotice() {
     inventoryIssues: data?.inventory?.issues,
     inventoryDetails: data?.inventory?.details,
     storageDirectory: data?.inventory?.storage_directory,
+    inventoryScanFailed: data?.inventory?.scan_failed,
   });
   const visible =
     !!data &&
@@ -245,7 +246,13 @@ export function StorageUpgradeNotice() {
                   ))}
                 </ul>
               )}
-              <p>{t("storageUpgrade.inventoryRecovery")}</p>
+              <p>
+                {t(
+                  data.inventory.scan_failed
+                    ? "storageUpgrade.inventoryScanFailed"
+                    : "storageUpgrade.inventoryRecovery",
+                )}
+              </p>
               <Button
                 size="sm"
                 variant="outline"

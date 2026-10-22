@@ -11,16 +11,18 @@ _SOURCE_PATH_PARTS = 2
 
 
 async def inventory_recovery_details() -> dict:
-    """Expose relative source names and safe error codes without sidecar contents."""
+    """Expose relative source names, safe error codes and whether the latest scan finished, without sidecar contents."""
     try:
         root = storage_root()
     except StorageUnavailableError:
-        return {"details": []}
+        return {"details": [], "scan_failed": False}
     details = []
+    scan_failed = False
     try:
         value = json.loads(
             await run_worker(read_regular_file, root / ".migration" / "inventory.json", limit=4 * 1024 * 1024)
         )
+        scan_failed = isinstance(value, dict) and value.get("scan_failed") is True
         issues = value.get("issues", []) if isinstance(value, dict) else []
         if not isinstance(issues, list):
             issues = []
@@ -41,4 +43,4 @@ async def inventory_recovery_details() -> dict:
     except (ValueError, MaintenanceRequiredError):
         # Old scans and interrupted scans still offer a fresh inventory retry.
         pass
-    return {"storage_directory": str(root), "details": details}
+    return {"storage_directory": str(root), "details": details, "scan_failed": scan_failed}

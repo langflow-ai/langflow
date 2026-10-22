@@ -60,13 +60,47 @@ async def test_orphaned_folders_report_issues_without_registered_bases(database)
     )
 
 
+async def test_a_failed_rescan_stops_naming_folders_from_an_earlier_scan(database):
+    for index in range(2):
+        source = database.root / "former-owner" / f"base-{index}"
+        source.mkdir(parents=True)
+        (source / "chroma.sqlite3").write_bytes(b"retained legacy data")
+    await coordinator.run_pending()
+    database.user.is_superuser = True
+    async with database.sessions() as session:
+        listed = await storage_status(session, database.user)
+    assert len(listed["inventory"]["details"]) == 2
+    assert not listed["inventory"]["scan_failed"]
+
+    # The named folders are recovered, but an unrelated owner symlink stops the next scan.
+    shutil.move(database.root / "former-owner", database.root.parent / "preserved-sources")
+    elsewhere = database.root.parent / "elsewhere"
+    elsewhere.mkdir()
+    linked = database.root / "linked-owner"
+    linked.symlink_to(elsewhere, target_is_directory=True)
+    assert await retry_inventory(database.user) == {"status": "scheduled"}
+    await coordinator.wait_for_upgrade()
+    async with database.sessions() as session:
+        failed = await storage_status(session, database.user)
+    assert failed["inventory"]["issues"]
+    assert failed["inventory"]["details"] == []
+    assert failed["inventory"]["scan_failed"]
+
+    linked.unlink()
+    await retry_inventory(database.user)
+    await coordinator.wait_for_upgrade()
+    async with database.sessions() as session:
+        recovered = await storage_status(session, database.user)
+    assert recovered["inventory"] == {"complete": True, "issues": 0}
+
+
 @pytest.mark.parametrize("contents", ["{", "[]", '{"issues": null}', '{"issues": [null]}'])
 async def test_unreadable_inventory_details_leave_retry_available(database, contents):
     directory = database.root / ".migration"
     directory.mkdir()
     (directory / "inventory.json").write_text(contents)
     details = await inventory_recovery_details()
-    assert details == {"storage_directory": str(database.root), "details": []}
+    assert details == {"storage_directory": str(database.root), "details": [], "scan_failed": False}
 
 
 async def test_inventory_details_are_bounded_and_exclude_unsafe_sources_and_private_fields(database):

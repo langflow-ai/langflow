@@ -21,6 +21,7 @@ export interface StorageUpgradeStatus {
     issues: number;
     storage_directory?: string;
     details?: { source: string; code: string }[];
+    scan_failed?: boolean;
   } | null;
   is_admin: boolean;
   running: boolean;

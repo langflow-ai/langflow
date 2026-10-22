@@ -30,6 +30,7 @@
   "storageUpgrade.inventory": "Algumas pastas antigas não puderam ser associadas com segurança. Um administrador precisa verificar o inventário do armazenamento e os logs da atualização.",
   "storageUpgrade.storageDirectory": "Diretório de armazenamento",
   "storageUpgrade.inventoryRecovery": "Estas pastas podem pertencer a outro banco de dados do Langflow. Restaure o proprietário e os metadados originais para migrá-las ou mova-as para fora do diretório de armazenamento mantendo um backup. Depois, verifique o armazenamento novamente.",
+  "storageUpgrade.inventoryScanFailed": "A última verificação do armazenamento não foi concluída. Verifique o acesso ao armazenamento e os logs da atualização e, depois, verifique o armazenamento novamente.",
   "storageUpgrade.retryInventory": "Verificar o armazenamento novamente",
   "field.required": "Obrigatório",
   "accordion.addVariable": "Incluir variável",

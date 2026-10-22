@@ -30,6 +30,7 @@
   "storageUpgrade.inventory": "일부 기존 저장소 폴더를 안전하게 연결하지 못했습니다. 관리자가 저장소 목록과 업그레이드 로그를 확인해야 합니다.",
   "storageUpgrade.storageDirectory": "저장소 디렉터리",
   "storageUpgrade.inventoryRecovery": "이 폴더는 다른 Langflow 데이터베이스에 속할 수 있습니다. 마이그레이션하려면 원래 소유자와 메타데이터를 복원하거나 백업을 유지한 채 저장소 디렉터리 밖으로 옮기세요. 그런 다음 저장소 확인을 다시 시도하세요.",
+  "storageUpgrade.inventoryScanFailed": "마지막 저장소 확인이 완료되지 않았습니다. 저장소 접근 권한과 업그레이드 로그를 확인한 후 저장소 확인을 다시 시도하세요.",
   "storageUpgrade.retryInventory": "저장소 확인 다시 시도",
   "field.required": "필수",
   "crash.title": "예상하지 못한 오류가 발생했습니다",

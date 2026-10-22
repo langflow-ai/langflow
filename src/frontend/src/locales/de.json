@@ -30,6 +30,7 @@
   "storageUpgrade.inventory": "Einige alte Speicherordner konnten nicht sicher zugeordnet werden. Ein Administrator muss das Speicherinventar und die Aktualisierungsprotokolle prüfen.",
   "storageUpgrade.storageDirectory": "Speicherverzeichnis",
   "storageUpgrade.inventoryRecovery": "Diese Ordner gehören möglicherweise zu einer anderen Langflow-Datenbank. Stellen Sie ihren ursprünglichen Besitzer und ihre Metadaten wieder her, um sie zu migrieren, oder verschieben Sie sie mit einer Sicherung aus dem Speicherverzeichnis. Wiederholen Sie dann die Speicherprüfung.",
+  "storageUpgrade.inventoryScanFailed": "Die letzte Speicherprüfung wurde nicht abgeschlossen. Prüfen Sie den Speicherzugriff und die Aktualisierungsprotokolle und wiederholen Sie dann die Speicherprüfung.",
   "storageUpgrade.retryInventory": "Speicherprüfung wiederholen",
   "field.required": "Erforderlich",
   "accordion.addVariable": "Variable hinzufügen",

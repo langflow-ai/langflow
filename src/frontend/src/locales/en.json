@@ -30,6 +30,7 @@
   "storageUpgrade.inventory": "Some old storage folders could not be matched safely. An administrator needs to check the storage inventory and upgrade logs.",
   "storageUpgrade.storageDirectory": "Storage directory",
   "storageUpgrade.inventoryRecovery": "These folders may belong to another Langflow database. Restore their original owner and metadata to migrate them, or move them outside the storage directory while keeping a backup. Then retry the storage check.",
+  "storageUpgrade.inventoryScanFailed": "The last storage check did not finish. Check storage access and the upgrade logs, then retry the storage check.",
   "storageUpgrade.retryInventory": "Retry storage check",
   "field.required": "required",
   "crash.title": "Sorry, we found an unexpected error!",

@@ -125,6 +125,35 @@ it("names orphaned folders and retries discovery without a migration ID", async 
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });
 
+it("explains an unfinished storage check instead of naming earlier folders", () => {
+  status = {
+    ...status,
+    running: false,
+    stores: [],
+    inventory: {
+      complete: false,
+      issues: 2,
+      storage_directory: "/srv/langflow/knowledge_bases",
+      details: [],
+      scan_failed: true,
+    },
+  };
+  render(<StorageUpgradeNotice />, { wrapper: wrapper() });
+  fireEvent.click(
+    screen.getByRole("button", { name: /view upgrade progress/i }),
+  );
+  expect(
+    screen.getByText(/last storage check did not finish/i),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByText(/another Langflow database/),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByRole("list")).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: /retry storage check/i }),
+  ).toBeEnabled();
+});
+
 it("keeps an empty fresh instance free of storage warnings", () => {
   status = { ...status, running: false, stores: [] };
   render(<StorageUpgradeNotice />, { wrapper: wrapper() });

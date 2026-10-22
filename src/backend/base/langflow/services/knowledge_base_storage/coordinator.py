@@ -749,13 +749,18 @@ async def reconcile_legacy_inventory() -> None:
         if issue := await _adopt(relative, fingerprint, *adoption):
             issues.append({**issue, "source": relative})
     _inventory_issue_count = len(issues)
+    _write_inventory({"issues": issues})
+    _inventory_complete = not issues
+
+
+def _write_inventory(inventory: dict) -> None:
+    """Record the latest scan's issues, or that it did not finish, for administrator recovery."""
     directory = private_directory(storage_root() / ".migration")
     path = directory / "inventory.json"
     if path.is_symlink():
         msg = "Invalid upgrade inventory path"
         raise MaintenanceRequiredError(msg)
-    path.write_text(json.dumps({"issues": issues}), encoding="utf-8")
-    _inventory_complete = not issues
+    path.write_text(json.dumps(inventory), encoding="utf-8")
 
 
 def inventory_status() -> dict:
@@ -829,6 +834,12 @@ async def _resume_pending() -> None:
     except Exception:  # noqa: BLE001 -- still persist actionable errors on registered KBs
         _inventory_issue_count = max(1, _inventory_issue_count)
         await logger.awarning("Legacy storage inventory requires administrator recovery")
+        if get_settings_service().settings.knowledge_bases_dir:
+            try:
+                # An earlier scan's folders may already be recovered, so stop naming them.
+                await _worker(_write_inventory, {"issues": [], "scan_failed": True})
+            except Exception:  # noqa: BLE001 -- unreadable storage already withholds recovery details
+                await logger.awarning("The unfinished legacy storage inventory could not be recorded")
     finally:
         if get_settings_service().settings.knowledge_bases_dir:
             try:
