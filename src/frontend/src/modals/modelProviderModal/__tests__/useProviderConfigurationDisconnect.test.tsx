@@ -1278,14 +1278,14 @@ describe("useProviderConfiguration.handleSaveAllVariables", () => {
   );
 
   it.each([
-    // A mixed provider's key is checked again on save; from a decision picker,
-    // that check must be for Decisions, or a Decisions-only key can't save.
+    // A mixed provider's key is checked again on save, as a chat call; from a
+    // decision picker it was just checked for Decisions, so the save says so.
     { view: "decision", kinds: ["llm", "decision"], asks: true },
-    // A decision-only provider isn't checked on save, so asking would bill twice.
+    // A decision-only provider's key is never checked on save.
     { view: "decision", kinds: ["decision"], asks: false },
     { view: "llm", kinds: ["llm", "decision"], asks: false },
   ] as const)(
-    "saves from the $view view asking for a Decisions check: $asks ($kinds)",
+    "saves from the $view view saying it was checked for Decisions: $asks ($kinds)",
     async ({ view, kinds, asks }) => {
       mockProviderVariablesMapping.OpenAI = openAIProviderVariables;
       const openAI: Provider = {
@@ -1318,9 +1318,9 @@ describe("useProviderConfiguration.handleSaveAllVariables", () => {
 
       expect(mockCreateMutateAsync).toHaveBeenCalledWith(
         asks
-          ? expect.objectContaining({ validationModelType: "decision" })
+          ? expect.objectContaining({ checkedModelType: "decision" })
           : expect.not.objectContaining({
-              validationModelType: expect.anything(),
+              checkedModelType: expect.anything(),
             }),
       );
     },

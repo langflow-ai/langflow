@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query
-from lfx.base.models.decision_constants import DECISION_ONLY_PROVIDERS
+from lfx.base.models.decision_constants import DECISION_MODELS_DETAILED, DECISION_ONLY_PROVIDERS
 from lfx.base.models.unified_models import (
     get_all_variables_for_provider,
     get_model_provider_variable_mapping,
@@ -137,17 +137,21 @@ async def _cleanup_provider_models(
     )
 
 
-def _validates_on_save(provider: str, validation_model_type: str | None) -> bool:
-    """Decision-only provider keys get a billable decision check only when the caller asks for one.
+_DECISION_PROVIDERS = frozenset(row["provider"] for row in DECISION_MODELS_DETAILED)
 
-    PERPLEXITY_API_KEY is also used by the Perplexity chat bundle, whose keys may lack Decisions access.
-    Model Providers never asks for a decision-only provider: it has already checked the key with
-    /models/validate-provider, and a second check here would bill the same key twice. Every other
-    provider's key is checked here, as a chat call unless the caller names "decision"; Model Providers
-    names it when a decision picker saves a mixed provider's key such as OpenAI's, so a key with only
-    Decisions access can be saved.
+
+def _validates_on_save(provider: str, checked_model_type: str | None) -> bool:
+    """Whether saving this provider's key runs a chat check, as it does for any chat provider.
+
+    A decision check is billed, so a key is never checked again here after one: a decision-only
+    provider's key, which Model Providers checks with /models/validate-provider, and a mixed
+    provider's key the caller says it just checked for decision models (``checked_model_type`` is
+    "decision", sent when a decision picker saves OpenAI's key). A key with only Decisions access
+    then saves without chat access. A provider with no decision models is always checked.
     """
-    return provider not in DECISION_ONLY_PROVIDERS or validation_model_type == "decision"
+    if provider in DECISION_ONLY_PROVIDERS:
+        return False
+    return not (checked_model_type == "decision" and provider in _DECISION_PROVIDERS)
 
 
 @router.post("/", response_model=VariableRead, status_code=201, include_in_schema=False)
@@ -157,7 +161,7 @@ async def create_variable(
     variable: VariableCreate,
     current_user: CurrentActiveUser,
     provider_policy_attributes: ProviderPolicyAttributesDependency,
-    validation_model_type: Annotated[Literal["decision"] | None, Query()] = None,
+    checked_model_type: Annotated[Literal["decision"] | None, Query()] = None,
 ):
     """Create a new variable."""
     await ensure_variable_permission(
@@ -192,7 +196,7 @@ async def create_variable(
     if (
         provider is not None
         and variable.name == get_model_provider_variable_mapping().get(provider)
-        and _validates_on_save(provider, validation_model_type)
+        and _validates_on_save(provider, checked_model_type)
     ):
         provider_vars = await asyncio.to_thread(get_all_variables_for_provider, current_user.id, provider)
         try:
@@ -201,7 +205,6 @@ async def create_variable(
                     validate_model_provider_key,
                     provider,
                     {**provider_vars, variable.name: variable.value},
-                    model_type=validation_model_type,
                     user_id=current_user.id,
                     policy_attributes=provider_policy_attributes,
                 )
@@ -315,7 +318,7 @@ async def update_variable(
     variable: VariableUpdate,
     current_user: CurrentActiveUser,
     provider_policy_attributes: ProviderPolicyAttributesDependency,
-    validation_model_type: Annotated[Literal["decision"] | None, Query()] = None,
+    checked_model_type: Annotated[Literal["decision"] | None, Query()] = None,
 ):
     """Update a variable."""
     variable_service = get_variable_service()
@@ -364,7 +367,7 @@ async def update_variable(
             if (
                 variable.value
                 and effective_name == get_model_provider_variable_mapping().get(provider)
-                and _validates_on_save(provider, validation_model_type)
+                and _validates_on_save(provider, checked_model_type)
             ):
                 # Run validation off the event loop; owner context (not caller) for share-aware updates.
                 provider_vars = await asyncio.to_thread(get_all_variables_for_provider, owner_id, provider)
@@ -374,7 +377,6 @@ async def update_variable(
                             validate_model_provider_key,
                             provider,
                             {**provider_vars, effective_name: variable.value},
-                            model_type=validation_model_type,
                             user_id=current_user.id,
                             policy_attributes=provider_policy_attributes,
                         )

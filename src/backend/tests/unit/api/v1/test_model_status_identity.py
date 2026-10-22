@@ -761,20 +761,17 @@ async def test_a_refused_key_names_the_provider_once(monkeypatch, model_type, de
     assert caught.value.detail == detail
 
 
-@pytest.mark.parametrize("denied", [False, True])
 @pytest.mark.parametrize("operation", ["create", "update"])
-async def test_openai_decision_credential_save_checks_model_policy_before_persistence(monkeypatch, denied, operation):
+async def test_a_key_saved_after_a_decision_check_needs_only_configure_permission(monkeypatch, operation):
+    """The save runs no model, so model policy is not its check.
+
+    /models/validate-provider, which does run one, checks it first:
+    see test_decision_credential_validation_never_invokes_denied_model.
+    """
     from unittest.mock import MagicMock, Mock
 
-    from fastapi import HTTPException
     from langflow.api.v1 import variable as variable_api
-    from lfx.base.models.decisions import providers
-    from lfx.services import model_provider_policy
-    from lfx.services.model_provider_policy import (
-        ModelProviderPolicyContext,
-        ModelProviderPolicyPurpose,
-        ModelProviderPolicySnapshot,
-    )
+    from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 
     user = SimpleNamespace(id=uuid4())
     variable = variable_api.VariableCreate(name="OPENAI_API_KEY", value="test-value", default_fields=[])
@@ -786,25 +783,16 @@ async def test_openai_decision_credential_save_checks_model_policy_before_persis
     monkeypatch.setattr(variable_api, "authorized_or_owner_scoped", AsyncMock(return_value=stored))
     monkeypatch.setattr(variable_api, "get_variable_service", lambda: service)
     monkeypatch.setattr(variable_api, "ensure_variable_permission", AsyncMock())
-    monkeypatch.setattr(variable_api, "_require_provider", AsyncMock())
-    monkeypatch.setattr(variable_api, "get_all_variables_for_provider", lambda *_: {})
-    policy = ModelProviderPolicySnapshot(
-        context=ModelProviderPolicyContext(user_id=user.id),
-        purpose=ModelProviderPolicyPurpose.USE,
-        candidate_provider_ids=frozenset({"openai"}),
-        allowed_provider_ids=frozenset({"openai"}),
-        blocked_model_keys=frozenset({"openai::decision::gpt-6-luna"}) if denied else frozenset(),
-    )
-    resolver = Mock(return_value=policy)
-    monkeypatch.setattr(model_provider_policy, "resolve_model_provider_policy", resolver)
+    require = AsyncMock()
+    monkeypatch.setattr(variable_api, "_require_provider", require)
     validate = Mock()
-    monkeypatch.setattr(providers, "validate_decision_provider_key", validate)
+    monkeypatch.setattr(variable_api, "validate_model_provider_key", validate)
     args = {
         "session": object(),
         "variable": variable,
         "current_user": user,
         "provider_policy_attributes": {"workspace_id": "workspace"},
-        "validation_model_type": "decision",
+        "checked_model_type": "decision",
     }
     save = variable_api.create_variable
     persistence = service.create_variable
@@ -813,19 +801,15 @@ async def test_openai_decision_credential_save_checks_model_policy_before_persis
         args["variable_id"] = stored.id
         save = variable_api.update_variable
         persistence = service.update_variable_fields
-    if denied:
-        with pytest.raises(HTTPException) as error:
-            await save(**args)
-        assert error.value.status_code == 404
-        persistence.assert_not_called()
-        validate.assert_not_called()
-    else:
-        result = await save(**args)
-        assert result.id == stored.id
-        validate.assert_called_once_with("OpenAI", {"OPENAI_API_KEY": "test-value"}, "gpt-6-luna")
-        persistence.assert_awaited_once()
-    assert resolver.call_args.kwargs["user_id"] == user.id
-    assert resolver.call_args.kwargs["attributes"] == {"workspace_id": "workspace"}
+    result = await save(**args)
+    assert result.id == stored.id
+    persistence.assert_awaited_once()
+    validate.assert_not_called()
+    assert require.await_args.args[1:] == (
+        "OpenAI",
+        ModelProviderPolicyPurpose.CONFIGURE,
+        {"workspace_id": "workspace"},
+    )
 
 
 DECISION_CATALOG = {
@@ -885,46 +869,25 @@ async def test_list_decision_models_hides_policy_denied_model(client, logged_in_
         assert any(provider == "OpenAI" and kind == "llm" for provider, _, kind in rows)
 
 
-@pytest.mark.parametrize(("validation_model_type", "validated"), [(None, False), ("decision", True)])
-async def test_perplexity_key_save_runs_a_decision_check_only_when_asked(monkeypatch, validation_model_type, validated):
-    """The Perplexity chat bundle shares PERPLEXITY_API_KEY; its keys may lack Decisions access."""
+@pytest.mark.parametrize(
+    ("name", "checked_model_type", "chat_checked"),
+    [
+        ("PERPLEXITY_API_KEY", None, False),
+        ("PERPLEXITY_API_KEY", "decision", False),
+        ("OPENAI_API_KEY", None, True),
+        ("OPENAI_API_KEY", "decision", False),
+        # A provider with no decision models has no decision check to stand in for its own.
+        ("ANTHROPIC_API_KEY", "decision", True),
+    ],
+)
+async def test_a_key_save_never_repeats_a_decision_check(monkeypatch, name, checked_model_type, chat_checked):
+    """A decision check is billed, so a decision-only key, or one just checked for decisions, isn't checked again."""
     from unittest.mock import MagicMock, Mock
 
     from langflow.api.v1 import variable as variable_api
 
     user = SimpleNamespace(id=uuid4())
-    variable = variable_api.VariableCreate(name="PERPLEXITY_API_KEY", value="test-value", default_fields=[])
-    stored = variable_api.Variable(name=variable.name, value=variable.value, default_fields=[], user_id=user.id)
-    service = MagicMock(spec=variable_api.DatabaseVariableService)
-    service.list_variables = AsyncMock(return_value=[])
-    service.create_variable = AsyncMock(return_value=stored)
-    monkeypatch.setattr(variable_api, "get_variable_service", lambda: service)
-    monkeypatch.setattr(variable_api, "ensure_variable_permission", AsyncMock())
-    monkeypatch.setattr(variable_api, "_require_provider", AsyncMock())
-    monkeypatch.setattr(variable_api, "get_all_variables_for_provider", lambda *_: {})
-    validate = Mock()
-    monkeypatch.setattr(variable_api, "validate_model_provider_key", validate)
-    result = await variable_api.create_variable(
-        session=object(),
-        variable=variable,
-        current_user=user,
-        provider_policy_attributes={},
-        validation_model_type=validation_model_type,
-    )
-    assert result.id == stored.id
-    assert validate.called is validated
-    service.create_variable.assert_awaited_once()
-
-
-@pytest.mark.parametrize(("validation_model_type", "checked_as"), [(None, None), ("decision", "decision")])
-async def test_openai_key_save_checks_the_kind_the_picker_names(monkeypatch, validation_model_type, checked_as):
-    """Saved from a decision picker, an OpenAI key is checked for Decisions, not chat, so a Decisions-only key saves."""
-    from unittest.mock import MagicMock, Mock
-
-    from langflow.api.v1 import variable as variable_api
-
-    user = SimpleNamespace(id=uuid4())
-    variable = variable_api.VariableCreate(name="OPENAI_API_KEY", value="sk-test", default_fields=[])
+    variable = variable_api.VariableCreate(name=name, value="test-value", default_fields=[])
     stored = variable_api.Variable(name=variable.name, value=variable.value, default_fields=[], user_id=user.id)
     service = MagicMock(spec=variable_api.DatabaseVariableService)
     service.list_variables = AsyncMock(return_value=[])
@@ -940,10 +903,58 @@ async def test_openai_key_save_checks_the_kind_the_picker_names(monkeypatch, val
         variable=variable,
         current_user=user,
         provider_policy_attributes={},
-        validation_model_type=validation_model_type,
+        checked_model_type=checked_model_type,
     )
-    validate.assert_called_once()
-    assert validate.call_args.kwargs["model_type"] == checked_as
+    assert validate.called is chat_checked
+    service.create_variable.assert_awaited_once()
+
+
+@pytest.mark.usefixtures("active_user")
+@pytest.mark.parametrize(("checked_model_type", "status_code"), [("decision", 201), (None, 400)])
+async def test_a_decision_picker_saves_a_decisions_only_openai_key_with_one_check(
+    client, logged_in_headers, monkeypatch, checked_model_type, status_code
+):
+    """Model Providers' decision check is the only one: the save neither repeats it nor needs chat access.
+
+    Only the two outbound calls are replaced, so a second check anywhere in the backend is counted.
+    """
+    import sys
+    import types
+
+    from lfx.base.models.decisions import providers as decision_providers
+
+    decision_checks, chat_calls = [], []
+    monkeypatch.setattr(
+        decision_providers, "validate_decision_provider_key", lambda *args: decision_checks.append(args)
+    )
+
+    class NoChatAccess:
+        def __init__(self, **_kwargs):
+            pass
+
+        def invoke(self, prompt):
+            chat_calls.append(prompt)
+            # How OpenAI refuses a key restricted to other endpoints.
+            msg = "Error code: 401 - You have insufficient permissions for this operation."
+            raise RuntimeError(msg)
+
+    monkeypatch.setitem(sys.modules, "langchain_openai", types.SimpleNamespace(ChatOpenAI=NoChatAccess))
+    key = "sk-decisions-only"  # pragma: allowlist secret
+    check = await client.post(
+        "api/v1/models/validate-provider",
+        headers=logged_in_headers,
+        json={"provider": "OpenAI", "variables": {"OPENAI_API_KEY": key}, "model_type": "decision"},
+    )
+    assert check.json()["valid"] is True
+    save = await client.post(
+        "api/v1/variables/",
+        headers=logged_in_headers,
+        params={"checked_model_type": checked_model_type} if checked_model_type else {},
+        json={"name": "OPENAI_API_KEY", "value": key, "type": "Credential", "default_fields": []},
+    )
+    assert save.status_code == status_code, save.text
+    assert len(decision_checks) == 1
+    assert len(chat_calls) == (0 if checked_model_type else 1)
 
 
 @pytest.mark.parametrize(

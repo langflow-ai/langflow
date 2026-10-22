@@ -582,17 +582,17 @@ export const useProviderConfiguration = ({
       const isValid = await validateCredentials();
       if (!isValid || !canUseCurrentProviderPolicy(providerName)) return;
     }
-    // Saving checks a mixed provider's key again, as a chat call unless told
-    // otherwise. From a decision picker, ask for the same Decisions check
-    // validateCredentials just made, so a key with only Decisions access saves.
-    // A decision-only provider's key is not checked on save at all, so asking
-    // would bill it twice.
+    // Saving checks a mixed provider's key again, as a chat call. From a
+    // decision picker, validateCredentials has just made the billed Decisions
+    // check, so the save says so and isn't checked again: one check, and a key
+    // with only Decisions access saves. A decision-only provider's key is
+    // never checked on save.
     const providerModels = trustedSelectedProvider?.models ?? [];
-    const saveValidation =
+    const alreadyChecked =
       modelType === "decision" &&
       providerModels.some((m) => m.metadata?.model_type === "decision") &&
       providerModels.some((m) => m.metadata?.model_type !== "decision")
-        ? { validationModelType: "decision" as const }
+        ? { checkedModelType: "decision" as const }
         : {};
     setIsSaving(true);
     setValidationFailed(false);
@@ -655,7 +655,7 @@ export const useProviderConfiguration = ({
             value,
             flowId,
             projectId,
-            ...saveValidation,
+            ...alreadyChecked,
           });
         } else {
           await createGlobalVariable({
@@ -666,7 +666,7 @@ export const useProviderConfiguration = ({
             default_fields: [],
             flowId,
             projectId,
-            ...saveValidation,
+            ...alreadyChecked,
           });
         }
         hasPersistedVariable = true;

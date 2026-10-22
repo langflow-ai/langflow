@@ -105,7 +105,7 @@ describe("global-variable mutation scope", () => {
     });
   });
 
-  it("asks for a Decisions key check in the query, never in the body", async () => {
+  it("says a key was just checked for Decisions in the query, never in the body", async () => {
     mockApiPost.mockResolvedValue({
       data: { id: "var-1", name: "OPENAI_API_KEY" },
     });
@@ -119,20 +119,20 @@ describe("global-variable mutation scope", () => {
       name: "OPENAI_API_KEY",
       value: "sk-test",
       flowId: "flow-a",
-      validationModelType: "decision",
+      checkedModelType: "decision",
     });
     await registeredMutation("usePatchGlobalVariables").mutationFn({
       id: "var-1",
       value: "sk-test",
-      validationModelType: "decision",
+      checkedModelType: "decision",
     });
 
     expect(mockApiPost).toHaveBeenCalledWith(
-      "/api/v1/variables/?flow_id=flow-a&validation_model_type=decision",
-      expect.not.objectContaining({ validationModelType: expect.anything() }),
+      "/api/v1/variables/?flow_id=flow-a&checked_model_type=decision",
+      expect.not.objectContaining({ checkedModelType: expect.anything() }),
     );
     expect(mockApiPatch).toHaveBeenCalledWith(
-      "/api/v1/variables/var-1?validation_model_type=decision",
+      "/api/v1/variables/var-1?checked_model_type=decision",
       { id: "var-1", value: "sk-test" },
     );
   });
