@@ -37,6 +37,9 @@ on:
         default: ""
 
 env:
+  # Apply to isolated installs as well as workspace installs.
+  UV_CONSTRAINT: "${{ github.workspace }}/scripts/ci/security-constraints.txt"
+  PIP_CONSTRAINT: "${{ github.workspace }}/scripts/ci/security-constraints.txt"
   DOCKER_BUILDKIT: "1"
 
 jobs:

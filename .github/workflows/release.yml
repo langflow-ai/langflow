@@ -73,6 +73,11 @@ concurrency:
   group: release-source-${{ inputs.release_tag }}
   cancel-in-progress: false
 
+env:
+  # Apply to isolated installs as well as workspace installs.
+  UV_CONSTRAINT: "${{ github.workspace }}/scripts/ci/security-constraints.txt"
+  PIP_CONSTRAINT: "${{ github.workspace }}/scripts/ci/security-constraints.txt"
+
 jobs:
   echo-inputs:
     name: Echo Workflow Inputs
@@ -152,6 +157,7 @@ jobs:
         if: ${{ !inputs.dry_run }}
         uses: astral-sh/setup-uv@v10.0.0
         with:
+          cache-suffix: litellm-20261022
           python-version: "3.13"
       - name: Verify tagged source disables auto-login
         if: ${{ !inputs.dry_run }}
@@ -289,9 +295,12 @@ jobs:
         if: ${{ inputs.pre_release }}
         uses: astral-sh/setup-uv@v10.0.0
         with:
+          cache-suffix: litellm-20261022
           version: latest-known
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          cache-dependency-glob: |
+            uv.lock
+            scripts/ci/security-constraints.txt
           python-version: "3.13"
           prune-cache: false
 
@@ -464,9 +473,12 @@ jobs:
       - name: Setup Environment
         uses: astral-sh/setup-uv@v10.0.0
         with:
+          cache-suffix: litellm-20261022
           version: latest-known
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          cache-dependency-glob: |
+            uv.lock
+            scripts/ci/security-constraints.txt
           python-version: "3.13"
           prune-cache: false
 
@@ -518,9 +530,12 @@ jobs:
       - name: Setup Environment
         uses: astral-sh/setup-uv@v10.0.0
         with:
+          cache-suffix: litellm-20261022
           version: latest-known
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          cache-dependency-glob: |
+            uv.lock
+            scripts/ci/security-constraints.txt
           python-version: "3.13"
           prune-cache: false
 
@@ -569,9 +584,12 @@ jobs:
       - name: Setup Environment
         uses: astral-sh/setup-uv@v10.0.0
         with:
+          cache-suffix: litellm-20261022
           version: latest-known
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          cache-dependency-glob: |
+            uv.lock
+            scripts/ci/security-constraints.txt
           python-version: "3.13"
           prune-cache: false
 
@@ -620,9 +638,12 @@ jobs:
       - name: Setup Environment
         uses: astral-sh/setup-uv@v10.0.0
         with:
+          cache-suffix: litellm-20261022
           version: latest-known
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          cache-dependency-glob: |
+            uv.lock
+            scripts/ci/security-constraints.txt
           python-version: "3.13"
           prune-cache: false
 
@@ -706,9 +727,12 @@ jobs:
       - name: Setup Environment
         uses: astral-sh/setup-uv@v10.0.0
         with:
+          cache-suffix: litellm-20261022
           version: latest-known
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          cache-dependency-glob: |
+            uv.lock
+            scripts/ci/security-constraints.txt
           python-version: "3.13"
           prune-cache: false
       - name: Set version for pre-release
@@ -776,9 +800,12 @@ jobs:
       - name: Setup Environment
         uses: astral-sh/setup-uv@v10.0.0
         with:
+          cache-suffix: litellm-20261022
           version: latest-known
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          cache-dependency-glob: |
+            uv.lock
+            scripts/ci/security-constraints.txt
           python-version: "3.13"
           prune-cache: false
       - name: Download SDK artifact
@@ -902,9 +929,12 @@ jobs:
       - name: Setup Environment
         uses: astral-sh/setup-uv@v10.0.0
         with:
+          cache-suffix: litellm-20261022
           version: latest-known
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          cache-dependency-glob: |
+            uv.lock
+            scripts/ci/security-constraints.txt
           python-version: "3.12"
           prune-cache: false
       - name: Download LFX artifact
@@ -1086,9 +1116,12 @@ jobs:
       - name: Setup Environment
         uses: astral-sh/setup-uv@v10.0.0
         with:
+          cache-suffix: litellm-20261022
           version: latest-known
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          cache-dependency-glob: |
+            uv.lock
+            scripts/ci/security-constraints.txt
           python-version: "3.12"
           prune-cache: false
       - name: Download LFX artifact
@@ -1296,9 +1329,12 @@ jobs:
       - name: Setup Environment
         uses: astral-sh/setup-uv@v10.0.0
         with:
+          cache-suffix: litellm-20261022
           version: latest-known
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          cache-dependency-glob: |
+            uv.lock
+            scripts/ci/security-constraints.txt
           python-version: "3.13"
           prune-cache: false
       - name: Install the project

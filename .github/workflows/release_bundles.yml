@@ -21,6 +21,9 @@ on:
         default: false
 
 env:
+  # Apply to isolated installs as well as workspace installs.
+  UV_CONSTRAINT: "${{ github.workspace }}/scripts/ci/security-constraints.txt"
+  PIP_CONSTRAINT: "${{ github.workspace }}/scripts/ci/security-constraints.txt"
   PYTHON_VERSION: "3.13"
 
 jobs:
@@ -40,9 +43,12 @@ jobs:
       - name: Setup Environment
         uses: astral-sh/setup-uv@v10.0.0
         with:
+          cache-suffix: litellm-20261022
           version: latest-known
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          cache-dependency-glob: |
+            uv.lock
+            scripts/ci/security-constraints.txt
           python-version: ${{ env.PYTHON_VERSION }}
           prune-cache: false
       - name: Install the project
@@ -148,6 +154,13 @@ jobs:
             runner: windows-latest
             python-version: "3.12"
     steps:
+      - name: Checkout install constraints
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
+          sparse-checkout: scripts/ci/security-constraints.txt
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
       - name: Setup Python
         uses: actions/setup-python@v7
         with:

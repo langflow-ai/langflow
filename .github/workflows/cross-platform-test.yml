@@ -36,6 +36,11 @@ on:
         type: boolean
         default: false
 
+env:
+  # Apply to isolated installs as well as workspace installs.
+  UV_CONSTRAINT: "${{ github.workspace }}/scripts/ci/security-constraints.txt"
+  PIP_CONSTRAINT: "${{ github.workspace }}/scripts/ci/security-constraints.txt"
+
 jobs:
   build-if-needed:
     name: Build Packages (if no artifacts provided)
@@ -53,9 +58,12 @@ jobs:
       - name: Setup Environment
         uses: astral-sh/setup-uv@v10.0.0
         with:
+          cache-suffix: litellm-20261022
           version: latest-known
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          cache-dependency-glob: |
+            uv.lock
+            scripts/ci/security-constraints.txt
           python-version: "3.13"
       - name: Install the project
         run: uv sync
@@ -143,6 +151,8 @@ jobs:
   test-installation-stable:
     name: Install & Run - ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.python-version }}
     env:
+      UV_CONSTRAINT: "${{ github.workspace }}/auth-smoke/scripts/ci/security-constraints.txt"
+      PIP_CONSTRAINT: "${{ github.workspace }}/auth-smoke/scripts/ci/security-constraints.txt"
       LANGFLOW_SUPERUSER_PASSWORD: ci-startup-only-password  # pragma: allowlist secret
     needs: [build-if-needed]
     if: |
@@ -209,7 +219,9 @@ jobs:
         uses: actions/checkout@v7
         with:
           path: auth-smoke
-          sparse-checkout: scripts/ci/check_authentication.py
+          sparse-checkout: |
+            scripts/ci/check_authentication.py
+            scripts/ci/security-constraints.txt
           sparse-checkout-cone-mode: false
           persist-credentials: false
 
@@ -455,6 +467,8 @@ jobs:
   test-installation-experimental:
     name: Install & Run - ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.python-version }} (Experimental)
     env:
+      UV_CONSTRAINT: "${{ github.workspace }}/auth-smoke/scripts/ci/security-constraints.txt"
+      PIP_CONSTRAINT: "${{ github.workspace }}/auth-smoke/scripts/ci/security-constraints.txt"
       LANGFLOW_SUPERUSER_PASSWORD: ci-startup-only-password  # pragma: allowlist secret
     needs: [build-if-needed]
     if: |
@@ -493,7 +507,9 @@ jobs:
         uses: actions/checkout@v7
         with:
           path: auth-smoke
-          sparse-checkout: scripts/ci/check_authentication.py
+          sparse-checkout: |
+            scripts/ci/check_authentication.py
+            scripts/ci/security-constraints.txt
           sparse-checkout-cone-mode: false
           persist-credentials: false
 
@@ -870,6 +886,9 @@ jobs:
 
   test-base-runtime:
     name: Base Distribution Wheel - Linux Python 3.14
+    env:
+      UV_CONSTRAINT: "${{ github.workspace }}/auth-smoke/scripts/ci/security-constraints.txt"
+      PIP_CONSTRAINT: "${{ github.workspace }}/auth-smoke/scripts/ci/security-constraints.txt"
     needs: [build-if-needed]
     if: |
       always() &&
@@ -884,7 +903,9 @@ jobs:
         uses: actions/checkout@v7
         with:
           path: auth-smoke
-          sparse-checkout: scripts/ci/check_authentication.py
+          sparse-checkout: |
+            scripts/ci/check_authentication.py
+            scripts/ci/security-constraints.txt
           sparse-checkout-cone-mode: false
           persist-credentials: false
 

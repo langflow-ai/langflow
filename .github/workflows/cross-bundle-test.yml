@@ -26,6 +26,7 @@ on:
       - "src/bundles/**"
       - "src/lfx/**"
       - ".github/workflows/cross-bundle-test.yml"
+      - "scripts/ci/security-constraints.txt"
   schedule:
     - cron: "0 6 * * 1" # Monday 06:00 UTC -- exhaustive grid
 
@@ -33,6 +34,11 @@ on:
 concurrency:
   group: cross-bundle-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Apply to isolated installs as well as workspace installs.
+  UV_CONSTRAINT: "${{ github.workspace }}/scripts/ci/security-constraints.txt"
+  PIP_CONSTRAINT: "${{ github.workspace }}/scripts/ci/security-constraints.txt"
 
 jobs:
   discover:
@@ -83,9 +89,12 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@v10.0.0
         with:
+          cache-suffix: litellm-20261022
           version: latest-known
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          cache-dependency-glob: |
+            uv.lock
+            scripts/ci/security-constraints.txt
           python-version: ${{ matrix.python-version }}
 
       - name: Install in-repo lfx + the bundle into a clean venv
