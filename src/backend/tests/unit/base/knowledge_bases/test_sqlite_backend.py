@@ -57,6 +57,31 @@ def test_distance_metric_names_the_configured_metric(context, metric, distance_m
 
 
 @pytest.mark.asyncio
+async def test_read_only_count_never_initializes_missing_storage(context):
+    assert await backend(context, create=True).read_only_count() is None
+    assert not context.database_path.parent.exists()
+
+
+@pytest.mark.asyncio
+async def test_read_only_count_includes_committed_wal_rows(context):
+    import apsw
+
+    store = backend(context)
+    await store.ensure_ready()
+    # Hold a reader at the old snapshot so the committed insert must stay in WAL.
+    reader = apsw.Connection(str(context.database_path))
+    try:
+        reader.execute("BEGIN")
+        assert reader.execute("SELECT count(*) FROM chunks").fetchone()[0] == 0
+        await store.add_embedded_documents([IngestedDocument("one", {}, [1.0, 0.0], id="one")])
+
+        assert await store.read_only_count() == 1
+        assert reader.execute("SELECT count(*) FROM chunks").fetchone()[0] == 0
+    finally:
+        reader.close()
+
+
+@pytest.mark.asyncio
 async def test_trusted_root_ancestor_alias_is_canonicalized(tmp_path):
     actual = tmp_path / "actual"
     actual.mkdir()

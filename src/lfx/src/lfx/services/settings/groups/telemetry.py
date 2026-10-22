@@ -2,6 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from lfx.services.telemetry.constants import DEFAULT_SEGMENT_WRITE_KEY
+
 
 class TelemetrySettings(BaseModel):
     """Telemetry, error tracking, and tracing settings."""
@@ -14,7 +16,10 @@ class TelemetrySettings(BaseModel):
     # Telemetry
     do_not_track: bool = False
     """If set to True, Langflow will not track telemetry."""
-    telemetry_base_url: str = "https://langflow.gateway.scarf.sh"
+    segment_write_key: str = DEFAULT_SEGMENT_WRITE_KEY
+    """Segment source write key. Official release artifacts include the production default."""
+    segment_api_url: str = "https://api.segment.io/v1/track"
+    """Segment HTTP Tracking API endpoint."""
 
     transactions_storage_enabled: bool = True
     """If set to True, Langflow will track transactions between flows."""

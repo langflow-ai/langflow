@@ -130,12 +130,16 @@ class TestMCPToolsComponentSchemaHandling:
 
     def test_build_tool_kwargs_omits_blank_optional_values(self, component):
         args_schema = create_input_schema_from_json_schema(self._browser_use_schema())
-        component.task = "Open docs homepage"
-        component.model = ""
-        component.profile_id = ""
-        component.keep_alive = False
-        component.output_schema = {}
-        component.proxy_country = ""
+        component.set_attributes(
+            {
+                "task": "Open docs homepage",
+                "model": "",
+                "profile_id": "",
+                "keep_alive": False,
+                "output_schema": {},
+                "proxy_country": "",
+            }
+        )
 
         kwargs = component._build_tool_kwargs(args_schema)
 

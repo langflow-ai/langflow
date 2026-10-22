@@ -11,15 +11,11 @@ from urllib.parse import urlsplit
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-#: The one reason worth telling apart. ``registration-unavailable`` means this
-#: process cannot see a usable registration for a connection - unparsable or
-#: absent ``LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS``, a registration that does
-#: not validate, one that belongs to another deployment context. The
-#: authorization is intact; the process is configured wrong, so a caller that
-#: would otherwise disarm the work (a listener holding a trigger) should retry
-#: instead. Every other OAuthError describes the authorization itself and does
-#: need a human to reconnect.
-OAuthErrorReason = Literal["registration-unavailable"]
+#: These failures do not establish that the authorization is expired.
+#: ``registration-unavailable`` means this process lacks usable OAuth settings.
+#: ``provider-unavailable`` means the exchange failed without a confirmed
+#: credential rejection. Neither should disarm a listener or require reconnect.
+OAuthErrorReason = Literal["registration-unavailable", "provider-unavailable"]
 
 
 class OAuthError(ValueError):
@@ -77,7 +73,11 @@ class OAuthRegistration(BaseModel):
         if self.context == "self_managed" and self.owner != "customer":
             msg = "Self-managed OAuth uses customer-owned registrations"
             raise OAuthError(msg)
-        if self.client_type == "public" and (self.client_secret or self.private_key):
+        # Google Desktop credentials can require client_secret at the token
+        # endpoint even though installed apps cannot keep it confidential.
+        # This provider parameter does not replace public-client PKCE.
+        google_desktop = self.provider == "google" and self.context == "desktop"
+        if self.client_type == "public" and (self.private_key or (self.client_secret and not google_desktop)):
             msg = "Public clients cannot contain registration secrets"
             raise OAuthError(msg)
         if self.client_type == "confidential" and bool(self.client_secret) == bool(self.private_key):

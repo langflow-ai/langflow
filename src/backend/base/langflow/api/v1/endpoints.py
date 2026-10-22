@@ -11,7 +11,7 @@ from uuid import UUID, uuid4
 
 import orjson
 import sqlalchemy as sa
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Query, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, StreamingResponse
 from lfx.custom.custom_component.component import Component
@@ -48,6 +48,7 @@ from lfx.workflow.end_user_identity import (
     end_user_required_detail,
     resolve_serving_scope,
 )
+from pydantic import ValidationError
 
 from langflow.api.utils import (
     CurrentActiveUser,
@@ -64,6 +65,7 @@ from langflow.api.utils.execution_principal import (
     execution_principal_for,
     stamp_execution_principal,
 )
+from langflow.api.utils.migration_pause import writing_on
 from langflow.api.v1.custom_component_policy import (
     CatalogPolicyHTTPException,
     enforce_catalog_policy_for_component_type,
@@ -88,6 +90,7 @@ from langflow.api.v1.schemas import (
     UpdateCustomComponentRequest,
     UploadFileResponse,
 )
+from langflow.api.validation_errors import redact_validation_errors
 from langflow.api.warm_graph import try_warm_run_graph
 from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.exceptions.api import APIException, InvalidChatInputError
@@ -100,6 +103,7 @@ from langflow.services.auth.utils import (
     api_key_security,
     get_current_user_for_sse,
     get_optional_user,
+    get_webhook_user,
 )
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.access_ceiling import (
@@ -112,7 +116,6 @@ from langflow.services.database.models.flow.utils import get_all_webhook_compone
 from langflow.services.database.models.jobs.model import JobType
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import (
-    get_auth_service,
     get_catalog_policy_service,
     get_job_service,
     get_memory_base_service,
@@ -251,6 +254,10 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
         if body:
             body_data = orjson.loads(body)
             return SimplifiedAPIRequest(**body_data)
+        return SimplifiedAPIRequest()
+    except ValidationError as exc:
+        # Pydantic's own text quotes the submitted values. Log which field failed and why.
+        logger.warning(f"Failed to parse request body: {redact_validation_errors(exc.errors())}")
         return SimplifiedAPIRequest()
     except Exception as exc:  # noqa: BLE001
         logger.warning(f"Failed to parse request body: {exc}")
@@ -586,6 +593,9 @@ async def simple_run_flow(
                 # getattr: the warm-run path may hand back a lightweight graph stand-in without
                 # this attribute, matching every other end_user_id read in the codebase.
                 end_user_id=getattr(graph, "end_user_id", None),
+                # Live from insert, then kept alive by execute_with_status, so an orphan
+                # sweep cannot fail it mid-run. The run writes no job_metadata of its own.
+                heartbeat=True,
             )
             # The funnel default. Binding is outermost-wins, so a caller that already named its
             # surface (webhook, mcp, openai_responses) keeps it and only the bare v1 route lands
@@ -594,6 +604,7 @@ async def simple_run_flow(
                 task_result, session_id = await _job_svc.execute_with_status(
                     run_id_uuid,
                     run_graph_internal,
+                    keep_alive=True,
                     graph=graph,
                     flow_id=flow_id_str,
                     session_id=effective_session_id,
@@ -961,7 +972,7 @@ async def get_webhook_auth(
 
     Centralizes the security logic for webhook run endpoints.
     """
-    webhook_user = await get_auth_service().get_webhook_user(flow_id_or_name, request)
+    webhook_user = await get_webhook_user(flow_id_or_name, request)
     # Webhook route also calls ``ensure_flow_permission`` after, so widening
     # for shared resources is acceptable here.
     flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, user_id=webhook_user.id, widen_for_shares=True)
@@ -1512,6 +1523,9 @@ async def webhook_run_flow(
         )
         # Fire-and-forget: log exceptions but don't block
         background_task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
+        # The run goes on after this request has answered, so it holds a place of its own among the
+        # changes a migration pause waits for.
+        writing_on(background_task, name="webhook_run")
     except Exception as exc:
         error_msg = str(exc)
         raise HTTPException(status_code=500, detail=error_msg) from exc
@@ -1872,12 +1886,27 @@ def _raw_component_parameters(
     return params
 
 
+def _bind_request_flow_id(component: Any, flow_id: UUID | None) -> None:
+    """Expose the request's flow to a component built for a design-time update.
+
+    The model-provider preflight runs on a freshly built instance, before the
+    template's ``_frontend_node_*`` values are applied, and no graph exists to
+    supply ``flow_id``. Components whose preflight reads persisted, flow-scoped
+    state (Memory Base) would otherwise fail with "flow_id is not available".
+    ``flow_id`` here is the query parameter ``ProviderPolicyAttributesDependency``
+    has already authorized, so it is safe to trust, unlike the template copy.
+    """
+    if flow_id is not None:
+        component._flow_id = str(flow_id)  # noqa: SLF001
+
+
 @router.post("/custom_component", status_code=HTTPStatus.OK, include_in_schema=False)
 async def custom_component(
     raw_code: CustomComponentRequest,
     user: CurrentActiveUser,
     request: Request,
     provider_policy_attributes: ProviderPolicyAttributesDependency,
+    flow_id: Annotated[UUID | None, Query()] = None,
 ) -> CustomComponentResponse:
     # Building a custom component instantiates (and partially executes) posted
     # code. That is a create/write-class action, so enforce the external access
@@ -1911,7 +1940,10 @@ async def custom_component(
     try:
         component = Component(_code=effective_code)
 
-        built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
+        built_frontend_node, component_instance = build_custom_component_template(
+            component, user_id=user.id, class_name=raw_code.get_class_name()
+        )
+        _bind_request_flow_id(component_instance, flow_id)
         type_ = get_instance_name(component_instance)
         enforce_catalog_policy_for_component_type(type_, snapshot=catalog_policy_snapshot)
         # Posting the source of a blocked integration component must not
@@ -1974,6 +2006,7 @@ async def custom_component_update(
     user: CurrentActiveUser,
     request: Request,
     provider_policy_attributes: ProviderPolicyAttributesDependency,
+    flow_id: Annotated[UUID | None, Query()] = None,
 ):
     """Update an existing custom component with new code and configuration.
 
@@ -2016,7 +2049,9 @@ async def custom_component_update(
         component_node, cc_instance = build_custom_component_template(
             component,
             user_id=user.id,
+            class_name=code_request.get_class_name(),
         )
+        _bind_request_flow_id(cc_instance, flow_id)
         component_type = get_instance_name(cc_instance)
         enforce_catalog_policy_for_component_type(component_type, snapshot=catalog_policy_snapshot)
         await aenforce_integration_policy_for_component(

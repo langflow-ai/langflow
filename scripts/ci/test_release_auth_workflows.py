@@ -51,6 +51,16 @@ def test_nightly_tag_commit_includes_release_authentication_default() -> None:
     assert AUTH_SOURCE.as_posix() in staged
 
 
+def test_nightly_tag_commits_bundle_metadata_before_builds() -> None:
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/nightly_build.yml").read_text())
+    steps = workflow["jobs"]["create-nightly-tag"]["steps"]
+    commands = next(step["run"] for step in steps if step.get("id") == "commit_tag")
+    assert commands.index("update_pyproject_combined.py") < commands.index("uv lock") < commands.index("git commit")
+    staged = commands[commands.index("git add") : commands.index("git commit")]
+    assert "src/bundles/*/pyproject.toml" in staged
+    assert "src/bundles/*/src/*/extension.json" in staged
+
+
 def test_standalone_lfx_builds_and_github_release_use_the_prepared_commit() -> None:
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/release-lfx.yml").read_text())
     jobs = workflow["jobs"]
@@ -66,7 +76,7 @@ def test_base_startup_installs_release_lfx_after_workspace_dependencies() -> Non
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/release.yml").read_text())
     commands = next(step["run"] for step in workflow["jobs"]["build-base"]["steps"] if step.get("name") == "Test CLI")
     assert (
-        commands.index("uv pip install src/backend/base/dist/*.whl")
+        commands.index('uv pip install "${FIND_LINKS[@]}" --prerelease=allow src/backend/base/dist/*.whl')
         < commands.index("uv pip install --force-reinstall --no-deps lfx-dist/*.whl")
         < commands.index("uv run --no-sync python -m langflow run")
     )

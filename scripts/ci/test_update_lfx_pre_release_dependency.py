@@ -11,9 +11,9 @@ provider = ["lfx-openai>=0.1.0,<1.0.0"]
 
     result = update_lfx_requirements(content, "1.11.0rc2")
 
-    assert '"lfx>=1.11.0rc2,<1.12.dev0"' in result
-    assert '"lfx[cassandra]>=1.11.0rc2,<1.12.dev0"' in result
-    assert "\"lfx[toolguard]>=1.11.0rc2,<1.12.dev0; sys_platform != 'win32'\"" in result
+    assert '"lfx==1.11.0rc2"' in result
+    assert '"lfx[cassandra]==1.11.0rc2"' in result
+    assert "\"lfx[toolguard]==1.11.0rc2; sys_platform != 'win32'\"" in result
     assert '"lfx-openai>=0.1.0,<1.0.0"' in result
 
 
@@ -22,4 +22,5 @@ def test_rewrites_an_existing_release_range_idempotently():
 
     result = update_lfx_requirements(content, "1.11.0rc2")
 
-    assert result == 'dependencies = ["lfx[toolguard]>=1.11.0rc2,<1.12.dev0"]\n'
+    assert result == 'dependencies = ["lfx[toolguard]==1.11.0rc2"]\n'
+    assert update_lfx_requirements(result, "1.11.0rc2") == result

@@ -111,6 +111,8 @@ class ComponentTestBase:
         mock_vertex.edges_source_names = set()
         mock_vertex._accumulate_upstream_token_usage = Mock(return_value=None)
         mock_vertex.graph = Mock()
+        # Offline component tests have no user whose provider variables can be queried.
+        mock_vertex.graph.user_id = None
         mock_vertex.graph.id = str(uuid4())
         mock_vertex.graph.session_id = str(uuid4())
         mock_vertex.graph.flow_id = str(uuid4())

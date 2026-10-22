@@ -54,6 +54,21 @@ class DeploymentSnapshotRequiredConnection(BaseModel):
     scopes: list[str] = Field(default_factory=list)
 
 
+class DeploymentSnapshotRequiredModel(BaseModel):
+    """One model a captured flow selects, in the shape the policy blocks by."""
+
+    provider: str
+    name: str
+    model_type: str | None = None
+
+
+class DeploymentSnapshotRequiredMcpProject(BaseModel):
+    """One sibling project a flow calls, and the name its config calls it by."""
+
+    server_name: str
+    project_id: str
+
+
 class DeploymentSnapshot(BaseModel):
     """A complete, safe baseline suitable for an Editor import."""
 
@@ -62,3 +77,14 @@ class DeploymentSnapshot(BaseModel):
     dependencies: dict[str, Any] = Field(default_factory=dict)
     required_variables: list[str] = Field(default_factory=list)
     required_connections: list[DeploymentSnapshotRequiredConnection] = Field(default_factory=list)
+    # Model provider identities the captured flows select, and the number of
+    # model fields that selected none. Both default empty, so a caller written
+    # against the earlier response shape reads an unchanged payload.
+    required_providers: list[str] = Field(default_factory=list)
+    required_models: list[DeploymentSnapshotRequiredModel] = Field(default_factory=list)
+    unresolved_model_fields: int = 0
+    # What the captured flows' MCP servers need from the deploy target: variable
+    # names it must already hold, and sibling projects that must already be
+    # deployed there. Both default empty, for the same reason as above.
+    required_mcp_variables: list[str] = Field(default_factory=list)
+    required_mcp_projects: list[DeploymentSnapshotRequiredMcpProject] = Field(default_factory=list)

@@ -7,9 +7,9 @@ import {
   SidebarMenu,
 } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
-import { SIDEBAR_BUNDLES } from "@/utils/styleUtils";
 import { toTitleCase } from "@/utils/utils";
 import { deriveBundleExtensionId } from "../helpers/derive-bundle-extension-id";
+import { isComponentsGroupCategory } from "../helpers/is-components-group-category";
 import type { CategoryGroupProps } from "../types";
 import { CategoryDisclosure } from "./categoryDisclouse";
 import { SearchConfigTrigger } from "./searchConfigTrigger";
@@ -42,13 +42,8 @@ export const CategoryGroup = memo(function CategoryGroup({
       <SidebarGroupContent>
         <SidebarMenu>
           {Object.entries(dataFilter)
-            .filter(
-              ([categoryName, items]) =>
-                // filter out bundles and MCP
-                !SIDEBAR_BUNDLES.some((cat) => cat.name === categoryName) &&
-                categoryName !== "custom_component" &&
-                categoryName !== "MCP" &&
-                Object.keys(items).length > 0,
+            .filter(([categoryName, items]) =>
+              isComponentsGroupCategory(categoryName, items),
             )
             .sort(([aName], [bName]) => {
               const categoryList =

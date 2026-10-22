@@ -156,6 +156,10 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             # JSON Schema: "type": ["string", "null"] for nullable
             non_null = [x for x in t if x != "null" and isinstance(x, str)]
             if non_null:
+                if non_null[0] == "array":
+                    # Same as above for the "type": ["array", "null"] form
+                    item_type: Any = parse_type(s.get("items", {}))
+                    return list[item_type] | None if "null" in t else list[item_type]
                 prim = {
                     "string": str,
                     "integer": int,
