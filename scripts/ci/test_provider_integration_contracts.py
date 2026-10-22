@@ -141,6 +141,14 @@ def test_duplicate_shipped_provider_ownership_fails(provider_contract):
     )
 
 
+@pytest.mark.parametrize("value", [None, [], "invalid", 42, False])
+def test_non_object_contracts_are_rejected(provider_contract, value):
+    root, contracts, path, _contract, _manifest, manifests = provider_contract
+    path.write_text(json.dumps(value))
+    errors = validate_contracts(manifests, contract_root=contracts, repo_root=root)
+    assert any("expected a version-1 contract" in error for error in errors)
+
+
 def test_missing_historical_matrix_still_fails(tmp_path):
     from check_capability_manifests import DEFAULT_BUNDLES_ROOT
 
