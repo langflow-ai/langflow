@@ -325,6 +325,34 @@ async def test_direct_webhook_with_poll_fallback_never_collects_on_push(
             await collect_source(row, None)
 
 
+@pytest.mark.usefixtures("pilot")
+async def test_get_handshake_requires_provider_proof_and_never_queues_events(trigger_owner, owned_flow, client):
+    from langflow.services.auth.utils import decrypt_api_key
+
+    await _connection(trigger_owner)
+    trigger = await _reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        secret = decrypt_api_key(row.signing_secret_encrypted)
+        public_id = row.public_id
+    url = f"/api/v1/triggers/ingress/pilot/{public_id}"
+    accepted = await client.get(url, params={"proof": secret, "challenge": "verified-challenge"})
+    assert accepted.status_code == 200
+    assert accepted.text == "verified-challenge"
+    bad_proof = await client.get(url, params={"proof": "wrong", "challenge": "bad"})
+    unknown = await client.get("/api/v1/triggers/ingress/pilot/unknown-trigger", params={"proof": secret})
+    assert bad_proof.status_code == unknown.status_code == 404
+    assert bad_proof.json() == unknown.json() == {"detail": "Not found"}
+    async with session_scope() as session:
+        assert not (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger.id))).all()
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().disable(session, row=row)
+    paused = await client.get(url, params={"proof": secret, "challenge": "bad"})
+    assert paused.status_code == 404
+    assert paused.json() == bad_proof.json()
+
+
 async def test_polling_prepare_claim_is_cleaned_up_on_pause(pilot, trigger_owner, owned_flow, monkeypatch):
     async def collect(_trigger, _lease):
         pytest.fail("Enabling a polling source should not collect inside its write transaction")
