@@ -3,18 +3,20 @@ import type { APIClassType, APIDataType } from "@/types/api";
 import { CONNECTION_REF_FIELD_TYPE } from "@/utils/connection-ref-gate";
 import {
   normalizeScope,
+  type ScopeCondition,
   uniqueNormalizedScopes,
 } from "@/utils/connection-scopes";
 
 export interface ConditionalScope {
   scope: string;
   input?: string;
-  condition?: "input_present" | "input_truthy";
+  condition?: ScopeCondition;
 }
 
 export interface ScopeRequirement {
   capabilityId: string;
   displayName: string;
+  risk: string;
   requiredScopes: string[];
   conditionalScopes: ConditionalScope[];
 }
@@ -32,11 +34,7 @@ export const shortScope = (scope: string): string => {
   return trimmed.split("/").pop() || trimmed;
 };
 
-/**
- * The capability manifest names the component each action runs through, and the
- * component's `connection_ref` field carries the scopes. Reading them from the
- * template keeps one source of truth: the backend compares the same strings.
- */
+/** Find a component template for servers that do not return manifest scopes. */
 export const findComponentByRef = (
   data: APIDataType | undefined,
   componentRef: string | null | undefined,
@@ -85,10 +83,13 @@ export function scopeRequirements(
     return {
       capabilityId: capability.id,
       displayName: capability.display_name,
-      requiredScopes: [...(field?.required_scopes ?? [])],
-      conditionalScopes: (field?.conditional_scopes ?? []).map(
-        normalizeConditional,
-      ),
+      risk: capability.risk,
+      requiredScopes: [
+        ...(capability.required_scopes ?? field?.required_scopes ?? []),
+      ],
+      conditionalScopes:
+        capability.conditional_scopes ??
+        (field?.conditional_scopes ?? []).map(normalizeConditional),
     };
   });
 }
@@ -171,6 +172,8 @@ export interface ReauthorizeScopeList {
   options: string[];
   /** The options the connection already holds; they start checked. */
   granted: string[];
+  /** Granted scopes plus provider refresh scopes to request by default. */
+  defaultSelected: string[];
   /** Granted scopes this registration cannot request again. */
   outsideCeiling: string[];
 }
@@ -218,6 +221,13 @@ export function reauthorizeScopeList({
   return {
     options,
     granted: options.filter((scope) => grantedKeys.has(key(scope))),
+    // Entra omits offline_access from granted scopes even when it issues a
+    // refresh token. Request it again on reconnect when the registration offers it.
+    defaultSelected: options.filter(
+      (scope) =>
+        grantedKeys.has(key(scope)) ||
+        (provider === "microsoft" && key(scope) === "offline_access"),
+    ),
     outsideCeiling: extra
       .filter(({ requestAs }) => !requestAs)
       .map(({ scope }) => scope),

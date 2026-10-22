@@ -976,6 +976,48 @@ class JobService(Service):
             await session.flush()
             return result.rowcount == 1
 
+    async def complete_live_job(self, job_id: UUID, *, owner: str | None = None) -> bool:
+        """Atomically flip a still-live job to COMPLETED. Returns True if we won.
+
+        The success write used to be unconditional while the watchdog's failure
+        write was guarded, so the two could not both be right. A run whose
+        heartbeat stalled long enough to be reconciled as worker_lost would
+        finish and flip the row back from FAILED to COMPLETED, leaving a
+        completed job that still carries a ``run_failed`` event after a
+        reattached client had already been told it failed.
+
+        Guarded on the row not already being terminal rather than on
+        IN_PROGRESS, because callers that pass ``mark_in_progress=False`` own the
+        status themselves and must not be stranded non-terminal by a guard that
+        does not match what they wrote.
+
+        ``owner`` closes the retry case: once a requeued job has been claimed by
+        somebody else, the original run must not complete a row a different
+        worker now owns. Callers outside the fleet pass None and get the status
+        guard alone, which is all a single-runner path can race against.
+
+        An absent owner passes the guard, because the owner is written by the
+        heartbeat rather than at claim time: a run short enough to finish before
+        its first beat has nobody's name on its row, and must still be allowed to
+        complete. The guard is "not somebody else's", not "provably mine".
+        """
+        from sqlalchemy import or_
+        from sqlmodel import update
+
+        owner_expr = col(Job.job_metadata)["owner"].as_string()
+        conditions = [Job.job_id == job_id, col(Job.status).not_in(_RETAINABLE_STATUSES)]
+        if owner is not None:
+            conditions.append(or_(owner_expr.is_(None), owner_expr == owner))
+        async with session_scope() as session:
+            stmt = (
+                update(Job)
+                .where(*conditions)
+                .values(status=JobStatus.COMPLETED, finished_timestamp=datetime.now(timezone.utc))
+            )
+            result = await session.exec(stmt)  # type: ignore[call-overload]
+            await session.flush()
+            return result.rowcount == 1
+
     async def release_queued_lease(self, job_id: UUID, *, owner: str, heartbeat_at: str) -> bool:
         """Release this owner's QUEUED lease without clearing a newer claim.
 
@@ -1466,6 +1508,7 @@ class JobService(Service):
         *args,
         mark_in_progress: bool = True,
         keep_alive: bool = False,
+        owner: str | None = None,
         **kwargs,
     ):
         """Wrapper that manages job status lifecycle around a coroutine.
@@ -1483,6 +1526,10 @@ class JobService(Service):
             *args: Positional arguments to pass to run_coro_func
             mark_in_progress: Write IN_PROGRESS before running. Keyword-only, and not
                 passed on to run_coro_func.
+            owner: this runner's lease owner, when it has one. Guards the terminal
+                success write so a stale run cannot complete a row that has since
+                been reconciled or re-claimed. Keyword-only, and not passed on to
+                run_coro_func.
             keep_alive: Heartbeat the job while run_coro_func runs (``start_keep_alive``),
                 for a run outside the background runner, which heartbeats its own jobs.
                 Insert the row with ``create_job(heartbeat=True)``: the first heartbeat
@@ -1554,7 +1601,15 @@ class JobService(Service):
         else:
             # Update to COMPLETED
             await logger.ainfo(f"Job {job_id} completed successfully")
-            await self.update_job_status(job_id, JobStatus.COMPLETED, finished_timestamp=True)
+            if not await self.complete_live_job(job_id, owner=owner):
+                # Something terminal landed under us, almost always a watchdog
+                # reconciling this run as worker_lost after its heartbeat stalled.
+                # The run really did finish, so this is worth seeing rather than
+                # swallowing: the durable row keeps the terminal status that was
+                # already reported to any reattached client.
+                await logger.awarning(
+                    f"Job {job_id} finished but its row was no longer live; leaving the terminal status already written"
+                )
             return result
 
     async def _validate_ownership(self, job_id: UUID, user_id: UUID) -> Job:

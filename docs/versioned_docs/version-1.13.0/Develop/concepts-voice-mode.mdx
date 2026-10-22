@@ -1,0 +1,41 @@
+---
+title: Use speech input
+slug: /concepts-voice-mode
+---
+
+import Icon from "@site/src/components/icon";
+
+The <Icon name="Mic" aria-hidden="true"/> **Microphone** button in the **Playground** transcribes speech into the chat input.
+It doesn't provide spoken responses or full voice interaction.
+
+:::note
+The previous Playground Voice Mode was deprecated in Langflow 1.10.
+Its legacy WebSocket endpoints remain available for existing integrations.
+:::
+
+## Transcribe speech in the Playground
+
+Speech input requires a supported browser and permission to use your microphone.
+It doesn't require a separate OpenAI or ElevenLabs API key.
+
+1. Open a flow that contains a **Chat Input** component.
+2. Click <Icon name="Play" aria-hidden="true"/> **Playground**.
+3. Click <Icon name="Mic" aria-hidden="true"/> **Voice input**.
+4. If prompted, allow microphone access.
+5. Speak, and then click <Icon name="MicOff" aria-hidden="true"/> **Stop recording**.
+6. Review the transcribed text in the chat input, and then send the message.
+
+If the microphone button is disabled, your browser doesn't support the required speech-recognition API.
+
+## Legacy voice WebSocket endpoints
+
+The deprecated `/api/v1/voice/ws/flow_tts/$FLOW_ID` and `/api/v1/voice/ws/flow_tts/$FLOW_ID/$SESSION_ID` endpoints remain available for existing applications.
+They use OpenAI Realtime voice transcription, run the specified flow, and return text-to-speech audio.
+They require Langflow authentication and an OpenAI API key configured for the user; ElevenLabs is optional.
+
+Don't use these deprecated endpoints for new integrations.
+
+## See also
+
+* [Test flows in the Playground](/concepts-playground)
+* [Voice input troubleshooting](/troubleshoot#voice-mode)

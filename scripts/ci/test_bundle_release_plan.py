@@ -31,8 +31,11 @@ from bundle_release_plan import (
     build_artifact_plan,
     build_change_plan,
     bump_version,
+    check_plan_against_index,
+    ensure_unpublished_bundles_fit_lfx_line,
     publish_artifacts,
     read_wheel,
+    restamp_nightly_bundles,
     restamp_unpublished_bundles,
     restamp_version,
     update_changed_bundles,
@@ -336,8 +339,56 @@ def test_prerelease_versions_share_the_requested_restamp() -> None:
     assert bump_version("1.2.3", bump="minor", prerelease=".dev7") == "1.3.0.dev7"
 
 
-def test_prerelease_restamp_reuses_stable_and_changes_only_unpublished_bundle(tmp_path: Path) -> None:
+def test_nightly_restamps_only_bundles_requiring_the_matching_final_runtime(tmp_path: Path) -> None:
     repo = _create_repository(tmp_path, {"alpha": "0.1.1", "beta": "0.2.0"})
+    beta_path = repo / "src/bundles/beta/pyproject.toml"
+    beta_path.write_text(beta_path.read_text().replace("lfx>=1.11.0.dev0,<2.0.0", "lfx>=1.11.0,<1.12"))
+    alpha_path = repo / "src/bundles/alpha/pyproject.toml"
+    alpha_before = alpha_path.read_bytes()
+
+    plan = restamp_nightly_bundles("1.11.0.dev7", base_dir=repo)
+
+    assert [(entry.package, entry.build_version, entry.lfx_range) for entry in plan] == [
+        ("lfx-beta", "0.2.0.dev7", "==1.11.0.dev7"),
+    ]
+    assert alpha_path.read_bytes() == alpha_before
+    beta = tomllib.loads(beta_path.read_text())["project"]
+    assert beta["version"] == "0.2.0.dev7"
+    assert beta["dependencies"] == ["lfx==1.11.0.dev7"]
+    manifest = json.loads((repo / "src/bundles/beta/src/lfx_beta/extension.json").read_text())
+    assert manifest["version"] == beta["version"]
+    root = tomllib.loads((repo / "pyproject.toml").read_text())["project"]
+    assert "lfx-beta>=0.2.0.dev7,<1.0.0" in root["dependencies"]
+    assert restamp_nightly_bundles("1.11.0.dev7", base_dir=repo) == ()
+
+
+@pytest.mark.parametrize("requirement", ["lfx>=1.11.1,<2.0.0", "lfx>=1.12.0,<2.0.0", "lfx>=1.10.0,<1.11"])
+def test_nightly_does_not_lower_other_release_floors_or_partially_update(tmp_path: Path, requirement: str) -> None:
+    repo = _create_repository(tmp_path, {"alpha": "0.1.1", "beta": "0.2.0"})
+    for directory, replacement in [("alpha", "lfx>=1.11.0,<2.0.0"), ("beta", requirement)]:
+        path = repo / f"src/bundles/{directory}/pyproject.toml"
+        path.write_text(path.read_text().replace("lfx>=1.11.0.dev0,<2.0.0", replacement))
+    paths = [repo / "pyproject.toml", *(repo / "src/bundles").rglob("*.toml"), *(repo / "src/bundles").rglob("*.json")]
+    originals = {path: path.read_bytes() for path in paths}
+
+    with pytest.raises(PlanError, match="cannot restamp"):
+        restamp_nightly_bundles("1.11.0.dev7", base_dir=repo)
+
+    assert {path: path.read_bytes() for path in paths} == originals
+
+
+@pytest.mark.parametrize("version", ["1.11.0", "1.11.0rc1"])
+def test_nightly_requires_a_development_runtime_version(tmp_path: Path, version: str) -> None:
+    repo = _create_repository(tmp_path, {"alpha": "0.1.1"})
+    with pytest.raises(PlanError, match="development version"):
+        restamp_nightly_bundles(version, base_dir=repo)
+
+
+@pytest.mark.parametrize("minimum", ["1.11.0.dev0", "1.11.0"])
+def test_prerelease_restamp_reuses_stable_and_changes_only_unpublished_bundle(tmp_path: Path, minimum: str) -> None:
+    repo = _create_repository(tmp_path, {"alpha": "0.1.1", "beta": "0.2.0"})
+    beta_path = repo / "src/bundles/beta/pyproject.toml"
+    beta_path.write_text(beta_path.read_text().replace("lfx>=1.11.0.dev0", f"lfx>={minimum}"))
     index = FakeIndex()
     index.queue("lfx-alpha", "0.1.1", _release_requiring("lfx<2.0.0,>=1.11.0.dev0"))
     index.queue("lfx-beta", "0.2.0", None)
@@ -377,6 +428,13 @@ def _release_requiring(lfx_requirement: str) -> dict[str, Any]:
     return {"info": {"requires_dist": ["requests>=2", lfx_requirement]}, "urls": []}
 
 
+def _publish_releases(index: FakeIndex, package: str, releases: dict[str, str]) -> None:
+    """Expose ``version -> lfx requirement`` releases of ``package`` on the fake index."""
+    index.versions[package] = tuple(releases)
+    for version, lfx_requirement in releases.items():
+        index.queue(package, version, _release_requiring(lfx_requirement))
+
+
 def test_prerelease_restamp_ignores_newer_release_for_another_lfx_line(tmp_path: Path) -> None:
     # The lfx 1.12 line publishes 0.2.x; the lfx 1.11 line's 0.1.x can never resolve to it.
     repo = _create_repository(tmp_path, {"alpha": "0.1.1"})
@@ -391,6 +449,21 @@ def test_prerelease_restamp_ignores_newer_release_for_another_lfx_line(tmp_path:
 
     assert [(entry.package, entry.build_version, entry.action) for entry in plan] == [
         ("lfx-alpha", "0.1.1", "reuse-stable"),
+    ]
+
+
+def test_prerelease_restamp_ignores_newer_nightly_pinned_to_another_lfx_line(tmp_path: Path) -> None:
+    repo = _create_repository(tmp_path, {"alpha": "0.2.5"})
+    index = FakeIndex()
+    index.latest_versions["lfx-alpha"] = "0.3.2"
+    index.versions["lfx-alpha"] = ("0.2.5", "0.3.2", "0.3.3.dev47")
+    index.queue("lfx-alpha", "0.3.2", _release_requiring("lfx>=1.13.0.dev0,<2.0.0"))
+    index.queue("lfx-alpha", "0.3.3.dev47", _release_requiring("lfx==1.13.0.dev47"))
+
+    plan = restamp_unpublished_bundles(0, "1.12.7rc0", index, base_dir=repo)
+
+    assert [(entry.package, entry.build_version, entry.action) for entry in plan] == [
+        ("lfx-alpha", "0.2.5rc0", "publish-prerelease"),
     ]
 
 
@@ -436,7 +509,7 @@ def test_prerelease_restamp_rejects_reusing_a_release_with_unknown_lfx_range(tmp
         restamp_unpublished_bundles(3, "1.11.0rc3", index, base_dir=repo)
 
 
-@pytest.mark.parametrize("lfx_requirement", ["lfx==1.12.0", "lfx~=1.12.0", "lfx"])
+@pytest.mark.parametrize("lfx_requirement", ["lfx==1.11.0", "lfx~=1.12.0", "lfx"])
 def test_prerelease_restamp_rejects_reusing_a_release_whose_lfx_range_cannot_be_evaluated(
     tmp_path: Path, lfx_requirement: str
 ) -> None:
@@ -457,7 +530,13 @@ def test_prerelease_restamp_rejects_reusing_a_release_whose_lfx_range_cannot_be_
     [
         (">=1.12.0.dev0,<2.0.0", True),
         ("<2.0.0,>=1.13.0.dev0", False),
-        ("==1.13.0", None),
+        ("==1.13.0", False),
+        ("==1.13.0.dev47", False),
+        ("==1.11.9", False),
+        ("==1.12.0", None),
+        ("==1.12.4", None),
+        ("==1.12.*", None),
+        ("===1.13.0", None),
         ("~=1.12.0", None),
         ("!=1.12.4", None),
         ("", None),  # A bare ``lfx`` requirement.
@@ -686,3 +765,136 @@ def test_public_index_delay_is_polled_before_success(tmp_path: Path) -> None:
 
     assert result[0].state == "matching"
     assert sleeps == [7, 7]
+
+
+def test_prerelease_restamp_rejects_a_new_version_in_an_older_lfx_lines_bundle_minor(tmp_path: Path) -> None:
+    # The lfx 1.11 line published 0.2.0; a 1.12 patch in 0.2.x would race it for patch numbers.
+    repo = _create_repository(tmp_path, {"alpha": "0.2.1"})
+    index = FakeIndex()
+    _publish_releases(index, "lfx-alpha", {"0.2.0": "lfx<2.0.0,>=1.11.0.dev0"})
+
+    with pytest.raises(
+        PlanError,
+        match=(
+            r"lfx-alpha 0\.2\.1rc0: bundle minor 0\.2 is not above older lfx lines' releases "
+            r"\(0\.2\.0 for lfx 1\.11\); bump lfx-alpha to 0\.3\.0 or later so lfx 1\.12 publishes"
+        ),
+    ):
+        restamp_unpublished_bundles(0, "1.12.0rc0", index, base_dir=repo)
+
+    assert 'version = "0.2.1"' in (repo / "src" / "bundles" / "alpha" / "pyproject.toml").read_text()
+
+
+def test_prerelease_restamp_allows_a_new_version_above_older_lfx_lines_bundle_minors(tmp_path: Path) -> None:
+    repo = _create_repository(tmp_path, {"alpha": "0.3.0"})
+    index = FakeIndex()
+    _publish_releases(index, "lfx-alpha", {"0.2.0": "lfx<2.0.0,>=1.11.0.dev0", "0.2.1": "lfx<2.0.0,>=1.12.0.dev0"})
+
+    plan = restamp_unpublished_bundles(0, "1.12.0rc0", index, base_dir=repo)
+
+    assert [(entry.package, entry.build_version, entry.action) for entry in plan] == [
+        ("lfx-alpha", "0.3.0rc0", "publish-prerelease"),
+    ]
+
+
+def test_artifact_plan_rejects_an_older_line_final_that_would_replace_a_newer_lines_build(tmp_path: Path) -> None:
+    # lfx 1.12 still ships 0.2.1 from the 1.11 minor, and a 1.11 final 0.2.2 admits lfx 1.12.
+    alpha = _make_wheel(tmp_path, "lfx-alpha", "0.2.2", "ALPHA = 2\n")
+    index = FakeIndex()
+    _publish_releases(index, "lfx-alpha", {"0.2.0": "lfx<2.0.0,>=1.11.0.dev0", "0.2.1": "lfx<2.0.0,>=1.12.0.dev0"})
+
+    with pytest.raises(
+        PlanError,
+        match=(
+            r"lfx-alpha 0\.2\.2: lfx<2,>=1\.11\.0\.dev0 admits lfx 1\.12, whose newest lfx-alpha is 0\.2\.1, so this "
+            r"release would replace that line's build; first move lfx-alpha on the lfx 1\.12 line to a bundle minor "
+            r"above 0\.2"
+        ),
+    ):
+        build_artifact_plan([alpha], index)
+
+
+@pytest.mark.parametrize(
+    ("version", "lfx_requirement", "newer_releases"),
+    [
+        ("0.2.2", "lfx<2,>=1.11.0.dev0", {"0.2.1": "lfx<2.0.0,>=1.12.0.dev0", "0.3.0": "lfx<2.0.0,>=1.12.0.dev0"}),
+        ("0.2.2", "lfx<1.12.0.dev0,>=1.11.0.dev0", {"0.2.1": "lfx<2.0.0,>=1.12.0.dev0"}),
+        ("0.2.2rc1", "lfx<2,>=1.11.0rc1", {"0.2.1": "lfx<2.0.0,>=1.12.0.dev0"}),
+    ],
+    ids=["newer-line-moved-up", "range-excludes-newer-line", "prerelease"],
+)
+def test_artifact_plan_allows_an_older_line_release_that_cannot_replace_a_newer_lines_build(
+    tmp_path: Path, version: str, lfx_requirement: str, newer_releases: dict[str, str]
+) -> None:
+    alpha = _make_wheel(tmp_path, "lfx-alpha", version, "ALPHA = 2\n", lfx_requirement=lfx_requirement)
+    index = FakeIndex()
+    _publish_releases(index, "lfx-alpha", {"0.2.0": "lfx<2.0.0,>=1.11.0.dev0", **newer_releases})
+
+    plan = build_artifact_plan([alpha], index)
+
+    assert [(entry.package, entry.action) for entry in plan] == [("lfx-alpha", "publish")]
+
+
+def test_new_version_is_blocked_by_a_release_whose_lfx_line_is_unknown(tmp_path: Path) -> None:
+    alpha = _make_wheel(tmp_path, "lfx-alpha", "0.3.0", "ALPHA = 2\n")
+    index = FakeIndex()
+    index.versions["lfx-alpha"] = ("0.2.0", "0.3.0rc1")
+    index.queue("lfx-alpha", "0.2.0", {"urls": []})
+    index.queue("lfx-alpha", "0.3.0rc1", {"urls": []})
+
+    with pytest.raises(PlanError, match=r"lfx-alpha 0\.3\.0: cannot tell which lfx line published 0\.3\.0rc1;"):
+        build_artifact_plan([alpha], index)
+
+
+def test_change_plan_rejects_versions_that_claim_another_lfx_lines_numbers(tmp_path: Path) -> None:
+    repo = _create_repository(tmp_path, {"alpha": "0.2.0", "beta": "0.3.0"})
+    for directory in ("alpha", "beta"):
+        source = repo / "src" / "bundles" / directory / "src" / f"lfx_{directory}" / "component.py"
+        source.write_text("VALUE = 2\n", encoding="utf-8")
+    plan = update_changed_bundles("HEAD", base_dir=repo, run_lock=lambda: _refresh_lock(repo))
+    index = FakeIndex()
+    _publish_releases(index, "lfx-alpha", {"0.2.0": "lfx<2.0.0,>=1.10.0.dev0"})
+    _publish_releases(index, "lfx-beta", {"0.3.0": "lfx<2.0.0,>=1.11.0.dev0", "0.3.1": "lfx<2.0.0,>=1.12.0.dev0"})
+
+    errors = {entry.name: entry.errors for entry in check_plan_against_index(plan, index, base_dir=repo)}
+
+    assert errors["lfx-alpha"] == (
+        "lfx-alpha 0.2.1: bundle minor 0.2 is not above older lfx lines' releases (0.2.0 for lfx 1.10); bump "
+        "lfx-alpha to 0.3.0 or later so lfx 1.11 publishes from its own bundle minor",
+    )
+    assert errors["lfx-beta"] == (
+        "lfx-beta 0.3.1: already published for lfx<2.0.0,>=1.12.0.dev0, which excludes lfx 1.11.0; bump lfx-beta "
+        "to an unpublished version in this lfx line's bundle minor before building",
+    )
+
+
+def test_change_plan_accepts_a_version_in_this_lfx_lines_own_bundle_minor(tmp_path: Path) -> None:
+    repo = _create_repository(tmp_path, {"alpha": "0.2.0"})
+    source = repo / "src" / "bundles" / "alpha" / "src" / "lfx_alpha" / "component.py"
+    source.write_text("VALUE = 2\n", encoding="utf-8")
+    plan = update_changed_bundles(
+        "HEAD", base_dir=repo, run_lock=lambda: _refresh_lock(repo), explicit_versions={"lfx-alpha": "0.3.0"}
+    )
+    index = FakeIndex()
+    _publish_releases(index, "lfx-alpha", {"0.2.0": "lfx<2.0.0,>=1.10.0.dev0"})
+
+    checked = check_plan_against_index(plan, index, base_dir=repo)
+
+    assert [(entry.name, entry.version, entry.errors) for entry in checked] == [("lfx-alpha", "0.3.0", ())]
+
+
+def test_nightly_guard_rejects_only_unpublished_versions_in_an_older_lines_bundle_minor(tmp_path: Path) -> None:
+    # alpha 0.2.1 is already public, so its shared minor is history; beta 0.2.1 would be a new claim.
+    repo = _create_repository(tmp_path, {"alpha": "0.2.1", "beta": "0.2.1", "gamma": "0.3.0"})
+    index = FakeIndex()
+    _publish_releases(index, "lfx-alpha", {"0.2.0": "lfx<2.0.0,>=1.10.0.dev0", "0.2.1": "lfx<2.0.0,>=1.11.0.dev0"})
+    _publish_releases(index, "lfx-beta", {"0.2.0": "lfx<2.0.0,>=1.10.0.dev0"})
+    _publish_releases(index, "lfx-gamma", {"0.2.0": "lfx<2.0.0,>=1.10.0.dev0"})
+
+    with pytest.raises(PlanError) as raised:
+        ensure_unpublished_bundles_fit_lfx_line("1.11.0.dev7", index, base_dir=repo)
+
+    message = str(raised.value)
+    assert "lfx-beta 0.2.1: bundle minor 0.2 is not above older lfx lines' releases" in message
+    assert "lfx-alpha" not in message
+    assert "lfx-gamma" not in message

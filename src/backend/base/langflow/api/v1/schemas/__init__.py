@@ -3,6 +3,8 @@ from enum import Enum
 from typing import Any, Literal
 from uuid import UUID
 
+from lfx.base.knowledge_bases.backends.opensearch import opensearch_env_configured
+from lfx.base.knowledge_bases.backends.postgres import postgres_env_configured, resolve_default_kb_backend
 from lfx.graph.schema import RunOutputs
 from lfx.services.settings.base import Settings
 from lfx.services.settings.feature_flags import FEATURE_FLAGS, FeatureFlags
@@ -193,6 +195,12 @@ class CustomComponentRequest(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     code: str
     frontend_node: dict | None = None
+
+    def get_class_name(self) -> str | None:
+        """Read an optional class identity from the saved frontend template."""
+        metadata = (self.frontend_node or {}).get("metadata")
+        class_name = metadata.get("component_class_name") if isinstance(metadata, dict) else None
+        return class_name if isinstance(class_name, str) and class_name else None
 
 
 class CustomComponentResponse(BaseModel):
@@ -462,6 +470,9 @@ class ConfigResponse(BaseConfigResponse):
     auto_saving_interval: int
     health_check_max_retries: int
     webhook_polling_interval: int
+    # Milliseconds between trigger-state re-fetches in the triggers UI. There is
+    # no trigger event stream, so this is how fast a badge converges.
+    trigger_polling_interval: int = 5000
     public_flow_cleanup_interval: int
     public_flow_expiration: int
     webhook_auth_enable: bool
@@ -492,6 +503,14 @@ class ConfigResponse(BaseConfigResponse):
     # replicas), so the vector-store picker hides the option rather than offering
     # a choice the create endpoint always rejects with 422.
     local_vector_store_available: bool = True
+    # The backend a new knowledge base or memory base lands on when the client
+    # names none (``resolve_default_kb_backend``): ``postgres`` when pgVector is
+    # provisioned via env, else ``opensearch`` when it is, else ``sqlite``. The UI
+    # defaults its provider picker to this instead of assuming pgVector, so an
+    # OpenSearch-only deployment never offers a backend that is not configured.
+    default_vector_store_backend: str = "sqlite"
+    # Only provider IDs are exposed. Connection values stay on the server.
+    configured_vector_store_backends: list[str] = Field(default_factory=list)
     # The component types an administrator blocked, for authenticated callers
     # only. ``catalog_governance_enabled`` says a policy exists somewhere; it
     # cannot say which component in front of you it applies to, and a missing
@@ -533,6 +552,7 @@ class ConfigResponse(BaseConfigResponse):
             health_check_max_retries=settings.health_check_max_retries,
             max_file_size_upload=settings.max_file_size_upload,
             webhook_polling_interval=settings.webhook_polling_interval,
+            trigger_polling_interval=settings.trigger_polling_interval,
             public_flow_cleanup_interval=settings.public_flow_cleanup_interval,
             public_flow_expiration=settings.public_flow_expiration,
             event_delivery=settings.event_delivery,
@@ -558,6 +578,15 @@ class ConfigResponse(BaseConfigResponse):
             agentic_experience=settings.agentic_experience,
             assistant_max_message_length=settings.assistant_max_message_length,
             local_vector_store_available=settings.deployment_profile != "prod",
+            default_vector_store_backend=resolve_default_kb_backend(),
+            configured_vector_store_backends=[
+                backend
+                for backend, configured in (
+                    ("postgres", postgres_env_configured()),
+                    ("opensearch", opensearch_env_configured()),
+                )
+                if configured
+            ],
         )
 
 
