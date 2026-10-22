@@ -188,6 +188,26 @@ class SelfTestAdapter(PollingListenerAdapter):
 class ProviderSourcePollAdapter(PollingListenerAdapter):
     """Poll every active source on one connection through its owner credential."""
 
+    @staticmethod
+    def _supports(trigger: ListenerTrigger) -> bool:
+        from langflow.services.triggers.providers.registry import get_provider
+
+        if trigger.kind in MICROSOFT_SOURCE_KINDS:
+            return trigger.provider == "microsoft" and trigger.mechanism_id == MECHANISM_GRAPH_DELTA
+        if trigger.kind in GOOGLE_SOURCE_KINDS:
+            return trigger.provider == "google" and trigger.mechanism_id in GOOGLE_POLL_MECHANISMS
+        provider = get_provider(trigger.provider or "")
+        return (
+            provider is not None
+            and provider.collect is not None
+            and any(
+                spec.kind == trigger.kind
+                and spec.poll_mechanism == trigger.mechanism_id
+                and spec.poll_mechanism is not None
+                for spec in provider.kinds
+            )
+        )
+
     async def poll(self, ctx: ListenerContext) -> int:
         from lfx.services.deps import session_scope_readonly
 
@@ -198,11 +218,18 @@ class ProviderSourcePollAdapter(PollingListenerAdapter):
 
         appended = 0
         for snapshot in ctx.triggers:
-            if ctx.stopping.is_set() or snapshot.mechanism_id not in ({MECHANISM_GRAPH_DELTA} | GOOGLE_POLL_MECHANISMS):
+            if ctx.stopping.is_set() or not self._supports(snapshot):
                 continue
             async with session_scope_readonly() as session:
                 row = await session.get(Trigger, snapshot.id)
-                if row is None or row.connection_id != ctx.connection_id or row.state != "active":
+                if (
+                    row is None
+                    or row.connection_id != ctx.connection_id
+                    or row.state != "active"
+                    or row.kind != snapshot.kind
+                    or row.provider != snapshot.provider
+                    or (row.config or {}).get("mechanism_id") != snapshot.mechanism_id
+                ):
                     continue
                 lease = await source_lease(session, row, family=FAMILY_TRIGGER_LISTENER)
                 detached = Trigger(**row.model_dump())
