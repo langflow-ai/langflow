@@ -133,6 +133,26 @@ const google: IntegrationProviderRead = {
   capabilities: [],
 };
 
+const pilot: IntegrationProviderRead = {
+  ...google,
+  provider_id: "pilot",
+  display_name: "Pilot",
+  capabilities: [
+    {
+      ...capability(
+        "pilot.trigger.item",
+        "bot",
+        "pilot-token",
+        "PilotOnItemTriggerComponent",
+      ),
+      identity: "service",
+    },
+  ],
+  manual_token_profiles: [
+    { id: "pilot-token", identity: "service", required_scopes: [] },
+  ],
+};
+
 const created = (overrides: Partial<ConnectionRead> = {}): ConnectionRead => ({
   id: "conn-1",
   owner_id: "user-1",
@@ -156,10 +176,11 @@ const created = (overrides: Partial<ConnectionRead> = {}): ConnectionRead => ({
 const dialog = (
   providers: IntegrationProviderRead[],
   deploymentContext: DeploymentContext | undefined,
+  open = true,
 ) => (
   <I18nextProvider i18n={i18n}>
     <AddConnectionDialog
-      open
+      open={open}
       onOpenChange={jest.fn()}
       providers={providers}
       canCreateInstance={false}
@@ -196,32 +217,13 @@ describe("AddConnectionDialog: pasted Slack tokens", () => {
 
   it("creates a provider-validated service token without an OAuth registration", async () => {
     const user = userEvent.setup();
-    const provider: IntegrationProviderRead = {
-      ...google,
-      provider_id: "pilot",
-      display_name: "Pilot",
-      capabilities: [
-        {
-          ...capability(
-            "pilot.trigger.item",
-            "bot",
-            "pilot-token",
-            "PilotOnItemTriggerComponent",
-          ),
-          identity: "service",
-        },
-      ],
-      manual_token_profiles: [
-        { id: "pilot-token", identity: "service", required_scopes: [] },
-      ],
-    };
     mockCreate.mockResolvedValue(
       created({
         provider_key: "pilot",
         executing_identity: { identity: "service" },
       }),
     );
-    renderDialog([provider], "self_managed");
+    renderDialog([pilot], "self_managed");
     expect(await screen.findByTestId("connection-token")).toBeInTheDocument();
     expect(screen.getByTestId("connection-token-help")).toHaveTextContent(
       "Langflow checks the token",
@@ -244,6 +246,46 @@ describe("AddConnectionDialog: pasted Slack tokens", () => {
         credentials: { access_token: "provider-token" },
       }),
     );
+  });
+
+  it("restores the provider's token default when the mounted dialog reopens", async () => {
+    const user = userEvent.setup();
+    const view = renderDialog([pilot], "self_managed");
+    await user.type(
+      await screen.findByTestId("connection-token"),
+      "discarded-token",
+    );
+    await user.click(screen.getByTestId("connection-allow-background-runs"));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    view.rerender(dialog([pilot], "self_managed", false));
+    view.rerender(dialog([pilot], "self_managed"));
+    expect(await screen.findByTestId("connection-token")).toHaveValue("");
+    expect(screen.getByTestId("connection-method")).toHaveValue("token");
+    expect(
+      screen.getByTestId("connection-allow-background-runs"),
+    ).not.toBeChecked();
+  });
+
+  it("preserves an explicit OAuth choice after the provider catalog refetches", async () => {
+    const user = userEvent.setup();
+    const view = renderDialog([pilot], "self_managed");
+    await screen.findByTestId("connection-token");
+    await user.selectOptions(screen.getByTestId("connection-method"), "oauth");
+    view.rerender(
+      dialog(
+        [
+          {
+            ...pilot,
+            manual_token_profiles: pilot.manual_token_profiles?.map(
+              (profile) => ({ ...profile }),
+            ),
+          },
+        ],
+        "self_managed",
+      ),
+    );
+    expect(screen.getByTestId("connection-method")).toHaveValue("oauth");
+    expect(screen.queryByTestId("connection-token")).not.toBeInTheDocument();
   });
 
   it("offers a pasted token for Slack off hosted, and only for Slack", () => {

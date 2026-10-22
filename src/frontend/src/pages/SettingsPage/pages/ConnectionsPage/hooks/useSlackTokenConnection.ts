@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import type {
   ConnectionCreate,
   ConnectionRead,
@@ -41,7 +41,7 @@ export interface SlackTokenConnection {
     name: string;
     displayName: string;
   }) => Promise<ConnectionRead>;
-  /** Forget the pasted token and go back to signing in. */
+  /** Forget the pasted token and restore the provider's default method. */
   reset: () => void;
 }
 
@@ -53,7 +53,7 @@ export function useSlackTokenConnection({
   create,
   tokenProfile,
 }: UseSlackTokenConnectionOptions): SlackTokenConnection {
-  const [method, setMethod] = useState<ConnectionMethod>("oauth");
+  const [selectedMethod, setMethod] = useState<ConnectionMethod | null>(null);
   const [token, setToken] = useState("");
   // Consent to unattended use is explicit and off by default: pasting a token
   // is not the same as allowing a trigger to run with it.
@@ -63,11 +63,14 @@ export function useSlackTokenConnection({
     !reauthorizing &&
     (offersSlackToken(providerId, deploymentContext) ||
       tokenProfile !== undefined);
+  const defaultMethod =
+    offersToken && providerId !== "slack" && tokenProfile ? "token" : "oauth";
+  const method =
+    selectedMethod === "token" && !offersToken
+      ? "oauth"
+      : (selectedMethod ?? defaultMethod);
   const usesToken = offersToken && method === "token";
   const tokenKind = slackTokenKind(token);
-  useEffect(() => {
-    if (providerId !== "slack" && tokenProfile) setMethod("token");
-  }, [providerId, tokenProfile]);
 
   const createWithToken = useCallback(
     ({ name, displayName }: { name: string; displayName: string }) =>
@@ -86,7 +89,7 @@ export function useSlackTokenConnection({
   );
 
   const reset = useCallback(() => {
-    setMethod("oauth");
+    setMethod(null);
     setToken("");
     setAllowBackgroundRuns(false);
   }, []);
