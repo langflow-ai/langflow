@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
 from lfx.utils.component_aliases import ComponentIdentityIndex, get_component_type_aliases
+from lfx.utils.flow_code import has_code_lines, normalize_code_for_import
 
 if TYPE_CHECKING:
     from lfx.services.catalog_policy import CatalogPolicySnapshot
@@ -276,11 +277,24 @@ def _extract_graph_payload(graph: Any) -> Mapping[str, Any] | None:
 
 
 def _extract_flow_data(target: Mapping[str, Any] | Any | None) -> dict[str, Any] | None:
-    """Normalize a flow payload or graph-like object to raw graph data."""
-    if isinstance(target, Mapping) or target is None:
-        return _normalize_flow_data(target)
+    """Normalize a flow payload or graph-like object to raw graph data.
 
-    return _normalize_flow_data(_extract_graph_payload(target))
+    Downloaded flows store component code as lists of lines, and ``Graph.from_payload`` joins
+    them before it builds. Join them here as well, on a copy, so policy checks hash and sanitize
+    the source that will run. Lines that cannot be joined stay as they are, and the code checks
+    still block them.
+    """
+    if isinstance(target, Mapping) or target is None:
+        flow_data = _normalize_flow_data(target)
+    else:
+        flow_data = _normalize_flow_data(_extract_graph_payload(target))
+
+    if flow_data is None or not has_code_lines(flow_data):
+        return flow_data
+    try:
+        return normalize_code_for_import(flow_data)
+    except ValueError:
+        return flow_data
 
 
 def _collect_catalog_component_keys(nodes: Any) -> set[str]:
@@ -1317,10 +1331,10 @@ def substitute_outdated_component_code_in_place(
     claim is likewise left untouched, so drift is never resolved into the *wrong* component —
     see :class:`SubstitutableComponentTypes`.
 
-    Mutates ``flow_data`` in place, matching ``Graph.from_payload``'s existing contract with
-    ``migrate_flow_payload``; callers that must preserve the stored flow (so the editor keeps
-    flagging the node as outdated) pass a copy. Returns ``display_name (id)`` labels for the
-    nodes that were swapped.
+    Mutates ``flow_data`` in place. ``Graph.from_payload`` passes the normalized copy it builds
+    from, so a stored flow is never changed there. Other callers that must preserve the stored
+    flow, so the editor keeps flagging the node as outdated, pass a copy. Returns
+    ``display_name (id)`` labels for the nodes that were swapped.
 
     When ``validate_public_execution`` is true, the exact post-substitution bytes are checked
     against the public code-execution policy using the same registry snapshot that supplied

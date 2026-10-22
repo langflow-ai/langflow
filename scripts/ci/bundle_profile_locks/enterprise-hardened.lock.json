@@ -158,9 +158,9 @@
       "providers": [
         "lfx-toolguard"
       ],
-      "requested": ">=0.2.0,<1.0.0",
-      "requirement": "lfx-toolguard==0.2.0",
-      "resolved_version": "0.2.0"
+      "requested": ">=0.2.2,<1.0.0",
+      "requirement": "lfx-toolguard==0.2.2",
+      "resolved_version": "0.2.2"
     },
     {
       "distribution": "lfx-vllm",
@@ -180,7 +180,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:f5f5bc20670c55d4",
+  "profile_digest": "sha256:07993f2d009af8f1",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",

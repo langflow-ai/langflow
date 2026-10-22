@@ -14,43 +14,14 @@ The Langflow team respects your privacy, and the team is committed to protecting
 
 Langflow telemetry doesn't send raw operating-system or authenticated Langflow user names, or raw authenticated user IDs.
 Authenticated product-usage IDs are derived from the installation identifier and the user's random database UUID.
-Usernames and SSO email addresses are not used to derive these IDs, and the same user UUID produces different IDs
-on different installations. Free-form error messages are omitted from outgoing telemetry because they can contain
-user inputs, SQL parameters, or credentials. Error types, stack hashes, success flags, and timings are retained.
+Usernames and SSO email addresses are not used to derive these IDs, and the same user UUID produces different IDs on different installations.
+
+Free-form error messages are omitted because they can contain user inputs, SQL parameters, or credentials.
+Error types, stack hashes, success flags, and timings are retained.
 The data collected by each event, including fields that can contain user-provided values, is documented below.
 
-Product-usage events are delivered through Segment. Langflow generally uses a persistent anonymous installation
-identifier and doesn't send operating-system user names or raw authenticated Langflow user IDs. Desktop email
-registration events use a fresh one-time identifier instead, so the registered address cannot be linked to the
-installation's other telemetry.
-
-## Configure Segment
-
-Official Langflow release artifacts send product-usage events to the approved production Segment source by default.
-The production write key is injected from a protected secret while building the release artifact and isn't stored in
-the source repository. Source checkouts don't send telemetry unless `LANGFLOW_SEGMENT_WRITE_KEY` is set. The same
-variable overrides the release default, such as when validating a development source. To use a compatible Segment
-endpoint, set `LANGFLOW_SEGMENT_API_URL`; it defaults to `https://api.segment.io/v1/track`.
-
-Use separate write keys for test and production sources.
-
-Every Segment event includes the IBM Common Schema product properties `UT30: 30AS5`, `productCode: WW3151`,
-`productCodeType: WWPC`, `productPlanName: opensource`, `productPlanType: freemium`, and `productTitle: Langflow`.
-Except for Desktop email registration events, the persistent installation identifier is used for `anonymousId`,
-`properties.instanceId`, and `properties.subscriptionId`. Each email registration event uses a fresh UUID for these
-three fields and a one-time `lf-` custom-realm `userId` derived from that UUID.
-
-For authenticated requests, the top-level `userId` is `lf-user-` followed by the SHA256 hash of the installation
-identifier, a separator, and the user's random database UUID. Langflow captures this opaque ID before handing an event
-to the telemetry worker. Lifecycle events and standalone LFX events use `lf-` followed by the SHA256 hash of the
-installation identifier.
-The shared default `langflow` account and unauthenticated webhook callers also use this installation fallback.
-Background workflow jobs retain only the opaque telemetry user ID and restore it during execution and resume.
-Jobs saved with the previous username-hash scheme use installation fallback when resumed.
-
-Free-form error messages are removed at the outbound telemetry boundary. Events retain success flags, exception types,
-exception contexts, stack trace hashes, and structured integration error codes without exporting user input, stored
-values, SQL statements, or parameters that an error message might contain.
+Product-usage events are delivered through Segment.
+Desktop email registration events use a one-time identifier, so the registered address is not linked to the installation's other telemetry.
 
 ## Opt out of telemetry
 
@@ -59,9 +30,6 @@ To opt out of telemetry, set `DO_NOT_TRACK=True` in your [Langflow environment v
 ## Data that Langflow collects
 
 Langflow telemetry collects data on flow runs, your environment, and component usage.
-Events use the IBM Common Schema names `Started Process`, `Ended Process`, `Ran Process`, and `UI Interaction`.
-The original Langflow event category is included in the Common Schema `object` property. Process events also include
-the required `processType` property.
 
 ### Run
 

@@ -1003,7 +1003,11 @@ jobs:
           # TODO: Unsure why the whl is not built in src/backend/base/dist
           mkdir src/backend/base/dist
           mv dist/*.whl src/backend/base/dist
-          uv pip install src/backend/base/dist/*.whl
+          FIND_LINKS=(--find-links ./lfx-dist)
+          if [ -d "./sdk-dist" ]; then
+            FIND_LINKS+=(--find-links ./sdk-dist)
+          fi
+          uv pip install "${FIND_LINKS[@]}" --prerelease=allow src/backend/base/dist/*.whl
           # Workspace sources take precedence over --find-links during dependency
           # installation. Replace LFX last so startup tests the published artifact.
           uv pip install --force-reinstall --no-deps lfx-dist/*.whl
