@@ -17,6 +17,7 @@ from sqlmodel import col, select, update
 from langflow.services.database.models.trigger.model import Trigger, TriggerSourceVersion
 from langflow.services.triggers import ledger
 from langflow.services.triggers.providers.registry import push_mechanisms
+from langflow.services.triggers.source_items import validate_source_items
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -65,6 +66,7 @@ async def append_and_advance(
     database uniqueness constraint collapses replays, including a push and a
     poll of the same provider item.
     """
+    validate_source_items(items)
     if session.get_bind().dialect.name == "sqlite":
         # FOR UPDATE is ignored by SQLite. Serialize before reading the cursor
         # so a second collector cannot commit against the same stale version.

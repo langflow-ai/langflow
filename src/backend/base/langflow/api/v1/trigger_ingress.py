@@ -60,6 +60,7 @@ from langflow.services.rate_limit.service import check_rate_limit
 from langflow.services.triggers.constants import INGRESS_PROVIDERS, PROVIDER_SLACK
 from langflow.services.triggers.ingress import intake
 from langflow.services.triggers.ingress.verifiers import (
+    REASON_BAD_PAYLOAD,
     REASON_BODY_TOO_LARGE,
     REASON_HANDSHAKE,
     REASON_RATE_LIMITED,
@@ -338,8 +339,14 @@ async def receive_provider_delivery(
     fallback = hashlib.sha256(body).hexdigest()[:32]
     if extension is not None and verified.source_items is not None:
         from langflow.services.triggers.source_delivery import append_and_advance
+        from langflow.services.triggers.source_items import validate_source_items
 
-        if any(item.get("provider") != provider for item in verified.source_items):
+        try:
+            validate_source_items(verified.source_items, provider=provider)
+        except ValueError:
+            await intake.audit_ingress(
+                accepted=False, provider=provider, public_id=public_id, target=target, reason=REASON_BAD_PAYLOAD
+            )
             return _reject()
         created = bool(
             await append_and_advance(

@@ -68,6 +68,11 @@ returns a dictionary containing only those fields. `collect(trigger, lease)`
 returns the existing `SourceRound` model. Each canonical item has `provider`,
 `resource`, `id`, `version`, and `data` fields. Optional `deleted` and
 `session_key` fields preserve deletion and conversation semantics. The shared
+validator requires nonempty string identities, limited to 32 characters for
+`provider`, 512 for `resource` and `id`, and 255 for `version`. `data` must be a
+JSON object, and the entire record must contain JSON-compatible values.
+Ingress and collectors reject the complete batch before durable writes when
+any item violates this contract. The shared
 runtime binds the result to its original connection, cursor, mechanism, and
 configuration before atomically committing events and the new cursor.
 
