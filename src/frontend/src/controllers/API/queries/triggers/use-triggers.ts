@@ -1,4 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useMemo } from "react";
 import { useUtilityStore } from "@/stores/utilityStore";
 import {
   bulkTriggers,
@@ -7,6 +13,7 @@ import {
   enableTrigger,
   getTrigger,
   getTriggerIngress,
+  listAllTriggers,
   listTriggerEvents,
   listTriggers,
   replayTriggerEvent,
@@ -43,13 +50,14 @@ export const useInvalidateTriggers = () => {
 
 export const useTriggersQuery = (
   params: TriggerListParams = {},
-  options?: { enabled?: boolean; poll?: boolean },
+  options?: { enabled?: boolean; poll?: boolean; allPages?: boolean },
 ) => {
   const interval = useTriggerPollingInterval();
   const poll = options?.poll ?? true;
   return useQuery<TriggerRead[]>({
-    queryKey: triggersKeys.list(params),
-    queryFn: () => listTriggers(params),
+    queryKey: [...triggersKeys.list(params), options?.allPages ?? false],
+    queryFn: () =>
+      options?.allPages ? listAllTriggers(params) : listTriggers(params),
     enabled: options?.enabled ?? true,
     refetchInterval: poll && interval > 0 ? interval : false,
     refetchIntervalInBackground: false,
@@ -62,15 +70,39 @@ export const useTriggerEventsQuery = (
   options?: { limit?: number; enabled?: boolean },
 ) => {
   const interval = useTriggerPollingInterval();
-  const limit = options?.limit ?? TRIGGER_EVENTS_PAGE_SIZE;
-  return useQuery<TriggerEventRead[]>({
+  const limit = Math.min(
+    199,
+    Math.max(1, options?.limit ?? TRIGGER_EVENTS_PAGE_SIZE),
+  );
+  const query = useInfiniteQuery({
     queryKey: [...triggersKeys.events(triggerId ?? "none"), limit],
-    queryFn: () => listTriggerEvents(triggerId as string, { limit }),
+    queryFn: ({ pageParam }) =>
+      listTriggerEvents(triggerId as string, {
+        limit: limit + 1,
+        offset: pageParam,
+      }),
+    initialPageParam: 0,
+    getNextPageParam: (page, _pages, offset) =>
+      page.length > limit ? offset + limit : undefined,
     enabled: Boolean(triggerId) && (options?.enabled ?? true),
     refetchInterval: interval > 0 ? interval : false,
     refetchIntervalInBackground: false,
     retry: 1,
   });
+  const data = useMemo(
+    () =>
+      query.data
+        ? Array.from(
+            new Map(
+              query.data.pages
+                .flatMap((page) => page.slice(0, limit))
+                .map((event) => [event.id, event]),
+            ).values(),
+          )
+        : undefined,
+    [query.data, limit],
+  );
+  return { ...query, data };
 };
 
 export const useTriggerIngressQuery = (

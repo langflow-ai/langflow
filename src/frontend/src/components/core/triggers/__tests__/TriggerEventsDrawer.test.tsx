@@ -1,12 +1,20 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { TriggerEventRead } from "@/controllers/API/queries/triggers";
+import { axe } from "@/utils/a11y-test";
 import TriggerEventsDrawer from "../eventsDrawer";
 import { makeEvent, makeTrigger } from "./fixtures";
 
 let mockEvents: TriggerEventRead[] = [];
 const mockReplay = jest.fn();
 const mockNavigate = jest.fn();
+const mockFetchNextPage = jest.fn();
+
+jest.mock("@/pages/FlowPage/components/TraceComponent/TraceDetailView", () => ({
+  TraceDetailView: ({ traceId }: { traceId: string }) => (
+    <div data-testid="opened-trace">{traceId}</div>
+  ),
+}));
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
@@ -15,9 +23,12 @@ jest.mock("@/components/common/genericIconComponent", () => ({
 jest.mock("@/controllers/API/queries/triggers", () => ({
   TRIGGER_EVENTS_PAGE_SIZE: 2,
   useTriggerEventsQuery: () => ({
-    data: mockEvents,
+    data: mockEvents.slice(0, 2),
     isLoading: false,
     isFetching: false,
+    hasNextPage: true,
+    isFetchingNextPage: false,
+    fetchNextPage: mockFetchNextPage,
   }),
   useTriggerQuery: () => ({ data: undefined }),
   useReplayTriggerEventMutation: () => ({
@@ -69,6 +80,7 @@ describe("TriggerEventsDrawer", () => {
 
   it("filters to tests and names an event without text by its origin", async () => {
     open();
+    await userEvent.click(screen.getByTestId("trigger-event-failed"));
     await userEvent.click(screen.getByTestId("trigger-events-filter-tests"));
 
     expect(screen.queryByTestId("trigger-event-failed")).toBeNull();
@@ -79,6 +91,7 @@ describe("TriggerEventsDrawer", () => {
       "aria-pressed",
       "true",
     );
+    expect(screen.getByTestId("trigger-event-payload")).toHaveTextContent("{}");
   });
 
   it("confirms a replay, posts it, and does not imply the original re-ran", async () => {
@@ -132,5 +145,23 @@ describe("TriggerEventsDrawer", () => {
 
     expect(screen.queryByTestId("trigger-event-third")).toBeNull();
     expect(screen.getByTestId("trigger-events-load-more")).toBeInTheDocument();
+  });
+
+  it("can load older failures when the current page has no matches", async () => {
+    mockEvents = [test];
+    open();
+    await userEvent.click(screen.getByTestId("trigger-events-filter-failed"));
+    await userEvent.click(screen.getByTestId("trigger-events-load-more"));
+    expect(mockFetchNextPage).toHaveBeenCalled();
+  });
+
+  it("opens the selected event's trace", async () => {
+    open();
+    await userEvent.click(screen.getByTestId("trigger-event-open-run"));
+    expect(await screen.findByTestId("opened-trace")).toHaveTextContent(
+      "job-1",
+    );
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(await axe(document.body)).toHaveNoViolations();
   });
 });

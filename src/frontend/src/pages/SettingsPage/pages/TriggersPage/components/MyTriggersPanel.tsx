@@ -17,9 +17,6 @@ import TriggersListState from "./TriggersListState";
 import TriggersTable from "./TriggersTable";
 import TriggersToolbar from "./TriggersToolbar";
 
-/** The owner list is one page of the newest triggers the caller can read. */
-const MY_PAGE_SIZE = 200;
-
 export interface MyTriggersPanelProps {
   busyId: string | null;
   onAction: (trigger: TriggerRead, action: TriggerUiAction) => void;
@@ -31,7 +28,7 @@ export function MyTriggersPanel({ busyId, onAction }: MyTriggersPanelProps) {
   const [search, setSearch] = useState("");
   const [state, setState] = useState<TriggerStateFilter>("all");
 
-  const query = useTriggersQuery({ limit: MY_PAGE_SIZE });
+  const query = useTriggersQuery({}, { allPages: true });
   const connections = useGetConnections({});
   const triggers = query.data ?? [];
   const visible = useMemo(

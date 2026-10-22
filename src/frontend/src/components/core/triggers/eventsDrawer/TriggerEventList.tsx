@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import type { TriggerEventRead } from "@/controllers/API/queries/triggers";
 import { cn } from "@/utils/utils";
 import { formatDateTime } from "../helpers/format-relative-time";
@@ -16,9 +15,6 @@ export interface TriggerEventListProps {
   selectedId: string | null;
   onSelect: (event: TriggerEventRead) => void;
   maxAttempts: number;
-  canLoadMore: boolean;
-  loadingMore: boolean;
-  onLoadMore: () => void;
 }
 
 /** Ledger rows, newest first. Each row is one button; the selected one is current. */
@@ -27,9 +23,6 @@ export function TriggerEventList({
   selectedId,
   onSelect,
   maxAttempts,
-  canLoadMore,
-  loadingMore,
-  onLoadMore,
 }: TriggerEventListProps) {
   const { t, i18n } = useTranslation();
   return (
@@ -88,18 +81,6 @@ export function TriggerEventList({
           );
         })}
       </ul>
-      {canLoadMore && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="mt-2 self-center"
-          onClick={onLoadMore}
-          loading={loadingMore}
-          data-testid="trigger-events-load-more"
-        >
-          {t("triggers.events.loadOlder")}
-        </Button>
-      )}
     </div>
   );
 }

@@ -34,6 +34,21 @@ export async function listTriggers(
   return asArray<TriggerRead>(data);
 }
 
+/** Settings search and provider choices cover every readable trigger. */
+export async function listAllTriggers(
+  params: TriggerListParams = {},
+): Promise<TriggerRead[]> {
+  const rows: TriggerRead[] = [];
+  const limit = 200;
+  let offset = 0;
+  while (true) {
+    const page = await listTriggers({ ...params, limit, offset });
+    rows.push(...page);
+    if (page.length < limit) return rows;
+    offset += limit;
+  }
+}
+
 export async function getTrigger(id: string): Promise<TriggerRead> {
   const { data } = await api.get<TriggerRead>(one(id));
   return data;

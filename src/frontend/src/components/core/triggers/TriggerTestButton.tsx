@@ -38,7 +38,11 @@ export function TriggerTestButton({
         aria-disabled={blockedReason ? true : undefined}
         aria-describedby={blockedReason ? reasonId : undefined}
         disabled={busy}
-        className={blockedReason ? "cursor-not-allowed opacity-50" : undefined}
+        className={
+          blockedReason
+            ? "cursor-not-allowed opacity-50 aria-disabled:pointer-events-auto"
+            : undefined
+        }
         onClick={() => {
           if (!blockedReason) onTest(trigger);
         }}

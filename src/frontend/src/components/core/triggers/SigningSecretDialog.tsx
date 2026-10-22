@@ -46,7 +46,13 @@ export function SigningSecretDialog({
   const url = revealed?.ingress_url ?? ingress.data?.ingress_url ?? null;
 
   return (
-    <Dialog open={trigger !== null} onOpenChange={onOpenChange}>
+    <Dialog
+      open={trigger !== null}
+      onOpenChange={(open) => {
+        if (!open && rotate.isPending) return;
+        onOpenChange(open);
+      }}
+    >
       <DialogContent className="max-w-lg" data-testid="trigger-secret-dialog">
         <DialogHeader>
           <DialogTitle>{t("triggers.secret.title")}</DialogTitle>
@@ -88,7 +94,11 @@ export function SigningSecretDialog({
             </Button>
           ) : (
             <>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
+              <Button
+                variant="outline"
+                disabled={rotate.isPending}
+                onClick={() => onOpenChange(false)}
+              >
                 {t("triggers.common.cancel")}
               </Button>
               <Button

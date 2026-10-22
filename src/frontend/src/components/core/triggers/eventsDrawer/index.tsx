@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,14 +9,12 @@ import {
 } from "@/components/ui/dialog";
 import { getAxiosErrorDetail } from "@/controllers/API/helpers/get-axios-error-message";
 import {
-  TRIGGER_EVENTS_PAGE_SIZE,
   type TriggerEventRead,
   type TriggerRead,
   useReplayTriggerEventMutation,
   useTriggerEventsQuery,
   useTriggerQuery,
 } from "@/controllers/API/queries/triggers";
-import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAlertStore from "@/stores/alertStore";
 import { cn } from "@/utils/utils";
 import { sourceKeyOf } from "../helpers/trigger-presentation";
@@ -29,6 +28,7 @@ import {
 import ReplayConfirmDialog from "./ReplayConfirmDialog";
 import TriggerEventDetail from "./TriggerEventDetail";
 import TriggerEventList from "./TriggerEventList";
+import TriggerRunDialog from "./trigger-run-dialog";
 
 export interface TriggerEventsDrawerProps {
   trigger: TriggerRead | null;
@@ -44,12 +44,11 @@ export function TriggerEventsDrawer({
   onOpenChange,
 }: TriggerEventsDrawerProps) {
   const { t } = useTranslation();
-  const navigate = useCustomNavigate();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const [filter, setFilter] = useState<TriggerEventFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [limit, setLimit] = useState(TRIGGER_EVENTS_PAGE_SIZE);
+  const [runFor, setRunFor] = useState<TriggerEventRead | null>(null);
   const [replayTarget, setReplayTarget] = useState<TriggerEventRead | null>(
     null,
   );
@@ -71,21 +70,18 @@ export function TriggerEventsDrawer({
   useEffect(() => {
     setFilter("all");
     setSelectedId(null);
-    setLimit(TRIGGER_EVENTS_PAGE_SIZE);
+    setRunFor(null);
+    setReplayTarget(null);
   }, [triggerId]);
 
-  // Ask for one row more than shown: there is no total count, so the extra
-  // row is how the drawer knows an older page exists.
-  const eventsQuery = useTriggerEventsQuery(triggerId, { limit: limit + 1 });
-  const loaded = eventsQuery.data ?? [];
-  const canLoadMore = loaded.length > limit;
-  const events = useMemo(() => loaded.slice(0, limit), [loaded, limit]);
+  const eventsQuery = useTriggerEventsQuery(triggerId);
+  const events = eventsQuery.data ?? [];
   const visible = useMemo(
     () => events.filter((event) => matchesEventFilter(event, filter)),
     [events, filter],
   );
   const selected =
-    events.find((event) => event.id === selectedId) ?? visible[0] ?? null;
+    visible.find((event) => event.id === selectedId) ?? visible[0] ?? null;
 
   const confirmReplay = async () => {
     if (!trigger || !replayTarget) return;
@@ -163,6 +159,13 @@ export function TriggerEventsDrawer({
                   >
                     {t("triggers.events.loading")}
                   </p>
+                ) : eventsQuery.isError && events.length === 0 ? (
+                  <p className="p-3 text-sm text-destructive" role="alert">
+                    {getAxiosErrorDetail(
+                      eventsQuery.error,
+                      t("triggers.errors.load"),
+                    )}
+                  </p>
                 ) : visible.length === 0 ? (
                   <p
                     className="p-3 text-sm text-muted-foreground"
@@ -178,12 +181,27 @@ export function TriggerEventsDrawer({
                     selectedId={selected?.id ?? null}
                     onSelect={(event) => setSelectedId(event.id)}
                     maxAttempts={trigger.max_attempts}
-                    canLoadMore={canLoadMore}
-                    loadingMore={eventsQuery.isFetching}
-                    onLoadMore={() =>
-                      setLimit((current) => current + TRIGGER_EVENTS_PAGE_SIZE)
-                    }
                   />
+                )}
+                {eventsQuery.isError && events.length > 0 && (
+                  <p className="p-3 text-sm text-destructive" role="alert">
+                    {getAxiosErrorDetail(
+                      eventsQuery.error,
+                      t("triggers.errors.load"),
+                    )}
+                  </p>
+                )}
+                {eventsQuery.hasNextPage && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => void eventsQuery.fetchNextPage()}
+                    loading={eventsQuery.isFetching}
+                    data-testid="trigger-events-load-more"
+                  >
+                    {t("triggers.events.loadOlder")}
+                  </Button>
                 )}
               </div>
               <div className="min-h-0 overflow-y-auto p-6">
@@ -197,10 +215,7 @@ export function TriggerEventsDrawer({
                       setSelectedId(event.id);
                     }}
                     onReplay={setReplayTarget}
-                    onOpenRun={() => {
-                      onOpenChange(false);
-                      navigate(`/flow/${trigger.flow_id}`);
-                    }}
+                    onOpenRun={setRunFor}
                     replaying={replay.isPending}
                   />
                 )}
@@ -216,6 +231,15 @@ export function TriggerEventsDrawer({
           onConfirm={() => void confirmReplay()}
           busy={replay.isPending}
         />
+        {trigger && runFor?.job_id && (
+          <TriggerRunDialog
+            event={runFor}
+            flowName={trigger.flow_name ?? trigger.name}
+            onOpenChange={(open) => {
+              if (!open) setRunFor(null);
+            }}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -363,8 +363,10 @@ export async function installTriggerMocks(
         );
         rows.forEach(settleSubscription);
         const operator = url.searchParams.get("scope") === "all";
+        const limit = Number(url.searchParams.get("limit") ?? 50);
+        const offset = Number(url.searchParams.get("offset") ?? 0);
         await route.fulfill({
-          json: rows.map((row) => {
+          json: rows.slice(offset, offset + limit).map((row) => {
             const body = read(row);
             if (!operator) delete (body as Partial<typeof body>).owner_username;
             return body;
@@ -480,6 +482,13 @@ export async function installTriggerMocks(
       if (sub === "events" && method === "GET") {
         const limit = Number(url.searchParams.get("limit") ?? 50);
         const offset = Number(url.searchParams.get("offset") ?? 0);
+        if (limit > 200) {
+          await route.fulfill({
+            status: 422,
+            json: { detail: "Maximum page size is 200" },
+          });
+          return;
+        }
         await route.fulfill({
           json: server.events
             .filter((event) => event.trigger_id === row.id)

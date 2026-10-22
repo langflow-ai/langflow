@@ -22,8 +22,6 @@ import TriggersTable from "./TriggersTable";
 import TriggersToolbar from "./TriggersToolbar";
 
 const NO_CONNECTION_NAMES = new Map<string, string>();
-/** The operator list is one page; a larger instance pages server-side later. */
-const OPERATOR_PAGE_SIZE = 200;
 
 /** B3: every user's triggers, a provider filter, and bulk pause or resume. */
 export function OperatorTriggersPanel() {
@@ -37,7 +35,7 @@ export function OperatorTriggersPanel() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const bulk = useBulkTriggersMutation();
 
-  const query = useTriggersQuery({ scope: "all", limit: OPERATOR_PAGE_SIZE });
+  const query = useTriggersQuery({ scope: "all" }, { allPages: true });
   const triggers = query.data ?? [];
   const providers = useMemo(() => providersOf(triggers), [triggers]);
   const visible = useMemo(

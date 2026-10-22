@@ -126,7 +126,9 @@ export function TriggerNodeBadge({ trigger }: { trigger: TriggerRead }) {
                       : undefined
                   }
                   className={
-                    test.blockedReason ? "cursor-not-allowed opacity-50" : ""
+                    test.blockedReason
+                      ? "cursor-not-allowed opacity-50 aria-disabled:pointer-events-auto"
+                      : ""
                   }
                   loading={busy}
                   onClick={() => {

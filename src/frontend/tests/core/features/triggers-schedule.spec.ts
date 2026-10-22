@@ -7,6 +7,7 @@ import {
 import {
   buildMockTrigger,
   installTriggerMocks,
+  type MockTriggerEvent,
 } from "../../utils/trigger-mocks";
 
 const TRIGGER_ID = "trg-schedule-e2e";
@@ -163,17 +164,67 @@ test.describe("Schedule trigger lifecycle", () => {
 
       const testButton = page.getByTestId(`trigger-test-${TRIGGER_ID}`);
       await expect(testButton).toHaveAttribute("aria-disabled", "true");
+      await testButton.hover();
+      await expect(page.getByRole("tooltip")).toContainText(
+        "Resume the trigger first.",
+      );
       await testButton.click({ force: true });
 
       await page.getByTestId(`trigger-menu-${TRIGGER_ID}`).click();
       await page.getByTestId("trigger-action-view_events").click();
       const replay = page.getByTestId("trigger-event-replay");
       await expect(replay).toHaveAttribute("aria-disabled", "true");
+      await replay.hover();
+      await expect(page.getByRole("tooltip")).toContainText(
+        "Resume the trigger first.",
+      );
       await replay.click({ force: true });
       await expect(page.getByTestId("trigger-replay-dialog")).toBeHidden();
 
       // Neither refused action reached the server.
       expect(server.writes).toEqual([]);
+    },
+  );
+
+  test(
+    "loads older failed events beyond 200 rows",
+    { tag: ["@release", "@workspace", "@api"] },
+    async ({ page }) => {
+      const events: MockTriggerEvent[] = Array.from(
+        { length: 220 },
+        (_, index) => ({
+          id: `history-${index}`,
+          trigger_id: TRIGGER_ID,
+          dedupe_key: `schedule:${index}`,
+          state: index === 219 ? "failed" : "completed",
+          attempt: 1,
+          available_at: null,
+          payload: { text: `Event ${index}` },
+          session_id: null,
+          job_id: null,
+          replay_of_event_id: null,
+          error: index === 219 ? "job_failed" : null,
+          created_at: "2026-10-15T09:00:00Z",
+          updated_at: "2026-10-15T09:00:05Z",
+        }),
+      );
+      await installTriggerMocks(page, {
+        triggers: [buildMockTrigger({ id: TRIGGER_ID })],
+        events,
+      });
+      await awaitBootstrapTest(page, { skipModal: true });
+      await page.goto("/settings/triggers");
+      await page.getByTestId(`trigger-menu-${TRIGGER_ID}`).click();
+      await page.getByTestId("trigger-action-view_events").click();
+      await page.getByTestId("trigger-events-filter-failed").click();
+      for (let index = 0; index < 4; index++) {
+        const older = page.getByTestId("trigger-events-load-more");
+        await expect(older).not.toHaveAttribute("aria-busy", "true");
+        await older.click();
+      }
+      await expect(page.getByTestId("trigger-event-history-219")).toBeVisible();
+      await expect(page.getByTestId("trigger-events-load-more")).toBeHidden();
+      await page.runA11yScan("settings-triggers-older-failed-event");
     },
   );
 });

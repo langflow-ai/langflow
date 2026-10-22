@@ -20,6 +20,40 @@ async function openTriggersSettings(page: LangflowPage) {
 
 test.describe("Provider trigger (mocked Slack)", () => {
   test(
+    "finds older triggers and providers beyond the first settings page",
+    { tag: ["@release", "@workspace", "@api"] },
+    async ({ page }) => {
+      const recent = Array.from({ length: 200 }, (_, index) =>
+        buildMockTrigger({
+          id: `recent-${index}`,
+          name: `Recent Slack ${index}`,
+          provider: "slack",
+          kind: "slack.message",
+        }),
+      );
+      await installTriggerMocks(page, {
+        triggers: [
+          ...recent,
+          buildMockTrigger({
+            id: "older-google",
+            name: "Older Gmail",
+            provider: "google",
+            kind: "google.gmail",
+          }),
+        ],
+      });
+      await openTriggersSettings(page);
+      await page.getByTestId("triggers-search").fill("Older Gmail");
+      await expect(page.getByTestId("trigger-row-older-google")).toBeVisible();
+      await page.getByRole("tab", { name: "All triggers" }).click();
+      await page.getByTestId("triggers-provider-filter").click();
+      await page.getByRole("option", { name: "Google", exact: true }).click();
+      await expect(page.getByTestId("trigger-row-older-google")).toBeVisible();
+      await expect(page.getByTestId("triggers-bulk-pause")).toBeEnabled();
+    },
+  );
+
+  test(
     "owner grants background runs, the subscription converges, then test, pause, resume and delete",
     { tag: ["@release", "@workspace", "@api"] },
     async ({ page }) => {

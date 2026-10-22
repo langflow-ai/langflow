@@ -96,7 +96,9 @@ export function TriggerEventDetail({
                   replay.blockedReason ? replayReasonId : undefined
                 }
                 className={
-                  replay.blockedReason ? "cursor-not-allowed opacity-50" : ""
+                  replay.blockedReason
+                    ? "cursor-not-allowed opacity-50 aria-disabled:pointer-events-auto"
+                    : ""
                 }
                 loading={replaying}
                 onClick={() => {

@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { axe } from "@/utils/a11y-test";
 import SigningSecretDialog from "../SigningSecretDialog";
 import { makeTrigger } from "./fixtures";
 
@@ -7,6 +8,7 @@ const mockRotate = jest.fn();
 const mockReset = jest.fn();
 let mockRevealed: unknown;
 let mockHasSecret = false;
+let mockPending = false;
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
@@ -26,7 +28,7 @@ jest.mock("@/controllers/API/queries/triggers", () => ({
     mutate: mockRotate,
     reset: mockReset,
     data: mockRevealed,
-    isPending: false,
+    isPending: mockPending,
     isError: false,
   }),
 }));
@@ -38,6 +40,7 @@ describe("SigningSecretDialog", () => {
     jest.clearAllMocks();
     mockRevealed = undefined;
     mockHasSecret = false;
+    mockPending = false;
   });
 
   it("never shows a secret before one is created", () => {
@@ -63,7 +66,7 @@ describe("SigningSecretDialog", () => {
       trigger_id: "trg-1",
       ingress_url: "https://lf.example/x",
       has_signing_secret: true,
-      signing_secret: "whsec_test",
+      signing_secret: "whsec_test", // pragma: allowlist secret
     };
     render(<SigningSecretDialog trigger={webhook} onOpenChange={jest.fn()} />);
 
@@ -82,5 +85,19 @@ describe("SigningSecretDialog", () => {
     rerender(<SigningSecretDialog trigger={null} onOpenChange={jest.fn()} />);
 
     expect(mockReset).toHaveBeenCalled();
+  });
+
+  it("keeps the dialog open through Escape and Cancel during rotation", async () => {
+    mockPending = true;
+    const onOpenChange = jest.fn();
+    render(
+      <SigningSecretDialog trigger={webhook} onOpenChange={onOpenChange} />,
+    );
+
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(await axe(document.body)).toHaveNoViolations();
   });
 });

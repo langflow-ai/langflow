@@ -1,6 +1,7 @@
 import { api } from "../../../api";
 import {
   bulkTriggers,
+  listAllTriggers,
   listTriggerEvents,
   listTriggers,
   replayTriggerEvent,
@@ -15,7 +16,7 @@ jest.mock("../../../helpers/constants", () => ({
 }));
 
 describe("triggers api", () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => jest.resetAllMocks());
 
   it("lists across flows when no flow is given", async () => {
     jest.mocked(api.get).mockResolvedValue({ data: [] });
@@ -48,6 +49,24 @@ describe("triggers api", () => {
     await listTriggers({ scope: "mine" });
 
     expect(api.get).toHaveBeenCalledWith("/api/v1/triggers");
+  });
+
+  it("includes older triggers and providers from every bounded page", async () => {
+    const first = Array.from({ length: 200 }, (_, id) => ({ id: String(id) }));
+    const older = { id: "oldest", provider: "google" };
+    jest
+      .mocked(api.get)
+      .mockResolvedValueOnce({ data: first })
+      .mockResolvedValueOnce({ data: [older] });
+
+    await expect(listAllTriggers({ scope: "all" })).resolves.toEqual([
+      ...first,
+      older,
+    ]);
+    expect(api.get).toHaveBeenNthCalledWith(
+      2,
+      "/api/v1/triggers?scope=all&limit=200&offset=200",
+    );
   });
 
   it("returns an empty list when the body is not an array", async () => {

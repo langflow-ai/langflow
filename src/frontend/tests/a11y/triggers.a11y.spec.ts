@@ -217,6 +217,51 @@ test.describe("Triggers route accessibility", () => {
 
       await page.runA11yScan("settings-triggers-events-drawer");
 
+      await page.route("**/api/v1/monitor/traces/a11y-job", async (route) =>
+        route.fulfill({
+          json: {
+            id: "a11y-job",
+            name: "Daily digest run",
+            status: "error",
+            flowId: "flow-a11y",
+            sessionId: "a11y-session",
+            startTime: "2026-10-15T09:00:00Z",
+            endTime: "2026-10-15T09:00:05Z",
+            totalLatencyMs: 5000,
+            totalTokens: 0,
+            totalCost: 0,
+            input: {},
+            output: {},
+            spans: [
+              {
+                id: "span-1",
+                name: "Schedule",
+                type: "chain",
+                status: "error",
+                startTime: "2026-10-15T09:00:00Z",
+                endTime: "2026-10-15T09:00:05Z",
+                latencyMs: 5000,
+                inputs: {},
+                outputs: {},
+                children: [],
+                error: "Flow build failed",
+              },
+            ],
+          },
+        }),
+      );
+      const openRun = drawer.getByTestId("trigger-event-open-run");
+      await openRun.click();
+      const run = page.getByTestId("trigger-run-dialog");
+      await expect(
+        run.getByText("Daily digest run", { exact: true }).first(),
+      ).toBeVisible();
+      await page.runA11yScan("settings-triggers-run-dialog");
+      await page.keyboard.press("Escape");
+      await expect(run).toBeHidden();
+      await expect(drawer).toBeVisible();
+      await expect(openRun).toBeFocused();
+
       await drawer.getByTestId("trigger-event-replay").focus();
       await page.keyboard.press("Enter");
       const confirm = page.getByRole("dialog", { name: "Replay this event?" });

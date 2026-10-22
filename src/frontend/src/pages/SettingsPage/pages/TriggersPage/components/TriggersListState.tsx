@@ -4,7 +4,10 @@ import { useTranslation } from "react-i18next";
 import { getAxiosErrorDetail } from "@/controllers/API/helpers/get-axios-error-message";
 
 export interface TriggersListStateProps {
-  query: Pick<UseQueryResult<unknown>, "isLoading" | "isError" | "error">;
+  query: Pick<
+    UseQueryResult<unknown>,
+    "isLoading" | "isError" | "error" | "data"
+  >;
   total: number;
   visible: number;
   emptyKey: string;
@@ -27,7 +30,7 @@ export function TriggersListState({
       </p>
     );
   }
-  if (query.isError) {
+  if (query.isError && query.data === undefined) {
     return (
       <p className="text-sm text-destructive" role="alert">
         {getAxiosErrorDetail(query.error, t("triggers.errors.load"))}
