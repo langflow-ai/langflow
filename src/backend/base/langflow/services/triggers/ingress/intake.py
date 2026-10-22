@@ -152,12 +152,18 @@ async def resolve_target(session: AsyncSession, *, provider: str, public_id: str
         spec = get_kind(row.kind)
         if spec is None or not spec.push_mechanism or (row.config or {}).get("mechanism_id") != spec.push_mechanism:
             return None
-        secrets = (
-            await extension.ingress_secrets(session, row)
-            if extension.ingress_secrets
-            else IngressSecrets(signing_secret=await _webhook_secret(row))
-        )
-        secrets = replace(secrets, target_config=dict(row.config or {}), target_kind=row.kind)
+        try:
+            secrets = (
+                await extension.ingress_secrets(session, row)
+                if extension.ingress_secrets
+                else IngressSecrets(signing_secret=await _webhook_secret(row))
+            )
+            if not isinstance(secrets, IngressSecrets):
+                return None
+            secrets = replace(secrets, target_config=dict(row.config or {}), target_kind=row.kind)
+        except Exception:  # noqa: BLE001 - broken provider state must not expose target existence or secrets
+            await logger.awarning("Trigger %s has unavailable ingress verification material", row.id)
+            return None
     elif provider == PROVIDER_WEBHOOK:
         secrets = IngressSecrets(signing_secret=await _webhook_secret(row))
     else:
