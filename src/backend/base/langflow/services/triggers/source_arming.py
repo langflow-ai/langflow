@@ -85,7 +85,13 @@ def normalize_source_config(kind: str, raw: dict[str, Any]) -> dict[str, Any]:
             msg = "The trigger provider is not installed."
             raise ValueError(msg)
         allowed = {field: raw.get(field) for field in extension.config_fields}
-        config = provider.normalize_config(kind, allowed)
+        try:
+            config = provider.normalize_config(kind, allowed)
+        except ValueError:
+            raise
+        except Exception:  # noqa: BLE001 - one provider failure must stay inside its node's configuration boundary
+            msg = "The trigger provider could not validate this source configuration."
+            raise ValueError(msg) from None
         if not isinstance(config, dict) or set(config) - set(extension.config_fields):
             msg = "The trigger provider returned unsupported configuration fields."
             raise ValueError(msg)
