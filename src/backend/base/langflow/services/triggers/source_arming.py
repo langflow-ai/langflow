@@ -17,12 +17,12 @@ from langflow.services.database.models.connection.oauth import ConnectionOAuth
 from langflow.services.database.models.connection.schemas import ConnectionOwnershipMode
 from langflow.services.deps import get_settings_service
 from langflow.services.triggers.constants import (
-    GOOGLE_SOURCE_KINDS,
     MECHANISM_GRAPH_DELTA,
     MECHANISM_GRAPH_NOTIFICATIONS,
     MICROSOFT_SOURCE_KINDS,
 )
 from langflow.services.triggers.ownership import UNUSABLE_CONNECTION_STATUSES
+from langflow.services.triggers.providers.registry import get_kind, source_kinds
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -73,9 +73,27 @@ class SourceArming:
 
 
 def normalize_source_config(kind: str, raw: dict[str, Any]) -> dict[str, Any]:
-    if kind not in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS:
+    if kind not in source_kinds():
         msg = f"Unsupported source kind: {kind}"
         raise ValueError(msg)
+    extension = get_kind(kind)
+    if extension is not None:
+        from langflow.services.triggers.providers.registry import get_provider
+
+        provider = get_provider(kind.split(".", 1)[0])
+        if provider is None:
+            msg = "The trigger provider is not installed."
+            raise ValueError(msg)
+        allowed = {field: raw.get(field) for field in extension.config_fields}
+        config = provider.normalize_config(kind, allowed)
+        if not isinstance(config, dict) or set(config) - set(extension.config_fields):
+            msg = "The trigger provider returned unsupported configuration fields."
+            raise ValueError(msg)
+        delivery = config.get("delivery_mode") or "auto"
+        if delivery not in {"auto", "push", "poll"}:
+            msg = "Delivery mode must be auto, push, or poll."
+            raise ValueError(msg)
+        return config
     config = {
         key: raw.get(key)
         for key in ("connection", "calendar_id", "site_id", "pubsub_topic", "pubsub_service_account")
@@ -119,6 +137,26 @@ async def resolve_arming(session: AsyncSession, *, kind: str, owner_id: UUID, co
         msg = "The flow owner does not own this connection. Shared and instance connections cannot back a source."
         raise ValueError(msg)
     context = deployment_context()
+    extension = get_kind(kind)
+    if extension is not None:
+        from langflow.services.triggers.source_subscription import configured_ingress_origin
+
+        available = (
+            get_settings_service().settings.trigger_ingress_enabled
+            and context != "desktop"
+            and await configured_ingress_origin(session, row.id) is not None
+        )
+        delivery = config.get("delivery_mode") or "auto"
+        if delivery == "push" and (not available or extension.push_mechanism is None):
+            msg = "Push delivery requires a supported public HTTPS ingress on this deployment."
+            raise ValueError(msg)
+        mechanism = extension.push_mechanism if available and delivery != "poll" else None
+        if mechanism is None:
+            mechanism = extension.poll_mechanism or extension.listener_mechanism
+        if mechanism is None or (context == "hosted" and mechanism != extension.push_mechanism):
+            msg = "This source has no supported delivery mechanism on this deployment."
+            raise ValueError(msg)
+        return SourceArming(connection_id=row.id, mechanism_id=mechanism)
     if kind == "google.gmail":
         if context == "hosted":
             msg = "Gmail triggers are unavailable on hosted Langflow pending restricted-scope verification."
@@ -187,6 +225,35 @@ async def check_ready(
     if not row.allow_non_interactive:
         msg = "Turn on Allow background runs for this source connection."
         raise ValueError(msg)
+    extension = get_kind(kind)
+    if extension is not None:
+        from lfx.integrations.capabilities import ScopeSet
+
+        from langflow.services.connection.service import enforce_integration_policy_for_provider
+        from langflow.services.triggers.providers.registry import capability_ids
+
+        await enforce_integration_policy_for_provider(
+            row.provider_key, user_id=row.owner_id, capability_ids=capability_ids(kind)
+        )
+
+        identity = (row.executing_identity or {}).get("identity")
+        if identity != extension.identity:
+            msg = "The source connection has the wrong executing identity."
+            raise ValueError(msg)
+        if arming.mechanism_id not in {
+            extension.poll_mechanism,
+            extension.push_mechanism,
+            extension.listener_mechanism,
+        }:
+            msg = "The source delivery mechanism is unavailable."
+            raise ValueError(msg)
+        missing = ScopeSet.missing(
+            provider=row.provider_key, required=extension.required_scopes, granted=row.granted_scopes or []
+        )
+        if missing:
+            msg = f"The source connection is missing required scopes: {', '.join(sorted(missing))}."
+            raise ValueError(msg)
+        return
     needed = set(_SCOPES[kind])
     if kind == "microsoft.file" and (config or {}).get("site_id"):
         needed.update({"Files.Read.All", "Sites.Read.All"})

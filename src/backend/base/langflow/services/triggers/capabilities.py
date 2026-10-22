@@ -103,7 +103,9 @@ def trigger_reason(row: Trigger) -> TriggerReason | None:
 
 
 def _uses_connection(row: Trigger) -> bool:
-    return row.connection_id is not None or row.provider in _CONNECTION_PROVIDERS
+    from langflow.services.triggers.providers.registry import get_kind
+
+    return row.connection_id is not None or row.provider in _CONNECTION_PROVIDERS or get_kind(row.kind) is not None
 
 
 def _decide(
