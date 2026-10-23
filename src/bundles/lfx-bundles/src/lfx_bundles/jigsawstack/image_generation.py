@@ -29,7 +29,7 @@ class JigsawStackImageGenerationComponent(Component):
             name="aspect_ratio",
             display_name="Aspect Ratio",
             info="The aspect ratio of the generated image. Must be one of the following:\
-                '1:1', '16:9', '21:9', '3:2', '2:3', '4:5', '5:4', '3:4', '4:3', '9:16', '9:21' \
+                '1:1', '16:9', '21:9', '3:2', '2:3', '4:5', '5:4', '3:4', '4:3', '9:16', '9:21'. \
                 Default is 1:1.",
             required=False,
             tool_mode=True,
@@ -43,7 +43,7 @@ class JigsawStackImageGenerationComponent(Component):
         MessageTextInput(
             name="file_store_key",
             display_name="File Store Key",
-            info="The key used to store the image on Jigsawstack File Storage. Not required if url is specified.",
+            info="The key used to store the image on JigsawStack File Storage. Not required if url is specified.",
             required=False,
             tool_mode=True,
         ),
