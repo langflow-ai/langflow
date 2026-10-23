@@ -3061,7 +3061,7 @@
   "connections.add.cleanupFailedBody": "The unfinished connection could not be deleted. Remove it from the list.",
   "connections.add.identity": "Runs as",
   "connections.add.method": "How to connect",
-  "connections.add.methodOauth": "Sign in with Slack",
+  "connections.add.methodOauth": "Sign in with {{provider}}",
   "connections.add.methodToken": "Paste a token",
   "connections.add.token": "Token",
   "connections.add.tokenHelp": "Paste an app-level token (xapp-…) so Slack triggers can receive events over Socket Mode, or a bot token (xoxb-…) for the actions that run as the app. Both are in your Slack app's settings.",

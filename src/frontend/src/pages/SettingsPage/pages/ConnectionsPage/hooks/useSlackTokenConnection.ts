@@ -23,6 +23,7 @@ export interface UseSlackTokenConnectionOptions {
   /** Creates the connection row (`POST /connections`). */
   create: (payload: ConnectionCreate) => Promise<ConnectionRead>;
   tokenProfile?: ManualTokenProfileRead;
+  tokenOnly: boolean;
 }
 
 export interface SlackTokenConnection {
@@ -75,6 +76,7 @@ export function useSlackTokenConnection({
   reauthorizing,
   create,
   tokenProfile,
+  tokenOnly,
 }: UseSlackTokenConnectionOptions): SlackTokenConnection {
   const [selectedMethod, setMethod] = useState<ConnectionMethod | null>(null);
   const [token, setToken] = useState("");
@@ -89,9 +91,10 @@ export function useSlackTokenConnection({
       tokenProfile !== undefined);
   const defaultMethod =
     offersToken && providerId !== "slack" && tokenProfile ? "token" : "oauth";
-  const method =
-    selectedMethod === "token" && !offersToken
-      ? "oauth"
+  const method = !offersToken
+    ? "oauth"
+    : tokenOnly
+      ? "token"
       : (selectedMethod ?? defaultMethod);
   const usesToken = offersToken && method === "token";
   const tokenKind = slackTokenKind(token);

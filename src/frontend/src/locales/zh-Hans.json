@@ -3061,7 +3061,7 @@
   "connections.add.cleanupFailedBody": "无法删除未完成的连接，请从列表中将其移除。",
   "connections.add.identity": "以此身份运行",
   "connections.add.method": "连接方式",
-  "connections.add.methodOauth": "使用 Slack 登录",
+  "connections.add.methodOauth": "使用 {{provider}} 登录",
   "connections.add.methodToken": "粘贴令牌",
   "connections.add.token": "令牌",
   "connections.add.tokenHelp": "粘贴应用级令牌 (xapp-…)，让 Slack 触发器通过 Socket Mode 接收事件；或粘贴机器人令牌 (xoxb-…)，供以应用身份运行的操作使用。两者都在你的 Slack 应用设置中。",

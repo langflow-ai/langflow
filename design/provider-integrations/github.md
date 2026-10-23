@@ -1,0 +1,13 @@
+# GitHub provider decision
+
+Verified against the linked official GitHub documentation on October 22, 2026. The executable capability record lives in src/bundles/github/src/lfx_github/components/github/capabilities.v1.json. The setup guide and transport matrix live in src/bundles/github/README.md. This provider requires the shared trigger-provider foundation and registers through the lfx-github distribution rather than a core hardcoded provider list.
+
+The included action set contains repository read, issue read/create/update, pull request read/create/update, and issue conversation comment creation. Stable component class names and manifest capability IDs identify these actions in saved flows. REST on GitHub.com is the only substrate. The preview deliberately excludes repository deletion, pull request merging, code execution, GitHub Enterprise, personal tokens, and arbitrary endpoint configuration.
+
+A customer-owned GitHub App installation is the executing identity. The host resolves a short-lived installation token through an owned connection. The bundle verifies that GitHub accepts that token on an installation-only API before issuing action requests. App repository permissions are enforced by GitHub on every endpoint. The manifest declares no OAuth scopes because GitHub does not expose read-only token permission introspection. Capability policy keys enforce Langflow action restrictions. No app private key enters the graph or bundle configuration.
+
+Two exact event triggers cover issue and pull request changes through individually provisioned repository webhooks. The trigger owner and non-interactive consent are enforced by the shared runtime. One secret per trigger verifies the raw HMAC body. Signed repository identity and configured event filters prevent delivery to another repository or event family. The durable trigger ledger owns acknowledgement, duplicate collapse, dispatch, retries, and replay. No public ingress means no event trigger. Polling is excluded because snapshots cannot reproduce every intermediate event and GitHub recommends webhook delivery.
+
+GitHub webhooks have no expiry. The provider stores a nonexpiring subscription and relies on durable cleanup to remove it on pause or deletion. Setup reuses the exact callback after an ambiguous prior creation. Revoked permissions may leave remote cleanup pending, which the owner resolves by restoring access or deleting the hook in GitHub. Continuous hook health checks and automatic App private-key token minting are not included.
+
+Real-tenant and GitHub Enterprise validation is unverified. Enterprise is unsupported, so validation cannot imply support until an explicit host trust, API version, App registration, and tenant test contract exists.
