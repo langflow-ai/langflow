@@ -38,6 +38,7 @@ members = [
     "lfx-cohere",
     "lfx-confluent",
     "lfx-datastax",
+    "lfx-desearch",
     "lfx-docling",
     "lfx-duckduckgo",
     "lfx-empiriolabs",
@@ -7697,6 +7698,7 @@ bundles = [
     { name = "lfx-arxiv" },
     { name = "lfx-bundles", extra = ["all-no-torch"] },
     { name = "lfx-confluent" },
+    { name = "lfx-desearch" },
     { name = "lfx-duckduckgo" },
     { name = "lfx-empiriolabs" },
     { name = "lfx-exa" },
@@ -7810,6 +7812,7 @@ requires-dist = [
     { name = "lfx-cohere", editable = "src/bundles/cohere" },
     { name = "lfx-confluent", marker = "extra == 'bundles'", editable = "src/bundles/confluent" },
     { name = "lfx-datastax", editable = "src/bundles/datastax" },
+    { name = "lfx-desearch", marker = "extra == 'bundles'", editable = "src/bundles/desearch" },
     { name = "lfx-docling", editable = "src/bundles/docling" },
     { name = "lfx-docling", extras = ["chunking"], marker = "extra == 'docling-chunking'", editable = "src/bundles/docling" },
     { name = "lfx-docling", extras = ["image-description"], marker = "extra == 'docling-image-description'", editable = "src/bundles/docling" },
@@ -9883,6 +9886,21 @@ requires-dist = [
     { name = "langchain-graph-retriever", specifier = "==0.8.0" },
     { name = "lfx", editable = "src/lfx" },
     { name = "requests", specifier = ">=2.32.0" },
+]
+
+[[package]]
+name = "lfx-desearch"
+version = "0.1.0"
+source = { editable = "src/bundles/desearch" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
 ]
 
 [[package]]
