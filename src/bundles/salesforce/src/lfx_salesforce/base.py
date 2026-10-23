@@ -11,10 +11,18 @@ from lfx.schema.data import Data
 
 from lfx_salesforce.client import SalesforceClient
 
-__all__ = ["Data", "DataInput", "DropdownInput", "MessageTextInput", "Output", "SalesforceAction"]
+__all__ = [
+    "Data",
+    "DataInput",
+    "DropdownInput",
+    "MessageTextInput",
+    "Output",
+    "SalesforceAction",
+    "SalesforceActionComponent",
+]
 
 
-class SalesforceAction(Component):
+class SalesforceActionComponent(Component):
     icon = "Cloud"
     capability_id: ClassVar[str] = ""
     salesforce_transport: Any = None
@@ -44,3 +52,7 @@ class SalesforceAction(Component):
                 )
         finally:
             await client.aclose()
+
+
+# Preserve imports of the original helper while component source uses the loader-compatible name.
+SalesforceAction = SalesforceActionComponent

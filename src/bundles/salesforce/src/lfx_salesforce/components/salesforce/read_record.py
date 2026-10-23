@@ -1,11 +1,11 @@
 """Read one Salesforce record through explicit scalar field selection."""
 
-from lfx_salesforce.base import Data, DropdownInput, MessageTextInput, Output, SalesforceAction
+from lfx_salesforce.base import Data, DropdownInput, MessageTextInput, Output, SalesforceActionComponent
 from lfx_salesforce.manifest import connection_input
 from lfx_salesforce.schema import API_ROOT, FIELDS, invalid, object_name, record_id, selected_fields
 
 
-class SalesforceReadRecordComponent(SalesforceAction):
+class SalesforceReadRecordComponent(SalesforceActionComponent):
     display_name = "Salesforce Read Record"
     description = "Read supported scalar fields from one visible Salesforce record."
     name = "SalesforceReadRecord"

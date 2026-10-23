@@ -1,11 +1,11 @@
 """Update explicit scalar fields on one record."""
 
-from lfx_salesforce.base import Data, DataInput, DropdownInput, MessageTextInput, Output, SalesforceAction
+from lfx_salesforce.base import Data, DataInput, DropdownInput, MessageTextInput, Output, SalesforceActionComponent
 from lfx_salesforce.manifest import connection_input
 from lfx_salesforce.schema import API_ROOT, FIELDS, object_name, record_id, values
 
 
-class SalesforceUpdateRecordComponent(SalesforceAction):
+class SalesforceUpdateRecordComponent(SalesforceActionComponent):
     display_name = "Salesforce Update Record"
     description = "Update supported fields on one existing Salesforce record."
     name = "SalesforceUpdateRecord"

@@ -1,11 +1,11 @@
 """Create a single record without automatic mutation retries."""
 
-from lfx_salesforce.base import Data, DataInput, DropdownInput, Output, SalesforceAction
+from lfx_salesforce.base import Data, DataInput, DropdownInput, Output, SalesforceActionComponent
 from lfx_salesforce.manifest import connection_input
 from lfx_salesforce.schema import API_ROOT, FIELDS, invalid, object_name, record_id, values
 
 
-class SalesforceCreateRecordComponent(SalesforceAction):
+class SalesforceCreateRecordComponent(SalesforceActionComponent):
     display_name = "Salesforce Create Record"
     description = "Create one record using supported fields and the connected account's permissions."
     name = "SalesforceCreateRecord"
