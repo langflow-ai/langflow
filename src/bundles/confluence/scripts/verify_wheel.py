@@ -18,7 +18,7 @@ def verify(installed, repository):
     import lfx_confluence
     from lfx.extension import load_installed_extensions
     from lfx.extension.bundle_registry import BundleRecord, get_default_registry
-    from lfx.extension.loader import load_inline_bundle
+    from lfx.extension.loader._bundles_root import _BundleRoot, _load_bundle_roots
 
     require(Path(lfx_confluence.__file__).is_relative_to(installed), "The source bundle shadowed the installed wheel.")
     distribution = importlib.metadata.distribution("lfx-confluence")
@@ -31,7 +31,20 @@ def verify(installed, repository):
         {component.bundle for component in result.components} == {"confluence_integrations"},
         "The integration changed the legacy category.",
     )
-    legacy = load_inline_bundle(repository / "src/bundles/lfx-bundles/src/lfx_bundles/confluence")
+    legacy_root = repository / "src/bundles/lfx-bundles/src/lfx_bundles"
+    other_categories = {
+        child.name: ("installed", str(child))
+        for child in legacy_root.iterdir()
+        if child.is_dir() and child.name != "confluence"
+    }
+    legacy = next(
+        result
+        for result in _load_bundle_roots(
+            [_BundleRoot(legacy_root, "lfx-bundles", "0.0.0")], claimed_bundles=other_categories
+        )
+        if result.bundle == "confluence"
+    )
+    require(legacy.slot == "official", "The legacy bundle did not load at its production slot.")
     require(legacy.ok, "The existing Confluence component did not load.")
     require(
         {component.class_name for component in legacy.components} == {"ConfluenceComponent"},
@@ -43,7 +56,7 @@ def verify(installed, repository):
             bundle="confluence",
             extension_id="lfx-bundles",
             extension_version="0.0.0",
-            slot="extra",
+            slot="official",
             components=tuple(legacy.components),
             manifestless=True,
         )
@@ -61,6 +74,13 @@ def verify(installed, repository):
         )
     )
     require(registry.get_bundle("confluence").class_names == {"ConfluenceComponent"}, "The legacy bundle was replaced.")
+    legacy_ids = {component.namespaced_id for component in registry.get_bundle("confluence").components}
+    integration_ids = {
+        component.namespaced_id for component in registry.get_bundle("confluence_integrations").components
+    }
+    require(legacy_ids == {"ext:confluence:ConfluenceComponent@official"}, "The legacy component identity changed.")
+    require(not legacy_ids & integration_ids, "The two categories claim a duplicate component identity.")
+    require(len(integration_ids) == COMPONENT_COUNT, "The integration component identities are not unique.")
     from langflow.services.triggers.providers.registry import get_provider
 
     provider = get_provider("confluence")
