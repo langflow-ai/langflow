@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import replace
 from types import SimpleNamespace
 from urllib.parse import parse_qs, urlsplit
@@ -113,3 +114,64 @@ async def test_custom_token_parser_cannot_bypass_expiry_or_tenant_validation(mon
         await providers.exchange(
             _registration(allowed_tenants=["other-tenant"]), code="code", previous_scopes=["items:read"]
         )
+
+
+@pytest.mark.parametrize("refresh", [False, True])
+@pytest.mark.parametrize(
+    "result",
+    [
+        KeyError("private-provider-value"),
+        TypeError("private-provider-value"),
+        None,
+        {},
+        [],
+        ({},),
+        ({}, None, None),
+        [{"access_token": "synthetic-access"}, None],
+        (None, None),
+        ({"access_token": "synthetic-access"}, "invalid"),
+    ],
+    ids=[
+        "missing-key",
+        "wrong-type",
+        "none",
+        "mapping",
+        "empty-list",
+        "short-tuple",
+        "long-tuple",
+        "list",
+        "token",
+        "account",
+    ],
+)
+async def test_custom_token_parser_failures_are_sanitized(oauth, monkeypatch, refresh, result):
+    async def request(*_args, **_kwargs):
+        return {"credential": {"access_token": "synthetic-access"}}
+
+    async def parse(*_args, **_kwargs):
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+    monkeypatch.setattr(providers, "_request", request)
+    monkeypatch.setattr(adapter, "provider_adapter", lambda _provider: replace(oauth, parse_token=parse))
+    kwargs = {"refresh_token": "synthetic-refresh"} if refresh else {"code": "code"}
+    with pytest.raises(OAuthError) as caught:
+        await providers.exchange(_registration(), previous_scopes=["items:read"], **kwargs)
+    assert caught.value.reason == "provider-unavailable"
+    assert "private-provider-value" not in str(caught.value)
+
+
+@pytest.mark.parametrize("error", [OAuthError("Authored rejection."), asyncio.CancelledError()])
+async def test_custom_token_parser_preserves_authored_errors_and_cancellation(oauth, monkeypatch, error):
+    async def request(*_args, **_kwargs):
+        return {}
+
+    async def parse(*_args, **_kwargs):
+        raise error
+
+    monkeypatch.setattr(providers, "_request", request)
+    monkeypatch.setattr(adapter, "provider_adapter", lambda _provider: replace(oauth, parse_token=parse))
+    with pytest.raises(type(error)) as caught:
+        await providers.exchange(_registration(), code="code", previous_scopes=[])
+    assert caught.value is error

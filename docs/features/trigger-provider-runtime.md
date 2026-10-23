@@ -81,8 +81,10 @@ configuration before atomically committing events and the new cursor.
 
 `provision(session, trigger)` returns a `TriggerSubscription` or `None`.
 The shared runtime reuses an active subscription on the same connection.
-Pending or failed setup still calls the hook, which must reconcile uncertain
-remote creates by stable callback identity before creating another object.
+Pending or failed setup still calls the hook. A provider may have created a
+remote webhook before a lost response or process exit prevented Langflow from
+saving its ID. The hook must find that existing webhook by its stable callback
+identity before retrying creation.
 `renew(session, subscription)` returns the provider's new expiration.
 `revoke(cleanup_task, lease)` deletes the remote subscription. Cleanup intents
 survive local pause and deletion. Nonexpiring remote hooks use
