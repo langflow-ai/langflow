@@ -1,9 +1,9 @@
 """GitHub on pull request declaration."""
 
-from lfx_github.triggers import PR_ACTIONS, GitHubRepositoryTrigger, trigger_inputs
+from lfx_github.triggers import PR_ACTIONS, GitHubRepositoryTriggerComponent, trigger_inputs
 
 
-class GitHubOnPullRequestTriggerComponent(GitHubRepositoryTrigger):
+class GitHubOnPullRequestTriggerComponent(GitHubRepositoryTriggerComponent):
     display_name = "GitHub: On Pull Request"
     description = "Run when selected pull request events arrive from a GitHub.com repository webhook."
     name = "GitHubOnPullRequestTrigger"

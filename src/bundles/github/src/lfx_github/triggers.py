@@ -55,7 +55,7 @@ def trigger_inputs(kind: str, actions: list[str]):
     ]
 
 
-class GitHubRepositoryTrigger(BaseTriggerComponent):
+class GitHubRepositoryTriggerComponent(BaseTriggerComponent):
     provider = "github"
     icon = "Github"
     needs_connection = True
@@ -68,3 +68,7 @@ class GitHubRepositoryTrigger(BaseTriggerComponent):
             "delivery_mode": "push",
             "include_bot_events": bool(getattr(self, "include_bot_events", False)),
         }
+
+
+# Preserve imports of the original helper while component source uses the loader-compatible name.
+GitHubRepositoryTrigger = GitHubRepositoryTriggerComponent
