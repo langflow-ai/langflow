@@ -1018,7 +1018,11 @@ def worker(
         configure(log_level=log_level)
 
     async def _run_worker() -> None:
-        from langflow.services.background_execution.worker import build_worker, run_worker_loop
+        from langflow.services.background_execution.worker import (
+            _ROSTER_BEATS_PER_WINDOW,
+            build_worker,
+            run_worker_loop,
+        )
 
         await initialize_services()
         settings = get_settings_service().settings
@@ -1051,6 +1055,14 @@ def worker(
                 owner=owner,
                 lease_ttl_s=settings.background_lease_ttl_s,
                 watchdog_interval_s=settings.background_watchdog_interval_s,
+                roster_enabled=True,
+                # Derived from the SAME knob the collector uses as the online
+                # window, not from the watchdog interval: those are independent
+                # settings, so reusing the watchdog's meant an operator raising
+                # it to cut orphan-scan load would silently make every idle
+                # worker read offline. A third of the window leaves room for
+                # the beat's own jitter and two missed beats.
+                roster_interval_s=settings.background_lease_ttl_s / _ROSTER_BEATS_PER_WINDOW,
             )
         finally:
             await teardown()
