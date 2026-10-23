@@ -121,6 +121,12 @@ async def _run(
     trigger_ids = await _selected_ids(session, request=request)
     for trigger_id in trigger_ids:
         try:
+            if action is TriggerAction.RESUME and not request.dry_run:
+                preliminary = await _current(session, trigger_id, lock=False)
+                if preliminary is None or not eligible(preliminary):
+                    await session.rollback()
+                    unchanged.append(trigger_id)
+                    continue
             try:
                 row = await _current(
                     session, trigger_id, lock=not request.dry_run, admission=action is TriggerAction.RESUME
