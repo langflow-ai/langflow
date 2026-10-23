@@ -65,6 +65,7 @@ members = [
     "lfx-serpingapi",
     "lfx-serply",
     "lfx-slack",
+    "lfx-telegram",
     "lfx-toolguard",
     "lfx-valkey",
     "lfx-vllm",
@@ -8879,6 +8880,7 @@ dependencies = [
     { name = "lfx-openai-compatible" },
     { name = "lfx-oracle" },
     { name = "lfx-slack" },
+    { name = "lfx-telegram" },
     { name = "lfx-toolguard" },
     { name = "lfx-vllm" },
     { name = "oauthlib" },
@@ -9025,6 +9027,7 @@ requires-dist = [
     { name = "lfx-serpingapi", marker = "extra == 'bundles'", editable = "src/bundles/serpingapi" },
     { name = "lfx-serply", marker = "extra == 'bundles'", editable = "src/bundles/serply" },
     { name = "lfx-slack", editable = "src/bundles/slack" },
+    { name = "lfx-telegram", editable = "src/bundles/telegram" },
     { name = "lfx-toolguard", editable = "src/bundles/toolguard" },
     { name = "lfx-valkey", marker = "extra == 'bundles'", editable = "src/bundles/valkey" },
     { name = "lfx-vllm", editable = "src/bundles/vllm" },
@@ -11472,6 +11475,21 @@ requires-dist = [
     { name = "aiohttp", specifier = ">=3.10.0,<4.0.0" },
     { name = "lfx", editable = "src/lfx" },
     { name = "slack-sdk", specifier = ">=3.33.0,<4.0.0" },
+]
+
+[[package]]
+name = "lfx-telegram"
+version = "0.1.0"
+source = { editable = "src/bundles/telegram" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.27.0,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
 ]
 
 [[package]]
