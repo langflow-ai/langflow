@@ -54,6 +54,7 @@ GUARDED_MODULES: dict[str, set[str]] = {
     "homeassistant/home_assistant_control.py": {"ssrf_safe_httpx_post"},
     "homeassistant/list_home_assistant_states.py": {"ssrf_safe_httpx_get"},
     "huggingface/huggingface_inference_api.py": {"ssrf_safe_httpx_get", "validate_url_for_ssrf_or_raise"},
+    "jsonify/jsonify_dataset.py": {"ssrf_safe_httpx_get_bounded"},
     "litellm/litellm_proxy.py": {"ssrf_safe_httpx_get", "ssrf_protected_openai_clients_for_url"},
     "lmstudio/lmstudioembeddings.py": {"ssrf_safe_async_get", "validate_url_for_ssrf_or_raise"},
     "lmstudio/lmstudiomodel.py": {"ssrf_safe_async_get", "ssrf_protected_openai_clients_for_url"},

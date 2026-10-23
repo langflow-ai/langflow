@@ -5047,6 +5047,11 @@
       "added_in": "1.13.0"
     },
     {
+      "bare_class_name": "JsonifyDatasetComponent",
+      "target": "ext:jsonify:JsonifyDatasetComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
       "bare_class_name": "SerplySearchComponent",
       "target": "ext:serply:SerplySearchComponent@official",
       "added_in": "1.13.0"
