@@ -79,7 +79,7 @@ export const useChatFileUpload = ({
               return newFiles;
             });
           },
-          onError: (error: AxiosError<{ detail?: string }>) => {
+          onError: (error: AxiosError<{ detail?: unknown }>) => {
             setFiles((prev) => {
               const newFiles = [...prev];
               const updatedIndex = newFiles.findIndex((f) => f.id === id);
@@ -96,15 +96,20 @@ export const useChatFileUpload = ({
               return newFiles;
             });
 
+            const detail = error.response?.data?.detail;
             setErrorData({
               title: t("errors.upload"),
-              list: [t("misc.fsErrorText"), SN_ERROR_TEXT],
+              list: [
+                typeof detail === "string" && detail.trim()
+                  ? detail
+                  : t("files.errorUploadingDetail"),
+              ],
             });
           },
         },
       );
     },
-    [currentFlowId, isUploadEnabled, mutate, setErrorData, setFiles],
+    [currentFlowId, isUploadEnabled, mutate, setErrorData, setFiles, t],
   );
 
   const handleFiles = useCallback(
