@@ -1462,7 +1462,8 @@ async def get_elevenlabs_voice_ids(
         if elevenlabs_client is None:
             return {"error": "ElevenLabs API key not found or invalid"}
 
-        voices_response = elevenlabs_client.voices.get_all()
+        # The synchronous SDK request must not block other work on the event loop.
+        voices_response = await asyncio.to_thread(elevenlabs_client.voices.get_all)
         voices = voices_response.voices
 
         # Fix for PERF401: Use list comprehension
