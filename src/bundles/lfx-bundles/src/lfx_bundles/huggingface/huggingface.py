@@ -176,7 +176,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         top_k = self.top_k or None
         top_p = self.top_p
         typical_p = self.typical_p or None
-        temperature = self.temperature or 0.8
+        temperature = 0.8 if self.temperature is None else self.temperature
         repetition_penalty = self.repetition_penalty or None
 
         try:
