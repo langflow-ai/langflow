@@ -7,18 +7,20 @@ from contextlib import asynccontextmanager, suppress
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
 
-from langflow.services.base import Service
 from lfx.log.logger import logger
+
+from langflow.services.base import Service
 
 if TYPE_CHECKING:
     from uuid import UUID
 
     from langchain_core.callbacks.base import BaseCallbackHandler
-    from langflow.services.tracing.base import BaseTracer
-    from langflow.services.tracing.schema import Log
     from lfx.custom.custom_component.component import Component
     from lfx.graph.vertex.base import Vertex
     from lfx.services.settings.service import SettingsService
+
+    from langflow.services.tracing.base import BaseTracer
+    from langflow.services.tracing.schema import Log
 
 
 def _get_langsmith_tracer():
