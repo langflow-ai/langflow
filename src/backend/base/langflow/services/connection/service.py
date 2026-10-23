@@ -44,6 +44,7 @@ from langflow.services.connection.oauth.locking import lock_connection
 from langflow.services.connection.policy import provider_has_usable_action
 from langflow.services.connection.slack_credentials import (
     PROVIDER_SLACK,
+    ManualCredentialError,
     check_slack_web_token,
     is_app_token_connection,
     refuse_outside_listener,
@@ -285,6 +286,28 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         # Require an available action before encrypting or storing credentials.
         await enforce_integration_policy_for_provider(payload.provider_key, user_id=user.id, require_usable_action=True)
         payload = await validate_manual_credential(payload, context=deployment_context())
+        if payload.credentials is not None:
+            from langflow.services.triggers.providers.registry import get_provider
+
+            provider = get_provider(payload.provider_key)
+            if provider is not None:
+                if provider.validate_manual_credential is None:
+                    msg = "This integration does not support manually entered credentials."
+                    raise ManualCredentialError(msg)
+                if provider.manual_token_requires_expiry:
+                    expiry = payload.credentials.expires_at
+                    if expiry is None or expiry.tzinfo is None or expiry <= _utc_now():
+                        msg = "This integration requires a future token expiration time with a time zone."
+                        raise ManualCredentialError(msg)
+                original = (payload.provider_key, payload.name, payload.ownership_mode, payload.allow_non_interactive)
+                payload = await provider.validate_manual_credential(payload, context=deployment_context())
+                if (
+                    not isinstance(payload, ConnectionCreate)
+                    or (payload.provider_key, payload.name, payload.ownership_mode, payload.allow_non_interactive)
+                    != original
+                ):
+                    msg = "The integration credential validator changed the connection identity."
+                    raise ManualCredentialError(msg)
         owner_id = user.id if payload.ownership_mode == ConnectionOwnershipMode.USER else None
         now = _utc_now()
         raw_credentials = _credential_payload(payload)

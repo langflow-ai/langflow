@@ -1,4 +1,5 @@
 {
+  "connections.add.tokenGenericHelp": "このプロバイダーのアクセストークンを貼り付けてください。Langflow は保存する前にトークンを確認します。",
   "storageUpgrade.unavailable": "ストレージを利用できません",
   "storageUpgrade.title": "データをアップグレード中",
   "storageUpgrade.queued": "アップグレード待ち",
@@ -2932,7 +2933,6 @@
   "slider.permissive": "寛容",
   "playground.workflowWarning": "ワークフローの警告",
   "settings.nav.connections": "接続",
-  "settings.nav.triggers": "トリガー",
   "connections.title": "接続",
   "connections.subtitle": "フローがあなたに代わって操作するために使用するサードパーティのアカウント（Google、Microsoft 365、Slackなど）です。トークンはサーバーに保管され、ここには表示されません。",
   "connections.search": "名前、ハンドル、アカウントを検索",
@@ -3076,6 +3076,9 @@
   "connections.identity.bot": "ボット",
   "connections.identity.service": "サービスアカウント",
   "settings.dbProviders.serverConfiguration": "サーバー環境で設定済みです。この設定を使用するには、フィールドを変更しないでください。",
+  "connections.add.tokenExpiresAt": "トークンの有効期限",
+  "connections.add.tokenExpiresAtHelp": "現在のタイムゾーンで、将来の有効期限を入力してください。",
+  "settings.nav.triggers": "トリガー",
   "triggers.title": "トリガー",
   "triggers.subtitle": "自動的に開始されるフローです。任意のフローで、トリガーカテゴリまたはプロバイダーのグループからトリガーを追加してください。",
   "triggers.tabs.label": "トリガーの表示",

@@ -1,4 +1,5 @@
 {
+  "connections.add.tokenGenericHelp": "Cole um token de acesso para este provedor. O Langflow verifica o token antes de salvá-lo.",
   "storageUpgrade.unavailable": "Armazenamento indisponível",
   "storageUpgrade.title": "Atualizando seus dados",
   "storageUpgrade.queued": "Aguardando atualização",
@@ -2932,7 +2933,6 @@
   "slider.permissive": "Permissivo",
   "playground.workflowWarning": "Aviso do fluxo de trabalho",
   "settings.nav.connections": "Conexões",
-  "settings.nav.triggers": "Gatilhos",
   "connections.title": "Conexões",
   "connections.subtitle": "Contas de terceiros (como Google, Microsoft 365 e Slack) que seus fluxos usam para agir em seu nome. Os tokens permanecem no servidor e nunca são exibidos aqui.",
   "connections.search": "Pesquisar nome, identificador ou conta",
@@ -3076,6 +3076,9 @@
   "connections.identity.bot": "Um bot",
   "connections.identity.service": "Uma conta de serviço",
   "settings.dbProviders.serverConfiguration": "Configurado pelo ambiente do servidor. Deixe os campos inalterados para usar essa configuração.",
+  "connections.add.tokenExpiresAt": "Expiração do token",
+  "connections.add.tokenExpiresAtHelp": "Insira uma data de expiração futura no seu fuso horário atual.",
+  "settings.nav.triggers": "Gatilhos",
   "triggers.title": "Gatilhos",
   "triggers.subtitle": "Fluxos que começam sozinhos. Adicione um gatilho pela categoria Gatilhos, ou pelo grupo de um provedor, em qualquer fluxo.",
   "triggers.tabs.label": "Visualizações de gatilhos",

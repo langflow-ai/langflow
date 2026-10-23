@@ -1,4 +1,5 @@
 {
+  "connections.add.tokenGenericHelp": "粘贴此提供商的访问令牌。Langflow 会在保存前验证令牌。",
   "storageUpgrade.unavailable": "存储不可用",
   "storageUpgrade.title": "正在升级数据",
   "storageUpgrade.queued": "等待升级",
@@ -2931,7 +2932,6 @@
   "slider.permissive": "宽松",
   "playground.workflowWarning": "工作流警告",
   "settings.nav.connections": "连接",
-  "settings.nav.triggers": "触发器",
   "connections.title": "连接",
   "connections.subtitle": "流程用来代表您执行操作的第三方账号（例如 Google、Microsoft 365 和 Slack）。令牌保存在服务器上，绝不会在此处显示。",
   "connections.search": "搜索名称、句柄或账号",
@@ -3075,6 +3075,9 @@
   "connections.identity.bot": "机器人",
   "connections.identity.service": "服务账号",
   "settings.dbProviders.serverConfiguration": "已通过服务器环境配置。保持字段不变以使用该配置。",
+  "connections.add.tokenExpiresAt": "令牌到期时间",
+  "connections.add.tokenExpiresAtHelp": "请输入当前时区的未来到期时间。",
+  "settings.nav.triggers": "触发器",
   "triggers.title": "触发器",
   "triggers.subtitle": "可自行启动的流程。在任意流程中，从“触发器”类别或提供方的分组添加触发器。",
   "triggers.tabs.label": "触发器视图",
