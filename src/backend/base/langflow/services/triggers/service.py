@@ -34,7 +34,7 @@ from langflow.services.triggers.constants import (
     SLACK_TRIGGER_KINDS,
 )
 from langflow.services.triggers.errors import TriggerNotFoundError
-from langflow.services.triggers.locking import lock_trigger
+from langflow.services.triggers.locking import lock_trigger, lock_trigger_for_admission
 from langflow.services.triggers.ownership import require_owned_connection
 from langflow.services.triggers.providers.registry import canvas_only_kinds, push_mechanisms, source_kinds
 from langflow.services.triggers.reconciliation import apply_config_verdict
@@ -88,7 +88,7 @@ def _reject_mechanism(config: dict | None) -> None:
         raise ValueError(msg)
 
 
-async def _arm_slack(session: AsyncSession, row: Trigger) -> None:
+async def _arm_slack(session: AsyncSession, row: Trigger, *, connection_ids: frozenset[UUID]) -> None:
     """Re-check a Slack trigger's filters, re-derive its connection and transport, and check it may run unattended.
 
     Re-derived rather than trusted: the connection can change between the save
@@ -108,6 +108,9 @@ async def _arm_slack(session: AsyncSession, row: Trigger) -> None:
 
     config = normalize_slack_config(row.kind, row.config or {})
     arming = await resolve_arming(session, owner_id=row.user_id, config=config, context=deployment_context())
+    if arming.connection_id not in connection_ids:
+        msg = "The source connection changed while enabling. Try again."
+        raise ValueError(msg)
     await check_ready_to_arm(session, kind=row.kind, config=config, arming=arming)
     moved = bind_connection(row, arming.connection_id)
     if moved or config.get("mechanism_id") != arming.mechanism_id:
@@ -251,7 +254,10 @@ class TriggerService(Service):
         return row
 
     async def enable(self, session: AsyncSession, *, row: Trigger) -> Trigger:
-        row = await self._lock_for_mutation(session, row=row)
+        row, connection_ids = await lock_trigger_for_admission(session, row.id)
+        if row is None:
+            msg = "The trigger no longer exists."
+            raise ValueError(msg)
         if row.state not in _ENABLEABLE_STATES:
             msg = f"Trigger in state {row.state!r} cannot be enabled."
             raise ValueError(msg)
@@ -261,12 +267,15 @@ class TriggerService(Service):
         if row.kind == "schedule":
             validate_schedule_config(row.config or {})
         if row.kind in SLACK_TRIGGER_KINDS:
-            await _arm_slack(session, row)
+            await _arm_slack(session, row, connection_ids=connection_ids)
         if row.kind in source_kinds():
             from langflow.services.triggers.source_arming import check_ready, normalize_source_config, resolve_arming
 
             config = normalize_source_config(row.kind, row.config or {})
             arming = await resolve_arming(session, kind=row.kind, owner_id=row.user_id, config=config)
+            if arming.connection_id not in connection_ids:
+                msg = "The source connection changed while enabling. Try again."
+                raise ValueError(msg)
             await check_ready(session, kind=row.kind, arming=arming, config=config)
             changed = (
                 row.connection_id != arming.connection_id
