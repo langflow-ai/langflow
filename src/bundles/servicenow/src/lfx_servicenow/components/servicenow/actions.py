@@ -1,6 +1,14 @@
 """Read and change only approved ServiceNow ticket tables and fields."""
 
-from lfx_servicenow.base import Data, DataInput, DropdownInput, IntInput, MessageTextInput, Output, ServiceNowAction
+from lfx_servicenow.base import (
+    Data,
+    DataInput,
+    DropdownInput,
+    IntInput,
+    MessageTextInput,
+    Output,
+    ServiceNowActionComponent,
+)
 from lfx_servicenow.manifest import connection_input
 from lfx_servicenow.schema import TABLES, fields, literal, record_id, result_record, table
 
@@ -11,7 +19,7 @@ def _table():
     return DropdownInput(name="table", display_name="Table", options=list(TABLES), value="incident")
 
 
-class ServiceNowSearchRecordsComponent(ServiceNowAction):
+class ServiceNowSearchRecordsComponent(ServiceNowActionComponent):
     display_name = "ServiceNow Search Tickets"
     description = "Search one approved ticket table with a single exact filter."
     name = "ServiceNowSearchRecords"
@@ -63,7 +71,7 @@ class ServiceNowSearchRecordsComponent(ServiceNowAction):
         return rows
 
 
-class ServiceNowReadRecordComponent(ServiceNowAction):
+class ServiceNowReadRecordComponent(ServiceNowActionComponent):
     display_name = "ServiceNow Read Ticket"
     description = "Read one ticket by its sys_id from an approved table."
     name = "ServiceNowReadRecord"
@@ -82,7 +90,7 @@ class ServiceNowReadRecordComponent(ServiceNowAction):
         return result
 
 
-class ServiceNowCreateRecordComponent(ServiceNowAction):
+class ServiceNowCreateRecordComponent(ServiceNowActionComponent):
     display_name = "ServiceNow Create Ticket"
     description = "Create one ticket using approved fields. Automatic write retries are disabled."
     name = "ServiceNowCreateRecord"
@@ -98,7 +106,7 @@ class ServiceNowCreateRecordComponent(ServiceNowAction):
         return result
 
 
-class ServiceNowUpdateRecordComponent(ServiceNowAction):
+class ServiceNowUpdateRecordComponent(ServiceNowActionComponent):
     display_name = "ServiceNow Update Ticket"
     description = "Patch approved ticket fields. ServiceNow ACLs and business rules still apply."
     name = "ServiceNowUpdateRecord"

@@ -9,10 +9,19 @@ from lfx.schema.data import Data
 
 from lfx_servicenow.client import ServiceNowClient
 
-__all__ = ["Data", "DataInput", "DropdownInput", "IntInput", "MessageTextInput", "Output", "ServiceNowAction"]
+__all__ = [
+    "Data",
+    "DataInput",
+    "DropdownInput",
+    "IntInput",
+    "MessageTextInput",
+    "Output",
+    "ServiceNowAction",
+    "ServiceNowActionComponent",
+]
 
 
-class ServiceNowAction(Component):
+class ServiceNowActionComponent(Component):
     icon = "Server"
     capability_id: ClassVar[str] = ""
     transport: Any = None
@@ -30,3 +39,7 @@ class ServiceNowAction(Component):
             ServiceNowClient(lease, transport=self.transport) as client,
         ):
             return await client.request(method, path, params=params, body=body)
+
+
+# Preserve imports of the original helper while component source uses the loader-compatible name.
+ServiceNowAction = ServiceNowActionComponent
