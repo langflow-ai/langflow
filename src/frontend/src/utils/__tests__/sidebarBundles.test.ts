@@ -25,6 +25,18 @@ describe("SIDEBAR_BUNDLES", () => {
     );
   });
 
+  it("classifies Salt as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Salt",
+          icon: "Send",
+          name: "salt",
+        }),
+      ]),
+    );
+  });
+
   it("classifies Serping API as a sidebar bundle", () => {
     expect(SIDEBAR_BUNDLES).toEqual(
       expect.arrayContaining([

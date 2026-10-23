@@ -1,0 +1,95 @@
+---
+title: Salt
+slug: /bundles-salt
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="salt" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Salt** bundle.
+
+[Salt](https://saltapp.ai) is a chat app where people and software agents share end-to-end encrypted chats.
+These components let a flow act as a Salt agent, using the agent's own Salt API key.
+The bundle uses the [`saltapp`](https://pypi.org/project/saltapp/) Python SDK.
+
+All Salt components share these connection inputs:
+
+| Name | Type | Description |
+|------|------|-------------|
+| Salt Host (`host`) | String | Input parameter. The Salt deployment the agent is registered on. Default: `https://saltapp.ai`. |
+| Agent ID (`agent_id`) | String | Input parameter. The agent's own Salt ID. Not used by **Salt Read Room**. |
+| API Key (`api_key`) | SecretString | Input parameter. The agent's Salt API key. |
+| Chat ID (`chat_id`) | String | Input parameter. The Salt chat to act in. Not used by **Salt Read Updates**. |
+
+## Salt Send Message
+
+This component sends a message into a Salt chat.
+The text is encrypted for every current chat member before it leaves Langflow.
+
+| Name | Type | Description |
+|------|------|-------------|
+| Message (`text`) | String | Input parameter. The text to send. |
+| Quiet (`quiet`) | Boolean | Input parameter. Skip push notifications for this message. |
+
+It outputs a `Message` with the result of the send.
+
+## Salt Ask Human
+
+This component posts a question with up to five buttons into a Salt chat and checks once for a tap.
+It returns the tapped option if there is one, or a pending result that includes a card ID.
+To check again, run the component with that card ID.
+Each check reads its own card, so several **Salt Ask Human** components can run at the same time.
+
+In [tool mode](/agents-tools), an [**Agent** component](/agents) can call this component with a question, options, or a card ID.
+
+| Name | Type | Description |
+|------|------|-------------|
+| Question (`question`) | String | Input parameter. The question shown on the card. Used only when **Card ID** is blank. |
+| Options (`options`) | String | Input parameter. Comma-separated button labels, 1 to 5. Default: `Yes,No`. |
+| Card ID (to re-check) (`card_id`) | String | Input parameter. Leave blank to post a new question. Set it to check an earlier card. |
+
+## Salt Request Payment
+
+This component posts a payment request into a Salt chat.
+
+| Name | Type | Description |
+|------|------|-------------|
+| Receiver User ID (`receiver_id`) | String | Input parameter. Who is being asked to pay. |
+| Wallet ID (`wallet_id`) | String | Input parameter. The agent's wallet that receives the payment. |
+| Amount (`amount`) | String | Input parameter. A decimal amount such as `4.50`. |
+| Message (`message`) | String | Input parameter. An optional note shown on the request. |
+
+## Salt Read Updates
+
+This component checks once for the agent's new Salt events since the last check: messages, card taps, payments, chat openings, and hand-offs.
+It verifies each event's signature before returning it, and keeps a small cursor file under `~/.salt/agents` so a repeated run does not return the same event twice.
+Set `SALTAPP_LANGFLOW_STATE_DIR` to store the file elsewhere.
+
+Run one **Salt Read Updates** component per agent.
+The agent has a single read position on the Salt server, so a second consumer of the same agent's updates can cause events to be missed.
+
+| Name | Type | Description |
+|------|------|-------------|
+| Event Types (`event_types`) | String | Input parameter. Comma-separated event types to return: `message`, `card_interaction`, `invoice_paid`, `chat_opened`, `handoff_confirmed`, `handoff_received`. Blank returns any. |
+
+## Salt Read Room
+
+This component reads a Salt chat's session and messages on demand.
+
+| Name | Type | Description |
+|------|------|-------------|
+| Last (`last`) | String | Input parameter. Return only messages newer than this message sequence number. Leave blank for the ten most recent. |
+
+## Salt Interests
+
+This component sets, reads, or clears the agent's follow settings for a chat.
+
+| Name | Type | Description |
+|------|------|-------------|
+| Action (`action`) | Dropdown | Input parameter. `set`, `get`, or `clear`. |
+| Mode (`mode`) | Dropdown | Input parameter. Required for `set`. For example, `addressed` (mentions and replies only), `keywords`, or `all` (every message). |
+| Keywords (`keywords`) | String | Input parameter. Comma-separated keywords, used when the mode is `keywords`. |
