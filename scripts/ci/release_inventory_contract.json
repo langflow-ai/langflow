@@ -78,7 +78,8 @@
         "lfx-oracle",
         "lfx-slack",
         "lfx-toolguard",
-        "lfx-vllm"
+        "lfx-vllm",
+        "lfx-discord"
       ],
       "forbidden_distributions_add": [
         "lfx-arxiv",
@@ -104,6 +105,7 @@
           "lfx-azure",
           "lfx-cohere",
           "lfx-datastax",
+          "lfx-discord",
           "lfx-docling",
           "lfx-google",
           "lfx-ibm",
@@ -158,6 +160,11 @@
         "lfx-toolguard": [
           "lfx_toolguard/extension.json",
           "lfx_toolguard/components/models_and_agents/policies_component.py"
+        ],
+        "lfx-discord": [
+          "lfx_discord/extension.json",
+          "lfx_discord/components/discord/capabilities.v1.json",
+          "lfx_discord/components/discord/discord_send_message.py"
         ]
       },
       "module_checks": [
@@ -237,6 +244,7 @@
           "lfx-cohere",
           "lfx-confluent",
           "lfx-datastax",
+          "lfx-discord",
           "lfx-docling",
           "lfx-duckduckgo",
           "lfx-empiriolabs",
@@ -372,6 +380,11 @@
         "lfx-bundles": [
           "lfx_bundles/mongodb/mongodb_atlas.py",
           "lfx_bundles/youtube/starter_projects/Youtube Analysis.json"
+        ],
+        "lfx-discord": [
+          "lfx_discord/extension.json",
+          "lfx_discord/components/discord/capabilities.v1.json",
+          "lfx_discord/components/discord/discord_send_message.py"
         ]
       },
       "module_checks": [

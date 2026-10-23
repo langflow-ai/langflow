@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "provider_id": "discord",
+  "distribution": "lfx-discord",
+  "manifest": {
+    "schema_version": 1,
+    "provider_id": "discord",
+    "display_name": "Discord",
+    "icon": "MessageCircle",
+    "docs_url": "https://docs.discord.com/developers/intro",
+    "auth_profiles": [
+      {
+        "id": "discord-bot-token",
+        "kind": "api_key",
+        "identity": "bot",
+        "supports_pkce": false,
+        "supports_refresh": false,
+        "default_scopes": [],
+        "client_type_by_context": {
+          "hosted": "external",
+          "self_managed": "external",
+          "desktop": "external",
+          "headless": "external"
+        },
+        "owner_by_context": {
+          "hosted": "customer",
+          "self_managed": "customer",
+          "desktop": "customer",
+          "headless": "customer"
+        }
+      }
+    ],
+    "capabilities": [
+      {
+        "id": "discord.trigger.message.gateway",
+        "display_name": "Discord: On Message",
+        "auth_profile_id": "discord-bot-token",
+        "identity": "bot",
+        "required_scopes": [],
+        "policy_keys": [
+          "integrations.discord.trigger.message"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "self_managed"
+        ],
+        "risk": "read",
+        "component_ref": "DiscordOnMessageTriggerComponent"
+      },
+      {
+        "id": "discord.trigger.mention.gateway",
+        "display_name": "Discord: On Mention",
+        "auth_profile_id": "discord-bot-token",
+        "identity": "bot",
+        "required_scopes": [],
+        "policy_keys": [
+          "integrations.discord.trigger.mention"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "self_managed"
+        ],
+        "risk": "read",
+        "component_ref": "DiscordOnMentionTriggerComponent"
+      },
+      {
+        "id": "discord.bot.send",
+        "display_name": "Discord: Send Message",
+        "auth_profile_id": "discord-bot-token",
+        "identity": "bot",
+        "required_scopes": [],
+        "policy_keys": [
+          "integrations.discord.bot.send"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "hosted",
+          "self_managed",
+          "desktop",
+          "headless"
+        ],
+        "risk": "write",
+        "component_ref": "DiscordSendMessageComponent"
+      },
+      {
+        "id": "discord.bot.reply",
+        "display_name": "Discord: Reply to Message",
+        "auth_profile_id": "discord-bot-token",
+        "identity": "bot",
+        "required_scopes": [],
+        "policy_keys": [
+          "integrations.discord.bot.reply"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "hosted",
+          "self_managed",
+          "desktop",
+          "headless"
+        ],
+        "risk": "write",
+        "component_ref": "DiscordReplyComponent"
+      }
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://docs.discord.com/developers/events/gateway",
+      "title": "Gateway connections and intents",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://docs.discord.com/developers/events/gateway-events",
+      "title": "Gateway events",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://docs.discord.com/developers/topics/opcodes-and-status-codes",
+      "title": "Opcodes and close codes",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://docs.discord.com/developers/resources/application",
+      "title": "Application resource",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://docs.discord.com/developers/resources/message",
+      "title": "Message resource",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://docs.discord.com/developers/topics/permissions",
+      "title": "Permissions",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://docs.discord.com/developers/topics/rate-limits",
+      "title": "Rate limits",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://docs.discord.com/developers/interactions/receiving-and-responding",
+      "title": "Interaction deadlines",
+      "verified_on": "2026-10-22"
+    }
+  ],
+  "transport_limitations": [
+    "Single-shard Gateway message creates and mentions on self-managed deployments only. One active receiver per verified bot. Explicit guild channels and threads only.",
+    "Bot-authenticated plain-text send and message reply actions. No slash commands, HTTP interactions, temporary response tokens, or ephemeral replies.",
+    "Resume is limited by Discord replay availability. No history backfill after an invalid session, pause, or long outage. Bot Message Content Intent is required for the general message receiver."
+  ],
+  "evidence_paths": [
+    "src/bundles/discord",
+    "src/backend/base/langflow/services/triggers/providers/discord",
+    "src/backend/tests/unit/services/triggers/providers/discord",
+    "src/backend/tests/unit/services/triggers/test_discord_runtime.py",
+    "design/provider-integrations/discord.md"
+  ],
+  "owner_acceptance": {
+    "status": "pending",
+    "note": "Implementation proposal. Live Discord tenant acceptance and owner sign-off are pending."
+  }
+}

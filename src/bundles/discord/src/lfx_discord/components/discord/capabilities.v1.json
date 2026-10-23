@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "provider_id": "discord",
+  "display_name": "Discord",
+  "icon": "MessageCircle",
+  "docs_url": "https://docs.discord.com/developers/intro",
+  "auth_profiles": [
+    {
+      "id": "discord-bot-token",
+      "kind": "api_key",
+      "identity": "bot",
+      "supports_pkce": false,
+      "supports_refresh": false,
+      "default_scopes": [],
+      "client_type_by_context": {
+        "hosted": "external",
+        "self_managed": "external",
+        "desktop": "external",
+        "headless": "external"
+      },
+      "owner_by_context": {
+        "hosted": "customer",
+        "self_managed": "customer",
+        "desktop": "customer",
+        "headless": "customer"
+      }
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "discord.trigger.message.gateway",
+      "display_name": "Discord: On Message",
+      "auth_profile_id": "discord-bot-token",
+      "identity": "bot",
+      "required_scopes": [],
+      "policy_keys": [
+        "integrations.discord.trigger.message"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "self_managed"
+      ],
+      "risk": "read",
+      "component_ref": "DiscordOnMessageTriggerComponent"
+    },
+    {
+      "id": "discord.trigger.mention.gateway",
+      "display_name": "Discord: On Mention",
+      "auth_profile_id": "discord-bot-token",
+      "identity": "bot",
+      "required_scopes": [],
+      "policy_keys": [
+        "integrations.discord.trigger.mention"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "self_managed"
+      ],
+      "risk": "read",
+      "component_ref": "DiscordOnMentionTriggerComponent"
+    },
+    {
+      "id": "discord.bot.send",
+      "display_name": "Discord: Send Message",
+      "auth_profile_id": "discord-bot-token",
+      "identity": "bot",
+      "required_scopes": [],
+      "policy_keys": [
+        "integrations.discord.bot.send"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "write",
+      "component_ref": "DiscordSendMessageComponent"
+    },
+    {
+      "id": "discord.bot.reply",
+      "display_name": "Discord: Reply to Message",
+      "auth_profile_id": "discord-bot-token",
+      "identity": "bot",
+      "required_scopes": [],
+      "policy_keys": [
+        "integrations.discord.bot.reply"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "write",
+      "component_ref": "DiscordReplyComponent"
+    }
+  ]
+}
