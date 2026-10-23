@@ -54,6 +54,7 @@
     "node": "22.22.0"
   },
   "overrides": {
+    "http-cache-semantics": "^4.3.0",
     "axios": "^1.20.0",
     "basic-ftp": "^6.2.1",
     "source-map-js": "^1.2.2",

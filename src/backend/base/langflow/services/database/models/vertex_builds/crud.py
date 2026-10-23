@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlmodel import col, delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow.model import Flow, is_virtual_flow_id
 from langflow.services.database.models.vertex_builds.model import VertexBuildBase, VertexBuildTable
 from langflow.services.deps import get_settings_service
 
@@ -34,6 +34,8 @@ async def get_vertex_builds_by_flow_id(
     """
     if isinstance(flow_id, str):
         flow_id = UUID(flow_id)
+    if is_virtual_flow_id(flow_id):
+        return []
     subquery = (
         select(VertexBuildTable.id, func.max(VertexBuildTable.timestamp).label("max_timestamp"))
         .where(VertexBuildTable.flow_id == flow_id)
@@ -149,6 +151,8 @@ async def delete_vertex_builds_by_flow_id(db: AsyncSession, flow_id: UUID, user_
         This operation is permanent and cannot be undone. Use with caution.
         The function commits the transaction automatically.
     """
+    if is_virtual_flow_id(UUID(str(flow_id))):
+        return
     owned_flow_subquery = select(Flow.id).where(Flow.id == flow_id, Flow.user_id == user_id)
     stmt = delete(VertexBuildTable).where(col(VertexBuildTable.flow_id).in_(owned_flow_subquery))
     await db.exec(stmt)

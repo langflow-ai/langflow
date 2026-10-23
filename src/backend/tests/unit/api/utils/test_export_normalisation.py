@@ -8,7 +8,10 @@ from __future__ import annotations
 import copy
 import json
 
+import pytest
 from langflow.api.utils.core import normalize_code_for_import, normalize_flow_for_export
+from langflow.services.database.models.flow.model import FlowCreate, FlowUpdate
+from pydantic import ValidationError
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -227,6 +230,28 @@ class TestNormaliseCodeForImport:
         original_copy = copy.deepcopy(flow)
         normalize_code_for_import(flow)
         assert flow == original_copy
+
+
+@pytest.mark.parametrize("model", [FlowCreate, FlowUpdate])
+@pytest.mark.parametrize("code", [_CODE_LINES, _CODE_STRING, [], ["", ""]])
+def test_flow_mutation_normalizes_exported_code(model, code):
+    data = _make_flow(code_value=code)["data"]
+    original = copy.deepcopy(data)
+
+    flow = model(name="Imported flow", data=data)
+
+    expected = "\n".join(code) if isinstance(code, list) else code
+    assert flow.data["nodes"][0]["data"]["node"]["template"]["code"]["value"] == expected
+    assert data == original
+
+
+@pytest.mark.parametrize("model", [FlowCreate, FlowUpdate])
+@pytest.mark.parametrize("code", [[1], ["source", None]])
+def test_flow_mutation_rejects_invalid_code_lines(model, code):
+    data = _make_flow(code_value=code)["data"]
+
+    with pytest.raises(ValidationError, match="Code lines must all be strings"):
+        model(name="Invalid code", data=data)
 
 
 # ---------------------------------------------------------------------------
