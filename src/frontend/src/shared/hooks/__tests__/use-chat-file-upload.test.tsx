@@ -1,12 +1,12 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import type { AxiosError } from "axios";
+import { AxiosError, AxiosHeaders } from "axios";
+import type { ChangeEvent } from "react";
+import { useState } from "react";
 import {
   FS_ERROR_TEXT,
   SN_ERROR_TEXT,
 } from "@/constants/file-upload-constants";
 import { useChatFileUpload } from "@/shared/hooks/use-chat-file-upload";
-import { useState } from "react";
-import type { ChangeEvent } from "react";
 import type { FilePreviewType } from "@/types/components";
 
 const mutateMock = jest.fn();
@@ -165,6 +165,78 @@ describe("useChatFileUpload", () => {
       expect(payload.list as unknown[]).not.toHaveLength(0);
     });
   });
+
+  it.each([
+    {
+      status: 400,
+      detail: "Empty file not allowed",
+      expected: "Empty file not allowed",
+    },
+    {
+      status: 403,
+      detail: "Upload is not permitted",
+      expected: "Upload is not permitted",
+    },
+    {
+      status: 413,
+      detail: "File exceeds the server limit",
+      expected: "File exceeds the server limit",
+    },
+    { status: 500, detail: undefined },
+    {
+      status: 422,
+      detail: [{ msg: "Invalid request", loc: ["body", "file"] }],
+    },
+    { status: 500, detail: { message: "Storage error" } },
+    { status: 500, detail: null },
+    { status: 500, detail: "" },
+    { status: 500, detail: "  \n  " },
+  ])(
+    "should show a useful upload error for status $status and detail $detail",
+    ({ status, detail, expected }) => {
+      const error = new AxiosError<{ detail?: unknown }>("Upload failed");
+      if (detail !== undefined) {
+        error.response = {
+          data: { detail },
+          status,
+          statusText: "Upload failed",
+          headers: {},
+          config: { headers: new AxiosHeaders() },
+        };
+      }
+      mutateMock.mockImplementation(
+        (
+          _variables: unknown,
+          options: {
+            onError: (error: AxiosError<{ detail?: unknown }>) => void;
+          },
+        ) => {
+          options.onError(error);
+        },
+      );
+      const { result } = renderHook(() => {
+        const [files, setFiles] = useState<FilePreviewType[]>([]);
+        const { handleFiles } = useChatFileUpload({
+          currentFlowId: "flow123",
+          setFiles,
+        });
+        return { files, handleFiles };
+      });
+
+      act(() => {
+        result.current.handleFiles(makeFileList(new File(["x"], "a.png")));
+      });
+
+      expect(setErrorDataMock).toHaveBeenCalledWith({
+        title: "Error uploading file",
+        list: [expected ?? "An error occurred while uploading the file"],
+      });
+      expect(result.current.files[0]).toMatchObject({
+        loading: false,
+        error: true,
+      });
+    },
+  );
 
   it("validation path: rejects disallowed file types before upload", () => {
     isAllowedChatAttachmentFileMock.mockReturnValue(false);
