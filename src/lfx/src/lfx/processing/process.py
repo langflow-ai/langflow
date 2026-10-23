@@ -530,8 +530,7 @@ def process_tweaks(
                        'nodes' as its child or directly contain 'nodes' key. Each node should have an 'id' and 'data'.
     :param tweaks: The dictionary containing the tweaks. The keys can be the node id or the name of the tweak.
                    The values can be a dictionary containing the tweaks for the node or the value of the tweak.
-    :param stream: A boolean flag indicating whether streaming should be deactivated across all components or not.
-                   Default is False.
+    :param stream: The streaming default for components without an explicit stream tweak. Default is False.
     :param caller_supplied: Whether these tweaks came from a run request. Pass False when the runtime
                    generated them itself, e.g. resolved variable values. Runtime-generated tweaks skip
                    the deployment policy for the same reason ``stream`` does: the policy governs what a
@@ -571,6 +570,12 @@ def process_tweaks(
                 pending.append((node, value))
         else:
             all_nodes_tweaks[key] = value
+    if exempt_keys:
+        # Transport streaming is a runtime default, not a caller's override.
+        # Apply it before targeted tweaks without changing the precedence of
+        # any explicit all-node values supplied by the caller.
+        injected_stream = all_nodes_tweaks.pop("stream")
+        pending = [(node, {"stream": injected_stream}) for node in nodes] + pending
     if all_nodes_tweaks:
         pending.extend((node, all_nodes_tweaks) for node in nodes)
 
