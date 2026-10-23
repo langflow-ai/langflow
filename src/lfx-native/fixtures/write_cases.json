@@ -1,0 +1,537 @@
+{
+  "description": "The engine's part of a save: check, repair on request, and derive. It is the recorder's write path (write_flow_graph) without its storage steps: the history service numbers the operations and packs them into rows. A case gives the stored graph, the submitted graph and the options, and either what the save stores or the graph whose violations refuse it. Random ids appear as `<generated edge id>` and `<generated row id>`. Each case names the rule it checks in `rule`; README.md lists the rules. The expected outputs are reviewed data that every engine must meet.",
+  "cases": [
+    {
+      "name": "an edit records its operations",
+      "rule": "save-path",
+      "stored": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "target": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": "hello"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "options": {"started": true, "repair_invalid_graph": false},
+      "expected": {
+        "base": {
+          "nodes": [
+            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+            {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+            {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+          ],
+          "edges": [
+            {
+              "id": "e",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            }
+          ]
+        },
+        "stored_repaired": false,
+        "target": {
+          "nodes": [
+            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+            {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": "hello"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+            {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+          ],
+          "edges": [
+            {
+              "id": "e",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            }
+          ]
+        },
+        "repairs": [],
+        "operations": [
+          {"type": "update_nodes", "updates": [{"id": "b", "path": ["data", "node", "template", "f", "value"], "op": "set_field", "value": "hello"}]}
+        ]
+      }
+    },
+    {
+      "name": "a save that changes only view state records nothing",
+      "rule": "no-update-metadata",
+      "stored": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "target": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ],
+        "viewport": {"zoom": 2},
+        "name": "renamed"
+      },
+      "options": {"started": true, "repair_invalid_graph": false},
+      "expected": {
+        "base": {
+          "nodes": [
+            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+            {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+            {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+          ],
+          "edges": [
+            {
+              "id": "e",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            }
+          ]
+        },
+        "stored_repaired": false,
+        "target": {
+          "nodes": [
+            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+            {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+            {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+          ],
+          "edges": [
+            {
+              "id": "e",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            }
+          ],
+          "viewport": {"zoom": 2},
+          "name": "renamed"
+        },
+        "repairs": [],
+        "operations": []
+      }
+    },
+    {
+      "name": "a flow without history and without data starts empty",
+      "rule": "save-path",
+      "stored": null,
+      "target": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "options": {"started": false, "repair_invalid_graph": false},
+      "expected": {
+        "base": {"nodes": [], "edges": []},
+        "stored_repaired": false,
+        "target": {
+          "nodes": [
+            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+            {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+            {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+          ],
+          "edges": [
+            {
+              "id": "e",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            }
+          ]
+        },
+        "repairs": [],
+        "operations": [
+          {
+            "type": "add_nodes",
+            "nodes": [
+              {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+              {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+              {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+            ]
+          },
+          {
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e",
+                "source": "a",
+                "target": "b",
+                "sourceHandle": "{œnameœ:œoutœ}",
+                "targetHandle": "{œfieldNameœ:œfœ}",
+                "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "a stored graph that breaks the rules is refused",
+      "rule": "repair-on-request",
+      "stored": {"nodes": [{"id": "a", "data": {"node": {"template": {}}}}, {"id": "a", "data": {"node": {"template": {}}}}], "edges": null},
+      "target": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "options": {"started": false, "repair_invalid_graph": false},
+      "error": {
+        "graph": "stored",
+        "violations": [{"code": "NODE_ID_DUPLICATE", "path": ["nodes", 1, "id"], "message": "duplicate node id", "resolution": "auto"}]
+      }
+    },
+    {
+      "name": "a stored graph that breaks the rules is repaired on request",
+      "rule": "repair-on-request",
+      "stored": {"nodes": [{"id": "a", "data": {"node": {"template": {}}}}, {"id": "a", "data": {"node": {"template": {}}}}], "edges": null},
+      "target": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          }
+        ]
+      },
+      "options": {"started": false, "repair_invalid_graph": true},
+      "expected": {
+        "base": {
+          "nodes": [{"id": "a", "data": {"node": {"template": {}}}}, {"id": "node-6Plfu", "data": {"node": {"template": {}}, "id": "node-6Plfu"}}],
+          "edges": []
+        },
+        "stored_repaired": true,
+        "target": {
+          "nodes": [
+            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+            {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+            {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+          ],
+          "edges": [
+            {
+              "id": "e",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            }
+          ]
+        },
+        "repairs": [
+          {
+            "graph": "stored",
+            "code": "NODE_ID_DUPLICATE",
+            "path": ["nodes", 1, "id"],
+            "action": "assigned a generated id; the first node keeps the id and its edges"
+          }
+        ],
+        "operations": [
+          {"type": "delete_nodes", "ids": ["node-6Plfu"]},
+          {
+            "type": "add_nodes",
+            "nodes": [
+              {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+              {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+            ]
+          },
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "a", "path": ["data", "node", "outputs"], "op": "set_field", "value": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}]
+          },
+          {
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e",
+                "source": "a",
+                "target": "b",
+                "sourceHandle": "{œnameœ:œoutœ}",
+                "targetHandle": "{œfieldNameœ:œfœ}",
+                "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "a submitted legacy table is refused",
+      "rule": "repair-on-request",
+      "stored": {"nodes": [], "edges": []},
+      "target": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "options": {"started": true, "repair_invalid_graph": false},
+      "error": {
+        "graph": "submitted",
+        "violations": [
+          {
+            "code": "TABLE_ROW_ID_MISSING",
+            "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "__id__"],
+            "message": "table row must have a non-empty string __id__",
+            "resolution": "auto"
+          },
+          {
+            "code": "TABLE_ROW_POS_INVALID",
+            "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "__pos__"],
+            "message": "table row must have a finite numeric __pos__",
+            "resolution": "auto"
+          },
+          {
+            "code": "TABLE_ROW_ID_MISSING",
+            "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "__id__"],
+            "message": "table row must have a non-empty string __id__",
+            "resolution": "auto"
+          },
+          {
+            "code": "TABLE_ROW_POS_INVALID",
+            "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "__pos__"],
+            "message": "table row must have a finite numeric __pos__",
+            "resolution": "auto"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a submitted legacy table is repaired on request",
+      "rule": "repair-on-request",
+      "stored": {"nodes": [], "edges": []},
+      "target": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "options": {"started": true, "repair_invalid_graph": true},
+      "expected": {
+        "base": {"nodes": [], "edges": []},
+        "stored_repaired": false,
+        "target": {
+          "nodes": [
+            {
+              "id": "api",
+              "data": {
+                "node": {
+                  "template": {
+                    "headers": {
+                      "type": "table",
+                      "_input_type": "TableInput",
+                      "value": [
+                        {"key": "Accept", "value": "json", "__id__": "<generated row id>", "__pos__": 1},
+                        {"key": "Auth", "value": "token", "__id__": "<generated row id>", "__pos__": 2}
+                      ]
+                    },
+                    "url": {"type": "str", "value": "http://x"}
+                  }
+                }
+              }
+            }
+          ],
+          "edges": []
+        },
+        "repairs": [
+          {
+            "graph": "submitted",
+            "code": "TABLE_ROW_ID_MISSING",
+            "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "__id__"],
+            "action": "assigned a generated row id"
+          },
+          {
+            "graph": "submitted",
+            "code": "TABLE_ROW_ID_MISSING",
+            "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "__id__"],
+            "action": "assigned a generated row id"
+          },
+          {
+            "graph": "submitted",
+            "code": "TABLE_ROW_POS_INVALID",
+            "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "__pos__"],
+            "action": "assigned a position that keeps the row where it is stored"
+          },
+          {
+            "graph": "submitted",
+            "code": "TABLE_ROW_POS_INVALID",
+            "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "__pos__"],
+            "action": "assigned a position that keeps the row where it is stored"
+          }
+        ],
+        "operations": [
+          {
+            "type": "add_nodes",
+            "nodes": [
+              {
+                "id": "api",
+                "data": {
+                  "node": {
+                    "template": {
+                      "headers": {
+                        "type": "table",
+                        "_input_type": "TableInput",
+                        "value": [
+                          {"key": "Accept", "value": "json", "__id__": "<generated row id>", "__pos__": 1},
+                          {"key": "Auth", "value": "token", "__id__": "<generated row id>", "__pos__": 2}
+                        ]
+                      },
+                      "url": {"type": "str", "value": "http://x"}
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "a submitted edge only the client can fix is refused even with repair",
+      "rule": "repair-direct-only",
+      "stored": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": []
+      },
+      "target": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmissingœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "missing"}}
+          }
+        ]
+      },
+      "options": {"started": true, "repair_invalid_graph": true},
+      "error": {
+        "graph": "submitted",
+        "violations": [
+          {
+            "code": "EDGE_HANDLE_NOT_FOUND",
+            "path": ["edges", 0],
+            "message": "edge 'e': target node 'b' has no field 'missing'",
+            "resolution": "manual",
+            "edge_id": "e"
+          }
+        ]
+      }
+    }
+  ]
+}

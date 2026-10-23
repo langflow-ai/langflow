@@ -1,0 +1,25 @@
+{
+  "name": "lfx-native",
+  "version": "0.1.0",
+  "description": "Langflow's native core: the flow operation engine, as WebAssembly.",
+  "author": "Hamza Rashid <hamzarashid.mail@gmail.com>",
+  "license": "MIT",
+  "files": ["pkg/"],
+  "exports": {
+    ".": {
+      "node": "./pkg/node/lfx_native.js",
+      "types": "./pkg/web/lfx_native.d.ts",
+      "default": "./pkg/web/lfx_native.js"
+    }
+  },
+  "types": "./pkg/web/lfx_native.d.ts",
+  "scripts": {
+    "build": "cargo build -p lfx-wasm --target wasm32-unknown-unknown --profile wasm && npm run bindgen:node && npm run bindgen:web",
+    "bindgen:node": "wasm-bindgen ../../target/wasm32-unknown-unknown/wasm/lfx_wasm.wasm --target nodejs --out-dir pkg/node --out-name lfx_native",
+    "bindgen:web": "wasm-bindgen ../../target/wasm32-unknown-unknown/wasm/lfx_wasm.wasm --target web --out-dir pkg/web --out-name lfx_native",
+    "test": "node --test tests/fixtures.test.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -447,6 +447,14 @@ external = ["RUF027"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/*" = ["D1", "INP", "T201"]
+"src/lfx-native/crates/lfx-python/tests/*" = [
+    "D1",   # Missing docstrings
+    "S101", # Use of assert (required for pytest)
+]
+"src/lfx-native/fixtures/tools/*" = [
+    "INP",  # Standalone fixture checkers, not a package
+    "T201", # Print statements: these are CLI scripts
+]
 "src/backend/tests/stress/*" = [
     "D1",     # Docstrings: this is a manual CLI tool, not a test target
     "INP001", # Stress tests live outside the unit test package
