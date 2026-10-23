@@ -5274,7 +5274,7 @@
     {
       "bare_class_name": "FlexAIModelComponent",
       "target": "ext:flexai:FlexAIModelComponent@official",
-      "added_in": "1.13.0"
+      "added_in": "1.14.0"
     }
   ],
   "ambiguous_bare_names": [
