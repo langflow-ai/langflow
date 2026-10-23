@@ -386,6 +386,15 @@ def test_api_key_required_by_default():
     assert provider_registry.is_api_key_optional("FakeCo") is False
 
 
+def test_core_provider_without_required_secret_is_api_key_optional():
+    """Core providers without an API-key variable must pass assistant setup."""
+    assert provider_registry.is_api_key_optional("Ollama") is True
+
+
+def test_core_provider_with_required_secret_is_not_api_key_optional():
+    assert provider_registry.is_api_key_optional("OpenAI") is False
+
+
 def test_live_provider_added_to_live_list_and_dispatches():
     register_provider(_fakeco_spec(live=True, live_discovery=_LIVE_DISCOVERY_PATH))
     assert "FakeCo" in LIVE_MODEL_PROVIDERS
