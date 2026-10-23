@@ -1,0 +1,284 @@
+{
+  "schema_version": 1,
+  "provider_id": "gitlab",
+  "display_name": "GitLab",
+  "icon": "Gitlab",
+  "docs_url": "https://docs.gitlab.com/user/project/integrations/webhooks/",
+  "auth_profiles": [
+    {
+      "id": "gitlab-personal-token",
+      "kind": "api_key",
+      "identity": "user_delegated",
+      "supports_pkce": false,
+      "supports_refresh": false,
+      "default_scopes": [
+        "api"
+      ],
+      "client_type_by_context": {
+        "hosted": "external",
+        "self_managed": "external",
+        "desktop": "external",
+        "headless": "external"
+      },
+      "owner_by_context": {
+        "hosted": "customer",
+        "self_managed": "customer",
+        "desktop": "customer",
+        "headless": "customer"
+      }
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "gitlab.project_read",
+      "display_name": "GitLab Get Project",
+      "auth_profile_id": "gitlab-personal-token",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "api"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.gitlab.project_read"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "read",
+      "component_ref": "GitLabGetProjectComponent"
+    },
+    {
+      "id": "gitlab.issue_read",
+      "display_name": "GitLab Get Issue",
+      "auth_profile_id": "gitlab-personal-token",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "api"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.gitlab.issue_read"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "read",
+      "component_ref": "GitLabGetIssueComponent"
+    },
+    {
+      "id": "gitlab.issue_create",
+      "display_name": "GitLab Create Issue",
+      "auth_profile_id": "gitlab-personal-token",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "api"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.gitlab.issue_create"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "write",
+      "component_ref": "GitLabCreateIssueComponent"
+    },
+    {
+      "id": "gitlab.issue_update",
+      "display_name": "GitLab Update Issue",
+      "auth_profile_id": "gitlab-personal-token",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "api"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.gitlab.issue_update"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "write",
+      "component_ref": "GitLabUpdateIssueComponent"
+    },
+    {
+      "id": "gitlab.merge_request_read",
+      "display_name": "GitLab Get Merge Request",
+      "auth_profile_id": "gitlab-personal-token",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "api"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.gitlab.merge_request_read"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "read",
+      "component_ref": "GitLabGetMergeRequestComponent"
+    },
+    {
+      "id": "gitlab.merge_request_create",
+      "display_name": "GitLab Create Merge Request",
+      "auth_profile_id": "gitlab-personal-token",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "api"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.gitlab.merge_request_create"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "write",
+      "component_ref": "GitLabCreateMergeRequestComponent"
+    },
+    {
+      "id": "gitlab.merge_request_update",
+      "display_name": "GitLab Update Merge Request",
+      "auth_profile_id": "gitlab-personal-token",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "api"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.gitlab.merge_request_update"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "write",
+      "component_ref": "GitLabUpdateMergeRequestComponent"
+    },
+    {
+      "id": "gitlab.issue_comment_create",
+      "display_name": "GitLab Create Issue Comment",
+      "auth_profile_id": "gitlab-personal-token",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "api"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.gitlab.issue_comment_create"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "write",
+      "component_ref": "GitLabCreateIssueCommentComponent"
+    },
+    {
+      "id": "gitlab.merge_request_comment_create",
+      "display_name": "GitLab Create Merge Request Comment",
+      "auth_profile_id": "gitlab-personal-token",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "api"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.gitlab.merge_request_comment_create"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "write",
+      "component_ref": "GitLabCreateMergeRequestCommentComponent"
+    },
+    {
+      "id": "gitlab.trigger.issue",
+      "display_name": "GitLab On Issue",
+      "auth_profile_id": "gitlab-personal-token",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "api"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.gitlab.trigger.issue"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "headless"
+      ],
+      "risk": "read",
+      "component_ref": "GitLabOnIssueTriggerComponent"
+    },
+    {
+      "id": "gitlab.trigger.merge_request",
+      "display_name": "GitLab On Merge Request",
+      "auth_profile_id": "gitlab-personal-token",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "api"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.gitlab.trigger.merge_request"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "headless"
+      ],
+      "risk": "read",
+      "component_ref": "GitLabOnMergeRequestTriggerComponent"
+    }
+  ]
+}

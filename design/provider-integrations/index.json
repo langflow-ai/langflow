@@ -1,4 +1,9 @@
 {
   "schema_version": 1,
-  "providers": []
+  "providers": [
+    {
+      "provider_id": "gitlab",
+      "contract": "contracts/gitlab.v1.json"
+    }
+  ]
 }
