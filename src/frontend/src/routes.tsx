@@ -17,6 +17,7 @@ import {
   ENABLE_CUSTOM_PARAM,
   ENABLE_FILE_MANAGEMENT,
   ENABLE_KNOWLEDGE_BASES,
+  ENABLE_TRIGGERS,
 } from "./customization/feature-flags";
 import { CustomAuthRoutesStore } from "./customization/utils/custom-auth-routes-store";
 import { CustomRoutesStore } from "./customization/utils/custom-routes-store";
@@ -43,6 +44,7 @@ import MigrationPage from "./pages/SettingsPage/pages/MigrationPage";
 import ModelProvidersPage from "./pages/SettingsPage/pages/ModelProvidersPage";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
+import TriggersPage from "./pages/SettingsPage/pages/TriggersPage";
 
 const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
 
@@ -158,6 +160,9 @@ const router = createBrowserRouter(
                   <Route path="db-providers" element={<DBProvidersPage />} />
                   <Route path="mcp-servers" element={<MCPServersPage />} />
                   <Route path="connections" element={<ConnectionsPage />} />
+                  {ENABLE_TRIGGERS && (
+                    <Route path="triggers" element={<TriggersPage />} />
+                  )}
                   <Route path="mcp-client" element={<McpClientPage />} />
 
                   <Route path="api-keys" element={<ApiKeysPage />} />
