@@ -37,6 +37,7 @@ def test_bundle_validates_and_loads():
     assert all(not cap.required_scopes for cap in manifest.capabilities)
     for cap in manifest.capabilities:
         assert hasattr(lfx_discord, cap.component_ref)
+        assert cap.display_name == getattr(lfx_discord, cap.component_ref).display_name
         if ".trigger." in cap.id:
             assert cap.deployment_contexts == ("self_managed",)
 
@@ -161,3 +162,16 @@ def test_saved_trigger_inputs_and_conversation_message(cls):
     message = value.build_message()
     assert message.text == "hello"
     assert message.session_id == "discord:123:222:333"
+
+
+@pytest.mark.usefixtures("resolver")
+async def test_repeated_send_in_one_graph_run_has_distinct_nonces(monkeypatch):
+    response = {"id": "444", "channel_id": "333", "content": "hello"}
+    transport = BotTransport([BOT, APP, CHANNEL, response, BOT, APP, CHANNEL, response]).install(monkeypatch)
+    value = component(DiscordSendMessageComponent, guild_id="222", channel_id="333", text="hello")
+    await value.build_message()
+    await value.build_message()
+    posts = [payload for method, _url, _headers, payload in transport.calls if method == "POST"]
+    assert len(posts) == 2
+    assert posts[0]["nonce"] != posts[1]["nonce"]
+    assert all(payload["enforce_nonce"] for payload in posts)

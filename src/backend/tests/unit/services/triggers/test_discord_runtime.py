@@ -180,7 +180,7 @@ async def test_cross_owner_connection_is_rejected(trigger_owner, owned_flow, mon
     async with session_scope() as session:
         row = await session.get(Trigger, row.id)
         row.user_id = uuid4()
-        with pytest.raises(ValueError, match="does not own"):
+        with pytest.raises(ValueError, match="connection its owner owns"):
             await TriggerService().enable(session, row=row)
 
 

@@ -364,3 +364,15 @@ async def test_rejected_fenced_delivery_does_not_advance_resume_sequence(monkeyp
         await adapter.start(ctx)
     assert saved[-1]["seq"] == 1
     assert ctx.stopping.is_set()
+
+
+@pytest.mark.parametrize("text", ["x" * 2001, "x" * 4000, "😀" * 2000], ids=["2001-ascii", "4000-ascii", "4000-utf16"])
+def test_nitro_message_content_is_delivered_without_truncation(text):
+    event = normalize({**MESSAGE, "content": text}, bot_id=BOT["id"], kind="discord.message", config=CONFIG)
+    assert event is not None
+    assert event["text"] == text
+
+
+@pytest.mark.parametrize("text", ["x" * 4001, "😀" * 2001], ids=["4001-ascii", "4002-utf16"])
+def test_oversized_inbound_message_is_rejected(text):
+    assert normalize({**MESSAGE, "content": text}, bot_id=BOT["id"], kind="discord.message", config=CONFIG) is None

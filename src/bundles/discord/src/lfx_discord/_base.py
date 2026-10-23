@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from typing import ClassVar
+from uuid import uuid4
 
 from lfx.custom import Component
 from lfx.integrations.errors import ConnectionNotAuthorizedError, InvalidRequestError
@@ -75,8 +76,9 @@ class DiscordActionComponent(Component):
                 }
             run_id = str(getattr(self.graph, "run_id", "")) if self.graph else ""
             if run_id:
+                # Each invocation is a new send; its payload keeps one nonce during transport.
                 payload["nonce"] = hashlib.sha256(
-                    f"{run_id}:{self._id}:{channel_id}:{text}:{message_id}".encode()
+                    f"{run_id}:{self._id}:{channel_id}:{text}:{message_id}:{uuid4().hex}".encode()
                 ).hexdigest()[:25]
                 payload["enforce_nonce"] = True
             result = await client.request("POST", f"/channels/{channel_id}/messages", payload=payload)

@@ -2,7 +2,8 @@
 
 from lfx_discord._client import snowflake
 
-MAX_MESSAGE_UNITS = 2000
+# Nitro messages can exceed the separate outbound bot limit.
+MAX_MESSAGE_UNITS = 4000
 
 
 def normalize(data: dict, *, bot_id: str, kind: str, config: dict) -> dict | None:
