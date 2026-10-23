@@ -279,12 +279,12 @@ def test_upgrade_write_failure_leaves_the_flow_intact(flow_file, monkeypatch):
     """
     original = flow_file.read_text(encoding="utf-8")
 
-    def boom(self, target):
+    def boom(_self, _target):
         raise OSError(28, "No space left on device")
 
     monkeypatch.setattr(Path, "replace", boom)
 
-    with pytest.raises(OSError):
+    with pytest.raises(OSError, match="No space left on device"):
         upgrade_command(flow_file, write=True, registry=_registry())
 
     assert flow_file.read_text(encoding="utf-8") == original
