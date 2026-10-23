@@ -6,11 +6,14 @@
 //! edge's handles, and each node's connections by the input or output they
 //! use.
 //!
-//! A batch is all or nothing. Every change records how to undo it, so a batch
-//! that fails puts the graph back as it was, in time proportional to what it
-//! changed rather than to the size of the graph.
+//! A batch is all or nothing, and it never writes to the graph it starts
+//! from. The first write to a node, an edge or an index entry copies it into
+//! the batch's layer, and later reads and writes in the batch use the copy.
+//! A batch that succeeds folds its layer into the graph; a batch that fails
+//! drops it. So nothing is ever undone, and a failed batch keeps the indexes
+//! that earlier batches built.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fmt;
 use std::str::FromStr;
 
@@ -20,7 +23,7 @@ use serde_json::{Map, Value};
 use crate::ops::edges::{EdgeIndex, GraphRead, endpoint};
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result};
-use crate::ops::keyed::{ListIndex, Removal};
+use crate::ops::keyed::ListIndex;
 use crate::ops::ops::PathExt;
 use crate::ops::schema::KeyedList;
 use crate::ops::validate::{Numbers, PathPart, validate_flow_data};
@@ -32,79 +35,200 @@ pub(crate) enum Copies {
     Discard,
 }
 
-/// How to undo one change inside a node.
+// --- Layers --------------------------------------------------------------------------------
+
+/// Whether removing an entry keeps the order of the others.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Order {
+    /// Nodes and edges keep their order, as callers read the graph back.
+    Kept,
+    /// An index has no order, so a removal can move the last entry into the gap.
+    Free,
+}
+
+/// What a batch did to one entry of a [`Layered`] map.
 #[derive(Debug)]
-pub(crate) enum FieldUndo {
-    /// A key was set; put back the value it held, or remove it if it was new.
-    KeySet { key: String, old: Option<Value> },
-    /// A key was deleted from `index`.
-    KeyDeleted {
-        key: String,
-        index: usize,
-        old: Value,
-    },
-    /// An item was appended.
-    ItemAdded,
-    /// The item at `slot` was replaced.
-    ItemReplaced { slot: usize, old: Value },
-    /// An item was removed.
-    ItemRemoved { removal: Removal, old: Value },
+enum Staged<V> {
+    /// A stored entry the batch updated. The batch writes to its own copy,
+    /// and the copy replaces the stored entry in place.
+    Updated(V),
+    /// An entry the batch added, which goes after the stored ones.
+    Added(V),
+    /// A stored entry the batch removed.
+    Removed,
 }
 
-/// How to undo one change.
+/// A map that a batch changes through a layer of its own.
+///
+/// Reads look in the layer first, then in the stored map. The first write to
+/// a stored entry copies it into the layer. [`Layered::fold`] makes the layer
+/// part of the stored map, and [`Layered::discard`] drops it.
 #[derive(Debug)]
-enum Undo {
-    NodeAdded(String),
-    NodeRemoved {
-        index: usize,
-        id: String,
-        node: Value,
-    },
-    EdgeAdded(String),
-    EdgeRemoved {
-        index: usize,
-        id: String,
-        edge: Value,
-    },
-    Field {
-        node_id: String,
-        container: Vec<PathPart>,
-        undo: FieldUndo,
-    },
+pub(crate) struct Layered<V> {
+    stored: IndexMap<String, V>,
+    layer: IndexMap<String, Staged<V>>,
+    order: Order,
 }
 
-/// Nodes and edges by id, and edges by the nodes they touch.
-#[derive(Debug, Default)]
-pub(crate) struct Graph {
-    pub nodes: IndexMap<String, Value>,
-    pub edges: IndexMap<String, Value>,
-    edges_at: HashMap<String, IndexSet<String>>,
+impl<V: Clone> Layered<V> {
+    /// An empty map.
+    pub fn new(order: Order) -> Self {
+        Self::with_stored(IndexMap::new(), order)
+    }
+
+    fn with_stored(stored: IndexMap<String, V>, order: Order) -> Self {
+        Self {
+            stored,
+            layer: IndexMap::new(),
+            order,
+        }
+    }
+
+    /// The entry with `key`.
+    pub fn get(&self, key: &str) -> Option<&V> {
+        match self.layer.get(key) {
+            Some(Staged::Updated(value) | Staged::Added(value)) => Some(value),
+            Some(Staged::Removed) => None,
+            None => self.stored.get(key),
+        }
+    }
+
+    /// Whether there is an entry with `key`.
+    pub fn contains(&self, key: &str) -> bool {
+        self.get(key).is_some()
+    }
+
+    /// Whether the entry existed when the batch started.
+    pub fn in_base(&self, key: &str) -> bool {
+        self.stored.contains_key(key)
+    }
+
+    /// The entry with `key`, to change it. The first call in a batch copies a stored entry.
+    pub fn get_mut(&mut self, key: &str) -> Option<&mut V> {
+        if !self.layer.contains_key(key) {
+            let copy = self.stored.get(key)?.clone();
+            self.layer.insert(key.to_owned(), Staged::Updated(copy));
+        }
+        match self.layer.get_mut(key)? {
+            Staged::Updated(value) | Staged::Added(value) => Some(value),
+            Staged::Removed => None,
+        }
+    }
+
+    /// The entry with `key`, to change it, added by `new` when there is none.
+    pub fn get_or_insert_with(&mut self, key: &str, new: impl FnOnce() -> V) -> &mut V {
+        if !self.contains(key) {
+            self.insert(key.to_owned(), new());
+        }
+        self.get_mut(key)
+            .expect("the entry exists or was just added")
+    }
+
+    /// Add an entry, or replace the one with the same key.
+    pub fn insert(&mut self, key: String, value: V) {
+        match self.layer.get_mut(&key) {
+            Some(Staged::Updated(old) | Staged::Added(old)) => *old = value,
+            Some(Staged::Removed) => {
+                // An entry removed and added again goes after the stored ones, as any addition.
+                self.layer.shift_remove(&key);
+                self.layer.insert(key, Staged::Added(value));
+            }
+            None if self.stored.contains_key(&key) => {
+                self.layer.insert(key, Staged::Updated(value));
+            }
+            None => {
+                self.layer.insert(key, Staged::Added(value));
+            }
+        }
+    }
+
+    /// Remove the entry with `key`. Returns whether there was one.
+    pub fn remove(&mut self, key: &str) -> bool {
+        match self.layer.get(key) {
+            Some(Staged::Removed) => false,
+            Some(Staged::Added(_)) if !self.stored.contains_key(key) => {
+                self.layer.shift_remove(key);
+                true
+            }
+            Some(_) => {
+                self.layer.insert(key.to_owned(), Staged::Removed);
+                true
+            }
+            None if self.stored.contains_key(key) => {
+                self.layer.insert(key.to_owned(), Staged::Removed);
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// Make the batch's changes part of the stored map, in time proportional to them.
+    pub fn fold(&mut self) {
+        for (key, staged) in std::mem::take(&mut self.layer) {
+            match staged {
+                Staged::Updated(value) => {
+                    if let Some(stored) = self.stored.get_mut(&key) {
+                        *stored = value;
+                    }
+                }
+                Staged::Added(value) => {
+                    self.remove_stored(&key);
+                    self.stored.insert(key, value);
+                }
+                Staged::Removed => self.remove_stored(&key),
+            }
+        }
+    }
+
+    /// Drop the batch's changes.
+    pub fn discard(&mut self) {
+        self.layer.clear();
+    }
+
+    fn remove_stored(&mut self, key: &str) {
+        match self.order {
+            Order::Kept => self.stored.shift_remove(key),
+            Order::Free => self.stored.swap_remove(key),
+        };
+    }
+
+    /// The entries in order. Only between batches, when the layer is empty.
+    fn values(&self) -> impl Iterator<Item = &V> {
+        debug_assert!(self.layer.is_empty(), "read between batches only");
+        self.stored.values()
+    }
+
+    /// The entries in order, without copying them. Only between batches.
+    fn into_values(self) -> impl Iterator<Item = V> {
+        debug_assert!(self.layer.is_empty(), "read between batches only");
+        self.stored.into_values()
+    }
 }
 
-impl Graph {
+// --- The graph -----------------------------------------------------------------------------
+
+/// The ids of the edges at each node.
+#[derive(Debug)]
+pub(crate) struct EdgesAt(Layered<IndexSet<String>>);
+
+impl EdgesAt {
     fn attach(&mut self, id: &str, edge: &Value) {
         for end in ends(edge) {
-            self.edges_at
-                .entry(end.to_owned())
-                .or_default()
+            self.0
+                .get_or_insert_with(end, IndexSet::new)
                 .insert(id.to_owned());
         }
     }
 
     fn detach(&mut self, id: &str, edge: &Value) {
         for end in ends(edge) {
-            if let Some(ids) = self.edges_at.get_mut(end) {
+            if let Some(ids) = self.0.get_mut(end) {
                 ids.swap_remove(id);
                 if ids.is_empty() {
-                    self.edges_at.remove(end);
+                    self.0.remove(end);
                 }
             }
         }
-    }
-
-    /// The ids of the edges at a node.
-    pub fn edges_at(&self, node_id: &str) -> impl Iterator<Item = &String> {
-        self.edges_at.get(node_id).into_iter().flatten()
     }
 }
 
@@ -117,6 +241,33 @@ fn ends(edge: &Value) -> Vec<&str> {
         vec![source]
     } else {
         vec![source, target]
+    }
+}
+
+/// Nodes and edges by id, and edges by the nodes they touch.
+#[derive(Debug)]
+pub(crate) struct Graph {
+    pub nodes: Layered<Value>,
+    pub edges: Layered<Value>,
+    edges_at: EdgesAt,
+}
+
+impl Graph {
+    /// The ids of the edges at a node.
+    pub fn edges_at(&self, node_id: &str) -> impl Iterator<Item = &String> {
+        self.edges_at.0.get(node_id).into_iter().flatten()
+    }
+
+    fn fold(&mut self) {
+        self.nodes.fold();
+        self.edges.fold();
+        self.edges_at.0.fold();
+    }
+
+    fn discard(&mut self) {
+        self.nodes.discard();
+        self.edges.discard();
+        self.edges_at.0.discard();
     }
 }
 
@@ -135,9 +286,17 @@ impl GraphRead for Graph {
 }
 
 /// The keyed lists indexed so far, by node and by the path of the list.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub(crate) struct Lists {
-    by_node: HashMap<String, Vec<(Vec<String>, ListIndex)>>,
+    by_node: Layered<Vec<(Vec<String>, ListIndex)>>,
+}
+
+impl Default for Lists {
+    fn default() -> Self {
+        Self {
+            by_node: Layered::new(Order::Free),
+        }
+    }
 }
 
 impl Lists {
@@ -150,7 +309,7 @@ impl Lists {
         items: &[Value],
         context: &str,
     ) -> Result<&mut ListIndex> {
-        let lists = self.by_node.entry(node_id.to_owned()).or_default();
+        let lists = self.by_node.get_or_insert_with(node_id, Vec::new);
         let position = if let Some(position) = lists
             .iter()
             .position(|(list_path, _)| list_path.equals(path))
@@ -166,22 +325,32 @@ impl Lists {
 
     /// Forget the indexes of the lists at or under `path`, which a write replaced or removed.
     pub fn forget_under(&mut self, node_id: &str, path: &[&str]) {
-        if let Some(lists) = self.by_node.get_mut(node_id) {
-            lists.retain(|(list_path, _)| !list_path.has_start(path));
+        let under = |(list_path, _): &(Vec<String>, ListIndex)| list_path.has_start(path);
+        let indexed = self
+            .by_node
+            .get(node_id)
+            .is_some_and(|lists| lists.iter().any(under));
+        if indexed && let Some(lists) = self.by_node.get_mut(node_id) {
+            lists.retain(|list| !under(list));
         }
     }
 
     fn forget_node(&mut self, node_id: &str) {
         self.by_node.remove(node_id);
     }
+
+    fn fold(&mut self) {
+        self.by_node.fold();
+    }
+
+    fn discard(&mut self) {
+        self.by_node.discard();
+    }
 }
 
-/// What one batch did, so it can be undone and reported.
+/// The nodes and edges one batch changed, to report them.
 #[derive(Debug, Default)]
 pub(crate) struct Batch {
-    undos: Vec<Undo>,
-    added_nodes: HashSet<String>,
-    removed_base_nodes: HashSet<String>,
     pub changed_nodes: IndexSet<String>,
     pub changed_edges: IndexSet<String>,
 }
@@ -216,19 +385,20 @@ impl GraphState {
         let Value::Object(mut root) = flow else {
             return Err(Error::graph_message("flow data must be an object"));
         };
-        let mut graph = Graph::default();
-        for node in take_list(&mut root, "nodes") {
-            let id = node.id().to_owned();
-            graph.nodes.insert(id, node);
+        let nodes = by_id(take_list(&mut root, "nodes"));
+        let edges = by_id(take_list(&mut root, "edges"));
+        let mut edges_at = EdgesAt(Layered::new(Order::Free));
+        for (id, edge) in &edges {
+            edges_at.attach(id, edge);
         }
-        for edge in take_list(&mut root, "edges") {
-            let id = edge.id().to_owned();
-            graph.attach(&id, &edge);
-            graph.edges.insert(id, edge);
-        }
+        edges_at.0.fold();
         Ok(Self {
             root,
-            graph,
+            graph: Graph {
+                nodes: Layered::with_stored(nodes, Order::Kept),
+                edges: Layered::with_stored(edges, Order::Kept),
+                edges_at,
+            },
             edge_index: EdgeIndex::default(),
             lists: Lists::default(),
             batch: Batch::default(),
@@ -269,99 +439,59 @@ impl GraphState {
 
     // --- Batches ---------------------------------------------------------------------
 
-    /// Start a batch: forget what the previous one did.
+    /// Start a batch: forget what the previous one changed.
     pub(crate) fn begin(&mut self) {
         self.batch = Batch::default();
     }
 
-    /// Undo everything the current batch changed, and drop the indexes it touched.
-    pub(crate) fn rollback(&mut self) {
-        while let Some(undo) = self.batch.undos.pop() {
-            self.undo(undo);
-        }
-        self.edge_index.clear();
-        self.lists = Lists::default();
-        self.batch = Batch::default();
+    /// End a batch that succeeded: its copies and index changes become the graph.
+    pub(crate) fn commit(&mut self) {
+        self.graph.fold();
+        self.edge_index.fold();
+        self.lists.fold();
     }
 
-    fn undo(&mut self, undo: Undo) {
-        match undo {
-            Undo::NodeAdded(id) => {
-                self.graph.nodes.shift_remove(&id);
-            }
-            Undo::NodeRemoved { index, id, node } => {
-                self.graph.nodes.shift_insert(index, id, node);
-            }
-            Undo::EdgeAdded(id) => {
-                if let Some(edge) = self.graph.edges.shift_remove(&id) {
-                    self.graph.detach(&id, &edge);
-                }
-            }
-            Undo::EdgeRemoved { index, id, edge } => {
-                self.graph.attach(&id, &edge);
-                self.graph.edges.shift_insert(index, id, edge);
-            }
-            Undo::Field {
-                node_id,
-                container,
-                undo,
-            } => {
-                let container = self
-                    .graph
-                    .nodes
-                    .get_mut(&node_id)
-                    .and_then(|node| resolve_mut(node, &container));
-                if let Some(container) = container {
-                    undo_field(container, undo);
-                }
-            }
-        }
+    /// End a batch that failed: drop its copies and index changes.
+    pub(crate) fn discard(&mut self) {
+        self.graph.discard();
+        self.edge_index.discard();
+        self.lists.discard();
+        self.batch = Batch::default();
     }
 
     /// Whether the node existed when the batch started.
     pub(crate) fn is_base_node(&self, id: &str) -> bool {
-        if self.batch.added_nodes.contains(id) {
-            self.batch.removed_base_nodes.contains(id)
-        } else {
-            self.graph.nodes.contains_key(id) || self.batch.removed_base_nodes.contains(id)
-        }
+        self.graph.nodes.in_base(id)
     }
 
-    // --- Changes that record their undo ---------------------------------------------------
+    // --- Changes -----------------------------------------------------------------------
 
     pub(crate) fn insert_node(&mut self, id: String, node: Value) {
-        self.batch.added_nodes.insert(id.clone());
         self.batch.changed_nodes.insert(id.clone());
-        self.batch.undos.push(Undo::NodeAdded(id.clone()));
         self.graph.nodes.insert(id, node);
     }
 
     /// Remove a node, if it exists, and with [`Copies::Keep`] return a copy of
     /// it. Its edges stay; the caller removes them.
     pub(crate) fn remove_node(&mut self, id: &str, copies: Copies) -> Option<Map<String, Value>> {
-        let base = self.is_base_node(id);
-        let (index, id, node) = self.graph.nodes.shift_remove_full(id)?;
-        self.edge_index.forget_node(&id);
-        self.lists.forget_node(&id);
-        if base {
-            self.batch.removed_base_nodes.insert(id.clone());
-        }
-        self.batch.changed_nodes.insert(id.clone());
+        let node = self.graph.nodes.get(id)?;
         let kept = match copies {
             Copies::Keep => node.as_object().cloned(),
             Copies::Discard => None,
         };
-        self.batch.undos.push(Undo::NodeRemoved { index, id, node });
+        self.graph.nodes.remove(id);
+        self.edge_index.forget_node(id);
+        self.lists.forget_node(id);
+        self.batch.changed_nodes.insert(id.to_owned());
         kept
     }
 
     pub(crate) fn insert_edge(&mut self, id: String, edge: Value) {
-        self.graph.attach(&id, &edge);
+        self.graph.edges_at.attach(&id, &edge);
         if let Some(map) = edge.as_object() {
             self.edge_index.insert(map);
         }
         self.batch.changed_edges.insert(id.clone());
-        self.batch.undos.push(Undo::EdgeAdded(id.clone()));
         self.graph.edges.insert(id, edge);
     }
 
@@ -379,7 +509,7 @@ impl GraphState {
             if !seen.insert(id) {
                 continue;
             }
-            let Some((index, id, edge)) = self.graph.edges.shift_remove_full(id) else {
+            let Some(edge) = self.graph.edges.get(id) else {
                 continue;
             };
             if let Some(map) = edge.as_object() {
@@ -388,42 +518,26 @@ impl GraphState {
                     kept.push(map.clone());
                 }
             }
-            self.graph.detach(&id, &edge);
-            self.batch.changed_edges.insert(id.clone());
-            removed.push(id.clone());
-            self.batch.undos.push(Undo::EdgeRemoved { index, id, edge });
+            self.graph.edges_at.detach(id, edge);
+            self.graph.edges.remove(id);
+            self.batch.changed_edges.insert(id.to_owned());
+            removed.push(id.to_owned());
         }
         (removed, kept)
     }
 
-    /// Record how to undo a change made inside a node.
-    pub(crate) fn record_field(
-        &mut self,
-        node_id: &str,
-        container: Vec<PathPart>,
-        undo: FieldUndo,
-    ) {
+    /// Note that a write changed a node.
+    pub(crate) fn changed_node(&mut self, node_id: &str) {
         self.batch.changed_nodes.insert(node_id.to_owned());
-        self.batch.undos.push(Undo::Field {
-            node_id: node_id.to_owned(),
-            container,
-            undo,
-        });
     }
+}
 
-    /// The value the last recorded field change replaced or removed.
-    pub(crate) fn last_replaced(&self) -> Option<&Value> {
-        match self.batch.undos.last()? {
-            Undo::Field { undo, .. } => match undo {
-                FieldUndo::KeySet { old, .. } => old.as_ref(),
-                FieldUndo::KeyDeleted { old, .. }
-                | FieldUndo::ItemReplaced { old, .. }
-                | FieldUndo::ItemRemoved { old, .. } => Some(old),
-                FieldUndo::ItemAdded => None,
-            },
-            _ => None,
-        }
-    }
+/// Nodes or edges by id, in their order.
+fn by_id(items: Vec<Value>) -> IndexMap<String, Value> {
+    items
+        .into_iter()
+        .map(|item| (item.id().to_owned(), item))
+        .collect()
 }
 
 /// Parse a flow graph given as JSON text, and load it into a [`GraphState`].
@@ -474,33 +588,69 @@ pub(crate) fn resolve_mut<'v>(root: &'v mut Value, steps: &[PathPart]) -> Option
     })
 }
 
-fn undo_field(container: &mut Value, undo: FieldUndo) {
-    match (container, undo) {
-        (Value::Object(map), FieldUndo::KeySet { key, old }) => match old {
-            Some(old) => {
-                map.insert(key, old);
-            }
-            None => {
-                map.shift_remove(&key);
-            }
-        },
-        (Value::Object(map), FieldUndo::KeyDeleted { key, index, old }) => {
-            map.shift_insert(index, key, old);
-        }
-        (Value::Array(items), FieldUndo::ItemAdded) => {
-            items.pop();
-        }
-        (Value::Array(items), FieldUndo::ItemReplaced { slot, old }) => {
-            items[slot] = old;
-        }
-        (Value::Array(items), FieldUndo::ItemRemoved { removal, old }) => match removal {
-            Removal::Shifted { slot } => items.insert(slot, old),
-            Removal::Swapped { slot } => {
-                items.push(old);
-                let last = items.len() - 1;
-                items.swap(slot, last);
-            }
-        },
-        _ => {}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn stored(keys: &[&str]) -> Layered<u32> {
+        let map = keys
+            .iter()
+            .zip(1..)
+            .map(|(key, value)| ((*key).to_owned(), value))
+            .collect();
+        Layered::with_stored(map, Order::Kept)
+    }
+
+    fn keys(map: &Layered<u32>) -> Vec<&str> {
+        map.stored.keys().map(String::as_str).collect()
+    }
+
+    #[test]
+    fn a_batch_reads_its_own_writes_and_leaves_the_stored_map_alone() {
+        let mut map = stored(&["a", "b"]);
+        *map.get_mut("a").unwrap() = 10;
+        map.remove("b");
+        map.insert("c".into(), 3);
+        assert_eq!(map.get("a"), Some(&10));
+        assert_eq!(map.get("b"), None);
+        assert_eq!(map.get("c"), Some(&3));
+        assert_eq!(map.stored.get("a"), Some(&1));
+        assert!(map.in_base("b") && !map.in_base("c"));
+    }
+
+    #[test]
+    fn a_dropped_batch_leaves_nothing_behind() {
+        let mut map = stored(&["a", "b"]);
+        *map.get_mut("a").unwrap() = 10;
+        map.remove("b");
+        map.insert("c".into(), 3);
+        map.discard();
+        assert_eq!(keys(&map), ["a", "b"]);
+        assert_eq!(map.get("a"), Some(&1));
+        assert_eq!(map.get("c"), None);
+    }
+
+    #[test]
+    fn a_folded_batch_keeps_copies_in_place_and_adds_last() {
+        let mut map = stored(&["a", "b", "c"]);
+        map.insert("x".into(), 24);
+        *map.get_mut("a").unwrap() = 10;
+        // Removed and added again: it goes last, after the other additions.
+        map.remove("b");
+        map.insert("b".into(), 20);
+        map.remove("c");
+        map.fold();
+        assert_eq!(keys(&map), ["a", "x", "b"]);
+        assert_eq!(map.values().copied().collect::<Vec<_>>(), [10, 24, 20]);
+    }
+
+    #[test]
+    fn an_entry_added_and_removed_in_one_batch_leaves_no_trace() {
+        let mut map = stored(&["a"]);
+        map.insert("x".into(), 24);
+        assert!(map.remove("x"));
+        assert!(!map.remove("x"));
+        map.fold();
+        assert_eq!(keys(&map), ["a"]);
     }
 }
