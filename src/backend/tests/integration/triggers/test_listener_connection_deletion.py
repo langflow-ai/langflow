@@ -170,7 +170,7 @@ async def test_connection_deletion_serializes_with_listener_writes(
             assert isinstance(result, ListenerDeliveryRejectedError), result
         else:
             assert result is None
-        assert context.stopping.is_set()
+        assert context.stopping.is_set() is (not fanout)
         async with database.scope() as session:
             assert await session.get(Connection, connections[-1].id) is None
             assert (await session.get(Trigger, target.id)).connection_id is None
