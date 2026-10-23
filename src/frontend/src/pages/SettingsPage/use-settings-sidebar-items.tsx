@@ -3,6 +3,7 @@ import { CustomStoreSidebar } from "@/customization/components/custom-store-side
 import {
   ENABLE_DATASTAX_LANGFLOW,
   ENABLE_PROFILE_ICONS,
+  ENABLE_TRIGGERS,
 } from "@/customization/feature-flags";
 import useAuthStore from "@/stores/authStore";
 import { useStoreStore } from "@/stores/storeStore";
@@ -71,6 +72,20 @@ export function useSettingsSidebarItems(): SettingsSidebarItem[] {
         />
       ),
     },
+    ...(ENABLE_TRIGGERS
+      ? [
+          {
+            title: t("settings.nav.triggers"),
+            href: "/settings/triggers",
+            icon: (
+              <ForwardedIconComponent
+                name="Zap"
+                className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+              />
+            ),
+          },
+        ]
+      : []),
     {
       title: t("settings.nav.globalVariables"),
       href: "/settings/global-variables",
