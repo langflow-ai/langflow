@@ -74,6 +74,37 @@ fn inverse_case(case: &Value) -> Result<(), Failed> {
     Err(format!("inverses do not restore the base: {}", compact(&restored)).into())
 }
 
+/// A user's undo: the inverse lists, last first, in one batch that is
+/// applied under every rule, without `restoring`.
+fn undo_case(case: &Value) -> Result<(), Failed> {
+    let base = &case["base"];
+    let mut state = GraphState::new(base.clone()).map_err(|error| error.to_string())?;
+    let operations = Operation::list_from_value(case["operations"].clone())
+        .map_err(|error| error.to_string())?;
+    let options = ApplyOptions {
+        inverse: true,
+        ..ApplyOptions::default()
+    };
+    let applied = state
+        .apply(operations, options)
+        .map_err(|error| format!("refused: {error}"))?;
+    let undo: Vec<Operation> = applied.inverse.into_iter().rev().flatten().collect();
+    let shown = Value::Array(undo.iter().map(Operation::to_value).collect());
+    assert_json_matches(
+        "undo",
+        &unordered(&json!([shown])),
+        &unordered(&json!([case["undo"]])),
+    )?;
+    state
+        .apply(undo, ApplyOptions::default())
+        .map_err(|error| format!("the undo is refused: {error}"))?;
+    let restored = state.to_value();
+    if graphs_equal(&restored, base).map_err(|error| error.to_string())? {
+        return Ok(());
+    }
+    Err(format!("the undo does not restore the base: {}", compact(&restored)).into())
+}
+
 fn rows(case: &Value, key: &str) -> Vec<Value> {
     case[key].as_array().cloned().unwrap_or_default()
 }
@@ -127,9 +158,10 @@ fn for_edges(case: &Value) -> Result<(), Failed> {
 
 type Check = fn(&Value) -> Result<(), Failed>;
 
-/// Every inverse case and editor case.
+/// Every inverse case, undo case and editor case.
 pub fn trials() -> Vec<Trial> {
-    let mut trials: Vec<Trial> = cases(&load("inverse_cases.json"))
+    let inverses = load("inverse_cases.json");
+    let mut trials: Vec<Trial> = cases(&inverses)
         .into_iter()
         .map(|(name, case)| {
             Trial::test(format!("inverse_cases::{name}"), move || {
@@ -137,6 +169,12 @@ pub fn trials() -> Vec<Trial> {
             })
         })
         .collect();
+    for (name, case) in section_cases(&inverses, "undo") {
+        trials.push(Trial::test(
+            format!("inverse_cases::undo::{name}"),
+            move || undo_case(&case),
+        ));
+    }
     let document = load("editor_cases.json");
     let sections: [(&str, Check); 5] = [
         ("assign", assign),

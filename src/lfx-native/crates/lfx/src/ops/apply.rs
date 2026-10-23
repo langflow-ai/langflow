@@ -1,14 +1,27 @@
 //! Applying operations to a flow graph.
 //!
 //! A batch applies in order, and all of it or none of it: on an error the
-//! state is as it was before the batch. Apply records each operation as the
-//! history stores it: a delete that finds nothing is not recorded, and the
-//! edges a delete takes with it are recorded as a `delete_edges` of their own.
+//! state is as it was before the batch.
 //!
-//! With `inverse`, apply also returns, for each operation, the operations
-//! that undo it, read from the state each write replaces. History playback
-//! keeps those instead of a graph per revision. Inverses are applied with
-//! `restoring`, last operation first.
+//! Each operation of the batch can give apply several results:
+//!
+//! - With `forward`, the operations as the history stores them. They can
+//!   differ from the operation that was sent: a delete that finds nothing is
+//!   not recorded, and the edges a delete takes with it are recorded as a
+//!   `delete_edges` of their own. So one operation records none, one or several.
+//! - With `inverse`, one list of operations that undo it, read from the state
+//!   each write replaces.
+//!
+//! For example, `delete_nodes ["b", "zz"]`, where node `b` has the edge `e1`
+//! and `zz` does not exist, records `delete_nodes ["b"]` and
+//! `delete_edges ["e1"]`. Its one undo list is `add_nodes [b]`, then
+//! `add_edges [e1]`: nodes come back before the edges that need them.
+//!
+//! The undo lists have two uses.
+//! History playback keeps them instead of a graph per revision, and applies
+//! them with `restoring`, last operation first. A user's undo joins them,
+//! last operation first, into one ordinary batch, which is checked under
+//! every rule like any edit.
 
 use std::collections::HashSet;
 
@@ -23,7 +36,7 @@ use crate::ops::ops::{AsKey, Change, FieldUpdate, Operation, Path, PathExt, Segm
 use crate::ops::schema::{
     KeyedList, ListKind, NODE_OBJECT_PATHS, NODE_SCHEMA, OUTPUTS_PATH, TEMPLATE_PATH,
 };
-use crate::ops::state::{Copies, FieldUndo, Graph, GraphState, Lists, resolve, resolve_mut};
+use crate::ops::state::{Copies, Graph, GraphState, Lists, resolve, resolve_mut};
 use crate::ops::validate::PathPart;
 use crate::ops::validate::missing_node_object;
 
@@ -48,8 +61,9 @@ pub struct Applied {
     /// The operations as the engine records them, with `forward`.
     pub forward: Vec<Operation>,
     /// With `inverse`: for each operation applied, the operations that undo
-    /// it. Undo the last operation first, each list in a call of its own,
-    /// with `restoring` set.
+    /// it. History playback applies the last list first, each in a call of
+    /// its own, with `restoring` set. A user's undo joins the lists, last
+    /// first, into one batch, and applies it without `restoring`.
     pub inverse: Vec<Vec<Operation>>,
     /// The edges the batch deleted because their node, field or output went away.
     pub deleted_edges: Vec<String>,
@@ -61,10 +75,9 @@ pub struct Applied {
 
 /// The options of a batch, and what it reports as it applies.
 ///
-/// Apply keeps two kinds of record, and they are different things. This
-/// report keeps the forward operations and the inverses for the caller, and
-/// only when the options ask for them. The undo list in `state` (`undos`) is
-/// always kept, inside the engine, to put the graph back when a batch fails.
+/// The report keeps the forward operations and the inverses for the caller,
+/// and only when the options ask for them. A batch that fails needs neither:
+/// its changes stay in the batch's layer in `state`, which is dropped.
 #[derive(Debug)]
 struct Report {
     options: ApplyOptions,
@@ -125,10 +138,11 @@ impl GraphState {
         let mut report = Report::new(options);
         for operation in operations {
             if let Err(error) = self.apply_operation(operation, &mut report) {
-                self.rollback();
+                self.discard();
                 return Err(error);
             }
         }
+        self.commit();
         let mut applied = report.applied;
         applied.changed_nodes = std::mem::take(&mut self.batch.changed_nodes)
             .into_iter()
@@ -171,7 +185,7 @@ impl GraphState {
             if added.contains(&id) {
                 bail!("add_nodes: duplicate node id in request: {}", quoted(&id));
             }
-            if self.graph.nodes.contains_key(&id) {
+            if self.graph.nodes.contains(&id) {
                 bail!("add_nodes: node id already exists: {}", quoted(&id));
             }
             added.insert(id.clone());
@@ -195,7 +209,7 @@ impl GraphState {
         let mut detached = IndexSet::new();
         for (index, mut update) in updates.into_iter().enumerate() {
             let context = format!("update_nodes[{index}]");
-            if !self.graph.nodes.contains_key(&update.id) {
+            if !self.graph.nodes.contains(&update.id) {
                 bail!("update_nodes: node does not exist: {}", quoted(&update.id));
             }
             if !self.is_base_node(&update.id) {
@@ -205,13 +219,13 @@ impl GraphState {
                 );
             }
             check_node_path(&update.path, &format!("{context}.path"))?;
-            let had_value =
+            let replaced =
                 self.apply_field_update(&mut update, &context, report.options, inverses.as_mut())?;
             if !report.options.restoring {
-                detached.extend(self.detached_edges(&update, had_value)?);
+                detached.extend(self.detached_edges(&update, replaced.as_ref())?);
             }
             // A delete that found nothing is not recorded.
-            if report.options.forward && (had_value || !update.is_delete()) {
+            if report.options.forward && (replaced.is_some() || !update.is_delete()) {
                 applied.push(update);
             }
         }
@@ -228,16 +242,17 @@ impl GraphState {
     }
 
     /// The edges a write left without an end: into a removed template field,
-    /// or from or into a removed output.
+    /// or from or into a removed output. `replaced` is what the path held
+    /// before the write.
     fn detached_edges(
         &mut self,
         update: &FieldUpdate,
-        had_value: bool,
+        replaced: Option<&Value>,
     ) -> Result<IndexSet<String>> {
         let path = &update.path;
-        if !had_value {
+        let Some(before) = replaced else {
             return Ok(IndexSet::new());
-        }
+        };
         let node_id = update.id.as_str();
         if update.is_delete()
             && path.len() == TEMPLATE_PATH.len() + 1
@@ -265,8 +280,7 @@ impl GraphState {
             let after: HashSet<String> = node_outputs(&self.graph, node_id)?
                 .map(|outputs| outputs.names().map(str::to_owned).collect())
                 .unwrap_or_default();
-            let before = self.last_replaced().cloned().unwrap_or(Value::Null);
-            let before = index_outputs(&before, node_id)?;
+            let before = index_outputs(before, node_id)?;
             before
                 .names()
                 .filter(|name| !after.contains(*name))
@@ -312,7 +326,7 @@ impl GraphState {
         let mut removed_nodes = Vec::new();
         let mut incident = IndexSet::new();
         for id in ids {
-            if !self.graph.nodes.contains_key(id) {
+            if !self.graph.nodes.contains(id) {
                 continue;
             }
             incident.extend(self.graph.edges_at(id).cloned());
@@ -360,13 +374,13 @@ impl GraphState {
             if added.contains(&id) {
                 bail!("add_edges: duplicate edge id in request: {}", quoted(&id));
             }
-            if self.graph.edges.contains_key(&id) {
+            if self.graph.edges.contains(&id) {
                 bail!("add_edges: edge id already exists: {}", quoted(&id));
             }
-            if !self.graph.nodes.contains_key(&source) {
+            if !self.graph.nodes.contains(&source) {
                 bail!("add_edges: source node does not exist: {}", quoted(&source));
             }
-            if !self.graph.nodes.contains_key(&target) {
+            if !self.graph.nodes.contains(&target) {
                 bail!("add_edges: target node does not exist: {}", quoted(&target));
             }
             added.insert(id.clone());
@@ -396,7 +410,7 @@ impl GraphState {
 
     /// Apply one `set_field` or `delete_field` to a node.
     ///
-    /// Returns whether the path held a value before the write. Without
+    /// Returns the value the path held before the write, if any. Without
     /// `forward`, a set's value moves into the graph instead of being copied.
     fn apply_field_update(
         &mut self,
@@ -404,7 +418,7 @@ impl GraphState {
         context: &str,
         options: ApplyOptions,
         inverses: Option<&mut FieldInverses>,
-    ) -> Result<bool> {
+    ) -> Result<Option<Value>> {
         let walk = self.check_field_update(&FieldWrite { update, context }, inverses)?;
         let value = match &mut update.change {
             Change::Set(value) if !options.forward => std::mem::take(value),
@@ -412,9 +426,9 @@ impl GraphState {
             Change::Delete => Value::Null,
         };
         let write = FieldWrite { update, context };
-        let had_value = self.write_last(&write, &walk, value)?;
+        let replaced = self.write_last(&write, &walk, value)?;
         self.check_list_keys_kept(&write, &walk)?;
-        Ok(had_value)
+        Ok(replaced)
     }
 
     /// Check a field update before it writes anything: its path must exist
@@ -531,26 +545,29 @@ impl GraphState {
         Ok(slot.map(PathPart::Index))
     }
 
-    /// Write or delete the last segment of the path. Returns whether it held a value.
-    fn write_last(&mut self, write: &FieldWrite<'_>, walk: &Walk, value: Value) -> Result<bool> {
+    /// Write or delete the last segment of the path. Returns the value it held, if any.
+    fn write_last(
+        &mut self,
+        write: &FieldWrite<'_>,
+        walk: &Walk,
+        value: Value,
+    ) -> Result<Option<Value>> {
         let (id, path) = (write.update.id.as_str(), &write.update.path);
-        let undo = match &path[path.len() - 1] {
+        let written = match &path[path.len() - 1] {
             Segment::Key(key) => self.write_key(write, walk, key, value)?,
             Segment::Item(key) => self.write_item(write, walk, key, value)?,
         };
-        let Some(undo) = undo else {
-            return Ok(false);
+        let replaced = match written {
+            Written::Nothing => return Ok(None),
+            Written::Added => None,
+            Written::Replaced(old) => Some(old),
         };
-        let had_value = !matches!(
-            undo,
-            FieldUndo::KeySet { old: None, .. } | FieldUndo::ItemAdded
-        );
         // A whole value replaced or removed takes the lists indexed under it with it.
         if let Some(keys) = path.to_list() {
             self.lists.forget_under(id, &keys);
         }
-        self.record_field(id, walk.steps.clone(), undo);
-        Ok(had_value)
+        self.changed_node(id);
+        Ok(replaced)
     }
 
     /// The value that holds the path's last segment, to write it.
@@ -561,46 +578,36 @@ impl GraphState {
             .and_then(|node| resolve_mut(node, &walk.steps))
     }
 
-    /// Write or delete an object key. Returns how to undo it, or `None` for a
-    /// delete that found nothing.
+    /// Write or delete an object key.
     fn write_key(
         &mut self,
         write: &FieldWrite<'_>,
         walk: &Walk,
         key: &str,
         value: Value,
-    ) -> Result<Option<FieldUndo>> {
+    ) -> Result<Written> {
         let (update, context) = (write.update, write.context);
         let Some(Value::Object(map)) = self.parent_mut(write, walk) else {
             bail!("{context}: path must end at an object property or a keyed list item");
         };
         if update.is_delete() {
-            let Some(index) = map.keys().position(|existing| existing == key) else {
-                return Ok(None);
-            };
-            let old = map.shift_remove(key).expect("the key was found just above");
-            return Ok(Some(FieldUndo::KeyDeleted {
-                key: key.to_owned(),
-                index,
-                old,
-            }));
+            return Ok(map
+                .shift_remove(key)
+                .map_or(Written::Nothing, Written::Replaced));
         }
-        let old = map.insert(key.to_owned(), value);
-        Ok(Some(FieldUndo::KeySet {
-            key: key.to_owned(),
-            old,
-        }))
+        Ok(map
+            .insert(key.to_owned(), value)
+            .map_or(Written::Added, Written::Replaced))
     }
 
-    /// Write or delete a keyed list item. Returns how to undo it, or `None`
-    /// for a delete that found nothing.
+    /// Write or delete a keyed list item.
     fn write_item(
         &mut self,
         write: &FieldWrite<'_>,
         walk: &Walk,
         key: &str,
         value: Value,
-    ) -> Result<Option<FieldUndo>> {
+    ) -> Result<Written> {
         let (update, context) = (write.update, write.context);
         let path = &update.path;
         let last = path.len() - 1;
@@ -624,7 +631,7 @@ impl GraphState {
         if update.is_delete() {
             return Ok(index
                 .remove(items, key)
-                .map(|(old, removal)| FieldUndo::ItemRemoved { removal, old }));
+                .map_or(Written::Nothing, Written::Replaced));
         }
         let slot = index.slot(key);
         if keyed.key_of(&value) != Some(key) {
@@ -634,11 +641,12 @@ impl GraphState {
             );
         }
         if let Some(slot) = slot {
-            let old = index.replace(items, slot, value, context)?;
-            return Ok(Some(FieldUndo::ItemReplaced { slot, old }));
+            return Ok(Written::Replaced(
+                index.replace(items, slot, value, context)?,
+            ));
         }
         index.add(items, value, context)?;
-        Ok(Some(FieldUndo::ItemAdded))
+        Ok(Written::Added)
     }
 }
 
@@ -649,6 +657,17 @@ fn written<'g>(graph: &'g Graph, write: &FieldWrite<'_>) -> &'g Value {
         .nodes
         .get(&write.update.id)
         .expect("update_nodes checks that the node exists")
+}
+
+/// What a field write did at the last segment of its path.
+#[derive(Debug)]
+enum Written {
+    /// A delete found nothing, so nothing changed.
+    Nothing,
+    /// A set wrote a key or an item that was not there.
+    Added,
+    /// A set or a delete replaced or removed this value.
+    Replaced(Value),
 }
 
 /// One field update on its way into a node.
@@ -917,6 +936,37 @@ mod tests {
         state
             .apply(operations(swap), ApplyOptions::default())
             .unwrap();
+    }
+
+    #[test]
+    fn a_refused_batch_keeps_the_indexes_earlier_batches_built() {
+        let field = json!({"type": "str", "value": ""});
+        let graph = json!({
+            "nodes": [
+                {"id": "S", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+                {"id": "T", "data": {"node": {"template": {"A": field, "B": field}}}},
+            ],
+            "edges": [edge("e1", "A")],
+        });
+        let mut state = GraphState::new(graph).unwrap();
+        let add = json!([{"type": "add_edges", "edges": [edge("e2", "B")]}]);
+        state
+            .apply(operations(add), ApplyOptions::default())
+            .unwrap();
+        assert!(state.edge_index.has_connections("T"));
+        // A writes T, then the second edge into A is refused: the batch changes nothing.
+        let refused = json!([
+            {"type": "update_nodes", "updates": [
+                {"id": "T", "op": "set_field", "path": ["data", "node", "template", "A", "value"], "value": "x"},
+            ]},
+            {"type": "add_edges", "edges": [edge("e3", "A")]},
+        ]);
+        let before = state.to_value();
+        state
+            .apply(operations(refused), ApplyOptions::default())
+            .unwrap_err();
+        assert_eq!(state.to_value(), before);
+        assert!(state.edge_index.has_connections("T"));
     }
 
     #[test]
