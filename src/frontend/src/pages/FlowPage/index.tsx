@@ -41,6 +41,7 @@ import MemoriesMainContent from "./components/MemoriesMainContent";
 import Page from "./components/PageComponent";
 import { FlowInsightsContent } from "./components/TraceComponent/FlowInsightsContent";
 import useLoadFlowForRoute from "./hooks/use-load-flow-for-route";
+import usePlaygroundDeepLink from "./hooks/use-playground-deep-link";
 import { saveBeforeLeaving } from "./save-before-leaving";
 
 function FlowPageMainContent({
@@ -233,6 +234,14 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const setIsFullscreen = usePlaygroundStore((state) => state.setIsFullscreen);
   const inputs = useFlowStore((state) => state.inputs);
   const outputs = useFlowStore((state) => state.outputs);
+
+  usePlaygroundDeepLink({
+    routeFlowId: id,
+    flowId: currentFlow?.id,
+    hasChat:
+      inputs.some((input) => input.type === "ChatInput") ||
+      outputs.some((output) => output.type === "ChatOutput"),
+  });
 
   // Assistant state
   const assistantOpen = useAssistantManagerStore(
