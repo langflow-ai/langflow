@@ -69,14 +69,21 @@ root. Never restart the old root against a successfully rotated database.
 
 For an operator-managed migration, add `--instance-uid <Langflow CR UID>` and
 `--receipt-file /protected/receipt.json`. The file is created only after the
-verified commit and contains schema version 1, that instance UID, the full
-SHA-256 of both roots (`previous_key_fingerprint` and `key_fingerprint`), status
+verified commit and contains schema version 1, that instance UID, domain-separated
+fingerprints of both roots (`previous_key_fingerprint` and `key_fingerprint`), status
 `completed`, and the database rotation UUID. For an already managed instance,
 the old fingerprint must equal the operator's currently accepted root. The
 operator records consumed rotation UUIDs and their transitions, so an older
 receipt cannot be reused after a later rotation, even if a key is reused.
 An administrator installs it as `receipt.json` in the migration receipt Secret.
 The operator validates its binding before activating a migrated root.
+
+Every receipt output uses the same 64-character hexadecimal HMAC-SHA-256
+fingerprint: the HMAC key is the UTF-8 string
+`langflow/secret-rotation/root-fingerprint/v1`, and the message is the root's
+UTF-8 bytes. Operator integrations must use this computation when comparing
+roots. Raw SHA-256 fingerprints are unsafe because they expose the Fernet key
+derived from short roots.
 
 ## Enterprise integration
 

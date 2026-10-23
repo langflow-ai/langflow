@@ -29,6 +29,7 @@ from langflow.services.secrets.crypto import (
     encrypt_with_key,
     ensure_valid_key,
     looks_like_fernet_token,
+    receipt_fingerprint,
 )
 
 if TYPE_CHECKING:
@@ -355,8 +356,8 @@ def rotate(
                 receipt.insert().values(
                     id=rotation_id,
                     instance_uid=instance_uid,
-                    old_fingerprint=hashlib.sha256(old_key.encode()).hexdigest(),
-                    new_fingerprint=hashlib.sha256(new_key.encode()).hexdigest(),
+                    old_fingerprint=receipt_fingerprint(old_key),
+                    new_fingerprint=receipt_fingerprint(new_key),
                     backup_sha256=backup_digest,
                     rotated_values=report.encrypted,
                     completed_at=datetime.now(timezone.utc),

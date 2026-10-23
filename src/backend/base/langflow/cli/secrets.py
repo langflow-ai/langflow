@@ -1,6 +1,5 @@
 """Offline secrets commands; key material is accepted only through named env vars."""
 
-import hashlib
 import json
 import os
 from dataclasses import asdict
@@ -10,6 +9,7 @@ from typing import Annotated
 import typer
 from sqlalchemy import create_engine
 
+from langflow.services.secrets.crypto import receipt_fingerprint
 from langflow.services.secrets.rotation import RotationError, audit, load_participants, rotate
 
 secrets_app = typer.Typer(
@@ -107,8 +107,8 @@ def rotate_command(
         receipt = {
             "schema_version": 1,
             "instance_uid": instance_uid,
-            "previous_key_fingerprint": hashlib.sha256(old_key.encode()).hexdigest(),
-            "key_fingerprint": hashlib.sha256(new_key.encode()).hexdigest(),
+            "previous_key_fingerprint": receipt_fingerprint(old_key),
+            "key_fingerprint": receipt_fingerprint(new_key),
             "status": "completed",
             "rotation_id": report.rotation_id,
         }
