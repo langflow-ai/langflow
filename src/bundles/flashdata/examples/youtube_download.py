@@ -1,0 +1,30 @@
+"""Run YouTube Download to Cloud Storage through a Langflow JSON-to-Message flow.
+
+Run with: lfx run youtube_download.py
+Set FLASHDATA_API_KEY and FLASHDATA_DOWNLOAD_JOB_ID in the process environment.
+FLASHDATA_DOWNLOAD_JOB_ID must identify an existing job. This example only reads its status.
+No language model is called. This is a source example, not a Gallery template.
+"""
+
+import os
+
+from lfx.components.processing.parser import ParserComponent
+from lfx.graph import Graph
+from lfx_flashdata import FlashDataYouTubeDownloadStatusComponent
+from pydantic import SecretStr
+
+
+def get_graph() -> Graph:
+    source = FlashDataYouTubeDownloadStatusComponent(
+        api_key="FLASHDATA_API_KEY", job_id=os.environ["FLASHDATA_DOWNLOAD_JOB_ID"]
+    )
+    parser = ParserComponent(mode="Parser", pattern="{text}")
+    parser.set(input_data=source.flashdata_youtube_download_status)
+    graph = Graph(source, parser)
+    graph.context.update(
+        {
+            "request_variables": {"FLASHDATA_API_KEY": SecretStr(os.environ["FLASHDATA_API_KEY"])},
+            "no_env_fallback": True,
+        }
+    )
+    return graph
