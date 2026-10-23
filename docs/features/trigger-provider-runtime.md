@@ -119,6 +119,7 @@ enqueue an event. Signed POST handshakes also use `Verified.handshake`.
 Provider-specific acknowledgments can set `response_body`,
 `response_media_type`, and `response_status`. They are returned only after the
 ledger commits. Responses are bounded to 4 KiB and status 200, 202, or 204.
+Acknowledgments and handshakes allow only `application/json` or `text/plain`.
 Acknowledgment credentials must never be included in the event payload.
 
 `listener_factory` and `listener_mechanism` on a kind install a custom adapter
