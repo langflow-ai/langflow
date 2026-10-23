@@ -77,6 +77,15 @@ function inverseCase(c) {
   if (!engine.graphsEqual(graph, c.base)) throw new Difference("the graph after the inverses", graph, c.base);
 }
 
+/** A user's undo: the inverse lists, last first, in one batch applied under every rule. */
+function undoCase(c) {
+  const result = engine.applyFlowOperations(clone(c.base), clone(c.operations), { inverse: true });
+  const undo = [...result.inverseOperations].reverse().flat();
+  check("undo", unordered([undo]), unordered([c.undo]));
+  const graph = engine.applyFlowOperations(result.flowData, clone(undo), {}).flowData;
+  if (!engine.graphsEqual(graph, c.base)) throw new Difference("the graph after the undo", graph, c.base);
+}
+
 // --- editor_cases.json -----------------------------------------------------------------------------
 
 const EDITOR_RUNS = {
@@ -91,6 +100,7 @@ const EDITOR_RUNS = {
 
 const CHECKS = [
   ["inverse_cases.json", "cases", inverseCase],
+  ["inverse_cases.json", "undo", undoCase],
   ...Object.entries(EDITOR_RUNS).map(([section, run]) => ["editor_cases.json", section, run]),
 ];
 
