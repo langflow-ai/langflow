@@ -556,6 +556,7 @@ module.exports = {
             "Components/bundles-docling",
             "Components/bundles-duckduckgo",
             "Components/bundles-elastic",
+            "Components/bundles-atlascloud",
             "Components/bundles-empiriolabs",
             "Components/bundles-exa",
             "Components/bundles-faiss",
