@@ -92,6 +92,14 @@ describe("Button behavior", () => {
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps a caller's aria-disabled so a blocked control stays focusable", () => {
+    render(<Button aria-disabled>Send</Button>);
+
+    const button = screen.getByRole("button", { name: "Send" });
+    expect(button).toHaveAttribute("aria-disabled", "true");
+    expect(button).not.toBeDisabled();
+  });
+
   it("defaults type to button so it does not submit forms accidentally", () => {
     render(<Button>Save</Button>);
     expect(screen.getByRole("button", { name: "Save" })).toHaveAttribute(
