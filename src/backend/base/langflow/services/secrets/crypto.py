@@ -7,6 +7,7 @@ service, whose empty-string fallback cannot verify a rotation.
 import base64
 import binascii
 import hashlib
+import hmac
 import json
 import os
 import random
@@ -44,6 +45,12 @@ SSO_TAG_BYTES = 16
 SSO_ENVELOPE_PARTS = 6
 SSO_HEADER_PARTS = 4
 SSO_BASE64URL_ALPHABET = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
+RECEIPT_FINGERPRINT_CONTEXT = b"langflow/secret-rotation/root-fingerprint/v1"
+
+
+def receipt_fingerprint(key: str) -> str:
+    """Identify a root without exposing the Fernet key derived from short roots."""
+    return hmac.new(RECEIPT_FINGERPRINT_CONTEXT, key.encode(), hashlib.sha256).hexdigest()
 
 
 def key_fingerprint(key: str) -> str:

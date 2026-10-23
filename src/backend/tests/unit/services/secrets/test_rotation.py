@@ -1,11 +1,17 @@
 """Offline rotation must preserve every encrypted location or roll back everything."""
 
+import base64
 import hashlib
 import json
 
 import pytest
 from cryptography.fernet import Fernet, InvalidToken
-from langflow.services.secrets.crypto import decrypt_with_key, encrypt_sso_secret_with_key, encrypt_with_key
+from langflow.services.secrets.crypto import (
+    decrypt_with_key,
+    encrypt_sso_secret_with_key,
+    encrypt_with_key,
+    receipt_fingerprint,
+)
 from langflow.services.secrets.rotation import RotationError, audit, rotate
 from sqlalchemy import create_engine, text
 
@@ -118,6 +124,17 @@ def test_rotation_rewraps_all_rows_and_records_only_database_completion(database
         assert json.loads(conn.execute(text("SELECT job_metadata FROM job")).scalar_one())["preserve"] == 1
 
 
+def test_receipt_fingerprint_cannot_decrypt_short_root_ciphertext(database, keys):
+    new_key = "short-new-root"
+    rotate(old_key=keys[0], new_key=new_key, **rotation_options(database))
+    with database[0].connect() as conn:
+        fingerprint = conn.execute(text("SELECT new_fingerprint FROM secret_rotation")).scalar_one()
+        ciphertext = conn.execute(text("SELECT value FROM variable WHERE id='0'")).scalar_one()
+    exposed_key = base64.urlsafe_b64encode(bytes.fromhex(fingerprint))
+    with pytest.raises(InvalidToken):
+        Fernet(exposed_key).decrypt(ciphertext.encode())
+
+
 def test_failure_after_first_three_rows_rolls_back_everything_without_marker(database, keys):
     engine, _ = database
     with engine.begin() as conn:
@@ -219,11 +236,19 @@ def test_cli_reads_named_env_keys_and_emits_bound_receipt(database, keys, monkey
     assert keys[1] not in result.output
     receipt = json.loads(receipt_file.read_text())
     assert receipt["instance_uid"] == "instance-123"
-    assert receipt["previous_key_fingerprint"] == hashlib.sha256(keys[0].encode()).hexdigest()
-    assert receipt["key_fingerprint"] == hashlib.sha256(keys[1].encode()).hexdigest()
+    assert receipt["previous_key_fingerprint"] == receipt_fingerprint(keys[0])
+    assert receipt["key_fingerprint"] == receipt_fingerprint(keys[1])
     assert receipt["status"] == "completed"
+    assert json.loads(result.output)["receipt"] == receipt
     with database[0].connect() as conn:
         assert conn.execute(text("SELECT instance_uid FROM secret_rotation")).scalar_one() == "instance-123"
+        assert (
+            conn.execute(text("SELECT old_fingerprint FROM secret_rotation")).scalar_one()
+            == receipt["previous_key_fingerprint"]
+        )
+        assert (
+            conn.execute(text("SELECT new_fingerprint FROM secret_rotation")).scalar_one() == receipt["key_fingerprint"]
+        )
 
 
 def test_enterprise_storage_cannot_be_skipped_without_participant(database, keys):
