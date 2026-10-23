@@ -80,6 +80,7 @@ def pytest_configure(config):  # noqa: ARG001
     pytest.MEMORY_CHATBOT_NO_LLM = data_path / "MemoryChatbotNoLLM.json"
     pytest.ENV_VARIABLE_TEST = data_path / "env_variable_test.json"
     pytest.LOOP_TEST = data_path / "LoopTest.json"
+    pytest.CYCLE_LOOP_TEST = data_path / "CycleLoopTest.json"
 
 
 def pytest_collection_modifyitems(config, items):  # noqa: ARG001
