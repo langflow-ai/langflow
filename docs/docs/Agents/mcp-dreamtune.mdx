@@ -1,0 +1,134 @@
+---
+title: Inspect GPU options with Dreamtune MCP
+slug: /mcp-dreamtune
+---
+
+Use the **MCP Tools** component to let a Langflow agent inspect the
+[Dreamtune](https://docs.dreamtunelabs.com/connect/mcp) GPU catalog. This example
+adds one catalog tool to the **Simple Agent** flow so the agent can compare
+hardware options without creating a compute job.
+
+Your agent's configured model generates the conversation. Dreamtune is connected
+as an MCP tool provider.
+
+## Prerequisites
+
+* A running Langflow instance and credentials for your agent's model provider.
+* A Dreamtune workspace API key. See [Dreamtune authentication](https://docs.dreamtunelabs.com/authentication).
+* For the optional local server, Node.js 22.20 or later installed in the environment running Langflow, including inside the container if you use Docker.
+
+## Connect the hosted MCP server
+
+1. Create a [Credential global variable](/configuration-global-variables) named
+   `DREAMTUNE_API_KEY` and set its value to your Dreamtune workspace API key.
+
+2. Open **Settings** > **MCP Servers**, click **Add MCP Server**, and select
+   **HTTP/SSE**.
+
+3. Enter the following connection details:
+
+   | Field | Value |
+   | :--- | :--- |
+   | **Name** | `Dreamtune` |
+   | **URL** | `https://mcp.dreamtunelabs.com/mcp` |
+   | **Headers** key | `X-Dreamtune-API-Key` |
+   | **Headers** value | `DREAMTUNE_API_KEY` |
+
+   Enter the global variable's name as the header value, without `${...}` or
+   `Bearer`. Langflow resolves it to the stored credential. See
+   [Use global variables in MCP server headers](/mcp-client#use-global-variables-in-mcp-server-headers).
+
+4. Save the server and confirm that Langflow discovers its tools.
+
+   Discovery checks the connection and retrieves tool definitions. It does not
+   run a model or create a compute job.
+
+### Alternative: use the local stdio server
+
+For a local process instead of a hosted connection, register a **STDIO** server
+with the following values. Choose one connection for this example to avoid
+duplicate tools.
+
+| Field | Value |
+| :--- | :--- |
+| **Name** | `Dreamtune` |
+| **Command** | `npx` |
+| **Arguments**, in order | `-y`, `--package`, `@dreamtune/sdk@0.1.2`, `dreamtune-mcp` |
+| **Environment Variables** | See the JSON configuration below |
+
+You can also register the same server using **JSON**:
+
+```json
+{
+  "mcpServers": {
+    "Dreamtune": {
+      "command": "npx",
+      "args": ["-y", "--package", "@dreamtune/sdk@0.1.2", "dreamtune-mcp"],
+      "env": {
+        "DREAMTUNE_API_KEY": "YOUR_DREAMTUNE_WORKSPACE_KEY",
+        "DREAMTUNE_API_ORIGIN": "https://api.dreamtunelabs.com",
+        "DREAMTUNE_REQUEST_TIMEOUT_MS": "60000"
+      }
+    }
+  }
+}
+```
+
+Supply the actual workspace key in the server's private configuration. Keep
+credential-bearing configuration out of Git and shared flow exports. The global
+variable substitution described above applies to HTTP headers; do not assume it
+also substitutes values in this stdio `env` object.
+
+The local server exposes its tool definitions before making an authenticated
+Dreamtune API request. Successful discovery alone therefore does not verify the
+key's permissions or balance. See [Local MCP setup](https://docs.dreamtunelabs.com/connect/local-mcp)
+for runtime requirements and version updates.
+
+## Add the catalog tool to an agent
+
+1. Create a flow using the **Simple Agent** template. Configure the **Agent**
+   component's model provider, model, and API key.
+
+2. Remove the template's **URL** tool so the example uses the GPU catalog as its
+   external tool.
+
+3. Open the **MCP** sidebar and drag the registered **Dreamtune** server onto the
+   canvas.
+
+4. Enable **Tool mode** in the **MCP Tools** component's header menu. Click
+   **Edit Tool Actions** and leave **Enabled** selected only for `compute_catalog`.
+   Clear **Enabled** for every other action. See
+   [Edit a tool's actions](/agents-tools#edit-a-tools-actions).
+
+5. Connect the **MCP Tools** component's **Toolset** output to the **Agent**
+   component's **Tools** input. Keep the template's **Chat Input** and
+   **Chat Output** connections.
+
+6. Open **Playground** and send this request:
+
+   ```text
+   Use compute_catalog to compare up to three GPU options for testing a 7B model.
+   Report the returned VRAM, region, and hourly price where available. Explain
+   missing fields and whether anything meets the requirements. Do not invent
+   availability or total costs. Do not create, start, or stop any jobs.
+   ```
+
+7. Inspect the agent's tool call and the returned catalog data. Confirm that its
+   answer reflects the tool result. If the catalog has no suitable entries,
+   the agent should report that instead of assuming hardware is available.
+
+You can repeat the pattern with `list_tools` or `inspect_tool` to explore
+Dreamtune's tool catalog. Add only the tools your flow requires. See
+[Dreamtune MCP tools](https://docs.dreamtunelabs.com/reference/mcp-tools) for input
+schemas and execution behavior.
+
+## Troubleshooting
+
+* **Authentication fails:** Use a workspace API key, the exact header name, and the Credential global variable's name as the header value.
+* **The local server cannot start:** Check Node.js and `npx` inside the environment running Langflow. A Node.js installation on the host does not install it inside a container.
+* **Tools appear but the catalog call fails:** Discovery and authenticated API execution are separate checks. Check the workspace key and the returned error.
+* **The agent does not call the tool:** Confirm **Tool mode**, the **Toolset** connection, that `compute_catalog` is enabled in **Edit Tool Actions**, and that the selected model supports tool calling.
+
+This flow reads the catalog. Your agent model's usage is billed by its configured
+provider. If you add Dreamtune model execution, tool execution, or compute
+creation later, review those operations' charges and shutdown requirements first.
