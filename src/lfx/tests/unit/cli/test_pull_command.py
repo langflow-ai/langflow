@@ -901,7 +901,7 @@ def test_write_flow_failure_leaves_the_existing_flow_intact(tmp_path, monkeypatc
     assert targets, "the first pull should have written a flow file"
     before = {p.name: p.read_text(encoding="utf-8") for p in targets}
 
-    def boom(self, target):
+    def boom(_self, _target):
         raise OSError(28, "No space left on device")
 
     monkeypatch.setattr(_Path, "replace", boom)

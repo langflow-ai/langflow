@@ -25,13 +25,13 @@ Pull to a custom directory::
 
 from __future__ import annotations
 
+import os
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-import os
-import tempfile
 import typer
 from rich.console import Console
 from rich.table import Table
