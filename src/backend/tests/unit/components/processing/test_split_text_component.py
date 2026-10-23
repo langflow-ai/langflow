@@ -304,6 +304,32 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         assert "Another text" in results["text"][2], f"Expected 'Another text', got '{results['text'][2]}'"
         assert "Another line" in results["text"][3], f"Expected 'Another line', got '{results['text'][3]}'"
 
+    @pytest.mark.parametrize("clean_output", [False, True])
+    def test_split_text_list_custom_text_key(self, clean_output):
+        inputs = [
+            Data(data={"body": "Alpha\nBeta", "source": "memo"}),
+            Data(data={"body": "Gamma", "source": "note"}),
+        ]
+        before = [item.model_dump() for item in inputs]
+        component = SplitTextComponent(
+            data_inputs=inputs,
+            text_key="body",
+            chunk_size=5,
+            chunk_overlap=0,
+            separator="\n",
+            clean_output=clean_output,
+        )
+
+        result = component.split_text()
+
+        assert result["text"].tolist() == ["Alpha", "Beta", "Gamma"]
+        if clean_output:
+            assert list(result.columns) == ["text"]
+        else:
+            assert result["source"].tolist() == ["memo", "memo", "note"]
+            assert "body" not in result.columns
+        assert [item.model_dump() for item in inputs] == before
+
     def test_split_text_with_dataframe_input(self):
         """Test splitting text with DataFrame input."""
         component = SplitTextComponent()
