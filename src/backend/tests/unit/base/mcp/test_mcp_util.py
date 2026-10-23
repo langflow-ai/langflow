@@ -34,6 +34,13 @@ from lfx.base.mcp.util import (
 from lfx.schema.data import Data
 
 
+def _mock_async_http_client():
+    client = MagicMock()
+    client.__aenter__ = AsyncMock(return_value=client)
+    client.__aexit__ = AsyncMock(return_value=None)
+    return client
+
+
 def test_validate_mcp_stdio_env_rejects_shellopts_ps4_combo():
     with pytest.raises(ValueError, match="SHELLOPTS"):
         _validate_mcp_stdio_env({"SHELLOPTS": "xtrace", "PS4": "$(id)"})
@@ -341,6 +348,7 @@ class TestMCPSessionManager:
         streamable_client = MagicMock()
         streamable_client.return_value.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock(), MagicMock()))
         streamable_client.return_value.__aexit__ = AsyncMock(return_value=None)
+        http_client = _mock_async_http_client()
         connection_params = {
             "url": "http://test-mcp.example/mcp",
             "headers": {},
@@ -351,7 +359,8 @@ class TestMCPSessionManager:
 
         with (
             patch("lfx.base.mcp.util.ClientSession", return_value=BlockingClientSession()),
-            patch("mcp.client.streamable_http.streamablehttp_client", streamable_client),
+            patch("lfx.base.mcp.util.create_mcp_http_client_with_ssl_option", return_value=http_client),
+            patch("mcp.client.streamable_http.streamable_http_client", streamable_client),
         ):
             creation_task = asyncio.create_task(
                 session_manager._create_streamable_http_session("test_session", connection_params)
@@ -4096,9 +4105,11 @@ class TestStreamableHttpTransportPolicy:
             stream_cm = MagicMock()
             stream_cm.return_value.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock(), None))
             stream_cm.return_value.__aexit__ = AsyncMock(return_value=None)
+            http_client = _mock_async_http_client()
             with (
                 patch("lfx.base.mcp.util.ClientSession", return_value=fake),
-                patch("mcp.client.streamable_http.streamablehttp_client", stream_cm),
+                patch("lfx.base.mcp.util.create_mcp_http_client_with_ssl_option", return_value=http_client),
+                patch("mcp.client.streamable_http.streamable_http_client", stream_cm),
                 patch("mcp.client.sse.sse_client") as sse_cm,
             ):
                 session, task, transport, sse_lock = await manager._create_streamable_http_session(
@@ -4122,9 +4133,11 @@ class TestStreamableHttpTransportPolicy:
             stream_cm = MagicMock()
             stream_cm.return_value.__aenter__ = AsyncMock(side_effect=ConnectionError("connection refused"))
             stream_cm.return_value.__aexit__ = AsyncMock(return_value=None)
+            http_client = _mock_async_http_client()
             with (
                 patch("lfx.base.mcp.util.ClientSession", return_value=fake),
-                patch("mcp.client.streamable_http.streamablehttp_client", stream_cm),
+                patch("lfx.base.mcp.util.create_mcp_http_client_with_ssl_option", return_value=http_client),
+                patch("mcp.client.streamable_http.streamable_http_client", stream_cm),
                 patch("mcp.client.sse.sse_client") as sse_cm,
             ):
                 with pytest.raises(ConnectionError, match="connection refused"):
@@ -4153,9 +4166,11 @@ class TestStreamableHttpTransportPolicy:
             sse_cm = MagicMock()
             sse_cm.return_value.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock()))
             sse_cm.return_value.__aexit__ = AsyncMock(return_value=None)
+            http_client = _mock_async_http_client()
             with (
                 patch("lfx.base.mcp.util.ClientSession", side_effect=client_session_factory),
-                patch("mcp.client.streamable_http.streamablehttp_client", stream_cm),
+                patch("lfx.base.mcp.util.create_mcp_http_client_with_ssl_option", return_value=http_client),
+                patch("mcp.client.streamable_http.streamable_http_client", stream_cm),
                 patch("mcp.client.sse.sse_client", sse_cm),
             ):
                 _session, task, transport, sse_lock = await manager._create_streamable_http_session(

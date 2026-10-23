@@ -1122,6 +1122,7 @@ async def _validate_connection_params(mode: str, command: str | None = None, url
 # Streamable HTTP connect: retries before giving up (transient network / server restart)
 STREAMABLE_HTTP_CONNECT_ATTEMPTS = 3
 STREAMABLE_HTTP_RETRY_BASE_DELAY_SEC = 0.35
+STREAMABLE_HTTP_READ_TIMEOUT_SECONDS = 60 * 5
 
 
 def _iter_exception_leaves(exc: BaseException) -> list[BaseException]:
@@ -1759,7 +1760,7 @@ class MCPSessionManager:
         import asyncio
 
         from mcp.client.sse import sse_client
-        from mcp.client.streamable_http import streamablehttp_client
+        from mcp.client.streamable_http import streamable_http_client
 
         session_future: asyncio.Future[ClientSession] = asyncio.Future()
         used_transport: list[str] = []
@@ -1793,12 +1794,18 @@ class MCPSessionManager:
                             f"Attempting Streamable HTTP connection for session {session_id} "
                             f"(attempt {attempt + 1}/{STREAMABLE_HTTP_CONNECT_ATTEMPTS})"
                         )
-                        async with streamablehttp_client(
-                            url=connection_params["url"],
-                            headers=connection_params["headers"],
-                            timeout=connection_params["timeout_seconds"],
-                            httpx_client_factory=custom_httpx_factory,
-                        ) as (read, write, _):
+                        async with (
+                            custom_httpx_factory(
+                                headers=connection_params["headers"],
+                                timeout=httpx.Timeout(
+                                    connection_params["timeout_seconds"], read=STREAMABLE_HTTP_READ_TIMEOUT_SECONDS
+                                ),
+                            ) as http_client,
+                            streamable_http_client(
+                                url=connection_params["url"],
+                                http_client=http_client,
+                            ) as (read, write, _),
+                        ):
                             session = ClientSession(read, write)
                             async with session:
                                 initialize_result = await asyncio.wait_for(session.initialize(), timeout=2.0)

@@ -2,6 +2,7 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 from lfx.base.mcp.util import (
     ClosedResourceError,
@@ -136,6 +137,13 @@ class _SideEffectSession:
         if self.calls == 1:
             await asyncio.sleep(self._first_response_delay)
         return SimpleNamespace(content=[], isError=False)
+
+
+def _async_http_client():
+    client = MagicMock()
+    client.__aenter__ = AsyncMock(return_value=client)
+    client.__aexit__ = AsyncMock(return_value=None)
+    return client
 
 
 @CLIENTS
@@ -283,9 +291,10 @@ async def test_streamable_http_session_creation_waits_with_configured_budget():
     """LE-2507: the same budget must reach the Streamable HTTP readiness wait."""
     manager = MCPSessionManager()
     observed: list[float] = []
-    http_client = MagicMock()
-    http_client.return_value.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock(), MagicMock()))
-    http_client.return_value.__aexit__ = AsyncMock(return_value=None)
+    transport_client = MagicMock()
+    transport_client.return_value.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock(), MagicMock()))
+    transport_client.return_value.__aexit__ = AsyncMock(return_value=None)
+    http_client = _async_http_client()
     connection_params = {"url": "http://127.0.0.1:9931/mcp", "headers": {}, "timeout_seconds": 5}
 
     task = None
@@ -293,7 +302,10 @@ async def test_streamable_http_session_creation_waits_with_configured_budget():
         with (
             patch("lfx.base.mcp.util.get_session_init_timeout", return_value=45.0),
             patch("lfx.base.mcp.util.ClientSession", return_value=_ReadyClientSession()),
-            patch("mcp.client.streamable_http.streamablehttp_client", http_client),
+            patch(
+                "lfx.base.mcp.util.create_mcp_http_client_with_ssl_option", return_value=http_client
+            ) as http_client_factory,
+            patch("mcp.client.streamable_http.streamable_http_client", transport_client),
             patch("lfx.base.mcp.util.asyncio.wait_for", side_effect=_recording_wait_for(observed)),
         ):
             _session, task, transport, _locked = await manager._create_streamable_http_session(
@@ -309,6 +321,9 @@ async def test_streamable_http_session_creation_waits_with_configured_budget():
     # The background task also bounds session.initialize() (2 s); the readiness wait is the budget.
     assert 45.0 in observed
     assert 30.0 not in observed
+    assert http_client_factory.call_args.kwargs["headers"] == {}
+    assert http_client_factory.call_args.kwargs["timeout"] == httpx.Timeout(5, read=300)
+    assert transport_client.call_args.kwargs == {"url": connection_params["url"], "http_client": http_client}
 
 
 # Made with Bob
