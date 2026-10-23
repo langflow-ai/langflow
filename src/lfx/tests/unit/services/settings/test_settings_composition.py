@@ -162,6 +162,7 @@ EXPECTED_FIELDS = {
     # ComponentsSettings
     "components_path",
     "components_index_path",
+    "component_load_max_workers",
     "load_flows_path",
     "bundle_urls",
     "lazy_load_components",
@@ -373,6 +374,7 @@ def test_critical_defaults_unchanged():
     assert settings.ssrf_protection_enabled is True
     assert settings.connector_ssrf_validation_enabled is True
     assert settings.allow_custom_components is True
+    assert settings.component_load_max_workers is None
     assert settings.block_code_interpreter_components is False
     assert settings.substitute_outdated_component_code is True
     assert settings.restrict_local_file_access is True
@@ -400,6 +402,26 @@ def test_critical_defaults_unchanged():
 def test_database_tls_files_dir_reads_operator_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("LANGFLOW_DATABASE_TLS_FILES_DIR", str(tmp_path))
     assert Settings(_env_file=None).database_tls_files_dir == tmp_path
+
+
+def test_component_load_max_workers_reads_operator_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The worker cap is unset by default and binds to the operator env var."""
+    monkeypatch.delenv("LANGFLOW_COMPONENT_LOAD_MAX_WORKERS", raising=False)
+    assert Settings(_env_file=None).component_load_max_workers is None
+
+    monkeypatch.setenv("LANGFLOW_COMPONENT_LOAD_MAX_WORKERS", "4")
+    assert Settings(_env_file=None).component_load_max_workers == 4
+
+
+@pytest.mark.parametrize("value", ["0", "-1"])
+def test_component_load_max_workers_must_be_positive(
+    monkeypatch: pytest.MonkeyPatch,
+    value: str,
+) -> None:
+    """Zero and negative worker caps are rejected so startup cannot deadlock."""
+    monkeypatch.setenv("LANGFLOW_COMPONENT_LOAD_MAX_WORKERS", value)
+    with pytest.raises(ValidationError, match="component_load_max_workers"):
+        Settings(_env_file=None)
 
 
 def test_dict_defaults_unchanged():

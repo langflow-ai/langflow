@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.log.logger import logger
@@ -22,6 +22,13 @@ class ComponentsSettings(BaseModel):
     If None, uses the built-in index at lfx/_assets/component_index.json.
     Set to a file path (e.g., '/path/to/index.json') or URL (e.g., 'https://example.com/index.json')
     to use a custom index.
+    """
+    component_load_max_workers: int | None = Field(default=None, gt=0)
+    """Maximum worker threads used while loading component modules at startup.
+
+    If unset, component loading uses asyncio's default thread pool. Set
+    ``LANGFLOW_COMPONENT_LOAD_MAX_WORKERS`` to a positive integer to cap
+    concurrency in containers where the host CPU count exceeds the CPU limit.
     """
 
     load_flows_path: str | None = None
