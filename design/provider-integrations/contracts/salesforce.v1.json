@@ -1,0 +1,184 @@
+{
+  "schema_version": 1,
+  "provider_id": "salesforce",
+  "distribution": "lfx-salesforce",
+  "manifest": {
+    "schema_version": 1,
+    "provider_id": "salesforce",
+    "display_name": "Salesforce",
+    "icon": "Cloud",
+    "docs_url": "https://developer.salesforce.com/docs/platform/api-rest/guide/resources-getupdated.html",
+    "auth_profiles": [
+      {
+        "id": "user",
+        "kind": "oauth2_authorization_code",
+        "identity": "user_delegated",
+        "supports_pkce": true,
+        "supports_refresh": true,
+        "scope_separator": " ",
+        "default_scopes": [
+          "api",
+          "id",
+          "refresh_token"
+        ],
+        "client_type_by_context": {
+          "hosted": "confidential",
+          "self_managed": "confidential"
+        },
+        "owner_by_context": {
+          "hosted": "either",
+          "self_managed": "customer"
+        }
+      }
+    ],
+    "capabilities": [
+      {
+        "id": "salesforce.record.read",
+        "display_name": "Salesforce Read Record",
+        "auth_profile_id": "user",
+        "identity": "user_delegated",
+        "required_scopes": [
+          "api"
+        ],
+        "conditional_scopes": [],
+        "policy_keys": [
+          "integrations.salesforce.record.read"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "hosted",
+          "self_managed"
+        ],
+        "risk": "read",
+        "component_ref": "SalesforceReadRecordComponent"
+      },
+      {
+        "id": "salesforce.record.create",
+        "display_name": "Salesforce Create Record",
+        "auth_profile_id": "user",
+        "identity": "user_delegated",
+        "required_scopes": [
+          "api"
+        ],
+        "conditional_scopes": [],
+        "policy_keys": [
+          "integrations.salesforce.record.create"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "hosted",
+          "self_managed"
+        ],
+        "risk": "write",
+        "component_ref": "SalesforceCreateRecordComponent"
+      },
+      {
+        "id": "salesforce.record.update",
+        "display_name": "Salesforce Update Record",
+        "auth_profile_id": "user",
+        "identity": "user_delegated",
+        "required_scopes": [
+          "api"
+        ],
+        "conditional_scopes": [],
+        "policy_keys": [
+          "integrations.salesforce.record.update"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "hosted",
+          "self_managed"
+        ],
+        "risk": "write",
+        "component_ref": "SalesforceUpdateRecordComponent"
+      },
+      {
+        "id": "salesforce.trigger.record",
+        "display_name": "Salesforce On Record Change",
+        "auth_profile_id": "user",
+        "identity": "user_delegated",
+        "required_scopes": [
+          "api",
+          "refresh_token"
+        ],
+        "conditional_scopes": [],
+        "policy_keys": [
+          "integrations.salesforce.trigger.record"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "self_managed"
+        ],
+        "risk": "read",
+        "component_ref": "SalesforceOnRecordTriggerComponent"
+      }
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://developer.salesforce.com/docs/platform/api-rest/guide/intro-rest-compatible-editions.html",
+      "title": "Supported editions and required permissions",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://developer.salesforce.com/docs/platform/api-rest/guide/intro-oauth-and-connected-apps.html",
+      "title": "External client apps, connected apps, and OAuth",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_refresh_token_flow.htm&language=en_US&type=5",
+      "title": "Refresh token flow and rotation",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://developer.salesforce.com/docs/platform/api-rest/guide/resources-getupdated.html",
+      "title": "REST Get Updated and latestDateCovered",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://developer.salesforce.com/docs/platform/api/guide/sforce-api-calls-getupdated.html",
+      "title": "Replication requirements and retention",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://developer.salesforce.com/docs/platform/api-rest/guide/resources-sobject-retrieve.html",
+      "title": "sObject record actions",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://developer.salesforce.com/docs/platform/api-rest/guide/resources-sobject-basic-info-post.html",
+      "title": "Create records",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://help.salesforce.com/s/articleView?id=000391120&language=en_US&type=1",
+      "title": "Salesforce warning about timestamp SOQL replication",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://help.salesforce.com/s/articleView?id=sf.domain_name_partitioned_domains.htm&language=en_US&type=5",
+      "title": "Official My Domain partitions",
+      "verified_on": "2026-10-22"
+    }
+  ],
+  "transport_limitations": [
+    "One operator-configured Salesforce My Domain org per deployment.",
+    "Self-managed triggers observe latest record states through bounded replication polling, not every intermediate change or deletion.",
+    "Actions support hosted and self-managed servers. Desktop, headless and hosted triggers are unsupported."
+  ],
+  "evidence_paths": [
+    "src/bundles/salesforce/README.md",
+    "src/bundles/salesforce/src/lfx_salesforce/components/salesforce/capabilities.v1.json",
+    "src/backend/base/langflow/services/triggers/providers/salesforce",
+    "src/backend/tests/unit/services/triggers/test_salesforce_lifecycle.py",
+    "src/backend/tests/unit/services/triggers/test_salesforce_provider_contract.py"
+  ],
+  "owner_acceptance": {
+    "status": "pending",
+    "note": "Owner sign-off and live provider tenant acceptance remain pending. Synthetic contract and lifecycle tests are recorded in the referenced evidence."
+  }
+}

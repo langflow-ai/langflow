@@ -76,6 +76,7 @@
         "lfx-openai",
         "lfx-openai-compatible",
         "lfx-oracle",
+        "lfx-salesforce",
         "lfx-slack",
         "lfx-toolguard",
         "lfx-vllm"
@@ -112,6 +113,7 @@
           "lfx-openai",
           "lfx-openai-compatible",
           "lfx-oracle",
+          "lfx-salesforce",
           "lfx-slack",
           "lfx-toolguard",
           "lfx-vllm"
@@ -251,6 +253,7 @@
           "lfx-openai-compatible",
           "lfx-oracle",
           "lfx-paddle",
+          "lfx-salesforce",
           "lfx-serpingapi",
           "lfx-serply",
           "lfx-slack",
