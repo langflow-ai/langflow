@@ -185,6 +185,29 @@ class TestWaitForCompletion:
             await job.wait_for_completion()
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("timeout", [None, 10.0])
+    @pytest.mark.parametrize("already_failed", [False, True])
+    async def test_re_raises_underlying_timeout_error(self, timeout, already_failed):
+        source_error = asyncio.TimeoutError("flow operation timed out")
+
+        async def fail_with_timeout() -> RunResponse:
+            await asyncio.sleep(0)
+            raise source_error
+
+        task = asyncio.create_task(fail_with_timeout())
+        job = BackgroundJob(task)
+        if already_failed:
+            with contextlib.suppress(asyncio.TimeoutError):
+                await task
+
+        for _ in range(2):
+            with pytest.raises(asyncio.TimeoutError) as raised:
+                await job.wait_for_completion(timeout=timeout)
+            assert raised.value is source_error
+        assert job.is_failed()
+        assert not job.is_running()
+
+    @pytest.mark.asyncio
     async def test_none_timeout_waits_indefinitely(self):
         task = asyncio.create_task(_slow_success(0.05))
         job = BackgroundJob(task)
