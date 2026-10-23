@@ -225,6 +225,10 @@ class SlackSocketModeAdapter:
         #: snapshot that still lacks the app id means it was cleared - the
         #: trigger moved to another connection and back - and is written again.
         self._recorded: dict[UUID, ListenerTrigger] = {}
+        # Startup and overlapping socket readers can all observe a snapshot
+        # without its app ID. Wait for any pending proof write before another
+        # recorder checks the snapshot or an event can be acknowledged.
+        self._record_lock = asyncio.Lock()
 
     # ------------------------------------------------------------------ #
     # ListenerAdapter
@@ -652,16 +656,17 @@ class SlackSocketModeAdapter:
         """
         if self._app_id is None:
             return
-        for trigger in list(ctx.triggers):
-            if (trigger.provider_state or {}).get(PROVIDER_STATE_APP_ID) == self._app_id:
-                continue
-            if self._recorded.get(trigger.id) is trigger:
-                continue
-            await ctx.save_cursor(
-                trigger_id=trigger.id,
-                provider_state={**(trigger.provider_state or {}), PROVIDER_STATE_APP_ID: self._app_id},
-            )
-            self._recorded[trigger.id] = trigger
+        async with self._record_lock:
+            for trigger in list(ctx.triggers):
+                if (trigger.provider_state or {}).get(PROVIDER_STATE_APP_ID) == self._app_id:
+                    continue
+                if self._recorded.get(trigger.id) is trigger:
+                    continue
+                await ctx.save_cursor(
+                    trigger_id=trigger.id,
+                    provider_state={**(trigger.provider_state or {}), PROVIDER_STATE_APP_ID: self._app_id},
+                )
+                self._recorded[trigger.id] = trigger
 
 
 async def _trigger_exists(trigger_id: UUID) -> bool:
