@@ -203,6 +203,7 @@ EXPECTED_FIELDS = {
     "variable_store",
     "fallback_to_env_var",
     "store_environment_variables",
+    "deployment_typed_variables_enabled",
     "variables_to_get_from_environment",
     "agentic_experience",
     "developer_api_enabled",

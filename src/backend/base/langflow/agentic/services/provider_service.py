@@ -14,6 +14,7 @@ from lfx.base.models.unified_models import (
 )
 from lfx.log.logger import logger
 from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, aresolve_model_provider_policy
+from lfx.services.variable.exceptions import RuntimeVariableError
 from lfx.utils.secrets import secret_value_to_str
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -126,6 +127,8 @@ async def check_api_key(
 
     try:
         api_key = await variable_service.get_variable(user_id, key_name, "", session)
+    except RuntimeVariableError:
+        raise
     except ValueError:
         logger.debug(f"{key_name} not found in global variables, checking environment")
 

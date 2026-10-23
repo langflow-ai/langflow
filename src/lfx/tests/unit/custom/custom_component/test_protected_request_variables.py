@@ -23,6 +23,7 @@ async def test_request_variable_cannot_override_protected_field(component_type: 
     )
     stored_value = "https://author.example"
     with patch("lfx.custom.custom_component.custom_component.get_variable_service") as service:
+        service.return_value.get_account_bound_variable = AsyncMock(return_value=None)
         service.return_value.get_variable = AsyncMock(return_value=stored_value)
         result = await CustomComponent.get_variable(component, "DESTINATION", field, object())
 

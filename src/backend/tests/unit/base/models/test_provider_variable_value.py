@@ -22,8 +22,33 @@ from __future__ import annotations
 import pytest
 from lfx.base.models import model_utils
 from lfx.base.models.model_utils import get_provider_variable_value
+from lfx.services.variable.exceptions import RuntimeVariableError
 
 _TOUCHED_VARIABLE_KEYS = ("OLLAMA_BASE_URL", "OPENAI_BASE_URL", "NOT_A_PROVIDER_VARIABLE")
+
+
+@pytest.mark.parametrize("reason", ["absent", "variable_not_approved", "undecryptable", "target_disabled"])
+def test_bound_account_discovery_never_uses_environment(monkeypatch, reason):
+    from contextlib import asynccontextmanager
+
+    class BoundService:
+        async def get_variable(self, **_kwargs):
+            msg = "Account lookup refused"
+            raise RuntimeVariableError(msg, reason=reason)
+
+    @asynccontextmanager
+    async def session_scope():
+        yield None
+
+    def forbidden_environment(_):
+        msg = "Authoritative account failures must not use environment values"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr(model_utils, "session_scope", session_scope)
+    monkeypatch.setattr(model_utils, "get_variable_service", BoundService)
+    monkeypatch.setattr(model_utils, "_environment_variable_value", forbidden_environment)
+    with pytest.raises(RuntimeVariableError, match="Account lookup refused"):
+        get_provider_variable_value("00000000-0000-0000-0000-000000000001", "OLLAMA_BASE_URL")
 
 
 @pytest.fixture(autouse=True)

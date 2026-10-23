@@ -12,7 +12,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from functools import partial
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 from lfx.base.knowledge_bases.backends import is_local_backend
 from lfx.base.mcp.constants import GLOBAL_VARIABLE_PLACEHOLDER_PATTERN
@@ -36,7 +36,9 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
 from langflow.services.database.models.mcp_server.model import MCPServer
 from langflow.services.database.models.memory_base.model import MemoryBase
-from langflow.services.deps import get_variable_service
+from langflow.services.database.models.variable.model import Variable
+from langflow.services.deps import get_settings_service, get_variable_service
+from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.utils.canonical_json import canonical_json_bytes
 from langflow.utils.flow_secrets import strip_secret_field_values_in_place
 from langflow.utils.mcp_config_secrets import (
@@ -135,6 +137,7 @@ class ProjectArtifactFlow:
     # internal one calls, which have to already be deployed there.
     required_mcp_variables: tuple[str, ...] = ()
     required_mcp_projects: tuple[ProjectArtifactRequiredMcpProject, ...] = ()
+    required_variable_declarations: tuple[ProjectArtifactRequiredVariable, ...] = ()
 
 
 @dataclass(frozen=True, order=True, slots=True)
@@ -158,6 +161,19 @@ class ProjectArtifactRequiredConnection:
     provider: str
     name: str
     scopes: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class ProjectArtifactRequiredVariable:
+    """One source variable's stored kind; None means activation must wait for resolution."""
+
+    name: str
+    kind: Literal["secret", "plain"] | None
+
+    def __post_init__(self) -> None:
+        if not self.name or not self.name.strip() or self.kind not in {"secret", "plain", None}:
+            msg = "invalid variable declaration"
+            raise ProjectArtifactError(msg)
 
 
 @dataclass(frozen=True, order=True, slots=True)
@@ -247,6 +263,8 @@ class ProjectDeploymentSnapshotFlow:
     icon: str | None = None
     icon_bg_color: str | None = None
     gradient: str | None = None
+    required_variables: tuple[str, ...] = ()
+    required_variable_declarations: tuple[ProjectArtifactRequiredVariable, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.name or not self.name.strip():
@@ -276,6 +294,8 @@ class ProjectDeploymentSnapshot:
     # projects that have to already be deployed there for a connection to resolve.
     required_mcp_variables: tuple[str, ...] = ()
     required_mcp_projects: tuple[ProjectArtifactRequiredMcpProject, ...] = ()
+    required_variable_declarations: tuple[ProjectArtifactRequiredVariable, ...] = ()
+    schema_version: int = 1
 
     def __post_init__(self) -> None:
         if not self.project_name or not self.project_name.strip():
@@ -918,11 +938,11 @@ def _collect_required_connections(flow_data: object) -> tuple[ProjectArtifactReq
 
 
 async def _known_variable_names(session: AsyncSession, owner_id: UUID | None) -> frozenset[str]:
-    """Return the global-variable names the project owner's snapshot may keep as bindings.
+    """Return the global-variable names the project owner's export may keep as bindings.
 
     Mirrors ``langflow.api.v1.flows_helpers._export_variable_names`` (kept as its
     own copy here rather than imported, so this services-layer module does not
-    reach up into api.v1). A snapshot keeps a ``load_from_db`` value only when
+    reach up into api.v1). An export keeps a ``load_from_db`` value only when
     it names one of the owner's existing global variables, so a name-shaped
     literal secret behind a stale ``load_from_db`` flag is never captured.
     """
@@ -930,6 +950,66 @@ async def _known_variable_names(session: AsyncSession, owner_id: UUID | None) ->
         return frozenset()
     names = await get_variable_service().list_variables(user_id=owner_id, session=session)
     return frozenset(name for name in names if name)
+
+
+async def _known_variable_kinds(
+    session: AsyncSession, owner_id: UUID | None
+) -> dict[str, Literal["secret", "plain"] | None]:
+    """Read only owner names and stored types, without fetching or decrypting values."""
+    if owner_id is None:
+        return {}
+    rows = (await session.exec(select(Variable.name, Variable.type).where(Variable.user_id == owner_id))).all()
+    kinds: dict[str, Literal["secret", "plain"] | None] = {}
+    for name, variable_type in rows:
+        if not name:
+            continue
+        kind: Literal["secret", "plain"] | None = (
+            "secret" if variable_type == CREDENTIAL_TYPE else "plain" if variable_type == GENERIC_TYPE else None
+        )
+        if name in kinds and kinds[name] != kind:
+            msg = "conflicting variable kinds"
+            raise ProjectArtifactError(msg)
+        kinds[name] = kind
+    return kinds
+
+
+async def _export_variable_metadata(
+    session: AsyncSession, owner_id: UUID | None
+) -> tuple[frozenset[str], dict[str, Literal["secret", "plain"] | None] | None]:
+    if not get_settings_service().settings.deployment_typed_variables_enabled:
+        return await _known_variable_names(session, owner_id), None
+    kinds = await _known_variable_kinds(session, owner_id)
+    return frozenset(kinds), kinds
+
+
+def _variable_declarations(
+    names: Iterable[str], kinds: Mapping[str, Literal["secret", "plain"] | None] | None
+) -> tuple[ProjectArtifactRequiredVariable, ...]:
+    if kinds is None:
+        return ()
+    names = set(names)
+    if names - kinds.keys():
+        msg = "required variable metadata is unavailable"
+        raise ProjectArtifactError(msg)
+    return tuple(ProjectArtifactRequiredVariable(name=name, kind=kinds[name]) for name in sorted(names))
+
+
+def _merge_variable_declarations(
+    groups: Iterable[Iterable[ProjectArtifactRequiredVariable]],
+) -> tuple[ProjectArtifactRequiredVariable, ...]:
+    merged: dict[str, ProjectArtifactRequiredVariable] = {}
+    for declarations in groups:
+        for declaration in declarations:
+            previous = merged.get(declaration.name)
+            if previous is not None and previous.kind != declaration.kind:
+                msg = "conflicting variable kinds"
+                raise ProjectArtifactError(msg)
+            merged[declaration.name] = declaration
+    return tuple(merged[name] for name in sorted(merged))
+
+
+def _variable_entry(declaration: ProjectArtifactRequiredVariable) -> dict[str, str | None]:
+    return {"name": declaration.name, "kind": declaration.kind}
 
 
 def _normalized_flow_data(
@@ -1011,6 +1091,7 @@ def _normalized_flow_bytes(
     snapshot: _FlowSnapshot,
     *,
     strict_secret_safety: bool = False,
+    known_variable_names: Collection[str] | None = None,
     registered_mcp_servers: Mapping[str, dict[str, Any]] | None = None,
 ) -> tuple[
     bytes,
@@ -1020,7 +1101,10 @@ def _normalized_flow_bytes(
     _McpRequirements,
 ]:
     scrubbed, variable_references, required_connections, model_requirements, mcp_requirements = _normalized_flow_data(
-        snapshot, strict_secret_safety=strict_secret_safety, registered_mcp_servers=registered_mcp_servers
+        snapshot,
+        strict_secret_safety=strict_secret_safety,
+        known_variable_names=known_variable_names,
+        registered_mcp_servers=registered_mcp_servers,
     )
     return (
         canonical_json_bytes(scrubbed),
@@ -1171,6 +1255,8 @@ def _build_archive(
     limits: ProjectArtifactLimits,
     dependencies: dict[str, list[dict[str, Any]]] | None = None,
     strict_secret_safety: bool = False,
+    known_variable_names: Collection[str] | None = None,
+    variable_kinds: Mapping[str, Literal["secret", "plain"] | None] | None = None,
     registered_mcp_servers: Mapping[str, dict[str, Any]] | None = None,
 ) -> ProjectArtifact:
     flow_entries: list[ProjectArtifactFlow] = []
@@ -1199,6 +1285,7 @@ def _build_archive(
         ) = _normalized_flow_bytes(
             snapshot,
             strict_secret_safety=strict_secret_safety,
+            known_variable_names=known_variable_names,
             registered_mcp_servers=registered_mcp_servers,
         )
         size = len(content)
@@ -1224,6 +1311,9 @@ def _build_archive(
                 unresolved_model_fields=model_requirements.unresolved_fields,
                 required_mcp_variables=mcp_requirements.variables,
                 required_mcp_projects=mcp_requirements.projects,
+                required_variable_declarations=_variable_declarations(
+                    (*required_variables, *mcp_requirements.variables), variable_kinds
+                ),
             )
         )
 
@@ -1249,6 +1339,7 @@ def _build_archive(
         _McpRequirements(variables=flow.required_mcp_variables, projects=flow.required_mcp_projects)
         for flow in flow_entries
     )
+    variable_declarations = _merge_variable_declarations(flow.required_variable_declarations for flow in flow_entries)
     manifest: dict[str, Any] = {
         # v2 is already assigned to flows[].version_id. Dependencies use v3,
         # connection requirements use v4, model providers use v5, and MCP
@@ -1258,19 +1349,30 @@ def _build_archive(
         # provider still packages as a version older readers already accept. An
         # unresolved count alone does not claim v5: it names nothing a target
         # could provision or approve, so an older reader loses nothing by
-        # ignoring it. v6 is claimed on either MCP list, because both name
-        # something the target must already have for the flow to run at all.
+        # ignoring it. v6 is claimed on either MCP list. v7 adds variable kinds;
+        # even a null kind requires a v7 reader to block unresolved activation.
         "schema_version": (
-            6
-            if (manifest_mcp.variables or manifest_mcp.projects)
+            7
+            if variable_declarations
             else (
-                5 if manifest_models.providers else (4 if manifest_required_connections else (3 if dependencies else 1))
+                6
+                if (manifest_mcp.variables or manifest_mcp.projects)
+                else (
+                    5
+                    if manifest_models.providers
+                    else (4 if manifest_required_connections else (3 if dependencies else 1))
+                )
             )
         ),
         "project": {"id": str(project_id), "name": project_name},
         # Names of every load_from_db-bound global variable the packaged flows
         # reference; the deploy target must provision each name before serving.
         "required_variables": sorted({name for flow in flow_entries for name in flow.required_variables}),
+        **(
+            {"required_variable_declarations": [_variable_entry(item) for item in variable_declarations]}
+            if variable_declarations
+            else {}
+        ),
         # Model provider identities the packaged flows select, and the number
         # of model fields that selected none. A choice deferred to run time
         # cannot be read from the flow, so the count is what stops the list
@@ -1303,6 +1405,15 @@ def _build_archive(
                 "sha256": flow.sha256,
                 "size": flow.size,
                 "required_variables": list(flow.required_variables),
+                **(
+                    {
+                        "required_variable_declarations": [
+                            _variable_entry(item) for item in flow.required_variable_declarations
+                        ]
+                    }
+                    if flow.required_variable_declarations
+                    else {}
+                ),
                 **({"required_providers": list(flow.required_providers)} if flow.required_providers else {}),
                 **(
                     {"required_models": [_model_entry(item) for item in flow.required_models]}
@@ -1393,6 +1504,8 @@ async def _build_archive_non_abandoning(
     limits: ProjectArtifactLimits,
     dependencies: dict[str, list[dict[str, Any]]] | None = None,
     strict_secret_safety: bool = False,
+    known_variable_names: Collection[str] | None = None,
+    variable_kinds: Mapping[str, Literal["secret", "plain"] | None] | None = None,
     registered_mcp_servers: Mapping[str, dict[str, Any]] | None = None,
 ) -> ProjectArtifact:
     """Build an archive without outliving its caller's capacity lease."""
@@ -1406,6 +1519,8 @@ async def _build_archive_non_abandoning(
             limits=limits,
             dependencies=dependencies,
             strict_secret_safety=strict_secret_safety,
+            known_variable_names=known_variable_names,
+            variable_kinds=variable_kinds,
             registered_mcp_servers=registered_mcp_servers,
         )
     )
@@ -1974,6 +2089,7 @@ async def build_project_artifact(
 
     # The owner's address book, read once: a flow references a server by name and
     # usually carries no config, so this is where the url and credential names are.
+    known_variable_names, variable_kinds = await _export_variable_metadata(session, prepared.project_user_id)
     registered_mcp_servers = await load_registered_mcp_servers(session, prepared.project_user_id)
 
     # Archive construction is intentionally non-abandoning. If the HTTP request
@@ -1987,6 +2103,8 @@ async def build_project_artifact(
         limits=effective_limits,
         dependencies=prepared.dependencies,
         strict_secret_safety=strict_snapshot,
+        known_variable_names=known_variable_names,
+        variable_kinds=variable_kinds,
         registered_mcp_servers=registered_mcp_servers,
     )
     if strict_snapshot:
@@ -2004,6 +2122,7 @@ def _build_deployment_snapshot_flows(
     *,
     limits: ProjectArtifactLimits,
     known_variable_names: Collection[str] | None = None,
+    variable_kinds: Mapping[str, Literal["secret", "plain"] | None] | None = None,
     registered_mcp_servers: Mapping[str, dict[str, Any]] | None = None,
     initial_expanded_bytes: int = 0,
 ) -> tuple[
@@ -2090,6 +2209,10 @@ def _build_deployment_snapshot_flows(
                 icon=scrubbed.get("icon"),
                 icon_bg_color=scrubbed.get("icon_bg_color"),
                 gradient=snapshot.payload.get("gradient"),
+                required_variables=variable_references,
+                required_variable_declarations=_variable_declarations(
+                    (*variable_references, *flow_mcp_requirements.variables), variable_kinds
+                ),
             )
         )
         required_variables.update(variable_references)
@@ -2146,7 +2269,7 @@ async def build_project_deployment_snapshot(
     project_text_bytes = _json_string_size(prepared.project_name)
     if prepared.project_description is not None:
         project_text_bytes += _json_string_size(prepared.project_description)
-    known_variable_names = await _known_variable_names(session, prepared.project_user_id)
+    known_variable_names, variable_kinds = await _export_variable_metadata(session, prepared.project_user_id)
     registered_mcp_servers = await load_registered_mcp_servers(session, prepared.project_user_id)
 
     (
@@ -2161,6 +2284,7 @@ async def build_project_deployment_snapshot(
             prepared.snapshots,
             limits=effective_limits,
             known_variable_names=known_variable_names,
+            variable_kinds=variable_kinds,
             registered_mcp_servers=registered_mcp_servers,
             initial_expanded_bytes=project_text_bytes,
         )
@@ -2173,6 +2297,7 @@ async def build_project_deployment_snapshot(
         project_description=prepared.project_description,
     )
 
+    variable_declarations = _merge_variable_declarations(flow.required_variable_declarations for flow in flows)
     return ProjectDeploymentSnapshot(
         project_id=prepared.project_id,
         project_name=prepared.project_name,
@@ -2186,4 +2311,6 @@ async def build_project_deployment_snapshot(
         unresolved_model_fields=model_requirements.unresolved_fields,
         required_mcp_variables=mcp_requirements.variables,
         required_mcp_projects=mcp_requirements.projects,
+        required_variable_declarations=variable_declarations,
+        schema_version=7 if variable_declarations else 1,
     )
