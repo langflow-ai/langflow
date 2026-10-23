@@ -10,6 +10,7 @@ from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import httpx
@@ -20,7 +21,7 @@ from langflow.services.database.models.trigger.model import Trigger, TriggerClea
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
 from langflow.services.triggers import dispatcher, source_runtime
-from langflow.services.triggers.ingress.verifiers import IngressRejected, Verified
+from langflow.services.triggers.ingress.verifiers import REASON_VERIFIER_ERROR, IngressRejected, Verified
 from langflow.services.triggers.providers import registry
 from langflow.services.triggers.reconciliation import reconcile_flow_triggers
 from langflow.services.triggers.service import TriggerService
@@ -36,6 +37,15 @@ from lfx.services.deps import get_integration_policy_service, get_policy_bundle_
 from sqlmodel import select
 
 pytestmark = pytest.mark.no_blockbuster
+
+
+@pytest.fixture
+def ingress_audit(monkeypatch):
+    from langflow.services.triggers.ingress import intake
+
+    audit = AsyncMock(wraps=intake.audit_ingress)
+    monkeypatch.setattr(intake, "audit_ingress", audit)
+    return audit
 
 
 @pytest.fixture
@@ -437,7 +447,7 @@ async def test_get_handshake_requires_provider_proof_and_never_queues_events(
 
 @pytest.mark.parametrize("extra", ["lifecycle", "source_items", "payload"])
 async def test_get_handshake_cannot_apply_provider_event_side_effects(
-    pilot, trigger_owner, owned_flow, client, monkeypatch, extra
+    pilot, trigger_owner, owned_flow, client, monkeypatch, extra, ingress_audit
 ):
     from langflow.services.auth.utils import decrypt_api_key
 
@@ -462,6 +472,8 @@ async def test_get_handshake_cannot_apply_provider_event_side_effects(
         f"/api/v1/triggers/ingress/pilot/{public_id}", params={"proof": secret, "challenge": "verified-challenge"}
     )
     assert response.status_code == 404
+    assert ingress_audit.await_args.kwargs["accepted"] is False
+    assert ingress_audit.await_args.kwargs["reason"] == REASON_VERIFIER_ERROR
     async with session_scope() as session:
         assert not (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger.id))).all()
         subscription = (
@@ -508,7 +520,7 @@ async def test_ingress_secret_hook_failures_do_not_reveal_the_target(
     [("text/plain", True), ("application/json", True), ("text/html", False), ("text/plain\r\nx-extra: yes", False)],
 )
 async def test_provider_handshake_media_is_bounded_before_any_side_effect(
-    pilot, trigger_owner, owned_flow, client, monkeypatch, method, media_type, accepted
+    pilot, trigger_owner, owned_flow, client, monkeypatch, method, media_type, accepted, ingress_audit
 ):
     from langflow.services.auth.utils import decrypt_api_key
 
@@ -538,14 +550,30 @@ async def test_provider_handshake_media_is_bounded_before_any_side_effect(
     assert response.status_code == (200 if accepted else 404)
     if accepted:
         assert response.headers["content-type"].startswith(media_type)
+    else:
+        assert ingress_audit.await_args.kwargs["accepted"] is False
+        assert ingress_audit.await_args.kwargs["reason"] == REASON_VERIFIER_ERROR
     async with session_scope() as session:
         assert not (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger.id))).all()
         assert (await session.get(Trigger, trigger.id)).provider_state == {}
 
 
 @pytest.mark.parametrize("method", ["GET", "POST"])
-async def test_provider_204_body_is_rejected_before_durable_delivery(
-    pilot, trigger_owner, owned_flow, client, monkeypatch, method
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        pytest.param({"response_status": 204, "response_body": "invalid-body"}, id="204-body"),
+        pytest.param({"response_status": []}, id="invalid-status-type"),
+        pytest.param({"response_media_type": []}, id="invalid-response-media-type"),
+        pytest.param({"response_body": {}}, id="invalid-response-body-type"),
+        pytest.param({"response_body": "\ud800"}, id="invalid-response-body-encoding"),
+        pytest.param({"handshake": {}}, id="invalid-handshake-type"),
+        pytest.param({"handshake": "\ud800"}, id="invalid-handshake-encoding"),
+        pytest.param({"handshake": "challenge", "handshake_media_type": []}, id="invalid-handshake-media-type"),
+    ],
+)
+async def test_provider_response_metadata_is_rejected_before_durable_delivery(
+    pilot, trigger_owner, owned_flow, client, monkeypatch, method, metadata, ingress_audit
 ):
     from langflow.services.auth.utils import decrypt_api_key
     from langflow.services.database.models.trigger.model import TriggerSourceVersion
@@ -553,7 +581,7 @@ async def test_provider_204_body_is_rejected_before_durable_delivery(
     def verify(request, secrets, *, tolerance_s):
         original = pilot.provider.verify_get if method == "GET" else pilot.provider.verify
         result = original(request, secrets, tolerance_s=tolerance_s)
-        changes = {"response_status": 204, "response_body": "invalid-body"}
+        changes = dict(metadata)
         if method == "POST":
             changes["source_items"] = (
                 {"provider": "pilot", "resource": "items", "id": "1", "version": "1", "data": {}},
@@ -579,6 +607,8 @@ async def test_provider_204_body_is_rejected_before_durable_delivery(
         headers={"x-pilot-signature": signature},
     )
     assert response.status_code == 404
+    assert ingress_audit.await_args.kwargs["accepted"] is False
+    assert ingress_audit.await_args.kwargs["reason"] == REASON_VERIFIER_ERROR
     async with session_scope() as session:
         assert not (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger.id))).all()
         assert not (
