@@ -669,7 +669,9 @@ class KBIngestionHelper:
                     continue
 
                 size_bytes = len(content_obj.raw_bytes)
-                text = extract_text_from_bytes(content_obj.file_name, content_obj.raw_bytes)
+                # PDF parsing can take minutes; keep API requests and worker
+                # heartbeats running while synchronous extraction does its work.
+                text = await asyncio.to_thread(extract_text_from_bytes, content_obj.file_name, content_obj.raw_bytes)
                 if not text.strip():
                     summary.record_item(
                         IngestionItemResult(
@@ -693,7 +695,8 @@ class KBIngestionHelper:
                     combined_metadata.update(item.source_metadata)
                 item_metadata_tag = json.dumps(combined_metadata) if combined_metadata else encoded_metadata_tag
 
-                chunks = chunk_text_for_ingestion(
+                chunks = await asyncio.to_thread(
+                    chunk_text_for_ingestion,
                     text,
                     chunk_size=chunk_size,
                     chunk_overlap=chunk_overlap,
