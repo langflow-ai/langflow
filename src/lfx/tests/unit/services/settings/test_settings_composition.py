@@ -270,8 +270,10 @@ EXPECTED_FIELDS = {
     "background_lease_ttl_s",
     "background_heartbeat_interval_s",
     "background_watchdog_interval_s",
+    "background_backend",
+    "background_poll_interval_s",
+    "background_claim_candidates",
     "background_retention_days",
-    "test_redis_url",
     "data_subject_response_days",
     "data_subject_auto_erase_on_expiry",
     # Triggers (TRG-2)
