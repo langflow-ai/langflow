@@ -7,6 +7,7 @@ import useIconStatus from "@/CustomNodes/hooks/use-icons-status";
 import useUpdateValidationStatus from "@/CustomNodes/hooks/use-update-validation-status";
 import useValidationStatusString from "@/CustomNodes/hooks/use-validation-status-string";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { TriggerNodeStatus } from "@/components/core/triggers/TriggerNodeBadge";
 import { Button } from "@/components/ui/button";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { BuildStatus } from "@/constants/enums";
@@ -15,6 +16,7 @@ import {
   usePermissions,
 } from "@/contexts/permissionsContext";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
+import { ENABLE_TRIGGERS } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAlertStore from "@/stores/alertStore";
@@ -26,6 +28,7 @@ import type { VertexBuildTypeAPI } from "@/types/api";
 import type { NodeDataType } from "@/types/flow";
 import { formatTokenCount } from "@/utils/format-token-count";
 import { findLastNode } from "@/utils/reactflowUtils";
+import { isTriggerComponent } from "@/utils/trigger-component";
 import { classNames, cn } from "@/utils/utils";
 import IconComponent from "../../../../components/common/genericIconComponent";
 import HumanInputNodeBadge, {
@@ -547,6 +550,9 @@ export default function NodeStatus({
             </ShadTooltip>
           )}
         </div>
+      )}
+      {ENABLE_TRIGGERS && showNode && isTriggerComponent(data.node) && (
+        <TriggerNodeStatus nodeId={nodeId} />
       )}
       {awaitingHumanInput ? (
         <HumanInputNodeBadge nodeId={nodeId} />
