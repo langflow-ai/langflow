@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from dataclasses import replace
 
 import pytest
 from langflow.services.database.models.connection.model import Connection
@@ -546,6 +547,111 @@ async def test_a_filter_edit_before_reconcile_is_rematched_without_reconnecting(
     await supervisor.reconcile()
     assert not socket.closed.is_set()
     assert len(socket_adapters) == 1
+
+
+@pytest.mark.parametrize("phase", ["startup", "overlap"])
+async def test_an_event_waits_for_the_inflight_app_identity_write(
+    slack, supervisor, socket_adapters, trigger_owner, owned_flow, monkeypatch, phase
+) -> None:
+    """An acknowledged event must not leave an older app-ID write in flight."""
+    initial_write = asyncio.Event()
+    release_write = asyncio.Event()
+    completed = []
+    gate_enabled = phase == "startup"
+    original = supervisor._context
+
+    def gated_context(worker):
+        ctx = original(worker)
+
+        async def save_cursor(**kwargs):
+            if gate_enabled and not initial_write.is_set():
+                initial_write.set()
+                await release_write.wait()
+            await ctx.save_cursor(**kwargs)
+            completed.append(kwargs["trigger_id"])
+
+        return replace(ctx, save_cursor=save_cursor)
+
+    monkeypatch.setattr(supervisor, "_context", gated_context)
+    _, trigger_id = await _armed(trigger_owner, owned_flow)
+    await supervisor.reconcile()
+    [socket] = await slack.wait_for_sockets(1)
+    peer = None
+    if phase == "overlap":
+        await socket.deliver(fx.load("message_im"), envelope_id="env-initial")
+        assert await socket.wait_for_ack("env-initial")
+        socket_adapters[0]._drain_timeout_s = 10.0
+        await socket.send({"type": "disconnect", "reason": "warning"})
+        _, peer = await slack.wait_for_sockets(2)
+        await peer.deliver(fx.load("message_im"), envelope_id="env-replacement")
+        assert await peer.wait_for_ack("env-replacement")
+        async with session_scope() as session:
+            row = await session.get(Trigger, trigger_id)
+            row.provider_state = {}
+            session.add(row)
+        await supervisor.reconcile()
+        completed.clear()
+        gate_enabled = True
+    await socket.deliver(fx.load("message_channel"), envelope_id="env-prime")
+    await asyncio.wait_for(initial_write.wait(), timeout=5)
+    try:
+        if peer is not None:
+            await peer.deliver(fx.load("message_channel"), envelope_id="env-peer")
+        assert not await socket.wait_for_ack("env-prime", timeout=0.5)
+        if peer is not None:
+            assert not peer.acked("env-peer")
+        assert len(await fx.events_for(trigger_id)) == (0 if phase == "startup" else 1)
+        assert completed == []
+    finally:
+        release_write.set()
+    assert await socket.wait_for_ack("env-prime")
+    if peer is not None:
+        assert await peer.wait_for_ack("env-peer")
+    assert completed == [trigger_id]
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger_id)
+        row.config = {**row.config, "channels": ["C0SUPPORT1"]}
+        session.add(row)
+    body = fx.load("message_channel")
+    body["event_id"] = "Ev0AFTERINITIAL"
+    await socket.deliver(body, envelope_id="env-after-initial")
+    assert await socket.wait_for_ack("env-after-initial")
+    assert len(await fx.events_for(trigger_id)) == (2 if phase == "startup" else 3)
+    assert not socket.closed.is_set()
+    assert len(socket_adapters) == 1
+
+
+@pytest.mark.usefixtures("socket_adapters")
+async def test_stop_cancels_a_pending_app_identity_write_and_its_waiting_event(
+    slack, supervisor, trigger_owner, owned_flow, monkeypatch
+) -> None:
+    initial_write = asyncio.Event()
+    release_write = asyncio.Event()
+    original = supervisor._context
+
+    def gated_context(worker):
+        ctx = original(worker)
+
+        async def save_cursor(**kwargs):
+            initial_write.set()
+            await release_write.wait()
+            await ctx.save_cursor(**kwargs)
+
+        return replace(ctx, save_cursor=save_cursor)
+
+    monkeypatch.setattr(supervisor, "_context", gated_context)
+    _, trigger_id = await _armed(trigger_owner, owned_flow)
+    await supervisor.reconcile()
+    [socket] = await slack.wait_for_sockets(1)
+    await asyncio.wait_for(initial_write.wait(), timeout=5)
+    try:
+        await socket.deliver(fx.load("message_channel"), envelope_id="env-pending")
+        await asyncio.wait_for(supervisor.stop(), timeout=5)
+        await asyncio.wait_for(socket.closed.wait(), timeout=5)
+        assert not socket.acked("env-pending")
+        assert await fx.events_for(trigger_id) == []
+    finally:
+        release_write.set()
 
 
 @pytest.mark.parametrize("change", ["pause", "lease", "ownership", "consent", "binding", "mechanism", "app"])
