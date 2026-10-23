@@ -1,0 +1,13 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: langflow-allow-egress
+  namespace: langflow
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: langflow
+  policyTypes:
+    - Egress
+  egress:
+    - {}
