@@ -593,6 +593,7 @@ module.exports = {
             "Components/bundles-pgvector",
             "Components/bundles-pinecone",
             "Components/bundles-plivo",
+            "Components/bundles-publora",
             "Components/bundles-qdrant",
             "Components/bundles-redis",
             "Components/bundles-sambanova",
