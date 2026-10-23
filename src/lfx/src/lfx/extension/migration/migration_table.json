@@ -5270,6 +5270,26 @@
       "bare_class_name": "MrscraperWebSearch",
       "target": "ext:mrscraper:MrscraperWebSearch@official",
       "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "MailtrapSendEmailComponent",
+      "target": "ext:mailtrap:MailtrapSendEmailComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "MailtrapListSandboxMessagesComponent",
+      "target": "ext:mailtrap:MailtrapListSandboxMessagesComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "MailtrapGetSandboxMessageComponent",
+      "target": "ext:mailtrap:MailtrapGetSandboxMessageComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "MailtrapCheckSandboxMessageComponent",
+      "target": "ext:mailtrap:MailtrapCheckSandboxMessageComponent@official",
+      "added_in": "1.14.0"
     }
   ],
   "ambiguous_bare_names": [
