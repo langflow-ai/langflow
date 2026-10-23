@@ -29,7 +29,7 @@ For example, connect **Account** to a **Parser** to read `token_remaining` befor
 
 ## MrScraper Scraper API
 
-Fetch HTML, Markdown, screenshots, or a combination. This component sends `POST https://api.mrscraper.com`. The request body contains `url`, `maxRetries`, and optional `tokenCap`; page options and the API token are query parameters.
+Fetch a public web page as rendered HTML, Markdown, screenshot, or a combination. This component sends `POST https://api.mrscraper.com`. The request body contains `url`, `maxRetries`, and optional `tokenCap`; page options and the API token are query parameters.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
@@ -62,7 +62,7 @@ JSON object responses pass through unchanged, including combined HTML, Markdown,
 
 ## MrScraper Web Search
 
-Search Google using query text or a full Google search URL. This component sends `POST https://sync.scraper.mrscraper.com/api/google/serp/v2/sync`.
+Search the web to retrieve real-time search results, including relevant website URLs, titles, descriptions, and related questions based on a given query or a full Google search URL. This component sends `POST https://sync.scraper.mrscraper.com/api/google/serp/v2/sync`.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|

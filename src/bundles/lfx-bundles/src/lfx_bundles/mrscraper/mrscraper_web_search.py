@@ -13,7 +13,10 @@ class MrscraperWebSearch(Component):
     """Search Google through the MrScraper v2 synchronous SERP API."""
 
     display_name: str = "MrScraper Web Search"
-    description: str = "Search Google using query text or a Google search URL; return JSON results or HTML."
+    description: str = (
+        "Search the web to retrieve real-time search results, including relevant website URLs, titles, "
+        "descriptions, and related questions based on a given query or a full Google search URL."
+    )
     name = "MrscraperWebSearch"
     icon: str = "MrScraper"
     documentation: str = "https://docs.mrscraper.com"
