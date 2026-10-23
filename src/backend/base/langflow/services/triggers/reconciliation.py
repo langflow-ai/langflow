@@ -183,6 +183,11 @@ def normalize_webhook_config(config: dict[str, Any]) -> dict[str, Any]:
 #: trigger paused, and the reason is still the explanation.
 NODE_REMOVED_ERROR = "trigger node removed from the flow"
 
+#: Why an armed Microsoft or Google source was paused by a save that changed its
+#: settings: the provider subscription was retired with the old settings, so it
+#: takes an explicit enable to subscribe again with the new ones.
+SOURCE_SETTINGS_CHANGED_ERROR = "Source settings changed. Enable the trigger again to resubscribe."
+
 #: States whose ``last_error`` a schedule verdict owns. The provider states and
 #: the terminal ``dead`` state carry reasons that a schedule edit cannot fix.
 _VERDICT_STATES = frozenset(
@@ -462,7 +467,7 @@ async def reconcile_flow_triggers(
 
                 await revoke_for_trigger(session, trigger_id=row.id)
                 row.state = TriggerState.PAUSED.value
-                row.last_error = error or "Source settings changed. Enable the trigger again to resubscribe."
+                row.last_error = error or SOURCE_SETTINGS_CHANGED_ERROR
                 row.provider_state = {}
                 changed = True
             elif row.last_error != error and row.state != TriggerState.ACTIVE.value:
@@ -477,9 +482,15 @@ async def reconcile_flow_triggers(
     from langflow.services.triggers.subscriptions import revoke_for_trigger
 
     for node_id, row in existing.items():
-        if node_id in nodes or row.state in {TriggerState.PAUSED.value, TriggerState.DEAD.value}:
+        if node_id in nodes or row.state == TriggerState.DEAD.value:
+            continue
+        # A pause the owner chose stays theirs. An operator's pause does not:
+        # removing the node is the owner's own off switch, and the operator's
+        # bulk resume must not re-arm a trigger whose node is gone.
+        if row.state == TriggerState.PAUSED.value and row.admin_paused_at is None:
             continue
         row.state = TriggerState.PAUSED.value
+        row.admin_paused_at = None
         row.last_error = NODE_REMOVED_ERROR
         session.add(row)
         # Retire the provider subscription with the node, for the same reason

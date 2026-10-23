@@ -10,8 +10,9 @@ import emoji
 from emoji import purely_emoji
 from lfx.log.logger import logger
 from lfx.schema.validators import ensure_utc
+from lfx.utils.flow_code import normalize_code_for_import
 from pydantic import BaseModel, ValidationInfo, field_serializer, field_validator
-from sqlalchemy import Boolean, Text, UniqueConstraint, false, text
+from sqlalchemy import Boolean, String, Text, UniqueConstraint, cast, false, func, or_, text
 from sqlalchemy import Enum as SQLEnum
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
@@ -22,6 +23,13 @@ if TYPE_CHECKING:
     from langflow.services.database.models.user.model import User
 
 HEX_COLOR_LENGTH = 7
+VIRTUAL_FLOW_UUID_VERSION = 5
+
+
+def is_virtual_flow_id(flow_id: UUID) -> bool:
+    """Return whether an ID belongs to the reserved public execution namespace."""
+    return flow_id.version == VIRTUAL_FLOW_UUID_VERSION
+
 
 _ENDPOINT_NAME_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
 
@@ -267,6 +275,19 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     )
 
 
+def persisted_flow_history_filter():
+    """Exclude the UUID5 range reserved for virtual public execution histories.
+
+    A legacy Flow row in that range cannot establish ownership of its runtime
+    records. Normalize UUID text because SQLite omits hyphens and Postgres does not.
+    """
+    uuid_hex = func.lower(func.replace(cast(Flow.id, String), "-", ""))
+    return or_(
+        func.substr(uuid_hex, 13, 1) != str(VIRTUAL_FLOW_UUID_VERSION),
+        func.substr(uuid_hex, 17, 1).not_in(("8", "9", "a", "b")),
+    )
+
+
 class FlowCreate(FlowBase):
     # Present on upload means upsert (that ID, if it already belongs to the caller); absent
     # means a generated UUID, so every existing import path keeps working unchanged.
@@ -275,6 +296,11 @@ class FlowCreate(FlowBase):
     folder_id: UUID | None = None
     workspace_id: UUID | None = None
     fs_path: str | None = None
+
+    @field_validator("data")
+    @classmethod
+    def normalize_code(cls, value: dict | None) -> dict | None:
+        return normalize_code_for_import(value) if value is not None else value
 
 
 class FlowRead(FlowBase):
@@ -340,6 +366,11 @@ class FlowUpdate(SQLModel):
     a2a_enabled: bool | None = None
     a2a_card_overrides: dict | None = None
     fs_path: str | None = None
+
+    @field_validator("data")
+    @classmethod
+    def normalize_code(cls, value: dict | None) -> dict | None:
+        return normalize_code_for_import(value) if value is not None else value
 
     @field_validator("endpoint_name")
     @classmethod

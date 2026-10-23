@@ -1,0 +1,127 @@
+---
+title: Configure Langflow for Microsoft Entra
+slug: /entra-app-registration
+---
+
+import Icon from "@site/src/components/icon";
+
+Connect Microsoft 365 to Langflow with an app registration you create in Microsoft Entra, which Langflow stores on the Langflow server. Each person then connects their own account in Langflow **Settings**.
+
+To create the registration, see [Register an application with the Microsoft identity platform](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app).
+
+## Prerequisites
+
+- A [Microsoft Entra tenant](https://learn.microsoft.com/en-us/entra/fundamentals/create-new-tenant), with permission to [register an application](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app).
+- [Microsoft 365 licenses](https://learn.microsoft.com/en-us/microsoft-365/admin/manage/assign-licenses-to-users) for users to connect. For each workload you must enable the following actions:
+  - SharePoint Online and OneDrive for file actions.
+  - Exchange Online for Outlook mail and calendar actions.
+  - Microsoft Teams for chat and channel messages.
+- The [directory or tenant UUID](https://learn.microsoft.com/en-us/entra/fundamentals/how-to-find-tenant).
+- The [public URL](/deployment-overview) of the Langflow instance that hosts the OAuth callback.
+- Access to set `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS` on the Langflow server.
+
+## Connect Microsoft 365
+
+To connect Microsoft 365, do the following:
+
+1. In Microsoft Entra, copy the directory (tenant) ID and the application (client) ID from your [registered single-tenant application](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app).
+Langflow accepts one tenant per registration.
+
+2. Add [Langflow's redirect URI](#redirect-uris) to the Microsoft Entra registration.
+Use the same hostname in the browser and in the URI.
+For more information on adding a redirect URI in Microsoft Entra, see [Redirect URI (reply URL) restrictions](https://learn.microsoft.com/en-us/entra/identity-platform/reply-url).
+
+3. In Microsoft Entra, add the delegated permissions for the actions you use with `offline_access`.
+Use the short names in [Delegated permissions](#delegated-permissions).
+For more information, see [Configure a client application to access web APIs](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-configure-app-access-web-apis).
+
+4. In Microsoft Entra, create a client secret or a certificate.
+For more information, see [Add credentials to your application](https://learn.microsoft.com/en-us/entra/identity-platform/how-to-add-credentials).
+   * If you're creating a client secret, copy the secret when Entra displays it.
+   * If you're creating a client certificate, copy the private key and the certificate's SHA-256 thumbprint.
+   * If you're creating a Desktop client, no secret is required.
+
+For more information, see [Public and confidential client apps](https://learn.microsoft.com/en-us/entra/identity-platform/msal-client-applications).
+
+5. On the Langflow server, set the `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS` [environment variable](./environment-variables.mdx) . Its value is the JSON below, not a path to a JSON file.
+
+   ```json
+   {
+     "microsoft-work": {
+       "provider": "microsoft",
+       "owner": "customer",
+       "context": "self_managed",
+       "client_type": "confidential",
+       "tenant": "00000000-0000-0000-0000-000000000000",
+       "client_id": "YOUR_APPLICATION_CLIENT_ID",
+       "client_secret": "YOUR_CLIENT_SECRET",
+       "redirect_uri": "https://langflow.example/api/v1/connections/oauth/microsoft/callback",
+       "scopes": ["Mail.Read", "Calendars.Read", "Files.Read", "offline_access"]
+     }
+   }
+   ```
+
+   * Set `LANGFLOW_CONNECTION_OAUTH_CONTEXT` to the same value as `context`: `self_managed`, `hosted`, or `desktop`.
+   * Replace `YOUR_APPLICATION_CLIENT_ID`, `YOUR_CLIENT_SECRET`, and `tenant` with the values from the registration.
+   * Replace `langflow.example` with your instance's public hostname.
+   * For a certificate, set `private_key` and `certificate_thumbprint` instead of `client_secret`.
+   * For Desktop, set `client_type` to `public` and omit the secret. `scopes` is the list of permissions a person can consent to.
+
+6. Restart Langflow.
+7. In the Langflow header, click your profile icon, and then select **Settings**.
+8. Click **Connections**.
+9. Click <Icon name="Plus" aria-hidden="true" /> **Add connection**.
+10. Select **Microsoft 365**. Enter a handle, such as `work`, and a display name.
+11. Under **Scopes to request**, select the permissions your flows need, and then click **Continue**.
+12. Complete consent. The consent prompt displays the permissions you selected.
+13. For a scheduled or deployed flow run, click <Icon name="Ellipsis" aria-hidden="true" /> **Actions** on the connection and select **Allow scheduled and deployed runs**.
+
+If Microsoft Entra requests administrator approval, an administrator must approve the app before consent can complete.
+For more information, see [Configure how users consent to applications](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-user-consent).
+
+If an administrator changes client ID, scope, or redirect URI, each user must reconnect to Langflow.
+To reconnect, click **Settings**, open the connection's <Icon name="Ellipsis" aria-hidden="true" /> **Actions** menu, and click **Reconnect**.
+Microsoft Entra will display the consent prompt again.
+
+Rotating Entra secrets doesn't require reconnection.
+
+## Revoke an account connection
+
+To disconnect an account in Langflow, select <Icon name="Ellipsis" aria-hidden="true" /> **Actions** on the connection, and then click **Revoke**.
+Langflow deletes the stored credentials.
+To remove the Langflow app's access in Microsoft Entra, see [Review permissions granted to applications](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/manage-application-permissions).
+
+## Redirect URIs
+
+In Microsoft Entra, add the redirect URI that matches how you run Langflow. Use the **Web** platform for a hosted or self-managed server, and **Mobile and desktop applications** for Langflow Desktop. A headless run doesn't use a redirect.
+
+| Context | Platform | Redirect URI |
+| --- | --- | --- |
+| Hosted or self-managed server | Web | `https://YOUR_INSTANCE/api/v1/connections/oauth/microsoft/callback` |
+| Desktop | Mobile and desktop applications | `http://localhost:7860/api/v1/connections/oauth/microsoft/callback` |
+| Headless | Not applicable | No redirect. For how to supply a token, see [Headless and CLI runs](../Components/bundles-microsoft.mdx#headless-and-cli-runs). |
+
+Replace `YOUR_INSTANCE` with the public hostname of the Langflow instance.
+
+## Delegated permissions
+
+In Microsoft Entra, add a Microsoft Graph permission for each action your flows use.
+These permissions don't require admin consent.
+For more information, see [Configure how users consent to applications](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-user-consent).
+
+| Component | Delegated permission |
+| --- | --- |
+| Outlook: Send Mail | `Mail.Send` |
+| Outlook: Search Mail | `Mail.Read` |
+| Outlook Calendar: List Events | `Calendars.Read` |
+| Outlook Calendar: Create Event | `Calendars.ReadWrite` |
+| Teams: Post Chat Message | `ChatMessage.Send` |
+| Teams: Post Channel Message | `ChannelMessage.Send` |
+| SharePoint/OneDrive: List Items | `Files.Read` |
+| SharePoint/OneDrive: Fetch Item | `Files.Read` |
+
+The Fetch Item action also requires `Files.Read.All` when you supply a **Drive ID**, and `Sites.Read.All` when you supply a **Site ID**.
+
+Include `offline_access` in registration and in `scopes`. Without `offline_access`, Entra doesn't issue a refresh token, so the connection stops working after about an hour.
+A refresh token that isn't used for 90 days expires, and the user has to reconnect Langflow.
+For more information, see [Refresh tokens](https://learn.microsoft.com/en-us/entra/identity-platform/refresh-tokens).
