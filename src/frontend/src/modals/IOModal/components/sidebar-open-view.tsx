@@ -3,13 +3,13 @@ import { useTranslation } from "react-i18next";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { ShowMoreSessions } from "@/components/core/playgroundComponent/chat-view/chat-header/components/show-more-sessions";
 import { Button } from "@/components/ui/button";
-import useFlowStore from "@/stores/flowStore";
-import { useVoiceStore } from "@/stores/voiceStore";
 import IconComponent from "../../../components/common/genericIconComponent";
 import type { SidebarOpenViewProps } from "../types/sidebar-open-view";
 import SessionSelector from "./IOFieldView/components/session-selector";
 
 export const SidebarOpenView = ({
+  onNewSession,
+  pendingSessionIds,
   sessions,
   sessionsPagination,
   setSelectedViewField,
@@ -22,14 +22,6 @@ export const SidebarOpenView = ({
 }: SidebarOpenViewProps) => {
   const { t } = useTranslation();
   const [openMenuSession, setOpenMenuSession] = useState<string | null>(null);
-
-  const setNewSessionCloseVoiceAssistant = useVoiceStore(
-    (state) => state.setNewSessionCloseVoiceAssistant,
-  );
-
-  const setNewChatOnPlayground = useFlowStore(
-    (state) => state.setNewChatOnPlayground,
-  );
 
   return (
     <>
@@ -50,12 +42,7 @@ export const SidebarOpenView = ({
                   variant="ghost"
                   className="flex h-8 w-8 items-center justify-center !p-0 hover:bg-secondary-hover"
                   aria-label={t("chat.newChat")}
-                  onClick={(_) => {
-                    setvisibleSession(undefined);
-                    setSelectedViewField(undefined);
-                    setNewSessionCloseVoiceAssistant(true);
-                    setNewChatOnPlayground(true);
-                  }}
+                  onClick={onNewSession}
                 >
                   <IconComponent
                     name="Plus"
@@ -69,6 +56,7 @@ export const SidebarOpenView = ({
         <div className="flex flex-col">
           {sessions.map((session, index) => (
             <SessionSelector
+              canRename={!pendingSessionIds?.has(session)}
               setSelectedView={setSelectedViewField}
               selectedView={selectedViewField}
               key={index}

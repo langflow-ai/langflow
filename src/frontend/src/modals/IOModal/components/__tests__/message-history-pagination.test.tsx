@@ -84,6 +84,7 @@ function SharedChat() {
   });
   return (
     <ChatViewWrapper
+      onNewSession={() => {}}
       messageHistory={messageHistory}
       messagesFetched={messageHistory.isFetched}
       selectedViewField={undefined}
