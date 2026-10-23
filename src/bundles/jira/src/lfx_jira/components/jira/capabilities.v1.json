@@ -1,0 +1,203 @@
+{
+  "schema_version": 1,
+  "provider_id": "jira",
+  "display_name": "Jira Cloud",
+  "icon": "Ticket",
+  "docs_url": "https://developer.atlassian.com/cloud/jira/platform/oauth-2-3lo-apps/",
+  "auth_profiles": [
+    {
+      "id": "user",
+      "kind": "oauth2_authorization_code",
+      "identity": "user_delegated",
+      "supports_pkce": false,
+      "supports_refresh": true,
+      "default_scopes": [
+        "offline_access",
+        "read:jira-user",
+        "read:jira-work",
+        "write:jira-work"
+      ],
+      "client_type_by_context": {
+        "hosted": "confidential",
+        "self_managed": "confidential"
+      },
+      "owner_by_context": {
+        "hosted": "either",
+        "self_managed": "customer"
+      }
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "jira.issue.search",
+      "display_name": "JiraSearchIssues",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "read:jira-work",
+        "read:jira-user"
+      ],
+      "policy_keys": [
+        "integrations.jira.issue.search"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed"
+      ],
+      "risk": "read",
+      "component_ref": "JiraSearchIssuesComponent"
+    },
+    {
+      "id": "jira.issue.read",
+      "display_name": "JiraReadIssue",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "read:jira-work",
+        "read:jira-user"
+      ],
+      "policy_keys": [
+        "integrations.jira.issue.read"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed"
+      ],
+      "risk": "read",
+      "component_ref": "JiraReadIssueComponent"
+    },
+    {
+      "id": "jira.issue.create",
+      "display_name": "JiraCreateIssue",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "read:jira-work",
+        "write:jira-work",
+        "read:jira-user"
+      ],
+      "policy_keys": [
+        "integrations.jira.issue.create"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed"
+      ],
+      "risk": "write",
+      "component_ref": "JiraCreateIssueComponent"
+    },
+    {
+      "id": "jira.issue.update",
+      "display_name": "JiraUpdateIssue",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "read:jira-work",
+        "write:jira-work",
+        "read:jira-user"
+      ],
+      "policy_keys": [
+        "integrations.jira.issue.update"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed"
+      ],
+      "risk": "write",
+      "component_ref": "JiraUpdateIssueComponent"
+    },
+    {
+      "id": "jira.issue.transition",
+      "display_name": "JiraTransitionIssue",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "read:jira-work",
+        "write:jira-work",
+        "read:jira-user"
+      ],
+      "policy_keys": [
+        "integrations.jira.issue.transition"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed"
+      ],
+      "risk": "write",
+      "component_ref": "JiraTransitionIssueComponent"
+    },
+    {
+      "id": "jira.trigger.created",
+      "display_name": "JiraOnIssueCreatedTrigger",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "read:jira-work",
+        "offline_access",
+        "read:jira-user"
+      ],
+      "policy_keys": [
+        "integrations.jira.trigger.created"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "self_managed"
+      ],
+      "risk": "read",
+      "component_ref": "JiraOnIssueCreatedTriggerComponent"
+    },
+    {
+      "id": "jira.trigger.updated",
+      "display_name": "JiraOnIssueUpdatedTrigger",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "read:jira-work",
+        "offline_access",
+        "read:jira-user"
+      ],
+      "policy_keys": [
+        "integrations.jira.trigger.updated"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "self_managed"
+      ],
+      "risk": "read",
+      "component_ref": "JiraOnIssueUpdatedTriggerComponent"
+    },
+    {
+      "id": "jira.trigger.status",
+      "display_name": "JiraOnIssueStatusChangedTrigger",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "read:jira-work",
+        "offline_access",
+        "read:jira-user"
+      ],
+      "policy_keys": [
+        "integrations.jira.trigger.status"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "self_managed"
+      ],
+      "risk": "read",
+      "component_ref": "JiraOnIssueStatusChangedTriggerComponent"
+    }
+  ]
+}
