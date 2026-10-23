@@ -31,15 +31,6 @@ pub struct ListIndex {
     slots: HashMap<String, usize>,
 }
 
-/// How an item left a list, so it can be put back.
-#[derive(Debug)]
-pub(crate) enum Removal {
-    /// Removed from `slot`; the items after it moved up.
-    Shifted { slot: usize },
-    /// Removed from `slot`; the last item took its place.
-    Swapped { slot: usize },
-}
-
 impl ListIndex {
     /// Index `items`, checking every item's key, and every table row's position.
     ///
@@ -118,8 +109,8 @@ impl ListIndex {
         Ok(())
     }
 
-    /// Remove the item with `key` and say how it left, or `None` when no item has it.
-    pub(crate) fn remove(&mut self, items: &mut Vec<Value>, key: &str) -> Option<(Value, Removal)> {
+    /// Remove the item with `key` and return it, or `None` when no item has it.
+    pub(crate) fn remove(&mut self, items: &mut Vec<Value>, key: &str) -> Option<Value> {
         let slot = self.slots.remove(key)?;
         if self.keyed.kind == ListKind::Natural {
             // Natural lists are short (a component's outputs or tool actions), and their order is kept.
@@ -129,7 +120,7 @@ impl ListIndex {
                     *later -= 1;
                 }
             }
-            return Some((item, Removal::Shifted { slot }));
+            return Some(item);
         }
         let item = items.swap_remove(slot);
         if let Some(moved) = items.get(slot)
@@ -137,7 +128,7 @@ impl ListIndex {
         {
             self.slots.insert(moved_key.to_owned(), slot);
         }
-        Some((item, Removal::Swapped { slot }))
+        Some(item)
     }
 
     /// Replace the item at `slot` by `item`, which carries the same key, and return the old item.

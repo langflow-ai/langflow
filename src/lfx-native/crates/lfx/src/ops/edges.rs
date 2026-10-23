@@ -28,6 +28,7 @@ use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result, bail, invalid, quoted};
 use crate::ops::keyed::ListIndex;
 use crate::ops::schema::{KeyedList, NODE_SCHEMA, OUTPUTS_PATH};
+use crate::ops::state::{Layered, Order};
 use crate::ops::validate::ViolationCode;
 
 /// The type of a note node.
@@ -72,7 +73,7 @@ pub struct Handles {
 }
 
 /// A node's edges, by the input they enter and the output they leave from.
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Connections {
     /// Edges into each input of the node.
     pub inputs: HashMap<Input, IndexSet<String>>,
@@ -96,11 +97,21 @@ pub(crate) fn endpoint<'e>(edge: &'e Map<String, Value>, end: &str) -> &'e str {
 }
 
 /// What is indexed so far about edges: each edge's handles, and each node's
-/// connections. Both are built the first time something asks for them.
-#[derive(Debug, Default)]
+/// connections. Both are built the first time something asks for them, and
+/// a batch changes them through its layer, as it changes the graph.
+#[derive(Debug)]
 pub(crate) struct EdgeIndex {
-    handles: HashMap<String, Handles>,
-    connections: HashMap<String, Connections>,
+    handles: Layered<Handles>,
+    connections: Layered<Connections>,
+}
+
+impl Default for EdgeIndex {
+    fn default() -> Self {
+        Self {
+            handles: Layered::new(Order::Free),
+            connections: Layered::new(Order::Free),
+        }
+    }
 }
 
 impl EdgeIndex {
@@ -117,7 +128,7 @@ impl EdgeIndex {
 
     /// A node's connections, reading the handles of its edges the first time.
     pub fn connections(&mut self, graph: &impl GraphRead, node_id: &str) -> Result<&Connections> {
-        if !self.connections.contains_key(node_id) {
+        if !self.connections.contains(node_id) {
             let mut connections = Connections::default();
             for id in graph.edge_ids_at(node_id) {
                 let edge = graph
@@ -128,7 +139,10 @@ impl EdgeIndex {
             }
             self.connections.insert(node_id.to_owned(), connections);
         }
-        Ok(&self.connections[node_id])
+        Ok(self
+            .connections
+            .get(node_id)
+            .expect("the connections were just built"))
     }
 
     /// Index a new edge at the nodes whose connections are built.
@@ -137,7 +151,7 @@ impl EdgeIndex {
     /// leaves those nodes to be indexed again when something asks.
     pub fn insert(&mut self, edge: &Map<String, Value>) {
         let ends = [endpoint(edge, "source"), endpoint(edge, "target")];
-        if !ends.iter().any(|end| self.connections.contains_key(*end)) {
+        if !ends.iter().any(|end| self.connections.contains(end)) {
             return;
         }
         match self.handles(edge) {
@@ -158,9 +172,11 @@ impl EdgeIndex {
 
     /// Drop what is indexed about an edge, before it is removed or its handles are rewritten.
     pub fn forget(&mut self, edge: &Map<String, Value>) {
-        let Some(handles) = self.handles.remove(edge.id()) else {
+        let id = edge.id();
+        let Some(handles) = self.handles.get(id).cloned() else {
             return;
         };
+        self.handles.remove(id);
         for end in [endpoint(edge, "source"), endpoint(edge, "target")] {
             if let Some(connections) = self.connections.get_mut(end) {
                 disconnect(connections, end, edge, &handles);
@@ -168,15 +184,27 @@ impl EdgeIndex {
         }
     }
 
+    /// Whether a node's connections are built.
+    #[cfg(test)]
+    pub fn has_connections(&self, node_id: &str) -> bool {
+        self.connections.contains(node_id)
+    }
+
     /// Drop a node's connections.
     pub fn forget_node(&mut self, node_id: &str) {
         self.connections.remove(node_id);
     }
 
-    /// Drop everything indexed.
-    pub fn clear(&mut self) {
-        self.handles.clear();
-        self.connections.clear();
+    /// Make a batch's changes part of the index.
+    pub fn fold(&mut self) {
+        self.handles.fold();
+        self.connections.fold();
+    }
+
+    /// Drop a batch's changes.
+    pub fn discard(&mut self) {
+        self.handles.discard();
+        self.connections.discard();
     }
 }
 
