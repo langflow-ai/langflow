@@ -9,9 +9,7 @@ export function processNodeAdvancedFields(
 ) {
   const newNode = cloneDeep(resData);
 
-  const relevantEdges = edges.filter(
-    (edge) => edge.source !== nodeId || edge.target !== nodeId,
-  );
+  const relevantEdges = edges.filter((edge) => edge.target === nodeId);
 
   if (relevantEdges.length === 0) {
     return newNode;
@@ -24,6 +22,11 @@ export function processNodeAdvancedFields(
       const fieldTemplate = newNode.template[field];
       if (fieldTemplate?.advanced === true) {
         newNode.template[field].advanced = false;
+      }
+      // A connected field stays on the node even when the component now declares it hidden,
+      // or cleanEdges would drop its edge.
+      if (fieldTemplate?.show === false) {
+        newNode.template[field].show = true;
       }
     }
   }
