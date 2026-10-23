@@ -8,7 +8,7 @@ The bundle ships three components that call the [Geekflare API](https://geekflar
 | --- | --- | --- |
 | `GeekflareSearchComponent` | Web, news, or image search returned as a table. Turn on **Google SERP** for the organic results of the full Google results page, by country or city. | `geekflare_search` |
 | `GeekflareScrapeComponent` | Page content as Markdown, text, or HTML, with optional `product` or `contact` templates for structured data. | `geekflare_scrape` |
-| `GeekflareWebsiteCheckComponent` | One website check: site status, DNS records, DNSSEC, TLS scan, redirect chain, broken links, load time, mixed content, or Lighthouse. | `geekflare_website_check` |
+| `GeekflareWebsiteCheckComponent` | One website check: site status, DNS records, TLS scan, redirect chain, broken links, load time, or Lighthouse. | `geekflare_website_check` |
 
 ## Install
 

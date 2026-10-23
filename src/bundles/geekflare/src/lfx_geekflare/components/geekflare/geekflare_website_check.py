@@ -9,12 +9,10 @@ from ._api import GeekflareAPIError, call_api, normalize_url
 CHECKS = {
     "site_status": "up",
     "dns_records": "dnsrecord",
-    "dnssec": "dnssec",
     "tls_scan": "tlsscan",
     "redirect_check": "redirectcheck",
     "broken_links": "brokenlink",
     "load_time": "loadtime",
-    "mixed_content": "mixedcontent",
     "lighthouse": "lighthouse",
 }
 
@@ -24,8 +22,8 @@ class GeekflareWebsiteCheckComponent(Component):
 
     display_name = "Geekflare Website Check"
     description = (
-        "Check a website with Geekflare: uptime, DNS records, DNSSEC, TLS/SSL, redirect chain, "
-        "broken links, load time, mixed content, or a Lighthouse audit."
+        "Check a website with Geekflare: uptime, DNS records, TLS/SSL, redirect chain, "
+        "broken links, load time, or a Lighthouse audit."
     )
     documentation = "https://docs.geekflare.com"
     icon = "Geekflare"
