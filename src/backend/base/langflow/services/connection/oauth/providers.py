@@ -166,8 +166,18 @@ async def exchange(
     token = body
     account = None
     if adapter is not None:
-        token, account = await adapter.parse_token(registration, body, refresh=bool(refresh_token))
-        if not isinstance(token, dict):
+        try:
+            parsed = await adapter.parse_token(registration, body, refresh=bool(refresh_token))
+        except OAuthError:
+            raise
+        except Exception:  # noqa: BLE001 - provider response parsing must not expose response values
+            msg = "OAuth provider returned an invalid credential response."
+            raise OAuthError(msg, reason="provider-unavailable") from None
+        if not isinstance(parsed, tuple) or len(parsed) != 2:  # noqa: PLR2004 - the adapter returns (credential, account)
+            msg = "OAuth provider returned an invalid credential response."
+            raise OAuthError(msg, reason="provider-unavailable")
+        token, account = parsed
+        if not isinstance(token, dict) or (account is not None and not isinstance(account, dict)):
             msg = "OAuth provider returned an invalid credential response."
             raise OAuthError(msg, reason="provider-unavailable")
         if (
