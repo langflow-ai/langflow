@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling==1.31.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "lfx-fxmacrodata"
+version = "0.1.0"
+description = "Native FXMacroData research integration for Langflow"
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = ["requests>=2.32,<3", "jsonschema>=4.23,<5", "lfx>=1.13.0.dev0,<2.0.0", "langchain-core>=1.2.28,<2"]
+
+[project.urls]
+Homepage = "https://fxmacrodata.com"
+Documentation = "https://fxmacrodata.com/documentation/reference"
+
+[project.optional-dependencies]
+test = ["pytest>=8", "pytest-xdist>=3"]
+
+[tool.hatch.build]
+ignore-vcs = true
+exclude = ["**/__pycache__/**", "**/*.pyc"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lfx_fxmacrodata"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/lfx_fxmacrodata/**", "README.md", "LICENSE", "pyproject.toml", "examples/**", "tests/**", "CAPABILITIES.md", ".gitignore"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+extend-exclude = ["src/lfx_fxmacrodata/_public_client"]
+line-length = 120
+target-version = "py310"
+
+[project.entry-points."langflow.extensions"]
+lfx-fxmacrodata = "lfx_fxmacrodata"
+
