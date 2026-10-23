@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "provider_id": "whatsapp",
+  "distribution": "lfx-whatsapp",
+  "manifest": {
+    "schema_version": 1,
+    "provider_id": "whatsapp",
+    "display_name": "WhatsApp Business",
+    "icon": "MessageCircle",
+    "docs_url": "https://www.postman.com/meta/whatsapp-business-platform/collection/wlk6lh4/whatsapp-cloud-api",
+    "auth_profiles": [
+      {
+        "id": "whatsapp-system-user",
+        "kind": "api_key",
+        "identity": "service",
+        "supports_pkce": false,
+        "supports_refresh": false,
+        "default_scopes": [
+          "whatsapp_business_management",
+          "whatsapp_business_messaging"
+        ],
+        "client_type_by_context": {
+          "hosted": "external",
+          "self_managed": "external"
+        },
+        "owner_by_context": {
+          "hosted": "customer",
+          "self_managed": "customer"
+        }
+      }
+    ],
+    "capabilities": [
+      {
+        "id": "whatsapp.message.send",
+        "display_name": "WhatsApp Send Text",
+        "auth_profile_id": "whatsapp-system-user",
+        "identity": "service",
+        "required_scopes": [
+          "whatsapp_business_management",
+          "whatsapp_business_messaging"
+        ],
+        "policy_keys": [
+          "integrations.whatsapp.message.send"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "hosted",
+          "self_managed"
+        ],
+        "risk": "write",
+        "component_ref": "WhatsAppSendTextComponent"
+      },
+      {
+        "id": "whatsapp.template.send",
+        "display_name": "WhatsApp Send Template",
+        "auth_profile_id": "whatsapp-system-user",
+        "identity": "service",
+        "required_scopes": [
+          "whatsapp_business_management",
+          "whatsapp_business_messaging"
+        ],
+        "policy_keys": [
+          "integrations.whatsapp.template.send"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "hosted",
+          "self_managed"
+        ],
+        "risk": "write",
+        "component_ref": "WhatsAppSendTemplateComponent"
+      },
+      {
+        "id": "whatsapp.message.reply",
+        "display_name": "WhatsApp Reply to Message",
+        "auth_profile_id": "whatsapp-system-user",
+        "identity": "service",
+        "required_scopes": [
+          "whatsapp_business_management",
+          "whatsapp_business_messaging"
+        ],
+        "policy_keys": [
+          "integrations.whatsapp.message.reply"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "hosted",
+          "self_managed"
+        ],
+        "risk": "write",
+        "component_ref": "WhatsAppReplyComponent"
+      },
+      {
+        "id": "whatsapp.trigger.event.webhook",
+        "display_name": "WhatsApp On Message or Status",
+        "auth_profile_id": "whatsapp-system-user",
+        "identity": "service",
+        "required_scopes": [
+          "whatsapp_business_management",
+          "whatsapp_business_messaging"
+        ],
+        "policy_keys": [
+          "integrations.whatsapp.trigger.event.webhook"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "hosted",
+          "self_managed"
+        ],
+        "risk": "read",
+        "component_ref": "WhatsAppOnEventTriggerComponent"
+      }
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://www.postman.com/meta/whatsapp-business-platform/request/8gvd47s/send-text-message",
+      "title": "Meta WhatsApp Cloud API send text",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://www.postman.com/meta/whatsapp-business-platform/request/i1mz7w8/debug-token",
+      "title": "Meta WhatsApp token debug",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://www.postman.com/meta/whatsapp-business-platform/request/un84tul/override-callback-url",
+      "title": "Meta WhatsApp WABA callback override",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://whatsapp.github.io/WhatsApp-Nodejs-SDK/api-reference/webhooks/start/",
+      "title": "Meta webhook challenge and HMAC verification",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://whatsapp.github.io/WhatsApp-Nodejs-SDK/api-reference/messages/template/",
+      "title": "Meta template message parameters",
+      "verified_on": "2026-10-22"
+    }
+  ],
+  "transport_limitations": [
+    "One claimed WABA-wide override per app/WABA. One configured phone. No shared receiver routing.",
+    "Text inbound messages and sent/delivered/read/failed/deleted status updates only. No media download or business-scoped user IDs.",
+    "Customer-owned system-user tokens only. No Embedded Signup, OAuth refresh, Desktop, headless, or on-premises API.",
+    "Approved templates support positional text body parameters only. Meta enforces consent, eligibility, messaging windows and limits.",
+    "Contract tests use synthetic HTTP responses. Live tenant acceptance is unverified."
+  ],
+  "evidence_paths": [
+    "src/bundles/whatsapp",
+    "src/backend/base/langflow/services/triggers/providers/whatsapp",
+    "src/backend/tests/unit/services/triggers/providers/whatsapp",
+    "design/provider-integrations/whatsapp.md"
+  ],
+  "owner_acceptance": {
+    "status": "pending",
+    "note": "Implementation proposal awaits release owner and live tenant acceptance."
+  }
+}
