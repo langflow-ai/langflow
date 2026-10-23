@@ -466,34 +466,32 @@ class TestModuleProxy:
             del json_proxy.loads
 
     @pytest.mark.parametrize(
-        ("global_imports", "code"),
+        ("global_imports", "code", "expected_error"),
         [
-            ("json", "os_mod = json.codecs.sys.modules['os']\nos_mod.system('id')"),
-            ("re", "os_mod = re.enum.sys.modules['os']\nos_mod.popen('id')"),
-            ("typing", "os_mod = typing.sys.modules['os']\nos_mod.getpid()"),
-            ("json", "json.decoder.sys.modules['os'].getuid()"),
+            ("json", "os_mod = json.codecs.sys.modules['os']\nos_mod.system('id')", AttributeError),
+            ("re", "os_mod = re.enum.sys.modules['os']\nos_mod.popen('id')", ValueError),
+            ("typing", "os_mod = typing.sys.modules['os']\nos_mod.getpid()", ValueError),
+            ("json", "json.decoder.sys.modules['os'].getuid()", AttributeError),
         ],
     )
-    def test_reported_escape_chains_blocked(self, global_imports, code):
-        """The PoC chains pass the AST gate (all public attributes) but cannot execute."""
+    def test_reported_escape_chains_blocked(self, global_imports, code, expected_error):
+        """Public-attribute chains are refused by the import gate or module proxy."""
         validate_code_safety(code)  # AST gate cannot see this attack class — by design
-        with pytest.raises(AttributeError, match="not allowed"):
+        with pytest.raises(expected_error, match="not allowed"):
             exec(code, self._build_globals(global_imports))  # noqa: S102 - test-only controlled exec
 
     def test_numpy_escape_chain_blocked(self):
-        """The docs-suggested numpy allow-list must not expose numpy.sys."""
-        pytest.importorskip("numpy")
+        """NumPy imports require isolation before any transitive escape can run."""
         code = "os_mod = numpy.sys.modules['os']\nos_mod.popen('id')"
         validate_code_safety(code)
-        with pytest.raises(AttributeError, match="not allowed"):
+        with pytest.raises(ValueError, match="not allowed in Global Imports"):
             exec(code, self._build_globals("numpy"))  # noqa: S102 - test-only controlled exec
 
     def test_numpy_ctypeslib_escape_chain_blocked(self):
-        """numpy.ctypeslib.load_library loads arbitrary native code (e.g. libc.system)."""
-        pytest.importorskip("numpy")
+        """NumPy native-library loading cannot run in the host interpreter."""
         code = "libc = numpy.ctypeslib.load_library('libSystem.B', '/usr/lib')\nlibc.system('id')"
         validate_code_safety(code)  # AST gate cannot see this attack class — by design
-        with pytest.raises(AttributeError, match="not allowed"):
+        with pytest.raises(ValueError, match="not allowed in Global Imports"):
             exec(code, self._build_globals("numpy"))  # noqa: S102 - test-only controlled exec
 
     def test_no_marker_written_end_to_end(self, tmp_path, monkeypatch):
@@ -510,3 +508,77 @@ class TestModuleProxy:
         exec(code, raw_globals)  # noqa: S102 - test-only controlled exec
         assert marker.exists()
         marker.unlink()
+
+
+class TestGlobalImportRestrictions:
+    @pytest.mark.parametrize(
+        "module_name",
+        [
+            "builtins",
+            "os",
+            "os.path",
+            "sys",
+            "subprocess",
+            "ctypes",
+            "ctypes.util",
+            "importlib",
+            "importlib.util",
+            "pathlib",
+            "socket",
+            "io",
+            "posix",
+            "nt",
+            "_io",
+            "numpy.ctypeslib",
+            "numpy._core",
+            "numpy",
+            "pandas",
+            "timeit",
+            "pydoc",
+            "typing",
+            "re",
+            "json.encoder",
+            "statistics.random",
+            "custom_plugin",
+        ],
+    )
+    def test_rejects_host_capabilities_before_import(self, module_name, monkeypatch):
+        """Every import outside the safe set is refused before its initializer runs."""
+
+        def unexpected_import(name):
+            pytest.fail(f"Rejected module reached the host importer: {name}")
+
+        monkeypatch.setattr("lfx.utils.python_repl_security.importlib.import_module", unexpected_import)
+        with pytest.raises(ValueError, match="not allowed in Global Imports"):
+            import_allowed_module(module_name)
+
+    @pytest.mark.parametrize("module_name", ["math", "json", "statistics"])
+    def test_preserves_supported_module_imports(self, module_name):
+        name, proxy = import_allowed_module(module_name)
+        assert name == module_name
+        assert isinstance(proxy, _ModuleProxy)
+
+    def test_global_import_cannot_restore_eval(self):
+        """The ordinary AST check alone permits qualified calls to builtin functions."""
+        code = 'answer = builtins.eval("6 * 7")'
+        validate_code_safety(code)
+        with pytest.raises(ValueError, match="not allowed in Global Imports"):
+            import_allowed_module("builtins")
+
+    @pytest.mark.parametrize("legacy_tool", [False, True], ids=["interpreter", "legacy-tool"])
+    @pytest.mark.parametrize("global_imports", ["numpy,pandas", ["numpy", "pandas"]], ids=["string", "list"])
+    def test_components_reject_restricted_global_imports(self, legacy_tool, global_imports):
+        from lfx.components.tools.python_repl import PythonREPLToolComponent
+        from lfx.components.utilities.python_repl_core import PythonREPLComponent
+
+        component_class = PythonREPLToolComponent if legacy_tool else PythonREPLComponent
+        with pytest.raises(ValueError, match="not allowed in Global Imports"):
+            component_class().get_globals(global_imports)
+
+    def test_safe_modules_preserve_calculation_and_json_behavior(self):
+        _, math_module = import_allowed_module("math")
+        _, json_module = import_allowed_module("json")
+        _, statistics_module = import_allowed_module("statistics")
+        values = json_module.loads("[1, 2, 3]")
+        assert statistics_module.mean(values) == 2
+        assert math_module.sqrt(sum(values) + 3) == 3
