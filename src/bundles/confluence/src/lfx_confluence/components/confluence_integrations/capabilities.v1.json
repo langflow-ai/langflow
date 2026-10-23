@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "provider_id": "confluence",
+  "display_name": "Confluence Cloud",
+  "icon": "BookOpen",
+  "docs_url": "https://developer.atlassian.com/cloud/confluence/oauth-2-3lo-apps/",
+  "auth_profiles": [
+    {
+      "id": "user",
+      "kind": "oauth2_authorization_code",
+      "identity": "user_delegated",
+      "supports_pkce": false,
+      "supports_refresh": true,
+      "default_scopes": [
+        "offline_access",
+        "read:confluence-user",
+        "read:page:confluence",
+        "write:page:confluence"
+      ],
+      "client_type_by_context": {
+        "hosted": "confidential",
+        "self_managed": "confidential"
+      },
+      "owner_by_context": {
+        "hosted": "either",
+        "self_managed": "customer"
+      }
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "confluence.page.search",
+      "display_name": "ConfluenceSearchPages",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "read:page:confluence",
+        "read:confluence-user"
+      ],
+      "policy_keys": [
+        "integrations.confluence.page.search"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed"
+      ],
+      "risk": "read",
+      "component_ref": "ConfluenceSearchPagesComponent"
+    },
+    {
+      "id": "confluence.page.read",
+      "display_name": "ConfluenceReadPage",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "read:page:confluence",
+        "read:confluence-user"
+      ],
+      "policy_keys": [
+        "integrations.confluence.page.read"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed"
+      ],
+      "risk": "read",
+      "component_ref": "ConfluenceReadPageComponent"
+    },
+    {
+      "id": "confluence.page.create",
+      "display_name": "ConfluenceCreatePage",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "read:page:confluence",
+        "write:page:confluence",
+        "read:confluence-user"
+      ],
+      "policy_keys": [
+        "integrations.confluence.page.create"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed"
+      ],
+      "risk": "write",
+      "component_ref": "ConfluenceCreatePageComponent"
+    },
+    {
+      "id": "confluence.page.update",
+      "display_name": "ConfluenceUpdatePage",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "read:page:confluence",
+        "write:page:confluence",
+        "read:confluence-user"
+      ],
+      "policy_keys": [
+        "integrations.confluence.page.update"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed"
+      ],
+      "risk": "write",
+      "component_ref": "ConfluenceUpdatePageComponent"
+    },
+    {
+      "id": "confluence.trigger.created",
+      "display_name": "ConfluenceOnPageCreatedTrigger",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "read:page:confluence",
+        "offline_access",
+        "read:confluence-user"
+      ],
+      "policy_keys": [
+        "integrations.confluence.trigger.created"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "self_managed"
+      ],
+      "risk": "read",
+      "component_ref": "ConfluenceOnPageCreatedTriggerComponent"
+    },
+    {
+      "id": "confluence.trigger.updated",
+      "display_name": "ConfluenceOnPageUpdatedTrigger",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "read:page:confluence",
+        "offline_access",
+        "read:confluence-user"
+      ],
+      "policy_keys": [
+        "integrations.confluence.trigger.updated"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "self_managed"
+      ],
+      "risk": "read",
+      "component_ref": "ConfluenceOnPageUpdatedTriggerComponent"
+    }
+  ]
+}
