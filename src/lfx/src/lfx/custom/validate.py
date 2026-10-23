@@ -18,6 +18,7 @@ from lfx.custom.annotation_validation import (
     snapshot_trusted_class_method_returns,
     validate_source_return_annotations,
 )
+from lfx.custom.build_once import component_class_builds_once as _component_class_builds_once
 from lfx.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
 from lfx.log.logger import logger
 
@@ -348,6 +349,10 @@ def create_class(code, class_name):
             runtime_module,
             trusted_method_returns=trusted_method_returns,
             source_class_bindings=source_class_bindings,
+            # The class is compiled and executed below. Executing it here too,
+            # with the other definitions, would build it twice and discard the
+            # first copy; that copy is kept only when the source could see it.
+            skip_class_name=class_name if _component_class_builds_once(code, runtime_module, class_name) else None,
         )
 
         future_imports = [n for n in runtime_module.body if isinstance(n, ast.ImportFrom) and n.module == "__future__"]
@@ -539,13 +544,15 @@ def _has_static_type_metaclass_bases(class_node: ast.ClassDef, exec_globals: dic
     )
 
 
-def prepare_global_scope(module, *, trusted_method_returns=None, source_class_bindings=None):
+def prepare_global_scope(module, *, trusted_method_returns=None, source_class_bindings=None, skip_class_name=None):
     """Prepares the global scope with necessary imports from the provided code module.
 
     Args:
         module: AST parsed module
         trusted_method_returns: Optional destination for server-owned method snapshots
         source_class_bindings: Optional destination for exact classes produced by source ClassDefs
+        skip_class_name: Optional component class that the caller compiles and executes itself;
+            it is left out here (see lfx.custom.build_once)
 
     Returns:
         Dictionary representing the global scope with imported modules
@@ -569,6 +576,18 @@ def prepare_global_scope(module, *, trusted_method_returns=None, source_class_bi
             import_froms.append(node)
         elif isinstance(node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef | ast.Assign | ast.AnnAssign):
             definitions.append(node)
+
+    if skip_class_name is not None:
+        # The caller compiles and executes this class itself, after every other
+        # definition. A `pass` keeps its place, so the __future__ imports run
+        # with each definition still bind their names (e.g. `annotations`) in
+        # the same order as when the class was executed here.
+        definitions = [
+            ast.copy_location(ast.Pass(), node)
+            if isinstance(node, ast.ClassDef) and node.name == skip_class_name
+            else node
+            for node in definitions
+        ]
 
     for node in imports:
         for alias in node.names:
