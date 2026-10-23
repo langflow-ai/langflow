@@ -455,6 +455,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "CometAPI", name: "cometapi", icon: "CometAPI" },
   { display_name: "Composio", name: "composio", icon: "Composio" },
   { display_name: "Confluence", name: "confluence", icon: "Confluence" },
+  { display_name: "ContextFetch", name: "contextfetch", icon: "ContextFetch" },
   { display_name: "Couchbase", name: "couchbase", icon: "Couchbase" },
   { display_name: "CrewAI", name: "crewai", icon: "CrewAI" },
   { display_name: "CUGA", name: "cuga", icon: "Bot" },
