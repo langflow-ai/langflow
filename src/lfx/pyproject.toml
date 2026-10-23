@@ -55,7 +55,8 @@ dependencies = [
     "langchain-classic~=1.0.7",
     "sqlalchemy>=2.0.38,<2.1.0",
     "validators>=0.34.0,<1.0.0",
-    "filelock>=3.20.1,<4.0.0",
+    "filelock>=4.1.0,<4.2.0; python_version < '3.11'",
+    "filelock>=4.2.1,<5.0.0; python_version >= '3.11'",
     "pypdf>=6.19.0,<7.0.0",
     "cryptography>=50.0.0",
     "pyjwt>=2.15.1,<3.0.0",  # CVE-2026-102266, CVE-2026-102267, CVE-2026-102271, CVE-2026-102272, CVE-2026-102274
