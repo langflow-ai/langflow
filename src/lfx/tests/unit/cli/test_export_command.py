@@ -732,8 +732,6 @@ def test_in_place_write_failure_leaves_the_source_flow_intact(tmp_path, monkeypa
     """
     from pathlib import Path as _Path
 
-    import pytest as _pytest
-
     from lfx.cli.export import _write_flow
 
     source = tmp_path / "flow.json"
