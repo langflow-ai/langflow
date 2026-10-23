@@ -58,14 +58,14 @@ jobs:
 - **macOS**: Intel (AMD64), Apple Silicon (ARM64)
 - **Windows**: AMD64
 - **Python versions**:
-  - **All platforms**: 3.10, 3.12, 3.13, and 3.14
+  - **All platforms**: 3.10, 3.12, 3.13, 3.14, and 3.15
   - **Stability**: 3.10, 3.12, and 3.13 are required to pass (blocking)
-  - **Preview**: 3.14 testing is optional (non-blocking) to monitor ecosystem readiness
+  - **Preview**: 3.14 and 3.15 testing is optional (non-blocking) to monitor ecosystem readiness
   - **Note**: macOS Intel (x86_64) is tested only on Python 3.12. macOS x86_64 is
     being dropped across the ecosystem — PyTorch ships no x86_64 wheels for py>=3.13
     and onnxruntime shipped none after 1.23 — and langflow requires `onnxruntime>=1.26`
     on py>=3.14, so macOS Intel + py>=3.14 cannot resolve. The 3.13 (blocking) and
-    3.14 (preview) sets therefore run on Linux, Windows, and macOS arm64 only
+    3.14/3.15 (preview) sets therefore run on Linux, Windows, and macOS arm64 only
 
 ## What Gets Tested
 
@@ -109,7 +109,7 @@ gh workflow run cross-platform-test.yml \
 
 ### Platform-Specific Optimizations
 - **Stable versions**: Python 3.10, 3.12, and 3.13 provide reliable package ecosystem support
-- **Preview testing**: Python 3.14 runs as non-blocking to monitor when it becomes viable
+- **Preview testing**: Python 3.14 and 3.15 run as non-blocking to monitor when they become viable
 - **Virtual Environments**: Uses `uv venv --seed` for consistent pip availability
 
 ### Workflow Architecture
@@ -193,10 +193,10 @@ error: command '/usr/bin/clang++' failed with exit code 1
 
 **Current Status**:
 - **Stable testing**: Python 3.10, 3.12, and 3.13 are required to pass (blocking jobs)
-- **Preview testing**: Python 3.14 runs as non-blocking to monitor ecosystem readiness
+- **Preview testing**: Python 3.14 and 3.15 run as non-blocking to monitor ecosystem readiness
 - **Compilation issues**: the historical `chroma-hnswlib` failure is avoided on the tested install
   paths (workspace/source builds exclude `chromadb`); a similar upstream issue surfacing on the
-  preview (3.14) tier stays non-blocking
+  preview (3.14/3.15) tier stays non-blocking
 - **Manual testing**: Source builds now use the same dependency transformation as nightly builds for testing parity
 
 **Files Involved**:
