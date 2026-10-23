@@ -647,15 +647,57 @@ class ListenerSupervisor:
                 or stopping.is_set()
             ):
                 raise ListenerDeliveryRejectedError(reason="lease_changed")
+            # A Slack destination can change while its same-app cache is live.
+            # Only an independently authorized source socket may refresh and
+            # skip that destination. A lost source still stops the adapter.
+            slack_app = None
+            if allow_slack_fanout and kind in SLACK_TRIGGER_KINDS:
+                source_connection = connections[worker.connection_id]
+                for source in worker.triggers:
+                    proven_app = slack_apps.get(source.id)
+                    if (
+                        source.kind not in SLACK_TRIGGER_KINDS
+                        or source.provider != "slack"
+                        or source.mechanism_id != MECHANISM_SLACK_SOCKET_MODE
+                        or not is_listener_kind(source)
+                        or not proven_app
+                        or source_connection.provider_key != "slack"
+                        or not is_owned_by(source_connection, source.user_id)
+                        or source_connection.status in UNUSABLE_CONNECTION_STATUSES
+                        or not source_connection.allow_non_interactive
+                    ):
+                        continue
+                    current = await session.get(Trigger, source.id, populate_existing=True)
+                    if current is None or (
+                        current.state == TriggerState.ACTIVE.value
+                        and current.connection_id == worker.connection_id
+                        and current.flow_id == source.flow_id
+                        and current.user_id == source.user_id
+                        and current.kind == source.kind
+                        and current.provider == "slack"
+                        and current.config.get("mechanism_id") == MECHANISM_SLACK_SOCKET_MODE
+                        and (current.provider_state or {}).get(SLACK_PROVIDER_STATE_APP_ID) == proven_app
+                    ):
+                        # Filter edits do not invalidate Socket Mode's app
+                        # proof. The destination is still checked against the
+                        # exact configuration used to match this event below.
+                        slack_app = proven_app
+                        break
+                if slack_app is None:
+                    raise ListenerDeliveryRejectedError(reason="source_changed")
+
+            def rejected_target(reason: str) -> ListenerDeliveryRejectedError:
+                return ListenerDeliveryRejectedError(reason="slack_target_changed" if slack_app else reason)
+
             row = await session.get(Trigger, trigger_id, populate_existing=True, with_for_update=True)
             if row is None:
                 raise ListenerDeliveryRejectedError(reason="target_removed")
             if row.state != TriggerState.ACTIVE.value or config is None or row.config != config or row.kind != kind:
-                raise ListenerDeliveryRejectedError(reason="target_changed")
+                raise rejected_target(reason="target_changed")
             if row.connection_id != connection_id:
                 # The preliminary read only discovers lock candidates. A
                 # concurrent rebind must never authorize an unlocked parent.
-                raise ListenerDeliveryRejectedError(reason="target_changed")
+                raise rejected_target(reason="target_changed")
             connection = connections.get(row.connection_id)
             if (
                 connection is None
@@ -664,7 +706,7 @@ class ListenerSupervisor:
                 or not connection.allow_non_interactive
                 or (row.provider is not None and connection.provider_key != row.provider)
             ):
-                raise ListenerDeliveryRejectedError(reason="connection_changed")
+                raise rejected_target(reason="connection_changed")
             if target is not None:
                 if (
                     row.connection_id != worker.connection_id
@@ -673,7 +715,7 @@ class ListenerSupervisor:
                     or row.provider != target.provider
                     or not is_listener_kind(target)
                 ):
-                    raise ListenerDeliveryRejectedError(reason="target_changed")
+                    raise rejected_target(reason="target_changed")
                 return row
             # Slack spreads one app's envelopes across all of its sockets.
             # Preserve that existing fanout only for active owned Socket Mode
@@ -686,33 +728,10 @@ class ListenerSupervisor:
                 and row.provider == "slack"
                 and row.config.get("mechanism_id") == MECHANISM_SLACK_SOCKET_MODE
                 and app_id
+                and app_id == slack_app
             ):
-                source_connection = connections[worker.connection_id]
-                for source in worker.triggers:
-                    if (
-                        source.kind not in SLACK_TRIGGER_KINDS
-                        or source_connection is None
-                        or not is_owned_by(source_connection, source.user_id)
-                        or source_connection.status in UNUSABLE_CONNECTION_STATUSES
-                        or not source_connection.allow_non_interactive
-                    ):
-                        continue
-                    current = await session.get(Trigger, source.id)
-                    if current is None and slack_apps.get(source.id) == app_id:
-                        return row
-                    if (
-                        current is not None
-                        and current.state == TriggerState.ACTIVE.value
-                        and current.connection_id == worker.connection_id
-                        and current.kind == source.kind
-                        and current.provider == "slack"
-                        and current.config.get("mechanism_id") == MECHANISM_SLACK_SOCKET_MODE
-                        and current.config == source.config
-                        and current.user_id == source.user_id
-                        and (current.provider_state or {}).get(SLACK_PROVIDER_STATE_APP_ID) == app_id
-                    ):
-                        return row
-            raise ListenerDeliveryRejectedError(reason="target_not_assigned")
+                return row
+            raise rejected_target(reason="target_not_assigned")
 
         async def emit(
             *,
@@ -749,7 +768,7 @@ class ListenerSupervisor:
                         session, trigger_id=trigger_id, dedupe_key=dedupe_key, payload=payload
                     )
             except ListenerDeliveryRejectedError as exc:
-                if exc.reason != "target_removed":
+                if exc.reason not in {"target_removed", "slack_target_changed"}:
                     stopping.set()
                 raise
             # A completed round trip is the proof the connection works; what
