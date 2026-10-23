@@ -87,7 +87,7 @@
       },
       {
         "id": "discord.bot.reply",
-        "display_name": "Discord: Reply Message",
+        "display_name": "Discord: Reply to Message",
         "auth_profile_id": "discord-bot-token",
         "identity": "bot",
         "required_scopes": [],
