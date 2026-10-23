@@ -349,6 +349,16 @@ def test_inverse_case(case):
     assert ops.graphs_equal(state.to_json(), dump(case["base"]))
 
 
+@pytest.mark.parametrize("case", section("inverse_cases.json", "undo"))
+def test_undo_case(case):
+    state = ops.GraphState(dump(case["base"]))
+    applied = parse(state.apply(dump(case["operations"]), inverse=True))
+    undo = [operation for inverse in reversed(applied["inverse_operations"]) for operation in inverse]
+    check(matches, "undo", unordered([undo]), unordered([case["undo"]]))
+    state.apply(dump(undo))
+    assert ops.graphs_equal(state.to_json(), dump(case["base"]))
+
+
 # --- restore_cases.json, write_cases.json ------------------------------------------------------------
 
 

@@ -1,14 +1,27 @@
 //! Applying operations to a flow graph.
 //!
 //! A batch applies in order, and all of it or none of it: on an error the
-//! state is as it was before the batch. Apply records each operation as the
-//! history stores it: a delete that finds nothing is not recorded, and the
-//! edges a delete takes with it are recorded as a `delete_edges` of their own.
+//! state is as it was before the batch.
 //!
-//! With `inverse`, apply also returns, for each operation, the operations
-//! that undo it, read from the state each write replaces. History playback
-//! keeps those instead of a graph per revision. Inverses are applied with
-//! `restoring`, last operation first.
+//! Each operation of the batch can give apply several results:
+//!
+//! - With `forward`, the operations as the history stores them. They can
+//!   differ from the operation that was sent: a delete that finds nothing is
+//!   not recorded, and the edges a delete takes with it are recorded as a
+//!   `delete_edges` of their own. So one operation records none, one or several.
+//! - With `inverse`, one list of operations that undo it, read from the state
+//!   each write replaces.
+//!
+//! For example, `delete_nodes ["b", "zz"]`, where node `b` has the edge `e1`
+//! and `zz` does not exist, records `delete_nodes ["b"]` and
+//! `delete_edges ["e1"]`. Its one undo list is `add_nodes [b]`, then
+//! `add_edges [e1]`: nodes come back before the edges that need them.
+//!
+//! The undo lists have two uses.
+//! History playback keeps them instead of a graph per revision, and applies
+//! them with `restoring`, last operation first. A user's undo joins them,
+//! last operation first, into one ordinary batch, which is checked under
+//! every rule like any edit.
 
 use std::collections::HashSet;
 
@@ -48,8 +61,9 @@ pub struct Applied {
     /// The operations as the engine records them, with `forward`.
     pub forward: Vec<Operation>,
     /// With `inverse`: for each operation applied, the operations that undo
-    /// it. Undo the last operation first, each list in a call of its own,
-    /// with `restoring` set.
+    /// it. History playback applies the last list first, each in a call of
+    /// its own, with `restoring` set. A user's undo joins the lists, last
+    /// first, into one batch, and applies it without `restoring`.
     pub inverse: Vec<Vec<Operation>>,
     /// The edges the batch deleted because their node, field or output went away.
     pub deleted_edges: Vec<String>,

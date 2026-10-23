@@ -244,6 +244,15 @@ cases("inverse_cases.json", "cases", (c) => {
   assert.ok(ops.graphsEqual(state.toJson(), dump(c.base)));
 });
 
+cases("inverse_cases.json", "undo", (c) => {
+  const state = new ops.GraphState(dump(c.base));
+  const applied = parse(state.apply(dump(c.operations), { inverse: true }));
+  const undo = [...applied.inverse_operations].reverse().flat();
+  check(matches, "undo", unordered([undo]), unordered([c.undo]));
+  state.apply(dump(undo), {});
+  assert.ok(ops.graphsEqual(state.toJson(), dump(c.base)));
+});
+
 // --- restore_cases.json, write_cases.json ----------------------------------------------------------
 
 cases("restore_cases.json", "cases", (c) => {
