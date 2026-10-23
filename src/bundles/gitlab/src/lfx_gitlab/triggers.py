@@ -38,7 +38,7 @@ def trigger_inputs(resource):
     ]
 
 
-class GitLabProjectTrigger(BaseTriggerComponent):
+class GitLabProjectTriggerComponent(BaseTriggerComponent):
     provider = "gitlab"
     icon = "Gitlab"
     needs_connection = True
@@ -52,3 +52,7 @@ class GitLabProjectTrigger(BaseTriggerComponent):
             "include_self_events": getattr(self, "include_self_events", False),
             "include_bot_events": getattr(self, "include_bot_events", False),
         }
+
+
+# Preserve imports of the original helper while component source uses the loader-compatible name.
+GitLabProjectTrigger = GitLabProjectTriggerComponent
