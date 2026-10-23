@@ -67,6 +67,7 @@ from langflow.services.triggers.ingress.verifiers import (
     REASON_TRIGGER_NOT_ACCEPTING,
     REASON_UNKNOWN_PROVIDER,
     REASON_UNKNOWN_TRIGGER,
+    REASON_VERIFIER_ERROR,
     IngressRejected,
     IngressRequest,
     IngressSecrets,
@@ -105,6 +106,18 @@ _REGISTRATION_ID = Annotated[str, Path(min_length=1, max_length=120, pattern=r"^
 
 def _reject() -> JSONResponse:
     return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content=_NOT_FOUND)
+
+
+def _bounded_provider_text(value: object) -> bool:
+    """Accept optional provider response text only when HTTP can encode it."""
+    if value is None:
+        return True
+    if not isinstance(value, str):
+        return False
+    try:
+        return len(value.encode()) <= _MAX_PROVIDER_RESPONSE_BYTES
+    except UnicodeEncodeError:
+        return False
 
 
 def _unknown_budget_spent(request: Request, limit_per_minute: int) -> bool:
@@ -293,15 +306,24 @@ async def receive_provider_delivery(
     if request.method == "GET" and (
         verified.handshake is None or verified.lifecycle or verified.source_items is not None or verified.payload
     ):
+        await intake.audit_ingress(
+            accepted=False, provider=provider, public_id=public_id, target=target, reason=REASON_VERIFIER_ERROR
+        )
         return _reject()
     if extension is not None and (
-        verified.response_status not in {200, 202, 204}
+        not isinstance(verified.response_status, int)
+        or not isinstance(verified.response_media_type, str)
+        or not _bounded_provider_text(verified.response_body)
+        or not _bounded_provider_text(verified.handshake)
+        or (verified.handshake is not None and not isinstance(verified.handshake_media_type, str))
+        or verified.response_status not in {200, 202, 204}
         or verified.response_media_type not in {"application/json", "text/plain"}
         or (verified.handshake is not None and verified.handshake_media_type not in {"application/json", "text/plain"})
         or (verified.response_status == status.HTTP_204_NO_CONTENT and verified.response_body is not None)
-        or (verified.response_body is not None and len(verified.response_body.encode()) > _MAX_PROVIDER_RESPONSE_BYTES)
-        or (verified.handshake is not None and len(verified.handshake.encode()) > _MAX_PROVIDER_RESPONSE_BYTES)
     ):
+        await intake.audit_ingress(
+            accepted=False, provider=provider, public_id=public_id, target=target, reason=REASON_VERIFIER_ERROR
+        )
         return _reject()
 
     if request.method == "GET":
