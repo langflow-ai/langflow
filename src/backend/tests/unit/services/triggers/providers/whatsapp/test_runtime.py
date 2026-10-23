@@ -116,8 +116,10 @@ async def connection(owner_id, *, allow=True):
         )
 
 
-async def reconcile(flow_id, owner_id):
-    fields = {**CONFIG, "delivery_mode": "push"}
+async def reconcile(flow_id, owner_id, *, include_delivery=True):
+    fields = dict(CONFIG)
+    if include_delivery:
+        fields["delivery_mode"] = "push"
     data = {
         "nodes": [
             {
@@ -134,6 +136,19 @@ async def reconcile(flow_id, owner_id):
         await reconcile_flow_triggers(session, flow_id=flow_id, owner_id=owner_id, flow_data=data)
     async with session_scope() as session:
         return (await session.exec(select(Trigger).where(Trigger.flow_id == flow_id))).one()
+
+
+async def test_saved_trigger_without_hidden_delivery_uses_push(installed, trigger_owner, owned_flow):
+    await connection(trigger_owner)
+    trigger = await reconcile(owned_flow, trigger_owner, include_delivery=False)
+    assert trigger.last_error is None
+    assert trigger.config["delivery_mode"] == "push"
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        assert row.state == "active"
+        assert row.config["mechanism_id"] == "whatsapp.webhook"
+    assert installed["callback"].endswith(trigger.public_id)
 
 
 async def test_real_owner_discovery_enable_batch_intake_dedupe_dispatch_and_cleanup(

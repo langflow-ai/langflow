@@ -34,7 +34,7 @@ def normalize_config(kind: str, config: dict) -> dict:
         type(messages) is not bool
         or type(statuses) is not bool
         or not (messages or statuses)
-        or config.get("delivery_mode", "push") not in {"auto", "push"}
+        or config.get("delivery_mode") not in {None, "auto", "push"}
     ):
         msg = "Select at least one WhatsApp event type and push delivery."
         raise ValueError(msg)
