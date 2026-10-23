@@ -43,29 +43,28 @@ jest.mock("@/components/common/genericIconComponent", () => ({
   default: () => null,
 }));
 
-it("submits the GitHub installation payload accepted by the backend validator", async () => {
-  const provider = {
-    provider_id: manifest.provider_id,
-    display_name: manifest.display_name,
-    approved: true,
-    enabled: false,
-    connection_count: 0,
-    capabilities: manifest.capabilities.map((capability) => ({
-      ...capability,
-      allowed: true,
-    })),
-    manual_token_profiles: [
-      {
-        id: manifest.auth_profiles[0].id,
-        identity: "service",
-        required_scopes: [],
-        requires_expiry: true,
-      },
-    ],
-  } as IntegrationProviderRead;
-  mockCreate.mockResolvedValue({ id: "github-connection", ...dialogPayload });
-  const user = userEvent.setup();
-  render(
+const provider = {
+  provider_id: manifest.provider_id,
+  display_name: manifest.display_name,
+  approved: true,
+  enabled: false,
+  connection_count: 0,
+  capabilities: manifest.capabilities.map((capability) => ({
+    ...capability,
+    allowed: true,
+  })),
+  manual_token_profiles: [
+    {
+      id: manifest.auth_profiles[0].id,
+      identity: "service",
+      required_scopes: [],
+      requires_expiry: true,
+    },
+  ],
+} as IntegrationProviderRead;
+
+function renderDialog() {
+  return render(
     <I18nextProvider i18n={i18n}>
       <AddConnectionDialog
         open
@@ -76,6 +75,22 @@ it("submits the GitHub installation payload accepted by the backend validator", 
       />
     </I18nextProvider>,
   );
+}
+
+it("offers only the installation token method supported by GitHub", () => {
+  renderDialog();
+  expect(screen.getByTestId("connection-token")).toBeVisible();
+  expect(screen.queryByTestId("connection-method")).not.toBeInTheDocument();
+  expect(screen.queryByText(/Sign in with/)).not.toBeInTheDocument();
+  expect(
+    screen.queryByTestId("connection-callback-url"),
+  ).not.toBeInTheDocument();
+});
+
+it("submits the GitHub installation payload accepted by the backend validator", async () => {
+  mockCreate.mockResolvedValue({ id: "github-connection", ...dialogPayload });
+  const user = userEvent.setup();
+  renderDialog();
   await user.type(screen.getByTestId("connection-name"), dialogPayload.name);
   await user.type(
     screen.getByTestId("connection-display-name"),

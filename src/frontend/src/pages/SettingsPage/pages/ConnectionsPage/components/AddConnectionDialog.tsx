@@ -110,10 +110,19 @@ export function AddConnectionDialog({
   const requestedScopes = useRef<string[]>([]);
 
   const provider = providers.find((item) => item.provider_id === providerId);
+  const manualTokenProfiles = provider?.manual_token_profiles ?? [];
   const tokenProfile =
-    provider?.manual_token_profiles?.find(
-      (profile) => profile.identity === identity,
-    ) ?? provider?.manual_token_profiles?.[0];
+    manualTokenProfiles.find((profile) => profile.identity === identity) ??
+    manualTokenProfiles[0];
+  // The catalog lists only api_key profiles with a credential validator here.
+  // If they cover every capability, there is no sign-in method to offer.
+  const tokenOnly =
+    manualTokenProfiles.length > 0 &&
+    (provider?.capabilities ?? []).every((capability) =>
+      manualTokenProfiles.some(
+        (profile) => profile.id === capability.auth_profile_id,
+      ),
+    );
   const create = useCreateConnectionMutation();
   const startOAuth = useStartOAuthMutation();
   const remove = useDeleteConnectionMutation();
@@ -126,6 +135,7 @@ export function AddConnectionDialog({
     reauthorizing: !!reauthorize,
     create: create.mutateAsync,
     tokenProfile,
+    tokenOnly,
   });
   const { usesToken } = slackToken;
 
@@ -528,8 +538,9 @@ export function AddConnectionDialog({
                 </select>
               </div>
 
-              {slackToken.offersToken && (
+              {slackToken.offersToken && !tokenOnly && (
                 <ConnectionMethodSelect
+                  providerName={provider?.display_name ?? providerId}
                   method={slackToken.method}
                   onMethodChange={(method) => {
                     slackToken.setMethod(method);

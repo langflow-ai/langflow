@@ -268,7 +268,7 @@ describe("AddConnectionDialog: pasted Slack tokens", () => {
     view.rerender(dialog([pilot], "self_managed", false));
     view.rerender(dialog([pilot], "self_managed"));
     expect(await screen.findByTestId("connection-token")).toHaveValue("");
-    expect(screen.getByTestId("connection-method")).toHaveValue("token");
+    expect(screen.queryByTestId("connection-method")).not.toBeInTheDocument();
     expect(
       screen.getByTestId("connection-allow-background-runs"),
     ).not.toBeChecked();
@@ -337,15 +337,30 @@ describe("AddConnectionDialog: pasted Slack tokens", () => {
 
   it("preserves an explicit OAuth choice after the provider catalog refetches", async () => {
     const user = userEvent.setup();
-    const view = renderDialog([pilot], "self_managed");
+    const provider = {
+      ...pilot,
+      capabilities: [
+        ...pilot.capabilities,
+        capability(
+          "pilot.user.read",
+          "user_delegated",
+          "pilot-user-oauth",
+          "PilotReadComponent",
+        ),
+      ],
+    };
+    const view = renderDialog([provider], "self_managed");
     await screen.findByTestId("connection-token");
+    expect(
+      screen.getByRole("option", { name: "Sign in with Pilot" }),
+    ).toBeInTheDocument();
     await user.selectOptions(screen.getByTestId("connection-method"), "oauth");
     view.rerender(
       dialog(
         [
           {
-            ...pilot,
-            manual_token_profiles: pilot.manual_token_profiles?.map(
+            ...provider,
+            manual_token_profiles: provider.manual_token_profiles?.map(
               (profile) => ({ ...profile }),
             ),
           },

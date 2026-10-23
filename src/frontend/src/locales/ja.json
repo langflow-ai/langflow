@@ -3062,7 +3062,7 @@
   "connections.add.cleanupFailedBody": "未完了の接続を削除できませんでした。一覧から削除してください。",
   "connections.add.identity": "実行者",
   "connections.add.method": "接続方法",
-  "connections.add.methodOauth": "Slack でサインイン",
+  "connections.add.methodOauth": "{{provider}} でサインイン",
   "connections.add.methodToken": "トークンを貼り付ける",
   "connections.add.token": "トークン",
   "connections.add.tokenHelp": "Slack トリガーが Socket Mode でイベントを受信できるようにするにはアプリレベルトークン (xapp-…) を、アプリとして実行されるアクションにはボットトークン (xoxb-…) を貼り付けてください。どちらも Slack アプリの設定にあります。",

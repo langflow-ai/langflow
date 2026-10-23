@@ -3062,7 +3062,7 @@
   "connections.add.cleanupFailedBody": "Die unvollständige Verbindung konnte nicht gelöscht werden. Entfernen Sie sie aus der Liste.",
   "connections.add.identity": "Ausführen als",
   "connections.add.method": "Verbindungsart",
-  "connections.add.methodOauth": "Mit Slack anmelden",
+  "connections.add.methodOauth": "Mit {{provider}} anmelden",
   "connections.add.methodToken": "Token einfügen",
   "connections.add.token": "Token",
   "connections.add.tokenHelp": "Fügen Sie ein App-Level-Token (xapp-…) ein, damit Slack-Trigger Ereignisse über den Socket Mode empfangen, oder ein Bot-Token (xoxb-…) für die Aktionen, die als App ausgeführt werden. Beide finden Sie in den Einstellungen Ihrer Slack-App.",
