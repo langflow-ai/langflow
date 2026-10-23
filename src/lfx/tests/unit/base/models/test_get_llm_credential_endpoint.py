@@ -81,6 +81,30 @@ def test_caller_key_can_reach_custom_endpoint(model_factory):
     assert model_factory.call_args.kwargs["api_key"] == "sk-test-caller-key"  # pragma: allowlist secret
 
 
+@pytest.mark.parametrize("source", ["alias", "cached-alias", "environment", "legacy-environment"])
+def test_resolved_endpoint_uses_protected_clients(monkeypatch, model_factory, source):
+    protected_clients = {"http_client": Mock(), "http_async_client": Mock()}
+    protect = Mock(return_value=protected_clients)
+    monkeypatch.setattr(instantiation, "ssrf_protected_openai_clients_for_url", protect)
+    overrides = None
+    if source == "alias":
+        overrides = {"openai_api_base": _CUSTOM_URL}
+    elif source == "cached-alias":
+        monkeypatch.setattr(
+            "lfx.base.models.model_remediation.cached_overrides", lambda *_args: {"openai_api_base": _CUSTOM_URL}
+        )
+    else:
+        monkeypatch.setenv("OPENAI_API_BASE" if source == "legacy-environment" else "OPENAI_BASE_URL", _CUSTOM_URL)
+
+    instantiation.get_llm(_MODEL, user_id=None, api_key="sk-test-caller-key", overrides=overrides)
+
+    protect.assert_called_once_with(_CUSTOM_URL)
+    kwargs = model_factory.call_args.kwargs
+    assert kwargs["base_url"] == _CUSTOM_URL
+    assert kwargs["http_client"] is protected_clients["http_client"]
+    assert kwargs["http_async_client"] is protected_clients["http_async_client"]
+
+
 def test_final_overridden_key_is_checked(monkeypatch, model_factory):
     monkeypatch.setattr(unified_models, "get_api_key_for_provider", lambda *_args: "sk-test-caller-key")
 

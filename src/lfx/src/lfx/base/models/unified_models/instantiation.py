@@ -500,6 +500,9 @@ def get_llm(
     if model_class_name == "ChatOpenAI":
         endpoint = kwargs.get("base_url") if "base_url" in kwargs else kwargs.get("openai_api_base")
         endpoint = _to_str(endpoint) or os.getenv("OPENAI_API_BASE") or os.getenv("OPENAI_BASE_URL")
+        if endpoint:
+            kwargs["base_url"] = endpoint
+            connection_url_param = "base_url"
         ensure_credential_endpoint_allowed(
             kwargs.get("api_key", kwargs.get("openai_api_key")),
             endpoint,
