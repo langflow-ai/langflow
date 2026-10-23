@@ -31,6 +31,9 @@ from langflow.services.deps import get_db_service, get_settings_service, session
 
 _held_locks: dict[tuple[int, object, UUID], _OperationLease] = {}
 _pg_transactions: dict[tuple[int, object, str], _PostgresTransaction] = {}
+# Leases run on the caller's event loop, so each loop gets its own coordination
+# engine. ``test_knowledge_event_loop.py`` checks that the Knowledge component
+# and the KB API never take a lease through ``run_until_complete`` or a new loop.
 _coordination_engines: dict[tuple[int, str, object], Any] = {}
 LOCK_TIMEOUT_SECONDS = 30.0
 _READ_METHODS = frozenset(
