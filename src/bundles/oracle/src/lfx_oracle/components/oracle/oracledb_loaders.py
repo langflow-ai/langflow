@@ -7,8 +7,26 @@ from langchain_oracledb.document_loaders import OracleAutonomousDatabaseLoader, 
 from lfx.custom.custom_component.component import Component
 from lfx.io import DictInput, MultilineInput, Output, SecretStrInput, StrInput
 from lfx.schema.data import Data
+from lfx.utils.file_path_security import (
+    LocalFileAccessError,
+    component_file_access_scopes,
+    enforce_local_file_access,
+    is_local_file_access_restricted,
+)
 
 from .connection import build_connection_params, split_credentialized_dsn
+
+
+def _validate_local_file_paths(
+    component: Component, options: dict[str, Any] | None, path_keys: tuple[str, ...]
+) -> dict[str, Any]:
+    validated_options = dict(options or {})
+    scope_ids = component_file_access_scopes(component)
+    for key in path_keys:
+        path = validated_options.get(key)
+        if path:
+            validated_options[key] = str(enforce_local_file_access(path, scope_ids=scope_ids))
+    return validated_options
 
 
 class OracleDocLoaderComponent(Component):
@@ -47,6 +65,13 @@ class OracleDocLoaderComponent(Component):
         return self.get_template_config(self)
 
     def load_documents(self) -> list[Data]:
+        if (self.params or {}).get("dir") and is_local_file_access_restricted():
+            msg = (
+                "Directory loading is not permitted when LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true. "
+                "Use the file option instead."
+            )
+            raise LocalFileAccessError(msg)
+
         connection_params = build_connection_params(
             self.connection_params,
             user=self.user,
@@ -54,8 +79,10 @@ class OracleDocLoaderComponent(Component):
             dsn=self.dsn,
             wallet_password=self.wallet_password,
         )
+        connection_params = _validate_local_file_paths(self, connection_params, ("config_dir", "wallet_location"))
+        params = _validate_local_file_paths(self, self.params, ("file", "dir"))
         with oracledb.connect(**connection_params) as connection:
-            loader = OracleDocLoader(connection, self.params)
+            loader = OracleDocLoader(connection, params)
             data = [Data.from_document(doc) for doc in loader.load()]
 
         self.status = data
@@ -134,6 +161,7 @@ class OracleAutonomousDatabaseLoaderComponent(Component):
             dsn=self.dsn,
             wallet_password=self.wallet_password,
         )
+        connection_params = _validate_local_file_paths(self, connection_params, ("config_dir", "wallet_location"))
         dsn = connection_params.get("dsn") or connection_params.get("connection_string") or connection_params.get("tns")
 
         user = connection_params.get("user") or connection_params.get("username")
