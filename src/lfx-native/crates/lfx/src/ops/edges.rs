@@ -16,6 +16,13 @@
 //! stays until something touches it; but an edge whose handles a rule must
 //! read, to see whether a field is taken or which edges a removed output
 //! carries, is read strictly too.
+//!
+//! An edge needs both of its ends. A node's endpoints are the keys of its
+//! template, which edges enter, and the items of its outputs list, which
+//! edges leave and loop feedback edges enter. When an endpoint goes, its
+//! edges go with it (a cascade delete): a deleted node takes every edge at
+//! it, and a write that removes an endpoint, directly or by replacing what
+//! holds it, takes the endpoint's edges ([`removed_endpoints`]).
 
 use std::collections::HashMap;
 use std::fmt;
@@ -28,7 +35,8 @@ use crate::ops::canonical::{HANDLE_KEYS, HANDLE_QUOTE, parse_handle, values_equa
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result, bail, invalid, quoted};
 use crate::ops::keyed::ListIndex;
-use crate::ops::schema::{KeyedList, NODE_SCHEMA, OUTPUTS_PATH};
+use crate::ops::ops::{PathExt, Segment};
+use crate::ops::schema::{KeyedList, NODE_SCHEMA, OUTPUTS_PATH, TEMPLATE_PATH};
 use crate::ops::state::{Layered, Order};
 use crate::ops::validate::ViolationCode;
 
@@ -64,6 +72,22 @@ pub struct Input {
     pub name: String,
 }
 
+impl Input {
+    fn field(name: &str) -> Self {
+        Self {
+            kind: InputKind::Field,
+            name: name.to_owned(),
+        }
+    }
+
+    fn loop_output(name: &str) -> Self {
+        Self {
+            kind: InputKind::LoopOutput,
+            name: name.to_owned(),
+        }
+    }
+}
+
 /// The output an edge leaves from and the input it enters.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Handles {
@@ -80,6 +104,121 @@ pub struct Connections {
     pub inputs: HashMap<Input, IndexSet<String>>,
     /// Edges out of each output of the node.
     pub outputs: HashMap<String, IndexSet<String>>,
+}
+
+impl Connections {
+    /// The ids of the edges at `endpoint`: into a field, or out of an output
+    /// and, for a loop output, into it.
+    pub(crate) fn at(&self, endpoint: &Endpoint) -> impl Iterator<Item = &String> {
+        let (input, output) = match endpoint {
+            Endpoint::Field(name) => (Input::field(name), None),
+            Endpoint::Output(name) => (Input::loop_output(name), self.outputs.get(name)),
+        };
+        self.inputs.get(&input).into_iter().chain(output).flatten()
+    }
+}
+
+/// A place on a node that edges attach to.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum Endpoint {
+    /// A template field, which edges enter.
+    Field(String),
+    /// An output, which edges leave and loop feedback edges enter.
+    Output(String),
+}
+
+/// Where a node keeps one kind of endpoint.
+#[derive(Debug)]
+struct Holder {
+    /// The path of the holder in a node.
+    path: &'static [&'static str],
+    /// Whether the holder is a keyed list, whose items a path names with
+    /// `{"key": ...}`, rather than an object, whose keys a path names.
+    keyed: bool,
+    /// The endpoint an entry of the holder is.
+    endpoint: fn(String) -> Endpoint,
+}
+
+/// The template holds a node's fields, and the outputs list its outputs.
+const HOLDERS: [Holder; 2] = [
+    Holder {
+        path: &TEMPLATE_PATH,
+        keyed: false,
+        endpoint: Endpoint::Field,
+    },
+    Holder {
+        path: &OUTPUTS_PATH,
+        keyed: true,
+        endpoint: Endpoint::Output,
+    },
+];
+
+/// The endpoints that a write at `path` of node `node_id` removed.
+///
+/// `before` is what the path held before the write, and `node` is the node
+/// after it. A delete of one template key or one output removes that
+/// endpoint. A write that replaces or deletes the outputs list, or anything
+/// holding a template or an outputs list, removes the endpoints it held that
+/// the node no longer has. Any other write removes none.
+///
+/// # Errors
+///
+/// An outputs list, before or after the write, breaks the keyed-list rules.
+pub(crate) fn removed_endpoints(
+    path: &[Segment],
+    is_delete: bool,
+    before: &Value,
+    node: &Value,
+    node_id: &str,
+) -> Result<Vec<Endpoint>> {
+    let mut removed = Vec::new();
+    for holder in &HOLDERS {
+        if path.len() == holder.path.len() + 1 && path.has_start(holder.path) {
+            if !is_delete {
+                continue;
+            }
+            let name = match &path[holder.path.len()] {
+                Segment::Item(key) if holder.keyed => key,
+                Segment::Key(key) if !holder.keyed => key,
+                _ => continue,
+            };
+            removed.push((holder.endpoint)(name.clone()));
+        } else if path.len() <= holder.path.len() && path.shares_start(holder.path) {
+            let held = holder.names(at_keys(before, &holder.path[path.len()..]), node_id)?;
+            let kept = holder.names(at_keys(node, holder.path), node_id)?;
+            removed.extend(
+                held.into_iter()
+                    .filter(|name| !kept.contains(name))
+                    .map(holder.endpoint),
+            );
+        }
+    }
+    Ok(removed)
+}
+
+impl Holder {
+    /// The names of the endpoints in `held`, a value of this holder: the
+    /// names of an outputs list, or the keys of a template.
+    fn names(&self, held: Option<&Value>, node_id: &str) -> Result<Vec<String>> {
+        let Some(held) = held else {
+            return Ok(Vec::new());
+        };
+        if self.keyed {
+            return Ok(index_outputs(held, node_id)?
+                .names()
+                .map(str::to_owned)
+                .collect());
+        }
+        Ok(held
+            .as_object()
+            .map(|object| object.keys().cloned().collect())
+            .unwrap_or_default())
+    }
+}
+
+/// The value at the object keys `keys` under `value`.
+fn at_keys<'v>(value: &'v Value, keys: &[&str]) -> Option<&'v Value> {
+    keys.iter().try_fold(value, |value, key| value.get(key))
 }
 
 /// Read access to an indexed graph, enough to check edges.
