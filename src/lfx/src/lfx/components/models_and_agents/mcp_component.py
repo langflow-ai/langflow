@@ -393,6 +393,15 @@ class MCPToolsComponent(ComponentWithCache):
         if isinstance(mcp_server, dict):
             server_name = mcp_server.get("name")
             server_config_from_value = mcp_server.get("config")
+            if server_name is not None and not isinstance(server_name, str):
+                msg = "MCP server name must be a string."
+                raise ValueError(msg)
+            if server_config_from_value is not None and not isinstance(server_config_from_value, dict):
+                msg = "MCP server config must be an object."
+                raise ValueError(msg)
+        elif mcp_server is not None and not isinstance(mcp_server, str):
+            msg = "MCP server must be a name or an object with a name and optional config."
+            raise ValueError(msg)
         else:
             server_name = mcp_server
         if not server_name:
@@ -1051,6 +1060,9 @@ class MCPToolsComponent(ComponentWithCache):
 
                 try:
                     name = schema_input.name
+                    if name in self.default_keys:
+                        await logger.awarning("Skipping remote tool input %r: reserved component field", name)
+                        continue
                     input_dict = schema_input.to_dict()
                     input_dict.setdefault("value", None)
                     input_dict.setdefault("required", True)
