@@ -56,6 +56,11 @@ def test_oracle_doc_loader_denies_outside_paths_when_restricted(tmp_path, path_o
     storage = tmp_path / "storage"
     outside = tmp_path / "outside" / path_option
     component = _doc_component(path_option=path_option, path=str(outside))
+    expected_error = (
+        "Directory loading is not permitted"
+        if path_option == "dir"
+        else "outside the authenticated user's storage scope"
+    )
 
     with (
         patch(
@@ -64,7 +69,7 @@ def test_oracle_doc_loader_denies_outside_paths_when_restricted(tmp_path, path_o
         ),
         patch("lfx_oracle.components.oracle.oracledb_loaders.oracledb.connect") as mock_connect,
         patch("lfx_oracle.components.oracle.oracledb_loaders.OracleDocLoader") as mock_loader,
-        pytest.raises(LocalFileAccessError, match="outside the authenticated user's storage scope"),
+        pytest.raises(LocalFileAccessError, match=expected_error),
     ):
         component.load_documents()
 
@@ -97,13 +102,10 @@ def test_oracle_doc_loader_allows_outside_paths_when_unrestricted(tmp_path, path
         assert mock_connect.call_args.kwargs[path_option] == str(outside)
 
 
-def test_oracle_doc_loader_allows_all_paths_inside_component_scope(tmp_path) -> None:
+def test_oracle_doc_loader_allows_file_and_connection_paths_inside_component_scope(tmp_path) -> None:
     storage = tmp_path / "storage"
     allowed = storage / "owner" / "input"
-    params = {
-        "file": str(allowed / "document.pdf"),
-        "dir": str(allowed / "documents"),
-    }
+    params = {"file": str(allowed / "document.pdf")}
     connection_params = {
         "config_dir": str(allowed / "config"),
         "wallet_location": str(allowed / "wallet"),
@@ -129,6 +131,52 @@ def test_oracle_doc_loader_allows_all_paths_inside_component_scope(tmp_path) -> 
     assert mock_connect.call_args.kwargs["config_dir"] == connection_params["config_dir"]
     assert mock_connect.call_args.kwargs["wallet_location"] == connection_params["wallet_location"]
     assert mock_loader.call_args.args[1] == params
+
+
+def test_oracle_doc_loader_rejects_directory_mode_when_restricted(tmp_path) -> None:
+    storage = tmp_path / "storage"
+    directory = storage / "owner" / "documents"
+    directory.mkdir(parents=True)
+    (directory / "document.pdf").touch()
+    component = _doc_component(path_option="dir", path=str(directory))
+
+    with (
+        patch(
+            "lfx.utils.file_path_security.get_settings_service",
+            return_value=_settings(restricted=True, config_dir=str(storage)),
+        ),
+        patch("lfx_oracle.components.oracle.oracledb_loaders.oracledb.connect") as mock_connect,
+        patch("lfx_oracle.components.oracle.oracledb_loaders.OracleDocLoader") as mock_loader,
+        pytest.raises(LocalFileAccessError, match="Directory loading is not permitted"),
+    ):
+        component.load_documents()
+
+    mock_connect.assert_not_called()
+    mock_loader.assert_not_called()
+
+
+def test_oracle_doc_loader_rejects_directory_symlinks_fail_closed_when_restricted(tmp_path) -> None:
+    storage = tmp_path / "storage"
+    directory = storage / "owner" / "documents"
+    directory.mkdir(parents=True)
+    outside = tmp_path / "outside.pdf"
+    outside.touch()
+    (directory / "linked.pdf").symlink_to(outside)
+    component = _doc_component(path_option="dir", path=str(directory))
+
+    with (
+        patch(
+            "lfx.utils.file_path_security.get_settings_service",
+            return_value=_settings(restricted=True, config_dir=str(storage)),
+        ),
+        patch("lfx_oracle.components.oracle.oracledb_loaders.oracledb.connect") as mock_connect,
+        patch("lfx_oracle.components.oracle.oracledb_loaders.OracleDocLoader") as mock_loader,
+        pytest.raises(LocalFileAccessError, match="Directory loading is not permitted"),
+    ):
+        component.load_documents()
+
+    mock_connect.assert_not_called()
+    mock_loader.assert_not_called()
 
 
 @pytest.mark.parametrize("path_option", _CONNECTION_OPTIONS)

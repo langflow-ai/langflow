@@ -7,7 +7,12 @@ from langchain_oracledb.document_loaders import OracleAutonomousDatabaseLoader, 
 from lfx.custom.custom_component.component import Component
 from lfx.io import DictInput, MultilineInput, Output, SecretStrInput, StrInput
 from lfx.schema.data import Data
-from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
+from lfx.utils.file_path_security import (
+    LocalFileAccessError,
+    component_file_access_scopes,
+    enforce_local_file_access,
+    is_local_file_access_restricted,
+)
 
 from .connection import build_connection_params, split_credentialized_dsn
 
@@ -60,6 +65,13 @@ class OracleDocLoaderComponent(Component):
         return self.get_template_config(self)
 
     def load_documents(self) -> list[Data]:
+        if (self.params or {}).get("dir") and is_local_file_access_restricted():
+            msg = (
+                "Directory loading is not permitted when LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true. "
+                "Use the file option instead."
+            )
+            raise LocalFileAccessError(msg)
+
         connection_params = build_connection_params(
             self.connection_params,
             user=self.user,
