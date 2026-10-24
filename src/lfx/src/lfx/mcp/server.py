@@ -147,8 +147,8 @@ def _set_client(client: LangflowClient) -> None:
     _shared_client = client
 
 
-@contextlib.contextmanager
-def client_scope(client: LangflowClient):
+@contextlib.asynccontextmanager
+async def client_scope(client: LangflowClient):
     """Bind ``client`` for the current async context only (host mounts).
 
     Unlike ``_set_client`` this never touches the shared stdio client, so an
@@ -161,9 +161,14 @@ def client_scope(client: LangflowClient):
     try:
         yield client
     finally:
-        _request_scope_var.reset(scope_token)
-        _registry_var.reset(registry_token)
-        _client_var.reset(client_token)
+        replacement = _client_var.get()
+        try:
+            if replacement is not None and replacement is not client:
+                await replacement.aclose()
+        finally:
+            _request_scope_var.reset(scope_token)
+            _registry_var.reset(registry_token)
+            _client_var.reset(client_token)
 
 
 async def _get_registry() -> dict[str, dict]:
@@ -272,7 +277,11 @@ async def login(username: str, password: str, server_url: str | None = None) -> 
     old_client = _client_var.get()
     if old_client is not None:
         await old_client.close()
-    client = LangflowClient(server_url=server_url, use_env_api_key=server_url is None)
+    client = LangflowClient(
+        server_url=server_url,
+        use_env_api_key=server_url is None,
+        use_env_global_vars=server_url is None,
+    )
     if _request_scope_var.get():
         _client_var.set(client)
     else:

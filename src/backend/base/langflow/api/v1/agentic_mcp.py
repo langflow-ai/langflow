@@ -123,7 +123,7 @@ async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Any:
     if client is None:
         msg = "Authenticated client is unavailable for this MCP request"
         raise ValueError(msg)
-    with client_scope(client):
+    async with client_scope(client):
         return await lfx_mcp.call_tool(name, arguments)
 
 
