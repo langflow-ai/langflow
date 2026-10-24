@@ -4,6 +4,7 @@ import httpx
 import pytest
 from lfx.base.models.unified_models import get_provider_secret_variable_key
 from lfx.components.llm_operations.decision_model import DecisionModelComponent
+from lfx.schema.properties import Usage
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -65,6 +66,19 @@ class TestDecisionModelComponent(ComponentTestBaseWithoutClient):
 
         monkeypatch.setattr("lfx.base.models.decisions.providers.provider_safe_httpx_post", post)
         return sent
+
+    async def test_the_tokens_a_decision_used_are_reported(
+        self, component_class, default_kwargs, provider, monkeypatch
+    ):
+        """Chat Output adds these to the Playground message, as it does a language model's."""
+        response = {**_choice_response(provider), "usage": {"input_tokens": 52, "output_tokens": 1}}
+        monkeypatch.setattr(
+            "lfx.base.models.decisions.providers.provider_safe_httpx_post",
+            lambda _url, **_kwargs: httpx.Response(200, json=response),
+        )
+        component = await self.component_setup(component_class, default_kwargs)
+        component.evaluate()
+        assert component._token_usage == Usage(input_tokens=52, output_tokens=1, total_tokens=53)
 
     async def test_choice_evidence_from_the_provider_response(
         self, component_class, default_kwargs, provider, provider_http

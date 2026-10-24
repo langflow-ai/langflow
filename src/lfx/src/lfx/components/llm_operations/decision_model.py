@@ -1,4 +1,4 @@
-from lfx.base.models.decisions.runtime import evaluate_decision, request_variables_of
+from lfx.base.models.decisions.runtime import decision_token_usage, evaluate_decision, request_variables_of
 from lfx.base.models.decisions.schema import DecisionConfigurationError, decision_request
 from lfx.base.models.unified_models import handle_model_input_update
 from lfx.custom.custom_component.component import Component
@@ -198,6 +198,7 @@ class DecisionModelComponent(Component):
             request_variables=request_variables_of(self),
             timeout=self.timeout,
         )
+        self._token_usage = decision_token_usage(result)
         # Only what this decision returned and asked: no empty fields from the other types.
         data = Data(
             data={

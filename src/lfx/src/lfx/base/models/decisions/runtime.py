@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.models.decisions.schema import DecisionConfigurationError, DecisionRequest
+from lfx.schema.properties import Usage
 from lfx.services.variable.request_scope import variable_name_forms
 from lfx.utils.secrets import secret_value_to_str
 
@@ -19,6 +20,19 @@ def request_variables_of(component: Any) -> Mapping[str, Any] | None:
     """The caller's per-request variables for this run (X-LANGFLOW-GLOBAL-VAR-* headers), if any."""
     context = getattr(getattr(component, "graph", None), "context", None)
     return context.get("request_variables") if isinstance(context, Mapping) else None
+
+
+def decision_token_usage(result: DecisionResult) -> Usage | None:
+    """The tokens a decision used, for the node badge and the Playground; None when the provider sent none."""
+    raw = result.usage or {}
+    counts = {name: raw.get(name) for name in ("input_tokens", "output_tokens", "total_tokens")}
+    # Only whole, non-negative counts: a result built outside parse_response can carry anything.
+    counts = {name: value if type(value) is int and value >= 0 else None for name, value in counts.items()}
+    if counts["input_tokens"] is None and counts["output_tokens"] is None:
+        return None
+    if counts["total_tokens"] is None:
+        counts["total_tokens"] = (counts["input_tokens"] or 0) + (counts["output_tokens"] or 0)
+    return Usage(**counts)
 
 
 def evaluate_decision(
