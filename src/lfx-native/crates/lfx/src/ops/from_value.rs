@@ -65,7 +65,7 @@ impl FromValueError {
 
     /// The same error, one list index further in.
     #[must_use]
-    fn at_index(mut self, index: usize) -> Self {
+    pub(crate) fn at_index(mut self, index: usize) -> Self {
         self.places.push(Place::Index(index));
         self
     }

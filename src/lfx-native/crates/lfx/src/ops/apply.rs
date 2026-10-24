@@ -23,19 +23,16 @@
 use std::collections::HashSet;
 
 use indexmap::IndexSet;
-use serde_json::{Map, Value};
+use serde_json::Value;
 
 use crate::ops::canonical::is_row_position;
 use crate::ops::edges::{Input, InputKind, check_edge, index_outputs, node_outputs};
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result, bail, invalid, quoted};
-use crate::ops::ops::{AsKey, Change, FieldUpdate, Operation, Path, PathExt, Segment, path_label};
-use crate::ops::schema::{
-    KeyedList, ListKind, NODE_OBJECT_PATHS, NODE_SCHEMA, OUTPUTS_PATH, TEMPLATE_PATH,
-};
+use crate::ops::ops::{Change, Edge, FieldUpdate, Node, NodePath, Operation, PathExt, Segment};
+use crate::ops::schema::{KeyedList, ListKind, NODE_SCHEMA, OUTPUTS_PATH, TEMPLATE_PATH};
 use crate::ops::state::{Copies, Graph, GraphState, Lists, resolve, resolve_mut};
 use crate::ops::validate::PathPart;
-use crate::ops::validate::missing_node_object;
 
 /// How a batch is applied.
 #[derive(Debug, Clone, Copy, Default)]
@@ -175,34 +172,31 @@ impl GraphState {
 
     // --- Nodes -------------------------------------------------------------------------
 
-    fn add_nodes(&mut self, nodes: Vec<Map<String, Value>>, report: &mut Report) -> Result<()> {
+    /// Add nodes. The parser checked each node's shape, and that no id
+    /// repeats in the operation; an id the flow already has is refused here.
+    fn add_nodes(&mut self, nodes: Vec<Node>, report: &mut Report) -> Result<()> {
         if nodes.is_empty() {
             return Ok(());
         }
-        let mut added = IndexSet::new();
+        let mut added = Vec::new();
         let mut payloads = Vec::new();
-        for (index, node) in nodes.into_iter().enumerate() {
-            let context = format!("add_nodes[{index}]");
-            let Some(id) = node.non_empty_str("id").map(str::to_owned) else {
-                bail!("{context}: node must have a non-empty string id");
-            };
-            if let Some(path) = missing_node_object(&node) {
-                bail!("{context}: node {} must be an object", path.join("."));
+        for node in nodes {
+            if self.graph.nodes.contains(node.id()) {
+                bail!("add_nodes: node id already exists: {}", quoted(node.id()));
             }
-            if added.contains(&id) {
-                bail!("add_nodes: duplicate node id in request: {}", quoted(&id));
-            }
-            if self.graph.nodes.contains(&id) {
-                bail!("add_nodes: node id already exists: {}", quoted(&id));
-            }
-            added.insert(id.clone());
             if report.options.forward {
                 payloads.push(node.clone());
+            }
+            let node = node.into_map();
+            // The graph's key is the one copy of the id that apply needs.
+            let id = node.id().to_owned();
+            if report.options.backward {
+                added.push(id.clone());
             }
             self.insert_node(id, Value::Object(node));
         }
         report.record(Operation::AddNodes(payloads));
-        report.record_backward(Operation::DeleteNodes(added.into_iter().collect()));
+        report.record_backward(Operation::DeleteNodes(added));
         Ok(())
     }
 
@@ -210,7 +204,6 @@ impl GraphState {
         if updates.is_empty() {
             return Ok(());
         }
-        reject_repeated_paths(&updates, "update_nodes")?;
         let mut backward = report.options.backward.then(FieldBackward::default);
         let mut applied = Vec::new();
         let mut detached = IndexSet::new();
@@ -225,7 +218,6 @@ impl GraphState {
                     quoted(&update.id)
                 );
             }
-            check_node_path(&update.path, &format!("{context}.path"))?;
             let replaced =
                 self.apply_field_update(&mut update, &context, report.options, backward.as_mut())?;
             if !report.options.restoring {
@@ -363,43 +355,46 @@ impl GraphState {
 
     // --- Edges -------------------------------------------------------------------------
 
-    fn add_edges(&mut self, edges: Vec<Map<String, Value>>, report: &mut Report) -> Result<()> {
+    /// Add edges. The parser checked each edge's shape, and that no id
+    /// repeats in the operation; what the edge needs from the flow is checked
+    /// here.
+    fn add_edges(&mut self, edges: Vec<Edge>, report: &mut Report) -> Result<()> {
         if edges.is_empty() {
             return Ok(());
         }
-        let mut added = IndexSet::new();
+        let mut added = Vec::new();
         let mut payloads = Vec::new();
-        for (index, edge) in edges.into_iter().enumerate() {
-            let context = format!("add_edges[{index}]");
-            let field = |key: &str| {
-                edge.non_empty_str(key)
-                    .map(str::to_owned)
-                    .ok_or_else(|| invalid!("{context}: edge must have a non-empty string {key}"))
-            };
-            let (id, source, target) = (field("id")?, field("source")?, field("target")?);
-            if added.contains(&id) {
-                bail!("add_edges: duplicate edge id in request: {}", quoted(&id));
+        for edge in edges {
+            if self.graph.edges.contains(edge.id()) {
+                bail!("add_edges: edge id already exists: {}", quoted(edge.id()));
             }
-            if self.graph.edges.contains(&id) {
-                bail!("add_edges: edge id already exists: {}", quoted(&id));
+            if !self.graph.nodes.contains(edge.source()) {
+                bail!(
+                    "add_edges: source node does not exist: {}",
+                    quoted(edge.source())
+                );
             }
-            if !self.graph.nodes.contains(&source) {
-                bail!("add_edges: source node does not exist: {}", quoted(&source));
+            if !self.graph.nodes.contains(edge.target()) {
+                bail!(
+                    "add_edges: target node does not exist: {}",
+                    quoted(edge.target())
+                );
             }
-            if !self.graph.nodes.contains(&target) {
-                bail!("add_edges: target node does not exist: {}", quoted(&target));
-            }
-            added.insert(id.clone());
             if !report.options.restoring {
-                check_edge(&self.graph, &mut self.edge_index, &edge)?;
+                check_edge(&self.graph, &mut self.edge_index, edge.as_map())?;
             }
             if report.options.forward {
                 payloads.push(edge.clone());
             }
+            let edge = edge.into_map();
+            let id = edge.id().to_owned();
+            if report.options.backward {
+                added.push(id.clone());
+            }
             self.insert_edge(id, Value::Object(edge));
         }
         report.record(Operation::AddEdges(payloads));
-        report.record_backward(Operation::DeleteEdges(added.into_iter().collect()));
+        report.record_backward(Operation::DeleteEdges(added));
         Ok(())
     }
 
@@ -748,7 +743,7 @@ fn list_slot(
 /// object keys that lead to it. Checks that the list is keyed.
 fn keyed_list<'p>(
     node: &Value,
-    path: &'p Path,
+    path: &'p [Segment],
     index: usize,
     value: &Value,
     context: &str,
@@ -767,38 +762,6 @@ fn keyed_list<'p>(
         bail!("{context}.path[{index}]: list item key on a value that is not a list");
     }
     Ok((keyed, prefix))
-}
-
-fn check_node_path(path: &Path, context: &str) -> Result<()> {
-    if path[0].as_key() == Some("id") {
-        bail!("{context}: cannot modify node identity");
-    }
-    // Every node keeps these objects, and operations patch inside them.
-    let forbidden = NODE_OBJECT_PATHS
-        .iter()
-        .any(|object_path| path.equals(object_path));
-    if forbidden {
-        bail!(
-            "{context}: cannot update entire node data objects at path {}; forbidden paths are: data, data.node, data.node.template",
-            path_label(path)
-        );
-    }
-    Ok(())
-}
-
-/// Refuse an update batch that writes one path of one node or edge twice.
-fn reject_repeated_paths(updates: &[FieldUpdate], kind: &str) -> Result<()> {
-    let mut seen = HashSet::new();
-    for update in updates {
-        if !seen.insert((update.id.as_str(), update.path.as_slice())) {
-            bail!(
-                "{kind}: multiple field updates for one id and path: {} {}",
-                quoted(&update.id),
-                path_label(&update.path)
-            );
-        }
-    }
-    Ok(())
 }
 
 // --- Backward operations of field writes ---------------------------------------------------
@@ -839,9 +802,13 @@ impl FieldBackward {
                 .last()
                 .is_some_and(|item| keyed.key_of(item) == Some(key.as_str()));
             if !is_last {
+                // The prefix is the path of a keyed list the schema declares,
+                // such as `data.node.outputs`, which a field update may write.
+                let list_path = NodePath::try_from(path[..last].to_vec())
+                    .expect("a keyed list's path may be written");
                 self.entries.push(FieldUpdate::set(
                     &update.id,
-                    path[..last].to_vec(),
+                    list_path,
                     Value::Array(items.clone()),
                 ));
                 return;
@@ -861,7 +828,7 @@ impl FieldBackward {
     fn operations(self, build: fn(Vec<FieldUpdate>) -> Operation) -> Vec<Operation> {
         let mut operations = Vec::new();
         let mut batch: Vec<FieldUpdate> = Vec::new();
-        let mut written: HashSet<(String, Path)> = HashSet::new();
+        let mut written: HashSet<(String, NodePath)> = HashSet::new();
         for entry in self.entries.into_iter().rev() {
             let key = (entry.id.clone(), entry.path.clone());
             if written.contains(&key) {
