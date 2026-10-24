@@ -19,7 +19,7 @@ use std::str::FromStr;
 use indexmap::{IndexMap, IndexSet};
 use serde_json::{Map, Value};
 
-use crate::ops::edges::{EdgeIndex, GraphRead, endpoint};
+use crate::ops::edges::{EdgeIndex, GraphRead};
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result};
 use crate::ops::keyed::ListIndex;
@@ -204,7 +204,7 @@ impl<V: Clone> Layered<V> {
 pub(crate) struct EdgesAt(Layered<IndexSet<String>>);
 
 impl EdgesAt {
-    fn attach(&mut self, id: &str, edge: &Value) {
+    fn attach(&mut self, id: &str, edge: &Edge) {
         for end in ends(edge) {
             self.0
                 .get_or_insert_with(end, IndexSet::new)
@@ -212,7 +212,7 @@ impl EdgesAt {
         }
     }
 
-    fn detach(&mut self, id: &str, edge: &Value) {
+    fn detach(&mut self, id: &str, edge: &Edge) {
         for end in ends(edge) {
             if let Some(ids) = self.0.get_mut(end) {
                 ids.swap_remove(id);
@@ -224,11 +224,8 @@ impl EdgesAt {
     }
 }
 
-fn ends(edge: &Value) -> Vec<&str> {
-    let Some(edge) = edge.as_object() else {
-        return Vec::new();
-    };
-    let (source, target) = (endpoint(edge, "source"), endpoint(edge, "target"));
+fn ends(edge: &Edge) -> Vec<&str> {
+    let (source, target) = (edge.source(), edge.target());
     if source == target {
         vec![source]
     } else {
@@ -239,8 +236,8 @@ fn ends(edge: &Value) -> Vec<&str> {
 /// Nodes and edges by id, and edges by the nodes they touch.
 #[derive(Debug)]
 pub(crate) struct Graph {
-    pub nodes: Layered<Value>,
-    pub edges: Layered<Value>,
+    pub nodes: Layered<Node>,
+    pub edges: Layered<Edge>,
     edges_at: EdgesAt,
 }
 
@@ -265,11 +262,11 @@ impl Graph {
 
 impl GraphRead for Graph {
     fn node(&self, id: &str) -> Option<&Map<String, Value>> {
-        self.nodes.get(id).and_then(Value::as_object)
+        self.nodes.get(id).map(Node::as_map)
     }
 
     fn edge(&self, id: &str) -> Option<&Map<String, Value>> {
-        self.edges.get(id).and_then(Value::as_object)
+        self.edges.get(id).map(Edge::as_map)
     }
 
     fn edge_ids_at(&self, node_id: &str) -> impl Iterator<Item = &str> {
@@ -369,8 +366,9 @@ impl GraphState {
         let Value::Object(mut root) = flow else {
             return Err(Error::graph_message("flow data must be an object"));
         };
-        let nodes = by_id(take_list(&mut root, "nodes"));
-        let edges = by_id(take_list(&mut root, "edges"));
+        // Validation passed, so every node and edge has its shape.
+        let nodes = by_id(take_list(&mut root, "nodes"), Node::try_from)?;
+        let edges = by_id(take_list(&mut root, "edges"), Edge::try_from)?;
         let mut edges_at = EdgesAt(Layered::new(Order::Free));
         for (id, edge) in &edges {
             edges_at.attach(id, edge);
@@ -394,8 +392,20 @@ impl GraphState {
         let mut out = Map::with_capacity(self.root.len());
         for (key, value) in &self.root {
             let value = match key.as_str() {
-                "nodes" => Value::Array(self.graph.nodes.values().cloned().collect()),
-                "edges" => Value::Array(self.graph.edges.values().cloned().collect()),
+                "nodes" => Value::Array(
+                    self.graph
+                        .nodes
+                        .values()
+                        .map(|node| node.as_value().clone())
+                        .collect(),
+                ),
+                "edges" => Value::Array(
+                    self.graph
+                        .edges
+                        .values()
+                        .map(|edge| Value::Object(edge.as_map().clone()))
+                        .collect(),
+                ),
                 _ => value.clone(),
             };
             out.insert(key.clone(), value);
@@ -411,11 +421,17 @@ impl GraphState {
         } = self;
         root.insert(
             "nodes".into(),
-            Value::Array(graph.nodes.into_values().collect()),
+            Value::Array(graph.nodes.into_values().map(Node::into_value).collect()),
         );
         root.insert(
             "edges".into(),
-            Value::Array(graph.edges.into_values().collect()),
+            Value::Array(
+                graph
+                    .edges
+                    .into_values()
+                    .map(|edge| Value::Object(edge.into_map()))
+                    .collect(),
+            ),
         );
         Value::Object(root)
     }
@@ -443,14 +459,15 @@ impl GraphState {
 
     // --- Changes -----------------------------------------------------------------------
 
-    pub(crate) fn insert_node(&mut self, id: String, node: Value) {
-        self.graph.nodes.insert(id, node);
+    /// Add `node`, or replace the node with its id.
+    pub(crate) fn insert_node(&mut self, node: Node) {
+        // The key is the one copy of the id that the graph needs.
+        self.graph.nodes.insert(node.id().to_owned(), node);
     }
 
     /// A copy of the node `id`, for the backward operations.
     pub(crate) fn node_copy(&self, id: &str) -> Option<Node> {
-        let node = self.graph.nodes.get(id)?.as_object()?;
-        Some(stored_node(node.clone()))
+        self.graph.nodes.get(id).cloned()
     }
 
     /// Remove the node `id`, if it exists. Its edges stay; the caller removes them.
@@ -460,18 +477,16 @@ impl GraphState {
         self.lists.forget_node(id);
     }
 
-    pub(crate) fn insert_edge(&mut self, id: String, edge: Value) {
-        self.graph.edges_at.attach(&id, &edge);
-        if let Some(map) = edge.as_object() {
-            self.edge_index.insert(map);
-        }
-        self.graph.edges.insert(id, edge);
+    /// Add `edge`, or replace the edge with its id.
+    pub(crate) fn insert_edge(&mut self, edge: Edge) {
+        self.graph.edges_at.attach(edge.id(), &edge);
+        self.edge_index.insert(edge.as_map());
+        self.graph.edges.insert(edge.id().to_owned(), edge);
     }
 
     /// A copy of the edge `id`, for the backward operations.
     pub(crate) fn edge_copy(&self, id: &str) -> Option<Edge> {
-        let edge = self.graph.edges.get(id)?.as_object()?;
-        Some(stored_edge(edge.clone()))
+        self.graph.edges.get(id).cloned()
     }
 
     /// Remove the edge `id`, if it exists.
@@ -479,31 +494,25 @@ impl GraphState {
         let Some(edge) = self.graph.edges.get(id) else {
             return;
         };
-        if let Some(map) = edge.as_object() {
-            self.edge_index.forget(map);
-        }
+        self.edge_index.forget(edge.as_map());
         self.graph.edges_at.detach(id, edge);
         self.graph.edges.remove(id);
     }
 }
 
-/// A node the flow holds, as a [`Node`]. Loading checks every node's shape,
-/// and no write can break it, so the check here never fails.
-fn stored_node(node: Map<String, Value>) -> Node {
-    Node::try_from(node).expect("a stored node has the shape of a node")
-}
-
-/// An edge the flow holds, as an [`Edge`]. Loading checks every edge's shape,
-/// and an edge is never written in place, so the check here never fails.
-fn stored_edge(edge: Map<String, Value>) -> Edge {
-    Edge::try_from(edge).expect("a stored edge has the shape of an edge")
-}
-
-/// Nodes or edges by id, in their order.
-fn by_id(items: Vec<Value>) -> IndexMap<String, Value> {
+/// Nodes or edges by id, in their order, each made by `make`.
+fn by_id<T>(
+    items: Vec<Value>,
+    make: fn(Map<String, Value>) -> Result<T>,
+) -> Result<IndexMap<String, T>> {
     items
         .into_iter()
-        .map(|item| (item.id().to_owned(), item))
+        .map(|item| {
+            let Value::Object(item) = item else {
+                return Err(Error::graph_message("nodes and edges must be objects"));
+            };
+            Ok((item.id().to_owned(), make(item)?))
+        })
         .collect()
 }
 

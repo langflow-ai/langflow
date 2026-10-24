@@ -253,13 +253,14 @@ impl FieldUpdate {
     }
 }
 
-/// A node that `add_nodes` adds.
+/// A node of a flow: one that `add_nodes` adds, or one the flow holds.
 ///
 /// Its `id` is a non-empty string, and its `data`, `data.node` and
 /// `data.node.template` are objects. A `Node` cannot be made without these
-/// checks, so apply does not make them again.
+/// checks, and a field update cannot undo them (see [`NodePath`]), so no
+/// reader checks them again.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Node(Map<String, Value>);
+pub struct Node(Value);
 
 impl Node {
     /// The node's id.
@@ -271,12 +272,34 @@ impl Node {
     /// The node as a JSON object.
     #[must_use]
     pub fn as_map(&self) -> &Map<String, Value> {
-        &self.0
+        match &self.0 {
+            Value::Object(node) => node,
+            _ => unreachable!("a node is a JSON object"),
+        }
     }
 
     /// The node as a JSON object, moved out.
     #[must_use]
     pub fn into_map(self) -> Map<String, Value> {
+        match self.0 {
+            Value::Object(node) => node,
+            _ => unreachable!("a node is a JSON object"),
+        }
+    }
+
+    /// The node as a JSON value, for reading a path in it.
+    pub(crate) fn as_value(&self) -> &Value {
+        &self.0
+    }
+
+    /// The node as a JSON value, for writing a path in it. A field update's
+    /// [`NodePath`] keeps the node's shape.
+    pub(crate) fn as_value_mut(&mut self) -> &mut Value {
+        &mut self.0
+    }
+
+    /// The node as a JSON value, moved out.
+    pub(crate) fn into_value(self) -> Value {
         self.0
     }
 
@@ -304,7 +327,7 @@ impl TryFrom<Map<String, Value>> for Node {
     /// Check `node`, and keep it as a node.
     fn try_from(node: Map<String, Value>) -> Result<Self> {
         Self::check(&node).map_err(|error| error.into_error("node"))?;
-        Ok(Self(node))
+        Ok(Self(Value::Object(node)))
     }
 }
 
@@ -312,15 +335,16 @@ impl FromValue for Node {
     fn from_value(value: Value) -> Result<Self, FromValueError> {
         let node = Map::from_value(value)?;
         Self::check(&node)?;
-        Ok(Self(node))
+        Ok(Self(Value::Object(node)))
     }
 }
 
-/// An edge that `add_edges` adds.
+/// An edge of a flow: one that `add_edges` adds, or one the flow holds.
 ///
 /// Its `id`, `source` and `target` are non-empty strings. An `Edge` cannot be
-/// made without these checks, so apply does not make them again. Whether the
-/// nodes and handles it names exist depends on the flow, so apply checks that.
+/// made without these checks, and an edge is never written in place, so no
+/// reader checks them again. Whether the nodes and handles it names exist
+/// depends on the flow, so apply checks that.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Edge(Map<String, Value>);
 

@@ -28,7 +28,6 @@ use serde_json::Value;
 
 use crate::ops::canonical::is_row_position;
 use crate::ops::edges::{check_edge, removed_endpoints};
-use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result, bail, invalid, quoted};
 use crate::ops::ops::{Change, Edge, FieldUpdate, Node, NodePath, Operation, PathExt, Segment};
 use crate::ops::schema::{KeyedList, ListKind, NODE_SCHEMA};
@@ -166,13 +165,10 @@ impl GraphState {
             if report.options.forward {
                 payloads.push(node.clone());
             }
-            let node = node.into_map();
-            // The graph's key is the one copy of the id that apply needs.
-            let id = node.id().to_owned();
             if report.options.backward {
-                added.push(id.clone());
+                added.push(node.id().to_owned());
             }
-            self.insert_node(id, Value::Object(node));
+            self.insert_node(node);
         }
         report.record(Operation::AddNodes(payloads));
         report.record_backward(Operation::DeleteNodes(added));
@@ -234,7 +230,13 @@ impl GraphState {
             .nodes
             .get(node_id)
             .ok_or_else(|| invalid!("node {} does not exist", quoted(node_id)))?;
-        let removed = removed_endpoints(&update.path, update.is_delete(), before, node, node_id)?;
+        let removed = removed_endpoints(
+            &update.path,
+            update.is_delete(),
+            before,
+            node.as_value(),
+            node_id,
+        )?;
         if removed.is_empty() {
             return Ok(IndexSet::new());
         }
@@ -315,12 +317,10 @@ impl GraphState {
             if report.options.forward {
                 payloads.push(edge.clone());
             }
-            let edge = edge.into_map();
-            let id = edge.id().to_owned();
             if report.options.backward {
-                added.push(id.clone());
+                added.push(edge.id().to_owned());
             }
-            self.insert_edge(id, Value::Object(edge));
+            self.insert_edge(edge);
         }
         report.record(Operation::AddEdges(payloads));
         report.record_backward(Operation::DeleteEdges(added));
@@ -523,7 +523,7 @@ impl GraphState {
         self.graph
             .nodes
             .get_mut(&write.update.id)
-            .and_then(|node| resolve_mut(node, &walk.steps))
+            .and_then(|node| resolve_mut(node.as_value_mut(), &walk.steps))
     }
 
     /// Write or delete an object key.
@@ -569,7 +569,7 @@ impl GraphState {
             .graph
             .nodes
             .get_mut(&update.id)
-            .and_then(|node| resolve_mut(node, &walk.steps));
+            .and_then(|node| resolve_mut(node.as_value_mut(), &walk.steps));
         let Some(Value::Array(items)) = parent else {
             bail!("{list_context}: list item key on a value that is not a list");
         };
@@ -605,6 +605,7 @@ fn written<'g>(graph: &'g Graph, write: &FieldWrite<'_>) -> &'g Value {
         .nodes
         .get(&write.update.id)
         .expect("update_nodes checks that the node exists")
+        .as_value()
 }
 
 /// What a field write did at the last segment of its path.
