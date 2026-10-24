@@ -188,14 +188,14 @@ async def _namespaces(username: str | None) -> list[str]:
         else:
             user_ids = list((await session.exec(select(User.id))).all())
             flow_ids = list((await session.exec(select(Flow.id))).all())
-    return [
-        namespace
-        for identifier, typed_scope in (
-            *((identifier, user_storage_scope) for identifier in user_ids),
-            *((identifier, flow_storage_scope) for identifier in flow_ids),
-        )
-        for namespace in (str(identifier), typed_scope(identifier))
-    ]
+        namespaces = [
+            namespace for identifier in user_ids for namespace in (str(identifier), user_storage_scope(identifier))
+        ]
+        for flow_id in flow_ids:
+            if await session.get(User, flow_id) is None:
+                namespaces.append(str(flow_id))
+            namespaces.append(flow_storage_scope(flow_id))
+    return namespaces
 
 
 async def _rows_without_bytes(copied: set[tuple[str, str]], username: str | None) -> list[FileRelocationResult]:

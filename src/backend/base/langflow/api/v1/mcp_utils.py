@@ -304,6 +304,7 @@ async def handle_read_resource(uri: str, project_id: UUID | str | None = None) -
                 msg = "Resource not found or access denied"
                 raise ValueError(msg) from exc
 
+        allow_legacy = False
         async with session_scope() as session:
             try:
                 flow_id = UUID(namespace_id)
@@ -314,6 +315,8 @@ async def handle_read_resource(uri: str, project_id: UUID | str | None = None) -
                 if parsed_project_id is not None:
                     flow_query = flow_query.where(Flow.folder_id == parsed_project_id)
                 flow = (await session.exec(flow_query)).first()
+                if flow is not None:
+                    allow_legacy = await _legacy_flow_storage_allowed(session, flow.id)
 
             if flow is None:
                 # The namespace segment may refer to the user's own bucket (user-level
@@ -331,7 +334,6 @@ async def handle_read_resource(uri: str, project_id: UUID | str | None = None) -
         # Read the file content from its typed namespace, falling back to the
         # authorized legacy location when the object predates typed storage.
         if flow is not None:
-            allow_legacy = await _legacy_flow_storage_allowed(session, flow.id)
             content = await _get_flow_file(storage_service, flow.id, filename, allow_legacy=allow_legacy)
         else:
             content = await _get_file_with_legacy_fallback(

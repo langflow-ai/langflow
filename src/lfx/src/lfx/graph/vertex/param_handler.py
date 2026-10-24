@@ -488,7 +488,7 @@ class ParameterHandler:
             or logical_path.is_absolute()
             or any(segment in {"", ".", ".."} for segment in segments)
             or not logical_path.parts
-            or logical_path.parts[0] not in scopes
+            or (logical_path.parts[0] not in scopes and user_storage_scope(logical_path.parts[0]) not in scopes)
         ):
             msg = "S3 file references must stay within the authenticated user's or executing flow's namespace."
             raise LocalFileAccessError(msg)

@@ -10,6 +10,7 @@ from sqlmodel import col, delete, select
 
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.transactions.model import TransactionTable
+from langflow.services.database.models.user.model import User
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 
@@ -50,22 +51,23 @@ async def cleanup_orphaned_records() -> None:
                     # Clean up any associated storage files
                     storage_service: StorageService = get_storage_service()
                     for flow_id in orphaned_flow_ids:
-                        # Raw legacy flow IDs may alias a user's namespace, so only typed
-                        # flow storage is safe to remove without a separate ownership lookup.
-                        namespace = flow_storage_scope(flow_id)
-                        try:
-                            files = await storage_service.list_files(namespace)
-                            for file in files:
-                                try:
-                                    await storage_service.delete_file(namespace, file)
-                                except Exception as exc:  # noqa: BLE001
-                                    logger.error(f"Failed to delete file {file} for flow {flow_id}: {exc!s}")
-                            # Delete the flow directory after all files are deleted
-                            flow_dir = storage_service.data_dir / namespace
-                            if await flow_dir.exists():
-                                await flow_dir.rmdir()
-                        except Exception as exc:  # noqa: BLE001
-                            logger.error(f"Failed to list files for flow {flow_id}: {exc!s}")
+                        namespaces = [flow_storage_scope(flow_id)]
+                        if await session.get(User, flow_id) is None:
+                            namespaces.append(str(flow_id))
+                        for namespace in namespaces:
+                            try:
+                                files = await storage_service.list_files(namespace)
+                                for file in files:
+                                    try:
+                                        await storage_service.delete_file(namespace, file)
+                                    except Exception as exc:  # noqa: BLE001
+                                        logger.error(f"Failed to delete file {file} for flow {flow_id}: {exc!s}")
+                                # Delete the flow directory after all files are deleted
+                                flow_dir = storage_service.data_dir / namespace
+                                if await flow_dir.exists():
+                                    await flow_dir.rmdir()
+                            except Exception as exc:  # noqa: BLE001
+                                logger.error(f"Failed to list files for flow {flow_id}: {exc!s}")
 
                     logger.debug(f"Successfully deleted orphaned records from {table.__name__}")
 
