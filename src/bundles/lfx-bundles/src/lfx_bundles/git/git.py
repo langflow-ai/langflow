@@ -166,20 +166,31 @@ class GitLoaderComponent(Component):
         except (OSError, UnicodeDecodeError):
             return False
 
-    def build_combined_filter(self, file_filter_patterns: str | None = None, content_filter_pattern: str | None = None):
+    def build_combined_filter(
+        self,
+        file_filter_patterns: str | None = None,
+        content_filter_pattern: str | None = None,
+        repo_path: str | Path | None = None,
+    ):
         """Build a combined filter function from file and content patterns.
 
         Args:
             file_filter_patterns: Comma-separated glob patterns
             content_filter_pattern: Regex pattern for content
+            repo_path: Repository directory that files must remain inside
 
         Returns:
             callable: Filter function that takes a file path and returns bool
         """
+        repository_root = Path(repo_path).resolve() if repo_path is not None else None
 
         def combined_filter(file_path: str) -> bool:
             try:
                 path = Path(file_path)
+                if path.is_symlink():
+                    return False
+                if repository_root is not None:
+                    path.resolve().relative_to(repository_root)
 
                 # Check if file exists and is readable
                 if not path.exists():
@@ -232,8 +243,6 @@ class GitLoaderComponent(Component):
         file_filter_patterns = getattr(self, "file_filter", None)
         content_filter_pattern = getattr(self, "content_filter", None)
 
-        combined_filter = self.build_combined_filter(file_filter_patterns, content_filter_pattern)
-
         repo_source = getattr(self, "repo_source", None)
         if repo_source == "Local":
             # repo_path is tenant-controlled and its file contents are read back: confine to the
@@ -247,6 +256,8 @@ class GitLoaderComponent(Component):
             validate_git_repository_url(clone_url)
             async with self.temp_clone_dir() as temp_dir:
                 repo_path = temp_dir
+
+        combined_filter = self.build_combined_filter(file_filter_patterns, content_filter_pattern, repo_path)
 
         # Only pass branch if it's explicitly set
         branch = getattr(self, "branch", None)

@@ -111,3 +111,56 @@ class TestGitExtractorComponent:
         assert result[0].data["total_lines"] == 1
         assert result[0].data["total_size_bytes"] == len(b"repository content\n")
         assert result[0].data["directories"] == 0
+
+
+@pytest.mark.usefixtures("ssrf_on")
+class TestGitLoaderComponent:
+    @pytest.fixture
+    def gitloader_repo_with_symlinks(self, tmp_path, monkeypatch):
+        from git import Repo
+        from lfx.components.git.git import GitLoaderComponent
+
+        settings = MagicMock()
+        settings.settings.restrict_local_file_access = False
+        monkeypatch.setattr("lfx.utils.file_path_security.get_settings_service", lambda: settings)
+
+        repository = tmp_path / "loader-repository"
+        repository.mkdir()
+        (repository / "README.md").write_text("repository readme\n", encoding="utf-8")
+        (repository / "docs").mkdir()
+        (repository / "docs" / "guide.txt").write_text("repository guide\n", encoding="utf-8")
+
+        outside_directory = tmp_path / "loader-outside"
+        outside_directory.mkdir()
+        outside_file = outside_directory / "outside.txt"
+        outside_file.write_text("OUTSIDE_REPOSITORY_CONTENT\n", encoding="utf-8")
+        (outside_directory / "nested.txt").write_text("OUTSIDE_REPOSITORY_CONTENT\n", encoding="utf-8")
+
+        (repository / "linked.txt").symlink_to(outside_file)
+        (repository / "linked-directory").symlink_to(outside_directory, target_is_directory=True)
+
+        git_repo = Repo.init(repository, initial_branch="main")
+        git_repo.index.add(["README.md", "docs/guide.txt", "linked.txt", "linked-directory"])
+        with git_repo.config_writer() as config:
+            config.set_value("user", "name", "Test User")
+            config.set_value("user", "email", "test@example.com")
+        git_repo.index.commit("Add repository fixtures")
+
+        component = GitLoaderComponent(repo_source="Local", repo_path=str(repository), branch="main")
+        return component, repository
+
+    async def test_load_documents_skips_symlinks(self, gitloader_repo_with_symlinks):
+        component, _ = gitloader_repo_with_symlinks
+
+        result = await component.load_documents()
+
+        assert sorted(item.data["source"] for item in result) == ["README.md", "docs/guide.txt"]
+        assert all("OUTSIDE_REPOSITORY_CONTENT" not in item.data["text"] for item in result)
+
+    def test_combined_filter_rejects_symlinks(self, gitloader_repo_with_symlinks):
+        component, repository = gitloader_repo_with_symlinks
+        filter_func = component.build_combined_filter(repo_path=repository)
+
+        assert filter_func(str(repository / "README.md"))
+        assert not filter_func(str(repository / "linked.txt"))
+        assert not filter_func(str(repository / "linked-directory" / "nested.txt"))
