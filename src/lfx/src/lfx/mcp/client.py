@@ -68,13 +68,14 @@ class LangflowClient:
         access_token: str | None = None,
         *,
         use_env_api_key: bool = True,
+        use_env_global_vars: bool = True,
     ):
         self.server_url = (server_url or os.environ.get("LANGFLOW_SERVER_URL", "http://localhost:7860")).rstrip("/")
         # HTTP mounts must not substitute process credentials for their caller.
         self.api_key = api_key or (os.environ.get("LANGFLOW_API_KEY") if use_env_api_key else None)
         self.access_token = access_token
         # Keep environment-based configuration consistent for this client's lifetime.
-        self.global_var_headers = _global_var_headers()
+        self.global_var_headers = _global_var_headers() if use_env_global_vars else {}
         self._http: httpx.AsyncClient | None = None
         self._lock = asyncio.Lock()
 
@@ -100,11 +101,14 @@ class LangflowClient:
             msg = "Refusing to forward global variable overrides outside the Langflow server origin"
             raise RuntimeError(msg)
 
-    async def close(self) -> None:
+    async def aclose(self) -> None:
         """Close the underlying HTTP client."""
         if self._http is not None and not self._http.is_closed:
             await self._http.aclose()
             self._http = None
+
+    async def close(self) -> None:
+        await self.aclose()
 
     def _headers(self) -> dict[str, str]:
         headers = {"Content-Type": "application/json"}
