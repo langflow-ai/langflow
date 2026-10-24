@@ -18,6 +18,7 @@
 //! carries, is read strictly too.
 
 use std::collections::HashMap;
+use std::fmt;
 use std::sync::LazyLock;
 
 use indexmap::IndexSet;
@@ -460,7 +461,7 @@ pub(crate) fn index_outputs<'g>(items: &'g Value, node_id: &str) -> Result<Outpu
     let index = ListIndex::build(
         outputs_list(),
         items,
-        &format!("node {}: data.node.outputs", quoted(node_id)),
+        &fmt::from_fn(|f| write!(f, "node {}: data.node.outputs", quoted(node_id))),
     )?;
     Ok(Outputs { items, index })
 }

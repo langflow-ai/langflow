@@ -21,6 +21,7 @@
 //! [`Applied::backward`] says how to apply the backward operations.
 
 use std::collections::HashSet;
+use std::fmt;
 
 use indexmap::IndexSet;
 use serde_json::Value;
@@ -208,7 +209,7 @@ impl GraphState {
         let mut applied = Vec::new();
         let mut detached = IndexSet::new();
         for (index, mut update) in updates.into_iter().enumerate() {
-            let context = format!("update_nodes[{index}]");
+            let context = UpdatePlace::new(index);
             if !self.graph.nodes.contains(&update.id) {
                 bail!("update_nodes: node does not exist: {}", quoted(&update.id));
             }
@@ -219,7 +220,7 @@ impl GraphState {
                 );
             }
             let replaced =
-                self.apply_field_update(&mut update, &context, report.options, backward.as_mut())?;
+                self.apply_field_update(&mut update, context, report.options, backward.as_mut())?;
             if !report.options.restoring {
                 detached.extend(self.detached_edges(&update, replaced.as_ref())?);
             }
@@ -416,7 +417,7 @@ impl GraphState {
     fn apply_field_update(
         &mut self,
         update: &mut FieldUpdate,
-        context: &str,
+        context: UpdatePlace,
         options: ApplyOptions,
         backward: Option<&mut FieldBackward>,
     ) -> Result<Option<Value>> {
@@ -617,7 +618,7 @@ impl GraphState {
             let parent = resolve(root, &walk.steps).expect("the walk resolved these steps");
             keyed_list(root, path, last, parent, context)?
         };
-        let list_context = format!("{context}.path[{last}]");
+        let list_context = context.segment(last);
         let parent = self
             .graph
             .nodes
@@ -643,10 +644,10 @@ impl GraphState {
         }
         if let Some(slot) = slot {
             return Ok(Written::Replaced(
-                index.replace(items, slot, value, context)?,
+                index.replace(items, slot, value, &context)?,
             ));
         }
-        index.add(items, value, context)?;
+        index.add(items, value, &context)?;
         Ok(Written::Added)
     }
 }
@@ -676,7 +677,44 @@ enum Written {
 struct FieldWrite<'w> {
     update: &'w FieldUpdate,
     /// Where the update is in its operation, for messages.
-    context: &'w str,
+    context: UpdatePlace,
+}
+
+/// Where a field update is in its `update_nodes`, for error messages:
+/// `update_nodes[1]`, or one segment of its path, `update_nodes[1].path[2]`.
+/// It is formatted only when an error is, so an update that applies builds
+/// no message.
+#[derive(Debug, Clone, Copy)]
+struct UpdatePlace {
+    update: usize,
+    segment: Option<usize>,
+}
+
+impl UpdatePlace {
+    fn new(update: usize) -> Self {
+        Self {
+            update,
+            segment: None,
+        }
+    }
+
+    /// The place of segment `index` of the update's path.
+    fn segment(self, index: usize) -> Self {
+        Self {
+            segment: Some(index),
+            ..self
+        }
+    }
+}
+
+impl fmt::Display for UpdatePlace {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "update_nodes[{}]", self.update)?;
+        if let Some(segment) = self.segment {
+            write!(f, ".path[{segment}]")?;
+        }
+        Ok(())
+    }
 }
 
 /// Where a field update's path leads, as object keys and array indexes, up to its last segment.
@@ -733,7 +771,7 @@ fn list_slot(
             &prefix,
             keyed,
             items,
-            &format!("{context}.path[{index}]"),
+            &context.segment(index),
         )?
         .slot(key);
     Ok((keyed, slot))
@@ -746,7 +784,7 @@ fn keyed_list<'p>(
     path: &'p [Segment],
     index: usize,
     value: &Value,
-    context: &str,
+    context: UpdatePlace,
 ) -> Result<(&'static KeyedList, Vec<&'p str>)> {
     let prefix = path[..index].to_list();
     let Some((keyed, prefix)) = prefix.and_then(|prefix| {
@@ -884,6 +922,27 @@ mod tests {
 
     fn operations(value: Value) -> Vec<Operation> {
         Operation::list_from_value(value).unwrap()
+    }
+
+    #[test]
+    fn an_update_error_names_the_update_and_the_segment() {
+        let graph = json!({
+            "nodes": [{"id": "a", "data": {"node": {"template": {"f": {"value": 1}}}}}],
+            "edges": [],
+        });
+        let mut state = GraphState::new(graph).unwrap();
+        let write = json!([{"type": "update_nodes", "updates": [
+            {"id": "a", "op": "set_field", "path": ["position"], "value": {}},
+            {"id": "a", "op": "set_field", "path": ["data", "node", "template", "f", "value", {"key": "r"}], "value": 1},
+        ]}]);
+        let error = state
+            .apply(operations(write), ApplyOptions::default())
+            .unwrap_err();
+        assert!(
+            error.message.starts_with("update_nodes[1].path[5]: "),
+            "{}",
+            error.message
+        );
     }
 
     #[test]

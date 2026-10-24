@@ -307,7 +307,7 @@ impl Lists {
         path: &[&str],
         keyed: &'static KeyedList,
         items: &[Value],
-        context: &str,
+        context: &dyn fmt::Display,
     ) -> Result<&mut ListIndex> {
         let lists = self.by_node.get_or_insert_with(node_id, Vec::new);
         let position = if let Some(position) = lists
