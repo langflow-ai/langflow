@@ -1,27 +1,24 @@
-//! Applying operations to a flow graph.
+//! Applying an operation batch to a flow.
 //!
 //! A batch applies in order, and all of it or none of it: on an error the
-//! state is as it was before the batch.
+//! flow is as it was before the batch.
 //!
-//! Each operation of the batch can give apply several results:
+//! Each operation of the batch can give apply two results:
 //!
-//! - With `forward`, the operations as the history stores them. They can
-//!   differ from the operation that was sent: a delete that finds nothing is
-//!   not recorded, and the edges a delete takes with it are recorded as a
-//!   `delete_edges` of their own. So one operation records none, one or several.
-//! - With `inverse`, one list of operations that undo it, read from the state
-//!   each write replaces.
+//! - When the caller sets the `forward` option, its forward operations. They
+//!   can differ from the operation that was sent: a `delete_edges` or a
+//!   `delete_field` that finds nothing is dropped, and the edges that a
+//!   delete takes with it (a cascade delete) become a `delete_edges` of
+//!   their own. So one operation gives none, one or several.
+//! - When the caller sets the `backward` option, its backward operations: a
+//!   list of the operations that undo it, read from the values it replaces.
 //!
-//! For example, `delete_nodes ["b", "zz"]`, where node `b` has the edge `e1`
-//! and `zz` does not exist, records `delete_nodes ["b"]` and
-//! `delete_edges ["e1"]`. Its one undo list is `add_nodes [b]`, then
-//! `add_edges [e1]`: nodes come back before the edges that need them.
+//! For example, `delete_nodes ["b"]`, where node `b` has the edge `e1`,
+//! gives the forward operations `delete_nodes ["b"]` and
+//! `delete_edges ["e1"]`. Its backward operations are `add_nodes [b]`, then
+//! `add_edges [e1]`: the node comes back before the edge that needs it.
 //!
-//! The undo lists have two uses.
-//! History playback keeps them instead of a graph per revision, and applies
-//! them with `restoring`, last operation first. A user's undo joins them,
-//! last operation first, into one ordinary batch, which is checked under
-//! every rule like any edit.
+//! [`Applied::backward`] says how to apply the backward operations.
 
 use std::collections::HashSet;
 
@@ -43,30 +40,39 @@ use crate::ops::validate::missing_node_object;
 /// How a batch is applied.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ApplyOptions {
-    /// Return the operations as the engine records them.
+    /// Return the forward operations.
     pub forward: bool,
-    /// Return, for each operation, the operations that undo it.
-    pub inverse: bool,
-    /// Apply inverses. Inverses put back a state the history already held,
+    /// Return, for each operation, its backward operations.
+    pub backward: bool,
+    /// Apply backward operations. They put back a state the flow already had,
     /// whatever rules it broke, and they add and delete every edge they touch
-    /// explicitly. So the edge rules, and the edges a removed field or output
-    /// would take with it, are both skipped. Never set this when applying
-    /// operations that will be stored.
+    /// explicitly. So the edge rules, and the cascade delete of a removed
+    /// field or output, are both skipped. Never set this for a batch that
+    /// will be saved.
     pub restoring: bool,
 }
 
 /// What a batch did.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Applied {
-    /// The operations as the engine records them, with `forward`.
+    /// When the caller sets the `forward` option: the forward operations.
     pub forward: Vec<Operation>,
-    /// With `inverse`: for each operation applied, the operations that undo
-    /// it. History playback applies the last list first, each in a call of
-    /// its own, with `restoring` set. A user's undo joins the lists, last
-    /// first, into one batch, and applies it without `restoring`.
-    pub inverse: Vec<Vec<Operation>>,
-    /// The edges the batch deleted because their node, field or output went away.
-    pub deleted_edges: Vec<String>,
+    /// When the caller sets the `backward` option: for each operation in the
+    /// batch, in the same order, a list of the operations that undo it. An
+    /// operation that changed nothing has an empty list.
+    ///
+    /// To undo the whole batch, undo the last operation first: apply the lists
+    /// from last to first, and keep the order inside each list.
+    ///
+    /// There are two ways to apply them:
+    ///
+    /// - To show an earlier version of the flow, as the editor's history does,
+    ///   set the `restoring` option. The flow goes back to a state it already
+    ///   had, so the engine skips its edge rules.
+    /// - To undo an edit with a new edit, put the lists into one batch, in that
+    ///   order, and apply it without `restoring`. The new edit is saved like any
+    ///   other edit, so it must pass the same rules.
+    pub backward: Vec<Vec<Operation>>,
     /// The nodes the batch added, removed or wrote.
     pub changed_nodes: Vec<String>,
     /// The edges the batch added, removed or wrote.
@@ -75,15 +81,13 @@ pub struct Applied {
 
 /// The options of a batch, and what it reports as it applies.
 ///
-/// The report keeps the forward operations and the inverses for the caller,
+/// The report keeps the forward and backward operations for the caller,
 /// and only when the options ask for them. A batch that fails needs neither:
 /// its changes stay in the batch's layer in `state`, which is dropped.
 #[derive(Debug)]
 struct Report {
     options: ApplyOptions,
     applied: Applied,
-    /// The inverses of the operation being applied, so far.
-    inverse: Vec<Operation>,
 }
 
 impl Report {
@@ -91,11 +95,17 @@ impl Report {
         Self {
             options,
             applied: Applied::default(),
-            inverse: Vec::new(),
         }
     }
 
-    /// Keep an operation as the engine records it. Kept only with `forward`.
+    /// Start an operation: its backward operations go into a list of their own.
+    fn begin_operation(&mut self) {
+        if self.options.backward {
+            self.applied.backward.push(Vec::new());
+        }
+    }
+
+    /// Keep a forward operation. Kept only with `forward`.
     fn record(&mut self, operation: Operation) {
         if self.options.forward {
             self.applied.forward.push(operation);
@@ -103,26 +113,23 @@ impl Report {
     }
 
     /// Record an operation that undoes part of the operation being applied.
-    /// Kept only with `inverse`.
-    fn record_inverse(&mut self, operation: Operation) {
-        if self.options.inverse {
-            self.inverse.push(operation);
+    /// Kept only with `backward`.
+    fn record_backward(&mut self, operation: Operation) {
+        if self.options.backward {
+            self.applied
+                .backward
+                .last_mut()
+                .expect("begin_operation started a list")
+                .push(operation);
         }
     }
 
-    /// Whether removals keep copies of what they remove, for the inverses.
+    /// Whether removals keep copies of what they remove, for the backward operations.
     fn copies(&self) -> Copies {
-        if self.options.inverse {
+        if self.options.backward {
             Copies::Keep
         } else {
             Copies::Discard
-        }
-    }
-
-    /// End the operation being applied: its inverses are complete.
-    fn end_operation(&mut self) {
-        if self.options.inverse {
-            self.applied.inverse.push(std::mem::take(&mut self.inverse));
         }
     }
 }
@@ -155,6 +162,7 @@ impl GraphState {
     }
 
     fn apply_operation(&mut self, operation: Operation, report: &mut Report) -> Result<()> {
+        report.begin_operation();
         match operation {
             Operation::AddNodes(nodes) => self.add_nodes(nodes, report)?,
             Operation::UpdateNodes(updates) => self.update_nodes(updates, report)?,
@@ -162,7 +170,6 @@ impl GraphState {
             Operation::AddEdges(edges) => self.add_edges(edges, report)?,
             Operation::DeleteEdges(ids) => self.delete_edges(&ids, report),
         }
-        report.end_operation();
         Ok(())
     }
 
@@ -195,7 +202,7 @@ impl GraphState {
             self.insert_node(id, Value::Object(node));
         }
         report.record(Operation::AddNodes(payloads));
-        report.record_inverse(Operation::DeleteNodes(added.into_iter().collect()));
+        report.record_backward(Operation::DeleteNodes(added.into_iter().collect()));
         Ok(())
     }
 
@@ -204,7 +211,7 @@ impl GraphState {
             return Ok(());
         }
         reject_repeated_paths(&updates, "update_nodes")?;
-        let mut inverses = report.options.inverse.then(FieldInverses::default);
+        let mut backward = report.options.backward.then(FieldBackward::default);
         let mut applied = Vec::new();
         let mut detached = IndexSet::new();
         for (index, mut update) in updates.into_iter().enumerate() {
@@ -220,7 +227,7 @@ impl GraphState {
             }
             check_node_path(&update.path, &format!("{context}.path"))?;
             let replaced =
-                self.apply_field_update(&mut update, &context, report.options, inverses.as_mut())?;
+                self.apply_field_update(&mut update, &context, report.options, backward.as_mut())?;
             if !report.options.restoring {
                 detached.extend(self.detached_edges(&update, replaced.as_ref())?);
             }
@@ -232,9 +239,9 @@ impl GraphState {
         if !applied.is_empty() {
             report.record(Operation::UpdateNodes(applied));
         }
-        if let Some(inverses) = inverses {
-            for operation in inverses.operations(Operation::UpdateNodes) {
-                report.record_inverse(operation);
+        if let Some(backward) = backward {
+            for operation in backward.operations(Operation::UpdateNodes) {
+                report.record_backward(operation);
             }
         }
         self.remove_cascaded(detached.iter().map(String::as_str), report);
@@ -339,7 +346,7 @@ impl GraphState {
             return Ok(());
         }
         report.record(Operation::DeleteNodes(removed));
-        report.record_inverse(Operation::AddNodes(removed_nodes));
+        report.record_backward(Operation::AddNodes(removed_nodes));
         self.remove_cascaded(incident.iter().map(String::as_str), report);
         Ok(())
     }
@@ -350,9 +357,8 @@ impl GraphState {
         if removed.is_empty() {
             return;
         }
-        report.applied.deleted_edges.extend(removed.iter().cloned());
         report.record(Operation::DeleteEdges(removed));
-        report.record_inverse(Operation::AddEdges(edges));
+        report.record_backward(Operation::AddEdges(edges));
     }
 
     // --- Edges -------------------------------------------------------------------------
@@ -393,7 +399,7 @@ impl GraphState {
             self.insert_edge(id, Value::Object(edge));
         }
         report.record(Operation::AddEdges(payloads));
-        report.record_inverse(Operation::DeleteEdges(added.into_iter().collect()));
+        report.record_backward(Operation::DeleteEdges(added.into_iter().collect()));
         Ok(())
     }
 
@@ -403,7 +409,7 @@ impl GraphState {
             return;
         }
         report.record(Operation::DeleteEdges(removed));
-        report.record_inverse(Operation::AddEdges(edges));
+        report.record_backward(Operation::AddEdges(edges));
     }
 
     // --- Field writes ----------------------------------------------------------------------
@@ -417,9 +423,9 @@ impl GraphState {
         update: &mut FieldUpdate,
         context: &str,
         options: ApplyOptions,
-        inverses: Option<&mut FieldInverses>,
+        backward: Option<&mut FieldBackward>,
     ) -> Result<Option<Value>> {
-        let walk = self.check_field_update(&FieldWrite { update, context }, inverses)?;
+        let walk = self.check_field_update(&FieldWrite { update, context }, backward)?;
         let value = match &mut update.change {
             Change::Set(value) if !options.forward => std::mem::take(value),
             Change::Set(value) => value.clone(),
@@ -432,25 +438,25 @@ impl GraphState {
     }
 
     /// Check a field update before it writes anything: its path must exist
-    /// up to the last segment. Record its inverse, and return its path as
+    /// up to the last segment. Record its backward operation, and return its path as
     /// object keys and array indexes.
     fn check_field_update(
         &mut self,
         write: &FieldWrite<'_>,
-        inverses: Option<&mut FieldInverses>,
+        backward: Option<&mut FieldBackward>,
     ) -> Result<Walk> {
         let walk = self.walk(write)?;
         if let Some(missing) = walk.missing_at {
             return Err(missing_segment(write, missing));
         }
-        if let Some(inverses) = inverses {
+        if let Some(backward) = backward {
             let last_step = self.read_last(write, &walk)?;
             let root = written(&self.graph, write);
             let parent = resolve(root, &walk.steps);
             let current = last_step
                 .as_ref()
                 .and_then(|step| resolve(parent?, std::slice::from_ref(step)));
-            inverses.record(root, write.update, parent, current);
+            backward.record(root, write.update, parent, current);
         }
         Ok(walk)
     }
@@ -795,17 +801,17 @@ fn reject_repeated_paths(updates: &[FieldUpdate], kind: &str) -> Result<()> {
     Ok(())
 }
 
-// --- Inverses of field writes --------------------------------------------------------------
+// --- Backward operations of field writes ---------------------------------------------------
 
 /// The writes that undo an update batch, read from the state each write
 /// replaces. They are undone last first; a path written twice is split into
 /// separate operations, since one operation may write a path once.
 #[derive(Debug, Default)]
-struct FieldInverses {
+struct FieldBackward {
     entries: Vec<FieldUpdate>,
 }
 
-impl FieldInverses {
+impl FieldBackward {
     /// Record what undoes `update`; called before it is applied.
     ///
     /// `parent` holds the path's last segment, and `current` is what the path holds.

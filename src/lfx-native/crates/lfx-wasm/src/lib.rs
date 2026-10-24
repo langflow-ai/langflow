@@ -31,7 +31,7 @@ fn run<T>(result: ApiResult<T>) -> Result<T, JsValue> {
     result.map_err(|error| thrown(&error))
 }
 
-/// Read the apply switches from an options object: `{forward, inverse, restoring}`.
+/// Read the apply switches from an options object: `{forward, backward, restoring}`.
 fn apply_options(options: &JsValue, forward_by_default: bool) -> ApplyOptions {
     let flag = |name: &str| {
         Reflect::get(options, &JsValue::from_str(name))
@@ -40,7 +40,7 @@ fn apply_options(options: &JsValue, forward_by_default: bool) -> ApplyOptions {
     };
     ApplyOptions {
         forward: flag("forward").unwrap_or(forward_by_default),
-        inverse: flag("inverse").unwrap_or(false),
+        backward: flag("backward").unwrap_or(false),
         restoring: flag("restoring").unwrap_or(false),
     }
 }
@@ -70,7 +70,7 @@ impl GraphState {
     }
 
     /// Apply a batch; returns what it did as JSON. `options` is
-    /// `{forward, inverse, restoring}`, each false by default.
+    /// `{forward, backward, restoring}`, each false by default.
     ///
     /// # Errors
     ///
@@ -92,7 +92,7 @@ impl GraphState {
 }
 
 /// Apply operations to a graph; returns `{"flow_data", ...}` as JSON.
-/// `options` is `{forward, inverse, restoring}`; `forward` is true by default.
+/// `options` is `{forward, backward, restoring}`; `forward` is true by default.
 ///
 /// # Errors
 ///

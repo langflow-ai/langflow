@@ -139,8 +139,7 @@ fn renumber(editor: bool) -> Renumber {
 // --- Apply ---------------------------------------------------------------------------------
 
 /// What a batch did, as JSON: the forward operations with `forward`, the
-/// inverses with `inverse`, the edges it deleted along the way, and the
-/// nodes and edges it changed.
+/// backward operations with `backward`, and the nodes and edges it changed.
 #[must_use]
 pub fn applied_json(applied: Applied, options: ApplyOptions) -> Map<String, Value> {
     let mut out = Map::new();
@@ -150,13 +149,12 @@ pub fn applied_json(applied: Applied, options: ApplyOptions) -> Map<String, Valu
             operations_json(applied.forward),
         );
     }
-    if options.inverse {
+    if options.backward {
         out.insert(
-            "inverse_operations".into(),
-            Value::Array(applied.inverse.into_iter().map(operations_json).collect()),
+            "backward_operations".into(),
+            Value::Array(applied.backward.into_iter().map(operations_json).collect()),
         );
     }
-    out.insert("deleted_edges".into(), json!(applied.deleted_edges));
     out.insert("changed_nodes".into(), json!(applied.changed_nodes));
     out.insert("changed_edges".into(), json!(applied.changed_edges));
     out

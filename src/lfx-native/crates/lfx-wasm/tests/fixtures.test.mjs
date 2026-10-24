@@ -226,7 +226,7 @@ cases("editor_cases.json", "fixes_for_edges", (c) =>
   check(matches, "fixes", parse(ops.fixesForEdges(dump(c.fixes), dump(c.edge_ids))), c.expected),
 );
 
-// --- inverse_cases.json ------------------------------------------------------------------------
+// --- backward_cases.json -----------------------------------------------------------------------
 
 function unordered(lists) {
   const keys = { delete_nodes: "ids", delete_edges: "ids", add_nodes: "nodes", add_edges: "edges" };
@@ -236,18 +236,18 @@ function unordered(lists) {
   );
 }
 
-cases("inverse_cases.json", "cases", (c) => {
+cases("backward_cases.json", "cases", (c) => {
   const state = new ops.GraphState(dump(c.base));
-  const applied = parse(state.apply(dump(c.operations), { inverse: true }));
-  check(matches, "inverse operations", unordered(applied.inverse_operations), unordered(c.inverse));
-  for (const inverse of [...applied.inverse_operations].reverse()) state.apply(dump(inverse), { restoring: true });
+  const applied = parse(state.apply(dump(c.operations), { backward: true }));
+  check(matches, "backward operations", unordered(applied.backward_operations), unordered(c.backward));
+  for (const backward of [...applied.backward_operations].reverse()) state.apply(dump(backward), { restoring: true });
   assert.ok(ops.graphsEqual(state.toJson(), dump(c.base)));
 });
 
-cases("inverse_cases.json", "undo", (c) => {
+cases("backward_cases.json", "undo", (c) => {
   const state = new ops.GraphState(dump(c.base));
-  const applied = parse(state.apply(dump(c.operations), { inverse: true }));
-  const undo = [...applied.inverse_operations].reverse().flat();
+  const applied = parse(state.apply(dump(c.operations), { backward: true }));
+  const undo = [...applied.backward_operations].reverse().flat();
   check(matches, "undo", unordered([undo]), unordered([c.undo]));
   state.apply(dump(undo), {});
   assert.ok(ops.graphsEqual(state.toJson(), dump(c.base)));
@@ -272,7 +272,7 @@ cases("write_cases.json", "cases", (c) => {
 });
 
 const FIXTURE_FILES = [
-  "apply_cases.json", "canonical_cases.json", "diff_cases.json", "editor_cases.json", "inverse_cases.json",
+  "apply_cases.json", "canonical_cases.json", "diff_cases.json", "editor_cases.json", "backward_cases.json",
   "limit_cases.json", "merge_cases.json", "property_cases.json", "repair_cases.json", "restore_cases.json",
   "table_cases.json", "validation_cases.json", "write_cases.json",
 ];

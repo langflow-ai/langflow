@@ -8,18 +8,18 @@ use serde_json::{Map, Value, json};
 
 use crate::support::{assert_json_eq, cases, compact, load};
 
-/// Every apply case, and the inverse round trip of every case that applies.
+/// Every apply case, and the backward round trip of every case that applies.
 pub fn trials() -> Vec<Trial> {
     let mut trials = Vec::new();
     for (name, case) in cases(&load("apply_cases.json")) {
-        let inverse_case = case.clone();
+        let backward_case = case.clone();
         trials.push(Trial::test(format!("apply_cases::{name}"), move || {
             apply_case(&case)
         }));
-        if inverse_case.get("error").is_none() {
+        if backward_case.get("error").is_none() {
             trials.push(Trial::test(
-                format!("apply_cases::{name}::inverse"),
-                move || inverse_round_trip(&inverse_case),
+                format!("apply_cases::{name}::backward"),
+                move || backward_round_trip(&backward_case),
             ));
         }
     }
@@ -94,13 +94,13 @@ fn apply_case(case: &Value) -> Result<(), Failed> {
     )
 }
 
-/// Applying a case's inverses, last first and with `restoring`, gives back its base.
-fn inverse_round_trip(case: &Value) -> Result<(), Failed> {
+/// Applying a case's backward operations, last first and with `restoring`, gives back its base.
+fn backward_round_trip(case: &Value) -> Result<(), Failed> {
     let base = &case["base"];
     let mut state =
         GraphState::new(base.clone()).map_err(|error| format!("base does not index: {error}"))?;
     let options = ApplyOptions {
-        inverse: true,
+        backward: true,
         ..ApplyOptions::default()
     };
     let applied = state
@@ -113,20 +113,20 @@ fn inverse_round_trip(case: &Value) -> Result<(), Failed> {
         restoring: true,
         ..ApplyOptions::default()
     };
-    for inverse in applied.inverse.into_iter().rev() {
+    for backward in applied.backward.into_iter().rev() {
         let shown = compact(&Value::Array(
-            inverse.iter().map(Operation::to_value).collect(),
+            backward.iter().map(Operation::to_value).collect(),
         ));
         state
-            .apply(inverse, restoring)
-            .map_err(|error| format!("inverse {shown} refused: {error}"))?;
+            .apply(backward, restoring)
+            .map_err(|error| format!("backward operations {shown} refused: {error}"))?;
     }
     let restored = state.to_value();
     if graphs_equal(&restored, base).map_err(|error| error.to_string())? {
         Ok(())
     } else {
         Err(format!(
-            "inverses do not restore the base\n  actual:   {}\n  expected: {}",
+            "backward operations do not restore the base\n  actual:   {}\n  expected: {}",
             compact(&restored),
             compact(base)
         )
