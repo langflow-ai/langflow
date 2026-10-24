@@ -1,0 +1,224 @@
+---
+title: FastAF
+slug: /bundles-fastaf
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="fastaf" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain provider integrations.
+
+FastAF provides public web scraping, Google search, AI extraction, screenshots and structured web data.
+Create and verify a [FastAF account](https://fastaf.co/signup/), then obtain an API key from the
+[dashboard](https://fastaf.co/dashboard/). Set **FastAF API Key** or use a credential global variable.
+The key is sent only in the Bearer authorization header to `https://api.fastaf.co`.
+See the [FastAF API documentation](https://fastaf.co/docs/) for current pricing and parameter details.
+
+Each component exposes one uniquely named `fastaf_*` tool in [tool mode](/agents-tools).
+Successful executions consume credits: there is no automatic retry, pagination or paid discovery.
+A timeout is not proof a request was unbilled. HTTP errors return a safe `error` row, not upstream bodies or credentials.
+
+## Outputs
+
+All components except Screenshot return a [`Table`](/data-types#table) constructed from `Data` records.
+Primary result arrays are selected when present; otherwise the response is a flat record.
+Nested keys use underscores, nested arrays become JSON strings, and missing list columns become null.
+Screenshot returns `Data` with a managed `file_path`, `content_type`, `bytes`, `http_status`,
+`credits_used` and `credits_remaining`, not base64 image data. Files use generated names under the
+flow's storage namespace (or a generated namespace outside a graph). Local paths belong to the server;
+configure durable storage if the image must persist.
+
+## Optional fields and cost controls
+
+Optional boolean controls use **Default**, **true**, or **false**. Default omits the API field.
+Optional numbers accept integer text; leave blank to preserve API defaults. This avoids Langflow's
+native integer input converting a blank into zero, which would change site-specific wait behavior.
+Explicit false and zero are retained. Validation runs before any paid request.
+
+Rendering defaults are site-specific, including Booking. Premium proxies or proxy country targeting
+increase the base scrape price. Challenge Mode cannot combine with rendering, premium or proxy country.
+Extraction sends a prompt and/or JSON-serialized rules on `/v1/scrape`, not an invented extraction endpoint.
+Search/News pages are zero-based, Amazon pages are one-based, and Maps uses offsets in steps of 20.
+Each execution retrieves one page only; continuation tokens can be supplied manually.
+
+## FastAF Scrape Page
+
+Retrieve public HTML, markdown, links, images or a summary. Static scrape: 1 credit; options can cost more.
+
+Endpoint: `POST /v1/scrape`. Tool: `fastaf_scrape`.
+
+| Name | Input | Default / behavior |
+| --- | --- | --- |
+| FastAF API Key (`fastaf_api_key`) | SecretString | Required secret; no default.Create an API key at https://fastaf.co/dashboard/. Calls consume FastAF credits; avoid blind retries. |
+| Page URL (`url`) | str | Required. Public HTTP(S) URL. Private targets and login paths are refused by FastAF. |
+| Render JavaScript (`dynamic`) | str | Default: `Default`. Default preserves site rules, including Booking rendering. |
+| Premium Proxies (`premium`) | str | Default: `Default`. 10 base credits; 25 with rendering. |
+| Proxy Country (`proxy_country`) | str | Optional; blank omitted. ISO country code; enables premium-tier pricing. |
+| Browser Wait (ms) (`wait`) | str | Optional; blank omitted. 0-35000; does not enable rendering. Blank preserves site defaults. Integer; leave blank for the API default. |
+| Challenge Mode (`challenge_mode`) | str | Default: `Default`. 10 base credits; incompatible with rendering/premium/country. |
+| Output Format (`format`) | str | Default: `html`. One format; an AI summary adds 10 credits. |
+| Proxy Session (`session_number`) | str | Optional; blank omitted. Repeat an ID to request the same proxy; expires after 60s idle. |
+
+## FastAF Search Web
+
+One Google results page: 5 credits, or 10 with advanced search. No automatic pagination or retries.
+
+Endpoint: `POST /v1/serp`. Tool: `fastaf_search`.
+
+| Name | Input | Default / behavior |
+| --- | --- | --- |
+| FastAF API Key (`fastaf_api_key`) | SecretString | Required secret; no default.Create an API key at https://fastaf.co/dashboard/. Calls consume FastAF credits; avoid blind retries. |
+| Search Query (`query`) | str | Required. Search text for one results page. |
+| Maximum Results (`results`) | str | Optional; blank omitted. 1-100; limits this page, not additional pages. Integer; leave blank for the API default. |
+| Page (`page`) | str | Optional; blank omitted. Zero-based; 0 is the first paid page. Integer; leave blank for the API default. |
+| Search Country (`country`) | str | Optional; blank omitted. Country code such as us or fr; no country surcharge. |
+| Language (`language`) | str | Optional; blank omitted. Language code, such as en. Jobs uses locales such as en_us. |
+| Advanced Search (`advanced_search`) | bool | Default: `False`. 10 rather than 5 credits. |
+| Mobile Results (`mobile`) | str | Default: `Default`. Mobile instead of desktop results; no surcharge. |
+| Search Origin (`location`) | str | Optional; blank omitted. City-level origin, such as Austin, Texas, United States. |
+
+## FastAF Extract Page Data
+
+Extract data using AI instructions on /v1/scrape. Adds 10 credits to the scrape base cost.
+
+Endpoint: `POST /v1/scrape`. Tool: `fastaf_extract`.
+
+| Name | Input | Default / behavior |
+| --- | --- | --- |
+| FastAF API Key (`fastaf_api_key`) | SecretString | Required secret; no default.Create an API key at https://fastaf.co/dashboard/. Calls consume FastAF credits; avoid blind retries. |
+| Page URL (`url`) | str | Required. Public HTTP(S) URL. Private targets and login paths are refused by FastAF. |
+| Render JavaScript (`dynamic`) | str | Default: `Default`. Default preserves site rules, including Booking rendering. |
+| Premium Proxies (`premium`) | str | Default: `Default`. 10 base credits; 25 with rendering. |
+| Proxy Country (`proxy_country`) | str | Optional; blank omitted. ISO country code; enables premium-tier pricing. |
+| Browser Wait (ms) (`wait`) | str | Optional; blank omitted. 0-35000; does not enable rendering. Blank preserves site defaults. Integer; leave blank for the API default. |
+| Challenge Mode (`challenge_mode`) | str | Default: `Default`. 10 base credits; incompatible with rendering/premium/country. |
+| Extraction Prompt (`prompt`) | str | Optional; blank omitted. Instructions for AI extraction. Supply a prompt, rules or both. |
+| Extraction Rules (`rules`) | dict | Default: `{}`. Field-to-instruction map, e.g. title: page title. AI adds 10 credits once. |
+
+## FastAF Capture Screenshot
+
+Capture a public page for 5 credits and save the image through Langflow's file service.
+
+Endpoint: `POST /v1/screenshot`. Tool: `fastaf_screenshot`.
+
+| Name | Input | Default / behavior |
+| --- | --- | --- |
+| FastAF API Key (`fastaf_api_key`) | SecretString | Required secret; no default.Create an API key at https://fastaf.co/dashboard/. Calls consume FastAF credits; avoid blind retries. |
+| Page URL (`url`) | str | Required. Public HTTP(S) URL. Private targets and login paths are refused by FastAF. |
+| Full Page (`full_page`) | bool | Default: `False`. Capture the full scrollable page rather than the viewport; no surcharge. |
+| Viewport Width (px) (`width`) | str | Optional; blank omitted. Width in CSS pixels, at least 1. Integer; leave blank for the API default. |
+| Viewport Height (px) (`height`) | str | Optional; blank omitted. Height in CSS pixels, at least 1. Integer; leave blank for the API default. |
+| Image Format (`format`) | str | Default: `png`. Image encoding. |
+| Quality (`quality`) | int | Default: `80`. JPG/WebP quality, 0-100. PNG is lossless. |
+| Capture Readiness (`wait_until`) | str | Default: `domcontentloaded`. Capture after DOM parsing, load or network idle. |
+
+## FastAF Get Amazon Data
+
+Amazon search/product: 1 credit; offers/bestsellers: 5. Reviews are not offered.
+
+Endpoint: `POST /v1/amazon`. Tool: `fastaf_amazon`.
+
+| Name | Input | Default / behavior |
+| --- | --- | --- |
+| FastAF API Key (`fastaf_api_key`) | SecretString | Required secret; no default.Create an API key at https://fastaf.co/dashboard/. Calls consume FastAF credits; avoid blind retries. |
+| Resource (`resource`) | str | Default: `search`. Select one resource; parameters for other resources are omitted. |
+| Search Query (`query`) | str | Optional; blank omitted. Search text for one results page. |
+| ASIN (`asin`) | str | Optional; blank omitted. Required for product/offers; the identifier after /dp/ in an Amazon URL. |
+| Amazon Domain Suffix (`domain`) | str | Default: `com`. com, co.uk, de, etc.; not a full hostname. |
+| Search Country (`country`) | str | Optional; blank omitted. Country code such as us or fr; no country surcharge. |
+| Language (`language`) | str | Optional; blank omitted. Language code, such as en. Jobs uses locales such as en_us. |
+| Delivery Postal Code (`postal_code`) | str | Optional; blank omitted. Localize availability/prices; not used for bestsellers. |
+| Page (`page`) | str | Optional; blank omitted. 1-100 for search; 1-2 for bestsellers; omitted for product/offers. Integer; leave blank for the API default. |
+| Bestseller Category (`category_id`) | str | Optional; blank omitted. Bestsellers only: slug/node from the category URL, e.g. kitchen/289668. |
+| Full Bestseller List (`full_list`) | str | Default: `Default`. Bestsellers only; API default true combines the ranked list. |
+
+## FastAF Search Maps
+
+Find Google Maps places or retrieve place details for 5 credits per execution.
+
+Endpoint: `POST /v1/maps`. Tool: `fastaf_maps`.
+
+| Name | Input | Default / behavior |
+| --- | --- | --- |
+| FastAF API Key (`fastaf_api_key`) | SecretString | Required secret; no default.Create an API key at https://fastaf.co/dashboard/. Calls consume FastAF credits; avoid blind retries. |
+| Search Query (`query`) | str | Optional; blank omitted. Search text for one results page. |
+| Place ID (`place_id`) | str | Optional; blank omitted. Google place_id from a previous Maps result; use instead of a query. |
+| Search Centre (`location`) | str | Optional; blank omitted. Place name, e.g. Rome, Italy. Cannot combine with coordinates. |
+| Coordinates (`coordinates`) | str | Optional; blank omitted. Centre as @latitude,longitude,zoom, e.g. @41.9028,12.4964,13z. |
+| Result Offset (`page`) | str | Optional; blank omitted. 0, 20, 40, 60, 80 or 100. Supply coordinates for pagination. Integer; leave blank for the API default. |
+| Search Country (`country`) | str | Optional; blank omitted. Country code such as us or fr; no country surcharge. |
+| Language (`language`) | str | Optional; blank omitted. Language code, such as en. Jobs uses locales such as en_us. |
+
+## FastAF Get LinkedIn Profile
+
+Retrieve public person-profile data for 60 credits; no private profiles or company pages.
+
+Endpoint: `POST /v1/linkedin`. Tool: `fastaf_linkedin`.
+
+| Name | Input | Default / behavior |
+| --- | --- | --- |
+| FastAF API Key (`fastaf_api_key`) | SecretString | Required secret; no default.Create an API key at https://fastaf.co/dashboard/. Calls consume FastAF credits; avoid blind retries. |
+| Profile ID (`profile_id`) | str | Required. Public person-profile slug after /in/, not the full URL. |
+| Premium Retrieval (`premium`) | str | Default: `Default`. Both public-profile modes cost 60 credits. |
+
+## FastAF Get YouTube Data
+
+Video transcript: 1 credit; one page of video search: 5 credits. Captions must be available.
+
+Endpoint: `POST /v1/youtube`. Tool: `fastaf_youtube`.
+
+| Name | Input | Default / behavior |
+| --- | --- | --- |
+| FastAF API Key (`fastaf_api_key`) | SecretString | Required secret; no default.Create an API key at https://fastaf.co/dashboard/. Calls consume FastAF credits; avoid blind retries. |
+| Resource (`resource`) | str | Default: `transcript`. Choose transcript or search. |
+| Video ID (`video_id`) | str | Optional; blank omitted. Value after v= in the public video URL; required for transcript. |
+| Search Query (`query`) | str | Optional; blank omitted. Search text for one results page. |
+| Search Filter or Page Token (`search_token`) | str | Optional; blank omitted. YouTube sp token from a search URL/previous response. Search only. |
+| Search Country (`country`) | str | Optional; blank omitted. Country code such as us or fr; no country surcharge. |
+| Language (`language`) | str | Optional; blank omitted. Language code, such as en. Jobs uses locales such as en_us. |
+
+## FastAF Search News
+
+Retrieve one Google News results page for 5 credits.
+
+Endpoint: `POST /v1/news`. Tool: `fastaf_news`.
+
+| Name | Input | Default / behavior |
+| --- | --- | --- |
+| FastAF API Key (`fastaf_api_key`) | SecretString | Required secret; no default.Create an API key at https://fastaf.co/dashboard/. Calls consume FastAF credits; avoid blind retries. |
+| Search Query (`query`) | str | Required. Search text for one results page. |
+| Maximum Results (`results`) | str | Optional; blank omitted. 1-100; limits this page, not additional pages. Integer; leave blank for the API default. |
+| Page (`page`) | str | Optional; blank omitted. Zero-based; 0 is the first paid page. Integer; leave blank for the API default. |
+| Search Country (`country`) | str | Optional; blank omitted. Country code such as us or fr; no country surcharge. |
+| Language (`language`) | str | Optional; blank omitted. Language code, such as en. Jobs uses locales such as en_us. |
+| Time Filter (`time_filter`) | str | Optional; blank omitted. Google expression: qdr:d (past day) or qdr:w (past week). |
+
+## FastAF Search Jobs
+
+Retrieve one Google Jobs results page for 5 credits.
+
+Endpoint: `POST /v1/jobs`. Tool: `fastaf_jobs`.
+
+| Name | Input | Default / behavior |
+| --- | --- | --- |
+| FastAF API Key (`fastaf_api_key`) | SecretString | Required secret; no default.Create an API key at https://fastaf.co/dashboard/. Calls consume FastAF credits; avoid blind retries. |
+| Search Query (`query`) | str | Required. Search text for one results page. |
+| Search Country (`country`) | str | Optional; blank omitted. Country code such as us or fr; no country surcharge. |
+| Language (`language`) | str | Optional; blank omitted. Language code, such as en. Jobs uses locales such as en_us. |
+| Next Page Token (`next_page_token`) | str | Optional; blank omitted. Continuation token; keep the same query and filters. Each page costs 5 credits. |
+| Job Filters (`filters`) | str | Optional; blank omitted. Google Jobs chips expression, e.g. employment_type:FULLTIME. |
+
+## Security and limits
+
+Only the fixed FastAF HTTPS origin receives the key. Certificate verification is enabled;
+redirects and environment proxy inheritance are disabled. Responses are capped at 64 MiB,
+with 120-second I/O timeouts and a checked read deadline. Error outputs never include request
+headers or upstream response bodies. Unknown credit counts remain null.
+
+## See also
+
+* [Extension bundles](/extensions-bundle-list)
+* [FastAF documentation](https://fastaf.co/docs/)
+* [Serping API bundle](/bundles-serpingapi)

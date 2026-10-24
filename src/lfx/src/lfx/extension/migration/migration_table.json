@@ -5270,6 +5270,56 @@
       "bare_class_name": "MrscraperWebSearch",
       "target": "ext:mrscraper:MrscraperWebSearch@official",
       "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "FastAFAmazonComponent",
+      "target": "ext:fastaf:FastAFAmazonComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "FastAFExtractComponent",
+      "target": "ext:fastaf:FastAFExtractComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "FastAFJobsComponent",
+      "target": "ext:fastaf:FastAFJobsComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "FastAFLinkedInComponent",
+      "target": "ext:fastaf:FastAFLinkedInComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "FastAFMapsComponent",
+      "target": "ext:fastaf:FastAFMapsComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "FastAFNewsComponent",
+      "target": "ext:fastaf:FastAFNewsComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "FastAFScrapeComponent",
+      "target": "ext:fastaf:FastAFScrapeComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "FastAFScreenshotComponent",
+      "target": "ext:fastaf:FastAFScreenshotComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "FastAFSearchComponent",
+      "target": "ext:fastaf:FastAFSearchComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "FastAFYouTubeComponent",
+      "target": "ext:fastaf:FastAFYouTubeComponent@official",
+      "added_in": "1.14.0"
     }
   ],
   "ambiguous_bare_names": [
