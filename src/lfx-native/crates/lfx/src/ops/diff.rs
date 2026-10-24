@@ -136,8 +136,7 @@ pub fn diff_flow_data(base: &Value, target: &Value) -> Result<Vec<Operation>> {
 
 /// Diff two graphs and prove the result replays exactly.
 ///
-/// Returns the operations, as the engine records them, together with the
-/// replayed graph.
+/// Returns the forward operations, together with the replayed graph.
 ///
 /// # Errors
 ///

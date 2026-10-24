@@ -81,19 +81,19 @@ impl GraphState {
     }
 
     /// Apply a batch; returns what it did as JSON.
-    #[pyo3(signature = (operations, *, forward = false, inverse = false, restoring = false))]
+    #[pyo3(signature = (operations, *, forward = false, backward = false, restoring = false))]
     fn apply(
         &mut self,
         py: Python<'_>,
         operations: &Bound<'_, PyAny>,
         forward: bool,
-        inverse: bool,
+        backward: bool,
         restoring: bool,
     ) -> PyResult<String> {
         let operations = text(operations)?;
         let options = ApplyOptions {
             forward,
-            inverse,
+            backward,
             restoring,
         };
         let state = &mut self.state;
@@ -109,19 +109,19 @@ impl GraphState {
 
 /// Apply operations to a graph; returns `{"flow_data", ...}` as JSON.
 #[pyfunction]
-#[pyo3(signature = (flow, operations, *, forward = true, inverse = false, restoring = false))]
+#[pyo3(signature = (flow, operations, *, forward = true, backward = false, restoring = false))]
 fn apply(
     py: Python<'_>,
     flow: &Bound<'_, PyAny>,
     operations: &Bound<'_, PyAny>,
     forward: bool,
-    inverse: bool,
+    backward: bool,
     restoring: bool,
 ) -> PyResult<String> {
     let (flow, operations) = (text(flow)?, text(operations)?);
     let options = ApplyOptions {
         forward,
-        inverse,
+        backward,
         restoring,
     };
     run(py, || api::apply(flow, operations, options))

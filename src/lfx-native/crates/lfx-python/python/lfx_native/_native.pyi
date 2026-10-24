@@ -16,7 +16,7 @@ class GraphState:
         operations: Json,
         *,
         forward: bool = False,
-        inverse: bool = False,
+        backward: bool = False,
         restoring: bool = False,
     ) -> str: ...
     def to_json(self) -> str: ...
@@ -26,7 +26,7 @@ def apply(
     operations: Json,
     *,
     forward: bool = True,
-    inverse: bool = False,
+    backward: bool = False,
     restoring: bool = False,
 ) -> str: ...
 def normalize_operations(operations: Json) -> str: ...

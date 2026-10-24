@@ -147,7 +147,7 @@ impl EdgeIndex {
 
     /// Index a new edge at the nodes whose connections are built.
     ///
-    /// An edge whose handles do not read (which only an inverse puts back)
+    /// An edge whose handles do not read (which only a backward operation puts back)
     /// leaves those nodes to be indexed again when something asks.
     pub fn insert(&mut self, edge: &Map<String, Value>) {
         let ends = [endpoint(edge, "source"), endpoint(edge, "target")];

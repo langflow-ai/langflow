@@ -12,8 +12,8 @@ file. Run it from the repository root of a checkout of the stack's top branch
     uv run python src/lfx-native/fixtures/tools/check.py
 
 It exits with 1 when a case differs. It does not check what the Python engine
-does not have: inverses and the editor's table rules and edge fixes
-(``inverse_cases.json`` and ``editor_cases.json``, which ``check_editor.mjs``
+does not have: backward operations and the editor's table rules and edge fixes
+(``backward_cases.json`` and ``editor_cases.json``, which ``check_editor.mjs``
 checks).
 """
 

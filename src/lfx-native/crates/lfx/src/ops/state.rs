@@ -28,7 +28,7 @@ use crate::ops::ops::PathExt;
 use crate::ops::schema::KeyedList;
 use crate::ops::validate::{Numbers, PathPart, validate_flow_data};
 
-/// Whether a removal returns copies of what it removed, which inverses need.
+/// Whether a removal returns copies of what it removed, which backward operations need.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Copies {
     Keep,

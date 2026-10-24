@@ -1,4 +1,4 @@
-//! `inverse_cases.json` and `editor_cases.json`: what only the editor's engine had.
+//! `backward_cases.json` and `editor_cases.json`: what only the editor's engine had.
 
 use lfx::ops::canonical::graphs_equal;
 use lfx::ops::keyed::{Renumber, append_table_rows, assign_changed_table_row_ids, assign_row_ids};
@@ -9,7 +9,7 @@ use serde_json::{Value, json};
 
 use crate::support::{assert_json_matches, cases, compact, load, section_cases};
 
-/// Compare inverse operations without the order of what they list: the ids a
+/// Compare backward operations without the order of what they list: the ids a
 /// delete names, and the entries an add lists, are sets keyed by id.
 fn unordered(operations: &Value) -> Value {
     let mut operations = operations.clone();
@@ -36,45 +36,49 @@ fn unordered(operations: &Value) -> Value {
     operations
 }
 
-fn inverse_case(case: &Value) -> Result<(), Failed> {
+fn backward_case(case: &Value) -> Result<(), Failed> {
     let base = &case["base"];
     let mut state = GraphState::new(base.clone()).map_err(|error| error.to_string())?;
     let operations = Operation::list_from_value(case["operations"].clone())
         .map_err(|error| error.to_string())?;
     let options = ApplyOptions {
-        inverse: true,
+        backward: true,
         ..ApplyOptions::default()
     };
     let applied = state
         .apply(operations, options)
         .map_err(|error| format!("refused: {error}"))?;
-    let inverse: Value = applied
-        .inverse
+    let backward: Value = applied
+        .backward
         .iter()
         .map(|list| Value::Array(list.iter().map(Operation::to_value).collect()))
         .collect();
     assert_json_matches(
-        "inverse operations",
-        &unordered(&inverse),
-        &unordered(&case["inverse"]),
+        "backward operations",
+        &unordered(&backward),
+        &unordered(&case["backward"]),
     )?;
     let restoring = ApplyOptions {
         restoring: true,
         ..ApplyOptions::default()
     };
-    for list in applied.inverse.into_iter().rev() {
+    for list in applied.backward.into_iter().rev() {
         state
             .apply(list, restoring)
-            .map_err(|error| format!("an inverse is refused: {error}"))?;
+            .map_err(|error| format!("a backward operation is refused: {error}"))?;
     }
     let restored = state.to_value();
     if graphs_equal(&restored, base).map_err(|error| error.to_string())? {
         return Ok(());
     }
-    Err(format!("inverses do not restore the base: {}", compact(&restored)).into())
+    Err(format!(
+        "backward operations do not restore the base: {}",
+        compact(&restored)
+    )
+    .into())
 }
 
-/// A user's undo: the inverse lists, last first, in one batch that is
+/// A user's undo: the backward operation lists, last first, in one batch that is
 /// applied under every rule, without `restoring`.
 fn undo_case(case: &Value) -> Result<(), Failed> {
     let base = &case["base"];
@@ -82,13 +86,13 @@ fn undo_case(case: &Value) -> Result<(), Failed> {
     let operations = Operation::list_from_value(case["operations"].clone())
         .map_err(|error| error.to_string())?;
     let options = ApplyOptions {
-        inverse: true,
+        backward: true,
         ..ApplyOptions::default()
     };
     let applied = state
         .apply(operations, options)
         .map_err(|error| format!("refused: {error}"))?;
-    let undo: Vec<Operation> = applied.inverse.into_iter().rev().flatten().collect();
+    let undo: Vec<Operation> = applied.backward.into_iter().rev().flatten().collect();
     let shown = Value::Array(undo.iter().map(Operation::to_value).collect());
     assert_json_matches(
         "undo",
@@ -158,20 +162,20 @@ fn for_edges(case: &Value) -> Result<(), Failed> {
 
 type Check = fn(&Value) -> Result<(), Failed>;
 
-/// Every inverse case, undo case and editor case.
+/// Every backward case, undo case and editor case.
 pub fn trials() -> Vec<Trial> {
-    let inverses = load("inverse_cases.json");
-    let mut trials: Vec<Trial> = cases(&inverses)
+    let backward = load("backward_cases.json");
+    let mut trials: Vec<Trial> = cases(&backward)
         .into_iter()
         .map(|(name, case)| {
-            Trial::test(format!("inverse_cases::{name}"), move || {
-                inverse_case(&case)
+            Trial::test(format!("backward_cases::{name}"), move || {
+                backward_case(&case)
             })
         })
         .collect();
-    for (name, case) in section_cases(&inverses, "undo") {
+    for (name, case) in section_cases(&backward, "undo") {
         trials.push(Trial::test(
-            format!("inverse_cases::undo::{name}"),
+            format!("backward_cases::undo::{name}"),
             move || undo_case(&case),
         ));
     }

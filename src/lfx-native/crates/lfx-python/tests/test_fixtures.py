@@ -320,7 +320,7 @@ def test_fixes_for_edges(case):
     check(matches, "fixes", parse(ops.fixes_for_edges(dump(case["fixes"]), dump(case["edge_ids"]))), case["expected"])
 
 
-# --- inverse_cases.json ---------------------------------------------------------------------------
+# --- backward_cases.json --------------------------------------------------------------------------
 
 
 def unordered(lists: list[Any]) -> list[Any]:
@@ -339,21 +339,21 @@ def unordered(lists: list[Any]) -> list[Any]:
     return out
 
 
-@pytest.mark.parametrize("case", section("inverse_cases.json", "cases"))
-def test_inverse_case(case):
+@pytest.mark.parametrize("case", section("backward_cases.json", "cases"))
+def test_backward_case(case):
     state = ops.GraphState(dump(case["base"]))
-    applied = parse(state.apply(dump(case["operations"]), inverse=True))
-    check(matches, "inverse operations", unordered(applied["inverse_operations"]), unordered(case["inverse"]))
-    for inverse in reversed(applied["inverse_operations"]):
-        state.apply(dump(inverse), restoring=True)
+    applied = parse(state.apply(dump(case["operations"]), backward=True))
+    check(matches, "backward operations", unordered(applied["backward_operations"]), unordered(case["backward"]))
+    for backward in reversed(applied["backward_operations"]):
+        state.apply(dump(backward), restoring=True)
     assert ops.graphs_equal(state.to_json(), dump(case["base"]))
 
 
-@pytest.mark.parametrize("case", section("inverse_cases.json", "undo"))
+@pytest.mark.parametrize("case", section("backward_cases.json", "undo"))
 def test_undo_case(case):
     state = ops.GraphState(dump(case["base"]))
-    applied = parse(state.apply(dump(case["operations"]), inverse=True))
-    undo = [operation for inverse in reversed(applied["inverse_operations"]) for operation in inverse]
+    applied = parse(state.apply(dump(case["operations"]), backward=True))
+    undo = [operation for backward in reversed(applied["backward_operations"]) for operation in backward]
     check(matches, "undo", unordered([undo]), unordered([case["undo"]]))
     state.apply(dump(undo))
     assert ops.graphs_equal(state.to_json(), dump(case["base"]))
@@ -416,7 +416,7 @@ def test_every_fixture_file_is_run():
         "repair_cases.json",
         "table_cases.json",
         "editor_cases.json",
-        "inverse_cases.json",
+        "backward_cases.json",
         "restore_cases.json",
         "write_cases.json",
         "limit_cases.json",

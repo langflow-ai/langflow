@@ -12,7 +12,7 @@ pub const FIXTURE_FILES: [&str; 13] = [
     "canonical_cases.json",
     "diff_cases.json",
     "editor_cases.json",
-    "inverse_cases.json",
+    "backward_cases.json",
     "limit_cases.json",
     "merge_cases.json",
     "property_cases.json",
