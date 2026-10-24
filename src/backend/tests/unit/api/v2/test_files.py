@@ -152,6 +152,12 @@ async def test_upload_file(files_client, files_created_api_key):
 
     response_json = response.json()
     assert "id" in response_json
+    assert response_json["path"].startswith(f"user-{files_created_api_key.user_id}/")
+
+    from langflow.services.deps import get_storage_service
+
+    stored = await get_storage_service().get_file(flow_id=f"user-{files_created_api_key.user_id}", file_name="test.txt")
+    assert stored == b"test content"
 
 
 async def test_should_not_persist_in_my_files_when_upload_is_ephemeral(files_client, files_created_api_key):
@@ -188,7 +194,8 @@ async def test_should_not_persist_in_my_files_when_upload_is_ephemeral(files_cli
     assert file_path, "Ephemeral upload should return a non-empty path"
     # Path format: {user_id}/{stored_file_name}
     parts = file_path.split("/")
-    assert len(parts) == 2, f"Expected path format 'user_id/filename', got: {file_path}"
+    assert len(parts) == 2, f"Expected path format 'user-<user_id>/filename', got: {file_path}"
+    assert parts[0] == f"user-{files_created_api_key.user_id}"
 
 
 async def test_should_return_path_with_forward_slashes_when_uploading_file(files_client, files_created_api_key):
@@ -223,6 +230,32 @@ async def test_should_return_path_with_forward_slashes_when_uploading_file(files
         f"Upload path '{upload_path}' not found in listed paths {listed_paths}. "
         "POST and GET must return identical path strings."
     )
+
+
+async def test_legacy_user_file_still_downloads(files_client, files_created_api_key):
+    """Existing raw user namespaces remain readable without a storage migration."""
+    from langflow.services.database.models.file.model import File as UserFile
+    from langflow.services.deps import get_storage_service
+
+    user_id = files_created_api_key.user_id
+    storage_service = get_storage_service()
+    await storage_service.save_file(flow_id=str(user_id), file_name="legacy.txt", data=b"legacy content")
+    async with session_scope() as session:
+        legacy_file = UserFile(
+            user_id=user_id,
+            name="legacy",
+            path=f"{user_id}/legacy.txt",
+            size=len(b"legacy content"),
+        )
+        session.add(legacy_file)
+        await session.commit()
+        await session.refresh(legacy_file)
+        file_id = legacy_file.id
+
+    response = await files_client.get(f"api/v2/files/{file_id}", headers={"x-api-key": files_created_api_key.api_key})
+
+    assert response.status_code == 200, response.text
+    assert response.content == b"legacy content"
 
 
 async def test_download_file(files_client, files_created_api_key):

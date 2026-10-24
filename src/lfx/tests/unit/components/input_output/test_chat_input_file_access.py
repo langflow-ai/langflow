@@ -92,7 +92,7 @@ async def test_chat_input_rejects_external_file_when_unsupported_storage_falls_b
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("scope_id", ["flow-id", "user-id"])
+@pytest.mark.parametrize("scope_id", ["flow-flow-id", "user-id"])
 async def test_chat_input_keeps_valid_stored_file_references(tmp_path, scope_id):
     config_dir = tmp_path / "config"
     stored_file = config_dir / scope_id / "upload.txt"
@@ -119,7 +119,7 @@ async def test_chat_input_keeps_valid_stored_file_references(tmp_path, scope_id)
 async def test_chat_input_keeps_server_provenance_public_file_reference(tmp_path):
     config_dir = tmp_path / "config"
     source_flow_id = "source-flow"
-    stored_file = config_dir / source_flow_id / "public-upload.txt"
+    stored_file = config_dir / f"flow-{source_flow_id}" / "public-upload.txt"
     stored_file.parent.mkdir(parents=True)
     stored_file.write_text("public attachment", encoding="utf-8")
     settings_service, storage_service = _make_services(config_dir, restricted=True)
@@ -133,7 +133,7 @@ async def test_chat_input_keeps_server_provenance_public_file_reference(tmp_path
         patch("lfx.graph.vertex.param_handler.get_storage_service", return_value=storage_service),
         patch("lfx.utils.file_path_security.get_settings_service", return_value=settings_service),
     ):
-        build_result = await graph.astep(files=[f"{source_flow_id}/{stored_file.name}"], user_id="owner-user")
+        build_result = await graph.astep(files=[f"flow-{source_flow_id}/{stored_file.name}"], user_id="owner-user")
         message = build_result.vertex.results["message"]
         content_dicts = message.get_file_content_dicts()
 
@@ -144,7 +144,7 @@ async def test_chat_input_keeps_server_provenance_public_file_reference(tmp_path
 async def test_chat_input_keeps_public_file_reference_in_subgraph(tmp_path):
     config_dir = tmp_path / "config"
     source_flow_id = "source-flow"
-    stored_file = config_dir / source_flow_id / "public-upload.txt"
+    stored_file = config_dir / f"flow-{source_flow_id}" / "public-upload.txt"
     stored_file.parent.mkdir(parents=True)
     stored_file.write_text("public attachment", encoding="utf-8")
     settings_service, storage_service = _make_services(config_dir, restricted=True)
@@ -161,7 +161,7 @@ async def test_chat_input_keeps_public_file_reference_in_subgraph(tmp_path):
             assert subgraph.source_flow_id == source_flow_id
             subgraph.prepare()
             build_result = await subgraph.astep(
-                files=[f"{source_flow_id}/{stored_file.name}"],
+                files=[f"flow-{source_flow_id}/{stored_file.name}"],
                 user_id="owner-user",
             )
             message = build_result.vertex.results["message"]

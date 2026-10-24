@@ -802,6 +802,25 @@ class TestMessageBaseFromMessageFilePaths:
         assert len(result.files) == 1
         assert result.files[0] == f"{session_id}/image.png"
 
+    def test_from_message_preserves_typed_flow_namespace(self):
+        """Keep the typed flow prefix when normalizing an uploaded image path."""
+        from langflow.services.database.models.message.model import MessageTable
+        from lfx.schema.image import Image
+
+        session_id = "785c90a9-37bd-4aae-b873-447772a33893"
+        file_path = f"/uploads/flow-{session_id}/image.png"
+        message = Message(
+            text="Test message",
+            sender="User",
+            sender_name="User",
+            session_id=session_id,
+            files=[Image(path=file_path)],
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert result.files == [f"flow-{session_id}/image.png"]
+
     def test_from_message_with_session_id_not_in_file_path(self):
         """Test that file paths NOT containing session_id are preserved as-is."""
         from langflow.services.database.models.message.model import MessageTable

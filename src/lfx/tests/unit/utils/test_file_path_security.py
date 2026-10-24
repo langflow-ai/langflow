@@ -92,9 +92,9 @@ def test_component_scopes_include_trusted_public_source_flow():
     component._vertex.graph.source_flow_id = "public-source-flow-id"
 
     assert component_file_access_scopes(component) == (
-        "public-owner-id",
-        "visitor-virtual-flow-id",
-        "public-source-flow-id",
+        "user-public-owner-id",
+        "flow-visitor-virtual-flow-id",
+        "flow-public-source-flow-id",
     )
 
 
@@ -276,13 +276,14 @@ def test_upload_named_like_secret_in_flow_subdir_allowed(tmp_path):
         assert enforce_local_file_access(str(upload), scope_ids=["flow-id"]) == Path(str(upload))
 
 
-def _component(user_id=None, flow_id=None, source_flow_id=None):
+def _component(user_id=None, flow_id=None, source_flow_id=None, authorized_legacy_flow_ids=()):
     """Build a component stub whose graph carries the given storage scopes."""
     component = MagicMock()
     component._user_id = user_id
     component._vertex.graph.user_id = None
     component._vertex.graph.flow_id = flow_id
     component._vertex.graph.source_flow_id = source_flow_id
+    component._vertex.graph.authorized_legacy_flow_ids = frozenset(authorized_legacy_flow_ids)
     return component
 
 
@@ -298,14 +299,35 @@ class TestValidateStorageKey:
         component = _component(user_id="owner-id")
         assert validate_storage_key(component, "owner-id/report.csv") == ("owner-id", "report.csv")
 
+    def test_own_typed_user_namespace_allowed(self):
+        component = _component(user_id="owner-id")
+        assert validate_storage_key(component, "user-owner-id/report.csv") == ("user-owner-id", "report.csv")
+
     def test_executing_flow_namespace_allowed(self):
-        """Legacy per-flow uploads live under the flow id rather than the user id."""
+        """Typed per-flow uploads cannot alias a user's raw UUID namespace."""
         component = _component(user_id="owner-id", flow_id="flow-id")
-        assert validate_storage_key(component, "flow-id/report.csv") == ("flow-id", "report.csv")
+        assert validate_storage_key(component, "flow-flow-id/report.csv") == ("flow-flow-id", "report.csv")
+
+    def test_server_authorized_legacy_flow_namespace_allowed(self):
+        component = _component(
+            user_id="owner-id",
+            flow_id="legacy-flow-id",
+            authorized_legacy_flow_ids={"legacy-flow-id"},
+        )
+        assert validate_storage_key(component, "legacy-flow-id/report.csv") == ("legacy-flow-id", "report.csv")
 
     def test_public_source_flow_namespace_allowed(self):
         component = _component(user_id="owner-id", flow_id="virtual-id", source_flow_id="public-flow-id")
-        assert validate_storage_key(component, "public-flow-id/report.csv") == ("public-flow-id", "report.csv")
+        assert validate_storage_key(component, "flow-public-flow-id/report.csv") == (
+            "flow-public-flow-id",
+            "report.csv",
+        )
+
+    def test_legacy_flow_id_cannot_address_a_user_namespace(self):
+        """Untyped flow scopes must not turn a colliding user ID into an allowed flow key."""
+        component = _component(user_id="attacker-id", flow_id="victim-id")
+        with pytest.raises(StorageNamespaceError, match="outside the authenticated user's"):
+            validate_storage_key(component, "victim-id/secret.txt")
 
     def test_other_user_namespace_denied(self):
         """The reported issue: addressing another user's upload namespace by storage key."""
