@@ -283,7 +283,11 @@ async def verify_project_auth_conditional(
 
     async with session_scope() as session:
         user = await get_current_user_mcp(
-            token=token or "", query_param=api_key_query_value, header_param=api_key_header_value, db=session
+            request=request,
+            token=token or "",
+            query_param=api_key_query_value,
+            header_param=api_key_header_value,
+            db=session,
         )
 
     if project_user_id != user.id:
