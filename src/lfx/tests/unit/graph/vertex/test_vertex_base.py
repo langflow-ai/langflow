@@ -761,6 +761,32 @@ def test_process_file_field_preserves_s3_references(
 
 
 @pytest.mark.parametrize(
+    ("path", "authorized_legacy", "allowed"),
+    [
+        ("test-user-id/report.txt", False, True),
+        ("test-flow-id/report.txt", False, False),
+        ("test-flow-id/report.txt", True, True),
+        ("other-user-id/report.txt", False, False),
+    ],
+)
+@pytest.mark.usefixtures("restricted_file_access")
+def test_process_file_field_s3_alias_scopes(parameter_handler, mock_storage_service, path, authorized_legacy, allowed):
+    """Raw S3 aliases require an own-user scope or an authorized legacy flow grant."""
+    mock_storage_service.settings_service = Mock()
+    mock_storage_service.settings_service.settings.storage_type = "s3"
+    mock_storage_service.resolve_component_path.side_effect = lambda value: value
+    if authorized_legacy:
+        parameter_handler.vertex.graph.authorized_legacy_flow_ids = frozenset({"test-flow-id"})
+
+    if allowed:
+        params = parameter_handler.process_file_field("file_field", {"type": "file", "file_path": path}, {})
+        assert params["file_field"] == path
+    else:
+        with pytest.raises(LocalFileAccessError, match="must stay within"):
+            parameter_handler.process_file_field("file_field", {"type": "file", "file_path": path}, {})
+
+
+@pytest.mark.parametrize(
     "malicious_path",
     [
         "/etc/passwd",

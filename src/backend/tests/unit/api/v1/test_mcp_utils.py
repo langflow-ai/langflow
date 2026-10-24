@@ -376,6 +376,41 @@ async def test_handle_read_resource_project_scope_binds_flow_id_as_uuid(monkeypa
 
 
 @pytest.mark.asyncio
+async def test_handle_read_resource_authorizes_legacy_flow_inside_open_session(monkeypatch):
+    """The legacy-flow ownership check must run before the session closes."""
+    import base64
+
+    class ClosingSession(FakeSession):
+        closed = False
+
+        async def get(self, _model, _identifier):
+            if self.closed:
+                msg = "session is closed"
+                raise RuntimeError(msg)
+
+    class ClosingContext(FakeSessionContext):
+        async def __aexit__(self, exc_type, exc, tb):
+            self._session.closed = True
+            return False
+
+    user_id = uuid4()
+    flow_id = uuid4()
+    file_name = "legacy.txt"
+    flow = SimpleNamespace(id=flow_id, user_id=user_id, folder_id=None, name="Legacy flow")
+    fake_session = ClosingSession(flows=[flow], user_files=[])
+    storage_service = FakeStorageService({}, {f"flow-{flow_id}/{file_name}": b"legacy contents"})
+    monkeypatch.setattr(mcp_utils, "session_scope", lambda: ClosingContext(fake_session))
+    monkeypatch.setattr(mcp_utils, "get_storage_service", lambda: storage_service)
+    token = mcp_utils.current_user_ctx.set(SimpleNamespace(id=user_id))
+    try:
+        result = await mcp_utils.handle_read_resource(f"http://host/api/v1/files/download/{flow_id}/{file_name}")
+    finally:
+        mcp_utils.current_user_ctx.reset(token)
+
+    assert base64.b64decode(result) == b"legacy contents"
+
+
+@pytest.mark.asyncio
 async def test_handle_list_resources_project_scoped_excludes_user_bucket(monkeypatch):
     """A project-scoped resources/list must not leak user-bucket files unrelated to the project."""
     user_id = "user-bob"
