@@ -91,6 +91,35 @@ docker compose exec postgres \
 
 Fresh installs are unaffected.
 
+## Changing the PostgreSQL password during an upgrade
+
+`POSTGRES_PASSWORD` initializes the role password only when PostgreSQL first initializes an empty data directory. Changing it in `.env` does not update the password stored in an existing `langflow-postgres` volume.
+
+If you are changing the password or adopting the required-password Compose configuration, rotate the existing role password before updating `.env`. During planned downtime, stop Langflow and open psql for the Compose variant you use:
+
+For `docker-compose.yml`:
+
+```sh
+docker compose stop langflow
+docker compose exec postgres psql -U langflow -d langflow
+```
+
+For `pre.docker-compose.yml`:
+
+```sh
+docker compose -f pre.docker-compose.yml stop langflow
+docker compose -f pre.docker-compose.yml exec postgres psql -U langflow -d langflow
+```
+
+At the psql prompt, rotate the role password and exit:
+
+```text
+langflow=# \password langflow
+langflow=# \q
+```
+
+Enter the new password twice at the secure prompts. psql does not echo the password or include it in a SQL command. Update `POSTGRES_PASSWORD` in `.env` to the same raw value before restarting with `docker compose up -d` or `docker compose -f pre.docker-compose.yml up -d`. The startup command continues to percent-encode it when constructing `LANGFLOW_DATABASE_URL`.
+
 ## Switching to a specific Langflow version
 
 If you want to use a specific version of Langflow, you can modify the `image` field under the `langflow` service in the Docker Compose file. For example, to use version 1.0-alpha, change `langflowai/langflow:latest` to `langflowai/langflow:1.0-alpha`.
