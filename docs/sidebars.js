@@ -561,6 +561,7 @@ module.exports = {
             "Components/bundles-faiss",
             "Components/bundles-figranium",
             "Components/bundles-files-ingestion",
+            "Components/bundles-fastaf",
             "Components/bundles-firecrawl",
             "Components/bundles-glean",
             "Components/bundles-google",
