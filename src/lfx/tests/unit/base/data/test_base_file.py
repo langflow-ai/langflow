@@ -730,6 +730,28 @@ class TestStorageKeyNamespaceOwnership:
         assert [data.data["text"] for data in result] == ["FLOW_UPLOAD"]
 
     @pytest.mark.usefixtures("storage")
+    def test_authorized_legacy_flow_namespace_still_resolves(self, tmp_path):
+        """A server-authorized non-colliding legacy flow key remains backward compatible."""
+        flow_id = "33333333-3333-3333-3333-333333333333"
+        flow_dir = tmp_path / "config" / flow_id
+        flow_dir.mkdir(parents=True)
+        (flow_dir / "legacy.txt").write_text("LEGACY_FLOW_UPLOAD", encoding="utf-8")
+        component = self._attacker_component()
+        component._vertex = SimpleNamespace(
+            graph=SimpleNamespace(
+                user_id=self.ATTACKER_ID,
+                flow_id=flow_id,
+                source_flow_id=None,
+                authorized_legacy_flow_ids=frozenset({flow_id}),
+            )
+        )
+        component.path = [f"{flow_id}/legacy.txt"]
+
+        result = component.load_files_base()
+
+        assert [data.data["text"] for data in result] == ["LEGACY_FLOW_UPLOAD"]
+
+    @pytest.mark.usefixtures("storage")
     def test_flow_id_cannot_address_legacy_user_namespace(self):
         """A caller-chosen flow ID must not grant access to the matching user's uploads."""
         component = self._attacker_component()

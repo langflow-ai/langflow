@@ -58,6 +58,7 @@ KIND_FS_SANDBOX = "fs_sandbox"
 KIND_SAVE_FILE_DIR = "save_file_dir"
 KIND_SKIPPED = "skipped"
 SKIPPED_SHARED_ACROSS_FLOWS = "end_user_storage_shared_across_flows"
+SKIPPED_AMBIGUOUS_USER_NAMESPACE = "builder_user_namespace_collides_with_flow"
 _SAFE_SEGMENT = re.compile(r"[^A-Za-z0-9_.-]")
 _RESERVED_SEGMENTS = frozenset({"flows", "profile_pictures", "knowledge_bases", "fs_sandbox", "alembic", "logs"})
 
@@ -91,10 +92,11 @@ def _save_file_segment(raw_id: str) -> str | None:
 
 async def builder_storage_plan(session: AsyncSession, ctx: EraseContext) -> list[dict[str, str]]:
     flow_ids = (await session.exec(select(Flow.id).where(Flow.user_id == ctx.subject_user_id))).all()
-    plan = [
-        _item(KIND_NAMESPACE, str(ctx.subject_user_id)),
-        _item(KIND_NAMESPACE, user_storage_scope(ctx.subject_user_id)),
-    ]
+    plan = [_item(KIND_NAMESPACE, user_storage_scope(ctx.subject_user_id))]
+    if await session.get(Flow, ctx.subject_user_id) is None:
+        plan.append(_item(KIND_NAMESPACE, str(ctx.subject_user_id)))
+    else:
+        plan.append(_item(KIND_SKIPPED, SKIPPED_AMBIGUOUS_USER_NAMESPACE))
     for flow_id in flow_ids:
         if await session.get(User, flow_id) is None:
             plan.append(_item(KIND_NAMESPACE, str(flow_id)))

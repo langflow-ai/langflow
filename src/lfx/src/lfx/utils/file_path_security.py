@@ -187,7 +187,7 @@ def component_authenticated_user_scope(component: object) -> str | None:
 
 
 def component_file_access_scopes(component: object) -> tuple[str, ...]:
-    """Return typed authenticated user, execution-flow, and trusted source-flow storage scopes.
+    """Return typed scopes plus legacy flow IDs authorized by the server.
 
     Components are instantiated without a graph while metadata is built. Reading ``user_id`` or
     ``flow_id`` properties in that state raises, so this helper inspects their backing graph safely.
@@ -195,10 +195,14 @@ def component_file_access_scopes(component: object) -> tuple[str, ...]:
     graph = getattr(getattr(component, "_vertex", None), "graph", None)
     flow_id = getattr(graph, "flow_id", None)
     source_flow_id = getattr(graph, "source_flow_id", None)
+    authorized_legacy = getattr(graph, "authorized_legacy_flow_ids", frozenset())
+    if not isinstance(authorized_legacy, frozenset):
+        authorized_legacy = frozenset()
     candidates = (
         component_authenticated_user_scope(component),
         flow_storage_scope(flow_id) if flow_id is not None else None,
         flow_storage_scope(source_flow_id) if source_flow_id is not None else None,
+        *sorted(str(candidate) for candidate in authorized_legacy),
     )
     scopes: list[str] = []
     for candidate in candidates:
@@ -213,8 +217,8 @@ def enforce_storage_key_scope(path: str, scope_ids: Iterable[object] | None) -> 
     """Split a ``"<namespace>/<file_name>"`` storage key and verify the caller may address it.
 
     New user and flow uploads use physically distinct ``user-<uuid>`` and ``flow-<uuid>``
-    namespaces. Untyped legacy keys are accepted only as user namespaces when that user is in
-    scope; treating them as flow namespaces would let a caller-chosen flow ID alias another user.
+    namespaces. Untyped legacy keys are accepted as user namespaces when that user is in scope,
+    or as flow namespaces only when the server authorized a non-colliding legacy flow ID.
 
     Unlike :func:`enforce_local_file_access` this check is NOT gated on
     ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS``. Reading a local *server* file by absolute path is a

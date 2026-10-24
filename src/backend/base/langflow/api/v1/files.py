@@ -198,7 +198,7 @@ async def download_file(
         raise HTTPException(status_code=500, detail=f"Content type not found for extension {extension}")
 
     try:
-        allow_legacy = session is None or await _legacy_flow_storage_allowed(session, flow.id)
+        allow_legacy = session is not None and await _legacy_flow_storage_allowed(session, flow.id)
         file_content = await _get_flow_file(storage_service, flow.id, file_name, allow_legacy=allow_legacy)
         headers = {
             "Content-Disposition": build_content_disposition(file_name),
@@ -235,7 +235,7 @@ async def download_image(
         raise HTTPException(status_code=500, detail=f"Content type {content_type} is not an image")
 
     try:
-        allow_legacy = session is None or await _legacy_flow_storage_allowed(session, flow.id)
+        allow_legacy = session is not None and await _legacy_flow_storage_allowed(session, flow.id)
         file_content = await _get_flow_file(storage_service, flow.id, file_name, allow_legacy=allow_legacy)
         # Defense-in-depth: a tenant-uploaded SVG/HTML served inline with a renderable content type
         # would execute scripts in the app origin if opened directly. nosniff stops MIME sniffing
@@ -359,7 +359,7 @@ async def list_files(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     try:
-        allow_legacy = session is None or await _legacy_flow_storage_allowed(session, flow.id)
+        allow_legacy = session is not None and await _legacy_flow_storage_allowed(session, flow.id)
         files = await _list_flow_files(storage_service, flow.id, allow_legacy=allow_legacy)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -387,7 +387,7 @@ async def delete_file(
         folder_id=flow.folder_id,
     )
     try:
-        allow_legacy = session is None or await _legacy_flow_storage_allowed(session, flow.id)
+        allow_legacy = session is not None and await _legacy_flow_storage_allowed(session, flow.id)
         await _delete_flow_file(storage_service, flow.id, file_name, allow_legacy=allow_legacy)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

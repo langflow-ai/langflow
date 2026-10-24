@@ -276,13 +276,14 @@ def test_upload_named_like_secret_in_flow_subdir_allowed(tmp_path):
         assert enforce_local_file_access(str(upload), scope_ids=["flow-id"]) == Path(str(upload))
 
 
-def _component(user_id=None, flow_id=None, source_flow_id=None):
+def _component(user_id=None, flow_id=None, source_flow_id=None, authorized_legacy_flow_ids=()):
     """Build a component stub whose graph carries the given storage scopes."""
     component = MagicMock()
     component._user_id = user_id
     component._vertex.graph.user_id = None
     component._vertex.graph.flow_id = flow_id
     component._vertex.graph.source_flow_id = source_flow_id
+    component._vertex.graph.authorized_legacy_flow_ids = frozenset(authorized_legacy_flow_ids)
     return component
 
 
@@ -306,6 +307,14 @@ class TestValidateStorageKey:
         """Typed per-flow uploads cannot alias a user's raw UUID namespace."""
         component = _component(user_id="owner-id", flow_id="flow-id")
         assert validate_storage_key(component, "flow-flow-id/report.csv") == ("flow-flow-id", "report.csv")
+
+    def test_server_authorized_legacy_flow_namespace_allowed(self):
+        component = _component(
+            user_id="owner-id",
+            flow_id="legacy-flow-id",
+            authorized_legacy_flow_ids={"legacy-flow-id"},
+        )
+        assert validate_storage_key(component, "legacy-flow-id/report.csv") == ("legacy-flow-id", "report.csv")
 
     def test_public_source_flow_namespace_allowed(self):
         component = _component(user_id="owner-id", flow_id="virtual-id", source_flow_id="public-flow-id")

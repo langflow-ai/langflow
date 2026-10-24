@@ -306,6 +306,76 @@ async def test_colliding_flow_id_cannot_read_legacy_user_files(
     assert typed_response.content == b"typed content"
 
 
+async def _seed_colliding_flow_files(files_active_user, files_other_active_user):
+    from langflow.services.deps import get_storage_service
+
+    async with session_scope() as session:
+        flow = Flow(
+            id=files_other_active_user.id,
+            user_id=files_active_user.id,
+            name="Colliding flow with typed and raw files",
+            data={"nodes": [], "edges": []},
+        )
+        session.add(flow)
+        await session.commit()
+    storage = get_storage_service()
+    await storage.save_file(str(flow.id), "private.png", b"PRIVATE_IMAGE")
+    await storage.save_file(f"flow-{flow.id}", "typed.png", b"TYPED_IMAGE")
+    return flow, storage
+
+
+async def test_colliding_flow_list_image_and_delete_preserve_raw_user_files(
+    files_client, files_created_api_key, files_active_user, files_other_active_user
+):
+    flow, storage = await _seed_colliding_flow_files(files_active_user, files_other_active_user)
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    listed = await files_client.get(f"api/v1/files/list/{flow.id}", headers=headers)
+    assert listed.status_code == 200, listed.text
+    assert listed.json()["files"] == ["typed.png"]
+
+    raw_image = await files_client.get(f"api/v1/files/images/{flow.id}/private.png", headers=headers)
+    assert raw_image.status_code != 200
+    assert b"PRIVATE_IMAGE" not in raw_image.content
+    typed_image = await files_client.get(f"api/v1/files/images/{flow.id}/typed.png", headers=headers)
+    assert typed_image.status_code == 200, typed_image.text
+    assert typed_image.content == b"TYPED_IMAGE"
+
+    raw_delete = await files_client.delete(f"api/v1/files/delete/{flow.id}/private.png", headers=headers)
+    assert raw_delete.status_code == 200, raw_delete.text
+    assert await storage.get_file(str(flow.id), "private.png") == b"PRIVATE_IMAGE"
+    typed_delete = await files_client.delete(f"api/v1/files/delete/{flow.id}/typed.png", headers=headers)
+    assert typed_delete.status_code == 200, typed_delete.text
+    assert await storage.get_file(str(flow.id), "private.png") == b"PRIVATE_IMAGE"
+
+
+@pytest.mark.usefixtures("files_client")
+@pytest.mark.parametrize("operation", ["download", "image", "list", "delete"])
+async def test_sessionless_file_calls_are_typed_only_for_colliding_flows(
+    files_active_user,
+    files_other_active_user,
+    operation,
+):
+    from fastapi import HTTPException
+    from langflow.api.v1.files import delete_file, download_file, download_image, list_files
+
+    flow, storage = await _seed_colliding_flow_files(files_active_user, files_other_active_user)
+    kwargs = {"flow": flow, "session": None, "storage_service": storage}
+
+    if operation == "list":
+        result = await list_files(**kwargs)
+        assert result == {"files": ["typed.png"]}
+    elif operation == "delete":
+        result = await delete_file(file_name="private.png", current_user=files_active_user, **kwargs)
+        assert "deleted successfully" in result["message"]
+        assert await storage.get_file(str(flow.id), "private.png") == b"PRIVATE_IMAGE"
+    else:
+        handler = download_file if operation == "download" else download_image
+        with pytest.raises(HTTPException):
+            await handler(file_name="private.png", **kwargs)
+        assert await storage.get_file(str(flow.id), "private.png") == b"PRIVATE_IMAGE"
+
+
 async def test_list_files(files_client, files_created_api_key, files_flow):
     headers = {"x-api-key": files_created_api_key.api_key}
 
