@@ -1,3 +1,4 @@
+import os
 import re
 import tempfile
 from contextlib import asynccontextmanager
@@ -6,11 +7,78 @@ from pathlib import Path
 
 import anyio
 from langchain_community.document_loaders.git import GitLoader
+from langchain_core.documents import Document
 from lfx.custom.custom_component.component import Component
 from lfx.io import DropdownInput, MessageTextInput, Output
 from lfx.schema.data import Data
 from lfx.utils.file_path_security import enforce_local_file_access
 from lfx.utils.ssrf_protection import validate_git_repository_url
+
+
+def _read_file_bytes(file_path: str) -> bytes:
+    path = Path(file_path)
+    flags = os.O_RDONLY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    elif path.is_symlink():
+        msg = f"Refusing to read through symlink: {file_path}"
+        raise PermissionError(msg)
+    with os.fdopen(os.open(file_path, flags), "rb") as file:
+        return file.read()
+
+
+_GIT_SYMLINK_MODE = 0o120000
+
+
+class _RepositoryGitLoader(GitLoader):
+    """Read working-tree files without following symlinks swapped in after filtering."""
+
+    def lazy_load(self):
+        from git import Blob, Repo
+
+        if not Path(self.repo_path).exists() and self.clone_url is None:
+            msg = f"Path {self.repo_path} does not exist"
+            raise ValueError(msg)
+        if self.clone_url:
+            if Path(self.repo_path, ".git").is_dir():
+                repo = Repo(self.repo_path)
+                if repo.remotes.origin.url != self.clone_url:
+                    msg = "A different repository is already cloned at this path."
+                    raise ValueError(msg)
+            else:
+                repo = Repo.clone_from(self.clone_url, self.repo_path)
+            repo.git.checkout(self.branch)
+        else:
+            repo = Repo(self.repo_path)
+            repo.git.checkout(self.branch)
+
+        for item in repo.tree().traverse():
+            if not isinstance(item, Blob) or item.mode == _GIT_SYMLINK_MODE:
+                continue
+
+            file_path = str(Path(self.repo_path) / item.path)
+            if repo.ignored([file_path]):
+                continue
+            if self.file_filter and not self.file_filter(file_path):
+                continue
+
+            rel_file_path = os.path.relpath(file_path, self.repo_path)
+            try:
+                content = _read_file_bytes(file_path)
+                try:
+                    text_content = content.decode("utf-8")
+                except UnicodeDecodeError:
+                    continue
+
+                metadata = {
+                    "source": rel_file_path,
+                    "file_path": rel_file_path,
+                    "file_name": item.name,
+                    "file_type": Path(item.name).suffix,
+                }
+                yield Document(page_content=text_content, metadata=metadata)
+            except Exception as e:  # noqa: BLE001
+                print(f"Error reading file {file_path}: {e}")  # noqa: T201
 
 
 class GitLoaderComponent(Component):
@@ -264,7 +332,7 @@ class GitLoaderComponent(Component):
         if not branch:
             branch = None
 
-        return GitLoader(
+        return _RepositoryGitLoader(
             repo_path=repo_path,
             clone_url=clone_url if repo_source == "Remote" else None,
             branch=branch,

@@ -164,3 +164,58 @@ class TestGitLoaderComponent:
         assert filter_func(str(repository / "README.md"))
         assert not filter_func(str(repository / "linked.txt"))
         assert not filter_func(str(repository / "linked-directory" / "nested.txt"))
+        assert not filter_func(str(repository / ".." / "loader-outside" / "nested.txt"))
+
+    async def test_remote_load_documents_preserves_safe_files(self, gitloader_repo_with_symlinks, monkeypatch):
+        from lfx.components.git.git import GitLoaderComponent
+
+        _, repository = gitloader_repo_with_symlinks
+        monkeypatch.setattr("lfx.components.git.git.validate_git_repository_url", lambda _: None)
+        component = GitLoaderComponent(repo_source="Remote", clone_url=repository.as_uri(), branch="main")
+
+        result = await component.load_documents()
+
+        assert sorted(item.data["source"] for item in result) == ["README.md", "docs/guide.txt"]
+        assert all("OUTSIDE_REPOSITORY_CONTENT" not in item.data["text"] for item in result)
+
+    async def test_load_documents_combines_confinement_and_filters(self, gitloader_repo_with_symlinks):
+        from lfx.components.git.git import GitLoaderComponent
+
+        _, repository = gitloader_repo_with_symlinks
+        component = GitLoaderComponent(
+            repo_source="Local",
+            repo_path=str(repository),
+            branch="main",
+            file_filter="*.txt",
+            content_filter="repository|OUTSIDE",
+        )
+
+        result = await component.load_documents()
+
+        assert [item.data["source"] for item in result] == ["docs/guide.txt"]
+        assert result[0].data["text"] == "repository guide\n"
+
+    async def test_load_documents_path_swap_does_not_read_outside(self, gitloader_repo_with_symlinks, monkeypatch):
+        component, repository = gitloader_repo_with_symlinks
+        tracked_file = repository / "README.md"
+        outside_file = repository.parent / "loader-outside" / "outside.txt"
+        original_build_filter = component.build_combined_filter
+
+        def build_filter_with_path_swap(*args, **kwargs):
+            filter_func = original_build_filter(*args, **kwargs)
+
+            def filter_and_swap(file_path):
+                allowed = filter_func(file_path)
+                if allowed and file_path == str(tracked_file):
+                    tracked_file.unlink()
+                    tracked_file.symlink_to(outside_file)
+                return allowed
+
+            return filter_and_swap
+
+        monkeypatch.setattr(component, "build_combined_filter", build_filter_with_path_swap)
+
+        result = await component.load_documents()
+
+        assert [item.data["source"] for item in result] == ["docs/guide.txt"]
+        assert all("OUTSIDE_REPOSITORY_CONTENT" not in item.data["text"] for item in result)
