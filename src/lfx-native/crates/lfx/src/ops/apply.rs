@@ -27,11 +27,11 @@ use indexmap::IndexSet;
 use serde_json::Value;
 
 use crate::ops::canonical::is_row_position;
-use crate::ops::edges::{Input, InputKind, check_edge, index_outputs, node_outputs};
+use crate::ops::edges::{check_edge, removed_endpoints};
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result, bail, invalid, quoted};
 use crate::ops::ops::{Change, Edge, FieldUpdate, Node, NodePath, Operation, PathExt, Segment};
-use crate::ops::schema::{KeyedList, ListKind, NODE_SCHEMA, OUTPUTS_PATH, TEMPLATE_PATH};
+use crate::ops::schema::{KeyedList, ListKind, NODE_SCHEMA};
 use crate::ops::state::{Copies, Graph, GraphState, Lists, resolve, resolve_mut};
 use crate::ops::validate::PathPart;
 
@@ -194,7 +194,7 @@ impl GraphState {
         }
         let mut backward = report.options.backward.then(FieldBackward::default);
         let mut applied = Vec::new();
-        let mut detached = IndexSet::new();
+        let mut cascaded = IndexSet::new();
         for (index, mut update) in updates.into_iter().enumerate() {
             let context = UpdatePlace::new(index);
             if !self.graph.nodes.contains(&update.id) {
@@ -208,8 +208,10 @@ impl GraphState {
             }
             let replaced =
                 self.apply_field_update(&mut update, context, report.options, backward.as_mut())?;
-            if !report.options.restoring {
-                detached.extend(self.detached_edges(&update, replaced.as_ref())?);
+            if !report.options.restoring
+                && let Some(before) = &replaced
+            {
+                cascaded.extend(self.edges_at_removed(&update, before)?);
             }
             // A delete that found nothing is not recorded.
             if report.options.forward && (replaced.is_some() || !update.is_delete()) {
@@ -224,76 +226,33 @@ impl GraphState {
                 report.record_backward(operation);
             }
         }
-        self.remove_cascaded(detached.iter().map(String::as_str), report);
+        self.remove_cascaded(cascaded.iter().map(String::as_str), report);
         Ok(())
     }
 
-    /// The edges a write left without an end: into a removed template field,
-    /// or from or into a removed output. `replaced` is what the path held
-    /// before the write.
-    fn detached_edges(
+    /// The edges at the endpoints that `update` removed from its node, which
+    /// go with them. `before` is what the path held before the write.
+    fn edges_at_removed(
         &mut self,
         update: &FieldUpdate,
-        replaced: Option<&Value>,
+        before: &Value,
     ) -> Result<IndexSet<String>> {
-        let path = &update.path;
-        let Some(before) = replaced else {
-            return Ok(IndexSet::new());
-        };
         let node_id = update.id.as_str();
-        if update.is_delete()
-            && path.len() == TEMPLATE_PATH.len() + 1
-            && path.has_start(&TEMPLATE_PATH)
-            && let Segment::Key(field) = &path[TEMPLATE_PATH.len()]
-        {
-            let input = Input {
-                kind: InputKind::Field,
-                name: field.clone(),
-            };
-            let connections = self.edge_index.connections(&self.graph, node_id)?;
-            return Ok(connections.inputs.get(&input).cloned().unwrap_or_default());
-        }
-        if !path.has_start(&OUTPUTS_PATH) {
-            return Ok(IndexSet::new());
-        }
-        let removed: Vec<String> = if path.len() == OUTPUTS_PATH.len() + 1 && update.is_delete() {
-            path[OUTPUTS_PATH.len()]
-                .as_item()
-                .map(str::to_owned)
-                .into_iter()
-                .collect()
-        } else if path.len() == OUTPUTS_PATH.len() {
-            // The whole list was replaced or deleted: the outputs it no longer has are gone.
-            let after: HashSet<String> = node_outputs(&self.graph, node_id)?
-                .map(|outputs| outputs.names().map(str::to_owned).collect())
-                .unwrap_or_default();
-            let before = index_outputs(before, node_id)?;
-            before
-                .names()
-                .filter(|name| !after.contains(*name))
-                .map(str::to_owned)
-                .collect()
-        } else {
-            return Ok(IndexSet::new());
-        };
+        let node = self
+            .graph
+            .nodes
+            .get(node_id)
+            .ok_or_else(|| invalid!("node {} does not exist", quoted(node_id)))?;
+        let removed = removed_endpoints(&update.path, update.is_delete(), before, node, node_id)?;
         if removed.is_empty() {
             return Ok(IndexSet::new());
         }
         let connections = self.edge_index.connections(&self.graph, node_id)?;
-        let mut detached = IndexSet::new();
-        for name in removed {
-            if let Some(ids) = connections.outputs.get(&name) {
-                detached.extend(ids.iter().cloned());
-            }
-            let input = Input {
-                kind: InputKind::LoopOutput,
-                name,
-            };
-            if let Some(ids) = connections.inputs.get(&input) {
-                detached.extend(ids.iter().cloned());
-            }
-        }
-        Ok(detached)
+        Ok(removed
+            .iter()
+            .flat_map(|endpoint| connections.at(endpoint))
+            .cloned()
+            .collect())
     }
 
     fn delete_nodes(&mut self, ids: &[String], report: &mut Report) -> Result<()> {
