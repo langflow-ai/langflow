@@ -24,7 +24,7 @@ use crate::ops::edges::{EdgeIndex, GraphRead, endpoint};
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result};
 use crate::ops::keyed::ListIndex;
-use crate::ops::ops::PathExt;
+use crate::ops::ops::{Edge, Node, PathExt};
 use crate::ops::schema::KeyedList;
 use crate::ops::validate::{Numbers, PathPart, validate_flow_data};
 
@@ -473,10 +473,10 @@ impl GraphState {
 
     /// Remove a node, if it exists, and with [`Copies::Keep`] return a copy of
     /// it. Its edges stay; the caller removes them.
-    pub(crate) fn remove_node(&mut self, id: &str, copies: Copies) -> Option<Map<String, Value>> {
+    pub(crate) fn remove_node(&mut self, id: &str, copies: Copies) -> Option<Node> {
         let node = self.graph.nodes.get(id)?;
         let kept = match copies {
-            Copies::Keep => node.as_object().cloned(),
+            Copies::Keep => node.as_object().cloned().map(stored_node),
             Copies::Discard => None,
         };
         self.graph.nodes.remove(id);
@@ -501,7 +501,7 @@ impl GraphState {
         &mut self,
         ids: impl IntoIterator<Item = &'i str>,
         copies: Copies,
-    ) -> (Vec<String>, Vec<Map<String, Value>>) {
+    ) -> (Vec<String>, Vec<Edge>) {
         let mut removed = Vec::new();
         let mut kept = Vec::new();
         let mut seen = HashSet::new();
@@ -515,7 +515,7 @@ impl GraphState {
             if let Some(map) = edge.as_object() {
                 self.edge_index.forget(map);
                 if copies == Copies::Keep {
-                    kept.push(map.clone());
+                    kept.push(stored_edge(map.clone()));
                 }
             }
             self.graph.edges_at.detach(id, edge);
@@ -530,6 +530,18 @@ impl GraphState {
     pub(crate) fn changed_node(&mut self, node_id: &str) {
         self.batch.changed_nodes.insert(node_id.to_owned());
     }
+}
+
+/// A node the flow holds, as a [`Node`]. Loading checks every node's shape,
+/// and no write can break it, so the check here never fails.
+fn stored_node(node: Map<String, Value>) -> Node {
+    Node::try_from(node).expect("a stored node has the shape of a node")
+}
+
+/// An edge the flow holds, as an [`Edge`]. Loading checks every edge's shape,
+/// and an edge is never written in place, so the check here never fails.
+fn stored_edge(edge: Map<String, Value>) -> Edge {
+    Edge::try_from(edge).expect("a stored edge has the shape of an edge")
 }
 
 /// Nodes or edges by id, in their order.

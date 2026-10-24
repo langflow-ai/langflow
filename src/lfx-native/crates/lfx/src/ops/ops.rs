@@ -6,12 +6,17 @@
 //! by its key, never by its index. An operation that is parsed and printed
 //! again reads as it was sent.
 
+use std::collections::HashSet;
+use std::ops::Deref;
 use std::str::FromStr;
 
 use serde_json::{Map, Value, json};
 
+use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result, quoted};
 use crate::ops::from_value::{FromValue, FromValueError, missing, read, unexpected};
+use crate::ops::schema::NODE_OBJECT_PATHS;
+use crate::ops::validate::missing_node_object;
 
 /// One step of a field path.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -147,13 +152,75 @@ pub enum Change {
     Delete,
 }
 
+/// The path of a field update.
+///
+/// It is not empty, it does not write the node's `id`, and it is not the
+/// whole of `data`, `data.node` or `data.node.template`, which every node
+/// keeps and which updates write inside. A `NodePath` cannot be made without
+/// these checks, so apply does not make them again, and every node keeps its
+/// id and these objects.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct NodePath(Path);
+
+impl NodePath {
+    /// The segments, moved out.
+    #[must_use]
+    pub fn into_segments(self) -> Path {
+        self.0
+    }
+
+    /// Check that a field update may write `path`. For example, `["id"]`
+    /// fails with `cannot change the node's id`.
+    fn check(path: &[Segment]) -> Result<(), FromValueError> {
+        if path.is_empty() {
+            return Err(FromValueError::new("must not be empty"));
+        }
+        if path[0].as_key() == Some("id") {
+            return Err(FromValueError::new("cannot change the node's id"));
+        }
+        if let Some(object) = NODE_OBJECT_PATHS.iter().find(|object| path.equals(object)) {
+            return Err(FromValueError::new(format!(
+                "cannot write the whole of {}; write inside it",
+                object.join(".")
+            )));
+        }
+        Ok(())
+    }
+}
+
+impl Deref for NodePath {
+    type Target = [Segment];
+
+    fn deref(&self) -> &[Segment] {
+        &self.0
+    }
+}
+
+impl TryFrom<Path> for NodePath {
+    type Error = Error;
+
+    /// Check `path`, and keep it as a field update's path.
+    fn try_from(path: Path) -> Result<Self> {
+        Self::check(&path).map_err(|error| error.into_error("path"))?;
+        Ok(Self(path))
+    }
+}
+
+impl FromValue for NodePath {
+    fn from_value(value: Value) -> Result<Self, FromValueError> {
+        let path = Path::from_value(value)?;
+        Self::check(&path)?;
+        Ok(Self(path))
+    }
+}
+
 /// One `set_field` or `delete_field` on a node.
 #[derive(Debug, Clone, PartialEq)]
 pub struct FieldUpdate {
     /// The node written.
     pub id: String,
     /// Where it is written.
-    pub path: Path,
+    pub path: NodePath,
     /// The write.
     pub change: Change,
 }
@@ -167,7 +234,7 @@ impl FieldUpdate {
 
     /// A `set_field` of `value` at `path`.
     #[must_use]
-    pub fn set(id: &str, path: Path, value: Value) -> Self {
+    pub fn set(id: &str, path: NodePath, value: Value) -> Self {
         Self {
             id: id.to_owned(),
             path,
@@ -177,7 +244,7 @@ impl FieldUpdate {
 
     /// A `delete_field` at `path`.
     #[must_use]
-    pub fn delete(id: &str, path: Path) -> Self {
+    pub fn delete(id: &str, path: NodePath) -> Self {
         Self {
             id: id.to_owned(),
             path,
@@ -186,17 +253,148 @@ impl FieldUpdate {
     }
 }
 
+/// A node that `add_nodes` adds.
+///
+/// Its `id` is a non-empty string, and its `data`, `data.node` and
+/// `data.node.template` are objects. A `Node` cannot be made without these
+/// checks, so apply does not make them again.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Node(Map<String, Value>);
+
+impl Node {
+    /// The node's id.
+    #[must_use]
+    pub fn id(&self) -> &str {
+        self.0.id()
+    }
+
+    /// The node as a JSON object.
+    #[must_use]
+    pub fn as_map(&self) -> &Map<String, Value> {
+        &self.0
+    }
+
+    /// The node as a JSON object, moved out.
+    #[must_use]
+    pub fn into_map(self) -> Map<String, Value> {
+        self.0
+    }
+
+    /// Check that `node` has the shape of a node. For example, a node without
+    /// `data.node` fails with `data.node: must be an object (node 'a')`.
+    fn check(node: &Map<String, Value>) -> Result<(), FromValueError> {
+        let Some(id) = node.non_empty_str("id") else {
+            return Err(FromValueError::new("must be a non-empty string").at_key("id"));
+        };
+        if let Some(path) = missing_node_object(node) {
+            let error = FromValueError::new(format!("must be an object (node {})", quoted(id)));
+            // An error takes its innermost key first.
+            return Err(path
+                .iter()
+                .rev()
+                .fold(error, |error, key| error.at_key(key)));
+        }
+        Ok(())
+    }
+}
+
+impl TryFrom<Map<String, Value>> for Node {
+    type Error = Error;
+
+    /// Check `node`, and keep it as a node.
+    fn try_from(node: Map<String, Value>) -> Result<Self> {
+        Self::check(&node).map_err(|error| error.into_error("node"))?;
+        Ok(Self(node))
+    }
+}
+
+impl FromValue for Node {
+    fn from_value(value: Value) -> Result<Self, FromValueError> {
+        let node = Map::from_value(value)?;
+        Self::check(&node)?;
+        Ok(Self(node))
+    }
+}
+
+/// An edge that `add_edges` adds.
+///
+/// Its `id`, `source` and `target` are non-empty strings. An `Edge` cannot be
+/// made without these checks, so apply does not make them again. Whether the
+/// nodes and handles it names exist depends on the flow, so apply checks that.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Edge(Map<String, Value>);
+
+impl Edge {
+    /// The edge's id.
+    #[must_use]
+    pub fn id(&self) -> &str {
+        self.0.id()
+    }
+
+    /// The id of the node the edge leaves from.
+    #[must_use]
+    pub fn source(&self) -> &str {
+        self.0.non_empty_str("source").unwrap_or_default()
+    }
+
+    /// The id of the node the edge goes into.
+    #[must_use]
+    pub fn target(&self) -> &str {
+        self.0.non_empty_str("target").unwrap_or_default()
+    }
+
+    /// The edge as a JSON object.
+    #[must_use]
+    pub fn as_map(&self) -> &Map<String, Value> {
+        &self.0
+    }
+
+    /// The edge as a JSON object, moved out.
+    #[must_use]
+    pub fn into_map(self) -> Map<String, Value> {
+        self.0
+    }
+
+    /// Check that `edge` has the shape of an edge.
+    fn check(edge: &Map<String, Value>) -> Result<(), FromValueError> {
+        for key in ["id", "source", "target"] {
+            if edge.non_empty_str(key).is_none() {
+                return Err(FromValueError::new("must be a non-empty string").at_key(key));
+            }
+        }
+        Ok(())
+    }
+}
+
+impl TryFrom<Map<String, Value>> for Edge {
+    type Error = Error;
+
+    /// Check `edge`, and keep it as an edge.
+    fn try_from(edge: Map<String, Value>) -> Result<Self> {
+        Self::check(&edge).map_err(|error| error.into_error("edge"))?;
+        Ok(Self(edge))
+    }
+}
+
+impl FromValue for Edge {
+    fn from_value(value: Value) -> Result<Self, FromValueError> {
+        let edge = Map::from_value(value)?;
+        Self::check(&edge)?;
+        Ok(Self(edge))
+    }
+}
+
 /// A flow operation.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Operation {
     /// Add nodes.
-    AddNodes(Vec<Map<String, Value>>),
+    AddNodes(Vec<Node>),
     /// Write fields of existing nodes.
     UpdateNodes(Vec<FieldUpdate>),
     /// Delete nodes, and the edges at them.
     DeleteNodes(Vec<String>),
     /// Add edges. An edge changes by being deleted and added again.
-    AddEdges(Vec<Map<String, Value>>),
+    AddEdges(Vec<Edge>),
     /// Delete edges.
     DeleteEdges(Vec<String>),
 }
@@ -287,13 +485,19 @@ impl Operation {
     #[must_use]
     pub fn to_value(&self) -> Value {
         match self {
-            Self::AddNodes(nodes) => json!({"type": "add_nodes", "nodes": nodes}),
+            Self::AddNodes(nodes) => json!({
+                "type": "add_nodes",
+                "nodes": nodes.iter().map(Node::as_map).collect::<Vec<_>>(),
+            }),
             Self::UpdateNodes(updates) => json!({
                 "type": "update_nodes",
                 "updates": updates.iter().map(FieldUpdate::to_value).collect::<Vec<_>>(),
             }),
             Self::DeleteNodes(ids) => json!({"type": "delete_nodes", "ids": ids}),
-            Self::AddEdges(edges) => json!({"type": "add_edges", "edges": edges}),
+            Self::AddEdges(edges) => json!({
+                "type": "add_edges",
+                "edges": edges.iter().map(Edge::as_map).collect::<Vec<_>>(),
+            }),
             Self::DeleteEdges(ids) => json!({"type": "delete_edges", "ids": ids}),
         }
     }
@@ -302,14 +506,14 @@ impl Operation {
     #[must_use]
     pub fn into_value(self) -> Value {
         let (kind, key, payload) = match self {
-            Self::AddNodes(nodes) => ("add_nodes", "nodes", objects(nodes)),
+            Self::AddNodes(nodes) => ("add_nodes", "nodes", objects(nodes, Node::into_map)),
             Self::UpdateNodes(updates) => (
                 "update_nodes",
                 "updates",
                 Value::Array(updates.into_iter().map(FieldUpdate::into_value).collect()),
             ),
             Self::DeleteNodes(ids) => ("delete_nodes", "ids", strings(ids)),
-            Self::AddEdges(edges) => ("add_edges", "edges", objects(edges)),
+            Self::AddEdges(edges) => ("add_edges", "edges", objects(edges, Edge::into_map)),
             Self::DeleteEdges(ids) => ("delete_edges", "ids", strings(ids)),
         };
         let mut operation = Map::new();
@@ -319,8 +523,13 @@ impl Operation {
     }
 }
 
-fn objects(objects: Vec<Map<String, Value>>) -> Value {
-    Value::Array(objects.into_iter().map(Value::Object).collect())
+fn objects<T>(objects: Vec<T>, into_map: fn(T) -> Map<String, Value>) -> Value {
+    Value::Array(
+        objects
+            .into_iter()
+            .map(|object| Value::Object(into_map(object)))
+            .collect(),
+    )
 }
 
 fn strings(strings: Vec<String>) -> Value {
@@ -341,13 +550,57 @@ impl FromValue for Operation {
     fn from_value(value: Value) -> Result<Self, FromValueError> {
         let object = Map::from_value(value)?;
         Ok(match OperationKind::from_map(&object)? {
-            OperationKind::AddNodes => Self::AddNodes(payload(object, "nodes")?),
-            OperationKind::UpdateNodes => Self::UpdateNodes(payload(object, "updates")?),
+            OperationKind::AddNodes => {
+                let nodes: Vec<Node> = payload(object, "nodes")?;
+                no_repeated_ids(nodes.iter().map(Node::id))
+                    .map_err(|error| error.at_key("nodes"))?;
+                Self::AddNodes(nodes)
+            }
+            OperationKind::UpdateNodes => {
+                let updates: Vec<FieldUpdate> = payload(object, "updates")?;
+                no_repeated_paths(&updates).map_err(|error| error.at_key("updates"))?;
+                Self::UpdateNodes(updates)
+            }
             OperationKind::DeleteNodes => Self::DeleteNodes(payload(object, "ids")?),
-            OperationKind::AddEdges => Self::AddEdges(payload(object, "edges")?),
+            OperationKind::AddEdges => {
+                let edges: Vec<Edge> = payload(object, "edges")?;
+                no_repeated_ids(edges.iter().map(Edge::id))
+                    .map_err(|error| error.at_key("edges"))?;
+                Self::AddEdges(edges)
+            }
             OperationKind::DeleteEdges => Self::DeleteEdges(payload(object, "ids")?),
         })
     }
+}
+
+/// Fail when an id repeats in one operation. For example, the second of two
+/// nodes `a` fails with `[1].id: repeats the id 'a'`.
+fn no_repeated_ids<'a>(ids: impl Iterator<Item = &'a str>) -> Result<(), FromValueError> {
+    let mut seen = HashSet::new();
+    for (index, id) in ids.enumerate() {
+        if !seen.insert(id) {
+            let error = FromValueError::new(format!("repeats the id {}", quoted(id)));
+            return Err(error.at_key("id").at_index(index));
+        }
+    }
+    Ok(())
+}
+
+/// Fail when one `update_nodes` writes one path of one node twice, which is a
+/// client bug.
+fn no_repeated_paths(updates: &[FieldUpdate]) -> Result<(), FromValueError> {
+    let mut seen = HashSet::new();
+    for (index, update) in updates.iter().enumerate() {
+        if !seen.insert((update.id.as_str(), &*update.path)) {
+            let message = format!(
+                "repeats the path {} of node {}",
+                path_label(&update.path),
+                quoted(&update.id)
+            );
+            return Err(FromValueError::new(message).at_index(index));
+        }
+    }
+    Ok(())
 }
 
 /// The value of an operation's one payload key, read as `T`. The operation
@@ -387,7 +640,13 @@ impl FieldUpdate {
         update.insert("id".into(), Value::String(self.id));
         update.insert(
             "path".into(),
-            Value::Array(self.path.into_iter().map(Segment::into_value).collect()),
+            Value::Array(
+                self.path
+                    .into_segments()
+                    .into_iter()
+                    .map(Segment::into_value)
+                    .collect(),
+            ),
         );
         match self.change {
             Change::Set(value) => {
@@ -414,7 +673,7 @@ impl FromValue for FieldUpdate {
             }
         };
         let mut id: Option<String> = None;
-        let mut path: Option<Path> = None;
+        let mut path: Option<NodePath> = None;
         let mut written = None;
         for (name, value) in object {
             match name.as_str() {
@@ -430,9 +689,6 @@ impl FromValue for FieldUpdate {
             return Err(FromValueError::new("must not be empty").at_key("id"));
         }
         let path = path.ok_or_else(|| missing("path"))?;
-        if path.is_empty() {
-            return Err(FromValueError::new("must not be empty").at_key("path"));
-        }
         let change = if set {
             Change::Set(written.ok_or_else(|| missing("value"))?)
         } else {
@@ -471,7 +727,7 @@ mod tests {
     #[test]
     fn operations_round_trip() {
         for operation in [
-            json!({"type": "add_nodes", "nodes": [{"id": "a"}]}),
+            json!({"type": "add_nodes", "nodes": [{"id": "a", "data": {"node": {"template": {}}}}]}),
             json!({"type": "update_nodes", "updates": [
                 {"id": "a", "path": ["data", "node", "outputs", {"key": "out"}], "op": "set_field", "value": {"name": "out", "size": 1.0}},
                 {"id": "a", "path": ["data", "node", "template", "rows", "value", {"key": "r"}], "op": "delete_field"},
@@ -520,6 +776,23 @@ mod tests {
     }
 
     #[test]
+    fn node_paths_refuse_what_a_field_update_may_not_write() {
+        let key = |key: &str| Segment::Key(key.into());
+        for (path, message) in [
+            (vec![], "path: must not be empty"),
+            (vec![key("id")], "path: cannot change the node's id"),
+            (
+                vec![key("data"), key("node")],
+                "path: cannot write the whole of data.node; write inside it",
+            ),
+        ] {
+            assert_eq!(NodePath::try_from(path).unwrap_err().message, message);
+        }
+        let path = vec![key("data"), key("node"), key("outputs")];
+        assert_eq!(*NodePath::try_from(path.clone()).unwrap(), path[..]);
+    }
+
+    #[test]
     fn path_labels_print_paths_as_json() {
         let path = [
             Segment::Key("outputs".into()),
@@ -550,6 +823,47 @@ mod tests {
             (
                 json!([{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["x", 0]}]}]),
                 "operations[0].updates[0].path[1]: integer list indexes are not allowed; name a list item with {\"key\": ...}",
+            ),
+            (
+                json!([{"type": "add_nodes", "nodes": [{"data": {}}]}]),
+                "operations[0].nodes[0].id: must be a non-empty string",
+            ),
+            (
+                json!([{"type": "add_nodes", "nodes": [{"id": "a", "data": {}}]}]),
+                "operations[0].nodes[0].data.node: must be an object (node 'a')",
+            ),
+            (
+                json!([{"type": "add_nodes", "nodes": [
+                    {"id": "a", "data": {"node": {"template": {}}}},
+                    {"id": "a", "data": {"node": {"template": {}}}},
+                ]}]),
+                "operations[0].nodes[1].id: repeats the id 'a'",
+            ),
+            (
+                json!([{"type": "add_edges", "edges": [{"id": "e", "source": "a"}]}]),
+                "operations[0].edges[0].target: must be a non-empty string",
+            ),
+            (
+                json!([{"type": "add_edges", "edges": [
+                    {"id": "e", "source": "a", "target": "b"},
+                    {"id": "e", "source": "b", "target": "a"},
+                ]}]),
+                "operations[0].edges[1].id: repeats the id 'e'",
+            ),
+            (
+                json!([{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["id"], "value": "b"}]}]),
+                "operations[0].updates[0].path: cannot change the node's id",
+            ),
+            (
+                json!([{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["data", "node"]}]}]),
+                "operations[0].updates[0].path: cannot write the whole of data.node; write inside it",
+            ),
+            (
+                json!([{"type": "update_nodes", "updates": [
+                    {"id": "a", "op": "delete_field", "path": ["position"]},
+                    {"id": "a", "op": "set_field", "path": ["position"], "value": {}},
+                ]}]),
+                "operations[0].updates[1]: repeats the path [\"position\"] of node 'a'",
             ),
         ] {
             let error = Operation::list_from_value(operations).unwrap_err();

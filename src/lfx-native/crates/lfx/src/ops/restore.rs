@@ -26,7 +26,7 @@ use crate::ops::canonical::{HANDLE_KEYS, values_equal};
 use crate::ops::edges::{endpoint, read_handles};
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result, quoted};
-use crate::ops::ops::Operation;
+use crate::ops::ops::{Edge, Operation};
 use crate::ops::validate::{Numbers, Resolution, ViolationCode, find_graph_violations};
 
 /// `revision` with `fixes` applied, after checking each one ([`check_restore_fixes`]).
@@ -121,7 +121,7 @@ pub fn check_restore_fixes(revision: &Value, stored: &Value, fixes: &[Operation]
                             quoted(id)
                         )));
                     };
-                    if !only_handles_differ(before, edge)? {
+                    if !only_handles_differ(before, edge.as_map())? {
                         return Err(Error::restore_not_allowed(format!(
                             "edge {}: a fix may only change the edge's handles",
                             quoted(id)
@@ -193,7 +193,8 @@ fn without_handles(edge: &Map<String, Value>) -> Value {
 ///
 /// # Errors
 ///
-/// A compared handle holds a number that is not finite.
+/// A compared handle holds a number that is not finite, or a rewritten edge
+/// has no `id`, `source` or `target`.
 pub fn edge_fixes(read: &[Value], shown: &[Value]) -> Result<Vec<Operation>> {
     let shown_by_id: HashMap<&str, &Map<String, Value>> = shown
         .iter()
@@ -214,7 +215,7 @@ pub fn edge_fixes(read: &[Value], shown: &[Value]) -> Result<Vec<Operation>> {
             &Value::Object(rewritten.clone()),
         )? {
             deleted.push(id.to_owned());
-            added.push(rewritten);
+            added.push(Edge::try_from(rewritten)?);
         }
     }
     let mut fixes = Vec::new();
@@ -273,7 +274,7 @@ pub fn fixes_for_edges(fixes: &[Operation], edge_ids: &[String]) -> Vec<Operatio
                 }
             }
             Operation::AddEdges(edges) => {
-                let edges: Vec<Map<String, Value>> = edges
+                let edges: Vec<Edge> = edges
                     .iter()
                     .filter(|edge| edge_ids.contains(edge.id()))
                     .cloned()
