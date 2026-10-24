@@ -7,6 +7,7 @@ from lfx.base.models.decisions.schema import DecisionConfigurationError, Decisio
 from lfx.components.llm_operations.llm_conditional_router import SmartRouterComponent, assign_route_ids
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
+from lfx.schema.properties import Usage
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -21,10 +22,16 @@ def _fresh_build_config(router):
     return build_config
 
 
-def _decide(
+def _decide(monkeypatch, kind, routes, result, **settings):
+    """Route one message with ``result`` as the provider's answer; returns the label, evidence and request."""
+    router, label, sent = _decided_router(monkeypatch, kind, routes, result, **settings)
+    return label, router._decision_evidence, sent[0] if sent else None
+
+
+def _decided_router(
     monkeypatch, kind, routes, result, *, minimum_probability=0.7, question="Is this a refund request?", **fields
 ):
-    """Route one message with ``result`` as the provider's answer; returns the label, evidence and request."""
+    """The router after routing one message with ``result`` as the provider's answer, its label and requests."""
     sent = []
 
     def evaluate(request, **_kwargs):
@@ -50,7 +57,7 @@ def _decide(
     )
     router.log = lambda *_args, **_kwargs: None
     label = router._get_categorization()
-    return label, router._decision_evidence, sent[0] if sent else None
+    return router, label, sent
 
 
 def _boolean(probability_true):
@@ -652,6 +659,39 @@ class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
         assert routed == ""
         assert evidence["reason"] == reason
         assert evidence["activated_branch"] == "default_result"
+
+    def test_a_decision_reports_the_tokens_it_used(self, monkeypatch):
+        """Chat Output adds these to the Playground message, as it does a language model's."""
+        result = _boolean(0.9).model_copy(update={"usage": {"input_tokens": 296, "output_tokens": 1}})
+        router, routed, _ = _decided_router(monkeypatch, "Boolean", [], result)
+        assert routed == "Yes"
+        assert router._token_usage == Usage(input_tokens=296, output_tokens=1, total_tokens=297)
+
+    def test_a_refusal_still_reports_its_tokens(self, monkeypatch):
+        refusal = DecisionResult(
+            kind="boolean",
+            provider="OpenAI",
+            model="gpt-6-luna",
+            status="refusal",
+            usage={"input_tokens": 120, "output_tokens": 0, "total_tokens": 120},
+        )
+        router, routed, _ = _decided_router(monkeypatch, "Boolean", [], refusal)
+        assert routed == ""
+        assert router._token_usage == Usage(input_tokens=120, output_tokens=0, total_tokens=120)
+
+    def test_a_decision_without_usage_reports_none(self, monkeypatch):
+        router, _, _ = _decided_router(monkeypatch, "Boolean", [], _boolean(0.9))
+        assert router._token_usage is None
+
+    def test_each_run_starts_without_the_last_runs_tokens(self):
+        router = self._router_with_outputs("yes_result", "no_result", "default_result")
+        router.set(routing_mode="Decision Model", decision_kind="Boolean", enable_else_output=True)
+        router._vertex = SimpleNamespace(
+            outgoing_edges=[SimpleNamespace(source_handle=SimpleNamespace(name="default_result"))]
+        )
+        router._token_usage = Usage(input_tokens=5, output_tokens=5, total_tokens=10)
+        router._pre_run_setup()
+        assert router._token_usage is None
 
     def test_a_blank_question_stops_before_any_model_call(self, monkeypatch):
         with pytest.raises(DecisionConfigurationError, match="Enter a Decision Question"):
