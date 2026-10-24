@@ -164,7 +164,10 @@ class FastAFBaseComponent(Component):
                     messages = {
                         400: "Check required fields and parameter combinations.",
                         401: "Reconnect with a valid API key.",
-                        402: "Check the credit balance or free-request eligibility.",
+                        402: (
+                            "Check the credit balance. Free tier: 2 free calls per account "
+                            "(after email verification), sign up at fastaf.co."
+                        ),
                         403: "Check account verification and status.",
                         429: "Rate or concurrency limit reached; wait before retrying.",
                         502: "The source was unavailable, blocked or returned no usable data.",
