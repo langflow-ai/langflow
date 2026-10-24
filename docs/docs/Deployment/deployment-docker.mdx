@@ -62,13 +62,14 @@ The Langflow repo includes a ready-to-use Compose file at `docker_example/docker
    cd langflow/docker_example
    ```
 
-3. Set `LANGFLOW_SUPERUSER_PASSWORD` in a `.env` file in the `docker_example` directory. The Compose file requires this value because official images disable automatic login.
+3. Set `LANGFLOW_SUPERUSER_PASSWORD` and `POSTGRES_PASSWORD` in a `.env` file in the `docker_example` directory. The Compose file requires both values. Official images disable automatic login, and PostgreSQL uses the password for internal service-to-service connections without publishing its port to the host.
 
    ```shell
    echo 'LANGFLOW_SUPERUSER_PASSWORD=SUPERUSER_PASSWORD' > .env
+   echo 'POSTGRES_PASSWORD=POSTGRES_PASSWORD' >> .env
    ```
 
-   Replace `SUPERUSER_PASSWORD` with a strong password for the Langflow superuser.
+   Replace `SUPERUSER_PASSWORD` with a strong password for the Langflow superuser and `POSTGRES_PASSWORD` with a separate strong password for PostgreSQL.
 
    <PartialAutoLoginDefaults />
 
@@ -358,8 +359,14 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
           - "7860:7860"
         depends_on:
           - postgres
+        command:
+          - /bin/sh
+          - -c
+          - |
+            export LANGFLOW_DATABASE_URL="$(python -c 'import os; from urllib.parse import quote; print("postgresql://langflow:" + quote(os.environ["POSTGRES_PASSWORD"], safe="") + "@postgres:5432/langflow")')"
+            exec langflow run
         environment:
-          - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow
+          - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
           - LANGFLOW_CONFIG_DIR=/app/langflow
           - LANGFLOW_SUPERUSER_PASSWORD=${LANGFLOW_SUPERUSER_PASSWORD}
         volumes:
@@ -371,7 +378,7 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
         image: postgres:16-trixie
         environment:
           POSTGRES_USER: langflow
-          POSTGRES_PASSWORD: langflow
+          POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
           POSTGRES_DB: langflow
         volumes:
           - langflow-postgres:/var/lib/postgresql/data
@@ -379,6 +386,8 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
     volumes:
       langflow-postgres:
     ```
+
+    Set `POSTGRES_PASSWORD` in your `.env` file before starting this configuration. The startup command percent-encodes the raw password when constructing `LANGFLOW_DATABASE_URL`, so reserved characters are preserved. The PostgreSQL service remains available to Langflow at `postgres:5432` on the private Compose network without publishing its port to the host.
 
     On Linux, if `./langflow-data` doesn't exist, Docker creates it owned by `root`, and Langflow fails to start with a `PermissionError`.
     Before you start Langflow, create the directory next to the Compose file, and make the Langflow user (UID `1000`) its owner:
@@ -390,7 +399,36 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
 
    For additional examples, see the [Docker Compose configuration](#docker-compose) and the [docker_example compose file](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml).
 
-2. Pull the new image and update the image tag in your `docker-compose.yml` or `docker run` command.
+2. If you are changing `POSTGRES_PASSWORD` or adopting the required-password quickstart configuration, rotate the existing role password before updating `.env`.
+
+    `POSTGRES_PASSWORD` initializes the role password only when PostgreSQL first initializes an empty data directory. It does not change the password stored in an existing `langflow-postgres` volume.
+
+    During planned downtime, stop Langflow and open psql for the Compose variant you use:
+
+    For `docker-compose.yml`:
+
+    ```bash
+    docker compose stop langflow
+    docker compose exec postgres psql -U langflow -d langflow
+    ```
+
+    For `pre.docker-compose.yml`:
+
+    ```bash
+    docker compose -f pre.docker-compose.yml stop langflow
+    docker compose -f pre.docker-compose.yml exec postgres psql -U langflow -d langflow
+    ```
+
+    At the psql prompt, rotate the role password and exit:
+
+    ```text
+    langflow=# \password langflow
+    langflow=# \q
+    ```
+
+    Enter the new password twice at the secure prompts. psql does not echo the password or include it in a SQL command. Update `POSTGRES_PASSWORD` in `.env` to the same raw value before restarting. The startup command continues to percent-encode it when constructing `LANGFLOW_DATABASE_URL`.
+
+3. Pull the new image and update the image tag in your `docker-compose.yml` or `docker run` command.
 
     With Docker Compose, set the image in your compose file, such as `image: langflowai/langflow:1.13.0`, and then pull:
 
@@ -404,7 +442,7 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
     docker pull langflowai/langflow:1.13.0
     ```
 
-3. Restart the container. The same volumes will be reattached, so your database and flows are preserved.
+4. Restart the container. The same volumes will be reattached, so your database and flows are preserved.
 
     With Docker Compose:
 

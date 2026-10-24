@@ -21,13 +21,14 @@ This guide will help you get Langflow up and running using Docker and Docker Com
    cd langflow/docker_example
    ```
 
-3. Create a `.env` file with the Langflow admin password set:
+3. Create a `.env` file with the Langflow admin and PostgreSQL passwords set:
 
    ```sh
    LANGFLOW_SUPERUSER_PASSWORD=SUPERUSER_PASSWORD
+   POSTGRES_PASSWORD=POSTGRES_PASSWORD
    ```
 
-   Replace `SUPERUSER_PASSWORD` with a strong password for the Langflow superuser.
+   Replace `SUPERUSER_PASSWORD` with a strong password for the Langflow superuser and `POSTGRES_PASSWORD` with a separate strong password for PostgreSQL.
    The default admin username is `langflow`.
 
 4. Run the Docker Compose file:
@@ -44,11 +45,11 @@ The Docker Compose configuration spins up two services: `langflow` and `postgres
 
 ### Langflow service
 
-The `langflow` service uses the `langflowai/langflow:latest` Docker image and exposes port 7860. It depends on the `postgres` service.
+The `langflow` service uses the `langflowai/langflow:latest` Docker image and exposes port 7860. It depends on the `postgres` service. At startup, it constructs `LANGFLOW_DATABASE_URL` with an RFC 3986 percent-encoded password so reserved characters do not change URL parsing.
 
 Environment variables:
 
-- `LANGFLOW_DATABASE_URL`: The connection string for the PostgreSQL database.
+- `POSTGRES_PASSWORD`: The raw PostgreSQL password. This value is required in `.env` and is percent-encoded only when constructing `LANGFLOW_DATABASE_URL`.
 - `LANGFLOW_SUPERUSER_PASSWORD`: The initial admin password. This value is required in `.env`.
 - `LANGFLOW_CONFIG_DIR`: The directory where Langflow stores logs, file storage, monitor data, and secret keys.
 
@@ -58,12 +59,12 @@ Volumes:
 
 ### PostgreSQL service
 
-The `postgres` service uses the `postgres:16-trixie` Docker image and exposes port 5432. The image is pinned to a specific Debian base (`trixie`, Debian 13) so the `postgres:16` tag cannot silently roll its underlying OS, which would otherwise produce a glibc collation version mismatch warning on existing data volumes.
+The `postgres` service uses the `postgres:16-trixie` Docker image and is available to Langflow on the private Compose network at `postgres:5432` without publishing port 5432 to the host. The image is pinned to a specific Debian base (`trixie`, Debian 13) so the `postgres:16` tag cannot silently roll its underlying OS, which would otherwise produce a glibc collation version mismatch warning on existing data volumes.
 
 Environment variables:
 
 - `POSTGRES_USER`: The username for the PostgreSQL database.
-- `POSTGRES_PASSWORD`: The password for the PostgreSQL database.
+- `POSTGRES_PASSWORD`: The password for the PostgreSQL database. This value is required in `.env` and is also used in `LANGFLOW_DATABASE_URL`.
 - `POSTGRES_DB`: The name of the PostgreSQL database.
 
 Volumes:
@@ -89,6 +90,35 @@ docker compose exec postgres \
 ```
 
 Fresh installs are unaffected.
+
+## Changing the PostgreSQL password during an upgrade
+
+`POSTGRES_PASSWORD` initializes the role password only when PostgreSQL first initializes an empty data directory. Changing it in `.env` does not update the password stored in an existing `langflow-postgres` volume.
+
+If you are changing the password or adopting the required-password Compose configuration, rotate the existing role password before updating `.env`. During planned downtime, stop Langflow and open psql for the Compose variant you use:
+
+For `docker-compose.yml`:
+
+```sh
+docker compose stop langflow
+docker compose exec postgres psql -U langflow -d langflow
+```
+
+For `pre.docker-compose.yml`:
+
+```sh
+docker compose -f pre.docker-compose.yml stop langflow
+docker compose -f pre.docker-compose.yml exec postgres psql -U langflow -d langflow
+```
+
+At the psql prompt, rotate the role password and exit:
+
+```text
+langflow=# \password langflow
+langflow=# \q
+```
+
+Enter the new password twice at the secure prompts. psql does not echo the password or include it in a SQL command. Update `POSTGRES_PASSWORD` in `.env` to the same raw value before restarting with `docker compose up -d` or `docker compose -f pre.docker-compose.yml up -d`. The startup command continues to percent-encode it when constructing `LANGFLOW_DATABASE_URL`.
 
 ## Switching to a specific Langflow version
 
