@@ -87,6 +87,43 @@ async def test_should_leave_no_rows_or_files_when_builder_erase_completes():
 
 
 @pytest.mark.usefixtures("client")
+async def test_should_preserve_another_users_flow_when_its_id_collides_with_the_builder():
+    from langflow.services.data_subjects.storage_steps import KIND_SKIPPED
+
+    seeded = await seed_builder("collision-subject")
+    admin_id = await create_user("dsr-collision-admin", superuser=True)
+    async with session_scope() as session:
+        session.add(
+            Flow(
+                id=seeded.user_id,
+                user_id=seeded.colleague_id,
+                name="Flow sharing the builder's raw storage ID",
+                data={"nodes": [], "edges": []},
+            )
+        )
+        await session.commit()
+    storage = get_storage_service()
+    await storage.save_file(str(seeded.user_id), "other-flow.txt", b"colleague attachment")
+
+    request_id = await _request_and_approve(seeded.user_id, admin_id)
+    async with session_scope() as session:
+        request = await session.get(DataSubjectRequest, request_id)
+        approved_plan = list(request.pending_paths or [])
+    status = await run_request(request_id)
+
+    assert status == DataSubjectRequestStatus.DONE.value
+    assert {
+        "kind": KIND_SKIPPED,
+        "value": "builder_user_namespace_collides_with_flow",
+    } in approved_plan
+    assert await storage.get_file(str(seeded.user_id), "other-flow.txt") == b"colleague attachment"
+    async with session_scope() as session:
+        preserved_flow = await session.get(Flow, seeded.user_id)
+        assert preserved_flow is not None
+        assert preserved_flow.user_id == seeded.colleague_id
+
+
+@pytest.mark.usefixtures("client")
 async def test_should_delete_access_exceptions_naming_the_builder_and_keep_ones_they_created():
     seeded = await seed_builder()
     admin_id = await create_user("dsr-admin", superuser=True)

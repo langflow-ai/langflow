@@ -151,6 +151,20 @@ def test_graph_copy_and_pickle_preserve_source_flow_id():
     assert pickle.loads(pickle.dumps(graph)).source_flow_id == "source-flow"  # noqa: S301
 
 
+def test_graph_copy_and_pickle_preserve_authorized_legacy_flow_ids():
+    flow_id = "non-colliding-flow-id"
+    graph = Graph.from_payload(
+        {"nodes": [], "edges": []},
+        flow_id=flow_id,
+        authorized_legacy_flow_ids={flow_id},
+    )
+
+    assert graph.authorized_legacy_flow_ids == frozenset({flow_id})
+    assert copy.deepcopy(graph).authorized_legacy_flow_ids == frozenset({flow_id})
+    assert graph.copy_for_run(user_id="caller").authorized_legacy_flow_ids == frozenset({flow_id})
+    assert pickle.loads(pickle.dumps(graph)).authorized_legacy_flow_ids == frozenset({flow_id})  # noqa: S301
+
+
 def test_from_payload_blocks_custom_components_when_disabled(monkeypatch):
     monkeypatch.setattr(
         "lfx.services.deps.get_settings_service",

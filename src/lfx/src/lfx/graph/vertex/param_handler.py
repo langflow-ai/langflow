@@ -435,7 +435,7 @@ class ParameterHandler:
         return self._enforce_file_paths(full_path)
 
     def _file_access_scopes(self) -> list[str]:
-        """Return server-established typed storage namespaces for the executing graph."""
+        """Return typed namespaces and server-authorized legacy flow scopes."""
         graph = getattr(self.vertex, "graph", None)
         user_id = getattr(graph, "user_id", None)
         candidates = (
@@ -449,6 +449,13 @@ class ParameterHandler:
                 scope = scope_factory(candidate)
                 if scope not in scopes:
                     scopes.append(scope)
+        authorized_legacy = getattr(graph, "authorized_legacy_flow_ids", frozenset())
+        if not isinstance(authorized_legacy, frozenset):
+            authorized_legacy = frozenset()
+        for candidate in sorted(authorized_legacy):
+            scope = str(candidate).strip()
+            if scope and scope not in scopes:
+                scopes.append(scope)
         return scopes
 
     def _enforce_file_paths(self, file_paths: str | list[str]) -> str | list[str]:
