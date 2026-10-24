@@ -71,6 +71,9 @@ async def test_cleanup_orphaned_records_with_orphans():
         session.add(message)
         await session.commit()
 
+    storage_service = get_storage_service()
+    await storage_service.save_file(f"flow-{orphaned_flow_id}", "test.json", b"test data")
+
     # Run cleanup
     async with session_scope() as session:
         await cleanup_orphaned_records()
@@ -79,6 +82,7 @@ async def test_cleanup_orphaned_records_with_orphans():
     async with session_scope() as session:
         message = await session.get(MessageTable, message.id)
         assert message is None
+    assert await storage_service.list_files(f"flow-{orphaned_flow_id}") == []
 
 
 @pytest.mark.asyncio

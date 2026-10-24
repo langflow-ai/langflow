@@ -235,7 +235,7 @@ async def test_files_delete_owner_proceeds(owner):
     from langflow.api.v1 import files
 
     flow = _make_flow(owner.id)
-    storage = MagicMock(delete_file=AsyncMock())
+    storage = MagicMock(delete_file=AsyncMock(), get_file_size=AsyncMock())
 
     result = await files.delete_file(file_name="x.txt", flow=flow, current_user=owner, storage_service=storage)
 

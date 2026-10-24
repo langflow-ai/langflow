@@ -34,6 +34,7 @@ from typing import TYPE_CHECKING, Literal
 
 import anyio
 from lfx.log.logger import logger
+from lfx.utils.file_path_security import flow_storage_scope, user_storage_scope, user_storage_scope_for_path
 from sqlmodel import select
 
 from langflow.services.database.models.file.model import File
@@ -171,7 +172,7 @@ def _refuse_a_source_that_is_not_local() -> None:
 
 
 async def _namespaces(username: str | None) -> list[str]:
-    """Every id files can be filed under: each user, and each flow.
+    """Every legacy and typed namespace belonging to each user and flow.
 
     Rows are not the authority on which files exist, but they are the authority on
     which namespaces belong to whom, which is what ``username`` filters on.
@@ -187,7 +188,14 @@ async def _namespaces(username: str | None) -> list[str]:
         else:
             user_ids = list((await session.exec(select(User.id))).all())
             flow_ids = list((await session.exec(select(Flow.id))).all())
-    return [str(identifier) for identifier in [*user_ids, *flow_ids]]
+    return [
+        namespace
+        for identifier, typed_scope in (
+            *((identifier, user_storage_scope) for identifier in user_ids),
+            *((identifier, flow_storage_scope) for identifier in flow_ids),
+        )
+        for namespace in (str(identifier), typed_scope(identifier))
+    ]
 
 
 async def _rows_without_bytes(copied: set[tuple[str, str]], username: str | None) -> list[FileRelocationResult]:
@@ -206,7 +214,7 @@ async def _rows_without_bytes(copied: set[tuple[str, str]], username: str | None
 
     missing = []
     for user_id, path in rows:
-        address = (str(user_id), PurePosixPath(path).name)
+        address = (user_storage_scope_for_path(path, user_id), PurePosixPath(path).name)
         if address not in copied:
             missing.append(
                 FileRelocationResult(

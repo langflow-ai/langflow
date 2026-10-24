@@ -217,8 +217,14 @@ async def test_upload_file(files_client, files_created_api_key, files_flow):
     assert response_json["flowId"] == str(files_flow.id)
 
     # Check that the file_path matches the expected pattern
-    file_path_pattern = re.compile(rf"{files_flow.id}/\d{{4}}-\d{{2}}-\d{{2}}_\d{{2}}-\d{{2}}-\d{{2}}_test\.txt")
+    file_path_pattern = re.compile(rf"flow-{files_flow.id}/\d{{4}}-\d{{2}}-\d{{2}}_\d{{2}}-\d{{2}}-\d{{2}}_test\.txt")
     assert file_path_pattern.match(response_json["file_path"])
+
+    from langflow.services.deps import get_storage_service
+
+    stored_name = response_json["file_path"].split("/")[-1]
+    stored = await get_storage_service().get_file(flow_id=f"flow-{files_flow.id}", file_name=stored_name)
+    assert stored == b"test content"
 
 
 async def test_download_file(files_client, files_created_api_key, files_flow):
@@ -240,6 +246,64 @@ async def test_download_file(files_client, files_created_api_key, files_flow):
     response = await files_client.get(f"api/v1/files/download/{files_flow.id}/{file_name}", headers=headers)
     assert response.status_code == 200
     assert response.content == b"test content"
+
+
+async def test_legacy_flow_file_still_downloads(files_client, files_created_api_key, files_flow):
+    """Owner-checked routes retain legacy flow files without migrating user data."""
+    from langflow.services.deps import get_storage_service
+
+    await get_storage_service().save_file(
+        flow_id=str(files_flow.id), file_name="legacy.txt", data=b"legacy flow content"
+    )
+
+    response = await files_client.get(
+        f"api/v1/files/download/{files_flow.id}/legacy.txt",
+        headers={"x-api-key": files_created_api_key.api_key},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.content == b"legacy flow content"
+
+
+async def test_colliding_flow_id_cannot_read_legacy_user_files(
+    files_client, files_created_api_key, files_active_user, files_other_active_user
+):
+    """A preexisting colliding flow may use typed storage, never the raw user fallback."""
+    from langflow.services.deps import get_storage_service
+
+    async with session_scope() as session:
+        session.add(
+            Flow(
+                id=files_other_active_user.id,
+                user_id=files_active_user.id,
+                name="Legacy colliding flow",
+                data={"nodes": [], "edges": []},
+            )
+        )
+        await session.commit()
+    storage = get_storage_service()
+    await storage.save_file(flow_id=str(files_other_active_user.id), file_name="private.txt", data=b"PRIVATE")
+
+    headers = {"x-api-key": files_created_api_key.api_key}
+    legacy_response = await files_client.get(
+        f"api/v1/files/download/{files_other_active_user.id}/private.txt", headers=headers
+    )
+    assert legacy_response.status_code != 200
+    assert b"PRIVATE" not in legacy_response.content
+
+    upload_response = await files_client.post(
+        f"api/v1/files/upload/{files_other_active_user.id}",
+        files={"file": ("typed.txt", b"typed content")},
+        headers=headers,
+    )
+    assert upload_response.status_code == 201, upload_response.text
+    # The upload adds its timestamp; use the returned name for the typed read below.
+    typed_name = upload_response.json()["file_path"].split("/")[-1]
+    typed_response = await files_client.get(
+        f"api/v1/files/download/{files_other_active_user.id}/{typed_name}", headers=headers
+    )
+    assert typed_response.status_code == 200, typed_response.text
+    assert typed_response.content == b"typed content"
 
 
 async def test_list_files(files_client, files_created_api_key, files_flow):
@@ -287,7 +351,7 @@ async def test_file_operations(files_client, files_created_api_key, files_flow):
     assert response_json["flowId"] == str(flow_id)
 
     # Check that the file_path matches the expected pattern
-    file_path_pattern = re.compile(rf"{flow_id}/\d{{4}}-\d{{2}}-\d{{2}}_\d{{2}}-\d{{2}}-\d{{2}}_{file_name}")
+    file_path_pattern = re.compile(rf"flow-{flow_id}/\d{{4}}-\d{{2}}-\d{{2}}_\d{{2}}-\d{{2}}-\d{{2}}_{file_name}")
     assert file_path_pattern.match(response_json["file_path"])
 
     # Extract the full file name with timestamp from the response

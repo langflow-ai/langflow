@@ -92,6 +92,17 @@ async def test_cannot_create_flow_at_another_users_virtual_history(client, logge
 
 
 @pytest.mark.parametrize("entry_point", ["post", "put", "batch", "json", "zip", "project-json", "project-zip"])
+async def test_cannot_create_flow_with_a_user_storage_id(client, logged_in_headers, active_user, entry_point):
+    """A new flow must not claim the legacy storage namespace of any user."""
+    response = await _create_with_id(client, logged_in_headers, active_user.id, entry_point)
+
+    assert response.status_code == 400, response.text
+    assert "user id" in response.json()["detail"].lower()
+    async with session_scope() as session:
+        assert await session.get(Flow, active_user.id) is None
+
+
+@pytest.mark.parametrize("entry_point", ["post", "put", "batch", "json", "zip", "project-json", "project-zip"])
 async def test_stable_imported_flow_id_is_preserved(client, logged_in_headers, entry_point):
     flow_id = uuid4()
     response = await _create_with_id(client, logged_in_headers, flow_id, entry_point)

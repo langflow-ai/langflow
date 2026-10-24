@@ -22,7 +22,7 @@ from langflow.services.database.models.transactions.model import TransactionTabl
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable.model import Variable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
-from langflow.services.deps import session_scope
+from langflow.services.deps import get_storage_service, session_scope
 from sqlalchemy import func
 from sqlmodel import col, select
 
@@ -48,6 +48,9 @@ async def _request_and_approve(subject_id, admin_id):
 async def test_should_leave_no_rows_or_files_when_builder_erase_completes():
     seeded = await seed_builder()
     admin_id = await create_user("dsr-admin", superuser=True)
+    storage = get_storage_service()
+    await storage.save_file(f"user-{seeded.user_id}", "typed-user.txt", b"typed user")
+    await storage.save_file(f"flow-{seeded.flow_id}", "typed-flow.txt", b"typed flow")
 
     request_id = await _request_and_approve(seeded.user_id, admin_id)
     status = await run_request(request_id)
@@ -79,6 +82,8 @@ async def test_should_leave_no_rows_or_files_when_builder_erase_completes():
         assert await _count(session, Flow, Flow.id == seeded.colleague_flow_id) == 1
         assert await _count(session, MessageTable, MessageTable.user_id == seeded.colleague_id) == 1
     assert not seeded.file_path.exists()
+    assert not await (storage.data_dir / f"user-{uid}").exists()
+    assert not await (storage.data_dir / f"flow-{flow_id}").exists()
 
 
 @pytest.mark.usefixtures("client")

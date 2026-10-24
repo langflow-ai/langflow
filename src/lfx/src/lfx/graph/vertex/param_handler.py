@@ -19,7 +19,9 @@ from lfx.utils.file_path_security import (
     StorageNamespaceError,
     enforce_local_file_access,
     enforce_storage_key_scope,
+    flow_storage_scope,
     is_local_file_access_restricted,
+    user_storage_scope,
 )
 from lfx.utils.util import unescape_string
 
@@ -433,17 +435,19 @@ class ParameterHandler:
         return self._enforce_file_paths(full_path)
 
     def _file_access_scopes(self) -> list[str]:
-        """Return server-established storage namespaces for the executing graph."""
+        """Return server-established typed storage namespaces for the executing graph."""
         graph = getattr(self.vertex, "graph", None)
+        user_id = getattr(graph, "user_id", None)
+        candidates = (
+            (user_storage_scope, user_id),
+            (flow_storage_scope, getattr(graph, "flow_id", None)),
+            (flow_storage_scope, getattr(graph, "source_flow_id", None)),
+        )
         scopes: list[str] = []
-        for candidate in (
-            getattr(graph, "user_id", None),
-            getattr(graph, "flow_id", None),
-            getattr(graph, "source_flow_id", None),
-        ):
-            if candidate is not None:
-                scope = str(candidate).strip()
-                if scope and scope not in scopes:
+        for scope_factory, candidate in candidates:
+            if candidate is not None and str(candidate).strip():
+                scope = scope_factory(candidate)
+                if scope not in scopes:
                     scopes.append(scope)
         return scopes
 

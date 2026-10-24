@@ -32,6 +32,13 @@ def test_should_canonicalize_namespace_when_uuid_has_uppercase():
     assert validate_namespace(str(value).upper()) == str(value)
 
 
+@pytest.mark.parametrize("prefix", ["user-", "flow-"])
+def test_should_accept_typed_uuid_namespaces(prefix):
+    value = uuid4()
+
+    assert validate_namespace(f"{prefix}{str(value).upper()}") == f"{prefix}{value}"
+
+
 @pytest.mark.asyncio
 class TestLocalDeleteNamespace:
     async def test_should_remove_nested_files_when_namespace_exists(self, tmp_path):
