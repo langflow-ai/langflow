@@ -13,7 +13,6 @@
 //! drops it. So nothing is ever undone, and a failed batch keeps the indexes
 //! that earlier batches built.
 
-use std::collections::HashSet;
 use std::fmt;
 use std::str::FromStr;
 
@@ -27,13 +26,6 @@ use crate::ops::keyed::ListIndex;
 use crate::ops::ops::{Edge, Node, PathExt};
 use crate::ops::schema::KeyedList;
 use crate::ops::validate::{Numbers, PathPart, validate_flow_data};
-
-/// Whether a removal returns copies of what it removed, which backward operations need.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Copies {
-    Keep,
-    Discard,
-}
 
 // --- Layers --------------------------------------------------------------------------------
 
@@ -455,18 +447,17 @@ impl GraphState {
         self.graph.nodes.insert(id, node);
     }
 
-    /// Remove a node, if it exists, and with [`Copies::Keep`] return a copy of
-    /// it. Its edges stay; the caller removes them.
-    pub(crate) fn remove_node(&mut self, id: &str, copies: Copies) -> Option<Node> {
-        let node = self.graph.nodes.get(id)?;
-        let kept = match copies {
-            Copies::Keep => node.as_object().cloned().map(stored_node),
-            Copies::Discard => None,
-        };
+    /// A copy of the node `id`, for the backward operations.
+    pub(crate) fn node_copy(&self, id: &str) -> Option<Node> {
+        let node = self.graph.nodes.get(id)?.as_object()?;
+        Some(stored_node(node.clone()))
+    }
+
+    /// Remove the node `id`, if it exists. Its edges stay; the caller removes them.
+    pub(crate) fn remove_node(&mut self, id: &str) {
         self.graph.nodes.remove(id);
         self.edge_index.forget_node(id);
         self.lists.forget_node(id);
-        kept
     }
 
     pub(crate) fn insert_edge(&mut self, id: String, edge: Value) {
@@ -477,34 +468,22 @@ impl GraphState {
         self.graph.edges.insert(id, edge);
     }
 
-    /// Remove the edges that exist among `ids`, each once. Return their ids,
-    /// and with [`Copies::Keep`], copies of the edges.
-    pub(crate) fn remove_edges<'i>(
-        &mut self,
-        ids: impl IntoIterator<Item = &'i str>,
-        copies: Copies,
-    ) -> (Vec<String>, Vec<Edge>) {
-        let mut removed = Vec::new();
-        let mut kept = Vec::new();
-        let mut seen = HashSet::new();
-        for id in ids {
-            if !seen.insert(id) {
-                continue;
-            }
-            let Some(edge) = self.graph.edges.get(id) else {
-                continue;
-            };
-            if let Some(map) = edge.as_object() {
-                self.edge_index.forget(map);
-                if copies == Copies::Keep {
-                    kept.push(stored_edge(map.clone()));
-                }
-            }
-            self.graph.edges_at.detach(id, edge);
-            self.graph.edges.remove(id);
-            removed.push(id.to_owned());
+    /// A copy of the edge `id`, for the backward operations.
+    pub(crate) fn edge_copy(&self, id: &str) -> Option<Edge> {
+        let edge = self.graph.edges.get(id)?.as_object()?;
+        Some(stored_edge(edge.clone()))
+    }
+
+    /// Remove the edge `id`, if it exists.
+    pub(crate) fn remove_edge(&mut self, id: &str) {
+        let Some(edge) = self.graph.edges.get(id) else {
+            return;
+        };
+        if let Some(map) = edge.as_object() {
+            self.edge_index.forget(map);
         }
-        (removed, kept)
+        self.graph.edges_at.detach(id, edge);
+        self.graph.edges.remove(id);
     }
 }
 

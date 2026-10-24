@@ -32,7 +32,7 @@ use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result, bail, invalid, quoted};
 use crate::ops::ops::{Change, Edge, FieldUpdate, Node, NodePath, Operation, PathExt, Segment};
 use crate::ops::schema::{KeyedList, ListKind, NODE_SCHEMA};
-use crate::ops::state::{Copies, Graph, GraphState, Lists, resolve, resolve_mut};
+use crate::ops::state::{Graph, GraphState, Lists, resolve, resolve_mut};
 use crate::ops::validate::PathPart;
 
 /// How a batch is applied.
@@ -115,15 +115,6 @@ impl Report {
                 .last_mut()
                 .expect("begin_operation started a list")
                 .push(operation);
-        }
-    }
-
-    /// Whether removals keep copies of what they remove, for the backward operations.
-    fn copies(&self) -> Copies {
-        if self.options.backward {
-            Copies::Keep
-        } else {
-            Copies::Discard
         }
     }
 }
@@ -226,7 +217,7 @@ impl GraphState {
                 report.record_backward(operation);
             }
         }
-        self.remove_cascaded(cascaded.iter().map(String::as_str), report);
+        self.remove_edges(cascaded.iter().map(String::as_str), report);
         Ok(())
     }
 
@@ -276,9 +267,10 @@ impl GraphState {
                 continue;
             }
             incident.extend(self.graph.edges_at(id).cloned());
-            if let Some(node) = self.remove_node(id, report.copies()) {
-                removed_nodes.push(node);
+            if report.options.backward {
+                removed_nodes.extend(self.node_copy(id));
             }
+            self.remove_node(id);
             removed.push(id.to_owned());
         }
         if removed.is_empty() {
@@ -286,18 +278,8 @@ impl GraphState {
         }
         report.record(Operation::DeleteNodes(removed));
         report.record_backward(Operation::AddNodes(removed_nodes));
-        self.remove_cascaded(incident.iter().map(String::as_str), report);
+        self.remove_edges(incident.iter().map(String::as_str), report);
         Ok(())
-    }
-
-    /// Remove the edges an operation took with it, recording them as a `delete_edges`.
-    fn remove_cascaded<'i>(&mut self, ids: impl IntoIterator<Item = &'i str>, report: &mut Report) {
-        let (removed, edges) = self.remove_edges(ids, report.copies());
-        if removed.is_empty() {
-            return;
-        }
-        report.record(Operation::DeleteEdges(removed));
-        report.record_backward(Operation::AddEdges(edges));
     }
 
     // --- Edges -------------------------------------------------------------------------
@@ -346,12 +328,31 @@ impl GraphState {
     }
 
     fn delete_edges(&mut self, ids: &[String], report: &mut Report) {
-        let (removed, edges) = self.remove_edges(ids.iter().map(String::as_str), report.copies());
+        self.remove_edges(ids.iter().map(String::as_str), report);
+    }
+
+    /// Remove the edges among `ids` that exist, each once, and record them as
+    /// a `delete_edges`. A `delete_edges` and a cascade delete both remove
+    /// their edges here.
+    fn remove_edges<'i>(&mut self, ids: impl IntoIterator<Item = &'i str>, report: &mut Report) {
+        let mut removed = Vec::new();
+        let mut copies = Vec::new();
+        let mut seen = HashSet::new();
+        for id in ids {
+            if !seen.insert(id) || !self.graph.edges.contains(id) {
+                continue;
+            }
+            if report.options.backward {
+                copies.extend(self.edge_copy(id));
+            }
+            self.remove_edge(id);
+            removed.push(id.to_owned());
+        }
         if removed.is_empty() {
             return;
         }
         report.record(Operation::DeleteEdges(removed));
-        report.record_backward(Operation::AddEdges(edges));
+        report.record_backward(Operation::AddEdges(copies));
     }
 
     // --- Field writes ----------------------------------------------------------------------
