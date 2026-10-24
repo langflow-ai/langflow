@@ -245,6 +245,7 @@ class MCPToolsComponent(ComponentWithCache):
         "code",
         "_type",
         "tool_mode",
+        "tools_metadata",
         "tool_placeholder",
         "mcp_server",
         "tool",
@@ -981,10 +982,17 @@ class MCPToolsComponent(ComponentWithCache):
             value == {} and model_field.default is None and cls._is_object_like_annotation(model_field.annotation)
         )
 
+    @classmethod
+    def _validate_tool_argument_name(cls, arg_name: str) -> None:
+        if arg_name in cls.default_keys:
+            msg = f"Remote tool argument '{arg_name}' conflicts with a reserved component field."
+            raise ValueError(msg)
+
     def _build_tool_kwargs(self, args_schema: type[BaseModel]) -> dict[str, Any]:
         """Collect tool kwargs from component inputs, omitting blank optional values."""
         kwargs: dict[str, Any] = {}
         for arg_name, model_field in args_schema.model_fields.items():
+            self._validate_tool_argument_name(arg_name)
             # MCP argument names come from the server and can match component methods or metadata.
             value = self._attributes.get(arg_name)
             if arg_name not in self._attributes and arg_name in self._inputs:
@@ -1060,9 +1068,7 @@ class MCPToolsComponent(ComponentWithCache):
 
                 try:
                     name = schema_input.name
-                    if name in self.default_keys:
-                        await logger.awarning("Skipping remote tool input %r: reserved component field", name)
-                        continue
+                    self._validate_tool_argument_name(name)
                     input_dict = schema_input.to_dict()
                     input_dict.setdefault("value", None)
                     input_dict.setdefault("required", True)
