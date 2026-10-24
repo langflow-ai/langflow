@@ -1,4 +1,5 @@
 {
+  "connections.add.tokenGenericHelp": "Pega un token de acceso para este proveedor. Langflow verifica el token antes de guardarlo.",
   "storageUpgrade.unavailable": "Almacenamiento no disponible",
   "storageUpgrade.title": "Actualizando tus datos",
   "storageUpgrade.queued": "Esperando la actualización",
@@ -2932,7 +2933,6 @@
   "slider.permissive": "Permisivo",
   "playground.workflowWarning": "Advertencia del flujo de trabajo",
   "settings.nav.connections": "Conexiones",
-  "settings.nav.triggers": "Disparadores",
   "connections.title": "Conexiones",
   "connections.subtitle": "Cuentas de terceros (como Google, Microsoft 365 y Slack) que tus flujos usan para actuar en tu nombre. Los tokens permanecen en el servidor y nunca se muestran aquí.",
   "connections.search": "Buscar por nombre, identificador o cuenta",
@@ -3076,6 +3076,9 @@
   "connections.identity.bot": "Un bot",
   "connections.identity.service": "Una cuenta de servicio",
   "settings.dbProviders.serverConfiguration": "Configurado desde el entorno del servidor. Deja los campos sin cambios para usar esa configuración.",
+  "connections.add.tokenExpiresAt": "Vencimiento del token",
+  "connections.add.tokenExpiresAtHelp": "Introduce una fecha de vencimiento futura en tu zona horaria actual.",
+  "settings.nav.triggers": "Disparadores",
   "triggers.title": "Disparadores",
   "triggers.subtitle": "Flujos que se inician por sí solos. Añade un disparador desde la categoría Disparadores, o desde el grupo de un proveedor, en cualquier flujo.",
   "triggers.tabs.label": "Vistas de disparadores",

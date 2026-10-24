@@ -1,4 +1,5 @@
 {
+  "connections.add.tokenGenericHelp": "이 공급자의 액세스 토큰을 붙여넣으세요. Langflow는 저장하기 전에 토큰을 확인합니다.",
   "storageUpgrade.unavailable": "저장소를 사용할 수 없습니다",
   "storageUpgrade.title": "데이터 업그레이드 중",
   "storageUpgrade.queued": "업그레이드 대기 중",
@@ -2931,7 +2932,6 @@
   "slider.permissive": "관대",
   "playground.workflowWarning": "Flow 실행 경고",
   "settings.nav.connections": "연결",
-  "settings.nav.triggers": "Trigger",
   "connections.title": "연결",
   "connections.subtitle": "Flow가 사용자를 대신해 작업할 때 쓰는 타사 계정(Google, Microsoft 365, Slack 등)입니다. Token은 서버에만 두고, 여기에는 표시하지 않습니다.",
   "connections.search": "이름, 식별자, 계정 검색",
@@ -3075,6 +3075,9 @@
   "connections.identity.bot": "봇",
   "connections.identity.service": "서비스 계정",
   "settings.dbProviders.serverConfiguration": "서버 환경에서 구성되었습니다. 이 구성을 사용하려면 필드를 변경하지 마세요.",
+  "connections.add.tokenExpiresAt": "토큰 만료 시간",
+  "connections.add.tokenExpiresAtHelp": "현재 시간대의 미래 만료 시간을 입력하세요.",
+  "settings.nav.triggers": "Trigger",
   "triggers.title": "Trigger",
   "triggers.subtitle": "스스로 시작하는 Flow입니다. 어느 Flow에서든 Trigger 분류나 Provider 그룹에서 Trigger를 추가하세요.",
   "triggers.tabs.label": "Trigger 보기",

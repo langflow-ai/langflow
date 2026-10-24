@@ -1,4 +1,5 @@
 {
+  "connections.add.tokenGenericHelp": "Paste an access token for this provider. Langflow checks the token before saving it.",
   "storageUpgrade.unavailable": "Storage unavailable",
   "storageUpgrade.title": "Upgrading your data",
   "storageUpgrade.queued": "Waiting to upgrade",
@@ -2931,7 +2932,6 @@
   "slider.permissive": "Permissive",
   "playground.workflowWarning": "Workflow warning",
   "settings.nav.connections": "Connections",
-  "settings.nav.triggers": "Triggers",
   "connections.title": "Connections",
   "connections.subtitle": "Third-party accounts (like Google, Microsoft 365 and Slack) that your flows use to act on your behalf. Tokens stay on the server and are never shown here.",
   "connections.search": "Search name, handle, or account",
@@ -3075,6 +3075,9 @@
   "connections.identity.bot": "A bot",
   "connections.identity.service": "A service account",
   "settings.dbProviders.serverConfiguration": "Configured from the server environment. Leave the fields unchanged to use that configuration.",
+  "connections.add.tokenExpiresAt": "Token expiration",
+  "connections.add.tokenExpiresAtHelp": "Enter a future expiration time in your current time zone.",
+  "settings.nav.triggers": "Triggers",
   "triggers.title": "Triggers",
   "triggers.subtitle": "Flows that start on their own. Add a trigger from the Triggers category, or from a provider's group, in any flow.",
   "triggers.tabs.label": "Trigger views",

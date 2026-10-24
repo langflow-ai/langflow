@@ -116,9 +116,38 @@ _RENEWERS: dict[str, SubscriptionRenewer] = {}
 _REVOKERS: dict[str, SubscriptionRevoker] = {}
 
 
+class _ProviderUnavailableError(RuntimeError):
+    """A catalog reload removed a renewal handler before it was invoked."""
+
+
+async def _renew_extension(session: AsyncSession, subscription: TriggerSubscription) -> datetime:
+    """Resolve the current trusted hook instead of retaining an old descriptor."""
+    from langflow.services.triggers.providers.registry import get_provider
+
+    extension = get_provider(subscription.provider)
+    if extension is None or extension.renew is None:
+        msg = "The trigger provider's subscription renewal handler is unavailable."
+        raise _ProviderUnavailableError(msg)
+    return await extension.renew(session, subscription)
+
+
 def _ensure_source_handlers(provider: str) -> None:
     """Install the built-in source handlers after import cycles have settled."""
+    from langflow.services.triggers.providers.registry import get_provider
+
+    extension = get_provider(provider)
+    if extension is not None:
+        from langflow.services.triggers.source_subscription import revoke_source
+
+        if extension.renew is not None:
+            _RENEWERS.setdefault(provider, _renew_extension)
+        elif _RENEWERS.get(provider) is _renew_extension:
+            _RENEWERS.pop(provider)
+        _REVOKERS.setdefault(provider, revoke_source)
+        return
     if provider not in {"microsoft", "google"}:
+        if _RENEWERS.get(provider) is _renew_extension:
+            _RENEWERS.pop(provider)
         return
     from langflow.services.triggers.source_subscription import renew_source, revoke_source
 
@@ -155,11 +184,9 @@ def registered_revokers() -> set[str]:
 async def _revoke_remote(session: AsyncSession, row: TriggerSubscription) -> None:
     """Ask the provider to delete the subscription, best effort.
 
-    With no registered revoker - OSS today, before TRG-6 - this is a no-op and
-    the remote object is left to expire on the provider's own schedule. That is
-    a real gap and it is named here rather than hidden: the local row is retired
-    regardless, so Langflow stops acting on the subscription immediately, but
-    the provider may keep delivering until its TTL runs out.
+    When a provider is temporarily unavailable, retain a durable cleanup
+    intent. Local retirement still stops deliveries immediately, and the
+    remote operation can finish after its installed handler is available.
     """
     if row.provider in {"microsoft", "google"}:
         from langflow.services.triggers.source_cleanup import enqueue_cleanup
@@ -169,6 +196,9 @@ async def _revoke_remote(session: AsyncSession, row: TriggerSubscription) -> Non
     _ensure_source_handlers(row.provider)
     revoker = _REVOKERS.get(row.provider)
     if revoker is None:
+        from langflow.services.triggers.source_cleanup import enqueue_cleanup
+
+        await enqueue_cleanup(session, row)
         return
     try:
         await revoker(session, row)
@@ -198,7 +228,7 @@ async def upsert_subscription(
     provider: str,
     provider_subscription_id: str,
     client_state_digest: str | None,
-    expires_at: datetime,
+    expires_at: datetime | None,
     provider_state: dict[str, Any] | None = None,
 ) -> TriggerSubscription:
     """Record (or refresh) the provider-side object backing a push trigger."""
@@ -218,7 +248,7 @@ async def upsert_subscription(
     row.client_state_digest = client_state_digest
     row.provider_state = provider_state or {}
     row.expires_at = expires_at
-    row.renew_after = renew_after_for(created_at=now, expires_at=expires_at)
+    row.renew_after = renew_after_for(created_at=now, expires_at=expires_at) if expires_at is not None else None
     row.state = TriggerSubscriptionState.ACTIVE.value
     row.updated_at = now
     session.add(row)
@@ -438,6 +468,12 @@ async def renew_one(session: AsyncSession, *, subscription_id: UUID, owner: str)
         return False
     try:
         expires_at = await renewer(session, row)
+    except _ProviderUnavailableError:
+        row.lease_owner = None
+        row.lease_until = None
+        session.add(row)
+        await session.flush()
+        return False
     except Exception as exc:  # noqa: BLE001 - a provider failure is retried, not raised
         with session.no_autoflush:
             if not await _refresh_claim(session, subscription_id=subscription_id, owner=owner):

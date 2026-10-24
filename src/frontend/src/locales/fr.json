@@ -1,4 +1,5 @@
 {
+  "connections.add.tokenGenericHelp": "Collez un jeton d'accès pour ce fournisseur. Langflow vérifie le jeton avant de l'enregistrer.",
   "storageUpgrade.unavailable": "Stockage indisponible",
   "storageUpgrade.title": "Mise à niveau de vos données",
   "storageUpgrade.queued": "En attente de mise à niveau",
@@ -2932,7 +2933,6 @@
   "slider.permissive": "Permissif",
   "playground.workflowWarning": "Avertissement du workflow",
   "settings.nav.connections": "Connexions",
-  "settings.nav.triggers": "Déclencheurs",
   "connections.title": "Connexions",
   "connections.subtitle": "Comptes tiers (comme Google, Microsoft 365 et Slack) que vos flux utilisent pour agir en votre nom. Les jetons restent sur le serveur et ne sont jamais affichés ici.",
   "connections.search": "Rechercher un nom, un identifiant ou un compte",
@@ -3076,6 +3076,9 @@
   "connections.identity.bot": "Un bot",
   "connections.identity.service": "Un compte de service",
   "settings.dbProviders.serverConfiguration": "Configuré depuis l’environnement du serveur. Laissez les champs inchangés pour utiliser cette configuration.",
+  "connections.add.tokenExpiresAt": "Expiration du jeton",
+  "connections.add.tokenExpiresAtHelp": "Saisissez une date d’expiration future dans votre fuseau horaire actuel.",
+  "settings.nav.triggers": "Déclencheurs",
   "triggers.title": "Déclencheurs",
   "triggers.subtitle": "Des flux qui démarrent d’eux-mêmes. Ajoutez un déclencheur depuis la catégorie Déclencheurs, ou depuis le groupe d’un fournisseur, dans n’importe quel flux.",
   "triggers.tabs.label": "Vues des déclencheurs",

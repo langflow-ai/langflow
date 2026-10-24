@@ -1,4 +1,5 @@
 {
+  "connections.add.tokenGenericHelp": "Fügen Sie ein Zugriffstoken für diesen Anbieter ein. Langflow prüft das Token vor dem Speichern.",
   "storageUpgrade.unavailable": "Speicher nicht verfügbar",
   "storageUpgrade.title": "Ihre Daten werden aktualisiert",
   "storageUpgrade.queued": "Wartet auf Aktualisierung",
@@ -2932,7 +2933,6 @@
   "slider.permissive": "Tolerant",
   "playground.workflowWarning": "Warnung zum Workflow",
   "settings.nav.connections": "Verbindungen",
-  "settings.nav.triggers": "Trigger",
   "connections.title": "Verbindungen",
   "connections.subtitle": "Drittanbieterkonten (wie Google, Microsoft 365 und Slack), über die Ihre Flows in Ihrem Namen handeln. Tokens bleiben auf dem Server und werden hier niemals angezeigt.",
   "connections.search": "Name, Handle oder Konto suchen",
@@ -3076,6 +3076,9 @@
   "connections.identity.bot": "Ein Bot",
   "connections.identity.service": "Ein Dienstkonto",
   "settings.dbProviders.serverConfiguration": "Über die Serverumgebung konfiguriert. Lassen Sie die Felder unverändert, um diese Konfiguration zu verwenden.",
+  "connections.add.tokenExpiresAt": "Ablaufzeit des Tokens",
+  "connections.add.tokenExpiresAtHelp": "Geben Sie eine zukünftige Ablaufzeit in Ihrer aktuellen Zeitzone ein.",
+  "settings.nav.triggers": "Trigger",
   "triggers.title": "Trigger",
   "triggers.subtitle": "Flows, die von selbst starten. Fügen Sie in einem beliebigen Flow einen Trigger aus der Kategorie „Trigger“ oder aus der Gruppe eines Anbieters hinzu.",
   "triggers.tabs.label": "Trigger-Ansichten",

@@ -296,6 +296,7 @@ EXPECTED_FIELDS = {
     "listener_backoff_cap_s",
     "listener_failure_threshold",
     # Triggers (TRG-4): provider push ingress and subscription renewal.
+    "trigger_ingress_origin",
     "trigger_ingress_enabled",
     "trigger_ingress_max_body_bytes",
     "trigger_ingress_rate_limit_per_minute",
@@ -356,6 +357,13 @@ def test_all_expected_fields_present():
 def test_field_count_unchanged():
     """The total field count matches the curated expected set (no stray adds/drops)."""
     assert len(Settings.model_fields) == len(EXPECTED_FIELDS)
+
+
+def test_trigger_ingress_origin_is_optional_operator_configuration(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LANGFLOW_TRIGGER_INGRESS_ORIGIN", raising=False)
+    assert Settings(_env_file=None).trigger_ingress_origin is None
+    monkeypatch.setenv("LANGFLOW_TRIGGER_INGRESS_ORIGIN", "https://hooks.langflow.example")
+    assert Settings(_env_file=None).trigger_ingress_origin == "https://hooks.langflow.example"
 
 
 def test_critical_defaults_unchanged():

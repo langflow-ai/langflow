@@ -2548,7 +2548,8 @@ dependencies = [
     { name = "coverage" },
     { name = "crosshair-tool", marker = "python_full_version < '3.15'" },
     { name = "dill" },
-    { name = "filelock" },
+    { name = "filelock", version = "4.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "filelock", version = "4.2.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "gitpython" },
     { name = "humanize" },
     { name = "inquirer" },
@@ -3806,7 +3807,8 @@ version = "5.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "dill" },
-    { name = "filelock" },
+    { name = "filelock", version = "4.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "filelock", version = "4.2.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "fsspec", extra = ["http"] },
     { name = "httpx" },
     { name = "huggingface-hub" },
@@ -5328,11 +5330,53 @@ wheels = [
 
 [[package]]
 name = "filelock"
-version = "3.32.0"
+version = "4.1.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/c0/80/8232b582c4b318b817cf1274ba74976b07b34d35ef439b3eb948f98645a1/filelock-3.32.0.tar.gz", hash = "sha256:7be2ad23a14607ccc71808e68fe30848aeace7058ace17852f68e2a68e310402", size = 213757, upload-time = "2026-07-21T13:17:42.898Z" }
+resolution-markers = [
+    "python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'win32'",
+    "python_full_version < '3.11' and sys_platform == 'win32'",
+    "python_full_version < '3.11' and platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "python_full_version < '3.11' and platform_machine != 'arm64' and sys_platform == 'darwin'",
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4c/58/6fd434bec86eff7c38a3168454cb132b762b2bea9b3ac094101a2f7bc32a/filelock-4.1.0.tar.gz", hash = "sha256:ad7f724afef953e731b1cc39bcd3a09166d72ed7fcdf29e6e88b1c3235c6715d", size = 561277, upload-time = "2026-10-09T19:57:20.34Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/06/79/b4c714bef36bc4ec2beeae1e0c124f0223888cd8c6feb1cdc56038116920/filelock-3.32.0-py3-none-any.whl", hash = "sha256:d396bea984af47333ef05e50eae7eff88c84256de6112aea0ec48a233c064fe3", size = 97732, upload-time = "2026-07-21T13:17:41.55Z" },
+    { url = "https://files.pythonhosted.org/packages/ee/86/032133892a5de43b5a98200b01aadcad68cc255e274a762f08b8a76d2912/filelock-4.1.0-py3-none-any.whl", hash = "sha256:2ce9818e3e2d8f284c1a964414447ef148d42a5fd5e2a477a7118e574b293ec1", size = 133003, upload-time = "2026-10-09T19:57:18.716Z" },
+]
+
+[[package]]
+name = "filelock"
+version = "4.2.4"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
+    "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'darwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "python_full_version == '3.14.*' and sys_platform != 'darwin' and sys_platform != 'win32'",
+    "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
+    "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
+    "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin'",
+    "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin'",
+    "python_full_version == '3.14.*' and sys_platform == 'darwin'",
+    "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
+    "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
+    "python_full_version == '3.14.*' and sys_platform == 'win32'",
+    "python_full_version == '3.13.*' and sys_platform != 'darwin' and sys_platform != 'win32'",
+    "python_full_version == '3.13.*' and sys_platform == 'win32'",
+    "python_full_version == '3.13.*' and platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "python_full_version == '3.13.*' and platform_machine != 'arm64' and sys_platform == 'darwin'",
+    "python_full_version == '3.12.*' and sys_platform != 'darwin' and sys_platform != 'win32'",
+    "python_full_version == '3.12.*' and sys_platform == 'win32'",
+    "python_full_version == '3.12.*' and platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "python_full_version == '3.12.*' and platform_machine != 'arm64' and sys_platform == 'darwin'",
+    "python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "python_full_version == '3.11.*' and platform_machine != 'arm64' and sys_platform == 'darwin'",
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d8/28/3893324bcadf8f89b1616637468d766af3f625008c0735bf704fdfa86617/filelock-4.2.4.tar.gz", hash = "sha256:c6d8663535e1650ee430507b4ffbac7b464dd64b7647ea0112a9f406499d163d", size = 652444, upload-time = "2026-10-19T01:57:51.001Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e0/1b/5e74289a1878e666bb4b65fe5805a04cafcac2aa5f519ef1ead67ef91c56/filelock-4.2.4-py3-none-any.whl", hash = "sha256:301241438c57936ef93f4243a94f2559022268bfcf9b375a9a72eb0f8db8358e", size = 162475, upload-time = "2026-10-19T01:57:49.419Z" },
 ]
 
 [[package]]
@@ -6787,7 +6831,8 @@ version = "1.25.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
-    { name = "filelock" },
+    { name = "filelock", version = "4.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "filelock", version = "4.2.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "fsspec" },
     { name = "hf-xet", marker = "platform_machine == 'AMD64' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64'" },
     { name = "httpx" },
@@ -9109,7 +9154,8 @@ dependencies = [
     { name = "emoji" },
     { name = "fastapi" },
     { name = "fastapi-pagination" },
-    { name = "filelock" },
+    { name = "filelock", version = "4.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "filelock", version = "4.2.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "grandalf" },
     { name = "greenlet" },
     { name = "gunicorn" },
@@ -9630,7 +9676,8 @@ requires-dist = [
     { name = "fastavro", marker = "python_full_version < '3.13' and extra == 'fastavro'", specifier = "==1.9.7" },
     { name = "fastmcp", marker = "extra == 'fastmcp'", specifier = ">=3.2.0" },
     { name = "fastparquet", marker = "extra == 'fastparquet'", specifier = ">=2024.11.0,<2025.0.0" },
-    { name = "filelock", specifier = ">=3.20.1,<4.0.0" },
+    { name = "filelock", marker = "python_full_version < '3.11'", specifier = ">=4.1.0,<4.2.0" },
+    { name = "filelock", marker = "python_full_version >= '3.11'", specifier = ">=4.2.1,<5.0.0" },
     { name = "gassist", marker = "sys_platform == 'win32' and extra == 'gassist'", specifier = ">=0.0.1" },
     { name = "gitpython", marker = "extra == 'gitpython'", specifier = ">=3.1.58" },
     { name = "google-api-python-client", marker = "extra == 'google'", specifier = "~=2.161" },
@@ -10146,7 +10193,8 @@ dependencies = [
     { name = "docstring-parser" },
     { name = "emoji" },
     { name = "fastapi" },
-    { name = "filelock" },
+    { name = "filelock", version = "4.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "filelock", version = "4.2.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "gunicorn" },
     { name = "h2" },
     { name = "httpx", extra = ["http2"] },
@@ -10261,7 +10309,8 @@ requires-dist = [
     { name = "emoji", specifier = ">=2.14.1,<3.0.0" },
     { name = "exec-sandbox", marker = "python_full_version >= '3.12' and extra == 'sandbox'", specifier = ">=0.22.0,<1.0.0" },
     { name = "fastapi", specifier = ">=0.135.0,<1.0.0" },
-    { name = "filelock", specifier = ">=3.20.1,<4.0.0" },
+    { name = "filelock", marker = "python_full_version < '3.11'", specifier = ">=4.1.0,<4.2.0" },
+    { name = "filelock", marker = "python_full_version >= '3.11'", specifier = ">=4.2.1,<5.0.0" },
     { name = "gunicorn", marker = "sys_platform != 'win32'", specifier = ">=22.0" },
     { name = "h2", specifier = ">=4.4.1" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.24.0,<1.0.0" },
@@ -18397,7 +18446,8 @@ name = "python-discovery"
 version = "1.6.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "filelock" },
+    { name = "filelock", version = "4.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "filelock", version = "4.2.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0c/57/250bd238b966cece44328235eb85290045d059265fdaf7527a3a958123db/python_discovery-1.6.1.tar.gz", hash = "sha256:cf87d3627dfb4412437fdd5b13eae402607722998d21567993aedbc59b23c15e", size = 84338, upload-time = "2026-09-18T01:31:53.971Z" }
 wheels = [
@@ -22108,7 +22158,8 @@ resolution-markers = [
     "python_full_version < '3.11' and platform_machine == 'arm64' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "filelock", marker = "(python_full_version == '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin') or (python_full_version < '3.15' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_machine == 'arm64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin')" },
+    { name = "filelock", version = "4.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "filelock", version = "4.2.4", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and python_full_version < '3.15' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_machine != 'arm64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (python_full_version == '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin') or (python_full_version >= '3.11' and platform_machine == 'arm64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin')" },
     { name = "fsspec", marker = "(python_full_version == '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin') or (python_full_version < '3.15' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_machine == 'arm64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin')" },
     { name = "jinja2", marker = "(python_full_version == '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin') or (python_full_version < '3.15' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_machine == 'arm64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin')" },
     { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
@@ -22157,7 +22208,8 @@ resolution-markers = [
     "python_full_version < '3.11' and platform_machine != 'arm64' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "filelock", marker = "(python_full_version < '3.14' and platform_machine != 'arm64' and platform_python_implementation != 'PyPy') or (python_full_version != '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.15' and platform_machine == 'arm64' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
+    { name = "filelock", version = "4.1.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and platform_machine != 'arm64') or (python_full_version < '3.11' and sys_platform != 'darwin')" },
+    { name = "filelock", version = "4.2.4", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version >= '3.15' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin') or (python_full_version >= '3.11' and sys_platform != 'darwin')" },
     { name = "fsspec", marker = "(python_full_version < '3.14' and platform_machine != 'arm64' and platform_python_implementation != 'PyPy') or (python_full_version != '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.15' and platform_machine == 'arm64' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
     { name = "jinja2", marker = "(python_full_version < '3.14' and platform_machine != 'arm64' and platform_python_implementation != 'PyPy') or (python_full_version != '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.15' and platform_machine == 'arm64' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
     { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and platform_machine != 'arm64') or (python_full_version < '3.11' and sys_platform != 'darwin')" },
@@ -23264,7 +23316,8 @@ version = "21.14.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "distlib" },
-    { name = "filelock" },
+    { name = "filelock", version = "4.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "filelock", version = "4.2.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "packaging" },
     { name = "platformdirs" },
     { name = "python-discovery" },
