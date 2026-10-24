@@ -62,13 +62,14 @@ The Langflow repo includes a ready-to-use Compose file at `docker_example/docker
    cd langflow/docker_example
    ```
 
-3. Set `LANGFLOW_SUPERUSER_PASSWORD` in a `.env` file in the `docker_example` directory. The Compose file requires this value because official images disable automatic login.
+3. Set `LANGFLOW_SUPERUSER_PASSWORD` and `POSTGRES_PASSWORD` in a `.env` file in the `docker_example` directory. The Compose file requires both values. Official images disable automatic login, and PostgreSQL uses the password for internal service-to-service connections without publishing its port to the host.
 
    ```shell
    echo 'LANGFLOW_SUPERUSER_PASSWORD=SUPERUSER_PASSWORD' > .env
+   echo 'POSTGRES_PASSWORD=POSTGRES_PASSWORD' >> .env
    ```
 
-   Replace `SUPERUSER_PASSWORD` with a strong password for the Langflow superuser.
+   Replace `SUPERUSER_PASSWORD` with a strong password for the Langflow superuser and `POSTGRES_PASSWORD` with a separate strong password for PostgreSQL.
 
    <PartialAutoLoginDefaults />
 
@@ -359,7 +360,7 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
         depends_on:
           - postgres
         environment:
-          - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow
+          - LANGFLOW_DATABASE_URL=postgresql://langflow:${POSTGRES_PASSWORD}@postgres:5432/langflow
           - LANGFLOW_CONFIG_DIR=/app/langflow
           - LANGFLOW_SUPERUSER_PASSWORD=${LANGFLOW_SUPERUSER_PASSWORD}
         volumes:
@@ -371,7 +372,7 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
         image: postgres:16-trixie
         environment:
           POSTGRES_USER: langflow
-          POSTGRES_PASSWORD: langflow
+          POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
           POSTGRES_DB: langflow
         volumes:
           - langflow-postgres:/var/lib/postgresql/data
@@ -379,6 +380,8 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
     volumes:
       langflow-postgres:
     ```
+
+    Set `POSTGRES_PASSWORD` in your `.env` file before starting this configuration. The PostgreSQL service remains available to Langflow at `postgres:5432` on the private Compose network without publishing its port to the host.
 
     On Linux, if `./langflow-data` doesn't exist, Docker creates it owned by `root`, and Langflow fails to start with a `PermissionError`.
     Before you start Langflow, create the directory next to the Compose file, and make the Langflow user (UID `1000`) its owner:
