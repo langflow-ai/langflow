@@ -81,6 +81,6 @@ async def test_client_scope_sets_and_resets_only_the_contextvar():
     outer = AsyncMock()
     inner = AsyncMock()
     mcp_server._set_client(outer)
-    with mcp_server.client_scope(inner):
+    async with mcp_server.client_scope(inner):
         assert mcp_server._get_client() is inner
     assert mcp_server._get_client() is outer
