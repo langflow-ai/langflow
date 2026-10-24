@@ -38,6 +38,9 @@ class FakeSession:
             return FakeResult(self._user_files)
         return FakeResult([])
 
+    async def get(self, _model, _identifier):
+        return None
+
 
 class FakeSessionContext:
     def __init__(self, session):
@@ -81,7 +84,7 @@ async def test_handle_list_resources_includes_flow_and_user_files(monkeypatch):
     ]
 
     fake_session = FakeSession(flows=flows, user_files=user_files)
-    storage_service = FakeStorageService({flow_id: ["flow-doc.docx"]})
+    storage_service = FakeStorageService({f"flow-{flow_id}": ["flow-doc.docx"]})
 
     monkeypatch.setattr(mcp_utils, "session_scope", lambda: FakeSessionContext(fake_session))
     monkeypatch.setattr(mcp_utils, "get_storage_service", lambda: storage_service)
@@ -345,7 +348,7 @@ async def test_handle_read_resource_project_scope_binds_flow_id_as_uuid(monkeypa
     storage_service = FakeStorageService(
         {},
         {
-            f"{flow.id}/{file_name}": b"project file contents",
+            f"flow-{flow.id}/{file_name}": b"project file contents",
             f"{other_flow.id}/{file_name}": b"other project file contents",
         },
     )
