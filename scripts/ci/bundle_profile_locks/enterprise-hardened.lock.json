@@ -138,9 +138,9 @@
       "providers": [
         "lfx-oracle"
       ],
-      "requested": ">=0.2.0,<1.0.0",
-      "requirement": "lfx-oracle==0.2.0",
-      "resolved_version": "0.2.0"
+      "requested": ">=0.3.0,<1.0.0",
+      "requirement": "lfx-oracle==0.3.0",
+      "resolved_version": "0.3.0"
     },
     {
       "distribution": "lfx-slack",
@@ -180,7 +180,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:a5568d72b77fce01",
+  "profile_digest": "sha256:0cc754f606b3e19e",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
