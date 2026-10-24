@@ -134,6 +134,14 @@ async def get_flow(
     return flow
 
 
+async def get_flow_for_image(flow_id: str, current_user: CurrentActiveUser, session: DbSession):
+    try:
+        parsed_flow_id = UUID(flow_id.removeprefix("flow-"))
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Flow not found") from exc
+    return await get_flow(parsed_flow_id, current_user, session)
+
+
 @router.post("/upload/{flow_id}", status_code=HTTPStatus.CREATED)
 async def upload_file(
     *,
@@ -214,7 +222,7 @@ async def download_file(
 async def download_image(
     file_name: ValidatedFileName,
     # Security: resolve flow through get_flow so image access requires authentication and owner match.
-    flow: Annotated[Flow, Depends(get_flow)],
+    flow: Annotated[Flow, Depends(get_flow_for_image)],
     *,
     session: DbSession = None,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
