@@ -35,7 +35,7 @@ use crate::ops::canonical::{HANDLE_KEYS, HANDLE_QUOTE, parse_handle, values_equa
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result, bail, invalid, quoted};
 use crate::ops::keyed::ListIndex;
-use crate::ops::ops::{PathExt, Segment};
+use crate::ops::ops::{NodeRef, PathExt, Segment};
 use crate::ops::schema::{KeyedList, NODE_SCHEMA, OUTPUTS_PATH, TEMPLATE_PATH};
 use crate::ops::state::{Layered, Order};
 use crate::ops::validate::ViolationCode;
@@ -224,7 +224,7 @@ fn at_keys<'v>(value: &'v Value, keys: &[&str]) -> Option<&'v Value> {
 /// Read access to an indexed graph, enough to check edges.
 pub(crate) trait GraphRead {
     /// The node with `id`.
-    fn node(&self, id: &str) -> Option<&Map<String, Value>>;
+    fn node(&self, id: &str) -> Option<NodeRef<'_>>;
     /// The edge with `id`.
     fn edge(&self, id: &str) -> Option<&Map<String, Value>>;
     /// The ids of the edges at a node.
@@ -565,14 +565,6 @@ pub fn derive_missing_handle_forms(edge: &mut Map<String, Value>) {
     }
 }
 
-/// A node's `data.node`. Validation and `add_nodes` keep it, and its template, an object.
-pub(crate) fn node_body(node: &Map<String, Value>) -> Result<&Map<String, Value>> {
-    node.get("data")
-        .and_then(|data| data.get("node"))
-        .and_then(Value::as_object)
-        .ok_or_else(|| Error::invalid("node data.node must be an object"))
-}
-
 /// A node's outputs, indexed by name.
 #[derive(Debug)]
 pub(crate) struct Outputs<'g> {
@@ -613,7 +605,7 @@ pub(crate) fn node_outputs<'g>(
     let node = graph
         .node(node_id)
         .ok_or_else(|| invalid!("node {} does not exist", quoted(node_id)))?;
-    let Some(outputs) = node_body(node)?.get("outputs") else {
+    let Some(outputs) = node.body().get("outputs") else {
         return Ok(None);
     };
     if !outputs.is_array() {
@@ -662,7 +654,7 @@ fn check_no_note(graph: &impl GraphRead, edge: &Map<String, Value>) -> Result<()
         let node = graph
             .node(node_id)
             .ok_or_else(|| invalid!("edge {}: {end} node does not exist", quoted(edge.id())))?;
-        if node.get("type").and_then(Value::as_str) == Some(NOTE_NODE_TYPE) {
+        if node.as_map().get("type").and_then(Value::as_str) == Some(NOTE_NODE_TYPE) {
             return Err(error(
                 edge,
                 ViolationCode::EdgeTouchesNote,
@@ -710,10 +702,9 @@ fn check_target_input(
     let name = &handles.input.name;
     match handles.input.kind {
         InputKind::Field => {
-            let body = graph.node(target).map(node_body).transpose()?;
-            let field = body
-                .and_then(|body| body.get("template"))
-                .and_then(|template| template.get(name))
+            let field = graph
+                .node(target)
+                .and_then(|node| node.template().get(name))
                 .and_then(Value::as_object);
             let Some(field) = field else {
                 return Err(error(

@@ -16,7 +16,6 @@ use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result, quoted};
 use crate::ops::from_value::{FromValue, FromValueError, missing, read, unexpected};
 use crate::ops::schema::NODE_OBJECT_PATHS;
-use crate::ops::validate::missing_node_object;
 
 /// One step of a field path.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -303,21 +302,83 @@ impl Node {
         self.0
     }
 
-    /// Check that `node` has the shape of a node. For example, a node without
-    /// `data.node` fails with `data.node: must be an object (node 'a')`.
+    /// The node as a [`NodeRef`], to read its objects.
+    pub(crate) fn view(&self) -> NodeRef<'_> {
+        NodeRef::read(self.as_map()).expect("a node has the shape of a node")
+    }
+
+    /// Check that `node` has the shape of a node.
     fn check(node: &Map<String, Value>) -> Result<(), FromValueError> {
+        NodeRef::read(node).map(|_| ())
+    }
+}
+
+/// A borrowed node with the shape of a [`Node`], and its `data.node` and
+/// `data.node.template` objects, found once.
+///
+/// The edge rules read nodes through it, from the graph state and from
+/// validation's view of a flow alike, so none of them checks a node's shape.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct NodeRef<'a> {
+    node: &'a Map<String, Value>,
+    body: &'a Map<String, Value>,
+    template: &'a Map<String, Value>,
+}
+
+impl<'a> NodeRef<'a> {
+    /// Check that `node` has the shape of a node, and borrow it.
+    pub(crate) fn new(node: &'a Map<String, Value>) -> Result<Self> {
+        Self::read(node).map_err(|error| error.into_error("node"))
+    }
+
+    /// Borrow `node` and find its objects. For example, a node without
+    /// `data.node` fails with `data.node: must be an object (node 'a')`.
+    fn read(node: &'a Map<String, Value>) -> Result<Self, FromValueError> {
         let Some(id) = node.non_empty_str("id") else {
             return Err(FromValueError::new("must be a non-empty string").at_key("id"));
         };
-        if let Some(path) = missing_node_object(node) {
+        let not_object = |path: &[&'static str]| {
             let error = FromValueError::new(format!("must be an object (node {})", quoted(id)));
             // An error takes its innermost key first.
-            return Err(path
-                .iter()
+            path.iter()
                 .rev()
-                .fold(error, |error, key| error.at_key(key)));
-        }
-        Ok(())
+                .fold(error, |error, key| error.at_key(key))
+        };
+        let [data_path, body_path, template_path] = NODE_OBJECT_PATHS;
+        let Some(Value::Object(data)) = node.get("data") else {
+            return Err(not_object(data_path));
+        };
+        let Some(Value::Object(body)) = data.get("node") else {
+            return Err(not_object(body_path));
+        };
+        let Some(Value::Object(template)) = body.get("template") else {
+            return Err(not_object(template_path));
+        };
+        Ok(Self {
+            node,
+            body,
+            template,
+        })
+    }
+
+    /// The node's id.
+    pub(crate) fn id(self) -> &'a str {
+        self.node.id()
+    }
+
+    /// The node as a JSON object.
+    pub(crate) fn as_map(self) -> &'a Map<String, Value> {
+        self.node
+    }
+
+    /// The node's `data.node`.
+    pub(crate) fn body(self) -> &'a Map<String, Value> {
+        self.body
+    }
+
+    /// The node's `data.node.template`.
+    pub(crate) fn template(self) -> &'a Map<String, Value> {
+        self.template
     }
 }
 
