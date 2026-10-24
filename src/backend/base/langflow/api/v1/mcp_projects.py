@@ -1046,8 +1046,7 @@ async def install_mcp_config(
         existing_config = {}
         if config_path.exists():
             try:
-                with config_path.open("r") as f:
-                    existing_config = json.load(f)
+                existing_config = load_client_mcp_config(config_path)
             except json.JSONDecodeError:
                 # If file exists but is invalid JSON, start fresh
                 existing_config = {"mcpServers": {}}
@@ -1220,8 +1219,7 @@ async def check_installed_mcp_servers(
                 # If config file exists, check if project is installed
                 if available:
                     try:
-                        with config_path.open("r") as f:
-                            config_data = json.load(f)
+                        config_data = load_client_mcp_config(config_path)
                         if config_contains_server_url(config_data, [project_streamable_url, project_sse_url]):
                             await logger.adebug(
                                 "Found %s config with matching URL for project %s", client_name, project.name
@@ -1306,6 +1304,21 @@ async def get_composer_sse_url(project: Folder) -> str:
 
     composer_sse_url = f"http://{composer_host}:{composer_port}/sse"
     return await get_url_by_os(composer_host, composer_port, composer_sse_url)
+
+
+def load_client_mcp_config(config_path: Path) -> dict[str, Any]:
+    """Read a client's MCP config JSON (``mcp.json``, ``claude_desktop_config.json``).
+
+    These files are written by the client apps as UTF-8 and are hand-editable by
+    users, so they regularly contain non-ASCII server names or env values.
+    Reading without an explicit encoding decodes with the platform locale, and
+    on a legacy-codepage host (Windows cp936/cp1252) a valid UTF-8 config
+    raised ``UnicodeDecodeError`` — which the ``json.JSONDecodeError`` handlers
+    at the call sites do not catch, so install failed with a 500 and the
+    installed-status check reported the client as unavailable.
+    """
+    with config_path.open("r", encoding="utf-8") as f:
+        return json.load(f)
 
 
 async def get_config_path(client: str) -> Path:
