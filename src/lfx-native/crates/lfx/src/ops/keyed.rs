@@ -12,6 +12,7 @@
 //! appended, and the last row moves into a deleted row's place.
 
 use std::collections::{HashMap, HashSet};
+use std::fmt;
 
 use serde_json::Value;
 
@@ -38,7 +39,11 @@ impl ListIndex {
     ///
     /// An item without a non-empty string key, two items with one key, or a
     /// table row without a finite numeric position.
-    pub fn build(keyed: &'static KeyedList, items: &[Value], context: &str) -> Result<Self> {
+    pub fn build(
+        keyed: &'static KeyedList,
+        items: &[Value],
+        context: &dyn fmt::Display,
+    ) -> Result<Self> {
         let mut index = Self {
             keyed,
             slots: HashMap::with_capacity(items.len()),
@@ -76,7 +81,7 @@ impl ListIndex {
     /// # Errors
     ///
     /// The item has no non-empty string key.
-    pub fn require_key<'v>(&self, item: &'v Value, context: &str) -> Result<&'v str> {
+    pub fn require_key<'v>(&self, item: &'v Value, context: &dyn fmt::Display) -> Result<&'v str> {
         match self.keyed.key_of(item) {
             Some(key) if !key.is_empty() => Ok(key),
             _ => Err(invalid!(
@@ -91,7 +96,7 @@ impl ListIndex {
     /// # Errors
     ///
     /// The row's position is missing, not a number, or not finite.
-    pub fn require_position(&self, row: &Value, context: &str) -> Result<()> {
+    pub fn require_position(&self, row: &Value, context: &dyn fmt::Display) -> Result<()> {
         match self.keyed.position.as_deref() {
             Some(key) if !row.get(key).is_some_and(is_row_position) => Err(invalid!(
                 "{context}: a table row's {key} must be a finite number"
@@ -101,7 +106,12 @@ impl ListIndex {
     }
 
     /// Append an item whose key is not in the list yet.
-    pub(crate) fn add(&mut self, items: &mut Vec<Value>, item: Value, context: &str) -> Result<()> {
+    pub(crate) fn add(
+        &mut self,
+        items: &mut Vec<Value>,
+        item: Value,
+        context: &dyn fmt::Display,
+    ) -> Result<()> {
         let key = self.require_key(&item, context)?.to_owned();
         self.require_position(&item, context)?;
         self.slots.insert(key, items.len());
@@ -137,7 +147,7 @@ impl ListIndex {
         items: &mut [Value],
         slot: usize,
         item: Value,
-        context: &str,
+        context: &dyn fmt::Display,
     ) -> Result<Value> {
         self.require_position(&item, context)?;
         Ok(std::mem::replace(&mut items[slot], item))
