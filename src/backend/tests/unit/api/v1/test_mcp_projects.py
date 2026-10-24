@@ -1,4 +1,5 @@
 import asyncio
+import io
 import json
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
@@ -35,6 +36,28 @@ from mcp.server.sse import SseServerTransport
 from sqlmodel import select
 
 from tests.unit.utils.mcp import project_session_manager_lifespan
+
+
+@pytest.fixture
+def ascii_default_encoding(monkeypatch):
+    """Make a bare ``Path.open("r")`` decode as ASCII, reproducing a legacy host.
+
+    Client MCP config files are written as UTF-8 and are hand-editable, so they
+    regularly contain non-ASCII server names or env values. ``Path.open``
+    resolves a missing encoding through ``io.text_encoding(None)``, so the
+    default is forced here: a read that passes no ``encoding`` decodes as ASCII
+    and raises on the non-ASCII bytes, while an explicit ``encoding=`` passes
+    through untouched. That keeps the endpoint tests below red against a bare
+    read on any host, including CI's UTF-8 Linux.
+    """
+    real_text_encoding = io.text_encoding
+
+    def _forced(encoding=None, stacklevel=1):
+        if encoding is None:
+            return "ascii"
+        return real_text_encoding(encoding, stacklevel)
+
+    monkeypatch.setattr(io, "text_encoding", _forced, raising=True)
 
 
 def _set_startup_mcp_settings(
@@ -1171,6 +1194,89 @@ async def test_install_mcp_config_embeds_api_key_without_skip_auth_auto_login(
     api_key_value = args[args.index("x-api-key") + 1]
     assert api_key_value
     assert api_key_value != "x-api-key"  # pragma: allowlist secret
+
+
+def _write_non_ascii_client_config(config_path) -> None:
+    """A client-shaped config whose server name and env value hold non-ASCII.
+
+    Cursor/Windsurf/Claude write these files as UTF-8 and users hand-edit them,
+    so non-ASCII content is the normal case in CJK environments, not an edge.
+    """
+    config_path.write_text(
+        json.dumps(
+            {
+                "mcpServers": {
+                    "我的服务": {"command": "npx", "env": {"NOTE": "中文备注"}},
+                },
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+
+@pytest.mark.usefixtures("ascii_default_encoding")
+async def test_install_mcp_config_reads_non_ascii_existing_config_as_utf8(
+    client: AsyncClient,
+    user_test_project,
+    logged_in_headers,
+    tmp_path,
+    monkeypatch,
+):
+    """Installing into a hand-edited non-ASCII config must not fail with a 500.
+
+    The install path reads the existing config with a bare ``Path.open("r")``
+    before this fix; on a legacy-codepage host the bare read raised
+    ``UnicodeDecodeError`` — not caught by the ``json.JSONDecodeError``
+    handler — and the endpoint failed with HTTP 500. It must instead parse the
+    config and merge the new server alongside the user's existing one.
+    """
+    config_path = _prepare_install_test_env(monkeypatch, tmp_path, "cursor_nonascii.json")
+    _write_non_ascii_client_config(config_path)
+
+    response = await client.post(
+        f"/api/v1/mcp/project/{user_test_project.id}/install",
+        headers=logged_in_headers,
+        json={"client": "cursor"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    installed_config = json.loads(config_path.read_text(encoding="utf-8"))
+    # The pre-existing non-ASCII server survived the merge (a start-fresh
+    # fallback or a decode failure would have dropped it).
+    assert "我的服务" in installed_config["mcpServers"]
+    assert "lf-user_test_project" in installed_config["mcpServers"]
+
+
+@pytest.mark.usefixtures("ascii_default_encoding")
+async def test_check_installed_mcp_servers_reads_non_ascii_config_as_utf8(
+    client: AsyncClient,
+    user_test_project,
+    logged_in_headers,
+    tmp_path,
+    monkeypatch,
+):
+    """A non-ASCII config must report the client as available, not unavailable.
+
+    The status path caught decode failures with a broad ``except Exception``
+    and marked the client unavailable/installed=false. With the UTF-8 read the
+    config parses, so cursor (whose config directory exists) is reported
+    available — installed stays false because no entry matches this project's
+    URLs.
+    """
+    config_path = _prepare_install_test_env(monkeypatch, tmp_path, "cursor_status.json")
+    _write_non_ascii_client_config(config_path)
+
+    response = await client.get(
+        f"/api/v1/mcp/project/{user_test_project.id}/installed",
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    results = {entry["name"]: entry for entry in response.json()}
+    assert results["cursor"]["available"] is True
+    assert results["cursor"]["installed"] is False
 
 
 async def test_should_keep_both_client_entries_when_installing_projects_sharing_server_name_prefix(
