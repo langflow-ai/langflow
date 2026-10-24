@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
@@ -19,6 +20,13 @@ COMPOSE_FILES = [
 TEST_PASSWORD = "test-only-password"  # noqa: S105  # pragma: allowlist secret
 RESERVED_PASSWORD = "test-only-/password#with?reserved"  # noqa: S105  # pragma: allowlist secret
 DOCKER = shutil.which("docker")
+IMAGE_STARTUP = {
+    "docker-compose.yml": {"entrypoint": [], "command": ["langflow", "run"]},
+    "pre.docker-compose.yml": {
+        "entrypoint": ["python", "-m", "langflow", "run"],
+        "command": ["--host", "0.0.0.0", "--port", "7860"],  # noqa: S104 - image default
+    },
+}
 
 pytestmark = pytest.mark.skipif(DOCKER is None, reason="Docker Compose is required")
 
@@ -40,6 +48,13 @@ def _compose_config(compose_file: Path, tmp_path: Path) -> subprocess.CompletedP
         text=True,
         check=False,
     )
+
+
+def _effective_command(compose_file: Path, langflow: dict) -> list[str]:
+    image = IMAGE_STARTUP[compose_file.name]
+    entrypoint = langflow["entrypoint"] if langflow.get("entrypoint") is not None else image["entrypoint"]
+    command = langflow.get("command", image["command"])
+    return [*entrypoint, *command]
 
 
 @pytest.mark.parametrize("compose_file", COMPOSE_FILES, ids=lambda path: path.name)
@@ -75,17 +90,26 @@ def test_startup_percent_encodes_reserved_password_characters(compose_file: Path
     langflow = config["services"]["langflow"]
     assert langflow["environment"]["POSTGRES_PASSWORD"] == RESERVED_PASSWORD
     assert config["services"]["postgres"]["environment"]["POSTGRES_PASSWORD"] == RESERVED_PASSWORD
-    assert "command" in langflow
+    command = _effective_command(compose_file, langflow)
+    assert command[:2] == ["/bin/sh", "-c"]
+    command[-1] = command[-1].replace("$$", "$")
 
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     langflow_stub = bin_dir / "langflow"
-    langflow_stub.write_text("#!/bin/sh\nprintf '%s' \"$LANGFLOW_DATABASE_URL\"\n", encoding="utf-8")
+    langflow_stub.write_text(
+        "#!/bin/sh\nprintf '%s\\n' \"$LANGFLOW_DATABASE_URL\"\nprintf '%s\\n' \"$@\"\n", encoding="utf-8"
+    )
     langflow_stub.chmod(0o755)
+    python_stub = bin_dir / "python"
+    python_stub.write_text(
+        f'#!/bin/sh\nif [ "$1" = "-c" ]; then exec "{sys.executable}" "$@"; fi\n'
+        "printf '%s\\n' \"$LANGFLOW_DATABASE_URL\"\nprintf '%s\\n' \"$@\"\n",
+        encoding="utf-8",
+    )
+    python_stub.chmod(0o755)
     environment = _compose_environment()
     environment["PATH"] = f"{bin_dir}{os.pathsep}{environment['PATH']}"
-    command = langflow["command"].copy()
-    command[-1] = command[-1].replace("$$", "$")
     startup = subprocess.run(  # noqa: S603 - the command comes from the repository Compose file
         command,
         cwd=REPO_ROOT,
@@ -96,7 +120,14 @@ def test_startup_percent_encodes_reserved_password_characters(compose_file: Path
     )
 
     assert startup.returncode == 0, startup.stderr
-    database_url = startup.stdout
+    output = startup.stdout.splitlines()
+    expected_arguments = (
+        ["-m", "langflow", "run", "--host", "0.0.0.0", "--port", "7860"]  # noqa: S104 - required binding
+        if compose_file.name == "pre.docker-compose.yml"
+        else ["run"]
+    )
+    assert output[1:] == expected_arguments
+    database_url = output[0]
     expected_url = "postgresql://langflow:test-only-" + "%2Fpassword%23with%3Freserved@postgres:5432/langflow"
     assert database_url == expected_url
     parsed_url = urlsplit(database_url)
