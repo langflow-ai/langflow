@@ -45,11 +45,11 @@ The Docker Compose configuration spins up two services: `langflow` and `postgres
 
 ### Langflow service
 
-The `langflow` service uses the `langflowai/langflow:latest` Docker image and exposes port 7860. It depends on the `postgres` service.
+The `langflow` service uses the `langflowai/langflow:latest` Docker image and exposes port 7860. It depends on the `postgres` service. At startup, it constructs `LANGFLOW_DATABASE_URL` with an RFC 3986 percent-encoded password so reserved characters do not change URL parsing.
 
 Environment variables:
 
-- `LANGFLOW_DATABASE_URL`: The connection string for the PostgreSQL database.
+- `POSTGRES_PASSWORD`: The raw PostgreSQL password. This value is required in `.env` and is percent-encoded only when constructing `LANGFLOW_DATABASE_URL`.
 - `LANGFLOW_SUPERUSER_PASSWORD`: The initial admin password. This value is required in `.env`.
 - `LANGFLOW_CONFIG_DIR`: The directory where Langflow stores logs, file storage, monitor data, and secret keys.
 

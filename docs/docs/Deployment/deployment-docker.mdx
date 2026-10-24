@@ -359,8 +359,14 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
           - "7860:7860"
         depends_on:
           - postgres
+        command:
+          - /bin/sh
+          - -c
+          - |
+            export LANGFLOW_DATABASE_URL="$(python -c 'import os; from urllib.parse import quote; print("postgresql://langflow:" + quote(os.environ["POSTGRES_PASSWORD"], safe="") + "@postgres:5432/langflow")')"
+            exec langflow run
         environment:
-          - LANGFLOW_DATABASE_URL=postgresql://langflow:${POSTGRES_PASSWORD}@postgres:5432/langflow
+          - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
           - LANGFLOW_CONFIG_DIR=/app/langflow
           - LANGFLOW_SUPERUSER_PASSWORD=${LANGFLOW_SUPERUSER_PASSWORD}
         volumes:
@@ -381,7 +387,7 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
       langflow-postgres:
     ```
 
-    Set `POSTGRES_PASSWORD` in your `.env` file before starting this configuration. The PostgreSQL service remains available to Langflow at `postgres:5432` on the private Compose network without publishing its port to the host.
+    Set `POSTGRES_PASSWORD` in your `.env` file before starting this configuration. The startup command percent-encodes the raw password when constructing `LANGFLOW_DATABASE_URL`, so reserved characters are preserved. The PostgreSQL service remains available to Langflow at `postgres:5432` on the private Compose network without publishing its port to the host.
 
     On Linux, if `./langflow-data` doesn't exist, Docker creates it owned by `root`, and Langflow fails to start with a `PermissionError`.
     Before you start Langflow, create the directory next to the Compose file, and make the Langflow user (UID `1000`) its owner:
