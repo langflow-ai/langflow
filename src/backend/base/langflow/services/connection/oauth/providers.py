@@ -32,20 +32,34 @@ def endpoints(registration: OAuthRegistration) -> tuple[str, str]:
     if registration.provider == "microsoft":
         authority = f"https://login.microsoftonline.com/{registration.tenant}/oauth2/v2.0"
         return f"{authority}/authorize", f"{authority}/token"
-    return "https://slack.com/oauth/v2/authorize", "https://slack.com/api/oauth.v2.access"
+    if registration.provider == "slack":
+        return "https://slack.com/oauth/v2/authorize", "https://slack.com/api/oauth.v2.access"
+    from langflow.services.connection.oauth.adapter import provider_adapter
+
+    adapter = provider_adapter(registration.provider)
+    if adapter is None:
+        msg = "This OAuth provider is unavailable."
+        raise OAuthError(msg, reason="registration-unavailable")
+    return adapter.checked_endpoints(registration)
 
 
 def authorization_url(registration: OAuthRegistration, *, state: str, verifier: str, scopes: list[str]) -> str:
+    from langflow.services.connection.oauth.adapter import provider_adapter
+
+    adapter = provider_adapter(registration.provider)
+    extra = adapter.authorization_params(registration) if adapter and adapter.authorization_params else {}
     params = {
+        **extra,
         "client_id": registration.client_id,
         "redirect_uri": registration.redirect_uri,
         "response_type": "code",
         "state": state,
     }
-    if registration.provider != "slack" or registration.client_type == "public":
+    if adapter.supports_pkce if adapter else registration.provider != "slack" or registration.client_type == "public":
         params.update(code_challenge=challenge(verifier), code_challenge_method="S256")
     scope_key = "user_scope" if registration.provider == "slack" and registration.profile == "user" else "scope"
-    params[scope_key] = ("," if registration.provider == "slack" else " ").join(scopes)
+    separator = adapter.scope_separator if adapter else "," if registration.provider == "slack" else " "
+    params[scope_key] = separator.join(scopes)
     if registration.provider == "google":
         params.update(access_type="offline", prompt="consent")
     return endpoints(registration)[0] + "?" + urlencode(params)
@@ -81,14 +95,23 @@ def client_auth(registration: OAuthRegistration) -> dict[str, str]:
 
 
 async def _request(
-    url: str, data: dict[str, str], *, headers: dict[str, str] | None = None, allow_empty: bool = False
+    url: str,
+    data: dict[str, str],
+    *,
+    headers: dict[str, str] | None = None,
+    allow_empty: bool = False,
+    json_body: bool = False,
 ) -> dict:
     """Send an OAuth request without mistaking provider failures for rejected credentials."""
     # No redirects or response text in errors: provider responses may echo codes/tokens.
     unavailable = "OAuth provider request failed. Retry the action later."
     try:
         async with httpx.AsyncClient(timeout=20, follow_redirects=False) as client:
-            response = await client.post(url, data=data, headers=headers)
+            response = (
+                await client.post(url, json=data, headers=headers)
+                if json_body
+                else await client.post(url, data=data, headers=headers)
+            )
     except httpx.HTTPError:
         raise OAuthError(unavailable, reason="provider-unavailable") from None
     # An outage or rate limit says nothing about the stored grant, regardless
@@ -119,16 +142,51 @@ async def exchange(
     previous_scopes: list[str],
 ) -> tuple[dict, list[str], dict | None]:
     """Exchange a code or refresh token and validate the provider's credential response."""
+    from langflow.services.connection.oauth.adapter import provider_adapter
+
+    adapter = provider_adapter(registration.provider)
     data = client_auth(registration)
     if refresh_token:
         data.update(grant_type="refresh_token", refresh_token=refresh_token)
     else:
         data.update(grant_type="authorization_code", code=code or "", redirect_uri=registration.redirect_uri)
-        if registration.provider != "slack" or registration.client_type == "public":
+        uses_pkce = (
+            adapter.supports_pkce
+            if adapter
+            else (registration.provider != "slack" or registration.client_type == "public")
+        )
+        if uses_pkce:
             data["code_verifier"] = verifier
-    body = await _request(endpoints(registration)[1], data)
+    json_body = bool(adapter and adapter.token_encoding == "json")  # noqa: S105 - serialization format
+    body = (
+        await _request(endpoints(registration)[1], data, json_body=True)
+        if json_body
+        else await _request(endpoints(registration)[1], data)
+    )
     token = body
     account = None
+    if adapter is not None:
+        try:
+            parsed = await adapter.parse_token(registration, body, refresh=bool(refresh_token))
+        except OAuthError:
+            raise
+        except Exception:  # noqa: BLE001 - provider response parsing must not expose response values
+            msg = "OAuth provider returned an invalid credential response."
+            raise OAuthError(msg, reason="provider-unavailable") from None
+        if not isinstance(parsed, tuple) or len(parsed) != 2:  # noqa: PLR2004 - the adapter returns (credential, account)
+            msg = "OAuth provider returned an invalid credential response."
+            raise OAuthError(msg, reason="provider-unavailable")
+        token, account = parsed
+        if not isinstance(token, dict) or (account is not None and not isinstance(account, dict)):
+            msg = "OAuth provider returned an invalid credential response."
+            raise OAuthError(msg, reason="provider-unavailable")
+        if (
+            registration.allowed_tenants
+            and not refresh_token
+            and (not isinstance(account, dict) or account.get("tenant_id") not in registration.allowed_tenants)
+        ):
+            msg = "OAuth account is outside the configured tenant restriction."
+            raise OAuthError(msg)
     if registration.provider == "slack":
         team = body.get("team") or {}
         if not isinstance(team, dict):

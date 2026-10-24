@@ -61,6 +61,7 @@ jobs:
           uv pip compile --quiet --python-version ${{ env.PYTHON_VERSION }} \
             --index-strategy unsafe-first-match --generate-hashes --constraint requirements-mend.txt \
             scripts/gp/requirements.txt -o requirements-gp-mend.txt
+          python scripts/ci/prepare_mend_requirements.py --python-version ${{ env.PYTHON_VERSION }}
 
       - name: Download Mend Unified Agent
         run: |

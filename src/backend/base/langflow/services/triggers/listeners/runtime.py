@@ -13,9 +13,9 @@ What it deliberately does *not* do:
   would race every API replica during a rolling upgrade, so this process
   verifies that the trigger tables exist and exits with an actionable message
   when they do not.
-* **It does not create a superuser, load bundles, or warm a component cache.**
-  None of that is needed to hold a socket, and every one of them is a way for
-  the listener to fail on something the API is responsible for.
+* **It does not create a superuser or warm a component cache.** It validates
+  installed bundles declaring trigger runtimes so their source and OAuth
+  hooks are available, without loading unrelated bundles or palette templates.
 * **It does not run the dispatcher or the schedule tick.** Those are API-process
   singletons (``decisions/process-model.md``). The two processes meet only at
   the ledger table.
@@ -116,10 +116,12 @@ async def warn_on_unrefreshable_connections() -> list[str]:
 
 async def boot_services() -> None:
     """Bring up exactly the services a listener needs, and nothing else."""
+    from langflow.services.triggers.listeners.providers import load_installed_trigger_providers
     from langflow.services.utils import initialize_settings_service, register_all_service_factories
 
     initialize_settings_service()
     register_all_service_factories()
+    load_installed_trigger_providers()
     register_builtin_adapters()
     await verify_schema()
 
