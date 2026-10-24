@@ -59,14 +59,23 @@ class RuncrateModelComponent(LCModelComponent):
         try:
             response = httpx.get(f"{RUNCRATE_BASE_URL}/models", timeout=10.0)
             response.raise_for_status()
-            models = response.json().get("data", [])
+            payload = response.json()
         except (httpx.RequestError, httpx.HTTPStatusError, ValueError) as e:
             self.log(f"Error fetching models: {e}")
             return []
+        models = payload.get("data") if isinstance(payload, dict) else None
+        if not isinstance(models, list):
+            self.log("Unexpected model list response; using the default models")
+            return []
         chat_models = [
-            {"id": m["id"], "name": m.get("name", m["id"]), "context": m.get("context_length") or 0}
+            {"id": m["id"], "name": str(m.get("name") or m["id"]), "context": m["context_length"]}
             for m in models
-            if m.get("id") and "text" in (m.get("output_modalities") or []) and m.get("context_length")
+            if isinstance(m, dict)
+            and isinstance(m.get("id"), str)
+            and isinstance(m.get("output_modalities"), list)
+            and "text" in m["output_modalities"]
+            and isinstance(m.get("context_length"), int)
+            and m["context_length"] > 0
         ]
         return sorted(chat_models, key=lambda x: x["name"])
 

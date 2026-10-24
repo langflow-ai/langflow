@@ -1,10 +1,11 @@
-import type React from "react";
-import { forwardRef } from "react";
+import { forwardRef, type SVGProps } from "react";
 import SvgRuncrate from "./RuncrateIcon";
 
-export const RuncrateIcon = forwardRef<
-  SVGSVGElement,
-  React.PropsWithChildren<{}>
->((props, ref) => {
-  return <SvgRuncrate ref={ref} {...props} />;
-});
+type RuncrateIconProps = SVGProps<SVGSVGElement> & {
+  isDark?: boolean;
+};
+
+// The SVG uses currentColor, so isDark is accepted and not forwarded.
+export const RuncrateIcon = forwardRef<SVGSVGElement, RuncrateIconProps>(
+  ({ isDark: _isDark, ...props }, ref) => <SvgRuncrate ref={ref} {...props} />,
+);
