@@ -986,6 +986,29 @@ async def test_download_image_for_browser(files_client, files_created_api_key, f
     assert response.headers.get("content-disposition") == "attachment"
 
 
+async def test_download_image_with_typed_flow_path(files_client, files_created_api_key, files_flow):
+    """Serve browser previews using the upload response's typed storage path."""
+    headers = {"x-api-key": files_created_api_key.api_key}
+    png_content = (
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+        b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01"
+        b"\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+    upload_response = await files_client.post(
+        f"api/v1/files/upload/{files_flow.id}",
+        files={"file": ("chain.png", png_content, "image/png")},
+        headers=headers,
+    )
+    assert upload_response.status_code == 201
+    file_path = upload_response.json()["file_path"]
+    assert file_path.startswith(f"flow-{files_flow.id}/")
+
+    response = await files_client.get(f"api/v1/files/images/{file_path}", headers=headers)
+
+    assert response.status_code == 200, response.text
+    assert response.content == png_content
+
+
 async def test_download_image_returns_correct_content_type(files_client, files_created_api_key, files_flow):
     """Test that the /images endpoint returns correct content-type for images."""
     headers = {"x-api-key": files_created_api_key.api_key}
