@@ -23,7 +23,7 @@ use crate::ops::edges::{EdgeIndex, GraphRead};
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result};
 use crate::ops::keyed::ListIndex;
-use crate::ops::ops::{Edge, Node, PathExt};
+use crate::ops::ops::{Edge, Node, NodeRef, PathExt};
 use crate::ops::schema::KeyedList;
 use crate::ops::validate::{Numbers, PathPart, validate_flow_data};
 
@@ -261,8 +261,8 @@ impl Graph {
 }
 
 impl GraphRead for Graph {
-    fn node(&self, id: &str) -> Option<&Map<String, Value>> {
-        self.nodes.get(id).map(Node::as_map)
+    fn node(&self, id: &str) -> Option<NodeRef<'_>> {
+        self.nodes.get(id).map(Node::view)
     }
 
     fn edge(&self, id: &str) -> Option<&Map<String, Value>> {

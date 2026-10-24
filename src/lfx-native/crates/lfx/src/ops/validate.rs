@@ -31,11 +31,12 @@ use serde_json::{Map, Value};
 
 use crate::ops::canonical::{is_finite_number, is_row_position, values_equal};
 use crate::ops::edges::{
-    EdgeIndex, GraphRead, InputKind, check_edge, edge_changed, endpoint, index_outputs, node_body,
+    EdgeIndex, GraphRead, InputKind, check_edge, edge_changed, endpoint, index_outputs,
     read_handles,
 };
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, ErrorCode, ErrorKind, Result};
+use crate::ops::ops::NodeRef;
 use crate::ops::schema::{NODE_OBJECT_PATHS, NODE_SCHEMA, field_value_path};
 
 /// The stable code of a graph rule.
@@ -434,7 +435,7 @@ fn node_violations<'a>(
 }
 
 /// The first of `data`, `data.node` and `data.node.template` that is not an object.
-pub(crate) fn missing_node_object(node: &Map<String, Value>) -> Option<&'static [&'static str]> {
+fn missing_node_object(node: &Map<String, Value>) -> Option<&'static [&'static str]> {
     let mut value = node;
     for object_path in NODE_OBJECT_PATHS {
         let key = object_path[object_path.len() - 1];
@@ -520,20 +521,26 @@ fn non_finite_violations(value: &Value, path: &mut GraphPath, violations: &mut V
 /// A structurally valid graph, indexed for the edge rules without copying it.
 #[derive(Debug)]
 pub(crate) struct GraphView<'a> {
-    nodes: HashMap<&'a str, &'a Map<String, Value>>,
+    nodes: HashMap<&'a str, NodeRef<'a>>,
     edges: HashMap<&'a str, &'a Map<String, Value>>,
     edges_at: HashMap<&'a str, Vec<&'a str>>,
 }
 
 impl<'a> GraphView<'a> {
     /// Build the indexes of a graph that passed structural validation.
-    pub fn new(graph: &'a Value) -> Self {
+    ///
+    /// # Errors
+    ///
+    /// A node does not have the shape of a node, which structural validation
+    /// refuses first.
+    pub fn new(graph: &'a Value) -> Result<Self> {
         let mut view = Self {
             nodes: HashMap::new(),
             edges: HashMap::new(),
             edges_at: HashMap::new(),
         };
         for node in list(graph, "nodes").iter().filter_map(Value::as_object) {
+            let node = NodeRef::new(node)?;
             view.nodes.insert(node.id(), node);
         }
         for edge in list(graph, "edges").iter().filter_map(Value::as_object) {
@@ -545,12 +552,12 @@ impl<'a> GraphView<'a> {
                 view.edges_at.entry(target).or_default().push(id);
             }
         }
-        view
+        Ok(view)
     }
 }
 
 impl GraphRead for GraphView<'_> {
-    fn node(&self, id: &str) -> Option<&Map<String, Value>> {
+    fn node(&self, id: &str) -> Option<NodeRef<'_>> {
         self.nodes.get(id).copied()
     }
 
@@ -625,19 +632,14 @@ fn removed_ends(base: &Value, target: &Value) -> Result<HashMap<String, RemovedE
         let Some(stored) = stored.get(node.id()) else {
             continue;
         };
-        let fields = removed_fields(template(stored)?, template(node)?);
-        let outputs = removed_outputs(node_body(stored)?, node_body(node)?, node.id())?;
+        let (stored, node) = (NodeRef::new(stored)?, NodeRef::new(node)?);
+        let fields = removed_fields(stored.template(), node.template());
+        let outputs = removed_outputs(stored.body(), node.body(), node.id())?;
         if !fields.is_empty() || !outputs.is_empty() {
             removed.insert(node.id().to_owned(), RemovedEnds { fields, outputs });
         }
     }
     Ok(removed)
-}
-
-/// A node's template. Structural validation keeps it an object.
-fn template(node: &Map<String, Value>) -> Result<&Map<String, Value>> {
-    node.template()
-        .ok_or_else(|| Error::invalid("node data.node.template must be an object"))
 }
 
 /// The template keys `before` has and `after` does not.
@@ -717,7 +719,7 @@ pub fn find_edge_violations(base: &Value, target: &Value) -> Result<Vec<Violatio
     if indexes.is_empty() {
         return Ok(Vec::new());
     }
-    let view = GraphView::new(target);
+    let view = GraphView::new(target)?;
     let mut edge_index = EdgeIndex::default();
     let edges = list(target, "edges");
     let index_of: HashMap<&str, usize> = edges
