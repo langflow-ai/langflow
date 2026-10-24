@@ -7,12 +7,13 @@ services:
       - "7860:7860"
     depends_on:
       - postgres
+    entrypoint: []
     command:
       - /bin/sh
       - -c
       - |
         export LANGFLOW_DATABASE_URL="$(python -c 'import os; from urllib.parse import quote; print("postgresql://langflow:" + quote(os.environ["POSTGRES_PASSWORD"], safe="") + "@postgres:5432/langflow")')"
-        exec langflow run
+        exec python -m langflow run --host 0.0.0.0 --port 7860
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       # This variable defines where the logs, file storage, monitor data and secret keys are stored.
