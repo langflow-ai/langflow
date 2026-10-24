@@ -348,13 +348,6 @@ impl Lists {
     }
 }
 
-/// The nodes and edges one batch changed, to report them.
-#[derive(Debug, Default)]
-pub(crate) struct Batch {
-    pub changed_nodes: IndexSet<String>,
-    pub changed_edges: IndexSet<String>,
-}
-
 /// A flow graph, indexed for applying operations.
 ///
 /// It keeps the graph and its indexes between batches, so the graph is
@@ -367,7 +360,6 @@ pub struct GraphState {
     pub(crate) graph: Graph,
     pub(crate) edge_index: EdgeIndex,
     pub(crate) lists: Lists,
-    pub(crate) batch: Batch,
 }
 
 impl GraphState {
@@ -401,7 +393,6 @@ impl GraphState {
             },
             edge_index: EdgeIndex::default(),
             lists: Lists::default(),
-            batch: Batch::default(),
         })
     }
 
@@ -439,11 +430,6 @@ impl GraphState {
 
     // --- Batches ---------------------------------------------------------------------
 
-    /// Start a batch: forget what the previous one changed.
-    pub(crate) fn begin(&mut self) {
-        self.batch = Batch::default();
-    }
-
     /// End a batch that succeeded: its copies and index changes become the graph.
     pub(crate) fn commit(&mut self) {
         self.graph.fold();
@@ -456,7 +442,6 @@ impl GraphState {
         self.graph.discard();
         self.edge_index.discard();
         self.lists.discard();
-        self.batch = Batch::default();
     }
 
     /// Whether the node existed when the batch started.
@@ -467,7 +452,6 @@ impl GraphState {
     // --- Changes -----------------------------------------------------------------------
 
     pub(crate) fn insert_node(&mut self, id: String, node: Value) {
-        self.batch.changed_nodes.insert(id.clone());
         self.graph.nodes.insert(id, node);
     }
 
@@ -482,7 +466,6 @@ impl GraphState {
         self.graph.nodes.remove(id);
         self.edge_index.forget_node(id);
         self.lists.forget_node(id);
-        self.batch.changed_nodes.insert(id.to_owned());
         kept
     }
 
@@ -491,7 +474,6 @@ impl GraphState {
         if let Some(map) = edge.as_object() {
             self.edge_index.insert(map);
         }
-        self.batch.changed_edges.insert(id.clone());
         self.graph.edges.insert(id, edge);
     }
 
@@ -520,15 +502,9 @@ impl GraphState {
             }
             self.graph.edges_at.detach(id, edge);
             self.graph.edges.remove(id);
-            self.batch.changed_edges.insert(id.to_owned());
             removed.push(id.to_owned());
         }
         (removed, kept)
-    }
-
-    /// Note that a write changed a node.
-    pub(crate) fn changed_node(&mut self, node_id: &str) {
-        self.batch.changed_nodes.insert(node_id.to_owned());
     }
 }
 

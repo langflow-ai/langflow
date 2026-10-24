@@ -71,10 +71,6 @@ pub struct Applied {
     ///   order, and apply it without `restoring`. The new edit is saved like any
     ///   other edit, so it must pass the same rules.
     pub backward: Vec<Vec<Operation>>,
-    /// The nodes the batch added, removed or wrote.
-    pub changed_nodes: Vec<String>,
-    /// The edges the batch added, removed or wrote.
-    pub changed_edges: Vec<String>,
 }
 
 /// The options of a batch, and what it reports as it applies.
@@ -139,7 +135,6 @@ impl GraphState {
     ///
     /// An operation is invalid for the graph.
     pub fn apply(&mut self, operations: Vec<Operation>, options: ApplyOptions) -> Result<Applied> {
-        self.begin();
         let mut report = Report::new(options);
         for operation in operations {
             if let Err(error) = self.apply_operation(operation, &mut report) {
@@ -148,15 +143,7 @@ impl GraphState {
             }
         }
         self.commit();
-        let mut applied = report.applied;
-        applied.changed_nodes = std::mem::take(&mut self.batch.changed_nodes)
-            .into_iter()
-            .collect();
-        applied.changed_edges = std::mem::take(&mut self.batch.changed_edges)
-            .into_iter()
-            .collect();
-        self.begin();
-        Ok(applied)
+        Ok(report.applied)
     }
 
     fn apply_operation(&mut self, operation: Operation, report: &mut Report) -> Result<()> {
@@ -568,7 +555,6 @@ impl GraphState {
         if let Some(keys) = path.to_list() {
             self.lists.forget_under(id, &keys);
         }
-        self.changed_node(id);
         Ok(replaced)
     }
 
