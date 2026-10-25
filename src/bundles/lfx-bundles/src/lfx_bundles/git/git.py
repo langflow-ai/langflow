@@ -1,7 +1,8 @@
 import os
 import re
+import stat
 import tempfile
-from contextlib import asynccontextmanager
+from contextlib import ExitStack, asynccontextmanager
 from fnmatch import fnmatch
 from pathlib import Path
 
@@ -15,16 +16,37 @@ from lfx.utils.file_path_security import enforce_local_file_access
 from lfx.utils.ssrf_protection import validate_git_repository_url
 
 
-def _read_file_bytes(file_path: str) -> bytes:
-    path = Path(file_path)
-    flags = os.O_RDONLY
-    if hasattr(os, "O_NOFOLLOW"):
-        flags |= os.O_NOFOLLOW
-    elif path.is_symlink():
-        msg = f"Refusing to read through symlink: {file_path}"
+def _require_secure_path_opens() -> None:
+    if not (hasattr(os, "O_NOFOLLOW") and hasattr(os, "O_DIRECTORY") and os.open in os.supports_dir_fd):
+        msg = "Secure Git working-tree reads are not supported on this platform."
+        raise NotImplementedError(msg)
+
+
+def _read_file_bytes(file_path: str, *, repository_root: Path | None = None, limit: int = -1) -> bytes:
+    if repository_root is None:
+        with Path(file_path).open("rb") as file:
+            return file.read(limit)
+    _require_secure_path_opens()
+    path = Path(file_path).absolute()
+    if ".." in path.parts:
+        msg = "Parent traversal is not permitted in Git working-tree paths."
         raise PermissionError(msg)
-    with os.fdopen(os.open(file_path, flags), "rb") as file:
-        return file.read()
+    path.relative_to(repository_root)
+    # Pin every directory from the filesystem root. O_NOFOLLOW on only the
+    # final file leaves parent-directory swaps able to redirect the read.
+    with ExitStack() as stack:
+        directory_flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_DIRECTORY
+        directory_fd = os.open(path.anchor, directory_flags)
+        stack.callback(os.close, directory_fd)
+        for part in path.parts[1:-1]:
+            directory_fd = os.open(part, directory_flags, dir_fd=directory_fd)
+            stack.callback(os.close, directory_fd)
+        file_fd = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory_fd)
+        with os.fdopen(file_fd, "rb") as file:
+            if not stat.S_ISREG(os.fstat(file.fileno()).st_mode):
+                msg = "Git working-tree paths must refer to regular files."
+                raise PermissionError(msg)
+            return file.read(limit)
 
 
 _GIT_SYMLINK_MODE = 0o120000
@@ -36,6 +58,7 @@ class _RepositoryGitLoader(GitLoader):
     def lazy_load(self):
         from git import Blob, Repo
 
+        _require_secure_path_opens()
         if not Path(self.repo_path).exists() and self.clone_url is None:
             msg = f"Path {self.repo_path} does not exist"
             raise ValueError(msg)
@@ -64,7 +87,7 @@ class _RepositoryGitLoader(GitLoader):
 
             rel_file_path = os.path.relpath(file_path, self.repo_path)
             try:
-                content = _read_file_bytes(file_path)
+                content = _read_file_bytes(file_path, repository_root=Path(self.repo_path))
                 try:
                     text_content = content.decode("utf-8")
                 except UnicodeDecodeError:
@@ -148,12 +171,10 @@ class GitLoaderComponent(Component):
     ]
 
     @staticmethod
-    def is_binary(file_path: str | Path) -> bool:
+    def is_binary(file_path: str | Path, *, repository_root: Path | None = None) -> bool:
         """Check if a file is binary by looking for null bytes."""
         try:
-            with Path(file_path).open("rb") as file:
-                content = file.read(1024)
-                return b"\x00" in content
+            return b"\x00" in _read_file_bytes(str(file_path), repository_root=repository_root, limit=1024)
         except Exception:  # noqa: BLE001
             return True
 
@@ -198,22 +219,22 @@ class GitLoaderComponent(Component):
         return any(fnmatch(path_str, pattern) or fnmatch(file_name, pattern) for pattern in include_patterns)
 
     @staticmethod
-    def check_content_pattern(file_path: str | Path, pattern: str) -> bool:
+    def check_content_pattern(file_path: str | Path, pattern: str, *, repository_root: Path | None = None) -> bool:
         """Check if file content matches the given regex pattern.
 
         Args:
             file_path: Path to the file to check
             pattern: Regex pattern to match against content
+            repository_root: Canonical repository root for confined working-tree reads
 
         Returns:
             bool: True if content matches, False otherwise
         """
         try:
             # Check if file is binary
-            with Path(file_path).open("rb") as file:
-                content = file.read(1024)
-                if b"\x00" in content:
-                    return False
+            content = _read_file_bytes(str(file_path), repository_root=repository_root)
+            if b"\x00" in content[:1024]:
+                return False
 
             # Try to compile the regex pattern first
             try:
@@ -228,8 +249,7 @@ class GitLoaderComponent(Component):
                 return False
 
             # If not binary and regex is valid, check content
-            with Path(file_path).open(encoding="utf-8") as file:
-                file_content = file.read()
+            file_content = content.decode("utf-8")
             return bool(content_regex.search(file_content))
         except (OSError, UnicodeDecodeError):
             return False
@@ -265,7 +285,7 @@ class GitLoaderComponent(Component):
                     return False
 
                 # Check if file is binary
-                if self.is_binary(path):
+                if self.is_binary(path, repository_root=repository_root):
                     return False
 
                 # Apply file pattern filters
@@ -273,7 +293,10 @@ class GitLoaderComponent(Component):
                     return False
 
                 # Apply content filter
-                return not (content_filter_pattern and not self.check_content_pattern(path, content_filter_pattern))
+                return not (
+                    content_filter_pattern
+                    and not self.check_content_pattern(path, content_filter_pattern, repository_root=repository_root)
+                )
             except Exception:  # noqa: BLE001
                 return False
 
@@ -323,7 +346,7 @@ class GitLoaderComponent(Component):
             clone_url = self.clone_url
             validate_git_repository_url(clone_url)
             async with self.temp_clone_dir() as temp_dir:
-                repo_path = temp_dir
+                repo_path = str(Path(temp_dir).resolve())
 
         combined_filter = self.build_combined_filter(file_filter_patterns, content_filter_pattern, repo_path)
 

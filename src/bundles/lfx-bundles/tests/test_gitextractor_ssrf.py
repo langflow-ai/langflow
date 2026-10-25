@@ -219,3 +219,47 @@ class TestGitLoaderComponent:
 
         assert [item.data["source"] for item in result] == ["docs/guide.txt"]
         assert all("OUTSIDE_REPOSITORY_CONTENT" not in item.data["text"] for item in result)
+
+    async def test_load_documents_parent_swap_does_not_read_outside(self, gitloader_repo_with_symlinks, monkeypatch):
+        component, repository = gitloader_repo_with_symlinks
+        outside_directory = repository.parent / "loader-outside"
+        (outside_directory / "guide.txt").write_text("OUTSIDE_REPOSITORY_CONTENT\n", encoding="utf-8")
+        original_build_filter = component.build_combined_filter
+
+        def build_filter_with_parent_swap(*args, **kwargs):
+            filter_func = original_build_filter(*args, **kwargs)
+
+            def filter_and_swap(file_path):
+                allowed = filter_func(file_path)
+                if allowed and file_path == str(repository / "docs" / "guide.txt"):
+                    (repository / "docs").rename(repository / "original-docs")
+                    (repository / "docs").symlink_to(outside_directory, target_is_directory=True)
+                return allowed
+
+            return filter_and_swap
+
+        monkeypatch.setattr(component, "build_combined_filter", build_filter_with_parent_swap)
+
+        result = await component.load_documents()
+
+        assert [item.data["source"] for item in result] == ["README.md"]
+        assert all("OUTSIDE_REPOSITORY_CONTENT" not in item.data["text"] for item in result)
+
+    async def test_load_documents_keeps_modified_working_tree_content(self, gitloader_repo_with_symlinks):
+        component, repository = gitloader_repo_with_symlinks
+        (repository / "README.md").write_text("local modification\n", encoding="utf-8")
+
+        result = await component.load_documents()
+
+        assert (
+            next(item.data["text"] for item in result if item.data["source"] == "README.md") == "local modification\n"
+        )
+
+    async def test_load_documents_requires_secure_path_opens(self, gitloader_repo_with_symlinks, monkeypatch):
+        import os
+
+        component, _ = gitloader_repo_with_symlinks
+        monkeypatch.delattr(os, "O_NOFOLLOW")
+
+        with pytest.raises(NotImplementedError, match="Secure Git working-tree reads"):
+            await component.load_documents()
