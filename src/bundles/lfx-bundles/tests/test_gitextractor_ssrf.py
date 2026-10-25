@@ -263,3 +263,59 @@ class TestGitLoaderComponent:
 
         with pytest.raises(NotImplementedError, match="Secure Git working-tree reads"):
             await component.load_documents()
+
+    async def test_load_documents_relative_local_root(self, gitloader_repo_with_symlinks, monkeypatch):
+        from lfx.components.git.git import GitLoaderComponent
+
+        _, repository = gitloader_repo_with_symlinks
+        monkeypatch.chdir(repository.parent)
+        component = GitLoaderComponent(repo_source="Local", repo_path=repository.name, branch="main")
+
+        result = await component.load_documents()
+
+        assert sorted(item.data["source"] for item in result) == ["README.md", "docs/guide.txt"]
+
+    async def test_load_documents_symlinked_local_root(self, gitloader_repo_with_symlinks):
+        from lfx.components.git.git import GitLoaderComponent
+
+        _, repository = gitloader_repo_with_symlinks
+        repository_link = repository.parent / "repository-link"
+        repository_link.symlink_to(repository, target_is_directory=True)
+        component = GitLoaderComponent(repo_source="Local", repo_path=str(repository_link), branch="main")
+
+        result = await component.load_documents()
+
+        assert sorted(item.data["source"] for item in result) == ["README.md", "docs/guide.txt"]
+
+    @pytest.mark.parametrize("repo_source", ["Local", "Remote"])
+    async def test_windows_fallback_preserves_safe_loading(
+        self, gitloader_repo_with_symlinks, monkeypatch, repo_source
+    ):
+        import lfx.components.git.git as git_module
+
+        _, repository = gitloader_repo_with_symlinks
+        monkeypatch.setattr(git_module, "_IS_WINDOWS", True)
+        monkeypatch.setattr(git_module, "_read_file_bytes_windows", git_module._read_file_bytes_posix)
+        monkeypatch.setattr(git_module, "validate_git_repository_url", lambda _: None)
+        component_kwargs = (
+            {"repo_path": str(repository)} if repo_source == "Local" else {"clone_url": repository.as_uri()}
+        )
+        component = git_module.GitLoaderComponent(repo_source=repo_source, branch="main", **component_kwargs)
+
+        result = await component.load_documents()
+
+        assert sorted(item.data["source"] for item in result) == ["README.md", "docs/guide.txt"]
+
+    @pytest.mark.parametrize(
+        ("handle_path", "repository_root", "expected"),
+        [
+            (r"\\?\C:\repo\docs\guide.txt", r"C:\repo", True),
+            (r"\\?\C:\outside\guide.txt", r"C:\repo", False),
+            (r"\\?\UNC\server\share\repo\guide.txt", r"\\server\share\repo", True),
+            (r"\\?\UNC\server\share\outside\guide.txt", r"\\server\share\repo", False),
+        ],
+    )
+    def test_windows_handle_path_confinement(self, handle_path, repository_root, expected):
+        from lfx.components.git.git import _windows_path_is_within_root
+
+        assert _windows_path_is_within_root(handle_path, repository_root) is expected
