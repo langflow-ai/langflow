@@ -98,8 +98,8 @@ class TestPerplexityComponent(ComponentTestBaseWithoutClient):
         assert model is mock_chat.return_value
 
     def test_build_model_applies_defaults(self, component_class, mocker):
-        # top_p falls back to None and n falls back to 1 when left unset; a falsy
-        # temperature falls back to 0.75.
+        # top_p falls back to None and n falls back to 1 when left unset;
+        # an explicitly configured zero temperature is preserved.
         mock_chat = mocker.patch.object(_PERPLEXITY_MODULE, "ChatPerplexity", return_value=MagicMock())
         component = component_class(api_key="dummy-key", model_name="llama-3.1-8b-instruct", max_tokens=10)
         component.temperature = 0
@@ -111,5 +111,5 @@ class TestPerplexityComponent(ComponentTestBaseWithoutClient):
         _, kwargs = mock_chat.call_args
         assert kwargs["top_p"] is None
         assert kwargs["n"] == 1
-        assert kwargs["temperature"] == 0.75
+        assert kwargs["temperature"] == 0
         assert kwargs["pplx_api_key"] == "dummy-key"

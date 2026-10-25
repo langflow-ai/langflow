@@ -105,7 +105,7 @@ class SambaNovaComponent(LCModelComponent):
         return ChatSambaNova(
             model=model_name,
             max_tokens=max_tokens or 1024,
-            temperature=temperature or 0.07,
+            temperature=0.07 if temperature is None else temperature,
             top_p=top_p,
             base_url=sambanova_url,
             sambanova_api_key=api_key,

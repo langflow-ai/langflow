@@ -9193,7 +9193,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.2.4"
+version = "1.2.5"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -9824,7 +9824,7 @@ provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "b
 
 [[package]]
 name = "lfx-cohere"
-version = "0.2.0"
+version = "0.2.2"
 source = { editable = "src/bundles/cohere" }
 dependencies = [
     { name = "langchain-cohere" },
@@ -10127,7 +10127,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-ollama"
-version = "0.2.0"
+version = "0.2.2"
 source = { editable = "src/bundles/ollama" }
 dependencies = [
     { name = "httpx" },

@@ -87,7 +87,7 @@
         {
           "distribution": "lfx-ollama",
           "extras": [],
-          "version": ">=0.2.0,<1.0.0",
+          "version": ">=0.2.2,<1.0.0",
           "providers": [
             "lfx-ollama"
           ]
@@ -103,7 +103,7 @@
         {
           "distribution": "lfx-cohere",
           "extras": [],
-          "version": ">=0.2.0,<1.0.0",
+          "version": ">=0.2.2,<1.0.0",
           "providers": [
             "lfx-cohere"
           ]

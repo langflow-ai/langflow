@@ -40,6 +40,6 @@ class CohereComponent(LCModelComponent):
         api_key = SecretStr(cohere_api_key).get_secret_value() if cohere_api_key else None
 
         return ChatCohere(
-            temperature=temperature or 0.75,
+            temperature=0.75 if temperature is None else temperature,
             cohere_api_key=api_key,
         )

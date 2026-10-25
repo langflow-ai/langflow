@@ -293,7 +293,7 @@ class ChatOllamaComponent(LCModelComponent):
             "num_thread": self.num_thread or None,
             "repeat_last_n": self.repeat_last_n or None,
             "repeat_penalty": self.repeat_penalty or None,
-            "temperature": self.temperature or None,
+            "temperature": self.temperature,
             "stop": self.stop_tokens.split(",") if self.stop_tokens else None,
             "system": self.system,
             "tfs_z": self.tfs_z or None,
