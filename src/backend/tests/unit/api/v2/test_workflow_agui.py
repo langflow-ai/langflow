@@ -125,6 +125,68 @@ def paused_background_producer(monkeypatch: pytest.MonkeyPatch) -> Iterator[asyn
     release.set()
 
 
+@pytest.mark.anyio
+async def test_workflow_host_resolve_caller_accepts_external_only_credential(tmp_path):
+    from unittest.mock import patch
+
+    from langflow.api.v2.workflow_host import LangflowWorkflowHost
+    from langflow.services.auth.context import clear_current_auth_context
+    from langflow.services.auth.external import identity_from_claims, set_current_external_access_context
+    from langflow.services.auth.service import AuthService
+    from langflow.services.database.models.user.model import User
+    from lfx.services.settings.auth import AuthSettings
+    from pydantic import SecretStr
+
+    settings = AuthSettings(CONFIG_DIR=str(tmp_path))
+    settings.SECRET_KEY = SecretStr("MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=")  # pragma: allowlist secret
+    settings.AUTO_LOGIN = False
+    settings.EXTERNAL_AUTH_ENABLED = True
+    settings.EXTERNAL_AUTH_TRUSTED_JWT_DECODE = True
+    settings.EXTERNAL_AUTH_PROVIDER = "external"
+    settings.EXTERNAL_AUTH_TOKEN_HEADER = "X-External-Auth"  # noqa: S105
+    settings_service = SimpleNamespace(
+        auth_settings=settings,
+        settings=SimpleNamespace(config_dir=str(tmp_path)),
+    )
+    service = AuthService(settings_service)
+    owner = User(id=uuid4(), username="owner", password="hashed", is_active=True, is_superuser=False)  # noqa: S106
+    credential = "external-workflow-credential"  # pragma: allowlist secret
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/",
+            "headers": [(b"x-external-auth", credential.encode())],
+            "query_string": b"",
+        }
+    )
+    identity = identity_from_claims({"sub": "external-workflow-subject"}, settings)
+    resolver = AsyncMock(return_value=identity)
+    db = AsyncMock()
+
+    @contextlib.asynccontextmanager
+    async def db_scope():
+        yield db
+
+    try:
+        with (
+            patch("langflow.services.auth.utils._auth_service", return_value=service),
+            patch("langflow.services.auth.utils.get_settings_service", return_value=settings_service),
+            patch("langflow.services.auth.utils.set_authenticated_telemetry_user"),
+            patch("langflow.services.auth.utils.session_scope", new=db_scope),
+            patch("langflow.services.auth.service.resolve_external_identity", new=resolver),
+            patch.object(service, "_materialize_external_user", new=AsyncMock(return_value=owner)),
+            patch.object(service, "_reconcile_verified_external_groups", new=AsyncMock()),
+        ):
+            result = await LangflowWorkflowHost().resolve_caller(request)
+    finally:
+        clear_current_auth_context()
+        set_current_external_access_context(None)
+
+    assert result.id == owner.id
+    resolver.assert_awaited_once_with(credential, settings)
+
+
 class TestAGUIRequestContract:
     """The endpoint accepts the AG-UI RunAgentInput body shape."""
 

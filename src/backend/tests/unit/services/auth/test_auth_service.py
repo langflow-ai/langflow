@@ -11,7 +11,7 @@ from uuid import UUID, uuid4
 import jwt
 import pytest
 from cryptography.fernet import Fernet, InvalidToken
-from fastapi import HTTPException, WebSocketException, status
+from fastapi import HTTPException, Request, WebSocket, WebSocketException, status
 from langflow.services.auth.constants import AUTO_LOGIN_ERROR, AUTO_LOGIN_WARNING
 from langflow.services.auth.context import (
     AUTH_METHOD_API_KEY,
@@ -2529,8 +2529,7 @@ def _foreign_external_jwt(claims: dict) -> str:
     """Encode an IdP-style JWT the native decoder cannot verify.
 
     Signed with a key that is not the service secret so native JWT decoding
-    fails and ``_authenticate_with_token`` falls through to the external
-    resolver, while the trusted external decode path
+    fails, while the trusted external decode path
     (EXTERNAL_AUTH_TRUSTED_JWT_DECODE) accepts it without signature checks.
     """
     payload = {"exp": datetime.now(timezone.utc) + timedelta(minutes=5), **claims}
@@ -2547,9 +2546,9 @@ async def test_single_credential_policy_rejection_exits_with_clean_session_and_c
 ):
     """A policy-rejected identity must not survive an exceptional auth exit (LE-2109).
 
-    With ``token == external_token`` the distinct-credential fallback never
-    runs, so the exceptional exit itself must roll back the staged JIT rows and
-    clear the identity contexts: callers that swallow auth errors
+    With ``token == external_token`` the external fallback runs after native
+    verification rejects the token, so the exceptional exit itself must roll
+    back the staged JIT rows and clear the identity contexts: callers that swallow auth errors
     (``get_optional_user``) let the request complete, and the request-scoped
     session auto-commits at teardown.
     """
@@ -2623,12 +2622,14 @@ async def test_get_optional_user_swallowed_policy_rejection_stages_nothing_for_c
         side_effect=AuthorizationMutationRejected("Group membership rejected")
     )
 
+    request = _http_request({"X-External-Auth": token})
     with (
         patch("langflow.services.deps.get_authorization_service", return_value=authz),
         patch.object(auth_service, "_initialize_jit_user_defaults", new=AsyncMock()),
         patch("langflow.services.auth.utils._auth_service", return_value=auth_service),
+        patch("langflow.services.auth.utils.get_settings_service", return_value=auth_service.settings),
     ):
-        user = await get_optional_user(token, None, None, db=async_session)
+        user = await get_optional_user(request, token, None, None, db=async_session)
 
     assert user is None
     # The request completed cleanly as anonymous, so the request-scoped
@@ -2984,3 +2985,170 @@ async def test_webhook_without_auth_runs_as_an_active_flow_owner(auth_service: A
         result = await auth_service.get_webhook_user(str(uuid4()), SimpleNamespace(headers={}, query_params={}))
 
     assert result is owner
+
+
+def _http_request(headers: dict[str, str]) -> Request:
+    return Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/",
+            "headers": [(name.lower().encode(), value.encode()) for name, value in headers.items()],
+            "query_string": b"",
+        }
+    )
+
+
+def _enable_trusted_proxy(auth_settings: AuthSettings) -> None:
+    auth_settings.EXTERNAL_AUTH_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_TRUSTED_JWT_DECODE = True
+    auth_settings.EXTERNAL_AUTH_PROVIDER = "external"
+    auth_settings.EXTERNAL_AUTH_TOKEN_HEADER = "X-External-Auth"  # noqa: S105
+    auth_settings.EXTERNAL_AUTH_TOKEN_COOKIE = "external-session"  # noqa: S105
+
+
+@pytest.mark.parametrize("native_channel", ["authorization-header", "native-cookie"])
+@pytest.mark.anyio
+async def test_http_native_token_is_not_sent_to_external_resolver(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+    native_channel: str,
+):
+    from langflow.services.auth import utils as auth_utils
+
+    _enable_trusted_proxy(auth_settings)
+    native_token = _foreign_external_jwt({"sub": "native-channel-subject"})
+    external_token = "configured-external-credential"  # noqa: S105  # pragma: allowlist secret
+    if native_channel == "authorization-header":
+        request = _http_request({"Authorization": f"Bearer {native_token}", "X-External-Auth": external_token})
+    else:
+        request = _http_request({"Cookie": f"access_token_lf={native_token}; external-session={external_token}"})
+    token = await auth_utils.oauth2_login(request)
+    resolved_tokens = []
+
+    async def reject_external_token(token: str, _settings) -> None:
+        resolved_tokens.append(token)
+        msg = "External credential rejected"
+        raise InvalidTokenError(msg)
+
+    with (
+        patch("langflow.services.auth.utils._auth_service", return_value=auth_service),
+        patch("langflow.services.auth.utils.get_settings_service", return_value=auth_service.settings),
+        patch("langflow.services.auth.service.resolve_external_identity", new=reject_external_token),
+        pytest.raises(HTTPException) as exc_info,
+    ):
+        await auth_utils.get_current_user(request, token, None, None, db=AsyncMock())
+
+    assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
+    assert resolved_tokens == [external_token]
+
+
+@pytest.mark.anyio
+async def test_websocket_query_token_is_not_sent_to_external_resolver(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    from langflow.services.auth import utils as auth_utils
+
+    _enable_trusted_proxy(auth_settings)
+    native_token = _foreign_external_jwt({"sub": "query-channel-subject"})
+    external_token = "configured-external-credential"  # noqa: S105  # pragma: allowlist secret
+    websocket = WebSocket(
+        {
+            "type": "websocket",
+            "path": "/",
+            "headers": [(b"x-external-auth", external_token.encode())],
+            "query_string": f"token={native_token}".encode(),
+        },
+        receive=AsyncMock(),
+        send=AsyncMock(),
+    )
+    resolved_tokens = []
+
+    async def reject_external_token(token: str, _settings) -> None:
+        resolved_tokens.append(token)
+        msg = "External credential rejected"
+        raise InvalidTokenError(msg)
+
+    with (
+        patch("langflow.services.auth.utils._auth_service", return_value=auth_service),
+        patch("langflow.services.auth.utils.get_settings_service", return_value=auth_service.settings),
+        patch("langflow.services.auth.service.resolve_external_identity", new=reject_external_token),
+        pytest.raises(WebSocketException),
+    ):
+        await auth_utils.get_current_user_for_websocket(websocket, db=AsyncMock())
+
+    assert resolved_tokens == [external_token]
+
+
+@pytest.mark.anyio
+async def test_external_only_http_request_still_authenticates(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    from langflow.services.auth import utils as auth_utils
+    from langflow.services.auth.external import identity_from_claims
+
+    _enable_trusted_proxy(auth_settings)
+    external_token = "configured-external-credential"  # noqa: S105  # pragma: allowlist secret
+    request = _http_request({"X-External-Auth": external_token})
+    token = await auth_utils.oauth2_login(request)
+    identity = identity_from_claims({"sub": "external-only-subject"}, auth_settings)
+    user = _dummy_user(uuid4())
+    resolver = AsyncMock(return_value=identity)
+
+    with (
+        patch("langflow.services.auth.utils._auth_service", return_value=auth_service),
+        patch("langflow.services.auth.utils.get_settings_service", return_value=auth_service.settings),
+        patch("langflow.services.auth.utils.set_authenticated_telemetry_user"),
+        patch("langflow.services.auth.service.resolve_external_identity", new=resolver),
+        patch.object(auth_service, "_materialize_external_user", new=AsyncMock(return_value=user)),
+        patch.object(auth_service, "_reconcile_verified_external_groups", new=AsyncMock()),
+    ):
+        result = await auth_utils.get_current_user(request, token, None, None, db=AsyncMock())
+
+    assert result is user
+    resolver.assert_awaited_once_with(external_token, auth_settings)
+
+
+@pytest.mark.parametrize("entrypoint", ["optional", "workflow", "mcp"])
+@pytest.mark.anyio
+async def test_external_only_request_still_authenticates_across_entrypoints(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+    entrypoint: str,
+):
+    from langflow.services.auth import utils as auth_utils
+    from langflow.services.auth.external import identity_from_claims
+
+    _enable_trusted_proxy(auth_settings)
+    external_token = "configured-external-credential"  # noqa: S105  # pragma: allowlist secret
+    request = _http_request({"X-External-Auth": external_token})
+    token = await auth_utils.oauth2_login(request)
+    identity = identity_from_claims({"sub": "external-only-subject"}, auth_settings)
+    user = _dummy_user(uuid4())
+    resolver = AsyncMock(return_value=identity)
+    db = AsyncMock()
+
+    @asynccontextmanager
+    async def db_scope():
+        yield db
+
+    with (
+        patch("langflow.services.auth.utils._auth_service", return_value=auth_service),
+        patch("langflow.services.auth.utils.get_settings_service", return_value=auth_service.settings),
+        patch("langflow.services.auth.utils.set_authenticated_telemetry_user"),
+        patch("langflow.services.auth.utils.session_scope", new=db_scope),
+        patch("langflow.services.auth.service.resolve_external_identity", new=resolver),
+        patch.object(auth_service, "_materialize_external_user", new=AsyncMock(return_value=user)),
+        patch.object(auth_service, "_reconcile_verified_external_groups", new=AsyncMock()),
+    ):
+        if entrypoint == "optional":
+            result = await auth_utils.get_optional_user(request, token, None, None, db=db)
+        elif entrypoint == "workflow":
+            result = await auth_utils.get_current_user_for_workflow(request, token, None, None)
+        else:
+            result = await auth_utils.get_current_user_mcp(request, token, None, None, db=db)
+
+    assert result.id == user.id
+    resolver.assert_awaited_once_with(external_token, auth_settings)
