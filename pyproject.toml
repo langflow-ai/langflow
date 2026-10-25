@@ -17,7 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base~=1.13.0",
+    "langflow-base==1.13.0",
     "oauthlib>=4.0.0,<5.0.0",  # CVE-2026-49264, CVE-2026-49265
     # langflow-extensions:bundle-deps-start
     # Release coordination: langflow declares BOUNDED ranges (>=A,<B) for every
@@ -31,20 +31,20 @@ dependencies = [
     # the supported lfx axis.
     "lfx-ibm>=0.3.0,<1.0.0",
     "lfx-docling>=0.2.1,<1.0.0",
-    "lfx-datastax>=0.2.1,<1.0.0",
-    "lfx-toolguard>=0.2.0,<1.0.0",
+    "lfx-datastax>=0.2.2,<1.0.0",
+    "lfx-toolguard>=0.2.2,<1.0.0",
     "lfx-openai>=0.2.0,<1.0.0",
     "lfx-anthropic>=0.2.0,<1.0.0",
     "lfx-azure>=0.2.0,<1.0.0",
     "lfx-ollama>=0.2.0,<1.0.0",
-    "lfx-amazon>=0.2.0,<1.0.0",
+    "lfx-amazon>=0.2.2,<1.0.0",
     "lfx-cohere>=0.2.0,<1.0.0",
     "lfx-oracle>=0.2.0,<1.0.0",
     "lfx-vllm>=0.2.0,<1.0.0",
     "lfx-openai-compatible>=0.2.0,<1.0.0",
-    "lfx-google>=0.3.2,<1.0.0",
-    "lfx-microsoft>=0.1.2,<1.0.0",
-    "lfx-slack>=0.2.0,<1.0.0",
+    "lfx-google>=0.3.5,<1.0.0",
+    "lfx-microsoft>=0.1.4,<1.0.0",
+    "lfx-slack>=0.2.2,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -183,7 +183,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 bundles = [
-    "lfx-bundles[all-no-torch]>=1.2.0,<2.0",
+    "lfx-bundles[all-no-torch]>=1.2.4,<2.0",
     "lfx-arxiv>=0.2.0,<1.0.0",
     "lfx-confluent>=0.2.0,<1.0.0",
     "lfx-duckduckgo>=0.2.0,<1.0.0",
@@ -210,7 +210,7 @@ docling-image-description = [
 ]
 
 audio = [
-    "langflow-base[audio]~=1.13.0",
+    "langflow-base[audio]==1.13.0",
 ]
 
 # Opt-in microVM sandbox backend for code-execution components
@@ -218,7 +218,7 @@ audio = [
 # and QEMU 8+ on the host; on older Pythons the extra installs nothing and the
 # backend fails closed at use time.
 sandbox = [
-    "langflow-base[sandbox]~=1.13.0",
+    "langflow-base[sandbox]==1.13.0",
 ]
 
 
@@ -242,22 +242,26 @@ nv-ingest = [
 ]
 
 postgresql = [
-    "langflow-base[postgresql]~=1.13.0",
+    "langflow-base[postgresql]==1.13.0",
 ]
 
 pgvector = [
-    "langflow-base[pgvector]~=1.13.0",
+    "langflow-base[pgvector]==1.13.0",
 ]
 
 opensearch = [
-    "langflow-base[opensearch]~=1.13.0",
+    "langflow-base[opensearch]==1.13.0",
 ]
 
 [tool.uv]
 constraint-dependencies = [
+    "datamodel-code-generator>=0.81.0",  # CVE-2026-107377
     "fsspec>=2026.6.0",  # CVE-2026-104851
     "langgraph>=1.2.14",  # GHSA-3fx2-cqw9-xr3c
     "langgraph-sdk>=0.4.6",  # GHSA-fvww-7h3r-vfhp / CVE-2026-104873, GHSA-3fx2-cqw9-xr3c
+    # GHSA-7hp6-4w63-5g45 is fixed in 1.103.1 and 1.104.0rc2.
+    # Keep Opik's upper bound while enforcing the patched LiteLLM floor.
+    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1,!=1.107.0",
     "multidict>=6.9.1",  # GHSA-54p9-h82j-f925 / CVE-2026-104874
     # Security floors for every workspace dependency path, including optional bundles.
     "oauthlib>=4.0.0,<5.0.0",  # CVE-2026-49264, CVE-2026-49265
@@ -275,13 +279,10 @@ override-dependencies = [
     "nltk>=3.10.3",
     "Markdown>=3.8.0",
     "playwright>=1.59.0",  # Latest available on PyPI; ensures updated Chromium with CVE fixes
-    "authlib>=1.8.0,<2.0.0",  # Scanner reported authlib 1.7.2; use the latest compatible release.
+    "authlib>=1.9.1,<2.0.0",  # Reject empty JWS signatures and empty HMAC keys.
     "PyJWT>=2.15.1,<3.0.0",  # CVE-2026-102266, CVE-2026-102267, CVE-2026-102271, CVE-2026-102272, CVE-2026-102274
     "virtualenv>=21.14.2,<22.0.0",  # Scanner reported virtualenv 21.7.0; use the latest compatible release.
     "Werkzeug>=3.1.9,<4.0.0",  # Scanner reported Werkzeug 3.1.8; use the latest compatible release.
-    # GHSA-7hp6-4w63-5g45 is fixed in 1.103.1 and 1.104.0rc2.
-    # Opik 2.2.7 supports patched LiteLLM versions on every supported Python.
-    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1",
     # Temporary compatibility valve: langchain-litellm 0.6.1-0.7.0 cap
     # cryptography below 49; 0.5.1 is the newest release without that cap.
     "langchain-litellm==0.5.1",
@@ -441,7 +442,7 @@ external = ["RUF027"]
     "TRY003",  # Long exception messages
     "EM101",   # String literals in exceptions
 ]
-"docs/docs/Lfx/samples/connections/*" = [
+"docs/**/Lfx/samples/connections/*" = [
     "INP001", # Reference samples are standalone files, loaded by path, not a package
 ]
 "src/backend/base/langflow/alembic/versions/*" = ["INP001", "D415", "PGH003"]

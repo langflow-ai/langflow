@@ -105,7 +105,7 @@ const ModelProvidersContent = ({
     <div className="flex flex-row w-full h-full overflow-hidden">
       <div
         className={cn(
-          "flex p-2 flex-col flex-shrink-0 transition-all duration-300 ease-in-out",
+          "flex min-h-0 p-2 flex-col flex-shrink-0 transition-all duration-300 ease-in-out",
           syncedSelectedProvider ? "w-1/3 border-r" : "w-full",
         )}
       >
@@ -122,14 +122,19 @@ const ModelProvidersContent = ({
           data-testid="provider-search-input"
           className="mb-2"
         />
-        <ProviderList
-          modelType={modelType}
-          onProviderSelect={handleProviderSelect}
-          selectedProviderName={syncedSelectedProvider?.provider ?? null}
-          query={providerQuery}
-          flowId={flowId}
-          projectId={projectId}
-        />
+        <div
+          className="min-h-0 flex-1 overflow-y-auto"
+          data-testid="provider-list-scroll"
+        >
+          <ProviderList
+            modelType={modelType}
+            onProviderSelect={handleProviderSelect}
+            selectedProviderName={syncedSelectedProvider?.provider ?? null}
+            query={providerQuery}
+            flowId={flowId}
+            projectId={projectId}
+          />
+        </div>
       </div>
 
       <div

@@ -31,7 +31,48 @@ For more information, see the [Kubernetes documentation](https://kubernetes.io/d
     helm repo update
     ```
 
-2. Install the Langflow app with the default options in the `langflow` namespace.
+2. Create the `langflow` namespace and generate a superuser password and API key:
+
+    ```shell
+    kubectl create namespace langflow
+    export LANGFLOW_SUPERUSER_PASSWORD=$(openssl rand -base64 32)
+    export LANGFLOW_API_KEY=$(openssl rand -hex 32)
+    kubectl create secret generic langflow-auth \
+      --namespace langflow \
+      --from-literal=LANGFLOW_SUPERUSER_PASSWORD="$LANGFLOW_SUPERUSER_PASSWORD" \
+      --from-literal=LANGFLOW_API_KEY="$LANGFLOW_API_KEY"
+    ```
+
+    Store both generated values securely.
+
+3. Download the chart's default configuration:
+
+    ```shell
+    helm show values langflow/langflow-runtime > langflow-values.yaml
+    ```
+
+4. In `langflow-values.yaml`, add these entries to the existing `env` list:
+
+    ```yaml
+      - name: LANGFLOW_AUTO_LOGIN
+        value: "false"
+      - name: LANGFLOW_SUPERUSER_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: langflow-auth
+            key: LANGFLOW_SUPERUSER_PASSWORD
+      - name: LANGFLOW_API_KEY_SOURCE
+        value: "env"
+      - name: LANGFLOW_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: langflow-auth
+            key: LANGFLOW_API_KEY
+    ```
+
+    Keep the existing entries in the list. For more information, see [API keys and authentication](/api-keys-and-authentication).
+
+5. Install the Langflow app with your configuration in the `langflow` namespace.
 
     <Tabs groupId="">
     <TabItem value="Install chart with custom image" label="Install chart with custom image" default>
@@ -39,7 +80,11 @@ For more information, see the [Kubernetes documentation](https://kubernetes.io/d
     If you have a [custom image with packaged flows](/deployment-docker#package-your-flow-as-a-docker-image), you can deploy Langflow by overriding the default [`values.yaml`](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) with the `--set` flag:
 
     ```shell
-    helm install my-langflow-app langflow/langflow-runtime -n langflow --create-namespace --set image.repository=myuser/langflow-hello-world --set image.tag=1.0.0
+    helm install my-langflow-app langflow/langflow-runtime \
+      --namespace langflow \
+      --values langflow-values.yaml \
+      --set image.repository=myuser/langflow-hello-world \
+      --set image.tag=1.0.0
     ```
 
     </TabItem>
@@ -49,8 +94,8 @@ For more information, see the [Kubernetes documentation](https://kubernetes.io/d
 
     ```shell
     helm install my-langflow-app-with-flow langflow/langflow-runtime \
-      -n langflow \
-      --create-namespace \
+      --namespace langflow \
+      --values langflow-values.yaml \
       --set 'downloadFlows.flows[0].url=https://raw.githubusercontent.com/langflow-ai/langflow/dev/tests/data/basic_example.json'
     ```
 
@@ -60,7 +105,7 @@ For more information, see the [Kubernetes documentation](https://kubernetes.io/d
     </TabItem>
     </Tabs>
 
-3. Check the status of the pods:
+6. Check the status of the pods:
 
     ```shell
     kubectl get pods -n langflow
@@ -82,10 +127,12 @@ For more information, see the [Kubernetes documentation](https://kubernetes.io/d
     kubectl port-forward -n langflow svc/my-langflow-app-with-flow-langflow-runtime 7860:7860
     ```
 
-3. Confirm you can access the API by calling `http://localhost:7860/api/v1/flows/`:
+3. Confirm you can access the API by calling `http://localhost:7860/api/v1/flows/` with the API key generated during installation:
 
     ```shell
-    curl -v http://localhost:7860/api/v1/flows/
+    curl -v \
+      --header "x-api-key: $LANGFLOW_API_KEY" \
+      http://localhost:7860/api/v1/flows/
     ```
 
     A successful request returns a list of flows.
@@ -95,12 +142,15 @@ The following example gets the first flow ID from the flows list, and then runs 
 
     ```shell
     # Get flow ID
-    id=$(curl -s "http://localhost:7860/api/v1/flows/" | jq -r '.[0].id')
+    id=$(curl -s \
+      --header "x-api-key: $LANGFLOW_API_KEY" \
+      "http://localhost:7860/api/v1/flows/" | jq -r '.[0].id')
 
     # Run flow
     curl -X POST \
         "http://localhost:7860/api/v1/run/$id?stream=false" \
         -H 'Content-Type: application/json' \
+        -H "x-api-key: $LANGFLOW_API_KEY" \
         -d '{
           "input_value": "Hello!",
           "output_type": "chat",
@@ -110,7 +160,7 @@ The following example gets the first flow ID from the flows list, and then runs 
 
 ## Configure secrets and environment variables
 
-Use the `.env` section of the Langflow runtime Helm chart's [`values.yaml`](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file to define environment variables for your Langflow deployment.
+Use the `env` section of the Langflow runtime Helm chart's [`values.yaml`](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file to define environment variables for your Langflow deployment.
 This includes built-in [Langflow environment variables](/environment-variables), as well as [global variables](/configuration-global-variables) used by your flows.
 
 Langflow can source global variables from your runtime environment, such as Kubernetes secrets referenced in `values.yaml`.
@@ -159,17 +209,23 @@ You can use `kubectl` and `helm` commands to create and set secrets:
 
     The result is encrypted.
 
-3. Upgrade the Helm release to use the secret:
+3. Add the following entry to the existing `env` list in `langflow-values.yaml`:
 
-    ```shell
-    helm upgrade my-langflow-app-image langflow/langflow-runtime -n langflow \
-      --reuse-values \
-      --set "extraEnv[0].name=OPENAI_API_KEY" \
-      --set "extraEnv[0].valueFrom.secretKeyRef.name=openai-credentials" \
-      --set "extraEnv[0].valueFrom.secretKeyRef.key=OPENAI_API_KEY"
+    ```yaml
+      - name: OPENAI_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: openai-credentials
+            key: OPENAI_API_KEY
     ```
 
-    Escape square brackets if required by your shell.
+4. Upgrade the Helm release:
+
+    ```shell
+    helm upgrade my-langflow-app langflow/langflow-runtime \
+      --namespace langflow \
+      --values langflow-values.yaml
+    ```
 
 </details>
 

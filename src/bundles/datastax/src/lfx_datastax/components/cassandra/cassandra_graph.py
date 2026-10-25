@@ -3,7 +3,6 @@
 from uuid import UUID
 
 from langchain_community.graph_vectorstores import CassandraGraphVectorStore
-
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
 from lfx.inputs.inputs import DictInput, FloatInput
@@ -15,6 +14,7 @@ from lfx.io import (
     SecretStrInput,
 )
 from lfx.schema.data import Data
+
 from lfx_datastax.components.cassandra._ssrf import validate_cassandra_connection
 
 

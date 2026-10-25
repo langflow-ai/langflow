@@ -1,3 +1,4 @@
+import { BASENAME } from "@/customization/config-constants";
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import type { GetCodeType } from "@/types/tweaks";
 
@@ -26,7 +27,7 @@ export default function getWidgetCode({
   <langflow-chat
     window_title="${flowName}"
     flow_id="${flowId}"
-    host_url="${protocol}//${host}"${
+    host_url="${protocol}//${host}${BASENAME}"${
       !isAuth
         ? `
     api_key="..."`
