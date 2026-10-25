@@ -1785,7 +1785,10 @@ class Component(CustomComponent):
 
         # First process outputs in the order defined by self.outputs
         for output in self.outputs:
-            output_obj = self._outputs_map.get(output.name, deepcopy(output))
+            try:
+                output_obj = self._outputs_map[output.name]
+            except KeyError:
+                output_obj = deepcopy(output)
             if self._should_process_output(output_obj):
                 result.append(output_obj)
                 processed_names.add(output_obj.name)

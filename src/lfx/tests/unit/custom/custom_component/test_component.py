@@ -1,3 +1,5 @@
+from copy import deepcopy
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -25,6 +27,65 @@ def test_set_invalid_output():
     chatoutput = ChatOutput()
     with pytest.raises(ValueError, match="Method build_config is not a valid output of ChatInput"):
         chatoutput.set(input_value=chatinput.build_config)
+
+
+def test_get_outputs_to_process_does_not_copy_mapped_output(monkeypatch):
+    component = Component()
+    component.outputs = [Output(name="result")]
+    mapped = Output(name="result", value={"items": [1]})
+    component._outputs_map = {"result": mapped}
+    copy_output = MagicMock(wraps=deepcopy)
+    monkeypatch.setattr("lfx.custom.custom_component.component.deepcopy", copy_output)
+
+    outputs = component._get_outputs_to_process()
+
+    copy_output.assert_not_called()
+    assert len(outputs) == 1
+    assert outputs[0] is mapped
+
+
+def test_get_outputs_to_process_preserves_none_in_map(monkeypatch):
+    component = Component()
+    component.outputs = [Output(name="result")]
+    component._outputs_map = {"result": None}
+    should_process = MagicMock(return_value=False)
+    monkeypatch.setattr(component, "_should_process_output", should_process)
+    copy_output = MagicMock(wraps=deepcopy)
+    monkeypatch.setattr("lfx.custom.custom_component.component.deepcopy", copy_output)
+
+    assert component._get_outputs_to_process() == []
+
+    should_process.assert_called_with(None)
+    copy_output.assert_not_called()
+
+
+def test_get_outputs_to_process_deep_copies_missing_output():
+    component = Component()
+    declared = Output(name="result", value={"items": []})
+    component.outputs = [declared]
+    component._outputs_map = {}
+
+    outputs = component._get_outputs_to_process()
+
+    assert len(outputs) == 1
+    assert outputs[0] == declared
+    assert outputs[0] is not declared
+    outputs[0].value["items"].append(1)
+    assert declared.value == {"items": []}
+    assert component._outputs_map == {}
+
+
+def test_get_outputs_to_process_preserves_order_and_filters():
+    component = Component()
+    component.outputs = [Output(name=name) for name in ("first", "filtered", "second")]
+    mapped = {name: Output(name=name) for name in ("second", "extra", "filtered", "first")}
+    component._outputs_map = mapped
+    component._vertex = SimpleNamespace(outgoing_edges=[object()], edges_source_names={"first", "second", "extra"})
+
+    outputs = component._get_outputs_to_process()
+
+    assert [output.name for output in outputs] == ["first", "second", "extra"]
+    assert all(output is mapped[output.name] for output in outputs)
 
 
 @pytest.mark.parametrize("repr_value", ["", "Explicit preview", {"preview": "Explicit preview"}])
