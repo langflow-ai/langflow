@@ -127,6 +127,7 @@ To use advanced parsing, do the following:
     |------|--------------|------|
     | pipeline | Pipeline | Input parameter, advanced parsing. The Docling pipeline to use, either `standard` (default, recommended) or `vlm` (may produce inconsistent results). |
     | ocr_engine | OCR Engine | Input parameter, advanced parsing. The OCR parser to use if `pipeline` is `standard`. Options are `None` (default) or [`EasyOCR`](https://pypi.org/project/easyocr/). `None` means that no OCR engine is used, and this can produce inconsistent or broken results for some documents. This setting has no effect with the `vlm` pipeline. |
+    | force_ocr | Force Full Page OCR | Input parameter, advanced parsing. When enabled, run OCR on every page even if the PDF has extractable text. Requires the `standard` pipeline and an OCR engine. Disabled by default. |
     | md_image_placeholder | Markdown Image Placeholder | Input parameter, advanced parsing. Defines the placeholder for image files if the output type is **Markdown**. Default: `<!-- image -->`. |
     | md_page_break_placeholder | Markdown Page Break Placeholder | Input parameter, advanced parsing. Defines the placeholder for page breaks if the output type is **Markdown**. Default: `""` (empty string). |
     | doc_key | Document Key | Input parameter, advanced parsing. The key to use for the `DoclingDocument` column, which holds the structured information extracted from the source document. See [Docling Document](https://docling-project.github.io/docling/concepts/docling_document/) for details. Default: `doc`. |
@@ -179,4 +180,3 @@ If you upload multiple files, the component outputs **Files**, which is a [`Tabl
 
 </TabItem>
 </Tabs>
-
