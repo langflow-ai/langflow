@@ -71,8 +71,80 @@ def collect_flow_files(flow_data: dict | None) -> FlowFiles:
     return result
 
 
+class FileKeyCollisionError(ValueError):
+    """Two different stored files would land on the same key in the serving environment."""
+
+
+def flow_file_target_key(key: str, flow_id: str) -> str:
+    """The key a stored file is written under where the flow is served.
+
+    The file keeps its name and moves into the flow's own namespace. The serving side runs
+    every flow as one service account, so a key namespaced to an editor user is refused by
+    ``enforce_storage_key_scope``; the flow's id is a namespace that check always accepts,
+    and flow ids are preserved across planes.
+
+    This rule is permanent once a deployment has used it. Files on the serving side are
+    physically stored under the keys it produces, so changing it orphans every file already
+    copied. ``key`` must already be a storage key, as ``collect_flow_files`` reports one.
+    """
+    _, _, file_name = key.partition("/")
+    return f"{validate_namespace(flow_id)}/{file_name}"
+
+
+def rewrite_flow_file_keys_in_place(flow_data: dict | None, flow_id: str) -> dict[str, str]:
+    """Point every storage key a flow's file inputs read at the flow's own namespace.
+
+    Mutates ``flow_data``, so pass a copy: this is for the package a deploy sends, and the
+    flow as stored keeps its original keys. Rewrites exactly the slot ``collect_flow_files``
+    reads, which is the one the graph reads, so the files a copy carries and the keys the
+    package names cannot disagree. Absolute paths and bare names are left as they are.
+
+    Returns ``{source key: target key}`` for every key rewritten, including one already in
+    the flow's namespace, which maps to itself.
+
+    Raises ``FileKeyCollisionError`` when two different files would land on one key, as
+    ``<user>/report.pdf`` and ``<flow>/report.pdf`` in one flow would. Neither is suffixed
+    nor allowed to overwrite the other: either would silently hand a component the wrong
+    document, so the deploy refuses and names both.
+    """
+    mapping: dict[str, str] = {}
+    claimed: dict[str, str] = {}
+
+    def rewrite(value: object) -> object:
+        if not isinstance(value, str) or _why_not_a_key(value) is not None:
+            return value
+        namespace, _, file_name = value.partition("/")
+        source = f"{validate_namespace(namespace)}/{file_name}"
+        target = flow_file_target_key(source, flow_id)
+        holder = claimed.setdefault(target, source)
+        if holder != source:
+            msg = (
+                f"'{holder}' and '{source}' would both be stored as '{target}' in the serving "
+                "environment; rename one of them before deploying"
+            )
+            raise FileKeyCollisionError(msg)
+        mapping[source] = target
+        return target
+
+    for _node_id, _field_name, field in _file_fields(flow_data):
+        slot = "file_path" if field.get("file_path") else "value"
+        held = field.get(slot)
+        if isinstance(held, list):
+            field[slot] = [rewrite(item) for item in held]
+        elif isinstance(held, str) and held.strip():
+            field[slot] = rewrite(held)
+    return mapping
+
+
 def _file_field_values(flow_data: dict | None):
     """Yield ``(node_id, field_name, value)`` for every file field in the flow and its children."""
+    for node_id, field_name, field in _file_fields(flow_data):
+        for value in _raw_values(field):
+            yield node_id, field_name, value
+
+
+def _file_fields(flow_data: dict | None):
+    """Yield ``(node_id, field_name, field)`` for every file field in the flow and its children."""
     frames = [flow_data]
     while frames:
         data = frames.pop()
@@ -91,12 +163,11 @@ def _file_field_values(flow_data: dict | None):
             template = inner.get("template")
             if isinstance(template, dict):
                 for field_name, field in template.items():
-                    if not isinstance(field, dict) or not _is_file_field(field):
-                        continue
-                    for value in _raw_values(field):
-                        yield node_id, field_name, value
-            # A node can carry another flow's data. Its components read files of their own,
-            # and the flow it belongs to is the one being deployed, so they count here.
+                    if isinstance(field, dict) and _is_file_field(field):
+                        yield node_id, field_name, field
+            # A node can carry another flow's data: a group node, which lfx's ``ungroup_node``
+            # expands into the parent graph at build time. Its components therefore run as the
+            # deployed flow and read files of their own, so they count here.
             nested = inner.get("flow")
             if isinstance(nested, dict) and isinstance(nested.get("data"), dict):
                 frames.append(nested["data"])

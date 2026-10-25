@@ -6,9 +6,16 @@ being reported as one — the last would have the deploy claim success and the f
 run time instead.
 """
 
+from copy import deepcopy
 from uuid import uuid4
 
-from langflow.utils.flow_files import collect_flow_files
+import pytest
+from langflow.utils.flow_files import (
+    FileKeyCollisionError,
+    collect_flow_files,
+    flow_file_target_key,
+    rewrite_flow_file_keys_in_place,
+)
 
 USER = str(uuid4())
 FLOW = str(uuid4())
@@ -93,7 +100,8 @@ def test_should_find_files_inside_a_nested_flow():
         ]
     }
 
-    assert collect_flow_files(data).keys == [f"{FLOW}/inner.pdf", f"{USER}/outer.pdf"]
+    # Sorted, because the two namespaces are random UUIDs and their order varies by run.
+    assert collect_flow_files(data).keys == sorted([f"{FLOW}/inner.pdf", f"{USER}/outer.pdf"])
 
 
 def test_should_report_an_absolute_path_as_unresolved_rather_than_a_key():
@@ -184,3 +192,91 @@ def test_should_survive_flow_data_that_is_missing_or_malformed():
     for data in (None, {}, {"nodes": None}, {"nodes": ["not a dict"]}, {"nodes": [{"data": None}]}):
         found = collect_flow_files(data)
         assert (found.keys, found.unresolved) == ([], [])
+
+
+# --- the rewrite a deploy package applies -------------------------------------------------
+
+
+def test_should_move_a_key_into_the_flow_namespace_keeping_its_name():
+    assert flow_file_target_key(f"{USER}/report.pdf", FLOW) == f"{FLOW}/report.pdf"
+
+
+def test_should_return_what_it_rewrote_including_a_key_already_in_place():
+    data = {
+        "nodes": [
+            _node("File-a", {"path": _file_field(file_path=f"{USER}/a.pdf")}),
+            _node("File-b", {"path": _file_field(file_path=f"{FLOW}/b.pdf")}),
+        ]
+    }
+
+    mapping = rewrite_flow_file_keys_in_place(data, FLOW)
+
+    assert mapping == {f"{USER}/a.pdf": f"{FLOW}/a.pdf", f"{FLOW}/b.pdf": f"{FLOW}/b.pdf"}
+
+
+def test_should_rewrite_the_slot_the_graph_reads_and_leave_the_other():
+    field = _file_field(file_path=f"{USER}/real.pdf", value=f"{USER}/stale.pdf")
+    data = {"nodes": [_node("File-a", {"path": field})]}
+
+    rewrite_flow_file_keys_in_place(data, FLOW)
+
+    assert field["file_path"] == f"{FLOW}/real.pdf"
+    assert field["value"] == f"{USER}/stale.pdf"
+
+
+def test_should_rewrite_value_when_file_path_is_empty():
+    field = _file_field(file_path="", value=f"{USER}/report.pdf")
+    data = {"nodes": [_node("File-a", {"path": field})]}
+
+    rewrite_flow_file_keys_in_place(data, FLOW)
+
+    assert field["value"] == f"{FLOW}/report.pdf"
+
+
+def test_should_rewrite_files_in_a_nested_flow_onto_the_deployed_flow():
+    inner_field = _file_field(file_path=f"{USER}/inner.pdf")
+    nested = {"nodes": [_node("File-inner", {"path": inner_field})]}
+    data = {"nodes": [_node("Group-a", {}, nested=nested)]}
+
+    rewrite_flow_file_keys_in_place(data, FLOW)
+
+    assert inner_field["file_path"] == f"{FLOW}/inner.pdf"
+
+
+def test_should_treat_one_document_written_in_two_cases_as_the_same_file():
+    data = {
+        "nodes": [
+            _node("File-a", {"path": _file_field(file_path=f"{USER}/report.pdf")}),
+            _node("File-b", {"path": _file_field(file_path=f"{USER.upper()}/report.pdf")}),
+        ]
+    }
+
+    mapping = rewrite_flow_file_keys_in_place(data, FLOW)
+
+    assert mapping == {f"{USER}/report.pdf": f"{FLOW}/report.pdf"}
+
+
+def test_should_refuse_when_a_user_file_and_a_flow_file_share_a_name():
+    data = {
+        "nodes": [
+            _node("File-a", {"path": _file_field(file_path=f"{USER}/report.pdf")}),
+            _node("File-b", {"path": _file_field(file_path=f"{FLOW}/report.pdf")}),
+        ]
+    }
+
+    with pytest.raises(FileKeyCollisionError, match=r"report\.pdf"):
+        rewrite_flow_file_keys_in_place(data, FLOW)
+
+
+def test_should_agree_with_the_scan_on_which_keys_move():
+    data = {
+        "nodes": [
+            _node("File-a", {"paths": _file_field(list=True, file_path=[f"{USER}/a.pdf", "report.pdf"])}),
+            _node("File-b", {"path": _file_field(file_path="/abs/b.pdf")}),
+        ]
+    }
+    scanned = collect_flow_files(deepcopy(data)).keys
+
+    mapping = rewrite_flow_file_keys_in_place(data, FLOW)
+
+    assert sorted(mapping) == scanned
