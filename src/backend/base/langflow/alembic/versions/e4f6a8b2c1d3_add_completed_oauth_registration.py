@@ -9,6 +9,7 @@ Safe to rollback: YES
 Services compatible: Versions that do not read connection_oauth.completed_registration_id
 """
 
+import json
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -21,6 +22,25 @@ down_revision: str | None = "1d8d193028c8"  # pragma: allowlist secret -- migrat
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
+_MAX_REGISTRATION_ID_LENGTH = 120
+
+
+def _completed_registration_id(encrypted_payload: str, decrypt_api_key) -> str | None:
+    try:
+        payload = json.loads(decrypt_api_key(encrypted_payload))
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    oauth = payload.get("oauth")
+    if not isinstance(oauth, dict):
+        return None
+    registration_id = oauth.get("registration_id")
+    if not isinstance(registration_id, str):
+        return None
+    registration_id = registration_id.strip()
+    return registration_id if 0 < len(registration_id) <= _MAX_REGISTRATION_ID_LENGTH else None
+
 
 def upgrade() -> None:
     conn = op.get_bind()
@@ -28,24 +48,33 @@ def upgrade() -> None:
         return
     with op.batch_alter_table("connection_oauth") as batch_op:
         batch_op.add_column(sa.Column("completed_registration_id", sa.String(length=120), nullable=True))
-    op.execute(
-        """
-        UPDATE connection_oauth
-        SET completed_registration_id = registration_id
-        WHERE state_digest IS NULL
-          AND EXISTS (
-              SELECT 1 FROM "connection"
-              WHERE "connection".id = connection_oauth.connection_id
-                AND "connection".status = 'ready'
-                AND "connection".status_reason IS NULL
-          )
-        """
+    op.create_index(
+        "ix_connection_oauth_completed_registration_id",
+        "connection_oauth",
+        ["completed_registration_id"],
+        unique=False,
     )
+    from langflow.services.auth.utils import decrypt_api_key
+
+    secrets = conn.exec_driver_sql("SELECT connection_id, encrypted_payload FROM connection_secret").all()
+    for connection_id, encrypted_payload in secrets:
+        registration_id = _completed_registration_id(encrypted_payload, decrypt_api_key)
+        if registration_id is not None:
+            conn.execute(
+                sa.text(
+                    "UPDATE connection_oauth SET completed_registration_id = :registration_id "
+                    "WHERE connection_id = :connection_id"
+                ),
+                {"registration_id": registration_id, "connection_id": connection_id},
+            )
 
 
 def downgrade() -> None:
     conn = op.get_bind()
     if not migration.column_exists("connection_oauth", "completed_registration_id", conn):
         return
+    indexes = {index["name"] for index in sa.inspect(conn).get_indexes("connection_oauth")}
+    if "ix_connection_oauth_completed_registration_id" in indexes:
+        op.drop_index("ix_connection_oauth_completed_registration_id", table_name="connection_oauth")
     with op.batch_alter_table("connection_oauth") as batch_op:
         batch_op.drop_column("completed_registration_id")

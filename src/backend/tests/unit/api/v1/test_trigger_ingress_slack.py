@@ -171,6 +171,40 @@ async def test_reconnection_routes_only_to_the_last_completed_grant(
     assert len(await fx.events_for(trigger_id)) == 2
 
 
+async def test_failed_reconnection_keeps_prior_completed_grant_active(
+    client: AsyncClient, active_user, logged_in_headers, flow, monkeypatch
+) -> None:
+    other_registration = "another-app"
+    fx.use_registrations(
+        monkeypatch,
+        {
+            fx.REGISTRATION_ID: fx.registration(),
+            other_registration: fx.registration(client_id="999.1"),
+        },
+    )
+    row, started = await _start_oauth_connection(client, logged_in_headers)
+    await _complete_oauth_connection(client, started, monkeypatch, team_id=fx.TEAM_ID)
+    trigger_id = await fx.arm(flow.id, active_user.id, UUID(row["id"]))
+    restarted = await client.post(
+        f"/api/v1/connections/{row['id']}/oauth/start",
+        headers=logged_in_headers,
+        json={"registration_id": other_registration, "scopes": fx.registration()["scopes"]},
+    )
+    assert restarted.status_code == 200, restarted.text
+    query = parse_qs(urlsplit(restarted.json()["authorization_url"]).query)
+    denied = await client.get(
+        "/api/v1/connections/oauth/slack/callback",
+        params={"state": query["state"][0], "error": "access_denied"},
+    )
+    assert denied.status_code == 400, denied.text
+
+    other_url = f"api/v1/triggers/ingress/slack/apps/{other_registration}"
+    assert (await _deliver(client, "message_channel", url=other_url)).status_code == 202
+    assert await fx.events_for(trigger_id) == []
+    assert (await _deliver(client, "message_channel")).status_code == 202
+    assert len(await fx.events_for(trigger_id)) == 1
+
+
 # --------------------------------------------------------------------------- #
 # The happy path
 # --------------------------------------------------------------------------- #
