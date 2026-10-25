@@ -9,7 +9,7 @@ from sqlalchemy import create_engine, inspect, text
 
 from .test_migration_execution import _engine_url, _make_alembic_cfg, db_url  # noqa: F401
 
-_PRIOR_REVISION = "1d8d193028c8"  # pragma: allowlist secret
+_PRIOR_REVISION = "e5a7c9b1d3f2"  # pragma: allowlist secret
 _REVISION = "e4f6a8b2c1d3"  # pragma: allowlist secret
 _INDEX = "ix_connection_oauth_completed_registration_id"
 

@@ -1,7 +1,7 @@
 """Track the registration of the last completed OAuth grant.
 
 Revision ID: e4f6a8b2c1d3
-Revises: 1d8d193028c8
+Revises: e5a7c9b1d3f2
 Create Date: 2026-10-23
 
 Phase: EXPAND
@@ -20,7 +20,7 @@ from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
 revision: str = "e4f6a8b2c1d3"  # pragma: allowlist secret -- migration revision identifier
-down_revision: str | None = "1d8d193028c8"  # pragma: allowlist secret -- migration revision identifier
+down_revision: str | None = "e5a7c9b1d3f2"  # pragma: allowlist secret -- migration revision identifier
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
