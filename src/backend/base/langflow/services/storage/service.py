@@ -125,6 +125,58 @@ class StorageService(Service):
     async def delete_file(self, flow_id: str, file_name: str) -> None:
         raise NotImplementedError
 
+    async def create_upload_link(
+        self,
+        flow_id: str,  # noqa: ARG002
+        file_name: str,  # noqa: ARG002
+        *,
+        expires_in: int = 3600,  # noqa: ARG002
+    ) -> str | None:
+        """A URL that accepts a ``PUT`` of this one file, or ``None`` when the backend has none.
+
+        A deploy copies a project's documents into the environment that serves it. Where the
+        target can mint one of these, the bytes go straight from the source to the target's
+        own store and no credential for it ever reaches the sender. Where it cannot, the
+        answer is ``None`` and the caller sends the bytes the long way instead, so the return
+        value is what selects the transport and no configuration flag has to say.
+
+        The default is ``None``: a backend has to be able to hand out a scoped, expiring write
+        before it says it can.
+        """
+        return None
+
+    async def _has_object(self, namespace: str, file_name: str) -> bool:
+        """Whether anything is stored under this key."""
+        try:
+            await self.get_file_size(flow_id=namespace, file_name=file_name)
+        except FileNotFoundError:
+            return False
+        return True
+
+    async def move_file(self, source_namespace: str, target_namespace: str, file_name: str) -> None:
+        """Move a stored file into another namespace under the same name.
+
+        A deploy stages a project's files under the copy job's own namespace and moves
+        them onto the keys flows read only once the whole set has landed, so a cancelled
+        copy is never half visible: until the move, flows go on reading what was there.
+
+        Idempotent. A source that is already gone with the file in place at the target
+        counts as a move that happened, which is what lets a promote interrupted partway
+        be re-run without recording how far it got.
+
+        The default reads the file and writes it back, holding it in memory, and exists so
+        that a backend outside this repo keeps working rather than hitting an abstract
+        method. Both shipped backends override it with a rename or a server-side copy.
+        """
+        try:
+            data = await self.get_file(flow_id=source_namespace, file_name=file_name)
+        except FileNotFoundError:
+            if await self._has_object(target_namespace, file_name):
+                return
+            raise
+        await self.save_file(flow_id=target_namespace, file_name=file_name, data=data)
+        await self.delete_file(flow_id=source_namespace, file_name=file_name)
+
     async def delete_namespace(self, namespace: str) -> int:
         """Delete every object stored under a flow or user namespace and return how many were removed.
 

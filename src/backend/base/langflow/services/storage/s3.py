@@ -18,6 +18,9 @@ from .service import StorageReadiness, StorageService, validate_namespace
 
 # S3 parts are 5 MiB at least, except the last one.
 STREAM_PART_SIZE = 8 * 1024 * 1024
+# How long an upload link stays good for. Long enough for one large file over a slow link,
+# short enough that a leaked URL is not a standing write. The caller can ask for less.
+UPLOAD_LINK_TTL = 3600
 # Server-side encryption modes whose ETag is not the body's MD5.
 _ETAG_NOT_MD5_ENCRYPTION = {"aws:kms", "aws:kms:dsse"}
 
@@ -496,6 +499,79 @@ class S3StorageService(StorageService):
             logger.exception("Error deleting an S3 namespace")
             raise
         return removed
+
+    async def create_upload_link(self, flow_id: str, file_name: str, *, expires_in: int = UPLOAD_LINK_TTL) -> str:
+        """A presigned ``PUT`` for exactly this key, good for ``expires_in`` seconds.
+
+        See ``StorageService.create_upload_link``. Signing covers the bucket and the key, so a
+        holder of the URL can write that one object and nothing else, and only until it expires.
+        Nothing is contacted here: the URL is signed locally from the credentials already loaded.
+
+        ``s3v4`` is pinned rather than left to the default, which resolves from the region:
+        ``us-east-1`` reaches the legacy global endpoint and signs v2, and a v2 presigned PUT is
+        refused by every region created since 2014 and by some MinIO setups.
+
+        Tags are deliberately not signed in. Including them would oblige the uploader to send a
+        matching ``x-amz-tagging`` header or get a signature mismatch, so the URL would no longer
+        be self-contained. ``move_file`` applies the configured tags when the object is promoted.
+        """
+        from aiobotocore.config import AioConfig
+
+        key = self.build_full_path(flow_id, file_name)
+        async with self.session.create_client("s3", config=AioConfig(signature_version="s3v4")) as s3_client:
+            return await s3_client.generate_presigned_url(
+                "put_object",
+                Params={"Bucket": self.bucket_name, "Key": key},
+                ExpiresIn=expires_in,
+            )
+
+    async def move_file(self, source_namespace: str, target_namespace: str, file_name: str) -> None:
+        """Move an object between namespaces with a server-side copy, then delete the source.
+
+        See ``StorageService.move_file``. The copy runs inside S3, so the bytes never travel
+        back through this process and the promote costs a metadata operation per file rather
+        than a second upload.
+
+        The configured tags are written here rather than inherited from the source. A staged
+        object that arrived through ``create_upload_link`` carries no tags, and ``copy_object``
+        copies the source's by default, so inheriting would leave a deployed project's files
+        untagged while every file written through ``save_file`` is tagged, and any lifecycle or
+        cost rule keyed on those tags would quietly skip them.
+
+        shortcut: ``copy_object`` tops out at 5 GiB per object; above that S3 wants
+        ``upload_part_copy``. Add that when a single stored file reaches that size.
+        """
+        source_key = self.build_full_path(source_namespace, file_name)
+        target_key = self.build_full_path(target_namespace, file_name)
+        extra: dict[str, Any] = {}
+        if self.tags:
+            extra["Tagging"] = "&".join([f"{k}={v}" for k, v in self.tags.items()])
+            extra["TaggingDirective"] = "REPLACE"
+
+        async with self._get_client() as s3_client:
+            try:
+                await s3_client.copy_object(
+                    Bucket=self.bucket_name,
+                    Key=target_key,
+                    CopySource={"Bucket": self.bucket_name, "Key": source_key},
+                    **extra,
+                )
+            except Exception as e:
+                if not (hasattr(e, "response") and e.response.get("Error", {}).get("Code") in ["NoSuchKey", "404"]):
+                    logger.exception(f"Error moving file {file_name} from {source_namespace} to {target_namespace}")
+                    raise
+                # Checked on this client rather than through _has_object, which would open a
+                # second one while this context is still held.
+                try:
+                    await s3_client.head_object(Bucket=self.bucket_name, Key=target_key)
+                except Exception as head_error:
+                    code = getattr(head_error, "response", {}).get("Error", {}).get("Code")
+                    if code not in ["NoSuchKey", "404"]:
+                        raise
+                    msg = f"File not found: {file_name}"
+                    raise FileNotFoundError(msg) from e
+                return
+            await s3_client.delete_object(Bucket=self.bucket_name, Key=source_key)
 
     async def delete_file(self, flow_id: str, file_name: str) -> None:
         """Delete a file from S3.

@@ -193,6 +193,24 @@ class LocalStorageService(StorageService):
             logger.exception(f"Error saving file {file_name} in flow {flow_id}")
             raise
 
+    async def move_file(self, source_namespace: str, target_namespace: str, file_name: str) -> None:
+        """Move a file between namespaces with a rename.
+
+        See ``StorageService.move_file``. A rename is atomic within a filesystem and both
+        namespaces sit under ``data_dir``, so a reader sees either the whole previous file
+        or the whole new one. ``save_file`` cannot promise that: it opens the final path in
+        ``"wb"`` or ``"ab"`` and writes into the live file.
+        """
+        source = await self._validated_path(source_namespace, file_name)
+        target = await self._validated_path(target_namespace, file_name)
+        await (self.data_dir / target_namespace).mkdir(parents=True, exist_ok=True)
+        try:
+            await source.replace(target)
+        except FileNotFoundError:
+            if await self._has_object(target_namespace, file_name):
+                return
+            raise
+
     async def get_file(self, flow_id: str, file_name: str) -> bytes:
         """Retrieve a file from the local storage.
 
