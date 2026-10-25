@@ -1,6 +1,7 @@
 """Execution-boundary validation for resolved MCP server configurations."""
 
 import shlex
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -319,8 +320,12 @@ async def test_stdio_client_preserves_executable_path_with_spaces():
     assert client._connection_params.args == ["server.js"]
 
 
-async def test_stdio_client_preserves_sanitized_opaque_header_values():
+@pytest.mark.parametrize("resolved_command", [None, r"C:\Program Files\uv\uvx.exe"])
+async def test_stdio_client_preserves_sanitized_opaque_header_values(monkeypatch, resolved_command):
     """HTTP punctuation in proxy header data must not be interpreted as command syntax."""
+    if resolved_command:
+        monkeypatch.setattr(mcp_util, "sys", SimpleNamespace(platform="win32"))
+        monkeypatch.setattr("mcp.os.win32.utilities.shutil.which", lambda _command: resolved_command)
     client = MCPStdioClient()
     session = MagicMock()
     session.list_tools = AsyncMock(return_value=MagicMock(tools=[]))
@@ -340,6 +345,124 @@ async def test_stdio_client_preserves_sanitized_opaque_header_values():
         "session=abc; theme=dark",
         "https://mcp.example.com",
     ]
+
+
+@pytest.mark.parametrize(
+    ("launcher", "resolved_command"),
+    [
+        ("cmd /c uvx", None),
+        ("cmd /k uvx", None),
+        ("cmd /r uvx", None),
+        ("cmd /d /c uvx", None),
+        ("cmd /q/k uvx", None),
+        ("npx", r"C:\Program Files\nodejs\npx.cmd"),
+        ("npx", r"C:\Program Files\nodejs\npx.bat"),
+        ("npx", r"C:\Program Files\nodejs\npx.CMD"),
+    ],
+)
+@pytest.mark.parametrize(
+    "headers",
+    [
+        {"Authorization": "token&echo"},
+        {"Authorization": "token|echo"},
+        {"Authorization": "token>output"},
+        {"Authorization": "%MCP_TOKEN%"},
+        {"Authorization": "!MCP_TOKEN!"},
+        {"Authorization": "token^value"},
+        {"Authorization": 'token"value'},
+        {"Authorization": "token(value"},
+        {"Authorization": "token)value"},
+        {"X-Header&Echo": "value"},
+    ],
+)
+async def test_stdio_client_rejects_shell_syntax_in_injected_headers(monkeypatch, launcher, resolved_command, headers):
+    """HTTP-valid headers must not bypass the policy for a cmd.exe payload."""
+    if resolved_command:
+        monkeypatch.setattr(mcp_util, "sys", SimpleNamespace(platform="win32"))
+        monkeypatch.setattr("mcp.os.win32.utilities.shutil.which", lambda _command: resolved_command)
+    client = MCPStdioClient()
+    get_session = AsyncMock()
+    client._get_or_create_session = get_session  # type: ignore[method-assign]
+
+    with pytest.raises(MCPStdioSecurityError, match="arguments are unsafe for a shell wrapper") as exc_info:
+        await client._connect_to_server(
+            f"{launcher} mcp-proxy https://mcp.example.com",
+            headers=headers,
+        )
+
+    assert not any(value in str(exc_info.value) for value in headers.values())
+    get_session.assert_not_awaited()
+    assert client._connection_params is None
+
+
+@pytest.mark.parametrize("header_value", ["Bearer token-._~+/=", "Bearer install", "Bearer pip", "Bearer -e"])
+@pytest.mark.parametrize("header_name", ["Authorization", "Install"])
+async def test_stdio_client_preserves_safe_headers_with_cmd_wrapper(header_name, header_value):
+    """A validated shell wrapper can still pass ordinary proxy credentials."""
+    client = MCPStdioClient()
+    session = MagicMock()
+    session.list_tools = AsyncMock(return_value=MagicMock(tools=[]))
+    client._get_or_create_session = AsyncMock(return_value=session)  # type: ignore[method-assign]
+
+    await client._connect_to_server(
+        "cmd /d /c uvx mcp-proxy https://mcp.example.com",
+        headers={header_name: header_value},
+    )
+
+    assert client._connection_params.command == "cmd"
+    assert client._connection_params.args == [
+        "/d",
+        "/c",
+        "uvx",
+        "mcp-proxy",
+        "--headers",
+        header_name.lower(),
+        header_value,
+        "https://mcp.example.com",
+    ]
+
+
+@pytest.mark.parametrize("extension", [".cmd", ".bat", ".CMD"])
+@pytest.mark.parametrize("headers", [None, {"Authorization": "Bearer token-._~+/="}])
+@pytest.mark.parametrize("npx_flag", ["", "-y", "--yes"])
+async def test_stdio_client_preserves_safe_resolved_batch_script(monkeypatch, extension, headers, npx_flag):
+    """Validate and pin the same batch script selected by the SDK resolver."""
+    resolved_command = rf"C:\Program Files\nodejs\npx{extension}"
+    monkeypatch.setattr(mcp_util, "sys", SimpleNamespace(platform="win32"))
+    monkeypatch.setattr(
+        "mcp.os.win32.utilities.shutil.which",
+        lambda command: resolved_command if command == f"npx{extension.lower()}" else None,
+    )
+    client = MCPStdioClient()
+    session = MagicMock()
+    session.list_tools = AsyncMock(return_value=MagicMock(tools=[]))
+    client._get_or_create_session = AsyncMock(return_value=session)  # type: ignore[method-assign]
+
+    await client._connect_to_server(
+        f"npx {npx_flag} mcp-proxy https://mcp.example.com",
+        headers=headers,
+    )
+
+    assert client._connection_params.command == resolved_command
+    header_args = ["--headers", "authorization", "Bearer token-._~+/="] if headers else []
+    flag_args = [npx_flag] if npx_flag else []
+    assert client._connection_params.args == [*flag_args, "mcp-proxy", *header_args, "https://mcp.example.com"]
+
+
+@pytest.mark.parametrize("argument", ["%MCP_VALUE%", "!MCP_VALUE!", "token^value", 'token"value'])
+async def test_stdio_client_rejects_cmd_expansion_in_original_batch_arguments(monkeypatch, argument):
+    """Original arguments also need the syntax policy for the resolved batch script."""
+    monkeypatch.setattr(mcp_util, "sys", SimpleNamespace(platform="win32"))
+    monkeypatch.setattr("mcp.os.win32.utilities.shutil.which", lambda _command: r"C:\nodejs\npx.cmd")
+    client = MCPStdioClient()
+    get_session = AsyncMock()
+    client._get_or_create_session = get_session  # type: ignore[method-assign]
+
+    with pytest.raises(MCPStdioSecurityError, match="arguments are unsafe for a shell wrapper"):
+        await client._connect_to_server(shlex.join(["npx", "-y", "mcp-proxy", argument]))
+
+    get_session.assert_not_awaited()
+    assert client._connection_params is None
 
 
 def test_shell_wrapper_nesting_is_bounded():
