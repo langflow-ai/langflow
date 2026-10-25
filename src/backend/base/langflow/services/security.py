@@ -26,6 +26,18 @@ DEFAULT_EXCLUDED_PATHS = "/health,/docs,/redoc,/openapi.json,/api/version"
 # any of them spoof X-Forwarded-For. Behind a reverse proxy, set
 # LANGFLOW_GUARD_TRUSTED_PROXIES to the proxy's addresses.
 DEFAULT_TRUSTED_PROXIES = ""
+# Query parameters that carry user text by design: the search boxes
+# (knowledge-base chunks, projects, folders, store, users, teams, end users)
+# and the traces `query` filter. The endpoints treat their values as data
+# (escaped LIKE patterns, substring filters, sanitized trace search), so
+# signature scanning them only produces false positives such as
+# `search=SELECT * FROM users`. Every other parameter, the path and the
+# headers are still scanned.
+DEFAULT_EXCLUDED_DETECTION_PARAMS = "search,query"
+# fastapi-guard's default Permissions-Policy is `microphone=()`, which blocks
+# the voice assistant's getUserMedia call. Same-origin microphone stays
+# allowed; geolocation and camera, which Langflow never uses, stay off.
+PERMISSIONS_POLICY = "geolocation=(), microphone=(self), camera=()"
 
 
 def _env_bool(name: str, *, default: bool = False) -> bool:
@@ -77,6 +89,9 @@ def build_guard_config() -> SecurityConfig:
         # keeps screening the URL path, query params, and headers; body
         # scanning is opt-in via LANGFLOW_GUARD_SCAN_BODY.
         "detection_scan_body": _env_bool("LANGFLOW_GUARD_SCAN_BODY"),
+        "excluded_detection_params": set(
+            _env_csv("LANGFLOW_GUARD_EXCLUDED_DETECTION_PARAMS", DEFAULT_EXCLUDED_DETECTION_PARAMS)
+        ),
         # In-memory state unless a Redis URL is configured; reuse the
         # deployment's REDIS_URL when present so counters and bans survive
         # langflow's default multi-worker gunicorn setup.
@@ -96,6 +111,7 @@ def build_guard_config() -> SecurityConfig:
                 "frame_options": "SAMEORIGIN",
                 "content_type_options": "nosniff",
                 "referrer_policy": "strict-origin-when-cross-origin",
+                "permissions_policy": PERMISSIONS_POLICY,
             }
             if _env_bool("LANGFLOW_GUARD_SECURITY_HEADERS")
             else None

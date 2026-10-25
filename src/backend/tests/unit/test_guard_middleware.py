@@ -139,3 +139,28 @@ async def test_rate_limit_auto_ban_flag(monkeypatch):
     monkeypatch.setenv("LANGFLOW_GUARD_RATE_LIMIT_AUTO_BAN", "sometimes")
     with pytest.raises(ValueError, match="LANGFLOW_GUARD_RATE_LIMIT_AUTO_BAN"):
         build_guard_config()
+
+
+async def test_free_text_params_skip_signature_scanning(monkeypatch):
+    """Search boxes carry user text, so their values are not signature scanned.
+
+    Operators can replace the list with LANGFLOW_GUARD_EXCLUDED_DETECTION_PARAMS.
+    """
+    from langflow.services.security import build_guard_config
+
+    monkeypatch.delenv("REDIS_URL", raising=False)
+    monkeypatch.delenv("LANGFLOW_GUARD_EXCLUDED_DETECTION_PARAMS", raising=False)
+    assert build_guard_config().excluded_detection_params == {"search", "query"}
+
+    monkeypatch.setenv("LANGFLOW_GUARD_EXCLUDED_DETECTION_PARAMS", "search, q")
+    assert build_guard_config().excluded_detection_params == {"search", "q"}
+
+
+async def test_security_headers_keep_same_origin_microphone(monkeypatch):
+    """The voice assistant calls getUserMedia, which `microphone=()` would block."""
+    from langflow.services.security import PERMISSIONS_POLICY, build_guard_config
+
+    monkeypatch.delenv("REDIS_URL", raising=False)
+    monkeypatch.setenv("LANGFLOW_GUARD_SECURITY_HEADERS", "true")
+    assert build_guard_config().security_headers["permissions_policy"] == PERMISSIONS_POLICY
+    assert "microphone=(self)" in PERMISSIONS_POLICY
