@@ -113,15 +113,19 @@ const config = {
           sidebarPath: require.resolve("./sidebars.js"), // Use sidebars.js file
           sidebarCollapsed: true,
           // Versioning configuration
-          lastVersion: "1.12.0",
+          lastVersion: "1.13.0",
           versions: {
             current: {
-              label: "1.13.x (Next)",
+              label: "1.14.x (Next)",
               path: "next",
+            },
+            "1.13.0": {
+              label: "1.13.x",
+              path: "",
             },
             "1.12.0": {
               label: "1.12.x",
-              path: "",
+              path: "1.12.0",
             },
             "1.11.0": {
               label: "1.11.x",
@@ -134,10 +138,6 @@ const config = {
             "1.9.0": {
               label: "1.9.x",
               path: "1.9.0",
-            },
-            "1.8.0": {
-              label: "1.8.x",
-              path: "1.8.0",
             },
           },
           rehypePlugins: [rehypeWbrUnderscore],
@@ -171,11 +171,6 @@ const config = {
             id: "api",
             spec: "openapi/openapi.json",
             route: "/api",
-          },
-          {
-            id: "workflow",
-            spec: "openapi/langflow-workflows-openapi.json",
-            route: "/api/workflow",
           },
         ],
         theme: {
@@ -311,10 +306,14 @@ const config = {
           },
           {
             to: "/data-types",
-            from: ["/guides-data-message", "/configuration-objects"],
+            from: [
+              "/guides-data-message",
+              "/configuration-objects",
+              "/concepts-objects",
+            ],
           },
           {
-            to: "/concepts-flows",
+            to: "/agents",
             from: [
               "/travel-planning-agent",
               "/starter-projects-travel-planning-agent",
@@ -328,18 +327,43 @@ const config = {
               "/sequential-agent",
               "/starter-projects-sequential-agent",
               "/tutorials-sequential-agent",
+            ],
+          },
+          {
+            to: "/memory",
+            from: [
               "/memory-chatbot",
               "/starter-projects-memory-chatbot",
               "/tutorials-memory-chatbot",
+            ],
+          },
+          {
+            to: "/chat-with-files",
+            from: [
               "/financial-report-parser",
               "/document-qa",
               "/starter-projects-document-qa",
               "/tutorials-document-qa",
+            ],
+          },
+          {
+            to: "/components-prompts",
+            from: [
               "/blog-writer",
               "/starter-projects-blog-writer",
               "/tutorials-blog-writer",
+            ],
+          },
+          {
+            to: "/get-started-quickstart",
+            from: [
               "/basic-prompting",
               "/starter-projects-basic-prompting",
+            ],
+          },
+          {
+            to: "/chat-with-rag",
+            from: [
               "/vector-store-rag",
               "/starter-projects-vector-store-rag",
             ],
@@ -359,6 +383,7 @@ const config = {
               "/configuration-authentication",
               "/configuration-security-best-practices",
               "/Configuration/configuration-security-best-practices",
+              "/jwt-authentication",
             ],
           },
           {
@@ -375,6 +400,7 @@ const config = {
             from: [
               "/concepts-api",
               "/workspace-api",
+              "/embedded-chat-widget",
             ],
           },
           {
@@ -398,10 +424,6 @@ const config = {
             from: "/agents-tool-calling-agent-component",
           },
           {
-            to: "/concepts-publish",
-            from: "/embedded-chat-widget",
-          },
-          {
             to: "/bundles-google",
             from: [
               "/integrations-setup-google-oauth-langflow",
@@ -415,10 +437,6 @@ const config = {
           {
             to: "/develop-application",
             from: "/develop-overview",
-          },
-          {
-            to: "/data-types",
-            from: "/concepts-objects",
           },
           {
             to: "/bundles-apify",
@@ -458,22 +476,35 @@ const config = {
             ]
           },
           {
-            to: "/next/guardrails",
-            from: "/next/guardrails-legacy",
-          },
-          {
             to: "/legacy-core-components",
             from: [
               "/directory",
               "/text-input-and-output",
+            ]
+          },
+          {
+            to: "/operations",
+            from: [
               "/data-operations",
               "/dataframe-operations",
               "/text-operations",
             ]
           },
           {
-            to: "/api-keys-and-authentication",
-            from: "/jwt-authentication",
+            to: "/api#tag/Workflow",
+            from: "/api/workflow",
+          },
+          {
+            to: "/components-bundle-components#altk",
+            from: "/bundles-altk",
+          },
+          {
+            to: "/components-bundle-components#legacy-bundles",
+            from: "/bundles-chroma",
+          },
+          {
+            to: "/macos-support",
+            from: "/deployment-macos-support",
           },
           // add more redirects like this
           // {

@@ -268,7 +268,12 @@ class ScopeSet:
         """Compare provider scope aliases without conflating token identities."""
         normalized = scope.strip()
         if provider in {"google", "google_workspace"}:
-            normalized = normalized.removeprefix("https://www.googleapis.com/auth/")
+            normalized = normalized.removeprefix("https://www.googleapis.com/auth/").casefold()
+            # Google returns the userinfo aliases for OpenID Connect identity scopes.
+            if normalized == "userinfo.email":
+                return "email"
+            if normalized == "userinfo.profile":
+                return "profile"
         elif provider == "microsoft":
             normalized = normalized.removeprefix("https://graph.microsoft.com/")
         return normalized.casefold()

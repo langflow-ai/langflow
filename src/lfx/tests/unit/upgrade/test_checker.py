@@ -1,5 +1,8 @@
 """Unit tests for the upgrade compatibility checker."""
 
+from copy import deepcopy
+
+import pytest
 from lfx.upgrade.checker import (
     TOOL_OUTPUT_NAME,
     build_registry_lookup,
@@ -69,6 +72,20 @@ def test_ok_when_code_matches():
     report = check_flow_compatibility(_flow(_node()), _registry())
     assert len(report.nodes) == 1
     assert report.nodes[0].status == "ok"
+
+
+@pytest.mark.parametrize("code", [REGISTRY_CODE_V2, REGISTRY_CODE_V1])
+def test_exported_code_lines_match_string_code_status(code):
+    node = _node(code=code)
+    node["data"]["node"]["template"]["code"] = {"type": "code", "value": code.split("\n")}
+    flow = _flow(node)
+    original = deepcopy(flow)
+
+    report = check_flow_compatibility(flow, _registry())
+    expected = check_flow_compatibility(_flow(_node(code=code)), _registry())
+
+    assert report == expected
+    assert flow == original
 
 
 def test_ok_for_custom_component_ignored():

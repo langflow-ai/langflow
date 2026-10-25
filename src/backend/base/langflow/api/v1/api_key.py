@@ -1,11 +1,12 @@
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Request, Response
 from lfx.services.authorization import AuthorizationMutation, AuthorizationMutationKind
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import ApiKeyCreateRequest, ApiKeysResponse
 from langflow.services.auth import utils as auth_utils
+from langflow.services.auth.cookies import auth_cookie_name
 from langflow.services.authorization.lifecycle import safe_identity_mutation_committed, stage_identity_mutation
 from langflow.services.authorization.utils import audit_decision
 
@@ -109,6 +110,7 @@ async def delete_api_key_route(
 @router.post("/store", include_in_schema=False)
 async def save_store_api_key(
     api_key_request: ApiKeyCreateRequest,
+    request: Request,
     response: Response,
     current_user: CurrentActiveUser,
     db: DbSession,
@@ -126,8 +128,10 @@ async def save_store_api_key(
         await db.commit()
 
         response.set_cookie(
-            "apikey_tkn_lflw",
+            auth_cookie_name("apikey_tkn_lflw", request),
             encrypted,
+            # Match the login cookie path so prefixed instances stay isolated.
+            path=f"{request.app.root_path.strip().rstrip('/')}/",
             httponly=auth_settings.ACCESS_HTTPONLY,
             samesite=auth_settings.ACCESS_SAME_SITE,
             secure=auth_settings.ACCESS_SECURE,

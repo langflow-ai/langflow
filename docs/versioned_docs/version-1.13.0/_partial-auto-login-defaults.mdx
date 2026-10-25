@@ -1,0 +1,22 @@
+:::note
+Official release packages, tagged source archives, and Docker images disable automatic login by default.
+
+For a new Python package installation, do the following:
+
+1. Create a `.env` file with the following values:
+
+```text
+LANGFLOW_AUTO_LOGIN=false
+LANGFLOW_SUPERUSER_PASSWORD=REPLACE_WITH_A_STRONG_PASSWORD
+```
+
+2. Start Langflow with the `.env` file:
+
+```bash
+uv run langflow run --env-file .env
+```
+
+3. Sign in with the username `langflow` or your configured `LANGFLOW_SUPERUSER`.
+
+For more information, see [`LANGFLOW_AUTO_LOGIN`](/api-keys-and-authentication#langflow-auto-login).
+:::

@@ -51,9 +51,10 @@ You must [start your Langflow server with authentication enabled](#start-a-langf
 
 ### Create a Langflow API key
 
-You can generate a Langflow API key in your Langflow **Settings** or with the Langflow CLI.
+You can generate a Langflow API key in your Langflow **Settings**, with the Langflow API, or with the Langflow CLI.
 
-The CLI option is required if your Langflow server is running in `--backend-only` mode.
+If your Langflow server is running in `--backend-only` mode, the frontend isn't running, so use the Langflow API.
+The Langflow CLI works only when automatic login is enabled.
 
 <Tabs>
 <TabItem value="settings" label="Langflow Settings" default>
@@ -64,23 +65,51 @@ The CLI option is required if your Langflow server is running in `--backend-only
 4. Copy the API key and store it securely.
 
 </TabItem>
-<TabItem value="Langflow CLI" label="Langflow CLI">
+<TabItem value="Langflow API" label="Langflow API">
 
-If you're serving your flow with `--backend-only=true`, you can't create API keys in your Langflow **Settings** because the frontend isn't running.
-In this case, you must create API keys with the Langflow CLI.
+Use the Langflow API when your server has [authentication enabled](#start-a-langflow-server-with-authentication-enabled), including in `--backend-only` mode.
 
-1. Recommended: [Start your Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled).
-
-    The Langflow team recommends enabling authentication for security reasons to prevent unauthorized creation of API keys and superusers, especially in production environments.
-    If authentication isn't enabled (`LANGFLOW_AUTO_LOGIN=True`), all users are effectively superusers, and they can create API keys with the Langflow CLI.
-
-2. Create an API key with [`langflow api-key`](/configuration-cli#langflow-api-key):
+1. Sign in with your username and password to get an access token:
 
     ```shell
-    uv run langflow api-key
+    TOKEN=$(curl -s -X POST "http://$LANGFLOW_SERVER_ADDRESS/api/v1/login" \
+      -H "Content-Type: application/x-www-form-urlencoded" \
+      --data-urlencode "username=$LANGFLOW_USERNAME" \
+      --data-urlencode "password=$LANGFLOW_PASSWORD" \
+      | python3 -c "import sys, json; print(json.load(sys.stdin)['access_token'])")
     ```
 
-    All API keys created with the Langflow CLI have superuser privileges because the command requires superuser authentication, and Langflow API keys adopt the privileges of the user who created them.
+2. Create an API key with the access token:
+
+    ```shell
+    curl -X POST "http://$LANGFLOW_SERVER_ADDRESS/api/v1/api_key/" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{"name": "my-api-key"}'
+    ```
+
+    The `api_key` field in the response contains the full key. Langflow shows the full key only in this response, so store it securely.
+    The key has the privileges of the user who signed in.
+
+</TabItem>
+<TabItem value="Langflow CLI" label="Langflow CLI">
+
+[`langflow api-key`](/configuration-cli#langflow-api-key) works only when automatic login is enabled (`LANGFLOW_AUTO_LOGIN=true`).
+Official Langflow packages and Docker images default to `LANGFLOW_AUTO_LOGIN=false`.
+With that default, the command doesn't create a key. It prints `Auto login is disabled. API keys cannot be created through the CLI.`, or it fails with an error if `LANGFLOW_SUPERUSER_PASSWORD` isn't set.
+To create a key on a server with authentication enabled, use Langflow **Settings** or the Langflow API.
+
+When automatic login is enabled, run the command on the Langflow host with the same environment variables as the server, because the command writes to the Langflow database directly:
+
+```shell
+uv run langflow api-key
+```
+
+The command creates a key named `CLI` for the auto-login superuser, so the key has superuser privileges.
+If that superuser already has an API key, the command deletes one existing key before it creates the new one.
+
+Automatic login lets anyone who can reach the server act as the superuser.
+Don't enable it on a shared or production server just to use this command.
 
 </TabItem>
 </Tabs>
@@ -189,9 +218,44 @@ If your flows use the File System component, also follow [Move shared files when
 4. Set `LANGFLOW_AUTO_LOGIN=false`, set `LANGFLOW_SUPERUSER` to the existing account's username, and set `LANGFLOW_SUPERUSER_PASSWORD` before restarting or upgrading. Startup requires this setting, but it does **not** overwrite a non-legacy password on an existing account. Use the password established in the previous steps.
 5. Start the new release with the existing database and configuration directory. In a fresh browser session, sign in with the established password and verify that your existing flows are present.
 
-Do not delete the existing account, database, or encryption key to regain access. Creating a different superuser does not transfer ownership of the existing account's flows. If you upgraded before preparing the account, use an existing administrator credential to update that account's password; if none is available, complete the preparation on a backed-up previous installation restricted to local access before upgrading again.
+Do not delete the existing account, database, or encryption key to regain access. Creating a different superuser does not transfer ownership of the existing account's flows. If you already upgraded without preparing the account, see [Recover access after upgrading](/troubleshoot#recover-access-after-upgrading).
 
 An explicit `LANGFLOW_AUTO_LOGIN=true` in an existing environment or `.env` file takes precedence over the new default. Remove that override or set it to `false` as part of the transition. Disabling auto-login prevents new anonymous sessions; it does not revoke previously issued sessions or API keys.
+
+##### Recover access after upgrading {#recover-access-after-upgrading}
+
+If you upgraded without preparing the account, Langflow starts but you can't sign in to the account that owns your flows.
+That account uses a generated bootstrap password that you never saw, and `LANGFLOW_SUPERUSER_PASSWORD` doesn't replace it.
+Your flows are still in the database.
+To recover them, temporarily re-enable auto-login and set a password on that same account:
+
+1. Back up the database and configuration directory.
+2. Stop Langflow. Set `LANGFLOW_AUTO_LOGIN=true` in the environment or `.env` file, then start Langflow with the same database and configuration directory. Keep the instance restricted to trusted local access until you finish.
+3. Request an auto-login token, and copy the `access_token` value from the response:
+
+    ```bash
+    curl -s http://localhost:7860/api/v1/auto_login
+    ```
+
+4. Get the account's ID, and copy the `id` value from the response:
+
+    ```bash
+    curl -s http://localhost:7860/api/v1/users/whoami \
+      -H "Authorization: Bearer ACCESS_TOKEN"
+    ```
+
+5. Set a strong password on that account. Don't use the legacy default value `langflow`. Read the password into a variable so that it isn't stored in your shell history, and avoid `"` and `\` characters, which break the JSON body.
+
+    ```bash
+    read -rs NEW_PASSWORD
+    curl -s -X PATCH http://localhost:7860/api/v1/users/USER_ID \
+      -H "Authorization: Bearer ACCESS_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "{\"password\": \"$NEW_PASSWORD\"}"
+    ```
+
+6. Stop Langflow. Remove `LANGFLOW_AUTO_LOGIN=true` or set it to `false`. If the account's username isn't `langflow`, set `LANGFLOW_SUPERUSER` to it. Set `LANGFLOW_SUPERUSER_PASSWORD` to the password from step 5. Startup requires this variable, but it doesn't overwrite the password you just set.
+7. Start Langflow, sign in with that username and password, and verify that your existing flows are present.
 
 #### LANGFLOW_SKIP_AUTH_AUTO_LOGIN {#langflow-skip-auth-auto-login}
 

@@ -47,6 +47,20 @@ UNRELATED_ERROR = (
     "'message': 'Number of requests has exceeded your rate limit.'}}"
 )
 
+# Verbatim OpenAI reasoning-model responses (o-series, gpt-5*): the parameter is
+# rejected outright, or only the default value is accepted. Both are remediated
+# by dropping temperature, same as Anthropic's "deprecated" wording.
+OPENAI_TEMPERATURE_UNSUPPORTED_ERROR = (
+    "Error code: 400 - {'error': {'message': \"Unsupported parameter: 'temperature' is not "
+    "supported with this model.\", 'type': 'invalid_request_error', 'param': 'temperature', "
+    "'code': None}}"
+)
+OPENAI_TEMPERATURE_VALUE_ERROR = (
+    "Error code: 400 - {'error': {'message': \"Unsupported value: 'temperature' does not support "
+    "0.1 with this model. Only the default (1) value is supported.\", 'type': "
+    "'invalid_request_error', 'param': 'temperature', 'code': 'unsupported_value'}}"
+)
+
 
 class ProviderBadRequestError(Exception):
     """Stands in for ``anthropic.BadRequestError`` — matching is on the message, not the class."""
@@ -152,6 +166,20 @@ class TestTemperatureRemediationRegistry:
     def test_should_match_regardless_of_provider(self):
         """The constraint is not Anthropic-specific; match on the error text alone."""
         assert find_remediation(ANTHROPIC_TEMPERATURE_ERROR, provider=None, already_applied=set()) is not None
+
+    def test_should_match_openai_reasoning_model_unsupported_parameter(self):
+        """o-series / gpt-5* reject an explicit temperature; drop it and retry."""
+        remediation = find_remediation(OPENAI_TEMPERATURE_UNSUPPORTED_ERROR, provider="OpenAI", already_applied=set())
+
+        assert remediation is not None
+        assert remediation.overrides == {"temperature": None}
+
+    def test_should_match_openai_reasoning_model_default_only_value(self):
+        """Some reasoning models accept only the default temperature value."""
+        remediation = find_remediation(OPENAI_TEMPERATURE_VALUE_ERROR, provider="OpenAI", already_applied=set())
+
+        assert remediation is not None
+        assert remediation.overrides == {"temperature": None}
 
     def test_should_not_match_unrelated_provider_errors(self):
         assert find_remediation(UNRELATED_ERROR, provider="Anthropic", already_applied=set()) is None

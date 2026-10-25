@@ -64,10 +64,10 @@ def test_workspace_security_constraints_enforce_patched_versions() -> None:
     _assert_floor(_requirement(constraints, "langgraph-sdk"), "0.4.6")
 
     # An override replaces every requirement on the package, dropping caps such as
-    # aiohttp's multidict<7.0 and langgraph's langgraph-sdk<0.5.0. Keep these floors
+    # aiohttp's multidict<7.0, langgraph's langgraph-sdk<0.5.0, and Opik's LiteLLM cap. Keep these floors
     # as constraints so `uv pip compile` (the Mend export) cannot resolve past them.
     override_names = {Requirement(spec).name.lower() for spec in uv_settings["override-dependencies"]}
-    assert not {"multidict", "langgraph-sdk"} & override_names
+    assert not {"multidict", "langgraph-sdk", "litellm"} & override_names
 
 
 def test_managed_dependency_graph_excludes_opendsstar_and_diskcache() -> None:
@@ -209,7 +209,7 @@ def test_workspace_security_overrides_enforce_current_python_floors() -> None:
     for name, minimum in (("authlib", "1.8.0"), ("virtualenv", "21.14.2"), ("Werkzeug", "3.1.9")):
         _assert_floor(_requirement(overrides, name), minimum)
 
-    litellm = _requirement(overrides, "litellm")
+    litellm = _requirement(constraints, "litellm")
     _assert_floor(litellm, "1.103.1")
     _assert_specifier(litellm, "!=", "1.104.0rc1")
 
