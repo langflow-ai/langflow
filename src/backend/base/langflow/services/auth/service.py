@@ -1673,7 +1673,11 @@ class AuthService(BaseAuthService):
         clear_current_auth_context()
         clear_current_external_access_context()
         if token or external_token:
-            return await self.get_current_user_from_access_token(token, db, external_token=external_token)
+            try:
+                return await self.get_current_user_from_access_token(token, db, external_token=external_token)
+            except MissingCredentialsError:
+                if not (query_param or header_param):
+                    raise
 
         settings_service = self.settings
         result: User | None

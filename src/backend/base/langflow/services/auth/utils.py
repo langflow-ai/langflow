@@ -564,9 +564,10 @@ async def get_current_user_mcp(
     db: AsyncSession = Depends(injectable_session_scope, scope="function"),
 ) -> User:
     external_token = _get_external_token(request.headers, request.cookies)
-    external_kwargs = {"external_token": external_token} if external_token else {}
     try:
-        return await _auth_service().get_current_user_mcp(token, query_param, header_param, db, **external_kwargs)
+        return await _auth_service().get_current_user_mcp(
+            token, query_param, header_param, db, external_token=external_token
+        )
     except AuthenticationError as e:
         raise _auth_error_to_http(e) from e
 
