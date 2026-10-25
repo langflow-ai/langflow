@@ -34,6 +34,7 @@ from fastapi.responses import StreamingResponse
 from lfx.base.knowledge_bases.backends import is_local_backend
 from lfx.base.knowledge_bases.backends.postgres import postgres_env_configured
 from lfx.log.logger import logger
+from lfx.utils.file_path_security import flow_storage_scope, user_storage_scope
 from pydantic import BaseModel, SecretStr, StringConstraints, ValidationError
 from sqlalchemy.engine import make_url
 from sqlmodel import select
@@ -1186,7 +1187,12 @@ async def _instance() -> dict[str, Any]:
         ).all()
         has_files = (await session.exec(select(File.id).limit(1))).first() is not None
         # relocate-files copies from the folder of each user and each flow, and from no other.
-        namespaces = {str(identifier) for model in (User, Flow) for identifier in await session.exec(select(model.id))}
+        namespaces = {
+            namespace
+            for model, typed_scope in ((User, user_storage_scope), (Flow, flow_storage_scope))
+            for identifier in await session.exec(select(model.id))
+            for namespace in (str(identifier), typed_scope(identifier))
+        }
     if settings.storage_type.lower() == "s3":
         files = {
             "storage": "s3",
