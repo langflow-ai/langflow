@@ -3,22 +3,9 @@ from enum import Enum
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import (
-    JSON,
-    BigInteger,
-    CheckConstraint,
-    Column,
-    DateTime,
-    Index,
-    Integer,
-    String,
-    Text,
-    UniqueConstraint,
-    text,
-)
+from sqlalchemy import JSON, BigInteger, Column, DateTime, Index, Integer, String, Text, UniqueConstraint, text
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.sql.naming import conv
 from sqlmodel import Field, SQLModel
 
 # JSONB on Postgres (GIN-indexable), JSON elsewhere — same variant as other JSON columns.
@@ -54,12 +41,7 @@ class JobType(str, Enum):
 
 class JobBase(SQLModel):
     job_id: UUID = Field(primary_key=True, index=True)
-    # Nullable in the column so a DEPLOYMENT_COPY job can leave it empty: that job belongs to a
-    # deployment, which spans every flow in a project, and a filler id would be
-    # indistinguishable from a real one. Every other job type still has to carry a flow, and
-    # ``ck_job_flow_id_required_unless_deployment_copy`` is what keeps that true -- relaxing the
-    # column alone would let a workflow job be inserted with no flow at all.
-    flow_id: UUID | None = Field(default=None, index=True, nullable=True)
+    flow_id: UUID = Field(index=True)
     status: JobStatus = Field(
         default=JobStatus.QUEUED,
         sa_column=Column(
@@ -120,16 +102,6 @@ class Job(JobBase, table=True):  # type: ignore[call-arg]
     __table_args__ = (
         Index("ix_job_status_created", "status", "created_timestamp"),
         Index("ix_job_finished_timestamp", "finished_timestamp"),
-        # A flow is required for every job except a deployment copy. ``type`` is itself
-        # nullable, and a CHECK passes when its expression is NULL rather than FALSE, so the
-        # null is excluded explicitly: without that, a row with no type and no flow would be
-        # accepted, which is the hole relaxing the column was meant not to open.
-        # conv() marks the name final: env.py installs ``ck_%(table_name)s_%(constraint_name)s``
-        # on the metadata, which would otherwise render this as ``ck_job_ck_job_...``.
-        CheckConstraint(
-            "flow_id IS NOT NULL OR (type IS NOT NULL AND type = 'deployment_copy')",
-            name=conv("ck_job_flow_id_required_unless_deployment_copy"),
-        ),
     )
 
 

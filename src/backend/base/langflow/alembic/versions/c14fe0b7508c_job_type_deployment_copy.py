@@ -1,0 +1,72 @@
+"""deployment_copy job type.
+
+Adds JobType.DEPLOYMENT_COPY to job_type_enum, for the job that copies a deployment's
+documents into the plane that serves it. One such job per flow, so ``flow_id`` stays required
+for every job type.
+
+Revision ID: c14fe0b7508c
+Revises: 1d8d193028c8
+Create Date: 2026-10-21 15:13:50.460965
+
+Phase: EXPAND
+Safe to rollback: YES, except that deployment_copy rows are deleted, since the old type has no
+    member to hold them. They record a copy's progress and redeploying recreates them.
+Services compatible: All versions. Older services never write the new type.
+"""
+
+from collections.abc import Sequence
+
+import sqlalchemy as sa
+from alembic import op
+
+# revision identifiers, used by Alembic.
+revision: str = "c14fe0b7508c"  # pragma: allowlist secret
+down_revision: str | None = "1d8d193028c8"  # pragma: allowlist secret
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
+
+_OLD_TYPES = ("workflow", "ingestion", "evaluation")
+_NEW_TYPES = (*_OLD_TYPES, "deployment_copy")
+
+
+def _job_type(*members: str) -> sa.Enum:
+    """``job_type_enum`` with the given members, rendered as the model renders it.
+
+    169b35510b37 created it as a named type, native on Postgres. On SQLite it is a VARCHAR as
+    wide as the longest member, with no CHECK (SQLAlchemy stopped emitting one in 1.4), so the
+    column has to be widened for ``deployment_copy`` at 15 characters: the old one is
+    VARCHAR(10), sized for ``evaluation``. SQLite does not enforce the width, so the value would
+    store either way, but the declared type would stop matching the model and the
+    phantom-migration check says so.
+    """
+    return sa.Enum(*members, name="job_type_enum")
+
+
+def upgrade() -> None:
+    conn = op.get_bind()
+    if conn.dialect.name == "postgresql":
+        # IF NOT EXISTS so a re-run is a no-op. Transaction-safe since PG12 as long as
+        # nothing in the same transaction writes the new value, which nothing here does.
+        op.execute("ALTER TYPE job_type_enum ADD VALUE IF NOT EXISTS 'deployment_copy'")
+        return
+
+    with op.batch_alter_table("job", schema=None) as batch_op:
+        batch_op.alter_column("type", existing_type=_job_type(*_OLD_TYPES), type_=_job_type(*_NEW_TYPES))
+
+
+def downgrade() -> None:
+    conn = op.get_bind()
+    # The old type has no member for these rows. They record a copy's progress and are
+    # recreated by redeploying, so dropping them is recoverable; nothing else is touched.
+    op.execute(sa.text("DELETE FROM job WHERE type = 'deployment_copy'"))
+
+    if conn.dialect.name == "postgresql":
+        # Postgres cannot drop a member, so the type is rebuilt without it.
+        op.execute("ALTER TYPE job_type_enum RENAME TO job_type_enum_old")
+        sa.Enum(*_OLD_TYPES, name="job_type_enum").create(conn, checkfirst=False)
+        op.execute("ALTER TABLE job ALTER COLUMN type TYPE job_type_enum USING type::text::job_type_enum")
+        op.execute("DROP TYPE job_type_enum_old")
+        return
+
+    with op.batch_alter_table("job", schema=None) as batch_op:
+        batch_op.alter_column("type", existing_type=_job_type(*_NEW_TYPES), type_=_job_type(*_OLD_TYPES))
