@@ -386,25 +386,30 @@ class MCPToolsComponent(ComponentWithCache):
 
         ensure_mcp_stdio_access(server_config, current_user, get_settings_service().settings)
 
+    @staticmethod
+    def _normalize_mcp_server_value(mcp_server: Any) -> tuple[str | None, dict | None]:
+        if isinstance(mcp_server, dict):
+            server_name = mcp_server.get("name")
+            server_config = mcp_server.get("config")
+        elif mcp_server is None or isinstance(mcp_server, str):
+            server_name = mcp_server
+            server_config = None
+        else:
+            msg = "MCP server must be a name or an object with a name and optional config."
+            raise ValueError(msg)
+
+        if server_name is not None and not isinstance(server_name, str):
+            msg = "MCP server name must be a string."
+            raise ValueError(msg)
+        if server_config is not None and not isinstance(server_config, dict):
+            msg = "MCP server config must be an object."
+            raise ValueError(msg)
+        return server_name, server_config
+
     async def update_tool_list(self, mcp_server_value=None):
         # Accepts mcp_server_value as dict {name, config} or uses self.mcp_server
         mcp_server = mcp_server_value if mcp_server_value is not None else getattr(self, "mcp_server", None)
-        server_name = None
-        server_config_from_value = None
-        if isinstance(mcp_server, dict):
-            server_name = mcp_server.get("name")
-            server_config_from_value = mcp_server.get("config")
-            if server_name is not None and not isinstance(server_name, str):
-                msg = "MCP server name must be a string."
-                raise ValueError(msg)
-            if server_config_from_value is not None and not isinstance(server_config_from_value, dict):
-                msg = "MCP server config must be an object."
-                raise ValueError(msg)
-        elif mcp_server is not None and not isinstance(mcp_server, str):
-            msg = "MCP server must be a name or an object with a name and optional config."
-            raise ValueError(msg)
-        else:
-            server_name = mcp_server
+        server_name, server_config_from_value = self._normalize_mcp_server_value(mcp_server)
         if not server_name:
             self.tools = []
             await logger.adebug("MCP update_tool_list: empty server_name, clearing tools")
@@ -692,6 +697,9 @@ class MCPToolsComponent(ComponentWithCache):
 
     async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Toggle the visibility of connection-specific fields based on the selected mode."""
+        normalized_server_name = None
+        if field_name == "mcp_server":
+            normalized_server_name, _ = self._normalize_mcp_server_value(field_value)
         try:
             is_refresh = bool(build_config.get("is_refresh", False))
             if field_name == "tool":
@@ -757,7 +765,7 @@ class MCPToolsComponent(ComponentWithCache):
 
                 build_config["tool_placeholder"]["tool_mode"] = True
 
-                current_server_name = field_value.get("name") if isinstance(field_value, dict) else field_value
+                current_server_name = normalized_server_name
                 build_config_server_value = build_config.get("mcp_server", {}).get("value")
                 build_config_server_name = (
                     build_config_server_value.get("name")
@@ -1171,7 +1179,7 @@ class MCPToolsComponent(ComponentWithCache):
         the "Use Cached Server" (``use_cache``) toggle which controls the shared cross-request cache.
         """
         mcp_server = getattr(self, "mcp_server", None)
-        srv = mcp_server.get("name") if isinstance(mcp_server, dict) else mcp_server
+        srv, _ = self._normalize_mcp_server_value(mcp_server)
 
         ttl = self.TOOL_TTL_SECS
         ttl_key = self._mcp_servers_cache_key(srv or "") if ttl > 0 and srv else ""

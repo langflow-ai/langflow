@@ -8,6 +8,12 @@ from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
 from pydantic import create_model
 
 RESERVED_INPUT_NAMES = dict.fromkeys([*MCPToolsComponent.default_keys, "tools_metadata"])
+INVALID_SERVER_VALUES = [
+    (["configured-server"], "MCP server must be a name or an object"),
+    (42, "MCP server must be a name or an object"),
+    ({"name": ["configured-server"]}, "MCP server name must be a string"),
+    ({"name": "configured-server", "config": "not-an-object"}, "MCP server config must be an object"),
+]
 
 
 def _component_with_tool(args_schema) -> MCPToolsComponent:
@@ -73,15 +79,7 @@ async def test_colliding_tool_cannot_execute():
     exec_tool.coroutine.assert_not_awaited()
 
 
-@pytest.mark.parametrize(
-    ("server_value", "error_match"),
-    [
-        (["configured-server"], "MCP server must be a name or an object"),
-        (42, "MCP server must be a name or an object"),
-        ({"name": ["configured-server"]}, "MCP server name must be a string"),
-        ({"name": "configured-server", "config": "not-an-object"}, "MCP server config must be an object"),
-    ],
-)
+@pytest.mark.parametrize(("server_value", "error_match"), INVALID_SERVER_VALUES)
 async def test_runtime_rejects_invalid_mcp_server_before_tool_discovery(server_value, error_match, monkeypatch):
     component = MCPToolsComponent()
     component._user_id = "runtime-user"
@@ -95,6 +93,40 @@ async def test_runtime_rejects_invalid_mcp_server_before_tool_discovery(server_v
         await component.update_tool_list(mcp_server_value=server_value)
 
     update_tools.assert_not_awaited()
+
+
+@pytest.mark.parametrize(("server_value", "error_match"), INVALID_SERVER_VALUES)
+async def test_get_tools_rejects_invalid_mcp_server_before_cache_access(server_value, error_match):
+    component = MCPToolsComponent()
+    component.mcp_server = server_value
+    component.update_tool_list = AsyncMock()
+
+    with pytest.raises(ValueError, match=error_match):
+        await component._get_tools()
+
+    component.update_tool_list.assert_not_awaited()
+
+
+@pytest.mark.parametrize(("server_value", "error_match"), INVALID_SERVER_VALUES)
+async def test_update_build_config_rejects_invalid_mcp_server_before_cache_access(server_value, error_match):
+    component = MCPToolsComponent()
+    component.use_cache = True
+    component._user_id = "runtime-user"
+    component.update_tool_list = AsyncMock()
+    build_config = {
+        "mcp_server": {"value": {"name": "configured-server"}},
+        "tool": {"show": True, "options": [], "value": "", "placeholder": ""},
+        "tool_placeholder": {"tool_mode": True},
+        "tools_metadata": {"show": False},
+        "use_cache": {"value": True},
+        "verify_ssl": {"value": True},
+        "headers": {"value": []},
+    }
+
+    with pytest.raises(ValueError, match=error_match):
+        await component.update_build_config(build_config, server_value, "mcp_server")
+
+    component.update_tool_list.assert_not_awaited()
 
 
 async def test_runtime_accepts_valid_mcp_server_configuration():
