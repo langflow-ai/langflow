@@ -39,7 +39,7 @@ dependencies = [
     "lfx-ollama>=0.2.0,<1.0.0",
     "lfx-amazon>=0.2.2,<1.0.0",
     "lfx-cohere>=0.2.0,<1.0.0",
-    "lfx-oracle>=0.2.0,<1.0.0",
+    "lfx-oracle>=0.3.0,<1.0.0",
     "lfx-vllm>=0.2.0,<1.0.0",
     "lfx-openai-compatible>=0.2.0,<1.0.0",
     "lfx-google>=0.3.5,<1.0.0",
@@ -183,7 +183,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 bundles = [
-    "lfx-bundles[all-no-torch]>=1.2.4,<2.0",
+    "lfx-bundles[all-no-torch]>=1.2.5,<2.0",
     "lfx-arxiv>=0.2.0,<1.0.0",
     "lfx-confluent>=0.2.0,<1.0.0",
     "lfx-duckduckgo>=0.2.0,<1.0.0",

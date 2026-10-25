@@ -1,6 +1,6 @@
 [project]
 name = "lfx-oracle"
-version = "0.2.0"
+version = "0.3.0"
 description = "Oracle Database components (Doc Loader, Autonomous Database Loader, Embeddings, Vector Store) as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -24,7 +24,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "oracle", "oracledb", "vec
 #   Oracle document loaders the components wrap.  Pins match the former
 #   ``langflow-base[oracledb]`` extra this bundle replaces.
 dependencies = [
-    "lfx>=1.13.0.dev0,<2.0.0",
+    "lfx>=1.13.0.dev0,<1.14.0.dev0",
     "oracledb>=2.2.0,<4.0.0",
     "langchain-oracledb>=1.5.0,<2.0.0",
 ]

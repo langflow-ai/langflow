@@ -202,6 +202,7 @@ async def make_oauth_connection(
                 connection_id=row.id,
                 user_id=owner_id,
                 registration_id=registration_id,
+                completed_registration_id=registration_id,
                 config_digest="0" * 64,
                 scopes=["chat:write"],
                 expires_at=datetime.now(timezone.utc),

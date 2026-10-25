@@ -44,7 +44,7 @@ class TestWithoutStorageService:
         """Pinned separately: the callers catch ``AttributeError``, so a regression is silent."""
         with patch(f"{MODULE}.get_storage_service", return_value=None):
             try:
-                _component().get_full_path("flow-1/report.csv")
+                _component().get_full_path("flow-flow-1/report.csv")
             except AttributeError as exc:  # pragma: no cover - only runs on regression
                 pytest.fail(f"get_full_path raised AttributeError: {exc}")
 
