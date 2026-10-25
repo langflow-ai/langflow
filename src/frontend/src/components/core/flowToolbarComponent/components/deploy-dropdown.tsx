@@ -13,6 +13,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { usePermissions } from "@/contexts/permissionsContext";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
+import CustomFlowDeployAction from "@/customization/components/custom-flow-deploy-action";
 import CustomFlowShareAction from "@/customization/components/custom-flow-share-action";
 import { CustomLink } from "@/customization/components/custom-link";
 import { ENABLE_PUBLISH, ENABLE_WIDGET } from "@/customization/feature-flags";
@@ -144,6 +145,14 @@ export default function PublishDropdown({
               resourceType="flow"
               resourceName={flowName}
               menuContext="editor"
+            />
+          )}
+          {/* Customization seam: overlays render a deploy-to-environment item; the OSS stub renders nothing. */}
+          {flowId && folderId && (
+            <CustomFlowDeployAction
+              projectId={folderId}
+              flowId={flowId}
+              flowName={flowName}
             />
           )}
           <DropdownMenuItem
