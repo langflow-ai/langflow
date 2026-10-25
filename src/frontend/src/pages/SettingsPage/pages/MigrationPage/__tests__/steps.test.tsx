@@ -79,6 +79,41 @@ describe("Where your data goes", () => {
     );
     expect(screen.queryByText("Knowledge bases")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Bucket")).not.toBeInTheDocument();
+    // What the admin enters stays in one worker's memory, which another worker cannot read.
+    expect(
+      screen.getByText(
+        /Run Langflow with one worker during the move, or another worker won't have them\./,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("says what to do when the worker that answers has no passwords", () => {
+    show(
+      <DestinationsStep
+        migration={migration(
+          {},
+          {
+            destinations: {
+              database: { location: "db.internal:5432/target" },
+              results: {
+                database: {
+                  ok: false,
+                  code: "secrets_missing", // pragma: allowlist secret
+                  reason: "Enter the database address again.",
+                },
+              },
+              saved_by: "alice",
+              saved_at: "2026-10-06T12:00:00Z",
+            },
+          },
+        )}
+        state={step("connect_target", "blocked", "secrets_missing")} // pragma: allowlist secret
+      />,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Langflow keeps passwords and keys only in memory and no longer has them. If Langflow runs more than one worker, restart it with one worker. Then enter them again.",
+    );
   });
 
   it("asks a PostgreSQL instance only for what it keeps on its own server", () => {
@@ -625,6 +660,10 @@ describe("Pause changes", () => {
 
     const dialog = screen.getByRole("dialog", { name: "Pause changes now?" });
     expect(dialog).toHaveTextContent("Tell people first.");
+    // The pause holds for this instance only, so the admin stops the others that share its database.
+    expect(dialog).toHaveTextContent(
+      "This pauses this instance only: stop any other instance or replica that uses the same database.",
+    );
     // The dialog wraps its Cancel button in a second one.
     await userEvent.click(
       within(dialog).getAllByRole("button", { name: "Cancel" })[0],
@@ -1354,6 +1393,100 @@ describe("Pause changes", () => {
     ).toBeInTheDocument();
   });
 
+  it("says before the way back that copying the database again needs a new, empty database", async () => {
+    // The copy wrote the database whose identity is "first". `savedNow` is the one saved now.
+    const copied = (
+      status: MigrationCopyRun["status"],
+      ok?: boolean,
+      savedNow = "first",
+    ) =>
+      migration(
+        {},
+        {
+          pause: paused,
+          destinations: {
+            database: {
+              location: "db.example:5432/langflow",
+              identity: savedNow,
+            },
+            saved_by: "alice",
+            saved_at: "2026-10-06T12:00:00Z",
+          },
+          steps: {
+            copy_database: {
+              run_id: "run-1",
+              status,
+              dry_run: false,
+              started_by: "alice",
+              started_at: "2026-10-06T12:05:00Z",
+              finished_at: "2026-10-06T12:06:00Z",
+              destination: {
+                database: {
+                  location: "db.example:5432/langflow",
+                  identity: "first",
+                },
+              },
+              report:
+                ok === undefined
+                  ? null
+                  : {
+                      ok,
+                      tables_copied: ok ? 59 : 0,
+                      rows_copied: ok ? 57 : 0,
+                    },
+              error: null,
+            },
+          },
+        },
+      );
+    const newDatabase =
+      "To copy the database again, save a new, empty database in 'Where your data goes' first.";
+
+    const { unmount } = show(<Recovery migration={copied("done", true)} />);
+    expect(
+      screen.getByText(/^Turn changes back on\. Nothing is lost here\./),
+    ).toHaveTextContent(newDatabase);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Turn changes back on" }),
+    );
+    expect(
+      screen.getByRole("dialog", { name: "Turn changes back on?" }),
+    ).toHaveTextContent(newDatabase);
+    unmount();
+
+    const banner = show(<PausedBanner migration={copied("done", true)} />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Turn changes back on" }),
+    );
+    expect(
+      screen.getByRole("dialog", { name: "Turn changes back on?" }),
+    ).toHaveTextContent(newDatabase);
+    banner.unmount();
+
+    // A copy that was refused or failed wrote nothing, and neither did one that never ran. Once another
+    // database is saved, the next copy goes there.
+    for (const state of [
+      copied("done", false),
+      copied("failed"),
+      migration({}, { pause: paused }),
+      copied("done", true, "second"),
+    ]) {
+      const recovery = show(<Recovery migration={state} />);
+      expect(
+        screen.getByText(/^Turn changes back on\. Nothing is lost here\./),
+      ).not.toHaveTextContent(newDatabase);
+      recovery.unmount();
+      const plain = show(<PausedBanner migration={state} />);
+      await userEvent.click(
+        screen.getByRole("button", { name: "Turn changes back on" }),
+      );
+      expect(
+        screen.getByRole("dialog", { name: "Turn changes back on?" }),
+      ).not.toHaveTextContent(newDatabase);
+      plain.unmount();
+    }
+  });
+
   it("says how to go back from where the move stands", () => {
     const { unmount } = show(<Recovery migration={migration()} />);
     expect(
@@ -1550,6 +1683,12 @@ describe("Back up this instance", () => {
     expect(
       screen.queryByText(/^Knowledge bases folder/),
     ).not.toBeInTheDocument();
+    // Another instance on this database would go on writing after the backup: the pause holds here only.
+    expect(
+      screen.getByText(
+        /^First stop any other instance or replica that uses this database\. The pause covers this instance only\./,
+      ),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Download the database" }),
     ).not.toBeInTheDocument();
@@ -1687,7 +1826,7 @@ describe("Copy the database", () => {
   it.each([
     [
       "secrets_missing",
-      "Langflow no longer holds the passwords and keys of the new instance. Enter them again in 'Where your data goes'.",
+      "Langflow no longer holds the passwords and keys of the new instance. If it runs more than one worker, restart it with one worker. Then enter them again in 'Where your data goes'.",
     ],
     ["run_active", "Another step is running. Wait for it to finish."],
     // A step above opened again in another tab, and this page has not read that yet.
@@ -2001,6 +2140,31 @@ describe("Copy the database", () => {
     expect(
       screen.getByRole("button", { name: "Copy again" }),
     ).toBeInTheDocument();
+  });
+
+  it("says where to save a new, empty database before an out-of-date copy is made again", () => {
+    const note =
+      "To copy the database again, save a new, empty database in 'Where your data goes' first.";
+    // The new instance's database holds the whole copy, and copying into it again fails once a row is gone.
+    const whole = show(
+      panel(
+        { report: { ok: true, tables_copied: 59, rows_copied: 57 } },
+        "current",
+      ),
+    );
+    expect(screen.getByText(note)).toBeInTheDocument();
+    whole.unmount();
+
+    // A copy that was refused or failed wrote nothing, so the same database takes the next one.
+    for (const run of [
+      { report: { ok: false, tables_copied: 0, rows_copied: 0 } },
+      { status: "failed" as const },
+    ]) {
+      const empty = show(panel(run, "current"));
+      expect(screen.getByText(/out of date/)).toBeInTheDocument();
+      expect(screen.queryByText(note)).not.toBeInTheDocument();
+      empty.unmount();
+    }
   });
 });
 
@@ -3202,7 +3366,9 @@ describe("Start the new instance", () => {
     expect(
       gate.getByText("Backup confirmed: s3://backups/langflow"),
     ).toBeInTheDocument();
-    expect(gate.getByText(/^Changes paused since /)).toBeInTheDocument();
+    expect(
+      gate.getByText(/^Changes paused on this instance since /),
+    ).toBeInTheDocument();
     expect(
       gate.getByText("Secret key verified on the new instance"),
     ).toBeInTheDocument();
@@ -3532,7 +3698,7 @@ describe("Start the new instance", () => {
     );
     expect(
       screen.getByText(
-        "Don't start this instance again. It would write to the new instance's database.",
+        "Don't start this instance again, or any other instance that used this database. They would write to the new instance's database.",
       ),
     ).toBeInTheDocument();
   });
@@ -3784,7 +3950,7 @@ describe("Check the copy", () => {
       screen.getByRole("button", { name: "Check the copy" }),
     );
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Langflow no longer holds the passwords and keys of the new instance. Enter them again in 'Where your data goes'.",
+      "Langflow no longer holds the passwords and keys of the new instance. If it runs more than one worker, restart it with one worker. Then enter them again in 'Where your data goes'.",
     );
     unmount();
 

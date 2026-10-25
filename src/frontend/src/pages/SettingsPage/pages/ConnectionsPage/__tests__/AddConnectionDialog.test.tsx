@@ -115,6 +115,7 @@ const fillDetails = async (user: ReturnType<typeof userEvent.setup>) => {
 describe("AddConnectionDialog ownership", () => {
   beforeEach(() => {
     mockCreate.mockReset();
+    mockRegistrations.isSuccess = true;
     mockResolveRegistrationId.mockReturnValue("google-demo");
     // Consent opens in a popup the dialog creates on the click itself.
     jest.spyOn(window, "open").mockReturnValue({
@@ -142,6 +143,9 @@ describe("AddConnectionDialog ownership", () => {
     );
     expect(screen.queryByTestId("connection-provider")).not.toBeInTheDocument();
     expect(
+      screen.queryByTestId("connection-setup-help"),
+    ).not.toBeInTheDocument();
+    expect(
       screen.queryByText(/No OAuth registration is configured/i),
     ).not.toBeInTheDocument();
   });
@@ -162,6 +166,66 @@ describe("AddConnectionDialog ownership", () => {
       /No OAuth registration is configured/i,
     );
     expect(screen.getByTestId("connection-authorize")).toBeDisabled();
+    expect(screen.getByRole("link", { name: "Setup guide" })).toHaveAttribute(
+      "href",
+      "https://docs.langflow.org/connection-oauth#customer-owned-google-registration",
+    );
+    expect(
+      screen.getByText(/LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS/),
+    ).toBeVisible();
+    expect(screen.getByTestId("connection-callback-url")).toHaveTextContent(
+      "/oauth/google/callback",
+    );
+  });
+
+  it("updates setup instructions when the selected provider changes", async () => {
+    mockResolveRegistrationId.mockReturnValue(null);
+    const user = userEvent.setup();
+    render(
+      <AddConnectionDialog
+        open
+        onOpenChange={jest.fn()}
+        providers={[
+          google,
+          {
+            ...google,
+            provider_id: "microsoft",
+            display_name: "Microsoft 365",
+          },
+        ]}
+        canCreateInstance={false}
+      />,
+    );
+    await user.selectOptions(
+      screen.getByTestId("connection-provider"),
+      "microsoft",
+    );
+    expect(screen.getByRole("link", { name: "Setup guide" })).toHaveAttribute(
+      "href",
+      "https://docs.langflow.org/entra-app-registration",
+    );
+    expect(screen.getByTestId("connection-callback-url")).toHaveTextContent(
+      "/oauth/microsoft/callback",
+    );
+    expect(screen.getByTestId("connection-continue")).toBeDisabled();
+  });
+
+  it("does not call a registration missing before discovery succeeds", () => {
+    mockResolveRegistrationId.mockReturnValue(null);
+    mockRegistrations.isSuccess = false;
+    render(
+      <AddConnectionDialog
+        open
+        onOpenChange={jest.fn()}
+        providers={[google]}
+        canCreateInstance={false}
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Setup guide" })).toBeVisible();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("connection-callback-url"),
+    ).not.toBeInTheDocument();
   });
 
   it.each([

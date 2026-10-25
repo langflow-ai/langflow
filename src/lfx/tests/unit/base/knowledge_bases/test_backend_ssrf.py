@@ -216,7 +216,7 @@ async def test_opensearch_refuses_unapproved_public_host_from_tenant_variable(
     _force_ssrf_on(monkeypatch)
     _patch_dns(monkeypatch, ["93.184.216.34"])
     backend = _opensearch_backend(monkeypatch, "https://rebind.attacker.example:9200")
-    with pytest.raises(ssrf_protection.SSRFProtectionError, match="not an approved destination"):
+    with pytest.raises(ssrf_protection.SSRFProtectionError, match="not allowed"):
         await backend._resolve_secrets()
     assert getattr(backend, "_resolved_url", None) is None
 
@@ -268,7 +268,7 @@ async def test_destination_gate_refuses_before_resolving_dns(monkeypatch: pytest
 
     monkeypatch.setattr(ssrf_protection, "resolve_hostname", _record)
     backend = _opensearch_backend(monkeypatch, "https://rebind.attacker.example:9200")
-    with pytest.raises(ssrf_protection.SSRFProtectionError, match="not an approved destination"):
+    with pytest.raises(ssrf_protection.SSRFProtectionError, match="not allowed"):
         await backend._resolve_secrets()
     assert calls == []
 
