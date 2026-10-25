@@ -816,16 +816,20 @@ class TestComponentRouting:
         sent = fake_exec_sandbox.instances[-1].run_calls[-1]["code"]
         assert "`" not in sent
 
-    def test_python_interpreter_sandbox_path(self, monkeypatch, fake_exec_sandbox):
+    @pytest.mark.parametrize("global_imports", ["math", "os", "numpy,pandas"])
+    def test_python_interpreter_sandbox_path(self, monkeypatch, fake_exec_sandbox, global_imports):
         """Verify that the Python Interpreter component routes code through the sandbox."""
         from lfx.components.utilities.python_repl_core import PythonREPLComponent
 
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
-        component = PythonREPLComponent(global_imports="math", python_code="print('hello from vm')")
+        component = PythonREPLComponent(global_imports=global_imports, python_code="print('hello from vm')")
         data = component.run_python_repl()
         assert data.data == {"result": "hello from vm"}
-        # Sandbox mode must not exec in-process: the fake scheduler saw the code.
-        assert fake_exec_sandbox.instances[-1].run_calls
+        # All requested modules are imported inside the guest, including those
+        # refused by the in-process interpreter.
+        sent = fake_exec_sandbox.instances[-1].run_calls[-1]["code"]
+        for module in global_imports.split(","):
+            assert f"import {module}" in sent
 
     @pytest.mark.usefixtures("fake_exec_sandbox")
     def test_python_interpreter_sandbox_error(self, monkeypatch):
@@ -917,16 +921,19 @@ class TestComponentRouting:
         assert "NameError" in observation
         assert fake_exec_sandbox.instances[-1].run_calls
 
-    def test_repl_tool_sandbox_path(self, monkeypatch, fake_exec_sandbox):
+    @pytest.mark.parametrize("global_imports", ["math", "os", "numpy,pandas"])
+    def test_repl_tool_sandbox_path(self, monkeypatch, fake_exec_sandbox, global_imports):
         """Verify that the Python REPL tool component routes code through the sandbox."""
         from lfx.components.tools.python_repl import PythonREPLToolComponent
 
         monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings("exec-sandbox"))
-        component = PythonREPLToolComponent(name="python_repl", description="repl", global_imports="math")
+        component = PythonREPLToolComponent(name="python_repl", description="repl", global_imports=global_imports)
         tool = component.build_tool()
         observation = tool.run("print('hello from vm')")
         assert observation == "hello from vm\n"
         sent = fake_exec_sandbox.instances[-1].run_calls[-1]["code"]
+        for module in global_imports.split(","):
+            assert f"import {module}" in sent
         assert sent.endswith("print('hello from vm')")
 
     def test_repl_tool_default_stays_in_process(self, monkeypatch, fake_exec_sandbox):
