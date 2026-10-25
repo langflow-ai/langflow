@@ -109,6 +109,19 @@ class TestRunAssistantIsGatedPerTool:
         with pytest.raises(ValueError, match="LANGFLOW_AGENTIC_EXPERIENCE"):
             await agentic_mcp.handle_call_tool("run_assistant", {"instruction": "build a flow"})
 
+    async def test_should_refuse_run_assistant_through_batch(self):
+        from langflow.api.v1 import agentic_mcp
+
+        token = agentic_mcp.current_loopback_client_ctx.set(AsyncMock())
+        try:
+            with pytest.raises(ValueError, match="LANGFLOW_AGENTIC_EXPERIENCE"):
+                await agentic_mcp.handle_call_tool(
+                    "batch",
+                    {"actions": [{"tool": "run_assistant", "args": {"instruction": "build a flow"}}]},
+                )
+        finally:
+            agentic_mcp.current_loopback_client_ctx.reset(token)
+
 
 @pytest.mark.usefixtures("agentic_enabled")
 class TestAgenticMcpAuthentication:
@@ -206,6 +219,22 @@ class TestAgenticMcpToolDelegation:
 
         with pytest.raises(ValueError, match="not available over HTTP"):
             await agentic_mcp.handle_call_tool("login", {"username": "u", "password": "p"})
+
+    async def test_should_not_expose_login_through_batch(self):
+        from langflow.api.v1 import agentic_mcp
+
+        token = agentic_mcp.current_loopback_client_ctx.set(AsyncMock())
+        try:
+            with (
+                patch("lfx.mcp.server._get_tool_map", return_value={"login": AsyncMock()}),
+                pytest.raises(ValueError, match="not available over HTTP"),
+            ):
+                await agentic_mcp.handle_call_tool(
+                    "batch",
+                    {"actions": [{"tool": "login", "args": {"username": "u", "password": "p"}}]},
+                )
+        finally:
+            agentic_mcp.current_loopback_client_ctx.reset(token)
 
     async def test_should_delegate_with_the_callers_loopback_client_bound(self):
         from langflow.api.v1 import agentic_mcp

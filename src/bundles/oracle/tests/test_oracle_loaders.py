@@ -307,7 +307,11 @@ def test_oracle_autonomous_database_loader_component_load_documents(
 
 
 def test_oracle_autonomous_database_loader_component_maps_aliases_and_optional_args() -> None:
-    with patch("lfx_oracle.components.oracle.oracledb_loaders.OracleAutonomousDatabaseLoader") as mock_loader:
+    with (
+        patch("lfx_oracle.components.oracle.oracledb_loaders.OracleAutonomousDatabaseLoader") as mock_loader,
+        patch("lfx.utils.file_path_security.get_settings_service") as mock_get_settings,
+    ):
+        mock_get_settings.return_value.settings.restrict_local_file_access = False
         mock_loader.return_value.load.return_value = []
         test_connection_inputs = get_oracle_test_connection_inputs(include_wallet_password=True)
         component = OracleAutonomousDatabaseLoaderComponent().set(
