@@ -14,6 +14,18 @@ _REVISION = "e4f6a8b2c1d3"  # pragma: allowlist secret
 _INDEX = "ix_connection_oauth_completed_registration_id"
 
 
+def _grant_payload(registration_id: object) -> dict:
+    return {
+        "version": 1,
+        "access_token": "stored",
+        "oauth": {
+            "registration_id": registration_id,
+            "config_digest": "0" * 64,
+            "generation": str(uuid4()),
+        },
+    }
+
+
 def test_oauth_migration_round_trip(db_url):  # noqa: F811
     config = _make_alembic_cfg(db_url)
     command.upgrade(config, "f3b6a9d2e4c1")  # pragma: allowlist secret - migration revision
@@ -91,24 +103,24 @@ def test_completed_registration_backfill_index_and_downgrade(db_url):  # noqa: F
             "ready",
             None,
             "legacy-app",
-            {"access_token": "stored", "oauth": {"registration_id": "legacy-app"}},
+            _grant_payload("legacy-app"),
             None,
         ),
         "legacy-pending": (
             "pending",
             None,
             "legacy-app",
-            {"access_token": "stored", "oauth": {"registration_id": "legacy-app"}},
+            _grant_payload("legacy-app"),
             None,
         ),
         "legacy-failed": (
             "ready",
             "oauth-failed",
             "new-attempt",
-            {"access_token": "stored", "oauth": {"registration_id": "previous-app"}},
+            _grant_payload("previous-app"),
             None,
         ),
-        "legacy-manual": ("ready", None, "legacy-app", {"access_token": "stored"}, None),
+        "legacy-manual": ("ready", None, "legacy-app", {"version": 1, "access_token": "stored"}, None),
         "legacy-incomplete": ("ready", None, "legacy-app", None, None),
         "legacy-pending-incomplete": ("pending", None, "legacy-app", None, None),
         "legacy-failed-incomplete": ("ready", "oauth-failed", "legacy-app", None, None),
@@ -117,14 +129,24 @@ def test_completed_registration_backfill_index_and_downgrade(db_url):  # noqa: F
             "ready",
             None,
             "legacy-app",
-            {"access_token": "stored", "oauth": {"registration_id": 123}},
+            _grant_payload(123),
             None,
         ),
         "legacy-blank": (
             "ready",
             None,
             "legacy-app",
-            {"access_token": "stored", "oauth": {"registration_id": " "}},
+            _grant_payload(" "),
+            None,
+        ),
+        "legacy-plaintext": ("ready", None, "legacy-app", None, json.dumps(_grant_payload("untrusted-app"))),
+        "legacy-no-token": ("ready", None, "legacy-app", {**_grant_payload("legacy-app"), "access_token": ""}, None),
+        "legacy-bad-version": ("ready", None, "legacy-app", {**_grant_payload("legacy-app"), "version": 2}, None),
+        "legacy-bad-oauth": (
+            "ready",
+            None,
+            "legacy-app",
+            {**_grant_payload("legacy-app"), "oauth": {"registration_id": "legacy-app"}},
             None,
         ),
     }
@@ -139,6 +161,10 @@ def test_completed_registration_backfill_index_and_downgrade(db_url):  # noqa: F
         "legacy-undecryptable": None,
         "legacy-malformed": None,
         "legacy-blank": None,
+        "legacy-plaintext": None,
+        "legacy-no-token": None,
+        "legacy-bad-version": None,
+        "legacy-bad-oauth": None,
     }
     try:
         with engine.begin() as connection:

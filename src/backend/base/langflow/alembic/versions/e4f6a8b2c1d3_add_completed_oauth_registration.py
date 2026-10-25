@@ -10,7 +10,9 @@ Services compatible: Versions that do not read connection_oauth.completed_regist
 """
 
 import json
-from collections.abc import Sequence
+import re
+from collections.abc import Callable, Sequence
+from uuid import UUID
 
 import sqlalchemy as sa
 from alembic import op
@@ -25,20 +27,39 @@ depends_on: str | Sequence[str] | None = None
 _MAX_REGISTRATION_ID_LENGTH = 120
 
 
-def _completed_registration_id(encrypted_payload: str, decrypt_api_key) -> str | None:
+def _completed_registration_id(encrypted_payload: str, decrypt_api_key: Callable[[str], str]) -> str | None:
     try:
-        payload = json.loads(decrypt_api_key(encrypted_payload))
+        plaintext = decrypt_api_key(encrypted_payload)
+        # Native auth deliberately accepts plaintext API keys. Connection
+        # grants have always been encrypted and cannot use that fallback.
+        if not plaintext or plaintext == encrypted_payload:
+            return None
+        payload = json.loads(plaintext)
     except (TypeError, ValueError):
         return None
-    if not isinstance(payload, dict):
+    if not isinstance(payload, dict) or payload.get("version") != 1:
+        return None
+    access_token = payload.get("access_token")
+    if not isinstance(access_token, str) or not access_token.strip():
         return None
     oauth = payload.get("oauth")
     if not isinstance(oauth, dict):
         return None
+    config_digest = oauth.get("config_digest")
+    generation = oauth.get("generation")
+    if not isinstance(config_digest, str) or re.fullmatch(r"[0-9a-f]{64}", config_digest) is None:
+        return None
+    if not isinstance(generation, str):
+        return None
+    try:
+        UUID(generation)
+    except ValueError:
+        return None
     registration_id = oauth.get("registration_id")
     if not isinstance(registration_id, str):
         return None
-    registration_id = registration_id.strip()
+    if registration_id != registration_id.strip():
+        return None
     return registration_id if 0 < len(registration_id) <= _MAX_REGISTRATION_ID_LENGTH else None
 
 
@@ -56,7 +77,10 @@ def upgrade() -> None:
     )
     from langflow.services.auth.utils import decrypt_api_key
 
-    secrets = conn.exec_driver_sql("SELECT connection_id, encrypted_payload FROM connection_secret").all()
+    secrets = conn.exec_driver_sql(
+        "SELECT s.connection_id, s.encrypted_payload FROM connection_secret AS s "
+        "JOIN connection_oauth AS o ON o.connection_id = s.connection_id"
+    )
     for connection_id, encrypted_payload in secrets:
         registration_id = _completed_registration_id(encrypted_payload, decrypt_api_key)
         if registration_id is not None:
