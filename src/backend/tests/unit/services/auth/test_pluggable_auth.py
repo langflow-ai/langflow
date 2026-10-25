@@ -35,6 +35,19 @@ class DummyAuthService(Service):
         return {"user": "dummy-mcp", "db": db}
 
 
+class LegacyDummyAuthService(DummyAuthService):
+    async def get_current_user_mcp(self, token, query_param, header_param, db):
+        call = ("get_current_user_mcp", token, query_param, header_param)
+        self.calls.append(call)
+        return {"user": "legacy-mcp", "db": db}
+
+
+class BrokenDummyAuthService(DummyAuthService):
+    async def get_current_user_mcp(self, token, query_param, header_param, db, external_token=None):  # noqa: ARG002
+        msg = "service implementation failed"
+        raise TypeError(msg)
+
+
 @pytest.fixture
 def dummy_auth_service():
     """A single DummyAuthService instance for patching."""
@@ -107,6 +120,60 @@ async def test_get_current_user_mcp_delegates_external_credential(dummy_auth_reg
     assert ("get_current_user_mcp", None, None, None, "external-mcp-credential") in dummy.calls
     assert response["user"] == "dummy-mcp"
     assert response["db"] is db
+
+
+@pytest.mark.anyio
+async def test_get_current_user_mcp_supports_legacy_signature_with_external_auth_disabled():
+    service = LegacyDummyAuthService()
+    db = MagicMock(spec=AsyncSession)
+    request = SimpleNamespace(headers={}, cookies={})
+
+    with (
+        patch.object(auth_utils, "_auth_service", return_value=service),
+        patch.object(auth_utils, "_get_external_token", return_value=None),
+    ):
+        response = await auth_utils.get_current_user_mcp(
+            request, token=None, query_param="legacy-query-key", header_param=None, db=db
+        )
+
+    assert ("get_current_user_mcp", None, "legacy-query-key", None) in service.calls
+    assert response["user"] == "legacy-mcp"
+    assert response["db"] is db
+
+
+@pytest.mark.anyio
+async def test_get_current_user_mcp_supports_legacy_signature_with_external_auth_enabled():
+    service = LegacyDummyAuthService()
+    db = MagicMock(spec=AsyncSession)
+    request = SimpleNamespace(headers={}, cookies={})
+    native_token = "legacy-native-token"  # noqa: S105  # pragma: allowlist secret
+
+    with (
+        patch.object(auth_utils, "_auth_service", return_value=service),
+        patch.object(auth_utils, "_get_external_token", return_value="external-mcp-credential"),
+    ):
+        response = await auth_utils.get_current_user_mcp(
+            request, token=native_token, query_param=None, header_param="legacy-header-key", db=db
+        )
+
+    assert ("get_current_user_mcp", native_token, None, "legacy-header-key") in service.calls
+    assert response["user"] == "legacy-mcp"
+    assert response["db"] is db
+
+
+@pytest.mark.anyio
+async def test_get_current_user_mcp_does_not_mask_service_type_errors():
+    service = BrokenDummyAuthService()
+    request = SimpleNamespace(headers={}, cookies={})
+
+    with (
+        patch.object(auth_utils, "_auth_service", return_value=service),
+        patch.object(auth_utils, "_get_external_token", return_value="external-mcp-credential"),
+        pytest.raises(TypeError, match="service implementation failed"),
+    ):
+        await auth_utils.get_current_user_mcp(
+            request, token=None, query_param=None, header_param=None, db=MagicMock(spec=AsyncSession)
+        )
 
 
 @pytest.mark.anyio

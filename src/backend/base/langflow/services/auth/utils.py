@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import inspect
 import random
 from typing import TYPE_CHECKING, Annotated, Final
 from uuid import UUID
@@ -564,10 +565,19 @@ async def get_current_user_mcp(
     db: AsyncSession = Depends(injectable_session_scope, scope="function"),
 ) -> User:
     external_token = _get_external_token(request.headers, request.cookies)
-    try:
-        return await _auth_service().get_current_user_mcp(
-            token, query_param, header_param, db, external_token=external_token
+    service = _auth_service()
+    external_kwargs = {}
+    if external_token:
+        parameters = inspect.signature(service.get_current_user_mcp).parameters.values()
+        supports_external_token = any(
+            parameter.kind == inspect.Parameter.VAR_KEYWORD
+            or (parameter.name == "external_token" and parameter.kind != inspect.Parameter.POSITIONAL_ONLY)
+            for parameter in parameters
         )
+        if supports_external_token:
+            external_kwargs["external_token"] = external_token
+    try:
+        return await service.get_current_user_mcp(token, query_param, header_param, db, **external_kwargs)
     except AuthenticationError as e:
         raise _auth_error_to_http(e) from e
 
