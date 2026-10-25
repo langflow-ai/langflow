@@ -1,6 +1,6 @@
 [project]
 name = "lfx"
-version = "1.14.0"
+version = "1.14.0.dev5"
 description = "Langflow Executor - A lightweight CLI tool for executing and serving Langflow AI flows"
 readme = "README.md"
 authors = [
@@ -63,7 +63,7 @@ dependencies = [
     "cryptography>=50.0.0",
     "pyjwt>=2.15.1,<3.0.0",  # CVE-2026-102266, CVE-2026-102267, CVE-2026-102271, CVE-2026-102272, CVE-2026-102274
     "ag-ui-protocol>=0.1.10",
-    "langflow-sdk>=0.4.0",
+    "langflow-sdk==0.4.0.dev99",
     # markitdown caps requires-python <3.15 and pulls magika -> onnxruntime, which has no
     # cp315 wheels. The URL component imports it lazily for its Markdown output format.
     "markitdown>=0.1.4,<2.0.0; python_version < '3.15'",
