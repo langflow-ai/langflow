@@ -1138,13 +1138,18 @@ class OperationsComponent(Component):
 
     @staticmethod
     def _comparable_filter_value(column: pd.Series, filter_value: Any) -> Any:
-        """Return a text input as a number when the column is numeric.
+        """Convert a text input to match a numeric or boolean column.
 
         Filter and Replace Value inputs arrive as text, and ``30 == "30"`` never matches in pandas.
         A blank input stays text: ``pd.to_numeric("")`` is NaN, which would match missing cells.
+        Boolean columns accept only the true/false spellings, ignoring case and surrounding whitespace.
         """
         if filter_value in (None, ""):
             return filter_value
+        if pd.api.types.is_bool_dtype(column) and isinstance(filter_value, str):
+            boolean_value = filter_value.strip().lower()
+            if boolean_value in ("true", "false"):
+                return boolean_value == "true"
         if pd.api.types.is_numeric_dtype(column) and not pd.api.types.is_bool_dtype(column):
             try:
                 return pd.to_numeric(filter_value)
