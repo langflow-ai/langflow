@@ -39,6 +39,9 @@ if TYPE_CHECKING:
 # Cleanup never retains refresh tokens or extends the deleted owner's access.
 _CREDENTIAL_RETENTION = timedelta(hours=1)
 
+# These adapters verify the original account and callback before remote deletion.
+_REPLACEMENT_CLEANUP_PROVIDERS = frozenset({"github", "gitlab", "telegram", "whatsapp"})
+
 
 def _aware(value: datetime) -> datetime:
     return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
@@ -302,8 +305,8 @@ async def run_cleanup_pass(*, limit: int = 25) -> int:
             )
             .values(encrypted_credential=None, credential_expires_at=None)
         )
-        # GitHub hooks never expire. A saved replacement connection must also
-        # recover the old callback's cleanup before the trigger can rearm.
+        # Non-expiring receivers need a saved replacement connection to finish
+        # the original callback's cleanup before the trigger can rearm.
         replacements = (
             await session.exec(
                 select(TriggerCleanup, Connection.id)
@@ -311,11 +314,11 @@ async def run_cleanup_pass(*, limit: int = 25) -> int:
                 .join(Trigger, TriggerCleanup.trigger_id == Trigger.id)
                 .join(Connection, Trigger.connection_id == Connection.id)
                 .where(
-                    TriggerCleanup.provider == "github",
-                    Trigger.provider == "github",
+                    col(TriggerCleanup.provider).in_(_REPLACEMENT_CLEANUP_PROVIDERS),
+                    Trigger.provider == TriggerCleanup.provider,
                     Trigger.kind == TriggerCleanup.kind,
                     Trigger.user_id == TriggerCleanup.user_id,
-                    Connection.provider_key == "github",
+                    Connection.provider_key == TriggerCleanup.provider,
                     Connection.ownership_mode == "user",
                     Connection.owner_id == TriggerCleanup.user_id,
                     Connection.status == "ready",

@@ -10,14 +10,18 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+import httpx
 from lfx.integrations.capabilities import ScopeSet
 from lfx.integrations.errors import (
     AuthExpiredError,
     ConnectionNotAuthorizedError,
     ConnectionUnresolvedError,
     IntegrationError,
+    IntegrationNetworkError,
     IntegrationPolicyBlockedError,
+    InvalidRequestError,
     ProviderUnavailableError,
+    RateLimitedError,
     ScopeMissingError,
 )
 from lfx.integrations.models import (
@@ -28,6 +32,7 @@ from lfx.integrations.models import (
 )
 from lfx.log.logger import logger
 from lfx.services.connection.base import BaseConnectionResolverService, ConnectionAccessPolicy
+from lfx.utils.ssrf_protection import SSRFProtectionError
 from pydantic import SecretStr
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import and_, col, false, or_, select
@@ -284,7 +289,31 @@ async def _validate_manual_credentials(payload: ConnectionCreate) -> ConnectionC
                     msg = "This integration requires a future token expiration time with a time zone."
                     raise ManualCredentialError(msg)
             original = (payload.provider_key, payload.name, payload.ownership_mode, payload.allow_non_interactive)
-            payload = await provider.validate_manual_credential(payload, context=deployment_context())
+            try:
+                payload = await provider.validate_manual_credential(payload, context=deployment_context())
+            except (ManualCredentialError, IntegrationPolicyBlockedError):
+                raise
+            except AuthExpiredError:
+                msg = "The provider rejected this token. Paste a valid token and try again."
+                raise ManualCredentialError(msg) from None
+            except (ConnectionNotAuthorizedError, ScopeMissingError):
+                msg = "The provider denied this token check. Check the token's permissions and account access."
+                raise ManualCredentialError(msg) from None
+            except RateLimitedError:
+                msg = "The provider rate limited this token check. Wait and try again."
+                raise ManualCredentialError(msg) from None
+            except (IntegrationNetworkError, SSRFProtectionError, httpx.RequestError):
+                msg = (
+                    "Langflow could not reach the provider. "
+                    "Check this server's outbound network and DNS settings, then try again."
+                )
+                raise ManualCredentialError(msg) from None
+            except (InvalidRequestError, ValueError):
+                msg = "The provider rejected this connection configuration. Check the setup guide and token settings."
+                raise ManualCredentialError(msg) from None
+            except IntegrationError:
+                msg = "The provider could not check this token. Try again."
+                raise ManualCredentialError(msg) from None
             if (
                 not isinstance(payload, ConnectionCreate)
                 or (payload.provider_key, payload.name, payload.ownership_mode, payload.allow_non_interactive)

@@ -142,8 +142,11 @@ const PUSH_MECHANISMS = new Set([
   "google.drive_push",
   "google.gmail_watch_pubsub_push",
   "github.repository_webhook",
+  "gitlab.project_webhook",
+  "whatsapp.webhook",
+  "telegram.webhook",
 ]);
-const SOCKET_MECHANISMS = new Set(["slack.socket_mode"]);
+const SOCKET_MECHANISMS = new Set(["slack.socket_mode", "discord.gateway"]);
 
 export type TriggerTransport =
   | "push"
@@ -185,6 +188,21 @@ export const sourceIconOf = (
       return "Microsoft";
     case "github":
       return "Github";
+    case "gitlab":
+      return "Gitlab";
+    case "whatsapp":
+    case "discord":
+      return "MessageCircle";
+    case "telegram":
+      return "Send";
+    case "salesforce":
+      return "Cloud";
+    case "servicenow":
+      return "Server";
+    case "jira":
+      return "Ticket";
+    case "confluence":
+      return "BookOpen";
     default:
       return trigger.kind === "inbound_webhook" ? "Webhook" : "Clock";
   }
