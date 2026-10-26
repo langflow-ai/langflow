@@ -166,6 +166,37 @@ describe("useSaveFlow", () => {
     expect(mockSetSaveLoading).toHaveBeenCalledWith(false);
   });
 
+  it("reports the messages of a validation error list, not the raw objects", async () => {
+    // The 422 a save gets when an MCP server config it carries fails validation.
+    const error = {
+      response: {
+        status: 422,
+        data: {
+          detail: [
+            {
+              type: "value_error",
+              loc: [],
+              msg: "Value error, Environment variable 'NODE_OPTIONS' is not allowed for security reasons",
+            },
+          ],
+        },
+      },
+    };
+    mockMutate.mockImplementation((_payload, options) => {
+      options.onError(error);
+    });
+    const { result } = renderHook(() => useSaveFlow());
+
+    await expect(result.current()).rejects.toBe(error);
+
+    expect(mockSetErrorData).toHaveBeenCalledWith({
+      title: "Failed to save flow",
+      list: [
+        "Value error, Environment variable 'NODE_OPTIONS' is not allowed for security reasons",
+      ],
+    });
+  });
+
   it("stays silent but still rejects when the caller suppresses the error toast", async () => {
     const error = {
       response: { status: 400, data: { detail: "Name must be unique" } },
