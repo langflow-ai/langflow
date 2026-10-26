@@ -1,3 +1,23 @@
+import { UAParser } from "ua-parser-js";
+
+const supportsFilePickerCancel = (userAgent: string): boolean => {
+  const { browser, engine, os } = UAParser(userAgent);
+  const engineVersion = Number.parseInt(engine.version ?? "", 10);
+
+  if (engine.name === "Blink") return engineVersion >= 113;
+  if (engine.name === "Gecko") return engineVersion >= 91;
+
+  if (engine.name === "WebKit") {
+    const version = os.name === "iOS" ? os.version : browser.version;
+    const [major = 0, minor = 0] = (version ?? "")
+      .split(".")
+      .map((part) => Number.parseInt(part, 10));
+    return major > 16 || (major === 16 && minor >= 4);
+  }
+
+  return false;
+};
+
 export function createFileUpload(props?: {
   accept?: string;
   multiple?: boolean;
@@ -36,6 +56,7 @@ export function createFileUpload(props?: {
       }
       input.removeEventListener("change", handleChange);
       input.removeEventListener("cancel", handleCancel);
+      document.removeEventListener("focus", handleLegacyFocus);
     };
 
     const handleChange = (event: Event) => {
@@ -104,8 +125,8 @@ export function createFileUpload(props?: {
       resolve(files);
     };
 
-    // Firefox returns focus to the document before dispatching `change`, so
-    // only the picker's own `cancel` event may treat the dialog as dismissed.
+    // Firefox can return focus before `change`, so focus is only a fallback on
+    // engines without the file input's native `cancel` event.
     const handleCancel = () => {
       if (isHandled) return;
       isHandled = true;
@@ -113,8 +134,15 @@ export function createFileUpload(props?: {
       resolve([]);
     };
 
+    const handleLegacyFocus = () => {
+      setTimeout(handleCancel, 100);
+    };
+
     input.addEventListener("change", handleChange);
     input.addEventListener("cancel", handleCancel);
+    if (!supportsFilePickerCancel(navigator.userAgent)) {
+      document.addEventListener("focus", handleLegacyFocus);
+    }
 
     document.body.appendChild(input);
     input.click();
