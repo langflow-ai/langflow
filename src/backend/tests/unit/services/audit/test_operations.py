@@ -118,6 +118,7 @@ def test_a_project_body_describes_its_attempted_shape_without_values():
 
 
 def test_a_replacement_body_describes_the_project_name_and_requested_flow_count():
+    """Describe replacement intent without copying graph or description values."""
     body = ProjectReplacementRequest(project_name="deployment", description=None, flows=[])
     described = describe_project_body("request_body")({"request_body": body})
     assert described == {
@@ -147,6 +148,7 @@ def test_a_replacement_body_describes_the_project_name_and_requested_flow_count(
     ],
 )
 def test_replacement_failure_codes_do_not_misclassify_project_conflicts(code, status, expected):
+    """Prefer stable replacement error codes over broad HTTP conflict categories."""
     exc = HTTPException(status, "private error text", headers={"X-Langflow-Error-Code": code})
     assert classify_failure(exc, PROJECT) is expected
 
