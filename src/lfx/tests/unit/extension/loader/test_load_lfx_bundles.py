@@ -135,6 +135,13 @@ def test_root_registers_each_provider_at_official(tmp_path: Path) -> None:
                 "FigraniumListTasksComponent",
             },
         ),
+        (
+            "apiverve",
+            {
+                "ApiverveFindApisComponent",
+                "ApiverveRunApiComponent",
+            },
+        ),
     ],
 )
 def test_checked_in_provider_loads_with_production_bundle_loader(
