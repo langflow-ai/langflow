@@ -10,12 +10,15 @@ from lfx.inputs.inputs import (
     AuthInput,
     ConnectionInput,
     ConnectionRefInput,
+    DictInput,
     FileInput,
     McpInput,
     MultilineSecretInput,
     SecretStrInput,
     StrInput,
+    TableInput,
 )
+from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
 from lfx.template import Output
@@ -317,4 +320,74 @@ def test_trace_masks_credential_field_types():
         "connection_ref": "github/metadata",
         "path": "/data/metadata.txt",
         "label": "metadata-label",
+    }
+
+
+def test_trace_masks_credential_headers():
+    class TraceComponent(Component):
+        inputs = [
+            # MCP Tools holds headers as a dict, API Request as key/value rows (Data when connected).
+            DictInput(name="headers", is_list=True),
+            TableInput(
+                name="api_headers",
+                value=[
+                    {"key": "Proxy-Authorization", "value": "Basic metadata-sentinel"},
+                    {"key": "User-Agent", "value": "Langflow/1.0"},
+                ],
+            ),
+            TableInput(name="connected_headers", value=[]),
+        ]
+
+    component = TraceComponent()
+    component.set_attributes(
+        {
+            "headers": {
+                "Authorization": "Bearer runtime-sentinel",
+                "X-Goog-Api-Key": "runtime-sentinel",
+                "X-RapidAPI-Key": "runtime-sentinel",
+                "X-Tenant": "acme",
+            },
+            "api_headers": [
+                {"key": "x-api-key", "value": "runtime-sentinel"},
+                {"key": "api-key", "value": "runtime-sentinel"},
+                {"key": "Private-Token", "value": "runtime-sentinel"},
+                {"key": "X-Vault-Token", "value": "runtime-sentinel"},
+                {"key": "X-UserToken", "value": "runtime-sentinel"},
+                {"key": "X-PassWord", "value": "runtime-sentinel"},
+                {"key": "Authorization ", "value": "Bearer runtime-sentinel"},
+                {"key": "Cookie", "value": "session=runtime-sentinel"},
+                {"key": "Accept", "value": "application/json"},
+                {"key": "X-Token-Count", "value": "128"},
+            ],
+            "connected_headers": Data(data={"X-Auth-Token": "runtime-sentinel", "X-Tenant": "acme"}),
+        }
+    )
+
+    assert component.get_trace_as_inputs() == {
+        "headers": {
+            "Authorization": "**********",
+            "X-Goog-Api-Key": "**********",
+            "X-RapidAPI-Key": "**********",
+            "X-Tenant": "acme",
+        },
+        "api_headers": [
+            {"key": "x-api-key", "value": "**********"},
+            {"key": "api-key", "value": "**********"},
+            {"key": "Private-Token", "value": "**********"},
+            {"key": "X-Vault-Token", "value": "**********"},
+            {"key": "X-UserToken", "value": "**********"},
+            {"key": "X-PassWord", "value": "**********"},
+            {"key": "Authorization ", "value": "**********"},
+            {"key": "Cookie", "value": "**********"},
+            {"key": "Accept", "value": "application/json"},
+            {"key": "X-Token-Count", "value": "128"},
+        ],
+        "connected_headers": [Data(data={"X-Auth-Token": "**********", "X-Tenant": "acme"})],
+    }
+    assert component.get_trace_as_metadata() == {
+        "api_headers": [
+            {"key": "Proxy-Authorization", "value": "**********"},
+            {"key": "User-Agent", "value": "Langflow/1.0"},
+        ],
+        "connected_headers": [],
     }

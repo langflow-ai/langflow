@@ -4,6 +4,7 @@ import ast
 import asyncio
 import inspect
 import logging
+import re
 from collections.abc import AsyncIterator, Iterator, Mapping
 from copy import deepcopy
 from functools import WRAPPER_ASSIGNMENTS, update_wrapper
@@ -36,6 +37,8 @@ from lfx.field_typing import Tool  # noqa: TC001
 # Lazy imports avoid circular deps: create_state_model (lfx.graph.state.model),
 # has_chat_output (lfx.graph.utils).
 from lfx.helpers.custom import format_type
+from lfx.log.logger import DEFAULT_REDACT_KEYS
+from lfx.mcp.redact import is_sensitive_field
 from lfx.memory import astore_message, aupdate_messages, delete_message
 from lfx.schema.artifact import get_artifact_type, post_process_raw
 from lfx.schema.data import Data
@@ -101,6 +104,32 @@ def _mask_secret_value(value: Any) -> Any:
     if is_secret_value(value):
         return str(value)
     return value
+
+
+def _is_credential_header(name: Any) -> bool:
+    name = str(name).strip()
+    # Split camelCase as flow export does (_is_secret_name in langflow/utils/flow_secrets.py),
+    # so X-RapidAPI-Key reads as X-Rapid_API-Key and X-UserToken as X-User_Token.
+    camel_split = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", name)
+    return (
+        name.lower() in DEFAULT_REDACT_KEYS
+        or camel_split.lower().endswith(("-token", "_token"))
+        or is_sensitive_field(name)
+        or is_sensitive_field(camel_split)
+    )
+
+
+def _mask_credential_headers(value: Any) -> Any:
+    """Mask credential header values in a header dict or key/value rows, keeping header names."""
+    if isinstance(value, list):
+        return [_mask_credential_headers(row) for row in value]
+    if isinstance(value, Data):
+        return value.model_copy(update={"data": _mask_credential_headers(value.data)})
+    if not isinstance(value, dict):
+        return _mask_secret_value(value)
+    if "key" in value and "value" in value:
+        return {**value, "value": "**********"} if _is_credential_header(value["key"]) else value
+    return {name: "**********" if _is_credential_header(name) else item for name, item in value.items()}
 
 
 def _get_secret_text(input_obj: Any, value: Any) -> str | None:
@@ -1356,6 +1385,9 @@ class Component(CustomComponent):
         credential_types = {FieldTypes.AUTH, FieldTypes.CONNECTION, FieldTypes.MCP}
         if getattr(input_, "password", False) or getattr(input_, "field_type", None) in credential_types:
             return "**********"
+        # Header inputs are plain dicts or tables, so mask credential headers by name.
+        if "header" in input_.name.lower():
+            return _mask_credential_headers(input_.value)
         return _mask_secret_value(input_.value)
 
     def get_trace_as_inputs(self):

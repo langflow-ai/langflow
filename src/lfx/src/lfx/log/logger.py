@@ -230,6 +230,7 @@ DEFAULT_REDACT_KEYS: frozenset[str] = frozenset(
         "encrypted_verifier",
         "registrations",
         "authorization",
+        "proxy-authorization",
         "auth",
         "cookie",
         "set-cookie",
