@@ -18,9 +18,9 @@ export interface UseSlackTokenConnectionOptions {
   providerId: string;
   /** Which deployment this is; hosted offers no pasted tokens. */
   deploymentContext: DeploymentContext | undefined;
-  /** Re-authorizing an existing connection never offers a token. */
+  /** Only token-only providers may renew a manually entered credential. */
   reauthorizing: boolean;
-  /** Creates the connection row (`POST /connections`). */
+  /** Stores the validated token through creation or renewal. */
   create: (payload: ConnectionCreate) => Promise<ConnectionRead>;
   tokenProfile?: ManualTokenProfileRead;
   tokenOnly: boolean;
@@ -86,7 +86,7 @@ export function useSlackTokenConnection({
   const [allowBackgroundRuns, setAllowBackgroundRuns] = useState(false);
 
   const offersToken =
-    !reauthorizing &&
+    (!reauthorizing || tokenOnly) &&
     (offersSlackToken(providerId, deploymentContext) ||
       tokenProfile !== undefined);
   const defaultMethod =

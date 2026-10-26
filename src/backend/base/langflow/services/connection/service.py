@@ -62,7 +62,7 @@ from langflow.services.database.models.connection import (
     ExecutingIdentityDescriptor,
     PersistedConnectionStatus,
 )
-from langflow.services.database.models.connection.schemas import ConnectionRevokeRead
+from langflow.services.database.models.connection.schemas import ConnectionRevokeRead, ConnectionTokenRenewal
 from langflow.services.deps import get_authorization_service, get_settings_service, session_scope
 
 if TYPE_CHECKING:
@@ -267,6 +267,34 @@ async def enforce_integration_policy_for_provider(
         raise IntegrationPolicyBlockedError(provider=provider_key)
 
 
+async def _validate_manual_credentials(payload: ConnectionCreate) -> ConnectionCreate:
+    """Apply the same provider validation to creation and token renewal."""
+    payload = await validate_manual_credential(payload, context=deployment_context())
+    if payload.credentials is not None:
+        from langflow.services.triggers.providers.registry import get_provider
+
+        provider = get_provider(payload.provider_key)
+        if provider is not None:
+            if provider.validate_manual_credential is None:
+                msg = "This integration does not support manually entered credentials."
+                raise ManualCredentialError(msg)
+            if provider.manual_token_requires_expiry:
+                expiry = payload.credentials.expires_at
+                if expiry is None or expiry.tzinfo is None or expiry <= _utc_now():
+                    msg = "This integration requires a future token expiration time with a time zone."
+                    raise ManualCredentialError(msg)
+            original = (payload.provider_key, payload.name, payload.ownership_mode, payload.allow_non_interactive)
+            payload = await provider.validate_manual_credential(payload, context=deployment_context())
+            if (
+                not isinstance(payload, ConnectionCreate)
+                or (payload.provider_key, payload.name, payload.ownership_mode, payload.allow_non_interactive)
+                != original
+            ):
+                msg = "The integration credential validator changed the connection identity."
+                raise ManualCredentialError(msg)
+    return payload
+
+
 class DatabaseConnectionResolverService(BaseConnectionResolverService):
     """Resolve encrypted database connections while exposing only safe metadata."""
 
@@ -285,29 +313,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
     ) -> ConnectionRead:
         # Require an available action before encrypting or storing credentials.
         await enforce_integration_policy_for_provider(payload.provider_key, user_id=user.id, require_usable_action=True)
-        payload = await validate_manual_credential(payload, context=deployment_context())
-        if payload.credentials is not None:
-            from langflow.services.triggers.providers.registry import get_provider
-
-            provider = get_provider(payload.provider_key)
-            if provider is not None:
-                if provider.validate_manual_credential is None:
-                    msg = "This integration does not support manually entered credentials."
-                    raise ManualCredentialError(msg)
-                if provider.manual_token_requires_expiry:
-                    expiry = payload.credentials.expires_at
-                    if expiry is None or expiry.tzinfo is None or expiry <= _utc_now():
-                        msg = "This integration requires a future token expiration time with a time zone."
-                        raise ManualCredentialError(msg)
-                original = (payload.provider_key, payload.name, payload.ownership_mode, payload.allow_non_interactive)
-                payload = await provider.validate_manual_credential(payload, context=deployment_context())
-                if (
-                    not isinstance(payload, ConnectionCreate)
-                    or (payload.provider_key, payload.name, payload.ownership_mode, payload.allow_non_interactive)
-                    != original
-                ):
-                    msg = "The integration credential validator changed the connection identity."
-                    raise ManualCredentialError(msg)
+        payload = await _validate_manual_credentials(payload)
         owner_id = user.id if payload.ownership_mode == ConnectionOwnershipMode.USER else None
         now = _utc_now()
         raw_credentials = _credential_payload(payload)
@@ -457,6 +463,57 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
 
     async def has_credentials(self, session: AsyncSession, connection_id: UUID) -> bool:
         return await session.get(ConnectionSecret, connection_id) is not None
+
+    async def renew_token(
+        self,
+        session: AsyncSession,
+        *,
+        row: Connection,
+        user: User | UserRead,
+        payload: ConnectionTokenRenewal,
+    ) -> ConnectionRead:
+        """Replace a validated manual credential under the caller's connection lock."""
+        from langflow.services.triggers.providers.registry import get_provider
+
+        provider = get_provider(row.provider_key)
+        if provider is None or provider.validate_manual_credential is None:
+            msg = "This integration does not support manual token renewal."
+            raise ManualCredentialError(msg)
+        await enforce_integration_policy_for_provider(row.provider_key, user_id=user.id, require_usable_action=True)
+        validated = await _validate_manual_credentials(
+            ConnectionCreate(
+                provider_key=row.provider_key,
+                name=row.name,
+                display_name=row.display_name,
+                ownership_mode=row.ownership_mode,
+                executing_identity=ExecutingIdentityDescriptor.model_validate(row.executing_identity),
+                allow_non_interactive=payload.allow_non_interactive,
+                credentials=payload.credentials,
+            )
+        )
+        raw_credentials = _credential_payload(validated)
+        if raw_credentials is None:
+            msg = "The integration credential validator returned no token."
+            raise ManualCredentialError(msg)
+        encrypted_payload = _encrypt_credential_payload(raw_credentials)
+        secret = await session.get(ConnectionSecret, row.id)
+        if secret is None:
+            secret = ConnectionSecret(connection_id=row.id, encrypted_payload=encrypted_payload)
+        else:
+            secret.encrypted_payload = encrypted_payload
+        secret.updated_at = _utc_now()
+        row.granted_scopes = list(validated.granted_scopes)
+        row.executing_identity = validated.executing_identity.model_dump(mode="json")
+        row.allow_non_interactive = validated.allow_non_interactive
+        _set_status(row, PersistedConnectionStatus.READY)
+        row.health = ConnectionHealth.UNKNOWN.value
+        row.health_checked_at = None
+        row.updated_at = secret.updated_at
+        session.add(secret)
+        session.add(row)
+        await session.flush()
+        await session.refresh(row)
+        return self.to_read(row, has_credentials=True)
 
     async def revoke(self, session: AsyncSession, row: Connection) -> ConnectionRevokeRead:
         provider_revocation = await broker.revoke(session, row)

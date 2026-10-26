@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import httpx
 import pytest
@@ -21,7 +21,7 @@ from langflow.services.connection.service import (
     _encrypt_credential_payload,
 )
 from langflow.services.database.models.connection.model import Connection, ConnectionSecret
-from langflow.services.database.models.connection.schemas import ConnectionCreate
+from langflow.services.database.models.connection.schemas import ConnectionCreate, ConnectionTokenRenewal
 from langflow.services.database.models.trigger.model import (
     Trigger,
     TriggerCleanup,
@@ -196,6 +196,158 @@ async def test_dialog_payload_is_accepted_and_catalog_requires_expiration(trigge
     assert provider["manual_token_profiles"] == [
         {"id": "github-installation", "identity": "service", "required_scopes": [], "requires_expiry": True}
     ]
+
+
+@pytest.mark.parametrize("revoke_first", [False, True])
+@pytest.mark.usefixtures("github_runtime")
+async def test_manual_token_renewal_preserves_connection_identity(client, logged_in_headers, revoke_first):
+    payload = json.loads((BUNDLE_ROOT / "tests/fixtures/manual-token-dialog.json").read_text())
+    created = await client.post("/api/v1/connections", headers=logged_in_headers, json=payload)
+    assert created.status_code == 201, created.text
+    original = created.json()
+    if revoke_first:
+        revoked = await client.post(f"/api/v1/connections/{original['id']}/revoke", headers=logged_in_headers)
+        assert revoked.status_code == 200, revoked.text
+    replacement = {
+        "credentials": {
+            "access_token": "replacement-installation",  # pragma: allowlist secret
+            "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat(),
+        },
+        "allow_non_interactive": False,
+    }
+
+    renewed = await client.post(
+        f"/api/v1/connections/{original['id']}/token", headers=logged_in_headers, json=replacement
+    )
+
+    assert renewed.status_code == 200, renewed.text
+    result = renewed.json()
+    for field in ("id", "owner_id", "provider_key", "name", "display_name", "ownership_mode", "created_at"):
+        assert result[field] == original[field]
+    assert result["status"] == "ready"
+    assert result["has_credentials"] is True
+    assert result["allow_non_interactive"] is False
+    assert "replacement-installation" not in renewed.text
+    async with session_scope() as session:
+        secret = await session.get(ConnectionSecret, UUID(original["id"]))
+        assert (
+            _decrypt_credential_payload(secret.encrypted_payload)["access_token"]
+            == replacement["credentials"]["access_token"]
+        )
+        assert (
+            len((await session.exec(select(Connection).where(Connection.owner_id == UUID(original["owner_id"])))).all())
+            == 1
+        )
+
+
+@pytest.mark.parametrize("expiry", [None, "2020-01-01T12:00:00Z", "2030-01-01T12:00:00"])
+async def test_token_renewal_requires_future_zoned_expiration(github_runtime, client, logged_in_headers, expiry):
+    payload = json.loads((BUNDLE_ROOT / "tests/fixtures/manual-token-dialog.json").read_text())
+    created = await client.post("/api/v1/connections", headers=logged_in_headers, json=payload)
+    assert created.status_code == 201, created.text
+    calls_before = len(github_runtime.calls)
+    payload["credentials"]["expires_at"] = expiry
+
+    response = await client.post(
+        f"/api/v1/connections/{created.json()['id']}/token",
+        headers=logged_in_headers,
+        json={"credentials": payload["credentials"]},
+    )
+
+    assert response.status_code == 422, response.text
+    assert len(github_runtime.calls) == calls_before
+
+
+async def test_token_renewal_respects_provider_policy(github_runtime, client, logged_in_headers, monkeypatch):
+    payload = json.loads((BUNDLE_ROOT / "tests/fixtures/manual-token-dialog.json").read_text())
+    created = await client.post("/api/v1/connections", headers=logged_in_headers, json=payload)
+    assert created.status_code == 201, created.text
+    calls_before = len(github_runtime.calls)
+
+    async def deny(*_args, **_kwargs):
+        raise IntegrationPolicyBlockedError(provider="github")
+
+    monkeypatch.setattr("langflow.services.connection.service.enforce_integration_policy_for_provider", deny)
+    response = await client.post(
+        f"/api/v1/connections/{created.json()['id']}/token",
+        headers=logged_in_headers,
+        json={"credentials": payload["credentials"]},
+    )
+
+    assert response.status_code == 403, response.text
+    assert len(github_runtime.calls) == calls_before
+
+
+async def test_renewed_connection_keeps_trigger_binding_and_webhook_cleanup(github_runtime, trigger_owner, owned_flow):
+    connection = await create_connection(trigger_owner)
+    trigger = await save_trigger(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+    github_runtime.controls.rejected_tokens.add("test-installation")
+    async with session_scope() as session:
+        row = await session.get(Connection, connection.id)
+        owner = await session.get(User, trigger_owner)
+        await DatabaseConnectionResolverService().renew_token(
+            session,
+            row=row,
+            user=owner,
+            payload=ConnectionTokenRenewal.model_validate(
+                {
+                    "credentials": {
+                        "access_token": "replacement-installation",  # pragma: allowlist secret
+                        "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat(),
+                    },
+                    "allow_non_interactive": True,
+                }
+            ),
+        )
+        row = await session.get(Trigger, trigger.id)
+        assert row.connection_id == connection.id
+        await TriggerService().disable(session, row=row)
+
+    assert await run_cleanup_pass() == 1
+    assert not github_runtime.hooks
+
+
+@pytest.mark.parametrize("status", [401, 403, 429, 503])
+async def test_rejected_token_renewal_preserves_existing_credential(github_runtime, client, logged_in_headers, status):
+    payload = json.loads((BUNDLE_ROOT / "tests/fixtures/manual-token-dialog.json").read_text())
+    created = await client.post("/api/v1/connections", headers=logged_in_headers, json=payload)
+    assert created.status_code == 201, created.text
+    connection_id = UUID(created.json()["id"])
+    async with session_scope() as session:
+        encrypted_before = (await session.get(ConnectionSecret, connection_id)).encrypted_payload
+    github_runtime.controls.installation_status = status
+
+    response = await client.post(
+        f"/api/v1/connections/{connection_id}/token",
+        headers=logged_in_headers,
+        json={"credentials": payload["credentials"], "allow_non_interactive": False},
+    )
+
+    assert response.status_code == 422, response.text
+    assert "private provider response" not in response.text
+    async with session_scope() as session:
+        assert (await session.get(ConnectionSecret, connection_id)).encrypted_payload == encrypted_before
+        row = await session.get(Connection, connection_id)
+        assert row.status == "ready"
+        assert row.allow_non_interactive is True
+
+
+async def test_foreign_connection_cannot_be_renewed(github_runtime, trigger_owner, client, logged_in_headers):
+    connection = await create_connection(trigger_owner)
+    calls_before = len(github_runtime.calls)
+    payload = json.loads((BUNDLE_ROOT / "tests/fixtures/manual-token-dialog.json").read_text())
+
+    response = await client.post(
+        f"/api/v1/connections/{connection.id}/token",
+        headers=logged_in_headers,
+        json={"credentials": payload["credentials"]},
+    )
+
+    assert response.status_code == 404, response.text
+    assert len(github_runtime.calls) == calls_before
 
 
 @pytest.mark.parametrize(
