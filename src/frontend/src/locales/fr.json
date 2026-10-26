@@ -3062,7 +3062,7 @@
   "connections.add.cleanupFailedBody": "La connexion inachevée n'a pas pu être supprimée. Retirez-la de la liste.",
   "connections.add.identity": "Agit en tant que",
   "connections.add.method": "Mode de connexion",
-  "connections.add.methodOauth": "Se connecter avec Slack",
+  "connections.add.methodOauth": "Se connecter avec {{provider}}",
   "connections.add.methodToken": "Coller un jeton",
   "connections.add.token": "Jeton",
   "connections.add.tokenHelp": "Collez un jeton de niveau application (xapp-…) pour que les déclencheurs Slack reçoivent des événements via le Socket Mode, ou un jeton de bot (xoxb-…) pour les actions exécutées en tant qu'application. Vous trouverez les deux dans les paramètres de votre application Slack.",
@@ -3303,5 +3303,16 @@
   "triggers.schedule.next": "Prochaine exécution {{time}}",
   "triggers.schedule.notScheduled": "Non planifié",
   "triggers.secret.isSet": "Défini. Affiché uniquement lors de sa création ou de sa rotation.",
-  "triggers.secret.notSet": "Non défini. Les requêtes sont refusées tant que vous n'en créez pas un."
+  "triggers.secret.notSet": "Non défini. Les requêtes sont refusées tant que vous n'en créez pas un.",
+  "connections.scopes.githubApp": "Géré par l’application GitHub",
+  "triggers.state.blocked": "Intervention nécessaire",
+  "triggers.provider.github": "GitHub",
+  "triggers.provider.gitlab": "GitLab",
+  "triggers.provider.whatsapp": "WhatsApp Business",
+  "triggers.provider.discord": "Discord",
+  "triggers.provider.telegram": "Telegram",
+  "triggers.provider.salesforce": "Salesforce",
+  "triggers.provider.servicenow": "ServiceNow",
+  "triggers.provider.jira": "Jira",
+  "triggers.provider.confluence": "Confluence"
 }

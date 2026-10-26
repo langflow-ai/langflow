@@ -3,7 +3,7 @@
   "provider_id": "discord",
   "display_name": "Discord",
   "icon": "MessageCircle",
-  "docs_url": "https://docs.discord.com/developers/intro",
+  "docs_url": "https://github.com/langflow-ai/langflow/blob/4c3cbec50c5eb9b070db1ff69845fd3fa2baaa80/design/provider-integrations/discord.md",
   "auth_profiles": [
     {
       "id": "discord-bot-token",

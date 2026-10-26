@@ -3062,7 +3062,7 @@
   "connections.add.cleanupFailedBody": "未完了の接続を削除できませんでした。一覧から削除してください。",
   "connections.add.identity": "実行者",
   "connections.add.method": "接続方法",
-  "connections.add.methodOauth": "Slack でサインイン",
+  "connections.add.methodOauth": "{{provider}} でサインイン",
   "connections.add.methodToken": "トークンを貼り付ける",
   "connections.add.token": "トークン",
   "connections.add.tokenHelp": "Slack トリガーが Socket Mode でイベントを受信できるようにするにはアプリレベルトークン (xapp-…) を、アプリとして実行されるアクションにはボットトークン (xoxb-…) を貼り付けてください。どちらも Slack アプリの設定にあります。",
@@ -3303,5 +3303,16 @@
   "triggers.schedule.next": "次回実行: {{time}}",
   "triggers.schedule.notScheduled": "未スケジュール",
   "triggers.secret.isSet": "設定済み。作成時またはローテーション時にのみ表示されます。",
-  "triggers.secret.notSet": "未設定。作成するまでリクエストは拒否されます。"
+  "triggers.secret.notSet": "未設定。作成するまでリクエストは拒否されます。",
+  "connections.scopes.githubApp": "GitHub App によって管理",
+  "triggers.state.blocked": "対応が必要",
+  "triggers.provider.github": "GitHub",
+  "triggers.provider.gitlab": "GitLab",
+  "triggers.provider.whatsapp": "WhatsApp Business",
+  "triggers.provider.discord": "Discord",
+  "triggers.provider.telegram": "Telegram",
+  "triggers.provider.salesforce": "Salesforce",
+  "triggers.provider.servicenow": "ServiceNow",
+  "triggers.provider.jira": "Jira",
+  "triggers.provider.confluence": "Confluence"
 }
