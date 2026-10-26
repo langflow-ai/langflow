@@ -1,5 +1,3 @@
-import { DEFAULT_FILE_PICKER_TIMEOUT } from "@/constants/constants";
-
 export function createFileUpload(props?: {
   accept?: string;
   multiple?: boolean;
@@ -125,13 +123,5 @@ export function createFileUpload(props?: {
         input.click();
       }
     });
-
-    setTimeout(() => {
-      if (!isHandled) {
-        isHandled = true;
-        cleanup();
-        resolve([]);
-      }
-    }, DEFAULT_FILE_PICKER_TIMEOUT);
   });
 }

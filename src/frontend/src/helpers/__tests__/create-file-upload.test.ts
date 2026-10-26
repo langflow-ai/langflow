@@ -45,6 +45,20 @@ describe("createFileUpload", () => {
     await expect(result).resolves.toEqual([file]);
   });
 
+  it("keeps the input attached while the picker stays open for a long time", async () => {
+    const result = createFileUpload();
+    const input = getInput() as HTMLInputElement;
+
+    jest.advanceTimersByTime(5 * 60 * 1000);
+
+    expect(input.isConnected).toBe(true);
+
+    const file = new File(["x"], "a.json", { type: "application/json" });
+    selectFiles(input, [file]);
+
+    await expect(result).resolves.toEqual([file]);
+  });
+
   it("resolves with no files and removes the input when the picker is cancelled", async () => {
     const result = createFileUpload();
     const input = getInput() as HTMLInputElement;
