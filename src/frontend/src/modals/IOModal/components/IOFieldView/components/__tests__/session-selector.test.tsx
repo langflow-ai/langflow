@@ -33,16 +33,18 @@ jest.mock("@/stores/voiceStore", () => ({
   ) => selector({ setNewSessionCloseVoiceAssistant: jest.fn() }),
 }));
 
-function renderSelector(session: string) {
+function renderSelector(session: string, isVisible = true) {
   const updateVisibleSession = jest.fn();
+  const onSessionRenamed = jest.fn();
   render(
     <TooltipProvider>
       <SessionSelector
         session={session}
         toggleVisibility={jest.fn()}
-        isVisible
+        isVisible={isVisible}
         inspectSession={jest.fn()}
         updateVisibleSession={updateVisibleSession}
+        onSessionRenamed={onSessionRenamed}
         setSelectedView={jest.fn()}
         playgroundPage
         setActiveSession={jest.fn()}
@@ -50,7 +52,7 @@ function renderSelector(session: string) {
       />
     </TooltipProvider>,
   );
-  return { updateVisibleSession };
+  return { updateVisibleSession, onSessionRenamed };
 }
 
 async function rename(newName: string) {
@@ -120,5 +122,17 @@ describe("SessionSelector session label", () => {
     );
     completeRename();
     expect(updateVisibleSession).toHaveBeenCalledWith("Custom Name");
+  });
+
+  it("reports renames of inactive sessions to the session list", async () => {
+    const { updateVisibleSession, onSessionRenamed } = renderSelector(
+      "session-1",
+      false,
+    );
+    await rename("Custom Name");
+    completeRename();
+
+    expect(onSessionRenamed).toHaveBeenCalledWith("session-1", "Custom Name");
+    expect(updateVisibleSession).not.toHaveBeenCalled();
   });
 });

@@ -13,6 +13,7 @@ import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import { LangflowButtonRedirectTarget } from "@/customization/utils/urls";
 import { isAuthenticatedPlayground } from "@/modals/IOModal/helpers/playground-auth";
 import { useUtilityStore } from "@/stores/utilityStore";
+import { useVoiceStore } from "@/stores/voiceStore";
 import { swatchColors } from "@/utils/styleUtils";
 import LangflowLogoColor from "../../assets/LangflowLogoColor.svg?react";
 import IconComponent from "../../components/common/genericIconComponent";
@@ -31,7 +32,18 @@ import { SelectedViewField } from "./components/selected-view-field";
 import { SidebarOpenView } from "./components/sidebar-open-view";
 import { useGetFlowId } from "./hooks/useGetFlowId";
 
-export default function IOModal({
+export default function IOModal(props: IOModalPropsType): JSX.Element {
+  const currentFlowId = useGetFlowId();
+  return (
+    <PlaygroundModal
+      key={currentFlowId}
+      {...props}
+      currentFlowId={currentFlowId}
+    />
+  );
+}
+
+function PlaygroundModal({
   children,
   open,
   setOpen,
@@ -39,7 +51,8 @@ export default function IOModal({
   isPlayground,
   canvasOpen,
   playgroundPage,
-}: IOModalPropsType): JSX.Element {
+  currentFlowId,
+}: IOModalPropsType & { currentFlowId: string }): JSX.Element {
   const { t } = useTranslation();
   const setIOModalOpen = useFlowsManagerStore((state) => state.setIOModalOpen);
   const inputs = useFlowStore((state) => state.inputs);
@@ -48,11 +61,8 @@ export default function IOModal({
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
   const isBuilding = useFlowStore((state) => state.isBuilding);
-  const newChatOnPlayground = useFlowStore(
-    (state) => state.newChatOnPlayground,
-  );
-  const setNewChatOnPlayground = useFlowStore(
-    (state) => state.setNewChatOnPlayground,
+  const setNewSessionCloseVoiceAssistant = useVoiceStore(
+    (state) => state.setNewSessionCloseVoiceAssistant,
   );
 
   const { flowIcon, flowId, flowGradient, flowName } = useFlowStore(
@@ -78,7 +88,6 @@ export default function IOModal({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const deleteSession = useMessagesStore((state) => state.deleteSession);
-  const currentFlowId = useGetFlowId();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const { mutate: deleteSessionFunction } = useDeleteSession();
@@ -87,6 +96,9 @@ export default function IOModal({
     currentFlowId,
   );
   const PlaygroundTitle = playgroundPage && flowName ? flowName : "Playground";
+  const pendingSessions = useRef(new Set<string>());
+  const localSessions = useRef(new Set<string>());
+  const deletedSessions = useRef(new Set<string>());
 
   const sessionsQuery = useGetSessionsFromFlowQuery({
     id: currentFlowId,
@@ -95,19 +107,24 @@ export default function IOModal({
   const {
     data: sessionsFromDb,
     isLoading: sessionsLoading,
+    isPlaceholderData,
     refetch: refetchSessions,
   } = sessionsQuery;
 
   useEffect(() => {
-    if (sessionsFromDb && !sessionsLoading) {
-      const sessions = [...sessionsFromDb];
+    if (sessionsFromDb && !sessionsLoading && !isPlaceholderData) {
+      const sessions = [
+        ...new Set([...sessionsFromDb, ...localSessions.current]),
+      ].filter((session) => !deletedSessions.current.has(session));
+      for (const session of sessionsFromDb)
+        pendingSessions.current.delete(session);
       // Always include the currentFlowId as the default session if it's not already present
       if (!sessions.includes(currentFlowId)) {
         sessions.unshift(currentFlowId);
       }
       setSessions(sessions);
     }
-  }, [sessionsFromDb, sessionsLoading, currentFlowId]);
+  }, [sessionsFromDb, sessionsLoading, isPlaceholderData, currentFlowId]);
 
   useEffect(() => {
     setIOModalOpen(open);
@@ -132,6 +149,12 @@ export default function IOModal({
       { sessionId: session_id, flowId: currentFlowId },
       {
         onSuccess: () => {
+          pendingSessions.current.delete(session_id);
+          localSessions.current.delete(session_id);
+          deletedSessions.current.add(session_id);
+          setSessions((current) =>
+            current.filter((session) => session !== session_id),
+          );
           // Remove the session from local state
           deleteSession(session_id);
 
@@ -182,10 +205,38 @@ export default function IOModal({
   const messages = useMessagesStore((state) => state.messages);
   const removeMessages = useMessagesStore((state) => state.removeMessages);
   const [sessions, setSessions] = useState<string[]>([]);
-  const [sessionId, setSessionId] = useState<string>(currentFlowId);
+  const sessionId = visibleSession ?? currentFlowId;
   const setCurrentSessionId = useUtilityStore(
     (state) => state.setCurrentSessionId,
   );
+
+  const createSession = () => {
+    const name = createNewSessionName();
+    const baseId = playgroundPage ? `${currentFlowId}:${name}` : name;
+    let newId = baseId;
+    let suffix = 1;
+    while (sessions.includes(newId) || pendingSessions.current.has(newId)) {
+      newId = `${baseId} (${suffix++})`;
+    }
+    pendingSessions.current.add(newId);
+    localSessions.current.add(newId);
+    deletedSessions.current.delete(newId);
+    setSessions((current) => [...current, newId]);
+    setvisibleSession(newId);
+    setSelectedViewField(undefined);
+    setNewSessionCloseVoiceAssistant(true);
+  };
+
+  const handleSessionRenamed = (previous: string, next: string) => {
+    pendingSessions.current.delete(previous);
+    localSessions.current.delete(previous);
+    deletedSessions.current.add(previous);
+    deletedSessions.current.delete(next);
+    localSessions.current.add(next);
+    setSessions((current) => [
+      ...new Set(current.map((id) => (id === previous ? next : id))),
+    ]);
+  };
 
   const messageHistory = useGetMessageHistory({
     id: currentFlowId,
@@ -222,51 +273,36 @@ export default function IOModal({
           throw err;
         });
       }
+      void refetchSessions();
     },
-    [isBuilding, setIsBuilding, chatValue, chatInput?.id, sessionId, buildFlow],
+    [
+      isBuilding,
+      setIsBuilding,
+      chatValue,
+      chatInput?.id,
+      sessionId,
+      buildFlow,
+      refetchSessions,
+    ],
   );
 
   useEffect(() => {
     if (playgroundPage && !isAuthenticatedPlayground() && messages.length > 0) {
-      window.sessionStorage.setItem(currentFlowId, JSON.stringify(messages));
+      const flowMessages = messages.filter(
+        (message) => message.flow_id === currentFlowId,
+      );
+      if (flowMessages.length > 0) {
+        window.sessionStorage.setItem(
+          currentFlowId,
+          JSON.stringify(flowMessages),
+        );
+      }
     }
-    // "New chat" sends under the generated `sessionId` (already namespaced on
-    // the playground page). Wait for its first message: the history load that
-    // opening a new chat triggers also changes `messages`, and refetching then
-    // would miss the session. Select it by id: the refetched list is newest
-    // first and may not be complete.
-    if (
-      newChatOnPlayground &&
-      !sessionsLoading &&
-      messages.some((message) => message.session_id === sessionId)
-    ) {
-      const newSessionId = sessionId;
-      const handleRefetchAndSetSession = async () => {
-        try {
-          await refetchSessions();
-          setvisibleSession(newSessionId);
-        } catch (error) {
-          console.error("Error refetching sessions:", error);
-        }
-      };
-
-      handleRefetchAndSetSession();
-      setNewChatOnPlayground(false);
-    }
-  }, [messages, playgroundPage]);
+  }, [messages, playgroundPage, currentFlowId]);
 
   useEffect(() => {
-    if (!visibleSession) {
-      const name = createNewSessionName();
-      // The public playground stores sessions as `${virtualFlowId}:${name}` (the
-      // backend leaves an already-scoped id unchanged), so send under that id and
-      // the new-chat selection effect above matches what the server lists and
-      // filters on.
-      setSessionId(playgroundPage ? `${currentFlowId}:${name}` : name);
-      setCurrentSessionId(currentFlowId);
-    } else if (visibleSession) {
-      setSessionId(visibleSession);
-      setCurrentSessionId(visibleSession);
+    setCurrentSessionId(sessionId);
+    if (visibleSession) {
       if (selectedViewField?.type === "Session") {
         setSelectedViewField({
           id: visibleSession,
@@ -322,12 +358,7 @@ export default function IOModal({
     swatchColors.length;
 
   const setActiveSession = (session: string) => {
-    setvisibleSession((prev) => {
-      if (prev === session) {
-        return undefined;
-      }
-      return session;
-    });
+    setvisibleSession(session);
   };
 
   const [hasInitialized, setHasInitialized] = useState(false);
@@ -428,6 +459,9 @@ export default function IOModal({
                 </div>
                 {sidebarOpen && !sessionsLoading && (
                   <SidebarOpenView
+                    onNewSession={createSession}
+                    onSessionRenamed={handleSessionRenamed}
+                    pendingSessionIds={pendingSessions.current}
                     sessions={sessions}
                     sessionsPagination={sessionsQuery}
                     setSelectedViewField={setSelectedViewField}
@@ -494,6 +528,7 @@ export default function IOModal({
                 />
               )}
               <ChatViewWrapper
+                onNewSession={createSession}
                 playgroundPage={playgroundPage}
                 selectedViewField={selectedViewField}
                 visibleSession={visibleSession}

@@ -27,6 +27,7 @@ describe("SidebarOpenView", () => {
     render(
       <TooltipProvider>
         <SidebarOpenView
+          onNewSession={jest.fn()}
           sessions={["flow", "session-a"]}
           sessionsPagination={{
             hasNextPage: true,

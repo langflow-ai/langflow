@@ -24,12 +24,14 @@ export default function SessionSelector({
   isVisible,
   inspectSession,
   updateVisibleSession,
+  onSessionRenamed,
   selectedView,
   setSelectedView,
   playgroundPage,
   setActiveSession,
   menuOpen,
   onMenuOpenChange,
+  canRename = true,
 }: {
   deleteSession: (session: string) => void;
   session: string;
@@ -37,12 +39,14 @@ export default function SessionSelector({
   isVisible: boolean;
   inspectSession: (session: string) => void;
   updateVisibleSession: (session: string) => void;
+  onSessionRenamed?: (previous: string, next: string) => void;
   selectedView?: { type: string; id: string };
   setSelectedView: (view: { type: string; id: string } | undefined) => void;
   playgroundPage: boolean;
   setActiveSession: (session: string) => void;
   menuOpen?: boolean;
   onMenuOpenChange?: (open: boolean) => void;
+  canRename?: boolean;
 }) {
   const { t } = useTranslation();
   const currentFlowId = useGetFlowId();
@@ -79,6 +83,7 @@ export default function SessionSelector({
         { old_session_id: session, new_session_id: newSessionId },
         {
           onSuccess: () => {
+            onSessionRenamed?.(session, newSessionId);
             if (isVisible) {
               updateVisibleSession(newSessionId);
             }
@@ -259,6 +264,7 @@ export default function SessionSelector({
             <SelectItem
               variant="plain"
               value="rename"
+              disabled={!canRename}
               className="cursor-pointer px-3 py-2 focus:bg-muted"
             >
               <div className="flex items-center">

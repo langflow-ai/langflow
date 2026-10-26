@@ -1,6 +1,7 @@
 import type { MessageHistoryControls } from "../components/message-history-loader";
 
 export type ChatViewWrapperProps = {
+  onNewSession: () => void;
   selectedViewField: { type: string; id: string } | undefined;
   visibleSession: string | undefined;
   sessions: string[];
