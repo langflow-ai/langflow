@@ -122,6 +122,21 @@ export async function waitForNodeUpdates(
   }
 }
 
+// The sentence naming a retired component and its replacement, shared by the run preflight and
+// the missing-fields alert.
+function retiredComponentMessage(component: ComponentsToUpdateType): string {
+  const templates = useTypesStore.getState().templates;
+  const replacements = (component.replacement ?? []).map((ref) => {
+    const type = ref.split(".").pop() ?? ref;
+    return templates[type]?.display_name ?? type;
+  });
+  return `${component.display_name ?? component.id} was retired in ${component.retiredIn} and fails when the flow runs. ${
+    replacements.length > 0
+      ? `Use ${replacements.join(", ")}.`
+      : "No direct replacement."
+  }`;
+}
+
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
   playgroundPage: false,
@@ -180,7 +195,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           allowCustomComponents,
           connectedFields.get(node.id) ?? new Set(),
         );
-        if (codeValidity && (codeValidity.outdated || codeValidity.blocked))
+        if (
+          codeValidity &&
+          (codeValidity.outdated ||
+            codeValidity.blocked ||
+            codeValidity.retired)
+        )
           outdatedNodes.push({
             id: node.id,
             type: node.data.type,
@@ -190,6 +210,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             blocked: codeValidity.blocked,
             breakingChange: codeValidity.breakingChange,
             userEdited: codeValidity.userEdited,
+            retired: codeValidity.retired,
+            retiredIn: codeValidity.retiredIn,
+            replacement: codeValidity.replacement,
           });
       }
     });
@@ -998,9 +1021,21 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
     errors = errors.concat(errorsObjs.flatMap((obj) => obj.errors));
     if (errors.length > 0) {
+      // The run stops here, before the preflight below, so this alert names the retired
+      // components too. componentsToUpdate may be stale, so recompute it as the preflight does.
+      let retiredMessages: string[] = [];
+      if (!get().playgroundPage) {
+        get().updateComponentsToUpdate(get().nodes);
+        const validatedIds = new Set(nodesToValidate.map((node) => node.id));
+        retiredMessages = get()
+          .componentsToUpdate.filter(
+            (component) => component.retired && validatedIds.has(component.id),
+          )
+          .map(retiredComponentMessage);
+      }
       setErrorData({
         title: i18n.t("errors.missedFields"),
-        list: errors,
+        list: [...errors, ...retiredMessages],
       });
       const ids = errorsObjs.flatMap((obj) => obj.id);
       get().updateBuildStatus(ids, BuildStatus.ERROR); // Set only the build status as error without adding info to the flow pool
@@ -1043,16 +1078,25 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     // for editor runs, where the template registry is loaded and its classification is reliable.
     if (!get().playgroundPage && componentsToPreflight.length > 0) {
       // A missing template blocks the run either way. Outdated components are
-      // only enforced in restricted mode, as before.
+      // only enforced in restricted mode, as before. A retired component fails
+      // when the flow runs in every mode, whether or not its code is current.
       const blockedComponents = componentsToPreflight.filter(
         (component) => component.blocked && stopsExecution(component),
+      );
+      // A retired component has no update to take, so it is named with its replacement.
+      const retiredComponents = componentsToPreflight.filter(
+        (component) => component.retired,
       );
       const outdatedComponents =
         substituteOutdatedComponentCode || allowCustomComponents
           ? []
-          : componentsToPreflight.filter((component) => component.outdated);
+          : componentsToPreflight.filter(
+              (component) => component.outdated && !component.retired,
+            );
       const mustBlockBuild =
-        blockedComponents.length > 0 || outdatedComponents.length > 0;
+        blockedComponents.length > 0 ||
+        outdatedComponents.length > 0 ||
+        retiredComponents.length > 0;
       if (mustBlockBuild) {
         const errorList: string[] = [];
 
@@ -1075,22 +1119,26 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           );
         }
 
+        errorList.push(...retiredComponents.map(retiredComponentMessage));
+
         const blockedTitle = allowCustomComponents
           ? "Components disabled by an administrator must be removed before building"
           : "Custom components are blocked while custom components are disabled";
+        const outdatedTitle =
+          outdatedComponents.length > 0
+            ? "Outdated components must be updated"
+            : "Retired components must be replaced";
 
         setErrorData({
           title:
             blockedComponents.length > 0
               ? blockedTitle
-              : "Outdated components must be updated before building",
+              : `${outdatedTitle} before building`,
           list: errorList,
         });
         get().setIsBuilding(false);
         throw new Error(
-          blockedComponents.length > 0
-            ? blockedTitle
-            : "Outdated components must be updated",
+          blockedComponents.length > 0 ? blockedTitle : outdatedTitle,
         );
       }
     }

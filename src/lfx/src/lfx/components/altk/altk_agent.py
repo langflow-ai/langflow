@@ -78,6 +78,7 @@ class ALTKAgentComponent(ALTKBaseAgentComponent):
     beta = True
     name = "ALTK Agent"
     legacy = True
+    retired_in = "1.13.0"
     replacement = ["models_and_agents.Agent"]
 
     memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]

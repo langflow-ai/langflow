@@ -15,13 +15,14 @@ Each case holds:
 - `saved_node`: the node as a flow saves it (`data.node`).
 - `connected_fields`: the fields of the saved node that an edge goes into. A narrowed or emptied input is breaking only when it is connected, and so is a field that, on a node in tool mode, the component now marks `tool_mode`. A field whose type changed is breaking when it is connected or holds a value. Both tests turn this list into edges.
 - `component`: the current component (its registry or template entry), or `null` when no component has that type.
-- `expected`: the status `lfx upgrade` reports, one of `ok`, `outdated_safe`, `outdated_breaking`, `blocked`.
+- `expected`: the status `lfx upgrade` reports, one of `ok`, `outdated_safe`, `outdated_breaking`, `blocked`, `retired`.
 
-The editor returns flags instead of a status. The Jest test maps them like this:
+The editor returns flags instead of a status. The Jest test maps them like this, and the first row that applies wins:
 
 | Editor result | Status |
 |---|---|
 | `blocked` | `blocked` |
+| `retired` | `retired` |
 | not `outdated` | `ok` |
 | `outdated` and `breakingChange` | `outdated_breaking` |
 | `outdated`, no `breakingChange` | `outdated_safe` |
@@ -53,7 +54,7 @@ Flows built and exported on that release, for cases the starter flows do not cov
 
 The saved code of most hard-flow nodes equals the bundled code, so `expected_statuses.json` alone never runs the rule on them. `test_hard_flow_status_after_a_component_change` gives one component new code, plus a change a later release could make (an emptied `input_types` list, dropped `Data` type names, no tool-mode input), and pins the status of every node of that type in a hard flow.
 
-`v1.12.6` was built on `langflow==1.12.6` (with `langflow-base` and `lfx` 1.12.6), and `v1.13.0` on `langflow==1.13.0` (with `langflow-base` and `lfx` 1.13.0). Each server ran with its own home and database. The flows were built through the server API: the same field updates the editor sends, and edge handles made by `lfx.graph.flow_builder`. Each folder holds the same seven flows:
+`v1.12.6` was built on `langflow==1.12.6` (with `langflow-base` and `lfx` 1.12.6), and `v1.13.0` on `langflow==1.13.0` (with `langflow-base` and `lfx` 1.13.0). Each server ran with its own home and database. The flows were built through the server API: the same field updates the editor sends, and edge handles made by `lfx.graph.flow_builder`. Both folders hold these seven flows:
 
 - `run_flow_inputs.json`: Run Flow with the inputs of the selected flow added as fields, one fed by an edge. Fields the component adds while editing count as removed fields.
 - `mcp_tools_arguments.json`: MCP Tools with a selected tool whose arguments became fields, one fed by an edge. The tool came from a local stdio server; its path is shortened to `mcp_greeter_server.py`.
@@ -62,3 +63,5 @@ The saved code of most hard-flow nodes equals the bundled code, so `expected_sta
 - `provider_fields.json`: Language Model and Agent switched to a non-default provider, and an edge into a Parser field that its mode can hide.
 - `prompt_variables.json`: a Prompt Template with two variables, each fed by an edge. The node lists them in `custom_fields`, so they are not removed fields.
 - `type_names.json`: edges whose handles carry `Data`, `JSON`, `DataFrame` and `Table`.
+
+`v1.12.6` also holds four flows saved with lfx-bundles 1.1.38 installed, one per component that 1.13 retired: `altk_agent.json`, `chroma_ext_type.json`, `chroma_legacy_type.json` (the older `Chroma` type) and `local_db.json`. The core index leaves these components out, because lfx-bundles discovers them at runtime. The test builds their templates from lfx's own classes, so these nodes read as retired instead of blocked.

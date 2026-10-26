@@ -19,7 +19,7 @@ TRANSIENT_TEMPLATE_KEYS: frozenset[str] = frozenset({"is_refresh", "tools_metada
 # lfx.graph.flow_builder.connect does it: to keep this module free of lfx.base imports.
 TOOL_OUTPUT_NAME = "component_as_tool"
 
-NodeStatusLiteral = Literal["ok", "outdated_safe", "outdated_breaking", "blocked"]
+NodeStatusLiteral = Literal["ok", "outdated_safe", "outdated_breaking", "blocked", "retired"]
 
 
 @dataclass
@@ -28,6 +28,8 @@ class NodeStatus:
     component_type: str
     display_name: str
     status: NodeStatusLiteral
+    retired_in: str | None = None
+    replacement: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -37,6 +39,10 @@ class CompatibilityReport:
     @property
     def has_blocked(self) -> bool:
         return any(n.status == "blocked" for n in self.nodes)
+
+    @property
+    def has_retired(self) -> bool:
+        return any(n.status == "retired" for n in self.nodes)
 
     @property
     def has_breaking(self) -> bool:
@@ -323,6 +329,18 @@ def _classify_node(
     registry_entry = registry.get(component_type)
     if registry_entry is None:
         return NodeStatus(node_id=node_id, component_type=component_type, display_name=display_name, status="blocked")
+
+    # A retired component fails when the flow runs, whatever its saved code, so it is reported
+    # before the code comparison.
+    if registry_entry.get("retired_in"):
+        return NodeStatus(
+            node_id=node_id,
+            component_type=component_type,
+            display_name=display_name,
+            status="retired",
+            retired_in=registry_entry["retired_in"],
+            replacement=list(registry_entry.get("replacement") or []),
+        )
 
     registry_template = registry_entry.get("template", {})
     registry_code_field = registry_template.get("code")

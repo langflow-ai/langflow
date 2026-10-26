@@ -115,6 +115,25 @@ describe("NodeLegacyComponent replacement hint", () => {
     expect(filtered.data).toEqual({});
   });
 
+  it("says a retired component fails and offers no dismiss", () => {
+    render(
+      <NodeLegacyComponent
+        legacy
+        replacement={["data.APIRequest"]}
+        retiredIn="1.13.0"
+        setDismissAll={jest.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "Retired in 1.13.0. This component fails when the flow runs.",
+      ),
+    ).toBeInTheDocument();
+    expect(hintText()).toBe("Use API Request.");
+    expect(screen.queryByTestId("dismiss-warning-bar")).not.toBeInTheDocument();
+  });
+
   it("filters the palette to a built-in replacement on click", () => {
     renderBanner(["data.APIRequest"]);
 
