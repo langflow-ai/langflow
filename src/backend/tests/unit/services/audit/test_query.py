@@ -35,6 +35,7 @@ T0 = datetime(2026, 9, 11, 16, 0, tzinfo=timezone.utc)
 
 
 def test_acting_and_represented_filters_have_distinct_cursor_fingerprints():
+    """Prevent a cursor from being reused between acting and represented queries."""
     acting = AuditEventFilters(resource_type=PROJECTS, acting_issuer="issuer", acting_subject="subject")
     represented = AuditEventFilters(resource_type=PROJECTS, represented_issuer="issuer", represented_subject="subject")
     assert acting.fingerprint() != represented.fingerprint()
@@ -42,6 +43,7 @@ def test_acting_and_represented_filters_have_distinct_cursor_fingerprints():
 
 @pytest.mark.parametrize("represented", [False, True])
 async def test_represented_filters_do_not_fall_back_to_acting_identity(audit_session, represented):
+    """Generate exact represented predicates without matching legacy acting fields."""
     event = build_audit_event(project_patch_draft())
     event.acting_issuer, event.acting_subject = "issuer", "subject"
     if represented:

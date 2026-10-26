@@ -43,6 +43,7 @@ class UntrustedAuditIdentityError(AuditIdentityError):
     """The authenticated credential cannot assert represented identity."""
 
     def __init__(self) -> None:
+        """Describe the trust failure without exposing the authenticated credential."""
         super().__init__("Credential may not assert represented audit identity")
 
 
@@ -58,6 +59,7 @@ current_represented_identity: ContextVar[RepresentedIdentity | None] = ContextVa
 
 
 def _invalid() -> InvalidAuditContextError:
+    """Return a bounded domain error that never includes the submitted header."""
     return InvalidAuditContextError("Invalid represented audit identity")
 
 

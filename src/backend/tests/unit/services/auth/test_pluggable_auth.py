@@ -76,6 +76,7 @@ async def test_api_key_security_uses_registered_service(dummy_auth_registration)
 
 @pytest.mark.anyio
 async def test_get_current_user_delegates_to_service(dummy_auth_registration):
+    """Retain registered-service delegation with the real request header interface."""
     dummy = dummy_auth_registration
     db = MagicMock(spec=AsyncSession)
     # get_current_user now extracts the external credential from the request and

@@ -229,6 +229,7 @@ def _request_id(feed_row: AuditFeedRow) -> UUID | None:
 
 
 def feed_item(feed_row: AuditFeedRow) -> AuditFeedItem:
+    """Build one feed item without inventing identity fields for authorization rows."""
     row = feed_row.row
     is_resource = feed_row.source is AuditSource.RESOURCE
     actor = AuditFeedActor(

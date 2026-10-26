@@ -214,6 +214,7 @@ async def get_current_user(
     # external credential so a present-but-invalid native cookie cannot shadow a
     # valid external one. The auth service tries the native token first and only
     # falls back to the external credential when it differs from the token.
+    """Authenticate through the registered service, then bind asserted audit identity."""
     external_token = _get_external_token(request.headers, request.cookies)
     try:
         user = await _auth_service().get_current_user(
@@ -559,6 +560,7 @@ async def get_current_user_mcp(
     header_param: Annotated[str | None, Security(api_key_header)],
     db: AsyncSession = Depends(injectable_session_scope, scope="function"),
 ) -> User:
+    """Authenticate the MCP caller before binding represented audit identity."""
     try:
         user = await _auth_service().get_current_user_mcp(token, query_param, header_param, db)
     except AuthenticationError as e:

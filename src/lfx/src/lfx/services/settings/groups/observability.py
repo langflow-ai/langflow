@@ -48,6 +48,7 @@ class ObservabilitySettings(BaseModel):
     @field_validator("audit_trusted_api_key_ids", mode="before")
     @classmethod
     def normalize_audit_trusted_api_key_ids(cls, value: str | list[UUID] | None) -> list[UUID]:
+        """Strip each entry once, parse UUIDs, and preserve first-occurrence ordering."""
         entries = value.split(",") if isinstance(value, str) else (value or [])
         normalized = (str(entry).strip() for entry in entries)
         return list(dict.fromkeys(UUID(entry) for entry in normalized if entry))
