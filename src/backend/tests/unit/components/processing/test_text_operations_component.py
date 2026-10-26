@@ -399,6 +399,7 @@ class TestTextOperationsClean:
     )
     @pytest.mark.parametrize("line_ending", ["\n", "\r\n"])
     def test_extra_spaces_preserves_line_breaks(self, remove_empty_lines, expected, line_ending):
+        """Preserve LF/CRLF separators while collapsing spaces and optionally removing empty lines."""
         component = TextOperations()
         component.text_input = f"First   line{line_ending}{line_ending}Second   line"
         component.operation = [{"name": "Text Clean"}]
