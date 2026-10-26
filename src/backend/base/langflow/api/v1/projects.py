@@ -133,6 +133,7 @@ from langflow.services.deps import (
     get_settings_service,
     get_storage_service,
 )
+from langflow.services.evaluations.cleanup import delete_project_evaluations
 from langflow.services.schema import ServiceType
 from langflow.services.storage.service import StorageService
 from langflow.services.triggers.reconciliation import reconcile_flow_triggers_safely
@@ -2292,6 +2293,7 @@ async def delete_project(
                     await cascade_delete_flow(session, flow.id, memory_base_cleanups=memory_base_cleanups)
 
             await check_project_has_deployments(session, project_id=project_id)
+            await delete_project_evaluations(session, project_id)
             await session.delete(target)
             # Flush eagerly so guard/constraint errors surface in-request rather than at teardown commit.
             await session.flush()

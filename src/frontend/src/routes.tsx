@@ -27,6 +27,11 @@ import { AppInitPage } from "./pages/AppInitPage";
 import { AppWrapperPage } from "./pages/AppWrapperPage";
 import FlowPage from "./pages/FlowPage";
 import LoginPage from "./pages/LoginPage";
+import DatasetDetailPage from "./pages/MainPage/pages/evalsPage/DatasetDetailPage";
+import DatasetsPage from "./pages/MainPage/pages/evalsPage/DatasetsPage";
+import EvalsRoute from "./pages/MainPage/pages/evalsPage/EvalsRoute";
+import EvaluationDetailPage from "./pages/MainPage/pages/evalsPage/EvaluationDetailPage";
+import EvaluationsPage from "./pages/MainPage/pages/evalsPage/EvaluationsPage";
 import FilesPage from "./pages/MainPage/pages/filesPage";
 import HomePage from "./pages/MainPage/pages/homePage";
 import KnowledgePage from "./pages/MainPage/pages/knowledgePage";
@@ -98,6 +103,38 @@ const router = createBrowserRouter(
                         element={<CustomNavigate replace to="files" />}
                       />
                       <Route path="files" element={<FilesPage />} />
+                      <Route
+                        path="datasets"
+                        element={
+                          <EvalsRoute>
+                            <DatasetsPage />
+                          </EvalsRoute>
+                        }
+                      />
+                      <Route
+                        path="datasets/:datasetId"
+                        element={
+                          <EvalsRoute>
+                            <DatasetDetailPage />
+                          </EvalsRoute>
+                        }
+                      />
+                      <Route
+                        path="evaluations"
+                        element={
+                          <EvalsRoute>
+                            <EvaluationsPage />
+                          </EvalsRoute>
+                        }
+                      />
+                      <Route
+                        path="evaluations/:evaluationId"
+                        element={
+                          <EvalsRoute>
+                            <EvaluationDetailPage />
+                          </EvalsRoute>
+                        }
+                      />
                       {ENABLE_KNOWLEDGE_BASES && (
                         <>
                           <Route

@@ -28,6 +28,7 @@ from .connection.oauth import ConnectionOAuth
 from .data_subject_request import DataSubjectRequest
 from .deployment import Deployment
 from .deployment_provider_account import DeploymentProviderAccount
+from .evaluation import Dataset, DatasetItem, Evaluation, EvaluationResult, EvaluationRun
 from .file import File
 from .flow import Flow
 from .flow_version import FlowVersion
@@ -79,8 +80,13 @@ __all__ = [
     "ConnectionOAuth",
     "ConnectionSecret",
     "DataSubjectRequest",
+    "Dataset",
+    "DatasetItem",
     "Deployment",
     "DeploymentProviderAccount",
+    "Evaluation",
+    "EvaluationResult",
+    "EvaluationRun",
     "ExecutionSignal",
     "File",
     "Flow",

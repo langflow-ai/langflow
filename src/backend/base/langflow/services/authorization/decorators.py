@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, TypeVar
 from fastapi import HTTPException, status
 
 from langflow.services.authorization.actions import (
+    DatasetAction,
     DeploymentAction,
     FileAction,
     FlowAction,
@@ -20,6 +21,7 @@ from langflow.services.authorization.actions import (
 )
 from langflow.services.authorization.guards import (
     _RESOURCE_SPECS,
+    ensure_dataset_permission,
     ensure_deployment_permission,
     ensure_file_permission,
     ensure_flow_permission,
@@ -37,6 +39,7 @@ _Action = (
     | FlowAction
     | ProjectAction
     | KnowledgeBaseAction
+    | DatasetAction
     | VariableAction
     | FileAction
     | ShareAction
@@ -48,6 +51,7 @@ _ENSURE_BY_SPEC: dict[str, Callable[..., Awaitable[None]]] = {
     "deployment": ensure_deployment_permission,
     "project": ensure_project_permission,
     "knowledge_base": ensure_knowledge_base_permission,
+    "dataset": ensure_dataset_permission,
     "variable": ensure_variable_permission,
     "file": ensure_file_permission,
     "share": ensure_share_permission,
@@ -78,6 +82,10 @@ _ORM_ATTR_BY_SPEC_KW: dict[str, dict[str, str]] = {
         "workspace_id": "workspace_id",
         "project_id": "project_id",
         "kb_name": "name",
+    },
+    "dataset": {
+        "dataset_id": "id",
+        "dataset_user_id": "user_id",
     },
     "variable": {
         "variable_id": "id",

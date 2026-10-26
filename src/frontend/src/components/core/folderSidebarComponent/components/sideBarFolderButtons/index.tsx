@@ -51,6 +51,7 @@ import type { FolderType } from "../../../../../pages/MainPage/entities";
 import useAlertStore from "../../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../../stores/foldersStore";
+import { useUtilityStore } from "../../../../../stores/utilityStore";
 import { handleKeyDown } from "../../../../../utils/reactflowUtils";
 import { cn } from "../../../../../utils/utils";
 import useFileDrop from "../../hooks/use-on-file-drop";
@@ -441,6 +442,10 @@ const SideBarFoldersButtonsComponent = ({
     _navigate("/assets/knowledge-bases");
   };
 
+  const evalsEnabled = useUtilityStore(
+    (state) => state.featureFlags.evals === true,
+  );
+
   return (
     <Sidebar
       collapsible={isMobile ? "offcanvas" : "none"}
@@ -632,6 +637,40 @@ const SideBarFoldersButtonsComponent = ({
                     />
                     {t("sidebar.knowledge")}
                   </SidebarMenuButton>
+                )}
+                {evalsEnabled && (
+                  <>
+                    <SidebarMenuButton
+                      onClick={() => _navigate("/assets/datasets")}
+                      size="md"
+                      className={cn(
+                        "text-sm",
+                        projectSidebar.footerItemClassName,
+                      )}
+                      data-testid="sidebar-datasets"
+                    >
+                      <ForwardedIconComponent
+                        name="Table"
+                        className="h-4 w-4"
+                      />
+                      {t("sidebar.datasets")}
+                    </SidebarMenuButton>
+                    <SidebarMenuButton
+                      onClick={() => _navigate("/assets/evaluations")}
+                      size="md"
+                      className={cn(
+                        "text-sm",
+                        projectSidebar.footerItemClassName,
+                      )}
+                      data-testid="sidebar-evaluations"
+                    >
+                      <ForwardedIconComponent
+                        name="FlaskConical"
+                        className="h-4 w-4"
+                      />
+                      {t("sidebar.evaluations")}
+                    </SidebarMenuButton>
+                  </>
                 )}
                 <SidebarMenuButton
                   onClick={handleFilesNavigation}
