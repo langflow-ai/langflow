@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import Collection, Iterator
 from contextlib import contextmanager
@@ -658,7 +659,6 @@ async def validate_provider(
 
     from lfx.base.models.unified_models import (
         get_all_variables_for_provider,
-        get_provider_all_variables,
         validate_model_provider_key,
     )
 
@@ -667,10 +667,11 @@ async def validate_provider(
     # secret never comes from storage here: only a key the caller sends is checked, so a saved or server
     # key can't be sent to an endpoint the caller names. What the dialog sends wins, including "" for a
     # value it is clearing.
-    secrets = {row.get("variable_key") for row in get_provider_all_variables(request.provider) if row.get("is_secret")}
-    saved = get_all_variables_for_provider(current_user.id, request.provider)
-    variables = {**{name: value for name, value in saved.items() if name not in secrets}, **request.variables}
     try:
+        saved = await asyncio.to_thread(
+            get_all_variables_for_provider, current_user.id, request.provider, include_secrets=False
+        )
+        variables = {**saved, **request.variables}
         # Validate the credentials
         # Decision models and decision-only providers are validated with a decision, never chat.
         with _policy_denial_as_not_found():

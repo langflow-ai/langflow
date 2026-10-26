@@ -401,6 +401,18 @@ def _keep_row_ids(current: Any, incoming: Any) -> Any:
     return [{**row, _ROW_ID_KEY: row_id} if row_id else row for row, row_id in zip(incoming, ids, strict=True)]
 
 
+def validate_router_mode_update(template: dict, params: dict[str, Any]) -> None:
+    """Reject changes that need a component refresh, including changes proposed for later approval."""
+    mode = params.get("routing_mode", (template.get("routing_mode") or {}).get("value"))
+    for field in ("routing_mode", "decision_kind") if mode == "Decision Model" else ("routing_mode",):
+        if field in params and params[field] != (template.get(field) or {}).get("value"):
+            msg = (
+                f"Changing Smart Router {field} requires refreshing its fields and outputs. "
+                "Change it in the editor first."
+            )
+            raise ValueError(msg)
+
+
 def configure_component(
     flow: dict,
     component_id: str,
@@ -478,6 +490,7 @@ def configure_component(
 
     router_outputs = None
     if node["data"].get("type") == "SmartRouter":
+        validate_router_mode_update(template, normalized_params)
         decision = candidate_values.get("routing_mode") == "Decision Model"
         kind = candidate_values.get("decision_kind", "Choice")
         table = "score_levels" if decision and kind == "Score" else "routes"

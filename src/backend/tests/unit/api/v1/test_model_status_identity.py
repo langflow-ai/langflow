@@ -544,7 +544,7 @@ async def test_decision_validation_request_uses_decision_endpoint(monkeypatch):
 
     monkeypatch.setattr(models_api, "_require_provider", AsyncMock())
     # Saved and environment settings are merged in; none here, so the check sees exactly what was sent.
-    monkeypatch.setattr(unified_models, "get_all_variables_for_provider", lambda *_: {})
+    monkeypatch.setattr(unified_models, "get_all_variables_for_provider", lambda *_, **__: {})
     validate = Mock()
     monkeypatch.setattr(unified_models, "validate_model_provider_key", validate)
     user = SimpleNamespace(id=uuid4())
@@ -603,7 +603,7 @@ async def test_decision_credential_validation_never_invokes_denied_model(monkeyp
         blocked_model_keys=frozenset(f"{provider_id}::decision::{name}" for name in denied),
     )
     monkeypatch.setattr(models_api, "_require_provider", AsyncMock())
-    monkeypatch.setattr(unified_models, "get_all_variables_for_provider", lambda *_: {})
+    monkeypatch.setattr(unified_models, "get_all_variables_for_provider", lambda *_, **__: {})
     resolver = Mock(return_value=policy)
     monkeypatch.setattr(model_provider_policy, "resolve_model_provider_policy", resolver)
     validate = Mock()
@@ -698,7 +698,7 @@ async def test_enable_decision_uses_typed_validation_despite_same_named_deprecat
             }
         ],
     )
-    monkeypatch.setattr(unified_models, "get_all_variables_for_provider", lambda *_: {})
+    monkeypatch.setattr(unified_models, "get_all_variables_for_provider", lambda *_, **__: {})
     validate = Mock()
     monkeypatch.setattr(unified_models, "validate_model_provider_key", validate)
     result = await models_api.update_enabled_models(
@@ -751,7 +751,7 @@ async def test_a_refused_key_names_the_provider_once(monkeypatch, model_type, de
             {"provider": "OpenAI", "models": [{"model_name": "shared", "metadata": {"model_type": model_type}}]}
         ],
     )
-    monkeypatch.setattr(unified_models, "get_all_variables_for_provider", lambda *_: {})
+    monkeypatch.setattr(unified_models, "get_all_variables_for_provider", lambda *_, **__: {})
     monkeypatch.setattr(
         unified_models, "validate_model_provider_key", Mock(side_effect=ValueError("Enter the OpenAI API key."))
     )
@@ -984,7 +984,7 @@ async def test_a_key_check_sees_the_saved_configuration(monkeypatch, sent, check
     monkeypatch.setattr(
         unified_models,
         "get_all_variables_for_provider",
-        lambda *_: {"OPENAI_API_KEY": "sk-saved", "OPENAI_BASE_URL": "https://proxy.example/v1"},
+        lambda *_, **__: {"OPENAI_BASE_URL": "https://proxy.example/v1"},
     )
     validate = Mock()
     monkeypatch.setattr(unified_models, "validate_model_provider_key", validate)
@@ -996,3 +996,80 @@ async def test_a_key_check_sees_the_saved_configuration(monkeypatch, sent, check
     checked = validate.call_args.args[1]
     assert checked.get("OPENAI_API_KEY") == sent.get("OPENAI_API_KEY")
     assert checked["OPENAI_BASE_URL"] == checked_base_url
+
+
+async def test_replacement_key_skips_broken_saved_secret_and_loads_settings_off_loop(monkeypatch):
+    import threading
+    from contextlib import asynccontextmanager
+    from unittest.mock import Mock
+
+    from lfx.base.models import unified_models
+    from lfx.base.models.unified_models import credentials
+    from lfx.services.variable import VariableNotFoundError
+    from pydantic import SecretStr
+
+    loop_thread = threading.get_ident()
+    reads = []
+
+    @asynccontextmanager
+    async def session_scope():
+        yield object()
+
+    async def get_variable(*, name, **_kwargs):
+        assert threading.get_ident() != loop_thread
+        reads.append(name)
+        if name == "OPENAI_API_KEY":
+            msg = "Could not decrypt credential variable 'OPENAI_API_KEY'."
+            raise ValueError(msg)
+        if name == "OPENAI_BASE_URL":
+            # Settings may themselves be stored as Credential variables.
+            return SecretStr("https://api.openai.com/v1")
+        raise VariableNotFoundError(name)
+
+    def read_settings(*args, **kwargs):
+        assert threading.get_ident() != loop_thread
+        return credentials.get_all_variables_for_provider(*args, **kwargs)
+
+    monkeypatch.setattr(models_api, "_require_provider", AsyncMock())
+    monkeypatch.setattr(credentials, "session_scope", session_scope)
+    monkeypatch.setattr(credentials, "get_variable_service", lambda: SimpleNamespace(get_variable=get_variable))
+    monkeypatch.setattr(unified_models, "get_all_variables_for_provider", read_settings)
+    validate = Mock()
+    monkeypatch.setattr(unified_models, "validate_model_provider_key", validate)
+    result = await models_api.validate_provider(
+        models_api.ValidateProviderRequest(
+            provider="OpenAI", variables={"OPENAI_API_KEY": "replacement-key"}, model_type="decision"
+        ),
+        current_user=SimpleNamespace(id=uuid4()),
+        provider_policy_attributes={},
+    )
+    assert result.valid
+    assert "OPENAI_API_KEY" not in reads
+    assert "OPENAI_BASE_URL" in reads
+    assert validate.call_args.args[1] == {
+        "OPENAI_API_KEY": "replacement-key",
+        "OPENAI_BASE_URL": "https://api.openai.com/v1",
+    }
+
+
+async def test_unreadable_saved_endpoint_returns_validation_error(monkeypatch):
+    from unittest.mock import Mock
+
+    from lfx.base.models import unified_models
+
+    monkeypatch.setattr(models_api, "_require_provider", AsyncMock())
+    monkeypatch.setattr(
+        unified_models,
+        "get_all_variables_for_provider",
+        Mock(side_effect=ValueError("Could not decrypt credential variable 'OPENAI_BASE_URL'.")),
+    )
+    validate = Mock()
+    monkeypatch.setattr(unified_models, "validate_model_provider_key", validate)
+    result = await models_api.validate_provider(
+        models_api.ValidateProviderRequest(provider="OpenAI", variables={"OPENAI_API_KEY": "replacement-key"}),
+        current_user=SimpleNamespace(id=uuid4()),
+        provider_policy_attributes={},
+    )
+    assert not result.valid
+    assert "OPENAI_BASE_URL" in result.error
+    validate.assert_not_called()

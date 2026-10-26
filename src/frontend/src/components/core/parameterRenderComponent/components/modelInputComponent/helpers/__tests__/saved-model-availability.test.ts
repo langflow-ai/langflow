@@ -111,6 +111,40 @@ describe("isSavedModelUnavailable", () => {
       modelType: "decision" as const,
     };
 
+    it.each([true, false])(
+      "checks an unconfigured provider's catalog only when status is reliable: %s",
+      (modelStatusIsReliable) => {
+        expect(
+          isSavedModelUnavailable({
+            ...decisionBase,
+            modelStatusIsReliable,
+            providers: [{ ...openaiListing([]), is_configured: false }],
+            enabledModels: { OpenAI: { "gpt-6-luna": false } },
+          }),
+        ).toBe(modelStatusIsReliable);
+      },
+    );
+
+    it("keeps an allowed decision model available for provider setup", () => {
+      expect(
+        isSavedModelUnavailable({
+          ...decisionBase,
+          providers: [
+            {
+              ...openaiListing([
+                {
+                  model_name: "gpt-6-luna",
+                  metadata: { model_type: "decision" },
+                },
+              ]),
+              is_configured: false,
+            },
+          ],
+          enabledModels: { OpenAI: { "gpt-6-luna": false } },
+        }),
+      ).toBe(false);
+    });
+
     it("is not kept available by a chat model of the same name", () => {
       expect(
         isSavedModelUnavailable({

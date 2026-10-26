@@ -6,10 +6,13 @@ from unittest.mock import AsyncMock
 import pytest
 from lfx.mcp.flow_builder_tools import (
     ConfigureComponent,
+    ProposeFieldEdit,
     drain_flow_events,
     get_working_flow,
     init_working_flow,
     reset_working_flow,
+    set_apply_edits_live,
+    set_propose_existing_edits,
 )
 from lfx.mcp.server import _keep_row_ids
 
@@ -109,6 +112,7 @@ def configured_router(request):
                                 table: {"type": "table", "value": rows},
                                 "routing_mode": {"type": "str", "value": "Decision Model"},
                                 "decision_kind": {"type": "str", "value": kind},
+                                "input_text": {"type": "str", "value": "Original message"},
                             },
                             "outputs": outputs,
                         },
@@ -172,15 +176,22 @@ def test_in_app_rejects_structural_route_edits_without_mutating_flow(configured_
     assert not drain_flow_events()
 
 
-async def test_standalone_mcp_still_refreshes_structural_route_edits(configured_router, monkeypatch):
+@pytest.mark.parametrize("field", ["rows", "routing_mode", "decision_kind"])
+async def test_standalone_mcp_still_refreshes_structural_route_edits(configured_router, monkeypatch, field):
     from lfx.mcp import server
 
     table, prefix, flow = configured_router
+    field = table if field == "rows" else field
     node = flow["data"]["nodes"][0]["data"]["node"]
-    node["template"][table]["real_time_refresh"] = True
+    node["template"][field]["real_time_refresh"] = True
     updated = copy.deepcopy(node)
-    updated["template"][table]["value"] = [{"route_category": "Support", "route_id": f"{prefix}_2_result"}]
-    updated["outputs"] = [updated["outputs"][1], updated["outputs"][2]]
+    value = {"routing_mode": "Language Model", "decision_kind": "Boolean"}.get(field)
+    if field == table:
+        value = [{"route_category": "Support"}]
+        updated["template"][field]["value"] = [{"route_category": "Support", "route_id": f"{prefix}_2_result"}]
+        updated["outputs"] = [updated["outputs"][1], updated["outputs"][2]]
+    else:
+        updated["template"][field]["value"] = value
     client = AsyncMock()
     client.post.return_value = updated
     save = AsyncMock()
@@ -188,10 +199,10 @@ async def test_standalone_mcp_still_refreshes_structural_route_edits(configured_
     monkeypatch.setattr(server, "_get_flow", AsyncMock(return_value=flow))
     monkeypatch.setattr(server, "_patch_flow", save)
 
-    result = await server.configure_component("flow", "router", {table: [{"route_category": "Support"}]})
+    result = await server.configure_component("flow", "router", {field: value})
 
-    assert result["configured"] == [table]
-    assert client.post.call_args.kwargs["json_data"]["field_value"] == updated["template"][table]["value"]
+    assert result["configured"] == [field]
+    assert client.post.call_args.kwargs["json_data"]["field_value"] == updated["template"][field]["value"]
     assert flow["data"]["nodes"][0]["data"]["node"] == updated
     save.assert_awaited_once_with("flow", flow)
 
@@ -201,7 +212,88 @@ def test_unrelated_configure_without_saved_outputs_still_works():
     flow = get_working_flow()
     del flow["data"]["nodes"][0]["data"]["node"]["outputs"]
     tool = ConfigureComponent()
-    tool.set(component_id="router", params={"routing_mode": "Language Model"})
+    tool.set(component_id="router", params={"input_text": "Updated message"})
     result = tool.configure_component()
     assert "error" not in result.data
     assert "outputs" not in drain_flow_events()[-1]
+
+
+@pytest.mark.usefixtures("configured_router")
+@pytest.mark.parametrize("propose", [False, True])
+@pytest.mark.parametrize(
+    ("mode", "kind", "params"),
+    [
+        ("Decision Model", "Choice", {"decision_kind": "Boolean"}),
+        ("Decision Model", "Choice", {"decision_kind": "Score"}),
+        ("Language Model", "Choice", {"routing_mode": "Decision Model"}),
+        ("Decision Model", "Choice", {"routing_mode": "Language Model"}),
+    ],
+)
+def test_in_app_rejects_mode_and_active_type_changes_atomically(mode, kind, params, propose):
+    set_propose_existing_edits(enabled=propose)
+    flow = get_working_flow()
+    template = flow["data"]["nodes"][0]["data"]["node"]["template"]
+    template["routing_mode"]["value"] = mode
+    template["decision_kind"]["value"] = kind
+    original = copy.deepcopy(flow)
+    tool = ConfigureComponent()
+    tool.set(component_id="router", params={"input_text": "Must not change", **params})
+    result = tool.configure_component()
+    assert "refreshing its fields and outputs" in result.data["error"]
+    assert get_working_flow() == original
+    assert not drain_flow_events()
+
+
+@pytest.mark.usefixtures("configured_router")
+@pytest.mark.parametrize("mode", ["Language Model", "Decision Model"])
+@pytest.mark.parametrize("propose", [False, True])
+def test_in_app_allows_no_op_mode_and_type_updates(mode, propose):
+    set_propose_existing_edits(enabled=propose)
+    flow = get_working_flow()
+    template = flow["data"]["nodes"][0]["data"]["node"]["template"]
+    template["routing_mode"]["value"] = mode
+    original = copy.deepcopy(flow)
+    tool = ConfigureComponent()
+    tool.set(component_id="router", params={"routing_mode": mode, "decision_kind": template["decision_kind"]["value"]})
+    result = tool.configure_component()
+    assert "error" not in result.data
+    assert get_working_flow() == original
+
+
+@pytest.mark.usefixtures("configured_router")
+def test_in_app_allows_inactive_decision_type_update():
+    flow = get_working_flow()
+    node = flow["data"]["nodes"][0]["data"]["node"]
+    node["template"]["routing_mode"]["value"] = "Language Model"
+    original_outputs = copy.deepcopy(node["outputs"])
+    tool = ConfigureComponent()
+    tool.set(component_id="router", params={"decision_kind": "Boolean"})
+    result = tool.configure_component()
+    assert "error" not in result.data
+    assert node["outputs"] == original_outputs
+    assert node["template"]["decision_kind"]["value"] == "Boolean"
+
+
+@pytest.mark.usefixtures("configured_router")
+@pytest.mark.parametrize("live", [False, True])
+@pytest.mark.parametrize(("field", "value"), [("decision_kind", "Boolean"), ("routing_mode", "Language Model")])
+def test_direct_field_proposal_rejects_router_refresh_changes_without_mutation(field, value, live):
+    set_apply_edits_live(enabled=live)
+    original = copy.deepcopy(get_working_flow())
+    tool = ProposeFieldEdit()
+    tool.set(component_id="router", field_name=field, new_value=value)
+    result = tool.propose_field_edit()
+    assert "refreshing its fields and outputs" in result.data["error"]
+    assert get_working_flow() == original
+    assert not drain_flow_events()
+
+
+@pytest.mark.usefixtures("configured_router")
+def test_direct_field_proposal_allows_no_op_type_change():
+    original = copy.deepcopy(get_working_flow())
+    kind = original["data"]["nodes"][0]["data"]["node"]["template"]["decision_kind"]["value"]
+    tool = ProposeFieldEdit()
+    tool.set(component_id="router", field_name="decision_kind", new_value=kind)
+    result = tool.propose_field_edit()
+    assert "error" not in result.data
+    assert get_working_flow() == original
