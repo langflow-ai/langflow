@@ -393,6 +393,20 @@ class TestTextOperationsJoin:
 
 
 class TestTextOperationsClean:
+    @pytest.mark.parametrize(
+        ("remove_empty_lines", "expected"),
+        [(False, "First line\n\nSecond line"), (True, "First line\nSecond line")],
+    )
+    def test_extra_spaces_preserves_line_breaks(self, remove_empty_lines, expected):
+        component = TextOperations()
+        component.text_input = "First   line\n\nSecond   line"
+        component.operation = [{"name": "Text Clean"}]
+        component.remove_extra_spaces = True
+        component.remove_special_chars = False
+        component.remove_empty_lines = remove_empty_lines
+
+        assert component.process_text() == expected
+
     def test_clean_extra_spaces(self):
         """Test removing extra spaces."""
         component = TextOperations()
