@@ -1629,9 +1629,6 @@ async def sync_flows_from_fs():
                                     try:
                                         flow_changed = False
                                         for field_name in ("name", "description", "data", "locked"):
-                                            # ``is not None`` rather than truthiness: a flow file may legitimately
-                                            # set ``locked`` to false or clear ``description``, and skipping those
-                                            # values leaves the row permanently out of sync with the file.
                                             if (new_value := update_data.get(field_name)) is not None and getattr(
                                                 flow, field_name
                                             ) != new_value:
