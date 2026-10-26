@@ -31,6 +31,7 @@ from .test_migration_execution import (  # noqa: F401
 
 OLD = importlib.import_module("langflow.alembic.versions.df1410b1eefa_add_audit_events")
 NEW = importlib.import_module("langflow.alembic.versions.a6f81c2d903b_add_represented_audit_identity")
+RELEASE = importlib.import_module("langflow.alembic.versions.1d8d193028c8_add_trigger_admin_paused_at")
 
 
 def _upgrade(module, connection):
@@ -86,9 +87,8 @@ def test_alembic_upgrade_from_both_release_predecessors(db_url, tmp_path, predec
             trigger = sa.Table("trigger", sa.MetaData(), sa.Column("id", sa.Integer, primary_key=True))
             trigger.create(conn)
             conn.execute(sa.insert(trigger).values(id=1))
-            if predecessor == NEW.down_revision:
-                release = importlib.import_module("langflow.alembic.versions.1d8d193028c8_add_trigger_admin_paused_at")
-                _upgrade(release, conn)
+            if predecessor == RELEASE.revision:
+                _upgrade(RELEASE, conn)
             table = sa.Table("audit_events", sa.MetaData(), autoload_with=conn)
             conn.execute(_event(table, acting_issuer="existing", acting_subject="history"))
             config = _alembic_config(tmp_path, conn)
@@ -211,16 +211,21 @@ def test_bounded_indexes_repair_draft_shapes_without_changing_history(db_url, tm
                         conn.execute(_event(table, **{f"{prefix}_issuer": issuer, f"{prefix}_subject": prefix}))
                     assert rejected.value.orig.sqlstate == "54000"
             if draft_revision is not None:
+                trigger = sa.Table("trigger", sa.MetaData(), sa.Column("id", sa.Integer, primary_key=True))
+                trigger.create(conn)
+                if draft_revision != NEW.revision:
+                    _upgrade(RELEASE, conn)
                 config = _alembic_config(tmp_path, conn)
                 command.stamp(config, NEW.revision)
                 conn.execute(sa.text("UPDATE alembic_version SET version_num = :draft"), {"draft": draft_revision})
                 # Consolidating an unmerged draft does not automatically rerun an
                 # already stamped revision or recognize removed draft IDs. After
-                # checking its schema, a draft database must explicitly restamp
-                # the release predecessor before reapplying this revision.
-                command.stamp(config, NEW.down_revision, purge=True)
+                # checking its schema, explicitly restamp the common ancestor
+                # so the earliest draft also applies the release trigger change.
+                command.stamp(config, RELEASE.down_revision, purge=True)
                 command.upgrade(config, "head")
                 assert conn.scalar(sa.text("SELECT version_num FROM alembic_version")) == NEW.revision
+                assert "admin_paused_at" in {column["name"] for column in sa.inspect(conn).get_columns("trigger")}
             else:
                 _upgrade(NEW, conn)
             _upgrade(NEW, conn)
