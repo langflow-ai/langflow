@@ -117,11 +117,6 @@ export function createFileUpload(props?: {
     input.addEventListener("cancel", handleCancel);
 
     document.body.appendChild(input);
-
-    requestAnimationFrame(() => {
-      if (!isHandled) {
-        input.click();
-      }
-    });
+    input.click();
   });
 }

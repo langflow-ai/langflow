@@ -18,6 +18,17 @@ describe("createFileUpload", () => {
     document.body.innerHTML = "";
   });
 
+  it("opens the picker synchronously so the click keeps its user activation", () => {
+    const click = jest
+      .spyOn(HTMLInputElement.prototype, "click")
+      .mockImplementation(() => {});
+
+    createFileUpload();
+
+    expect(click).toHaveBeenCalledTimes(1);
+    click.mockRestore();
+  });
+
   it("resolves with the selected files and removes the input", async () => {
     const result = createFileUpload({ multiple: true });
     const input = getInput() as HTMLInputElement;
