@@ -55,7 +55,8 @@ def _error_message(response: httpx.Response, api_key: str) -> str:
     else:
         if isinstance(body, dict):
             detail = str(body.get("message") or body.get("error") or "")
-    detail = _redact(detail[:_ERROR_DETAIL_LIMIT], api_key)
+    # Redact before truncating, so a key cut at the limit cannot leak in part.
+    detail = _redact(detail, api_key)[:_ERROR_DETAIL_LIMIT]
     label = _STATUS_LABELS.get(response.status_code, f"Keenable API error ({response.status_code})")
     return f"{label}: {detail}" if detail else label
 

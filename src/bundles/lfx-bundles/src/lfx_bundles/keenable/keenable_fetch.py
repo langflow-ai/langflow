@@ -5,7 +5,7 @@ from __future__ import annotations
 from urllib.parse import urlsplit
 
 from lfx.custom.custom_component.component import Component
-from lfx.io import FloatInput, MessageTextInput, Output, SecretStrInput
+from lfx.io import BoolInput, FloatInput, MessageTextInput, Output, SecretStrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 
@@ -45,6 +45,13 @@ class KeenableFetchComponent(Component):
             required=True,
             tool_mode=True,
         ),
+        BoolInput(
+            name="live",
+            display_name="Live Fetch",
+            info="Fetch the page from its source instead of Keenable's indexed copy.",
+            value=False,
+            advanced=True,
+        ),
         FloatInput(
             name="timeout",
             display_name="Timeout (seconds)",
@@ -61,18 +68,25 @@ class KeenableFetchComponent(Component):
     def fetch_page(self) -> Data:
         """Return the page as one ``Data`` with the markdown content as ``text``."""
         url = str(self.url or "").strip()
-        parsed = urlsplit(url)
         try:
-            if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            try:
+                parsed = urlsplit(url)
+                valid = parsed.scheme in {"http", "https"} and bool(parsed.hostname)
+            except ValueError:  # e.g. an unmatched bracket in the host
+                valid = False
+            if not valid:
                 msg = f"Enter an absolute http(s) URL, such as https://example.com; got {url!r}."
                 raise KeenableAPIError(msg)
+            params = {"url": url}
+            if self.live:
+                params["live"] = "true"
             body = keenable_request(
                 "GET",
                 "/v1/fetch/public",
                 "/v1/fetch",
                 api_key=self.api_key,
                 timeout=float(self.timeout or DEFAULT_TIMEOUT_SECONDS),
-                params={"url": url},
+                params=params,
             )
         except KeenableAPIError as exc:
             logger.error(str(exc))

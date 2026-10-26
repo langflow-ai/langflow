@@ -59,6 +59,7 @@ Keenable downloads the page on its own servers, so Langflow only sends the URL t
 |------|------|-------------|
 | Keenable API Key (`api_key`) | SecretString | Input parameter. Optional. Without a key, the component uses the keyless public endpoint. |
 | URL (`url`) | String | Input parameter. The `http://` or `https://` URL of the page to fetch. |
+| Live Fetch (`live`) | Boolean | Input parameter. Fetch the page from its source instead of Keenable's indexed copy. Default: `false`. |
 | Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Keenable to answer. Default: `30`. |
 
 ## See also

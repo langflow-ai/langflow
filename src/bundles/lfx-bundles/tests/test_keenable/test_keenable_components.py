@@ -117,6 +117,14 @@ class TestKeenableSearch:
         assert "rate limit exceeded (429)" in error
         assert API_KEY not in error
 
+    def test_key_cut_at_the_detail_limit_is_still_redacted(self) -> None:
+        # The key straddles the 300-character cap on the echoed detail.
+        body = {"message": "x" * 290 + API_KEY}
+        with patch("httpx.Client.request", return_value=_response(500, json_body=body)):
+            data = _search(api_key=API_KEY).search()
+
+        assert API_KEY[:10] not in data[0].data["error"]
+
     def test_non_json_response_is_an_error(self) -> None:
         with patch("httpx.Client.request", return_value=_response(text="<html>bad gateway</html>")):
             data = _search().search()
@@ -159,7 +167,15 @@ class TestKeenableFetch:
         assert request.call_args.args[1] == f"{API_BASE_URL}/v1/fetch"
         assert request.call_args.kwargs["headers"]["X-API-Key"] == API_KEY
 
-    @pytest.mark.parametrize("url", ["", "example.com", "file:///etc/passwd", "ftp://example.com/x"])
+    def test_live_fetch_is_sent_only_when_enabled(self) -> None:
+        with patch("httpx.Client.request", return_value=_response(json_body={"content": ""})) as request:
+            _fetch(live=True).fetch_page()
+
+        assert request.call_args.kwargs["params"] == {"url": "https://www.langflow.org/", "live": "true"}
+
+    @pytest.mark.parametrize(
+        "url", ["", "example.com", "file:///etc/passwd", "ftp://example.com/x", "https://[example"]
+    )
     def test_rejects_non_http_urls_without_a_request(self, url: str) -> None:
         with patch("httpx.Client.request") as request:
             page = _fetch(url=url).fetch_page()
