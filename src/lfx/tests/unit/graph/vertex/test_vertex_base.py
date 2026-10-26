@@ -537,7 +537,7 @@ def _relabel_file_input_as_string(vertex, *, include_field: bool = True) -> None
     if include_field:
         template["file_field"] = {
             "type": "str",
-            "value": "test-flow-id/../../server-secret.txt",
+            "value": "flow-test-flow-id/../../server-secret.txt",
             "show": True,
         }
     vertex.data["node"]["template"] = template
@@ -556,7 +556,7 @@ def test_process_file_field_rejects_path_outside_graph_scopes(
     with pytest.raises(LocalFileAccessError, match="outside the authenticated user's storage scope"):
         parameter_handler.process_file_field(
             "file_field",
-            {"type": "file", "file_path": "test-flow-id/../../server-secret.txt"},
+            {"type": "file", "file_path": "flow-test-flow-id/../../server-secret.txt"},
             {},
         )
 
@@ -604,9 +604,9 @@ def test_process_field_parameters_uses_canonical_file_list_semantics(
     """Request list metadata cannot prevent containment from checking every canonical FileInput item."""
     component_cache.all_types_dict["trusted_bundle"]["TrustedFileComponent"]["template"]["file_field"]["list"] = True
     _relabel_file_input_as_string(mock_vertex)
-    mock_vertex.data["node"]["template"]["file_field"]["value"] = ["test-flow-id/safe.txt", "/etc/passwd"]
+    mock_vertex.data["node"]["template"]["file_field"]["value"] = ["flow-test-flow-id/safe.txt", "/etc/passwd"]
     mock_vertex.data["node"]["template"]["file_field"]["list"] = False
-    safe_path = restricted_file_access / "test-flow-id" / "safe.txt"
+    safe_path = restricted_file_access / "flow-test-flow-id" / "safe.txt"
     safe_path.parent.mkdir()
     safe_path.write_text("safe", encoding="utf-8")
     outside_path = tmp_path / "server-secret.txt"
@@ -634,7 +634,7 @@ def test_process_file_field_rejects_legacy_absolute_path_fallback(
         )
 
 
-@pytest.mark.parametrize("namespace", ["test-user-id", "test-flow-id"])
+@pytest.mark.parametrize("namespace", ["test-user-id", "flow-test-flow-id"])
 def test_process_file_field_allows_uploaded_files_in_graph_scopes(
     parameter_handler,
     mock_storage_service,
@@ -672,7 +672,7 @@ def test_process_file_field_without_storage_service_still_contains(
     """
     monkeypatch.setattr("lfx.graph.vertex.param_handler.get_storage_service", lambda: None)
     handler = ParameterHandler(mock_vertex, None)
-    in_scope = restricted_file_access / "test-flow-id" / "uploaded.txt"
+    in_scope = restricted_file_access / "flow-test-flow-id" / "uploaded.txt"
     in_scope.parent.mkdir()
     in_scope.write_text("uploaded", encoding="utf-8")
 
@@ -702,7 +702,7 @@ def test_process_file_field_checks_every_list_item(
     tmp_path,
 ):
     """List-valued FileInputs reject the whole input when any path escapes."""
-    uploaded_path = restricted_file_access / "test-flow-id" / "uploaded.txt"
+    uploaded_path = restricted_file_access / "flow-test-flow-id" / "uploaded.txt"
     uploaded_path.parent.mkdir()
     uploaded_path.write_text("uploaded", encoding="utf-8")
     outside_path = tmp_path / "server-secret.txt"
@@ -713,7 +713,7 @@ def test_process_file_field_checks_every_list_item(
             "file_field",
             {
                 "type": "file",
-                "file_path": ["test-flow-id/uploaded.txt", "test-flow-id/../../server-secret.txt"],
+                "file_path": ["flow-test-flow-id/uploaded.txt", "flow-test-flow-id/../../server-secret.txt"],
                 "list": True,
             },
             {},
@@ -749,24 +749,50 @@ def test_process_file_field_preserves_s3_references(
     """Non-local storage keys remain logical references for storage-aware consumers."""
     mock_storage_service.settings_service = Mock()
     mock_storage_service.settings_service.settings.storage_type = "s3"
-    mock_storage_service.resolve_component_path.return_value = "test-flow-id/uploaded.txt"
+    mock_storage_service.resolve_component_path.return_value = "flow-test-flow-id/uploaded.txt"
 
     params = parameter_handler.process_file_field(
         "file_field",
-        {"type": "file", "file_path": "test-flow-id/uploaded.txt"},
+        {"type": "file", "file_path": "flow-test-flow-id/uploaded.txt"},
         {},
     )
 
-    assert params["file_field"] == "test-flow-id/uploaded.txt"
+    assert params["file_field"] == "flow-test-flow-id/uploaded.txt"
+
+
+@pytest.mark.parametrize(
+    ("path", "authorized_legacy", "allowed"),
+    [
+        ("test-user-id/report.txt", False, True),
+        ("test-flow-id/report.txt", False, False),
+        ("test-flow-id/report.txt", True, True),
+        ("other-user-id/report.txt", False, False),
+    ],
+)
+@pytest.mark.usefixtures("restricted_file_access")
+def test_process_file_field_s3_alias_scopes(parameter_handler, mock_storage_service, path, authorized_legacy, allowed):
+    """Raw S3 aliases require an own-user scope or an authorized legacy flow grant."""
+    mock_storage_service.settings_service = Mock()
+    mock_storage_service.settings_service.settings.storage_type = "s3"
+    mock_storage_service.resolve_component_path.side_effect = lambda value: value
+    if authorized_legacy:
+        parameter_handler.vertex.graph.authorized_legacy_flow_ids = frozenset({"test-flow-id"})
+
+    if allowed:
+        params = parameter_handler.process_file_field("file_field", {"type": "file", "file_path": path}, {})
+        assert params["file_field"] == path
+    else:
+        with pytest.raises(LocalFileAccessError, match="must stay within"):
+            parameter_handler.process_file_field("file_field", {"type": "file", "file_path": path}, {})
 
 
 @pytest.mark.parametrize(
     "malicious_path",
     [
         "/etc/passwd",
-        "test-flow-id/../../etc/passwd",
+        "flow-test-flow-id/../../etc/passwd",
         "test-flow-id\\..\\..\\windows\\win.ini",
-        "test-flow-id/secret\x00.txt",
+        "flow-test-flow-id/secret\x00.txt",
         "other-flow-id/uploaded.txt",
     ],
 )
@@ -798,14 +824,14 @@ def test_process_file_field_allows_server_provenanced_public_flow_namespace(
     source_flow_id = "public-source-flow-id"
     parameter_handler.vertex.graph.flow_id = "visitor-virtual-flow-id"
     parameter_handler.vertex.graph.source_flow_id = source_flow_id
-    uploaded_path = restricted_file_access / source_flow_id / "uploaded.txt"
+    uploaded_path = restricted_file_access / f"flow-{source_flow_id}" / "uploaded.txt"
     uploaded_path.parent.mkdir()
     uploaded_path.write_text("uploaded", encoding="utf-8")
     mock_storage_service.resolve_component_path.return_value = str(uploaded_path)
 
     params = parameter_handler.process_file_field(
         "file_field",
-        {"type": "file", "file_path": f"{source_flow_id}/uploaded.txt"},
+        {"type": "file", "file_path": f"flow-{source_flow_id}/uploaded.txt"},
         {},
     )
 
@@ -817,7 +843,7 @@ def _runtime_file_vertex(*, source_flow_id: str | None = None) -> Vertex:
     vertex.data = {
         "node": {
             "template": {
-                "file_field": {"type": "file", "file_path": "test-flow-id/original.txt", "show": True},
+                "file_field": {"type": "file", "file_path": "flow-test-flow-id/original.txt", "show": True},
                 "text_field": {"type": "str", "value": "original", "show": True},
             }
         }
@@ -844,7 +870,7 @@ def test_update_raw_params_rejects_run_flow_file_tweak_escape(mock_storage_servi
         patch("lfx.graph.vertex.param_handler.get_storage_service", return_value=mock_storage_service),
         pytest.raises(LocalFileAccessError, match="outside the authenticated user's storage scope"),
     ):
-        vertex.update_raw_params({"file_field": "test-flow-id/../../server-secret.txt"}, overwrite=True)
+        vertex.update_raw_params({"file_field": "flow-test-flow-id/../../server-secret.txt"}, overwrite=True)
 
     assert vertex.raw_params["file_field"] == "original-file"
 
@@ -931,13 +957,13 @@ def test_update_raw_params_resolves_v2_public_flow_file_input(
     """V2/public execution inputs resolve against trusted source-flow provenance."""
     source_flow_id = "public-source-flow-id"
     vertex = _runtime_file_vertex(source_flow_id=source_flow_id)
-    uploaded_path = restricted_file_access / source_flow_id / "uploaded.txt"
+    uploaded_path = restricted_file_access / f"flow-{source_flow_id}" / "uploaded.txt"
     uploaded_path.parent.mkdir()
     uploaded_path.write_text("uploaded", encoding="utf-8")
     mock_storage_service.resolve_component_path.return_value = str(uploaded_path)
 
     with patch("lfx.graph.vertex.param_handler.get_storage_service", return_value=mock_storage_service):
-        vertex.update_raw_params({"file_field": f"{source_flow_id}/uploaded.txt"}, overwrite=True)
+        vertex.update_raw_params({"file_field": f"flow-{source_flow_id}/uploaded.txt"}, overwrite=True)
 
     assert vertex.raw_params["file_field"] == str(uploaded_path.resolve())
     assert vertex.params["file_field"] == str(uploaded_path.resolve())
@@ -947,13 +973,13 @@ def test_update_raw_params_resolves_v2_public_flow_file_input(
 def test_update_raw_params_resolves_wrapped_v2_file_tweak(mock_storage_service, restricted_file_access):
     """Template-shaped V2 FileInput tweaks use the same resolver as scalar tweaks."""
     vertex = _runtime_file_vertex()
-    uploaded_path = restricted_file_access / "test-flow-id" / "uploaded.txt"
+    uploaded_path = restricted_file_access / "flow-test-flow-id" / "uploaded.txt"
     uploaded_path.parent.mkdir()
     uploaded_path.write_text("uploaded", encoding="utf-8")
     mock_storage_service.resolve_component_path.return_value = str(uploaded_path)
 
     with patch("lfx.graph.vertex.param_handler.get_storage_service", return_value=mock_storage_service):
-        vertex.update_raw_params({"file_field": {"file_path": "test-flow-id/uploaded.txt"}}, overwrite=True)
+        vertex.update_raw_params({"file_field": {"file_path": "flow-test-flow-id/uploaded.txt"}}, overwrite=True)
 
     assert vertex.raw_params["file_field"] == str(uploaded_path.resolve())
 
@@ -1473,14 +1499,14 @@ class TestFileInputStorageNamespaceOwnership:
         assert params["path"] == [str(expected)]
 
     def test_executing_flow_namespace_still_resolves(self, unrestricted_storage, tmp_path):
-        flow_dir = tmp_path / "config" / self.FLOW_ID
+        flow_dir = tmp_path / "config" / f"flow-{self.FLOW_ID}"
         flow_dir.mkdir(parents=True)
         (flow_dir / "flow.txt").write_text("FLOW_UPLOAD", encoding="utf-8")
         handler = self._handler(unrestricted_storage, user_id=self.ATTACKER_ID, flow_id=self.FLOW_ID)
 
         params = handler.process_file_field(
             "path",
-            {"type": "file", "file_path": f"{self.FLOW_ID}/flow.txt"},
+            {"type": "file", "file_path": f"flow-{self.FLOW_ID}/flow.txt"},
             {},
         )
 
@@ -1534,16 +1560,16 @@ class TestFileInputStorageNamespaceOwnership:
         "runtime_value",
         [
             pytest.param(f"{ATTACKER_ID}/own.txt", id="owned-user-storage-key"),
-            pytest.param(f"{FLOW_ID}/flow.txt", id="executing-flow-storage-key"),
+            pytest.param(f"flow-{FLOW_ID}/flow.txt", id="executing-flow-storage-key"),
             pytest.param("/srv/langflow/report.csv", id="posix-absolute-path"),
             pytest.param("C:/data/report.csv", id="windows-drive-forward-slashes"),
             pytest.param(r"C:\data\report.csv", id="windows-drive-backslashes"),
             pytest.param(r"\\fileserver\share\report.csv", id="windows-unc-backslashes"),
             pytest.param("//fileserver/share/report.csv", id="windows-unc-forward-slashes"),
             pytest.param("report.csv", id="separatorless-local-path"),
-            pytest.param([f"{ATTACKER_ID}/own.txt", f"{FLOW_ID}/flow.txt"], id="list"),
+            pytest.param([f"{ATTACKER_ID}/own.txt", f"flow-{FLOW_ID}/flow.txt"], id="list"),
             pytest.param({"file_path": f"{ATTACKER_ID}/own.txt"}, id="file-path-wrapper"),
-            pytest.param({"value": f"{FLOW_ID}/flow.txt"}, id="value-wrapper"),
+            pytest.param({"value": f"flow-{FLOW_ID}/flow.txt"}, id="value-wrapper"),
         ],
     )
     def test_unrestricted_runtime_file_values_are_validated_without_rewriting(
@@ -1569,7 +1595,7 @@ class TestFileInputStorageNamespaceOwnership:
 
     def test_unrestricted_runtime_file_value_allows_trusted_source_flow_key(self, unrestricted_storage):
         handler = self._runtime_handler(unrestricted_storage, source_flow_id="trusted-source-flow")
-        runtime_value = "trusted-source-flow/source.txt"
+        runtime_value = "flow-trusted-source-flow/source.txt"
 
         assert handler.process_runtime_params({"path": runtime_value}) == {"path": runtime_value}
 

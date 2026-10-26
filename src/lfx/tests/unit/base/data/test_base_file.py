@@ -572,7 +572,7 @@ class TestS3DeleteAfterProcessingSecurity:
         storage_service.delete_file.assert_not_awaited()
 
     def test_s3_key_cleanup_rejects_flow_id_collision_with_other_user(self, monkeypatch):
-        storage_service = SimpleNamespace(delete_file=AsyncMock())
+        storage_service = SimpleNamespace(delete_file=AsyncMock(), get_file=AsyncMock())
         monkeypatch.setattr("lfx.base.data.base_file.get_storage_service", lambda: storage_service, raising=False)
 
         component = TestFileComponent()
@@ -583,8 +583,10 @@ class TestS3DeleteAfterProcessingSecurity:
         component.file_path = Data(data={"file_path": "victim-id/file.txt"})
         component.delete_server_file_after_processing = True
 
-        component.load_files_base()
+        with pytest.raises(StorageNamespaceError, match="outside the authenticated user's"):
+            component.load_files_base()
 
+        storage_service.get_file.assert_not_awaited()
         storage_service.delete_file.assert_not_awaited()
 
 
@@ -711,9 +713,9 @@ class TestStorageKeyNamespaceOwnership:
 
     @pytest.mark.usefixtures("storage")
     def test_executing_flow_namespace_still_resolves(self, tmp_path):
-        """Legacy per-flow uploads are addressed by flow id, which is also an owned scope."""
+        """Typed per-flow uploads cannot be confused with a user's raw UUID namespace."""
         flow_id = "33333333-3333-3333-3333-333333333333"
-        flow_dir = tmp_path / "config" / flow_id
+        flow_dir = tmp_path / "config" / f"flow-{flow_id}"
         flow_dir.mkdir(parents=True)
         (flow_dir / "flow.txt").write_text("FLOW_UPLOAD", encoding="utf-8")
 
@@ -721,11 +723,45 @@ class TestStorageKeyNamespaceOwnership:
         component._vertex = SimpleNamespace(
             graph=SimpleNamespace(user_id=self.ATTACKER_ID, flow_id=flow_id, source_flow_id=None)
         )
-        component.path = [f"{flow_id}/flow.txt"]
+        component.path = [f"flow-{flow_id}/flow.txt"]
 
         result = component.load_files_base()
 
         assert [data.data["text"] for data in result] == ["FLOW_UPLOAD"]
+
+    @pytest.mark.usefixtures("storage")
+    def test_authorized_legacy_flow_namespace_still_resolves(self, tmp_path):
+        """A server-authorized non-colliding legacy flow key remains backward compatible."""
+        flow_id = "33333333-3333-3333-3333-333333333333"
+        flow_dir = tmp_path / "config" / flow_id
+        flow_dir.mkdir(parents=True)
+        (flow_dir / "legacy.txt").write_text("LEGACY_FLOW_UPLOAD", encoding="utf-8")
+        component = self._attacker_component()
+        component._vertex = SimpleNamespace(
+            graph=SimpleNamespace(
+                user_id=self.ATTACKER_ID,
+                flow_id=flow_id,
+                source_flow_id=None,
+                authorized_legacy_flow_ids=frozenset({flow_id}),
+            )
+        )
+        component.path = [f"{flow_id}/legacy.txt"]
+
+        result = component.load_files_base()
+
+        assert [data.data["text"] for data in result] == ["LEGACY_FLOW_UPLOAD"]
+
+    @pytest.mark.usefixtures("storage")
+    def test_flow_id_cannot_address_legacy_user_namespace(self):
+        """A caller-chosen flow ID must not grant access to the matching user's uploads."""
+        component = self._attacker_component()
+        component._vertex = SimpleNamespace(
+            graph=SimpleNamespace(user_id=self.ATTACKER_ID, flow_id=self.VICTIM_ID, source_flow_id=None)
+        )
+        component.path = [f"{self.VICTIM_ID}/secret.txt"]
+
+        with pytest.raises(StorageNamespaceError, match="outside the authenticated user's"):
+            component.load_files_base()
 
     def test_s3_object_key_outside_namespace_is_denied(self, monkeypatch, tmp_path):
         """S3 keys never touch the filesystem, so they need the same namespace check."""

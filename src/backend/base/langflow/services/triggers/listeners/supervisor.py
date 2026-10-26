@@ -53,23 +53,30 @@ from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest
 from lfx.log.logger import logger
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from pydantic import ValidationError
-from sqlmodel import col, select, update
+from sqlmodel import col, select
 
+from langflow.services.connection.oauth.locking import lock_connection
 from langflow.services.database.models.connection.model import Connection
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import TriggerState
 from langflow.services.deps import get_connection_resolver_service, get_settings_service, session_scope
 from langflow.services.triggers import ledger
-from langflow.services.triggers.constants import FAMILY_TRIGGER_LISTENER
+from langflow.services.triggers.constants import (
+    FAMILY_TRIGGER_LISTENER,
+    MECHANISM_SLACK_SOCKET_MODE,
+    SLACK_PROVIDER_STATE_APP_ID,
+    SLACK_TRIGGER_KINDS,
+)
 from langflow.services.triggers.listeners import connection_leases, replicas
 from langflow.services.triggers.listeners.adapters import (
     ListenerContext,
+    ListenerDeliveryRejectedError,
     ListenerTrigger,
     adapter_spec,
     build_adapter,
     is_listener_kind,
 )
-from langflow.services.triggers.ownership import UNUSABLE_CONNECTION_STATUSES, owned_by_trigger_owner
+from langflow.services.triggers.ownership import UNUSABLE_CONNECTION_STATUSES, is_owned_by, owned_by_trigger_owner
 from langflow.services.triggers.principal import trigger_execution_principal
 
 if TYPE_CHECKING:
@@ -569,6 +576,12 @@ class ListenerSupervisor:
             await worker.adapter.start(ctx)
         except asyncio.CancelledError:
             raise
+        except ListenerDeliveryRejectedError:
+            # The rejected context must not restart or acknowledge its socket.
+            # Leave any replacement generation intact; reconcile can build a
+            # fresh adapter if this replica still owns a desired connection.
+            if self.workers.get(worker.connection_id) is worker and worker.task is asyncio.current_task():
+                await self._drop(worker.connection_id, release_lease=False)
         except _NEEDS_RECONNECT_ERRORS as exc:
             if is_local_configuration_failure(exc):
                 await self._failed(worker, exc)
@@ -578,7 +591,156 @@ class ListenerSupervisor:
             await self._failed(worker, exc)
 
     def _context(self, worker: ConnectionWorker) -> ListenerContext:
-        async def emit(*, trigger_id: UUID, dedupe_key: str, payload: dict[str, Any]) -> bool:
+        # These values belong to this adapter invocation. Updating the mutable
+        # worker during a later election must not authorize an older context.
+        generation = worker.lease_generation
+        stopping = worker.stopping
+        # App identity comes from a previously guarded Socket Mode hello. Keep
+        # that proof for this leased socket if its own source node is deleted
+        # before reconcile, while other connections still need app fanout.
+        slack_apps = {
+            source.id: source.provider_state[SLACK_PROVIDER_STATE_APP_ID]
+            for source in worker.triggers
+            if source.kind in SLACK_TRIGGER_KINDS and (source.provider_state or {}).get(SLACK_PROVIDER_STATE_APP_ID)
+        }
+
+        async def lock_target(
+            session: AsyncSession,
+            *,
+            trigger_id: UUID,
+            expected_config: dict[str, Any] | None = None,
+            expected_kind: str | None = None,
+            allow_slack_fanout: bool = False,
+        ) -> Trigger:
+            target = next((target for target in worker.triggers if target.id == trigger_id), None)
+            config = expected_config if expected_config is not None else target.config if target else None
+            kind = expected_kind if expected_kind is not None else target.kind if target else None
+            if stopping.is_set():
+                raise ListenerDeliveryRejectedError(reason="lease_changed")
+            # Connection deletion locks its parent before updating trigger and
+            # lease FKs. Use that same order, including a fanout destination,
+            # so neither transaction can hold a child while waiting on its
+            # parent's deleter. Reserve SQLite's writer before the first read.
+            connections: dict[UUID, Connection | None] = {}
+            if session.get_bind().dialect.name == "sqlite":
+                connections[worker.connection_id] = await lock_connection(session, worker.connection_id)
+            connection_id = (await session.exec(select(Trigger.connection_id).where(Trigger.id == trigger_id))).first()
+            connection_ids = {worker.connection_id}
+            if connection_id is not None:
+                connection_ids.add(connection_id)
+            # Two Slack sockets can fan out in opposite directions. Acquire
+            # every parent in the same order before taking either child lock.
+            for identifier in sorted(connection_ids, key=str):
+                if identifier not in connections:
+                    connections[identifier] = await lock_connection(session, identifier)
+            if connections[worker.connection_id] is None:
+                raise ListenerDeliveryRejectedError(reason="connection_changed")
+            if (
+                stopping.is_set()
+                or not await connection_leases.guard_generation(
+                    session,
+                    connection_id=worker.connection_id,
+                    holder=self.holder,
+                    generation=generation,
+                    ttl_s=get_settings_service().settings.listener_lease_ttl_s,
+                )
+                or stopping.is_set()
+            ):
+                raise ListenerDeliveryRejectedError(reason="lease_changed")
+            # A Slack destination can change while its same-app cache is live.
+            # Only an independently authorized source socket may refresh and
+            # skip that destination. A lost source still stops the adapter.
+            slack_app = None
+            if allow_slack_fanout and kind in SLACK_TRIGGER_KINDS:
+                source_connection = connections[worker.connection_id]
+                for source in worker.triggers:
+                    proven_app = slack_apps.get(source.id)
+                    if (
+                        source.kind not in SLACK_TRIGGER_KINDS
+                        or source.provider != "slack"
+                        or source.mechanism_id != MECHANISM_SLACK_SOCKET_MODE
+                        or not is_listener_kind(source)
+                        or not proven_app
+                        or source_connection.provider_key != "slack"
+                        or not is_owned_by(source_connection, source.user_id)
+                        or source_connection.status in UNUSABLE_CONNECTION_STATUSES
+                        or not source_connection.allow_non_interactive
+                    ):
+                        continue
+                    current = await session.get(Trigger, source.id, populate_existing=True)
+                    if current is None or (
+                        current.state == TriggerState.ACTIVE.value
+                        and current.connection_id == worker.connection_id
+                        and current.flow_id == source.flow_id
+                        and current.user_id == source.user_id
+                        and current.kind == source.kind
+                        and current.provider == "slack"
+                        and current.config.get("mechanism_id") == MECHANISM_SLACK_SOCKET_MODE
+                        and (current.provider_state or {}).get(SLACK_PROVIDER_STATE_APP_ID) == proven_app
+                    ):
+                        # Filter edits do not invalidate Socket Mode's app
+                        # proof. The destination is still checked against the
+                        # exact configuration used to match this event below.
+                        slack_app = proven_app
+                        break
+                if slack_app is None:
+                    raise ListenerDeliveryRejectedError(reason="source_changed")
+
+            def rejected_target(reason: str) -> ListenerDeliveryRejectedError:
+                return ListenerDeliveryRejectedError(reason="slack_target_changed" if slack_app else reason)
+
+            row = await session.get(Trigger, trigger_id, populate_existing=True, with_for_update=True)
+            if row is None:
+                raise ListenerDeliveryRejectedError(reason="target_removed")
+            if row.state != TriggerState.ACTIVE.value or config is None or row.config != config or row.kind != kind:
+                raise rejected_target(reason="target_changed")
+            if row.connection_id != connection_id:
+                # The preliminary read only discovers lock candidates. A
+                # concurrent rebind must never authorize an unlocked parent.
+                raise rejected_target(reason="target_changed")
+            connection = connections.get(row.connection_id)
+            if (
+                connection is None
+                or not is_owned_by(connection, row.user_id)
+                or connection.status in UNUSABLE_CONNECTION_STATUSES
+                or not connection.allow_non_interactive
+                or (row.provider is not None and connection.provider_key != row.provider)
+            ):
+                raise rejected_target(reason="connection_changed")
+            if target is not None:
+                if (
+                    row.connection_id != worker.connection_id
+                    or row.flow_id != target.flow_id
+                    or row.user_id != target.user_id
+                    or row.provider != target.provider
+                    or not is_listener_kind(target)
+                ):
+                    raise rejected_target(reason="target_changed")
+                return row
+            # Slack spreads one app's envelopes across all of its sockets.
+            # Preserve that existing fanout only for active owned Socket Mode
+            # targets whose stored app identity matches a source this context
+            # actually serves. Other providers cannot borrow this allowance.
+            app_id = (row.provider_state or {}).get(SLACK_PROVIDER_STATE_APP_ID)
+            if (
+                allow_slack_fanout
+                and row.kind in SLACK_TRIGGER_KINDS
+                and row.provider == "slack"
+                and row.config.get("mechanism_id") == MECHANISM_SLACK_SOCKET_MODE
+                and app_id
+                and app_id == slack_app
+            ):
+                return row
+            raise rejected_target(reason="target_not_assigned")
+
+        async def emit(
+            *,
+            trigger_id: UUID,
+            dedupe_key: str,
+            payload: dict[str, Any],
+            expected_config: dict[str, Any] | None = None,
+            expected_kind: str | None = None,
+        ) -> bool:
             """Commit one ledger row. Returns True when it was new.
 
             The write happens in its own transaction and is committed before the
@@ -586,11 +748,29 @@ class ListenerSupervisor:
             immediately afterwards is acknowledging something durable. That is
             the whole of the listener's delivery responsibility: it never runs a
             flow, and the dispatcher picks the row up from the ledger.
+
+            ``False`` means durable deduplication only. A stale context raises
+            ListenerDeliveryRejectedError and cannot acknowledge or advance its
+            cursor. Adapters filtering a captured target pass expected_config
+            and expected_kind so an in-place context refresh cannot authorize
+            an event matched against older settings.
             """
-            async with session_scope() as session:
-                _row, created = await ledger.append_event(
-                    session, trigger_id=trigger_id, dedupe_key=dedupe_key, payload=payload
-                )
+            try:
+                async with session_scope() as session:
+                    await lock_target(
+                        session,
+                        trigger_id=trigger_id,
+                        expected_config=expected_config,
+                        expected_kind=expected_kind,
+                        allow_slack_fanout=True,
+                    )
+                    _row, created = await ledger.append_event(
+                        session, trigger_id=trigger_id, dedupe_key=dedupe_key, payload=payload
+                    )
+            except ListenerDeliveryRejectedError as exc:
+                if exc.reason not in {"target_removed", "slack_target_changed"}:
+                    stopping.set()
+                raise
             # A completed round trip is the proof the connection works; what
             # the ledger did with the row is a dedupe outcome, not a health
             # signal. Requiring ``created`` would leave the error banner up
@@ -607,30 +787,26 @@ class ListenerSupervisor:
             canvas save cannot clobber a cursor and replay the world.
 
             Fenced on the lease generation this adapter started under, in the
-            same statement as the write. Lease expiry says the previous holder
+            same transaction as the write. Lease expiry says the previous holder
             stopped heartbeating, not that it stopped running: without the
             fence, an adapter that was slow to notice a handover could land an
             older cursor on top of its successor's and replay or skip a window
             of provider events. With it, the stale write matches no rows.
             """
-            async with session_scope() as session:
-                result = await session.exec(  # type: ignore[call-overload]
-                    update(Trigger)
-                    .where(
-                        col(Trigger.id) == trigger_id,
-                        connection_leases.held_clause(
-                            connection_id=worker.connection_id,
-                            holder=self.holder,
-                            generation=worker.lease_generation,
-                        ),
-                    )
-                    .values(provider_state=dict(provider_state), updated_at=_now())
-                )
-                if result.rowcount:
+            try:
+                async with session_scope() as session:
+                    row = await lock_target(session, trigger_id=trigger_id)
+                    row.provider_state = dict(provider_state)
+                    row.updated_at = _now()
+                    session.add(row)
+            except ListenerDeliveryRejectedError as exc:
+                if exc.reason == "target_removed":
                     return
-                if await session.get(Trigger, trigger_id) is None:
-                    # The owner deleted the trigger mid-poll. Routine, not a fence.
-                    return
+                stopping.set()
+            else:
+                if row.kind in SLACK_TRIGGER_KINDS and (provider_state or {}).get(SLACK_PROVIDER_STATE_APP_ID):
+                    slack_apps[row.id] = provider_state[SLACK_PROVIDER_STATE_APP_ID]
+                return
             await logger.awarning(
                 "Listener discarded a stale cursor for trigger %s: the lease on connection %s moved on",
                 trigger_id,

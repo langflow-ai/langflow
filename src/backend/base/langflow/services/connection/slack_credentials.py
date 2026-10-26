@@ -80,8 +80,15 @@ async def check_slack_web_token(access_token: str) -> list[str]:
 async def validate_manual_credential(payload: ConnectionCreate, *, context: str) -> ConnectionCreate:
     """Apply local token rules, then verify Slack Web API credentials before saving."""
     payload = prepare_manual_credential(payload, context=context)
-    if payload.provider_key != PROVIDER_SLACK or payload.credentials is None:
+    if payload.provider_key != PROVIDER_SLACK:
         return payload
+    if payload.credentials is None:
+        return payload.model_copy(
+            update={
+                "granted_scopes": [],
+                "executing_identity": payload.executing_identity.model_copy(update={"account": None}),
+            }
+        )
     token = payload.credentials.access_token.get_secret_value()
     if token.startswith(APP_TOKEN_PREFIX):
         return payload
