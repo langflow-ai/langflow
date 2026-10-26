@@ -24,6 +24,7 @@ export default function SessionSelector({
   isVisible,
   inspectSession,
   updateVisibleSession,
+  onSessionRenamed,
   selectedView,
   setSelectedView,
   playgroundPage,
@@ -38,6 +39,7 @@ export default function SessionSelector({
   isVisible: boolean;
   inspectSession: (session: string) => void;
   updateVisibleSession: (session: string) => void;
+  onSessionRenamed?: (previous: string, next: string) => void;
   selectedView?: { type: string; id: string };
   setSelectedView: (view: { type: string; id: string } | undefined) => void;
   playgroundPage: boolean;
@@ -81,6 +83,7 @@ export default function SessionSelector({
         { old_session_id: session, new_session_id: newSessionId },
         {
           onSuccess: () => {
+            onSessionRenamed?.(session, newSessionId);
             if (isVisible) {
               updateVisibleSession(newSessionId);
             }

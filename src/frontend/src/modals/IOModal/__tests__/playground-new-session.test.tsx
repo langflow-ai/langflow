@@ -37,11 +37,13 @@ jest.mock("../components/IOFieldView/components/session-selector", () => ({
     toggleVisibility,
     deleteSession,
     canRename,
+    onSessionRenamed,
   }: {
     session: string;
     toggleVisibility: () => void;
     deleteSession: (session: string) => void;
     canRename?: boolean;
+    onSessionRenamed?: (previous: string, next: string) => void;
   }) => (
     <>
       <button
@@ -53,6 +55,12 @@ jest.mock("../components/IOFieldView/components/session-selector", () => ({
       </button>
       <button type="button" onClick={() => deleteSession(session)}>
         Delete {session}
+      </button>
+      <button
+        type="button"
+        onClick={() => onSessionRenamed?.(session, `${session}-renamed`)}
+      >
+        Rename {session}
       </button>
     </>
   ),
@@ -88,8 +96,9 @@ jest.mock("../../baseModal", () => {
   Modal.Content = Modal;
   return { __esModule: true, default: Modal };
 });
+let mockFlowId = "test-flow-id";
 jest.mock("../hooks/useGetFlowId", () => ({
-  useGetFlowId: () => "test-flow-id",
+  useGetFlowId: () => mockFlowId,
 }));
 jest.mock(
   "../components/chatView/chatInput/components/voice-assistant/helpers/create-new-session-name",
@@ -195,6 +204,7 @@ const activeSession = () => screen.getByTestId("visible-session").textContent!;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockFlowId = "test-flow-id";
   flowState.newChatOnPlayground = false;
   mockAuthenticatedPlayground = true;
   flowState.buildFlow.mockResolvedValue(undefined);
@@ -307,12 +317,81 @@ it("removes a deleted local session from subsequent server refreshes", () => {
   act(() => {
     deleteSessionQuery.mutate.mock.calls[0][1].onSuccess();
   });
-  sessionsQuery.data = [];
+  sessionsQuery.data = [created];
   view.rerender(playground());
   expect(
     screen.queryByRole("button", { name: created }),
   ).not.toBeInTheDocument();
   expect(activeSession()).toBe("test-flow-id");
+});
+
+it("retains a confirmed local session through a stale server result", () => {
+  const view = render(playground());
+  fireEvent.click(screen.getByTestId("new-chat"));
+  const created = activeSession();
+  sessionsQuery.data = [created];
+  view.rerender(playground());
+
+  sessionsQuery.data = [];
+  view.rerender(playground());
+
+  expect(screen.getByRole("button", { name: created })).toHaveAttribute(
+    "data-can-rename",
+    "true",
+  );
+  expect(activeSession()).toBe(created);
+});
+
+it("starts with the new flow's session after a route change", async () => {
+  const view = render(playground());
+  fireEvent.click(screen.getByTestId("new-chat"));
+  const previous = activeSession();
+  mockFlowId = "next-flow-id";
+  sessionsQuery.data = [mockFlowId];
+  view.rerender(playground());
+
+  expect(activeSession()).toBe(mockFlowId);
+  expect(
+    screen.queryByRole("button", { name: previous }),
+  ).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Send" }));
+  await waitFor(() =>
+    expect(flowState.buildFlow).toHaveBeenLastCalledWith(
+      expect.objectContaining({ session: mockFlowId }),
+    ),
+  );
+});
+
+it("can reuse the name of a deleted local session", () => {
+  const view = render(playground());
+  fireEvent.click(screen.getByTestId("new-chat"));
+  const created = activeSession();
+  fireEvent.click(screen.getByRole("button", { name: `Delete ${created}` }));
+  act(() => deleteSessionQuery.mutate.mock.calls[0][1].onSuccess());
+  fireEvent.click(screen.getByTestId("new-chat"));
+  sessionsQuery.data = [created];
+  view.rerender(playground());
+
+  expect(activeSession()).toBe(created);
+  expect(screen.getByRole("button", { name: created })).toBeInTheDocument();
+});
+
+it("retains a renamed local session and filters its previous name", () => {
+  const view = render(playground());
+  fireEvent.click(screen.getByTestId("new-chat"));
+  const created = activeSession();
+  sessionsQuery.data = [created];
+  view.rerender(playground());
+  fireEvent.click(screen.getByRole("button", { name: `Rename ${created}` }));
+  sessionsQuery.data = [created];
+  view.rerender(playground());
+
+  expect(
+    screen.queryByRole("button", { name: created }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: `${created}-renamed` }),
+  ).toHaveAttribute("data-can-rename", "true");
 });
 
 it("persists anonymous messages with the selected session", () => {
@@ -332,4 +411,34 @@ it("persists anonymous messages with the selected session", () => {
     messagesState.messages,
   );
   expect(activeSession()).toBe(created);
+});
+
+it("preserves the next flow's stored history while old messages remain in the store", () => {
+  mockAuthenticatedPlayground = false;
+  const previous = {
+    flow_id: "test-flow-id",
+    session_id: "test-flow-id",
+    text: "Previous",
+  } as Message;
+  const next = {
+    flow_id: "next-flow-id",
+    session_id: "next-flow-id",
+    text: "Next",
+  } as Message;
+  messagesState.messages = [previous];
+  window.sessionStorage.setItem("next-flow-id", JSON.stringify([next]));
+  const view = render(playground());
+
+  mockFlowId = "next-flow-id";
+  sessionsQuery.data = [mockFlowId];
+  view.rerender(playground());
+  expect(JSON.parse(window.sessionStorage.getItem(mockFlowId)!)).toEqual([
+    next,
+  ]);
+
+  messagesState.messages = [previous, next];
+  view.rerender(playground());
+  expect(JSON.parse(window.sessionStorage.getItem(mockFlowId)!)).toEqual([
+    next,
+  ]);
 });

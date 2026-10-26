@@ -9,6 +9,7 @@ import SessionSelector from "./IOFieldView/components/session-selector";
 
 export const SidebarOpenView = ({
   onNewSession,
+  onSessionRenamed,
   pendingSessionIds,
   sessions,
   sessionsPagination,
@@ -56,6 +57,7 @@ export const SidebarOpenView = ({
         <div className="flex flex-col">
           {sessions.map((session, index) => (
             <SessionSelector
+              onSessionRenamed={onSessionRenamed}
               canRename={!pendingSessionIds?.has(session)}
               setSelectedView={setSelectedViewField}
               selectedView={selectedViewField}

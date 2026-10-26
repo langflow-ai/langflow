@@ -32,7 +32,18 @@ import { SelectedViewField } from "./components/selected-view-field";
 import { SidebarOpenView } from "./components/sidebar-open-view";
 import { useGetFlowId } from "./hooks/useGetFlowId";
 
-export default function IOModal({
+export default function IOModal(props: IOModalPropsType): JSX.Element {
+  const currentFlowId = useGetFlowId();
+  return (
+    <PlaygroundModal
+      key={currentFlowId}
+      {...props}
+      currentFlowId={currentFlowId}
+    />
+  );
+}
+
+function PlaygroundModal({
   children,
   open,
   setOpen,
@@ -40,7 +51,8 @@ export default function IOModal({
   isPlayground,
   canvasOpen,
   playgroundPage,
-}: IOModalPropsType): JSX.Element {
+  currentFlowId,
+}: IOModalPropsType & { currentFlowId: string }): JSX.Element {
   const { t } = useTranslation();
   const setIOModalOpen = useFlowsManagerStore((state) => state.setIOModalOpen);
   const inputs = useFlowStore((state) => state.inputs);
@@ -76,7 +88,6 @@ export default function IOModal({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const deleteSession = useMessagesStore((state) => state.deleteSession);
-  const currentFlowId = useGetFlowId();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const { mutate: deleteSessionFunction } = useDeleteSession();
@@ -86,6 +97,8 @@ export default function IOModal({
   );
   const PlaygroundTitle = playgroundPage && flowName ? flowName : "Playground";
   const pendingSessions = useRef(new Set<string>());
+  const localSessions = useRef(new Set<string>());
+  const deletedSessions = useRef(new Set<string>());
 
   const sessionsQuery = useGetSessionsFromFlowQuery({
     id: currentFlowId,
@@ -94,14 +107,15 @@ export default function IOModal({
   const {
     data: sessionsFromDb,
     isLoading: sessionsLoading,
+    isPlaceholderData,
     refetch: refetchSessions,
   } = sessionsQuery;
 
   useEffect(() => {
-    if (sessionsFromDb && !sessionsLoading) {
+    if (sessionsFromDb && !sessionsLoading && !isPlaceholderData) {
       const sessions = [
-        ...new Set([...sessionsFromDb, ...pendingSessions.current]),
-      ];
+        ...new Set([...sessionsFromDb, ...localSessions.current]),
+      ].filter((session) => !deletedSessions.current.has(session));
       for (const session of sessionsFromDb)
         pendingSessions.current.delete(session);
       // Always include the currentFlowId as the default session if it's not already present
@@ -110,7 +124,7 @@ export default function IOModal({
       }
       setSessions(sessions);
     }
-  }, [sessionsFromDb, sessionsLoading, currentFlowId]);
+  }, [sessionsFromDb, sessionsLoading, isPlaceholderData, currentFlowId]);
 
   useEffect(() => {
     setIOModalOpen(open);
@@ -136,6 +150,8 @@ export default function IOModal({
       {
         onSuccess: () => {
           pendingSessions.current.delete(session_id);
+          localSessions.current.delete(session_id);
+          deletedSessions.current.add(session_id);
           setSessions((current) =>
             current.filter((session) => session !== session_id),
           );
@@ -203,10 +219,23 @@ export default function IOModal({
       newId = `${baseId} (${suffix++})`;
     }
     pendingSessions.current.add(newId);
+    localSessions.current.add(newId);
+    deletedSessions.current.delete(newId);
     setSessions((current) => [...current, newId]);
     setvisibleSession(newId);
     setSelectedViewField(undefined);
     setNewSessionCloseVoiceAssistant(true);
+  };
+
+  const handleSessionRenamed = (previous: string, next: string) => {
+    pendingSessions.current.delete(previous);
+    localSessions.current.delete(previous);
+    deletedSessions.current.add(previous);
+    deletedSessions.current.delete(next);
+    localSessions.current.add(next);
+    setSessions((current) => [
+      ...new Set(current.map((id) => (id === previous ? next : id))),
+    ]);
   };
 
   const messageHistory = useGetMessageHistory({
@@ -259,9 +288,17 @@ export default function IOModal({
 
   useEffect(() => {
     if (playgroundPage && !isAuthenticatedPlayground() && messages.length > 0) {
-      window.sessionStorage.setItem(currentFlowId, JSON.stringify(messages));
+      const flowMessages = messages.filter(
+        (message) => message.flow_id === currentFlowId,
+      );
+      if (flowMessages.length > 0) {
+        window.sessionStorage.setItem(
+          currentFlowId,
+          JSON.stringify(flowMessages),
+        );
+      }
     }
-  }, [messages, playgroundPage]);
+  }, [messages, playgroundPage, currentFlowId]);
 
   useEffect(() => {
     setCurrentSessionId(sessionId);
@@ -423,6 +460,7 @@ export default function IOModal({
                 {sidebarOpen && !sessionsLoading && (
                   <SidebarOpenView
                     onNewSession={createSession}
+                    onSessionRenamed={handleSessionRenamed}
                     pendingSessionIds={pendingSessions.current}
                     sessions={sessions}
                     sessionsPagination={sessionsQuery}
