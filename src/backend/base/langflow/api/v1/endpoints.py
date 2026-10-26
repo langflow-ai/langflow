@@ -130,6 +130,7 @@ from langflow.services.integration_policy_discovery import (
     filter_component_palette_by_integration_policy,
 )
 from langflow.services.telemetry.schema import RunPayload
+from langflow.services.triggers.reconciliation import find_trigger_nodes
 from langflow.utils.flow_secrets import restore_request_variable_references, strip_secret_field_values
 from langflow.utils.version import get_version_info
 
@@ -983,6 +984,12 @@ async def get_webhook_auth(
     # Webhook route also calls ``ensure_flow_permission`` after, so widening
     # for shared resources is acceptable here.
     flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, user_id=webhook_user.id, widen_for_shares=True)
+    # Only flows with a Webhook component run here. Any other flow answers like a missing one.
+    # Trigger nodes, such as the Inbound Webhook trigger, have their own route and don't count.
+    trigger_ids = {node_id for node_id, _, _ in find_trigger_nodes(flow.data)}
+    webhook_nodes = [node for node in get_all_webhook_components_in_flow(flow.data) if node["id"] not in trigger_ids]
+    if not webhook_nodes:
+        raise HTTPException(status_code=404, detail=f"Flow identifier {flow_id_or_name} not found")
     return WebhookAuth(user=webhook_user, flow=flow)
 
 

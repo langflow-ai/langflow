@@ -237,6 +237,50 @@ async def test_webhook_not_found_invalid_endpoint(client, created_api_key):
     assert response.status_code == 404
 
 
+@pytest.mark.parametrize("webhook_auth_enable", [False, True])
+async def test_webhook_runs_only_flows_with_a_webhook_component(
+    client, added_webhook_test, flow_component, created_api_key, logged_in_headers, monkeypatch, webhook_auth_enable
+):
+    """A flow without a Webhook component gets the same 404 as a missing flow, and no run starts.
+
+    An Inbound Webhook trigger doesn't count as a Webhook component: it has its own signed route.
+    """
+    from langflow.services.database.models.flow.model import FlowCreate
+    from langflow.services.deps import get_settings_service
+    from langflow.services.event_manager import webhook_event_manager
+    from lfx.components.triggers import InboundWebhookTriggerComponent
+    from lfx.graph import Graph
+
+    monkeypatch.setattr(get_settings_service().auth_settings, "WEBHOOK_AUTH_ENABLE", webhook_auth_enable)
+    headers = {"x-api-key": created_api_key.api_key} if webhook_auth_enable else {}
+    trigger = InboundWebhookTriggerComponent()
+    trigger_flow = FlowCreate(**Graph(start=trigger, end=trigger).dump(name="Inbound Webhook trigger"))
+    response = await client.post("api/v1/flows/", json=trigger_flow.model_dump(), headers=logged_in_headers)
+    assert response.status_code == 201
+    plain_flow_ids = [flow_component["id"], response.json()["id"]]
+    webhook_flow_id = added_webhook_test["id"]
+    # A run announces itself on its flow's event stream as soon as it starts.
+    plain_events = [await webhook_event_manager.subscribe(flow_id) for flow_id in plain_flow_ids]
+    webhook_events = await webhook_event_manager.subscribe(webhook_flow_id)
+
+    try:
+        for plain_flow_id in plain_flow_ids:
+            response = await client.post(f"api/v1/webhook/{plain_flow_id}", headers=headers, json={"k": "v"})
+            assert response.status_code == 404
+            assert response.json()["detail"] == f"Flow identifier {plain_flow_id} not found"
+
+        response = await client.post(f"api/v1/webhook/{webhook_flow_id}", headers=headers, json={"k": "v"})
+        assert response.status_code == 202
+        event = await asyncio.wait_for(webhook_events.get(), timeout=10)
+        assert event["event"] == "vertices_sorted"
+        # A run scheduled by an earlier call would have announced itself before this one.
+        assert all(events.empty() for events in plain_events)
+    finally:
+        for plain_flow_id, events in zip(plain_flow_ids, plain_events, strict=True):
+            await webhook_event_manager.unsubscribe(plain_flow_id, events)
+        await webhook_event_manager.unsubscribe(webhook_flow_id, webhook_events)
+
+
 # async def test_webhook_not_found_invalid_flow_id(client, created_api_key):
 #     """Test that webhook returns 404 for invalid flow ID."""
 #     endpoint = "api/v1/webhook/00000000-0000-0000-0000-000000000000"
