@@ -1,7 +1,10 @@
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
-import type { TriggerState } from "@/controllers/API/queries/triggers";
+import type {
+  TriggerRead,
+  TriggerState,
+} from "@/controllers/API/queries/triggers";
 import { cn } from "@/utils/utils";
 import {
   badgeLabelKey,
@@ -11,16 +14,18 @@ import {
 
 export interface TriggerStateBadgeProps {
   state: TriggerState;
+  reason?: TriggerRead["reason"];
   className?: string;
 }
 
 /** The trigger's state as an icon plus text, never color alone. */
 export function TriggerStateBadge({
   state,
+  reason,
   className,
 }: TriggerStateBadgeProps) {
   const { t } = useTranslation();
-  const badgeState = badgeStateOf(state);
+  const badgeState = badgeStateOf(state, reason);
   const style = TRIGGER_BADGE_STYLE[badgeState];
   return (
     <Badge

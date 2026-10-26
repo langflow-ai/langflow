@@ -3,7 +3,7 @@
   "provider_id": "salesforce",
   "display_name": "Salesforce",
   "icon": "Cloud",
-  "docs_url": "https://developer.salesforce.com/docs/platform/api-rest/guide/resources-getupdated.html",
+  "docs_url": "https://github.com/langflow-ai/langflow/blob/71a160e50f8c4a6578f199759ec7369b8243f744/src/bundles/salesforce/README.md#authentication-and-deployment",
   "auth_profiles": [
     {
       "id": "user",
