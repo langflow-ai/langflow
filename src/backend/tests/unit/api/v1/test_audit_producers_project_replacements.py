@@ -27,6 +27,7 @@ GRAPH = {"nodes": [], "edges": [], "private_marker": "must not reach audit detai
 
 @pytest.fixture
 def audit_on(client):  # noqa: ARG001
+    """Enable audit persistence for each replacement API case."""
     yield from enabled_audit()
 
 
@@ -42,10 +43,12 @@ async def _seed_project(user, project_id, *, flows=()):
 
 
 def _flow(name):
+    """Build a distinct flow whose private graph data must stay outside audits."""
     return {"id": str(uuid4()), "name": name, "data": GRAPH}
 
 
 def _url(project_id, operation_id=None):
+    """Address a replacement operation, reusing its ID when supplied."""
     return f"api/v1/projects/{project_id}/replacement-operations/{operation_id or uuid4()}"
 
 
@@ -54,6 +57,7 @@ def _url(project_id, operation_id=None):
 async def test_expired_receipt_retry_retains_name_in_audit_export(
     client, active_super_user, logged_in_headers_super_user, create, deleted
 ):
+    """Keep expired failures searchable after either creation, replacement, or deletion."""
     project_id, operation_id = uuid4(), uuid4()
     name = f"deployment-{uuid4().hex[:12]}" if create else await _seed_project(active_super_user, project_id)
     body = {"description": "committed", "flows": [_flow("committed-flow")]}
@@ -97,6 +101,7 @@ async def test_expired_receipt_retry_retains_name_in_audit_export(
 async def test_replacement_records_one_project_event_and_replays_without_more_events(
     client, active_user, logged_in_headers, create
 ):
+    """Commit one outcome, replay it unchanged, and record conflicting reuse separately."""
     project_id = uuid4()
     name = f"deployment-{uuid4().hex[:12]}" if create else await _seed_project(active_user, project_id)
     flow = _flow("first")
@@ -150,6 +155,7 @@ async def test_replacement_records_one_project_event_and_replays_without_more_ev
 
 
 async def test_replacement_records_added_updated_and_removed_flows(client, active_user, logged_in_headers):
+    """Record each committed flow change with the same replacement request ID."""
     project_id = uuid4()
     kept, removed, added = _flow("original"), _flow("removed"), _flow("added")
     await _seed_project(
@@ -186,6 +192,7 @@ async def test_replacement_records_added_updated_and_removed_flows(client, activ
 
 
 async def test_replacement_inserts_flow_and_project_audits_in_one_batch(client, active_user, logged_in_headers):
+    """Observe one audit insert execution for the complete replacement transaction."""
     project_id = uuid4()
     kept, removed, added = _flow("kept"), _flow("removed"), _flow("added")
     await _seed_project(
@@ -194,6 +201,7 @@ async def test_replacement_inserts_flow_and_project_audits_in_one_batch(client, 
     inserts = []
 
     def observe(_connection, _cursor, statement, _parameters, _context, _executemany):
+        """Count audit inserts without including unrelated mutation statements."""
         if statement.startswith("INSERT INTO audit_events"):
             inserts.append(statement)
 
@@ -224,6 +232,7 @@ class _DeadlockError(Exception):
 async def test_replacement_rolls_back_staged_events_before_retry_or_failure(
     client, active_user, logged_in_headers, monkeypatch, create, failure, failure_point
 ):
+    """Discard aborted success events before retrying or recording a final failure."""
     project_id = uuid4()
     kept, removed = _flow("before-flow"), _flow("removed")
     name = (
@@ -243,6 +252,7 @@ async def test_replacement_rolls_back_staged_events_before_retry_or_failure(
     attempts = 0
 
     async def fail_after_staging(*args, **kwargs):
+        """Inject a retryable or terminal failure after real audit staging."""
         nonlocal attempts
         attempts += 1
         await original_stage(*args, **kwargs)
@@ -301,6 +311,7 @@ async def test_replacement_rolls_back_staged_events_before_retry_or_failure(
 async def test_replacement_authorization_refusal_writes_no_mutation_events(
     client, active_user, logged_in_headers, monkeypatch, guard
 ):
+    """Keep authorization refusals separate from attempted mutation outcomes."""
     project_id = uuid4()
     await _seed_project(active_user, project_id)
     flow = _flow("denied")
@@ -318,6 +329,7 @@ async def test_replacement_authorization_refusal_writes_no_mutation_events(
 @pytest.mark.parametrize("mode", ["disabled", "excluded"])
 @pytest.mark.parametrize("create", [True, False])
 async def test_replacement_respects_audit_settings(client, active_user, logged_in_headers, monkeypatch, mode, create):
+    """Suppress successful and failed events when auditing or the action is disabled."""
     project_id = uuid4()
     if not create:
         await _seed_project(active_user, project_id)
@@ -343,6 +355,7 @@ async def test_replacement_respects_audit_settings(client, active_user, logged_i
 async def test_replacement_cleanup_failure_does_not_record_a_failed_mutation(
     client, active_user, logged_in_headers, monkeypatch
 ):
+    """Preserve committed success when post-commit memory cleanup fails."""
     from langflow.services.memory_base import flow_cleanup
 
     project_id = uuid4()
@@ -351,6 +364,7 @@ async def test_replacement_cleanup_failure_does_not_record_a_failed_mutation(
     original_delete = projects_module.cascade_delete_flow
 
     async def collect_cleanup(*args, **kwargs):
+        """Delete the real flow while attaching a cleanup that will fail later."""
         deleted = await original_delete(*args, **kwargs)
         kwargs["memory_base_cleanups"].append(object())
         return deleted

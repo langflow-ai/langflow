@@ -242,6 +242,7 @@ def describe_project_body(param: str) -> Callable[[dict[str, Any]], dict[str, An
     """Attempted name, field names and requested Flow count of a Project body."""
 
     def describe(kwargs: dict[str, Any]) -> dict[str, Any]:
+        """Extract safe attempted fields and membership counts from the named body."""
         body = kwargs.get(param)
         fields = _fields_set(body)
         # FolderCreate names them *_list, FolderUpdate names them flows/components.
