@@ -302,6 +302,35 @@ async def run_cleanup_pass(*, limit: int = 25) -> int:
             )
             .values(encrypted_credential=None, credential_expires_at=None)
         )
+        # GitHub hooks never expire. A saved replacement connection must also
+        # recover the old callback's cleanup before the trigger can rearm.
+        replacements = (
+            await session.exec(
+                select(TriggerCleanup, Connection.id)
+                .select_from(TriggerCleanup)
+                .join(Trigger, TriggerCleanup.trigger_id == Trigger.id)
+                .join(Connection, Trigger.connection_id == Connection.id)
+                .where(
+                    TriggerCleanup.provider == "github",
+                    Trigger.provider == "github",
+                    Trigger.kind == TriggerCleanup.kind,
+                    Trigger.user_id == TriggerCleanup.user_id,
+                    Connection.provider_key == "github",
+                    Connection.ownership_mode == "user",
+                    Connection.owner_id == TriggerCleanup.user_id,
+                    Connection.status == "ready",
+                    Connection.allow_non_interactive == True,  # noqa: E712
+                    col(TriggerCleanup.encrypted_credential).is_(None),
+                    or_(col(TriggerCleanup.connection_id).is_(None), TriggerCleanup.connection_id != Connection.id),
+                )
+                .limit(limit)
+            )
+        ).all()
+        for task, connection_id in replacements:
+            task.connection_id = connection_id
+            task.available_at = now
+            session.add(task)
+        await session.flush()
         ids = (
             await session.exec(
                 select(TriggerCleanup.id)

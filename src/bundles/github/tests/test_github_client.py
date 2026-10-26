@@ -14,6 +14,20 @@ from lfx.integrations.errors import (
 from lfx_github.client import GitHubClient, bounded_text, positive_id, repository_path
 
 
+@pytest.mark.parametrize("protection_enabled", [True, False])
+async def test_default_transport_keeps_redirects_disabled(lease, monkeypatch, protection_enabled):
+    from lfx.utils import ssrf_httpx
+    from lfx.utils.ssrf_transport import SSRFProtectedTransport
+
+    monkeypatch.setattr(ssrf_httpx, "is_ssrf_protection_enabled", lambda: protection_enabled)
+    monkeypatch.setattr(ssrf_httpx, "_validate_and_resolve_strict_url", lambda url: (url, ["140.82.116.6"]))
+    async with GitHubClient(lease) as client:
+        assert client._client.follow_redirects is False
+        assert client._client.trust_env is False
+        if protection_enabled:
+            assert isinstance(client._client._transport, SSRFProtectedTransport)
+
+
 async def test_fixed_origin_identity_probe_and_request(lease):
     calls = []
 

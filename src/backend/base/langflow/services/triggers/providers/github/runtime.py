@@ -85,6 +85,8 @@ async def prepare(session: AsyncSession, trigger: Trigger) -> None:
         if not _matches(existing, trigger, address):
             msg = "The original GitHub webhook must be cleaned up before changing its connection or repository."
             raise SourceConfigurationError(msg)
+        existing.state = "pending"
+        session.add(existing)
         return
     reservation_id = uuid4()
     session.add(

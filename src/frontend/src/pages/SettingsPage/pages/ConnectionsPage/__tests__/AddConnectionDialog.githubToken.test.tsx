@@ -77,6 +77,10 @@ function renderDialog() {
   );
 }
 
+beforeEach(() => {
+  mockCreate.mockReset();
+});
+
 it("offers only the installation token method supported by GitHub", () => {
   renderDialog();
   expect(screen.getByTestId("connection-token")).toBeVisible();
@@ -111,3 +115,39 @@ it("submits the GitHub installation payload accepted by the backend validator", 
   await user.click(screen.getByTestId("connection-continue"));
   expect(mockCreate).toHaveBeenCalledWith(dialogPayload);
 });
+
+it.each([
+  "GitHub rejected this token. Paste a valid GitHub App installation token and try again.",
+  "GitHub rejected this token. Use a GitHub App installation token with repository access.",
+  "GitHub rate limited this token check. Wait and try again.",
+  "GitHub could not check this token. Try again.",
+])(
+  "shows the validation reason and permits correction for %s",
+  async (detail) => {
+    mockCreate.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: { status: 422, data: { detail } },
+    });
+    const user = userEvent.setup();
+    renderDialog();
+    await user.type(screen.getByTestId("connection-name"), dialogPayload.name);
+    await user.type(
+      screen.getByTestId("connection-display-name"),
+      dialogPayload.display_name,
+    );
+    await user.type(
+      screen.getByTestId("connection-token"),
+      dialogPayload.credentials.access_token,
+    );
+    fireEvent.change(screen.getByLabelText("Token expiration"), {
+      target: { value: "2030-06-01T12:00" },
+    });
+    await user.click(screen.getByTestId("connection-continue"));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(detail);
+    expect(screen.queryByText("Connected")).not.toBeInTheDocument();
+    expect(screen.getByTestId("connection-continue")).toBeEnabled();
+    await user.type(screen.getByTestId("connection-token"), "-corrected");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  },
+);

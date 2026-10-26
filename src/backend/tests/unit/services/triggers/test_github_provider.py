@@ -13,6 +13,7 @@ from uuid import uuid4
 
 import httpx
 import pytest
+from langflow.services.connection.slack_credentials import ManualCredentialError
 from langflow.services.database.models.connection.schemas import (
     ConnectionCreate,
     ConnectionCredentialWrite,
@@ -22,7 +23,7 @@ from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.triggers.ingress.verifiers import IngressRejected, IngressRequest
 from langflow.services.triggers.providers.github.config import normalize_config
 from langflow.services.triggers.providers.github.events import verify
-from lfx.integrations.errors import ConnectionNotAuthorizedError, InvalidRequestError
+from lfx.integrations.errors import InvalidRequestError
 from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest, CredentialLease, ResolvedCredential
 from lfx.services.authorization.base import ExecutionPrincipal
 from lfx_github.client import GitHubClient
@@ -376,7 +377,7 @@ async def test_manual_installation_identity_discards_scope_and_account_claims(mo
 async def test_manual_credentials_reject_invalid_expiry_and_secrets(credential_values):
     from langflow.services.triggers.providers.github.credentials import validate_manual_credential
 
-    with pytest.raises(InvalidRequestError):
+    with pytest.raises(ManualCredentialError):
         await validate_manual_credential(manual_payload(**credential_values), context="self_managed")
 
 
@@ -388,7 +389,7 @@ async def test_manual_personal_token_fails_installation_probe(monkeypatch):
         "GitHubClient",
         partial(GitHubClient, transport=httpx.MockTransport(lambda _request: httpx.Response(403))),
     )
-    with pytest.raises(ConnectionNotAuthorizedError):
+    with pytest.raises(ManualCredentialError, match="GitHub App installation token"):
         await credentials.validate_manual_credential(manual_payload(), context="desktop")
 
 

@@ -121,7 +121,8 @@ class GitHubClient:
             if transport is None
             else {"transport": transport}
         )
-        self._client = httpx.AsyncClient(timeout=httpx.Timeout(20.0), follow_redirects=False, trust_env=False, **kwargs)
+        kwargs["follow_redirects"] = False
+        self._client = httpx.AsyncClient(timeout=httpx.Timeout(20.0), trust_env=False, **kwargs)
 
     async def __aenter__(self):
         return self

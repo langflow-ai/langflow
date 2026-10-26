@@ -7,7 +7,7 @@ import hashlib
 import hmac
 import json
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
@@ -15,12 +15,23 @@ from uuid import uuid4
 
 import httpx
 import pytest
-from langflow.services.connection.service import DatabaseConnectionResolverService
+from langflow.services.connection.service import (
+    DatabaseConnectionResolverService,
+    _decrypt_credential_payload,
+    _encrypt_credential_payload,
+)
+from langflow.services.database.models.connection.model import Connection, ConnectionSecret
 from langflow.services.database.models.connection.schemas import ConnectionCreate
-from langflow.services.database.models.trigger.model import Trigger, TriggerCleanup, TriggerEvent, TriggerSubscription
+from langflow.services.database.models.trigger.model import (
+    Trigger,
+    TriggerCleanup,
+    TriggerEvent,
+    TriggerLease,
+    TriggerSubscription,
+)
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
-from langflow.services.triggers import dispatcher
+from langflow.services.triggers import dispatcher, leases
 from langflow.services.triggers.providers import registry
 from langflow.services.triggers.providers.github import credentials, runtime
 from langflow.services.triggers.reconciliation import reconcile_flow_triggers
@@ -81,12 +92,20 @@ def github_runtime(monkeypatch, client):  # noqa: ARG001
         delete_started=None,
         delete_release=None,
         next_id=44,
+        rejected_tokens=set(),
+        installation_status=200,
     )
 
     async def handle(request):
         calls.append((request.method, request.url.path))
+        if request.headers["authorization"].removeprefix("Bearer ") in controls.rejected_tokens:
+            return httpx.Response(401)
         path = request.url.path
         if path == "/installation/repositories":
+            if controls.installation_status != 200:
+                return httpx.Response(
+                    controls.installation_status, json={"message": "private provider response test-installation"}
+                )
             return httpx.Response(200, json={"total_count": 1, "repositories": [{"id": 80, "full_name": "org/repo"}]})
         if path == "/repos/org/repo":
             return httpx.Response(200, json={"id": 80})
@@ -124,9 +143,11 @@ def github_runtime(monkeypatch, client):  # noqa: ARG001
     return SimpleNamespace(hooks=hooks, calls=calls, controls=controls)
 
 
-async def create_connection(user_id, *, background=True):
+async def create_connection(user_id, *, background=True, token=None):
     payload = json.loads((BUNDLE_ROOT / "tests/fixtures/manual-token-dialog.json").read_text())
     payload["allow_non_interactive"] = background
+    if token is not None:
+        payload["credentials"]["access_token"] = token
     async with session_scope() as session:
         owner = await session.get(User, user_id)
         return await DatabaseConnectionResolverService().create(
@@ -134,8 +155,8 @@ async def create_connection(user_id, *, background=True):
         )
 
 
-async def save_trigger(flow_id, owner_id, *, connection="github/work"):
-    node = GitHubOnIssueTriggerComponent(connection=connection, repository="org/repo", actions=["opened"])
+async def save_trigger(flow_id, owner_id, *, connection="github/work", actions=None):
+    node = GitHubOnIssueTriggerComponent(connection=connection, repository="org/repo", actions=actions or ["opened"])
     data = {
         "nodes": [
             {
@@ -167,6 +188,35 @@ async def test_dialog_payload_is_accepted_and_catalog_requires_expiration(trigge
     ]
 
 
+@pytest.mark.parametrize(
+    ("status", "expiry", "message"),
+    [
+        (401, "future", "GitHub rejected this token"),
+        (403, "future", "GitHub App installation token"),
+        (429, "future", "GitHub rate limited this token check"),
+        (503, "future", "GitHub could not check this token"),
+        (200, "past", "requires a future token expiration time"),
+        (200, "missing", "requires a future token expiration time"),
+    ],
+)
+async def test_rejected_manual_connection_returns_actionable_422(
+    github_runtime, client, logged_in_headers, status, expiry, message
+):
+    github_runtime.controls.installation_status = status
+    payload = json.loads((BUNDLE_ROOT / "tests/fixtures/manual-token-dialog.json").read_text())
+    if expiry == "past":
+        payload["credentials"]["expires_at"] = (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()
+    elif expiry == "missing":
+        payload["credentials"].pop("expires_at")
+    response = await client.post("/api/v1/connections", json=payload, headers=logged_in_headers)
+    assert response.status_code == 422, response.text
+    assert message in response.json()["detail"]
+    assert "test-installation" not in response.text
+    assert "private provider response" not in response.text
+    async with session_scope() as session:
+        assert (await session.exec(select(Connection).where(Connection.provider_key == "github"))).all() == []
+
+
 async def test_pause_cleanup_blocks_reenable_until_old_hook_is_deleted(github_runtime, trigger_owner, owned_flow):
     await create_connection(trigger_owner)
     trigger = await save_trigger(owned_flow, trigger_owner)
@@ -195,6 +245,116 @@ async def test_pause_cleanup_blocks_reenable_until_old_hook_is_deleted(github_ru
     assert len(github_runtime.hooks) == 1
     assert await run_cleanup_pass() == 0
     assert len(github_runtime.hooks) == 1
+
+
+@pytest.mark.parametrize("failure", ["expired", "revoked"])
+@pytest.mark.parametrize("hook_removed", [False, True])
+async def test_recreated_connection_recovers_cleanup_and_reenable(
+    github_runtime, trigger_owner, owned_flow, failure, hook_removed
+):
+    connection = await create_connection(trigger_owner)
+    trigger = await save_trigger(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+    if failure == "expired":
+        async with session_scope() as session:
+            secret = await session.get(ConnectionSecret, connection.id)
+            payload = _decrypt_credential_payload(secret.encrypted_payload)
+            payload["expires_at"] = (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()
+            secret.encrypted_payload = _encrypt_credential_payload(json.dumps(payload))
+            session.add(secret)
+    else:
+        github_runtime.controls.rejected_tokens.add("test-installation")
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().disable(session, row=row)
+    assert await run_cleanup_pass() == 0
+    async with session_scope() as session:
+        task = (await session.exec(select(TriggerCleanup).where(TriggerCleanup.trigger_id == trigger.id))).one()
+        assert task.attempt == 1
+        assert task.available_at.replace(tzinfo=timezone.utc) > datetime.now(timezone.utc)
+        original = await session.get(Connection, connection.id)
+        await DatabaseConnectionResolverService().delete(session, original)
+    replacement = await create_connection(trigger_owner, token="test-installation-renewed")  # noqa: S106  # pragma: allowlist secret
+    assert replacement.id != connection.id
+    await save_trigger(owned_flow, trigger_owner)
+    if hook_removed:
+        github_runtime.hooks.clear()
+    assert await run_cleanup_pass() == 1
+    assert github_runtime.hooks == {}
+    async with session_scope() as session:
+        assert (await session.exec(select(TriggerCleanup).where(TriggerCleanup.trigger_id == trigger.id))).all() == []
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        assert row.state == "active"
+        assert row.connection_id == replacement.id
+    assert set(github_runtime.hooks) == {45}
+    assert await run_cleanup_pass() == 0
+    assert set(github_runtime.hooks) == {45}
+
+
+@pytest.mark.parametrize("invalid_binding", ["trigger_owner", "connection_owner", "provider", "background"])
+async def test_cleanup_recovery_rejects_unrelated_or_unconsented_connection(
+    github_runtime, trigger_owner, owned_flow, invalid_binding
+):
+    connection = await create_connection(trigger_owner)
+    trigger = await save_trigger(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        await TriggerService().disable(session, row=row)
+        await DatabaseConnectionResolverService().delete(session, await session.get(Connection, connection.id))
+    replacement = await create_connection(trigger_owner, token="test-installation-renewed")  # noqa: S106  # pragma: allowlist secret
+    await save_trigger(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        if invalid_binding in {"trigger_owner", "connection_owner"}:
+            foreign = User(username=f"github-foreign-{uuid4().hex}", password="test-only", is_active=True)  # noqa: S106  # pragma: allowlist secret
+            session.add(foreign)
+            await session.flush()
+            if invalid_binding == "trigger_owner":
+                row = await session.get(Trigger, trigger.id)
+                row.user_id = foreign.id
+            else:
+                row = await session.get(Connection, replacement.id)
+                row.owner_id = foreign.id
+        else:
+            row = await session.get(Connection, replacement.id)
+            if invalid_binding == "provider":
+                row.provider_key = "slack"
+            else:
+                row.allow_non_interactive = False
+        session.add(row)
+    before = len(github_runtime.calls)
+    assert await run_cleanup_pass() == 0
+    assert len(github_runtime.calls) == before
+    assert set(github_runtime.hooks) == {44}
+    async with session_scope() as session:
+        task = (await session.exec(select(TriggerCleanup).where(TriggerCleanup.trigger_id == trigger.id))).one()
+        assert task.connection_id == connection.id
+
+
+async def test_cleanup_recovery_preserves_foreign_callback(github_runtime, trigger_owner, owned_flow):
+    connection = await create_connection(trigger_owner)
+    trigger = await save_trigger(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        await TriggerService().disable(session, row=row)
+        await DatabaseConnectionResolverService().delete(session, await session.get(Connection, connection.id))
+    replacement = await create_connection(trigger_owner, token="test-installation-renewed")  # noqa: S106  # pragma: allowlist secret
+    await save_trigger(owned_flow, trigger_owner)
+    github_runtime.hooks[44]["config"]["url"] = "https://foreign.example/unrelated"
+    before = len(github_runtime.calls)
+    assert await run_cleanup_pass() == 0
+    assert set(github_runtime.hooks) == {44}
+    assert ("DELETE", "/repos/org/repo/hooks/44") not in github_runtime.calls[before:]
+    async with session_scope() as session:
+        task = (await session.exec(select(TriggerCleanup).where(TriggerCleanup.trigger_id == trigger.id))).one()
+        assert task.connection_id == replacement.id
+        row = await session.get(Trigger, trigger.id)
+        with pytest.raises(SourceConfigurationError, match="still being removed"):
+            await TriggerService().enable(session, row=row)
 
 
 async def test_signed_redelivery_enters_ledger_once_and_dispatches_as_owner(
@@ -448,6 +608,92 @@ async def test_cleanup_defers_until_inflight_create_settles(github_runtime, trig
         task.available_at = datetime.now(timezone.utc)
         session.add(task)
     assert await run_cleanup_pass() == 1
+    assert github_runtime.hooks == {}
+
+
+async def test_flow_save_during_setup_records_retryable_error(github_runtime, trigger_owner, owned_flow):
+    await create_connection(trigger_owner)
+    trigger = await save_trigger(owned_flow, trigger_owner)
+    controls = github_runtime.controls
+    controls.create_started = asyncio.Event()
+    controls.create_release = asyncio.Event()
+
+    async def activate():
+        async with session_scope() as session:
+            row = await session.get(Trigger, trigger.id)
+            await TriggerService().enable_and_activate(session, row=row)
+
+    activation = asyncio.create_task(activate())
+    try:
+        await asyncio.wait_for(controls.create_started.wait(), timeout=10)
+        await save_trigger(owned_flow, trigger_owner, actions=["closed"])
+    finally:
+        controls.create_release.set()
+        with pytest.raises(ValueError, match="superseded"):
+            await activation
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        assert row.state == "error"
+        assert "Enable the trigger to retry" in row.last_error
+        assert row.config["actions"] == ["closed"]
+        await TriggerService().enable_and_activate(session, row=row)
+        assert row.state == "active"
+    assert set(github_runtime.hooks) == {44}
+    assert github_runtime.calls.count(("POST", "/repos/org/repo/hooks")) == 1
+
+
+@pytest.mark.parametrize("provisioned", [False, True])
+@pytest.mark.parametrize("live_initializer", [False, True])
+async def test_interrupted_setup_becomes_retryable_after_source_lease_expires(
+    github_runtime, trigger_owner, owned_flow, provisioned, live_initializer
+):
+    await create_connection(trigger_owner)
+    trigger = await save_trigger(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable(session, row=row)
+    if provisioned:
+        async with session_scope() as session:
+            await runtime.provision(session, await session.get(Trigger, trigger.id))
+    name = f"trigger-source:{trigger.id}"
+    async with session_scope() as session:
+        assert await leases.acquire(session, name=name, owner="stopped-process", ttl_s=3600)
+        row = await session.get(Trigger, trigger.id)
+        row.updated_at = datetime.now(timezone.utc) - timedelta(hours=2)
+        session.add(row)
+    if live_initializer:
+        await dispatcher.reconcile_push_sources()
+        async with session_scope() as session:
+            row = await session.get(Trigger, trigger.id)
+            assert row.state == "pending"
+            assert row.last_error is None
+    async with session_scope() as session:
+        lease = await session.get(TriggerLease, name)
+        lease.expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+        session.add(lease)
+    await dispatcher.reconcile_push_sources()
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        assert row.state == "error"
+        assert "Enable the trigger to retry" in row.last_error
+        await TriggerService().enable_and_activate(session, row=row)
+        assert row.state == "active"
+    assert set(github_runtime.hooks) == {44}
+    assert github_runtime.calls.count(("POST", "/repos/org/repo/hooks")) == 1
+
+
+async def test_maintenance_does_not_arm_a_saved_trigger(github_runtime, trigger_owner, owned_flow):
+    await create_connection(trigger_owner)
+    trigger = await save_trigger(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        row.updated_at = datetime.now(timezone.utc) - timedelta(hours=2)
+        session.add(row)
+    await dispatcher.reconcile_push_sources()
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        assert row.state == "pending"
+        assert row.last_error is None
     assert github_runtime.hooks == {}
 
 
