@@ -1,6 +1,6 @@
 [project]
 name = "langflow"
-version = "1.13.0"
+version = "1.13.1"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.15"
 license = "MIT"
@@ -17,7 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base~=1.13.0",
+    "langflow-base==1.13.1",
     "oauthlib>=4.0.0,<5.0.0",  # CVE-2026-49264, CVE-2026-49265
     # langflow-extensions:bundle-deps-start
     # Release coordination: langflow declares BOUNDED ranges (>=A,<B) for every
@@ -32,17 +32,17 @@ dependencies = [
     "lfx-ibm>=0.3.0,<1.0.0",
     "lfx-docling>=0.2.1,<1.0.0",
     "lfx-datastax>=0.2.0,<1.0.0",
-    "lfx-toolguard>=0.2.0,<1.0.0",
+    "lfx-toolguard>=0.2.2,<1.0.0",
     "lfx-openai>=0.2.0,<1.0.0",
     "lfx-anthropic>=0.2.0,<1.0.0",
     "lfx-azure>=0.2.0,<1.0.0",
     "lfx-ollama>=0.2.0,<1.0.0",
-    "lfx-amazon>=0.2.0,<1.0.0",
+    "lfx-amazon>=0.2.2,<1.0.0",
     "lfx-cohere>=0.2.0,<1.0.0",
-    "lfx-oracle>=0.2.0,<1.0.0",
+    "lfx-oracle>=0.3.0,<1.0.0",
     "lfx-vllm>=0.2.0,<1.0.0",
     "lfx-openai-compatible>=0.2.0,<1.0.0",
-    "lfx-google>=0.3.3,<1.0.0",
+    "lfx-google>=0.3.5,<1.0.0",
     "lfx-microsoft>=0.1.4,<1.0.0",
     "lfx-slack>=0.2.2,<1.0.0",
     # langflow-extensions:bundle-deps-end
@@ -183,7 +183,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 bundles = [
-    "lfx-bundles[all-no-torch]>=1.2.1,<2.0",
+    "lfx-bundles[all-no-torch]>=1.2.5,<2.0",
     "lfx-arxiv>=0.2.0,<1.0.0",
     "lfx-confluent>=0.2.0,<1.0.0",
     "lfx-duckduckgo>=0.2.0,<1.0.0",
@@ -210,7 +210,7 @@ docling-image-description = [
 ]
 
 audio = [
-    "langflow-base[audio]~=1.13.0",
+    "langflow-base[audio]==1.13.1",
 ]
 
 # Opt-in microVM sandbox backend for code-execution components
@@ -218,7 +218,7 @@ audio = [
 # and QEMU 8+ on the host; on older Pythons the extra installs nothing and the
 # backend fails closed at use time.
 sandbox = [
-    "langflow-base[sandbox]~=1.13.0",
+    "langflow-base[sandbox]==1.13.1",
 ]
 
 
@@ -242,15 +242,15 @@ nv-ingest = [
 ]
 
 postgresql = [
-    "langflow-base[postgresql]~=1.13.0",
+    "langflow-base[postgresql]==1.13.1",
 ]
 
 pgvector = [
-    "langflow-base[pgvector]~=1.13.0",
+    "langflow-base[pgvector]==1.13.1",
 ]
 
 opensearch = [
-    "langflow-base[opensearch]~=1.13.0",
+    "langflow-base[opensearch]==1.13.1",
 ]
 
 [tool.uv]
@@ -261,7 +261,7 @@ constraint-dependencies = [
     "langgraph-sdk>=0.4.6",  # GHSA-fvww-7h3r-vfhp / CVE-2026-104873, GHSA-3fx2-cqw9-xr3c
     # GHSA-7hp6-4w63-5g45 is fixed in 1.103.1 and 1.104.0rc2.
     # Keep Opik's upper bound while enforcing the patched LiteLLM floor.
-    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1",
+    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1,!=1.107.0",
     "multidict>=6.9.1",  # GHSA-54p9-h82j-f925 / CVE-2026-104874
     # Security floors for every workspace dependency path, including optional bundles.
     "oauthlib>=4.0.0,<5.0.0",  # CVE-2026-49264, CVE-2026-49265
@@ -442,7 +442,7 @@ external = ["RUF027"]
     "TRY003",  # Long exception messages
     "EM101",   # String literals in exceptions
 ]
-"docs/docs/Lfx/samples/connections/*" = [
+"docs/**/Lfx/samples/connections/*" = [
     "INP001", # Reference samples are standalone files, loaded by path, not a package
 ]
 "src/backend/base/langflow/alembic/versions/*" = ["INP001", "D415", "PGH003"]

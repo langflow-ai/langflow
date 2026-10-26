@@ -1,6 +1,7 @@
 import copy
 import json
 import pickle
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -23,6 +24,31 @@ from lfx.utils.flow_validation import CatalogPolicyValidationError, CustomCompon
 
 # now we have three types of graph:
 # BASIC_EXAMPLE_PATH, COMPLEX_EXAMPLE_PATH, OPENAPI_EXAMPLE_PATH
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("wrapped", [False, True])
+async def test_from_payload_runs_exported_code_lines(wrapped):
+    flow_path = Path(__file__).parents[2] / "data" / "simple_chat_no_llm.json"
+    flow = json.loads(flow_path.read_text(encoding="utf-8"))
+    for node in flow["data"]["nodes"]:
+        template = node["data"]["node"]["template"]
+        for field in template.values():
+            if isinstance(field, dict) and field.get("type") == "code":
+                field["value"] = field["value"].split("\n")
+        if node["data"]["type"] == "ChatInput":
+            template["input_value"]["value"] = "Exported graph echo"
+        else:
+            output_id = node["id"]
+    payload = flow if wrapped else flow["data"]
+    original = copy.deepcopy(payload)
+
+    graph = Graph.from_payload(payload)
+    results = [result async for result in graph.async_start()]
+
+    assert len(results) == 3
+    assert graph.get_vertex(output_id).built_object["message"].text == "Exported graph echo"
+    assert payload == original
 
 
 @pytest.fixture
@@ -123,6 +149,20 @@ def test_graph_copy_and_pickle_preserve_source_flow_id():
 
     assert copy.deepcopy(graph).source_flow_id == "source-flow"
     assert pickle.loads(pickle.dumps(graph)).source_flow_id == "source-flow"  # noqa: S301
+
+
+def test_graph_copy_and_pickle_preserve_authorized_legacy_flow_ids():
+    flow_id = "non-colliding-flow-id"
+    graph = Graph.from_payload(
+        {"nodes": [], "edges": []},
+        flow_id=flow_id,
+        authorized_legacy_flow_ids={flow_id},
+    )
+
+    assert graph.authorized_legacy_flow_ids == frozenset({flow_id})
+    assert copy.deepcopy(graph).authorized_legacy_flow_ids == frozenset({flow_id})
+    assert graph.copy_for_run(user_id="caller").authorized_legacy_flow_ids == frozenset({flow_id})
+    assert pickle.loads(pickle.dumps(graph)).authorized_legacy_flow_ids == frozenset({flow_id})  # noqa: S301
 
 
 def test_from_payload_blocks_custom_components_when_disabled(monkeypatch):

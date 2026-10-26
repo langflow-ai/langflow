@@ -65,6 +65,7 @@ from langflow.api.utils.execution_principal import (
     execution_principal_for,
     stamp_execution_principal,
 )
+from langflow.api.utils.flow_utils import get_authorized_legacy_flow_ids
 from langflow.api.utils.migration_pause import writing_on
 from langflow.api.v1.custom_component_policy import (
     CatalogPolicyHTTPException,
@@ -130,7 +131,7 @@ from langflow.services.integration_policy_discovery import (
     filter_component_palette_by_integration_policy,
 )
 from langflow.services.telemetry.schema import RunPayload
-from langflow.utils.flow_secrets import strip_secret_field_values
+from langflow.utils.flow_secrets import restore_request_variable_references, strip_secret_field_values
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
@@ -163,7 +164,14 @@ def _reject_shared_secret_variable_overrides(
     variables: object,
 ) -> None:
     """Keep request variables from redirecting a shared flow's hidden credential."""
-    if variables and not _caller_owns_flow(flow, user) and strip_secret_field_values(flow.data) != flow.data:
+    if not variables or _caller_owns_flow(flow, user):
+        return
+    scrubbed_data = strip_secret_field_values(flow.data)
+    if isinstance(variables, Mapping):
+        # Request-backed references resolve to the caller's value rather than an owner's
+        # secret. Bindings on ordinary fields are not hidden, so they never block a run.
+        restore_request_variable_references(flow.data, scrubbed_data, variables)
+    if scrubbed_data != flow.data:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot override variables in a shared flow using its owner's hidden credentials.",
@@ -509,7 +517,12 @@ async def simple_run_flow(
             if user_id is not None:
                 graph_data = await apply_global_variable_defaults(graph_data, user_id)
             graph = Graph.from_payload(
-                graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name, context=context
+                graph_data,
+                flow_id=flow_id_str,
+                user_id=str(user_id),
+                flow_name=flow.name,
+                context=context,
+                authorized_legacy_flow_ids=await get_authorized_legacy_flow_ids(flow.id),
             )
         stamp_execution_principal(graph, execution_principal)
         graph.expose_error_details = expose_error_details
@@ -1678,6 +1691,7 @@ async def experimental_run_flow(
                     flow_id=flow_id_str,
                     user_id=str(api_key_user.id),
                     flow_name=flow.name,
+                    authorized_legacy_flow_ids=await get_authorized_legacy_flow_ids(flow.id),
                 )
         except CustomComponentValidationError as exc:
             await logger.aexception("Advanced-run flow validation failed for flow %s", flow.id)

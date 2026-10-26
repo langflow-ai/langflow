@@ -58,7 +58,7 @@ If you encounter the error "An API key must be passed as query or header" when a
 
 ![Simple Agent template](/img/quickstart-simple-agent-flow.png)
 
-The **Simple Agent** template consists of an [**Agent** component](/agents) connected to [**Chat Input** and **Chat Output** components](/chat-input-and-output), a [**Calculator** component](/calculator), and a [**URL** component](/url). When you run this flow, you submit a query to the agent through the **Chat Input** component, the agent uses the **Calculator** and **URL** tools to generate a response, and then returns the response through the **Chat Output** component.
+The **Simple Agent** template consists of an [**Agent** component](/agents) connected to [**Chat Input** and **Chat Output** components](/chat-input-and-output) and a [**URL** component](/url). The **Calculator** tool is part of the **Agent** component, and it is enabled by default. When you run this flow, you submit a query to the agent through the **Chat Input** component, the agent uses its **Calculator** tool and the **URL** tool to generate a response, and then returns the response through the **Chat Output** component.
 
 Many components can be tools for agents, including [Model Context Protocol (MCP) servers](/mcp-server). The agent decides which tools to call based on the context of a given query.
 
@@ -79,8 +79,9 @@ Many components can be tools for agents, including [Model Context Protocol (MCP)
 4. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
 
 5. To test the **Calculator** tool, ask the agent a simple math question, such as `I want to add 4 and 4.`
+The **Calculator** is a tool on the **Agent** component. Open the **Agent** component's parameters to turn it on or off.
 To help you test and evaluate your flows, the **Playground** shows the agent's reasoning process as it analyzes the prompt, selects a tool, and then uses the tool to generate a response.
-In this case, a math question causes the agent to select the **Calculator** tool and use an action like `evaluate_expression`.
+In this case, a math question causes the agent to use the **Calculator** tool and an action like `evaluate_expression`.
 
 ![Playground with Agent tool](/img/quickstart-simple-agent-playground.png)
 

@@ -7,6 +7,7 @@ import os
 import re
 import shlex
 import shutil
+import sys
 import unicodedata
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
@@ -38,6 +39,7 @@ from lfx.base.mcp.security import (
     AGENTIC_USER_ID_ENV_VAR,
     validate_mcp_stdio_config,
 )
+from lfx.base.mcp.source_policy import CMD_TOKEN_TRANSFORM_CHARS
 from lfx.log.logger import logger
 from lfx.observability import outbound_call_span
 from lfx.schema.data import Data
@@ -2171,27 +2173,11 @@ class MCPStdioClient(_PooledSessionClient):
         current_user_id: str | UUID | None = None,
         headers: dict[str, str] | None = None,
     ) -> list[StructuredTool]:
-        """Connect to MCP server using stdio transport (SDK style).
+        """Connect to an MCP stdio server after validating its command and arguments.
 
-        The server process is launched **without a shell** (``shell=False``
-        semantics): ``command_str`` is tokenized with :func:`shlex.split` and
-        the resulting executable + arguments are passed to
-        :class:`~mcp.StdioServerParameters` directly.  The MCP SDK then execs
-        the process via ``anyio.open_process`` on POSIX and
-        ``create_windows_process`` on Windows -- the latter resolving ``.cmd`` /
-        ``.bat`` / ``.exe`` wrappers (e.g. ``npx.cmd``) through ``shutil.which``
-        -- so no ``bash -c`` / ``cmd /c`` wrapper is required on any platform.
-
-        Removing the shell wrapper structurally eliminates the entire class of
-        injection vectors that depend on a shell interpreter starting up:
-        shell metacharacters, ``IFS`` word-splitting, ``CDPATH`` redirection,
-        ``BASH_ENV`` / ``ENV`` / ``BASH_FUNC_*`` startup injection, and
-        ``PS4`` / ``SHELLOPTS`` xtrace abuse.  None of those can fire because no
-        shell is ever spawned.  The :func:`_validate_mcp_stdio_env` backstop
-        still rejects loader and interpreter env vars (``LD_PRELOAD``,
-        ``DYLD_*``, ``GCONV_PATH``, ``PYTHONPATH``, ``NODE_OPTIONS``, ...) which
-        remain dangerous regardless of the shell because they are honored by the
-        dynamic linker or the target interpreter itself.
+        Native executables receive structured arguments directly through the MCP SDK.
+        Explicit shell wrappers and Windows batch scripts also require validation after
+        HTTP headers are inserted, because HTTP-valid punctuation can become shell syntax.
         """
         from mcp import StdioServerParameters
 
@@ -2206,11 +2192,30 @@ class MCPStdioClient(_PooledSessionClient):
         # directly, and no unvalidated argv or tenant-controlled environment may reach
         # StdioServerParameters.
         validate_mcp_stdio_config(command, args, env)
-        # Component headers are validated as HTTP data and appended as structured
-        # argv only after command policy succeeds. Cookie/signature values may
-        # legitimately contain shell-looking punctuation, which is inert because
-        # the process is launched without a shell.
+        # Preserve opaque HTTP values for direct executables, but apply the shell
+        # policy to the assembled argv when a wrapper will interpret those values.
         final_args = _inject_mcp_stdio_headers(args, _process_headers(headers))
+        is_windows_batch = False
+        if sys.platform == "win32":
+            from mcp.os.win32.utilities import get_windows_executable_command
+
+            # Windows can invoke cmd.exe for a batch script even with shell=False.
+            # Use the SDK's resolver and pin the script whose arguments we check.
+            resolved_command = get_windows_executable_command(command)
+            if resolved_command.lower().endswith((".cmd", ".bat")):
+                is_windows_batch = True
+                command = resolved_command
+        base_command = mcp_security.extract_base_command(command)
+        if is_windows_batch or base_command in mcp_security.SHELL_WRAPPERS:
+            # The original arguments already passed command-specific policy.
+            # Header values need shell syntax checks without keyword restrictions.
+            shell_chars = mcp_security.DANGEROUS_SHELL_CHARS
+            if is_windows_batch or base_command == "cmd":
+                shell_chars |= CMD_TOKEN_TRANSFORM_CHARS
+            if any(char in arg for arg in final_args for char in shell_chars):
+                # Header values may contain credentials, so omit the offending argument.
+                msg = "MCP stdio arguments are unsafe for a shell wrapper; use a direct executable instead"
+                raise mcp_security.MCPStdioSecurityError(msg)
         safe_env = _validate_mcp_stdio_env(env)
         if AGENTIC_MCP_MODULE in command or any(AGENTIC_MCP_MODULE in arg for arg in args):
             if not current_user_id:
@@ -2221,10 +2226,7 @@ class MCPStdioClient(_PooledSessionClient):
             safe_env = {**safe_env, AGENTIC_USER_ID_ENV_VAR: str(current_user_id)}
         env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **safe_env}
 
-        # shell=False: exec the binary directly with structured args. The MCP SDK
-        # abstracts the platform differences (POSIX exec vs. Windows executable
-        # resolution), so identical parameters work on every OS and no shell
-        # interpreter is ever interposed between Langflow and the server process.
+        # Pass the validated command and assembled arguments to the MCP SDK.
         server_params = StdioServerParameters(
             command=command,
             args=final_args,

@@ -189,22 +189,28 @@ class WarmGraphRegistry:
         self._total_payload_bytes -= self._flow_payload_bytes.pop(flow_id, 0)
 
     @staticmethod
-    def _build(flow_id: str, name: str | None, data: dict) -> Graph:
+    def _build(
+        flow_id: str,
+        name: str | None,
+        data: dict,
+        authorized_legacy_flow_ids: frozenset[str] = frozenset(),
+    ) -> Graph:
         """Parse ``flow.data`` into a structural ``Graph`` template.
 
-        ``data`` is deepcopied first because ``from_payload`` rewrites the payload
-        in place (legacy component migration), and the caller's dict may be the DB
-        row's own mapping. Components and extension events are deferred; the
-        request-local ``copy_for_run`` binds identity and constructs components.
+        ``from_payload`` builds from its own normalized copy, so ``data`` stays
+        unchanged even when it is the DB row's own mapping. Components and
+        extension events are deferred, and the request-local ``copy_for_run``
+        binds identity and constructs components.
         """
         from lfx.graph.graph.base import Graph
 
         return Graph.from_payload(
-            deepcopy(data),
+            data,
             flow_id=flow_id,
             flow_name=name,
             instantiate_components=False,
             emit_extension_events=False,
+            authorized_legacy_flow_ids=authorized_legacy_flow_ids,
         )
 
     @classmethod
@@ -449,12 +455,22 @@ class WarmGraphRegistry:
                     msg = f"flow {flow_id} entry is {entry_bytes} bytes; warm limit is {self._max_flow_bytes} bytes"
                     raise WarmRegistryCapacityError(msg)
 
+                authorized_legacy_flow_ids = frozenset()
+                if flow is not None:
+                    from langflow.api.utils.flow_utils import get_authorized_legacy_flow_ids
+
+                    authorized_legacy_flow_ids = await get_authorized_legacy_flow_ids(flow_id)
+
+                from inspect import signature
+
+                build_args = (flow_id, build_name, build_data)
+                if "authorized_legacy_flow_ids" in signature(self._build).parameters:
+                    build_args = (*build_args, authorized_legacy_flow_ids)
+
                 try:
                     async with self._build_reservation(flow_id, entry_bytes):
                         try:
-                            graph = await self._to_thread_without_abandoning(
-                                self._build, flow_id, build_name, build_data
-                            )
+                            graph = await self._to_thread_without_abandoning(self._build, *build_args)
                         except asyncio.CancelledError:
                             raise
                         except Exception:

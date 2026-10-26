@@ -93,15 +93,7 @@ async def handle_list_tools() -> list[types.Tool]:
     return [tool for tool in await lfx_mcp.list_tools() if tool.name not in excluded]
 
 
-@server.call_tool(validate_input=False)
-async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Any:
-    """Delegate to the lfx FastMCP server with the caller's loopback client bound.
-
-    ``validate_input=False`` mirrors FastMCP's own transport registration;
-    FastMCP still validates the final arguments via pydantic. The shared
-    lowlevel ``request_ctx`` contextvar makes FastMCP's Context (progress/log
-    notifications) work through this delegation unchanged.
-    """
+def _ensure_tool_allowed(name: str) -> None:
     if name in _HTTP_EXCLUDED_TOOLS:
         msg = f"Tool '{name}' is not available over HTTP"
         raise ValueError(msg)
@@ -111,11 +103,27 @@ async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Any:
             "(LANGFLOW_AGENTIC_EXPERIENCE is not enabled). The other tools remain available."
         )
         raise ValueError(msg)
+
+
+@server.call_tool(validate_input=False)
+async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Any:
+    """Delegate to the lfx FastMCP server with the caller's loopback client bound.
+
+    ``validate_input=False`` mirrors FastMCP's own transport registration;
+    FastMCP still validates the final arguments via pydantic. The shared
+    lowlevel ``request_ctx`` contextvar makes FastMCP's Context (progress/log
+    notifications) work through this delegation unchanged.
+    """
+    _ensure_tool_allowed(name)
+    if name == "batch" and isinstance(arguments.get("actions"), list):
+        for action in arguments["actions"]:
+            if isinstance(action, dict):
+                _ensure_tool_allowed(action.get("tool", ""))
     client = current_loopback_client_ctx.get()
     if client is None:
         msg = "Authenticated client is unavailable for this MCP request"
         raise ValueError(msg)
-    with client_scope(client):
+    async with client_scope(client):
         return await lfx_mcp.call_tool(name, arguments)
 
 

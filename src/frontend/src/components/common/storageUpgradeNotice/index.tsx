@@ -135,6 +135,10 @@ export function StorageUpgradeNotice() {
   const { data } = useGetStorageStatus();
   const [open, setOpen] = useState(false);
   const [dismissed, setDismissed] = useState<string | null>(null);
+  const inventoryRetry = usePostStorageRetry();
+  const [inventoryFeedback, setInventoryFeedback] = useState<
+    "scheduled" | "failed" | null
+  >(null);
   const userId = useAuthStore((state) => state.userData?.id);
   const queryClient = useQueryClient();
   const previous = useRef<string | null>(null);
@@ -149,6 +153,9 @@ export function StorageUpgradeNotice() {
     running: data?.running,
     inventoryComplete: data?.inventory?.complete,
     inventoryIssues: data?.inventory?.issues,
+    inventoryDetails: data?.inventory?.details,
+    storageDirectory: data?.inventory?.storage_directory,
+    inventoryScanFailed: data?.inventory?.scan_failed,
   });
   const visible =
     !!data &&
@@ -219,10 +226,64 @@ export function StorageUpgradeNotice() {
               isAdmin={data.is_admin}
             />
           ))}
-          {!!data.inventory?.issues && (
-            <p role="alert" className="text-sm">
-              {t("storageUpgrade.inventory")}
-            </p>
+          {data.is_admin && !!data.inventory?.issues && (
+            <section className="space-y-3 text-sm">
+              <p role="alert">{t("storageUpgrade.inventory")}</p>
+              {data.inventory.storage_directory && (
+                <div>
+                  <h3 className="font-medium">
+                    {t("storageUpgrade.storageDirectory")}
+                  </h3>
+                  <p className="break-all font-mono text-xs">
+                    {data.inventory.storage_directory}
+                  </p>
+                </div>
+              )}
+              {!!data.inventory.details?.length && (
+                <ul className="list-inside list-disc break-all font-mono text-xs">
+                  {data.inventory.details.map((issue) => (
+                    <li key={issue.source}>{issue.source}</li>
+                  ))}
+                </ul>
+              )}
+              <p>
+                {t(
+                  data.inventory.scan_failed
+                    ? "storageUpgrade.inventoryScanFailed"
+                    : "storageUpgrade.inventoryRecovery",
+                )}
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={inventoryRetry.isPending || data.running}
+                onClick={() => {
+                  setInventoryFeedback(null);
+                  inventoryRetry.mutate(
+                    { inventory: true },
+                    {
+                      onSuccess: () => setInventoryFeedback("scheduled"),
+                      onError: () => setInventoryFeedback("failed"),
+                    },
+                  );
+                }}
+              >
+                {t(
+                  inventoryRetry.isPending
+                    ? "storageUpgrade.retryScheduling"
+                    : "storageUpgrade.retryInventory",
+                )}
+              </Button>
+              {inventoryFeedback && (
+                <p role={inventoryFeedback === "failed" ? "alert" : "status"}>
+                  {t(
+                    inventoryFeedback === "failed"
+                      ? "storageUpgrade.retryFailed"
+                      : "storageUpgrade.retryScheduled",
+                  )}
+                </p>
+              )}
+            </section>
           )}
         </div>
       </DialogContent>
