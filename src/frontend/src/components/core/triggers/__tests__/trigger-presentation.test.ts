@@ -15,6 +15,10 @@ import {
 import { makeEvent, makeTrigger } from "./fixtures";
 
 describe("badgeStateOf", () => {
+  it("distinguishes blocked configuration from setup in progress", () => {
+    expect(badgeStateOf("pending", "config_invalid")).toBe("blocked");
+    expect(badgeStateOf("pending", "pending")).toBe("pending");
+  });
   it("renders dead with the error treatment, never as a seventh badge", () => {
     expect(badgeStateOf("dead")).toBe("error");
   });
@@ -117,6 +121,7 @@ describe("transportOf", () => {
     ["slack.events_api", "push"],
     ["microsoft.graph_change_notifications", "push"],
     ["google.gmail_watch_pubsub_push", "push"],
+    ["github.repository_webhook", "push"],
     ["slack.socket_mode", "socket"],
     ["microsoft.graph_delta_poll", "poll"],
   ])("reads %s as %s", (mechanism, transport) => {
@@ -158,6 +163,11 @@ describe("sourceKeyOf", () => {
 });
 
 describe("needsAttention", () => {
+  it("includes a pending trigger whose configuration needs correction", () => {
+    expect(needsAttention({ state: "pending", reason: "config_invalid" })).toBe(
+      true,
+    );
+  });
   it.each(["needs_reconnect", "error", "dead", "expired"] as const)(
     "flags %s",
     (state) => {

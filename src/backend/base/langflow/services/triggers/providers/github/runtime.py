@@ -223,7 +223,10 @@ async def revoke(task: TriggerCleanup, lease: CredentialLease) -> None:
         raise SourceConfigurationError(msg)
     async with GitHubClient(lease) as client:
         if task.provider_subscription_id == f"pending:{task.id}":
-            hook_ids = await _matching_hooks(client, path, address)
+            try:
+                hook_ids = await _matching_hooks(client, path, address)
+            except ResourceNotFoundError:
+                return
         else:
             prefix = task.provider_state["repository"] + ":"
             if not task.provider_subscription_id.startswith(prefix):

@@ -94,6 +94,7 @@ def github_runtime(monkeypatch, client):  # noqa: ARG001
         next_id=44,
         rejected_tokens=set(),
         installation_status=200,
+        missing_repository=False,
     )
 
     async def handle(request):
@@ -113,6 +114,8 @@ def github_runtime(monkeypatch, client):  # noqa: ARG001
                     "repositories": [{"id": 80, "full_name": "org/repo", "owner": {"id": 9, "login": "org"}}],
                 },
             )
+        if controls.missing_repository:
+            return httpx.Response(404)
         if path == "/repos/org/repo":
             return httpx.Response(200, json={"id": 80})
         if request.method == "GET" and path.endswith("/hooks"):
@@ -161,8 +164,8 @@ async def create_connection(user_id, *, background=True, token=None):
         )
 
 
-async def save_trigger(flow_id, owner_id, *, connection="github/work", actions=None):
-    node = GitHubOnIssueTriggerComponent(connection=connection, repository="org/repo", actions=actions or ["opened"])
+async def save_trigger(flow_id, owner_id, *, connection="github/work", repository="org/repo", actions=None):
+    node = GitHubOnIssueTriggerComponent(connection=connection, repository=repository, actions=actions or ["opened"])
     data = {
         "nodes": [
             {
@@ -179,6 +182,99 @@ async def save_trigger(flow_id, owner_id, *, connection="github/work", actions=N
         await reconcile_flow_triggers(session, flow_id=flow_id, owner_id=owner_id, flow_data=data)
     async with session_scope() as session:
         return (await session.exec(select(Trigger).where(Trigger.flow_id == flow_id))).one()
+
+
+async def test_missing_repository_cleanup_allows_corrected_trigger(github_runtime, trigger_owner, owned_flow):
+    await create_connection(trigger_owner)
+    trigger = await save_trigger(owned_flow, trigger_owner, repository="org/repoo")
+    github_runtime.controls.missing_repository = True
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        with pytest.raises(ValueError, match="Source activation failed"):
+            await TriggerService().enable_and_activate(session, row=row)
+    await save_trigger(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        await TriggerService().disable(session, row=await session.get(Trigger, trigger.id))
+    assert await run_cleanup_pass() == 1
+    async with session_scope() as session:
+        assert (await session.exec(select(TriggerCleanup).where(TriggerCleanup.trigger_id == trigger.id))).all() == []
+    github_runtime.controls.missing_repository = False
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        assert row.state == "active"
+    assert len(github_runtime.hooks) == 1
+
+
+@pytest.mark.parametrize("reject_token", [False, True])
+async def test_active_enable_preserves_live_subscription(
+    github_runtime, trigger_owner, owned_flow, reject_token, client
+):
+    await create_connection(trigger_owner)
+    trigger = await save_trigger(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        subscription = (
+            await session.exec(select(TriggerSubscription).where(TriggerSubscription.trigger_id == row.id))
+        ).one()
+        before = subscription.model_dump()
+    calls_before = list(github_runtime.calls)
+    if reject_token:
+        github_runtime.controls.rejected_tokens.add("test-installation")
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable(session, row=row)
+        assert row.state == "active"
+        subscription = await session.get(TriggerSubscription, before["id"])
+        assert subscription.model_dump() == before
+        assert (await runtime.ingress_secrets(session, row)).signing_secret
+        await TriggerService().activate_push_source(session, row=row)
+        assert row.state == "active"
+    assert github_runtime.calls == calls_before
+    body = json.dumps(
+        {
+            "repository": {"id": 80, "full_name": "org/repo"},
+            "action": "opened",
+            "issue": {"id": 100, "number": 4},
+            "sender": {"id": 9, "type": "User"},
+        }
+    ).encode()
+    hook = next(iter(github_runtime.hooks.values()))
+    signature = "sha256=" + hmac.new(hook["config"]["secret"].encode(), body, hashlib.sha256).hexdigest()
+    response = await client.post(
+        f"/api/v1/triggers/ingress/github/{row.public_id}",
+        content=body,
+        headers={"X-Hub-Signature-256": signature, "X-GitHub-Event": "issues", "X-GitHub-Delivery": str(uuid4())},
+    )
+    assert response.status_code == 202, response.text
+
+
+@pytest.mark.parametrize("renew", [False, True])
+@pytest.mark.usefixtures("github_runtime")
+async def test_dns_failure_has_safe_connection_error(client, logged_in_headers, monkeypatch, renew):
+    from lfx.utils import ssrf_httpx
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+
+    payload = json.loads((BUNDLE_ROOT / "tests/fixtures/manual-token-dialog.json").read_text())
+    url = "/api/v1/connections"
+    if renew:
+        created = await client.post(url, headers=logged_in_headers, json=payload)
+        assert created.status_code == 201
+        url += f"/{created.json()['id']}/token"
+        payload = {"credentials": payload["credentials"]}
+
+    def unavailable(_url):
+        msg = "DNS resolution failed for api.github.com with private diagnostic"
+        raise SSRFProtectionError(msg)
+
+    monkeypatch.setattr(credentials, "GitHubClient", GitHubClient)
+    monkeypatch.setattr(ssrf_httpx, "is_ssrf_protection_enabled", lambda: True)
+    monkeypatch.setattr(ssrf_httpx, "_validate_and_resolve_strict_url", unavailable)
+    response = await client.post(url, headers=logged_in_headers, json=payload)
+    assert response.status_code == 422, response.text
+    assert "could not reach GitHub" in response.json()["detail"]
+    assert "private diagnostic" not in response.text
 
 
 @pytest.mark.usefixtures("github_runtime")

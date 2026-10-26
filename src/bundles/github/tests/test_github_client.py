@@ -117,6 +117,96 @@ async def test_error_statuses_do_not_repeat_writes(lease, status, headers, error
         assert raised.value.retry_after == 13
 
 
+@pytest.mark.parametrize(
+    ("payload", "reason"),
+    [
+        ({"message": "not all refs are readable"}, "not all refs are readable"),
+        (
+            {"message": "Validation Failed", "errors": [{"message": "not all refs are readable"}]},
+            "not all refs are readable",
+        ),
+        (
+            {"message": "Validation Failed", "errors": [{"message": "No commits between main and private-branch"}]},
+            "no commits",
+        ),
+        (
+            {
+                "message": "Validation Failed",
+                "errors": [{"message": "A pull request already exists for private-branch"}],
+            },
+            "already has a pull request",
+        ),
+        (
+            {
+                "message": "Validation Failed",
+                "errors": [{"resource": "PullRequest", "field": "head", "code": "invalid"}],
+            },
+            "head branch",
+        ),
+        (
+            {
+                "message": "Validation Failed",
+                "errors": [{"resource": "PullRequest", "field": "base", "code": "invalid"}],
+            },
+            "base branch",
+        ),
+    ],
+)
+async def test_validation_errors_explain_safe_remedy(lease, payload, reason):
+    def handle(request):
+        return (
+            httpx.Response(200, json={})
+            if request.url.path.startswith("/installation/")
+            else httpx.Response(422, json=payload)
+        )
+
+    async with GitHubClient(lease, transport=httpx.MockTransport(handle)) as client:
+        with pytest.raises(InvalidRequestError, match=reason):
+            await client.request("POST", "/repos/org/repo/pulls", body={"head": "topic", "base": "main"})
+
+
+@pytest.mark.parametrize(
+    "errors",
+    [
+        None,
+        "invalid",
+        [None, "private"],
+        [{"resource": "PullRequest", "code": [], "field": {}}],
+        [{"resource": "PullRequest", "code": "invalid", "field": []}],
+        [{"field": "private@example.com", "message": "private input"}],
+    ],
+)
+async def test_unknown_validation_text_stays_private(lease, errors):
+    payload = {"message": "secret test-installation-1", "errors": errors}
+
+    def handle(request):
+        return (
+            httpx.Response(200, json={})
+            if request.url.path.startswith("/installation/")
+            else httpx.Response(422, json=payload)
+        )
+
+    async with GitHubClient(lease, transport=httpx.MockTransport(handle)) as client:
+        with pytest.raises(InvalidRequestError) as error:
+            await client.request("POST", "/repos/org/repo/pulls", body={"head": "topic", "base": "main"})
+    assert str(error.value) == "The provider rejected the action's inputs."
+
+
+async def test_default_transport_dns_failure_is_normalized(lease, monkeypatch):
+    from lfx.utils import ssrf_httpx
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+
+    def unavailable(_url):
+        msg = "private DNS diagnostic"
+        raise SSRFProtectionError(msg)
+
+    monkeypatch.setattr(ssrf_httpx, "is_ssrf_protection_enabled", lambda: True)
+    monkeypatch.setattr(ssrf_httpx, "_validate_and_resolve_strict_url", unavailable)
+    with pytest.raises(IntegrationNetworkError, match=r"could not reach api\.github\.com") as error:
+        GitHubClient(lease)
+    assert "private DNS diagnostic" not in str(error.value)
+
+
 async def test_timeout_does_not_retry_mutation(lease):
     calls = []
 

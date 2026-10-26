@@ -20,6 +20,7 @@ export interface UseSlackTokenConnectionOptions {
   deploymentContext: DeploymentContext | undefined;
   /** Only token-only providers may renew a manually entered credential. */
   reauthorizing: boolean;
+  initialAllowBackgroundRuns?: boolean;
   /** Stores the validated token through creation or renewal. */
   create: (payload: ConnectionCreate) => Promise<ConnectionRead>;
   tokenProfile?: ManualTokenProfileRead;
@@ -74,6 +75,7 @@ export function useSlackTokenConnection({
   providerId,
   deploymentContext,
   reauthorizing,
+  initialAllowBackgroundRuns = false,
   create,
   tokenProfile,
   tokenOnly,
@@ -81,9 +83,10 @@ export function useSlackTokenConnection({
   const [selectedMethod, setMethod] = useState<ConnectionMethod | null>(null);
   const [token, setToken] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
-  // Consent to unattended use is explicit and off by default: pasting a token
-  // is not the same as allowing a trigger to run with it.
-  const [allowBackgroundRuns, setAllowBackgroundRuns] = useState(false);
+  // Renewal retains the owner's consent. New connections require explicit consent.
+  const [allowBackgroundRuns, setAllowBackgroundRuns] = useState(
+    initialAllowBackgroundRuns,
+  );
 
   const offersToken =
     (!reauthorizing || tokenOnly) &&
@@ -134,8 +137,8 @@ export function useSlackTokenConnection({
     setMethod(null);
     setToken("");
     setExpiresAt("");
-    setAllowBackgroundRuns(false);
-  }, []);
+    setAllowBackgroundRuns(initialAllowBackgroundRuns);
+  }, [initialAllowBackgroundRuns]);
 
   return {
     offersToken,

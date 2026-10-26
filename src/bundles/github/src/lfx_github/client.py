@@ -20,6 +20,7 @@ from lfx.integrations.errors import (
     ResourceNotFoundError,
 )
 from lfx.utils.ssrf_httpx import ssrf_protected_strict_httpx_client_kwargs_for_url
+from lfx.utils.ssrf_protection import SSRFProtectionError
 from lfx.utils.url_redaction import suppress_sensitive_http_logs
 
 if TYPE_CHECKING:
@@ -83,8 +84,41 @@ def without_credentials(value: Any) -> Any:
     return value
 
 
-def response_error(response: httpx.Response):
-    """Return fixed error text without reflecting provider bodies or secrets."""
+def _validation_message(payload: Any) -> str:
+    """Translate recognized validation reasons without echoing user or provider data."""
+    if not isinstance(payload, dict):
+        return "The provider rejected the action's inputs."
+    errors = payload.get("errors")
+    errors = errors if isinstance(errors, list) else []
+    for item in [payload, *errors]:
+        if not isinstance(item, dict):
+            continue
+        message = item.get("message")
+        if message == "not all refs are readable":
+            return (
+                "GitHub reported that not all refs are readable. "
+                "Check Contents read permission and the head and base branches."
+            )
+        if isinstance(message, str) and message.startswith("No commits between "):
+            return "GitHub found no commits between the head and base branches. Choose branches with changes."
+        if isinstance(message, str) and message.startswith("A pull request already exists for "):
+            return "GitHub already has a pull request for this head branch. Update the existing pull request."
+    for error in errors:
+        if not isinstance(error, dict) or error.get("resource") != "PullRequest":
+            continue
+        code = error.get("code")
+        if not isinstance(code, str) or code not in {"invalid", "missing", "missing_field", "unprocessable"}:
+            continue
+        field = error.get("field")
+        if isinstance(field, str) and field in {"head", "base"}:
+            return (
+                f"GitHub rejected the {field} branch. Check the branch name and the installation's repository access."
+            )
+    return "The provider rejected the action's inputs."
+
+
+def response_error(response: httpx.Response, payload: Any = None):
+    """Return safe error text from status and recognized validation reasons."""
     status = response.status_code
     if status == httpx.codes.UNAUTHORIZED:
         return AuthExpiredError(provider=PROVIDER_ID)
@@ -107,7 +141,7 @@ def response_error(response: httpx.Response):
     if status == httpx.codes.NOT_FOUND:
         return ResourceNotFoundError(provider=PROVIDER_ID)
     if httpx.codes.BAD_REQUEST <= status < httpx.codes.INTERNAL_SERVER_ERROR:
-        return InvalidRequestError(provider=PROVIDER_ID, http_status=status)
+        return InvalidRequestError(_validation_message(payload), provider=PROVIDER_ID, http_status=status)
     return ProviderUnavailableError(provider=PROVIDER_ID, http_status=status)
 
 
@@ -116,11 +150,14 @@ class GitHubClient:
 
     def __init__(self, lease: CredentialLease, *, transport: httpx.AsyncBaseTransport | None = None):
         self.lease = lease
-        kwargs = (
-            ssrf_protected_strict_httpx_client_kwargs_for_url(API_ORIGIN)[1]
-            if transport is None
-            else {"transport": transport}
-        )
+        try:
+            kwargs = (
+                ssrf_protected_strict_httpx_client_kwargs_for_url(API_ORIGIN)[1]
+                if transport is None
+                else {"transport": transport}
+            )
+        except SSRFProtectionError:
+            raise IntegrationNetworkError(reason="connection", provider=PROVIDER_ID, host="api.github.com") from None
         kwargs["follow_redirects"] = False
         self._client = httpx.AsyncClient(timeout=httpx.Timeout(20.0), trust_env=False, **kwargs)
 
@@ -170,7 +207,11 @@ class GitHubClient:
                             await self._request("GET", "/installation/repositories", params={"per_page": 1})
                         continue
                     if not httpx.codes.OK <= response.status_code < httpx.codes.MULTIPLE_CHOICES:
-                        raise response_error(response)
+                        try:
+                            error_payload = json.loads(chunks)
+                        except (ValueError, UnicodeDecodeError):
+                            error_payload = None
+                        raise response_error(response, error_payload)
                     if not chunks:
                         return {}
                     try:
@@ -182,7 +223,7 @@ class GitHubClient:
                     return without_credentials(payload)
             except httpx.TimeoutException:
                 raise IntegrationNetworkError(reason="timeout", provider=PROVIDER_ID, host="api.github.com") from None
-            except httpx.TransportError:
+            except (httpx.TransportError, SSRFProtectionError):
                 raise IntegrationNetworkError(
                     reason="connection", provider=PROVIDER_ID, host="api.github.com"
                 ) from None

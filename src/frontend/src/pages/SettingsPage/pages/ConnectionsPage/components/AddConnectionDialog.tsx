@@ -136,6 +136,7 @@ export function AddConnectionDialog({
     providerId,
     deploymentContext,
     reauthorizing: !!reauthorize,
+    initialAllowBackgroundRuns: reauthorize?.allow_non_interactive ?? false,
     create: (payload) =>
       reauthorize && payload.credentials
         ? renewToken.mutateAsync({

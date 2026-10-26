@@ -2,7 +2,13 @@
 
 from datetime import datetime, timedelta, timezone
 
-from lfx.integrations.errors import AuthExpiredError, ConnectionNotAuthorizedError, IntegrationError, RateLimitedError
+from lfx.integrations.errors import (
+    AuthExpiredError,
+    ConnectionNotAuthorizedError,
+    IntegrationError,
+    IntegrationNetworkError,
+    RateLimitedError,
+)
 from lfx.integrations.models import (
     ConnectionAccount,
     ConnectionRef,
@@ -79,6 +85,9 @@ async def validate_manual_credential(payload: ConnectionCreate, *, context: str)
         raise ManualCredentialError(msg) from None
     except RateLimitedError:
         msg = "GitHub rate limited this token check. Wait and try again."
+        raise ManualCredentialError(msg) from None
+    except IntegrationNetworkError:
+        msg = "Langflow could not reach GitHub. Check this server's outbound network and DNS settings, then try again."
         raise ManualCredentialError(msg) from None
     except IntegrationError:
         msg = "GitHub could not check this token. Try again."

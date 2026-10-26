@@ -123,6 +123,52 @@ it("has no axe violations in the manual token reconnect form", async () => {
   expect(await axe(screen.getByRole("dialog"))).toHaveNoViolations();
 });
 
+it.each([true, false])(
+  "preserves existing background consent %s on renewal",
+  async (consent) => {
+    const connection = { ...revokedConnection, allow_non_interactive: consent };
+    mockRenew.mockResolvedValue({ ...connection, status: "ready" });
+    const user = userEvent.setup();
+    renderDialog(connection);
+    expect(
+      screen.getByTestId("connection-allow-background-runs"),
+    ).toHaveAttribute("data-state", consent ? "checked" : "unchecked");
+    await user.type(
+      screen.getByTestId("connection-token"),
+      "replacement-installation",
+    );
+    fireEvent.change(screen.getByLabelText("Token expiration"), {
+      target: { value: "2030-06-01T12:00" },
+    });
+    await user.click(screen.getByTestId("connection-continue"));
+    expect(mockRenew).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.objectContaining({ allow_non_interactive: consent }),
+      }),
+    );
+  },
+);
+
+it("lets the owner turn background consent off during renewal", async () => {
+  mockRenew.mockResolvedValue({ ...revokedConnection, status: "ready" });
+  const user = userEvent.setup();
+  renderDialog({ ...revokedConnection, allow_non_interactive: true });
+  await user.click(screen.getByTestId("connection-allow-background-runs"));
+  await user.type(
+    screen.getByTestId("connection-token"),
+    "replacement-installation",
+  );
+  fireEvent.change(screen.getByLabelText("Token expiration"), {
+    target: { value: "2030-06-01T12:00" },
+  });
+  await user.click(screen.getByTestId("connection-continue"));
+  expect(mockRenew).toHaveBeenCalledWith(
+    expect.objectContaining({
+      payload: expect.objectContaining({ allow_non_interactive: false }),
+    }),
+  );
+});
+
 it("renews a revoked GitHub connection without creating another row or starting OAuth", async () => {
   mockRenew.mockResolvedValue({ ...revokedConnection, status: "ready" });
   const user = userEvent.setup();
@@ -140,10 +186,7 @@ it("renews a revoked GitHub connection without creating another row or starting 
   fireEvent.change(screen.getByLabelText("Token expiration"), {
     target: { value: "2030-06-01T12:00" },
   });
-  expect(
-    screen.getByTestId("connection-allow-background-runs"),
-  ).not.toBeChecked();
-  await user.click(screen.getByTestId("connection-allow-background-runs"));
+  expect(screen.getByTestId("connection-allow-background-runs")).toBeChecked();
   await user.click(screen.getByTestId("connection-continue"));
 
   expect(mockRenew).toHaveBeenCalledWith({
@@ -190,6 +233,9 @@ it("keeps a rejected replacement editable without showing a successful reconnect
 
 it("offers only the installation token method supported by GitHub", () => {
   renderDialog();
+  expect(
+    screen.getByTestId("connection-allow-background-runs"),
+  ).not.toBeChecked();
   expect(screen.getByTestId("connection-token")).toBeVisible();
   expect(screen.queryByTestId("connection-method")).not.toBeInTheDocument();
   expect(screen.queryByText(/Sign in with/)).not.toBeInTheDocument();

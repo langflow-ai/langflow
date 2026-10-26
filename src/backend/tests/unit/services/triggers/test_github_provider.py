@@ -336,6 +336,41 @@ async def test_remote_cleanup_is_fixed_operation_and_missing_hook_succeeds(monke
     assert requests[-2].method == "GET"
 
 
+@pytest.mark.parametrize("status", [404, 403, 503])
+async def test_pending_cleanup_accepts_missing_repository_but_retains_other_failures(monkeypatch, status):
+    from langflow.services.triggers.providers.github import runtime
+    from lfx.integrations.errors import ConnectionNotAuthorizedError, ProviderUnavailableError
+
+    requests = []
+    task_id = uuid4()
+
+    async def idle(_task):
+        return False
+
+    def handle(request):
+        requests.append(request)
+        return (
+            httpx.Response(200, json={}) if request.url.path == "/installation/repositories" else httpx.Response(status)
+        )
+
+    monkeypatch.setattr(runtime, "_setup_in_progress", idle)
+    monkeypatch.setattr(runtime, "GitHubClient", partial(GitHubClient, transport=httpx.MockTransport(handle)))
+    task = SimpleNamespace(
+        id=task_id,
+        provider_state={"repository": "org/repoo", "callback": "https://langflow.example/opaque"},
+        provider_subscription_id=f"pending:{task_id}",
+    )
+    if status == 404:
+        await runtime.revoke(task, credential_lease())
+    else:
+        with pytest.raises(ConnectionNotAuthorizedError if status == 403 else ProviderUnavailableError):
+            await runtime.revoke(task, credential_lease())
+    assert [(request.method, request.url.path) for request in requests] == [
+        ("GET", "/installation/repositories"),
+        ("GET", "/repos/org/repoo/hooks"),
+    ]
+
+
 def manual_payload(**credentials):
     values = {
         "access_token": SecretStr("test-installation"),
