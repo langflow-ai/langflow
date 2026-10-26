@@ -349,7 +349,7 @@ async def test_owner_only_families_ignore_an_explicit_connection_share(
             return True
 
         async def batch_enforce(self, *, user_id, domain, requests, context=None):  # noqa: ARG002
-            assert context == {"execution_principal_kind": "actor"}
+            assert context == {"execution_principal_kind": "actor", "execution_principal": allowed}
             return [True] * len(requests)
 
     monkeypatch.setattr(connection_service, "get_authorization_service", _AuthzStub)

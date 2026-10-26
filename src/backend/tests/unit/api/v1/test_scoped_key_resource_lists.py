@@ -23,6 +23,7 @@ from tests.unit.services.authorization._policy_double import install_policy_auth
 @contextmanager
 def exact_resource_plugin(monkeypatch, *, structured=True):
     settings = get_settings_service()
+    monkeypatch.setattr(settings.auth_settings, "API_KEY_SCOPES_ENABLED", True)
     with install_policy_authz(settings) as service:
 
         async def enforce(*, obj, act, context=None, **_kwargs):
