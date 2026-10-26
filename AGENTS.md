@@ -235,7 +235,15 @@ changes:
 
 ## Documentation
 
-Documentation uses Docusaurus and lives in `docs/`:
+Two places hold docs, and they serve different readers.
+
+**Feature notes** go in `docs/features/`. Agents and developers write here while implementing a change: behavior, design details, and anything that should stay on record. One markdown file per topic, named for the change. This folder is not published.
+
+**User-facing docs** are the Docusaurus site. Pages live in `docs/docs/` and `docs/versioned_docs/`, and the nav lives in `docs/sidebars.js`. People read these on the docs site, and models retrieve them from the published docs. Edit these only when the task is a user-facing docs change that the docs writer should review.
+
+A pull request that touches any file under `docs/` flags the docs team. That notice is optional and does not block merge.
+
+To preview the published site:
 ```bash
 cd docs
 yarn install
