@@ -118,7 +118,11 @@ class SplitTextComponent(Component):
                 documents = [self.data_inputs.to_lc_document()]
             else:
                 try:
-                    documents = [input_.to_lc_document() for input_ in self.data_inputs if isinstance(input_, Data)]
+                    documents = [
+                        input_.model_copy(update={"text_key": self.text_key}).to_lc_document()
+                        for input_ in self.data_inputs
+                        if isinstance(input_, Data)
+                    ]
                     if not documents:
                         msg = f"No valid Data inputs found in {type(self.data_inputs)}"
                         raise TypeError(msg)
