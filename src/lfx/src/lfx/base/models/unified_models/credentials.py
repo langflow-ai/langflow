@@ -229,12 +229,16 @@ def provider_variable_from_env(var_key: str) -> str | None:
     return None
 
 
-def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) -> dict[str, str]:
-    """Get all configured variables for a provider from database or environment."""
+def get_all_variables_for_provider(
+    user_id: UUID | str | None, provider: str, *, include_secrets: bool = True
+) -> dict[str, str]:
+    """Get configured provider variables, optionally resolving only non-secret settings."""
     result: dict[str, str] = {}
 
     # Get all variable definitions for this provider
     provider_vars = get_provider_all_variables(provider)
+    if not include_secrets:
+        provider_vars = [variable for variable in provider_vars if not variable.get("is_secret")]
     if not provider_vars:
         return result
 

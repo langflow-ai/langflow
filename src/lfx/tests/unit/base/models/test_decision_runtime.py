@@ -1,6 +1,7 @@
 """Decision execution rejects denied/configuration-invalid requests before inference."""
 
-from unittest.mock import Mock
+from contextlib import asynccontextmanager
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from lfx.base.models import unified_models
@@ -19,6 +20,7 @@ from lfx.services.variable.request_scope import (
     reset_no_env_fallback,
     reset_request_variables,
 )
+from pydantic import SecretStr
 
 
 @pytest.fixture
@@ -211,6 +213,79 @@ def test_callers_per_request_key_for_its_own_provider_comes_first(execution):
     request, model, transport = execution
     evaluate_decision(request, model=model, request_variables={"OPENAI_API_KEY": "sk-header-key"})
     assert transport.call_args.kwargs["api_key"] == "sk-header-key"
+
+
+@pytest.fixture
+def saved_provider_variables(monkeypatch):
+    from lfx.base.models.unified_models import credentials
+
+    @asynccontextmanager
+    async def session_scope():
+        yield object()
+
+    async def read_variable(*, name, **_kwargs):
+        if name == "OPENAI_API_KEY":
+            msg = "Saved API key cannot be decrypted"
+            raise ValueError(msg)
+        return SecretStr("https://api.openai.com/v1")
+
+    service = Mock(get_variable=AsyncMock(side_effect=read_variable))
+    monkeypatch.setattr(credentials, "session_scope", session_scope)
+    monkeypatch.setattr(credentials, "get_variable_service", lambda: service)
+    return service
+
+
+@pytest.mark.parametrize("alias", ["OPENAI_API_KEY", "x-langflow-global-var-openai-api-key"])
+def test_request_key_skips_broken_saved_secret(execution, saved_provider_variables, alias):
+    request, model, transport = execution
+    token = activate_no_env_fallback(disabled=True)
+    try:
+        evaluate_decision(
+            request,
+            model=model,
+            user_id="00000000-0000-0000-0000-000000000001",
+            request_variables={alias: SecretStr("sk-request-key")},
+        )
+    finally:
+        reset_no_env_fallback(token)
+    assert transport.call_args.kwargs["api_key"] == "sk-request-key"
+    names = [call.kwargs["name"] for call in saved_provider_variables.get_variable.await_args_list]
+    assert names == ["OPENAI_BASE_URL"]
+
+
+@pytest.mark.parametrize("request_variables", [None, {}, {"OPENAI_API_KEY": "   "}])
+def test_missing_request_override_does_not_hide_broken_saved_secret(
+    execution, saved_provider_variables, request_variables
+):
+    request, model, transport = execution
+    with pytest.raises(ValueError, match="cannot be decrypted"):
+        evaluate_decision(
+            request,
+            model=model,
+            user_id="00000000-0000-0000-0000-000000000001",
+            request_variables=request_variables,
+        )
+    transport.assert_not_called()
+    saved_provider_variables.get_variable.assert_awaited_once()
+
+
+@pytest.mark.parametrize("broken_setting", [False, True])
+def test_request_key_still_reads_saved_credential_endpoint(execution, saved_provider_variables, broken_setting):
+    request, model, transport = execution
+    saved_provider_variables.get_variable.side_effect = (
+        ValueError("Saved endpoint cannot be decrypted") if broken_setting else None
+    )
+    saved_provider_variables.get_variable.return_value = SecretStr("https://custom.example/v1")
+    expected_error = ValueError if broken_setting else DecisionConfigurationError
+    expected_message = "cannot be decrypted" if broken_setting else "official OpenAI endpoint"
+    with pytest.raises(expected_error, match=expected_message):
+        evaluate_decision(
+            request,
+            model=model,
+            user_id="00000000-0000-0000-0000-000000000001",
+            request_variables={"OPENAI_API_KEY": "sk-request-key"},
+        )
+    transport.assert_not_called()
 
 
 @pytest.mark.parametrize("variable", ["OPENAI_BASE_URL", "OPENAI_API_BASE"])

@@ -73,25 +73,25 @@ def evaluate_decision(
 
     from lfx.base.models.decisions.providers import evaluate_provider, require_official_openai_endpoint
 
-    variables = unified_models.get_all_variables_for_provider(user_id, provider)
-    if provider == "OpenAI":
-        # A caller's per-request endpoint counts too, so a key meant for a proxy never reaches the hosted API.
-        require_official_openai_endpoint(variables, request_variables or {})
-
     # Only the provider's own credential is used; flows cannot supply or name a key. A caller's
     # per-request value for it comes first, in any form a request sends it (X-LANGFLOW-GLOBAL-VAR-*
     # headers arrive dashed, lfx serve keeps x-langflow-global-var-* aliases), then the provider's
     # configured variable, which also accepts a LANGFLOW_-prefixed environment name.
     own_variable = unified_models.get_provider_secret_variable_key(provider)
     requested = request_variables or {}
-    resolved_key = next(
+    requested_key = next(
         (
             key
             for name in variable_name_forms(own_variable)
             if (key := secret_value_to_str(requested.get(name), strip=True))
         ),
         None,
-    ) or secret_value_to_str(variables.get(own_variable), strip=True)
+    )
+    variables = unified_models.get_all_variables_for_provider(user_id, provider, include_secrets=requested_key is None)
+    if provider == "OpenAI":
+        # Saved settings still constrain request keys, even when stored as Credential variables.
+        require_official_openai_endpoint(variables, requested)
+    resolved_key = requested_key or secret_value_to_str(variables.get(own_variable), strip=True)
     if not resolved_key:
         msg = f"Add the {provider} API key in Model Providers, or set {own_variable}."
         raise DecisionConfigurationError(msg)

@@ -16,6 +16,7 @@ from lfx.graph.flow_builder.component import (
     CUSTOM_COMPONENT_CANVAS_TYPE,
     FLOW_BUILDER_REGISTRY_TYPE_KEY,
     FLOW_BUILDER_UNTRUSTED_CUSTOM_KEY,
+    validate_router_mode_update,
 )
 from lfx.graph.flow_builder.component import (
     _coerce_model_value as fb_coerce_model_value,
@@ -503,8 +504,11 @@ class ConfigureComponent(Component):
 
         try:
             _require_allowed_model_providers(_model_providers_in_params(flow, self.component_id, params))
-        except ModelProviderPolicyError as e:
-            logger.warning("configure_component blocked by model-provider policy: %s", e)
+            node = _find_node(flow, self.component_id)
+            if node and node["data"].get("type") == "SmartRouter":
+                validate_router_mode_update(node["data"]["node"].get("template", {}), params)
+        except (ModelProviderPolicyError, ValueError) as e:
+            logger.warning("configure_component rejected: %s", e)
             return Data(data={"error": str(e)})
 
         # Deterministic review gate (Bug B): editing a TEXT field on a pre-existing
