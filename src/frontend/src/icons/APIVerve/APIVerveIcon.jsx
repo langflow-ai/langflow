@@ -5,7 +5,14 @@ const SvgAPIVerve = ({ isDark: _isDark, ...props }) => (
     fill="currentColor"
     {...props}
   >
-    <rect x="4" y="4" width="18" height="18" rx="5" transform="rotate(45 13 13)" />
+    <rect
+      x="4"
+      y="4"
+      width="18"
+      height="18"
+      rx="5"
+      transform="rotate(45 13 13)"
+    />
     <rect
       x="9"
       y="9"
