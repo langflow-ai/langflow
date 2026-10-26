@@ -568,6 +568,7 @@ export function AddConnectionDialog({
                     providerId={providerId}
                     noRegistration={noRegistration}
                     usesToken={usesToken}
+                    docsUrl={provider?.docs_url}
                   />
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -659,6 +660,16 @@ export function AddConnectionDialog({
                     </div>
                   </div>
                 </>
+              )}
+
+              {reauthorize && usesToken && (
+                <ConnectionSetupHelp
+                  key={`${providerId}:${usesToken}`}
+                  providerId={providerId}
+                  noRegistration={noRegistration}
+                  usesToken={usesToken}
+                  docsUrl={provider?.docs_url}
+                />
               )}
 
               {usesToken && (
@@ -780,6 +791,7 @@ export function AddConnectionDialog({
                 key={providerId}
                 providerId={providerId}
                 noRegistration={noRegistration}
+                docsUrl={provider?.docs_url}
               />
               {registrationSelect}
 
@@ -831,6 +843,7 @@ export function AddConnectionDialog({
               <ConnectionSetupHelp
                 providerId={providerId}
                 noRegistration={false}
+                docsUrl={provider?.docs_url}
               />
             )}
             <div className="flex justify-end gap-2">

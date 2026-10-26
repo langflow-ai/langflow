@@ -57,6 +57,7 @@ jest.mock("@/components/common/genericIconComponent", () => ({
 const provider = {
   provider_id: manifest.provider_id,
   display_name: manifest.display_name,
+  docs_url: manifest.docs_url,
   approved: true,
   enabled: false,
   connection_count: 0,
@@ -81,13 +82,16 @@ const revokedConnection = {
   has_credentials: false,
 } as unknown as ConnectionRead;
 
-function renderDialog(reauthorize?: ConnectionRead) {
+function renderDialog(
+  reauthorize?: ConnectionRead,
+  providers: IntegrationProviderRead[] = [provider],
+) {
   return render(
     <I18nextProvider i18n={i18n}>
       <AddConnectionDialog
         open
         onOpenChange={jest.fn()}
-        providers={[provider]}
+        providers={providers}
         canCreateInstance={false}
         deploymentContext="self_managed"
         reauthorize={reauthorize}
@@ -101,6 +105,54 @@ beforeEach(() => {
   mockRenew.mockReset();
   mockStartOAuth.mockReset();
   mockRemove.mockReset();
+});
+
+it.each([undefined, revokedConnection])(
+  "links to GitHub setup while creating or renewing a connection",
+  (connection) => {
+    renderDialog(connection);
+    const link = screen.getByRole("link", { name: "Setup guide" });
+    expect(link).toHaveAttribute("href", manifest.docs_url);
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    expect(screen.queryByText(/No OAuth registration/)).not.toBeInTheDocument();
+  },
+);
+
+it("updates setup guidance when the selected provider changes", async () => {
+  const user = userEvent.setup();
+  const other = {
+    ...provider,
+    provider_id: "custom-provider",
+    display_name: "Custom provider",
+    docs_url: "https://docs.example.com/custom/setup",
+  };
+  const undocumented = {
+    ...other,
+    provider_id: "undocumented-provider",
+    display_name: "Undocumented provider",
+    docs_url: null,
+  };
+  renderDialog(undefined, [provider, other, undocumented]);
+  expect(screen.getByRole("link", { name: "Setup guide" })).toHaveAttribute(
+    "href",
+    manifest.docs_url,
+  );
+  await user.selectOptions(
+    screen.getByTestId("connection-provider"),
+    other.provider_id,
+  );
+  expect(screen.getByRole("link", { name: "Setup guide" })).toHaveAttribute(
+    "href",
+    other.docs_url,
+  );
+  await user.selectOptions(
+    screen.getByTestId("connection-provider"),
+    undocumented.provider_id,
+  );
+  expect(
+    screen.queryByRole("link", { name: "Setup guide" }),
+  ).not.toBeInTheDocument();
 });
 
 it("keeps the existing connection when token renewal is canceled", async () => {

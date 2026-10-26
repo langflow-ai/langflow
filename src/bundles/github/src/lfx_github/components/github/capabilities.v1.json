@@ -3,7 +3,7 @@
   "provider_id": "github",
   "display_name": "GitHub",
   "icon": "Github",
-  "docs_url": "https://docs.github.com/en/apps/using-github-apps/installing-your-own-github-app",
+  "docs_url": "https://github.com/langflow-ai/langflow/blob/c28dd06c973d94852222f0dffa488bc99e7612a3/src/bundles/github/README.md#setup",
   "auth_profiles": [
     {
       "id": "github-installation",
