@@ -31,7 +31,7 @@ class RuncrateModelComponent(LCModelComponent):
         SecretStrInput(
             name="api_key",
             display_name="Runcrate API Key",
-            info="Create a key at https://www.runcrate.ai/dashboard/api-keys",
+            info="Create a key at https://www.runcrate.ai/dashboard/api-keys?utm_source=langflow&utm_medium=listing&utm_campaign=gpu_pricing",
             value="RUNCRATE_API_KEY",
             required=True,
         ),
