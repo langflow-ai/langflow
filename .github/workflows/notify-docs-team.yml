@@ -1,0 +1,88 @@
+name: Notify docs team
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "docs/**"
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Flag the docs team
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const pullNumber = context.payload.pull_request.number;
+            const prAuthor = context.payload.pull_request.user.login;
+            const marker = "<!-- docs-team-notice -->";
+            const repo = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            };
+
+            const reviewers = "${{ vars.DOCS_TEAM_MEMBERS }}"
+              .split(",")
+              .map((user) => user.trim())
+              .filter((user) => user.length > 0 && user !== prAuthor);
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              ...repo,
+              pull_number: pullNumber,
+              per_page: 100,
+            });
+            const docsFiles = files.filter((file) => file.filename.startsWith("docs/"));
+            const listed = docsFiles.slice(0, 40).map((file) => `- \`${file.filename}\` (${file.status})`);
+            if (docsFiles.length > listed.length) {
+              listed.push(`- …and ${docsFiles.length - listed.length} more`);
+            }
+
+            const body = [
+              marker,
+              "Docs files changed in this pull request. The docs team has been flagged.",
+              "This review request is optional and does not block merge.",
+              "",
+              listed.length > 0 ? listed.join("\n") : "No files under `docs/` remain in the current diff.",
+            ].join("\n");
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              ...repo,
+              issue_number: pullNumber,
+              per_page: 100,
+            });
+            const existing = comments.find((comment) => comment.body?.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                ...repo,
+                comment_id: existing.id,
+                body,
+              });
+              core.info("Updated the existing docs notice.");
+              return;
+            }
+
+            await github.rest.issues.createComment({
+              ...repo,
+              issue_number: pullNumber,
+              body,
+            });
+
+            if (reviewers.length === 0) {
+              core.warning("No eligible docs reviewers. Set the DOCS_TEAM_MEMBERS repository variable.");
+              return;
+            }
+
+            try {
+              await github.rest.pulls.requestReviewers({
+                ...repo,
+                pull_number: pullNumber,
+                reviewers,
+              });
+              core.info(`Requested review from: ${reviewers.join(", ")}`);
+            } catch (error) {
+              core.warning(`Could not request docs reviewers: ${error.message}`);
+            }
