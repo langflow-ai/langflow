@@ -2991,6 +2991,7 @@
   "connections.status.reauthorize": "Volver a conectar",
   "connections.status.reasonMissing": "La credencial almacenada ya no existe.",
   "connections.status.reasonUndecryptable": "La credencial almacenada ya no se descifra con la clave de esta instancia.",
+  "connections.scopes.githubApp": "Gestionado por la aplicación de GitHub",
   "connections.scopes.none": "Sin permisos concedidos",
   "connections.health.healthy": "Correcta",
   "connections.health.unhealthy": "Con problemas",

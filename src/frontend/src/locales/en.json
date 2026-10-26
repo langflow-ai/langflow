@@ -2990,6 +2990,7 @@
   "connections.status.reauthorize": "Reconnect",
   "connections.status.reasonMissing": "The stored credential is gone.",
   "connections.status.reasonUndecryptable": "The stored credential no longer decrypts with this instance's key.",
+  "connections.scopes.githubApp": "Managed by the GitHub App",
   "connections.scopes.none": "No scopes granted",
   "connections.health.healthy": "Healthy",
   "connections.health.unhealthy": "Unhealthy",

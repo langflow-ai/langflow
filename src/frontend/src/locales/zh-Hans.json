@@ -2990,6 +2990,7 @@
   "connections.status.reauthorize": "重新连接",
   "connections.status.reasonMissing": "存储的凭据已丢失。",
   "connections.status.reasonUndecryptable": "存储的凭据无法再用此实例的密钥解密。",
+  "connections.scopes.githubApp": "由 GitHub App 管理",
   "connections.scopes.none": "未授予任何权限范围",
   "connections.health.healthy": "正常",
   "connections.health.unhealthy": "异常",

@@ -3,7 +3,13 @@
 from datetime import datetime, timedelta, timezone
 
 from lfx.integrations.errors import AuthExpiredError, ConnectionNotAuthorizedError, IntegrationError, RateLimitedError
-from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest, CredentialLease, ResolvedCredential
+from lfx.integrations.models import (
+    ConnectionAccount,
+    ConnectionRef,
+    ConnectionResolutionRequest,
+    CredentialLease,
+    ResolvedCredential,
+)
 from lfx.services.authorization.base import ExecutionPrincipal
 from lfx_github.client import GitHubClient
 
@@ -17,6 +23,19 @@ class _ManualResolver:
 
     async def resolve(self, _request: ConnectionResolutionRequest) -> ResolvedCredential:
         return self.credential
+
+
+def _installation_account(response: dict | list) -> ConnectionAccount | None:
+    repositories = response.get("repositories") if isinstance(response, dict) else None
+    if not isinstance(repositories, list) or not repositories or not isinstance(repositories[0], dict):
+        return None
+    owner = repositories[0].get("owner")
+    if not isinstance(owner, dict):
+        return None
+    owner_id, login = owner.get("id"), owner.get("login")
+    if type(owner_id) is not int or owner_id <= 0 or not isinstance(login, str) or not login.strip():
+        return None
+    return ConnectionAccount(id=str(owner_id), display=login)
 
 
 async def validate_manual_credential(payload: ConnectionCreate, *, context: str) -> ConnectionCreate:
@@ -51,7 +70,7 @@ async def validate_manual_credential(payload: ConnectionCreate, *, context: str)
     lease = CredentialLease(_ManualResolver(credential), request)
     try:
         async with GitHubClient(lease) as client:
-            await client.request("GET", "/installation/repositories", params={"per_page": 1})
+            installation = await client.request("GET", "/installation/repositories", params={"per_page": 1})
     except AuthExpiredError:
         msg = "GitHub rejected this token. Paste a valid GitHub App installation token and try again."
         raise ManualCredentialError(msg) from None
@@ -68,7 +87,9 @@ async def validate_manual_credential(payload: ConnectionCreate, *, context: str)
     return payload.model_copy(
         update={
             "granted_scopes": [],
-            "executing_identity": ExecutingIdentityDescriptor(identity="service"),
+            "executing_identity": ExecutingIdentityDescriptor(
+                identity="service", account=_installation_account(installation)
+            ),
             "credentials": credentials.model_copy(update={"expires_at": expiry}),
         }
     )

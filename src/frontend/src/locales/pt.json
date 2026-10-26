@@ -2991,6 +2991,7 @@
   "connections.status.reauthorize": "Reconectar",
   "connections.status.reasonMissing": "A credencial armazenada não existe mais.",
   "connections.status.reasonUndecryptable": "A credencial armazenada não é mais descriptografada com a chave desta instância.",
+  "connections.scopes.githubApp": "Gerenciado pelo GitHub App",
   "connections.scopes.none": "Nenhum escopo concedido",
   "connections.health.healthy": "Saudável",
   "connections.health.unhealthy": "Com falha",

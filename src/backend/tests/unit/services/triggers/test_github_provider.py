@@ -24,7 +24,13 @@ from langflow.services.triggers.ingress.verifiers import IngressRejected, Ingres
 from langflow.services.triggers.providers.github.config import normalize_config
 from langflow.services.triggers.providers.github.events import verify
 from lfx.integrations.errors import InvalidRequestError
-from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest, CredentialLease, ResolvedCredential
+from lfx.integrations.models import (
+    ConnectionAccount,
+    ConnectionRef,
+    ConnectionResolutionRequest,
+    CredentialLease,
+    ResolvedCredential,
+)
 from lfx.services.authorization.base import ExecutionPrincipal
 from lfx_github.client import GitHubClient
 from pydantic import SecretStr
@@ -346,23 +352,58 @@ def manual_payload(**credentials):
     )
 
 
-async def test_manual_installation_identity_discards_scope_and_account_claims(monkeypatch):
+@pytest.mark.parametrize(
+    "response",
+    [
+        {"repositories": [], "total_count": 0},
+        {"repositories": [{"owner": None}]},
+        {"repositories": [{"owner": {"id": True, "login": "invalid"}}]},
+        {"repositories": [{"owner": {"id": 80, "login": ""}}]},
+    ],
+)
+async def test_manual_installation_identity_discards_scope_and_account_claims(monkeypatch, response):
     from langflow.services.triggers.providers.github import credentials
 
     calls = []
 
     def handle(request):
         calls.append(request)
-        return httpx.Response(200, json={"repositories": [], "total_count": 0})
+        return httpx.Response(200, json=response)
 
     monkeypatch.setattr(credentials, "GitHubClient", partial(GitHubClient, transport=httpx.MockTransport(handle)))
-    original = manual_payload()
+    original = manual_payload().model_copy(
+        update={
+            "executing_identity": ExecutingIdentityDescriptor(
+                identity="user_delegated", account=ConnectionAccount(id="claimed", display="Unverified account")
+            )
+        }
+    )
     result = await credentials.validate_manual_credential(original, context="self_managed")
     assert result.executing_identity.identity == "service"
     assert result.executing_identity.account is None
     assert result.granted_scopes == []
     assert result.credentials.expires_at <= original.credentials.expires_at
     assert all(call.url.path == "/installation/repositories" for call in calls)
+
+
+@pytest.mark.parametrize("owner_type", ["User", "Organization"])
+async def test_manual_installation_identity_captures_verified_repository_owner(monkeypatch, owner_type):
+    from langflow.services.triggers.providers.github import credentials
+
+    def handle(_request):
+        return httpx.Response(
+            200,
+            json={
+                "repositories": [{"owner": {"id": 80, "login": "installation-owner", "type": owner_type}}],
+                "total_count": 1,
+            },
+        )
+
+    monkeypatch.setattr(credentials, "GitHubClient", partial(GitHubClient, transport=httpx.MockTransport(handle)))
+    result = await credentials.validate_manual_credential(manual_payload(), context="self_managed")
+    assert result.executing_identity.identity == "service"
+    assert result.executing_identity.account == ConnectionAccount(id="80", display="installation-owner")
+    assert result.granted_scopes == []
 
 
 @pytest.mark.parametrize(

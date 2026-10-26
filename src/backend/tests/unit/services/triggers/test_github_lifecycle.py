@@ -106,7 +106,13 @@ def github_runtime(monkeypatch, client):  # noqa: ARG001
                 return httpx.Response(
                     controls.installation_status, json={"message": "private provider response test-installation"}
                 )
-            return httpx.Response(200, json={"total_count": 1, "repositories": [{"id": 80, "full_name": "org/repo"}]})
+            return httpx.Response(
+                200,
+                json={
+                    "total_count": 1,
+                    "repositories": [{"id": 80, "full_name": "org/repo", "owner": {"id": 9, "login": "org"}}],
+                },
+            )
         if path == "/repos/org/repo":
             return httpx.Response(200, json={"id": 80})
         if request.method == "GET" and path.endswith("/hooks"):
@@ -179,6 +185,10 @@ async def save_trigger(flow_id, owner_id, *, connection="github/work", actions=N
 async def test_dialog_payload_is_accepted_and_catalog_requires_expiration(trigger_owner, client, logged_in_headers):
     connection = await create_connection(trigger_owner)
     assert connection.executing_identity.identity == "service"
+    assert connection.executing_identity.account.model_dump(exclude_none=True) == {"id": "9", "display": "org"}
+    async with session_scope() as session:
+        stored = await session.get(Connection, connection.id)
+        assert stored.executing_identity["account"] == {"id": "9", "display": "org", "tenant_id": None}
     assert connection.granted_scopes == []
     response = await client.get("/api/v1/integrations", headers=logged_in_headers)
     assert response.status_code == 200

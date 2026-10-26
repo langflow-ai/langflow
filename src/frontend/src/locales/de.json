@@ -2991,6 +2991,7 @@
   "connections.status.reauthorize": "Neu verbinden",
   "connections.status.reasonMissing": "Die gespeicherten Anmeldedaten fehlen.",
   "connections.status.reasonUndecryptable": "Die gespeicherten Anmeldedaten lassen sich mit dem Schlüssel dieser Instanz nicht mehr entschlüsseln.",
+  "connections.scopes.githubApp": "Von der GitHub-App verwaltet",
   "connections.scopes.none": "Keine Berechtigungen erteilt",
   "connections.health.healthy": "In Ordnung",
   "connections.health.unhealthy": "Fehlerhaft",

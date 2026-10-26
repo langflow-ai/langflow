@@ -2991,6 +2991,7 @@
   "connections.status.reauthorize": "再接続",
   "connections.status.reasonMissing": "保存されていた資格情報がありません。",
   "connections.status.reasonUndecryptable": "保存された資格情報は、このインスタンスの鍵では復号できません。",
+  "connections.scopes.githubApp": "GitHub App によって管理",
   "connections.scopes.none": "付与されたスコープなし",
   "connections.health.healthy": "正常",
   "connections.health.unhealthy": "異常",

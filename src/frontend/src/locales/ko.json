@@ -2990,6 +2990,7 @@
   "connections.status.reauthorize": "다시 연결",
   "connections.status.reasonMissing": "저장된 인증 정보가 없습니다.",
   "connections.status.reasonUndecryptable": "이 인스턴스의 키로는 저장된 인증 정보를 더 이상 복호화할 수 없습니다.",
+  "connections.scopes.githubApp": "GitHub App에서 관리",
   "connections.scopes.none": "부여된 권한 범위 없음",
   "connections.health.healthy": "정상",
   "connections.health.unhealthy": "비정상",

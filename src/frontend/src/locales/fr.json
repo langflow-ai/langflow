@@ -2991,6 +2991,7 @@
   "connections.status.reauthorize": "Reconnecter",
   "connections.status.reasonMissing": "L'identifiant enregistré a disparu.",
   "connections.status.reasonUndecryptable": "L'identifiant enregistré ne se déchiffre plus avec la clé de cette instance.",
+  "connections.scopes.githubApp": "Géré par l’application GitHub",
   "connections.scopes.none": "Aucune autorisation accordée",
   "connections.health.healthy": "Saine",
   "connections.health.unhealthy": "En échec",
