@@ -102,7 +102,7 @@ def _paged_session_ids_stmt(stmt, *, limit: int | None, offset: int | None):
     return (
         stmt.where(col(MessageTable.session_id).isnot(None))
         .group_by(MessageTable.session_id)
-        .order_by(func.max(MessageTable.timestamp).desc(), col(MessageTable.session_id).desc())
+        .order_by(func.max(MessageTable.timestamp).desc(), col(MessageTable.session_id).asc())
         .offset(offset or 0)
         .limit(effective_limit)
     )

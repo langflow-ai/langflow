@@ -104,7 +104,11 @@ test(
 
     // create new session (use sidebar new-chat button)
     await page.getByTestId(TID.newChat).click();
-    await expect(page.getByTitle("New Session 0")).toBeVisible();
+    await expect(
+      page.getByTitle(
+        /^New Session [0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      ),
+    ).toBeVisible();
 
     // check rename session
     await sendPlaygroundMessage(page, "session_after_delete", {
