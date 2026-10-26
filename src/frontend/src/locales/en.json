@@ -3061,7 +3061,7 @@
   "connections.add.cleanupFailedBody": "The unfinished connection could not be deleted. Remove it from the list.",
   "connections.add.identity": "Runs as",
   "connections.add.method": "How to connect",
-  "connections.add.methodOauth": "Sign in with Slack",
+  "connections.add.methodOauth": "Sign in with {{provider}}",
   "connections.add.methodToken": "Paste a token",
   "connections.add.token": "Token",
   "connections.add.tokenHelp": "Paste an app-level token (xapp-…) so Slack triggers can receive events over Socket Mode, or a bot token (xoxb-…) for the actions that run as the app. Both are in your Slack app's settings.",
@@ -3302,5 +3302,16 @@
   "triggers.schedule.next": "Next run {{time}}",
   "triggers.schedule.notScheduled": "Not scheduled",
   "triggers.secret.isSet": "Set. Shown only when created or rotated.",
-  "triggers.secret.notSet": "Not set. Requests are refused until you create one."
+  "triggers.secret.notSet": "Not set. Requests are refused until you create one.",
+  "connections.scopes.githubApp": "Managed by the GitHub App",
+  "triggers.state.blocked": "Needs attention",
+  "triggers.provider.github": "GitHub",
+  "triggers.provider.gitlab": "GitLab",
+  "triggers.provider.whatsapp": "WhatsApp Business",
+  "triggers.provider.discord": "Discord",
+  "triggers.provider.telegram": "Telegram",
+  "triggers.provider.salesforce": "Salesforce",
+  "triggers.provider.servicenow": "ServiceNow",
+  "triggers.provider.jira": "Jira",
+  "triggers.provider.confluence": "Confluence"
 }

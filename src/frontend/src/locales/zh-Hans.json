@@ -3061,7 +3061,7 @@
   "connections.add.cleanupFailedBody": "无法删除未完成的连接，请从列表中将其移除。",
   "connections.add.identity": "以此身份运行",
   "connections.add.method": "连接方式",
-  "connections.add.methodOauth": "使用 Slack 登录",
+  "connections.add.methodOauth": "使用 {{provider}} 登录",
   "connections.add.methodToken": "粘贴令牌",
   "connections.add.token": "令牌",
   "connections.add.tokenHelp": "粘贴应用级令牌 (xapp-…)，让 Slack 触发器通过 Socket Mode 接收事件；或粘贴机器人令牌 (xoxb-…)，供以应用身份运行的操作使用。两者都在你的 Slack 应用设置中。",
@@ -3302,5 +3302,16 @@
   "triggers.schedule.next": "下次运行：{{time}}",
   "triggers.schedule.notScheduled": "未计划",
   "triggers.secret.isSet": "已设置。仅在创建或轮换时显示。",
-  "triggers.secret.notSet": "未设置。在你创建之前，请求会被拒绝。"
+  "triggers.secret.notSet": "未设置。在你创建之前，请求会被拒绝。",
+  "connections.scopes.githubApp": "由 GitHub App 管理",
+  "triggers.state.blocked": "需要处理",
+  "triggers.provider.github": "GitHub",
+  "triggers.provider.gitlab": "GitLab",
+  "triggers.provider.whatsapp": "WhatsApp Business",
+  "triggers.provider.discord": "Discord",
+  "triggers.provider.telegram": "Telegram",
+  "triggers.provider.salesforce": "Salesforce",
+  "triggers.provider.servicenow": "ServiceNow",
+  "triggers.provider.jira": "Jira",
+  "triggers.provider.confluence": "Confluence"
 }
