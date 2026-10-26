@@ -116,4 +116,47 @@ describe("useFileDrop.onDrop (drag-and-drop flow between projects)", () => {
     expect(mockSetFolderDragging).toHaveBeenCalledWith(false);
     expect(mockSetFolderIdDragging).toHaveBeenCalledWith("");
   });
+
+  it("should_report_validation_messages_when_a_dropped_flow_file_fails_to_upload", () => {
+    const { result } = renderHook(() => useFileDrop("project-B"));
+    const file = new File(["{}"], "flow.json", { type: "application/json" });
+
+    const event = {
+      dataTransfer: {
+        getData: jest.fn(() => ""),
+        types: ["Files"],
+        files: [file],
+      },
+      preventDefault: jest.fn(),
+    } as unknown as React.DragEvent<HTMLDivElement>;
+
+    result.current.onDrop(event, "project-B");
+
+    expect(mockUploadFlowToFolder).toHaveBeenCalledWith(
+      { flows: expect.any(FormData), folderId: "project-B" },
+      expect.objectContaining({ onError: expect.any(Function) }),
+    );
+    // The 422 an upload gets when an MCP server config the flow carries fails validation.
+    mockUploadFlowToFolder.mock.calls[0][1].onError({
+      response: {
+        status: 422,
+        data: {
+          detail: [
+            {
+              type: "value_error",
+              loc: [],
+              msg: "Value error, Environment variable 'NODE_OPTIONS' is not allowed for security reasons",
+            },
+          ],
+        },
+      },
+    });
+
+    expect(mockSetErrorData).toHaveBeenCalledWith({
+      title: "errors.upload",
+      list: [
+        "Value error, Environment variable 'NODE_OPTIONS' is not allowed for security reasons",
+      ],
+    });
+  });
 });

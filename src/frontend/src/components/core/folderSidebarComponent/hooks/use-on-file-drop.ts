@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { usePostUploadFlowToFolder } from "@/controllers/API/queries/folders/use-post-upload-to-folder";
 import { handleBlockedSave } from "@/hooks/flows/handle-blocked-save";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
+import { extractApiErrorMessages } from "@/utils/apiError";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
@@ -129,7 +130,17 @@ const useFileDrop = (folderId: string) => {
     setFolderDragging(false);
     setFolderIdDragging("");
 
-    uploadFlowToFolder({ flows: formData, folderId });
+    uploadFlowToFolder(
+      { flows: formData, folderId },
+      {
+        onError: (err) => {
+          setErrorData({
+            title: t("errors.upload"),
+            list: extractApiErrorMessages(err),
+          });
+        },
+      },
+    );
   };
 
   return {

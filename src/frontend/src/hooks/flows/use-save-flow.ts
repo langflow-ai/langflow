@@ -1,5 +1,6 @@
 import type { ReactFlowJsonObject } from "@xyflow/react";
 import { useTranslation } from "react-i18next";
+import { extractApiErrorMessage } from "@/controllers/API/helpers/extract-api-error-message";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import useAlertStore from "@/stores/alertStore";
@@ -223,7 +224,7 @@ const useSaveFlow = () => {
               reject(e);
               return;
             }
-            reportSaveError(detail || e.message || "Unknown error");
+            reportSaveError(extractApiErrorMessage(e, "Unknown error"));
             setSaveLoading(false);
             reject(e);
           };
