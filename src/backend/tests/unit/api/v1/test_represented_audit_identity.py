@@ -25,16 +25,21 @@ pytestmark = pytest.mark.usefixtures("audit_on")
 
 @pytest.fixture
 def audit_on(client):  # noqa: ARG001
+    """Enable audit persistence for each API test and restore the previous settings."""
     yield from enabled_audit()
 
 
 async def _key(user):
+    """Create a database-backed credential for a test user."""
     async with session_scope() as session:
         return await create_api_key(session, ApiKeyCreate(name=f"audit-{uuid4().hex}"), user.id)
 
 
 def _headers(key, subject="用户-Ålice"):
+    """Encode an exact represented identity alongside the test API key."""
+
     def encode(value):
+        """Encode UTF-8 identity bytes using the versioned transport format."""
         return "v1." + base64.urlsafe_b64encode(value.encode()).decode().rstrip("=")
 
     return {"x-api-key": key.api_key, ISSUER_HEADER: encode("https://idp.example"), SUBJECT_HEADER: encode(subject)}
@@ -42,6 +47,7 @@ def _headers(key, subject="用户-Ålice"):
 
 @pytest.fixture(params=["record_id", "secret_value"])
 async def trusted_key(active_user, monkeypatch, request):
+    """Trust the test credential through either its record ID or Secret value."""
     key = await _key(active_user)
     settings = get_settings_service().settings
     monkeypatch.setattr(settings, "audit_trusted_api_key_ids", [key.id] if request.param == "record_id" else [])
@@ -54,6 +60,7 @@ async def trusted_key(active_user, monkeypatch, request):
 async def test_service_account_and_represented_user_survive_project_and_flow_lifecycle(
     client, active_user, trusted_key
 ):
+    """Retain the service credential and represented user through resource lifecycle events."""
     headers = _headers(trusted_key)
     created = await client.post("api/v1/projects/", json={"name": f"project-{uuid4().hex}"}, headers=headers)
     assert created.status_code == 201, created.text
@@ -86,6 +93,7 @@ async def test_service_account_and_represented_user_survive_project_and_flow_lif
 async def test_another_key_on_the_same_account_and_a_user_token_cannot_assert_identity(
     client, active_user, trusted_key, logged_in_headers
 ):
+    """Reject assertions from untrusted credentials before a project can be created."""
     other = await _key(active_user)
     represented = {key: value for key, value in _headers(trusted_key).items() if key != "x-api-key"}
     for credential in ({"x-api-key": other.api_key}, logged_in_headers):
@@ -99,6 +107,7 @@ async def test_another_key_on_the_same_account_and_a_user_token_cannot_assert_id
 
 @pytest.mark.parametrize("malformed", ["partial", "duplicate", "oversized", "format_character"])
 async def test_invalid_identity_is_rejected_before_mutation(client, trusted_key, malformed):
+    """Reject incomplete, duplicate, oversized, and format-character assertions before mutation."""
     headers = list(_headers(trusted_key).items())
     if malformed == "partial":
         headers = [(key, value) for key, value in headers if key != SUBJECT_HEADER]
@@ -117,6 +126,7 @@ async def test_invalid_identity_is_rejected_before_mutation(client, trusted_key,
 
 
 async def test_failure_retains_identity_after_rollback(client, trusted_key):
+    """Preserve the authenticated and represented identities when a mutation rolls back."""
     headers = _headers(trusted_key)
     projects = []
     for _ in range(2):
@@ -134,6 +144,7 @@ async def test_failure_retains_identity_after_rollback(client, trusted_key):
 
 
 async def test_replacement_create_replace_and_receipt_replay_preserve_identity(client, trusted_key):
+    """Attribute replacements and failures correctly without duplicating successful receipt events."""
     headers = _headers(trusted_key)
     project_id, operation_id = uuid4(), uuid4()
     url = f"api/v1/projects/{project_id}/replacement-operations/{operation_id}"
@@ -165,7 +176,10 @@ async def test_replacement_create_replace_and_receipt_replay_preserve_identity(c
 
 
 async def test_concurrent_requests_and_direct_calls_do_not_share_identity(client, trusted_key):
+    """Keep represented identities separate across concurrent and subsequent requests."""
+
     async def create(subject):
+        """Create a project and return its recorded represented subject."""
         headers = _headers(trusted_key, subject) if subject else {"x-api-key": trusted_key.api_key}
         response = await client.post("api/v1/projects/", json={"name": f"project-{uuid4().hex}"}, headers=headers)
         assert response.status_code == 201, response.text
@@ -177,6 +191,7 @@ async def test_concurrent_requests_and_direct_calls_do_not_share_identity(client
 
 
 async def test_acting_history_is_not_projected_as_represented_identity(client, trusted_key):
+    """Filter legacy acting history without treating it as represented identity."""
     row = await record_event(
         resource_type="project",
         resource_id=uuid4(),
@@ -205,6 +220,7 @@ async def test_acting_history_is_not_projected_as_represented_identity(client, t
 
 
 async def test_both_identity_pairs_remain_distinct_in_filters_and_responses(client, trusted_key):
+    """Filter and return both stored identity pairs independently."""
     row = await record_event(
         resource_type="project",
         resource_id=uuid4(),
@@ -241,6 +257,7 @@ async def test_both_identity_pairs_remain_distinct_in_filters_and_responses(clie
 async def test_mcp_mutations_bind_identity_before_updating_settings(
     client, active_user, trusted_key, monkeypatch, composer_enabled, assertion
 ):
+    """Bind trusted MCP identities and reject invalid assertions before settings change."""
     settings = get_settings_service().settings
     monkeypatch.setattr(settings, "mcp_composer_enabled", composer_enabled)
     plain_headers = {"x-api-key": trusted_key.api_key}
@@ -294,6 +311,7 @@ async def test_mcp_mutations_bind_identity_before_updating_settings(
 async def test_composer_transport_auth_also_binds_represented_identity(
     client, active_user, trusted_key, monkeypatch, assertion
 ):
+    """Apply the same identity contract when composer transport authenticates a request."""
     from langflow.api.v1.mcp_projects import verify_project_auth_conditional
     from langflow.api.v1.mcp_utils import authenticated_caller_ctx
     from langflow.services.audit.represented import current_represented_identity
@@ -339,6 +357,7 @@ async def test_composer_transport_auth_also_binds_represented_identity(
 
 
 async def test_non_superuser_keeps_own_deleted_project_history_with_plugin_visibility(client, monkeypatch):
+    """Keep a service user's deleted project history visible under plugin filtering."""
     from langflow.api.v1 import audit_reads
 
     user_id, username = await make_user("service-history")
@@ -360,6 +379,7 @@ async def test_non_superuser_keeps_own_deleted_project_history_with_plugin_visib
         )
 
     async def plugin_visibility():
+        """Enable the plugin visibility branch for the history regression."""
         return True
 
     monkeypatch.setattr(audit_reads, "plugin_decides_visibility", plugin_visibility)

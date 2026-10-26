@@ -46,6 +46,7 @@ class AuditActor:
     represented_subject: str | None = None
 
     def __post_init__(self) -> None:
+        """Require complete identity pairs and enforce each field's character limit."""
         for prefix, issuer, subject, issuer_limit, subject_limit in (
             ("acting", self.acting_issuer, self.acting_subject, ACTING_ISSUER_MAX_LENGTH, ACTING_SUBJECT_MAX_LENGTH),
             (
@@ -116,6 +117,7 @@ class AuditRequestContextMiddleware:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        """Isolate request attribution and restore the previous context after the response."""
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return

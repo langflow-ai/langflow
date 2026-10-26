@@ -71,6 +71,7 @@ class AuditEventFilters:
     until: datetime | None = None
 
     def fingerprint(self) -> str:
+        """Bind a cursor to its exact filters while preserving legacy cursor fingerprints."""
         canonical: dict[str, Any] = {
             "resource_type": self.resource_type.value,
             "resource_id": str(self.resource_id) if self.resource_id else None,
@@ -93,6 +94,7 @@ class AuditEventFilters:
         return hashlib.sha256(encoded).hexdigest()
 
     def clauses(self) -> list[ColumnElement[bool]]:
+        """Build resource and identity filters without falling back between identity pairs."""
         clauses: list[ColumnElement[bool]] = [col(AuditEvent.resource_type) == self.resource_type.value]
         exact = {
             AuditEvent.resource_id: self.resource_id,

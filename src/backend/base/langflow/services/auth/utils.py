@@ -213,6 +213,7 @@ async def get_current_user(
     header_param: Annotated[str | None, Security(api_key_header)],
     db: AsyncSession = Depends(injectable_session_scope, scope="function"),
 ) -> User:
+    """Authenticate through the registered service, then bind asserted audit identity."""
     # Keep the native token (resolved by oauth2_login, which may already have
     # collapsed to the external credential) separate from a freshly-extracted
     # external credential so native verification never forwards a native token
@@ -564,6 +565,7 @@ async def get_current_user_mcp(
     header_param: Annotated[str | None, Security(api_key_header)],
     db: AsyncSession = Depends(injectable_session_scope, scope="function"),
 ) -> User:
+    """Authenticate the MCP caller before binding represented audit identity."""
     external_token = _get_external_token(request.headers, request.cookies)
     service = _auth_service()
     external_kwargs = {}

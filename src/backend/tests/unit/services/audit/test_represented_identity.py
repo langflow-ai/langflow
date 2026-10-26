@@ -33,11 +33,13 @@ from .conftest import project_patch_draft
 
 
 def encoded(value: str) -> str:
+    """Encode the supplied Unicode value without normalization or padding."""
     return "v1." + base64.urlsafe_b64encode(value.encode()).decode().rstrip("=")
 
 
 @pytest.mark.parametrize("value", ["auth0|Alice", "用户-Ålice", " CaseSensitive ", "s" * 512])
 def test_identity_decoding_preserves_exact_unicode(value):
+    """Preserve Unicode, case, and surrounding whitespace during identity decoding."""
     assert decode_identity_value(encoded(value), 512) == value
 
 
@@ -45,15 +47,18 @@ def test_identity_decoding_preserves_exact_unicode(value):
 def test_largest_utf8_values_fit_the_wire_limit(character_limit):
     # Each owl uses four UTF-8 bytes: this exercises the largest wire value
     # allowed by each real field's character limit.
+    """Accept each field's maximum character count when every character uses four bytes."""
     value = "🦉" * character_limit
     assert decode_identity_value(encoded(value), character_limit) == value
 
 
 @pytest.mark.parametrize("character_limit", [512, 2048])
 def test_oversized_wire_values_are_rejected_before_decoding(monkeypatch, character_limit):
+    """Reject excessive transport input before allocating decoded identity bytes."""
     wire_value = encoded("🦉" * 2049)
 
     def unexpected_decode(*_args, **_kwargs):
+        """Fail if an excessive wire value reaches the base64 decoder."""
         message = "Oversized headers must not reach the decoder"
         raise AssertionError(message)
 
@@ -84,17 +89,20 @@ def test_oversized_wire_values_are_rejected_before_decoding(monkeypatch, charact
     ],
 )
 def test_malformed_context_is_rejected_without_echoing_values(value):
+    """Reject invalid transport and unsafe Unicode with a bounded domain error."""
     with pytest.raises(InvalidAuditContextError) as raised:
         decode_identity_value(value, 512)
     assert str(raised.value) == "Invalid represented audit identity"
 
 
 def test_equivalent_base64_spellings_have_the_same_identity():
+    """Treat alternate final base64 bits as the same decoded identity."""
     assert decode_identity_value("v1.YQ", 512) == decode_identity_value("v1.YR", 512) == "a"
 
 
 @pytest.mark.parametrize("method", ["api_key", "jwt", "auto_login", "external"])
 def test_only_a_database_api_key_on_the_exact_allowlist_is_trusted(monkeypatch, method):
+    """Restrict assertions to an authenticated database key with the exact trusted record ID."""
     trusted, other = uuid4(), uuid4()
     monkeypatch.setattr(get_settings_service().settings, "audit_trusted_api_key_ids", [trusted])
     request = Request(
@@ -122,6 +130,7 @@ def test_only_a_database_api_key_on_the_exact_allowlist_is_trusted(monkeypatch, 
 
 
 def test_allowlist_configuration_validates_and_deduplicates_record_ids():
+    """Parse trusted key UUIDs once and reject malformed configuration."""
     first, second = uuid4(), uuid4()
     settings = ObservabilitySettings(audit_trusted_api_key_ids=f"{first}, {second},{first}")
     assert settings.audit_trusted_api_key_ids == [first, second]
@@ -131,6 +140,7 @@ def test_allowlist_configuration_validates_and_deduplicates_record_ids():
 
 @pytest.mark.parametrize("legacy_subject", [None, "legacy-session-user"])
 def test_represented_identity_preserves_authentication_and_legacy_end_user_scope(monkeypatch, legacy_subject):
+    """Keep audit assertions separate from authorization and legacy serving scope."""
     settings = get_settings_service().settings
     key_id = uuid4()
     monkeypatch.setattr(settings, "audit_trusted_api_key_ids", [key_id])
@@ -158,6 +168,7 @@ def test_represented_identity_preserves_authentication_and_legacy_end_user_scope
 
 
 def test_acting_and_represented_identity_are_independent():
+    """Allow either identity pair without copying values into the other pair."""
     fields = {"user_id": uuid4(), "actor_type": AuditActorType.API_KEY, "actor_id": uuid4()}
     actor = AuditActor(**fields, represented_issuer="issuer", represented_subject="subject")
     assert (actor.acting_issuer, actor.acting_subject) == (None, None)
@@ -176,14 +187,20 @@ def test_acting_and_represented_identity_are_independent():
 
 @pytest.mark.parametrize("prefix", ["acting", "represented"])
 def test_each_identity_pair_is_validated_independently(prefix):
+    """Accept exact limits and reject incomplete or oversized identity pairs independently."""
     fields = {"user_id": uuid4(), "actor_type": AuditActorType.API_KEY, "actor_id": uuid4()}
+    actor = AuditActor(**fields, **{f"{prefix}_issuer": "i" * 2048, f"{prefix}_subject": "s" * 512})
+    assert getattr(actor, f"{prefix}_issuer") == "i" * 2048
     with pytest.raises(AuditContractError):
         AuditActor(**fields, **{f"{prefix}_subject": "subject"})
+    with pytest.raises(AuditContractError, match=f"{prefix}_issuer is longer than the contract allows"):
+        AuditActor(**fields, **{f"{prefix}_issuer": "i" * 2049, f"{prefix}_subject": "subject"})
     with pytest.raises(AuditContractError):
         AuditActor(**fields, **{f"{prefix}_issuer": "issuer", f"{prefix}_subject": "s" * 513})
 
 
 async def test_writer_persists_distinct_identity_pairs(audit_session, audit_enabled):  # noqa: ARG001
+    """Store both supplied identity pairs without changing their values."""
     actor = AuditActor(
         user_id=uuid4(),
         actor_type=AuditActorType.USER,
@@ -202,6 +219,7 @@ async def test_writer_persists_distinct_identity_pairs(audit_session, audit_enab
 
 @pytest.mark.parametrize("schema", [AuditActorRead, AuditFeedActor])
 def test_acting_identity_remains_a_supported_api_field(schema):
+    """Keep acting identity fields available in both public audit schemas."""
     properties = schema.model_json_schema()["properties"]
     for name in ("acting_issuer", "acting_subject"):
         assert name in properties
