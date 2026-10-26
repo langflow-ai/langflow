@@ -7,14 +7,20 @@ import type {
 } from "@/controllers/API/queries/triggers";
 
 /**
- * The six badge states the UI shows. `dead` is the seventh trigger state, but
- * the contract renders it with the Error treatment and the `dead` reason
- * rather than as a badge of its own.
+ * Blocked configuration needs attention, while ordinary pending setup is busy.
+ * Dead triggers share the Error treatment.
  */
-export type TriggerBadgeState = Exclude<TriggerState, "dead">;
+export type TriggerBadgeState = Exclude<TriggerState, "dead"> | "blocked";
 
-export const badgeStateOf = (state: TriggerState): TriggerBadgeState =>
-  state === "dead" ? "error" : state;
+export const badgeStateOf = (
+  state: TriggerState,
+  reason?: TriggerRead["reason"],
+): TriggerBadgeState =>
+  state === "pending" && reason === "config_invalid"
+    ? "blocked"
+    : state === "dead"
+      ? "error"
+      : state;
 
 interface BadgeStyle {
   icon: string;
@@ -23,6 +29,10 @@ interface BadgeStyle {
 
 /** Every badge pairs an icon with text, never color alone. */
 export const TRIGGER_BADGE_STYLE: Record<TriggerBadgeState, BadgeStyle> = {
+  blocked: {
+    icon: "TriangleAlert",
+    className: "bg-accent-amber text-accent-amber-foreground border-0",
+  },
   pending: {
     icon: "LoaderCircle",
     className: "bg-accent-indigo text-accent-indigo-foreground border-0",
@@ -131,8 +141,12 @@ const PUSH_MECHANISMS = new Set([
   "google.calendar_push",
   "google.drive_push",
   "google.gmail_watch_pubsub_push",
+  "github.repository_webhook",
+  "gitlab.project_webhook",
+  "whatsapp.webhook",
+  "telegram.webhook",
 ]);
-const SOCKET_MECHANISMS = new Set(["slack.socket_mode"]);
+const SOCKET_MECHANISMS = new Set(["slack.socket_mode", "discord.gateway"]);
 
 export type TriggerTransport =
   | "push"
@@ -172,13 +186,33 @@ export const sourceIconOf = (
       return "Google";
     case "microsoft":
       return "Microsoft";
+    case "github":
+      return "Github";
+    case "gitlab":
+      return "Gitlab";
+    case "whatsapp":
+    case "discord":
+      return "MessageCircle";
+    case "telegram":
+      return "Send";
+    case "salesforce":
+      return "Cloud";
+    case "servicenow":
+      return "Server";
+    case "jira":
+      return "Ticket";
+    case "confluence":
+      return "BookOpen";
     default:
       return trigger.kind === "inbound_webhook" ? "Webhook" : "Clock";
   }
 };
 
 /** "Needs attention" groups every state the owner has to act on. */
-export const needsAttention = (trigger: Pick<TriggerRead, "state">): boolean =>
+export const needsAttention = (
+  trigger: Pick<TriggerRead, "state"> & Partial<Pick<TriggerRead, "reason">>,
+): boolean =>
+  (trigger.state === "pending" && trigger.reason === "config_invalid") ||
   trigger.state === "needs_reconnect" ||
   trigger.state === "error" ||
   trigger.state === "dead" ||
