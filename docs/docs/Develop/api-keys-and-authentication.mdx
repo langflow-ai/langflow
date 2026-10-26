@@ -582,11 +582,11 @@ The connection and integration endpoints count requests per signed-in user inste
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
-| `LANGFLOW_RATE_LIMIT_ENABLED` | Boolean | `True` | Enable rate limiting on the `/login` and `/api/v2/workflows/public` endpoints. Set to False to disable those limits (not recommended in production). |
+| `LANGFLOW_RATE_LIMIT_ENABLED` | Boolean | `True` | Enable rate limiting on the `/login` and `/api/v2/workflows/public` endpoints, and on the `/api/v1/webhook` endpoint when `LANGFLOW_WEBHOOK_AUTH_ENABLE=False`. Set to False to disable those limits (not recommended in production). |
 | `LANGFLOW_RATE_LIMIT_PER_MINUTE` | Integer | `5` | Maximum number of login attempts allowed per minute from a single IP address. |
 | `LANGFLOW_RATE_LIMIT_STORAGE_URI` | String | `memory://` | Storage backend for rate limit counters. Use `memory://` for single-server deployments or `redis://host:port` for multi-server deployments where the limit should be shared across instances. |
 | `LANGFLOW_RATE_LIMIT_TRUST_PROXY` | Boolean | `False` | When `true`, Langflow reads the client IP from the rightmost `X-Forwarded-For` header entry instead of the direct connection IP. Enable only when Langflow is behind a trusted reverse proxy or load balancer. Do not enable if users can reach Langflow directly, as this allows header spoofing. |
-| `LANGFLOW_PUBLIC_FLOW_RATE_LIMIT_PER_MINUTE` | Integer | `20` | Maximum number of unauthenticated public-flow runs allowed per minute from a single IP address. Public flows consume resources under an isolated anonymous principal, so they are rate-limited separately from the `/login` endpoint. |
+| `LANGFLOW_PUBLIC_FLOW_RATE_LIMIT_PER_MINUTE` | Integer | `20` | Maximum number of unauthenticated public-flow runs allowed per minute from a single IP address. Public flows consume resources under an isolated anonymous principal, so they are rate-limited separately from the `/login` endpoint. The same limit applies to `/api/v1/webhook` requests for each flow when `LANGFLOW_WEBHOOK_AUTH_ENABLE=False`. |
 | `LANGFLOW_CONNECTION_METADATA_RATE_LIMIT_PER_MINUTE` | Integer | `60` | Maximum number of connection and integration metadata reads allowed per minute for each signed-in user. These endpoints return no credential material and make no outbound provider call, and the Connections UI polls the connection listing every two seconds while an OAuth consent is pending, so they are limited separately from and more generously than the `/login` endpoint. Connection writes have their own limit, and credential tests, health checks, and the OAuth endpoints keep their own tighter buckets. |
 | `LANGFLOW_CONNECTION_WRITE_RATE_LIMIT_PER_MINUTE` | Integer | `30` | Maximum number of connection creates, updates, revokes, and deletes allowed per minute for each signed-in user. The four operations share one limit, sized for someone managing connections in the Connections UI rather than for login attempts. Credential tests, health checks, and starting an OAuth consent use `LANGFLOW_RATE_LIMIT_PER_MINUTE`, each with its own counter. |
 
@@ -710,7 +710,7 @@ This variable controls whether API key authentication is required for webhook en
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
-| `LANGFLOW_WEBHOOK_AUTH_ENABLE` | Boolean | `True` | When `True`, webhook endpoints require API key authentication and validate that the authenticated user owns the flow being executed. When `False`, no Langflow API key is required and all requests to the webhook endpoint are treated as being sent by the flow owner. |
+| `LANGFLOW_WEBHOOK_AUTH_ENABLE` | Boolean | `True` | When `True`, webhook endpoints require API key authentication and validate that the authenticated user owns the flow being executed. When `False`, no Langflow API key is required and all requests to the webhook endpoint are treated as being sent by the flow owner. These requests are rate-limited per client IP address and flow by [`LANGFLOW_PUBLIC_FLOW_RATE_LIMIT_PER_MINUTE`](#login-rate-limiting). |
 
 By default, webhooks require API key authentication with `LANGFLOW_WEBHOOK_AUTH_ENABLE=True`.
 

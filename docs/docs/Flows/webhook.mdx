@@ -93,6 +93,7 @@ To learn about triggering flows with payloads from external applications, see th
 By default, webhooks require API key authentication (`LANGFLOW_WEBHOOK_AUTH_ENABLE=True`).
 
 To allow webhooks to run without authentication (not recommended; use only in trusted environments), in your Langflow `.env` file, set `LANGFLOW_WEBHOOK_AUTH_ENABLE=False`. When disabled, requests to the webhook endpoint are treated as being sent by the flow owner.
+Each client IP address can then send up to `LANGFLOW_PUBLIC_FLOW_RATE_LIMIT_PER_MINUTE` requests per minute to each flow (default `20`). For more information, see [`LANGFLOW_RATE_LIMIT_*`](/api-keys-and-authentication#login-rate-limiting).
 
 When webhook authentication is enabled, you must provide a Langflow API key with each webhook request.
 
