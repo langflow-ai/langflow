@@ -8,6 +8,7 @@ import {
   getEffectiveIntegrationPolicy,
   listIntegrations,
   listOAuthRegistrations,
+  renewConnectionToken,
   revokeConnection,
   startOAuth,
   testConnection,
@@ -18,6 +19,7 @@ import type {
   ConnectionCreate,
   ConnectionRead,
   ConnectionRevokeRead,
+  ConnectionTokenRenewal,
   ConnectionUpdate,
   EffectiveIntegrationPolicyRead,
   IntegrationListRead,
@@ -87,6 +89,19 @@ export const useUpdateConnectionMutation = () => {
   >({
     mutationFn: ({ id, patch }) => updateConnection(id, patch),
     onSuccess: invalidate,
+  });
+};
+
+export const useRenewConnectionTokenMutation = () => {
+  const invalidate = useInvalidateConnections();
+  return useMutation<
+    ConnectionRead,
+    unknown,
+    { id: string; payload: ConnectionTokenRenewal }
+  >({
+    mutationFn: ({ id, payload }) => renewConnectionToken(id, payload),
+    retry: false,
+    onSettled: invalidate,
   });
 };
 

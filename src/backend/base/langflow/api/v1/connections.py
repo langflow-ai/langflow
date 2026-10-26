@@ -34,7 +34,7 @@ from langflow.services.database.models.connection import (
     ConnectionTestRequest,
     ConnectionUpdate,
 )
-from langflow.services.database.models.connection.schemas import ConnectionRevokeRead
+from langflow.services.database.models.connection.schemas import ConnectionRevokeRead, ConnectionTokenRenewal
 from langflow.services.deps import get_connection_resolver_service, session_scope
 from langflow.services.rate_limit import (
     check_rate_limit,
@@ -421,6 +421,42 @@ async def update_connection(
             detail="Only the connection owner may allow non-interactive use.",
         )
     return await service.update(session, row, payload)
+
+
+@router.post("/{connection_id}/token", response_model=ConnectionRead)
+async def renew_connection_token(
+    request: Request,
+    connection_id: UUID,
+    payload: ConnectionTokenRenewal,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+    service: ConnectionService,
+) -> ConnectionRead:
+    """Validate a replacement token and update the owner's existing connection."""
+    check_rate_limit(
+        request,
+        scope=_SCOPE_CONNECTIONS,
+        limit_per_minute=get_connection_write_limit(),
+        key=get_user_limiter_key(current_user.id),
+    )
+    row = await _authorized_row(
+        service=service,
+        session=session,
+        user=current_user,
+        connection_id=connection_id,
+        action=ConnectionAction.WRITE,
+        for_update=True,
+    )
+    if not _may_enable_non_interactive(current_user, row):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Only the connection owner may renew its token."
+        )
+    try:
+        return await service.renew_token(session, row=row, user=current_user, payload=payload)
+    except IntegrationPolicyBlockedError as exc:
+        raise _policy_blocked(exc) from exc
+    except ManualCredentialError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
 
 
 @router.post("/{connection_id}/revoke", response_model=ConnectionRevokeRead)

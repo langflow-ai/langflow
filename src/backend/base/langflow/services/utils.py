@@ -104,6 +104,15 @@ async def get_or_create_super_user(
     if user and user.is_superuser:
         if rotate_legacy_default_password:
             await _rotate_legacy_default_superuser_password(session, user, password)
+        if not is_default and not auth.verify_password(password, user.password):
+            await logger.awarning(
+                "LANGFLOW_SUPERUSER_PASSWORD was not applied because the configured superuser "
+                "already exists with a different password. The existing password was preserved. "
+                "To recover access after upgrading, see "
+                "https://github.com/langflow-ai/langflow/blob/release-1.13.0/"
+                "docs/docs/Develop/api-keys-and-authentication.mdx"
+                "#recover-access-after-upgrading-recover-access-after-upgrading"
+            )
         return None  # Superuser already exists
 
     if user and is_default:

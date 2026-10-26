@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
 from lfx.integrations.errors import ConnectionUnresolvedError
@@ -62,6 +62,17 @@ async def sync_source(trigger_id: UUID) -> int:
         row = await session.get(Trigger, trigger_id)
         if row is None or row.state not in {"active", "pending"}:
             return 0
+        from langflow.services.triggers.providers.registry import get_kind, get_provider
+
+        extension = get_provider(row.provider or "")
+        if extension is not None:
+            spec = get_kind(row.kind)
+            if extension.collect is None or (
+                spec is not None
+                and (row.config or {}).get("mechanism_id") == spec.push_mechanism
+                and not extension.ingress_is_hint
+            ):
+                return 0
         lease = await source_lease(session, row, family=FAMILY_TRIGGER_PUSH)
         snapshot = Trigger(**row.model_dump())
     result = await collect_source(snapshot, lease)
@@ -127,10 +138,11 @@ async def ensure_subscription(trigger_id: UUID) -> None:
                 # Preserve compensation even if a pause raced the remote create.
                 from langflow.services.triggers.source_cleanup import enqueue_cleanup
 
-                await enqueue_cleanup(session, subscription)
-                subscription.state = "expired"
-                subscription.renew_after = None
-                session.add(subscription)
+                if subscription is not None:
+                    await enqueue_cleanup(session, subscription)
+                    subscription.state = "expired"
+                    subscription.renew_after = None
+                    session.add(subscription)
 
     if key:
         from langflow.services.triggers.source_cleanup import with_mailbox_lease
@@ -177,7 +189,7 @@ async def initialize_source(trigger_id: UUID) -> None:
         async with session_scope() as session:
             owned = await leases.fence(session, name=name, owner=owner)
             row = await session.get(Trigger, trigger_id)
-            if owned and row is not None and row.config == expected and row.state == "pending":
+            if owned and row is not None and row.state == "pending":
                 row.state = "error"
                 row.last_error = f"Source activation failed: {source_failure_detail(exc)}. Enable the trigger to retry."
                 session.add(row)
@@ -187,6 +199,47 @@ async def initialize_source(trigger_id: UUID) -> None:
         raise ValueError(msg) from exc
     finally:
         async with session_scope() as session:
+            await leases.forget(session, name=name, owner=owner)
+
+
+async def mark_interrupted_activations(*, limit: int = 5) -> None:
+    """Expose abandoned push setup without arming nodes that were only saved."""
+    from sqlmodel import col, select
+
+    from langflow.services.database.models.trigger.model import TriggerSubscription
+    from langflow.services.triggers.providers.registry import push_mechanisms, source_kinds
+
+    ttl = get_settings_service().settings.trigger_lease_ttl_s
+    stale_before = datetime.now(timezone.utc) - timedelta(seconds=ttl)
+    async with session_scope_readonly() as session:
+        ids = (
+            await session.exec(
+                select(Trigger.id)
+                .join(TriggerSubscription, TriggerSubscription.trigger_id == Trigger.id)
+                .where(
+                    Trigger.state == "pending",
+                    col(Trigger.kind).in_(source_kinds()),
+                    Trigger.config["mechanism_id"].as_string().in_(push_mechanisms()),
+                    TriggerSubscription.provider == Trigger.provider,
+                    col(TriggerSubscription.state).in_({"pending", "active"}),
+                    Trigger.updated_at <= stale_before,
+                )
+                .distinct()
+                .limit(limit)
+            )
+        ).all()
+    for trigger_id in ids:
+        name = f"trigger-source:{trigger_id}"
+        owner = leases.new_owner_token("source-interrupted")
+        async with session_scope() as session:
+            if not await leases.acquire(session, name=name, owner=owner, ttl_s=ttl):
+                continue
+            await session.exec(
+                update(Trigger)
+                .where(Trigger.id == trigger_id, Trigger.state == "pending", Trigger.updated_at <= stale_before)
+                .values(state="error", last_error="Source activation was interrupted. Enable the trigger to retry.")
+                .execution_options(synchronize_session=False)
+            )
             await leases.forget(session, name=name, owner=owner)
 
 

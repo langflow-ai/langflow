@@ -95,7 +95,7 @@ function runPatches() {
 }
 
 export function onRouteDidUpdate({ location }) {
-  // Only Redoc routes (/api, /api/workflow) — a bare startsWith("/api")
+  // Only the Redoc route (/api). A bare startsWith("/api")
   // would also match regular docs pages like /api-request or /api-keys
   // and leak a body observer per navigation (Redoc never renders there).
   const isRedocPage =
