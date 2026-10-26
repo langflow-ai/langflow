@@ -22,8 +22,9 @@
 //! edges leave and loop feedback edges enter. When an endpoint goes, its
 //! edges go with it (a cascade delete): a deleted node takes every edge at
 //! it, and a write that removes an endpoint, directly or by replacing what
-//! holds it, takes the endpoint's edges ([`removed_endpoints`]).
+//! holds it, takes the endpoint's edges (`removed_endpoints`).
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::LazyLock;
@@ -35,9 +36,9 @@ use crate::ops::canonical::{HANDLE_KEYS, HANDLE_QUOTE, parse_handle, values_equa
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result, bail, invalid, quoted};
 use crate::ops::keyed::ListIndex;
-use crate::ops::ops::{NodeRef, PathExt, Segment};
+use crate::ops::ops::{PathExt, Segment};
 use crate::ops::schema::{KeyedList, NODE_SCHEMA, OUTPUTS_PATH, TEMPLATE_PATH};
-use crate::ops::state::{Layered, Order};
+use crate::ops::state::Layered;
 use crate::ops::validate::ViolationCode;
 
 /// The type of a note node.
@@ -153,10 +154,19 @@ const HOLDERS: [Holder; 2] = [
     },
 ];
 
+/// Whether [`removed_endpoints`] reads what a write at `path` replaced: the
+/// write is at a holder's path or at an ancestor (anc.) path of it.
+pub(crate) fn reads_before(path: &[Segment]) -> bool {
+    HOLDERS
+        .iter()
+        .any(|holder| path.len() <= holder.path.len() && path.shares_start(holder.path))
+}
+
 /// The endpoints that a write at `path` of node `node_id` removed.
 ///
-/// `before` is what the path held before the write, and `node` is the node
-/// after it. A delete of one template key or one output removes that
+/// `before` is what the path held before the write, which only a write that
+/// [`reads_before`] needs, and `after(keys)` is the value at the object keys
+/// `keys` of the node after it. A delete of one template key or one output removes that
 /// endpoint. A write that replaces or deletes the outputs list, or anything
 /// holding a template or an outputs list, removes the endpoints it held that
 /// the node no longer has. Any other write removes none.
@@ -164,11 +174,11 @@ const HOLDERS: [Holder; 2] = [
 /// # Errors
 ///
 /// An outputs list, before or after the write, breaks the keyed-list rules.
-pub(crate) fn removed_endpoints(
+pub(crate) fn removed_endpoints<'a>(
     path: &[Segment],
     is_delete: bool,
-    before: &Value,
-    node: &Value,
+    before: Option<&Value>,
+    after: impl Fn(&[&str]) -> Option<Cow<'a, Value>>,
     node_id: &str,
 ) -> Result<Vec<Endpoint>> {
     let mut removed = Vec::new();
@@ -184,8 +194,9 @@ pub(crate) fn removed_endpoints(
             };
             removed.push((holder.endpoint)(name.clone()));
         } else if path.len() <= holder.path.len() && path.shares_start(holder.path) {
+            let before = before.expect("a write that reads before passes what it replaced");
             let held = holder.names(at_keys(before, &holder.path[path.len()..]), node_id)?;
-            let kept = holder.names(at_keys(node, holder.path), node_id)?;
+            let kept = holder.names(after(holder.path).as_deref(), node_id)?;
             removed.extend(
                 held.into_iter()
                     .filter(|name| !kept.contains(name))
@@ -204,7 +215,7 @@ impl Holder {
             return Ok(Vec::new());
         };
         if self.keyed {
-            return Ok(index_outputs(held, node_id)?
+            return Ok(index_outputs(Cow::Borrowed(held), node_id)?
                 .names()
                 .map(str::to_owned)
                 .collect());
@@ -223,8 +234,12 @@ fn at_keys<'v>(value: &'v Value, keys: &[&str]) -> Option<&'v Value> {
 
 /// Read access to an indexed graph, enough to check edges.
 pub(crate) trait GraphRead {
-    /// The node with `id`.
-    fn node(&self, id: &str) -> Option<NodeRef<'_>>;
+    /// Whether the graph has a node with `id`.
+    fn has_node(&self, id: &str) -> bool;
+    /// The value at the object keys `path` of the node `id`, as the reader
+    /// sees it. The graph state reads through its batch's field writes, and
+    /// copies a value only when the batch wrote inside it.
+    fn node_value(&self, id: &str, path: &[&str]) -> Option<Cow<'_, Value>>;
     /// The edge with `id`.
     fn edge(&self, id: &str) -> Option<&Map<String, Value>>;
     /// The ids of the edges at a node.
@@ -248,8 +263,8 @@ pub(crate) struct EdgeIndex {
 impl Default for EdgeIndex {
     fn default() -> Self {
         Self {
-            handles: Layered::new(Order::Free),
-            connections: Layered::new(Order::Free),
+            handles: Layered::new(),
+            connections: Layered::new(),
         }
     }
 }
@@ -568,14 +583,16 @@ pub fn derive_missing_handle_forms(edge: &mut Map<String, Value>) {
 /// A node's outputs, indexed by name.
 #[derive(Debug)]
 pub(crate) struct Outputs<'g> {
-    items: &'g [Value],
+    /// The outputs list, which is an array.
+    items: Cow<'g, Value>,
     index: ListIndex,
 }
 
 impl Outputs<'_> {
     /// The output named `name`.
     pub fn get(&self, name: &str) -> Option<&Value> {
-        self.index.slot(name).map(|slot| &self.items[slot])
+        let slot = self.index.slot(name)?;
+        self.items.as_array().map(|items| &items[slot])
     }
 
     /// The names of all outputs.
@@ -585,13 +602,13 @@ impl Outputs<'_> {
 }
 
 /// Index an outputs list, which follows the keyed-list rules.
-pub(crate) fn index_outputs<'g>(items: &'g Value, node_id: &str) -> Result<Outputs<'g>> {
-    let Value::Array(items) = items else {
+pub(crate) fn index_outputs<'g>(items: Cow<'g, Value>, node_id: &str) -> Result<Outputs<'g>> {
+    let Value::Array(list) = items.as_ref() else {
         bail!("node {}: data.node.outputs must be a list", quoted(node_id));
     };
     let index = ListIndex::build(
         outputs_list(),
-        items,
+        list,
         &fmt::from_fn(|f| write!(f, "node {}: data.node.outputs", quoted(node_id))),
     )?;
     Ok(Outputs { items, index })
@@ -602,10 +619,10 @@ pub(crate) fn node_outputs<'g>(
     graph: &'g impl GraphRead,
     node_id: &str,
 ) -> Result<Option<Outputs<'g>>> {
-    let node = graph
-        .node(node_id)
-        .ok_or_else(|| invalid!("node {} does not exist", quoted(node_id)))?;
-    let Some(outputs) = node.body().get("outputs") else {
+    if !graph.has_node(node_id) {
+        bail!("node {} does not exist", quoted(node_id));
+    }
+    let Some(outputs) = graph.node_value(node_id, &OUTPUTS_PATH) else {
         return Ok(None);
     };
     if !outputs.is_array() {
@@ -651,10 +668,11 @@ enum Takes {
 fn check_no_note(graph: &impl GraphRead, edge: &Map<String, Value>) -> Result<()> {
     for end in ["source", "target"] {
         let node_id = endpoint(edge, end);
-        let node = graph
-            .node(node_id)
-            .ok_or_else(|| invalid!("edge {}: {end} node does not exist", quoted(edge.id())))?;
-        if node.as_map().get("type").and_then(Value::as_str) == Some(NOTE_NODE_TYPE) {
+        if !graph.has_node(node_id) {
+            bail!("edge {}: {end} node does not exist", quoted(edge.id()));
+        }
+        let node_type = graph.node_value(node_id, &["type"]);
+        if node_type.as_deref().and_then(Value::as_str) == Some(NOTE_NODE_TYPE) {
             return Err(error(
                 edge,
                 ViolationCode::EdgeTouchesNote,
@@ -702,11 +720,9 @@ fn check_target_input(
     let name = &handles.input.name;
     match handles.input.kind {
         InputKind::Field => {
-            let field = graph
-                .node(target)
-                .and_then(|node| node.template().get(name))
-                .and_then(Value::as_object);
-            let Some(field) = field else {
+            let [data, body, template] = TEMPLATE_PATH;
+            let field = graph.node_value(target, &[data, body, template, name]);
+            let Some(field) = field.as_deref().and_then(Value::as_object) else {
                 return Err(error(
                     edge,
                     ViolationCode::EdgeHandleNotFound,

@@ -2,7 +2,7 @@
 
 use lfx::ops::canonical::{graph_hash, graphs_equal};
 use lfx::ops::schema::NODE_SCHEMA;
-use lfx::ops::{ApplyOptions, GraphState, Operation};
+use lfx::ops::{ApplyOptions, GraphState, Mode, Operation};
 use libtest_mimic::{Failed, Trial};
 use serde_json::{Map, Value, json};
 
@@ -80,8 +80,8 @@ fn apply_case(case: &Value) -> Result<(), Failed> {
     let state = state.ok_or("no state")?;
     assert_json_eq(
         "flow data",
-        &ignoring_row_order(&state.to_value()),
-        &ignoring_row_order(&case["expected"]),
+        &ignoring_order(&state.to_value()),
+        &ignoring_order(&case["expected"]),
     )?;
     let forward = Value::Array(applied.forward.iter().map(Operation::to_value).collect());
     let expected_forward = case
@@ -94,7 +94,7 @@ fn apply_case(case: &Value) -> Result<(), Failed> {
     )
 }
 
-/// Applying a case's backward operations, last first and with `restoring`, gives back its base.
+/// Applying a case's backward operations, last first and in preview mode, gives back its base.
 fn backward_round_trip(case: &Value) -> Result<(), Failed> {
     let base = &case["base"];
     let mut state =
@@ -109,8 +109,8 @@ fn backward_round_trip(case: &Value) -> Result<(), Failed> {
             options,
         )
         .map_err(|error| format!("refused: {error}"))?;
-    let restoring = ApplyOptions {
-        restoring: true,
+    let restore = ApplyOptions {
+        mode: Mode::Preview,
         ..ApplyOptions::default()
     };
     for backward in applied.backward.into_iter().rev() {
@@ -118,7 +118,7 @@ fn backward_round_trip(case: &Value) -> Result<(), Failed> {
             backward.iter().map(Operation::to_value).collect(),
         ));
         state
-            .apply(backward, restoring)
+            .apply(backward, restore)
             .map_err(|error| format!("backward operations {shown} refused: {error}"))?;
     }
     let restored = state.to_value();
@@ -209,9 +209,15 @@ fn ignoring_id_order(operations: &Value) -> Value {
     operations
 }
 
-/// Compare table rows as a collection keyed by `__id__`: a table's order is its rows' positions.
-fn ignoring_row_order(flow: &Value) -> Value {
+/// Compare nodes, edges and table rows as collections keyed by id: their array
+/// order is not state, and a table's order is its rows' positions.
+fn ignoring_order(flow: &Value) -> Value {
     let mut flow = flow.clone();
+    for key in ["nodes", "edges"] {
+        if let Some(items) = flow.get_mut(key).and_then(Value::as_array_mut) {
+            items.sort_by(|a, b| a["id"].as_str().cmp(&b["id"].as_str()));
+        }
+    }
     for node in flow
         .get_mut("nodes")
         .and_then(Value::as_array_mut)

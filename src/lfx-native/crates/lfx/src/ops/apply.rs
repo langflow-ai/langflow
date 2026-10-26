@@ -20,19 +20,22 @@
 //!
 //! [`Applied::backward`] says how to apply the backward operations.
 
+use std::borrow::Cow;
 use std::collections::HashSet;
 use std::fmt;
+use std::str::FromStr;
 
 use indexmap::IndexSet;
 use serde_json::Value;
 
 use crate::ops::canonical::is_row_position;
-use crate::ops::edges::{check_edge, removed_endpoints};
+use crate::ops::edges::{GraphRead, check_edge, reads_before, removed_endpoints};
 use crate::ops::error::{Error, Result, bail, invalid, quoted};
+use crate::ops::fields::{self, FieldWrite};
+use crate::ops::keyed::{ListIndex, check_position};
 use crate::ops::ops::{Change, Edge, FieldUpdate, Node, NodePath, Operation, PathExt, Segment};
 use crate::ops::schema::{KeyedList, ListKind, NODE_SCHEMA};
-use crate::ops::state::{Graph, GraphState, Lists, resolve, resolve_mut};
-use crate::ops::validate::PathPart;
+use crate::ops::state::{Graph, GraphState, field_value};
 
 /// How a batch is applied.
 #[derive(Debug, Clone, Copy, Default)]
@@ -41,12 +44,36 @@ pub struct ApplyOptions {
     pub forward: bool,
     /// Return, for each operation, its backward operations.
     pub backward: bool,
-    /// Apply backward operations. They put back a state the flow already had,
-    /// whatever rules it broke, and they add and delete every edge they touch
-    /// explicitly. So the edge rules, and the cascade delete of a removed
-    /// field or output, are both skipped. Never set this for a batch that
-    /// will be saved.
-    pub restoring: bool,
+    /// Which rules the batch must pass.
+    pub mode: Mode,
+}
+
+/// Which rules a batch must pass.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum Mode {
+    /// Every rule. A batch that will be saved is always strict.
+    #[default]
+    Strict,
+    /// Apply backward operations to show an earlier revision of the flow, as
+    /// the editor's history preview does. They put back a state the flow
+    /// already had, whatever rules it broke, and they add and delete every
+    /// edge they touch explicitly. So the edge rules, and the cascade delete
+    /// of a removed field or output, are both skipped. Never use this for a
+    /// batch that will be saved.
+    Preview,
+}
+
+impl FromStr for Mode {
+    type Err = Error;
+
+    /// The mode that `name` names: `strict` or `preview`.
+    fn from_str(name: &str) -> Result<Self> {
+        match name {
+            "strict" => Ok(Self::Strict),
+            "preview" => Ok(Self::Preview),
+            _ => bail!("unknown apply mode: {}", quoted(name)),
+        }
+    }
 }
 
 /// What a batch did.
@@ -64,10 +91,10 @@ pub struct Applied {
     /// There are two ways to apply them:
     ///
     /// - To show an earlier version of the flow, as the editor's history does,
-    ///   set the `restoring` option. The flow goes back to a state it already
+    ///   apply them in [`Mode::Preview`]. The flow goes back to a state it already
     ///   had, so the engine skips its edge rules.
     /// - To undo an edit with a new edit, put the lists into one batch, in that
-    ///   order, and apply it without `restoring`. The new edit is saved like any
+    ///   order, and apply it in [`Mode::Strict`]. The new edit is saved like any
     ///   other edit, so it must pass the same rules.
     pub backward: Vec<Vec<Operation>>,
 }
@@ -125,6 +152,9 @@ impl GraphState {
     ///
     /// An operation is invalid for the graph.
     pub fn apply(&mut self, operations: Vec<Operation>, options: ApplyOptions) -> Result<Applied> {
+        // A batch that panicked, which a binding turns into an exception,
+        // left its layers behind. The graph itself is as it was before it.
+        self.discard();
         let mut report = Report::new(options);
         for operation in operations {
             if let Err(error) = self.apply_operation(operation, &mut report) {
@@ -159,7 +189,7 @@ impl GraphState {
         let mut added = Vec::new();
         let mut payloads = Vec::new();
         for node in nodes {
-            if self.graph.nodes.contains(node.id()) {
+            if self.graph.has_node(node.id()) {
                 bail!("add_nodes: node id already exists: {}", quoted(node.id()));
             }
             if report.options.forward {
@@ -184,7 +214,7 @@ impl GraphState {
         let mut cascaded = IndexSet::new();
         for (index, mut update) in updates.into_iter().enumerate() {
             let context = UpdatePlace::new(index);
-            if !self.graph.nodes.contains(&update.id) {
+            if !self.graph.has_node(&update.id) {
                 bail!("update_nodes: node does not exist: {}", quoted(&update.id));
             }
             if !self.is_base_node(&update.id) {
@@ -193,15 +223,16 @@ impl GraphState {
                     quoted(&update.id)
                 );
             }
-            let replaced =
+            let before =
                 self.apply_field_update(&mut update, context, report.options, backward.as_mut())?;
-            if !report.options.restoring
-                && let Some(before) = &replaced
+            if report.options.mode == Mode::Strict
+                && let Before::Value(value) = &before
             {
-                cascaded.extend(self.edges_at_removed(&update, before)?);
+                cascaded.extend(self.edges_at_removed(&update, value.as_ref())?);
             }
             // A delete that found nothing is not recorded.
-            if report.options.forward && (replaced.is_some() || !update.is_delete()) {
+            let found = matches!(before, Before::Value(_));
+            if report.options.forward && (found || !update.is_delete()) {
                 applied.push(update);
             }
         }
@@ -218,23 +249,20 @@ impl GraphState {
     }
 
     /// The edges at the endpoints that `update` removed from its node, which
-    /// go with them. `before` is what the path held before the write.
+    /// go with them. `before` is what the path held before the write, when
+    /// [`removed_endpoints`] reads it.
     fn edges_at_removed(
         &mut self,
         update: &FieldUpdate,
-        before: &Value,
+        before: Option<&Value>,
     ) -> Result<IndexSet<String>> {
         let node_id = update.id.as_str();
-        let node = self
-            .graph
-            .nodes
-            .get(node_id)
-            .ok_or_else(|| invalid!("node {} does not exist", quoted(node_id)))?;
+        let graph = &self.graph;
         let removed = removed_endpoints(
             &update.path,
             update.is_delete(),
             before,
-            node.as_value(),
+            |keys| graph.node_value(node_id, keys),
             node_id,
         )?;
         if removed.is_empty() {
@@ -265,7 +293,7 @@ impl GraphState {
         let mut removed_nodes = Vec::new();
         let mut incident = IndexSet::new();
         for id in ids {
-            if !self.graph.nodes.contains(id) {
+            if !self.graph.has_node(id) {
                 continue;
             }
             incident.extend(self.graph.edges_at(id).cloned());
@@ -296,22 +324,22 @@ impl GraphState {
         let mut added = Vec::new();
         let mut payloads = Vec::new();
         for edge in edges {
-            if self.graph.edges.contains(edge.id()) {
+            if self.graph.has_edge(edge.id()) {
                 bail!("add_edges: edge id already exists: {}", quoted(edge.id()));
             }
-            if !self.graph.nodes.contains(edge.source()) {
+            if !self.graph.has_node(edge.source()) {
                 bail!(
                     "add_edges: source node does not exist: {}",
                     quoted(edge.source())
                 );
             }
-            if !self.graph.nodes.contains(edge.target()) {
+            if !self.graph.has_node(edge.target()) {
                 bail!(
                     "add_edges: target node does not exist: {}",
                     quoted(edge.target())
                 );
             }
-            if !report.options.restoring {
+            if report.options.mode == Mode::Strict {
                 check_edge(&self.graph, &mut self.edge_index, edge.as_map())?;
             }
             if report.options.forward {
@@ -339,7 +367,7 @@ impl GraphState {
         let mut copies = Vec::new();
         let mut seen = HashSet::new();
         for id in ids {
-            if !seen.insert(id) || !self.graph.edges.contains(id) {
+            if !seen.insert(id) || !self.graph.has_edge(id) {
                 continue;
             }
             if report.options.backward {
@@ -357,60 +385,74 @@ impl GraphState {
 
     // --- Field writes ----------------------------------------------------------------------
 
-    /// Apply one `set_field` or `delete_field` to a node.
+    /// Apply one `set_field` or `delete_field` to a node, through the batch's
+    /// field layer.
     ///
-    /// Returns the value the path held before the write, if any. Without
-    /// `forward`, a set's value moves into the graph instead of being copied.
+    /// Returns what the path held before the write. Without `forward`, a
+    /// set's value moves into the layer instead of being copied.
     fn apply_field_update(
         &mut self,
         update: &mut FieldUpdate,
         context: UpdatePlace,
         options: ApplyOptions,
         backward: Option<&mut FieldBackward>,
-    ) -> Result<Option<Value>> {
-        let walk = self.check_field_update(&FieldWrite { update, context }, backward)?;
+    ) -> Result<Before> {
+        let placed = PlacedUpdate { update, context };
+        self.copy_natural_list(&placed)?;
+        let walk = self.walk(&placed)?;
+        if let Some(missing) = walk.missing_at {
+            return Err(missing_segment(&placed, missing));
+        }
+        let (id, path) = (placed.update.id.as_str(), &placed.update.path);
+        if let Some(backward) = backward {
+            let current = field_value(&self.graph, &mut self.lists, id, path, &context)?;
+            let natural = match walk.last_list {
+                Some(keyed) if placed.update.is_delete() && keyed.kind == ListKind::Natural => {
+                    field_value(
+                        &self.graph,
+                        &mut self.lists,
+                        id,
+                        &path[..path.len() - 1],
+                        &context,
+                    )?
+                }
+                _ => None,
+            };
+            let items = natural.as_deref().and_then(Value::as_array);
+            backward.record(placed.update, current.as_deref(), items.map(Vec::as_slice));
+        }
+        let before = if walk.exists && options.mode == Mode::Strict && reads_before(path) {
+            field_value(&self.graph, &mut self.lists, id, path, &context)?.map(Cow::into_owned)
+        } else {
+            None
+        };
         let value = match &mut update.change {
             Change::Set(value) if !options.forward => std::mem::take(value),
             Change::Set(value) => value.clone(),
             Change::Delete => Value::Null,
         };
-        let write = FieldWrite { update, context };
-        let replaced = self.write_last(&write, &walk, value)?;
-        self.check_list_keys_kept(&write, &walk)?;
-        Ok(replaced)
-    }
-
-    /// Check a field update before it writes anything: its path must exist
-    /// up to the last segment. Record its backward operation, and return its path as
-    /// object keys and array indexes.
-    fn check_field_update(
-        &mut self,
-        write: &FieldWrite<'_>,
-        backward: Option<&mut FieldBackward>,
-    ) -> Result<Walk> {
-        let walk = self.walk(write)?;
-        if let Some(missing) = walk.missing_at {
-            return Err(missing_segment(write, missing));
-        }
-        if let Some(backward) = backward {
-            let last_step = self.read_last(write, &walk)?;
-            let root = written(&self.graph, write);
-            let parent = resolve(root, &walk.steps);
-            let current = last_step
-                .as_ref()
-                .and_then(|step| resolve(parent?, std::slice::from_ref(step)));
-            backward.record(root, write.update, parent, current);
-        }
-        Ok(walk)
+        let placed = PlacedUpdate { update, context };
+        self.write_last(&placed, &walk, value)?;
+        self.check_list_keys_kept(&placed, &walk)?;
+        Ok(if walk.exists {
+            Before::Value(before)
+        } else {
+            Before::Nothing
+        })
     }
 
     /// Check that a write inside a keyed list item left the item's key alone,
     /// and a table row its position.
-    fn check_list_keys_kept(&self, write: &FieldWrite<'_>, walk: &Walk) -> Result<()> {
-        let context = write.context;
-        let root = written(&self.graph, write);
+    fn check_list_keys_kept(&mut self, placed: &PlacedUpdate<'_>, walk: &Walk) -> Result<()> {
+        let (id, path, context) = (
+            placed.update.id.as_str(),
+            &placed.update.path,
+            placed.context,
+        );
         for item in walk.list_items.iter().rev() {
-            let value = resolve(root, &walk.steps[..item.depth]);
+            let item_path = &path[..=item.segment];
+            let value = field_value(&self.graph, &mut self.lists, id, item_path, &context)?;
+            let value = value.as_deref();
             if value.and_then(|value| item.keyed.key_of(value)) != Some(item.key.as_str()) {
                 bail!("{context}: cannot change a list item's key");
             }
@@ -425,203 +467,192 @@ impl GraphState {
         Ok(())
     }
 
-    /// Follow `path[..last]` from the node or edge, once.
+    /// Follow the write's path through the batch's field layer
+    /// ([`Graph::walk_field`]), and read what it holds, before anything is
+    /// written.
     ///
-    /// Returns the path as object keys and array indexes, the keyed list items passed through, and
-    /// the first segment that does not exist. A segment that does not fit the
-    /// value it reads, such as a key of a list, is an error rather than a
-    /// missing value.
-    fn walk(&mut self, write: &FieldWrite<'_>) -> Result<Walk> {
-        let (path, context) = (&write.update.path, write.context);
-        let mut walk = Walk::default();
-        let root = written(&self.graph, write);
-        let mut value = root;
-        for (index, part) in path[..path.len() - 1].iter().enumerate() {
-            let key = match part {
-                Segment::Key(key) => {
-                    let Value::Object(map) = value else {
-                        bail!(
-                            "{context}.path[{index}]: {} reads a key of a value that is not an object",
-                            quoted(key)
-                        );
-                    };
-                    let Some(child) = map.get(key) else {
-                        walk.missing_at = Some(index);
-                        return Ok(walk);
-                    };
-                    walk.steps.push(PathPart::Key(key.clone()));
-                    value = child;
-                    continue;
-                }
-                Segment::Item(key) => key,
-            };
-            let (keyed, slot) = list_slot(&mut self.lists, write, root, index, value, key)?;
-            let Some(slot) = slot else {
-                walk.missing_at = Some(index);
-                return Ok(walk);
-            };
-            walk.steps.push(PathPart::Index(slot));
-            walk.list_items.push(ListItemOnPath {
-                keyed,
-                key: key.clone(),
-                depth: walk.steps.len(),
-            });
-            value = &value[slot];
-        }
-        Ok(walk)
-    }
-
-    /// The step from the value holding the last segment to the value the path
-    /// names, or `None` when there is none.
-    fn read_last(&mut self, write: &FieldWrite<'_>, walk: &Walk) -> Result<Option<PathPart>> {
-        let (path, context) = (&write.update.path, write.context);
+    /// The value that holds the last segment is inside an entry at an
+    /// ancestor (anc.) path of the write's path, or else in the node. A
+    /// segment that does not fit the value it reads, such as a key of a list,
+    /// is an error rather than a missing value.
+    fn walk(&mut self, placed: &PlacedUpdate<'_>) -> Result<Walk> {
+        let (id, path, context) = (
+            placed.update.id.as_str(),
+            &placed.update.path,
+            placed.context,
+        );
         let last = path.len() - 1;
-        let root = written(&self.graph, write);
-        let parent = resolve(root, &walk.steps).expect("the walk resolved these steps");
-        let key = match &path[last] {
+        let (graph, lists) = (&self.graph, &mut self.lists);
+        let stored = graph.is_stored_node(id);
+        let mut list_items = Vec::new();
+        let mut last_list = None;
+        let mut step = fields::step_fn(|value, index, in_entry| match &path[index] {
             Segment::Key(key) => {
-                let Value::Object(map) = parent else {
+                let Value::Object(map) = value else {
                     bail!(
-                        "{context}.path[{last}]: {} reads a key of a value that is not an object",
+                        "{context}.path[{index}]: {} reads a key of a value that is not an object",
                         quoted(key)
                     );
                 };
-                return Ok(map.contains_key(key).then(|| PathPart::Key(key.clone())));
+                Ok(map.get(key))
             }
-            Segment::Item(key) => key,
+            Segment::Item(key) => {
+                let (keyed, list_path) = keyed_list(graph, placed, index, value)?;
+                let items = value.as_array().map(Vec::as_slice).unwrap_or_default();
+                // A stored node's lists keep their index between reads. A list
+                // inside an entry, or in a node the batch added, is checked again
+                // at each read, as building an index checks it.
+                let list_context = context.segment(index);
+                let slot = if stored && !in_entry {
+                    lists
+                        .index(id, &list_path, keyed, items, &list_context)?
+                        .slot(key)
+                } else {
+                    ListIndex::build(keyed, items, &list_context)?.slot(key)
+                };
+                if index == last {
+                    last_list = Some(keyed);
+                } else {
+                    list_items.push(ListItemOnPath {
+                        keyed,
+                        key: key.clone(),
+                        segment: index,
+                    });
+                }
+                Ok(slot.map(|slot| &items[slot]))
+            }
+        });
+        let walked = graph
+            .walk_field(id, &path[..last], &mut step)?
+            .expect("update_nodes checks that the node exists");
+        let Ok(parent) = walked.found else {
+            return Ok(Walk {
+                write_len: walked.write_len,
+                list_items,
+                last_list,
+                found: false,
+                exists: false,
+                missing_at: walked.found.err(),
+            });
         };
-        let (_, slot) = list_slot(&mut self.lists, write, root, last, parent, key)?;
-        Ok(slot.map(PathPart::Index))
-    }
-
-    /// Write or delete the last segment of the path. Returns the value it held, if any.
-    fn write_last(
-        &mut self,
-        write: &FieldWrite<'_>,
-        walk: &Walk,
-        value: Value,
-    ) -> Result<Option<Value>> {
-        let (id, path) = (write.update.id.as_str(), &write.update.path);
-        let written = match &path[path.len() - 1] {
-            Segment::Key(key) => self.write_key(write, walk, key, value)?,
-            Segment::Item(key) => self.write_item(write, walk, key, value)?,
-        };
-        let replaced = match written {
-            Written::Nothing => return Ok(None),
-            Written::Added => None,
-            Written::Replaced(old) => Some(old),
-        };
-        // A whole value replaced or removed takes the lists indexed under it with it.
-        if let Some(keys) = path.to_list() {
-            self.lists.forget_under(id, &keys);
+        let found = step(parent, last, walked.write_len.is_some())?.is_some();
+        // The item that a write on the way sits at was checked when it was written.
+        if let Some(len) = walked.write_len
+            && let Segment::Item(key) = &path[len - 1]
+        {
+            list_items.push(ListItemOnPath {
+                keyed: NODE_SCHEMA.listed_at(&path[..len - 1]),
+                key: key.clone(),
+                segment: len - 1,
+            });
+            list_items.sort_by_key(|item| item.segment);
         }
-        Ok(replaced)
-    }
-
-    /// The value that holds the path's last segment, to write it.
-    fn parent_mut(&mut self, write: &FieldWrite<'_>, walk: &Walk) -> Option<&mut Value> {
-        self.graph
-            .nodes
-            .get_mut(&write.update.id)
-            .and_then(|node| resolve_mut(node.as_value_mut(), &walk.steps))
-    }
-
-    /// Write or delete an object key.
-    fn write_key(
-        &mut self,
-        write: &FieldWrite<'_>,
-        walk: &Walk,
-        key: &str,
-        value: Value,
-    ) -> Result<Written> {
-        let (update, context) = (write.update, write.context);
-        let Some(Value::Object(map)) = self.parent_mut(write, walk) else {
-            bail!("{context}: path must end at an object property or a keyed list item");
+        let write_at_path = walked
+            .writes
+            .and_then(|writes| writes.child_write(&path[last]));
+        let exists = match (walked.write_len, write_at_path) {
+            (None, Some(write)) => matches!(write, FieldWrite::Set(_)),
+            _ => found,
         };
-        if update.is_delete() {
-            return Ok(map
-                .shift_remove(key)
-                .map_or(Written::Nothing, Written::Replaced));
-        }
-        Ok(map
-            .insert(key.to_owned(), value)
-            .map_or(Written::Added, Written::Replaced))
+        Ok(Walk {
+            write_len: walked.write_len,
+            list_items,
+            last_list,
+            found,
+            exists,
+            missing_at: None,
+        })
     }
 
-    /// Write or delete a keyed list item.
-    fn write_item(
-        &mut self,
-        write: &FieldWrite<'_>,
-        walk: &Walk,
-        key: &str,
-        value: Value,
-    ) -> Result<Written> {
-        let (update, context) = (write.update, write.context);
-        let path = &update.path;
+    /// Write or delete the last segment of the path: in the value of the
+    /// write on the way, or as the write at the path itself.
+    fn write_last(&mut self, placed: &PlacedUpdate<'_>, walk: &Walk, value: Value) -> Result<()> {
+        let (update, context) = (placed.update, placed.context);
+        let (id, path) = (update.id.as_str(), &update.path);
         let last = path.len() - 1;
-        let (keyed, prefix) = {
-            let root = written(&self.graph, write);
-            let parent = resolve(root, &walk.steps).expect("the walk resolved these steps");
-            keyed_list(root, path, last, parent, context)?
+        if let (Segment::Item(key), false) = (&path[last], update.is_delete()) {
+            let keyed = walk.last_list.expect("the walk read the last item's list");
+            if keyed.key_of(&value) != Some(key) {
+                bail!(
+                    "{context}: a list item written at its key must carry the same key: {}",
+                    quoted(key)
+                );
+            }
+            check_position(keyed, &value, &context.segment(last))?;
+        }
+        if update.is_delete() && !walk.exists {
+            // A delete that finds nothing writes nothing.
+            return Ok(());
+        }
+        let write = if update.is_delete() {
+            FieldWrite::Remove
+        } else {
+            FieldWrite::Set(value)
         };
-        let list_context = context.segment(last);
-        let parent = self
+        let writes = self.graph.writes_mut(id);
+        if let Some(len) = walk.write_len {
+            let (_, on_path) = writes
+                .write_on_path_mut(&path[..last])
+                .expect("the walk found the write on the way");
+            let FieldWrite::Set(set) = on_path else {
+                unreachable!("the walk found the parent in a set's value")
+            };
+            let parent = fields::descend_mut(set, &path[..last], len)
+                .expect("the walk found the parent in the write");
+            fields::make_write(parent, &path[last], &path[..last], write, None);
+        } else if matches!(write, FieldWrite::Remove) && !walk.found {
+            // The value is only the batch's own write at the path.
+            writes.drop_write(path);
+        } else {
+            writes.set(path, write);
+        }
+        Ok(())
+    }
+
+    /// A write to an item of a natural list, or inside one, is made in a copy
+    /// of the whole list, so the list keeps its order. Put that copy as the
+    /// write at the list, unless a write on the way already holds the list.
+    fn copy_natural_list(&mut self, placed: &PlacedUpdate<'_>) -> Result<()> {
+        let (id, path) = (placed.update.id.as_str(), &placed.update.path);
+        let Some(item) = (0..path.len()).find(|&index| {
+            matches!(path[index], Segment::Item(_))
+                && NODE_SCHEMA.natural_list_at(&path[..index]).is_some()
+        }) else {
+            return Ok(());
+        };
+        let list_path = &path[..item];
+        let step = |value, index: usize, _| {
+            Ok(fields::child(value, &list_path[..index], &list_path[index]))
+        };
+        let walked = self
             .graph
-            .nodes
-            .get_mut(&update.id)
-            .and_then(|node| resolve_mut(node.as_value_mut(), &walk.steps));
-        let Some(Value::Array(items)) = parent else {
-            bail!("{list_context}: list item key on a value that is not a list");
+            .walk_field(id, list_path, step)?
+            .expect("update_nodes checks that the node exists");
+        // A missing list or one that is not a list is the write's own error.
+        let (None, Ok(list @ Value::Array(_))) = (walked.write_len, walked.found) else {
+            return Ok(());
         };
-        let index = self
-            .lists
-            .index(&update.id, &prefix, keyed, items, &list_context)?;
-        if update.is_delete() {
-            return Ok(index
-                .remove(items, key)
-                .map_or(Written::Nothing, Written::Replaced));
-        }
-        let slot = index.slot(key);
-        if keyed.key_of(&value) != Some(key) {
-            bail!(
-                "{context}: a list item written at its key must carry the same key: {}",
-                quoted(key)
-            );
-        }
-        if let Some(slot) = slot {
-            return Ok(Written::Replaced(
-                index.replace(items, slot, value, &context)?,
-            ));
-        }
-        index.add(items, value, &context)?;
-        Ok(Written::Added)
+        let list = list.clone();
+        self.graph
+            .writes_mut(id)
+            .set(list_path, FieldWrite::Set(list));
+        Ok(())
     }
 }
 
-/// The node a field write goes to. `update_nodes` checks that it exists
-/// before it writes.
-fn written<'g>(graph: &'g Graph, write: &FieldWrite<'_>) -> &'g Value {
-    graph
-        .nodes
-        .get(&write.update.id)
-        .expect("update_nodes checks that the node exists")
-        .as_value()
-}
-
-/// What a field write did at the last segment of its path.
+/// What a field write's path held before the write.
 #[derive(Debug)]
-enum Written {
-    /// A delete found nothing, so nothing changed.
+enum Before {
+    /// Nothing: the write added a value, or a delete found nothing.
     Nothing,
-    /// A set wrote a key or an item that was not there.
-    Added,
-    /// A set or a delete replaced or removed this value.
-    Replaced(Value),
+    /// A value. It is kept only for a cascade delete that reads it
+    /// ([`reads_before`]).
+    Value(Option<Value>),
 }
 
-/// One field update on its way into a node.
+/// A field update, with its place in its `update_nodes` for error messages.
 #[derive(Debug)]
-struct FieldWrite<'w> {
+struct PlacedUpdate<'w> {
     update: &'w FieldUpdate,
     /// Where the update is in its operation, for messages.
     context: UpdatePlace,
@@ -664,13 +695,23 @@ impl fmt::Display for UpdatePlace {
     }
 }
 
-/// Where a field update's path leads, as object keys and array indexes, up to its last segment.
+/// Where a field update's path leads through the batch's field layer, and what it holds.
 #[derive(Debug, Default)]
 struct Walk {
-    /// The steps to the value that holds the last segment.
-    steps: Vec<PathPart>,
-    /// The keyed list items the path passes through.
+    /// The length of the path of the write on the way that holds the value
+    /// with the last segment: a write at an ancestor path of the write's
+    /// path. `None` when the node itself holds that value.
+    write_len: Option<usize>,
+    /// The keyed list items the path passes through, before its last segment.
     list_items: Vec<ListItemOnPath>,
+    /// The keyed list whose item the last segment names, if it names one.
+    last_list: Option<&'static KeyedList>,
+    /// Whether the value that holds the last segment has it: inside the
+    /// entry, or in the node itself when no entry holds that value.
+    found: bool,
+    /// Whether the path holds a value as the batch sees it: [`Self::found`],
+    /// unless an entry at the path itself says otherwise.
+    exists: bool,
     /// The index of the first segment that does not exist.
     missing_at: Option<usize>,
 }
@@ -680,14 +721,14 @@ struct Walk {
 struct ListItemOnPath {
     keyed: &'static KeyedList,
     key: String,
-    /// How many steps lead to the item.
-    depth: usize,
+    /// The index of the path segment that names the item.
+    segment: usize,
 }
 
 /// The error for the first segment of a path that does not exist.
-fn missing_segment(write: &FieldWrite<'_>, missing: usize) -> Error {
-    let context = write.context;
-    match &write.update.path[missing] {
+fn missing_segment(placed: &PlacedUpdate<'_>, missing: usize) -> Error {
+    let context = placed.context;
+    match &placed.update.path[missing] {
         Segment::Key(key) => invalid!(
             "{context}.path[{missing}]: object path part must be an existing string key: {}",
             quoted(key)
@@ -699,46 +740,30 @@ fn missing_segment(write: &FieldWrite<'_>, missing: usize) -> Error {
     }
 }
 
-/// The keyed list `path[index]` names an item of, and the array index of the item with
-/// `key`, or `None` when there is no such item.
-fn list_slot(
-    lists: &mut Lists,
-    write: &FieldWrite<'_>,
-    root: &Value,
-    index: usize,
-    list: &Value,
-    key: &str,
-) -> Result<(&'static KeyedList, Option<usize>)> {
-    let (path, context) = (&write.update.path, write.context);
-    let (keyed, prefix) = keyed_list(root, path, index, list, context)?;
-    let items = list.as_array().map(Vec::as_slice).unwrap_or_default();
-    let slot = lists
-        .index(
-            &write.update.id,
-            &prefix,
-            keyed,
-            items,
-            &context.segment(index),
-        )?
-        .slot(key);
-    Ok((keyed, slot))
-}
-
-/// The keyed list whose item `path[index]` names, and its address: the
-/// object keys that lead to it. Checks that the list is keyed.
+/// The keyed list whose item `path[index]` names, and its path as object
+/// keys. The schema decides whether a template field's value is a table from
+/// the field's keys, read through the batch's writes. Checks that the list
+/// is keyed and that `value`, what the path holds there, is a list.
 fn keyed_list<'p>(
-    node: &Value,
-    path: &'p [Segment],
+    graph: &Graph,
+    placed: &PlacedUpdate<'p>,
     index: usize,
     value: &Value,
-    context: UpdatePlace,
 ) -> Result<(&'static KeyedList, Vec<&'p str>)> {
-    let prefix = path[..index].to_list();
-    let Some((keyed, prefix)) = prefix.and_then(|prefix| {
-        NODE_SCHEMA
-            .keyed_list_at(node, &prefix)
-            .map(|keyed| (keyed, prefix))
-    }) else {
+    let (id, path, context) = (
+        placed.update.id.as_str(),
+        &placed.update.path,
+        placed.context,
+    );
+    let list_path = path[..index].to_list();
+    let keyed = list_path.as_ref().and_then(|list_path| {
+        NODE_SCHEMA.keyed_list_by(list_path, |field_path, key| {
+            let mut keys = field_path.to_vec();
+            keys.push(key);
+            graph.node_value(id, &keys)
+        })
+    });
+    let (Some(keyed), Some(list_path)) = (keyed, list_path) else {
         bail!(
             "{context}.path[{index}]: list item key on a list the node schema does not declare keyed"
         );
@@ -746,7 +771,7 @@ fn keyed_list<'p>(
     if !value.is_array() {
         bail!("{context}.path[{index}]: list item key on a value that is not a list");
     }
-    Ok((keyed, prefix))
+    Ok((keyed, list_path))
 }
 
 // --- Backward operations of field writes ---------------------------------------------------
@@ -762,27 +787,21 @@ struct FieldBackward {
 impl FieldBackward {
     /// Record what undoes `update`; called before it is applied.
     ///
-    /// `parent` holds the path's last segment, and `current` is what the path holds.
+    /// `current` is what the path holds. `natural_items` is the natural list
+    /// that a delete of one of its items removes it from.
     fn record(
         &mut self,
-        root: &Value,
         update: &FieldUpdate,
-        parent: Option<&Value>,
         current: Option<&Value>,
+        natural_items: Option<&[Value]>,
     ) {
         let path = &update.path;
         let last = path.len() - 1;
-        if update.is_delete()
-            && let (Segment::Item(key), Some(Value::Array(items)), Some(_)) =
-                (&path[last], parent, current)
-            && let Some(keyed) = path[..last]
-                .to_list()
-                .and_then(|prefix| NODE_SCHEMA.keyed_list_at(root, &prefix))
-            && keyed.kind == ListKind::Natural
-        {
+        if let (Segment::Item(key), Some(items), Some(_)) = (&path[last], natural_items, current) {
             // Removing a natural-list item that is not last cannot be undone by
             // a write at the item's key, which appends; the whole list is written back.
             // A table's order is its rows' positions, so its rows need no such care.
+            let keyed = NODE_SCHEMA.listed_at(&path[..last]);
             let is_last = items
                 .last()
                 .is_some_and(|item| keyed.key_of(item) == Some(key.as_str()));
@@ -794,7 +813,7 @@ impl FieldBackward {
                 self.entries.push(FieldUpdate::set(
                     &update.id,
                     list_path,
-                    Value::Array(items.clone()),
+                    Value::Array(items.to_vec()),
                 ));
                 return;
             }
@@ -851,6 +870,7 @@ mod tests {
 
     use super::*;
     use crate::ops::edges::escape_handle;
+    use crate::ops::schema::OUTPUTS_PATH;
 
     fn target_handle(field: &str) -> Value {
         json!({"fieldName": field, "id": "T", "inputTypes": ["Message"], "type": "str"})
@@ -946,6 +966,270 @@ mod tests {
             .unwrap_err();
         assert_eq!(state.to_value(), before);
         assert!(state.edge_index.has_connections("T"));
+    }
+
+    fn set(id: &str, path: Value, value: Value) -> Value {
+        let mut update = json!({"id": id, "op": "set_field"});
+        update["path"] = path;
+        update["value"] = value;
+        update
+    }
+
+    fn delete(id: &str, path: Value) -> Value {
+        let mut update = json!({"id": id, "op": "delete_field"});
+        update["path"] = path;
+        update
+    }
+
+    fn updates(updates: Vec<Value>) -> Vec<Operation> {
+        let mut operation = json!({"type": "update_nodes"});
+        operation["updates"] = Value::Array(updates);
+        operations(Value::Array(vec![operation]))
+    }
+
+    fn table_node() -> Value {
+        let row = |id: &str, pos: u32| json!({"__id__": id, "__pos__": pos, "v": "x"});
+        json!({"id": "t", "data": {"node": {"template": {
+            "rows": {"type": "table", "value": [row("r1", 1), row("r2", 2), row("r3", 3)]},
+            "text": {"type": "str", "value": ""},
+        }}}})
+    }
+
+    fn rows_path(key: Option<&str>) -> Value {
+        let mut path = json!(["data", "node", "template", "rows", "value"]);
+        if let Some(key) = key {
+            path.as_array_mut().unwrap().push(json!({"key": key}));
+        }
+        path
+    }
+
+    fn cell_path(key: &str) -> Value {
+        let mut path = rows_path(Some(key));
+        path.as_array_mut().unwrap().push(json!("v"));
+        path
+    }
+
+    /// Each batch applied to one graph state kept between batches gives what
+    /// it gives on a graph loaded fresh.
+    fn same_as_fresh(state: &mut GraphState, batch: Vec<Operation>) -> Result<()> {
+        let fresh = apply_flow_operations(state.to_value(), batch.clone(), ApplyOptions::default());
+        let kept = state.apply(batch, ApplyOptions::default());
+        match (fresh, kept) {
+            (Ok((graph, _)), Ok(_)) => {
+                assert!(crate::ops::canonical::graphs_equal(&state.to_value(), &graph).unwrap());
+                Ok(())
+            }
+            (Err(_), Err(error)) => Err(error),
+            (fresh, kept) => panic!("fresh {fresh:?}, kept {kept:?}"),
+        }
+    }
+
+    #[test]
+    fn a_held_table_keeps_its_index_through_writes_and_refused_batches() {
+        let mut state = GraphState::new(json!({"nodes": [table_node()], "edges": []})).unwrap();
+        let row = |id: &str, pos: f64| json!({"__id__": id, "__pos__": pos, "v": "n"});
+        same_as_fresh(
+            &mut state,
+            updates(vec![set("t", cell_path("r2"), json!("y"))]),
+        )
+        .unwrap();
+        same_as_fresh(
+            &mut state,
+            updates(vec![delete("t", rows_path(Some("r1")))]),
+        )
+        .unwrap();
+        // Refused after a row is added and a cell written: nothing changes.
+        let before = state.to_value();
+        let refused = updates(vec![
+            set("t", rows_path(Some("r4")), row("r4", 4.0)),
+            set("t", cell_path("r3"), json!("z")),
+            set("t", cell_path("gone"), json!("z")),
+        ]);
+        same_as_fresh(&mut state, refused).unwrap_err();
+        assert_eq!(state.to_value(), before);
+        same_as_fresh(
+            &mut state,
+            updates(vec![
+                set("t", rows_path(Some("r5")), row("r5", 0.5)),
+                set("t", cell_path("r5"), json!("w")),
+                delete("t", rows_path(Some("r2"))),
+                set("t", cell_path("r3"), json!("v3")),
+            ]),
+        )
+        .unwrap();
+        same_as_fresh(
+            &mut state,
+            updates(vec![set("t", cell_path("r5"), json!("again"))]),
+        )
+        .unwrap();
+        let rows = &state.to_value()["nodes"][0]["data"]["node"]["template"]["rows"]["value"];
+        let mut cells: Vec<(String, String)> = rows
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|row| {
+                (
+                    row["__id__"].as_str().unwrap().into(),
+                    row["v"].as_str().unwrap().into(),
+                )
+            })
+            .collect();
+        cells.sort();
+        assert_eq!(
+            cells,
+            [("r3".into(), "v3".into()), ("r5".into(), "again".into())]
+        );
+    }
+
+    #[test]
+    fn a_field_type_written_in_the_batch_decides_whether_its_value_is_a_table() {
+        let node = json!({"id": "t", "data": {"node": {"template": {
+            "rows": {"type": "str", "value": [{"__id__": "r1", "__pos__": 1}]},
+        }}}});
+        let graph = json!({"nodes": [node], "edges": []});
+        let row = json!({"__id__": "r2", "__pos__": 2});
+        let refused = updates(vec![set("t", rows_path(Some("r2")), row.clone())]);
+        let error =
+            apply_flow_operations(graph.clone(), refused, ApplyOptions::default()).unwrap_err();
+        assert!(
+            error.message.contains("does not declare keyed"),
+            "{}",
+            error.message
+        );
+        let typed = updates(vec![
+            set(
+                "t",
+                json!(["data", "node", "template", "rows", "type"]),
+                json!("table"),
+            ),
+            set("t", rows_path(Some("r2")), row),
+        ]);
+        let (graph, _) = apply_flow_operations(graph, typed, ApplyOptions::default()).unwrap();
+        assert_eq!(
+            graph["nodes"][0]["data"]["node"]["template"]["rows"]["value"]
+                .as_array()
+                .unwrap()
+                .len(),
+            2
+        );
+    }
+
+    #[test]
+    fn a_list_written_in_the_batch_is_checked_when_a_write_reads_its_items() {
+        let graph = json!({"nodes": [table_node()], "edges": []});
+        let update = |update: Value| json!({"type": "update_nodes", "updates": [update]});
+        let batch = operations(json!([
+            update(set("t", rows_path(None), json!([1, 2]))),
+            update(delete("t", rows_path(Some("r1")))),
+        ]));
+        let error = apply_flow_operations(graph, batch, ApplyOptions::default()).unwrap_err();
+        assert!(
+            error.message.contains("non-empty string key"),
+            "{}",
+            error.message
+        );
+    }
+
+    #[test]
+    fn an_output_removed_and_added_again_in_one_batch_goes_last() {
+        let output = |name: &str| json!({"name": name});
+        let node = json!({"id": "n", "data": {"node": {"template": {},
+            "outputs": [output("a"), output("b"), output("c")]}}});
+        let outputs = |key: &str| json!(["data", "node", "outputs", {"key": key}]);
+        let update = |update: Value| json!({"type": "update_nodes", "updates": [update]});
+        let batch = operations(json!([
+            update(delete("n", outputs("a"))),
+            update(set("n", outputs("d"), output("d"))),
+            update(set("n", outputs("a"), output("a"))),
+        ]));
+        let mut state = GraphState::new(json!({"nodes": [node], "edges": []})).unwrap();
+        state.apply(batch, ApplyOptions::default()).unwrap();
+        let outputs = state.graph.node_value("n", &OUTPUTS_PATH).unwrap();
+        let names: Vec<&str> = outputs
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|output| output["name"].as_str().unwrap())
+            .collect();
+        assert_eq!(names, ["b", "c", "d", "a"]);
+    }
+
+    #[test]
+    fn a_node_deleted_and_added_again_takes_the_writes_after_it() {
+        let node = json!({"id": "n", "data": {"node": {"template": {"f": {"value": 1}}}}});
+        let batch = json!([
+            {"type": "delete_nodes", "ids": ["n"]},
+            {"type": "add_nodes", "nodes": [{"id": "n", "data": {"node": {"template": {"g": {"value": 2}}}}}]},
+            {"type": "update_nodes", "updates": [set("n", json!(["data", "node", "template", "g", "value"]), json!(3))]},
+        ]);
+        let (graph, _) = apply_flow_operations(
+            json!({"nodes": [node], "edges": []}),
+            operations(batch),
+            ApplyOptions::default(),
+        )
+        .unwrap();
+        assert_eq!(
+            graph["nodes"][0]["data"]["node"]["template"],
+            json!({"g": {"value": 3}})
+        );
+    }
+
+    #[test]
+    fn an_edge_rule_reads_a_field_written_in_the_batch() {
+        let field = json!({"type": "str", "value": ""});
+        let graph = json!({
+            "nodes": [
+                {"id": "S", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+                {"id": "T", "data": {"node": {"template": {"A": field}}}},
+            ],
+            "edges": [edge("e1", "A")],
+        });
+        let second = json!({"type": "add_edges", "edges": [edge("e2", "A")]});
+        let error = apply_flow_operations(
+            graph.clone(),
+            operations(json!([second])),
+            ApplyOptions::default(),
+        )
+        .unwrap_err();
+        assert_eq!(
+            error.code,
+            crate::ops::error::ErrorCode::Violation(
+                crate::ops::validate::ViolationCode::EdgeTargetOccupied
+            ),
+            "{error}"
+        );
+        let list = set(
+            "T",
+            json!(["data", "node", "template", "A", "list"]),
+            json!(true),
+        );
+        let batch = json!([{"type": "update_nodes", "updates": [list]}, second]);
+        apply_flow_operations(graph, operations(batch), ApplyOptions::default()).unwrap();
+    }
+
+    #[test]
+    fn a_write_over_earlier_writes_undoes_to_the_graph_before_the_batch() {
+        let graph = json!({"nodes": [table_node()], "edges": []});
+        let field = json!(["data", "node", "template", "rows"]);
+        let batch = updates(vec![
+            set("t", cell_path("r1"), json!("y")),
+            delete("t", rows_path(Some("r2"))),
+            set("t", field, json!({"type": "str", "value": "flat"})),
+        ]);
+        let mut state = GraphState::new(graph.clone()).unwrap();
+        let options = ApplyOptions {
+            backward: true,
+            ..ApplyOptions::default()
+        };
+        let applied = state.apply(batch, options).unwrap();
+        let preview = ApplyOptions {
+            mode: Mode::Preview,
+            ..ApplyOptions::default()
+        };
+        for list in applied.backward.into_iter().rev() {
+            state.apply(list, preview).unwrap();
+        }
+        assert!(crate::ops::canonical::graphs_equal(&state.to_value(), &graph).unwrap());
     }
 
     #[test]
