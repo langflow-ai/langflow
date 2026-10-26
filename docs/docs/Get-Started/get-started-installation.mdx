@@ -194,16 +194,18 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
     Both packages use the `langflow` command. In Langflow 1.12,
     `langflow-base` does not provide a `langflow-base` executable.
 
-4. Set a superuser password, and then start Langflow. As of Langflow 1.13, official release packages disable automatic login.
+4. Set a superuser password. As of Langflow 1.13, official release packages disable automatic login.
 
     Create a `.env` file with the following values:
 
     ```text
     LANGFLOW_AUTO_LOGIN=false
-    LANGFLOW_SUPERUSER_PASSWORD=REPLACE_WITH_A_STRONG_PASSWORD
+    LANGFLOW_SUPERUSER_PASSWORD=YOUR_SUPERUSER_PASSWORD
     ```
 
-    Start Langflow with the `.env` file. `--env-file` loads the file and overrides variables already set in the environment:
+    Replace `YOUR_SUPERUSER_PASSWORD` with a strong password for the Langflow superuser.
+
+5. Start Langflow with the `.env` file. `--env-file` loads the file and overrides variables already set in the environment:
 
     ```bash
     uv run langflow run --env-file .env
@@ -213,13 +215,13 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
 
     It can take a few minutes for Langflow to start.
 
-5. To confirm that a local Langflow instance is running, navigate to the default Langflow URL `http://127.0.0.1:7860`.
+6. To confirm that a local Langflow instance is running, navigate to the default Langflow URL `http://127.0.0.1:7860`.
 
-6. Sign in with the username `langflow` or your configured `LANGFLOW_SUPERUSER`.
+7. Sign in with the username `langflow` or your configured `LANGFLOW_SUPERUSER`.
 
     For more information, see [`LANGFLOW_AUTO_LOGIN`](/api-keys-and-authentication#langflow-auto-login).
 
-7. Create your first flow with the [Quickstart](/get-started-quickstart).
+8. Create your first flow with the [Quickstart](/get-started-quickstart).
 
 ### Manage the Langflow OSS version
 
@@ -230,6 +232,14 @@ For more information, see [Prepare to upgrade](/release-notes#prepare-to-upgrade
 To install a specific version of the Langflow package, add the required version to the command, such as `uv pip install langflow==1.4.22`.
 
 To reinstall Langflow and all of its dependencies, run `uv pip install langflow --force-reinstall`.
+
+:::warning Upgrading from an auto-login installation
+Langflow 1.13 disables auto-login by default.
+Before you upgrade an installation that signs in automatically, [prepare the existing account for password sign-in](/api-keys-and-authentication#upgrade-from-auto-login).
+`LANGFLOW_SUPERUSER_PASSWORD` does not replace a password that was already generated for that account.
+If you already upgraded and can't sign in, see [Recover access after upgrading](/api-keys-and-authentication#recover-access-after-upgrading).
+Don't delete or reinstall Langflow to regain access, because that can permanently remove your flows.
+:::
 
 ## Next steps
 
