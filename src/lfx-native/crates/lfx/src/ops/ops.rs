@@ -302,11 +302,6 @@ impl Node {
         self.0
     }
 
-    /// The node as a [`NodeRef`], to read its objects.
-    pub(crate) fn view(&self) -> NodeRef<'_> {
-        NodeRef::read(self.as_map()).expect("a node has the shape of a node")
-    }
-
     /// Check that `node` has the shape of a node.
     fn check(node: &Map<String, Value>) -> Result<(), FromValueError> {
         NodeRef::read(node).map(|_| ())
@@ -316,8 +311,8 @@ impl Node {
 /// A borrowed node with the shape of a [`Node`], and its `data.node` and
 /// `data.node.template` objects, found once.
 ///
-/// The edge rules read nodes through it, from the graph state and from
-/// validation's view of a flow alike, so none of them checks a node's shape.
+/// [`Node`] checks its shape through it, and validation reads the nodes it
+/// compares through it, so neither checks a node's shape twice.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct NodeRef<'a> {
     node: &'a Map<String, Value>,
@@ -364,11 +359,6 @@ impl<'a> NodeRef<'a> {
     /// The node's id.
     pub(crate) fn id(self) -> &'a str {
         self.node.id()
-    }
-
-    /// The node as a JSON object.
-    pub(crate) fn as_map(self) -> &'a Map<String, Value> {
-        self.node
     }
 
     /// The node's `data.node`.

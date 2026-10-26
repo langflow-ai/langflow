@@ -72,7 +72,7 @@ function backwardCase(c) {
   check("backward operations", unordered(result.inverseOperations), unordered(c.backward));
   let graph = result.flowData;
   for (const backward of [...result.inverseOperations].reverse()) {
-    graph = engine.applyFlowOperations(graph, clone(backward), { restoring: true }).flowData;
+    graph = engine.applyFlowOperations(graph, clone(backward), { mode: "preview" }).flowData;
   }
   if (!engine.graphsEqual(graph, c.base)) throw new Difference("the graph after the backward operations", graph, c.base);
 }

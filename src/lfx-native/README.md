@@ -77,7 +77,7 @@ This table maps each part of the engine to its callers today, in the Python engi
 
 | Part | Browser (`lfx-native`) | Editor callers |
 | --- | --- | --- |
-| Backward operations, and applying them | `GraphState.apply` with `backward` and `restoring` | history timeline (`buildHistoryTimeline` and `graphAt` in `history.ts`) |
+| Backward operations, and applying them | `GraphState.apply` with `backward` and `mode: preview` | history timeline (`buildHistoryTimeline` and `graphAt` in `history.ts`) |
 | A user's undo and redo | `GraphState.apply` with `backward`; the backward operation lists, last first, sent as one ordinary batch | none yet; for multiplayer undo and redo |
 | Append rows, and renumber a full gap | `appendTableRows`, and `assignRowIds` with renumbering (the default in the browser) | `TableNodeComponent` |
 | Edge fixes for a refused restore | `edgeFixes`, `fixesForEdges` | `use-flow-version-sidebar.ts`, `refused-restore.ts` |

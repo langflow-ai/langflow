@@ -15,6 +15,7 @@ pub mod diff;
 pub mod edges;
 pub(crate) mod entry;
 pub mod error;
+pub(crate) mod fields;
 pub(crate) mod from_value;
 pub mod ids;
 pub mod keyed;
@@ -30,7 +31,7 @@ pub mod state;
 pub mod validate;
 pub mod write;
 
-pub use apply::{Applied, ApplyOptions, apply_flow_operations};
+pub use apply::{Applied, ApplyOptions, Mode, apply_flow_operations};
 pub use diff::{Derived, derive_flow_operations, diff_flow_data};
 pub use error::{Error, ErrorCode, ErrorKind, Result};
 pub use ops::{

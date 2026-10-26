@@ -3,7 +3,7 @@
 use lfx::ops::canonical::graphs_equal;
 use lfx::ops::keyed::{Renumber, append_table_rows, assign_changed_table_row_ids, assign_row_ids};
 use lfx::ops::restore::{edge_fixes, fixes_for_edges};
-use lfx::ops::{ApplyOptions, GraphState, Operation};
+use lfx::ops::{ApplyOptions, GraphState, Mode, Operation};
 use libtest_mimic::{Failed, Trial};
 use serde_json::{Value, json};
 
@@ -58,13 +58,13 @@ fn backward_case(case: &Value) -> Result<(), Failed> {
         &unordered(&backward),
         &unordered(&case["backward"]),
     )?;
-    let restoring = ApplyOptions {
-        restoring: true,
+    let restore = ApplyOptions {
+        mode: Mode::Preview,
         ..ApplyOptions::default()
     };
     for list in applied.backward.into_iter().rev() {
         state
-            .apply(list, restoring)
+            .apply(list, restore)
             .map_err(|error| format!("a backward operation is refused: {error}"))?;
     }
     let restored = state.to_value();
@@ -79,7 +79,7 @@ fn backward_case(case: &Value) -> Result<(), Failed> {
 }
 
 /// A user's undo: the backward operation lists, last first, in one batch that is
-/// applied under every rule, without `restoring`.
+/// applied in strict mode, under every rule.
 fn undo_case(case: &Value) -> Result<(), Failed> {
     let base = &case["base"];
     let mut state = GraphState::new(base.clone()).map_err(|error| error.to_string())?;

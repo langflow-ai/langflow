@@ -23,6 +23,7 @@
 //!   checks the engine makes when it applies `add_edges`, so validation and
 //!   apply never disagree.
 
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
@@ -521,7 +522,7 @@ fn non_finite_violations(value: &Value, path: &mut GraphPath, violations: &mut V
 /// A structurally valid graph, indexed for the edge rules without copying it.
 #[derive(Debug)]
 pub(crate) struct GraphView<'a> {
-    nodes: HashMap<&'a str, NodeRef<'a>>,
+    nodes: HashMap<&'a str, &'a Value>,
     edges: HashMap<&'a str, &'a Map<String, Value>>,
     edges_at: HashMap<&'a str, Vec<&'a str>>,
 }
@@ -539,9 +540,11 @@ impl<'a> GraphView<'a> {
             edges: HashMap::new(),
             edges_at: HashMap::new(),
         };
-        for node in list(graph, "nodes").iter().filter_map(Value::as_object) {
-            let node = NodeRef::new(node)?;
-            view.nodes.insert(node.id(), node);
+        for node in list(graph, "nodes") {
+            let Some(map) = node.as_object() else {
+                continue;
+            };
+            view.nodes.insert(NodeRef::new(map)?.id(), node);
         }
         for edge in list(graph, "edges").iter().filter_map(Value::as_object) {
             let id = edge.id();
@@ -557,8 +560,15 @@ impl<'a> GraphView<'a> {
 }
 
 impl GraphRead for GraphView<'_> {
-    fn node(&self, id: &str) -> Option<NodeRef<'_>> {
-        self.nodes.get(id).copied()
+    fn has_node(&self, id: &str) -> bool {
+        self.nodes.contains_key(id)
+    }
+
+    fn node_value(&self, id: &str, path: &[&str]) -> Option<Cow<'_, Value>> {
+        let node = self.nodes.get(id)?;
+        path.iter()
+            .try_fold(*node, |value, key| value.get(key))
+            .map(Cow::Borrowed)
     }
 
     fn edge(&self, id: &str) -> Option<&Map<String, Value>> {
@@ -668,13 +678,13 @@ fn removed_outputs(
         return Ok(HashSet::new());
     }
     let kept: HashSet<String> = match outputs_after {
-        Some(outputs_after) => index_outputs(outputs_after, node_id)?
+        Some(outputs_after) => index_outputs(Cow::Borrowed(outputs_after), node_id)?
             .names()
             .map(str::to_owned)
             .collect(),
         None => HashSet::new(),
     };
-    Ok(index_outputs(outputs_before, node_id)?
+    Ok(index_outputs(Cow::Borrowed(outputs_before), node_id)?
         .names()
         .filter(|name| !kept.contains(*name))
         .map(str::to_owned)

@@ -102,8 +102,12 @@ def ignoring_id_order(operations: list[Any]) -> list[Any]:
     ]
 
 
-def ignoring_row_order(flow: Any) -> Any:
+def ignoring_order(flow: Any) -> Any:
+    """Nodes, edges and table rows as collections keyed by id: their array order is not state."""
     flow = parse(dump(flow))
+    for key in ("nodes", "edges"):
+        if key in flow:
+            flow[key] = sorted(flow[key], key=lambda item: item["id"])
     for node in flow.get("nodes", []):
         node_text = dump(node)
         for name in parse(ops.table_fields(node_text)):
@@ -126,7 +130,7 @@ def test_apply_case(case):
         check(strict, "state after the refused batch", parse(state.to_json()), case["base"])
         return
     assert "error" not in case, "expected the operations to be refused"
-    check(strict, "flow data", ignoring_row_order(parse(state.to_json())), ignoring_row_order(case["expected"]))
+    check(strict, "flow data", ignoring_order(parse(state.to_json())), ignoring_order(case["expected"]))
     expected_forward = case.get("forward_operations", case["operations"])
     check(
         strict,
@@ -345,7 +349,7 @@ def test_backward_case(case):
     applied = parse(state.apply(dump(case["operations"]), backward=True))
     check(matches, "backward operations", unordered(applied["backward_operations"]), unordered(case["backward"]))
     for backward in reversed(applied["backward_operations"]):
-        state.apply(dump(backward), restoring=True)
+        state.apply(dump(backward), mode="preview")
     assert ops.graphs_equal(state.to_json(), dump(case["base"]))
 
 

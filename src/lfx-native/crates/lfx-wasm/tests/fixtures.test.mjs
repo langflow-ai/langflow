@@ -87,8 +87,11 @@ function cases(name, section, run) {
 const ignoringIdOrder = (operations) =>
   operations.map((op) => (op.type === "delete_nodes" || op.type === "delete_edges" ? { ...op, ids: [...op.ids].sort() } : op));
 
-function ignoringRowOrder(flow) {
+// Nodes, edges and table rows as collections keyed by id: their array order is not state.
+function ignoringOrder(flow) {
   const copy = parse(dump(flow));
+  const byId = (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  for (const key of ["nodes", "edges"]) if (copy[key]) copy[key] = [...copy[key]].sort(byId);
   for (const node of copy.nodes ?? []) {
     for (const name of JSON.parse(ops.tableFields(dump(node)))) {
       const field = node.data.node.template[name];
@@ -108,7 +111,7 @@ cases("apply_cases.json", "cases", (c) => {
     return check(strict, "state after the refused batch", parse(state.toJson()), c.base);
   }
   assert.ok(!c.error, "expected the operations to be refused");
-  check(strict, "flow data", ignoringRowOrder(parse(state.toJson())), ignoringRowOrder(c.expected));
+  check(strict, "flow data", ignoringOrder(parse(state.toJson())), ignoringOrder(c.expected));
   check(strict, "forward operations", ignoringIdOrder(applied.value.forward_operations), ignoringIdOrder(c.forward_operations ?? c.operations));
 });
 
@@ -240,7 +243,7 @@ cases("backward_cases.json", "cases", (c) => {
   const state = new ops.GraphState(dump(c.base));
   const applied = parse(state.apply(dump(c.operations), { backward: true }));
   check(matches, "backward operations", unordered(applied.backward_operations), unordered(c.backward));
-  for (const backward of [...applied.backward_operations].reverse()) state.apply(dump(backward), { restoring: true });
+  for (const backward of [...applied.backward_operations].reverse()) state.apply(dump(backward), { mode: "preview" });
   assert.ok(ops.graphsEqual(state.toJson(), dump(c.base)));
 });
 
@@ -272,7 +275,7 @@ cases("write_cases.json", "cases", (c) => {
 });
 
 const FIXTURE_FILES = [
-  "apply_cases.json", "canonical_cases.json", "diff_cases.json", "editor_cases.json", "backward_cases.json",
+  "apply_cases.json", "backward_cases.json", "canonical_cases.json", "diff_cases.json", "editor_cases.json",
   "limit_cases.json", "merge_cases.json", "property_cases.json", "repair_cases.json", "restore_cases.json",
   "table_cases.json", "validation_cases.json", "write_cases.json",
 ];
