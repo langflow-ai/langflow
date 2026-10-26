@@ -37,7 +37,7 @@ export function createFileUpload(props?: {
         }
       }
       input.removeEventListener("change", handleChange);
-      document.removeEventListener("focus", handleFocus);
+      input.removeEventListener("cancel", handleCancel);
     };
 
     const handleChange = (event: Event) => {
@@ -106,18 +106,17 @@ export function createFileUpload(props?: {
       resolve(files);
     };
 
-    const handleFocus = () => {
-      setTimeout(() => {
-        if (!isHandled) {
-          isHandled = true;
-          cleanup();
-          resolve([]);
-        }
-      }, 100);
+    // Firefox returns focus to the document before dispatching `change`, so
+    // only the picker's own `cancel` event may treat the dialog as dismissed.
+    const handleCancel = () => {
+      if (isHandled) return;
+      isHandled = true;
+      cleanup();
+      resolve([]);
     };
 
     input.addEventListener("change", handleChange);
-    document.addEventListener("focus", handleFocus);
+    input.addEventListener("cancel", handleCancel);
 
     document.body.appendChild(input);
 
