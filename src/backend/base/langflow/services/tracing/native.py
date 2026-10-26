@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid5
 
+from lfx.base.models.decisions.schema import DecisionResult
 from lfx.log.logger import logger
 from typing_extensions import override
 
@@ -166,6 +167,7 @@ class NativeTracer(BaseTracer):
         outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
         logs: Sequence[Log | dict] = (),
+        decision_result: DecisionResult | None = None,
     ) -> None:
         """End a component-level trace span.
 
@@ -175,6 +177,7 @@ class NativeTracer(BaseTracer):
             outputs: Output data
             error: Optional error
             logs: Optional logs
+            decision_result: Completed decision call, captured before queueing this event.
         """
         if not self._ready:
             return
@@ -206,6 +209,25 @@ class NativeTracer(BaseTracer):
             attributes["gen_ai.usage.input_tokens"] = tokens["gen_ai.usage.input_tokens"]
         if tokens.get("gen_ai.usage.output_tokens"):
             attributes["gen_ai.usage.output_tokens"] = tokens["gen_ai.usage.output_tokens"]
+
+        if isinstance(decision_result, DecisionResult):
+            attributes.update(
+                {
+                    "gen_ai.response.model": decision_result.model,
+                    "gen_ai.provider.name": decision_result.provider,
+                    "gen_ai.operation.name": "decision",
+                }
+            )
+            usage = decision_result.token_usage
+            if usage is not None:
+                for name in ("input_tokens", "output_tokens"):
+                    count = getattr(usage, name)
+                    if count is not None:
+                        attributes[f"gen_ai.usage.{name}"] = count
+                if usage.total_tokens is not None:
+                    attributes["langflow.decision.total_tokens"] = usage.total_tokens
+            if decision_result.provider_latency_ms is not None:
+                attributes["langflow.decision.provider_latency_ms"] = decision_result.provider_latency_ms
 
         self.completed_spans.append(
             self._build_completed_span(
@@ -325,15 +347,21 @@ class NativeTracer(BaseTracer):
             has_span_errors = any(span.get("status") == SpanStatus.ERROR for span in self.completed_spans)
             trace_status = SpanStatus.ERROR if (error or has_span_errors) else SpanStatus.OK
 
-            # Only sum LangChain spans (component spans already aggregate their children's
-            # tokens); OTel derives total from input+output as there is no standard total_tokens key.
+            # Decision calls have no LangChain child; other component spans already aggregate
+            # their children's tokens and must not be counted again.
             from langflow.services.tracing.formatting import safe_int_tokens
 
+            # shortcut: unknown decision totals are omitted; migrate the trace schema to represent incomplete totals.
             total_tokens = sum(
-                safe_int_tokens((span.get("attributes") or {}).get("gen_ai.usage.input_tokens"))
-                + safe_int_tokens((span.get("attributes") or {}).get("gen_ai.usage.output_tokens"))
+                safe_int_tokens((span.get("attributes") or {}).get("langflow.decision.total_tokens"))
+                if (span.get("attributes") or {}).get("gen_ai.operation.name") == "decision"
+                else (
+                    safe_int_tokens((span.get("attributes") or {}).get("gen_ai.usage.input_tokens"))
+                    + safe_int_tokens((span.get("attributes") or {}).get("gen_ai.usage.output_tokens"))
+                )
                 for span in self.completed_spans
                 if span.get("span_source") == "langchain"
+                or (span.get("attributes") or {}).get("gen_ai.operation.name") == "decision"
             )
 
             async with session_scope() as session:

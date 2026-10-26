@@ -1,12 +1,133 @@
 """Decision Model component discovery and the shared execution contract."""
 
+from types import SimpleNamespace
+
 import pytest
-from lfx.base.models.decisions.schema import DecisionConfigurationError, DecisionResult
+from lfx.base.models.decisions.schema import DecisionConfigurationError, DecisionEvaluationError, DecisionResult
 from lfx.components.llm_operations import decision_model as component_module
 from lfx.components.llm_operations.decision_model import DecisionModelComponent
+from lfx.components.llm_operations.llm_conditional_router import SmartRouterComponent
 from lfx.custom.eval import eval_custom_component_code
 from lfx.custom.utils import create_component_template
 from lfx.schema.data import Data
+from lfx.schema.properties import Usage
+
+
+def _accounting_component(consumer, monkeypatch, result):
+    module = "decision_model" if consumer == "evaluator" else "llm_conditional_router"
+    if consumer == "evaluator":
+        component = DecisionModelComponent()
+        component.set(kind="Boolean", context="text", question="Does this apply?")
+        run = component.evaluate
+    else:
+        component = SmartRouterComponent()
+        component.set(
+            routing_mode="Decision Model",
+            decision_kind="Boolean",
+            input_text="text",
+            decision_question="Does this apply?",
+            minimum_probability=0.7,
+            enable_else_output=True,
+            evaluation_error_action="Stop with error",
+        )
+        component._vertex = SimpleNamespace(
+            outgoing_edges=[SimpleNamespace(source_handle=SimpleNamespace(name="default_result"))]
+        )
+        component.log = lambda *_args, **_kwargs: None
+        run = component._get_decision_categorization
+    monkeypatch.setattr(f"lfx.components.llm_operations.{module}.evaluate_decision", lambda *_args, **_kwargs: result)
+    return component, run
+
+
+@pytest.mark.parametrize("consumer", ["evaluator", "router"])
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ({"input_tokens": 10, "output_tokens": 2}, Usage(input_tokens=10, output_tokens=2, total_tokens=12)),
+        ({"input_tokens": 0, "output_tokens": 0}, Usage(input_tokens=0, output_tokens=0, total_tokens=0)),
+        ({"input_tokens": 10}, Usage(input_tokens=10)),
+        ({"output_tokens": 0}, Usage(output_tokens=0)),
+        ({"total_tokens": 12}, Usage(total_tokens=12)),
+        (
+            {"input_tokens": 10, "output_tokens": 2, "total_tokens": 15},
+            Usage(input_tokens=10, output_tokens=2, total_tokens=15),
+        ),
+        ({"input_tokens_details": {"cached_tokens": 3}}, None),
+        ({}, None),
+        (None, None),
+    ],
+)
+def test_decision_components_expose_reported_token_counts(consumer, raw, expected, monkeypatch):
+    result = DecisionResult(kind="boolean", provider="TypeSafe", model="jev", probability_true=0.9, usage=raw)
+    component, run = _accounting_component(consumer, monkeypatch, result)
+    component._token_usage = Usage(input_tokens=99, output_tokens=99, total_tokens=198)
+    run()
+    assert component._token_usage == expected
+    assert component._decision_result is result
+    assert result.usage == raw
+
+
+@pytest.mark.parametrize("consumer", ["evaluator", "router"])
+def test_decision_components_clear_previous_usage_before_validation_errors(consumer, monkeypatch):
+    result = DecisionResult(kind="boolean", provider="TypeSafe", model="jev", probability_true=0.9)
+    component, run = _accounting_component(consumer, monkeypatch, result)
+    component._token_usage = Usage(input_tokens=99)
+    component._decision_result = result
+    component.set(**({"question": ""} if consumer == "evaluator" else {"decision_question": ""}))
+    with pytest.raises(DecisionConfigurationError):
+        run()
+    assert component._token_usage is None
+    assert component._decision_result is None
+
+
+@pytest.mark.parametrize("consumer", ["evaluator", "router"])
+def test_decision_components_keep_refusal_usage(consumer, monkeypatch):
+    result = DecisionResult(
+        kind="boolean",
+        provider="OpenAI",
+        model="gpt-6-luna",
+        status="refusal",
+        usage={"input_tokens": 10, "output_tokens": 0},
+    )
+    component, run = _accounting_component(consumer, monkeypatch, result)
+    if consumer == "router":
+        with pytest.raises(DecisionEvaluationError, match="declined to answer"):
+            run()
+    else:
+        run()
+    assert component._token_usage == Usage(input_tokens=10, output_tokens=0, total_tokens=10)
+    assert component._decision_result is result
+
+
+@pytest.mark.parametrize("consumer", ["evaluator", "router"])
+def test_decision_components_clear_usage_on_provider_failure(consumer, monkeypatch):
+    result = DecisionResult(
+        kind="boolean", provider="TypeSafe", model="jev", probability_true=0.9, usage={"input_tokens": 10}
+    )
+    component, run = _accounting_component(consumer, monkeypatch, result)
+    run()
+    assert component._token_usage == Usage(input_tokens=10)
+
+    def fail(*_args, **_kwargs):
+        msg = "Provider unavailable"
+        raise DecisionEvaluationError(msg, category="transport")
+
+    module = "decision_model" if consumer == "evaluator" else "llm_conditional_router"
+    monkeypatch.setattr(f"lfx.components.llm_operations.{module}.evaluate_decision", fail)
+    with pytest.raises(DecisionEvaluationError, match="Provider unavailable"):
+        run()
+    assert component._token_usage is None
+    assert component._decision_result is None
+
+
+def test_router_clears_decision_usage_when_reused_in_language_model_mode():
+    router = SmartRouterComponent()
+    router.set(routing_mode="Language Model")
+    router._token_usage = Usage(input_tokens=99)
+    router._decision_result = DecisionResult(kind="boolean", provider="TypeSafe", model="jev", probability_true=0.9)
+    router._pre_run_setup()
+    assert router._token_usage is None
+    assert router._decision_result is None
 
 
 def test_component_template_discoverable():
@@ -72,11 +193,16 @@ def test_packaged_index_preserves_decision_component_sources():
     signature = blob.pop("sha256")
     assert hashlib.sha256(orjson.dumps(blob, option=orjson.OPT_SORT_KEYS)).hexdigest() == signature
     components = dict(blob["entries"])["llm_operations"]
+    for name in ("DecisionModel", "SmartRouter"):
+        assert "self._token_usage = result.token_usage" in components[name]["template"]["code"]["value"]
     assert not {"TypeSafeDecision", "PerplexityDecision", "OpenAIDecision"} & components.keys()
     template = components[DecisionModelComponent.name]
     assert template["template"]["model"]["model_type"] == "decision"
     restored = eval_custom_component_code(template["template"]["code"]["value"])()
     assert restored.name == DecisionModelComponent.name
+    restored.set(context="Old text", structured_context=Data(data={}))
+    with pytest.raises(DecisionConfigurationError, match="Structured Context is empty"):
+        restored._context()
 
 
 def test_components_do_not_import_provider_sdks():
@@ -188,6 +314,8 @@ def test_structured_context_reaches_the_model_as_json(monkeypatch):
         # Connected but empty, as from a Dynamic Create Data with no fields: say so, don't ask to connect it.
         ({"structured_context": Data(data={})}, "Structured Context is empty"),
         ({"structured_context": {}}, "Structured Context is empty"),
+        ({"context": "Old text", "structured_context": Data(data={})}, "Structured Context is empty"),
+        ({"context": "Old text", "structured_context": {}}, "Structured Context is empty"),
         ({"context": "Charged twice", "structured_context": {"order": 1042}}, "not both"),
     ],
 )

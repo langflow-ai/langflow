@@ -5,12 +5,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langflow.services.tracing.base import BaseTracer
+from langflow.services.tracing.native import NativeTracer
 from langflow.services.tracing.service import (
     TraceContext,
     TracingService,
     component_context_var,
     trace_context_var,
 )
+from lfx.base.models.decisions.schema import DecisionResult
+from lfx.components.llm_operations.llm_conditional_router import SmartRouterComponent
 from lfx.services.settings.base import Settings
 from lfx.services.settings.service import SettingsService
 
@@ -773,6 +776,47 @@ async def test_stop_drains_pending_queue_items(tracing_service):
 
     assert processed == ["Chat Output"]
     assert trace_context.traces_queue.empty()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failed", [False, True])
+@pytest.mark.parametrize("model", ["jev-1.13.0", "synthetic-secret-must-not-persist"])
+async def test_decision_result_is_captured_before_queued_trace_completion(tracing_service, failed, model):
+    trace_context = TraceContext(uuid.uuid4(), "run", "proj", "u", "s")
+    native = NativeTracer("run", "chain", "proj", uuid.uuid4())
+    vendor = MockTracer("run", "chain", "proj", uuid.uuid4())
+    trace_context.tracers = {"native": native, "vendor": vendor}
+    component = SmartRouterComponent()
+    component.set_attributes({"api_key": "synthetic-secret-must-not-persist"})
+    result = DecisionResult(
+        kind="boolean",
+        provider="TypeSafe",
+        model=model,
+        probability_true=0.8,
+        usage={"input_tokens": 42, "output_tokens": 0},
+    )
+    token = trace_context_var.set(trace_context)
+    component_token = component_context_var.set(None)
+    try:
+        try:
+            async with tracing_service.trace_component(component, "router", {}):
+                component._decision_result = result
+                if failed:
+                    msg = "routing failed after inference"
+                    raise ValueError(msg)
+        except ValueError:
+            assert failed
+        component._decision_result = None
+        await tracing_service._stop(trace_context)
+    finally:
+        trace_context_var.reset(token)
+        component_context_var.reset(component_token)
+
+    assert native.completed_spans[0]["attributes"]["gen_ai.usage.input_tokens"] == 42
+    expected_model = "jev-1.13.0" if model == "jev-1.13.0" else "**********"
+    assert native.completed_spans[0]["attributes"]["gen_ai.response.model"] == expected_model
+    assert result.model == model
+    assert len(vendor.end_trace_list) == 1
 
 
 def test_get_tracer_is_silent_when_tracing_is_deactivated(mock_settings_service):

@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from langchain_core.callbacks.base import BaseCallbackHandler
+    from lfx.base.models.decisions.schema import DecisionResult
     from lfx.custom.custom_component.component import Component
     from lfx.graph.vertex.base import Vertex
     from lfx.services.settings.service import SettingsService
@@ -122,6 +123,7 @@ class ComponentTraceContext:
         self.inputs_metadata: dict[str, dict] = metadata or {}
         self.outputs: dict[str, dict] = defaultdict(dict)
         self.outputs_metadata: dict[str, dict] = defaultdict(dict)
+        self.decision_result: DecisionResult | None = None
         self.logs: dict[str, list[Log | dict[Any, Any]]] = defaultdict(list)
 
 
@@ -456,6 +458,8 @@ class TracingService(Service):
         trace_context: TraceContext,
         error: Exception | None = None,
     ) -> None:
+        from langflow.services.tracing.native import NativeTracer
+
         for tracer in trace_context.tracers.values():
             if tracer.ready:
                 try:
@@ -465,6 +469,11 @@ class TracingService(Service):
                         outputs=trace_context.all_outputs[component_trace_context.trace_name],
                         error=error,
                         logs=component_trace_context.logs[component_trace_context.trace_name],
+                        **(
+                            {"decision_result": component_trace_context.decision_result}
+                            if isinstance(tracer, NativeTracer)
+                            else {}
+                        ),
                     )
                 except Exception:  # noqa: BLE001
                     logger.exception(f"Error ending trace {component_trace_context.trace_name}")
@@ -504,7 +513,15 @@ class TracingService(Service):
         trace_context.all_inputs[trace_name] |= inputs or {}
         await trace_context.traces_queue.put((self._start_component_traces, (component_trace_context, trace_context)))
         try:
-            yield self
+            try:
+                yield self
+            finally:
+                result = getattr(component, "_decision_result", None)
+                if result is not None:
+                    # Display metadata must use the source component's secret registry.
+                    component_trace_context.decision_result = result.model_copy(
+                        update={"model": component._sanitize_secret_values(result.model)}
+                    )
         except Exception as e:
             await trace_context.traces_queue.put(
                 (self._end_component_traces, (component_trace_context, trace_context, e))

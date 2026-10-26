@@ -12,13 +12,16 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import uuid4
 
+import pytest
 from langflow.services.database.models.traces.model import SpanStatus, SpanTable, SpanType
 from langflow.services.tracing.formatting import (
     _CHAT_INPUT_SPAN_NAME,
     build_span_tree,
+    compute_leaf_token_total,
     extract_trace_io_from_rows,
     extract_trace_io_from_spans,
     safe_int_tokens,
+    span_to_response,
 )
 
 # ---------------------------------------------------------------------------
@@ -27,6 +30,52 @@ from langflow.services.tracing.formatting import (
 
 _TRACE_ID = uuid4()
 _UTC = timezone.utc
+
+
+@pytest.mark.parametrize(
+    ("decision_attributes", "expected"),
+    [
+        ({"gen_ai.usage.input_tokens": 10}, 5),
+        ({"langflow.decision.total_tokens": 20}, 25),
+        ({"gen_ai.usage.input_tokens": 10, "gen_ai.usage.output_tokens": 2, "langflow.decision.total_tokens": 20}, 25),
+        ({"langflow.decision.total_tokens": 0}, 5),
+    ],
+)
+def test_trace_query_fallback_preserves_decision_totals(decision_attributes, expected):
+    attributes = {
+        "decision": {"gen_ai.operation.name": "decision", **decision_attributes},
+        "llm": {"gen_ai.usage.input_tokens": 4, "gen_ai.usage.output_tokens": 1},
+        "parent": {"gen_ai.usage.input_tokens": 4, "gen_ai.usage.output_tokens": 1},
+    }
+    assert compute_leaf_token_total(list(attributes), {"parent"}, attributes) == expected
+
+
+def test_model_only_span_has_no_fabricated_token_usage():
+    response = span_to_response(_span(attributes={"gen_ai.response.model": "jev-1.13.0"}))
+    assert response.model_name == "jev-1.13.0"
+    assert response.token_usage is None
+
+
+def test_zero_decision_output_tokens_survive_trace_formatting():
+    response = span_to_response(_span(attributes={"gen_ai.usage.input_tokens": 42, "gen_ai.usage.output_tokens": 0}))
+    assert response.token_usage == {"promptTokens": 42, "completionTokens": 0, "totalTokens": 42}
+
+
+@pytest.mark.parametrize(
+    ("attributes", "expected"),
+    [
+        ({"langflow.decision.total_tokens": 42}, {"promptTokens": None, "completionTokens": None, "totalTokens": 42}),
+        ({"gen_ai.usage.input_tokens": 42}, {"promptTokens": 42, "completionTokens": None, "totalTokens": None}),
+        (
+            {"gen_ai.usage.input_tokens": 0, "gen_ai.usage.output_tokens": 0, "langflow.decision.total_tokens": 0},
+            {"promptTokens": 0, "completionTokens": 0, "totalTokens": 0},
+        ),
+        ({}, None),
+    ],
+)
+def test_decision_trace_counts_preserve_unknown_and_zero(attributes, expected):
+    response = span_to_response(_span(attributes={"gen_ai.operation.name": "decision", **attributes}))
+    assert response.token_usage == expected
 
 
 def _dt(hour: int, minute: int = 0) -> datetime:

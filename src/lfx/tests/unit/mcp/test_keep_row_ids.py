@@ -1,5 +1,16 @@
 """The assistant edits a Smart Router's routes as plain rows; their edges must survive."""
 
+import copy
+from unittest.mock import AsyncMock
+
+import pytest
+from lfx.mcp.flow_builder_tools import (
+    ConfigureComponent,
+    drain_flow_events,
+    get_working_flow,
+    init_working_flow,
+    reset_working_flow,
+)
 from lfx.mcp.server import _keep_row_ids
 
 SAVED = [
@@ -76,3 +87,121 @@ def test_names_the_router_tells_apart_keep_their_own_ids():
     ]
     reordered = [{"route_category": "Strasse"}, {"route_category": "Straße"}]
     assert _ids(_keep_row_ids(saved, reordered)) == [("Strasse", "category_2_result"), ("Straße", "category_1_result")]
+
+
+@pytest.fixture(params=[("routes", "Choice", "category"), ("score_levels", "Score", "level")])
+def configured_router(request):
+    table, kind, prefix = request.param
+    reset_working_flow()
+    rows = [{**row, "route_id": f"{prefix}_{i}_result"} for i, row in enumerate(SAVED, 1)]
+    outputs = [{"name": row["route_id"], "display_name": row["route_category"]} for row in rows]
+    outputs.append({"name": "default_result", "display_name": "Else"})
+    flow = {
+        "data": {
+            "nodes": [
+                {
+                    "id": "router",
+                    "data": {
+                        "id": "router",
+                        "type": "SmartRouter",
+                        "node": {
+                            "template": {
+                                table: {"type": "table", "value": rows},
+                                "routing_mode": {"type": "str", "value": "Decision Model"},
+                                "decision_kind": {"type": "str", "value": kind},
+                            },
+                            "outputs": outputs,
+                        },
+                    },
+                }
+            ],
+            "edges": [
+                {"source": "router", "sourceHandle": row["route_id"], "target": row["route_category"]} for row in rows
+            ],
+        },
+    }
+    init_working_flow(copy.deepcopy(flow), "flow")
+    yield table, prefix, flow
+    reset_working_flow()
+
+
+def test_in_app_configure_preserves_reordered_and_renamed_route_destinations(configured_router):
+    table, prefix, original = configured_router
+    tool = ConfigureComponent()
+    tool.set(
+        component_id="router",
+        params={
+            table: [
+                {"route_category": "Support"},
+                {"route_category": "Payments", "route_description": "Invoices and refunds"},
+            ]
+        },
+    )
+    result = tool.configure_component()
+    assert "error" not in result.data
+    updated = get_working_flow()["data"]
+    node = updated["nodes"][0]["data"]["node"]
+    assert _ids(node["template"][table]["value"]) == [
+        ("Support", f"{prefix}_2_result"),
+        ("Payments", f"{prefix}_1_result"),
+    ]
+    assert node["outputs"] == [
+        {"name": f"{prefix}_2_result", "display_name": "Support"},
+        {"name": f"{prefix}_1_result", "display_name": "Payments"},
+        {"name": "default_result", "display_name": "Else"},
+    ]
+    assert updated["edges"] == original["data"]["edges"]
+    assert drain_flow_events()[-1]["outputs"] == node["outputs"]
+
+
+@pytest.mark.parametrize(
+    "incoming",
+    [
+        [{"route_category": "Support"}],
+        [{"route_category": "Support"}, {"route_category": "Billing"}, {"route_category": "Sales"}],
+        [{"route_category": "Support"}, {"route_category": "Sales"}],
+    ],
+)
+def test_in_app_rejects_structural_route_edits_without_mutating_flow(configured_router, incoming):
+    table, _, original = configured_router
+    tool = ConfigureComponent()
+    tool.set(component_id="router", params={table: incoming})
+    result = tool.configure_component()
+    assert "updating its outputs" in result.data["error"]
+    assert get_working_flow() == original
+    assert not drain_flow_events()
+
+
+async def test_standalone_mcp_still_refreshes_structural_route_edits(configured_router, monkeypatch):
+    from lfx.mcp import server
+
+    table, prefix, flow = configured_router
+    node = flow["data"]["nodes"][0]["data"]["node"]
+    node["template"][table]["real_time_refresh"] = True
+    updated = copy.deepcopy(node)
+    updated["template"][table]["value"] = [{"route_category": "Support", "route_id": f"{prefix}_2_result"}]
+    updated["outputs"] = [updated["outputs"][1], updated["outputs"][2]]
+    client = AsyncMock()
+    client.post.return_value = updated
+    save = AsyncMock()
+    monkeypatch.setattr(server, "_get_client", lambda: client)
+    monkeypatch.setattr(server, "_get_flow", AsyncMock(return_value=flow))
+    monkeypatch.setattr(server, "_patch_flow", save)
+
+    result = await server.configure_component("flow", "router", {table: [{"route_category": "Support"}]})
+
+    assert result["configured"] == [table]
+    assert client.post.call_args.kwargs["json_data"]["field_value"] == updated["template"][table]["value"]
+    assert flow["data"]["nodes"][0]["data"]["node"] == updated
+    save.assert_awaited_once_with("flow", flow)
+
+
+@pytest.mark.usefixtures("configured_router")
+def test_unrelated_configure_without_saved_outputs_still_works():
+    flow = get_working_flow()
+    del flow["data"]["nodes"][0]["data"]["node"]["outputs"]
+    tool = ConfigureComponent()
+    tool.set(component_id="router", params={"routing_mode": "Language Model"})
+    result = tool.configure_component()
+    assert "error" not in result.data
+    assert "outputs" not in drain_flow_events()[-1]

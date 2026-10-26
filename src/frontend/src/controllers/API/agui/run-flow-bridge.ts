@@ -28,6 +28,7 @@ import type {
   VertexDataTypeAPI,
 } from "@/types/api";
 import type { ChatInputType, ChatOutputType } from "@/types/chat";
+import { decisionErrorFromLogs } from "@/utils/decision-error-message";
 import { api } from "../api";
 import {
   injectHumanInputCard,
@@ -163,6 +164,7 @@ export function applyStateDelta(
   nodeIds: Set<string>,
   runningNodeIds?: Set<string>,
   originalBuildStatuses?: Map<string, FlowBuildStatusEntry | undefined>,
+  showDecisionNotice = true,
 ): void {
   const flowStore = useFlowStore.getState();
   for (const op of ops) {
@@ -213,6 +215,16 @@ export function applyStateDelta(
     // Only the final per-vertex emission carries the result data; running
     // states have ``output: null`` and contribute no flow-pool entry.
     if (value.output) {
+      const decisionError =
+        value.status === "success"
+          ? decisionErrorFromLogs(value.output.logs)
+          : null;
+      if (decisionError && showDecisionNotice) {
+        useAlertStore.getState().setNoticeData({
+          title: i18n.t("flow.decisionErrorElse"),
+          list: [decisionError],
+        });
+      }
       const entry: VertexBuildTypeAPI = {
         id: nodeId,
         inactivated_vertices: null,
@@ -541,6 +553,10 @@ export function buildBackgroundRunRequest(opts: WorkflowRunOptions) {
   return body;
 }
 
+// Keep notification effects idempotent across HITL reattachments while still
+// replaying every frame into the canvas. Durable sequence numbers are job-scoped.
+const backgroundEventSequences = new Map<string, number>();
+
 /**
  * Consume a background run's durable event stream (`GET /{job_id}/events`) and fold
  * events into the flow store. Resolves when the run ends, suspends for human input,
@@ -562,12 +578,21 @@ export async function consumeBackgroundEvents(
   let runId = jobId;
   let suspended = false;
   let terminalSeen = false;
+  let showDecisionNotice = true;
 
   const ctx: BridgeContext = {
     setRunId: (r) => {
       runId = r;
     },
-    applyDelta: (ops) => applyStateDelta(ops, runId, touchedNodeIds),
+    applyDelta: (ops) =>
+      applyStateDelta(
+        ops,
+        runId,
+        touchedNodeIds,
+        undefined,
+        undefined,
+        showDecisionNotice,
+      ),
     handleCustomEvent: (eventType, data) => handleMessageEvent(eventType, data),
     // The background replay routes 'end' through the same message handler (as before the
     // end/log split); logs aren't surfaced separately on the reattach path.
@@ -646,7 +671,17 @@ export async function consumeBackgroundEvents(
       } catch {
         return false;
       }
-      if (handleAGUIEvent(event, ctx)) {
+      const idLine = frame.split("\n").find((line) => line.startsWith("id:"));
+      const sequence = idLine ? Number(idLine.slice(3).trim()) : NaN;
+      const hasSequence = Number.isSafeInteger(sequence) && sequence > 0;
+      const previousSequence = backgroundEventSequences.get(jobId) ?? 0;
+      // Frames without a durable ID cannot safely be identified as replays.
+      showDecisionNotice = !hasSequence || sequence > previousSequence;
+      const finished = handleAGUIEvent(event, ctx);
+      if (hasSequence && sequence > previousSequence) {
+        backgroundEventSequences.set(jobId, sequence);
+      }
+      if (finished) {
         // A terminal event supersedes a replayed pause (resume reattach re-emits it).
         suspended = false;
         terminalSeen = true;

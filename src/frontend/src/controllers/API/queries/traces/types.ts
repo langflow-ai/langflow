@@ -65,10 +65,10 @@ export interface SpanApiResponse {
   error?: string;
   modelName?: string;
   tokenUsage?: {
-    promptTokens: number;
-    completionTokens: number;
-    totalTokens: number;
-    cost: number;
+    promptTokens?: number | null;
+    completionTokens?: number | null;
+    totalTokens?: number | null;
+    cost?: number | null;
   };
   children: SpanApiResponse[];
 }

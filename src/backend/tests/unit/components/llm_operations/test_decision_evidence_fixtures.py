@@ -252,6 +252,8 @@ RESULT_SCENARIOS = {
 
 
 def _component_result(monkeypatch, scenario: ResultScenario) -> dict:
+    clock = iter((10.0, 10.125))
+    monkeypatch.setattr("lfx.base.models.decisions.providers.perf_counter", lambda: next(clock))
     monkeypatch.setenv(get_provider_secret_variable_key(scenario.provider), "fixture-key")  # pragma: allowlist secret
     monkeypatch.setattr(
         "lfx.base.models.decisions.providers.provider_safe_httpx_post",

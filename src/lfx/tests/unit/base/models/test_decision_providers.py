@@ -20,6 +20,26 @@ PROVIDERS = tuple(providers.ENDPOINTS)
 DEFAULT_MODELS = {row["provider"]: row["name"] for row in reversed(DECISION_MODELS_DETAILED)}
 
 
+def test_provider_latency_measures_http_call_only(monkeypatch):
+    clock = iter([10.0, 10.125])
+    monkeypatch.setattr(providers, "perf_counter", lambda: next(clock))
+    monkeypatch.setattr(
+        providers,
+        "provider_safe_httpx_post",
+        lambda *_, **__: httpx.Response(200, json=response_for("TypeSafe", "boolean")),
+    )
+
+    result = providers.evaluate_provider("TypeSafe", "jev-latest", request_for("boolean"), api_key="test-key")
+
+    assert result.provider_latency_ms == 125
+    assert (
+        providers.parse_response(
+            "TypeSafe", request_for("boolean"), response_for("TypeSafe", "boolean")
+        ).provider_latency_ms
+        is None
+    )
+
+
 def request_for(kind):
     candidates = (DecisionOption(id="a", label="Low"), DecisionOption(id="b", label="High"))
     return DecisionRequest(
@@ -557,12 +577,30 @@ def test_a_blank_yes_or_no_description_is_none():
     assert providers.build_payload("OpenAI", "gpt-6-luna", request)["questions"][0]["type"] == "predicate"
 
 
-@pytest.mark.parametrize(("header", "expected"), [("req_5f0c9a", "req_5f0c9a"), ("has spaces <b>", None), (None, None)])
-def test_result_keeps_only_a_safe_request_id(monkeypatch, header, expected):
-    headers = {"x-request-id": header} if header else {}
-    response = httpx.Response(200, json=response_for("Perplexity", "boolean"), headers=headers)
+@pytest.mark.parametrize(
+    ("provider", "header_name"), [("Perplexity", "x-request-id"), ("TypeSafe", "x-typesafe-request-id")]
+)
+@pytest.mark.parametrize(
+    ("header", "expected"),
+    [("req_5f0c9a", "req_5f0c9a"), ("has spaces <b>", None), ("r" * 129, None), (None, None)],
+)
+def test_result_keeps_only_a_safe_request_id(monkeypatch, provider, header_name, header, expected):
+    headers = {header_name: header} if header else {}
+    response = httpx.Response(200, json=response_for(provider, "boolean"), headers=headers)
     monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: response)
-    result = providers.evaluate_provider("Perplexity", "pplx-decider-latest", request_for("boolean"), api_key="key")
+    result = providers.evaluate_provider(provider, DEFAULT_MODELS[provider], request_for("boolean"), api_key="key")
+    assert result.request_id == expected
+
+
+@pytest.mark.parametrize(("header", "expected"), [("req_generic", "req_generic"), ("unsafe <b>", None)])
+def test_generic_request_id_takes_precedence(monkeypatch, header, expected):
+    response = httpx.Response(
+        200,
+        json=response_for("TypeSafe", "boolean"),
+        headers={"x-request-id": header, "x-typesafe-request-id": "req_typesafe"},
+    )
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: response)
+    result = providers.evaluate_provider("TypeSafe", DEFAULT_MODELS["TypeSafe"], request_for("boolean"), api_key="key")
     assert result.request_id == expected
 
 
@@ -573,12 +611,16 @@ def test_undecodable_answers_name_the_providers_request_id(monkeypatch):
         providers.evaluate_provider("Perplexity", "pplx-decider-latest", request_for("choice"), api_key="key")
 
 
-def test_failures_name_the_providers_request_id(monkeypatch):
-    response = httpx.Response(503, text="private user content", headers={"x-request-id": "req_5f0c9a"})
+@pytest.mark.parametrize(
+    ("provider", "header_name"), [("Perplexity", "x-request-id"), ("TypeSafe", "x-typesafe-request-id")]
+)
+@pytest.mark.parametrize(("header", "reference"), [("req_5f0c9a", ", request ID req_5f0c9a"), ("unsafe <b>", "")])
+def test_failures_name_the_providers_request_id(monkeypatch, provider, header_name, header, reference):
+    response = httpx.Response(503, text="private user content", headers={header_name: header})
     monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: response)
     with pytest.raises(DecisionEvaluationError) as caught:
-        providers.evaluate_provider("Perplexity", "pplx-decider-latest", request_for("choice"), api_key="key")
-    assert str(caught.value) == "Perplexity had a server problem (HTTP 503, request ID req_5f0c9a). Try again later."
+        providers.evaluate_provider(provider, DEFAULT_MODELS[provider], request_for("choice"), api_key="key")
+    assert str(caught.value) == f"{provider} had a server problem (HTTP 503{reference}). Try again later."
 
 
 @pytest.mark.parametrize(

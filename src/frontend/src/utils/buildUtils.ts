@@ -25,6 +25,7 @@ import { useMessagesStore } from "../stores/messagesStore";
 import type { VertexBuildTypeAPI } from "../types/api";
 import { isErrorLogType } from "../types/utils/typeCheckingUtils";
 import type { VertexLayerElementType } from "../types/zustand/flow";
+import { decisionErrorFromLogs } from "./decision-error-message";
 import { isOutputType } from "./reactflowUtils";
 import { isStringArray, tryParseJson } from "./utils";
 
@@ -470,6 +471,16 @@ export function processEndVertexEvent(
 ): boolean {
   const { onBuildUpdate, onBuildError, onBuildStart } = callbacks;
   const buildData = data.build_data;
+
+  const decisionError = buildData.valid
+    ? decisionErrorFromLogs(buildData.data?.logs)
+    : null;
+  if (decisionError) {
+    useAlertStore.getState().setNoticeData({
+      title: i18n.t("flow.decisionErrorElse"),
+      list: [decisionError],
+    });
+  }
 
   if (onBuildUpdate) {
     if (!buildData.valid) {

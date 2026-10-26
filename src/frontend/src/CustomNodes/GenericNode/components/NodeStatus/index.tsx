@@ -24,6 +24,7 @@ import { useShortcutsStore } from "@/stores/shortcuts";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { VertexBuildTypeAPI } from "@/types/api";
 import type { NodeDataType } from "@/types/flow";
+import { decisionErrorFromLogs } from "@/utils/decision-error-message";
 import { formatTokenCount } from "@/utils/format-token-count";
 import { findLastNode } from "@/utils/reactflowUtils";
 import { classNames, cn } from "@/utils/utils";
@@ -101,6 +102,11 @@ export default function NodeStatus({
 
   const showNodeStatus =
     conditionSuccess || conditionError || conditionInactive;
+
+  const decisionError =
+    buildStatus === BuildStatus.BUILT && validationStatus?.valid
+      ? decisionErrorFromLogs(validationStatus.data.logs)
+      : null;
 
   const lastRunTime = useFlowStore(
     (state) => state.flowBuildStatus[nodeId_]?.timestamp,
@@ -428,6 +434,18 @@ export default function NodeStatus({
 
   return (
     <div className="flex shrink-0 items-center gap-2">
+      {decisionError && (
+        <ShadTooltip content={decisionError} side="bottom">
+          <span
+            role="status"
+            tabIndex={0}
+            className="nodrag flex items-center gap-1 text-xs text-accent-amber-foreground"
+          >
+            <IconComponent name="TriangleAlert" className="h-3 w-3" />
+            {t("flow.decisionErrorElse")}
+          </span>
+        </ShadTooltip>
+      )}
       {(showNodeStatus || nodeAuth) && (
         <div className="flex items-center gap-2 self-center">
           {showNodeStatus && (

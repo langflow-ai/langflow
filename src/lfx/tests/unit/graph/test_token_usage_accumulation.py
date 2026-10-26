@@ -3,6 +3,7 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import pytest
 from lfx.graph.schema import ResultData
 from lfx.graph.vertex.base import Vertex
 from lfx.schema.properties import Usage
@@ -182,7 +183,7 @@ class TestAccumulateUpstreamTokenUsage:
         assert result is None
 
     def test_handles_none_values_in_token_usage(self):
-        """Token usage with None values treated as 0."""
+        """Unreported counts stay unknown rather than becoming zero."""
         llm = _make_vertex_stub(
             "LLM-1",
             token_usage=Usage(input_tokens=None, output_tokens=50, total_tokens=None),
@@ -193,9 +194,39 @@ class TestAccumulateUpstreamTokenUsage:
         result = output._accumulate_upstream_token_usage()
 
         assert isinstance(result, Usage)
-        assert result.input_tokens == 0
+        assert result.input_tokens is None
         assert result.output_tokens == 50
-        assert result.total_tokens == 50
+        assert result.total_tokens is None
+
+    @pytest.mark.parametrize(
+        ("first", "second", "expected"),
+        [
+            (Usage(total_tokens=10), Usage(total_tokens=20), Usage(total_tokens=30)),
+            (
+                Usage(input_tokens=10, output_tokens=0),
+                Usage(input_tokens=20, output_tokens=0),
+                Usage(input_tokens=30, output_tokens=0, total_tokens=30),
+            ),
+            (
+                Usage(input_tokens=10, total_tokens=12),
+                Usage(input_tokens=20, output_tokens=3, total_tokens=23),
+                Usage(input_tokens=30, total_tokens=35),
+            ),
+            (
+                Usage(input_tokens=10),
+                Usage(input_tokens=20, output_tokens=3, total_tokens=23),
+                Usage(input_tokens=30),
+            ),
+        ],
+    )
+    def test_partial_counts_and_explicit_totals(self, first, second, expected):
+        first_vertex = _make_vertex_stub("Decision-1", token_usage=first)
+        second_vertex = _make_vertex_stub("LLM-1", token_usage=second)
+        output = _make_vertex_stub("ChatOutput-1", is_output=True)
+        edges = [_make_edge("Decision-1", "LLM-1"), _make_edge("LLM-1", "ChatOutput-1")]
+        _wire_graph(output, {"Decision-1": first_vertex, "LLM-1": second_vertex}, edges)
+
+        assert output._accumulate_upstream_token_usage() == expected
 
 
 class TestExtractTokenUsage:

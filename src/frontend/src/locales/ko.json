@@ -3075,5 +3075,6 @@
   "connections.identity.user_delegated": "로그인한 사용자",
   "connections.identity.bot": "봇",
   "connections.identity.service": "서비스 계정",
-  "settings.dbProviders.serverConfiguration": "서버 환경에서 구성되었습니다. 이 구성을 사용하려면 필드를 변경하지 마세요."
+  "settings.dbProviders.serverConfiguration": "서버 환경에서 구성되었습니다. 이 구성을 사용하려면 필드를 변경하지 마세요.",
+  "flow.decisionErrorElse": "공급자 오류 · Else로 라우팅됨"
 }

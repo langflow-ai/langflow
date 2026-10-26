@@ -5,6 +5,7 @@
     "model_source": "response",
     "probability_true": 0.88,
     "provider": "OpenAI",
+    "provider_latency_ms": 125.0,
     "request": {
       "kind": "boolean",
       "question": "Is the customer asking for a refund?"
@@ -27,6 +28,7 @@
       "technical": 0.12
     },
     "provider": "Perplexity",
+    "provider_latency_ms": 125.0,
     "request": {
       "kind": "choice",
       "options": [
@@ -62,6 +64,7 @@
     "model": "gpt-6-luna",
     "model_source": "response",
     "provider": "OpenAI",
+    "provider_latency_ms": 125.0,
     "refusal": "I can't evaluate this request.",
     "request": {
       "kind": "boolean",
@@ -81,6 +84,7 @@
       "upset": 0.05
     },
     "provider": "TypeSafe",
+    "provider_latency_ms": 125.0,
     "request": {
       "kind": "score",
       "levels": [

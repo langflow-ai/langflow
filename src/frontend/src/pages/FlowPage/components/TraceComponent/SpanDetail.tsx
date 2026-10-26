@@ -35,7 +35,7 @@ export function SpanDetail({ span }: SpanDetailProps) {
 
   const hasInputs = Object.keys(span?.inputs || {}).length > 0;
   const hasOutputs = Object.keys(span?.outputs || {}).length > 0;
-  const hasTokenUsage = span?.tokenUsage && span.tokenUsage.totalTokens > 0;
+  const hasTokenUsage = span?.tokenUsage != null;
   const isLlmSpan = span?.type === "llm";
 
   const { colorClass, iconName, shouldSpin } = getStatusIconProps(span.status);
@@ -104,27 +104,22 @@ export function SpanDetail({ span }: SpanDetailProps) {
               <MetricCard
                 label={t("trace.tokens")}
                 value={
-                  hasTokenUsage
-                    ? span.tokenUsage!.totalTokens.toLocaleString()
-                    : "\u2014"
+                  span.tokenUsage?.totalTokens?.toLocaleString() ?? "\u2014"
                 }
                 icon="Coins"
               />
               <MetricCard
                 label={t("trace.prompt")}
                 value={
-                  hasTokenUsage
-                    ? span.tokenUsage!.promptTokens.toLocaleString()
-                    : "\u2014"
+                  span.tokenUsage?.promptTokens?.toLocaleString() ?? "\u2014"
                 }
                 icon="ArrowUp"
               />
               <MetricCard
                 label={t("trace.completion")}
                 value={
-                  hasTokenUsage
-                    ? span.tokenUsage!.completionTokens.toLocaleString()
-                    : "\u2014"
+                  span.tokenUsage?.completionTokens?.toLocaleString() ??
+                  "\u2014"
                 }
                 icon="ArrowDown"
               />
@@ -133,13 +128,13 @@ export function SpanDetail({ span }: SpanDetailProps) {
         </div>
 
         {/* Cost (if applicable) */}
-        {hasTokenUsage && span.tokenUsage!.cost > 0 && (
+        {span.tokenUsage?.cost != null && span.tokenUsage.cost > 0 && (
           <div className="mb-4 flex items-center justify-between rounded-md bg-muted p-3">
             <span className="text-sm font-medium">
               {t("trace.estimatedCost")}
             </span>
             <span className="text-sm font-semibold">
-              {formatCost(span.tokenUsage!.cost)}
+              {formatCost(span.tokenUsage.cost)}
             </span>
           </div>
         )}

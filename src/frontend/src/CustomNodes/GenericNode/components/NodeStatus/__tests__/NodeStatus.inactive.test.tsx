@@ -164,3 +164,56 @@ describe("BuildStatusDisplay for a blocked node", () => {
     expect(screen.queryByText("Duration:")).not.toBeInTheDocument();
   });
 });
+
+describe("Decision Model operational-error warning", () => {
+  beforeEach(resetStores);
+
+  it.each([
+    [BuildStatus.BUILT, "evaluation_error", "default_result", true],
+    [BuildStatus.INACTIVE, "evaluation_error", "default_result", false],
+    [BuildStatus.BUILDING, "evaluation_error", "default_result", false],
+    [BuildStatus.TO_BUILD, "evaluation_error", "default_result", false],
+    [BuildStatus.BUILT, "below_threshold", "default_result", false],
+    [BuildStatus.ERROR, "evaluation_error", null, false],
+  ])(
+    "shows only a completed operational fallback (%s, %s)",
+    (status, reason, branch, visible) => {
+      useFlowStore.setState({
+        flowPool: {
+          [NODE_ID]: [
+            {
+              ...staleBuild,
+              data: {
+                ...staleBuild.data,
+                logs: {
+                  output: [
+                    {
+                      name: "Decision evidence",
+                      type: "info",
+                      message: {
+                        reason,
+                        activated_branch: branch,
+                        error_action: "Route to Else",
+                        error: {
+                          message: "Provider unavailable (request ID req_123).",
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      });
+      renderStatus(status);
+      const warning = screen.queryByText("Provider error · routed to Else");
+      if (visible) {
+        expect(warning).toHaveAttribute("role", "status");
+        expect(warning).toHaveAttribute("tabindex", "0");
+      } else {
+        expect(warning).not.toBeInTheDocument();
+      }
+    },
+  );
+});

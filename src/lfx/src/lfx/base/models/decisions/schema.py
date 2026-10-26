@@ -8,6 +8,8 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError, field_validator, model_validator
 
+from lfx.schema.properties import Usage
+
 DecisionKind = Literal["choice", "boolean", "score"]
 Probability = Annotated[float, Field(strict=True, ge=0, le=1, allow_inf_nan=False)]
 FiniteNumber = Annotated[float, Field(strict=True, allow_inf_nan=False)]
@@ -178,6 +180,18 @@ class DecisionResult(BaseModel):
     usage: dict[str, JsonValue] | None = None
     # The provider's ID for this request, to quote when asking it about an answer.
     request_id: NonEmpty | None = None
+    # Protected HTTP call duration, excluding parsing and component execution.
+    provider_latency_ms: Annotated[float, Field(ge=0, allow_inf_nan=False)] | None = None
+
+    @property
+    def token_usage(self) -> Usage | None:
+        """Expose validated provider counts without treating an unreported count as zero."""
+        usage = Usage.model_validate(self.usage or {})
+        if all(value is None for value in (usage.input_tokens, usage.output_tokens, usage.total_tokens)):
+            return None
+        if usage.total_tokens is None and usage.input_tokens is not None and usage.output_tokens is not None:
+            usage.total_tokens = usage.input_tokens + usage.output_tokens
+        return usage
 
     @model_validator(mode="after")
     def validate_evidence(self) -> DecisionResult:

@@ -10,7 +10,10 @@
 
 import { BuildStatus } from "@/constants/enums";
 import { queryClient } from "@/contexts";
-import { runFlowAGUI } from "@/controllers/API/agui/run-flow-bridge";
+import {
+  consumeBackgroundEvents,
+  runFlowAGUI,
+} from "@/controllers/API/agui/run-flow-bridge";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useMessagesStore } from "@/stores/messagesStore";
@@ -62,12 +65,17 @@ beforeEach(() => {
 // Minimal fake Response sufficient for `runHttpRequest`'s SSE decoder.
 // Lifted from the pattern in `run-agent.test.ts` so the bridge sees
 // exactly what the wire produces.
-function sseResponse(events: object[]): unknown {
+function sseResponse(events: object[], sequences?: number[]): unknown {
   const encoder = new (
     globalThis as { TextEncoder: typeof TextEncoder }
   ).TextEncoder();
   const payload = encoder.encode(
-    events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join(""),
+    events
+      .map(
+        (e, index) =>
+          `${sequences ? `id: ${sequences[index]}\n` : ""}data: ${JSON.stringify(e)}\n\n`,
+      )
+      .join(""),
   );
   let delivered = false;
   return {
@@ -99,6 +107,81 @@ function sseResponse(events: object[]): unknown {
 }
 
 describe("runFlowAGUI end-to-end", () => {
+  it.each([
+    ["success", "evaluation_error", true],
+    ["success", "below_minimum_probability", false],
+    ["error", "evaluation_error", false],
+  ])(
+    "warns for operational Else only: %s / %s",
+    async (status, reason, warns) => {
+      const message = "TypeSafe is unavailable (HTTP 503). Try again.";
+      const events = [
+        { type: "RUN_STARTED", threadId: "thread-1", runId: "run-1" },
+        {
+          type: "STATE_DELTA",
+          delta: [
+            {
+              op: "add",
+              path: "/nodes/router",
+              value: { status: "running", output: null },
+            },
+          ],
+        },
+        {
+          type: "STATE_DELTA",
+          delta: [
+            {
+              op: "replace",
+              path: "/nodes/router",
+              value: {
+                status,
+                output: {
+                  logs: {
+                    default_result: [
+                      {
+                        name: "Decision evidence",
+                        type: "info",
+                        message: {
+                          reason,
+                          activated_branch: "default_result",
+                          error_action: "Route to Else",
+                          error: { message },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+        },
+        { type: "RUN_FINISHED", threadId: "thread-1", runId: "run-1" },
+      ];
+      const fetchSpy = jest
+        .spyOn(global, "fetch")
+        .mockResolvedValue(sseResponse(events) as Response);
+      try {
+        await runFlowAGUI({
+          flowId: "flow-1",
+          threadId: "thread-1",
+          silent: true,
+        });
+        const notices = useAlertStore
+          .getState()
+          .notificationList.filter((notice) => notice.type === "notice");
+        expect(notices).toHaveLength(warns ? 1 : 0);
+        if (warns) {
+          expect(notices[0]).toMatchObject({
+            title: "Provider error · routed to Else",
+            list: [message],
+          });
+        }
+      } finally {
+        fetchSpy.mockRestore();
+      }
+    },
+  );
+
   it("keeps a substitution notice visible when the workflow succeeds", async () => {
     const message =
       "Custom components are disabled (LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false). This run uses the server's Agent code. The saved flow is unchanged.";
@@ -665,6 +748,103 @@ describe("runFlowAGUI end-to-end", () => {
       expect(flow.buildInfo).toEqual({ success: false });
     } finally {
       fetchSpy.mockRestore();
+    }
+  });
+});
+
+describe("background decision warning replay", () => {
+  const failure = {
+    type: "STATE_DELTA",
+    delta: [
+      {
+        op: "add",
+        path: "/nodes/router",
+        value: {
+          status: "success",
+          output: {
+            results: {},
+            outputs: {},
+            messages: [],
+            logs: {
+              default_result: [
+                {
+                  name: "Decision evidence",
+                  type: "info",
+                  message: {
+                    reason: "evaluation_error",
+                    activated_branch: "default_result",
+                    error_action: "Route to Else",
+                    error: {
+                      message:
+                        "TypeSafe unavailable, request ID original-request",
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    ],
+  };
+
+  it("hydrates replayed state without a fresh warning, but warns for new evaluations and jobs", async () => {
+    const fetchMock = jest
+      .spyOn(global, "fetch")
+      .mockImplementation(async () => sseResponse([failure], [1]) as Response);
+    const opts = { flowId: "f1", silent: true };
+    try {
+      await consumeBackgroundEvents("warning-replay-job", opts);
+      expect(useAlertStore.getState().notificationList).toHaveLength(1);
+      // The original toast expired and the canvas needs rehydrating on reattach.
+      useAlertStore.setState({ tempNotificationList: [] });
+      useFlowStore.setState({ flowBuildStatus: {}, flowPool: {} });
+      await consumeBackgroundEvents("warning-replay-job", opts, undefined, {
+        skipCardInjection: true,
+      });
+      expect(useAlertStore.getState().notificationList).toHaveLength(1);
+      expect(useAlertStore.getState().tempNotificationList).toHaveLength(0);
+      expect(useFlowStore.getState().flowBuildStatus.router.status).toBe(
+        BuildStatus.BUILT,
+      );
+      expect(useFlowStore.getState().flowPool.router).toHaveLength(1);
+
+      // A second evaluation of the same router can have identical diagnostic text.
+      fetchMock.mockImplementation(
+        async () => sseResponse([failure, failure], [1, 2]) as Response,
+      );
+      await consumeBackgroundEvents("warning-replay-job", opts);
+      expect(useAlertStore.getState().notificationList).toHaveLength(2);
+      expect(useAlertStore.getState().tempNotificationList).toHaveLength(1);
+
+      useAlertStore.setState({ tempNotificationList: [] });
+      fetchMock.mockImplementation(
+        async () => sseResponse([failure], [1]) as Response,
+      );
+      await consumeBackgroundEvents("warning-new-job", opts);
+      expect(useAlertStore.getState().notificationList).toHaveLength(3);
+      expect(useAlertStore.getState().tempNotificationList).toHaveLength(1);
+    } finally {
+      fetchMock.mockRestore();
+    }
+  });
+
+  it("does not suppress unidentifiable frames without durable IDs", async () => {
+    const fetchMock = jest
+      .spyOn(global, "fetch")
+      .mockImplementation(async () => sseResponse([failure]) as Response);
+    try {
+      await consumeBackgroundEvents("warning-no-id", {
+        flowId: "f1",
+        silent: true,
+      });
+      await consumeBackgroundEvents("warning-no-id", {
+        flowId: "f1",
+        silent: true,
+      });
+      expect(useAlertStore.getState().notificationList).toHaveLength(2);
+    } finally {
+      fetchMock.mockRestore();
     }
   });
 });

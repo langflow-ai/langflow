@@ -24,6 +24,14 @@ class ChatComponent(Component):
             component = source_vertex.custom_component
             source = component.display_name
             icon = component.icon
+            if component.name == "SmartRouter" and getattr(component, "routing_mode", None) == "Decision Model":
+                # The inactive Language Model field can still hold a saved model.
+                evidence = component._decision_evidence or {}  # noqa: SLF001
+                model_name = (evidence.get("result") or {}).get("model") or _extract_model_name(
+                    component.decision_model
+                )
+                model_name = component._sanitize_secret_values(model_name)  # noqa: SLF001
+                return model_name or source, icon, source, component.get_id()
             possible_attributes = ["model_name", "model_id", "model"]
             for attribute in possible_attributes:
                 if hasattr(component, attribute):

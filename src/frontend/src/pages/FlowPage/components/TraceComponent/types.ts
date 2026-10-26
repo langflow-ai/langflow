@@ -16,10 +16,10 @@ export type SpanType =
 export type SpanStatus = "unset" | "ok" | "error" | "awaiting_human";
 
 export interface TokenUsage {
-  promptTokens: number;
-  completionTokens: number;
-  totalTokens: number;
-  cost: number;
+  promptTokens?: number | null;
+  completionTokens?: number | null;
+  totalTokens?: number | null;
+  cost?: number | null;
 }
 
 export interface Span {

@@ -6,6 +6,7 @@ from pathlib import Path
 import httpx
 import pytest
 from lfx.graph.graph.base import Graph
+from lfx.schema.properties import Usage
 
 STARTER = (
     Path(__file__).resolve().parents[4] / "base/langflow/initial_setup/starter_projects/Support Ticket Routing.json"
@@ -37,7 +38,14 @@ async def _route(monkeypatch, probabilities: dict[str, float]) -> tuple[Graph, s
         sent.append(kwargs["json"])
         top = max(probabilities, key=probabilities.get)
         answer = {"type": "choice", "choice": top, "confidence": 0.5, "probabilities": probabilities}
-        return httpx.Response(200, json={"model": "jev-1.13.0", "answers": {"decision": answer}})
+        return httpx.Response(
+            200,
+            json={
+                "model": "jev-1.13.0",
+                "answers": {"decision": answer},
+                "usage": {"input_tokens": 12, "output_tokens": 0},
+            },
+        )
 
     monkeypatch.setattr("lfx.base.models.decisions.providers.provider_safe_httpx_post", post)
     monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")  # pragma: allowlist secret
@@ -62,6 +70,8 @@ async def test_confident_answer_reaches_only_its_route(monkeypatch):
     assert criteria["category_1_result"].startswith("Billing: ")
     assert sent[0]["state"] == MESSAGE
     assert _text(graph, targets["category_1_result"]).startswith("Thanks. Our billing team")
+    reply = graph.get_vertex(targets["category_1_result"]).built_object["message"]
+    assert reply.properties.usage == Usage(input_tokens=12, output_tokens=0, total_tokens=12)
 
 
 async def test_below_threshold_answer_goes_to_review(monkeypatch):

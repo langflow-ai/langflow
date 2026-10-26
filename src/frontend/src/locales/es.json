@@ -3076,5 +3076,6 @@
   "connections.identity.user_delegated": "El usuario que inició sesión",
   "connections.identity.bot": "Un bot",
   "connections.identity.service": "Una cuenta de servicio",
-  "settings.dbProviders.serverConfiguration": "Configurado desde el entorno del servidor. Deja los campos sin cambios para usar esa configuración."
+  "settings.dbProviders.serverConfiguration": "Configurado desde el entorno del servidor. Deja los campos sin cambios para usar esa configuración.",
+  "flow.decisionErrorElse": "Error del proveedor · dirigido a Else"
 }

@@ -95,7 +95,20 @@ def span_to_response(span: SpanTable) -> SpanReadResponse:
         SpanReadResponse with frontend-compatible (camelCase) field names.
     """
     token_usage = None
-    if span.attributes:
+    if (span.attributes or {}).get("gen_ai.operation.name") == "decision":
+        fields = {
+            "promptTokens": "gen_ai.usage.input_tokens",
+            "completionTokens": "gen_ai.usage.output_tokens",
+            "totalTokens": "langflow.decision.total_tokens",
+        }
+        if any(name in span.attributes for name in fields.values()):
+            token_usage = {
+                field: safe_int_tokens(span.attributes[name]) if name in span.attributes else None
+                for field, name in fields.items()
+            }
+    elif span.attributes and any(
+        name in span.attributes for name in ("gen_ai.usage.input_tokens", "gen_ai.usage.output_tokens")
+    ):
         # OTel GenAI conventions enable consistent parsing across different LLM providers
         input_tokens = span.attributes.get("gen_ai.usage.input_tokens", 0)
         output_tokens = span.attributes.get("gen_ai.usage.output_tokens", 0)
@@ -308,6 +321,9 @@ def compute_leaf_token_total(
     for span_id in span_ids:
         if span_id not in parent_ids:
             attrs = attributes_by_id.get(span_id) or {}
+            if attrs.get("gen_ai.operation.name") == "decision":
+                total += safe_int_tokens(attrs.get("langflow.decision.total_tokens"))
+                continue
             # Prefer OTel GenAI keys for consistency with observability standards
             input_tokens = attrs.get("gen_ai.usage.input_tokens", 0)
             output_tokens = attrs.get("gen_ai.usage.output_tokens", 0)

@@ -3076,5 +3076,6 @@
   "connections.identity.user_delegated": "サインイン中のユーザー",
   "connections.identity.bot": "ボット",
   "connections.identity.service": "サービスアカウント",
-  "settings.dbProviders.serverConfiguration": "サーバー環境で設定済みです。この設定を使用するには、フィールドを変更しないでください。"
+  "settings.dbProviders.serverConfiguration": "サーバー環境で設定済みです。この設定を使用するには、フィールドを変更しないでください。",
+  "flow.decisionErrorElse": "プロバイダーエラー · Else にルーティング"
 }

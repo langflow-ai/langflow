@@ -6,6 +6,7 @@ import json
 import math
 import re
 import socket
+from time import perf_counter
 from typing import TYPE_CHECKING, Annotated, Any
 
 import httpx
@@ -95,8 +96,8 @@ def _provider_error_code(response: httpx.Response) -> str:
 
 
 def _request_id(response: httpx.Response) -> str | None:
-    """The provider's ``x-request-id``, only when it is a short safe token; never other header content."""
-    value = response.headers.get("x-request-id")
+    """The provider's request ID, only when it is a short safe token; never other header content."""
+    value = response.headers.get("x-request-id") or response.headers.get("x-typesafe-request-id")
     return value if value and re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", value) else None
 
 
@@ -326,6 +327,7 @@ def evaluate_provider(
         msg = f"Timeout (seconds) must be more than 0 and at most {MAX_TIMEOUT}."
         raise DecisionConfigurationError(msg)
     try:
+        started = perf_counter()
         response = provider_safe_httpx_post(
             ENDPOINTS[provider],
             json=payload,
@@ -333,6 +335,7 @@ def evaluate_provider(
             timeout=timeout,
             follow_redirects=False,
         )
+        provider_latency_ms = (perf_counter() - started) * 1000
     except httpx.TimeoutException:
         msg = f"{provider} didn't answer in time. Try again."
         raise DecisionEvaluationError(msg, category="timeout") from None
@@ -398,7 +401,9 @@ def evaluate_provider(
     except ValueError:
         msg = f"{provider} sent an answer Langflow couldn't read{_reference(request_id=request_id)}. "
         raise DecisionEvaluationError(msg + _try_again(provider, request_id), category="invalid_response") from None
-    return parse_response(provider, request, body, request_id=request_id)
+    return parse_response(provider, request, body, request_id=request_id).model_copy(
+        update={"provider_latency_ms": provider_latency_ms}
+    )
 
 
 def validate_decision_provider_key(provider: str, variables: dict, model_name: str) -> None:

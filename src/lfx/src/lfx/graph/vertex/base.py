@@ -535,33 +535,37 @@ class Vertex:
         and sums their token usage into a single total.
         """
         predecessors = self._get_all_upstream_vertices()
-        total_input = 0
-        total_output = 0
-        has_data = False
-
-        for predecessor in predecessors:
-            if predecessor.result and predecessor.result.token_usage:
-                usage = predecessor.result.token_usage
-                total_input += usage.input_tokens or 0
-                total_output += usage.output_tokens or 0
-                has_data = True
+        usages = [
+            predecessor.result.token_usage
+            for predecessor in predecessors
+            if predecessor.result and predecessor.result.token_usage
+        ]
 
         # Include own token usage if present
         if self.custom_component:
             own_usage = self.custom_component._token_usage  # noqa: SLF001
             if own_usage:
-                total_input += own_usage.input_tokens or 0
-                total_output += own_usage.output_tokens or 0
-                has_data = True
+                usages.append(own_usage)
 
-        if not has_data:
+        if not usages:
             return None
 
-        return Usage(
-            input_tokens=total_input,
-            output_tokens=total_output,
-            total_tokens=total_input + total_output,
-        )
+        totals = {}
+        for field in ("input_tokens", "output_tokens", "total_tokens"):
+            values = []
+            for usage in usages:
+                value = getattr(usage, field)
+                if (
+                    field == "total_tokens"
+                    and value is None
+                    and usage.input_tokens is not None
+                    and usage.output_tokens is not None
+                ):
+                    value = usage.input_tokens + usage.output_tokens
+                values.append(value)
+            # An unreported count is unknown, not zero, even when other nodes report theirs.
+            totals[field] = None if None in values else sum(values)
+        return Usage(**totals)
 
     def _extract_token_usage(self) -> Usage | None:
         """Extract token usage from the custom component if available.

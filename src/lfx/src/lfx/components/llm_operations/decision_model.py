@@ -161,7 +161,7 @@ class DecisionModelComponent(Component):
         if not structured:
             structured = None
         if structured is None:
-            if not text:
+            if connected or not text:
                 msg = (
                     "Structured Context is empty. Give the component it comes from at least one field, or use Context."
                     if connected
@@ -175,6 +175,8 @@ class DecisionModelComponent(Component):
         return structured
 
     def evaluate(self) -> Data:
+        self._token_usage = None
+        self._decision_result = None
         # A tweak can send anything here; the dropdown only offers these three.
         if self.kind not in _KINDS:
             msg = "Pick a Decision Type: Choice, Boolean or Score."
@@ -198,6 +200,8 @@ class DecisionModelComponent(Component):
             request_variables=request_variables_of(self),
             timeout=self.timeout,
         )
+        self._decision_result = result
+        self._token_usage = result.token_usage
         # Only what this decision returned and asked: no empty fields from the other types.
         data = Data(
             data={

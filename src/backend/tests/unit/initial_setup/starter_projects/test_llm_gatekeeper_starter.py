@@ -6,6 +6,7 @@ from pathlib import Path
 import httpx
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
 from lfx.graph.graph.base import Graph
+from lfx.schema.properties import Usage
 
 STARTER = Path(__file__).resolve().parents[4] / "base/langflow/initial_setup/starter_projects/LLM Gatekeeper.json"
 LLM_REPLY = "Here is a migration plan for your billing system."
@@ -34,7 +35,14 @@ async def _run(monkeypatch, message: str, decision) -> tuple[Graph, set[str], di
             raise decision
         top = max(decision, key=decision.get)
         answer = {"type": "choice", "choice": top, "confidence": 0.5, "probabilities": decision}
-        return httpx.Response(200, json={"model": "jev-1.13.0", "answers": {"decision": answer}})
+        return httpx.Response(
+            200,
+            json={
+                "model": "jev-1.13.0",
+                "answers": {"decision": answer},
+                "usage": {"input_tokens": 12, "output_tokens": 0},
+            },
+        )
 
     def get_llm(**_kwargs):
         llm_calls.append(message)
@@ -69,6 +77,8 @@ class TestLLMGatekeeperStarter:
         assert _text(graph, targets["category_2_result"]).startswith("Use Forgot password?")
         assert not {targets["default_result"], targets["llm_reply"]} & ran
         assert not llm_calls
+        reply = graph.get_vertex(targets["category_2_result"]).built_object["message"]
+        assert reply.properties.usage == Usage(input_tokens=12, output_tokens=0, total_tokens=12)
 
     async def test_an_uncertain_message_goes_to_the_language_model(self, monkeypatch):
         message = "Can you help me plan a migration from our old billing system?"

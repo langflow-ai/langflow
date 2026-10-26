@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { type ReactNode } from "react";
 import { SpanDetail } from "../SpanDetail";
 import { buildSpan } from "./spanTestUtils";
@@ -22,6 +22,33 @@ jest.mock("@/components/ui/badge", () => ({
 }));
 
 describe("SpanDetail", () => {
+  it.each([
+    { usage: { totalTokens: 42 }, total: "42", prompt: "—", completion: "—" },
+    { usage: { promptTokens: 42 }, total: "—", prompt: "42", completion: "—" },
+    {
+      usage: { totalTokens: 0, promptTokens: 0, completionTokens: 0 },
+      total: "0",
+      prompt: "0",
+      completion: "0",
+    },
+  ])(
+    "preserves partial and zero decision counts: $usage",
+    ({ usage, total, prompt, completion }) => {
+      render(
+        <SpanDetail span={buildSpan({ type: "chain", tokenUsage: usage })} />,
+      );
+      for (const [label, value] of [
+        ["Tokens", total],
+        ["Prompt", prompt],
+        ["Completion", completion],
+      ]) {
+        expect(
+          within(screen.getByText(label).parentElement!).getByText(value),
+        ).toBeInTheDocument();
+      }
+    },
+  );
+
   // Verifies that when no span is selected (null), the empty-state placeholder is shown with the prompt text.
   it("renders empty state when no span selected", () => {
     render(<SpanDetail span={null} />);

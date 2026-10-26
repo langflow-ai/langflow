@@ -19,11 +19,13 @@ jest.mock("@/stores/flowStore", () => ({
   },
 }));
 
+const mockSetNoticeData = jest.fn();
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
   default: {
     getState: () => ({
       setErrorData: jest.fn(),
+      setNoticeData: mockSetNoticeData,
     }),
   },
 }));
@@ -72,6 +74,7 @@ jest.mock("@/utils/utils", () => ({
 }));
 
 jest.mock("../../i18n", () => ({
+  __esModule: true,
   default: { t: jest.fn((key: string) => key) },
 }));
 
@@ -658,6 +661,47 @@ describe("onEvent — log", () => {
     jest.clearAllMocks();
     (mockFlowStoreState as any).appendLogToFlowPool = mockAppendLogToFlowPool;
   });
+
+  it.each(["evaluation_error", "below_threshold"])(
+    "warns in the Playground only for operational fallback: %s",
+    async (reason) => {
+      await onEvent(
+        "end_vertex",
+        {
+          build_data: {
+            id: "router",
+            valid: true,
+            data: {
+              logs: {
+                default_result: [
+                  {
+                    name: "Decision evidence",
+                    type: "info",
+                    message: {
+                      reason,
+                      activated_branch: "default_result",
+                      error_action: "Route to Else",
+                      error: { message: "Provider unavailable" },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+        [],
+        {},
+      );
+      if (reason === "evaluation_error") {
+        expect(mockSetNoticeData).toHaveBeenCalledWith({
+          title: "flow.decisionErrorElse",
+          list: ["Provider unavailable"],
+        });
+      } else {
+        expect(mockSetNoticeData).not.toHaveBeenCalled();
+      }
+    },
+  );
 
   it("calls appendLogToFlowPool with correct args for a valid log event", async () => {
     const data = {

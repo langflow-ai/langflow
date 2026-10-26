@@ -726,6 +726,8 @@ class SmartRouterComponent(Component):
             raise DecisionConfigurationError(msg)
 
     def _get_decision_categorization(self) -> str:
+        self._token_usage = None
+        self._decision_result = None
         self._validate_decision_graph()
         kind = self._decision_kind()
         # Score rounds to a level and needs no threshold; the other types fall back to the router's.
@@ -831,6 +833,8 @@ class SmartRouterComponent(Component):
             category = "permission_denied" if isinstance(exc, PermissionError) else "configuration_error"
             evidence.update(reason=category, error={"category": category, "message": str(exc)})
             raise
+        self._decision_result = result
+        self._token_usage = result.token_usage
         evidence["result"] = result.model_dump(exclude_none=True)
         if result.status == "refusal":
             evidence["reason"] = "refusal"
@@ -885,6 +889,8 @@ class SmartRouterComponent(Component):
         Called once per vertex build (before the output methods run), so the categorization
         and branch-exclusion decisions are recomputed fresh on every execution.
         """
+        self._token_usage = None
+        self._decision_result = None
         self._matched_category = None
         self._categorization_result = None
         self._excluded_outputs = set()

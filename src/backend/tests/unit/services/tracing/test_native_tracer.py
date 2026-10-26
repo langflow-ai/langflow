@@ -12,6 +12,7 @@ import pytest
 from langflow.services.database.models.traces.model import SpanStatus, SpanType
 from langflow.services.tracing.native import NativeTracer
 from langflow.services.tracing.span_sorting import resolve_span_uuids, topological_sort_spans
+from lfx.base.models.decisions.schema import DecisionResult
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -117,6 +118,43 @@ class TestInit:
 
 
 class TestAddEndTrace:
+    @pytest.mark.parametrize("status", ["success", "refusal"])
+    def test_decision_metrics_use_existing_span_and_preserve_zero_tokens(self, status):
+        tracer = _make_tracer()
+        result = DecisionResult(
+            kind="boolean",
+            provider="TypeSafe",
+            model="jev-1.13.0",
+            status=status,
+            probability_true=0.8 if status == "success" else None,
+            usage={"input_tokens": 42, "output_tokens": 0},
+            provider_latency_ms=125,
+        )
+        tracer.add_trace("router", "Smart Router", "chain", {})
+        tracer.end_trace("router", "Smart Router", decision_result=result)
+        tracer.end_trace("router", "Smart Router", decision_result=result)
+
+        assert len(tracer.completed_spans) == 1
+        span = tracer.completed_spans[0]
+        assert span["attributes"] == {
+            "gen_ai.response.model": "jev-1.13.0",
+            "gen_ai.provider.name": "TypeSafe",
+            "gen_ai.operation.name": "decision",
+            "gen_ai.usage.input_tokens": 42,
+            "gen_ai.usage.output_tokens": 0,
+            "langflow.decision.total_tokens": 42,
+            "langflow.decision.provider_latency_ms": 125,
+        }
+        assert span["inputs"] == {}
+        assert not tracer.spans
+
+    def test_decision_without_usage_does_not_fabricate_tokens(self):
+        tracer = _make_tracer()
+        result = DecisionResult(kind="boolean", provider="TypeSafe", model="jev-latest", probability_true=0.8)
+        tracer.add_trace("router", "Smart Router", "chain", {})
+        tracer.end_trace("router", "Smart Router", decision_result=result)
+        assert not any(key.startswith("gen_ai.usage.") for key in tracer.completed_spans[0]["attributes"])
+
     def test_add_trace_stores_span(self):
         tracer = _make_tracer()
         tracer.add_trace(
@@ -459,7 +497,17 @@ class TestFlushToDatabase:
         assert trace_obj.status == SpanStatus.ERROR
 
     @pytest.mark.asyncio
-    async def test_flush_calculates_total_tokens_from_spans(self):
+    @pytest.mark.parametrize(
+        ("decision_usage", "expected_total"),
+        [
+            (None, 80),
+            ({"input_tokens": 42, "output_tokens": 0}, 122),
+            ({"total_tokens": 42}, 122),
+            ({"input_tokens": 42}, 80),
+            ({"input_tokens": 40, "output_tokens": 0, "total_tokens": 42}, 122),
+        ],
+    )
+    async def test_flush_calculates_total_tokens_from_spans(self, decision_usage, expected_total):
         flow_id = str(uuid4())
         tracer = _make_tracer(flow_id=flow_id)
         tracer.completed_spans = [
@@ -493,6 +541,22 @@ class TestFlushToDatabase:
             },
         ]
 
+        # A language-model component repeats its child's usage; it must not count twice.
+        tracer.completed_spans.append({**tracer.completed_spans[0], "id": str(uuid4()), "span_source": "component"})
+        if decision_usage is not None:
+            tracer.add_trace("router", "Smart Router", "chain", {})
+            tracer.end_trace(
+                "router",
+                "Smart Router",
+                decision_result=DecisionResult(
+                    kind="boolean",
+                    provider="TypeSafe",
+                    model="jev-latest",
+                    probability_true=0.8,
+                    usage=decision_usage,
+                ),
+            )
+
         captured_traces = []
         mock_session = AsyncMock()
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
@@ -510,7 +574,7 @@ class TestFlushToDatabase:
 
         trace_obj = next((o for o in captured_traces if isinstance(o, TraceTable)), None)
         assert trace_obj is not None
-        assert trace_obj.total_tokens == 80
+        assert trace_obj.total_tokens == expected_total
 
 
 # ---------------------------------------------------------------------------
