@@ -3302,5 +3302,15 @@
   "triggers.schedule.next": "다음 실행: {{time}}",
   "triggers.schedule.notScheduled": "예약되지 않음",
   "triggers.secret.isSet": "설정됨. 생성하거나 교체할 때만 표시됩니다.",
-  "triggers.secret.notSet": "설정되지 않음. 생성하기 전까지 요청이 거부됩니다."
+  "triggers.secret.notSet": "설정되지 않음. 생성하기 전까지 요청이 거부됩니다.",
+  "triggers.state.blocked": "확인 필요",
+  "triggers.provider.github": "GitHub",
+  "triggers.provider.gitlab": "GitLab",
+  "triggers.provider.whatsapp": "WhatsApp Business",
+  "triggers.provider.discord": "Discord",
+  "triggers.provider.telegram": "Telegram",
+  "triggers.provider.salesforce": "Salesforce",
+  "triggers.provider.servicenow": "ServiceNow",
+  "triggers.provider.jira": "Jira",
+  "triggers.provider.confluence": "Confluence"
 }

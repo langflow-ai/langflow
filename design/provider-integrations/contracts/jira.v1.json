@@ -7,7 +7,7 @@
     "provider_id": "jira",
     "display_name": "Jira Cloud",
     "icon": "Ticket",
-    "docs_url": "https://developer.atlassian.com/cloud/jira/platform/oauth-2-3lo-apps/",
+    "docs_url": "https://github.com/langflow-ai/langflow/blob/aeec0212b435e7e023fd89f53309e95d278d610e/design/provider-integrations/jira.md",
     "auth_profiles": [
       {
         "id": "user",

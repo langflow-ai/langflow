@@ -541,6 +541,7 @@ export function AddConnectionDialog({
               <ConnectionSetupHelp
                 key={`${providerId}:${usesToken}`}
                 providerId={providerId}
+                docsUrl={provider?.docs_url}
                 noRegistration={noRegistration}
                 usesToken={usesToken}
               />
@@ -748,6 +749,7 @@ export function AddConnectionDialog({
               <ConnectionSetupHelp
                 key={providerId}
                 providerId={providerId}
+                docsUrl={provider?.docs_url}
                 noRegistration={noRegistration}
               />
               {registrationSelect}
@@ -799,6 +801,7 @@ export function AddConnectionDialog({
             {authorize?.kind === "untracked" && (
               <ConnectionSetupHelp
                 providerId={providerId}
+                docsUrl={provider?.docs_url}
                 noRegistration={false}
               />
             )}

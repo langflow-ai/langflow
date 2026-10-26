@@ -3302,5 +3302,15 @@
   "triggers.schedule.next": "下次运行：{{time}}",
   "triggers.schedule.notScheduled": "未计划",
   "triggers.secret.isSet": "已设置。仅在创建或轮换时显示。",
-  "triggers.secret.notSet": "未设置。在你创建之前，请求会被拒绝。"
+  "triggers.secret.notSet": "未设置。在你创建之前，请求会被拒绝。",
+  "triggers.state.blocked": "需要处理",
+  "triggers.provider.github": "GitHub",
+  "triggers.provider.gitlab": "GitLab",
+  "triggers.provider.whatsapp": "WhatsApp Business",
+  "triggers.provider.discord": "Discord",
+  "triggers.provider.telegram": "Telegram",
+  "triggers.provider.salesforce": "Salesforce",
+  "triggers.provider.servicenow": "ServiceNow",
+  "triggers.provider.jira": "Jira",
+  "triggers.provider.confluence": "Confluence"
 }

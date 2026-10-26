@@ -18,6 +18,7 @@ from lfx.integrations.errors import (
     ScopeMissingError,
 )
 from lfx.utils.ssrf_httpx import ssrf_protected_strict_httpx_client_kwargs_for_url
+from lfx.utils.ssrf_protection import SSRFProtectionError
 from lfx.utils.url_redaction import suppress_sensitive_http_logs
 
 from lfx_jira.schema import API_ORIGIN, READ, cloud_id, invalid
@@ -33,12 +34,16 @@ MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 
 
 def http_client(transport=None) -> httpx.AsyncClient:
-    kwargs = (
-        ssrf_protected_strict_httpx_client_kwargs_for_url(API_ORIGIN)[1]
-        if transport is None
-        else {"transport": transport}
-    )
-    return httpx.AsyncClient(timeout=20, follow_redirects=False, trust_env=False, **kwargs)
+    try:
+        kwargs = (
+            ssrf_protected_strict_httpx_client_kwargs_for_url(API_ORIGIN)[1]
+            if transport is None
+            else {"transport": transport}
+        )
+    except SSRFProtectionError:
+        raise IntegrationNetworkError(provider="jira", reason="connection", host="api.atlassian.com") from None
+    kwargs["follow_redirects"] = False
+    return httpx.AsyncClient(timeout=20, trust_env=False, **kwargs)
 
 
 async def send(http: httpx.AsyncClient, method: str, path: str, token: str, *, body=None, params=None):
