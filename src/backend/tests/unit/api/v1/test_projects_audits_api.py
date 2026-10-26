@@ -51,6 +51,7 @@ async def _audits(client, headers, query: str = "") -> dict:
 
 
 async def test_a_page_has_the_contract_shape_newest_first(client, logged_in_headers, active_user):
+    """Return the audit contract in descending order with both identity fields present."""
     project = await _project(client, logged_in_headers, description="d")
     await client.patch(f"api/v1/projects/{project['id']}", json={"description": "e"}, headers=logged_in_headers)
     await client.delete(f"api/v1/projects/{project['id']}", headers=logged_in_headers)

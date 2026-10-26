@@ -85,9 +85,9 @@ class AuditEvent(SQLModel, table=True):  # type: ignore[call-arg]
         Index("ix_audit_events_timeline", "timestamp", "id"),
         Index("ix_audit_events_user_timeline", "user_id", "timestamp"),
         Index("ix_audit_events_actor_timeline", "actor_type", "actor_id", "timestamp"),
-        Index("ix_audit_events_acting_timeline", "acting_issuer", "acting_subject", "timestamp"),
-        # A 512-character subject needs at most 2048 UTF-8 bytes. Including
-        # the issuer can exceed PostgreSQL's B-tree entry limit.
+        # Each 512-character subject needs at most 2048 UTF-8 bytes. Including
+        # either issuer can exceed PostgreSQL's B-tree entry limit.
+        Index("ix_audit_events_acting_timeline", "acting_subject", "timestamp"),
         Index("ix_audit_events_represented_timeline", "represented_subject", "timestamp"),
         Index("ix_audit_events_request_id", "request_id"),
     )

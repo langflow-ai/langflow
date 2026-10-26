@@ -18,8 +18,8 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    pass
+    """Join both predecessor branches without changing their schemas."""
 
 
 def downgrade() -> None:
-    pass
+    """Keep the merge point compatible with both predecessor branches."""

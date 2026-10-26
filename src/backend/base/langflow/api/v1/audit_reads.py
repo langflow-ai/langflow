@@ -333,6 +333,7 @@ class AuditActorRead(BaseModel):
 
 
 def actor_of(event: AuditEvent) -> AuditActorRead:
+    """Expose stored acting and represented identities as separate API fields."""
     return AuditActorRead(
         type=event.actor_type,
         id=event.actor_id,

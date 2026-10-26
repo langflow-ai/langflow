@@ -26,6 +26,7 @@ INDEX = "ix_audit_events_represented_timeline"
 
 
 def upgrade() -> None:
+    """Add the migration changes without rewriting existing audit history."""
     conn = op.get_bind()
     if not migration.table_exists(TABLE, conn):
         return
