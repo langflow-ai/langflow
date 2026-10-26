@@ -505,7 +505,7 @@ for a provider other than Slack.
 The Connections page distinguishes confirmed provider revocation from local credential removal.
 
 For Microsoft's `unsupported`, remove the app's consent in Entra as
-described in [Revocation](./entra-app-registration#revocation).
+described in [Revocation](./entra-app-registration#revoke-an-account-connection).
 
 `revoked` reports token revocation, not a complete uninstall. Langflow sends only the
 stored access token to Slack's `auth.revoke`, which revokes that token without
