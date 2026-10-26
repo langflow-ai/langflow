@@ -3303,5 +3303,15 @@
   "triggers.schedule.next": "次回実行: {{time}}",
   "triggers.schedule.notScheduled": "未スケジュール",
   "triggers.secret.isSet": "設定済み。作成時またはローテーション時にのみ表示されます。",
-  "triggers.secret.notSet": "未設定。作成するまでリクエストは拒否されます。"
+  "triggers.secret.notSet": "未設定。作成するまでリクエストは拒否されます。",
+  "triggers.state.blocked": "対応が必要",
+  "triggers.provider.github": "GitHub",
+  "triggers.provider.gitlab": "GitLab",
+  "triggers.provider.whatsapp": "WhatsApp Business",
+  "triggers.provider.discord": "Discord",
+  "triggers.provider.telegram": "Telegram",
+  "triggers.provider.salesforce": "Salesforce",
+  "triggers.provider.servicenow": "ServiceNow",
+  "triggers.provider.jira": "Jira",
+  "triggers.provider.confluence": "Confluence"
 }
