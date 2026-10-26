@@ -32,9 +32,15 @@ def _credential_context():
 
 
 async def _seed(active_user, monkeypatch):
-    async def enforce(*, context, act, **_kwargs):
+    async def enforce(*, context, act, obj, **_kwargs):
         policy = context.get("api_key_permissions")
-        return policy is None or any(act in item["actions"] for item in policy.get("restrictions", []))
+        resource_type, _, resource_id = obj.partition(":")
+        return policy is None or any(
+            act in item["actions"]
+            and item["resource_type"] == resource_type
+            and ("resource_ids" not in item or resource_id in item["resource_ids"])
+            for item in policy.get("restrictions", [])
+        )
 
     authorization = SimpleNamespace(supports_api_key_scopes=AsyncMock(return_value=True), enforce=enforce)
     monkeypatch.setattr(get_settings_service().auth_settings, "AUTHZ_ENABLED", True)

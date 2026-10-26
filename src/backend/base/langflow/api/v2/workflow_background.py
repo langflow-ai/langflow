@@ -303,8 +303,13 @@ async def _buffer_background_run(
             authorized_context = await get_job_service().authorize_job_start(job_uuid)
             if authorized_context is not None:
                 set_current_auth_context(authorized_context)
-        except PermissionError:
+        except Exception:  # noqa: BLE001 - any admission failure must fail closed
+            from langflow.services.jobs.api_key_authorization import JobAuthorizationError
+
             errored = True
+            for event in adapter.error_events(JobAuthorizationError()):
+                sequence = bg_run.base_index + len(bg_run.frames)
+                await bg_run.append(format_sse_event(data_str=event.data_json, id=str(sequence)))
             return
         with contextlib.suppress(Exception):
             await get_job_service().update_job_status(job_uuid, JobStatus.IN_PROGRESS)

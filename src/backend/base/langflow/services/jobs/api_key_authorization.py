@@ -194,7 +194,14 @@ async def _revalidate_job(job: Job) -> AuthCredentialContext | None:
                 if knowledge_base is None:
                     raise JobAuthorizationError
                 checks.append(
-                    ("knowledge_base", {"kb_name": knowledge_base.name, "kb_user_id": knowledge_base.user_id})
+                    (
+                        "knowledge_base",
+                        {
+                            "kb_id": knowledge_base.id,
+                            "kb_name": knowledge_base.name,
+                            "kb_user_id": knowledge_base.user_id,
+                        },
+                    )
                 )
     # Release the read transaction before enforcement can open its own policy
     # or durable audit session, including on single-connection deployments.

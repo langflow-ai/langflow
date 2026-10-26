@@ -7,6 +7,26 @@ import pytest
 
 
 @pytest.mark.anyio
+async def test_disabled_issuance_hides_options_from_scope_capable_plugin(client, logged_in_headers, monkeypatch):
+    from langflow.services.deps import get_settings_service
+
+    auth_settings = get_settings_service().auth_settings
+    monkeypatch.setattr(auth_settings, "AUTHZ_ENABLED", True)
+    monkeypatch.setattr(auth_settings, "API_KEY_SCOPES_ENABLED", False)
+    plugin = SimpleNamespace(
+        supports_api_key_scopes=AsyncMock(return_value=True),
+        get_api_key_permission_options=AsyncMock(return_value={"supported": True}),
+    )
+    monkeypatch.setattr("langflow.api.v1.api_key.get_authorization_service", lambda: plugin)
+
+    response = await client.get("api/v1/api_key/permission-options", headers=logged_in_headers)
+
+    assert response.status_code == 200
+    assert response.json() == {"supported": False, "roles": [], "resource_actions": {}, "scope_types": {}}
+    plugin.get_api_key_permission_options.assert_not_awaited()
+
+
+@pytest.mark.anyio
 async def test_permission_options_reports_unsupported_without_plugin(client, logged_in_headers):
     response = await client.get("api/v1/api_key/permission-options", headers=logged_in_headers)
     assert response.status_code == 200
@@ -25,6 +45,7 @@ async def test_owner_can_replace_and_remove_permissions_without_rotating_secret(
     from langflow.services.deps import get_settings_service
 
     monkeypatch.setattr(get_settings_service().auth_settings, "AUTHZ_ENABLED", True)
+    monkeypatch.setattr(get_settings_service().auth_settings, "API_KEY_SCOPES_ENABLED", True)
     policy = {"restrictions": [{"resource_type": "flow", "actions": ["read", "execute"]}]}
 
     updated = await client.patch(
@@ -36,6 +57,7 @@ async def test_owner_can_replace_and_remove_permissions_without_rotating_secret(
     assert "*" in updated.json()["api_key"]
     validate.assert_awaited_once()
 
+    monkeypatch.setattr(get_settings_service().auth_settings, "API_KEY_SCOPES_ENABLED", False)
     removed = await client.patch(
         f"api/v1/api_key/{created['id']}/permissions", json={"permissions": None}, headers=logged_in_headers
     )
@@ -82,6 +104,7 @@ async def test_restricted_key_cannot_modify_its_owner_profile(client, logged_in_
 
     settings = get_settings_service()
     monkeypatch.setattr(settings.auth_settings, "AUTHZ_ENABLED", True)
+    monkeypatch.setattr(settings.auth_settings, "API_KEY_SCOPES_ENABLED", True)
     plugin = SimpleNamespace(
         supports_api_key_scopes=AsyncMock(return_value=True),
         validate_api_key_permissions=AsyncMock(),
@@ -113,6 +136,7 @@ async def test_restricted_key_cannot_administer_credentials(client, logged_in_he
     from langflow.services.deps import get_settings_service
 
     monkeypatch.setattr(get_settings_service().auth_settings, "AUTHZ_ENABLED", True)
+    monkeypatch.setattr(get_settings_service().auth_settings, "API_KEY_SCOPES_ENABLED", True)
     plugin = SimpleNamespace(
         supports_api_key_scopes=AsyncMock(return_value=True),
         validate_api_key_permissions=AsyncMock(),

@@ -1,5 +1,6 @@
 """Credential ceilings are enforced at the shared CRUD boundary."""
 
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
@@ -20,10 +21,11 @@ def clear_credential_context():
     clear_current_auth_context()
 
 
-def settings(*, enabled=True):
+def settings(*, enabled=True, scopes_enabled=True):
     return SimpleNamespace(
         auth_settings=SimpleNamespace(
             AUTHZ_ENABLED=enabled,
+            API_KEY_SCOPES_ENABLED=scopes_enabled,
             API_KEY_SOURCE="db",  # pragma: allowlist secret
             EXTERNAL_AUTH_ACCESS_CEILING_ENABLED=False,
             EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS=False,
@@ -34,6 +36,42 @@ def settings(*, enabled=True):
 
 def policy():
     return {"restrictions": [{"resource_type": "flow", "actions": ["read", "execute"]}]}
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("operation", ["create", "edit"])
+async def test_rollout_switch_blocks_scoped_issuance_at_shared_boundary(operation, monkeypatch):
+    owner_id = uuid4()
+    key = ApiKey(api_key="stored", user_id=owner_id, created_at=datetime.now(timezone.utc))
+    session = AsyncMock()
+    session.add = MagicMock()
+    session.exec.return_value = MagicMock(first=MagicMock(return_value=key))
+    authorization = SimpleNamespace(
+        supports_api_key_scopes=AsyncMock(return_value=True), validate_api_key_permissions=AsyncMock()
+    )
+    monkeypatch.setattr(crud, "get_settings_service", lambda: settings(scopes_enabled=False))
+    monkeypatch.setattr(crud, "get_authorization_service", lambda: authorization)
+
+    request = (
+        crud.create_api_key(session, ApiKeyCreate(name="Runner", permissions=policy()), owner_id)
+        if operation == "create"
+        else crud.update_api_key_permissions(session, api_key_id=key.id, user_id=owner_id, permissions=policy())
+    )
+    with pytest.raises(PermissionError, match="issuance is disabled"):
+        await request
+
+    authorization.validate_api_key_permissions.assert_not_awaited()
+    session.add.assert_not_called()
+    assert key.permissions is None
+
+
+@pytest.mark.anyio
+async def test_disabling_issuance_preserves_existing_scoped_key_authentication(monkeypatch):
+    key = ApiKey(api_key="stored", user_id=uuid4(), permissions=policy())
+    authorization = SimpleNamespace(supports_api_key_scopes=AsyncMock(return_value=True))
+    monkeypatch.setattr(crud, "get_authorization_service", lambda: authorization)
+
+    assert await crud._scoped_key_can_authenticate(key, settings(scopes_enabled=False))
 
 
 @pytest.mark.anyio

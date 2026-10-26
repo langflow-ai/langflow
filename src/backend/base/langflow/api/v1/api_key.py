@@ -44,7 +44,8 @@ async def get_api_keys_route(
 async def get_api_key_permission_options(current_user: CurrentActiveUser) -> ApiKeyPermissionOptions:
     try:
         ensure_api_key_management_allowed()
-        if not get_settings_service().auth_settings.AUTHZ_ENABLED:
+        auth_settings = get_settings_service().auth_settings
+        if not auth_settings.AUTHZ_ENABLED or not auth_settings.API_KEY_SCOPES_ENABLED:
             return ApiKeyPermissionOptions()
         authorization = get_authorization_service()
         if not await authorization.supports_api_key_scopes():

@@ -51,7 +51,9 @@ export async function getApiKeyPermissionTargets(
     case "flow": {
       const { data } = await api.get<
         TargetRecord[] | { items: TargetRecord[] }
-      >(`${getURL("FLOWS")}/`, { params: { get_all: true } });
+      >(`${getURL("FLOWS")}/`, {
+        params: { get_all: true, header_flows: true },
+      });
       records = Array.isArray(data) ? data : data.items;
       break;
     }

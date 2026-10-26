@@ -148,8 +148,12 @@ async def delete_api_key(session: AsyncSession, api_key_id: UUID, user_id: UUID)
 
 async def validate_api_key_permissions(session: AsyncSession, *, user_id: UUID, permissions: dict[str, Any]) -> None:
     """Ask an enabled supporting plugin to validate references and owner visibility."""
-    if not get_settings_service().auth_settings.AUTHZ_ENABLED:
+    auth_settings = get_settings_service().auth_settings
+    if not auth_settings.AUTHZ_ENABLED:
         msg = "Scoped API keys require enabled authorization"
+        raise PermissionError(msg)
+    if not auth_settings.API_KEY_SCOPES_ENABLED:
+        msg = "Scoped API key issuance is disabled"
         raise PermissionError(msg)
     authorization = get_authorization_service()
     if not await authorization.supports_api_key_scopes():

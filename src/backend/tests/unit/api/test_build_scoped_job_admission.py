@@ -241,7 +241,8 @@ async def test_restricted_pause_keeps_job_nonterminal_and_preserves_provenance(a
         job_id = await start_build(active_user, flow, queue)
         await queue.task_coro
         job = await get_job_service().get_job_by_job_id(UUID(job_id))
-        assert job.status == JobStatus.IN_PROGRESS
+        assert job.status == JobStatus.SUSPENDED
+        assert job.finished_timestamp is None
         assert job.job_metadata["api_key_authorization"]["api_key_id"] == str(key_id)
         events = []
         while not queue.event_manager.queue.empty():
@@ -250,6 +251,7 @@ async def test_restricted_pause_keeps_job_nonterminal_and_preserves_provenance(a
                 events.append(json.loads(payload))
         assert any(event["event"] == "human_input_required" for event in events)
         assert not any(event["event"] == "error" for event in events)
+        assert await get_job_service().claim_suspended_for_resume(UUID(job_id))
     finally:
         queue.close()
 

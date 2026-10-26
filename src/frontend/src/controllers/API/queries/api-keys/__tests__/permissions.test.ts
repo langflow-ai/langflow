@@ -141,6 +141,9 @@ describe("API key permission requests", () => {
     await expect(getApiKeyPermissionTargets("flow")).resolves.toEqual([
       { id: "flow-a", name: "Flow A" },
     ]);
+    expect(mockGet).toHaveBeenCalledWith("/api/v1/flows/", {
+      params: { get_all: true, header_flows: true },
+    });
   });
 
   it("uses canonical knowledge-base IDs even when names collide", async () => {

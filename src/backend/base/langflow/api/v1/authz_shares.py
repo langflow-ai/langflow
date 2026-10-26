@@ -483,6 +483,8 @@ async def list_shares(
                         raise
                     continue
             visible.append(row)
+            if restricted_key and len(visible) >= offset + limit:
+                break
     if restricted_key:
         visible = visible[offset : offset + limit]
     return await _serialize_shares(session, visible)

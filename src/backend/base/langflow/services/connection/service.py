@@ -391,7 +391,8 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         user: User | UserRead,
         provider_ids: frozenset[str] | None,
     ) -> list[Connection]:
-        is_superuser = bool(getattr(user, "is_superuser", False)) and not current_auth_is_restricted_api_key()
+        restricted_key = current_auth_is_restricted_api_key()
+        is_superuser = bool(getattr(user, "is_superuser", False)) and not restricted_key
         owner_clause = or_(
             Connection.owner_id == user.id,
             Connection.ownership_mode == ConnectionOwnershipMode.INSTANCE.value,
@@ -415,7 +416,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                 stmt = stmt.where(owner_clause)
         stmt = stmt.order_by(col(Connection.display_name), col(Connection.id))
         rows = list((await session.exec(stmt)).all())
-        if not is_superuser and cross_user:
+        if not is_superuser and (cross_user or restricted_key):
             rows = await filter_visible_resources(
                 user,
                 resource_type="connection",

@@ -211,7 +211,8 @@ async def _execute_restricted_build(job_service, job_id: uuid.UUID, **kwargs) ->
         )
     except GraphPausedException:
         # The driver already emitted the approval card and stream sentinel.
-        # Keep the legacy paused job nonterminal without a queue error event.
+        # No durable runner owns this legacy queue callback's pause transition.
+        await job_service.update_job_status(job_id, JobStatus.SUSPENDED)
         return
 
 

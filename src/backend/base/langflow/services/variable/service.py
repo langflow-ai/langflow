@@ -9,7 +9,7 @@ from lfx.log.logger import logger
 from lfx.services.authorization.base import ExecutionPrincipal, ResourceVisibilityScope
 from lfx.services.settings.constants import AGENTIC_VARIABLES
 from lfx.services.variable import VariableNotFoundError
-from sqlmodel import col, select, update
+from sqlmodel import col, false, select, update
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
@@ -325,18 +325,18 @@ class DatabaseVariableService(VariableService, Service):
                     act="read",
                     context=dependency_context,
                 )
-            if visibility is None or not (visibility.all_resources or visibility.resource_ids):
+            if visibility is None:
                 raise
 
-            shared_clauses = [
-                Variable.name == name,
-                Variable.user_id != user_id,
-            ]
-            if not visibility.all_resources:
-                shared_clauses.append(col(Variable.id).in_(visibility.resource_ids))
-            if visibility.excluded_resource_ids:
-                shared_clauses.append(col(Variable.id).not_in(visibility.excluded_resource_ids))
-            shared_variables = list((await session.exec(select(Variable).where(*shared_clauses))).all())
+            from langflow.services.authorization.listing import restrict_to_owned_or_visible_scope
+
+            shared_stmt = restrict_to_owned_or_visible_scope(
+                select(Variable).where(Variable.name == name, Variable.user_id != user_id),
+                id_column=Variable.id,
+                owner_clause=false(),
+                visibility=visibility,
+            )
+            shared_variables = list((await session.exec(shared_stmt)).all())
             if not shared_variables:
                 raise
             if len(shared_variables) > 1:
