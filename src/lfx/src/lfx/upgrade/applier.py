@@ -1,8 +1,10 @@
 """Apply safe upgrades to a flow dict.
 
 Returns a deep copy of the flow with safe-upgradeable node codes replaced by the
-current registry code and any template fields the saved flow predates introduced
-with their registry defaults. Breaking and blocked nodes are left unchanged.
+current registry code, any template fields the saved flow predates introduced
+with their registry defaults, any empty field whose type changed replaced by the
+registry's declaration, and the outputs replaced by the registry's outputs. Breaking
+and blocked nodes are left unchanged.
 """
 
 from __future__ import annotations
@@ -13,7 +15,15 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-from lfx.upgrade.checker import CompatibilityReport, build_registry_lookup, new_template_field_keys
+from lfx.upgrade.checker import (
+    CompatibilityReport,
+    _canonical_types,
+    _node_is_in_tool_mode,
+    build_registry_lookup,
+    flow_node_id,
+    new_template_field_keys,
+    retyped_field_keys,
+)
 
 
 def apply_safe_upgrades(
@@ -59,8 +69,7 @@ def _apply_to_nodes(nodes: list[dict], safe_ids: set[str], registry: dict[str, d
     """
     count = 0
     for node in nodes:
-        node_id = node.get("data", {}).get("id") or node.get("id")
-        if node_id in safe_ids:
+        if flow_node_id(node) in safe_ids:
             component_type = node.get("data", {}).get("type", "")
             entry = registry.get(component_type)
             if entry:
@@ -75,10 +84,54 @@ def _apply_to_nodes(nodes: list[dict], safe_ids: set[str], registry: dict[str, d
                     # each one exactly as the registry declares it — the state a freshly
                     # added component would carry. Deep-copied so later edits to the
                     # upgraded flow cannot reach back into the shared registry lookup.
-                    for key in new_template_field_keys(registry_template, flow_template):
+                    # A field whose type changed is empty and unconnected on a safe node; take
+                    # the registry's declaration for it too, as the editor's update does.
+                    for key in new_template_field_keys(registry_template, flow_template) | retyped_field_keys(
+                        registry_template, flow_template
+                    ):
                         flow_template[key] = copy.deepcopy(registry_template[key])
+                    # Every saved output still exists on a safe node, so take the registry's
+                    # outputs, as the editor's update does: an added output reaches the node. A
+                    # tool-mode node keeps its toolset output.
+                    node_info = node["data"]["node"]
+                    saved_outputs = node_info.get("outputs") or []
+                    if entry.get("outputs") is not None and not _node_is_in_tool_mode(saved_outputs):
+                        node_info["outputs"] = _updated_outputs(entry["outputs"], saved_outputs)
                     count += 1
         nested = node.get("data", {}).get("node", {}).get("flow", {}).get("data", {}).get("nodes")
         if nested:
             count += _apply_to_nodes(nested, safe_ids, registry)
     return count
+
+
+def _updated_outputs(registry_outputs: list[dict], saved_outputs: list[dict]) -> list[dict]:
+    """Return the registry's outputs with each saved output's ``hidden`` flag, ``options`` and picked type.
+
+    The picked type (``selected``) is kept when the output offers it exactly; otherwise when the output
+    offers it under its other name (``Data`` saved, ``JSON`` declared), written in the output's spelling.
+    A saved output with no picked type (or one that is not a string) and a single type counts that type
+    as its pick. Any other output takes the registry's pick.
+    """
+    saved = {output.get("name"): output for output in saved_outputs}
+    outputs = copy.deepcopy(registry_outputs)
+    for output in outputs:
+        old = saved.get(output.get("name"))
+        if old is None:
+            continue
+        if "hidden" in old:
+            output["hidden"] = old["hidden"]
+        if "options" in old:
+            output["options"] = old["options"]
+        picked = old.get("selected")
+        if not isinstance(picked, str):
+            saved_types = old.get("types")
+            picked = saved_types[0] if isinstance(saved_types, list) and len(saved_types) == 1 else None
+        if not isinstance(picked, str):
+            continue
+        types = output.get("types") or []
+        same_type = [t for t in types if _canonical_types([t]) == _canonical_types([picked])]
+        if picked in types:
+            output["selected"] = picked
+        elif same_type:
+            output["selected"] = same_type[0]
+    return outputs
