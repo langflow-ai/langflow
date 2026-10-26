@@ -1,14 +1,15 @@
 """Add represented audit identity separately from authenticated acting identity.
 
 Revision ID: a6f81c2d903b
-Revises: e5a7c9b1d3f2
+Revises: 1d8d193028c8
 Create Date: 2026-10-14
 
 Phase: EXPAND
 
-Keep acting columns, constraints, indexes and history unchanged. Represented
-columns start null: acting identity cannot be used to infer represented identity.
-Downgrade preserves the additive columns and all audit history.
+Keep acting columns, constraints and history unchanged. Represented columns
+start null: acting identity cannot be used to infer represented identity.
+Bound both identity indexes, including indexes left by draft installations.
+Downgrade preserves the additive columns, safe indexes and all audit history.
 """
 
 import sqlalchemy as sa
@@ -16,13 +17,12 @@ from alembic import op
 from langflow.utils import migration
 
 revision = "a6f81c2d903b"  # pragma: allowlist secret
-down_revision = "e5a7c9b1d3f2"  # pragma: allowlist secret
+down_revision = "1d8d193028c8"  # pragma: allowlist secret
 branch_labels = None
 depends_on = None
 
 TABLE = "audit_events"
 CHECK = "ck_audit_events_represented_pair"
-INDEX = "ix_audit_events_represented_timeline"
 
 
 def upgrade() -> None:
@@ -44,11 +44,18 @@ def upgrade() -> None:
                     "(represented_issuer IS NULL AND represented_subject IS NULL) "
                     "OR (represented_issuer IS NOT NULL AND represented_subject IS NOT NULL)",
                 )
-    indexes = {item["name"] for item in sa.inspect(conn).get_indexes(TABLE)}
-    if INDEX not in indexes:
-        # Index only the subject (at most 2048 UTF-8 bytes). The full issuer
-        # remains stored and filtered separately, without an oversized key.
-        op.create_index(INDEX, TABLE, ["represented_subject", "timestamp"])
+    indexes = {item["name"]: item for item in sa.inspect(conn).get_indexes(TABLE)}
+    for prefix in ("acting", "represented"):
+        name = f"ix_audit_events_{prefix}_timeline"
+        columns = [f"{prefix}_subject", "timestamp"]
+        existing = indexes.get(name)
+        if existing is not None:
+            if existing["column_names"] == columns:
+                continue
+            op.drop_index(name, table_name=TABLE)
+        # A subject uses at most 2048 UTF-8 bytes. Keep the full issuer stored
+        # and filtered separately so PostgreSQL's B-tree key limit is respected.
+        op.create_index(name, TABLE, columns)
 
 
 def downgrade() -> None:
