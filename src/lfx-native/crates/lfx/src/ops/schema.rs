@@ -3,12 +3,13 @@
 //! `node_schema.json` is the single description of where things are in a node,
 //! so no code hard-codes those paths. It is embedded in the crate and read once.
 
+use std::borrow::Cow;
 use std::collections::HashSet;
 use std::sync::LazyLock;
 
 use serde_json::{Map, Value};
 
-use crate::ops::ops::PathExt;
+use crate::ops::ops::{AsKey, PathExt};
 use crate::ops::state::resolve;
 use crate::ops::validate::PathPart;
 
@@ -214,27 +215,31 @@ impl NodeSchema {
     /// matches one of the schema's `when_field` conditions.
     #[must_use]
     pub fn keyed_list_at<S: AsRef<str>>(&self, node: &Value, path: &[S]) -> Option<&KeyedList> {
-        self.keyed_list_where(path, |field_path| {
+        self.keyed_list_by(path, |field_path, key| {
             let mut field = node;
             for part in field_path {
                 field = field.as_object()?.get(part.as_ref())?;
             }
-            field.as_object()
+            field.as_object()?.get(key).map(Cow::Borrowed)
         })
     }
 
     /// The keyed list a template field's `value` is, given the field itself.
     #[must_use]
     pub fn field_value_list(&self, name: &str, field: &Map<String, Value>) -> Option<&KeyedList> {
-        self.keyed_list_where(&field_value_path(name), |_| Some(field))
+        self.keyed_list_by(&field_value_path(name), |_, key| {
+            field.get(key).map(Cow::Borrowed)
+        })
     }
 
-    /// The keyed list at `path`, reading the template field a table pattern
-    /// matches through `field_at` only when it has to.
-    fn keyed_list_where<'f, S: AsRef<str>>(
+    /// The keyed list at `path`. When a table pattern matches, it reads the
+    /// keys of the template field that `when_field` names through
+    /// `field_key(field_path, key)`, which gives `None` for a field that is
+    /// not an object or lacks the key.
+    pub(crate) fn keyed_list_by<'f, S: AsRef<str>>(
         &self,
         path: &[S],
-        field_at: impl FnOnce(&[S]) -> Option<&'f Map<String, Value>>,
+        field_key: impl Fn(&[S], &str) -> Option<Cow<'f, Value>>,
     ) -> Option<&KeyedList> {
         if let Some((_, keyed)) = self
             .natural_lists
@@ -257,15 +262,33 @@ impl NodeSchema {
         let Some(wildcard) = wildcard else {
             return Some(&self.table);
         };
-        let field = field_at(&path[..=wildcard])?;
+        let field_path = &path[..=wildcard];
         self.table_when_field
             .iter()
             .any(|condition| {
                 condition
                     .iter()
-                    .all(|(key, value)| field.get(key) == Some(value))
+                    .all(|(key, value)| field_key(field_path, key).as_deref() == Some(value))
             })
             .then_some(&self.table)
+    }
+
+    /// The keyed list whose items a checked path names at `path`: the natural
+    /// list the schema declares there, or else a table. Only a path that a
+    /// write already checked may name list items, so the field's type is not
+    /// read again.
+    #[must_use]
+    pub fn listed_at<T: AsKey>(&self, path: &[T]) -> &KeyedList {
+        self.natural_list_at(path).unwrap_or(&self.table)
+    }
+
+    /// The natural list the schema declares at `path`, if any.
+    #[must_use]
+    pub fn natural_list_at<T: AsKey>(&self, path: &[T]) -> Option<&KeyedList> {
+        self.natural_lists
+            .iter()
+            .find(|(list_path, _)| path.equals(list_path))
+            .map(|(_, keyed)| keyed)
     }
 
     /// Whether the list at `path` of `node` is a table.

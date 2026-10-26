@@ -2,9 +2,9 @@
 //
 // The fixture files are the specification of the engine: their expected
 // outputs are reviewed data, and every engine must meet them. This script runs
-// the editor's engine over the inputs of what only the editor has: inverses
-// (inverse_cases.json), and the editor's table rules and edge fixes
-// (editor_cases.json). It reports each case whose result differs from the
+// the editor's engine over the inputs of what only the editor has: backward
+// operations (backward_cases.json), and the editor's table rules and edge
+// fixes (editor_cases.json). It reports each case whose result differs from the
 // expected output, with the case's name and rule. It never writes a fixture
 // file. Bundle the TypeScript engine of the stack's top branch
 // (oplog-history-ui) into one CommonJS file that exports applyFlowOperations,
@@ -56,7 +56,7 @@ function check(what, actual, expected) {
   if (!matches(value, expected)) throw new Difference(what, value, expected);
 }
 
-// --- inverse_cases.json ----------------------------------------------------------------------------
+// --- backward_cases.json ---------------------------------------------------------------------------
 
 /** Ids a delete names and the entries an add lists, as sets keyed by id. */
 function unordered(lists) {
@@ -67,14 +67,23 @@ function unordered(lists) {
   );
 }
 
-function inverseCase(c) {
+function backwardCase(c) {
   const result = engine.applyFlowOperations(clone(c.base), clone(c.operations), { inverse: true });
-  check("inverse operations", unordered(result.inverseOperations), unordered(c.inverse));
+  check("backward operations", unordered(result.inverseOperations), unordered(c.backward));
   let graph = result.flowData;
-  for (const inverse of [...result.inverseOperations].reverse()) {
-    graph = engine.applyFlowOperations(graph, clone(inverse), { restoring: true }).flowData;
+  for (const backward of [...result.inverseOperations].reverse()) {
+    graph = engine.applyFlowOperations(graph, clone(backward), { mode: "preview" }).flowData;
   }
-  if (!engine.graphsEqual(graph, c.base)) throw new Difference("the graph after the inverses", graph, c.base);
+  if (!engine.graphsEqual(graph, c.base)) throw new Difference("the graph after the backward operations", graph, c.base);
+}
+
+/** A user's undo: the backward operation lists, last first, in one batch applied under every rule. */
+function undoCase(c) {
+  const result = engine.applyFlowOperations(clone(c.base), clone(c.operations), { inverse: true });
+  const undo = [...result.inverseOperations].reverse().flat();
+  check("undo", unordered([undo]), unordered([c.undo]));
+  const graph = engine.applyFlowOperations(result.flowData, clone(undo), {}).flowData;
+  if (!engine.graphsEqual(graph, c.base)) throw new Difference("the graph after the undo", graph, c.base);
 }
 
 // --- editor_cases.json -----------------------------------------------------------------------------
@@ -90,7 +99,8 @@ const EDITOR_RUNS = {
 // --- Running every case ----------------------------------------------------------------------------
 
 const CHECKS = [
-  ["inverse_cases.json", "cases", inverseCase],
+  ["backward_cases.json", "cases", backwardCase],
+  ["backward_cases.json", "undo", undoCase],
   ...Object.entries(EDITOR_RUNS).map(([section, run]) => ["editor_cases.json", section, run]),
 ];
 

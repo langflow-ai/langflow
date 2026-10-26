@@ -6,8 +6,8 @@ Each checker runs one engine over the inputs of every case that the engine can r
 
 | Script | Engine it checks | Files it checks |
 | --- | --- | --- |
-| `check.py` | the Python engine (`lfx.services.flow_operations`, and the restore fix check and the save path of `langflow.services.flow_history`) | every file except `inverse_cases.json` and `editor_cases.json` |
-| `check_editor.mjs` | the editor's TypeScript engine (`src/frontend/src/utils/flow-operations/`), for what only it has: inverses, the editor's table rules and the edge fixes | `inverse_cases.json`, `editor_cases.json` |
+| `check.py` | the Python engine (`lfx.services.flow_operations`, and the restore fix check and the save path of `langflow.services.flow_history`) | every file except `backward_cases.json` and `editor_cases.json` |
+| `check_editor.mjs` | the editor's TypeScript engine (`src/frontend/src/utils/flow-operations/`), for what only it has: backward operations, the editor's table rules and the edge fixes | `backward_cases.json`, `editor_cases.json` |
 
 Both scripts run the Python and editor engines of the operation log stack, so run them from a checkout of its top branch, `oplog-history-ui`.
 

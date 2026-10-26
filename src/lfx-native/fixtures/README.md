@@ -65,7 +65,8 @@ The doc names refer to the notes in `plans/multiplayer/` of the design vault.
 | `save-path` | A save checks the submitted graph against the stored graph and records the diff. A flow without data starts from an empty graph. | ops-history, "Accepted-write algorithm" |
 | `restore-fixes` | A restore takes only the edge fixes that address its violations: a delete, or a handle rewrite. The editor's fixes are what its preview changed. | ops-history, "Repair"; oplog-engine-cleanup, "Restore with client fixes" |
 | `last-writer-wins` | Of two writes to one path, the later wins. Writes to different paths both land. | operation-protocol-multiplayer-proposal, "Concurrency semantics" |
-| `inverses` | Applying the inverses of a batch, last first, gives back the graph before the batch. | ops-history, "API and UI progression" (playback) |
+| `backward-operations` | Applying the backward operations of a batch, last first, gives back the flow before the batch. | ops-history, "API and UI progression" (playback) |
+| `undo-request` | A user's undo is an ordinary request: the backward operations of the user's batch, last first, in one batch. Applied in strict mode, under every rule, it gives back the graph before the batch. | operation-protocol-multiplayer-proposal, "Undo" |
 | `replay-same-hash` | Every engine replays the same accepted transactions to the same graph hash. | ops-history, "Diff and protocol work needed"; rust-flow-engine-plan, "Hashes must not change" |
 | `lone-surrogates` | A string with a lone surrogate is refused. A surrogate pair is one character. | rust-flow-engine-investigation, "Drift between the two engines today" |
 | `depth-limit` | JSON nested deeper than 127 levels is refused, in every runtime. | rust-flow-engine-plan, "Rough Sizing & Key Risks" (deep flows) |

@@ -1,9 +1,9 @@
 {
-  "description": "Inverses: what undoes each operation of a batch. Applying `operations` to `base` with inverses on gives `inverse`, one list per operation. Applying those lists last first, each in a call of its own with `restoring` set, gives back `base`. Ids a delete names and the entries an add lists compare as sets keyed by id; numbers compare by value. Each case names the rule it checks in `rule`; README.md lists the rules. The expected outputs are reviewed data that every engine must meet.",
+  "description": "Backward operations: what undoes each operation of a batch. Applying `operations` to `base` with `backward` on gives `backward`, one list per operation. Applying those lists last first, each in a call of its own with `restoring` set, gives back `base`. Ids a delete names and the entries an add lists compare as sets keyed by id; numbers compare by value. The `undo` cases check a user's undo, which the editor sends as an ordinary batch. Applying `operations` to `base` with `backward` on, and joining the lists last first into one batch, gives `undo`. Applying `undo` to the result without `restoring`, under every rule, gives back `base`. Each case names the rule it checks in `rule`; README.md lists the rules. The expected outputs are reviewed data that every engine must meet.",
   "cases": [
     {
       "name": "apply case: empty operation list leaves the flow unchanged",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -22,11 +22,11 @@
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [],
-      "inverse": []
+      "backward": []
     },
     {
       "name": "apply case: add_nodes appends new nodes",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -52,11 +52,11 @@
           ]
         }
       ],
-      "inverse": [[{"type": "delete_nodes", "ids": ["c"]}]]
+      "backward": [[{"type": "delete_nodes", "ids": ["c"]}]]
     },
     {
       "name": "apply case: set_field replaces a template value",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -77,11 +77,11 @@
       "operations": [
         {"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "hello"}]}
       ],
-      "inverse": [[{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "hi"}]}]]
+      "backward": [[{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "hi"}]}]]
     },
     {
       "name": "apply case: set_field creates a missing final object key",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -100,11 +100,11 @@
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "customColor"], "value": "#fff"}]}],
-      "inverse": [[{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["data", "customColor"]}]}]]
+      "backward": [[{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["data", "customColor"]}]}]]
     },
     {
       "name": "apply case: set_field writes an output selected by name",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -125,11 +125,11 @@
       "operations": [
         {"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "outputs", {"key": "out"}, "selected"], "value": "Data"}]}
       ],
-      "inverse": [[{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "out"}, "selected"]}]}]]
+      "backward": [[{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "out"}, "selected"]}]}]]
     },
     {
       "name": "apply case: set_field replaces a whole position",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -148,11 +148,11 @@
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["position"], "value": {"x": 5, "y": 6}}]}],
-      "inverse": [[{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["position"], "value": {"x": 100, "y": 0}}]}]]
+      "backward": [[{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["position"], "value": {"x": 100, "y": 0}}]}]]
     },
     {
       "name": "apply case: delete_field removes an object key",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {
@@ -175,11 +175,11 @@
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["data", "customColor"]}]}],
-      "inverse": [[{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "customColor"], "value": "#000"}]}]]
+      "backward": [[{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "customColor"], "value": "#000"}]}]]
     },
     {
       "name": "apply case: delete_field of a missing key changes and records nothing",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -198,11 +198,11 @@
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["data", "customColor"]}]}],
-      "inverse": [[]]
+      "backward": [[]]
     },
     {
       "name": "apply case: delete_nodes removes incident edges",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -221,7 +221,7 @@
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [{"type": "delete_nodes", "ids": ["a"]}],
-      "inverse": [
+      "backward": [
         [
           {
             "type": "add_nodes",
@@ -247,7 +247,7 @@
     },
     {
       "name": "apply case: add_edges connects existing nodes",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -280,11 +280,11 @@
           ]
         }
       ],
-      "inverse": [[{"type": "delete_edges", "ids": ["e-ba"]}]]
+      "backward": [[{"type": "delete_edges", "ids": ["e-ba"]}]]
     },
     {
       "name": "apply case: add_edges after add_nodes in one batch",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -323,11 +323,11 @@
           ]
         }
       ],
-      "inverse": [[{"type": "delete_nodes", "ids": ["c"]}], [{"type": "delete_edges", "ids": ["e-bc"]}]]
+      "backward": [[{"type": "delete_nodes", "ids": ["c"]}], [{"type": "delete_edges", "ids": ["e-bc"]}]]
     },
     {
       "name": "apply case: delete_edges ignores unknown and repeated ids",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -346,7 +346,7 @@
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [{"type": "delete_edges", "ids": ["zz", "e-ab", "e-ab"]}],
-      "inverse": [
+      "backward": [
         [
           {
             "type": "add_edges",
@@ -366,7 +366,7 @@
     },
     {
       "name": "apply case: set_field changes a value's JSON type",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
@@ -376,11 +376,11 @@
         "viewport": {"x": 0, "y": 0, "zoom": 1}
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": 3}]}],
-      "inverse": [[{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "hi"}]}]]
+      "backward": [[{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "hi"}]}]]
     },
     {
       "name": "apply case: list item: set_field edits one table cell by row id",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {
@@ -403,7 +403,7 @@
           "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}, "v"], "value": "w"}]
         }
       ],
-      "inverse": [
+      "backward": [
         [
           {
             "type": "update_nodes",
@@ -414,7 +414,7 @@
     },
     {
       "name": "apply case: list item: set_field at a new row id appends the row",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {
@@ -444,13 +444,13 @@
           ]
         }
       ],
-      "inverse": [
+      "backward": [
         [{"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r3"}]}]}]
       ]
     },
     {
       "name": "apply case: list item: setting a row's __pos__ changes only its position",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {
@@ -473,7 +473,7 @@
           "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "__pos__"], "value": 3}]
         }
       ],
-      "inverse": [
+      "backward": [
         [
           {
             "type": "update_nodes",
@@ -484,7 +484,7 @@
     },
     {
       "name": "apply case: list item: two rows may share a position",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {
@@ -509,13 +509,13 @@
           ]
         }
       ],
-      "inverse": [
+      "backward": [
         [{"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r0"}]}]}]
       ]
     },
     {
       "name": "apply case: list item: delete_field removes a table row by id",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {
@@ -535,7 +535,7 @@
       "operations": [
         {"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}]}]}
       ],
-      "inverse": [
+      "backward": [
         [
           {
             "type": "update_nodes",
@@ -553,7 +553,7 @@
     },
     {
       "name": "apply case: list item: deleting a row lets the last row take its slot",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {
@@ -576,7 +576,7 @@
       "operations": [
         {"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}]}]}
       ],
-      "inverse": [
+      "backward": [
         [
           {
             "type": "update_nodes",
@@ -594,7 +594,7 @@
     },
     {
       "name": "apply case: list item: delete_field of a missing row changes and records nothing",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {
@@ -614,11 +614,11 @@
       "operations": [
         {"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "gone"}]}]}
       ],
-      "inverse": [[]]
+      "backward": [[]]
     },
     {
       "name": "apply case: list item: set_field edits an output selected by name",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {
@@ -636,11 +636,11 @@
       "operations": [
         {"type": "update_nodes", "updates": [{"id": "k", "op": "set_field", "path": ["data", "node", "outputs", {"key": "b"}, "hidden"], "value": true}]}
       ],
-      "inverse": [[{"type": "update_nodes", "updates": [{"id": "k", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "b"}, "hidden"]}]}]]
+      "backward": [[{"type": "update_nodes", "updates": [{"id": "k", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "b"}, "hidden"]}]}]]
     },
     {
       "name": "apply case: list item: set_field at a new output name appends it",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {
@@ -658,11 +658,11 @@
       "operations": [
         {"type": "update_nodes", "updates": [{"id": "k", "op": "set_field", "path": ["data", "node", "outputs", {"key": "c"}], "value": {"name": "c"}}]}
       ],
-      "inverse": [[{"type": "update_nodes", "updates": [{"id": "k", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "c"}]}]}]]
+      "backward": [[{"type": "update_nodes", "updates": [{"id": "k", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "c"}]}]}]]
     },
     {
       "name": "apply case: list item: a tool action is selected by its first tag",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {
@@ -685,7 +685,7 @@
           ]
         }
       ],
-      "inverse": [
+      "backward": [
         [
           {
             "type": "update_nodes",
@@ -696,7 +696,7 @@
     },
     {
       "name": "apply case: list item: a table stored out of position order is accepted",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {
@@ -714,7 +714,7 @@
           "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "z"}]
         }
       ],
-      "inverse": [
+      "backward": [
         [
           {
             "type": "update_nodes",
@@ -725,7 +725,7 @@
     },
     {
       "name": "apply case: edge change: an edge's handles change by deleting and adding it, both forms together",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -758,7 +758,7 @@
           ]
         }
       ],
-      "inverse": [
+      "backward": [
         [
           {
             "type": "add_edges",
@@ -779,7 +779,7 @@
     },
     {
       "name": "apply case: edge change: re-adding an edge onto a free field applies",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -812,7 +812,7 @@
           ]
         }
       ],
-      "inverse": [
+      "backward": [
         [
           {
             "type": "add_edges",
@@ -833,7 +833,7 @@
     },
     {
       "name": "apply case: edge rules: a list field takes several connections",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -873,11 +873,11 @@
           ]
         }
       ],
-      "inverse": [[{"type": "delete_edges", "ids": ["e2", "e3"]}]]
+      "backward": [[{"type": "delete_edges", "ids": ["e2", "e3"]}]]
     },
     {
       "name": "apply case: edge rules: replacing a connection deletes before it adds",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -910,7 +910,7 @@
           ]
         }
       ],
-      "inverse": [
+      "backward": [
         [
           {
             "type": "add_edges",
@@ -931,7 +931,7 @@
     },
     {
       "name": "apply case: edge rules: an edge into a group's own field applies",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -974,11 +974,11 @@
           ]
         }
       ],
-      "inverse": [[{"type": "delete_edges", "ids": ["e2"]}]]
+      "backward": [[{"type": "delete_edges", "ids": ["e2"]}]]
     },
     {
       "name": "apply case: cascade: deleting a template field deletes the edges into it",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -996,7 +996,7 @@
         ]
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "d", "op": "delete_field", "path": ["data", "node", "template", "one"]}]}],
-      "inverse": [
+      "backward": [
         [
           {"type": "update_nodes", "updates": [{"id": "d", "op": "set_field", "path": ["data", "node", "template", "one"], "value": {"type": "str"}}]},
           {
@@ -1017,7 +1017,7 @@
     },
     {
       "name": "apply case: cascade: replacing the outputs list deletes the edges of the outputs it drops",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -1035,7 +1035,7 @@
         ]
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "s", "op": "set_field", "path": ["data", "node", "outputs"], "value": [{"name": "other"}]}]}],
-      "inverse": [
+      "backward": [
         [
           {"type": "update_nodes", "updates": [{"id": "s", "op": "set_field", "path": ["data", "node", "outputs"], "value": [{"name": "out"}]}]},
           {
@@ -1056,7 +1056,7 @@
     },
     {
       "name": "apply case: cascade: an outputs list that keeps its names keeps its edges",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -1076,11 +1076,11 @@
       "operations": [
         {"type": "update_nodes", "updates": [{"id": "s", "op": "set_field", "path": ["data", "node", "outputs"], "value": [{"name": "out", "hidden": true}]}]}
       ],
-      "inverse": [[{"type": "update_nodes", "updates": [{"id": "s", "op": "set_field", "path": ["data", "node", "outputs"], "value": [{"name": "out"}]}]}]]
+      "backward": [[{"type": "update_nodes", "updates": [{"id": "s", "op": "set_field", "path": ["data", "node", "outputs"], "value": [{"name": "out"}]}]}]]
     },
     {
       "name": "apply case: cascade: deleting an output deletes the edges from it and into it",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -1112,7 +1112,7 @@
         {"type": "update_nodes", "updates": [{"id": "s", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "out"}]}]},
         {"type": "update_nodes", "updates": [{"id": "loop", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "item"}]}]}
       ],
-      "inverse": [
+      "backward": [
         [
           {"type": "update_nodes", "updates": [{"id": "s", "op": "set_field", "path": ["data", "node", "outputs", {"key": "out"}], "value": {"name": "out"}}]},
           {
@@ -1154,7 +1154,7 @@
     },
     {
       "name": "apply case: cascade: deleting a node deletes the edges at both its ends",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -1183,7 +1183,7 @@
         ]
       },
       "operations": [{"type": "delete_nodes", "ids": ["d"]}],
-      "inverse": [
+      "backward": [
         [
           {
             "type": "add_nodes",
@@ -1217,7 +1217,7 @@
     },
     {
       "name": "apply case: cascade: an edge re-added earlier in the batch goes with its new field",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -1251,7 +1251,7 @@
         },
         {"type": "update_nodes", "updates": [{"id": "d", "op": "delete_field", "path": ["data", "node", "template", "many"]}]}
       ],
-      "inverse": [
+      "backward": [
         [
           {
             "type": "add_edges",
@@ -1291,7 +1291,7 @@
     },
     {
       "name": "deleting a node puts it and its edges back",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "name": "flow",
         "nodes": [
@@ -1353,7 +1353,7 @@
         ]
       },
       "operations": [{"type": "delete_nodes", "ids": ["b"]}],
-      "inverse": [
+      "backward": [
         [
           {
             "type": "add_nodes",
@@ -1406,7 +1406,7 @@
     },
     {
       "name": "deleting edges puts them back",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "name": "flow",
         "nodes": [
@@ -1468,7 +1468,7 @@
         ]
       },
       "operations": [{"type": "delete_edges", "ids": ["e1", "loop", "missing"]}],
-      "inverse": [
+      "backward": [
         [
           {
             "type": "add_edges",
@@ -1496,7 +1496,7 @@
     },
     {
       "name": "adding a node is undone by deleting it",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "name": "flow",
         "nodes": [
@@ -1558,11 +1558,11 @@
         ]
       },
       "operations": [{"type": "add_nodes", "nodes": [{"id": "c", "data": {"node": {"template": {}}}}]}],
-      "inverse": [[{"type": "delete_nodes", "ids": ["c"]}]]
+      "backward": [[{"type": "delete_nodes", "ids": ["c"]}]]
     },
     {
       "name": "adding an edge is undone by deleting it",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "name": "flow",
         "nodes": [
@@ -1638,11 +1638,11 @@
           ]
         }
       ],
-      "inverse": [[{"type": "delete_edges", "ids": ["e3"]}]]
+      "backward": [[{"type": "delete_edges", "ids": ["e3"]}]]
     },
     {
       "name": "a set of an existing value puts the value back",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "name": "flow",
         "nodes": [
@@ -1704,11 +1704,11 @@
         ]
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": "y"}]}],
-      "inverse": [[{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": "x"}]}]]
+      "backward": [[{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": "x"}]}]]
     },
     {
       "name": "a set of a new key is undone by deleting it",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "name": "flow",
         "nodes": [
@@ -1770,11 +1770,11 @@
         ]
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "info"], "value": "help"}]}],
-      "inverse": [[{"type": "update_nodes", "updates": [{"id": "b", "op": "delete_field", "path": ["data", "node", "template", "f", "info"]}]}]]
+      "backward": [[{"type": "update_nodes", "updates": [{"id": "b", "op": "delete_field", "path": ["data", "node", "template", "f", "info"]}]}]]
     },
     {
       "name": "a type change is undone by writing the old value back",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "name": "flow",
         "nodes": [
@@ -1836,11 +1836,11 @@
         ]
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": 5}]}],
-      "inverse": [[{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": "x"}]}]]
+      "backward": [[{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": "x"}]}]]
     },
     {
       "name": "a delete of an existing key puts it back",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "name": "flow",
         "nodes": [
@@ -1902,11 +1902,11 @@
         ]
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "b", "op": "delete_field", "path": ["data", "node", "template", "f", "type"]}]}],
-      "inverse": [[{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "type"], "value": "str"}]}]]
+      "backward": [[{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "type"], "value": "str"}]}]]
     },
     {
-      "name": "a delete that finds nothing has no inverse",
-      "rule": "inverses",
+      "name": "a delete that finds nothing has no backward operations",
+      "rule": "backward-operations",
       "base": {
         "name": "flow",
         "nodes": [
@@ -1968,11 +1968,11 @@
         ]
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "b", "op": "delete_field", "path": ["data", "node", "template", "f", "missing"]}]}],
-      "inverse": [[]]
+      "backward": [[]]
     },
     {
       "name": "deleting a field puts back the edges into it",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "name": "flow",
         "nodes": [
@@ -2034,7 +2034,7 @@
         ]
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "b", "op": "delete_field", "path": ["data", "node", "template", "f"]}]}],
-      "inverse": [
+      "backward": [
         [
           {
             "type": "update_nodes",
@@ -2058,7 +2058,7 @@
     },
     {
       "name": "deleting the last output is undone by a write at its key",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "name": "flow",
         "nodes": [
@@ -2120,7 +2120,7 @@
         ]
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "loop"}]}]}],
-      "inverse": [
+      "backward": [
         [
           {
             "type": "update_nodes",
@@ -2144,7 +2144,7 @@
     },
     {
       "name": "deleting an output that is not last writes the list back",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "name": "flow",
         "nodes": [
@@ -2206,7 +2206,7 @@
         ]
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "mid"}]}]}],
-      "inverse": [
+      "backward": [
         [
           {
             "type": "update_nodes",
@@ -2236,8 +2236,8 @@
       ]
     },
     {
-      "name": "deleting two outputs that are not last splits the inverse",
-      "rule": "inverses",
+      "name": "deleting two outputs that are not last splits the backward operations",
+      "rule": "backward-operations",
       "base": {
         "name": "flow",
         "nodes": [
@@ -2307,7 +2307,7 @@
           ]
         }
       ],
-      "inverse": [
+      "backward": [
         [
           {
             "type": "update_nodes",
@@ -2365,7 +2365,7 @@
     },
     {
       "name": "replacing the outputs puts back the list and its edges",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "name": "flow",
         "nodes": [
@@ -2427,7 +2427,7 @@
         ]
       },
       "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "outputs"], "value": [{"name": "out"}]}]}],
-      "inverse": [
+      "backward": [
         [
           {
             "type": "update_nodes",
@@ -2466,7 +2466,7 @@
     },
     {
       "name": "adding a table row is undone by deleting it",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "name": "flow",
         "nodes": [
@@ -2540,13 +2540,13 @@
           ]
         }
       ],
-      "inverse": [
+      "backward": [
         [{"type": "update_nodes", "updates": [{"id": "b", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r4"}]}]}]
       ]
     },
     {
       "name": "deleting a table row puts it back",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "name": "flow",
         "nodes": [
@@ -2610,7 +2610,7 @@
       "operations": [
         {"type": "update_nodes", "updates": [{"id": "b", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}]}]}
       ],
-      "inverse": [
+      "backward": [
         [
           {
             "type": "update_nodes",
@@ -2628,7 +2628,7 @@
     },
     {
       "name": "moving a table row puts its position back",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "name": "flow",
         "nodes": [
@@ -2695,7 +2695,7 @@
           "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r3"}, "__pos__"], "value": 0.5}]
         }
       ],
-      "inverse": [
+      "backward": [
         [
           {
             "type": "update_nodes",
@@ -2706,7 +2706,7 @@
     },
     {
       "name": "two writes of one path in one batch undo in order",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "name": "flow",
         "nodes": [
@@ -2771,14 +2771,14 @@
         {"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": "y"}]},
         {"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": "z"}]}
       ],
-      "inverse": [
+      "backward": [
         [{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": "x"}]}],
         [{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": "y"}]}]
       ]
     },
     {
       "name": "re-adding an edge with other handles puts it back",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "name": "flow",
         "nodes": [
@@ -2855,7 +2855,7 @@
           ]
         }
       ],
-      "inverse": [
+      "backward": [
         [
           {
             "type": "add_edges",
@@ -2876,7 +2876,7 @@
     },
     {
       "name": "a batch of several operations",
-      "rule": "inverses",
+      "rule": "backward-operations",
       "base": {
         "name": "flow",
         "nodes": [
@@ -2942,7 +2942,7 @@
         {"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "mid"}]}]},
         {"type": "delete_nodes", "ids": ["b"]}
       ],
-      "inverse": [
+      "backward": [
         [
           {
             "type": "add_edges",
@@ -3011,6 +3011,1004 @@
             ]
           }
         ]
+      ]
+    }
+  ],
+  "undo": [
+    {
+      "name": "undoing a set writes the old value back",
+      "rule": "undo-request",
+      "base": {
+        "name": "flow",
+        "nodes": [
+          {
+            "id": "a",
+            "data": {
+              "node": {
+                "template": {"text": {"type": "str", "value": "hi"}},
+                "outputs": [{"name": "out"}, {"name": "mid"}, {"name": "last"}, {"name": "loop", "allows_loop": true}]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "data": {
+              "node": {
+                "template": {
+                  "f": {"type": "str", "value": "x"},
+                  "many": {"type": "str", "list": true, "value": []},
+                  "rows": {
+                    "type": "table",
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
+                  }
+                },
+                "outputs": []
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          },
+          {
+            "id": "e2",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œmidœ}",
+            "targetHandle": "{œfieldNameœ:œmanyœ}",
+            "data": {"sourceHandle": {"name": "mid"}, "targetHandle": {"fieldName": "many"}}
+          },
+          {
+            "id": "loop",
+            "source": "a",
+            "target": "a",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œnameœ:œloopœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"name": "loop"}}
+          }
+        ]
+      },
+      "operations": [{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": "y"}]}],
+      "undo": [{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": "x"}]}]
+    },
+    {
+      "name": "undoing a set of a new key deletes it",
+      "rule": "undo-request",
+      "base": {
+        "name": "flow",
+        "nodes": [
+          {
+            "id": "a",
+            "data": {
+              "node": {
+                "template": {"text": {"type": "str", "value": "hi"}},
+                "outputs": [{"name": "out"}, {"name": "mid"}, {"name": "last"}, {"name": "loop", "allows_loop": true}]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "data": {
+              "node": {
+                "template": {
+                  "f": {"type": "str", "value": "x"},
+                  "many": {"type": "str", "list": true, "value": []},
+                  "rows": {
+                    "type": "table",
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
+                  }
+                },
+                "outputs": []
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          },
+          {
+            "id": "e2",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œmidœ}",
+            "targetHandle": "{œfieldNameœ:œmanyœ}",
+            "data": {"sourceHandle": {"name": "mid"}, "targetHandle": {"fieldName": "many"}}
+          },
+          {
+            "id": "loop",
+            "source": "a",
+            "target": "a",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œnameœ:œloopœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"name": "loop"}}
+          }
+        ]
+      },
+      "operations": [{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "info"], "value": "help"}]}],
+      "undo": [{"type": "update_nodes", "updates": [{"id": "b", "op": "delete_field", "path": ["data", "node", "template", "f", "info"]}]}]
+    },
+    {
+      "name": "undoing a new table row deletes it by id",
+      "rule": "undo-request",
+      "base": {
+        "name": "flow",
+        "nodes": [
+          {
+            "id": "a",
+            "data": {
+              "node": {
+                "template": {"text": {"type": "str", "value": "hi"}},
+                "outputs": [{"name": "out"}, {"name": "mid"}, {"name": "last"}, {"name": "loop", "allows_loop": true}]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "data": {
+              "node": {
+                "template": {
+                  "f": {"type": "str", "value": "x"},
+                  "many": {"type": "str", "list": true, "value": []},
+                  "rows": {
+                    "type": "table",
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
+                  }
+                },
+                "outputs": []
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          },
+          {
+            "id": "e2",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œmidœ}",
+            "targetHandle": "{œfieldNameœ:œmanyœ}",
+            "data": {"sourceHandle": {"name": "mid"}, "targetHandle": {"fieldName": "many"}}
+          },
+          {
+            "id": "loop",
+            "source": "a",
+            "target": "a",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œnameœ:œloopœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"name": "loop"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "b",
+              "op": "set_field",
+              "path": ["data", "node", "template", "rows", "value", {"key": "r4"}],
+              "value": {"__id__": "r4", "__pos__": 4, "k": "four"}
+            }
+          ]
+        }
+      ],
+      "undo": [{"type": "update_nodes", "updates": [{"id": "b", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r4"}]}]}]
+    },
+    {
+      "name": "undoing a deleted table row writes it back with its id and position",
+      "rule": "undo-request",
+      "base": {
+        "name": "flow",
+        "nodes": [
+          {
+            "id": "a",
+            "data": {
+              "node": {
+                "template": {"text": {"type": "str", "value": "hi"}},
+                "outputs": [{"name": "out"}, {"name": "mid"}, {"name": "last"}, {"name": "loop", "allows_loop": true}]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "data": {
+              "node": {
+                "template": {
+                  "f": {"type": "str", "value": "x"},
+                  "many": {"type": "str", "list": true, "value": []},
+                  "rows": {
+                    "type": "table",
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
+                  }
+                },
+                "outputs": []
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          },
+          {
+            "id": "e2",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œmidœ}",
+            "targetHandle": "{œfieldNameœ:œmanyœ}",
+            "data": {"sourceHandle": {"name": "mid"}, "targetHandle": {"fieldName": "many"}}
+          },
+          {
+            "id": "loop",
+            "source": "a",
+            "target": "a",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œnameœ:œloopœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"name": "loop"}}
+          }
+        ]
+      },
+      "operations": [
+        {"type": "update_nodes", "updates": [{"id": "b", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}]}]}
+      ],
+      "undo": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "b",
+              "op": "set_field",
+              "path": ["data", "node", "template", "rows", "value", {"key": "r1"}],
+              "value": {"__id__": "r1", "__pos__": 1, "k": "one"}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "undoing a move writes the old position back",
+      "rule": "undo-request",
+      "base": {
+        "name": "flow",
+        "nodes": [
+          {
+            "id": "a",
+            "data": {
+              "node": {
+                "template": {"text": {"type": "str", "value": "hi"}},
+                "outputs": [{"name": "out"}, {"name": "mid"}, {"name": "last"}, {"name": "loop", "allows_loop": true}]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "data": {
+              "node": {
+                "template": {
+                  "f": {"type": "str", "value": "x"},
+                  "many": {"type": "str", "list": true, "value": []},
+                  "rows": {
+                    "type": "table",
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
+                  }
+                },
+                "outputs": []
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          },
+          {
+            "id": "e2",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œmidœ}",
+            "targetHandle": "{œfieldNameœ:œmanyœ}",
+            "data": {"sourceHandle": {"name": "mid"}, "targetHandle": {"fieldName": "many"}}
+          },
+          {
+            "id": "loop",
+            "source": "a",
+            "target": "a",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œnameœ:œloopœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"name": "loop"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r3"}, "__pos__"], "value": 0.5}]
+        }
+      ],
+      "undo": [
+        {
+          "type": "update_nodes",
+          "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r3"}, "__pos__"], "value": 3}]
+        }
+      ]
+    },
+    {
+      "name": "undoing deleted edges adds them with the same ids",
+      "rule": "undo-request",
+      "base": {
+        "name": "flow",
+        "nodes": [
+          {
+            "id": "a",
+            "data": {
+              "node": {
+                "template": {"text": {"type": "str", "value": "hi"}},
+                "outputs": [{"name": "out"}, {"name": "mid"}, {"name": "last"}, {"name": "loop", "allows_loop": true}]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "data": {
+              "node": {
+                "template": {
+                  "f": {"type": "str", "value": "x"},
+                  "many": {"type": "str", "list": true, "value": []},
+                  "rows": {
+                    "type": "table",
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
+                  }
+                },
+                "outputs": []
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          },
+          {
+            "id": "e2",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œmidœ}",
+            "targetHandle": "{œfieldNameœ:œmanyœ}",
+            "data": {"sourceHandle": {"name": "mid"}, "targetHandle": {"fieldName": "many"}}
+          },
+          {
+            "id": "loop",
+            "source": "a",
+            "target": "a",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œnameœ:œloopœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"name": "loop"}}
+          }
+        ]
+      },
+      "operations": [{"type": "delete_edges", "ids": ["e1", "loop", "missing"]}],
+      "undo": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            },
+            {
+              "id": "loop",
+              "source": "a",
+              "target": "a",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œnameœ:œloopœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"name": "loop"}}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "undoing a deleted node adds it, then its edges",
+      "rule": "undo-request",
+      "base": {
+        "name": "flow",
+        "nodes": [
+          {
+            "id": "a",
+            "data": {
+              "node": {
+                "template": {"text": {"type": "str", "value": "hi"}},
+                "outputs": [{"name": "out"}, {"name": "mid"}, {"name": "last"}, {"name": "loop", "allows_loop": true}]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "data": {
+              "node": {
+                "template": {
+                  "f": {"type": "str", "value": "x"},
+                  "many": {"type": "str", "list": true, "value": []},
+                  "rows": {
+                    "type": "table",
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
+                  }
+                },
+                "outputs": []
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          },
+          {
+            "id": "e2",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œmidœ}",
+            "targetHandle": "{œfieldNameœ:œmanyœ}",
+            "data": {"sourceHandle": {"name": "mid"}, "targetHandle": {"fieldName": "many"}}
+          },
+          {
+            "id": "loop",
+            "source": "a",
+            "target": "a",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œnameœ:œloopœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"name": "loop"}}
+          }
+        ]
+      },
+      "operations": [{"type": "delete_nodes", "ids": ["b"]}],
+      "undo": [
+        {
+          "type": "add_nodes",
+          "nodes": [
+            {
+              "id": "b",
+              "data": {
+                "node": {
+                  "template": {
+                    "f": {"type": "str", "value": "x"},
+                    "many": {"type": "str", "list": true, "value": []},
+                    "rows": {
+                      "type": "table",
+                      "value": [
+                        {"__id__": "r1", "__pos__": 1, "k": "one"},
+                        {"__id__": "r2", "__pos__": 2, "k": "two"},
+                        {"__id__": "r3", "__pos__": 3, "k": "three"}
+                      ]
+                    }
+                  },
+                  "outputs": []
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            },
+            {
+              "id": "e2",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œmidœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ}",
+              "data": {"sourceHandle": {"name": "mid"}, "targetHandle": {"fieldName": "many"}}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "undoing a deleted field writes it back, then its edges",
+      "rule": "undo-request",
+      "base": {
+        "name": "flow",
+        "nodes": [
+          {
+            "id": "a",
+            "data": {
+              "node": {
+                "template": {"text": {"type": "str", "value": "hi"}},
+                "outputs": [{"name": "out"}, {"name": "mid"}, {"name": "last"}, {"name": "loop", "allows_loop": true}]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "data": {
+              "node": {
+                "template": {
+                  "f": {"type": "str", "value": "x"},
+                  "many": {"type": "str", "list": true, "value": []},
+                  "rows": {
+                    "type": "table",
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
+                  }
+                },
+                "outputs": []
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          },
+          {
+            "id": "e2",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œmidœ}",
+            "targetHandle": "{œfieldNameœ:œmanyœ}",
+            "data": {"sourceHandle": {"name": "mid"}, "targetHandle": {"fieldName": "many"}}
+          },
+          {
+            "id": "loop",
+            "source": "a",
+            "target": "a",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œnameœ:œloopœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"name": "loop"}}
+          }
+        ]
+      },
+      "operations": [{"type": "update_nodes", "updates": [{"id": "b", "op": "delete_field", "path": ["data", "node", "template", "f"]}]}],
+      "undo": [
+        {"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f"], "value": {"type": "str", "value": "x"}}]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "undoing a deleted output that is not last writes the list back",
+      "rule": "undo-request",
+      "base": {
+        "name": "flow",
+        "nodes": [
+          {
+            "id": "a",
+            "data": {
+              "node": {
+                "template": {"text": {"type": "str", "value": "hi"}},
+                "outputs": [{"name": "out"}, {"name": "mid"}, {"name": "last"}, {"name": "loop", "allows_loop": true}]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "data": {
+              "node": {
+                "template": {
+                  "f": {"type": "str", "value": "x"},
+                  "many": {"type": "str", "list": true, "value": []},
+                  "rows": {
+                    "type": "table",
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
+                  }
+                },
+                "outputs": []
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          },
+          {
+            "id": "e2",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œmidœ}",
+            "targetHandle": "{œfieldNameœ:œmanyœ}",
+            "data": {"sourceHandle": {"name": "mid"}, "targetHandle": {"fieldName": "many"}}
+          },
+          {
+            "id": "loop",
+            "source": "a",
+            "target": "a",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œnameœ:œloopœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"name": "loop"}}
+          }
+        ]
+      },
+      "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "mid"}]}]}],
+      "undo": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "a",
+              "op": "set_field",
+              "path": ["data", "node", "outputs"],
+              "value": [{"name": "out"}, {"name": "mid"}, {"name": "last"}, {"name": "loop", "allows_loop": true}]
+            }
+          ]
+        },
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œmidœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ}",
+              "data": {"sourceHandle": {"name": "mid"}, "targetHandle": {"fieldName": "many"}}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "undoing a replaced connection deletes the new edge before it adds the old one",
+      "rule": "undo-request",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {"type": "delete_edges", "ids": ["e1"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "d",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œresœ}",
+              "targetHandle": "{œfieldNameœ:œoneœ}",
+              "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "one"}}
+            }
+          ]
+        }
+      ],
+      "undo": [
+        {"type": "delete_edges", "ids": ["e2"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œoneœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "undoing two writes of one path keeps them as separate operations",
+      "rule": "undo-request",
+      "base": {
+        "name": "flow",
+        "nodes": [
+          {
+            "id": "a",
+            "data": {
+              "node": {
+                "template": {"text": {"type": "str", "value": "hi"}},
+                "outputs": [{"name": "out"}, {"name": "mid"}, {"name": "last"}, {"name": "loop", "allows_loop": true}]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "data": {
+              "node": {
+                "template": {
+                  "f": {"type": "str", "value": "x"},
+                  "many": {"type": "str", "list": true, "value": []},
+                  "rows": {
+                    "type": "table",
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
+                  }
+                },
+                "outputs": []
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          },
+          {
+            "id": "e2",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œmidœ}",
+            "targetHandle": "{œfieldNameœ:œmanyœ}",
+            "data": {"sourceHandle": {"name": "mid"}, "targetHandle": {"fieldName": "many"}}
+          },
+          {
+            "id": "loop",
+            "source": "a",
+            "target": "a",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œnameœ:œloopœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"name": "loop"}}
+          }
+        ]
+      },
+      "operations": [
+        {"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": "y"}]},
+        {"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": "z"}]}
+      ],
+      "undo": [
+        {"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": "y"}]},
+        {"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": "x"}]}
+      ]
+    },
+    {
+      "name": "undoing a batch of several operations",
+      "rule": "undo-request",
+      "base": {
+        "name": "flow",
+        "nodes": [
+          {
+            "id": "a",
+            "data": {
+              "node": {
+                "template": {"text": {"type": "str", "value": "hi"}},
+                "outputs": [{"name": "out"}, {"name": "mid"}, {"name": "last"}, {"name": "loop", "allows_loop": true}]
+              }
+            }
+          },
+          {
+            "id": "b",
+            "data": {
+              "node": {
+                "template": {
+                  "f": {"type": "str", "value": "x"},
+                  "many": {"type": "str", "list": true, "value": []},
+                  "rows": {
+                    "type": "table",
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "k": "one"},
+                      {"__id__": "r2", "__pos__": 2, "k": "two"},
+                      {"__id__": "r3", "__pos__": 3, "k": "three"}
+                    ]
+                  }
+                },
+                "outputs": []
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+          },
+          {
+            "id": "e2",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œmidœ}",
+            "targetHandle": "{œfieldNameœ:œmanyœ}",
+            "data": {"sourceHandle": {"name": "mid"}, "targetHandle": {"fieldName": "many"}}
+          },
+          {
+            "id": "loop",
+            "source": "a",
+            "target": "a",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œnameœ:œloopœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"name": "loop"}}
+          }
+        ]
+      },
+      "operations": [
+        {"type": "delete_edges", "ids": ["e2"]},
+        {"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "mid"}]}]},
+        {"type": "delete_nodes", "ids": ["b"]}
+      ],
+      "undo": [
+        {
+          "type": "add_nodes",
+          "nodes": [
+            {
+              "id": "b",
+              "data": {
+                "node": {
+                  "template": {
+                    "f": {"type": "str", "value": "x"},
+                    "many": {"type": "str", "list": true, "value": []},
+                    "rows": {
+                      "type": "table",
+                      "value": [
+                        {"__id__": "r1", "__pos__": 1, "k": "one"},
+                        {"__id__": "r2", "__pos__": 2, "k": "two"},
+                        {"__id__": "r3", "__pos__": 3, "k": "three"}
+                      ]
+                    }
+                  },
+                  "outputs": []
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            }
+          ]
+        },
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "a",
+              "op": "set_field",
+              "path": ["data", "node", "outputs"],
+              "value": [{"name": "out"}, {"name": "mid"}, {"name": "last"}, {"name": "loop", "allows_loop": true}]
+            }
+          ]
+        },
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œmidœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ}",
+              "data": {"sourceHandle": {"name": "mid"}, "targetHandle": {"fieldName": "many"}}
+            }
+          ]
+        }
       ]
     }
   ]

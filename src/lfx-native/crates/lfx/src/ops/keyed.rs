@@ -12,6 +12,7 @@
 //! appended, and the last row moves into a deleted row's place.
 
 use std::collections::{HashMap, HashSet};
+use std::fmt;
 
 use serde_json::Value;
 
@@ -31,15 +32,6 @@ pub struct ListIndex {
     slots: HashMap<String, usize>,
 }
 
-/// How an item left a list, so it can be put back.
-#[derive(Debug)]
-pub(crate) enum Removal {
-    /// Removed from `slot`; the items after it moved up.
-    Shifted { slot: usize },
-    /// Removed from `slot`; the last item took its place.
-    Swapped { slot: usize },
-}
-
 impl ListIndex {
     /// Index `items`, checking every item's key, and every table row's position.
     ///
@@ -47,7 +39,11 @@ impl ListIndex {
     ///
     /// An item without a non-empty string key, two items with one key, or a
     /// table row without a finite numeric position.
-    pub fn build(keyed: &'static KeyedList, items: &[Value], context: &str) -> Result<Self> {
+    pub fn build(
+        keyed: &'static KeyedList,
+        items: &[Value],
+        context: &dyn fmt::Display,
+    ) -> Result<Self> {
         let mut index = Self {
             keyed,
             slots: HashMap::with_capacity(items.len()),
@@ -85,13 +81,8 @@ impl ListIndex {
     /// # Errors
     ///
     /// The item has no non-empty string key.
-    pub fn require_key<'v>(&self, item: &'v Value, context: &str) -> Result<&'v str> {
-        match self.keyed.key_of(item) {
-            Some(key) if !key.is_empty() => Ok(key),
-            _ => Err(invalid!(
-                "{context}: every item of this list needs a non-empty string key"
-            )),
-        }
+    pub fn require_key<'v>(&self, item: &'v Value, context: &dyn fmt::Display) -> Result<&'v str> {
+        item_key(self.keyed, item, context)
     }
 
     /// Check that an item of a table carries a finite numeric position. An
@@ -100,17 +91,17 @@ impl ListIndex {
     /// # Errors
     ///
     /// The row's position is missing, not a number, or not finite.
-    pub fn require_position(&self, row: &Value, context: &str) -> Result<()> {
-        match self.keyed.position.as_deref() {
-            Some(key) if !row.get(key).is_some_and(is_row_position) => Err(invalid!(
-                "{context}: a table row's {key} must be a finite number"
-            )),
-            _ => Ok(()),
-        }
+    pub fn require_position(&self, row: &Value, context: &dyn fmt::Display) -> Result<()> {
+        check_position(self.keyed, row, context)
     }
 
     /// Append an item whose key is not in the list yet.
-    pub(crate) fn add(&mut self, items: &mut Vec<Value>, item: Value, context: &str) -> Result<()> {
+    pub(crate) fn add(
+        &mut self,
+        items: &mut Vec<Value>,
+        item: Value,
+        context: &dyn fmt::Display,
+    ) -> Result<()> {
         let key = self.require_key(&item, context)?.to_owned();
         self.require_position(&item, context)?;
         self.slots.insert(key, items.len());
@@ -118,26 +109,24 @@ impl ListIndex {
         Ok(())
     }
 
-    /// Remove the item with `key` and say how it left, or `None` when no item has it.
-    pub(crate) fn remove(&mut self, items: &mut Vec<Value>, key: &str) -> Option<(Value, Removal)> {
+    /// Remove the item with `key` and return it, or `None` when no item has it.
+    pub(crate) fn remove(&mut self, items: &mut Vec<Value>, key: &str) -> Option<Value> {
         let slot = self.slots.remove(key)?;
+        let item = remove_item(self.keyed, items, slot);
         if self.keyed.kind == ListKind::Natural {
-            // Natural lists are short (a component's outputs or tool actions), and their order is kept.
-            let item = items.remove(slot);
             for later in self.slots.values_mut() {
                 if *later > slot {
                     *later -= 1;
                 }
             }
-            return Some((item, Removal::Shifted { slot }));
+            return Some(item);
         }
-        let item = items.swap_remove(slot);
         if let Some(moved) = items.get(slot)
             && let Some(moved_key) = self.keyed.key_of(moved)
         {
             self.slots.insert(moved_key.to_owned(), slot);
         }
-        Some((item, Removal::Swapped { slot }))
+        Some(item)
     }
 
     /// Replace the item at `slot` by `item`, which carries the same key, and return the old item.
@@ -146,10 +135,65 @@ impl ListIndex {
         items: &mut [Value],
         slot: usize,
         item: Value,
-        context: &str,
+        context: &dyn fmt::Display,
     ) -> Result<Value> {
         self.require_position(&item, context)?;
         Ok(std::mem::replace(&mut items[slot], item))
+    }
+}
+
+/// An item's key, which must be a non-empty string.
+///
+/// # Errors
+///
+/// The item has no non-empty string key.
+pub(crate) fn item_key<'v>(
+    keyed: &KeyedList,
+    item: &'v Value,
+    context: &dyn fmt::Display,
+) -> Result<&'v str> {
+    match keyed.key_of(item) {
+        Some(key) if !key.is_empty() => Ok(key),
+        _ => Err(invalid!(
+            "{context}: every item of this list needs a non-empty string key"
+        )),
+    }
+}
+
+/// Check that an item of a table carries a finite numeric position. An item
+/// of a natural list has no position, so it always passes.
+///
+/// # Errors
+///
+/// The row's position is missing, not a number, or not finite.
+pub(crate) fn check_position(
+    keyed: &KeyedList,
+    row: &Value,
+    context: &dyn fmt::Display,
+) -> Result<()> {
+    match keyed.position.as_deref() {
+        Some(key) if !row.get(key).is_some_and(is_row_position) => Err(invalid!(
+            "{context}: a table row's {key} must be a finite number"
+        )),
+        _ => Ok(()),
+    }
+}
+
+/// The array index of the item with `key`, found by reading every item. For
+/// a list without an index, such as one a batch wrote.
+pub(crate) fn find_item(keyed: &KeyedList, items: &[Value], key: &str) -> Option<usize> {
+    items
+        .iter()
+        .position(|item| keyed.key_of(item) == Some(key))
+}
+
+/// Remove the item at `slot`. A natural list keeps its order; a table moves
+/// its last row into the gap.
+pub(crate) fn remove_item(keyed: &KeyedList, items: &mut Vec<Value>, slot: usize) -> Value {
+    match keyed.kind {
+        // Natural lists are short (a component's outputs or tool actions), and their order is kept.
+        ListKind::Natural => items.remove(slot),
+        ListKind::Table => items.swap_remove(slot),
     }
 }
 
