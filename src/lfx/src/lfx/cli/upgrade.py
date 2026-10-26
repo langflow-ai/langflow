@@ -21,6 +21,7 @@ _STATUS_MARKERS = {
     "outdated_breaking": "[BREAKING]",
     "blocked": "[BLOCKED]",
     "retired": "[RETIRED]",
+    "customized": "[CUSTOMIZED]",
 }
 
 
@@ -107,4 +108,9 @@ def upgrade_command(
             "Error: --strict: flow has pending safe upgrades. Re-run with --write to apply them.",
             err=True,
         )
+        raise typer.Exit(1)
+
+    # --write leaves customized components as they are, so they stay drift even after it.
+    if strict and report.has_customized:
+        typer.echo("Error: --strict: flow has customized components, which --write leaves unchanged.", err=True)
         raise typer.Exit(1)
