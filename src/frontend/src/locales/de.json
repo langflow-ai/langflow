@@ -3062,7 +3062,7 @@
   "connections.add.cleanupFailedBody": "Die unvollständige Verbindung konnte nicht gelöscht werden. Entfernen Sie sie aus der Liste.",
   "connections.add.identity": "Ausführen als",
   "connections.add.method": "Verbindungsart",
-  "connections.add.methodOauth": "Mit Slack anmelden",
+  "connections.add.methodOauth": "Mit {{provider}} anmelden",
   "connections.add.methodToken": "Token einfügen",
   "connections.add.token": "Token",
   "connections.add.tokenHelp": "Fügen Sie ein App-Level-Token (xapp-…) ein, damit Slack-Trigger Ereignisse über den Socket Mode empfangen, oder ein Bot-Token (xoxb-…) für die Aktionen, die als App ausgeführt werden. Beide finden Sie in den Einstellungen Ihrer Slack-App.",
@@ -3303,5 +3303,16 @@
   "triggers.schedule.next": "Nächster Lauf {{time}}",
   "triggers.schedule.notScheduled": "Nicht geplant",
   "triggers.secret.isSet": "Festgelegt. Nur beim Erstellen oder Rotieren angezeigt.",
-  "triggers.secret.notSet": "Nicht festgelegt. Anfragen werden abgelehnt, bis Sie eines erstellen."
+  "triggers.secret.notSet": "Nicht festgelegt. Anfragen werden abgelehnt, bis Sie eines erstellen.",
+  "connections.scopes.githubApp": "Von der GitHub-App verwaltet",
+  "triggers.state.blocked": "Aufmerksamkeit erforderlich",
+  "triggers.provider.github": "GitHub",
+  "triggers.provider.gitlab": "GitLab",
+  "triggers.provider.whatsapp": "WhatsApp Business",
+  "triggers.provider.discord": "Discord",
+  "triggers.provider.telegram": "Telegram",
+  "triggers.provider.salesforce": "Salesforce",
+  "triggers.provider.servicenow": "ServiceNow",
+  "triggers.provider.jira": "Jira",
+  "triggers.provider.confluence": "Confluence"
 }

@@ -26,6 +26,7 @@ import {
   useDeleteConnectionMutation,
   useOAuthRegistrationsQuery,
   usePendingConnectionPoll,
+  useRenewConnectionTokenMutation,
   useStartOAuthMutation,
 } from "@/controllers/API/queries/connections";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
@@ -59,7 +60,7 @@ const CONSENT_TIMEOUT_MS = 10 * 60 * 1000;
 const openBlankConsentWindow = (): Window | null =>
   window.open("about:blank", "langflow-oauth-consent", "width=520,height=700");
 
-/** Re-authorizing starts at `scopes`: the handle and identity already exist. */
+/** Reconnecting keeps the handle and identity fixed. */
 type Step = "details" | "scopes" | "authorize";
 
 export interface AddConnectionDialogProps {
@@ -87,7 +88,6 @@ export function AddConnectionDialog({
   const typesData = useTypesStore((state) => state.data);
   useGetTypes({ enabled: open });
 
-  const [step, setStep] = useState<Step>(reauthorize ? "scopes" : "details");
   const [providerId, setProviderId] = useState(
     reauthorize?.provider_key ?? providers[0]?.provider_id ?? "",
   );
@@ -110,11 +110,23 @@ export function AddConnectionDialog({
   const requestedScopes = useRef<string[]>([]);
 
   const provider = providers.find((item) => item.provider_id === providerId);
+  const manualTokenProfiles = provider?.manual_token_profiles ?? [];
   const tokenProfile =
-    provider?.manual_token_profiles?.find(
-      (profile) => profile.identity === identity,
-    ) ?? provider?.manual_token_profiles?.[0];
+    manualTokenProfiles.find((profile) => profile.identity === identity) ??
+    manualTokenProfiles[0];
+  // The catalog lists only api_key profiles with a credential validator here.
+  // If they cover every capability, there is no sign-in method to offer.
+  const tokenOnly =
+    manualTokenProfiles.length > 0 &&
+    (provider?.capabilities ?? []).every((capability) =>
+      manualTokenProfiles.some(
+        (profile) => profile.id === capability.auth_profile_id,
+      ),
+    );
+  const initialStep = reauthorize && !tokenOnly ? "scopes" : "details";
+  const [step, setStep] = useState<Step>(initialStep);
   const create = useCreateConnectionMutation();
+  const renewToken = useRenewConnectionTokenMutation();
   const startOAuth = useStartOAuthMutation();
   const remove = useDeleteConnectionMutation();
   const isAwaitingConsent =
@@ -124,8 +136,19 @@ export function AddConnectionDialog({
     providerId,
     deploymentContext,
     reauthorizing: !!reauthorize,
-    create: create.mutateAsync,
+    initialAllowBackgroundRuns: reauthorize?.allow_non_interactive ?? false,
+    create: (payload) =>
+      reauthorize && payload.credentials
+        ? renewToken.mutateAsync({
+            id: reauthorize.id,
+            payload: {
+              credentials: payload.credentials,
+              allow_non_interactive: payload.allow_non_interactive ?? false,
+            },
+          })
+        : create.mutateAsync(payload),
     tokenProfile,
+    tokenOnly,
   });
   const { usesToken } = slackToken;
 
@@ -396,8 +419,7 @@ export function AddConnectionDialog({
     name.length <= CONNECTION_NAME_MAX_LENGTH;
   const canContinue =
     !!provider &&
-    handleValid &&
-    displayName.trim().length > 0 &&
+    (!!reauthorize || (handleValid && displayName.trim().length > 0)) &&
     (usesToken
       ? slackToken.expiresAtValid &&
         (providerId === "slack"
@@ -462,7 +484,7 @@ export function AddConnectionDialog({
       });
     }
     popupRef.current?.close();
-    setStep(reauthorize ? "scopes" : "details");
+    setStep(initialStep);
     setAuthorize(null);
     setBaseline(null);
     setPendingRow(null);
@@ -505,132 +527,150 @@ export function AddConnectionDialog({
         {step === "details" && !noProviders && (
           <div className="flex min-h-0 flex-col gap-4">
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="connection-provider">
-                  {t("connections.add.provider")}
-                </Label>
-                <select
-                  id="connection-provider"
-                  className="h-9 rounded-md border border-border bg-background px-2 text-sm"
-                  value={providerId}
-                  onChange={(event) => {
-                    setProviderId(event.target.value);
-                    // A pasted token belongs to the provider it was pasted for.
-                    slackToken.reset();
-                  }}
-                  data-testid="connection-provider"
-                >
-                  {providers.map((item) => (
-                    <option key={item.provider_id} value={item.provider_id}>
-                      {item.display_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {!reauthorize && (
+                <>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="connection-provider">
+                      {t("connections.add.provider")}
+                    </Label>
+                    <select
+                      id="connection-provider"
+                      className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+                      value={providerId}
+                      onChange={(event) => {
+                        setProviderId(event.target.value);
+                        // A pasted token belongs to the provider it was pasted for.
+                        slackToken.reset();
+                      }}
+                      data-testid="connection-provider"
+                    >
+                      {providers.map((item) => (
+                        <option key={item.provider_id} value={item.provider_id}>
+                          {item.display_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              {slackToken.offersToken && (
-                <ConnectionMethodSelect
-                  method={slackToken.method}
-                  onMethodChange={(method) => {
-                    slackToken.setMethod(method);
-                    setFieldError(null);
-                  }}
-                />
+                  {slackToken.offersToken && !tokenOnly && (
+                    <ConnectionMethodSelect
+                      providerName={provider?.display_name ?? providerId}
+                      method={slackToken.method}
+                      onMethodChange={(method) => {
+                        slackToken.setMethod(method);
+                        setFieldError(null);
+                      }}
+                    />
+                  )}
+
+                  <ConnectionSetupHelp
+                    key={`${providerId}:${usesToken}`}
+                    providerId={providerId}
+                    noRegistration={noRegistration}
+                    usesToken={usesToken}
+                    docsUrl={provider?.docs_url}
+                  />
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <Label htmlFor="connection-name">
+                          {t("connections.add.handle")}
+                        </Label>
+                        <ShadTooltip
+                          content={t("connections.add.handleTooltip", {
+                            example: `${providerId}/work`,
+                          })}
+                          side="top"
+                          avoidCollisions
+                        >
+                          <button
+                            type="button"
+                            aria-label={t("connections.add.handleHelpLabel")}
+                            className="cursor-help rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            data-testid="connection-handle-help"
+                          >
+                            <ForwardedIconComponent
+                              name="Info"
+                              className="h-3.5 w-3.5 text-muted-foreground"
+                              ariaHidden
+                            />
+                          </button>
+                        </ShadTooltip>
+                      </div>
+                      <Input
+                        id="connection-name"
+                        value={name}
+                        spellCheck={false}
+                        placeholder={t("connections.add.handlePlaceholder")}
+                        onChange={(event) => setName(event.target.value)}
+                        maxLength={CONNECTION_NAME_MAX_LENGTH}
+                        aria-invalid={name.length > 0 && !handleValid}
+                        className="aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive"
+                        aria-describedby="connection-name-help"
+                        data-testid="connection-name"
+                      />
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {providerId}/{name || "…"}
+                      </span>
+                      <p
+                        id="connection-name-help"
+                        className={cn(
+                          "text-xs text-muted-foreground",
+                          name.length > 0 && !handleValid && "text-destructive",
+                        )}
+                      >
+                        {t("connections.add.handleHelp", {
+                          max: CONNECTION_NAME_MAX_LENGTH,
+                        })}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <Label htmlFor="connection-display-name">
+                          {t("connections.add.displayName")}
+                        </Label>
+                        <ShadTooltip
+                          content={t("connections.add.displayNameTooltip")}
+                          side="top"
+                          avoidCollisions
+                        >
+                          <button
+                            type="button"
+                            aria-label={t(
+                              "connections.add.displayNameHelpLabel",
+                            )}
+                            className="cursor-help rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            data-testid="connection-display-name-help"
+                          >
+                            <ForwardedIconComponent
+                              name="Info"
+                              className="h-3.5 w-3.5 text-muted-foreground"
+                              ariaHidden
+                            />
+                          </button>
+                        </ShadTooltip>
+                      </div>
+                      <Input
+                        id="connection-display-name"
+                        value={displayName}
+                        onChange={(event) => setDisplayName(event.target.value)}
+                        data-testid="connection-display-name"
+                      />
+                    </div>
+                  </div>
+                </>
               )}
 
-              <ConnectionSetupHelp
-                key={`${providerId}:${usesToken}`}
-                providerId={providerId}
-                noRegistration={noRegistration}
-                usesToken={usesToken}
-              />
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <Label htmlFor="connection-name">
-                      {t("connections.add.handle")}
-                    </Label>
-                    <ShadTooltip
-                      content={t("connections.add.handleTooltip", {
-                        example: `${providerId}/work`,
-                      })}
-                      side="top"
-                      avoidCollisions
-                    >
-                      <button
-                        type="button"
-                        aria-label={t("connections.add.handleHelpLabel")}
-                        className="cursor-help rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        data-testid="connection-handle-help"
-                      >
-                        <ForwardedIconComponent
-                          name="Info"
-                          className="h-3.5 w-3.5 text-muted-foreground"
-                          ariaHidden
-                        />
-                      </button>
-                    </ShadTooltip>
-                  </div>
-                  <Input
-                    id="connection-name"
-                    value={name}
-                    spellCheck={false}
-                    placeholder={t("connections.add.handlePlaceholder")}
-                    onChange={(event) => setName(event.target.value)}
-                    maxLength={CONNECTION_NAME_MAX_LENGTH}
-                    aria-invalid={name.length > 0 && !handleValid}
-                    className="aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive"
-                    aria-describedby="connection-name-help"
-                    data-testid="connection-name"
-                  />
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {providerId}/{name || "…"}
-                  </span>
-                  <p
-                    id="connection-name-help"
-                    className={cn(
-                      "text-xs text-muted-foreground",
-                      name.length > 0 && !handleValid && "text-destructive",
-                    )}
-                  >
-                    {t("connections.add.handleHelp", {
-                      max: CONNECTION_NAME_MAX_LENGTH,
-                    })}
-                  </p>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <Label htmlFor="connection-display-name">
-                      {t("connections.add.displayName")}
-                    </Label>
-                    <ShadTooltip
-                      content={t("connections.add.displayNameTooltip")}
-                      side="top"
-                      avoidCollisions
-                    >
-                      <button
-                        type="button"
-                        aria-label={t("connections.add.displayNameHelpLabel")}
-                        className="cursor-help rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        data-testid="connection-display-name-help"
-                      >
-                        <ForwardedIconComponent
-                          name="Info"
-                          className="h-3.5 w-3.5 text-muted-foreground"
-                          ariaHidden
-                        />
-                      </button>
-                    </ShadTooltip>
-                  </div>
-                  <Input
-                    id="connection-display-name"
-                    value={displayName}
-                    onChange={(event) => setDisplayName(event.target.value)}
-                    data-testid="connection-display-name"
-                  />
-                </div>
-              </div>
+              {reauthorize && usesToken && (
+                <ConnectionSetupHelp
+                  key={`${providerId}:${usesToken}`}
+                  providerId={providerId}
+                  noRegistration={noRegistration}
+                  usesToken={usesToken}
+                  docsUrl={provider?.docs_url}
+                />
+              )}
 
               {usesToken && (
                 <SlackTokenFields
@@ -732,7 +772,9 @@ export function AddConnectionDialog({
                 {t("connections.add.cancel")}
               </Button>
               <Button
-                disabled={!canContinue || create.isPending}
+                disabled={
+                  !canContinue || create.isPending || renewToken.isPending
+                }
                 onClick={onContinue}
                 data-testid="connection-continue"
               >
@@ -749,6 +791,7 @@ export function AddConnectionDialog({
                 key={providerId}
                 providerId={providerId}
                 noRegistration={noRegistration}
+                docsUrl={provider?.docs_url}
               />
               {registrationSelect}
 
@@ -800,6 +843,7 @@ export function AddConnectionDialog({
               <ConnectionSetupHelp
                 providerId={providerId}
                 noRegistration={false}
+                docsUrl={provider?.docs_url}
               />
             )}
             <div className="flex justify-end gap-2">

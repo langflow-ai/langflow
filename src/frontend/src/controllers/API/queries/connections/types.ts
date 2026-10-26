@@ -97,6 +97,12 @@ export interface ConnectionCreate {
   credentials?: ConnectionCredentialWrite | null;
 }
 
+/** Write-only replacement for a provider-validated manual credential. */
+export interface ConnectionTokenRenewal {
+  credentials: ConnectionCredentialWrite;
+  allow_non_interactive: boolean;
+}
+
 /** Only these two change without re-authorizing the provider. */
 export interface ConnectionUpdate {
   display_name?: string;

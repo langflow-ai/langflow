@@ -3062,7 +3062,7 @@
   "connections.add.cleanupFailedBody": "No se pudo eliminar la conexión incompleta. Quítala de la lista.",
   "connections.add.identity": "Actúa como",
   "connections.add.method": "Cómo conectar",
-  "connections.add.methodOauth": "Iniciar sesión con Slack",
+  "connections.add.methodOauth": "Iniciar sesión con {{provider}}",
   "connections.add.methodToken": "Pegar un token",
   "connections.add.token": "Token",
   "connections.add.tokenHelp": "Pega un token de nivel de aplicación (xapp-…) para que los disparadores de Slack reciban eventos mediante Socket Mode, o un token de bot (xoxb-…) para las acciones que se ejecutan como la aplicación. Ambos están en la configuración de tu aplicación de Slack.",
@@ -3303,5 +3303,16 @@
   "triggers.schedule.next": "Próxima ejecución {{time}}",
   "triggers.schedule.notScheduled": "Sin programar",
   "triggers.secret.isSet": "Configurado. Solo se muestra al crearlo o rotarlo.",
-  "triggers.secret.notSet": "Sin configurar. Las solicitudes se rechazan hasta que crees uno."
+  "triggers.secret.notSet": "Sin configurar. Las solicitudes se rechazan hasta que crees uno.",
+  "connections.scopes.githubApp": "Gestionado por la aplicación de GitHub",
+  "triggers.state.blocked": "Requiere atención",
+  "triggers.provider.github": "GitHub",
+  "triggers.provider.gitlab": "GitLab",
+  "triggers.provider.whatsapp": "WhatsApp Business",
+  "triggers.provider.discord": "Discord",
+  "triggers.provider.telegram": "Telegram",
+  "triggers.provider.salesforce": "Salesforce",
+  "triggers.provider.servicenow": "ServiceNow",
+  "triggers.provider.jira": "Jira",
+  "triggers.provider.confluence": "Confluence"
 }

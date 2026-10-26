@@ -7,7 +7,7 @@
     "provider_id": "whatsapp",
     "display_name": "WhatsApp Business",
     "icon": "MessageCircle",
-    "docs_url": "https://www.postman.com/meta/whatsapp-business-platform/collection/wlk6lh4/whatsapp-cloud-api",
+    "docs_url": "https://github.com/langflow-ai/langflow/blob/483810b364409a23be81f604b0ad0565eafc562b/design/provider-integrations/whatsapp.md",
     "auth_profiles": [
       {
         "id": "whatsapp-system-user",
