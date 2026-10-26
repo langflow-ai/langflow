@@ -77,7 +77,7 @@ class RuncrateModelComponent(LCModelComponent):
             and isinstance(m.get("context_length"), int)
             and m["context_length"] > 0
         ]
-        return sorted(chat_models, key=lambda x: x["name"])
+        return sorted(chat_models, key=lambda x: x["name"].casefold())
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:  # noqa: ARG002
         """Refresh the model options from the live list."""
