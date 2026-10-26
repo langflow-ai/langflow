@@ -161,7 +161,7 @@ class DecisionModelComponent(Component):
         if not structured:
             structured = None
         if structured is None:
-            if not text:
+            if connected or not text:
                 msg = (
                     "Structured Context is empty. Give the component it comes from at least one field, or use Context."
                     if connected

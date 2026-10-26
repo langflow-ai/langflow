@@ -525,7 +525,17 @@ class ConfigureComponent(Component):
                         fb_configure(flow, self.component_id, remaining)
                         _fill_missing_model_names(flow, self.component_id, remaining)
                         _mirror_model_value_into_options(flow, self.component_id, remaining)
-                        _emit("configure", component_id=self.component_id, params=remaining)
+                        node = _find_node(flow, self.component_id)
+                        _emit(
+                            "configure",
+                            component_id=self.component_id,
+                            params=remaining,
+                            **(
+                                {"outputs": node["data"]["node"]["outputs"]}
+                                if node["data"].get("type") == "SmartRouter" and "outputs" in node["data"]["node"]
+                                else {}
+                            ),
+                        )
                     except (ValueError, KeyError) as e:
                         logger.warning("configure_component (non-text remainder) failed: %s", e)
                         return Data(data={"error": str(e)})
@@ -546,7 +556,17 @@ class ConfigureComponent(Component):
             # into `options` so the dropdown matches instead of its own fallback.
             _fill_missing_model_names(flow, self.component_id, params)
             _mirror_model_value_into_options(flow, self.component_id, params)
-            _emit("configure", component_id=self.component_id, params=params)
+            node = _find_node(flow, self.component_id)
+            _emit(
+                "configure",
+                component_id=self.component_id,
+                params=params,
+                **(
+                    {"outputs": node["data"]["node"]["outputs"]}
+                    if node["data"].get("type") == "SmartRouter" and "outputs" in node["data"]["node"]
+                    else {}
+                ),
+            )
             summary = ", ".join(f"{k}={v!r}" for k, v in params.items())
             return Data(data={"text": f"Set {summary} on {self.component_id}", "configured": list(params.keys())})
         except (ValueError, KeyError) as e:
