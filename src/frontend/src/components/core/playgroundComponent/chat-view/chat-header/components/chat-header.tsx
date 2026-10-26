@@ -16,6 +16,7 @@ import { SessionMoreMenu } from "./session-more-menu";
 
 export function ChatHeader({
   sessions,
+  sessionsPagination,
   onNewChat,
   onSessionSelect,
   currentSessionId,
@@ -30,9 +31,6 @@ export function ChatHeader({
   logsModalTriggerRef,
   onRenameSession,
   onClearChat,
-  hasMoreSessions,
-  isLoadingSessions,
-  onLoadMoreSessions,
 }: ChatHeaderProps & { sessions: string[] }) {
   // State to coordinate menu open/close
   const { t } = useTranslation();
@@ -128,10 +126,8 @@ export function ChatHeader({
         <div className="flex items-center gap-2 flex-[2_1_0] min-w-0">
           <AnimatedConditional isOpen={isSessionDropdownVisible}>
             <ChatSessionsDropdown
-              hasMoreSessions={hasMoreSessions}
-              isLoadingSessions={isLoadingSessions}
-              onLoadMoreSessions={onLoadMoreSessions}
               sessions={sessions}
+              sessionsPagination={sessionsPagination}
               onNewChat={onNewChat}
               onSessionSelect={onSessionSelect}
               currentSessionId={currentSessionId}

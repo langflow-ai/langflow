@@ -357,6 +357,33 @@ async def test_edit_file_uses_upload_name_rules(files_client, files_created_api_
         assert response.status_code == 400, name
 
 
+@pytest.mark.parametrize(
+    "invalid_name", ["../escape", "..\\escape", "nested/path", "nested\\path", "/absolute", "a\x00b"]
+)
+async def test_rejected_rename_preserves_name_and_safe_batch_download(
+    files_client, files_created_api_key, invalid_name: str
+):
+    headers = {"x-api-key": files_created_api_key.api_key}
+    content = b"original uploaded content"
+    upload = await files_client.post("api/v2/files", files={"file": ("safe.txt", content)}, headers=headers)
+    assert upload.status_code == 201, upload.text
+    original = upload.json()
+
+    rename = await files_client.put(f"api/v2/files/{original['id']}", params={"name": invalid_name}, headers=headers)
+    assert rename.status_code == 400, rename.text
+
+    listed = await files_client.get("api/v2/files", headers=headers)
+    assert listed.status_code == 200, listed.text
+    persisted = next(file for file in listed.json() if file["id"] == original["id"])
+    assert persisted["name"] == original["name"]
+
+    download = await files_client.post("api/v2/files/batch/", json=[original["id"]], headers=headers)
+    assert download.status_code == 200, download.text
+    with zipfile.ZipFile(io.BytesIO(download.content)) as archive:
+        assert archive.namelist() == [f"{original['name']}.txt"]
+        assert archive.read(archive.namelist()[0]) == content
+
+
 async def test_batch_download_limits_legacy_names_with_collision_suffix(files_client, files_created_api_key):
     from langflow.services.database.models.file.model import File as UserFile
 

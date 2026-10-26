@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
@@ -7,14 +7,16 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
 import { useGetFlowId } from "../../../hooks/use-get-flow-id";
+import { useSessionHasMessages } from "../hooks/use-session-has-messages";
+import { SessionSelector, type SessionSelectorProps } from "./session-selector";
 import {
-  SessionLoadMore,
-  type SessionPaginationProps,
-} from "./session-load-more";
-import { SessionSelector } from "./session-selector";
+  type SessionsPagination,
+  ShowMoreSessions,
+} from "./show-more-sessions";
 
-interface ChatSidebarProps extends SessionPaginationProps {
+interface ChatSidebarProps {
   sessions: string[];
+  sessionsPagination: SessionsPagination;
   onNewChat?: () => void;
   onSessionSelect?: (sessionId: string) => void;
   currentSessionId?: string;
@@ -24,8 +26,42 @@ interface ChatSidebarProps extends SessionPaginationProps {
   onBulkDeleteSessions?: (sessionIds: string[], onSuccess: () => void) => void;
 }
 
+type SessionRowProps = Omit<
+  SessionSelectorProps,
+  | "toggleVisibility"
+  | "updateVisibleSession"
+  | "onToggleSelect"
+  | "onMenuOpenChange"
+> & {
+  onSelect: (session: string) => void;
+  onToggleSelect: (session: string) => void;
+  onMenuOpenChange: (session: string, open: boolean) => void;
+};
+
+// Binds a row to the list-level handlers, so loading another page or toggling
+// one row re-renders only the rows whose props changed.
+const SessionRow = memo(function SessionRow({
+  session,
+  onSelect,
+  onToggleSelect,
+  onMenuOpenChange,
+  ...props
+}: SessionRowProps) {
+  return (
+    <SessionSelector
+      {...props}
+      session={session}
+      toggleVisibility={() => onSelect(session)}
+      updateVisibleSession={onSelect}
+      onToggleSelect={() => onToggleSelect(session)}
+      onMenuOpenChange={(open) => onMenuOpenChange(session, open)}
+    />
+  );
+});
+
 export function ChatSidebar({
   sessions,
+  sessionsPagination,
   onNewChat,
   onSessionSelect,
   currentSessionId,
@@ -33,7 +69,6 @@ export function ChatSidebar({
   onOpenLogs,
   onRenameSession,
   onBulkDeleteSessions,
-  ...pagination
 }: ChatSidebarProps) {
   const { t } = useTranslation();
   const [openMenuSession, setOpenMenuSession] = useState<string | null>(null);
@@ -43,6 +78,12 @@ export function ChatSidebar({
   const currentFlowId = useGetFlowId();
   const isShareablePlayground = useFlowStore((state) => state.playgroundPage);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  // Only the open menu shows the message-dependent actions, so one cache
+  // subscription serves the whole list instead of one per row.
+  const openMenuSessionHasMessages = useSessionHasMessages({
+    sessionId: openMenuSession,
+    flowId: currentFlowId,
+  });
 
   // Filter out the default session (currentFlowId) from selectable sessions
   const selectableSessions = useMemo(
@@ -57,24 +98,37 @@ export function ChatSidebar({
     selectableSessions.length > 0 &&
     selectableSessions.every((session) => selectedSessions.has(session));
 
-  const handleDeleteSession = (session: string) => {
-    onDeleteSession?.(session);
-    // Remove from selected sessions if it was selected
-    setSelectedSessions((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(session);
-      return newSet;
-    });
-    // Session switching is handled by the store's removeSession
-  };
+  const handleDeleteSession = useCallback(
+    (session: string) => {
+      onDeleteSession?.(session);
+      // Remove from selected sessions if it was selected
+      setSelectedSessions((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(session);
+        return newSet;
+      });
+      // Session switching is handled by the store's removeSession
+    },
+    [onDeleteSession],
+  );
 
-  const handleSessionClick = (session: string) => {
-    onSessionSelect?.(session);
-  };
+  const handleSessionClick = useCallback(
+    (session: string) => {
+      onSessionSelect?.(session);
+    },
+    [onSessionSelect],
+  );
 
-  const handleRename = async (sessionId: string, newSessionId: string) => {
-    await onRenameSession?.(sessionId, newSessionId);
-  };
+  const handleRename = useCallback(
+    async (sessionId: string, newSessionId: string) => {
+      await onRenameSession?.(sessionId, newSessionId);
+    },
+    [onRenameSession],
+  );
+
+  const handleMenuOpenChange = useCallback((session: string, open: boolean) => {
+    setOpenMenuSession(open ? session : null);
+  }, []);
 
   const handleSelectAll = () => {
     if (allSelected) {
@@ -86,7 +140,7 @@ export function ChatSidebar({
     }
   };
 
-  const handleToggleSession = (session: string) => {
+  const handleToggleSession = useCallback((session: string) => {
     setSelectedSessions((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(session)) {
@@ -96,7 +150,7 @@ export function ChatSidebar({
       }
       return newSet;
     });
-  };
+  }, []);
 
   const handleBulkDelete = () => {
     if (selectedSessions.size === 0 || !onBulkDeleteSessions) return;
@@ -179,7 +233,9 @@ export function ChatSidebar({
                         />
                       </div>
                       <span className="text-sm text-muted-foreground select-none">
-                        {t("chat.selectAll")}
+                        {sessionsPagination.hasNextPage
+                          ? t("chat.selectAllLoaded")
+                          : t("chat.selectAll")}
                       </span>
                     </button>
                     {selectedSessions.size > 0 && (
@@ -209,31 +265,29 @@ export function ChatSidebar({
                     )}
                   </div>
                 )}
-                <SessionSelector
+                <SessionRow
                   session={session}
                   currentFlowId={currentFlowId}
                   deleteSession={handleDeleteSession}
-                  toggleVisibility={() => handleSessionClick(session)}
+                  onSelect={handleSessionClick}
                   isVisible={visibleSession === session}
-                  updateVisibleSession={handleSessionClick}
                   inspectSession={onOpenLogs}
                   handleRename={handleRename}
-                  selectedView={undefined}
-                  setSelectedView={() => {}}
+                  hasMessages={
+                    openMenuSession === session && openMenuSessionHasMessages
+                  }
                   menuOpen={openMenuSession === session}
-                  onMenuOpenChange={(open) => {
-                    setOpenMenuSession(open ? session : null);
-                  }}
+                  onMenuOpenChange={handleMenuOpenChange}
                   isSelected={selectedSessions.has(session)}
-                  onToggleSelect={() => handleToggleSession(session)}
-                  showCheckbox={selectableSessions.includes(session)}
+                  onToggleSelect={handleToggleSession}
+                  showCheckbox={session !== currentFlowId}
                 />
               </div>
             );
           })}
+          <ShowMoreSessions pagination={sessionsPagination} />
         </div>
       )}
-      <SessionLoadMore {...pagination} />
     </div>
   );
 }

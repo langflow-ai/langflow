@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import copy
 import io
 import json
@@ -30,13 +31,14 @@ from lfx.extension.bundle_registry import get_default_registry
 from lfx.log.logger import logger
 from lfx.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
 from lfx.utils.component_aliases import flatten_components_with_aliases
+from lfx.utils.flow_code import normalize_code_for_import
 from lfx.utils.util import escape_json_dump
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import selectinload
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.api.utils.migration_pause import is_paused
+from langflow.api.utils.migration_pause import writing
 from langflow.initial_setup.constants import (
     ASSISTANT_FOLDER_DESCRIPTION,
     ASSISTANT_FOLDER_NAME,
@@ -1252,7 +1254,7 @@ def _merge_variable_bindings(existing_data, incoming_data):
 
 
 async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: AsyncSession, user_id: UUID) -> None:
-    flow = orjson.loads(file_content)
+    flow = normalize_code_for_import(orjson.loads(file_content))
     flow_endpoint_name = flow.get("endpoint_name")
     if _is_valid_uuid(filename):
         flow["id"] = filename
@@ -1619,10 +1621,14 @@ async def sync_flows_from_fs():
     try:
         while True:
             # A paused instance takes no change from disk. A file that changed is read once the pause ends.
-            if is_paused():
-                await asyncio.sleep(fs_flows_polling_interval)
-                continue
+            # A pass holds a place among the changes a pause waits for, so one that began just before
+            # a pause is waited for and does not write after it.
+            place = contextlib.ExitStack()
             try:
+                if not place.enter_context(writing(name="flow_sync")):
+                    place.close()
+                    await asyncio.sleep(fs_flows_polling_interval)
+                    continue
                 async with session_scope() as session:
                     stmt = select(Flow).where(col(Flow.fs_path).is_not(None))
                     flows = (await session.exec(stmt)).all()
@@ -1679,6 +1685,8 @@ async def sync_flows_from_fs():
             except Exception:  # noqa: BLE001
                 await logger.aexception("Error while syncing flows from database")
                 break
+            finally:
+                place.close()
 
             await asyncio.sleep(fs_flows_polling_interval)
     except asyncio.CancelledError:

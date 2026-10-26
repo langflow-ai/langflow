@@ -1,3 +1,4 @@
+import { BASENAME } from "../config-constants";
 import { customGetHostProtocol } from "./custom-get-host-protocol";
 
 export function getApiSampleHeaders(
@@ -28,5 +29,5 @@ export function getWidgetAdditionalHeaders(): string {
 export function getBaseUrl(): string {
   const { protocol, host } = customGetHostProtocol();
 
-  return `${protocol}//${host}`;
+  return `${protocol}//${host}${BASENAME}`;
 }

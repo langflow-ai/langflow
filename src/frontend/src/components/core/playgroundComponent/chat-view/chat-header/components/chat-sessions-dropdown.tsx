@@ -12,10 +12,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/utils/utils";
 import { useGetFlowId } from "../../../hooks/use-get-flow-id";
-import type { SessionPaginationProps } from "./session-load-more";
+import {
+  type SessionsPagination,
+  ShowMoreSessions,
+} from "./show-more-sessions";
 
-interface ChatSessionsDropdownProps extends SessionPaginationProps {
+interface ChatSessionsDropdownProps {
   sessions: string[];
+  sessionsPagination: SessionsPagination;
   onNewChat?: () => void;
   onSessionSelect?: (sessionId: string) => void;
   currentSessionId?: string;
@@ -25,12 +29,12 @@ interface ChatSessionsDropdownProps extends SessionPaginationProps {
 
 export function ChatSessionsDropdown({
   sessions,
+  sessionsPagination,
   onNewChat,
   onSessionSelect,
   currentSessionId,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
-  ...pagination
 }: ChatSessionsDropdownProps) {
   const { t } = useTranslation();
   const currentFlowId = useGetFlowId();
@@ -74,23 +78,8 @@ export function ChatSessionsDropdown({
                     {session === currentFlowId ? "Default Session" : session}
                   </DropdownMenuItem>
                 ))}
+                <ShowMoreSessions pagination={sessionsPagination} asMenuItem />
               </DropdownMenuGroup>
-              {pagination.hasMoreSessions && (
-                <DropdownMenuItem
-                  data-testid="load-more-sessions"
-                  disabled={pagination.isLoadingSessions}
-                  onSelect={(event) => {
-                    event.preventDefault();
-                    pagination.onLoadMoreSessions?.();
-                  }}
-                >
-                  {t(
-                    pagination.isLoadingSessions
-                      ? "loading.loading"
-                      : "nodeToolbar.showMore",
-                  )}
-                </DropdownMenuItem>
-              )}
             </div>
             <DropdownMenuSeparator className="!my-0" />
             <div className="p-1">

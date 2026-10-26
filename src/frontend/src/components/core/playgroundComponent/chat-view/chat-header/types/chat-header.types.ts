@@ -1,8 +1,9 @@
 import type { RefObject } from "react";
-import type { SessionPaginationProps } from "../components/session-load-more";
+import type { SessionsPagination } from "../components/show-more-sessions";
 
-export interface ChatHeaderProps extends SessionPaginationProps {
+export interface ChatHeaderProps {
   sessions: string[];
+  sessionsPagination: SessionsPagination;
   onNewChat?: () => void;
   onSessionSelect?: (sessionId: string) => void;
   currentSessionId?: string;

@@ -11,7 +11,7 @@ from uuid import UUID, uuid4
 
 import orjson
 import sqlalchemy as sa
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Query, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, StreamingResponse
 from lfx.custom.custom_component.component import Component
@@ -48,6 +48,7 @@ from lfx.workflow.end_user_identity import (
     end_user_required_detail,
     resolve_serving_scope,
 )
+from pydantic import ValidationError
 
 from langflow.api.utils import (
     CurrentActiveUser,
@@ -64,6 +65,7 @@ from langflow.api.utils.execution_principal import (
     execution_principal_for,
     stamp_execution_principal,
 )
+from langflow.api.utils.migration_pause import writing_on
 from langflow.api.v1.custom_component_policy import (
     CatalogPolicyHTTPException,
     enforce_catalog_policy_for_component_type,
@@ -88,6 +90,7 @@ from langflow.api.v1.schemas import (
     UpdateCustomComponentRequest,
     UploadFileResponse,
 )
+from langflow.api.validation_errors import redact_validation_errors
 from langflow.api.warm_graph import try_warm_run_graph
 from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.exceptions.api import APIException, InvalidChatInputError
@@ -127,7 +130,7 @@ from langflow.services.integration_policy_discovery import (
     filter_component_palette_by_integration_policy,
 )
 from langflow.services.telemetry.schema import RunPayload
-from langflow.utils.flow_secrets import strip_secret_field_values
+from langflow.utils.flow_secrets import restore_request_variable_references, strip_secret_field_values
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
@@ -160,7 +163,14 @@ def _reject_shared_secret_variable_overrides(
     variables: object,
 ) -> None:
     """Keep request variables from redirecting a shared flow's hidden credential."""
-    if variables and not _caller_owns_flow(flow, user) and strip_secret_field_values(flow.data) != flow.data:
+    if not variables or _caller_owns_flow(flow, user):
+        return
+    scrubbed_data = strip_secret_field_values(flow.data)
+    if isinstance(variables, Mapping):
+        # Request-backed references resolve to the caller's value rather than an owner's
+        # secret. Bindings on ordinary fields are not hidden, so they never block a run.
+        restore_request_variable_references(flow.data, scrubbed_data, variables)
+    if scrubbed_data != flow.data:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot override variables in a shared flow using its owner's hidden credentials.",
@@ -251,6 +261,10 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
         if body:
             body_data = orjson.loads(body)
             return SimplifiedAPIRequest(**body_data)
+        return SimplifiedAPIRequest()
+    except ValidationError as exc:
+        # Pydantic's own text quotes the submitted values. Log which field failed and why.
+        logger.warning(f"Failed to parse request body: {redact_validation_errors(exc.errors())}")
         return SimplifiedAPIRequest()
     except Exception as exc:  # noqa: BLE001
         logger.warning(f"Failed to parse request body: {exc}")
@@ -586,6 +600,9 @@ async def simple_run_flow(
                 # getattr: the warm-run path may hand back a lightweight graph stand-in without
                 # this attribute, matching every other end_user_id read in the codebase.
                 end_user_id=getattr(graph, "end_user_id", None),
+                # Live from insert, then kept alive by execute_with_status, so an orphan
+                # sweep cannot fail it mid-run. The run writes no job_metadata of its own.
+                heartbeat=True,
             )
             # The funnel default. Binding is outermost-wins, so a caller that already named its
             # surface (webhook, mcp, openai_responses) keeps it and only the bare v1 route lands
@@ -594,6 +611,7 @@ async def simple_run_flow(
                 task_result, session_id = await _job_svc.execute_with_status(
                     run_id_uuid,
                     run_graph_internal,
+                    keep_alive=True,
                     graph=graph,
                     flow_id=flow_id_str,
                     session_id=effective_session_id,
@@ -1512,6 +1530,9 @@ async def webhook_run_flow(
         )
         # Fire-and-forget: log exceptions but don't block
         background_task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
+        # The run goes on after this request has answered, so it holds a place of its own among the
+        # changes a migration pause waits for.
+        writing_on(background_task, name="webhook_run")
     except Exception as exc:
         error_msg = str(exc)
         raise HTTPException(status_code=500, detail=error_msg) from exc
@@ -1872,12 +1893,27 @@ def _raw_component_parameters(
     return params
 
 
+def _bind_request_flow_id(component: Any, flow_id: UUID | None) -> None:
+    """Expose the request's flow to a component built for a design-time update.
+
+    The model-provider preflight runs on a freshly built instance, before the
+    template's ``_frontend_node_*`` values are applied, and no graph exists to
+    supply ``flow_id``. Components whose preflight reads persisted, flow-scoped
+    state (Memory Base) would otherwise fail with "flow_id is not available".
+    ``flow_id`` here is the query parameter ``ProviderPolicyAttributesDependency``
+    has already authorized, so it is safe to trust, unlike the template copy.
+    """
+    if flow_id is not None:
+        component._flow_id = str(flow_id)  # noqa: SLF001
+
+
 @router.post("/custom_component", status_code=HTTPStatus.OK, include_in_schema=False)
 async def custom_component(
     raw_code: CustomComponentRequest,
     user: CurrentActiveUser,
     request: Request,
     provider_policy_attributes: ProviderPolicyAttributesDependency,
+    flow_id: Annotated[UUID | None, Query()] = None,
 ) -> CustomComponentResponse:
     # Building a custom component instantiates (and partially executes) posted
     # code. That is a create/write-class action, so enforce the external access
@@ -1911,7 +1947,10 @@ async def custom_component(
     try:
         component = Component(_code=effective_code)
 
-        built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
+        built_frontend_node, component_instance = build_custom_component_template(
+            component, user_id=user.id, class_name=raw_code.get_class_name()
+        )
+        _bind_request_flow_id(component_instance, flow_id)
         type_ = get_instance_name(component_instance)
         enforce_catalog_policy_for_component_type(type_, snapshot=catalog_policy_snapshot)
         # Posting the source of a blocked integration component must not
@@ -1974,6 +2013,7 @@ async def custom_component_update(
     user: CurrentActiveUser,
     request: Request,
     provider_policy_attributes: ProviderPolicyAttributesDependency,
+    flow_id: Annotated[UUID | None, Query()] = None,
 ):
     """Update an existing custom component with new code and configuration.
 
@@ -2016,7 +2056,9 @@ async def custom_component_update(
         component_node, cc_instance = build_custom_component_template(
             component,
             user_id=user.id,
+            class_name=code_request.get_class_name(),
         )
+        _bind_request_flow_id(cc_instance, flow_id)
         component_type = get_instance_name(cc_instance)
         enforce_catalog_policy_for_component_type(component_type, snapshot=catalog_policy_snapshot)
         await aenforce_integration_policy_for_component(

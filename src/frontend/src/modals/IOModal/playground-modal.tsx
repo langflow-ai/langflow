@@ -88,23 +88,25 @@ export default function IOModal({
   );
   const PlaygroundTitle = playgroundPage && flowName ? flowName : "Playground";
 
+  const sessionsQuery = useGetSessionsFromFlowQuery({
+    id: currentFlowId,
+    enabled: open,
+  });
   const {
     data: sessionsFromDb,
     isLoading: sessionsLoading,
     refetch: refetchSessions,
-    hasNextPage,
-    isFetchingNextPage,
-    isFetching: sessionsFetching,
-    fetchNextPage,
-  } = useGetSessionsFromFlowQuery(
-    {
-      id: currentFlowId,
-    },
-    { enabled: open },
-  );
+  } = sessionsQuery;
 
   useEffect(() => {
-    setSessions(sessionsFromDb?.sessions ?? [currentFlowId]);
+    if (sessionsFromDb && !sessionsLoading) {
+      const sessions = [...sessionsFromDb];
+      // Always include the currentFlowId as the default session if it's not already present
+      if (!sessions.includes(currentFlowId)) {
+        sessions.unshift(currentFlowId);
+      }
+      setSessions(sessions);
+    }
   }, [sessionsFromDb, sessionsLoading, currentFlowId]);
 
   useEffect(() => {
@@ -228,16 +230,21 @@ export default function IOModal({
     if (playgroundPage && !isAuthenticatedPlayground() && messages.length > 0) {
       window.sessionStorage.setItem(currentFlowId, JSON.stringify(messages));
     }
-    if (newChatOnPlayground && !sessionsLoading) {
-      // "New chat" sends under the generated `sessionId`. Select it by id: the
-      // refetched list is newest first and may not be complete.
+    // "New chat" sends under the generated `sessionId` (already namespaced on
+    // the playground page). Wait for its first message: the history load that
+    // opening a new chat triggers also changes `messages`, and refetching then
+    // would miss the session. Select it by id: the refetched list is newest
+    // first and may not be complete.
+    if (
+      newChatOnPlayground &&
+      !sessionsLoading &&
+      messages.some((message) => message.session_id === sessionId)
+    ) {
       const newSessionId = sessionId;
       const handleRefetchAndSetSession = async () => {
         try {
           await refetchSessions();
-          // The new session's ID is known locally. The newest page can also
-          // contain concurrent conversations, and its last row is the oldest.
-          setvisibleSession(sessionId);
+          setvisibleSession(newSessionId);
         } catch (error) {
           console.error("Error refetching sessions:", error);
         }
@@ -250,7 +257,12 @@ export default function IOModal({
 
   useEffect(() => {
     if (!visibleSession) {
-      setSessionId(createNewSessionName());
+      const name = createNewSessionName();
+      // The public playground stores sessions as `${virtualFlowId}:${name}` (the
+      // backend leaves an already-scoped id unchanged), so send under that id and
+      // the new-chat selection effect above matches what the server lists and
+      // filters on.
+      setSessionId(playgroundPage ? `${currentFlowId}:${name}` : name);
       setCurrentSessionId(currentFlowId);
     } else if (visibleSession) {
       setSessionId(visibleSession);
@@ -416,13 +428,8 @@ export default function IOModal({
                 </div>
                 {sidebarOpen && !sessionsLoading && (
                   <SidebarOpenView
-                    hasMoreSessions={hasNextPage}
-                    isLoadingSessions={isFetchingNextPage}
-                    onLoadMoreSessions={() => {
-                      if (hasNextPage && !sessionsFetching)
-                        void fetchNextPage();
-                    }}
                     sessions={sessions}
+                    sessionsPagination={sessionsQuery}
                     setSelectedViewField={setSelectedViewField}
                     setvisibleSession={setvisibleSession}
                     handleDeleteSession={handleDeleteSession}
