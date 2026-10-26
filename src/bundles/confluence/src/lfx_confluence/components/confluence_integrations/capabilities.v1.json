@@ -3,7 +3,7 @@
   "provider_id": "confluence",
   "display_name": "Confluence Cloud",
   "icon": "BookOpen",
-  "docs_url": "https://developer.atlassian.com/cloud/confluence/oauth-2-3lo-apps/",
+  "docs_url": "https://github.com/langflow-ai/langflow/blob/d4dffe227d3ec238f430736d7ca6d16bbf084c9b/src/bundles/confluence/README.md#setup",
   "auth_profiles": [
     {
       "id": "user",

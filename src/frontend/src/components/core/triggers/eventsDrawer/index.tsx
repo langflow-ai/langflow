@@ -122,7 +122,10 @@ export function TriggerEventsDrawer({
                     {trigger.name} · {t(sourceKeyOf(trigger))} ·{" "}
                     <TriggerTransportLabel trigger={trigger} />
                   </span>
-                  <TriggerStateBadge state={trigger.state} />
+                  <TriggerStateBadge
+                    state={trigger.state}
+                    reason={trigger.reason}
+                  />
                 </div>
               </DialogDescription>
             </header>

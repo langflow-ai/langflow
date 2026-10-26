@@ -3303,5 +3303,15 @@
   "triggers.schedule.next": "Prochaine exécution {{time}}",
   "triggers.schedule.notScheduled": "Non planifié",
   "triggers.secret.isSet": "Défini. Affiché uniquement lors de sa création ou de sa rotation.",
-  "triggers.secret.notSet": "Non défini. Les requêtes sont refusées tant que vous n'en créez pas un."
+  "triggers.secret.notSet": "Non défini. Les requêtes sont refusées tant que vous n'en créez pas un.",
+  "triggers.state.blocked": "Intervention nécessaire",
+  "triggers.provider.github": "GitHub",
+  "triggers.provider.gitlab": "GitLab",
+  "triggers.provider.whatsapp": "WhatsApp Business",
+  "triggers.provider.discord": "Discord",
+  "triggers.provider.telegram": "Telegram",
+  "triggers.provider.salesforce": "Salesforce",
+  "triggers.provider.servicenow": "ServiceNow",
+  "triggers.provider.jira": "Jira",
+  "triggers.provider.confluence": "Confluence"
 }
