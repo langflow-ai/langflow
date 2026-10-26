@@ -3,7 +3,7 @@
   "provider_id": "gitlab",
   "display_name": "GitLab",
   "icon": "Gitlab",
-  "docs_url": "https://docs.gitlab.com/user/project/integrations/webhooks/",
+  "docs_url": "https://github.com/langflow-ai/langflow/blob/4da04f6168de8634a65858c1ec9e6f214e7826e4/src/bundles/gitlab/README.md#setup",
   "auth_profiles": [
     {
       "id": "gitlab-personal-token",

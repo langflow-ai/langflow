@@ -17,6 +17,35 @@ from lfx.integrations.errors import (
 from lfx_gitlab.client import GitLabClient, api_origin, positive_id
 
 
+@pytest.mark.parametrize("protection_enabled", [True, False])
+async def test_default_transport_keeps_redirects_disabled(lease, monkeypatch, protection_enabled):
+    from lfx.utils import ssrf_httpx
+    from lfx.utils.ssrf_transport import SSRFProtectedTransport
+
+    monkeypatch.setattr(ssrf_httpx, "is_ssrf_protection_enabled", lambda: protection_enabled)
+    monkeypatch.setattr(ssrf_httpx, "_validate_and_resolve_strict_url", lambda url: (url, ["172.65.251.78"]))
+    async with GitLabClient(lease) as client:
+        assert client._client.follow_redirects is False
+        assert client._client.trust_env is False
+        if protection_enabled:
+            assert isinstance(client._client._transport, SSRFProtectedTransport)
+
+
+async def test_default_transport_dns_failure_is_normalized(lease, monkeypatch):
+    from lfx.utils import ssrf_httpx
+    from lfx.utils.ssrf_protection import SSRFProtectionError
+
+    def unavailable(_url):
+        msg = "private DNS diagnostic"
+        raise SSRFProtectionError(msg)
+
+    monkeypatch.setattr(ssrf_httpx, "is_ssrf_protection_enabled", lambda: True)
+    monkeypatch.setattr(ssrf_httpx, "_validate_and_resolve_strict_url", unavailable)
+    with pytest.raises(IntegrationNetworkError, match=r"could not reach gitlab\.com") as error:
+        GitLabClient(lease)
+    assert "private DNS diagnostic" not in str(error.value)
+
+
 @pytest.mark.parametrize(
     "value",
     [

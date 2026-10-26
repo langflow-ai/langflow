@@ -22,6 +22,7 @@ from lfx.integrations.errors import (
     ResourceNotFoundError,
 )
 from lfx.utils.ssrf_httpx import ssrf_protected_strict_httpx_client_kwargs_for_url
+from lfx.utils.ssrf_protection import SSRFProtectionError
 from lfx.utils.url_redaction import suppress_sensitive_http_logs
 
 _PATH = re.compile(
@@ -134,12 +135,18 @@ class GitLabClient:
     def __init__(self, lease, *, transport: httpx.AsyncBaseTransport | None = None):
         self.lease = lease
         self.origin = api_origin()
-        kwargs = (
-            ssrf_protected_strict_httpx_client_kwargs_for_url(self.origin)[1]
-            if transport is None
-            else {"transport": transport}
-        )
-        self._client = httpx.AsyncClient(timeout=20, follow_redirects=False, trust_env=False, **kwargs)
+        try:
+            kwargs = (
+                ssrf_protected_strict_httpx_client_kwargs_for_url(self.origin)[1]
+                if transport is None
+                else {"transport": transport}
+            )
+        except SSRFProtectionError:
+            raise IntegrationNetworkError(
+                reason="connection", provider="gitlab", host=urlsplit(self.origin).hostname
+            ) from None
+        kwargs["follow_redirects"] = False
+        self._client = httpx.AsyncClient(timeout=20, trust_env=False, **kwargs)
 
     async def __aenter__(self):
         return self

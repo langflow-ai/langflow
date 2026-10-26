@@ -18,11 +18,13 @@ export interface UseSlackTokenConnectionOptions {
   providerId: string;
   /** Which deployment this is; hosted offers no pasted tokens. */
   deploymentContext: DeploymentContext | undefined;
-  /** Re-authorizing an existing connection never offers a token. */
+  /** Only token-only providers may renew a manually entered credential. */
   reauthorizing: boolean;
-  /** Creates the connection row (`POST /connections`). */
+  initialAllowBackgroundRuns?: boolean;
+  /** Stores the validated token through creation or renewal. */
   create: (payload: ConnectionCreate) => Promise<ConnectionRead>;
   tokenProfile?: ManualTokenProfileRead;
+  tokenOnly: boolean;
 }
 
 export interface SlackTokenConnection {
@@ -73,25 +75,29 @@ export function useSlackTokenConnection({
   providerId,
   deploymentContext,
   reauthorizing,
+  initialAllowBackgroundRuns = false,
   create,
   tokenProfile,
+  tokenOnly,
 }: UseSlackTokenConnectionOptions): SlackTokenConnection {
   const [selectedMethod, setMethod] = useState<ConnectionMethod | null>(null);
   const [token, setToken] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
-  // Consent to unattended use is explicit and off by default: pasting a token
-  // is not the same as allowing a trigger to run with it.
-  const [allowBackgroundRuns, setAllowBackgroundRuns] = useState(false);
+  // Renewal retains the owner's consent. New connections require explicit consent.
+  const [allowBackgroundRuns, setAllowBackgroundRuns] = useState(
+    initialAllowBackgroundRuns,
+  );
 
   const offersToken =
-    !reauthorizing &&
+    (!reauthorizing || tokenOnly) &&
     (offersSlackToken(providerId, deploymentContext) ||
       tokenProfile !== undefined);
   const defaultMethod =
     offersToken && providerId !== "slack" && tokenProfile ? "token" : "oauth";
-  const method =
-    selectedMethod === "token" && !offersToken
-      ? "oauth"
+  const method = !offersToken
+    ? "oauth"
+    : tokenOnly
+      ? "token"
       : (selectedMethod ?? defaultMethod);
   const usesToken = offersToken && method === "token";
   const tokenKind = slackTokenKind(token);
@@ -131,8 +137,8 @@ export function useSlackTokenConnection({
     setMethod(null);
     setToken("");
     setExpiresAt("");
-    setAllowBackgroundRuns(false);
-  }, []);
+    setAllowBackgroundRuns(initialAllowBackgroundRuns);
+  }, [initialAllowBackgroundRuns]);
 
   return {
     offersToken,
