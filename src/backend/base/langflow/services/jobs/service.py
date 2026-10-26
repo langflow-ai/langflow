@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+
+    from langflow.services.auth.context import AuthCredentialContext
 from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
@@ -274,7 +276,16 @@ class JobService(Service):
                     msg = f"A non-retryable job with dedupe_key={dedupe_key!r} already exists"
                     raise DuplicateJobError(msg)
 
-            metadata = dict(initial_metadata or {})
+            from langflow.services.jobs.api_key_authorization import stamp_api_key_job_authorization
+
+            metadata = await stamp_api_key_job_authorization(
+                session,
+                metadata=dict(initial_metadata or {}),
+                flow_id=flow_id,
+                job_type=job_type,
+                asset_id=asset_id,
+                asset_type=asset_type,
+            )
             if end_user_id:
                 metadata["end_user_id"] = end_user_id
             if heartbeat:
@@ -358,12 +369,9 @@ class JobService(Service):
             job = await session.get(Job, job_id)
             if job is None:
                 return None
-            if replace or job.job_metadata is None:
-                job.job_metadata = dict(patch)
-            else:
-                # Shallow merge — callers wanting deep-merge own the
-                # composition. This keeps the helper predictable.
-                job.job_metadata = {**job.job_metadata, **patch}
+            from langflow.services.jobs.api_key_authorization import preserve_api_key_job_authorization
+
+            job.job_metadata = preserve_api_key_job_authorization(job.job_metadata, patch, replace=replace)
             session.add(job)
             await session.flush()
             return job
@@ -382,7 +390,9 @@ class JobService(Service):
             job = await session.get(Job, job_id)
             if job is None:
                 return None
-            job.job_metadata = {**(job.job_metadata or {}), **metadata}
+            from langflow.services.jobs.api_key_authorization import preserve_api_key_job_authorization
+
+            job.job_metadata = preserve_api_key_job_authorization(job.job_metadata, metadata)
             job.status = JobStatus.SUSPENDED
             session.add(job)
             await session.flush()
@@ -1360,6 +1370,7 @@ class JobService(Service):
         *args,
         mark_in_progress: bool = True,
         keep_alive: bool = False,
+        created_job: Job | None = None,
         **kwargs,
     ):
         """Wrapper that manages job status lifecycle around a coroutine.
@@ -1383,6 +1394,9 @@ class JobService(Service):
                 waits one interval. The heartbeat stops before the terminal status write,
                 and on a pause, which leaves the row IN_PROGRESS. run_coro_func must not
                 write ``job_metadata``. Keyword-only, and not passed on to run_coro_func.
+            created_job: The server-created row for a run starting immediately in this
+                request. Reuses its admission metadata when ``mark_in_progress=False``.
+                Queued, retried, or resumed work must load the current row instead.
             **kwargs: Keyword arguments to pass to run_coro_func
 
         Returns:
@@ -1393,12 +1407,20 @@ class JobService(Service):
         """
         from lfx.log import logger
 
+        from langflow.services.auth.context import get_current_auth_context, set_current_auth_context
+
         await logger.ainfo(f"Starting job execution: job_id={job_id}")
 
+        previous_context = get_current_auth_context()
         try:
             if mark_in_progress:
                 await logger.adebug(f"Updating job {job_id} status to IN_PROGRESS")
-                await self.update_job_status(job_id, JobStatus.IN_PROGRESS)
+                authorization_job = await self.update_job_status(job_id, JobStatus.IN_PROGRESS)
+            else:
+                authorization_job = created_job
+            authorized_context = await self.authorize_job_start(job_id, job=authorization_job)
+            if authorized_context is not None:
+                set_current_auth_context(authorized_context)
 
             if keep_alive:
                 await self.start_keep_alive(job_id, beat_now=False)
@@ -1450,6 +1472,14 @@ class JobService(Service):
             await logger.ainfo(f"Job {job_id} completed successfully")
             await self.update_job_status(job_id, JobStatus.COMPLETED, finished_timestamp=True)
             return result
+        finally:
+            set_current_auth_context(previous_context)
+
+    async def authorize_job_start(self, job_id: UUID, *, job: Job | None = None) -> AuthCredentialContext | None:
+        """Revalidate originating restricted credentials before starting queued work."""
+        from langflow.services.jobs.api_key_authorization import authorize_job_start
+
+        return await authorize_job_start(self, job_id, job=job)
 
     async def _validate_ownership(self, job_id: UUID, user_id: UUID) -> Job:
         """Verify that a job exists and belongs to the specified user.

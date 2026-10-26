@@ -21,6 +21,7 @@ from langflow.api.utils import (
     build_content_disposition,
 )
 from langflow.api.v1.schemas import UploadFileResponse
+from langflow.services.auth.context import current_auth_is_restricted_api_key
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_settings_service, get_storage_service
@@ -77,6 +78,29 @@ async def get_flow(
     # Return 404 for both non-existent flows and unauthorized access to prevent information disclosure
     if not flow or flow.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Flow not found")
+    if current_auth_is_restricted_api_key():
+        session.expunge(flow)
+        await session.rollback()
+    return flow
+
+
+async def get_readable_flow(
+    flow: Annotated[Flow, Depends(get_flow)],
+    current_user: CurrentActiveUser,
+    session: DbSession,
+):
+    if current_auth_is_restricted_api_key():
+        if flow in session:
+            session.expunge(flow)
+        await session.rollback()
+        await ensure_flow_permission(
+            current_user,
+            FlowAction.READ,
+            flow_id=flow.id,
+            flow_user_id=flow.user_id,
+            workspace_id=flow.workspace_id,
+            folder_id=flow.folder_id,
+        )
     return flow
 
 
@@ -125,7 +149,7 @@ async def upload_file(
 @router.get("/download/{flow_id}/{file_name}")
 async def download_file(
     file_name: ValidatedFileName,
-    flow: Annotated[Flow, Depends(get_flow)],
+    flow: Annotated[Flow, Depends(get_readable_flow)],
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     # Authorization handled by get_flow dependency
@@ -158,7 +182,7 @@ async def download_file(
 async def download_image(
     file_name: ValidatedFileName,
     # Security: resolve flow through get_flow so image access requires authentication and owner match.
-    flow: Annotated[Flow, Depends(get_flow)],
+    flow: Annotated[Flow, Depends(get_readable_flow)],
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     """Download image from storage for browser rendering."""
@@ -295,7 +319,7 @@ async def list_profile_pictures(
 
 @router.get("/list/{flow_id}")
 async def list_files(
-    flow: Annotated[Flow, Depends(get_flow)],
+    flow: Annotated[Flow, Depends(get_readable_flow)],
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     try:

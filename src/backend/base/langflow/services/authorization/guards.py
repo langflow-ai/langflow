@@ -14,7 +14,7 @@ from lfx.log.logger import logger
 from langflow.services.auth.context import (
     current_auth_context_for_audit,
     current_auth_context_for_authz,
-    current_auth_is_api_key,
+    current_auth_is_restricted_api_key,
 )
 from langflow.services.authorization import audit as _audit
 from langflow.services.authorization.access_ceiling import (
@@ -177,6 +177,8 @@ def _audit_guard_decision(
     """
     if _capability_probe.get():
         return _audit_suppressed()
+    if result == _audit.AUDIT_DENY and current_auth_is_restricted_api_key():
+        details = {"reason": "api_key_or_owner_access_denied", **(details or {})}
     decision: dict[str, Any] = {
         "user_id": user_id,
         "action": action,
@@ -193,22 +195,22 @@ def _audit_guard_decision(
 
 async def _api_key_scopes_require_plugin_enforcement() -> bool:
     """Return True when owner override must not hide API-key caveats."""
-    if not current_auth_is_api_key():
-        return False
+    return current_auth_is_restricted_api_key()
 
-    settings = get_settings_service()
-    if not settings.auth_settings.AUTHZ_ENABLED:
-        return False
 
-    authz = get_authorization_service()
-    supports_api_key_scopes = getattr(authz, "supports_api_key_scopes", None)
-    if supports_api_key_scopes is None:
-        return False
+async def require_api_key_scope_support() -> None:
+    """Refuse scoped credentials when their restrictions cannot be enforced."""
+    if not current_auth_is_restricted_api_key():
+        return
     try:
-        return bool(await supports_api_key_scopes())
+        settings = get_settings_service()
+        authz = get_authorization_service()
+        supported = getattr(authz, "supports_api_key_scopes", None)
+        if settings.auth_settings.AUTHZ_ENABLED and supported is not None and await supported():
+            return
     except Exception:  # noqa: BLE001
-        logger.exception("Authorization plugin failed API-key scope capability check; preserving owner override")
-        return False
+        logger.exception("Authorization plugin failed API-key scope capability check")
+    raise mark_authorization_refusal(HTTPException(status_code=403, detail=_DEFAULT_DENY_DETAIL))
 
 
 async def should_apply_owner_override() -> bool:
@@ -273,6 +275,17 @@ async def ensure_permission(
         if owner_key in merged_context and merged_context[owner_key] is not None:
             audit_details[owner_key] = str(merged_context[owner_key])
 
+    try:
+        await require_api_key_scope_support()
+    except HTTPException:
+        await _audit_guard_decision(
+            user_id=user.id,
+            action=audit_action,
+            obj=obj,
+            result=_audit.AUDIT_DENY,
+            details={**audit_details, "reason": "api_key_scope_enforcement_unavailable"},
+        )
+        raise
     settings = get_settings_service()
     if not settings.auth_settings.AUTHZ_ENABLED:
         # Auditing is independently configurable so operators can observe the
@@ -379,6 +392,13 @@ async def _ensure_resource_permission(
         )
         return
 
+    if current_auth_is_restricted_api_key():
+        extra_context = {
+            **extra_context,
+            "api_key_owner_override_allowed": bool(
+                owner_override_allowed and owner_id is not None and getattr(user, "id", None) == owner_id
+            ),
+        }
     await ensure_permission(
         user,
         domain=resolved_domain,
@@ -482,6 +502,7 @@ _RESOURCE_SPECS: dict[str, _ResourceSpec] = {
         id_kw="share_id",
         workspace_kw=None,
         scope_kw=None,
+        extra_context_kws=("backing_resource_type", "backing_resource_id"),
         # Creating a share authorizes against the already-existing target
         # resource owner, not the prospective share-row owner.
         owner_override_on_create=True,
@@ -561,6 +582,8 @@ async def _ensure_typed(
         # that scope policy by kb_id directly (mirrors the legacy clone).
         extra_context[spec.id_kw] = resource_id
     for key in spec.extra_context_kws:
+        if spec_key == "share" and kwargs.get(key) is None:
+            continue
         extra_context[key] = kwargs.get(key)
 
     # On CREATE the resource does not exist yet, so ownership can only come
@@ -698,6 +721,7 @@ async def ensure_flows_permission(
     if not flow_ids:
         return
 
+    await require_api_key_scope_support()
     act_str = _coerce_action(act)
     user_id = getattr(user, "id", None)
     resolved_domain = _resolve_authz_domain(workspace_id, folder_id)
@@ -748,6 +772,8 @@ async def ensure_flows_permission(
         "folder_user_id": None,
     }
     auth_context = {**extra_context, **_auth_context(user)}
+    if current_auth_is_restricted_api_key():
+        auth_context["api_key_owner_override_allowed"] = user_id is not None and flow_user_id == user_id
     owner_override_enabled = await should_apply_owner_override()
     if owner_override_enabled and user_id is not None and flow_user_id == user_id:
         await _audit_flow_decision_batch(
@@ -1044,6 +1070,8 @@ async def ensure_share_permission(
     share_id: UUID | None = None,
     share_user_id: UUID | None = None,
     domain: str | None = None,
+    backing_resource_type: str | None = None,
+    backing_resource_id: UUID | str | None = None,
 ) -> None:
     """Check share-row permission (owner override, then plugin enforce)."""
     await _ensure_typed(
@@ -1053,6 +1081,8 @@ async def ensure_share_permission(
         kwargs={
             "share_id": share_id,
             "share_user_id": share_user_id,
+            "backing_resource_type": backing_resource_type,
+            "backing_resource_id": backing_resource_id,
         },
         domain_override=domain,
     )

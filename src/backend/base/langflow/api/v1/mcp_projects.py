@@ -51,18 +51,22 @@ from langflow.api.utils.mcp import (
     project_mcp_server_name_candidates,
 )
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
-from langflow.api.v1.mcp import ResponseNoOp
+from langflow.api.v1.mcp import ResponseNoOp, _bind_mcp_transport_user
 from langflow.api.v1.mcp_utils import (
     authenticated_caller_ctx,
+    bind_mcp_operation_context,
     current_request_headers_ctx,
     current_request_variables_ctx,
     current_user_ctx,
+    filter_mcp_flows,
     handle_call_tool,
     handle_list_resources,
     handle_list_tools_result,
     handle_mcp_errors,
     handle_read_resource,
+    protect_mcp_operation_handlers,
     raise_if_sse_disabled,
+    snapshot_mcp_metadata,
 )
 from langflow.api.v1.schemas import (
     AuthSettings,
@@ -324,11 +328,7 @@ async def _build_project_tools_response(
         async with session_scope() as session:
             # Fetch the project first to verify it exists and belongs to the current user
             project = (
-                await session.exec(
-                    select(Folder)
-                    .options(selectinload(Folder.flows))
-                    .where(Folder.id == project_id, Folder.user_id == current_user.id)
-                )
+                await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
             ).first()
 
             if not project:
@@ -345,49 +345,60 @@ async def _build_project_tools_response(
             if mcp_enabled:
                 flows_query = flows_query.where(Flow.mcp_enabled == True)  # noqa: E712
 
-            flows = (await session.exec(flows_query)).all()
+            project = snapshot_mcp_metadata(project)
+            flows = [snapshot_mcp_metadata(flow) for flow in (await session.exec(flows_query)).all()]
 
-            for flow in flows:
-                if flow.user_id is None:
-                    continue
+        await ensure_project_permission(
+            current_user,
+            ProjectAction.READ,
+            project_id=project.id,
+            project_user_id=project.user_id,
+            workspace_id=project.workspace_id,
+        )
 
-                # Format the flow name according to MCP conventions (snake_case)
-                flow_name = sanitize_mcp_name(flow.name)
+        flows = await filter_mcp_flows(current_user, flows)
 
-                # Use action_name and action_description if available, otherwise use defaults
-                name = sanitize_mcp_name(flow.action_name) if flow.action_name else flow_name
-                description = flow.action_description or (
-                    flow.description if flow.description else f"Tool generated from flow: {flow_name}"
+        for flow in flows:
+            if flow.user_id is None:
+                continue
+
+            # Format the flow name according to MCP conventions (snake_case)
+            flow_name = sanitize_mcp_name(flow.name)
+
+            # Use action_name and action_description if available, otherwise use defaults
+            name = sanitize_mcp_name(flow.action_name) if flow.action_name else flow_name
+            description = flow.action_description or (
+                flow.description if flow.description else f"Tool generated from flow: {flow_name}"
+            )
+            try:
+                tool = MCPSettings(
+                    id=flow.id,
+                    action_name=name,
+                    action_description=description,
+                    mcp_enabled=flow.mcp_enabled,
+                    # inputSchema=json_schema_from_flow(flow),
+                    name=flow.name,
+                    description=flow.description,
                 )
-                try:
-                    tool = MCPSettings(
-                        id=flow.id,
-                        action_name=name,
-                        action_description=description,
-                        mcp_enabled=flow.mcp_enabled,
-                        # inputSchema=json_schema_from_flow(flow),
-                        name=flow.name,
-                        description=flow.description,
-                    )
-                    tools.append(tool)
-                except Exception as e:  # noqa: BLE001
-                    msg = f"Error in listing project tools: {e!s} from flow: {name}"
-                    await logger.awarning(msg)
-                    continue
+                tools.append(tool)
+            except Exception as e:  # noqa: BLE001
+                msg = f"Error in listing project tools: {e!s} from flow: {name}"
+                await logger.awarning(msg)
+                continue
 
-            # Get project-level auth settings but mask sensitive fields for security
-            auth_settings = None
-            if project.auth_settings:
-                # Decrypt to get the settings structure
-                decrypted_settings = decrypt_auth_settings(project.auth_settings)
-                if decrypted_settings:
-                    # Mask sensitive fields before sending to frontend
-                    masked_settings = decrypted_settings.copy()
-                    if masked_settings.get("oauth_client_secret"):
-                        masked_settings["oauth_client_secret"] = "*******"  # noqa: S105
-                    if masked_settings.get("api_key"):
-                        masked_settings["api_key"] = "*******"
-                    auth_settings = AuthSettings(**masked_settings)
+        # Get project-level auth settings but mask sensitive fields for security
+        auth_settings = None
+        if project.auth_settings:
+            # Decrypt to get the settings structure
+            decrypted_settings = decrypt_auth_settings(project.auth_settings)
+            if decrypted_settings:
+                # Mask sensitive fields before sending to frontend
+                masked_settings = decrypted_settings.copy()
+                if masked_settings.get("oauth_client_secret"):
+                    masked_settings["oauth_client_secret"] = "*******"  # noqa: S105
+                if masked_settings.get("api_key"):
+                    masked_settings["api_key"] = "*******"
+                auth_settings = AuthSettings(**masked_settings)
 
     except HTTPException:
         # A missing project is a 404, not a 500
@@ -455,6 +466,8 @@ async def handle_project_sse(
     project_token = current_project_ctx.set(project_id)
     variables = extract_global_variables_from_headers(request.headers, include_auth_headers=True)
     req_vars_token = current_request_variables_ctx.set(variables or None)
+    _bind_mcp_transport_user(request, current_user)
+    bind_mcp_operation_context(request, current_user, caller_user_id=authenticated_caller_ctx.get())
 
     try:
         async with sse.connect_sse(request.scope, request.receive, request._send) as streams:  # noqa: SLF001
@@ -496,6 +509,8 @@ async def _handle_project_sse_messages(
     project_token = current_project_ctx.set(project_id)
     variables = extract_global_variables_from_headers(request.headers, include_auth_headers=True)
     req_vars_token = current_request_variables_ctx.set(variables or None)
+    _bind_mcp_transport_user(request, current_user)
+    bind_mcp_operation_context(request, current_user, caller_user_id=authenticated_caller_ctx.get())
 
     try:
         sse = get_project_sse(project_id)
@@ -556,6 +571,8 @@ async def _dispatch_project_streamable_http(
     # Carry the raw request headers into the deep tool dispatch so an MCP-triggered run
     # scopes to the serving end-user identity (resolve_serving_scope) like /run does.
     request_headers_token = current_request_headers_ctx.set(request.headers)
+    _bind_mcp_transport_user(request, current_user)
+    bind_mcp_operation_context(request, current_user, caller_user_id=authenticated_caller_ctx.get())
 
     try:
         await project_server.session_manager.handle_request(request.scope, request.receive, request._send)  # noqa: SLF001
@@ -1491,6 +1508,8 @@ class ProjectMCPServer:
                 project_id=self.project_id,
                 is_action=True,
             )
+
+        protect_mcp_operation_handlers(self.server)
 
     async def ensure_session_manager_running(self) -> None:
         """Start the project's Streamable HTTP manager if needed."""

@@ -35,6 +35,7 @@ from langflow.exceptions.api import (
     WorkflowResourceError,
     WorkflowServiceUnavailableError,
 )
+from langflow.services.auth.context import get_current_auth_context, set_current_auth_context
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_job_service, get_queue_service
@@ -296,7 +297,15 @@ async def _buffer_background_run(
     errored = False
     cancelled = False
     job_uuid = UUID(job_id) if isinstance(job_id, str) else job_id
+    previous_context = get_current_auth_context()
     try:
+        try:
+            authorized_context = await get_job_service().authorize_job_start(job_uuid)
+            if authorized_context is not None:
+                set_current_auth_context(authorized_context)
+        except PermissionError:
+            errored = True
+            return
         with contextlib.suppress(Exception):
             await get_job_service().update_job_status(job_uuid, JobStatus.IN_PROGRESS)
         async for frame, event_type in _stream_event_frames(
@@ -330,6 +339,7 @@ async def _buffer_background_run(
         await bg_run.finish_cancelled(_WORKFLOW_CANCELLED_MESSAGE)
         raise
     finally:
+        set_current_auth_context(previous_context)
         if not cancelled:
             await bg_run.finish()
         # ``generate_flow_events`` queues telemetry, tracing teardown, and

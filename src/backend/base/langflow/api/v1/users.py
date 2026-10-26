@@ -17,7 +17,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import PasswordResetRequest, UsersResponse
 from langflow.initial_setup.setup import get_or_create_default_folder
-from langflow.services.auth.context import current_auth_is_api_key
+from langflow.services.auth.context import current_auth_is_api_key, current_auth_is_restricted_api_key
 from langflow.services.auth.utils import get_current_user, get_current_user_optional
 from langflow.services.authorization.admin import (
     ADMINISTRATION_REQUIRED_REASON,
@@ -431,6 +431,16 @@ async def patch_user(
     operation_id: OperationId = None,
 ) -> User:
     """Update an existing user's data."""
+    if current_auth_is_restricted_api_key():
+        await _audit_deny(
+            user_id=user.id,
+            action="user:update",
+            obj=f"user:{user_id}",
+            status_code=403,
+            reason="restricted_api_key",
+            operation_id=operation_id,
+        )
+        raise HTTPException(status_code=403, detail="Restricted API keys cannot administer users")
     update_password = bool(user_update.password)
 
     # Prevent users from deactivating their own account to avoid lockout

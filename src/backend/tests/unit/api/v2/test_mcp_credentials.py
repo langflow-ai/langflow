@@ -1,6 +1,7 @@
 """MCP management responses must not disclose the credentials used by runtime clients."""
 
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -9,6 +10,7 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from langflow.api.v2.mcp import get_server, router
 from langflow.services.auth import utils as auth_utils
+from langflow.services.auth.context import AuthCredentialContext, get_current_auth_context, set_current_auth_context
 from langflow.services.auth.mcp_encryption import encrypt_mcp_config
 from langflow.services.auth.service import AuthService
 from langflow.services.database.models import MCPServer
@@ -35,7 +37,7 @@ async def credential_api(request, monkeypatch, tmp_path):
     """Exercise the MCP router with a real database and isolated encryption key."""
     auth_settings = AuthSettings(CONFIG_DIR=str(tmp_path))
     auth_settings.SECRET_KEY = SecretStr(Fernet.generate_key().decode())
-    settings = SimpleNamespace(settings=SimpleNamespace(), auth_settings=auth_settings)
+    settings = SimpleNamespace(settings=SimpleNamespace(mcp_server_timeout=10), auth_settings=auth_settings)
     auth = AuthService(settings)
     monkeypatch.setattr(auth_utils, "get_auth_service", lambda: auth)
     monkeypatch.setattr("langflow.api.v2.mcp._clear_server_cache", lambda _name: None)
@@ -58,6 +60,69 @@ async def credential_api(request, monkeypatch, tmp_path):
         async with AsyncClient(transport=ASGITransport(app), base_url="http://testserver") as client:
             yield client, session, user
     await engine.dispose()
+
+
+@pytest.fixture
+def restricted_key_context():
+    previous = get_current_auth_context()
+    set_current_auth_context(AuthCredentialContext(method="api_key", api_key_id=uuid4(), api_key_restricted=True))
+    yield
+    set_current_auth_context(previous)
+
+
+@pytest.mark.parametrize("operation", ["list", "read", "create", "edit", "delete", "discover"])
+@pytest.mark.usefixtures("restricted_key_context")
+async def test_scoped_key_cannot_manage_or_reuse_mcp_credentials(credential_api, monkeypatch, operation):
+    client, session, user = credential_api
+    row = MCPServer(user_id=user.id, name="secure", config=encrypt_mcp_config(CANARY_CONFIG))
+    session.add(row)
+    await session.commit()
+    original = row.config.copy()
+    discovery = AsyncMock(return_value=[])
+    monkeypatch.setattr("langflow.api.v2.mcp.run_server_checks", discovery)
+    requests = {
+        "list": ("GET", "/api/v2/mcp/servers", None),
+        "read": ("GET", "/api/v2/mcp/servers/secure", None),
+        "create": ("POST", "/api/v2/mcp/servers/new", CANARY_CONFIG),
+        "edit": ("PATCH", "/api/v2/mcp/servers/secure", {"url": "https://other.invalid/mcp"}),
+        "delete": ("DELETE", "/api/v2/mcp/servers/secure", None),
+        "discover": ("GET", "/api/v2/mcp/servers?action_count=true", None),
+    }
+    method, url, body = requests[operation]
+
+    response = await client.request(method, url, json=body)
+
+    assert response.status_code == 403
+    assert "mcp-canary" not in response.text
+    discovery.assert_not_awaited()
+    await session.refresh(row)
+    assert row.config == original
+
+
+@pytest.mark.parametrize("operation", ["list", "read", "cached_read", "write", "delete"])
+@pytest.mark.usefixtures("restricted_key_context")
+async def test_scoped_mcp_helpers_refuse_before_database_access(operation):
+    from langflow.api.v2.mcp import get_server_list, update_server
+
+    session = AsyncMock()
+    user = SimpleNamespace(id=uuid4(), is_superuser=True)
+    helpers = {
+        "list": lambda: get_server_list(user, session, None, None),
+        "read": lambda: get_server("secure", user, session, None, None),
+        "cached_read": lambda: get_server(
+            "secure", user, session, None, None, server_list={"mcpServers": {"secure": CANARY_CONFIG}}
+        ),
+        "write": lambda: update_server("secure", CANARY_CONFIG, user, session, None, None),
+        "delete": lambda: update_server("secure", {}, user, session, None, None, delete=True),
+    }
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException) as refusal:
+        await helpers[operation]()
+    assert refusal.value.status_code == 403
+    session.exec.assert_not_awaited()
+    session.execute.assert_not_awaited()
+    session.delete.assert_not_awaited()
 
 
 @pytest.mark.parametrize("encrypted", [False, True], ids=["legacy", "encrypted"])

@@ -14,7 +14,7 @@ from typing import Any, ParamSpec, TypeVar
 from urllib.parse import quote, unquote, urlparse
 from uuid import UUID, uuid4
 
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 from lfx.base.mcp.util import build_mcp_tool_name_map, get_flow_snake_case
 from lfx.log.logger import logger
 from lfx.observability import execution_protocol
@@ -25,7 +25,7 @@ from lfx.utils.flow_validation import (
 )
 from lfx.utils.helpers import build_content_type_from_extension
 from mcp import types
-from sqlmodel import select
+from sqlmodel import SQLModel, select
 
 from langflow.api.utils.core import strip_secret_field_values
 from langflow.api.utils.execution_principal import FAMILY_LEGACY_MCP, FAMILY_MCP_PROJECTS
@@ -36,11 +36,19 @@ from langflow.api.v1.run_validation import HITL_UNSUPPORTED_DETAIL, flow_require
 from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.helpers.flow import get_flow_input_tweaks, json_schema_from_flow
 from langflow.schema.message import Message
-from langflow.services.authorization import FlowAction, ensure_flow_permission
+from langflow.services.auth.context import (
+    current_auth_is_restricted_api_key,
+    get_current_auth_context,
+    set_current_auth_context,
+)
+from langflow.services.authorization import FileAction, FlowAction, ensure_file_permission, ensure_flow_permission
+from langflow.services.authorization.credentials import ensure_mcp_credential_file_access, is_mcp_credential_file
+from langflow.services.authorization.guards import _resolve_flow_domain
+from langflow.services.authorization.listing import filter_visible_resources
 from langflow.services.authorization.public_access import public_execution_user
 from langflow.services.database.models import Flow
 from langflow.services.database.models.file.model import File as UserFile
-from langflow.services.database.models.user.model import User
+from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 from langflow.utils.flow_secrets import restore_request_variable_references
 
@@ -50,7 +58,7 @@ P = ParamSpec("P")
 MCP_SERVERS_FILE = "_mcp_servers"
 
 # Create context variables
-current_user_ctx: ContextVar[User] = ContextVar("current_user_ctx")
+current_user_ctx: ContextVar[User | UserRead] = ContextVar("current_user_ctx")
 
 authenticated_caller_ctx: ContextVar[UUID | None] = ContextVar("authenticated_caller_ctx", default=None)
 
@@ -105,6 +113,102 @@ current_request_variables_ctx: ContextVar[dict[str, str] | None] = ContextVar(
 # current_request_variables_ctx) so a tool run can scope to the serving end-user identity via
 # the same ``resolve_serving_scope`` path /run and /workflows use. None outside a request.
 current_request_headers_ctx: ContextVar[Any] = ContextVar("current_request_headers_ctx", default=None)
+
+_MCP_AUTH_SCOPE = "langflow.mcp_authenticated_operation"
+
+
+def bind_mcp_operation_context(request: Request, user: User | UserRead, *, caller_user_id: UUID | None) -> None:
+    """Attach authenticated message identity to the request the SDK carries across tasks."""
+    request.scope[_MCP_AUTH_SCOPE] = (user, get_current_auth_context(), caller_user_id)
+
+
+async def refresh_mcp_operation_context(server: Any) -> None:
+    """Adopt this message's credential and recheck durable keys before each operation."""
+    try:
+        request = server.request_context.request
+    except (LookupError, AttributeError):
+        request = None
+    if isinstance(request, Request):
+        identity = request.scope.get(_MCP_AUTH_SCOPE)
+        if identity is None:
+            if current_auth_is_restricted_api_key():
+                raise HTTPException(status_code=403, detail="MCP message authentication context is unavailable")
+        else:
+            user, credential, caller_id = identity
+            current_user_ctx.set(user)
+            set_current_auth_context(credential)
+            authenticated_caller_ctx.set(caller_id)
+            current_request_headers_ctx.set(request.headers)
+            from langflow.api.utils import extract_global_variables_from_headers
+
+            current_request_variables_ctx.set(
+                extract_global_variables_from_headers(request.headers, include_auth_headers=True) or None
+            )
+    credential = get_current_auth_context()
+    if (
+        credential is None
+        or credential.method != "api_key"
+        or credential.api_key_source == "env"  # pragma: allowlist secret
+    ):
+        return
+    from langflow.services.auth.api_key_context import refresh_database_api_key_user
+
+    current_user_ctx.set(await refresh_database_api_key_user(current_user_ctx.get()))
+
+
+def protect_mcp_operation_handlers(server: Any) -> None:
+    """Refresh message authorization inside the SDK's per-operation dispatch task."""
+
+    def protect(handler):
+        @wraps(handler)
+        async def checked(request):
+            try:
+                await refresh_mcp_operation_context(server)
+            except HTTPException:
+                credential = get_current_auth_context()
+                if credential is not None and credential.method == "api_key" and credential.api_key_id is not None:
+                    from lfx.services.authorization import AuthorizationPrincipal
+
+                    from langflow.services.authorization.audit import audit_decision
+
+                    user_id = current_user_ctx.get().id
+                    async with session_scope() as session:
+                        if await session.get(User, user_id) is None:
+                            user_id = None
+                    await audit_decision(
+                        user_id=user_id,
+                        principal=AuthorizationPrincipal(
+                            actor_type="api_key", actor_id=credential.api_key_id, user_id=user_id
+                        ),
+                        action="mcp:request",
+                        obj=f"api_key:{credential.api_key_id}",
+                        result="deny",
+                        details={"event": "authorization_decision", "reason": "mcp_credential_authorization_invalid"},
+                    )
+                raise
+            return await handler(request)
+
+        return checked
+
+    for request_type, handler in list(server.request_handlers.items()):
+        server.request_handlers[request_type] = protect(handler)
+
+
+async def filter_mcp_flows(user: User | UserRead, flows: list[Flow]) -> list[Flow]:
+    return await filter_visible_resources(
+        user,
+        resource_type="flow",
+        candidates=flows,
+        domain_extractor=lambda flow: _resolve_flow_domain(
+            getattr(flow, "workspace_id", None), getattr(flow, "folder_id", None)
+        ),
+        owner_extractor=lambda flow: getattr(flow, "user_id", None),
+    )
+
+
+def snapshot_mcp_metadata(row: T) -> T:
+    """Keep loaded metadata independent of the read transaction's lifetime."""
+    return row.model_copy(deep=True) if isinstance(row, SQLModel) else row
 
 
 def handle_mcp_errors(func: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[T]]:
@@ -185,58 +289,56 @@ async def handle_list_resources(project_id=None):
             else:
                 flows_query = select(Flow).where(Flow.user_id == current_user.id)
 
-            flows = (await session.exec(flows_query)).all()
+            flows = [snapshot_mcp_metadata(flow) for flow in (await session.exec(flows_query)).all()]
+            user_files = []
+            # User-level files have no project association, so a project server
+            # must never include them (PVR0754098).
+            if project_id is None:
+                user_files_stmt = select(UserFile).where(UserFile.user_id == current_user.id)
+                user_files = [snapshot_mcp_metadata(item) for item in (await session.exec(user_files_stmt)).all()]
 
-            for flow in flows:
-                if flow.id:
-                    try:
-                        files = await storage_service.list_files(flow_id=str(flow.id))
-                        for file_name in files:
-                            # URL encode the filename
-                            safe_filename = quote(file_name)
-                            resource = types.Resource(
+        flows = await filter_mcp_flows(current_user, flows)
+        user_files = await filter_visible_resources(
+            current_user,
+            resource_type="file",
+            candidates=user_files,
+            owner_extractor=lambda item: getattr(item, "user_id", None),
+        )
+        for flow in flows:
+            if flow.id:
+                try:
+                    files = await storage_service.list_files(flow_id=str(flow.id))
+                    for file_name in files:
+                        safe_filename = quote(file_name)
+                        resources.append(
+                            types.Resource(
                                 uri=f"{base_url}/api/v1/files/download/{flow.id}/{safe_filename}",
                                 name=file_name,
                                 description=f"File in flow: {flow.name}",
                                 mimeType=build_content_type_from_extension(file_name),
                             )
-                            resources.append(resource)
-                    except FileNotFoundError as e:
-                        msg = f"Error listing files for flow {flow.id}: {e}"
-                        await logger.adebug(msg)
-                        continue
-            ####################################################
-            # When a user uploads a file inside a flow
-            # (e.g., via the File Read component),
-            # it hits /api/v2/files (POST),
-            # which saves files at the user-level.
-            # So the above query for flow files is not enough.
-            # So we list all user files for the current user.
-            # This is not good. We need to fix this for 1.8.0.
-            #
-            # SECURITY (PVR0754098): user-level files have no project association,
-            # so they must not be exposed through a project-scoped MCP server —
-            # doing so would let a project client enumerate files unrelated to
-            # the project. Only include them on the global (project_id is None) server.
-            ###################################################
-            if project_id is None:
-                user_files_stmt = select(UserFile).where(UserFile.user_id == current_user.id)
-                user_files = (await session.exec(user_files_stmt)).all()
-                for user_file in user_files:
-                    stored_path = getattr(user_file, "path", "") or ""
-                    stored_filename = Path(stored_path).name if stored_path else user_file.name
-                    safe_filename = quote(stored_filename)
-                    if stored_filename.startswith(f"{MCP_SERVERS_FILE}_{current_user.id}"):
-                        # reserved file name for langflow MCP server config file(s)
-                        continue
-                    description = getattr(user_file, "provider", None) or "User file uploaded via File Manager"
-                    resource = types.Resource(
-                        uri=f"{base_url}/api/v1/files/download/{current_user.id}/{safe_filename}",
-                        name=stored_filename,
-                        description=description,
-                        mimeType=build_content_type_from_extension(stored_filename),
-                    )
-                    resources.append(resource)
+                        )
+                except FileNotFoundError as e:
+                    await logger.adebug(f"Error listing files for flow {flow.id}: {e}")
+                    continue
+        for user_file in user_files:
+            stored_path = getattr(user_file, "path", "") or ""
+            stored_filename = Path(stored_path).name if stored_path else user_file.name
+            safe_filename = quote(stored_filename)
+            if stored_filename.startswith(f"{MCP_SERVERS_FILE}_{current_user.id}"):
+                # reserved file name for langflow MCP server config file(s)
+                continue
+            if current_auth_is_restricted_api_key() and is_mcp_credential_file(stored_filename):
+                continue
+            description = getattr(user_file, "provider", None) or "User file uploaded via File Manager"
+            resources.append(
+                types.Resource(
+                    uri=f"{base_url}/api/v1/files/download/{current_user.id}/{safe_filename}",
+                    name=stored_filename,
+                    description=description,
+                    mimeType=build_content_type_from_extension(stored_filename),
+                )
+            )
     except Exception as e:
         msg = f"Error in listing resources: {e!s}"
         await logger.aexception(msg)
@@ -288,6 +390,8 @@ async def handle_read_resource(uri: str, project_id: UUID | str | None = None) -
             msg = "Authenticated user context is required to read MCP resources"
             raise ValueError(msg) from exc
 
+        if str(current_user.id) == str(namespace_id):
+            await ensure_mcp_credential_file_access(user_id=current_user.id, names=(filename,))
         parsed_project_id = None
         if project_id is not None:
             try:
@@ -296,6 +400,8 @@ async def handle_read_resource(uri: str, project_id: UUID | str | None = None) -
                 msg = "Resource not found or access denied"
                 raise ValueError(msg) from exc
 
+        flow_guard = None
+        file_guard = None
         async with session_scope() as session:
             try:
                 flow_id = UUID(namespace_id)
@@ -317,6 +423,25 @@ async def handle_read_resource(uri: str, project_id: UUID | str | None = None) -
                 if project_id is not None:
                     msg = "Resource not found or access denied"
                     raise ValueError(msg)
+
+                files = (await session.exec(select(UserFile).where(UserFile.user_id == current_user.id))).all()
+                user_file = next((item for item in files if Path(item.path or item.name).name == filename), None)
+                if user_file is None and current_auth_is_restricted_api_key():
+                    raise HTTPException(status_code=403, detail="Resource not found or access denied")
+                if user_file is not None:
+                    file_guard = {"file_id": user_file.id, "file_user_id": user_file.user_id}
+            else:
+                flow_guard = {
+                    "flow_id": flow.id,
+                    "flow_user_id": flow.user_id,
+                    "workspace_id": flow.workspace_id,
+                    "folder_id": flow.folder_id,
+                }
+
+        if flow_guard is not None:
+            await ensure_flow_permission(current_user, FlowAction.READ, **flow_guard)
+        if file_guard is not None:
+            await ensure_file_permission(current_user, FileAction.READ, **file_guard)
 
         storage_service = get_storage_service()
 
@@ -377,6 +502,10 @@ async def handle_call_tool(
         if project_id and flow.folder_id != project_id:
             msg = f"Flow '{name}' not found in project {project_id}"
             raise ValueError(msg)
+
+        if current_auth_is_restricted_api_key():
+            flow = snapshot_mcp_metadata(flow)
+            await session.rollback()
 
         # Enforce execute permission (owner override + external access ceiling)
         # before running the flow. Without this an external "viewer" could run a
@@ -584,54 +713,62 @@ async def _collect_tools(
                     flows_query = flows_query.where(Flow.mcp_enabled == True)  # noqa: E712
             elif current_user is not None:
                 # Global server: scope to the calling user only.
-                flows_query = select(Flow).where(Flow.user_id == current_user.id).order_by(Flow.id)
+                flows_query = (
+                    select(Flow)
+                    .where(Flow.user_id == current_user.id, Flow.is_component == False)  # noqa: E712
+                    .order_by(Flow.id)
+                )
             else:
                 await logger.awarning(
                     "handle_list_tools called without a current user and no project_id; returning empty list"
                 )
                 return tools, excluded
 
-            flows = (await session.exec(flows_query)).all()
+            flows = [snapshot_mcp_metadata(flow) for flow in (await session.exec(flows_query)).all()]
 
-            # The same map the call path resolves against, so a name cannot be published
-            # here and refused there. A flow dropped below still holds its name: the call
-            # path cannot know which tools failed to build, and a name that shifted
-            # because a neighbour was dropped would put the two halves back out of step.
-            name_map = build_mcp_tool_name_map(
-                [flow for flow in flows if flow.user_id is not None],
-                is_action=bool(project_id),
-            )
-            for name, flow in name_map.items():
-                if project_id:
-                    description = flow.action_description or (
-                        flow.description if flow.description else f"Tool generated from flow: {name}"
-                    )
-                else:
-                    description = (
-                        f"{flow.id}: {flow.description}" if flow.description else f"Tool generated from flow: {name}"
-                    )
+        # The same map the call path resolves against, so a name cannot be published
+        # here and refused there. A flow dropped below still holds its name: the call
+        # path cannot know which tools failed to build, and a name that shifted
+        # because a neighbour was dropped would put the two halves back out of step.
+        name_map = build_mcp_tool_name_map(
+            [flow for flow in flows if flow.user_id is not None],
+            is_action=bool(project_id),
+        )
+        visible = await filter_mcp_flows(current_user, list(name_map.values()))
+        visible_ids = {flow.id for flow in visible}
+        for name, flow in name_map.items():
+            if flow.id not in visible_ids:
+                continue
+            if project_id:
+                description = flow.action_description or (
+                    flow.description if flow.description else f"Tool generated from flow: {name}"
+                )
+            else:
+                description = (
+                    f"{flow.id}: {flow.description}" if flow.description else f"Tool generated from flow: {name}"
+                )
 
-                try:
-                    tool = types.Tool(
-                        name=name,
-                        description=description,
-                        inputSchema=json_schema_from_flow(flow),
-                    )
-                    tools.append(tool)
-                except Exception as e:  # noqa: BLE001
-                    # Type only: the project endpoint answers end users on the serving plane, and a raw
-                    # exception string carries paths, SQL and component internals. The full
-                    # message stays in the error log below, where only the operator reads it.
-                    excluded.append({"flow_id": str(flow.id), "tool_name": name, "reason": type(e).__name__})
-                    await logger.aerror(f"Flow excluded from MCP tool list -- {name} ({flow.id}): {e!s}")
-                    continue
+            try:
+                tool = types.Tool(
+                    name=name,
+                    description=description,
+                    inputSchema=json_schema_from_flow(flow),
+                )
+                tools.append(tool)
+            except Exception as e:  # noqa: BLE001
+                # Type only: the project endpoint answers end users on the serving plane, and a raw
+                # exception string carries paths, SQL and component internals. The full
+                # message stays in the error log below, where only the operator reads it.
+                excluded.append({"flow_id": str(flow.id), "tool_name": name, "reason": type(e).__name__})
+                await logger.aerror(f"Flow excluded from MCP tool list -- {name} ({flow.id}): {e!s}")
+                continue
 
-            # A project that answers 200 with an empty list reads as "no tools configured".
-            # If every flow was dropped, say so instead of letting the deploy look healthy.
-            # Scoped to the project endpoint: the global server is the editor-plane surface,
-            # where an empty list is a normal state and raising would be a UI regression.
-            if project_id and excluded and not tools:
-                raise RuntimeError(_format_excluded(excluded))
+        # A project that answers 200 with an empty list reads as "no tools configured".
+        # If every flow was dropped, say so instead of letting the deploy look healthy.
+        # Scoped to the project endpoint: the global server is the editor-plane surface,
+        # where an empty list is a normal state and raising would be a UI regression.
+        if project_id and excluded and not tools:
+            raise RuntimeError(_format_excluded(excluded))
     except Exception as e:
         msg = f"Error in listing tools: {e!s}"
         await logger.aexception(msg)

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from lfx.log.logger import logger
-from lfx.services.authorization.base import ResourceVisibilityScope
+from lfx.services.authorization.base import ExecutionPrincipal, ResourceVisibilityScope
 from lfx.services.settings.constants import AGENTIC_VARIABLES
 from lfx.services.variable import VariableNotFoundError
 from sqlmodel import col, select, update
@@ -304,6 +304,7 @@ class DatabaseVariableService(VariableService, Service):
             authz = get_authorization_service()
             if not await authz.is_enabled() or not await authz.supports_cross_user_fetch():
                 raise
+            dependency_context = {"execution_principal": ExecutionPrincipal(kind="actor", user_id=str(user_id))}
             get_visibility = getattr(authz, "get_resource_visibility", None)
             if get_visibility is None:
                 # Compatibility for duck-typed authorization services that
@@ -313,6 +314,7 @@ class DatabaseVariableService(VariableService, Service):
                     resource_type="variable",
                     domain="*",
                     act="read",
+                    context=dependency_context,
                 )
                 visibility = None if visible_ids is None else ResourceVisibilityScope(resource_ids=tuple(visible_ids))
             else:
@@ -321,6 +323,7 @@ class DatabaseVariableService(VariableService, Service):
                     resource_type="variable",
                     domain="*",
                     act="read",
+                    context=dependency_context,
                 )
             if visibility is None or not (visibility.all_resources or visibility.resource_ids):
                 raise
