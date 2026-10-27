@@ -250,6 +250,8 @@ class RuntimeSettings(BaseModel):
     no inbound provider deliveries at all (a firewalled install using Track B
     listeners only); every ingress request then answers 404 exactly as an
     unknown trigger id does, so disabling it leaks nothing either."""
+    trigger_ingress_origin: str | None = None
+    """Operator-advertised HTTPS origin for push providers without OAuth callbacks."""
     trigger_ingress_max_body_bytes: int = Field(default=1_048_576, gt=0)
     """Per-route body cap for an ingress delivery, independent of the global
     request limit. Provider notifications are small - Graph basic notifications
@@ -351,6 +353,10 @@ class RuntimeSettings(BaseModel):
 
     webhook_polling_interval: int = 0
     """The polling interval for the webhook in ms. Set to 0 to disable (SSE provides real-time updates)."""
+    trigger_polling_interval: int = Field(default=5000, ge=1000)
+    """How often, in ms, the triggers UI re-fetches trigger state. Triggers have no event
+    stream, so state converges at this cadence; the floor keeps a misconfiguration from
+    turning every open settings page into a tight polling loop."""
     fs_flows_polling_interval: int = 10000
     """The polling interval in milliseconds for synchronizing flows from the file system."""
 

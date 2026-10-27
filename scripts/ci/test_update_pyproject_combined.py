@@ -15,8 +15,9 @@ import update_uv_dependency
 
 
 @pytest.mark.parametrize("strict_bundle", [False, True])
+@pytest.mark.parametrize("operator", ["~=", "=="])
 def test_full_base_chain_uses_unprefixed_exact_dev_versions(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, strict_bundle: bool
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, operator: str, *, strict_bundle: bool
 ) -> None:
     (tmp_path / "src/backend/base").mkdir(parents=True)
     (tmp_path / "pyproject.toml").write_text(
@@ -48,6 +49,10 @@ def test_full_base_chain_uses_unprefixed_exact_dev_versions(
     monkeypatch.setattr(update_lf_base_dependency, "BASE_DIR", tmp_path)
     monkeypatch.setattr(update_uv_dependency, "BASE_DIR", tmp_path)
     monkeypatch.setattr(update_pyproject_combined, "BASE_DIR", tmp_path)
+
+    if operator == "==":
+        for path in [tmp_path / "pyproject.toml", tmp_path / "src/backend/base/pyproject.toml"]:
+            path.write_text(path.read_text().replace("~=1.12.0", "==1.12.0"))
 
     update_pyproject_combined.update_projects_for_nightly("v1.12.0.dev26", "v1.12.0.dev26", "v1.12.0.dev7")
 
