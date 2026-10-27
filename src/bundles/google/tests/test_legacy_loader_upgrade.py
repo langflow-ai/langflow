@@ -78,7 +78,7 @@ def test_saved_1_12_flow_opens_without_a_blocking_or_breaking_verdict() -> None:
 def test_the_legacy_loaders_are_not_exempted_from_the_upgrade_checker() -> None:
     """The exemption list short-circuits before the registry lookup.
 
-    ``_classify_node`` returns ``ok`` for an exempt type before it checks whether the
+    ``classify_node`` returns ``ok`` for an exempt type before it checks whether the
     component is in the registry at all, so listing these classes would also hide a
     ``blocked`` verdict (bundle uninstalled) and every future breaking change to them.
     A safe-update banner preserves these compatibility checks.

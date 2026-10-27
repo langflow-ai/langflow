@@ -349,7 +349,7 @@ def flow_node_id(node: Mapping[str, Any]) -> str:
     return node.get("id") or node.get("data", {}).get("id") or "unknown"
 
 
-def _classify_node(
+def classify_node(
     node: dict, registry: dict[str, dict], connected_fields: Collection[str] | None = None
 ) -> NodeStatus | None:
     data = node.get("data", {})
@@ -440,30 +440,25 @@ def _connected_fields_by_node(edges: list[dict] | None) -> dict[str, set[str]] |
     return connected
 
 
-def _classify_nodes_recursive(
-    nodes: list[dict],
-    registry: dict[str, dict],
-    statuses: list[NodeStatus],
-    edges: list[dict] | None,
-) -> None:
-    """Classify every node, recursing fully into nested grouped-component flows.
+def iter_flow_nodes(
+    nodes: list[dict], edges: list[dict] | None, group_path: tuple[str, ...] = ()
+) -> Iterator[tuple[dict, set[str] | None, tuple[str, ...]]]:
+    """Yield every node with the fields a connection goes into and the ids of the groups around it.
 
     Grouped components can nest arbitrarily deep (a group inside a group); each level lives
     under ``node.data.node.flow.data.nodes``. Walking only the first level would silently skip
     grandchildren, so we recurse all the way down, keeping the checker symmetric with the
-    applier, which also recurses fully.
+    applier, which also recurses fully. ``group_path`` lists the group ids, outermost first.
 
-    ``edges`` are the edges at this level, ``None`` when they are unknown. A nested level uses the
-    edges of its own flow, plus each edge into the group: it reaches the inner field that the
-    edge's own ``proxy`` names, or the group field's ``proxy`` when the edge has none, as
-    ``lfx.graph.graph.utils.update_target_handle`` resolves it.
+    ``edges`` are the edges at this level, ``None`` when they are unknown, and then the connected
+    fields are ``None`` too. A nested level uses the edges of its own flow, plus each edge into the
+    group: it reaches the inner field that the edge's own ``proxy`` names, or the group field's
+    ``proxy`` when the edge has none, as ``lfx.graph.graph.utils.update_target_handle`` resolves it.
     """
     connected = _connected_fields_by_node(edges)
     for node in nodes:
         node_id = flow_node_id(node)
-        status = _classify_node(node, registry, None if connected is None else connected.get(node_id, set()))
-        if status is not None:
-            statuses.append(status)
+        yield node, None if connected is None else connected.get(node_id, set()), group_path
         node_info = node.get("data", {}).get("node", {})
         nested_flow = node_info.get("flow", {}).get("data", {})
         nested = nested_flow.get("nodes")
@@ -483,7 +478,7 @@ def _classify_nodes_recursive(
                         nested_edges.append(
                             {"target": proxy.get("id"), "data": {"targetHandle": {"fieldName": proxy.get("field")}}}
                         )
-            _classify_nodes_recursive(nested, registry, statuses, nested_edges)
+            yield from iter_flow_nodes(nested, nested_edges, (*group_path, node_id))
 
 
 def check_flow_compatibility(
@@ -506,5 +501,8 @@ def check_flow_compatibility(
     if registry is None:
         registry = build_registry_lookup(all_types_dict)
     statuses: list[NodeStatus] = []
-    _classify_nodes_recursive(flow_data.get("nodes", []), registry, statuses, flow_data.get("edges"))
+    for node, connected_fields, _ in iter_flow_nodes(flow_data.get("nodes", []), flow_data.get("edges")):
+        status = classify_node(node, registry, connected_fields)
+        if status is not None:
+            statuses.append(status)
     return CompatibilityReport(nodes=statuses)
