@@ -10,7 +10,7 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
 
 The **Batch Run** component runs a language model over _each row of one text column_ in a [`Table`](/data-types#table), and then returns a new `Table` with the original text and an LLM response.
-Requests run in configurable batches. If a provider returns a rate-limit response, Batch Run retries the affected rows with a smaller batch, using the provider's `Retry-After` value when available and exponential backoff otherwise.
+Requests run in configurable batches. If a provider returns a rate-limit response, Batch Run retries the affected rows with a smaller batch, using a numeric `Retry-After` value when available (capped at 300 seconds) and exponential backoff otherwise. HTTP-date `Retry-After` values are not currently supported.
 The output contains the following columns:
 
 * `text_input`: The original text from the input `Table`

@@ -1,5 +1,6 @@
 import re
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, call, patch
 
 import pytest
 from langchain_core.messages import AIMessage
@@ -7,6 +8,85 @@ from lfx.components.llm_operations.batch_run import BatchRunComponent
 from lfx.schema import DataFrame
 
 from tests.base import ComponentTestBaseWithoutClient
+
+
+class _BatchModel:
+    def __init__(self, handler):
+        self.handler = handler
+        self.batch_sizes = []
+
+    async def abatch(self, conversations, **_kwargs):
+        self.batch_sizes.append(len(conversations))
+        return self.handler(conversations)
+
+
+def _conversations(count):
+    return [[{"role": "user", "content": str(index)}] for index in range(count)]
+
+
+@pytest.mark.asyncio
+async def test_run_conversations_limits_batch_size_and_delays_between_batches():
+    model = _BatchModel(lambda batch: [item[0]["content"] for item in batch])
+    component = BatchRunComponent(batch_size=2, delay_between_batches=0.25)
+
+    with patch("lfx.components.llm_operations.batch_run.asyncio.sleep", new_callable=AsyncMock) as sleep:
+        results = await component._run_conversations(model, _conversations(5))
+
+    assert results == ["0", "1", "2", "3", "4"]
+    assert model.batch_sizes == [2, 2, 1]
+    assert sleep.await_args_list == [call(0.25), call(0.25)]
+
+
+@pytest.mark.asyncio
+async def test_run_conversations_reduces_batch_and_retries_rate_limited_rows():
+    class RateLimitError(Exception):
+        status_code = 429
+        response = SimpleNamespace(headers={"Retry-After": "7.5"})
+
+    def handle_batch(batch):
+        if not model.batch_sizes[:-1]:
+            return [RateLimitError("busy") for _ in batch]
+        return [f"ok:{item[0]['content']}" for item in batch]
+
+    model = _BatchModel(handle_batch)
+    component = BatchRunComponent(batch_size=4, max_rate_limit_retries=1)
+
+    with patch("lfx.components.llm_operations.batch_run.asyncio.sleep", new_callable=AsyncMock) as sleep:
+        results = await component._run_conversations(model, _conversations(4))
+
+    assert results == ["ok:0", "ok:1", "ok:2", "ok:3"]
+    assert model.batch_sizes == [4, 2, 2]
+    sleep.assert_awaited_once_with(7.5)
+
+
+def test_rate_limit_detection_and_retry_after_bounds():
+    component = BatchRunComponent()
+
+    assert component._is_rate_limit_error(SimpleNamespace(status_code=429))
+    assert not component._is_rate_limit_error(SimpleNamespace(status_code=503, message="rate limit"))
+    assert component._is_rate_limit_error(RuntimeError("rate limit exceeded"))
+    assert component._retry_after_seconds(SimpleNamespace(retry_after="12")) == 12
+    assert component._retry_after_seconds(SimpleNamespace(retry_after="nan")) is None
+    assert component._retry_after_seconds(SimpleNamespace(retry_after="inf")) is None
+    assert component._retry_after_seconds(SimpleNamespace(retry_after="9999")) == 300
+
+
+@pytest.mark.asyncio
+async def test_run_conversations_stops_after_retry_limit():
+    class RateLimitError(Exception):
+        status_code = 429
+
+    model = _BatchModel(lambda batch: [RateLimitError("busy") for _ in batch])
+    component = BatchRunComponent(batch_size=2, max_rate_limit_retries=0)
+
+    with (
+        patch("lfx.components.llm_operations.batch_run.asyncio.sleep", new_callable=AsyncMock) as sleep,
+        pytest.raises(RateLimitError),
+    ):
+        await component._run_conversations(model, _conversations(2))
+
+    assert model.batch_sizes == [2]
+    sleep.assert_not_awaited()
 
 
 class _MockLLM:

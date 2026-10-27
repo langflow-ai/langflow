@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import math
 import time
+from http import HTTPStatus
 from typing import Any, cast
 
 import toml  # type: ignore[import-untyped]
@@ -31,6 +33,8 @@ from lfx.schema.token_usage import accumulate_usage, extract_usage_from_message
 
 
 class BatchRunComponent(Component):
+    MAX_RETRY_AFTER_SECONDS = 300.0
+
     display_name = "Batch Run"
     description = "Runs an LLM on each row of a DataFrame column. If no column is specified, all columns are used."
     documentation: str = "https://docs.langflow.org/batch-run"
@@ -82,7 +86,10 @@ class BatchRunComponent(Component):
         IntInput(
             name="batch_size",
             display_name="Batch Size",
-            info="Maximum number of model requests to run at the same time. Rate-limit responses reduce this automatically.",
+            info=(
+                "Maximum number of model requests to run at the same time. "
+                "Rate-limit responses reduce this automatically."
+            ),
             value=5,
             required=True,
             advanced=True,
@@ -183,9 +190,10 @@ class BatchRunComponent(Component):
         """Identify common provider rate-limit errors without depending on a provider SDK."""
         status_code = getattr(error, "status_code", None)
         response = getattr(error, "response", None)
-        status_code = status_code or getattr(response, "status_code", None)
-        if status_code == 429:
-            return True
+        if status_code is None:
+            status_code = getattr(response, "status_code", None)
+        if status_code is not None:
+            return status_code == HTTPStatus.TOO_MANY_REQUESTS
 
         error_text = f"{type(error).__name__}: {error}".lower()
         return "rate limit" in error_text or "rate_limit" in error_text or "too many requests" in error_text
@@ -202,7 +210,9 @@ class BatchRunComponent(Component):
             delay = float(retry_after)
         except (TypeError, ValueError):
             return None
-        return delay if delay >= 0 else None
+        if not math.isfinite(delay) or delay < 0:
+            return None
+        return min(delay, BatchRunComponent.MAX_RETRY_AFTER_SECONDS)
 
     async def _run_conversations(self, model: Any, conversations: list[list[dict[str, str]]]) -> list[Any]:
         """Run conversations in bounded batches, backing off and shrinking after 429s."""
