@@ -91,7 +91,7 @@ export function createFlowTracesColumns({
           params.data?.totalTokens,
           params.data?.total_tokens,
         );
-        return tokens === null ? "" : String(tokens);
+        return tokens === null ? "" : tokens.toLocaleString();
       },
     },
     {
