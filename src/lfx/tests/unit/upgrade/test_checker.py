@@ -5,6 +5,7 @@ from copy import deepcopy
 import pytest
 from lfx.upgrade.checker import (
     TOOL_OUTPUT_NAME,
+    breaking_reasons,
     build_registry_lookup,
     check_flow_compatibility,
 )
@@ -296,7 +297,7 @@ def _group(node_id: str, type_: str, child: dict) -> dict:
     }
 
 
-# --- _outputs_are_compatible must not flag cosmetic / widening changes -----------------
+# --- _output_reasons must not flag cosmetic / widening changes -------------------------
 
 
 def _output(types, display_name="Output", method="run"):
@@ -327,7 +328,7 @@ def test_outdated_breaking_when_output_types_narrowed():
     assert report.nodes[0].status == "outdated_breaking"
 
 
-# --- _shared_fields_compatible must allow widening -------------------------------------
+# --- _shared_field_reasons must allow widening -----------------------------------------
 
 
 def test_outdated_safe_when_input_types_widened():
@@ -554,3 +555,109 @@ def test_outdated_breaking_when_tool_mode_node_input_types_narrowed():
     registry = _registry(code=REGISTRY_CODE_V2, template_extra={"query": {"tool_mode": True, "input_types": ["Data"]}})
     report = check_flow_compatibility(_flow(node, edges=[_edge_into("query")]), registry)
     assert report.nodes[0].status == "outdated_breaking"
+
+
+# --- breaking_reasons names what breaks --------------------------------------------------
+
+_OUT = {"name": "out", "types": ["Message"], "method": "run", "allows_loop": False}
+_TOOL_OUT = {"name": TOOL_OUTPUT_NAME, "types": ["Tool"], "method": "to_toolkit", "allows_loop": False}
+
+
+def _entry(outputs=(_OUT,), **template):
+    return {"outputs": list(outputs), "template": {"code": {"value": REGISTRY_CODE_V2}, **template}}
+
+
+def _saved(outputs=(_OUT,), **template):
+    return {
+        "outputs": None if outputs is None else list(outputs),
+        "template": {"code": {"value": REGISTRY_CODE_V1}, **template},
+    }
+
+
+@pytest.mark.parametrize(
+    ("entry", "saved", "connected", "expected"),
+    [
+        pytest.param(
+            _entry(outputs=[{**_OUT, "name": "result"}]), _saved(), [], [("output_changed", "out")], id="output removed"
+        ),
+        pytest.param(
+            _entry(),
+            _saved(outputs=[{**_OUT, "types": ["Message", "Data"]}]),
+            [],
+            [("output_changed", "out")],
+            id="output narrowed",
+        ),
+        pytest.param(
+            _entry(outputs=[{**_OUT, "method": "build"}]), _saved(), [], [("output_changed", "out")], id="output method"
+        ),
+        pytest.param(
+            _entry(outputs=[{**_OUT, "allows_loop": True}]),
+            _saved(),
+            [],
+            [("output_changed", "out")],
+            id="output allows_loop",
+        ),
+        pytest.param(_entry(), _saved(outputs=None), [], [("output_changed", None)], id="saved node has no outputs"),
+        pytest.param(
+            _entry(query={"type": "str"}),
+            _saved(outputs=[_TOOL_OUT], query={"type": "str", "tool_mode": True}),
+            [],
+            [("output_changed", TOOL_OUTPUT_NAME)],
+            id="tool mode dropped",
+        ),
+        pytest.param(_entry(), _saved(old={"type": "str"}), [], [("field_removed", "old")], id="field removed"),
+        pytest.param(
+            _entry(api_key={"type": "str", "required": True, "value": ""}),
+            _saved(),
+            [],
+            [("required_input_missing", "api_key")],
+            id="new required field",
+        ),
+        pytest.param(
+            _entry(x={"type": "int"}),
+            _saved(x={"type": "str"}),
+            ["x"],
+            [("connection_dropped", "x")],
+            id="retyped, connected",
+        ),
+        pytest.param(
+            _entry(x={"type": "str", "input_types": ["Message"]}),
+            _saved(x={"type": "str", "input_types": ["Message", "Data"]}),
+            ["x"],
+            [("connection_dropped", "x")],
+            id="input_types narrowed, connected",
+        ),
+        pytest.param(
+            _entry(x={"type": "str", "tool_mode": True}),
+            _saved(outputs=[_TOOL_OUT], x={"type": "str"}),
+            ["x"],
+            [("connection_dropped", "x")],
+            id="now tool_mode on a tool-mode node, connected",
+        ),
+        pytest.param(
+            _entry(x={"type": "int"}),
+            _saved(x={"type": "str", "value": "hi"}),
+            [],
+            [("value_dropped", "x")],
+            id="retyped, holds a value",
+        ),
+        pytest.param(
+            _entry(x={"type": "int"}),
+            _saved(x={"type": "str", "value": "hi"}),
+            ["x"],
+            [("connection_dropped", "x")],
+            id="retyped, connected and holds a value",
+        ),
+    ],
+)
+def test_breaking_reason_codes(entry, saved, connected, expected):
+    """Each kind of break gets its reason code and names the field or output it is about."""
+    reasons = breaking_reasons(entry, saved, connected)
+    assert [(reason.code, reason.field) for reason in reasons] == expected
+    assert all(reason.message for reason in reasons)
+
+
+def test_breaking_reasons_lists_every_reason():
+    """The rule keeps checking after the first reason it finds."""
+    reasons = breaking_reasons(_entry(outputs=[]), _saved(old={"type": "str"}), [])
+    assert [(reason.code, reason.field) for reason in reasons] == [("output_changed", "out"), ("field_removed", "old")]

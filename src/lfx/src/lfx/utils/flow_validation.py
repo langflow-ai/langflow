@@ -1501,7 +1501,7 @@ def _registry_entry_for_component_type(component_type: str) -> Mapping[str, Any]
 def _unfillable_required_fields(registry_template: Mapping[str, Any], flow_template: Mapping[str, Any]) -> list[str]:
     """Name the server inputs a saved node cannot supply, using the checker's own rule.
 
-    These are exactly the fields ``_template_keys_compatible`` refuses to introduce silently: a
+    These are exactly the fields ``_template_key_reasons`` refuses to introduce silently: a
     required input the saved node has no key for and whose declared state cannot fill it.
     """
     from lfx.upgrade.checker import new_template_field_keys

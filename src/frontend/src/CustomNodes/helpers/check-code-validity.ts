@@ -267,7 +267,7 @@ export const checkCodeValidity = (
 
 // Every output the saved node has must still exist with the same method and loop setting, and may
 // produce more types than the saved node knew (aliases applied), never fewer. An added output and a
-// display name change are safe. Must match _outputs_are_compatible in
+// display name change are safe. Must match _output_reasons in
 // src/lfx/src/lfx/upgrade/checker.py.
 const outputsCompatible = (
   originalOutputs: OutputFieldType[],
@@ -296,7 +296,7 @@ const holdsValue = (value: unknown): boolean =>
   );
 
 // Fields both sides have must keep their saved edges and saved values. Must match
-// _shared_fields_compatible in src/lfx/src/lfx/upgrade/checker.py. Undefined connectedFields
+// _shared_field_reasons in src/lfx/src/lfx/upgrade/checker.py. Undefined connectedFields
 // means the connections are unknown, so every field counts as connected.
 // - A changed field type is breaking when an edge goes into the field, because cleanEdges keeps
 //   an edge only when the handle's field type is equal. It is also breaking when the saved field
@@ -345,7 +345,7 @@ const sharedFieldsCompatible = (
 };
 
 // Template key sets are compared directionally, not for equality. Must match
-// _template_keys_compatible in src/lfx/src/lfx/upgrade/checker.py:
+// _template_key_reasons in src/lfx/src/lfx/upgrade/checker.py:
 // - A field only the saved node has is one the current component dropped, or one the
 //   component added while it was edited (Run Flow inputs, MCP Tools arguments). The update
 //   drops the field, its value, and any edge into it, so it is always breaking, connected or not.
