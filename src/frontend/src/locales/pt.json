@@ -3528,5 +3528,8 @@
   "triggers.events.state.skipped": "Ignorado",
   "triggers.events.filters.skipped": "Ignorados",
   "triggers.eventError.sender_not_allowed": "O remetente não está na lista de números permitidos.",
-  "triggers.events.skippedCannotReplay": "Eventos ignorados não podem ser repetidos. Atualize o filtro de remetentes e envie uma nova mensagem."
+  "triggers.events.skippedCannotReplay": "Eventos ignorados não podem ser repetidos. Atualize o filtro de remetentes e envie uma nova mensagem.",
+  "modelProviders.openRouterModelHint": "Escolha um modelo listado ou insira um ID de modelo de decisão do OpenRouter. O OpenRouter determina quais solicitações o modelo suporta.",
+  "modelProviders.searchOrAddModel": "Pesquisar ou adicionar um ID de modelo…",
+  "modelProviders.addDecisionModel": "Adicionar modelo de decisão \"{{name}}\""
 }

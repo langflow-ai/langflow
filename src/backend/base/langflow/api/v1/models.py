@@ -427,7 +427,14 @@ async def list_models(
     # that ship no static catalog rows) still receive is_enabled/is_configured (#13735).
     configured_providers = {p for p, configured in provider_configured_status.items() if configured}
     configured_providers = {provider for provider in configured_providers if provider_policy.allows(provider)}
-    replace_with_live_models(filtered_models, current_user.id, configured_providers, model_type)
+    await asyncio.to_thread(
+        replace_with_live_models,
+        filtered_models,
+        current_user.id,
+        configured_providers,
+        model_type,
+        get_model_provider_metadata(),
+    )
 
     # Merge free-text custom deployments into the catalog (honors list_models filters).
     explicitly_enabled_models = await _get_enabled_models(session=session, current_user=current_user)
@@ -452,7 +459,7 @@ async def list_models(
     # Providers whose model list is discovered from the provider's endpoint
     # once credentials are configured. The UI uses this to explain an empty
     # (or seed-only) catalog instead of presenting it as "no models exist".
-    live_discovery_providers = set(LIVE_MODEL_PROVIDERS) | set(get_live_only_providers())
+    live_discovery_providers = set(LIVE_MODEL_PROVIDERS) | set(get_live_only_providers()) | {"TypeSafe"}
 
     for provider_dict in filtered_models:
         prov_name = provider_dict.get("provider")
@@ -466,6 +473,13 @@ async def list_models(
             for row in provider_dict["models"]
             if _not_a_blocked_decision_model(
                 provider_policy, prov_name, row["model_name"], (row.get("metadata") or {}).get("model_type")
+            )
+            and (
+                (row.get("metadata") or {}).get("model_type") != "decision"
+                or (
+                    (model_name is None or row["model_name"] == model_name)
+                    and all((row.get("metadata") or {}).get(k) == v for k, v in metadata_filters.items())
+                )
             )
         ]
         if len(allowed) != len(provider_dict["models"]):
@@ -1038,7 +1052,7 @@ async def _get_enabled_models_result(
     configured_providers = {
         provider for provider, configured in provider_status.items() if configured and provider_policy.allows(provider)
     }
-    replace_with_live_models(all_models_by_provider, current_user.id, configured_providers)
+    await asyncio.to_thread(replace_with_live_models, all_models_by_provider, current_user.id, configured_providers)
 
     # Get disabled and explicitly enabled models lists
     disabled_models = await _get_disabled_models(session=session, current_user=current_user)

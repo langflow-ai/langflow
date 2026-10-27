@@ -533,6 +533,7 @@ def get_decision_model_options(
     *,
     provider_policy: ModelProviderPolicySnapshot | None = None,
     require_configured: bool = True,
+    provider_filter: str | None = None,
 ) -> list[dict[str, Any]]:
     """Return enabled decision models; configuration read failures propagate.
 
@@ -560,7 +561,28 @@ def get_decision_model_options(
         if require_configured:
             configured = run_until_complete(_fetch_enabled_providers_for_user(user_id, provider_policy=provider_policy))
     options: list[dict[str, Any]] = []
-    for group in get_unified_models_detailed(model_type="decision"):
+    groups = get_unified_models_detailed(
+        model_type="decision", providers=[provider_filter] if provider_filter else None
+    )
+    if (
+        provider_filter in (None, "OpenRouter")
+        and provider_policy.allows("OpenRouter")
+        and (configured is None or "OpenRouter" in configured)
+    ):
+        replace_with_live_models(groups, user_id, {"OpenRouter"}, "decision", model_provider_metadata)
+    if (
+        provider_filter in (None, "TypeSafe")
+        and provider_policy.allows("TypeSafe")
+        and (configured is None or "TypeSafe" in configured)
+    ):
+        from lfx.base.models.model_utils import get_provider_variable_value
+
+        if get_provider_variable_value(user_id, "TYPESAFE_API_KEY"):
+            replace_with_live_models(groups, user_id, {"TypeSafe"}, "decision", model_provider_metadata)
+    inject_custom_enabled_models(groups, enabled, model_type="decision")
+    for group in groups:
+        if provider_filter is not None and group["provider"] != provider_filter:
+            continue
         provider = group["provider"]
         if not provider_policy.allows(provider) or (configured is not None and provider not in configured):
             continue

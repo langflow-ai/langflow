@@ -78,7 +78,15 @@ def evaluate_decision(
         msg = f"{model_name} is switched off in Model Providers. Turn it on there, or pick another Decision Model."
         raise DecisionConfigurationError(msg)
     # Flow-supplied capabilities and endpoints are not authoritative.
-    choices = unified_models.get_decision_model_options(provider_policy=policy, require_configured=False)
+    if provider in {"OpenRouter", "TypeSafe"}:
+        # Discovery is not an execution dependency. TypeSafe also accepts pinned IDs omitted by its list.
+        choices = [
+            {"provider": provider, "name": model_name, "metadata": {"capabilities": ["choice", "boolean", "score"]}}
+        ]
+    else:
+        choices = unified_models.get_decision_model_options(
+            provider_policy=policy, require_configured=False, provider_filter=provider
+        )
     selected = next((row for row in choices if row["provider"] == provider and row["name"] == model_name), None)
     if selected is None:
         msg = "The selected Decision Model is no longer offered. Pick another Decision Model."
