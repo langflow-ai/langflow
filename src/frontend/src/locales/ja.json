@@ -3327,5 +3327,6 @@
   "triggers.secret.notSet": "未設定。作成するまでリクエストは拒否されます。",
   "modelProviders.openRouterModelHint": "一覧からモデルを選択するか、OpenRouterの判断モデルIDを入力してください。モデルが対応するリクエストはOpenRouterが決定します。",
   "modelProviders.searchOrAddModel": "モデルIDを検索または追加…",
-  "modelProviders.addDecisionModel": "判断モデル「{{name}}」を追加"
+  "modelProviders.addDecisionModel": "判断モデル「{{name}}」を追加",
+  "modelProviders.decisionDiscoveryError": "意思決定モデルを読み込めませんでした。このプロバイダーの認証情報を確認して、もう一度お試しください。他のプロバイダーは引き続き利用できます。"
 }

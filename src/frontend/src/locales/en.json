@@ -3326,5 +3326,6 @@
   "triggers.secret.notSet": "Not set. Requests are refused until you create one.",
   "modelProviders.openRouterModelHint": "Choose a listed model or enter an OpenRouter decision model ID. OpenRouter determines which requests the model supports.",
   "modelProviders.searchOrAddModel": "Search or add a model ID…",
-  "modelProviders.addDecisionModel": "Add decision model \"{{name}}\""
+  "modelProviders.addDecisionModel": "Add decision model \"{{name}}\"",
+  "modelProviders.decisionDiscoveryError": "Decision models could not be loaded. Check this provider’s credentials and try again. Other providers are still available."
 }

@@ -6,7 +6,7 @@ import contextlib
 from collections import Counter
 from typing import TYPE_CHECKING, Any
 
-from lfx.base.models.decision_constants import is_decision_row
+from lfx.base.models.decision_constants import LIVE_DECISION_PROVIDERS, is_decision_row
 from lfx.base.models.model_metadata import EXPLICIT_ENABLE_ONLY_PROVIDERS, get_provider_param_mapping
 from lfx.base.models.model_utils import apply_metadata_filters, inject_custom_enabled_models, replace_with_live_models
 from lfx.utils.async_helpers import run_until_complete
@@ -18,7 +18,12 @@ from .credentials import (
     _keeps_model_settings,
     model_status_contains,
 )
-from .provider_queries import get_model_providers, get_models_detailed, model_provider_metadata
+from .provider_queries import (
+    get_model_providers,
+    get_models_detailed,
+    get_provider_secret_variable_key,
+    model_provider_metadata,
+)
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -534,12 +539,15 @@ def get_decision_model_options(
     provider_policy: ModelProviderPolicySnapshot | None = None,
     require_configured: bool = True,
     provider_filter: str | None = None,
+    discovery_errors: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     """Return enabled decision models; configuration read failures propagate.
 
     Without a user, and in standalone lfx, which keeps no Model Providers settings, any
     catalog model policy allows can be selected; its credentials come from request
     variables or the environment. With saved settings, a user's providers and switches apply.
+    Discovery failures omit that provider's live rows and populate discovery_errors when supplied,
+    or log a warning for standalone callers. They do not remove healthy providers' options.
     """
     # A component outside a graph reports the placeholder user id "None".
     if isinstance(user_id, str) and user_id == "None":
@@ -564,21 +572,27 @@ def get_decision_model_options(
     groups = get_unified_models_detailed(
         model_type="decision", providers=[provider_filter] if provider_filter else None
     )
-    if (
-        provider_filter in (None, "OpenRouter")
-        and provider_policy.allows("OpenRouter")
-        and (configured is None or "OpenRouter" in configured)
-    ):
-        replace_with_live_models(groups, user_id, {"OpenRouter"}, "decision", model_provider_metadata)
-    if (
-        provider_filter in (None, "TypeSafe")
-        and provider_policy.allows("TypeSafe")
-        and (configured is None or "TypeSafe" in configured)
-    ):
-        from lfx.base.models.model_utils import get_provider_variable_value
+    from lfx.base.models.model_utils import get_provider_variable_value
 
-        if get_provider_variable_value(user_id, "TYPESAFE_API_KEY"):
-            replace_with_live_models(groups, user_id, {"TypeSafe"}, "decision", model_provider_metadata)
+    # Discover only where a key could run the result. Without one, OpenRouter's public list would
+    # still be fetched (failing offline installs) and TypeSafe's seed would be replaced by nothing.
+    live = {
+        provider
+        for provider in LIVE_DECISION_PROVIDERS
+        if provider_filter in (None, provider)
+        and provider_policy.allows(provider)
+        and (configured is None or provider in configured)
+        and get_provider_variable_value(user_id, get_provider_secret_variable_key(provider))
+    }
+    replace_with_live_models(groups, user_id, live, "decision", model_provider_metadata, tolerate_discovery_errors=True)
+    for group in groups:
+        if error := group.get("discovery_error"):
+            if discovery_errors is not None:
+                discovery_errors[group["provider"]] = error
+            else:
+                from lfx.log.logger import logger
+
+                logger.warning(error)
     inject_custom_enabled_models(groups, enabled, model_type="decision")
     for group in groups:
         if provider_filter is not None and group["provider"] != provider_filter:

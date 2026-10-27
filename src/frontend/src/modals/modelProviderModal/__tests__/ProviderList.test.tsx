@@ -384,3 +384,24 @@ it("keeps unconfigured OpenRouter visible in the decision provider list", () => 
   render(<ProviderList modelType="decision" />);
   expect(screen.getByTestId("provider-item-OpenRouter")).toBeInTheDocument();
 });
+
+it("keeps a failed decision provider selectable for credential repair", () => {
+  const query = jest.requireMock(
+    "@/controllers/API/queries/models/use-get-model-providers",
+  ).useGetModelProviders;
+  query.mockReturnValueOnce({
+    data: [
+      {
+        provider: "TypeSafe",
+        models: [],
+        is_configured: true,
+        live_discovery: true,
+        discovery_error: "Discovery unavailable",
+      },
+    ],
+    isLoading: false,
+    isFetching: false,
+  });
+  render(<ProviderList modelType="decision" />);
+  expect(screen.getByRole("button", { name: /TypeSafe/ })).toBeEnabled();
+});

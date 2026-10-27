@@ -3327,5 +3327,6 @@
   "triggers.secret.notSet": "Nicht festgelegt. Anfragen werden abgelehnt, bis Sie eines erstellen.",
   "modelProviders.openRouterModelHint": "Wähle ein aufgeführtes Modell oder gib eine OpenRouter-Entscheidungsmodell-ID ein. OpenRouter bestimmt, welche Anfragen das Modell unterstützt.",
   "modelProviders.searchOrAddModel": "Modell-ID suchen oder hinzufügen…",
-  "modelProviders.addDecisionModel": "Entscheidungsmodell „{{name}}“ hinzufügen"
+  "modelProviders.addDecisionModel": "Entscheidungsmodell „{{name}}“ hinzufügen",
+  "modelProviders.decisionDiscoveryError": "Entscheidungsmodelle konnten nicht geladen werden. Prüfen Sie die Zugangsdaten dieses Anbieters und versuchen Sie es erneut. Andere Anbieter sind weiterhin verfügbar."
 }

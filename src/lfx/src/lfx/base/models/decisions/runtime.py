@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
+from lfx.base.models.decision_constants import LIVE_DECISION_PROVIDERS
 from lfx.base.models.decisions.schema import DecisionConfigurationError, DecisionRequest
 from lfx.schema.properties import Usage
 from lfx.services.variable.request_scope import variable_name_forms
@@ -73,25 +74,22 @@ def evaluate_decision(
         raise DecisionConfigurationError(msg)
     # Flow-supplied capabilities and endpoints are not authoritative. As for a language model, a run
     # checks policy and the catalog, not Model Providers' on/off switches: those only shape the picker.
-    if provider in {"OpenRouter", "TypeSafe"}:
-        # Discovery is not an execution dependency. TypeSafe also accepts pinned IDs omitted by its list.
-        choices = [
-            {"provider": provider, "name": model_name, "metadata": {"capabilities": ["choice", "boolean", "score"]}}
-        ]
-    else:
+    # A live catalog is not an execution dependency: its provider rejects an unknown ID or Decision Type,
+    # and TypeSafe also accepts pinned IDs omitted by its list.
+    if provider not in LIVE_DECISION_PROVIDERS:
         choices = unified_models.get_decision_model_options(
             provider_policy=policy, require_configured=False, provider_filter=provider
         )
-    selected = next((row for row in choices if row["provider"] == provider and row["name"] == model_name), None)
-    if selected is None:
-        msg = "The selected Decision Model is no longer offered. Pick another Decision Model."
-        raise DecisionConfigurationError(msg)
-    if request.kind not in selected.get("metadata", {}).get("capabilities", []):
-        msg = (
-            f"{model_name} doesn't support the {request.kind.title()} Decision Type. "
-            "Pick another Decision Type or Decision Model."
-        )
-        raise DecisionConfigurationError(msg)
+        selected = next((row for row in choices if row["provider"] == provider and row["name"] == model_name), None)
+        if selected is None:
+            msg = "The selected Decision Model is no longer offered. Pick another Decision Model."
+            raise DecisionConfigurationError(msg)
+        if request.kind not in selected.get("metadata", {}).get("capabilities", []):
+            msg = (
+                f"{model_name} doesn't support the {request.kind.title()} Decision Type. "
+                "Pick another Decision Type or Decision Model."
+            )
+            raise DecisionConfigurationError(msg)
 
     from lfx.base.models.decisions.providers import evaluate_provider, require_official_openai_endpoint
 

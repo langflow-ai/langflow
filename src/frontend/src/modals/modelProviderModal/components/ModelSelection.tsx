@@ -24,15 +24,15 @@ const CUSTOM_DEPLOYMENT_PROVIDERS = new Set(["Azure AI Foundry"]);
 
 /**
  * Providers that render their own useful UI when no catalog models exist.
- * They serve only language and embedding models, so a decision-only view
- * gets the generic empty state instead.
+ * Custom deployments and Ollama serve only language and embedding models, so
+ * a decision-only view gets the generic empty state instead; OpenRouter's
+ * decision view offers its own add-a-model-ID control.
  */
 export const hasProviderOwnedEmptyState = (
   providerName: string | undefined,
   modelType: ModelTypeFilter,
 ): boolean =>
-  (providerName === "OpenRouter" &&
-    kindsOfFilter(modelType).includes("decision")) ||
+  (providerName === "OpenRouter" && modelType === "decision") ||
   (!!providerName &&
     deploymentKindsOfFilter(modelType).length > 0 &&
     (CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName) ||
@@ -282,17 +282,21 @@ const ModelSelection = ({
   };
 
   const visibleKinds = kindsOfFilter(modelType);
+  // OpenRouter model IDs are added only from the decision view, so a chat ID
+  // typed elsewhere is never saved as a decision model.
+  const addsOpenRouterDecisions =
+    providerName === "OpenRouter" && modelType === "decision";
   const visibleDeploymentTypes = useMemo(
     () =>
-      providerName === "OpenRouter"
-        ? kindsOfFilter(modelType).filter((kind) => kind === "decision")
+      addsOpenRouterDecisions
+        ? kindsOfFilter(modelType)
         : deploymentKindsOfFilter(modelType),
-    [modelType, providerName],
+    [addsOpenRouterDecisions, modelType],
   );
   const supportsCustomDeployments =
     !!providerName &&
     (CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName) ||
-      providerName === "OpenRouter") &&
+      addsOpenRouterDecisions) &&
     visibleDeploymentTypes.length > 0;
 
   // Merge enabled free-text deployments; typed API wins, legacy customs default to llm.
@@ -331,7 +335,7 @@ const ModelSelection = ({
             model_name: name,
             metadata: {
               model_type: deploymentType,
-              icon: providerName === "OpenRouter" ? "OpenRouter" : "Azure",
+              icon: addsOpenRouterDecisions ? "OpenRouter" : "Azure",
             },
           });
         }
@@ -501,7 +505,7 @@ const ModelSelection = ({
     !!liveDiscovery &&
     !isConfigured &&
     !isOllama &&
-    (modelType !== "decision" || providerName === "OpenRouter");
+    (modelType !== "decision" || addsOpenRouterDecisions);
   // Use the unfiltered list for the empty-state check so an
   // ollama-no-models warning still fires when the search field happens to be
   // populated.
@@ -514,16 +518,17 @@ const ModelSelection = ({
 
   const showSearchInput = supportsCustomDeployments || !noModelsAvailable;
 
-  const searchInputLabel =
-    providerName === "OpenRouter" && supportsCustomDeployments
-      ? t("modelProviders.searchOrAddModel")
-      : supportsCustomDeployments
-        ? t("modelProviders.searchOrAddDeployment", {
-            defaultValue: "Search or add a deployment name…",
-          })
-        : t("modelProviders.searchModels", {
-            defaultValue: "Search models…",
-          });
+  const searchInputLabel = addsOpenRouterDecisions
+    ? t("modelProviders.searchOrAddModel", {
+        defaultValue: "Search or add a model ID…",
+      })
+    : supportsCustomDeployments
+      ? t("modelProviders.searchOrAddDeployment", {
+          defaultValue: "Search or add a deployment name…",
+        })
+      : t("modelProviders.searchModels", {
+          defaultValue: "Search models…",
+        });
 
   // A refusal won't change on retry: this user can't read the policy.
   const isAccessError = isAccessRefusal(enabledModelsError);
@@ -565,8 +570,11 @@ const ModelSelection = ({
           className="text-xs text-muted-foreground leading-relaxed"
           data-testid="custom-deployment-hint"
         >
-          {providerName === "OpenRouter"
-            ? t("modelProviders.openRouterModelHint")
+          {addsOpenRouterDecisions
+            ? t("modelProviders.openRouterModelHint", {
+                defaultValue:
+                  "Choose a listed model or enter an OpenRouter decision model ID. OpenRouter determines which requests the model supports.",
+              })
             : t("modelProviders.customDeploymentHint", {
                 defaultValue:
                   "Use your Azure AI Foundry deployment names from the portal (not catalog model IDs). Search or type a name to add one.",
@@ -603,9 +611,10 @@ const ModelSelection = ({
               }}
             >
               <ForwardedIconComponent name="Plus" className="mr-2 h-4 w-4" />
-              {providerName === "OpenRouter"
+              {addsOpenRouterDecisions
                 ? t("modelProviders.addDecisionModel", {
                     name: trimmedModelQuery,
+                    defaultValue: 'Add decision model "{{name}}"',
                   })
                 : modelType === "all"
                   ? deploymentType === "llm"

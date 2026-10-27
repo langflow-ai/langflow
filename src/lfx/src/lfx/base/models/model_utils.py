@@ -10,7 +10,7 @@ import httpx
 import requests
 from cachetools import TTLCache
 
-from lfx.base.models.decision_constants import is_decision_row
+from lfx.base.models.decision_constants import DECISION_CAPABILITIES, LIVE_DECISION_PROVIDERS, is_decision_row
 from lfx.base.models.model_metadata import (
     CONDITIONAL_LIVE_MODEL_PROVIDERS,
     EXPLICIT_ENABLE_ONLY_PROVIDERS,
@@ -1270,7 +1270,7 @@ def inject_custom_enabled_models(
             "default": False,
         }
         if openrouter_decision:
-            metadata["capabilities"] = ["choice", "boolean", "score"]
+            metadata["capabilities"] = list(DECISION_CAPABILITIES)
         if metadata_filters and any(metadata.get(k) != v for k, v in metadata_filters.items()):
             continue
 
@@ -1307,6 +1307,8 @@ def replace_with_live_models(
     enabled_providers: set[str] | list[str],
     model_type: str | None = None,
     provider_metadata: dict | None = None,
+    *,
+    tolerate_discovery_errors: bool = False,
 ) -> list[dict]:
     """Replace static model entries with live models for providers in LIVE_MODEL_PROVIDERS.
 
@@ -1320,6 +1322,7 @@ def replace_with_live_models(
         enabled_providers: Set/list of provider names that are currently enabled/configured.
         model_type: ``"llm"``, ``"embeddings"``, or ``None`` (fetch both and concatenate).
         provider_metadata: Optional dict of extra provider metadata to merge into the entry.
+        tolerate_discovery_errors: Return decision discovery errors on provider entries so settings stay editable.
 
     Returns:
         The (possibly modified) provider_models list.
@@ -1330,21 +1333,32 @@ def replace_with_live_models(
     for provider in (*LIVE_MODEL_PROVIDERS, *CONDITIONAL_LIVE_MODEL_PROVIDERS, "TypeSafe"):
         if provider not in enabled_providers:
             continue
-        if model_type == "decision" and provider not in {"OpenRouter", "TypeSafe"}:
+        if model_type == "decision" and provider not in LIVE_DECISION_PROVIDERS:
             continue
         if provider == "TypeSafe" and model_type not in (None, "decision"):
             continue
         if not user_id and model_type != "decision":
             continue
 
+        discovery_error = None
         if model_type is None:
             live_llm = get_live_models_for_provider(user_id, provider, "llm")
             live_emb = get_live_models_for_provider(user_id, provider, "embeddings")
             live_models = live_llm + live_emb
-            if provider in {"OpenRouter", "TypeSafe"}:
-                live_models += get_live_models_for_provider(user_id, provider, "decision")
+        elif model_type == "decision":
+            live_models = []
         else:
             live_models = get_live_models_for_provider(user_id, provider, model_type)
+        if provider in LIVE_DECISION_PROVIDERS and model_type in (None, "decision"):
+            from lfx.base.models.decisions.schema import DecisionConfigurationError
+
+            try:
+                live_models += get_live_models_for_provider(user_id, provider, "decision")
+            except DecisionConfigurationError as exc:
+                if not tolerate_discovery_errors:
+                    raise
+                # Keep credentials editable without presenting stale decision rows as live results.
+                discovery_error = str(exc)
 
         if provider in CONDITIONAL_LIVE_MODEL_PROVIDERS and not live_models:
             continue
@@ -1355,23 +1369,25 @@ def replace_with_live_models(
         replaced = False
         for provider_dict in provider_models:
             if provider_dict.get("provider") == provider:
-                # Chat/embedding discovery does not establish decision capability.
-                preserved_decisions = [
-                    row
-                    for row in provider_dict.get("models", [])
-                    if (model_type == "decision" and not is_decision_row(row))
-                    or (
-                        is_decision_row(row)
-                        and model_type != "decision"
-                        and not (provider in {"OpenRouter", "TypeSafe"} and model_type is None)
-                    )
-                ]
-                provider_dict["models"] = [*catalog_models, *preserved_decisions]
+                # Replace only the kinds just discovered: chat/embedding discovery does not
+                # establish decision capability, and decision discovery says nothing about chat.
+                rows = provider_dict.get("models", [])
+                if model_type == "decision":
+                    preserved = [row for row in rows if not is_decision_row(row)]
+                elif model_type is None and provider in LIVE_DECISION_PROVIDERS:
+                    preserved = []
+                else:
+                    preserved = [row for row in rows if is_decision_row(row)]
+                provider_dict["models"] = [*catalog_models, *preserved]
                 provider_dict["num_models"] = len(provider_dict["models"])
+                if discovery_error:
+                    provider_dict["discovery_error"] = discovery_error
+                else:
+                    provider_dict.pop("discovery_error", None)
                 replaced = True
                 break
 
-        if not replaced and catalog_models:
+        if not replaced and (catalog_models or discovery_error):
             entry: dict = {
                 "provider": provider,
                 "models": catalog_models,
@@ -1379,6 +1395,8 @@ def replace_with_live_models(
             }
             if provider_metadata and provider in provider_metadata:
                 entry.update(provider_metadata[provider])
+            if discovery_error:
+                entry["discovery_error"] = discovery_error
             provider_models.append(entry)
 
     return provider_models

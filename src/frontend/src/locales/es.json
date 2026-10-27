@@ -3327,5 +3327,6 @@
   "triggers.secret.notSet": "Sin configurar. Las solicitudes se rechazan hasta que crees uno.",
   "modelProviders.openRouterModelHint": "Elige un modelo de la lista o introduce un ID de modelo de decisión de OpenRouter. OpenRouter determina qué solicitudes admite el modelo.",
   "modelProviders.searchOrAddModel": "Buscar o añadir un ID de modelo…",
-  "modelProviders.addDecisionModel": "Añadir modelo de decisión «{{name}}»"
+  "modelProviders.addDecisionModel": "Añadir modelo de decisión «{{name}}»",
+  "modelProviders.decisionDiscoveryError": "No se pudieron cargar los modelos de decisión. Comprueba las credenciales de este proveedor e inténtalo de nuevo. Los demás proveedores siguen disponibles."
 }

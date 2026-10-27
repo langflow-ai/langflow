@@ -7,8 +7,8 @@ from threading import RLock
 import httpx
 from cachetools import TTLCache, cached
 
+from lfx.base.models.decision_constants import decision_model_metadata
 from lfx.base.models.decisions.schema import DecisionConfigurationError
-from lfx.base.models.model_metadata import create_model_metadata
 from lfx.base.models.provider_ssrf import provider_httpx_client_kwargs
 from lfx.utils.ssrf_protection import SSRFProtectionError
 
@@ -31,13 +31,7 @@ def _catalog(api_key: str) -> list[dict]:
         for row in rows:
             if not isinstance(row, dict) or not isinstance(row.get("name"), str) or not row["name"].strip():
                 raise ValueError
-            name = row["name"]
-            models[name] = {
-                **create_model_metadata(
-                    provider="TypeSafe", name=name, icon="Bot", model_type="decision", default=True
-                ),
-                "capabilities": ["choice", "boolean", "score"],
-            }
+            models[row["name"]] = decision_model_metadata("TypeSafe", row["name"], "Bot", default=True)
         return list(models.values())
     except (httpx.HTTPError, SSRFProtectionError, ValueError, TypeError):
         msg = "Could not load TypeSafe decision models. Check the TypeSafe API key and try refreshing again."
