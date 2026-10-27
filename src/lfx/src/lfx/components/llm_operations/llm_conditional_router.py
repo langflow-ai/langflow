@@ -3,7 +3,7 @@ from collections.abc import Mapping
 from math import floor, isfinite
 from typing import Any
 
-from lfx.base.models.decisions.runtime import evaluate_decision, request_variables_of
+from lfx.base.models.decisions.runtime import decision_token_usage, evaluate_decision, request_variables_of
 from lfx.base.models.decisions.schema import (
     DecisionConfigurationError,
     DecisionEvaluationError,
@@ -831,6 +831,8 @@ class SmartRouterComponent(Component):
             category = "permission_denied" if isinstance(exc, PermissionError) else "configuration_error"
             evidence.update(reason=category, error={"category": category, "message": str(exc)})
             raise
+        # A refusal is billed too, so its tokens count before the policy below decides where it goes.
+        self._token_usage = decision_token_usage(result)
         evidence["result"] = result.model_dump(exclude_none=True)
         if result.status == "refusal":
             evidence["reason"] = "refusal"
@@ -889,6 +891,7 @@ class SmartRouterComponent(Component):
         self._categorization_result = None
         self._excluded_outputs = set()
         self._decision_evidence = None
+        self._token_usage = None
         # Checked before any model is called, so a mismatch never costs an inference. Boolean's
         # Yes and No outputs don't come from a table, but must be the saved ones: a tweak that switches
         # a routes flow to Boolean would otherwise run every route branch.

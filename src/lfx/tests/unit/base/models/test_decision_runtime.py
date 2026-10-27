@@ -6,8 +6,9 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from lfx.base.models import unified_models
 from lfx.base.models.decisions import providers
-from lfx.base.models.decisions.runtime import evaluate_decision
+from lfx.base.models.decisions.runtime import decision_token_usage, evaluate_decision
 from lfx.base.models.decisions.schema import DecisionConfigurationError, DecisionRequest, DecisionResult
+from lfx.schema.properties import Usage
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyContext,
     ModelProviderPolicyError,
@@ -386,3 +387,43 @@ def test_per_request_keys_for_other_providers_are_ignored(execution):
     request, model, transport = execution
     evaluate_decision(request, model=model, request_variables={"ANTHROPIC_API_KEY": "sk-ant-other"})
     assert transport.call_args.kwargs["api_key"] == "sk-explicit-test"
+
+
+def _with_usage(usage):
+    return DecisionResult(kind="boolean", provider="TypeSafe", model="jev-1.13.0", probability_true=0.9, usage=usage)
+
+
+@pytest.mark.parametrize(
+    ("usage", "expected"),
+    [
+        (
+            {"input_tokens": 296, "output_tokens": 0, "total_tokens": 296},
+            Usage(input_tokens=296, output_tokens=0, total_tokens=296),
+        ),
+        # A provider that leaves out the total gets one summed from the counts it sent.
+        ({"input_tokens": 40, "output_tokens": 2}, Usage(input_tokens=40, output_tokens=2, total_tokens=42)),
+        ({"output_tokens": 3}, Usage(input_tokens=None, output_tokens=3, total_tokens=3)),
+        # Details Langflow doesn't show are left on the evidence.
+        (
+            {"input_tokens": 10, "output_tokens": 1, "input_tokens_details": {"cached_tokens": 8}},
+            Usage(input_tokens=10, output_tokens=1, total_tokens=11),
+        ),
+    ],
+)
+def test_decision_token_usage_reads_the_providers_counts(usage, expected):
+    assert decision_token_usage(_with_usage(usage)) == expected
+
+
+@pytest.mark.parametrize(
+    "usage",
+    [
+        None,
+        {},
+        {"total_tokens": 12},
+        # Not counts: a result built outside parse_response is never trusted to hold them.
+        {"input_tokens": -1, "output_tokens": "2"},
+        {"input_tokens": True, "output_tokens": 1.5},
+    ],
+)
+def test_decision_token_usage_is_none_without_counts(usage):
+    assert decision_token_usage(_with_usage(usage)) is None
