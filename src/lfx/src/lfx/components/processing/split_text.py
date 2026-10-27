@@ -98,9 +98,10 @@ class SplitTextComponent(Component):
                 msg = "DataFrame is empty"
                 raise TypeError(msg)
 
-            self.data_inputs.text_key = self.text_key
+            table = self.data_inputs.copy(deep=False)
+            table.text_key = self.text_key
             try:
-                documents = self.data_inputs.to_lc_documents()
+                documents = table.to_lc_documents()
             except Exception as e:
                 msg = f"Error converting DataFrame to documents: {e}"
                 raise TypeError(msg) from e
@@ -114,8 +115,8 @@ class SplitTextComponent(Component):
 
             documents = []
             if isinstance(self.data_inputs, Data):
-                self.data_inputs.text_key = self.text_key
-                documents = [self.data_inputs.to_lc_document()]
+                data = self.data_inputs.model_copy(update={"text_key": self.text_key})
+                documents = [data.to_lc_document()]
             else:
                 try:
                     documents = [input_.to_lc_document() for input_ in self.data_inputs if isinstance(input_, Data)]
