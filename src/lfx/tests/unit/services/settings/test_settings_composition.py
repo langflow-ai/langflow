@@ -62,10 +62,11 @@ def test_edition_reads_operator_environment(monkeypatch: pytest.MonkeyPatch) -> 
     assert Settings(_env_file=None).edition == "enterprise"
 
 
-def test_edition_rejects_unknown_values(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("LANGFLOW_EDITION", "premium")
-    with pytest.raises(ValidationError):
-        Settings(_env_file=None)
+@pytest.mark.parametrize("edition", ["premium", ""])
+def test_edition_defaults_for_unsupported_values(monkeypatch: pytest.MonkeyPatch, edition: str) -> None:
+    """An unsupported telemetry edition must not prevent settings initialization."""
+    monkeypatch.setenv("LANGFLOW_EDITION", edition)
+    assert Settings(_env_file=None).edition == "opensource"
 
 
 # Every field the composed Settings must expose: the original monolith fields

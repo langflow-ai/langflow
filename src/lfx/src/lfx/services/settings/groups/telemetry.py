@@ -1,6 +1,6 @@
-from typing import Literal
+from typing import Literal, get_args
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from lfx.services.telemetry.constants import DEFAULT_SEGMENT_WRITE_KEY, Edition
 
@@ -22,6 +22,12 @@ class TelemetrySettings(BaseModel):
     """Segment HTTP Tracking API endpoint."""
     edition: Edition = "opensource"
     """Product edition reported to Segment as ``productPlanName``. Enterprise images set ``enterprise``."""
+
+    @field_validator("edition", mode="before")
+    @classmethod
+    def normalize_edition(cls, value: str) -> str:
+        """Keep telemetry configuration from blocking application startup."""
+        return value if value in get_args(Edition) else "opensource"
 
     transactions_storage_enabled: bool = True
     """If set to True, Langflow will track transactions between flows."""
