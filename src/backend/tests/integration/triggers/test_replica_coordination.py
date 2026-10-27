@@ -401,6 +401,32 @@ async def test_stale_listener_cannot_rewind_cursor_and_duplicate_delivery_is_col
         assert len((await session.exec(select(TriggerEvent))).all()) == 1
 
 
+async def test_listener_processes_stop_after_background_consent_is_withdrawn(database, replicas):
+    from langflow.services.database.models.trigger.model import TriggerListenerLease
+
+    trigger = (await _arm(database, connections=1))[0]
+    first, second = replicas("listener-a"), replicas("listener-b")
+    assert await first.call("reconcile") == [str(trigger.connection_id)]
+    await first.call("capture")
+    args = {"connection": str(trigger.connection_id), "trigger": str(trigger.id)}
+    assert await first.call("emit", **args, key="before-withdrawal") is True
+    async with database.scope() as session:
+        connection = await session.get(Connection, trigger.connection_id)
+        connection.allow_non_interactive = False
+        session.add(connection)
+
+    for _ in range(3):
+        assert await first.call("reconcile") == []
+        assert await second.call("reconcile") == []
+    with pytest.raises(AssertionError, match="ListenerDeliveryRejectedError"):
+        await first.call("emit", **args, key="after-withdrawal")
+    async with database.scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        assert (row.state, row.last_error) == ("needs_reconnect", "connection_not_authorized")
+        assert await session.get(TriggerListenerLease, trigger.connection_id) is None
+        assert len((await session.exec(select(TriggerEvent))).all()) == 1
+
+
 async def test_stale_listener_generation_cannot_rewind_cursor(database, replicas):
     trigger = (await _arm(database, connections=1))[0]
     first, second = replicas("listener-same"), replicas("listener-same")

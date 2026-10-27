@@ -175,18 +175,25 @@ async def load_desired_state(session: AsyncSession) -> dict[UUID, list[ListenerT
     return desired
 
 
-async def unusable_connection_ids(session: AsyncSession, connection_ids: list[UUID]) -> set[UUID]:
+async def connection_reconnect_reasons(session: AsyncSession, connection_ids: list[UUID]) -> dict[UUID, str]:
     """Connections whose credential the owner has to re-grant."""
     if not connection_ids:
-        return set()
+        return {}
     statement = select(Connection).where(col(Connection.id).in_(connection_ids))
     rows = (await session.exec(statement)).all()
     found = {row.id for row in rows}
-    unusable = {row.id for row in rows if row.status in _UNUSABLE_CONNECTION_STATUSES}
+    reconnect_reason = "The connection was revoked or expired. Reconnect it to resume this trigger."
+    reasons = {}
+    for row in rows:
+        if not row.allow_non_interactive:
+            reasons[row.id] = "connection_not_authorized"
+        elif row.status in _UNUSABLE_CONNECTION_STATUSES:
+            reasons[row.id] = reconnect_reason
     # A connection row that vanished is unusable too: ``ON DELETE SET NULL``
     # clears the trigger's reference, but until reconciliation notices, the
     # listener would otherwise dial a connection that no longer exists.
-    return unusable | (set(connection_ids) - found)
+    reasons.update(dict.fromkeys(set(connection_ids) - found, reconnect_reason))
+    return reasons
 
 
 async def mark_needs_reconnect(session: AsyncSession, *, trigger_ids: list[UUID], reason: str) -> None:
@@ -383,12 +390,12 @@ class ListenerSupervisor:
         settings = get_settings_service().settings
         async with session_scope() as session:
             desired = await load_desired_state(session)
-            unusable = await unusable_connection_ids(session, list(desired))
-            for connection_id in unusable:
+            reconnect_reasons = await connection_reconnect_reasons(session, list(desired))
+            for connection_id, reason in reconnect_reasons.items():
                 await mark_needs_reconnect(
                     session,
                     trigger_ids=[trigger.id for trigger in desired[connection_id]],
-                    reason="The connection was revoked or expired. Reconnect it to resume this trigger.",
+                    reason=reason,
                 )
                 desired.pop(connection_id, None)
             # Announced before it is counted, so this replica is always in its
@@ -398,9 +405,13 @@ class ListenerSupervisor:
             self.live_replicas = await replicas.live_replicas(
                 session, reap_after_s=max(settings.listener_lease_ttl_s * 10, 300.0)
             )
+            held_connections = await connection_leases.held_by(
+                session, holder=self.holder, ttl_s=settings.listener_lease_ttl_s
+            )
 
         # Connections we hold but no longer want.
-        for connection_id in [cid for cid in self.workers if cid not in desired]:
+        # A peer may have disarmed triggers after a rejected delivery removed our worker.
+        for connection_id in (self.workers.keys() | held_connections | reconnect_reasons.keys()) - desired.keys():
             await self._drop(connection_id)
 
         self.fair_share = replicas.fair_share(total=len(desired), replicas=self.live_replicas)
@@ -537,9 +548,9 @@ class ListenerSupervisor:
 
     async def _drop(self, connection_id: UUID, *, release_lease: bool = True) -> None:
         worker = self.workers.pop(connection_id, None)
-        if worker is None:
-            return
-        await self._stop_worker(worker)
+        if worker is not None:
+            await self._stop_worker(worker)
+        # A delivery rejection may already have stopped the worker while retaining its lease.
         if release_lease:
             with contextlib.suppress(Exception):
                 async with session_scope() as session:
