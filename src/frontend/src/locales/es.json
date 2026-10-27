@@ -3531,5 +3531,6 @@
   "triggers.events.skippedCannotReplay": "Los eventos omitidos no se pueden repetir. Actualiza el filtro de remitentes y envía un mensaje nuevo.",
   "modelProviders.openRouterModelHint": "Elige un modelo de la lista o introduce un ID de modelo de decisión de OpenRouter. OpenRouter determina qué solicitudes admite el modelo.",
   "modelProviders.searchOrAddModel": "Buscar o añadir un ID de modelo…",
-  "modelProviders.addDecisionModel": "Añadir modelo de decisión «{{name}}»"
+  "modelProviders.addDecisionModel": "Añadir modelo de decisión «{{name}}»",
+  "modelProviders.decisionDiscoveryError": "No se pudieron cargar los modelos de decisión. Comprueba las credenciales de este proveedor e inténtalo de nuevo. Los demás proveedores siguen disponibles."
 }

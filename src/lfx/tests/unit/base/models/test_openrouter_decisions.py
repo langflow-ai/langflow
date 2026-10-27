@@ -1,6 +1,6 @@
 """Gateway discovery and explicit IDs share the existing policy and credential boundary."""
 
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import httpx
 import pytest
@@ -82,15 +82,22 @@ def test_discovery_does_not_mix_chat_and_decisions(monkeypatch):
     }
 
 
-def test_standalone_picker_lists_all_gateway_models():
+def test_standalone_picker_lists_all_gateway_models(monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "own-key")
     options = get_decision_model_options(provider_policy=policy())
     assert len(options) == 3
     assert all(o["provider"] == "OpenRouter" for o in options)
 
 
-def test_saved_custom_model_survives_discovery_and_honors_disabled_state(monkeypatch):
-    from unittest.mock import AsyncMock
+def test_standalone_picker_without_key_never_fetches(monkeypatch, public_catalog):
+    # An offline install without an OpenRouter key must not wait on, or fail from, the public list.
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    public_catalog.side_effect = AssertionError("no key, so no discovery")
+    assert get_decision_model_options(provider_policy=policy()) == []
 
+
+def test_saved_custom_model_survives_discovery_and_honors_disabled_state(monkeypatch):
+    monkeypatch.setattr("lfx.base.models.model_utils.get_provider_variable_value", lambda *_: "own-key")
     monkeypatch.setattr(model_catalog, "_keeps_model_settings", lambda: True)
     monkeypatch.setattr(model_catalog, "_fetch_enabled_providers_for_user", AsyncMock(return_value={"OpenRouter"}))
     monkeypatch.setattr(
@@ -153,3 +160,62 @@ def test_key_validation_for_new_model_uses_auth_not_chat_or_decision(monkeypatch
     )
     assert get.call_args.args[0] == "https://openrouter.ai/api/v1/auth/key"
     public_catalog.assert_not_called()
+
+
+def test_partial_discovery_keeps_chat_models_but_never_stale_decisions(monkeypatch):
+    from lfx.base.models import model_utils
+
+    def fetch(_user, _provider, kind):
+        if kind == "decision":
+            msg = "Decision discovery unavailable"
+            raise DecisionConfigurationError(msg)
+        return [{"name": "chat", "model_type": "llm"}] if kind == "llm" else []
+
+    monkeypatch.setattr(model_utils, "get_live_models_for_provider", fetch)
+    groups = [
+        {
+            "provider": "OpenRouter",
+            "models": [
+                {"model_name": "stale", "metadata": {"model_type": "decision"}},
+            ],
+        }
+    ]
+    with pytest.raises(DecisionConfigurationError):
+        replace_with_live_models(groups, "user", {"OpenRouter"})
+    replace_with_live_models(groups, "user", {"OpenRouter"}, tolerate_discovery_errors=True)
+    assert [row["model_name"] for row in groups[0]["models"]] == ["chat"]
+    assert groups[0]["discovery_error"] == "Decision discovery unavailable"
+    monkeypatch.setattr(model_utils, "get_live_models_for_provider", lambda *_: [])
+    replace_with_live_models(groups, "user", {"OpenRouter"}, tolerate_discovery_errors=True)
+    assert "discovery_error" not in groups[0]
+
+
+def test_picker_outage_preserves_healthy_options_and_reports_recovery(monkeypatch, public_catalog):
+    from types import SimpleNamespace
+
+    from lfx.base.models.unified_models.build_config import handle_model_input_update
+    from lfx.inputs.inputs import ModelInput
+
+    ids = frozenset({"openrouter", "openai"})
+    snapshot = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(),
+        purpose=ModelProviderPolicyPurpose.USE,
+        candidate_provider_ids=ids,
+        allowed_provider_ids=ids,
+    )
+    monkeypatch.setattr("lfx.services.model_provider_policy.resolve_model_provider_policy", lambda **_: snapshot)
+    monkeypatch.setenv("OPENROUTER_API_KEY", "own-key")
+    public_catalog.side_effect = httpx.ConnectError("offline")
+    selection = [{"provider": "OpenRouter", "name": "saved-id"}]
+    config = {"model": {"value": selection, "model_type": "decision"}}
+    component = SimpleNamespace(
+        user_id=None, inputs=[ModelInput(name="model", model_type="decision", info="Choose a model.")]
+    )
+    handle_model_input_update(component, config, None)
+    assert {row["provider"] for row in config["model"]["options"]} == {"OpenAI"}
+    assert "Could not load OpenRouter" in config["model"]["info"]
+    assert config["model"]["value"] == selection
+    public_catalog.side_effect = None
+    handle_model_input_update(component, config, None)
+    assert {row["provider"] for row in config["model"]["options"]} == {"OpenAI", "OpenRouter"}
+    assert config["model"]["info"] == "Choose a model."

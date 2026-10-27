@@ -80,6 +80,11 @@ describe("hasProviderOwnedEmptyState", () => {
       expect(hasProviderOwnedEmptyState(providerName, "decision")).toBe(false);
     },
   );
+
+  it("owns OpenRouter's empty state only in the decision view", () => {
+    expect(hasProviderOwnedEmptyState("OpenRouter", "decision")).toBe(true);
+    expect(hasProviderOwnedEmptyState("OpenRouter", "all")).toBe(false);
+  });
 });
 
 describe("ModelSelection", () => {

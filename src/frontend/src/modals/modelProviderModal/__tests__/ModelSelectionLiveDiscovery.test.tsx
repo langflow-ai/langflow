@@ -160,6 +160,31 @@ it("lets users add an OpenRouter decision ID absent from discovery", () => {
   );
 });
 
+it("never offers to add an OpenRouter ID as a decision model outside the decision view", () => {
+  render(
+    <ModelSelection
+      modelType="all"
+      availableModels={[
+        { model_name: "openai/gpt-chat", metadata: { model_type: "llm" } },
+      ]}
+      onModelToggle={noop}
+      providerName="OpenRouter"
+      liveDiscovery
+      isConfigured
+      isEnabledModel
+    />,
+  );
+  fireEvent.change(screen.getByTestId("model-search-input"), {
+    target: { value: "openai/another-chat" },
+  });
+  expect(
+    screen.queryByTestId("add-custom-decision-deployment-button"),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByTestId("custom-deployment-hint"),
+  ).not.toBeInTheDocument();
+});
+
 it("shows OpenRouter credential guidance in the decision view", () => {
   render(
     <ModelSelection
