@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Any, Literal
 from uuid import uuid4
@@ -24,6 +26,9 @@ from langflow.cli.admin.config import (
 )
 from langflow.cli.admin.directory_reconcile import DirectoryReconciler, DirectoryResolutionError
 from langflow.cli.admin.manifest import (
+    BearerDirectoryConnectionTrust,
+    DirectoryConnectionTrust,
+    directory_connection_payload,
     dump_admin_state,
     dump_directory_state,
     load_admin_state,
@@ -585,24 +590,77 @@ def directory_connection_get(ctx: typer.Context) -> None:
 @directory_connection_app.command("configure")
 def directory_connection_configure(
     ctx: typer.Context,
-    tenant_id: Annotated[str, typer.Option("--tenant-id")],
-    issuer: Annotated[str, typer.Option("--issuer")],
-    audience: Annotated[str, typer.Option("--audience")],
-    jwks_url: Annotated[str, typer.Option("--jwks-url")],
-    allowed_client_id: Annotated[str, typer.Option("--allowed-client-id")],
+    tenant_id: Annotated[str | None, typer.Option("--tenant-id")] = None,
+    issuer: Annotated[str | None, typer.Option("--issuer")] = None,
+    audience: Annotated[str | None, typer.Option("--audience")] = None,
+    jwks_url: Annotated[str | None, typer.Option("--jwks-url")] = None,
+    allowed_client_id: Annotated[str | None, typer.Option("--allowed-client-id")] = None,
+    auth_mode: Annotated[Literal["entra_jwt", "bearer_token"] | None, typer.Option("--auth-mode")] = None,
+    display_name: Annotated[str | None, typer.Option("--display-name")] = None,
+    sso_provider_key: Annotated[str | None, typer.Option("--sso-provider-key")] = None,
+    sso_issuer: Annotated[str | None, typer.Option("--sso-issuer")] = None,
+    subject_claim: Annotated[str | None, typer.Option("--subject-claim")] = None,
 ) -> None:
-    _emit(
-        ctx,
-        _api_call(
-            lambda: _client_from_context(ctx).configure_directory_connection(
-                tenant_id=tenant_id,
-                issuer=issuer,
-                audience=audience,
-                jwks_url=jwks_url,
-                allowed_client_id=allowed_client_id,
-            )
-        ),
-    )
+    values = {
+        "auth_mode": auth_mode,
+        "display_name": display_name,
+        "tenant_id": tenant_id,
+        "issuer": issuer,
+        "audience": audience,
+        "jwks_url": jwks_url,
+        "allowed_client_id": allowed_client_id,
+        "sso_provider_key": sso_provider_key,
+        "sso_issuer": sso_issuer,
+        "subject_claim": subject_claim,
+    }
+    model = BearerDirectoryConnectionTrust if auth_mode == "bearer_token" else DirectoryConnectionTrust
+    try:
+        connection = model.model_validate({name: value for name, value in values.items() if value is not None})
+    except ValidationError as exc:
+        detail = "; ".join(f"{'.'.join(map(str, error['loc']))}: {error['msg']}" for error in exc.errors())
+        _fail(ValueError(f"Invalid directory connection configuration: {detail}"), usage=True)
+    payload = directory_connection_payload(connection)
+    _emit(ctx, _api_call(lambda: _client_from_context(ctx).configure_directory_connection(**payload)))
+
+
+@directory_connection_app.command("token")
+def directory_connection_token(
+    ctx: typer.Context,
+    output_file: Annotated[Path, typer.Option("--output-file", help="New private file for the SCIM bearer token.")],
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Confirm invalidating the previous SCIM token.")] = False,
+) -> None:
+    if not yes:
+        _fail(ValueError("Token creation requires --yes and --output-file"), usage=True)
+    try:
+        descriptor = os.open(output_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except OSError:
+        _fail(ValueError("Token output must be a new writable file"), usage=True)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            os.fchmod(stream.fileno(), 0o600)
+            stream.flush()
+            os.fsync(stream.fileno())
+            result = _client_from_context(ctx).rotate_directory_connection_token()
+            invalid_response = "Invalid directory token response"
+            if not isinstance(result, dict):
+                raise TypeError(invalid_response)
+            token, expires_at = result.get("token"), result.get("expires_at")
+            if not isinstance(token, str) or not token or not isinstance(expires_at, str):
+                raise ValueError(invalid_response)
+            datetime.fromisoformat(expires_at)
+            json.dump({"token": token, "expires_at": expires_at}, stream)
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+    except (AdminAPIError, httpx.HTTPError, ConnectionConfigurationError, OSError, TypeError, ValueError):
+        output_file.unlink(missing_ok=True)
+        _fail(ValueError("Directory token creation failed. Check the connection before retrying."))
+    invocation: AdminInvocation = ctx.ensure_object(AdminInvocation)
+    if invocation.output == "json":
+        _emit(ctx, {"output_file": str(output_file), "expires_at": expires_at})
+    else:
+        typer.echo(f"Token file: {output_file}")
+        typer.echo(f"Expires at: {expires_at}")
 
 
 @directory_connection_app.command("validate")
