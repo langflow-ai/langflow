@@ -24,9 +24,7 @@ def workflow(name: str) -> dict:
 def test_core_packages_share_the_supported_python_range(member: str) -> None:
     project = tomllib.loads((REPO_ROOT / member / "pyproject.toml").read_text())["project"]
     versions = SpecifierSet(project["requires-python"])
-    assert "3.10" not in versions
-    assert all(version in versions for version in SUPPORTED | {EXPERIMENTAL})
-    assert "3.16" not in versions
+    assert versions == SpecifierSet(">=3.11,<3.16")
 
 
 @pytest.mark.parametrize("name", ["ci.yml", "python_test.yml", "backend-unit-tests.yml", "store_pytest_durations.yml"])

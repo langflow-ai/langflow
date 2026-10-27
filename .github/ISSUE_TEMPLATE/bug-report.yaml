@@ -100,7 +100,7 @@ body:
       label: "Python Version"
       description: |
 
-        **Langflow requires Python version 3.11 or greater.**
+        **Langflow supports Python 3.11 through 3.14. Python 3.15 support is experimental.**
       options:
         - "3.15"
         - "3.14"
