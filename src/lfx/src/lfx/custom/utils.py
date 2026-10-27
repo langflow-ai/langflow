@@ -31,7 +31,9 @@ from lfx.log.logger import logger
 from lfx.schema.dotdict import dotdict
 from lfx.template.field.base import Input
 from lfx.template.frontend_node.custom_components import ComponentFrontendNode, CustomComponentFrontendNode
+from lfx.template.utils import copy_saved_custom_field_values
 from lfx.type_extraction.type_extraction import extract_inner_type
+from lfx.utils.file_path_security import component_file_access_scopes
 from lfx.utils.util import get_base_classes
 
 if TYPE_CHECKING:
@@ -718,6 +720,31 @@ def build_custom_component_template(
                 "traceback": traceback.format_exc(),
             },
         ) from exc
+
+
+async def update_rebuilt_node(
+    component_instance: CustomComponent | Component,
+    frontend_node: dict[str, Any],
+    saved_node: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Carries the saved node's values into a node rebuilt from code and refreshes its tool-mode outputs.
+
+    This is what the editor's Update runs after rebuilding a node, and the upgrade check runs it too.
+    """
+    if saved_node is not None:
+        frontend_node = await component_instance.update_frontend_node(frontend_node, saved_node)
+        # The hook rebuilds custom fields (a Prompt's variables) from the template text with
+        # empty values; give them back the values the user saved.
+        copy_saved_custom_field_values(frontend_node, saved_node, component_file_access_scopes(component_instance))
+
+    if isinstance(component_instance, Component):
+        # Updates the node in place; the return value is not used.
+        await component_instance.run_and_validate_update_outputs(
+            frontend_node=frontend_node,
+            field_name="tool_mode",
+            field_value=frontend_node.get("tool_mode", False),
+        )
+    return frontend_node
 
 
 def create_component_template(
