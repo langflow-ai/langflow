@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from lfx.services.telemetry.constants import DEFAULT_SEGMENT_WRITE_KEY
+from lfx.services.telemetry.constants import DEFAULT_SEGMENT_WRITE_KEY, Edition
 
 
 class TelemetrySettings(BaseModel):
@@ -20,6 +20,8 @@ class TelemetrySettings(BaseModel):
     """Segment source write key. Official release artifacts include the production default."""
     segment_api_url: str = "https://api.segment.io/v1/track"
     """Segment HTTP Tracking API endpoint."""
+    edition: Edition = "opensource"
+    """Product edition reported to Segment as ``productPlanName``. Enterprise images set ``enterprise``."""
 
     transactions_storage_enabled: bool = True
     """If set to True, Langflow will track transactions between flows."""

@@ -52,6 +52,22 @@ def test_segment_has_no_write_key_in_source_checkout() -> None:
     assert Settings().segment_write_key == DEFAULT_SEGMENT_WRITE_KEY
 
 
+def test_edition_defaults_to_opensource(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LANGFLOW_EDITION", raising=False)
+    assert Settings(_env_file=None).edition == "opensource"
+
+
+def test_edition_reads_operator_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LANGFLOW_EDITION", "enterprise")
+    assert Settings(_env_file=None).edition == "enterprise"
+
+
+def test_edition_rejects_unknown_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LANGFLOW_EDITION", "premium")
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None)
+
+
 # Every field the composed Settings must expose: the original monolith fields
 # plus the settings added in 1.10.0 (folded into the mixins during the release
 # back-merge). Asserted as a set so a missing group in the inheritance chain —
@@ -129,6 +145,7 @@ EXPECTED_FIELDS = {
     "do_not_track",
     "segment_write_key",
     "segment_api_url",
+    "edition",
     "transactions_storage_enabled",
     "vertex_builds_storage_enabled",
     "sync_result_storage_enabled",
