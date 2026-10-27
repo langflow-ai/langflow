@@ -675,7 +675,8 @@ async def validate_provider(
         # Validate the credentials
         # Decision models and decision-only providers are validated with a decision, never chat.
         with _policy_denial_as_not_found():
-            validate_model_provider_key(
+            await asyncio.to_thread(
+                validate_model_provider_key,
                 request.provider,
                 variables,
                 request.model_name,
@@ -1250,12 +1251,13 @@ async def update_enabled_models(
             from lfx.base.models.unified_models import get_all_variables_for_provider, validate_model_provider_key
 
             # Get variables from DB or environment
-            variables = get_all_variables_for_provider(current_user.id, update.provider)
+            variables = await asyncio.to_thread(get_all_variables_for_provider, current_user.id, update.provider)
 
             try:
                 # Validate the credentials
                 with _policy_denial_as_not_found():
-                    validate_model_provider_key(
+                    await asyncio.to_thread(
+                        validate_model_provider_key,
                         update.provider,
                         variables,
                         model_name=update.model_id,
