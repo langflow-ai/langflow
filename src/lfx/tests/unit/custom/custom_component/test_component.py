@@ -409,6 +409,44 @@ def test_trace_masks_credential_headers():
     }
 
 
+def test_trace_masks_headers_in_configured_log_redact_keys(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_LOG_REDACT_KEYS", "x-company-credential, X-Company-Signature")
+
+    class TraceComponent(Component):
+        inputs = [TableInput(name="api_headers", value=[])]
+
+    component = TraceComponent()
+    component.set_attributes(
+        {
+            "api_headers": [
+                {"key": "X-Company-Credential", "value": "runtime-sentinel"},
+                {"key": "X-Company-Signature", "value": "runtime-sentinel"},
+                {"key": "X-Company-Region", "value": "eu"},
+            ]
+        }
+    )
+
+    assert component.get_trace_as_inputs()["api_headers"] == [
+        {"key": "X-Company-Credential", "value": "**********"},
+        {"key": "X-Company-Signature", "value": "**********"},
+        {"key": "X-Company-Region", "value": "eu"},
+    ]
+
+
+def test_trace_masks_credential_headers_nested_under_other_keys():
+    class TraceComponent(Component):
+        inputs = [DictInput(name="headers", is_list=True), TableInput(name="api_headers", value=[])]
+
+    nested = {"headers": {"Authorization": "Bearer runtime-sentinel", "X-Tenant": "acme"}}
+    component = TraceComponent()
+    component.set_attributes({"headers": nested, "api_headers": [Data(data=nested)]})
+
+    masked = {"headers": {"Authorization": "**********", "X-Tenant": "acme"}}
+    assert component.get_trace_as_inputs() == {"headers": masked, "api_headers": [Data(data=masked)]}
+    # Trace outputs and logs hide the nested value too.
+    assert component._sanitize_trace_value("sent Bearer runtime-sentinel") == "sent **********"
+
+
 class _RecordingTracingService(TracingService):
     """The minimal tracing service, keeping the outputs and logs a component sends to it."""
 

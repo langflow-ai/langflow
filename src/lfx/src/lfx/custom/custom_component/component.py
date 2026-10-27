@@ -36,7 +36,7 @@ from lfx.field_typing import Tool  # noqa: TC001
 # Lazy imports avoid circular deps: create_state_model (lfx.graph.state.model),
 # has_chat_output (lfx.graph.utils).
 from lfx.helpers.custom import format_type
-from lfx.log.logger import DEFAULT_REDACT_KEYS
+from lfx.log.logger import redact_keys
 from lfx.mcp.redact import is_sensitive_field
 from lfx.memory import astore_message, aupdate_messages, delete_message
 from lfx.schema.artifact import get_artifact_type, post_process_raw
@@ -107,19 +107,23 @@ def _mask_secret_value(value: Any) -> Any:
 
 def _is_credential_header(name: Any) -> bool:
     name = str(name).strip()
-    # Mask every header flow export nulls (is_secret_name). The log redaction list and the field
-    # check in lfx.mcp.redact also catch names export keeps, such as auth, X-APIKey, X-PassWord
-    # and X-RapidAPIKey, which reads as x_rapid_apikey once normalized.
+    # Mask every header flow export nulls (is_secret_name). The log redaction list, with the keys an
+    # operator adds through LANGFLOW_LOG_REDACT_KEYS, and the field check in lfx.mcp.redact also
+    # catch names export keeps, such as auth, X-APIKey, X-PassWord and X-RapidAPIKey, which reads
+    # as x_rapid_apikey once normalized.
     return (
         is_secret_name(name)
-        or name.lower() in DEFAULT_REDACT_KEYS
+        or name.lower() in redact_keys()
         or is_sensitive_field(name)
         or is_sensitive_field(normalized_secret_name(name))
     )
 
 
 def _mask_credential_headers(value: Any) -> Any:
-    """Mask credential header values in a header dict or key/value rows, keeping header names."""
+    """Mask credential header values in a header dict or key/value rows, keeping header names.
+
+    Values under other names are searched too, so a credential header nested in them is masked.
+    """
     if isinstance(value, list):
         return [_mask_credential_headers(row) for row in value]
     if isinstance(value, Data):
@@ -127,8 +131,12 @@ def _mask_credential_headers(value: Any) -> Any:
     if not isinstance(value, dict):
         return _mask_secret_value(value)
     if "key" in value and "value" in value:
-        return {**value, "value": "**********"} if _is_credential_header(value["key"]) else value
-    return {name: "**********" if _is_credential_header(name) else item for name, item in value.items()}
+        masked = "**********" if _is_credential_header(value["key"]) else _mask_credential_headers(value["value"])
+        return {**value, "value": masked}
+    return {
+        name: "**********" if _is_credential_header(name) else _mask_credential_headers(item)
+        for name, item in value.items()
+    }
 
 
 def _header_cells(value: Any) -> Iterator[tuple[Any, Any]]:
@@ -140,6 +148,15 @@ def _header_cells(value: Any) -> Iterator[tuple[Any, Any]]:
         yield from _header_cells(value.data)
     elif isinstance(value, dict):
         yield from [(value["key"], value["value"])] if "key" in value and "value" in value else value.items()
+
+
+def _credential_header_values(value: Any) -> list[Any]:
+    """Return the header values _mask_credential_headers masks, including ones nested under other names."""
+    return [
+        text
+        for name, item in _header_cells(value)
+        for text in ([item] if _is_credential_header(name) else _credential_header_values(item))
+    ]
 
 
 def _get_trace_secret_texts(input_: Any) -> list[str]:
@@ -161,7 +178,7 @@ def _get_trace_secret_texts(input_: Any) -> list[str]:
         cells = [*env.items(), *_header_cells(config.get("headers"))]
         texts = [item for name, item in cells if _is_credential_header(name)]
     elif "header" in input_.name.lower():
-        texts = [item for name, item in _header_cells(value) if _is_credential_header(name)]
+        texts = _credential_header_values(value)
     else:
         return []
     return [text for text in map(unwrap_secret_value, texts) if isinstance(text, str) and text]
