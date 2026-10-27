@@ -20,7 +20,16 @@ const useFileDrop = (folderId: string) => {
   const saveFlow = useSaveFlow();
   const flows = useFlowsManagerStore((state) => state.flows);
 
-  const { mutate: uploadFlowToFolder } = usePostUploadFlowToFolder();
+  // On the hook rather than the call: a second drop replaces the callbacks of a
+  // call still in flight, so the first upload's failure would show no alert.
+  const { mutate: uploadFlowToFolder } = usePostUploadFlowToFolder({
+    onError: (err) => {
+      setErrorData({
+        title: t("errors.upload"),
+        list: extractApiErrorMessages(err),
+      });
+    },
+  });
   const handleFileDrop = async (e, folderId) => {
     if (e.dataTransfer.types.some((type) => type === "Files")) {
       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
@@ -130,17 +139,7 @@ const useFileDrop = (folderId: string) => {
     setFolderDragging(false);
     setFolderIdDragging("");
 
-    uploadFlowToFolder(
-      { flows: formData, folderId },
-      {
-        onError: (err) => {
-          setErrorData({
-            title: t("errors.upload"),
-            list: extractApiErrorMessages(err),
-          });
-        },
-      },
-    );
+    uploadFlowToFolder({ flows: formData, folderId });
   };
 
   return {

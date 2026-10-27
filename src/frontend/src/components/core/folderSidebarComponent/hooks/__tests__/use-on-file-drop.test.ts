@@ -1,10 +1,12 @@
-import { renderHook } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { createElement, type ReactNode } from "react";
 import useFileDrop from "../use-on-file-drop";
 
 const mockSaveFlow = jest.fn().mockResolvedValue(undefined);
 const mockSetFolderDragging = jest.fn();
 const mockSetFolderIdDragging = jest.fn();
-const mockUploadFlowToFolder = jest.fn();
+const mockApiPost = jest.fn();
 const mockSetErrorData = jest.fn();
 
 /** The slice of store state these tests stand up; the hook reads a few keys of it. */
@@ -18,12 +20,11 @@ jest.mock("@/hooks/flows/use-save-flow", () => ({
   default: () => mockSaveFlow,
 }));
 
-jest.mock(
-  "@/controllers/API/queries/folders/use-post-upload-to-folder",
-  () => ({
-    usePostUploadFlowToFolder: () => ({ mutate: mockUploadFlowToFolder }),
-  }),
-);
+// Only the request is stubbed: the upload mutation itself is real, so overlapping
+// drops behave as they do in the app.
+jest.mock("@/controllers/API/api", () => ({
+  api: { post: (...args: unknown[]) => mockApiPost(...args) },
+}));
 
 jest.mock("react-i18next", () => ({
   __esModule: true,
@@ -61,6 +62,41 @@ jest.mock("../../../../../stores/foldersStore", () => {
   };
 });
 
+const renderFileDrop = () => {
+  const client = new QueryClient();
+  return renderHook(() => useFileDrop("project-B"), {
+    wrapper: ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client }, children),
+  });
+};
+
+/** A flow file dropped on a project. */
+const fileDrop = (name: string) =>
+  ({
+    dataTransfer: {
+      getData: jest.fn(() => ""),
+      types: ["Files"],
+      files: [new File(["{}"], name, { type: "application/json" })],
+    },
+    preventDefault: jest.fn(),
+  }) as unknown as React.DragEvent<HTMLDivElement>;
+
+/** The 422 an upload gets when an MCP server config the flow carries fails validation. */
+const validationRejection = {
+  response: {
+    status: 422,
+    data: {
+      detail: [
+        {
+          type: "value_error",
+          loc: [],
+          msg: "Value error, Environment variable 'NODE_OPTIONS' is not allowed for security reasons",
+        },
+      ],
+    },
+  },
+};
+
 describe("useFileDrop.onDrop (drag-and-drop flow between projects)", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -85,7 +121,7 @@ describe("useFileDrop.onDrop (drag-and-drop flow between projects)", () => {
   });
 
   it("should_call_saveFlow_with_new_folder_id_when_flow_is_dropped_into_empty_project", () => {
-    const { result } = renderHook(() => useFileDrop("project-B"));
+    const { result } = renderFileDrop();
 
     const event = {
       dataTransfer: {
@@ -117,46 +153,52 @@ describe("useFileDrop.onDrop (drag-and-drop flow between projects)", () => {
     expect(mockSetFolderIdDragging).toHaveBeenCalledWith("");
   });
 
-  it("should_report_validation_messages_when_a_dropped_flow_file_fails_to_upload", () => {
-    const { result } = renderHook(() => useFileDrop("project-B"));
-    const file = new File(["{}"], "flow.json", { type: "application/json" });
+  it("should_report_validation_messages_when_a_dropped_flow_file_fails_to_upload", async () => {
+    mockApiPost.mockRejectedValueOnce(validationRejection);
+    const { result } = renderFileDrop();
 
-    const event = {
-      dataTransfer: {
-        getData: jest.fn(() => ""),
-        types: ["Files"],
-        files: [file],
-      },
-      preventDefault: jest.fn(),
-    } as unknown as React.DragEvent<HTMLDivElement>;
+    act(() => result.current.onDrop(fileDrop("flow.json"), "project-B"));
 
-    result.current.onDrop(event, "project-B");
-
-    expect(mockUploadFlowToFolder).toHaveBeenCalledWith(
-      { flows: expect.any(FormData), folderId: "project-B" },
-      expect.objectContaining({ onError: expect.any(Function) }),
+    await waitFor(() =>
+      expect(mockSetErrorData).toHaveBeenCalledWith({
+        title: "errors.upload",
+        list: [
+          "Value error, Environment variable 'NODE_OPTIONS' is not allowed for security reasons",
+        ],
+      }),
     );
-    // The 422 an upload gets when an MCP server config the flow carries fails validation.
-    mockUploadFlowToFolder.mock.calls[0][1].onError({
-      response: {
-        status: 422,
-        data: {
-          detail: [
-            {
-              type: "value_error",
-              loc: [],
-              msg: "Value error, Environment variable 'NODE_OPTIONS' is not allowed for security reasons",
-            },
-          ],
-        },
-      },
-    });
+    expect(mockApiPost).toHaveBeenCalledWith(
+      expect.stringContaining("folder_id=project-B"),
+      expect.any(FormData),
+    );
+  });
 
-    expect(mockSetErrorData).toHaveBeenCalledWith({
-      title: "errors.upload",
-      list: [
-        "Value error, Environment variable 'NODE_OPTIONS' is not allowed for security reasons",
-      ],
+  it("should_report_a_failed_upload_after_a_second_drop_started", async () => {
+    let rejectFirst: (reason: unknown) => void = () => {};
+    mockApiPost
+      .mockImplementationOnce(
+        () =>
+          new Promise((_resolve, reject) => {
+            rejectFirst = reject;
+          }),
+      )
+      .mockImplementationOnce(() => new Promise(() => {}));
+    const { result } = renderFileDrop();
+
+    act(() => {
+      result.current.onDrop(fileDrop("first.json"), "project-B");
+      result.current.onDrop(fileDrop("second.json"), "project-B");
     });
+    await waitFor(() => expect(mockApiPost).toHaveBeenCalledTimes(2));
+    act(() => rejectFirst(validationRejection));
+
+    await waitFor(() =>
+      expect(mockSetErrorData).toHaveBeenCalledWith({
+        title: "errors.upload",
+        list: [
+          "Value error, Environment variable 'NODE_OPTIONS' is not allowed for security reasons",
+        ],
+      }),
+    );
   });
 });
