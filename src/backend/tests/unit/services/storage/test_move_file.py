@@ -261,6 +261,32 @@ class TestCreateUploadLink:
         assert f"files/{second}/a.pdf" not in one
         assert one.split("?")[0] != two.split("?")[0]
 
+    async def test_should_sign_for_the_regional_host_when_on_aws(self, tmp_path, monkeypatch):
+        # The global host answers a new bucket outside us-east-1 with a 307 to the regional
+        # one, and a redirected PUT never lands -- found on a real ca-central-1 bucket.
+        monkeypatch.setenv("AWS_DEFAULT_REGION", "ca-central-1")
+        monkeypatch.setenv("AWS_ACCESS_KEY_ID", "k")
+        monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "s")
+        monkeypatch.delenv("AWS_ENDPOINT_URL_S3", raising=False)
+        monkeypatch.delenv("AWS_ENDPOINT_URL", raising=False)
+        service = S3StorageService(Mock(), _settings(tmp_path))
+
+        url = await service.create_upload_link(str(uuid4()), "report.pdf")
+
+        assert url.startswith("https://bucket.s3.ca-central-1.amazonaws.com/files/")
+
+    async def test_should_keep_the_custom_endpoint_host_when_one_is_set(self, tmp_path, monkeypatch):
+        # A virtual host would put the bucket into MinIO's hostname, which does not resolve.
+        monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
+        monkeypatch.setenv("AWS_ACCESS_KEY_ID", "k")
+        monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "s")
+        monkeypatch.setenv("AWS_ENDPOINT_URL_S3", "http://minio:9000")
+        service = S3StorageService(Mock(), _settings(tmp_path))
+
+        url = await service.create_upload_link(str(uuid4()), "report.pdf")
+
+        assert url.startswith("http://minio:9000/bucket/files/")
+
     @pytest.mark.parametrize("namespace", ["../etc", "a/b", "", "C:\\Windows"])
     async def test_should_refuse_before_signing_when_namespace_is_malformed(self, tmp_path, namespace):
         service = S3StorageService(Mock(), _settings(tmp_path))

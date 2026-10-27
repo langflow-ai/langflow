@@ -514,11 +514,23 @@ class S3StorageService(StorageService):
         Tags are deliberately not signed in. Including them would oblige the uploader to send a
         matching ``x-amz-tagging`` header or get a signature mismatch, so the URL would no longer
         be self-contained. ``move_file`` applies the configured tags when the object is promoted.
+
+        On AWS the link names the bucket's regional host. botocore presigns for the global
+        ``<bucket>.s3.amazonaws.com``, which answers a bucket outside us-east-1 with a 307 to
+        the regional host until its DNS settles, and a redirected PUT never lands. A custom
+        endpoint (MinIO) keeps botocore's default, since a virtual host would put the bucket
+        into that endpoint's hostname; so does a dotted bucket name, which breaks TLS there.
         """
+        from urllib.parse import urlsplit
+
         from aiobotocore.config import AioConfig
 
         key = self.build_full_path(flow_id, file_name)
-        async with self.session.create_client("s3", config=AioConfig(signature_version="s3v4")) as s3_client:
+        async with self.session.create_client("s3") as probe:
+            host = urlsplit(probe.meta.endpoint_url).hostname or ""
+        regional = host.endswith(".amazonaws.com") and "." not in self.bucket_name
+        config = AioConfig(signature_version="s3v4", s3={"addressing_style": "virtual"} if regional else None)
+        async with self.session.create_client("s3", config=config) as s3_client:
             return await s3_client.generate_presigned_url(
                 "put_object",
                 Params={"Bucket": self.bucket_name, "Key": key},
