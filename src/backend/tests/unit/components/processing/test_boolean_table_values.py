@@ -84,6 +84,36 @@ class TestBooleanTableValues(ComponentTestBaseWithoutClient):
         ("operator", "filter_value", "expected_names"),
         [
             ("equals", "True", ["Alice"]),
+            ("equals", "false", ["Bob"]),
+            ("not equals", "True", ["Bob", "Carol"]),
+            ("not equals", "False", ["Alice", "Carol"]),
+        ],
+    )
+    async def test_filter_auto_parsed_csv_boolean_column_with_missing_cell(
+        self, component, operator, filter_value, expected_names
+    ):
+        converter = TypeConverterComponent(
+            input_data=Message(text="name,active\nAlice,True\nBob,False\nCarol,\n"),
+            auto_parse=True,
+        )
+        table = converter.convert_to_dataframe()
+        component.set(
+            df=table,
+            operation=[{"name": "Filter"}],
+            column_name="active",
+            filter_operator=operator,
+            filter_value=filter_value,
+        )
+
+        result = _run_operation(component)
+
+        assert table["active"].dtype == object
+        assert result["name"].tolist() == expected_names
+
+    @pytest.mark.parametrize(
+        ("operator", "filter_value", "expected_names"),
+        [
+            ("equals", "True", ["Alice"]),
             ("equals", "False", ["Bob"]),
             ("not equals", "True", ["Bob"]),
             ("not equals", "False", ["Alice"]),

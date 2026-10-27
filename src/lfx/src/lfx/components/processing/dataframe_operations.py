@@ -329,10 +329,11 @@ class DataFrameOperationsComponent(Component):
         Filter and Replace Value inputs arrive as text, and ``30 == "30"`` never matches in pandas.
         A blank input stays text: ``pd.to_numeric("")`` is NaN, which would match missing cells.
         Boolean columns accept only the true/false spellings, ignoring case and surrounding whitespace.
+        A missing cell leaves a CSV boolean column as ``object``, so booleans are detected from the values.
         """
         if filter_value in (None, ""):
             return filter_value
-        if pd.api.types.is_bool_dtype(column) and isinstance(filter_value, str):
+        if isinstance(filter_value, str) and pd.api.types.infer_dtype(column, skipna=True) == "boolean":
             boolean_value = filter_value.strip().lower()
             if boolean_value in ("true", "false"):
                 return boolean_value == "true"
