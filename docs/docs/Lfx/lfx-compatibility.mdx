@@ -33,6 +33,8 @@ The `lfx upgrade` command inspects a flow against the built-in component registr
 
 `lfx upgrade` compares each component in the flow against a bundled index at `_assets/component_index.json` that ships with the LFX release.
 
+To check every flow saved in a Langflow server's database before you upgrade the server, use [`langflow upgrade-check`](/upgrade-check).
+
 Run it with no flags to get a read-only compatibility report. The command reads your flow JSON, walks through every component node, and prints one line per node with its status. It does not modify the file.
 
 ```bash

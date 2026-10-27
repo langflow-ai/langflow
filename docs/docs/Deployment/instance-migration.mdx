@@ -24,6 +24,7 @@ Instance migration is disabled by default. To enable it, do the following:
 Before starting, prepare the following:
 
 - Prepare a [target instance](/get-started-installation) with the _same or newer_ Langflow version.
+  If it runs a newer version, [check your flows against that version](/upgrade-check) first.
 - If the source instance uses SQLite, provision an [empty PostgreSQL database](/configuration-custom-database).
 - If the source instance has local knowledge bases, enable the [pgvector extension in PostgreSQL](/knowledge#postgres-pgvector).
 - If the source instance uses PostgreSQL and has local knowledge bases, set `PGVECTOR_CONNECTION_STRING` on the source instance to that database, and then restart Langflow before you start the migration. Enabling the extension alone leaves the knowledge base test and copy blocked with `pgvector_env_missing`.
@@ -130,6 +131,7 @@ The browser downloads `langflow-migration-YYYYMMDD.json`. That download is saved
 
 ## See also
 
+- [Check flows before an upgrade](/upgrade-check)
 - [Database migrations](/database-migrations)
 - [Configure an external PostgreSQL database](/configuration-custom-database)
 - [Manage vector data](/knowledge)

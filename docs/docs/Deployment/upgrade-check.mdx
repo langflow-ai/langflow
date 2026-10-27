@@ -1,0 +1,210 @@
+---
+title: Check flows before an upgrade
+slug: /upgrade-check
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+The `langflow upgrade-check` command reads the database of the Langflow server you are about to upgrade, and checks every saved flow against the release you upgrade to.
+It names each flow that needs action before the upgrade, and why.
+
+Run the command from the release you upgrade to, before you upgrade the server.
+The command only reads the database. It never changes it.
+
+## What the command checks
+
+The command checks every flow, saved component, and saved flow version that still runs, which means a trigger pins it or a deployment has it attached.
+Nodes inside groups are checked too, including groups inside groups.
+Starter projects are skipped, because Langflow recreates them at startup.
+
+For each node, the command reports the following:
+
+- The node's status, with the same rule as [`lfx upgrade`](/lfx-compatibility#check-and-upgrade-flows-with-lfx-upgrade): `ok`, `outdated_safe`, `outdated_breaking`, `retired`, `customized`, or `blocked`.
+- For an outdated node, the result of a dry run of the visual editor's **Update**: the node is rebuilt from the new release's code with its saved values, and nothing is saved. A node is `outdated_breaking` only when the update would drop a connection, a value, a field, or an output.
+- What the upgraded server runs for the node under the settings you pass: its saved code (`saved_code`), the server's own code (`server_code`), or nothing (`refused`). The catalog rules saved in the database apply too.
+
+The command doesn't do the following:
+
+- It doesn't run flows or call any provider. During the dry run, every network call is refused. A node whose update makes one is reported as `could_not_verify`.
+- It doesn't migrate the database schema or update any flow.
+- It doesn't check files, knowledge bases, credentials, or variables. To check those, see [Migrate to a new Langflow instance](/instance-migration).
+
+## Before you run the check
+
+Pass the upgraded server's settings as options.
+The command reads no environment variable and no `.env` file of the server, so a value you don't pass takes its default.
+
+| Option | Server setting | Default |
+|---|---|---|
+| `--allow-custom-components` / `--no-allow-custom-components` | `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` | Allowed |
+| `--substitute-outdated-component-code` / `--no-substitute-outdated-component-code` | `LANGFLOW_SUBSTITUTE_OUTDATED_COMPONENT_CODE` | On |
+| `--block-code-interpreter-components` / `--no-block-code-interpreter-components` | `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS` | Off |
+| `--custom-component-admin-only` / `--no-custom-component-admin-only` | `LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY` | Off |
+| `--allow-components-paths-override` / `--no-allow-components-paths-override` | `LANGFLOW_ALLOW_COMPONENTS_PATHS_OVERRIDE` | On |
+| `--components-path`, once per folder | `LANGFLOW_COMPONENTS_PATH` | None |
+
+If the upgraded server loads custom components, pass every folder the server actually loads with `--components-path`.
+The command loads them the way the server does at startup, which imports their code, so the command needs the same Python packages as the server.
+If you pass `--no-allow-custom-components` and `--no-allow-components-paths-override`, the command loads none of the folders you pass.
+
+If the database is SQLite, the database's folder must be writable.
+Langflow keeps SQLite in WAL mode, and SQLite creates a `-shm` file next to the database even to read it.
+The database file itself doesn't change.
+If the folder is read-only, such as a Docker volume mounted with `:ro`, the command stops and says so.
+Mount the folder writable for the check, or stop the server, copy the database to a writable folder, and check the copy.
+
+If the database is PostgreSQL, use a database user that can only read.
+For example:
+
+```sql
+CREATE ROLE langflow_check LOGIN PASSWORD 'CHANGE_ME';
+GRANT CONNECT ON DATABASE langflow TO langflow_check;
+GRANT USAGE ON SCHEMA public TO langflow_check;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO langflow_check;
+```
+
+The command also reads PostgreSQL in read-only transactions.
+To read PostgreSQL, the command needs the PostgreSQL driver, which the `postgresql` extra and the Docker image include.
+
+## Run the check
+
+The examples check against Langflow 1.14.0. Replace it with the release you upgrade to.
+
+<Tabs>
+<TabItem value="pip" label="pip or uvx" default>
+
+Run the command with the new release, without installing it over the running server:
+
+```bash
+uvx --from "langflow[postgresql]==1.14.0" langflow upgrade-check \
+  --database-url "postgresql://langflow_check:CHANGE_ME@db.example.com:5432/langflow" \
+  --output upgrade-check.json
+```
+
+For a SQLite database, pass the absolute path of the file:
+
+```bash
+uvx --from "langflow==1.14.0" langflow upgrade-check \
+  --database-url "sqlite:////var/lib/langflow/langflow.db" \
+  --output upgrade-check.json
+```
+
+Other users of the machine can see the database URL in the process list while the check runs.
+
+</TabItem>
+<TabItem value="docker" label="Docker">
+
+Mount the volume that holds the server's SQLite database, writable, and pass the path the server's `LANGFLOW_DATABASE_URL` names:
+
+```bash
+docker run --rm \
+  -v langflow-data:/app/langflow \
+  langflowai/langflow:1.14.0 \
+  langflow upgrade-check \
+    --database-url sqlite:////app/langflow/langflow.db \
+    --json > upgrade-check.jsonl
+```
+
+For PostgreSQL, pass the database URL and no volume.
+With `--json`, the last line of `upgrade-check.jsonl` holds the report.
+To save the report as one file, run:
+
+```bash
+tail -n 1 upgrade-check.jsonl | jq .report > upgrade-check.json
+```
+
+</TabItem>
+<TabItem value="kubernetes" label="Kubernetes">
+
+1. Store the database URL in a secret:
+
+    ```bash
+    kubectl create secret generic langflow-upgrade-check \
+      --namespace langflow \
+      --from-literal=database-url="postgresql://langflow_check:CHANGE_ME@postgres:5432/langflow"
+    ```
+
+2. Create a Job that runs the new release's image:
+
+    ```yaml
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      name: langflow-upgrade-check
+      namespace: langflow
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: upgrade-check
+              image: langflowai/langflow:1.14.0
+              command: ["langflow", "upgrade-check"]
+              args: ["--database-url", "$(DATABASE_URL)", "--json"]
+              env:
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: langflow-upgrade-check
+                      key: database-url
+    ```
+
+    `backoffLimit: 0` keeps Kubernetes from running the check again when it exits with `1`.
+    If the server loads custom components, mount the same folders and add `--components-path` for each one.
+
+3. When the Job completes, copy the report out of its logs:
+
+    ```bash
+    kubectl logs job/langflow-upgrade-check --namespace langflow \
+      | jq -R 'fromjson? | objects | select(.event == "report") | .report' > upgrade-check.json
+    ```
+
+</TabItem>
+</Tabs>
+
+## Read the result
+
+| Exit code | Meaning |
+|---|---|
+| `0` | Nothing needs action. Flows with warnings can still be listed. |
+| `1` | At least one flow fails, or the database has a problem that stops the upgraded server from starting. |
+| `2` | The check could not finish, such as for a wrong URL, an unreadable database, or components that could not load. The last line says what to change. |
+| `130` or `143` | The check was stopped by `SIGINT` or `SIGTERM`. It is safe to run again. |
+
+A flow's status is the worst of its nodes:
+
+- `fail`: a node is `outdated_breaking`, `retired`, or `blocked`, the upgraded server refuses to run a node, or a customized node's edits will not run because the server runs its own code instead.
+- `warn`: a node is `customized` and its edits still run, a node `could_not_verify`, or the new release's code for a node doesn't build. A flow whose saved data can't be read also warns.
+- `ok`: nothing needs action.
+
+Without `--json`, the command prints the number of flows with each status, then each failing or warning flow with the nodes and reasons behind its status.
+
+With `--json`, the command prints one JSON object per line.
+Each flow is a `{"event": "flow", "flow": {...}}` line as soon as it is checked, and the last line is `{"event": "report", "report": {...}}`.
+If the check can't finish, the last line is `{"event": "error", "code": "...", "message": "..."}` instead.
+
+`--output` writes the report as one JSON file. The report has the following keys:
+
+- `format_version`: `1`.
+- `generated_at`: when the check ran, in UTC.
+- `source`: the database's dialect, its Alembic revision, and how many flows, saved components, and running flow versions the check read.
+- `target`: the Langflow and LFX versions, the hash of the component index, the installed bundles, and the custom components folders and how many components they hold.
+- `settings`: every setting the check used, and the catalog rules it applied.
+- `summary`: the number of flows by status, and the number of nodes by status.
+- `flows`: every flow with a node that needs a look (`outdated_safe` included) or an unreadable row. Each flow has its owner, project, last edit, and those nodes. A flow whose nodes are all `ok` isn't listed. Each node lists its `status`, what it `runs`, its `reasons`, and its `dry_run` result: `keeps`, `loses`, `could_not_verify`, or `build_failed`.
+- `errors`: saved rows that couldn't be read, and catalog rules that couldn't be read, which stop the upgraded server from starting.
+
+## Limits
+
+- The command reads flows in pages, each page in its own short transaction, so a long check never blocks the database. The report isn't one snapshot: a flow saved while the check runs is read as it is when its page comes.
+- Each flow is judged as its owner runs it. A shared flow that another user runs can get a different result, such as with `--custom-component-admin-only`, which treats admins and other users differently.
+- An outdated **Run Flow** node with fields for the selected flow's inputs, or an outdated **MCP Tools** node with fields for the selected tool's arguments, reports as `outdated_breaking`. The editor's **Update** drops those generated fields and their connections. After you update such a node, select the flow or tool again, reconnect its inputs, and check the values of its fields.
+- A custom component whose update code calls the network reports as `could_not_verify`.
+
+## See also
+
+- [LFX and Langflow version compatibility](/lfx-compatibility)
+- [Migrate to a new Langflow instance](/instance-migration)
+- [Database migrations](/database-migrations)
