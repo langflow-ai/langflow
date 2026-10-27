@@ -1,4 +1,5 @@
 {
+  "id": "0ad677ea-c4cc-432e-b8a7-94bdc031400f",
   "name": "Read Shared Report",
   "description": "Read a public BrewPage report as source text in Langflow. Uses the existing MCP Tools component; no model, account or API key.",
   "data": {
