@@ -30,6 +30,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import sqlalchemy as sa
+from lfx.services.catalog_policy import CatalogPolicySnapshot
 from sqlalchemy.pool import NullPool
 
 if TYPE_CHECKING:
@@ -94,6 +95,15 @@ class SourceFlowVersion:
     data_error: str | None = None
 
 
+@dataclass(frozen=True)
+class SourceCatalogPolicy:
+    """The catalog rules the upgraded server will load from this source."""
+
+    snapshot: CatalogPolicySnapshot
+    # Set when the rules could not be read; ``snapshot`` then holds what could.
+    data_error: str | None = None
+
+
 @dataclass
 class SourceDatabase:
     """A source database open for reading.
@@ -112,6 +122,7 @@ class SourceDatabase:
     has_flow_versions: bool = False
     has_triggers: bool = False
     has_deployments: bool = False
+    has_policy_bundle: bool = False
 
     def flows(self) -> Iterator[SourceFlow]:
         """Yield every flow and saved component."""
@@ -131,6 +142,12 @@ class SourceDatabase:
         """Yield the saved versions that still run: pinned by a trigger or attached to a deployment."""
         if self.has_flow_versions:
             yield from _running_flow_versions(self)
+
+    def catalog_policy(self) -> SourceCatalogPolicy:
+        """Return the catalog rules the upgraded server will load. Sources before 1.12 have none."""
+        if not self.has_policy_bundle:
+            return SourceCatalogPolicy(CatalogPolicySnapshot())
+        return _active_catalog_policy(self.connection)
 
 
 @contextmanager
@@ -214,6 +231,7 @@ def read_connection(connection: sa.Connection) -> SourceDatabase:
         has_flow_versions="flow_version" in tables,
         has_triggers="trigger" in tables,
         has_deployments={"deployment", "flow_version_deployment_attachment"} <= tables,
+        has_policy_bundle={"policy_bundle_active", "policy_bundle_revision"} <= tables,
     )
     source.users = [SourceUser(_uuid(row.id), row.username) for row in _select(connection, "user", "id", "username")]
     source.projects = [SourceProject(_uuid(row.id), row.name) for row in _select(connection, "folder", "id", "name")]
@@ -251,6 +269,35 @@ def _running_flow_versions(source: SourceDatabase) -> Iterator[SourceFlowVersion
             attached_to_deployments=tuple(sorted(deployments.get(row.id, []))),
             **_flow_data(row.data),
         )
+
+
+def _active_catalog_policy(connection: sa.Connection) -> SourceCatalogPolicy:
+    """Read the active policy bundle, as ``get_policy_bundle_state`` does when the server starts.
+
+    A default install loads only the bundle. ``catalog_policy_rule`` is a copy the release keeps
+    for downgrades and the server does not read it, so neither does this.
+    """
+    active = sa.table("policy_bundle_active", sa.column("revision"))
+    # A CHECK keeps this table to one row.
+    revision = connection.execute(sa.select(active.c.revision)).scalar_one_or_none()
+    if revision is None:
+        return SourceCatalogPolicy(CatalogPolicySnapshot(), "the active policy bundle is missing")
+    bundle = sa.table(
+        "policy_bundle_revision",
+        sa.column("revision"),
+        sa.column("blocked_component_keys"),
+        sa.column("blocked_template_keys"),
+    )
+    query = sa.select(bundle.c.blocked_component_keys, bundle.c.blocked_template_keys).where(
+        bundle.c.revision == revision
+    )
+    row = connection.execute(query).one_or_none()
+    if row is None:
+        return SourceCatalogPolicy(CatalogPolicySnapshot(), f"policy bundle revision {revision} is missing")
+    components, component_error = _policy_keys(row.blocked_component_keys, "blocked_component_keys")
+    templates, template_error = _policy_keys(row.blocked_template_keys, "blocked_template_keys")
+    errors = [error for error in (component_error, template_error) if error]
+    return SourceCatalogPolicy(CatalogPolicySnapshot(components, templates), "; ".join(errors) or None)
 
 
 def _alembic_revisions(connection: sa.Connection, tables: set[str]) -> list[str]:
@@ -295,3 +342,14 @@ def _flow_data(value: Any) -> dict[str, Any]:
     if not isinstance(parsed, dict):
         return {"data": None, "data_error": f"flow data is a JSON {type(parsed).__name__}, not an object"}
     return {"data": parsed, "data_error": None}
+
+
+def _policy_keys(value: Any, column: str) -> tuple[frozenset[str], str | None]:
+    """Return a bundle column's keys as the server reads them: JSON text on SQLite, already parsed on Postgres.
+
+    A value the server cannot read stops it at startup, so it is reported, not skipped quietly.
+    """
+    try:
+        return frozenset(json.loads(value) if isinstance(value, str) else value), None
+    except (TypeError, ValueError) as exc:
+        return frozenset(), f"{column} could not be read: {exc}"
