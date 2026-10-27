@@ -98,7 +98,12 @@ class SplitTextComponent(Component):
                 msg = "DataFrame is empty"
                 raise TypeError(msg)
 
-            table = self.data_inputs.copy(deep=False)
+            # Build the throwaway copy through the documented DataFrame/Table constructor
+            # instead of pandas' NDFrame.copy: on pandas 2.0.x (inside lfx's declared
+            # pandas>=2.0.0 range) copy() hands the BlockManager to Table.__init__, which does
+            # not load managers, so the copy comes back empty and the text_key assignment
+            # below raises ValueError.
+            table = DataFrame(self.data_inputs)
             table.text_key = self.text_key
             try:
                 documents = table.to_lc_documents()

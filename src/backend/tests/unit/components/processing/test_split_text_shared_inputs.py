@@ -34,6 +34,62 @@ def test_split_text_does_not_change_the_shared_input_text_key(input_type):
         assert shared.to_lc_documents()[0].page_content == "the original branch"
 
 
+def _pandas_2_0_ndframe_copy(self, *, deep: bool = True):
+    """``NDFrame.copy`` as implemented in pandas 2.0.x.
+
+    Verbatim body of ``pandas/core/generic.py`` lines 6452-6454 at tag ``v2.0.3``. lfx
+    declares ``pandas>=2.0.0,<3.0.0`` (src/lfx/pyproject.toml), so this is the ``copy``
+    implementation ``SplitTextComponent`` runs against on the declared minimum version.
+    From pandas 2.1.0 the same line reads ``self._constructor_from_mgr(...)``, which builds
+    a pandas ``DataFrame`` first and therefore reaches the ``isinstance(data, pd.DataFrame)``
+    branch of ``Table.__init__``.
+    """
+    data = self._mgr.copy(deep=deep)
+    self._clear_item_cache()
+    return self._constructor(data).__finalize__(self, method="copy")
+
+
+def test_pandas_2_0_manager_copy_of_a_table_loses_rows():
+    """A BlockManager handed to ``Table.__init__`` yields an empty Table.
+
+    ``Table.__init__`` only loads ``list`` and ``dict | pd.DataFrame`` inputs, so the
+    manager form pandas 2.0.x passes to ``_constructor`` falls through unset. This holds for
+    both ``deep`` values, which is why switching to ``deep=True`` is not a fix.
+    """
+    table = DataFrame([{"text": "the original branch", "body": "the split branch"}])
+
+    for deep in (True, False):
+        copied = _pandas_2_0_ndframe_copy(table, deep=deep)
+        assert len(copied) == 0
+        with pytest.raises(ValueError, match="not found in Table columns"):
+            copied.text_key = "body"
+
+
+def test_split_text_table_copy_survives_the_pandas_2_0_copy_path(monkeypatch):
+    """Split Text must not depend on pandas' version-dependent ``copy()`` for its rows."""
+    row = {"text": "the original branch", "body": "the split branch"}
+    shared = DataFrame([row])
+    monkeypatch.setattr(DataFrame, "copy", _pandas_2_0_ndframe_copy)
+
+    component = SplitTextComponent()
+    component.set_attributes(
+        {
+            "data_inputs": shared,
+            "text_key": "body",
+            "chunk_overlap": 0,
+            "chunk_size": 100,
+            "separator": "\n",
+            "keep_separator": "False",
+            "clean_output": True,
+        }
+    )
+
+    documents = component.split_text_base()
+
+    assert [doc.page_content for doc in documents] == ["the split branch"]
+    assert shared.text_key == "text"
+
+
 class JsonProducer(Component):
     outputs = [Output(name="value", method="produce")]
 
