@@ -1768,6 +1768,102 @@ async def _migration_preflight(
     return report.ok
 
 
+_SERVER_SETTING_HELP = "The upgraded server's {} setting."
+
+
+@app.command(name="upgrade-check")
+def upgrade_check(
+    database_url: str = typer.Option(
+        ...,
+        help="URL of the database the server to upgrade uses, such as sqlite:////app/langflow/langflow.db or "
+        "postgresql://user:password@host:5432/langflow. It is only read.",  # pragma: allowlist secret
+    ),
+    components_path: list[str] = typer.Option(
+        [],
+        help="A folder of custom components the upgraded server loads (its components_path). Repeat for each folder.",
+    ),
+    allow_custom_components: bool = typer.Option(  # noqa: FBT001
+        default=True, help=_SERVER_SETTING_HELP.format("allow_custom_components")
+    ),
+    substitute_outdated_component_code: bool = typer.Option(  # noqa: FBT001
+        default=True, help=_SERVER_SETTING_HELP.format("substitute_outdated_component_code")
+    ),
+    block_code_interpreter_components: bool = typer.Option(  # noqa: FBT001
+        default=False, help=_SERVER_SETTING_HELP.format("block_code_interpreter_components")
+    ),
+    custom_component_admin_only: bool = typer.Option(  # noqa: FBT001
+        default=False, help=_SERVER_SETTING_HELP.format("custom_component_admin_only")
+    ),
+    allow_components_paths_override: bool = typer.Option(  # noqa: FBT001
+        default=True, help=_SERVER_SETTING_HELP.format("allow_components_paths_override")
+    ),
+    as_json: bool = typer.Option(  # noqa: FBT001
+        False,  # noqa: FBT003
+        "--json",
+        help="Print one JSON object per line: each flow as it is checked, then the report. Logs go to stderr.",
+    ),
+    output: Path | None = typer.Option(None, help="Write the report to this file as one JSON document."),
+) -> None:
+    """Check every saved flow of a database against this release, before upgrading the server to it.
+
+    Run it from the release you upgrade to. It reads the database and never changes it,
+    and names every flow, saved component and running flow version that needs action
+    before the upgrade, and why. Pass the upgraded server's settings as options: the
+    command reads no environment variable and no .env file of the server.
+
+    Exits 0 when nothing needs action, 1 when a flow fails or the database has a problem
+    that stops the upgraded server, and 2 when the check could not finish.
+    """
+    import subprocess
+    import tempfile
+
+    from langflow.cli.events import emit
+
+    options = {
+        "database_url": database_url,
+        "settings": {
+            "allow_custom_components": allow_custom_components,
+            "substitute_outdated_component_code": substitute_outdated_component_code,
+            "block_code_interpreter_components": block_code_interpreter_components,
+            "custom_component_admin_only": custom_component_admin_only,
+            "allow_components_paths_override": allow_components_paths_override,
+            "components_path": components_path,
+        },
+        "json": as_json,
+        "output": str(output) if output else None,
+    }
+    # Component code can build Langflow's settings, and this process already imported modules that
+    # read the environment. So the check runs in a child that sees no LANGFLOW_ variable and keeps
+    # whatever it writes in a folder that is deleted at the end.
+    env = {name: value for name, value in os.environ.items() if not name.startswith("LANGFLOW_")}
+    with (
+        tempfile.TemporaryDirectory(prefix="langflow-upgrade-check-") as config_dir,
+        interruption_reported("The check only reads, so nothing changed.", as_json=as_json),
+    ):
+        # Its own session: a terminal's Ctrl+C reaches this process only, which stops the child.
+        child = subprocess.Popen(  # noqa: S603
+            [sys.executable, "-m", "langflow.upgrade_check.command"],
+            stdin=subprocess.PIPE,
+            env={**env, "LANGFLOW_CONFIG_DIR": config_dir},
+            text=True,
+            start_new_session=True,
+        )
+        try:
+            child.communicate(json.dumps(options))
+        finally:
+            if child.poll() is None:
+                child.terminate()
+                child.wait()
+    if child.returncode not in {0, 1, 2}:
+        message = f"the check stopped unexpectedly (exit code {child.returncode}). It is safe to run again."
+        if as_json:
+            emit("error", code="check_failed", message=message)
+        else:
+            typer.echo(f"The upgrade check could not finish: {message}", err=True)
+        raise typer.Exit(2)
+    raise typer.Exit(child.returncode)
+
+
 # command to copy the langflow database from the cache to the current directory
 # because now the database is stored per installation
 @app.command()
