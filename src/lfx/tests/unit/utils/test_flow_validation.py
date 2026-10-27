@@ -156,7 +156,7 @@ async def test_prepare_admin_only_flow_build_substitutes_server_source(monkeypat
         "ensure_component_hash_lookups_loaded",
         AsyncMock(return_value={"ChatInput": {"same-hash"}}),
     )
-    monkeypatch.setattr(fv, "get_trusted_code_for_validation", lambda _code: trusted_code)
+    monkeypatch.setattr(fv, "get_trusted_code_for_validation", lambda _code, _cache=None: trusted_code)
 
     flow = {"nodes": [_node("known", "ChatInput", submitted_code)], "edges": []}
     sanitized = await fv.prepare_admin_only_flow_build(flow)
@@ -178,7 +178,7 @@ async def test_prepare_admin_only_flow_build_fails_closed_without_trusted_source
         "ensure_component_hash_lookups_loaded",
         AsyncMock(return_value={"ChatInput": {code_hash}}),
     )
-    monkeypatch.setattr(fv, "get_trusted_code_for_validation", lambda _code: None)
+    monkeypatch.setattr(fv, "get_trusted_code_for_validation", lambda _code, _cache=None: None)
 
     flow = {"nodes": [_node("known", "ChatInput", code)], "edges": []}
     with pytest.raises(CustomComponentValidationError, match="no trusted server component"):
@@ -210,7 +210,7 @@ async def test_prepare_admin_only_flow_build_rejects_group_proxy_code(monkeypatc
         lambda: SimpleNamespace(snapshot=CatalogPolicySnapshot()),
     )
     monkeypatch.setattr(fv, "ensure_component_hash_lookups_loaded", AsyncMock(return_value=hashes))
-    monkeypatch.setattr(fv, "get_trusted_code_for_validation", lambda _code: trusted)
+    monkeypatch.setattr(fv, "get_trusted_code_for_validation", lambda _code, _cache=None: trusted)
     raw = _group_with_proxy(_node("child", "ChatInput", trusted), "code", injected)
     assert process_flow(raw)["nodes"][0]["data"]["node"]["template"]["code"]["value"] == injected
 
@@ -227,7 +227,7 @@ async def test_prepare_admin_only_flow_build_preserves_safe_group(monkeypatch):
     trusted = "# trusted ChatInput code"
     hashes = {"ChatInput": {fv._compute_code_hash(trusted)}}
     monkeypatch.setattr(fv, "ensure_component_hash_lookups_loaded", AsyncMock(return_value=hashes))
-    monkeypatch.setattr(fv, "get_trusted_code_for_validation", lambda _code: trusted)
+    monkeypatch.setattr(fv, "get_trusted_code_for_validation", lambda _code, _cache=None: trusted)
     raw = _group_with_proxy(_node("child", "ChatInput", trusted), "input_value", "hello")
 
     prepared = await fv.prepare_admin_only_flow_build(raw)
@@ -259,9 +259,9 @@ def _configure_admin_only_outdated_substitution(monkeypatch):
         "lfx.services.deps.get_catalog_policy_service",
         lambda: SimpleNamespace(snapshot=CatalogPolicySnapshot()),
     )
-    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda: type_to_hash)
-    monkeypatch.setattr(fv, "get_component_code_lookups_for_validation", lambda: type_to_code)
-    monkeypatch.setattr(fv, "get_trusted_code_for_validation", lambda _code: current_code)
+    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda _cache=None: type_to_hash)
+    monkeypatch.setattr(fv, "get_component_code_lookups_for_validation", lambda _cache=None: type_to_code)
+    monkeypatch.setattr(fv, "get_trusted_code_for_validation", lambda _code, _cache=None: current_code)
     monkeypatch.setattr(fv, "ensure_component_hash_lookups_loaded", AsyncMock(return_value=type_to_hash))
     return current_code
 
@@ -324,11 +324,11 @@ def _configure_restricted_exported_code(monkeypatch) -> None:
         "lfx.services.deps.get_catalog_policy_service",
         lambda: SimpleNamespace(snapshot=CatalogPolicySnapshot()),
     )
-    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda: type_to_hash)
+    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda _cache=None: type_to_hash)
     monkeypatch.setattr(
         fv,
         "get_trusted_code_for_validation",
-        lambda code: code if code == EXPORTED_CHAT_INPUT_CODE else None,
+        lambda code, _cache=None: code if code == EXPORTED_CHAT_INPUT_CODE else None,
     )
     monkeypatch.setattr(fv, "ensure_component_hash_lookups_loaded", AsyncMock(return_value=type_to_hash))
 
@@ -415,9 +415,9 @@ async def test_admin_only_blocks_trusted_code_execution_components(monkeypatch, 
         "lfx.services.deps.get_catalog_policy_service",
         lambda: SimpleNamespace(snapshot=CatalogPolicySnapshot()),
     )
-    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda: hashes)
+    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda _cache=None: hashes)
     monkeypatch.setattr(fv, "ensure_component_hash_lookups_loaded", AsyncMock(return_value=hashes))
-    monkeypatch.setattr(fv, "get_trusted_code_for_validation", lambda _code: source)
+    monkeypatch.setattr(fv, "get_trusted_code_for_validation", lambda _code, _cache=None: source)
     node = _node("interpreter", "ChatInput" if shape == "relabelled" else component_type, source)
     payload = (
         _group_with_proxy(node, "input_value", "local-canary") if shape == "grouped" else {"nodes": [node], "edges": []}
@@ -511,7 +511,7 @@ def test_prepare_flow_build_for_user_from_cache_maps_malformed_shapes_to_policy_
         )
     )
     monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
-    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", dict)
+    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda _cache=None: {})
 
     with pytest.raises(CustomComponentValidationError):
         fv.prepare_flow_build_for_user_from_cache(flow, is_superuser=False)
@@ -690,7 +690,7 @@ def test_catalog_policy_validation_blocks_nested_components():
 def test_catalog_policy_validation_is_exact_case_sensitive_and_empty_snapshot_allows(monkeypatch):
     monkeypatch.setattr(
         "lfx.utils.flow_validation.get_component_identity_index_for_validation",
-        lambda: _catalog_identity_index(),
+        lambda _cache=None: _catalog_identity_index(),
     )
     validate_catalog_policy_for_flow(
         _catalog_flow("agent"),
@@ -718,7 +718,7 @@ def test_catalog_policy_flow_validation_resolves_canonical_and_legacy_identities
 ):
     monkeypatch.setattr(
         "lfx.utils.flow_validation.get_component_identity_index_for_validation",
-        lambda: _catalog_identity_index(),
+        lambda _cache=None: _catalog_identity_index(),
     )
 
     with pytest.raises(CatalogPolicyValidationError, match=canonical):
@@ -731,7 +731,7 @@ def test_catalog_policy_flow_validation_resolves_canonical_and_legacy_identities
 def test_catalog_policy_alias_validation_fails_closed_without_component_identity_cache(monkeypatch):
     monkeypatch.setattr(
         "lfx.utils.flow_validation.get_component_identity_index_for_validation",
-        lambda: None,
+        lambda _cache=None: None,
     )
 
     # Exact identities remain enforceable without the registry cache.
@@ -768,7 +768,7 @@ def test_catalog_policy_alias_validation_fails_closed_with_empty_published_regis
 def test_catalog_policy_validation_blocks_nested_legacy_alias(monkeypatch):
     monkeypatch.setattr(
         "lfx.utils.flow_validation.get_component_identity_index_for_validation",
-        lambda: _catalog_identity_index(),
+        lambda _cache=None: _catalog_identity_index(),
     )
     flow = _catalog_flow("Group")
     flow["nodes"][0]["data"]["node"]["flow"] = {"data": _catalog_flow("PromptComponent")}
@@ -785,7 +785,7 @@ def test_catalog_policy_component_code_blocks_known_alias_before_execution(monke
     code_hash = hashlib.sha256(code.encode()).hexdigest()[:12]
     monkeypatch.setattr(
         "lfx.utils.flow_validation.get_component_hash_lookups_for_validation",
-        lambda: {"Agent": {code_hash}, "AgentComponent": {code_hash}},
+        lambda _cache=None: {"Agent": {code_hash}, "AgentComponent": {code_hash}},
     )
 
     with pytest.raises(CatalogPolicyValidationError, match="AgentComponent"):
@@ -811,7 +811,7 @@ def test_catalog_policy_component_code_empty_snapshot_does_not_require_template_
 def test_catalog_policy_component_code_fails_closed_while_identities_initialize(monkeypatch):
     monkeypatch.setattr(
         "lfx.utils.flow_validation.get_component_hash_lookups_for_validation",
-        lambda: None,
+        lambda _cache=None: None,
     )
 
     with pytest.raises(CatalogPolicyIdentityUnavailableError, match="identities are still initializing"):
@@ -844,7 +844,7 @@ def test_catalog_policy_component_code_does_not_build_from_transient_component_c
 def test_catalog_policy_component_type_is_exact_and_empty_snapshot_allows(monkeypatch):
     monkeypatch.setattr(
         "lfx.utils.flow_validation.get_component_identity_index_for_validation",
-        lambda: _catalog_identity_index(),
+        lambda _cache=None: _catalog_identity_index(),
     )
     snapshot = CatalogPolicySnapshot(blocked_component_keys={"Agent"})
 
@@ -872,7 +872,7 @@ def test_catalog_policy_materialized_component_resolves_canonical_identity(
 ):
     monkeypatch.setattr(
         "lfx.utils.flow_validation.get_component_identity_index_for_validation",
-        lambda: _catalog_identity_index(),
+        lambda _cache=None: _catalog_identity_index(),
     )
 
     with pytest.raises(CatalogPolicyValidationError, match=canonical):
@@ -1228,7 +1228,7 @@ async def test_prepare_public_flow_build_opt_in_checks_group_proxy(monkeypatch):
         "lfx.services.deps.get_settings_service",
         lambda: _public_settings(allow_custom=True, allow_public_custom=True),
     )
-    monkeypatch.setattr(fv, "validate_flow_for_current_settings", lambda _target: None)
+    monkeypatch.setattr(fv, "validate_flow_for_current_settings", lambda _target, **_kwargs: None)
     raw = _group_with_proxy(
         _mcp_node({"name": "remote", "config": {"url": "https://example.com"}}),
         "mcp_server",
@@ -1295,7 +1295,7 @@ def test_public_graph_opt_in_rejects_proxy_mcp_stdio_before_initialization(monke
         "lfx.services.deps.get_settings_service",
         lambda: _public_settings(allow_custom=True, allow_public_custom=True),
     )
-    monkeypatch.setattr(fv, "validate_flow_for_current_settings", lambda _target: None)
+    monkeypatch.setattr(fv, "validate_flow_for_current_settings", lambda _target, **_kwargs: None)
     initialized = []
     monkeypatch.setattr(Graph, "initialize", lambda self: initialized.append(self))
     raw = _group_with_proxy(_mcp_node({"url": "https://example.com"}), "mcp_server", {"command": "python"})
@@ -1332,7 +1332,7 @@ async def test_prepare_public_flow_build_rechecks_code_execution_after_substitut
     monkeypatch.setattr(
         fv,
         "get_component_hash_lookups_for_validation",
-        lambda: {"PythonREPLComponent": {trusted_repl_hash}},
+        lambda _cache=None: {"PythonREPLComponent": {trusted_repl_hash}},
     )
 
     flow = {
@@ -1367,7 +1367,7 @@ def test_public_component_lookup_snapshot_linearizes_reload(monkeypatch):
     reload_finished = Event()
     results: list[tuple[dict[str, str], object]] = []
 
-    def read_code():
+    def read_code(_cache=None):
         code_read_started.set()
         assert release_code_read.wait(timeout=2)
         return component_cache.type_to_code
@@ -1376,7 +1376,7 @@ def test_public_component_lookup_snapshot_linearizes_reload(monkeypatch):
     monkeypatch.setattr(
         fv,
         "get_component_hash_lookups_for_validation",
-        lambda: component_cache.type_to_current_hash,
+        lambda _cache=None: component_cache.type_to_current_hash,
     )
 
     def read_snapshot() -> None:
@@ -1526,7 +1526,9 @@ async def test_prepare_public_flow_build_opt_in_honors_global(monkeypatch):
         lambda: _public_settings(allow_custom=True, allow_public_custom=True),
     )
     seen = {}
-    monkeypatch.setattr(fv, "validate_flow_for_current_settings", lambda target: seen.setdefault("target", target))
+    monkeypatch.setattr(
+        fv, "validate_flow_for_current_settings", lambda target, **_kwargs: seen.setdefault("target", target)
+    )
 
     flow = {"nodes": [_node("x", "MyCustom", "import os")], "edges": []}
     prepared = await fv.prepare_public_flow_build(flow)
@@ -1606,7 +1608,7 @@ async def test_prepare_public_flow_build_opt_in_still_blocks_code_execution(monk
         "lfx.services.deps.get_settings_service",
         lambda: _public_settings(allow_custom=True, allow_public_custom=True),
     )
-    monkeypatch.setattr(fv, "validate_flow_for_current_settings", lambda _target: None)
+    monkeypatch.setattr(fv, "validate_flow_for_current_settings", lambda _target, **_kwargs: None)
 
     with pytest.raises(PublicFlowValidationError, match="code-execution"):
         await fv.prepare_public_flow_build(_flow_with_component("PythonREPLComponent"))
@@ -1623,7 +1625,7 @@ async def test_prepare_public_flow_build_restricted_opt_in_checks_effective_subs
     settings_service = _public_settings(allow_custom=False, allow_public_custom=True)
     monkeypatch.setattr(settings_service.settings, "substitute_outdated_component_code", True, raising=False)
     monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: settings_service)
-    monkeypatch.setattr(fv, "validate_flow_for_current_settings", lambda _target: None)
+    monkeypatch.setattr(fv, "validate_flow_for_current_settings", lambda _target, **_kwargs: None)
     monkeypatch.setattr(
         fv,
         "_ensure_public_component_lookup_snapshot",
@@ -1872,7 +1874,7 @@ def test_public_flow_blocks_flow_invoking_component_relabelled_via_code_hash(mon
     run_flow_code = "class RunFlowComponent(Component):\n    name = 'RunFlow'\n"
     code_hash = fv._compute_code_hash(run_flow_code)
     # Pretend the server's known RunFlow template hashes to this code.
-    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda: {"RunFlow": {code_hash}})
+    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda _cache=None: {"RunFlow": {code_hash}})
 
     # Declared type is innocuous and in NEITHER blocklist, but the code is RunFlow's.
     evasive = _flow_with_typed_code("Totally Innocent", run_flow_code)
@@ -1887,7 +1889,9 @@ def test_public_flow_blocks_code_execution_component_relabelled_via_code_hash(mo
 
     repl_code = "class PythonREPLComponent(Component):\n    pass\n"
     code_hash = fv._compute_code_hash(repl_code)
-    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda: {"PythonREPLComponent": {code_hash}})
+    monkeypatch.setattr(
+        fv, "get_component_hash_lookups_for_validation", lambda _cache=None: {"PythonREPLComponent": {code_hash}}
+    )
 
     evasive = _flow_with_typed_code("Harmless Label", repl_code)
     with pytest.raises(PublicFlowValidationError) as exc_info:
@@ -1899,7 +1903,9 @@ def test_public_flow_code_hash_allows_unrelated_code(monkeypatch):
     """A node whose code does not match any blocked template hash must still build."""
     from lfx.utils import flow_validation as fv
 
-    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda: {"RunFlow": {"deadbeefcafe"}})
+    monkeypatch.setattr(
+        fv, "get_component_hash_lookups_for_validation", lambda _cache=None: {"RunFlow": {"deadbeefcafe"}}
+    )
     safe = _flow_with_typed_code("ChatInput", "class ChatInput(Component):\n    pass\n")
     validate_public_flow_no_code_execution(safe)  # must not raise
 
@@ -1908,7 +1914,7 @@ def test_public_flow_type_block_works_without_hash_lookups(monkeypatch):
     """When the hash lookup is unavailable, canonical type-name matching still blocks."""
     from lfx.utils import flow_validation as fv
 
-    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda: None)
+    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda _cache=None: None)
     with pytest.raises(PublicFlowValidationError):
         validate_public_flow_no_code_execution(_flow_with_component("RunFlow"))
 
@@ -2083,7 +2089,7 @@ async def test_prepare_public_flow_build_blocks_mcp_stdio_under_custom_component
         "lfx.services.deps.get_settings_service",
         lambda: _public_settings(allow_custom=True, allow_public_custom=True),
     )
-    monkeypatch.setattr(fv, "validate_flow_for_current_settings", lambda _target: None)
+    monkeypatch.setattr(fv, "validate_flow_for_current_settings", lambda _target, **_kwargs: None)
 
     flow = _mcp_flow({"name": "srv", "config": dict(STDIO_CONFIG)})
     with pytest.raises(PublicFlowValidationError):
@@ -2213,7 +2219,7 @@ def test_graph_rejects_proxy_injected_code_interpreter_before_initialization(mon
     monkeypatch.setattr(
         fv,
         "get_component_hash_lookups_for_validation",
-        lambda: {"PythonREPLComponent": {fv._compute_code_hash(trusted_interpreter)}},
+        lambda _cache=None: {"PythonREPLComponent": {fv._compute_code_hash(trusted_interpreter)}},
     )
     initialized = []
     monkeypatch.setattr(Graph, "initialize", lambda self: initialized.append(self))
@@ -2241,7 +2247,7 @@ def test_interpreter_policy_fails_closed_without_hash_registry(monkeypatch):
         "lfx.services.deps.get_catalog_policy_service",
         lambda: SimpleNamespace(snapshot=CatalogPolicySnapshot()),
     )
-    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda: None)
+    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda _cache=None: None)
     initialized = []
     monkeypatch.setattr(Graph, "initialize", lambda self: initialized.append(self))
     raw = _group_with_proxy(_node("child", "ChatInput", "# benign code"), "code", "# interpreter code")
@@ -2280,7 +2286,7 @@ async def test_interpreter_only_build_loads_hashes_before_validation(monkeypatch
         "lfx.services.deps.get_catalog_policy_service",
         lambda: SimpleNamespace(snapshot=CatalogPolicySnapshot()),
     )
-    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda: cached_hashes)
+    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda _cache=None: cached_hashes)
     monkeypatch.setattr(fv, "ensure_component_hash_lookups_loaded", load_hashes)
 
     raw = {"nodes": [_node("child", "ChatInput", trusted)]}
@@ -2313,7 +2319,7 @@ async def test_interpreter_only_build_loads_hashes_for_proxy_created_code(monkey
         "lfx.services.deps.get_catalog_policy_service",
         lambda: SimpleNamespace(snapshot=CatalogPolicySnapshot()),
     )
-    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda: cached_hashes)
+    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda _cache=None: cached_hashes)
     monkeypatch.setattr(fv, "ensure_component_hash_lookups_loaded", load_hashes)
 
     raw = _group_with_proxy(_node("child", "ChatInput", ""), "code", trusted)
@@ -2338,7 +2344,7 @@ async def test_interpreter_only_build_skips_hash_loading_for_codeless_flow(monke
         "lfx.services.deps.get_catalog_policy_service",
         lambda: SimpleNamespace(snapshot=CatalogPolicySnapshot()),
     )
-    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda: None)
+    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda _cache=None: None)
     load_hashes = AsyncMock(side_effect=RuntimeError("registry unavailable"))
     monkeypatch.setattr(fv, "ensure_component_hash_lookups_loaded", load_hashes)
 

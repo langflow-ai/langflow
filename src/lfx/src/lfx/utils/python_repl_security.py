@@ -49,6 +49,7 @@ import builtins
 import importlib
 import re
 import types
+from typing import Any
 
 # Builtins considered safe to expose to interpreter code. Deliberately excludes anything
 # that can import modules, execute/compile code, touch the filesystem, or reach
@@ -341,28 +342,42 @@ def ensure_code_execution_enabled() -> None:
             "be resolved. Check the server configuration and try again."
         )
         raise CodeExecutionDisabledError(msg)
-    if not getattr(settings_service.settings, "allow_custom_components", True):
-        msg = (
-            "Python code execution is disabled because allow_custom_components is False. "
-            "Set LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true to enable this component."
-        )
-        raise CodeExecutionDisabledError(msg)
-    if getattr(settings_service.settings, "block_code_interpreter_components", False):
-        msg = (
-            "Python code execution is disabled because block_code_interpreter_components is True. "
-            "Set LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=false to enable this component."
-        )
-        raise CodeExecutionDisabledError(msg)
-    if getattr(settings_service.settings, "custom_component_admin_only", False) is True:
+    settings = settings_service.settings
+    is_superuser = False
+    if getattr(settings, "custom_component_admin_only", False) is True:
         from lfx.services.model_provider_policy import current_model_provider_policy_context
 
         # The execution host binds this principal from the authenticated user.
         # Do not infer administrator privilege from graph input fields or the flow
         # owner's identity. Missing context must fail closed, including direct calls.
         principal = current_model_provider_policy_context()
-        if principal is None or principal.user_id is None or principal.attributes.get("is_superuser") is not True:
-            msg = "Python code execution is restricted to administrators because custom_component_admin_only is True."
-            raise CodeExecutionDisabledError(msg)
+        is_superuser = (
+            principal is not None and principal.user_id is not None and principal.attributes.get("is_superuser") is True
+        )
+    refusal = code_execution_refusal(settings, is_superuser=is_superuser)
+    if refusal is not None:
+        raise CodeExecutionDisabledError(refusal)
+
+
+def code_execution_refusal(settings: Any, *, is_superuser: bool) -> str | None:
+    """Return why ``settings`` refuse Python code execution to a caller, or ``None`` when they allow it.
+
+    The decision :func:`ensure_code_execution_enabled` enforces, which resolves the settings and
+    the authenticated caller itself. The upgrade check asks it for another server's settings.
+    """
+    if not getattr(settings, "allow_custom_components", True):
+        return (
+            "Python code execution is disabled because allow_custom_components is False. "
+            "Set LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true to enable this component."
+        )
+    if getattr(settings, "block_code_interpreter_components", False):
+        return (
+            "Python code execution is disabled because block_code_interpreter_components is True. "
+            "Set LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=false to enable this component."
+        )
+    if getattr(settings, "custom_component_admin_only", False) is True and not is_superuser:
+        return "Python code execution is restricted to administrators because custom_component_admin_only is True."
+    return None
 
 
 def safe_builtins() -> dict:
