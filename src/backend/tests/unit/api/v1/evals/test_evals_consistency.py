@@ -266,6 +266,43 @@ class TestRunner:
         first_b = starts.index(run_b["id"])
         assert first_b < starts.count(run_a["id"]), starts
 
+    async def test_should_resolve_the_judge_inside_the_flows_provider_policy_scope(
+        self, client, logged_in_headers, monkeypatch
+    ):
+        from langflow.services.evaluations.scorers import llm_judge
+        from lfx.services.model_provider_policy.context import current_model_provider_policy_context
+
+        seen = []
+
+        def capture_get_llm(*_args, **_kwargs):
+            seen.append(current_model_provider_policy_context())
+            msg = "judge model unavailable"
+            raise RuntimeError(msg)
+
+        monkeypatch.setattr(runner, "execute_row", _slow_rows(0))
+        monkeypatch.setattr(llm_judge, "get_llm", capture_get_llm)
+        project = await _project(client, logged_in_headers, "p-policy")
+        flow = await _flow_in_project(client, logged_in_headers, project["id"])
+        dataset = await create_dataset(client, logged_in_headers, "policy", [("a", "a")])
+        judge = [{"name": "j", "provider": "OpenAI", "metadata": {}}]
+        evaluation = await create_evaluation(
+            client,
+            logged_in_headers,
+            flow["id"],
+            dataset["id"],
+            scorers=[{"type": "llm_judge", "name": "judge", "config": {"model": judge}}],
+        )
+        await wait_for_run(
+            client, logged_in_headers, (await start_run(client, logged_in_headers, evaluation["id"]))["id"]
+        )
+        assert len(seen) == 1
+        context = seen[0]
+        assert context is not None, "the judge ran outside the flow's provider policy scope"
+        assert str(context.user_id) == flow["user_id"]
+        assert str(context.attributes["project_id"]) == project["id"]
+        assert context.attributes["provider_scope_required"] is True
+        assert current_model_provider_policy_context() is None
+
     async def test_should_finish_a_run_when_a_cancel_poll_fails(self, client, logged_in_headers, monkeypatch):
         monkeypatch.setattr(runner, "execute_row", _slow_rows(0.2))
         monkeypatch.setattr(runner, "CANCEL_POLL_SECONDS", 0.05)
