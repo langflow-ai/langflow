@@ -4,7 +4,6 @@ import ast
 import asyncio
 import inspect
 import logging
-import re
 from collections.abc import AsyncIterator, Iterator, Mapping
 from copy import deepcopy
 from functools import WRAPPER_ASSIGNMENTS, update_wrapper
@@ -50,7 +49,7 @@ from lfx.serialization.serialization import serialize
 from lfx.template.field.base import UNDEFINED, Input, Output
 from lfx.template.frontend_node.custom_components import ComponentFrontendNode
 from lfx.utils.async_helpers import async_delegate_target, run_until_complete
-from lfx.utils.secrets import is_secret_value, unwrap_secret_value
+from lfx.utils.secrets import is_secret_name, is_secret_value, normalized_secret_name, unwrap_secret_value
 from lfx.utils.util import find_closest_match
 
 from .custom_component import CustomComponent
@@ -108,14 +107,14 @@ def _mask_secret_value(value: Any) -> Any:
 
 def _is_credential_header(name: Any) -> bool:
     name = str(name).strip()
-    # Split camelCase as flow export does (_is_secret_name in langflow/utils/flow_secrets.py),
-    # so X-RapidAPI-Key reads as X-Rapid_API-Key and X-UserToken as X-User_Token.
-    camel_split = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", name)
+    # Mask every header flow export nulls (is_secret_name). The log redaction list and the field
+    # check in lfx.mcp.redact also catch names export keeps, such as auth, X-APIKey, X-PassWord
+    # and X-RapidAPIKey, which reads as x_rapid_apikey once normalized.
     return (
-        name.lower() in DEFAULT_REDACT_KEYS
-        or camel_split.lower().endswith(("-token", "_token"))
+        is_secret_name(name)
+        or name.lower() in DEFAULT_REDACT_KEYS
         or is_sensitive_field(name)
-        or is_sensitive_field(camel_split)
+        or is_sensitive_field(normalized_secret_name(name))
     )
 
 
