@@ -127,7 +127,7 @@ def call(
 
 def catalog(timeout: float = DEFAULT_TIMEOUT_SECONDS) -> dict[str, dict[str, Any]]:
     """Return ``{api_id: definition}`` from the public catalog, cached for an hour."""
-    global _catalog, _catalog_at
+    global _catalog, _catalog_at  # noqa: PLW0603 - module-level cache, guarded by _catalog_lock
     with _catalog_lock:
         if _catalog is not None and time.monotonic() - _catalog_at < CATALOG_TTL_SECONDS:
             return _catalog
@@ -136,8 +136,13 @@ def catalog(timeout: float = DEFAULT_TIMEOUT_SECONDS) -> dict[str, dict[str, Any
                 response = client.get(CATALOG_URL, headers={"accept": "application/json"})
             response.raise_for_status()
             apis = response.json()["apis"]
+            if not isinstance(apis, dict):
+                msg = "Catalog 'apis' must be an object."
+                raise TypeError(msg)
         except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
             if _catalog is not None:
+                # Serve stale data and wait a full TTL before retrying.
+                _catalog_at = time.monotonic()
                 return _catalog
             msg = "The APIVerve catalog could not be loaded. Retry in a moment."
             raise ValueError(msg) from exc

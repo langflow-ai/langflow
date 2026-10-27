@@ -237,3 +237,23 @@ class TestApiverveFindApis:
             base.search("pdf")
 
         assert sum(str(c.args[1]).startswith(base.CATALOG_URL) for c in mock_get.call_args_list) == 1
+
+    def test_malformed_catalog_is_rejected(self) -> None:
+        with (
+            patch("httpx.Client.get", autospec=True, return_value=_response(json_body={"apis": []})),
+            pytest.raises(ValueError, match="catalog could not be loaded"),
+        ):
+            base.search("vat")
+
+        assert base._catalog is None
+
+    def test_failed_refresh_serves_stale_catalog_and_backs_off(self) -> None:
+        with patch("httpx.Client.get", autospec=True, side_effect=_fake_get()):
+            base.search("vat")
+        base._catalog_at -= base.CATALOG_TTL_SECONDS + 1
+
+        with patch("httpx.Client.get", autospec=True, side_effect=httpx.ConnectError("down")) as mock_get:
+            assert [row["api"] for row in base.search("vat")] == ["vatrates"]
+            base.search("pdf")
+
+        assert mock_get.call_count == 1
