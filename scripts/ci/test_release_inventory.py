@@ -25,6 +25,7 @@ OPT_IN_STANDALONE_EXTENSIONS = {
     "lfx-firecrawl",
     "lfx-nextplaid",
     "lfx-paddle",
+    "lfx-bowmark",
     "lfx-serpingapi",
     "lfx-serply",
     "lfx-valkey",

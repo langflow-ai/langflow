@@ -5052,6 +5052,16 @@
       "added_in": "1.13.0"
     },
     {
+      "bare_class_name": "BowmarkLibraryComponent",
+      "target": "ext:bowmark:BowmarkLibraryComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "BowmarkRunComponent",
+      "target": "ext:bowmark:BowmarkRunComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
       "bare_class_name": "SerpingApiSearchComponent",
       "target": "ext:serpingapi:SerpingApiSearchComponent@official",
       "added_in": "1.13.0"
