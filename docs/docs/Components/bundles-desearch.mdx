@@ -1,0 +1,78 @@
+---
+title: Desearch
+slug: /bundles-desearch
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="desearch" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Desearch** bundle.
+
+All Desearch components need a Desearch API key. Create one at [console.desearch.ai/api-keys](https://console.desearch.ai/api-keys). For details on the underlying API, see the [Desearch documentation](https://www.desearch.ai/docs).
+
+If a request fails, for example because the API key is missing or invalid, the component returns a single row with an `error` column, or for the **Answer** output a message, that describes the problem.
+
+## Desearch Web Search
+
+This component runs a web search through [Desearch](https://desearch.ai) and returns the results.
+
+It outputs the results as a [`Table`](/data-types#table) with `title`, `link`, and `snippet` columns. The `text` of each row is the result snippet.
+
+In [tool mode](/agents-tools), the component exposes a single tool named `desearch_web_search` that an [**Agent** component](/agents) can call with a search query.
+
+### Desearch Web Search parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Search Query (`input_value`) | String | Input parameter. The search query to run with Desearch. |
+| Desearch API Key (`desearch_api_key`) | SecretString | Input parameter. Your Desearch API key. |
+| Offset (`offset`) | Integer | Input parameter. The number of results to skip, for paging. Default: `0`. |
+
+## Desearch AI Search
+
+This component sends a prompt to Desearch AI search, which searches the selected sources and returns an answer with links to its sources.
+
+It has two outputs:
+
+* **Answer**: A [`Message`](/data-types#message) with the answer followed by a list of source links.
+* **Sources**: A [`Table`](/data-types#table) with `title` and `link` columns for the sources. Both outputs share one search.
+
+In [tool mode](/agents-tools), the component exposes a single tool named `desearch_ai_search` that returns the answer with its sources.
+
+### Desearch AI Search parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Prompt (`input_value`) | String | Input parameter. The question or topic to research. |
+| Desearch API Key (`desearch_api_key`) | SecretString | Input parameter. Your Desearch API key. |
+| Sources (`sources`) | List | Input parameter. The sources to search: `web`, `twitter`, `reddit`, `hackernews`, `arxiv`, and `wikipedia`. Default: `web` and `twitter`. |
+| Date Range (`date_filter`) | String | Input parameter. Only use sources from this period, from `PAST_24_HOURS` to `PAST_2_YEARS`. Default: `ANY_TIME`. |
+
+## Desearch X Search
+
+This component searches X (Twitter) posts by keyword through Desearch.
+
+It outputs the posts as a [`Table`](/data-types#table) with `id`, `url`, `text`, `created_at`, `username`, `like_count`, `retweet_count`, and `reply_count` columns. The `text` of each row is the post text.
+
+In [tool mode](/agents-tools), the component exposes a single tool named `desearch_x_search`.
+
+### Desearch X Search parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Search Query (`input_value`) | String | Input parameter. Keywords to search for in X posts. |
+| Desearch API Key (`desearch_api_key`) | SecretString | Input parameter. Your Desearch API key. |
+| Number of Posts (`count`) | Integer | Input parameter. How many posts to return, from `1` to `100`. Default: `10`. |
+| Sort (`sort`) | String | Input parameter. `Top` or `Latest`. Default: `Top`. |
+| User (`user`) | String | Input parameter. Only posts from this username, without the at sign. Optional. |
+| Language (`lang`) | String | Input parameter. Language code, for example `en`. Optional. |
+| Start Date (`start_date`) | String | Input parameter. Earliest post date in `YYYY-MM-DD` format (UTC). Optional. |
+| End Date (`end_date`) | String | Input parameter. Latest post date in `YYYY-MM-DD` format (UTC). Optional. |
+
+## See also
+
+* [**Web Search** component](/web-search)

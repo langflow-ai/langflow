@@ -131,6 +131,7 @@ lfx-serply = { workspace = true }
 lfx-serpingapi = { workspace = true }
 lfx-microsoft = { workspace = true }
 lfx-slack = { workspace = true }
+lfx-desearch = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -171,6 +172,7 @@ members = [
     "src/bundles/serpingapi",
     "src/bundles/microsoft",
     "src/bundles/slack",
+    "src/bundles/desearch",
     # langflow-extensions:bundle-members-end
 ]
 
@@ -186,6 +188,7 @@ bundles = [
     "lfx-bundles[all-no-torch]>=1.2.4,<2.0",
     "lfx-arxiv>=0.2.0,<1.0.0",
     "lfx-confluent>=0.2.0,<1.0.0",
+    "lfx-desearch>=0.1.0,<1.0.0",
     "lfx-duckduckgo>=0.2.0,<1.0.0",
     "lfx-empiriolabs>=0.2.0,<1.0.0",
     "lfx-exa>=0.2.0,<1.0.0",

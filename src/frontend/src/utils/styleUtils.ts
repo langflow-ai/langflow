@@ -460,6 +460,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "CUGA", name: "cuga", icon: "Bot" },
   { display_name: "DataStax", name: "datastax", icon: "AstraDB" },
   { display_name: "DeepSeek", name: "deepseek", icon: "DeepSeek" },
+  { display_name: "Desearch", name: "desearch", icon: "Search" },
   { display_name: "Docling", name: "docling", icon: "Docling" },
   { display_name: "DuckDuckGo", name: "duckduckgo", icon: "DuckDuckGo" },
   { display_name: "Elastic", name: "elastic", icon: "ElasticsearchStore" },
