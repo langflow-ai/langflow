@@ -20,6 +20,7 @@ from lfx.custom.utils import (
     build_custom_component_template,
     get_instance_name,
     update_component_build_config,
+    update_rebuilt_node,
 )
 from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.graph.graph.base import Graph
@@ -37,9 +38,7 @@ from lfx.services.model_provider_policy import (
     set_current_model_provider_policy_context,
 )
 from lfx.services.settings.service import SettingsService
-from lfx.template.utils import copy_saved_custom_field_values
 from lfx.utils.component_aliases import ComponentIdentityIndex, build_component_identity_index
-from lfx.utils.file_path_security import component_file_access_scopes
 from lfx.utils.flow_validation import (
     CustomComponentValidationError,
     admin_only_build_required,
@@ -1974,26 +1973,7 @@ async def custom_component(
                 user_id=user.id,
                 parameters=_raw_component_parameters(current_template),
             )
-        if raw_code.frontend_node is not None:
-            built_frontend_node = await component_instance.update_frontend_node(
-                built_frontend_node,
-                raw_code.frontend_node,
-            )
-            # The hook rebuilds custom fields (a Prompt's variables) from the template text with
-            # empty values; give them back the values the user saved.
-            copy_saved_custom_field_values(
-                built_frontend_node,
-                raw_code.frontend_node,
-                component_file_access_scopes(component_instance),
-            )
-
-        tool_mode: bool = built_frontend_node.get("tool_mode", False)
-        if isinstance(component_instance, Component):
-            await component_instance.run_and_validate_update_outputs(
-                frontend_node=built_frontend_node,
-                field_name="tool_mode",
-                field_value=tool_mode,
-            )
+        built_frontend_node = await update_rebuilt_node(component_instance, built_frontend_node, raw_code.frontend_node)
     except IntegrationPolicyError as exc:
         # Same reasoning as the model-provider denial below: a governed
         # integration that discovery hides must not be distinguishable from one
