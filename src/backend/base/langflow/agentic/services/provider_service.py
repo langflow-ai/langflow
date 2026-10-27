@@ -4,6 +4,7 @@ import os
 import re
 from uuid import UUID
 
+from lfx.base.models.decision_constants import DECISION_ONLY_PROVIDERS
 from lfx.base.models.model_metadata import CONDITIONAL_LIVE_MODEL_PROVIDERS, LIVE_MODEL_PROVIDERS
 from lfx.base.models.model_utils import get_live_models_for_provider
 from lfx.base.models.provider_registry import get_registry_snapshot, is_api_key_optional
@@ -68,13 +69,18 @@ async def get_enabled_providers_for_user(
 
     provider_variable_map = get_model_provider_variable_mapping()
     registered_providers = _get_registered_provider_names()
+    # The assistant generates text, so decision-only providers are never candidates.
     provider_candidates = [
-        *provider_variable_map,
-        *(
-            provider
-            for provider in registered_providers
-            if provider not in provider_variable_map and is_api_key_optional(provider)
-        ),
+        provider
+        for provider in (
+            *provider_variable_map,
+            *(
+                provider
+                for provider in registered_providers
+                if provider not in provider_variable_map and is_api_key_optional(provider)
+            ),
+        )
+        if provider not in DECISION_ONLY_PROVIDERS
     ]
     # Resolve authorization before reading any credential-bearing variables or
     # probing environment-backed providers. Assistant requests bind their
@@ -248,6 +254,7 @@ def get_default_model(provider: str, user_id: UUID | str | None = None) -> str |
         include_unsupported=False,
         include_deprecated=False,
         only_defaults=True,
+        model_type="llm",
     )
     for provider_dict in models_by_provider:
         models = provider_dict.get("models", [])
