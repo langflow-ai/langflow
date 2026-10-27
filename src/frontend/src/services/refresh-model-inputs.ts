@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { isEqual, isEqualWith } from "lodash";
+import { isEqual, isEqualWith, mapValues, omit } from "lodash";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import { appendProviderScope } from "@/controllers/API/helpers/provider-scope";
@@ -152,6 +152,48 @@ const isEmptyModelValue = (value: unknown): boolean =>
 const sameEmptyValue = (left: unknown, right: unknown): true | undefined =>
   isEmptyModelValue(left) && isEmptyModelValue(right) ? true : undefined;
 
+const fieldPresentation = ["display_name", "info", "placeholder"] as const;
+const outputPresentation = ["display_name", "info"] as const;
+
+function refreshState(node: APIClassType | undefined) {
+  return {
+    // Field-mount requests populate options and provider-field visibility.
+    // Flow/project identity is checked separately against the captured scope.
+    template: mapValues(
+      omit(node?.template, [
+        "_frontend_node_flow_id",
+        "_frontend_node_folder_id",
+      ]),
+      (field) =>
+        field && typeof field === "object"
+          ? omit(field, [
+              ...fieldPresentation,
+              "options",
+              ...(field.type === "model" ? [] : ["show"]),
+            ])
+          : field,
+    ),
+    outputs: node?.outputs?.map((output) => omit(output, outputPresentation)),
+  };
+}
+
+function preservePresentationEdits<T extends object>(
+  before: T | undefined,
+  current: T | undefined,
+  next: T,
+  keys: readonly (keyof T)[],
+): T {
+  if (!before || !current) return next;
+  return {
+    ...next,
+    ...Object.fromEntries(
+      keys
+        .filter((key) => !isEqual(before[key], current[key]))
+        .map((key) => [key, current[key]]),
+    ),
+  };
+}
+
 function buildProviderConfiguration(
   providers: ModelProviderWithStatus[],
 ): ProviderConfiguration {
@@ -262,10 +304,32 @@ async function refreshSingleNode(
       .nodes.find((candidate) => candidate.id === node.id)?.data?.node as
       | APIClassType
       | undefined;
-    const changedInFlight =
-      !isEqualWith(liveNode?.template, nodeData.template, sameEmptyValue) ||
-      !isEqual(liveNode?.outputs, nodeData.outputs);
+    // Palette hydration translates presentation metadata while a refresh is pending.
+    const changedInFlight = !isEqualWith(
+      refreshState(liveNode),
+      refreshState(nodeData),
+      sameEmptyValue,
+    );
     if (changedInFlight) return;
+
+    refreshedTemplate = mapValues(refreshedTemplate, (field, key) =>
+      field && typeof field === "object"
+        ? preservePresentationEdits(
+            nodeData.template[key],
+            liveNode?.template[key],
+            field,
+            fieldPresentation,
+          )
+        : field,
+    );
+    refreshedOutputs = refreshedOutputs?.map((output) =>
+      preservePresentationEdits(
+        nodeData.outputs?.find((previous) => previous.name === output.name),
+        liveNode?.outputs?.find((current) => current.name === output.name),
+        output,
+        outputPresentation,
+      ),
+    );
 
     // Runs on every flow open, so the user has not asked for this write.
     setNode(

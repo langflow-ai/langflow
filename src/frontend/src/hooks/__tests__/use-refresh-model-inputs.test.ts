@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import type { APITemplateType } from "@/types/api";
+import type { APIClassType, APITemplateType } from "@/types/api";
 import type { AllNodeType } from "@/types/flow";
 
 // Mock values - must be defined before jest.mock calls
@@ -1138,6 +1138,162 @@ describe("refreshAllModelInputs — disconnected provider", () => {
         (updater(mockNodes[0]) as any).data.node.template.model.value,
     );
     expect(applied).not.toContainEqual([
+      expect.objectContaining({ name: "gpt-5.6", provider: "OpenAI" }),
+    ]);
+  });
+
+  it.each([
+    ["field", "display_name"],
+    ["field", "info"],
+    ["field", "placeholder"],
+    ["output", "display_name"],
+    ["output", "info"],
+  ])(
+    "applies refresh and preserves in-flight %s %s presentation",
+    async (target, key) => {
+      const initial = createMockModelNodeWithValue("node-1", []);
+      const initialData = initial.data.node as APIClassType;
+      initialData.outputs = [
+        {
+          name: "response",
+          types: ["Message"],
+          display_name: "Response",
+          info: "Before",
+        },
+      ];
+      initialData.template.model = {
+        ...initialData.template.model,
+        display_name: "Model",
+        info: "Before",
+        placeholder: "Before",
+      };
+      mockNodes = [initial];
+      let resolveResponse: ((value: unknown) => void) | undefined;
+      (api.post as jest.Mock).mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveResponse = resolve;
+          }),
+      );
+      const refresh = refreshAllModelInputs(undefined, { silent: true });
+      await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+      const live = JSON.parse(JSON.stringify(initial)) as AllNodeType;
+      const liveData = live.data.node as APIClassType;
+      const changed =
+        target === "field" ? liveData.template.model : liveData.outputs![0];
+      Object.assign(changed, { [key]: "Live presentation" });
+      mockNodes = [live];
+      resolveResponse?.({
+        data: {
+          ...initialData,
+          template: {
+            ...initialData.template,
+            model: { ...initialData.template.model, options: [OPENAI_OPTION] },
+          },
+        },
+      });
+      await refresh;
+      expect(mockSetNode).toHaveBeenCalledTimes(1);
+      const updated = mockSetNode.mock.calls[0][1](live).data
+        .node as APIClassType;
+      expect(updated.template.model.value).toEqual([
+        expect.objectContaining({ name: "gpt-5.6", provider: "OpenAI" }),
+      ]);
+      expect(
+        target === "field" ? updated.template.model : updated.outputs![0],
+      ).toMatchObject({ [key]: "Live presentation" });
+    },
+  );
+
+  it.each([
+    "value",
+    "nested value.info",
+    "output types",
+    "model show",
+    "advanced",
+    "api_editable",
+    "load_from_db",
+  ])("rejects a delayed refresh after a substantive %s edit", async (edit) => {
+    const initial = createMockModelNodeWithValue("node-1", []);
+    const initialData = initial.data.node as APIClassType;
+    initialData.template.context = {
+      ...initialData.template.model,
+      type: "str",
+      value: { info: "Original input" },
+    };
+    initialData.outputs = [
+      { name: "response", types: ["Message"], display_name: "Response" },
+    ];
+    mockNodes = [initial];
+    let resolveResponse: ((value: unknown) => void) | undefined;
+    (api.post as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveResponse = resolve;
+        }),
+    );
+    const refresh = refreshAllModelInputs(undefined, { silent: true });
+    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+    const live = JSON.parse(JSON.stringify(initial)) as AllNodeType;
+    const liveData = live.data.node as APIClassType;
+    if (edit === "output types") liveData.outputs![0].types = ["Data"];
+    else if (edit === "model show") liveData.template.model.show = false;
+    else if (["advanced", "api_editable", "load_from_db"].includes(edit)) {
+      liveData.template.context[edit] = true;
+    } else
+      liveData.template.context.value =
+        edit === "value" ? "Changed input" : { info: "Changed nested input" };
+    mockNodes = [live];
+    resolveResponse?.({
+      data: {
+        ...initialData,
+        template: {
+          ...initialData.template,
+          model: { ...initialData.template.model, options: [OPENAI_OPTION] },
+        },
+      },
+    });
+    await refresh;
+    expect(mockSetNode).not.toHaveBeenCalled();
+  });
+
+  it("applies the delayed model after concurrent mount refresh hydrates context, options, and credential visibility", async () => {
+    const initial = createMockModelNodeWithValue("node-1", []);
+    const initialData = initial.data.node as APIClassType;
+    initialData.template.model.options = [];
+    initialData.template.api_key = {
+      ...initialData.template.model,
+      type: "str",
+      show: true,
+      value: "",
+    };
+    mockNodes = [initial];
+    let resolveResponse: ((value: unknown) => void) | undefined;
+    (api.post as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveResponse = resolve;
+        }),
+    );
+    const refresh = refreshAllModelInputs(undefined, { silent: true });
+    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+    const live = JSON.parse(JSON.stringify(initial)) as AllNodeType;
+    const liveData = live.data.node as APIClassType;
+    liveData.template._frontend_node_flow_id = {
+      ...initialData.template.code,
+      value: mockCurrentFlowId,
+    };
+    liveData.template._frontend_node_folder_id = {
+      ...initialData.template.code,
+      value: mockCurrentFolderId,
+    };
+    liveData.template.api_key.show = false;
+    liveData.template.model.options = [OPENAI_OPTION];
+    mockNodes = [live];
+    resolveResponse?.({ data: liveData });
+    await refresh;
+    expect(mockSetNode).toHaveBeenCalledTimes(1);
+    expect(getRefreshedModelValue()).toEqual([
       expect.objectContaining({ name: "gpt-5.6", provider: "OpenAI" }),
     ]);
   });
