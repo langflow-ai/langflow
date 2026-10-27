@@ -661,9 +661,12 @@ async def test_narrowing_read_purpose_preserves_both_typed_model_denials(monkeyp
     assert policy.allows_model("OpenAI", "gpt-6-luna", model_type="llm")
 
 
-async def test_enable_decision_uses_typed_validation_despite_same_named_deprecated_chat(monkeypatch):
+@pytest.mark.parametrize("reject_second", [False, True])
+async def test_enable_decision_uses_typed_validation_despite_same_named_deprecated_chat(monkeypatch, reject_second):
+    import threading
     from unittest.mock import MagicMock, Mock
 
+    from fastapi import HTTPException
     from lfx.base.models import unified_models
     from lfx.services.model_provider_policy import (
         ModelProviderPolicyContext,
@@ -684,7 +687,8 @@ async def test_enable_decision_uses_typed_validation_despite_same_named_deprecat
     monkeypatch.setattr(models_api, "_aresolve_policy", AsyncMock(return_value=policy))
     monkeypatch.setattr(models_api, "_get_disabled_models", AsyncMock(return_value=set()))
     monkeypatch.setattr(models_api, "_get_enabled_models", AsyncMock(return_value=set()))
-    monkeypatch.setattr(models_api, "_save_model_list_variable", AsyncMock())
+    save = AsyncMock()
+    monkeypatch.setattr(models_api, "_save_model_list_variable", save)
     monkeypatch.setattr(
         models_api,
         "get_unified_models_detailed",
@@ -694,23 +698,52 @@ async def test_enable_decision_uses_typed_validation_despite_same_named_deprecat
                 "models": [
                     {"model_name": "shared", "metadata": {"model_type": "llm", "deprecated": True}},
                     {"model_name": "shared", "metadata": {"model_type": "decision"}},
+                    {"model_name": "second", "metadata": {"model_type": "decision"}},
                 ],
             }
         ],
     )
-    monkeypatch.setattr(unified_models, "get_all_variables_for_provider", lambda *_, **__: {})
-    validate = Mock()
+    loop_thread = threading.get_ident()
+
+    def load_settings(*_args, **_kwargs):
+        assert threading.get_ident() != loop_thread
+        return {}
+
+    def validate_key(*_args, model_name, **_kwargs):
+        assert threading.get_ident() != loop_thread
+        save.assert_not_called()
+        if reject_second and model_name == "second":
+            msg = "Invalid second model key"
+            raise ValueError(msg)
+
+    settings = Mock(side_effect=load_settings)
+    monkeypatch.setattr(unified_models, "get_all_variables_for_provider", settings)
+    validate = Mock(side_effect=validate_key)
     monkeypatch.setattr(unified_models, "validate_model_provider_key", validate)
-    result = await models_api.update_enabled_models(
-        session=object(),
-        current_user=user,
-        provider_policy_attributes={},
-        updates=[ModelStatusUpdate(provider="OpenAI", model_id="shared", model_type="decision", enabled=True)],
-    )
-    validate.assert_called_once_with(
+    kwargs = {
+        "session": object(),
+        "current_user": user,
+        "provider_policy_attributes": {},
+        "updates": [
+            ModelStatusUpdate(provider="OpenAI", model_id=name, model_type="decision", enabled=True)
+            for name in ("shared", "second")
+        ],
+    }
+    if reject_second:
+        with pytest.raises(HTTPException) as caught:
+            await models_api.update_enabled_models(**kwargs)
+        assert caught.value.status_code == 400
+        assert caught.value.detail == "Invalid second model key"
+        save.assert_not_called()
+    else:
+        result = await models_api.update_enabled_models(**kwargs)
+        assert set(result["enabled_models"]) == {"OpenAI::decision::shared", "OpenAI::decision::second"}
+        assert save.await_count == 2
+    assert settings.call_count == 2
+    assert validate.call_count == 2
+    validate.assert_any_call(
         "OpenAI", {}, model_name="shared", model_type="decision", user_id=user.id, policy_attributes={}
     )
-    assert result["enabled_models"] == ["OpenAI::decision::shared"]
 
 
 @pytest.mark.parametrize(
@@ -1034,7 +1067,11 @@ async def test_replacement_key_skips_broken_saved_secret_and_loads_settings_off_
     monkeypatch.setattr(credentials, "session_scope", session_scope)
     monkeypatch.setattr(credentials, "get_variable_service", lambda: SimpleNamespace(get_variable=get_variable))
     monkeypatch.setattr(unified_models, "get_all_variables_for_provider", read_settings)
-    validate = Mock()
+
+    def validate_key(*_args, **_kwargs):
+        assert threading.get_ident() != loop_thread
+
+    validate = Mock(side_effect=validate_key)
     monkeypatch.setattr(unified_models, "validate_model_provider_key", validate)
     result = await models_api.validate_provider(
         models_api.ValidateProviderRequest(
