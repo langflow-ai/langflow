@@ -117,10 +117,8 @@ class AuditReadQuery:
 _AUTH_PARAMS = frozenset({"x-api-key"})
 
 #: Query keys the ``flatten_query_string_lists`` middleware must hand over whole.
-#: That middleware splits every value on ``,`` so a repeatable filter can be sent
-#: as one key. A free-text search is not a list — ``q=invoice, q3`` is one phrase
-#: — and splitting it reached the route as a repeated ``q`` and answered 400.
-VERBATIM_QUERY_PARAMS = frozenset({"q"})
+#: Identity filters and free-text searches can contain commas and are never lists.
+VERBATIM_QUERY_PARAMS = frozenset({"q", *_TEXT_LIMITS})
 
 
 def group_query_params(

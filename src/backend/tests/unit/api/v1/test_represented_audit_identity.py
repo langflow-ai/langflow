@@ -35,14 +35,14 @@ async def _key(user):
         return await create_api_key(session, ApiKeyCreate(name=f"audit-{uuid4().hex}"), user.id)
 
 
-def _headers(key, subject="用户-Ålice"):
+def _headers(key, subject="用户-Ålice", *, issuer="https://idp.example"):
     """Encode an exact represented identity alongside the test API key."""
 
     def encode(value):
         """Encode UTF-8 identity bytes using the versioned transport format."""
         return "v1." + base64.urlsafe_b64encode(value.encode()).decode().rstrip("=")
 
-    return {"x-api-key": key.api_key, ISSUER_HEADER: encode("https://idp.example"), SUBJECT_HEADER: encode(subject)}
+    return {"x-api-key": key.api_key, ISSUER_HEADER: encode(issuer), SUBJECT_HEADER: encode(subject)}
 
 
 @pytest.fixture(params=["record_id", "secret_value"])
@@ -250,6 +250,46 @@ async def test_both_identity_pairs_remain_distinct_in_filters_and_responses(clie
     [resource_item] = [item for item in combined.json()["items"] if item["id"] == str(row.id)]
     assert resource_item["actor"]["acting_subject"] == "actor"
     assert resource_item["actor"]["represented_subject"] == "end-user"
+
+
+@pytest.mark.parametrize(
+    ("issuer", "subject", "filter_name"),
+    [
+        ("https://idp.example", "alice,bob", "represented_subject"),
+        ("https://idp.example/tenant,a", "alice", "represented_issuer"),
+    ],
+)
+async def test_represented_identity_filters_preserve_commas(client, trusted_key, issuer, subject, filter_name):
+    """Match exact comma-containing identities while rejecting repeated identity filters."""
+    created = await client.post(
+        "api/v1/projects/",
+        json={"name": f"comma-identity-{uuid4().hex}"},
+        headers=_headers(trusted_key, subject, issuer=issuer),
+    )
+    assert created.status_code == 201, created.text
+    project_id = created.json()["id"]
+    [event] = await events_for(project_id)
+    assert (event.represented_issuer, event.represented_subject) == (issuer, subject)
+    params = {"project_id": project_id, "represented_subject": subject, "operation": "create,patch"}
+    if filter_name == "represented_issuer":
+        params[filter_name] = issuer
+    headers = {"x-api-key": trusted_key.api_key}
+    response = await client.get("api/v1/projects/audits", params=params, headers=headers)
+    assert response.status_code == 200, response.text
+    [item] = response.json()["items"]
+    assert item["id"] == str(event.id)
+    assert item["actor"][filter_name] == params[filter_name]
+
+    partial = await client.get(
+        "api/v1/projects/audits", params={**params, filter_name: params[filter_name].split(",")[0]}, headers=headers
+    )
+    assert partial.status_code == 200, partial.text
+    assert partial.json()["items"] == []
+    repeated = await client.get(
+        "api/v1/projects/audits", params=[*params.items(), (filter_name, params[filter_name])], headers=headers
+    )
+    assert repeated.status_code == 400, repeated.text
+    assert repeated.json()["detail"] == f"Query parameter may appear once: {filter_name}"
 
 
 @pytest.mark.parametrize("composer_enabled", [False, True])
