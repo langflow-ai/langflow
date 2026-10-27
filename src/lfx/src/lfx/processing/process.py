@@ -563,11 +563,11 @@ def process_tweaks(
     refused: list[tuple[str, str]] = []
 
     all_nodes_tweaks = {}
-    pending: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    pending: list[tuple[dict[str, Any], dict[str, Any], frozenset[str]]] = []
     for key, value in tweaks_dict.items():
         if isinstance(value, dict):
             if (node := nodes_map.get(key)) or (node := nodes_display_name_map.get(key)):
-                pending.append((node, value))
+                pending.append((node, value, frozenset()))
         else:
             all_nodes_tweaks[key] = value
     if exempt_keys:
@@ -575,12 +575,13 @@ def process_tweaks(
         # Apply it before targeted tweaks without changing the precedence of
         # any explicit all-node values supplied by the caller.
         injected_stream = all_nodes_tweaks.pop("stream")
-        pending = [(node, {"stream": injected_stream}) for node in nodes] + pending
+        pending = [(node, {"stream": injected_stream}, exempt_keys) for node in nodes] + pending
     if all_nodes_tweaks:
-        pending.extend((node, all_nodes_tweaks) for node in nodes)
+        pending.extend((node, all_nodes_tweaks, frozenset()) for node in nodes)
 
     # Decide first, mutate second. A refusal must leave the payload untouched.
-    for node, node_tweaks in pending:
+    # Only the injected default is exempt; targeted caller values obey policy.
+    for node, node_tweaks, node_exempt_keys in pending:
         template_data = node.get("data", {}).get("node", {}).get("template")
         if not isinstance(template_data, dict):
             continue
@@ -592,7 +593,7 @@ def process_tweaks(
                 node_data=node.get("data", {}),
                 policy=policy,
                 flow_declares_allowlist=flow_declares_allowlist,
-                exempt_keys=exempt_keys,
+                exempt_keys=node_exempt_keys,
             ).items()
         )
 
@@ -600,13 +601,13 @@ def process_tweaks(
         refused_fields = sorted({field_name for field_name, _ in refused})
         raise TweakRefusedError(refused_fields, reason=_combined_refusal_reason(refused))
 
-    for node, node_tweaks in pending:
+    for node, node_tweaks, node_exempt_keys in pending:
         apply_tweaks(
             node,
             node_tweaks,
             policy=policy,
             flow_declares_allowlist=flow_declares_allowlist,
-            exempt_keys=exempt_keys,
+            exempt_keys=node_exempt_keys,
         )
 
     return graph_data

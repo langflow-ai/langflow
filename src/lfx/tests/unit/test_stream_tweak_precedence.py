@@ -1,6 +1,7 @@
 """Streaming transport defaults must preserve explicit component tweaks."""
 
 from copy import deepcopy
+from unittest.mock import patch
 
 import pytest
 from lfx.exceptions.tweaks import TweakRefusedError
@@ -92,3 +93,32 @@ def test_refused_tweak_does_not_apply_the_runtime_stream_default():
         )
 
     assert graph == before
+
+
+@pytest.mark.parametrize("policy", ["off", "declared"])
+@pytest.mark.parametrize("target", ["Model-a", "Model"])
+def test_targeted_stream_tweak_obeys_deployment_policy(policy, target):
+    """An injected default must not exempt the caller's targeted stream tweak."""
+    graph = _graph()
+    graph["nodes"][0]["data"]["node"]["template"]["temperature"]["api_editable"] = True
+    before = deepcopy(graph)
+
+    with (
+        patch("lfx.processing.process._resolve_tweak_policy", return_value=policy),
+        pytest.raises(TweakRefusedError, match="stream"),
+    ):
+        process_tweaks(graph, {target: {"stream": False}}, stream=True)
+
+    assert graph == before
+
+
+def test_declared_stream_tweak_overrides_the_runtime_default():
+    """A field explicitly exposed by the flow can still override the default."""
+    graph = _graph()
+    graph["nodes"][0]["data"]["node"]["template"]["stream"]["api_editable"] = True
+
+    with patch("lfx.processing.process._resolve_tweak_policy", return_value="declared"):
+        process_tweaks(graph, {"Model-a": {"stream": False}}, stream=True)
+
+    assert graph["nodes"][0]["data"]["node"]["template"]["stream"]["value"] is False
+    assert graph["nodes"][1]["data"]["node"]["template"]["stream"]["value"] is True
