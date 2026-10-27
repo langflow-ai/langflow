@@ -979,6 +979,13 @@ async def test_a_decision_picker_saves_a_decisions_only_openai_key_with_one_chec
     # The checks under count, not endpoints: an environment base URL would stop the chat check early.
     for name in ("OPENAI_BASE_URL", "OPENAI_API_BASE", "LANGFLOW_OPENAI_BASE_URL"):
         monkeypatch.delenv(name, raising=False)
+    # Login imports CI's environment credentials before the test body runs.
+    variables = await client.get("api/v1/variables/", headers=logged_in_headers)
+    assert variables.status_code == 200
+    for variable in variables.json():
+        if variable["name"] in {"OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENAI_API_BASE", "LANGFLOW_OPENAI_BASE_URL"}:
+            deleted = await client.delete(f"api/v1/variables/{variable['id']}", headers=logged_in_headers)
+            assert deleted.status_code == 204, deleted.text
     key = "sk-decisions-only"  # pragma: allowlist secret
     check = await client.post(
         "api/v1/models/validate-provider",
