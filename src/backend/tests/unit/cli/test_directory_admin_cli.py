@@ -635,3 +635,18 @@ def test_directory_token_preflight_rejects_unwritable_file_before_http(monkeypat
         app, ["admin", "directory", "connection", "token", "--yes", "--output-file", str(tmp_path / "token.json")]
     )
     assert result.exit_code == 2
+
+
+def test_directory_token_requires_private_posix_file_support(monkeypatch, capsys, tmp_path: Path) -> None:
+    path = tmp_path / "token.json"
+
+    def no_client(_ctx):
+        pytest.fail("Unsupported private-file creation reached HTTP")
+
+    monkeypatch.setattr("langflow.cli.admin.commands._client_from_context", no_client)
+    monkeypatch.delattr("langflow.cli.admin.commands.os.fchmod")
+    result = CliRunner().invoke(app, ["admin", "directory", "connection", "token", "--yes", "--output-file", str(path)])
+    captured = capsys.readouterr()
+    assert result.exit_code == 2
+    assert "requires POSIX" in result.output + captured.out + captured.err
+    assert not path.exists()

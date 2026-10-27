@@ -631,6 +631,8 @@ def directory_connection_token(
 ) -> None:
     if not yes:
         _fail(ValueError("Token creation requires --yes and --output-file"), usage=True)
+    if os.name != "posix" or not callable(getattr(os, "fchmod", None)):
+        _fail(ValueError("Private token-file creation currently requires POSIX"), usage=True)
     try:
         descriptor = os.open(output_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     except OSError:
