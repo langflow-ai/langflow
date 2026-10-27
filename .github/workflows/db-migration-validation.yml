@@ -209,6 +209,46 @@ jobs:
           # Verify upgrade
           python -c 'from importlib.metadata import version; print("Upgraded to Langflow Nightly version:", version("langflow"))'
 
+      - name: Check saved flows against the nightly before migrating
+        working-directory: migration-test
+        env:
+          SOURCE_DATABASE_URL: postgresql://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@localhost:5432/${{ env.POSTGRES_DB }}  # pragma: allowlist secret
+        run: |
+          source .venv/bin/activate
+
+          # Exit 0 or 1 is a finished check (1 means a flow needs action). Exit 2 means it could not finish.
+          status=0
+          python -m langflow upgrade-check --database-url "$SOURCE_DATABASE_URL" --json \
+            --output upgrade-check-report.json > upgrade-check.jsonl || status=$?
+          echo "upgrade-check exited with $status"
+          if [ "$status" -ne 0 ] && [ "$status" -ne 1 ]; then
+            echo "❌ upgrade-check could not finish on a database the stable release created"
+            tail -n 1 upgrade-check.jsonl || true
+            exit 1
+          fi
+
+          # The report file parses, and the stream ends with the same report.
+          python - <<'PY'
+          import json
+
+          report = json.load(open("upgrade-check-report.json"))
+          last = json.loads(open("upgrade-check.jsonl").read().splitlines()[-1])
+          assert report["format_version"] == 1, report["format_version"]
+          assert last == {"event": "report", "report": report}, "the last --json line is not the report"
+          print(json.dumps(report["summary"]))
+          PY
+
+      - name: Upload upgrade-check report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: upgrade-check-report
+          path: |
+            migration-test/upgrade-check-report.json
+            migration-test/upgrade-check.jsonl
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Run migration and verify startup
         working-directory: migration-test
         env:
