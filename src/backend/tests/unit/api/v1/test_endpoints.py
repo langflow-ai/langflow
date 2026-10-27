@@ -1480,3 +1480,59 @@ async def test_custom_component_fails_closed_when_no_trusted_copy(
     response = await client.post("api/v1/custom_component", json=request.model_dump(), headers=logged_in_headers)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN, response.json()
+
+
+@pytest.mark.parametrize("path", ["api/v1/custom_component", "api/v1/custom_component/update"])
+async def test_memory_base_preflight_sees_request_flow_id(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    flow,
+    monkeypatch,
+    path: str,
+):
+    """Updating a Memory Base node must not fail with "flow_id is not available".
+
+    The model-provider preflight runs on a fresh instance before the template's
+    ``_frontend_node_*`` values are applied and without a graph, so the flow has
+    to come from the request's (already authorized) ``flow_id`` query parameter.
+    """
+    from langflow.services.database.models.memory_base.model import MemoryBase
+    from lfx.components.files_and_knowledge.memory_retrieval import MemoryBaseComponent
+    from lfx.services.deps import session_scope
+
+    memory_base = MemoryBase(name="mb-one", flow_id=flow.id, user_id=flow.user_id, kb_name="mb-one-kb")
+    async with session_scope() as session:
+        session.add(memory_base)
+    resolve_embedding_selection = AsyncMock(return_value=("OpenAI", "text-embedding-3-small"))
+    monkeypatch.setattr("langflow.api.utils.kb_helpers.resolve_embedding_selection", resolve_embedding_selection)
+
+    source_file = await asyncio.to_thread(inspect.getsourcefile, MemoryBaseComponent)
+    code = await Path(source_file).read_text(encoding="utf-8")
+    template = {
+        "code": {"value": code, "_input_type": "CodeInput"},
+        "memory_base": {"value": "mb-one", "_input_type": "DropdownInput"},
+    }
+    if path.endswith("/update"):
+        request = UpdateCustomComponentRequest(
+            code=code,
+            frontend_node={"outputs": []},
+            field="tool_mode",
+            field_value=False,
+            template=template,
+        )
+    else:
+        request = CustomComponentRequest(code=code, frontend_node={"template": template})
+
+    response = await client.post(
+        path,
+        json=request.model_dump(),
+        params={"flow_id": str(flow.id)},
+        headers=logged_in_headers,
+    )
+
+    try:
+        assert response.status_code == status.HTTP_200_OK, response.json()
+        resolve_embedding_selection.assert_awaited_with(user_id=flow.user_id, kb_name="mb-one-kb")
+    finally:
+        async with session_scope() as session:
+            await session.delete(await session.get(MemoryBase, memory_base.id))

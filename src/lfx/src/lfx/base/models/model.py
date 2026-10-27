@@ -437,6 +437,10 @@ class LCModelComponent(Component):
         Returns:
             Built LLM model instance
         """
+        # Imported lazily like the policy gate in Component to keep the
+        # policy service out of this module's import-time dependencies.
+        from lfx.services.model_provider_policy import ModelProviderPolicyError
+
         try:
             if provider_name not in [model.get("display_name") for model in model_info.values()]:
                 msg = f"Unknown model provider: {provider_name}"
@@ -468,6 +472,10 @@ class LCModelComponent(Component):
                 component = component_class()
 
             return self.build_llm_model_from_inputs(component, component_inputs)
+        except ModelProviderPolicyError:
+            # Keep the policy_blocked code and blocked-model guidance intact
+            # for callers that surface policy denials.
+            raise
         except Exception as e:
             msg = f"Error building {provider_name} language model"
             raise ValueError(msg) from e

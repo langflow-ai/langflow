@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -442,6 +443,17 @@ from langflow.io import MessageTextInput
 
 
 class TestGenerateRequirementsFromFlow:
+    def test_exported_code_lines_include_external_dependencies(self):
+        node = _make_node("ExternalComponent", "import qdrant_client\n")
+        node["data"]["node"]["template"]["code"]["value"] = ["import qdrant_client", ""]
+        flow = _make_flow(node)
+        original = deepcopy(flow)
+
+        result = generate_requirements_from_flow(flow, include_lfx=False, pin_versions=False)
+
+        assert result == ["qdrant-client"]
+        assert flow == original
+
     def test_empty_flow(self):
         flow = _make_flow()
         result = generate_requirements_from_flow(flow, pin_versions=False)

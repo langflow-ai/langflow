@@ -1,8 +1,8 @@
 [project]
 name = "langflow-base"
-version = "1.13.0"
+version = "1.14.0"
 description = "A Python package with a built-in web application"
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.10,<3.16"
 license = "MIT"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 readme = "README.md"
@@ -17,7 +17,7 @@ maintainers = [
 ]
 
 dependencies = [
-    "lfx[sqlite]~=1.13.0",
+    "lfx[sqlite]==1.14.0",
     "fastapi>=0.139.0,<1.0.0",
     "starlette>=1.5.0",
     "slowapi>=0.1.9,<1.0.0",
@@ -47,7 +47,9 @@ dependencies = [
     "rich>=13.7.0,<14.0.0",
     "langchain-experimental~=0.4.1",
     "sqlmodel~=0.0.46",
-    "pydantic>=2.13.0,<2.14",
+    # pydantic-core ships cp315 wheels from 2.48 on, which only pydantic 2.14 pins.
+    "pydantic>=2.13.0,<2.14; python_version < '3.15'",
+    "pydantic>=2.14.1,<2.15; python_version >= '3.15'",
     "pydantic-settings>=2.2.0,<3.0.0",
     "email-validator>=2.0.0",
     "typer>=0.19.0,<1.0.0",
@@ -92,7 +94,8 @@ dependencies = [
     "pip>=26.2.1,<27.0.0",
     "setuptools>=83.0.0,<84.0.0",
     "nanoid>=2.0.0,<3.0.0",
-    "filelock>=3.20.1,<4.0.0",
+    "filelock>=4.1.0,<4.2.0; python_version < '3.11'",
+    "filelock>=4.2.1,<5.0.0; python_version >= '3.11'",
     "grandalf>=0.8.0,<1.0.0",
     "spider-client>=0.0.27,<1.0.0",
     "clickhouse-connect==0.7.19",
@@ -119,7 +122,8 @@ dependencies = [
     "jaraco-context>=6.1.0",
     "wheel>=0.46.2,<1.0.0",
     "onnxruntime>=1.20,<1.24; python_version<'3.14'", # >=1.24 does not support Python 3.10
-    "onnxruntime>=1.26; python_version>='3.14'",
+    # onnxruntime ships no cp315 wheels (and no sdist) yet; drop the gate once it does.
+    "onnxruntime>=1.26; python_version>='3.14' and python_version<'3.15'",
     "dynaconf>=3.2.13,<4.0.0",
     "pyasn1>=0.6.3,<0.7.0",
     "langgraph-checkpoint>4.0.0,<5.0.0",
@@ -134,6 +138,9 @@ dependencies = [
     "arize-phoenix-otel>=0.6.1",
     "openinference-instrumentation-langchain>=0.1.29",
     "opik>=2.0.0,<3.0.0",
+    # Opik installs LiteLLM even without the optional litellm extra.
+    # Block the compromised 1.107.0 release in published wheel metadata.
+    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1,!=1.107.0",
     # Newer Opik releases cap LiteLLM below its security floor on Python 3.10.
     # Publish the compatible version constraint so fresh wheel installs stay valid.
     "opik==2.2.7; python_version < '3.11'",
@@ -223,11 +230,11 @@ local = [
 ]
 
 # Opt-in microVM sandbox backend for code-execution components (issue #12029).
-sandbox = ["lfx[sandbox]~=1.13.0"]
+sandbox = ["lfx[sandbox]==1.14.0"]
 
 # Individual database providers
 couchbase = ["couchbase>=4.2.1"]
-cassandra = ["lfx[cassandra]~=1.13.0"]  # Compatibility spelling for the lfx-datastax extension.
+cassandra = ["lfx[cassandra]==1.14.0"]  # Compatibility spelling for the lfx-datastax extension.
 clickhouse = ["clickhouse-connect==0.7.19"]
 
 
@@ -293,7 +300,7 @@ pytube = ["pytube==15.0.0"]
 smolagents = ["smolagents>=1.8.0"]
 
 # Individual tools
-beautifulsoup = ["lfx~=1.13.0"]  # beautifulsoup4 is now a hard lfx dependency
+beautifulsoup = ["lfx==1.14.0"]  # beautifulsoup4 is now a hard lfx dependency
 serpapi = ["google-search-results>=2.4.1,<3.0.0"]
 google-api = ["google-api-python-client~=2.161"]
 wikipedia = ["wikipedia==1.4.0"]
@@ -332,7 +339,7 @@ pgvector = [
     "psycopg[binary]>=3.1,<4.0",
 ]
 litellm = [
-    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1",
+    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1,!=1.107.0",
     # Runtime deps from litellm[proxy] that langflow-ide hits when logging
     # to langfuse via litellm.proxy.proxy_server (issue #12228). The full
     # Pull in only the modules Langflow uses from litellm[proxy] rather than
@@ -366,7 +373,7 @@ spider = ["spider-client>=0.0.27,<1.0.0"]
 altk = []
 
 # Toolguard Integration
-toolguard = ["lfx[toolguard]~=1.13.0"]  # toolguard relocated to lfx
+toolguard = ["lfx[toolguard]==1.14.0"]  # toolguard relocated to lfx
 
 # Additional LangChain integrations
 # Excluded on macOS x86_64: transitive torch dependency (via sentence-transformers) has no Intel Mac wheels
@@ -416,12 +423,13 @@ cuga = [
     # Temporary compatibility valve: newer langchain-litellm releases require cryptography<49.
     "langchain-litellm==0.5.1; sys_platform != 'darwin' and python_version < '3.14'",
     "langchain-litellm==0.5.1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
-    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1; sys_platform != 'darwin' and python_version < '3.14'",
-    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
+    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1,!=1.107.0; sys_platform != 'darwin' and python_version < '3.14'",
+    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1,!=1.107.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
 ]
 mlx = [
-    "mlx>=0.29.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
-    "mlx-vlm~=0.3.9; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
+    # mlx ships no cp315 wheels (and no sdist) yet.
+    "mlx>=0.29.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12' and python_version < '3.15'",
+    "mlx-vlm~=0.3.9; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12' and python_version < '3.15'",
 ]
 
 # MCP

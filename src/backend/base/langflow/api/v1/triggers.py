@@ -8,6 +8,11 @@ ceiling as running the flow by hand, which is what a trigger ultimately does.
 Existence privacy follows the connections precedent: a trigger the caller cannot
 read at all is a 404, while a caller who can read the flow but not write it gets
 an honest 403.
+
+Two routes are not flow-scoped. ``GET /triggers?scope=all`` and the ``/bulk``
+routes are the operator view (TRG-7 B3): superuser only, across every user, for
+incident response. Every ``TriggerRead`` carries the server-computed
+``allowed_actions`` / ``blocked_actions`` / ``reason`` for the caller.
 """
 
 from __future__ import annotations
@@ -19,16 +24,22 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response,
 
 from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
 from langflow.api.v1.flows_helpers import _read_flow
+from langflow.api.v1.triggers_helpers import list_all_triggers, list_visible_triggers, present, present_one
+from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version.exceptions import FlowVersionNotFoundError
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import (
+    PROVIDER_PATTERN,
     TriggerBindingTarget,
+    TriggerBulkRequest,
+    TriggerBulkResult,
     TriggerCreate,
     TriggerEventRead,
     TriggerIngressRead,
+    TriggerListScope,
     TriggerPinRequest,
     TriggerRead,
     TriggerReplayRequest,
@@ -37,12 +48,12 @@ from langflow.services.database.models.trigger.schemas import (
     TriggerTestRequest,
     TriggerUpdate,
 )
+from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_settings_service, get_trigger_service
-from langflow.services.triggers import ledger
+from langflow.services.triggers import ledger, operator
 from langflow.services.triggers.constants import (
     KIND_INBOUND_WEBHOOK,
     PROVIDER_WEBHOOK,
-    PUSH_MECHANISMS,
     TEST_DEDUPE_PREFIX,
 )
 from langflow.services.triggers.errors import (
@@ -62,6 +73,7 @@ def _service() -> TriggerService:
 
 
 TriggerServiceDep = Annotated[TriggerService, Depends(_service)]
+CurrentSuperuser = Annotated[User | UserRead, Depends(get_current_active_superuser)]
 
 
 def _not_found() -> HTTPException:
@@ -160,19 +172,79 @@ async def list_triggers(
     session: DbSessionReadOnly,
     current_user: CurrentActiveUser,
     service: TriggerServiceDep,
-    flow_id: Annotated[UUID, Query(description="Flow whose triggers to list")],
+    flow_id: Annotated[UUID | None, Query(description="Only the triggers on this flow")] = None,
+    scope: Annotated[
+        TriggerListScope,
+        Query(description="'mine': every flow the caller can read. 'all': every user's triggers (superuser only)."),
+    ] = TriggerListScope.MINE,
+    provider: Annotated[str | None, Query(max_length=64, pattern=PROVIDER_PATTERN)] = None,
+    state: TriggerState | None = None,
     limit: Annotated[int, Query(ge=1, le=_MAX_PAGE_SIZE)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[TriggerRead]:
-    """List the triggers on one flow.
+    """List triggers, newest first, each with its flow's name.
 
-    ``flow_id`` is required rather than optional: an unscoped list would have to
-    fan out over every flow the caller can read, and the answer a client wants is
-    always "the triggers on this flow".
+    With ``flow_id``, the triggers on that one flow, authorized as a flow read
+    (404 when the caller cannot read it). Without it, the triggers on every flow
+    the caller can read, including shared flows when a registered plugin
+    supports cross-user fetch. ``scope=all`` is the
+    operator view: every user's triggers with each owner's username, superuser
+    only.
     """
-    await _authorized_flow(session, current_user, flow_id, FlowAction.READ)
-    rows = await service.list_for_flows(session, flow_ids=[flow_id], limit=limit, offset=offset)
-    return [TriggerRead.model_validate(row) for row in rows]
+    if scope is TriggerListScope.ALL:
+        if not current_user.is_superuser:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Only a superuser can list every user's triggers."
+            )
+        rows = await list_all_triggers(
+            session, flow_id=flow_id, provider=provider, state=state, limit=limit, offset=offset
+        )
+        return await present(rows, current_user)
+    if flow_id is None:
+        rows = await list_visible_triggers(
+            session, current_user, provider=provider, state=state, limit=limit, offset=offset
+        )
+        return await present(rows, current_user)
+    flow = await _authorized_flow(session, current_user, flow_id, FlowAction.READ)
+    triggers = await service.list_for_flows(
+        session, flow_ids=[flow_id], limit=limit, offset=offset, provider=provider, state=state
+    )
+    return await present([(row, flow, None) for row in triggers], current_user)
+
+
+@router.post("/bulk/pause", response_model=TriggerBulkResult)
+async def bulk_pause_triggers(
+    payload: TriggerBulkRequest,
+    session: DbSession,
+    current_user: CurrentSuperuser,
+    service: TriggerServiceDep,
+) -> TriggerBulkResult:
+    """Pause every armed trigger the filter selects, across all users. Superuser only.
+
+    For incident response. Only ``active``, ``error`` and ``needs_reconnect``
+    triggers are paused; each is marked so its owner sees ``paused_by_admin``
+    and the operator's bulk resume can re-arm exactly these. ``dry_run`` reports
+    the same answer without changing anything, for a confirmation dialog.
+    """
+    return await operator.bulk_pause(session, service, request=payload, actor_id=current_user.id)
+
+
+@router.post("/bulk/resume", response_model=TriggerBulkResult)
+async def bulk_resume_triggers(
+    payload: TriggerBulkRequest,
+    session: DbSession,
+    current_user: CurrentSuperuser,
+    service: TriggerServiceDep,
+) -> TriggerBulkResult:
+    """Resume the triggers an operator paused that the filter selects. Superuser only.
+
+    A trigger its owner paused stays paused. A trigger that cannot start is
+    reported in ``failed``: if enabling it is refused it stays paused, released
+    from the operator's hold, with the reason in ``last_error``; if a push
+    source's subscription fails, the trigger records the failure as it would
+    for the owner's own resume. Each change commits with its audit row.
+    """
+    return await operator.bulk_resume(session, service, request=payload, actor_id=current_user.id)
 
 
 @router.post("", response_model=TriggerRead, status_code=status.HTTP_201_CREATED)
@@ -199,7 +271,7 @@ async def create_trigger(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
-    return TriggerRead.model_validate(row)
+    return await present_one(session, current_user, row)
 
 
 def _reject_unsupported_binding(target: TriggerBindingTarget, deployment_id: UUID | None) -> None:
@@ -226,7 +298,7 @@ async def get_trigger(
     row = await _authorized_trigger(
         service=service, session=session, user=current_user, trigger_id=trigger_id, action=FlowAction.READ
     )
-    return TriggerRead.model_validate(row)
+    return await present_one(session, current_user, row)
 
 
 @router.patch("/{trigger_id}", response_model=TriggerRead)
@@ -247,7 +319,7 @@ async def update_trigger(
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
     _reject_unsupported_binding(TriggerBindingTarget(updated.binding_target), updated.deployment_id)
-    return TriggerRead.model_validate(updated)
+    return await present_one(session, current_user, updated)
 
 
 @router.delete("/{trigger_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -275,19 +347,10 @@ async def enable_trigger(
         service=service, session=session, user=current_user, trigger_id=trigger_id, action=FlowAction.WRITE
     )
     try:
-        updated = await service.enable(session, row=row)
-        if (
-            updated.provider in {"microsoft", "google"}
-            and (updated.config or {}).get("mechanism_id") in PUSH_MECHANISMS
-        ):
-            from langflow.services.triggers.source_runtime import initialize_source
-
-            await session.commit()
-            await initialize_source(updated.id)
-            await session.refresh(updated)
+        updated = await service.enable_and_activate(session, row=row)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
-    return TriggerRead.model_validate(updated)
+    return await present_one(session, current_user, updated)
 
 
 @router.post("/{trigger_id}/disable", response_model=TriggerRead)
@@ -304,7 +367,7 @@ async def disable_trigger(
         updated = await service.disable(session, row=row)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
-    return TriggerRead.model_validate(updated)
+    return await present_one(session, current_user, updated)
 
 
 @router.post("/{trigger_id}/pin", response_model=TriggerRead)
@@ -329,7 +392,7 @@ async def pin_trigger(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
-    return TriggerRead.model_validate(updated)
+    return await present_one(session, current_user, updated)
 
 
 @router.get("/{trigger_id}/events", response_model=list[TriggerEventRead])
@@ -425,18 +488,23 @@ async def get_trigger_ingress(
     row = await _authorized_trigger(
         service=service, session=session, user=current_user, trigger_id=trigger_id, action=FlowAction.READ
     )
-    if (
-        row.provider in {"microsoft", "google"}
-        and row.public_id
-        and (row.config or {}).get("mechanism_id") in PUSH_MECHANISMS
-    ):
+    from langflow.services.triggers.providers.registry import get_kind, push_mechanisms, source_kinds
+
+    mechanism = (row.config or {}).get("mechanism_id")
+    kind = get_kind(row.kind)
+    supports_push = (
+        bool(kind.push_mechanism) and mechanism == kind.push_mechanism
+        if kind is not None
+        else mechanism in push_mechanisms()
+    )
+    if row.kind in source_kinds() and row.public_id and supports_push:
         from langflow.services.triggers.source_subscription import source_ingress_url
 
         return TriggerIngressRead(
             trigger_id=row.id,
             public_id=row.public_id,
             ingress_url=await source_ingress_url(session, row),
-            has_signing_secret=False,
+            has_signing_secret=bool(row.signing_secret_encrypted),
         )
     _require_ingress_kind(row)
     return _ingress_read(row, request)

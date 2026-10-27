@@ -1,0 +1,1062 @@
+---
+title: Troubleshoot Langflow
+slug: /troubleshoot
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import Icon from "@site/src/components/icon";
+
+This page provides troubleshooting advice for issues you might encounter when using Langflow or contributing to Langflow.
+
+## Missing components
+
+As Langflow development continues, components are often recategorized or deprecated for better alignment or to prepare for new components.
+
+If a component appears to be missing from the <Icon name="Component" aria-hidden="true" /> **Core components** and  menus, try the following:
+
+* <Icon name="Search" aria-hidden="true" /> **Search** for the component.
+* Check other component categories and <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components).
+* Check [legacy components](/concepts-components#legacy-components), which are hidden by default.
+* Check the [Changelog](https://github.com/langflow-ai/langflow/releases/latest) for component changes in recent releases.
+* Make sure the component isn't already present in your flow if it is a single-use component.
+
+If you still cannot locate the component, see [Langflow GitHub Issues and Discussions](/contributing-github-issues).
+
+## No input in the Playground
+
+If there is no message input field in the **Playground**, make sure your flow has a [**Chat Input** component](/chat-input-and-output) that is connected, directly or indirectly, to the **Input** port of a **Language Model** or **Agent** component.
+
+Because the **Playground** is designed for flows that use an LLM in a query-and-response format, such as chatbots and agents, a flow must have **Chat Input**, **Language Model**/**Agent**, and **Chat Output** components to be fully supported by the **Playground** chat interface.
+
+For more information, see [Test flows in the Playground](/concepts-playground).
+
+## Missing key, no key found, or invalid API key
+
+If you get an API key error when running a flow, try the following:
+
+* For all components that require credentials, make sure those components have a valid credential in the component's settings, such as the **API Key** field.
+* If you store your credentials in [Langflow global variables](/configuration-global-variables), make sure you selected the correct global variable and that the variable contains a valid credential.
+* Make sure the provided credentials are active, have the required permissions, and, if applicable, have sufficient funds in the account to execute the required action. For example, model providers require credits to use their LLMs.
+
+## Langflow installation issues
+
+The following issues can occur when installing Langflow.
+
+### Langflow installation freezes at pip dependency resolution
+
+Installing Langflow OSS with `pip install langflow` slowly fails with this error message:
+
+```text
+pip is looking at multiple versions of <<library>> to determine which version is compatible with other requirements. This could take a while.
+```
+
+To work around this issue, install Langflow with `uv` instead of `pip`, as explained in [Install and run the Langflow OSS Python package](/get-started-installation#install-and-run-the-langflow-oss-python-package).
+
+### Linux installation fails to build required package
+
+When you try to install Langflow OSS on Linux, installation fails because of outdated or missing packages:
+
+```bash
+Resolved 455 packages in 18.92s
+  × Failed to build `webrtcvad==2.0.10`
+  ├─▶ The build backend returned an error
+  ╰─▶ Call to `setuptools.build_meta:__legacy__.build_wheel` failed (exit status: 1)
+```
+
+To resolve this error, install the required build dependencies, and then retry the Langflow installation:
+
+```bash
+sudo apt-get update
+sudo apt-get install build-essential python3-dev
+```
+
+If upgrading your packages doesn't fix the issue, install `gcc` separately, and then retry the Langflow installation:
+
+```bash
+sudo apt-get install gcc
+```
+
+### Installation failure from `webrtcvad` package
+
+If you experience an error from the `webrtcvad` package, run `uv pip install webrtcvad-wheels` in your virtual environment, and then retry the Langflow installation.
+
+### `get_body_field` error after installing Langflow
+
+After installing Langflow OSS with `pip install langflow` or `uv pip install langflow`, Langflow fails to start with an error that mentions `get_body_field`, such as:
+
+```text
+ImportError: cannot import name 'get_body_field' from 'fastapi.dependencies.utils'
+```
+
+or:
+
+```text
+NameError: name 'get_body_field' is not defined
+```
+
+This happens when the resolver installs FastAPI `0.140.5` or later, which removed `get_body_field`.
+
+Langflow 1.11.0 allows FastAPI `>=0.139.0,<1.0.0`, so a fresh install can pull an incompatible FastAPI 0.140.x release.
+
+To work around this, pin FastAPI below 0.140.
+
+To pin FastAPI when installing Langflow:
+
+```bash
+uv pip install langflow "fastapi<0.140"
+```
+
+To pin FastAPI in an environment where Langflow is already installed:
+
+```bash
+uv pip install "fastapi<0.140"
+```
+
+Langflow version 1.11.1 resolves a compatible FastAPI 0.140.x and `fastapi-pagination` 0.15.16 pair on a new install, so it does not require this pin.
+If you constrain these dependencies yourself, use `fastapi-pagination>=0.15.16` with `fastapi>=0.140.5`.
+
+## Langflow Desktop installation issues
+
+The following issues can occur when Langflow Desktop installs or updates its bundled Langflow OSS instance.
+
+To view Langflow Desktop logs, see [Desktop logs](/logging#desktop-logs).
+
+### Protocol buffers (protoc) required for Intel-based Macs
+
+If you're installing Langflow on an Intel-based Mac, you may encounter installation errors if Protocol Buffers Compiler (`protoc`) is not installed.
+
+This requirement doesn't apply to Apple Silicon Macs on ARM64.
+
+To resolve this issue, install `protoc` using `brew install protobuf`.
+
+For more information, including alternative installation methods, see the [Protocol buffers installation documentation](https://protobuf.dev/installation/).
+
+### Langflow installation failed
+
+Langflow Desktop installed Langflow OSS but couldn't verify the installation. You might see an error dialog with the title `Langflow Installation Failed` and the message `Langflow installation failed. Please check your internet connection and try again. If the problem persists, restart the application.`
+
+To resolve this error, clear Langflow Desktop's Python virtual environment:
+
+1. Close Langflow Desktop.
+2. Navigate to Langflow Desktop's data directory at `%LOCALAPPDATA%\com.LangflowDesktop` on Windows, or `~/Library/Application Support/com.LangflowDesktop` on macOS.
+3. Delete the `venv` or `python_env` folder.
+4. Restart Langflow Desktop.
+
+If the issue persists, ensure you have installed Python version 3.10 or later, and it is accessible by your Langflow installation. If the Python version is correct, try reinstalling Langflow Desktop from [langflow.org/desktop](https://langflow.org/desktop).
+
+### Langflow startup failed
+
+Langflow Desktop installed Langflow OSS but the OSS backend isn't responding to health checks. You might see an error dialog with the title `Langflow Startup Failed` and the message `Langflow failed to start properly. Please restart the application and try again.`
+
+To resolve this error, do the following:
+
+1. Check if another process is using Langflow Desktop's default port `7860`.
+    * On Windows, run `netstat -ano | findstr :7860`.
+    * On macOS or Linux, run `lsof -i :7860`.
+2. If another process is using the port, stop that process or [configure Langflow Desktop to use a different port](/environment-variables#set-environment-variables-for-langflow-desktop).
+
+### Failed to install uv or unable to find uv
+
+Langflow Desktop can't locate or install the `uv` executable. You might see an error dialog with the title `UV Installation Failed` and the message `UV installation failed. Please check your internet connection and try again. If the problem persists, restart the application.`
+
+To resolve this error, do the following:
+
+1. In a terminal verify `uv` is installed by running `uv --version`.
+2. Based on the output, install `uv` or add it to your PATH:
+
+   <Tabs>
+   <TabItem value="not-installed" label="uv is not installed (command not found)" default>
+
+   Install `uv` using one of the following methods:
+
+   * Windows (PowerShell):
+     ```powershell
+     powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+     ```
+   * macOS or Linux:
+     ```bash
+     curl -LsSf https://astral.sh/uv/install.sh | sh
+     ```
+   * Any platform (pip):
+     ```bash
+     pip install uv
+     ```
+
+   </TabItem>
+   <TabItem value="not-found" label="uv is installed but not found by Langflow Desktop">
+
+   Add `uv` to your PATH so Langflow Desktop can locate it:
+
+   * Windows: In PowerShell, run:
+     ```powershell
+     [System.Environment]::SetEnvironmentVariable("Path", $env:Path + ";$env:USERPROFILE\.cargo\bin", "User")
+     ```
+   * macOS or Linux: Add `~/.local/bin` to your PATH in `~/.bashrc` or `~/.zshrc`.
+
+   </TabItem>
+   </Tabs>
+
+3. Restart Langflow Desktop.
+
+### Python environment failed
+
+Langflow Desktop failed to create the Python virtual environment required for Langflow OSS. You might see an error dialog with the title `Python Environment Failed` and the message `Python environment setup failed. Please ensure you have sufficient disk space and try again.`
+
+To resolve this error, do the following:
+
+1. Ensure you have sufficient disk space available (at least 2 GB free).
+2. Ensure that you have write permissions in the Langflow Desktop data directory:
+   * On Windows: `%LOCALAPPDATA%\com.LangflowDesktop`
+   * On macOS: `~/Library/Application Support/com.LangflowDesktop`
+3. Close Langflow Desktop.
+4. Delete the `venv` or `python_env` folder in the Langflow Desktop data directory.
+5. Restart Langflow Desktop.
+
+If the issue persists, ensure Python version 3.10 or later is installed and accessible, or reinstall Langflow Desktop from [langflow.org/desktop](https://langflow.org/desktop).
+
+### Python environment failed: Python check failed
+
+Langflow Desktop created the Python virtual environment but couldn't verify that Python is working correctly. You might see an error dialog with the title `Python Environment Failed` and a message about Python verification.
+
+To resolve this error, see [Python environment failed](#python-environment-failed).
+
+### Xcode Command Line Tools required
+
+Langflow Desktop requires [Xcode Command Line Tools](https://developer.apple.com/xcode/resources/) to install Langflow OSS on macOS. You might see an error dialog with the title `Xcode Command Line Tools required!` and instructions to run `xcode-select --install`.
+
+To resolve this error, do the following:
+
+1. Install [Xcode Command Line Tools](https://developer.apple.com/xcode/resources/).
+2. Launch Xcode at least once. Xcode performs additional setup on first startup that other tools such as Git, VS Code, and Langflow Desktop depend on.
+3. Restart Langflow Desktop.
+
+### C++ build tools required
+
+Microsoft Windows installations of Langflow Desktop require a C++ compiler that might not be present on your system.
+You might see an error dialog with the title `C++ Build Tools required!` with instructions to install Microsoft C++ Build Tools. Follow the on-screen prompt, or install [Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/).
+
+### Manual UV installation required
+
+Langflow Desktop tried multiple methods to automatically install `uv` but all attempts failed. Desktop requires `uv` to manage Python packages and virtual environments. You might see an error dialog with the title `Manual UV Installation Required` and instructions to install `uv` manually.
+
+To resolve this error, do the following:
+
+1. Install `uv` manually using PowerShell:
+    ```powershell
+    powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+    ```
+
+    Or install using pip:
+    ```bash
+    pip install uv
+    ```
+
+2. Verify the installation by running `uv --version` in a new PowerShell or Command Prompt window.
+
+   If `uv` is not found, add it to your PATH. In PowerShell, run:
+   ```powershell
+   [System.Environment]::SetEnvironmentVariable("Path", $env:Path + ";$env:USERPROFILE\.cargo\bin", "User")
+   ```
+
+3. Restart Langflow Desktop.
+
+## Uninstall Langflow
+
+Uninstalling Langflow depends on how it was installed, and on which operating system.
+
+If you reinstall Langflow after uninstalling, any data you didn't delete will be picked up automatically by the new installation. Delete the data directories listed below if you want a completely fresh start.
+
+### Uninstall the Langflow OSS Python package
+
+1. To uninstall the Langflow OSS Python package, run the following command in the virtual environment where Langflow is installed:
+
+    ```bash
+    uv pip uninstall langflow
+    ```
+
+2. To remove the Langflow data directory, which contains your flows, settings, and cache, run:
+
+    <Tabs>
+    <TabItem value="mac-linux" label="macOS / Linux" default>
+
+    ```bash
+    rm -rf ~/.langflow
+    ```
+
+    </TabItem>
+    <TabItem value="windows" label="Windows">
+
+    ```powershell
+    Remove-Item -Recurse -Force "$env:USERPROFILE\.langflow"
+    ```
+
+    </TabItem>
+    </Tabs>
+
+### Uninstall Langflow Desktop
+
+To uninstall Langflow Desktop, uninstall the application with your OS package manager, and then manually delete the remaining data directories.
+
+<Tabs>
+<TabItem value="macos" label="macOS" default>
+
+1. Drag `Langflow.app` from `/Applications` to the Trash, or right-click and select **Move to Trash**.
+2. Empty the **Trash** to remove the application file.
+3. To remove the Langflow data directory, run the following command:
+
+    ```bash
+    rm -rf ~/.langflow
+    ```
+
+4. To remove the Desktop app support files, run the following commands:
+
+    ```bash
+    rm -rf ~/Library/Application\ Support/com.LangflowDesktop
+    rm -rf ~/Library/Caches/com.LangflowDesktop
+    rm -rf ~/Library/Logs/com.LangflowDesktop
+    rm -f  ~/Library/Preferences/com.LangflowDesktop.plist
+    rm -rf ~/Library/WebKit/com.LangflowDesktop
+    ```
+
+</TabItem>
+<TabItem value="windows" label="Windows">
+
+1. Open **Settings** > **Apps** > **Installed apps**.
+2. Find **Langflow** in the list, click the menu (**...**), and select **Uninstall**.
+3. Follow the on-screen prompts to complete the uninstallation.
+4. To remove the Langflow data directory, run the following command:
+
+    ```powershell
+    Remove-Item -Recurse -Force "$env:LOCALAPPDATA\com.LangflowDesktop"
+    ```
+
+</TabItem>
+</Tabs>
+
+## Langflow startup issues
+
+The following issues can occur when attempting to start Langflow.
+
+### No `langflow.__main__` module
+
+When you try to run Langflow with the command `langflow run`, you encounter the following error:
+
+```bash
+> No module named 'langflow.__main__'
+```
+
+To resolve this issue, do the following:
+
+1. Run `uv run langflow run` instead of `langflow run`.
+2. If that doesn't work, reinstall the latest Langflow version with `uv pip install langflow -U`.
+3. If that doesn't work, reinstall Langflow and its dependencies with `uv pip install langflow --pre -U --force-reinstall`.
+
+### Langflow runTraceback
+
+When you try to run Langflow using the command `langflow run`, you encounter the following error:
+
+```bash
+> langflow runTraceback (most recent call last): File ".../langflow", line 5, in <module>  from langflow.__main__ import mainModuleNotFoundError: No module named 'langflow.__main__'
+```
+
+There are two possible reasons for this error:
+
+* **Multiple Langflow installations**: You installed Langflow using `pip install langflow` but you already had a previous version of Langflow installed in your system. In this case, you might be running the wrong executable.
+
+    To solve this issue, run the correct executable by running `python -m langflow run` instead of `langflow run`.
+
+    If that doesn't work, try uninstalling and reinstalling Langflow with `uv pip install langflow --pre -U`.
+
+* **Version conflict during installation**: Some version conflicts might have occurred during the installation process. To resolve this issue, reinstall Langflow and its dependencies by running `python -m pip install langflow --pre -U --force-reinstall`.
+
+### Environment variables not available from terminal
+
+Environment variables set in your terminal aren't automatically available to GUI-based applications like Langflow Desktop when launched through the Finder or the Start Menu.
+To set environment variables for Langflow Desktop, see [Set environment variables for Langflow Desktop](/environment-variables#set-environment-variables-for-langflow-desktop).
+
+### Access Langflow Desktop startup logs
+
+If you encounter issues with Langflow Desktop, you might need to [access Langflow Desktop startup logs](/logging#desktop-logs) for debugging.
+
+### User not found or inactive when running multiple flows
+
+When running multiple local Langflow OSS instances on different ports, such as `localhost:7860` and `localhost:7861`, you might see authentication errors in the logs.
+For example:
+
+```text
+[07/22/25 10:57:07] INFO     2025-07-22 10:57:07 - INFO     - User not found
+[07/22/25 10:57:07] INFO     2025-07-22 10:57:07 - INFO     - User is inactive
+```
+
+To resolve this error, use separate browser instances or browser profiles to access each Langflow instance.
+
+### Package is not installed
+
+In Langflow OSS, you can follow the error message's instructions to install the missing dependency.
+
+To manage dependencies in Langflow Desktop, see [Install custom dependencies in Langflow Desktop](/install-custom-dependencies#langflow-desktop).
+
+### PostgreSQL asyncpg driver compatibility issue
+
+The following error can occur when initializing Langflow with a PostgreSQL database:
+
+```text
+sqlalchemy.exc.DBAPIError: (sqlalchemy.dialects.postgresql.asyncpg.Error) <class 'asyncpg.exceptions.DataError'>: invalid input for query argument $7: datetime.datetime(2025, 10, 31, 14, 8, 5... (can't subtract offset-naive and offset-aware datetimes)
+```
+
+This error occurs because `asyncpg` has stricter timezone handling than `psycopg2`, and is not fully compatible with Langflow's current database schema.
+
+To resolve this issue, remove `asyncpg` from your installation and use `psycopg2` instead.
+
+### PostgreSQL version mismatch: `UNIQUE NULLS DISTINCT` syntax error
+
+The following error can occur when initializing Langflow with a PostgreSQL database.
+Langflow logs a clear message and then exits:
+
+```text
+Langflow requires PostgreSQL 15 or higher when using PostgreSQL as the database. The current PostgreSQL version does not support the syntax used by Langflow's schema. Please upgrade your PostgreSQL instance to version 15 or higher.
+```
+
+You may also see the underlying SQL error in the traceback:
+
+```text
+(psycopg.errors.SyntaxError) syntax error at or near "NULLS"
+LINE 13:  CONSTRAINT file_name_user_id_key UNIQUE NULLS DISTINCT (nam...
+```
+
+This occurs when you're using a PostgreSQL version prior to version 15.
+These versions don't support the `UNIQUE NULLS DISTINCT` syntax used by Langflow's database schema.
+Langflow requires PostgreSQL 15 or higher when configured to use PostgreSQL.
+
+To resolve this issue, upgrade your PostgreSQL instance to version 15 or higher, and then restart Langflow.
+
+### An API key must be passed as query or header
+
+The following error can occur when attempting to sign up on the Langflow sign in page: `An API key must be passed as query or header`.
+
+This means that `LANGFLOW_AUTO_LOGIN` is set to `false`, and only superusers can create and activate non-superuser accounts.
+Therefore, you are locked out of this Langflow instance.
+
+If you aren't an administrator, then a superuser must create and activate a non-superuser account before you can sign in.
+
+If you are the administrator, sign in with a superuser account, and then create and activate users with the [Users API](/api-users).
+Alternatively, restart Langflow with `LANGFLOW_AUTO_LOGIN=true`.
+
+For more information, see [Start Langflow Server with authentication enabled](/api-keys-and-authentication#start-a-langflow-server-with-authentication-enabled).
+
+### PermissionError on `/app/langflow/secret_key` at startup
+
+The Langflow container runs as a non-root user (`uid=1000`).
+The Langflow image pre-creates `/app/langflow` with that user as the owner, so a new `langflow-data` named volume inherits the correct ownership.
+If you ran an earlier image build that did not pre-create this directory, the named volume was initialized as `root:root` and the non-root container user cannot write `secret_key` into it, and the error `PermissionError: [Errno 13]` on `/app/langflow/secret_key` appears.
+
+This commonly affects rootful Docker daemons such as Docker Desktop.
+Podman with rootless user-namespace mapping does not reproduce the issue.
+
+To preserve the `langflow-postgres` data while resetting only the `langflow-data` volume, do the following:
+
+1. Stop the container and find the exact volume name for `langflow-data`.
+This command lists the volumes, and then searches for `langflow-data`.
+
+    ```sh
+    docker compose down
+    docker compose config --volumes
+    docker volume ls | grep langflow-data
+    ```
+
+2. Once you have confirmed the exact volume name, remove only that volume:
+
+    ```sh
+    docker volume rm LANGFLOW_DATA_VOLUME_NAME
+    docker compose pull
+    docker compose up -d
+    ```
+
+Alternatively, if you don't need to preserve the `langflow-postgres` data volume, you can pull the latest container image instead.
+
+:::danger
+This method removes all data, including the `langflow-postgres` data volume.
+:::
+
+```sh
+docker compose down -v
+docker compose pull
+docker compose up -d
+```
+
+## Langflow upgrade issues
+
+The following issues can occur when upgrading your Langflow version.
+
+For information about managing Langflow versions, see [Install Langflow](/get-started-installation).
+
+### Recover access after upgrading {#recover-access-after-upgrading}
+
+Langflow 1.13 disables auto-login by default.
+After you upgrade an installation that signed in automatically, one of the following can occur:
+
+* Startup exits with `Username and password must be set`.
+* Langflow starts, but sign-in fails with `Incorrect username or password` even after you set `LANGFLOW_SUPERUSER_PASSWORD`.
+* The sign-up page creates a new account that doesn't have your existing flows.
+
+Your flows are still in the database. They belong to the account that auto-login used, which has a generated password that `LANGFLOW_SUPERUSER_PASSWORD` doesn't replace.
+
+If startup exits, set `LANGFLOW_SUPERUSER_PASSWORD` before you start Langflow. If sign-in still fails, temporarily re-enable auto-login and set a password on that same account:
+
+1. Back up the database and configuration directory.
+2. Stop Langflow. Set `LANGFLOW_AUTO_LOGIN=true` in the environment or `.env` file, then start Langflow with the same database and configuration directory. Keep the instance restricted to trusted local access until you finish.
+3. Request an auto-login token, and copy the `access_token` value from the response:
+
+    ```bash
+    curl -s http://localhost:7860/api/v1/auto_login
+    ```
+
+4. Get the account's ID, and copy the `id` value from the response:
+
+    ```bash
+    curl -s http://localhost:7860/api/v1/users/whoami \
+      -H "Authorization: Bearer ACCESS_TOKEN"
+    ```
+
+5. Set a strong password on that account. Don't use the legacy default value `langflow`. Read the password into a variable so that it isn't stored in your shell history, and avoid `"` and `\` characters, which break the JSON body.
+
+    ```bash
+    read -rs NEW_PASSWORD
+    curl -s -X PATCH http://localhost:7860/api/v1/users/USER_ID \
+      -H "Authorization: Bearer ACCESS_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "{\"password\": \"$NEW_PASSWORD\"}"
+    ```
+
+6. Stop Langflow. Remove `LANGFLOW_AUTO_LOGIN=true` or set it to `false`. If the account's username isn't `langflow`, set `LANGFLOW_SUPERUSER` to it. Set `LANGFLOW_SUPERUSER_PASSWORD` to the password from step 5. Startup requires this variable, but it doesn't overwrite the password you just set.
+7. Start Langflow, sign in with that username and password, and verify that your existing flows are present.
+
+Don't delete the database or reinstall Langflow to regain access, because that can permanently remove your flows.
+
+### There's a mismatch between the models and the database
+
+The following error can occur during Langflow upgrades when the database schema doesn't match the current version's models:
+
+```bash
+There's a mismatch between the models and the database.
+```
+
+Back up your database first, and then run the migration fix command:
+
+```bash
+uv run langflow migration --fix
+```
+
+:::warning
+`langflow migration --fix` is destructive.
+Use a dedicated database for Langflow application data.
+Repair mode repeatedly downgrades and re-applies Langflow's schema revisions, which can delete Langflow data, and it might fail to converge when non-Langflow tables such as `langchain_pg_*` vector store tables share the same database.
+For more information, see [Database migrations](./database-migrations).
+:::
+
+If the migration fix doesn't resolve the issue, clear the cache by deleting the contents of your Langflow cache folder.
+The filepath depends on your operating system, installation type, and configuration options.
+For more information and default filepaths, see [Memory management options](/memory).
+
+:::danger
+Clearing the cache erases your settings.
+If you want to retain your settings files, create a backup of those files before clearing the cache folder.
+:::
+
+### Langflow Desktop says it is running the latest version, but it is actually behind
+
+If you are running Langflow Desktop version 1.4.2 or earlier, the UI might incorrectly report that you are on the latest version when a newer version is available.
+
+This happens because the automatic update feature in the UI was introduced in version 1.4.2.
+Earlier versions can't automatically detect or apply updates.
+
+To resolve this issue, uninstall Langflow Desktop, and then [download and install the latest version of Langflow Desktop](https://langflow.org/desktop).
+
+### 422 error when freezing components after upgrading Pydantic/FastAPI dependencies
+
+If you locally upgrade your Pydantic and FastAPI dependencies, you may encounter a 422 error when trying to freeze components.
+
+This error occurs due to changes in how request bodies are handled in newer versions of these dependencies.
+
+If you're experiencing this issue, update your Langflow installation to version 1.6.5 or later, which includes a fix for this issue.
+
+```bash
+uv pip install langflow -U
+```
+
+### Can't sign in after upgrading from an auto-login installation {#cant-sign-in-after-upgrade}
+
+Langflow 1.13 disables auto-login by default.
+After you upgrade an installation that signed in automatically, one of the following can occur:
+
+* Startup exits with `Username and password must be set`.
+* Langflow starts, but sign-in fails with `Incorrect username or password` even after you set `LANGFLOW_SUPERUSER_PASSWORD`.
+* The sign-up page creates a new account that doesn't have your existing flows.
+
+Your flows are still in the database. They belong to the account that auto-login used, which has a generated password that `LANGFLOW_SUPERUSER_PASSWORD` doesn't replace.
+
+To resolve this issue:
+
+1. If startup exits, set `LANGFLOW_SUPERUSER_PASSWORD` before you start Langflow.
+2. If sign-in still fails, follow [Recover access after upgrading](/api-keys-and-authentication#recover-access-after-upgrading).
+
+Don't delete the database or reinstall Langflow to regain access, because that can permanently remove your flows.
+
+## Knowledge base storage upgrade {#knowledge-base-storage-upgrade}
+
+If a **Storage upgrade needs attention** error message appears, it means Langflow could not finish copying that knowledge base or memory base to SQLite. The base shows **Storage upgrade needs attention** instead of **Ready**. Some other blocked states show **Storage unavailable**. The original files stay in the knowledge base directory. The upgrade steps are in [Upgrade Knowledge and Memory storage](/knowledge-storage-upgrade).
+
+1. Open **View upgrade progress**.
+2. Read the message on the base. Find that message in the sections below.
+3. Complete the steps in that section. Leave the original Chroma folder in place.
+4. Select **Retry upgrade**. Only a superuser sees that button. Retry continues the same copy.
+5. Return to [step 6 of the upgrade](/knowledge-storage-upgrade#upgrade-one-langflow-instance) and wait until the base shows **Ready**.
+
+If you are not a superuser, stop after step 2 and contact a superuser. The progress card says:
+
+> This base needs a storage upgrade. Your data is preserved. Contact your administrator, or open the upgrade notice if you administer this instance.
+
+A flow that uses the base stops with:
+
+> This knowledge or memory base needs a storage upgrade. Your original data is preserved. Open the upgrade notice in Langflow, or contact your administrator.
+
+A health check that waits for storage (`/healthz?require_storage_ready=true`) returns:
+
+> Knowledge base storage upgrade requires attention
+
+If **Retry upgrade** fails, the card says **Could not schedule the upgrade. Refresh and try again.** Refresh the page and select **Retry upgrade** again.
+
+Langflow logs `Knowledge base storage upgrade <id> requires attention: code=<error code>`. Each section includes that code, so a log line pasted into search lands here.
+
+### No directory from the previous version could be tied to this base {#legacy-source-missing}
+
+Error code: `legacy_source_missing`
+
+> No directory from the previous version could be tied to this base. If its owner was renamed, move its directory to `<current username>/<base name>` in the knowledge base directory, then retry.
+
+Each old store is a folder named `<username>/<base name>` inside the knowledge base directory. The username is the one the owner had when the folder was written. Renaming the account leaves the folder where it is.
+
+1. Find the folder. Look under the owner's previous username.
+2. Move it to `<current username>/<base name>` inside the knowledge base directory.
+3. Move every other copy of that base out of the knowledge base directory.
+4. Select **Retry upgrade**.
+
+Langflow keeps the files where they are when it cannot tell which folder belongs to the base. It does not assign them to another account.
+
+### More than one directory from the previous version could hold this base {#legacy-source-ambiguous}
+
+Error code: `legacy_source_ambiguous`
+
+> More than one directory from the previous version could hold this base. Leave only its own directory at `<current username>/<base name>`, move any other copy out of the knowledge base directory, then retry. Your original data is preserved.
+
+1. Leave one folder at `<current username>/<base name>` inside the knowledge base directory.
+2. Move every other copy out of the knowledge base directory.
+3. If another base of the same name has no files of its own, detach that base so Langflow stops treating its folder as a second copy. A superuser sends `POST /api/v1/knowledge-base-storage/attention/{kb_id}/detach` with that base's current storage generation.
+4. Select **Retry upgrade**.
+
+### Some old storage folders could not be matched safely {#unmatched-storage-folders}
+
+The progress dialog shows:
+
+> Some old storage folders could not be matched safely. An administrator needs to check the storage inventory and upgrade logs.
+
+Langflow found a Chroma folder and could not tie it to one base. The folder stays where it is.
+
+1. If the folder belongs to a base Langflow already lists, move it to `<current username>/<base name>` inside the knowledge base directory.
+2. If the folder is a knowledge base that has no row in Langflow yet, register it for the account that owns it:
+
+    ```bash
+    langflow reconcile-kb-from-disk --username <username>
+    ```
+
+    Add `--dry-run` first to list what would be registered. The command does not delete folders.
+
+3. Restart Langflow.
+4. Select **Retry upgrade** for any base that still needs attention.
+
+A folder left behind by an account that no longer has that username stays unmatched, so a new account with the same username does not receive it.
+
+### Stop the other Langflow instance using this data {#legacy-workers-running}
+
+Error code: `legacy_workers_running`
+
+> Stop the other Langflow instance using this data, then retry.
+
+1. Stop the other Langflow process.
+2. Confirm only one Langflow process is running.
+3. Select **Retry upgrade**.
+
+### Stop all old instances, then run a single Langflow worker {#single-host-required}
+
+Error code: `single_host_required`
+
+> Stop all old instances, then run a single Langflow worker on the host with the original local data. Distributed deployments require administrator recovery.
+
+1. Stop every Langflow process.
+2. Follow [Upgrade one Langflow instance](/knowledge-storage-upgrade#upgrade-one-langflow-instance) on the host that has the original local data. If several hosts must serve the same bases, move those stores to pgvector or OpenSearch instead, and leave `LANGFLOW_KNOWLEDGE_BASE_AUTO_MIGRATE` set to `false`.
+
+### Copy the original data to a local filesystem {#local-filesystem-required}
+
+Error code: `local_filesystem_required`
+
+> Copy the original data to a local filesystem and run one Langflow worker there. Shared filesystems require administrator recovery.
+
+1. Stop Langflow.
+2. Move the knowledge base directory to a local disk. A Docker Desktop bind mount that reports `fuse.grpcfuse` needs a local named volume. VirtioFS mounts are supported.
+3. Start one Langflow process on that disk.
+4. Select **Retry upgrade**.
+
+### Enable LANGFLOW_KNOWLEDGE_BASE_AUTO_MIGRATE {#automatic-upgrade-disabled}
+
+Error code: `automatic_upgrade_disabled`
+
+> Enable LANGFLOW_KNOWLEDGE_BASE_AUTO_MIGRATE and restart Langflow to upgrade your local data.
+
+1. Unset `LANGFLOW_KNOWLEDGE_BASE_AUTO_MIGRATE`, or set it to `true`.
+2. Confirm the [prerequisites](/knowledge-storage-upgrade#prerequisites) are still true: one process, files on a local disk.
+3. Restart Langflow.
+
+Leave the variable `false` when these stores must move to pgvector or OpenSearch instead.
+
+### This remote Chroma store must be migrated {#remote-source-requires-migration}
+
+Error code: `remote_source_requires_migration`
+
+> This remote Chroma store must be migrated to pgvector or OpenSearch by an administrator.
+
+Langflow leaves a Chroma Cloud collection where it is.
+
+1. Configure [pgvector or OpenSearch](/knowledge#configure-vector-database-providers).
+2. Move the collection's data into that provider.
+3. Create the knowledge base or memory base on that provider.
+4. Update flows to use the new base.
+
+### The copy failed validation {#validation-failed}
+
+Error code: `validation_failed`
+
+> The copy failed validation. Your original data is preserved. Check the upgrade logs before retrying.
+
+1. Read the Langflow logs for this base.
+2. Fix the problem the log names.
+3. Leave the original Chroma folder in place.
+4. Select **Retry upgrade**.
+
+### The upgrade was interrupted {#interrupted}
+
+Error code: `interrupted`
+
+> The upgrade was interrupted. Retry to resume safely.
+
+1. Start Langflow if it is stopped.
+2. Select **Retry upgrade**.
+
+The copy continues. The unfinished copy is not used as an empty replacement for the old base.
+
+### Check storage access, free disk space and the upgrade logs {#check-storage}
+
+Error codes: `migration_failed`, `maintenance_required`, `storage_changed`
+
+> Check storage access, free disk space and the upgrade logs, then retry. Your original data is preserved.
+
+1. Confirm Langflow can read and write the knowledge base directory.
+2. Free about four times the store's size on that disk.
+3. Read the upgrade logs. For `storage_changed`, confirm this is still the base you expect. Its routing changed while the copy was running.
+4. Select **Retry upgrade**.
+
+### This store exceeds the automatic reader limits {#automatic-reader-limit}
+
+Error code: `automatic_reader_limit`
+
+> This store exceeds the automatic reader limits. Preserve the source and export it from an isolated old-release environment.
+
+The automatic copy cannot read a store this large.
+
+1. Leave the original Chroma folder in place.
+2. Open the store from a Langflow 1.12 environment.
+3. Move the data to pgvector or OpenSearch.
+4. Use that provider in 1.13.
+
+### Storage for this base was detached {#storage-detached}
+
+A flow that uses the base stops with:
+
+> Storage for this base was detached. Contact your administrator to recover it, or delete the base and create a replacement.
+
+Detaching stops Langflow from serving the base and leaves the original files on disk.
+
+1. Copy the data you still need from the original folder, or from the backup you took in the [prerequisites](/knowledge-storage-upgrade#prerequisites).
+2. Delete the detached base in Langflow.
+3. Create a new knowledge base or memory base and load that data into it.
+
+## Langflow MCP issues {#mcp}
+
+The following issues can occur when using Langflow as an MCP server or client.
+
+### Default project MCP server only works when authentication is None
+
+If the default project MCP server works without authentication, but fails after adding an API key to the server configuration, the API key might have been added to the wrong section of the configuration.
+
+The default MCP server uses streamable HTTP transport.
+The API key must be added to the `args` array that is passed to `mcp-proxy`, not the `env` object.
+
+Your `args` array must include `"--headers"`, `"x-api-key"`, and your key value. For example:
+
+```json
+{
+  "mcpServers": {
+    "PROJECT_NAME": {
+      "command": "uvx",
+      "args": [
+        "mcp-proxy",
+        "--transport",
+        "streamablehttp",
+        "--headers",
+        "x-api-key",
+        "YOUR_API_KEY",
+        "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/streamable"
+      ]
+    }
+  }
+}
+```
+
+For more information, see [Connect clients to your Langflow MCP server](/mcp-server#connect-clients-to-use-the-servers-actions).
+
+### Claude for Desktop doesn't use MCP server tools correctly
+
+If Claude for Desktop doesn't use your server's tools correctly, try explicitly defining the path to your local `uvx` or `npx` executable file in the `claude_desktop_config.json` configuration file:
+
+1. To find your `uvx` path, run `which uvx`.
+
+    To find your `npx` path, run `which npx`.
+
+2. In your `claude_desktop_config.json` file, add the path to your Langflow MCP server configuration, as shown in the following examples.
+
+    <Tabs>
+    <TabItem value="uvx" label="uvx" default>
+
+    ```json
+    {
+      "mcpServers": {
+        "PROJECT_NAME": {
+          "command": "PATH_TO_UVX",
+          "args": [
+            "mcp-proxy",
+            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/streamable"
+          ]
+        }
+      }
+    }
+    ```
+
+    </TabItem>
+    <TabItem value="npx" label="npx">
+
+    ```json
+    {
+      "mcpServers": {
+        "PROJECT_NAME": {
+          "command": "PATH_TO_NPX",
+          "args": [
+            "-y",
+            "supergateway",
+            "--sse",
+            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/streamable"
+          ]
+        }
+      }
+    }
+    ```
+
+    </TabItem>
+    </Tabs>
+
+### MCP browser-based flows don't open a browser on Windows
+
+This is a known issue when using MCP Tools with browser navigation actions, such as Playwright, on Windows: The agent can execute the tool successfully but the browser tab or window doesn't open.
+
+This issue occurs because the MCP server runs from a Python process, which prevents it from opening browser windows in WSL or Windows.
+
+To work around this issue, use the standalone MCP server approach documented in the [Playwright MCP repository](https://github.com/microsoft/playwright-mcp?tab=readme-ov-file#standalone-mcp-server).
+After the server is up and running, you can add it as an HTTP/SSE server in Langflow.
+
+For other browser navigation tools, see the provider's documentation for specific troubleshooting guidance.
+
+### "No tools or prompts connected" on MCP servers in mixed Windows/WSL environments
+
+If you encounter "No tools or prompts connected" errors or connection failures when using Langflow Desktop as an MCP server with clients running in different environments, such as Langflow on a Windows host and an MCP client in WSL, this is due to network isolation between Windows and WSL environments.
+
+WSL cannot directly access Windows localhost services, and Langflow running on a Windows host is not accessible from WSL clients at `localhost:7860`.
+
+To work around this issue, run the server and host in the same operating environment.
+
+Alternatively, configure Langflow Desktop to accept connections from WSL at the default Windows IP address of `10.255.255.254:7860` instead of `localhost`.
+
+### MCP Tools component loses Tool Mode option after upgrading flows {#mcp-tools-component-loses-tool-mode-option-after-upgrading-flows}
+
+If you upgrade an existing flow that uses the [**MCP Tools** component](/mcp-tools) in **Tool Mode**, the component might lose its **Tool Mode** setting after upgrading the flow.
+This can break flows that rely on the component's **Tool Mode** to expose MCP tools to agents.
+
+If you experience this when upgrading a flow that you created in Langflow version 1.7.1 or earlier, do the following:
+
+1. Select the **MCP Tools** component in your flow.
+2. Click <Icon name="Code" aria-hidden="true"/> **Code** to open the component's code editor.
+3. In the component's template structure, locate the `tool_mode` field under `inputs`.
+   The field can be either missing or set to `false`.
+4. Add the `tool_mode` field if it's missing, and set it to `true`:
+
+   ```python
+   tool_mode = True
+   ```
+
+5. Click **Check & Save** to apply the code changes.
+
+## Langflow Assistant issues {#langflow-assistant}
+
+The following issues can occur when using [Langflow Assistant](/langflow-assistant).
+
+### The agent ran out of steps before finishing
+
+If **Langflow Assistant** stops with `The agent ran out of steps before finishing. Try again, or break the request into smaller parts.`, the request needed more steps than the Assistant's step limit allows.
+
+To resolve this error, raise the limit for your session with the `/iterations` command, such as `/iterations 150`, and then send the request again.
+The default limit is `100`, and the maximum is `200`.
+To raise the default for every user of your Langflow server, set [`LANGFLOW_ASSISTANT_ITERATIONS`](/environment-variables).
+You can also split the request into smaller prompts.
+
+For more information, see [The agent ran out of steps before finishing](/langflow-assistant#the-agent-ran-out-of-steps-before-finishing).
+
+## Token length limit errors in Embedding Model components
+
+Token length errors can happen if your chunking strategy doesn't align with your embedding model's tokenization limits.
+For more information, see [Tokenization errors due to chunk size](/split-text#chunk-size).
+
+## Document processing errors in Docker containers
+
+If you're running Langflow in a Docker container, you might encounter errors when using components that handle files or images, such as the [**Read File** component](/read-file) or [**Docling** components](/bundles-docling). To resolve these errors, you might need to install additional system dependencies.
+
+When running Langflow in a Linux-based Docker container, Docling requires system libraries that aren't included in the base Docker image. If you see errors related to document or image processing, add the following to your Dockerfile:
+
+```dockerfile
+RUN apt-get update && apt-get install -y libgl1 libglib2.0-0
+```
+
+These dependencies are required by Docling for document processing operations.
+
+For more information about customizing Docker images, see [Customize the Langflow Docker image with your own code](/deployment-docker#customize-the-langflow-docker-image).
+
+## Custom components and integrations issues
+
+For troubleshooting advice for a third-party integration, see the information about that integration in the Langflow documentation and the provider's documentation.
+
+If you are building a custom component, see [Error handling and logging for custom Python components](/components-custom-components#error-handling-and-logging).
+
+### Custom components not appearing in the visual editor
+
+If your custom components are not appearing in the Langflow visual editor, try the following troubleshooting steps:
+
+1. Ensure your components follow the [required directory structure](https://docs.langflow.org/components-custom-components#directory-structure-requirements).
+    ```
+    /your/custom/components/path/       # Base directory set by LANGFLOW_COMPONENTS_PATH
+        └── category_name/              # Required category subfolder that determines menu name
+            ├── __init__.py             # Required
+            └── custom_component.py     # Component file
+    ```
+
+2. Verify each category directory includes an `__init__.py` file.
+This is required for Python to recognize the directory as a module.
+
+3. Use the command line argument instead of the environment variable for `LANGFLOW_COMPONENTS_PATH`.
+If you're using the `LANGFLOW_COMPONENTS_PATH` environment variable and components aren't loading, try the `--components-path` command line argument instead:
+
+    ```bash
+    uv run langflow run --components-path /path/to/your/custom/components
+    ```
+
+If you continue to experience issues, please [report them on GitHub](https://github.com/langflow-ai/langflow/issues) with details about your directory structure and component setup.
+
+## Multi-worker deployments
+
+### Workers report `JobQueueNotFoundError`
+
+The load balancer is routing poll or stream requests to a different worker than the one that started the build.
+
+To resolve this issue:
+
+- Ensure `LANGFLOW_JOB_QUEUE_TYPE=redis` is set on **all** workers, not just some. Mixed-mode deployments (some workers using `asyncio`, others using `redis`) are not supported.
+- Verify all workers can reach the same Redis instance.
+
+For setup instructions, see [Deploy Langflow with multiple workers](./deployment-multi-worker).
+
+### Redis connection refused or auth errors
+
+If your Redis instance requires a password or TLS, you must use `LANGFLOW_REDIS_QUEUE_URL` (for example, `rediss://user:password@host:6380/1`). The individual `LANGFLOW_REDIS_QUEUE_HOST` and `LANGFLOW_REDIS_QUEUE_PORT` settings construct a plain unauthenticated connection and do not support auth or TLS. Managed Redis services such as AWS ElastiCache with AUTH, Google MemoryStore with TLS, and Upstash all require the URL form.
+
+### Cache and queue keys colliding
+
+If `LANGFLOW_REDIS_QUEUE_DB` is set to the same database index used by the Langflow cache, keys from both systems will mix and produce unpredictable behavior.
+
+The cache defaults to DB `0` and the job queue defaults to DB `1`. Verify both settings point to different database indices.
+
+### Server refuses to start with multiple workers and `LANGFLOW_JOB_QUEUE_TYPE=asyncio`
+
+Startup fails with a `RuntimeError` that explains the in-memory job queue is worker-local.
+
+Polling and streaming delivery use a follow-up `GET /api/v1/build/<job_id>/events` request after the initial build POST, and the load balancer can route those requests to different workers, which produces intermittent "Job not found" errors.
+
+Set `LANGFLOW_JOB_QUEUE_TYPE=redis` on all workers so queue state is shared. This supports all `LANGFLOW_EVENT_DELIVERY` modes.
+
+If the deployment is headless and never uses the visual editor or MCP over SSE, you can set `LANGFLOW_DANGEROUSLY_ALLOW_MULTI_WORKER_WITHOUT_SHARED_QUEUE=true` to start anyway. This is unsupported with the Langflow UI and with MCP over SSE, and several subsystems become per-worker. Read [Run multiple workers without Redis](./deployment-multi-worker#run-multiple-workers-without-redis) before enabling it.
+
+### Builds are cancelled unexpectedly
+
+The polling watchdog reclaims builds whose client heartbeat has gone stale. The default threshold is 90 seconds (`LANGFLOW_REDIS_QUEUE_POLLING_STALE_THRESHOLD_S=90`). If legitimate long-running builds are being cancelled, increase this value or set it to `0` to disable the watchdog entirely.
+
+## Voice input {#voice-mode}
+
+If the **Voice input** button is disabled, your browser doesn't support the required speech-recognition API.
+If recording doesn't start, allow microphone access for the Langflow site in your browser settings.
+
+For setup and information about the deprecated voice WebSocket endpoints, see [Use speech input](/concepts-voice-mode).
+
+## Intel Mac issues {#intel-mac-issues}
+
+The following issues can occur when running Langflow on Intel-based Macs.
+
+### "No matching distribution found" errors on Intel Mac
+
+If you see errors about missing packages after installing Langflow on an Intel Mac, such as:
+
+```text
+ERROR: Could not find a version that satisfies the requirement torch
+ERROR: No matching distribution found for torch
+```
+
+This is expected behavior. ML packages such as PyTorch are intentionally excluded on Intel Macs because PyTorch dropped support for macOS x86_64 starting with version 2.3.0.
+
+To verify your architecture and understand which features are available, run:
+
+```bash
+python -c "import platform; print(platform.machine())"
+# x86_64 = Intel, arm64 = Apple Silicon
+```
+
+Use core Langflow features or API-based alternatives instead of local ML models.
+For details on which features are available and workarounds, see [macOS support](./macos-support-matrix.mdx).
+
+### Performance issues on Intel Mac
+
+If Langflow feels slow on an Intel Mac:
+
+1. Ensure you are not trying to run ML workloads locally, as these are not supported on Intel Macs.
+2. Use API-based providers for embeddings and completions instead of local models.
+3. Consider upgrading to Apple Silicon for better performance with ML features.
+
+For more information, see [Workarounds for Intel Mac users](./macos-support-matrix.mdx#workarounds-for-intel-mac-users).
+
+## See also
+
+- [Langflow GitHub Issues and Discussions](/contributing-github-issues)
+- [Langflow telemetry](/contributing-telemetry)

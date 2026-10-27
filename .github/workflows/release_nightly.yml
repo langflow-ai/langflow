@@ -226,6 +226,9 @@ jobs:
           rm -rf src/backend/base/dist
           rm -rf dist
           make build base=true args="--no-sources --wheel"
+          LFX_VERSION=$(uv run --no-sync python -c 'import tomllib; print(tomllib.load(open("src/lfx/pyproject.toml", "rb"))["project"]["version"])')
+          uv run --no-project --with packaging python scripts/ci/check_core_dependency_pins.py \
+            dist/langflow_base-*.whl --dependency-version "$LFX_VERSION"
 
       - name: Test Langflow Base CLI
         env:
@@ -330,7 +333,10 @@ jobs:
           version=$(echo $version | sed 's/^v//')
           echo "version=$version" >> $GITHUB_OUTPUT
       - name: Build Langflow Main for distribution
-        run: make build main=true args="--no-sources --wheel"
+        run: |
+          make build main=true args="--no-sources --wheel"
+          uv run --no-project --with packaging python scripts/ci/check_core_dependency_pins.py \
+            dist/langflow-*.whl --dependency-version "${{ inputs.nightly_tag_base }}"
       - name: Test Langflow Main CLI
         env:
           LANGFLOW_SUPERUSER_PASSWORD: ci-startup-only-password  # pragma: allowlist secret

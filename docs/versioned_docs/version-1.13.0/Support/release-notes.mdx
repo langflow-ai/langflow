@@ -1,0 +1,140 @@
+---
+title: Langflow release notes
+slug: /release-notes
+---
+
+import Icon from "@site/src/components/icon";
+import McpIcon from '@site/static/logos/mcp-icon.svg';
+
+This page summarizes significant changes to Langflow in each release.
+For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases/latest).
+
+Due to strict SemVer requirements, Langflow Desktop can have different patch versions than the core Langflow OSS Python package, but the major and minor versions are aligned.
+
+## Prepare to upgrade
+
+:::warning
+Whenever possible, the Langflow team recommends installing new Langflow versions in a new virtual environment or VM before upgrading your primary installation.
+This allows you to [import flows](/concepts-flows-import#import-a-flow) from your existing installation and test them in the new version without disrupting your existing installation.
+In the event of breaking changes or bugs, your existing installation is preserved in a stable state.
+:::
+
+To avoid the impact of potential breaking changes and test new versions, the Langflow team recommends the following upgrade process:
+
+1. Recommended: [Export your projects](/api-projects#export-a-project) to create backups of your flows:
+
+    ```bash
+    curl -X GET \
+    "$LANGFLOW_SERVER_URL/api/v1/projects/download/$PROJECT_ID" \
+      -H "accept: application/json" \
+      -H "x-api-key: $LANGFLOW_API_KEY"
+    ```
+
+   To export flows from the visual editor, see [Import and export flows](/concepts-flows-import).
+
+2. Install the new version:
+
+   * **Langflow OSS Python package**: Install the new version in a new virtual environment. For instructions, see [Install and run the Langflow OSS Python package](/get-started-installation#install-and-run-the-langflow-oss-python-package).
+   * **Langflow Docker image**: Run the new image in a separate container, or upgrade your existing image. For more information, see [Upgrade the Langflow Docker image](/deployment-docker#upgrade-the-langflow-docker-image).
+   * **Langflow Desktop**: To upgrade in place, open Langflow Desktop, and then click **Upgrade Available** in the Langflow header. If you want to isolate the new version, you must install Langflow Desktop on a separate physical or virtual machine, and then [import your flows](/concepts-flows-import) to the new installation.
+
+3. [Import your flows](/concepts-flows-import) to test them in the new version, [upgrading components](/concepts-components#component-versions) as needed.
+
+    When upgrading components, you can use the **Create backup flow before updating** option if you didn't previously export your flows.
+
+4. If you installed the new version in isolation, upgrade your primary installation after testing the new version.
+
+    If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
+
+## 1.13.x
+
+Highlights of this release include the following changes. For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases/latest).
+
+### Breaking changes
+
+- Official packages require authentication by default
+
+    Official Python packages, tagged source archives, and Docker images now set `LANGFLOW_AUTO_LOGIN=false`.
+    Set `LANGFLOW_SUPERUSER_PASSWORD`, then sign in as `langflow` or the username in `LANGFLOW_SUPERUSER`.
+
+    Before upgrading an auto-login installation, [prepare that account for password sign-in](/api-keys-and-authentication#upgrade-from-auto-login).
+
+    If you already upgraded and can't sign in, see [recover access](/troubleshoot#recover-access-after-upgrading).
+
+    For more information, see [API keys and authentication](/api-keys-and-authentication#langflow-auto-login).
+
+- Chroma and Local DB components are removed
+
+    Langflow 1.13 stores local Knowledge and Memory in SQLite, instead of a local Chroma database.
+    The [**Chroma DB**](/components-bundle-components#legacy-bundles) and [**Local DB**](/components-bundle-components#legacy-bundles) components are legacy.
+
+    Replace **Chroma** and **Local DB** with a [knowledge base](/knowledge#knowledge-bases), or with a supported remote vector store.
+
+    For more information, see [Upgrade Knowledge and Memory storage](/knowledge-storage-upgrade).
+
+### New features
+
+- Audit logging
+
+    Set `LANGFLOW_AUDIT_ENABLED=true` to record an append-only history of flow and project operations, including who attempted a change, on which resource, when, how it completed, and a description of what was written.
+    Query events with `GET /api/v1/flows/audits` and `GET /api/v1/projects/audits`.
+
+    For more information, see [Audit logging](./audit-logging).
+
+- Connections
+
+    Langflow stores Google Workspace, Microsoft 365, and Slack accounts as persistent connections.
+    For more information, see [Connections](./connections).
+
+- Concurrent editing
+
+    Langflow now protects a flow that is open by more than one user.
+    For more information, see [Concurrent editing](./concurrent-editing).
+
+- Instance migration
+
+    Langflow provides a guided workflow to migrate users, projects, flows, settings, local files, and local knowledge bases to a new instance.
+    The workflow checks the source instance, pauses writes, creates a backup, copies applicable data to the target instance's storage, verifies the copy, and provides recovery steps.
+
+    For more information, see [Migrate a Langflow instance](/instance-migration).
+
+- Administration API and CLI
+
+    Superusers can manage users, teams, and roles with the API or the `langflow admin` command.
+    For more information, see [Administer users and teams with the API and CLI](./admin-api-cli).
+
+## Component changes
+
+- The ALTK component is removed
+
+    The [**ALTK**](/components-bundle-components) component is removed.
+
+    Replace **ALTK** with the [**Agent**](/components-agents) component.
+
+- MrScraper components are removed
+
+    The [**MrScraper**](/bundles-mrscraper) bundle now provides three components.
+
+    Instead, use the **Scraper API** or **Web Search** components.
+
+    For more information, see [Update existing flows](/bundles-mrscraper).
+
+## 1.12.x
+
+For 1.12.x release notes, see the [1.12.x documentation](@site/versioned_docs/version-1.12.0/Support/release-notes.mdx).
+
+## 1.11.x
+
+For 1.11.x release notes, see the [1.11.x documentation](https://docs.langflow.org/1.11.0/release-notes).
+
+## 1.10.x
+
+For 1.10.x release notes, see the [1.10.x documentation](https://docs.langflow.org/1.10.0/release-notes).
+
+## 1.9.x
+
+For 1.9.x release notes, see the [1.9.x documentation](https://docs.langflow.org/1.9.0/release-notes).
+
+## Earlier releases
+
+See the [Changelog](https://github.com/langflow-ai/langflow/releases).
