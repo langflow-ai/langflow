@@ -1292,7 +1292,7 @@ async def test_a_run_that_a_webhook_left_running_stops_the_pause(
     headers, flow_id = logged_in_headers_super_user, uuid4()
     _checked(config_dir, [PASSING], **PREPARED)
     monkeypatch.setattr(migration_module, "_DRAIN_SECONDS", 0.2)
-    webhook_data = {"nodes": [{"id": "Webhook-1"}], "edges": []}
+    webhook_data = {"nodes": [{"id": "Webhook-1", "data": {"type": "Webhook"}}], "edges": []}
     await _add(Flow(id=flow_id, name="on a webhook", data=webhook_data, user_id=active_super_user.id))
     # A webhook that asks for no key runs as the owner of its flow.
     monkeypatch.setattr(get_settings_service().auth_settings, "WEBHOOK_AUTH_ENABLE", False)

@@ -237,6 +237,54 @@ async def test_webhook_not_found_invalid_endpoint(client, created_api_key):
     assert response.status_code == 404
 
 
+async def test_webhook_flag_is_off_for_a_saved_trigger_only_flow(client, created_api_key, logged_in_headers):
+    """A flow with only an Inbound Webhook trigger is saved with webhook=False, matching the route's 404."""
+    from langflow.services.database.models.flow.model import FlowCreate
+    from lfx.components.triggers import InboundWebhookTriggerComponent
+    from lfx.graph import Graph
+
+    trigger = InboundWebhookTriggerComponent()
+    flow = FlowCreate(**Graph(start=trigger, end=trigger).dump(name="Inbound Webhook trigger"))
+    response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+    assert response.status_code == 201
+    flow_id = response.json()["id"]
+    # The canvas saves with PATCH, which recomputes the webhook flag.
+    response = await client.patch(f"api/v1/flows/{flow_id}", json={"data": flow.data}, headers=logged_in_headers)
+    assert response.status_code == 200
+    assert response.json()["webhook"] is False
+
+    response = await client.post(
+        f"api/v1/webhook/{flow_id}", headers={"x-api-key": created_api_key.api_key}, json={"k": "v"}
+    )
+    assert response.status_code == 404
+
+
+async def test_webhook_payload_goes_only_to_the_webhook_component(client, logged_in_headers):
+    """With a Webhook component and an Inbound Webhook trigger, only the Webhook component gets the payload.
+
+    The webhook route sends the payload to each node get_all_webhook_components_in_flow returns.
+    """
+    from langflow.services.database.models.flow.model import FlowCreate
+    from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
+    from lfx.components.input_output import WebhookComponent
+    from lfx.components.triggers import InboundWebhookTriggerComponent
+    from lfx.graph import Graph
+
+    webhook = WebhookComponent()
+    graph = Graph(start=webhook, end=InboundWebhookTriggerComponent())
+    flow = FlowCreate(**graph.dump(name="Webhook and Inbound Webhook trigger"))
+    response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+    assert response.status_code == 201
+    response = await client.patch(
+        f"api/v1/flows/{response.json()['id']}", json={"data": flow.data}, headers=logged_in_headers
+    )
+    assert response.status_code == 200
+    assert response.json()["webhook"] is True
+
+    webhook_nodes = get_all_webhook_components_in_flow(response.json()["data"])
+    assert [node["id"] for node in webhook_nodes] == [webhook.get_id()]
+
+
 @pytest.mark.parametrize("webhook_auth_enable", [False, True])
 async def test_webhook_runs_only_flows_with_a_webhook_component(
     client, added_webhook_test, flow_component, created_api_key, logged_in_headers, monkeypatch, webhook_auth_enable

@@ -102,7 +102,7 @@ async def test_webhook_auth_sets_telemetry_identity(monkeypatch) -> None:
         "get_settings_service",
         lambda: SimpleNamespace(auth_settings=SimpleNamespace(WEBHOOK_AUTH_ENABLE=True)),
     )
-    flow = SimpleNamespace(data={"nodes": [{"id": "Webhook-1"}]})
+    flow = SimpleNamespace(data={"nodes": [{"id": "Webhook-1", "data": {"type": "Webhook"}}]})
     monkeypatch.setattr(endpoints, "get_flow_by_id_or_endpoint_name", AsyncMock(return_value=flow))
 
     await endpoints.get_webhook_auth("flow-id", SimpleNamespace())
