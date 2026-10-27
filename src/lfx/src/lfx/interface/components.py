@@ -873,8 +873,8 @@ def get_component_identity_index(
     return build_component_identity_index(all_types_dict)
 
 
-def _components_path_extension_paths(settings_service: "SettingsService") -> list[Path]:
-    """Inline-bundle parent paths derived from settings.components_path.
+def _components_path_extension_paths(components_path: list[str]) -> list[Path]:
+    """Inline-bundle parent paths derived from the components_path setting.
 
     Each entry in components_path is treated as a parent directory whose
     immediate subfolders are inline bundles at the @extra slot. The base
@@ -887,7 +887,7 @@ def _components_path_extension_paths(settings_service: "SettingsService") -> lis
     """
     base_resolved = _resolved_component_path(BASE_COMPONENTS_PATH)
     paths: list[Path] = []
-    for raw in settings_service.settings.components_path or []:
+    for raw in components_path or []:
         candidate = Path(raw)
         candidate_resolved = _resolved_component_path(candidate)
         if candidate_resolved == base_resolved:
@@ -1128,7 +1128,9 @@ def _resolve_bundle_shadowing(
 
 
 async def import_extension_components(
-    settings_service: "SettingsService",
+    settings_service: "SettingsService | None" = None,
+    *,
+    components_path: list[str] | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Build templates for every Component loaded via the Extension System.
 
@@ -1151,7 +1153,13 @@ async def import_extension_components(
 
     Components whose class fails to instantiate or template are skipped
     with a logged warning -- one bad bundle must not abort the cache build.
+
+    ``components_path`` replaces ``settings_service.settings.components_path``,
+    so a caller that must not build Langflow's settings (the upgrade check)
+    discovers the same bundles.
     """
+    if components_path is None:
+        components_path = settings_service.settings.components_path if settings_service else []
     extension_results = load_installed_extensions()
     # Seed-directory bundles are the second @official-slot production-install
     # source documented in deployment-extensions-production.mdx: a Docker
@@ -1190,7 +1198,7 @@ async def import_extension_components(
     # which silently fell back to legacy custom-component loading without
     # extension metadata.
     dev_results = load_dev_extensions()
-    inline_results = discover_inline_bundles(_components_path_extension_paths(settings_service))
+    inline_results = discover_inline_bundles(_components_path_extension_paths(components_path))
 
     # Resolve cross-source bundle-name shadowing in a single pass.  Discovery
     # surfaces five sources -- installed (pip) > seed (filesystem-staged) >
