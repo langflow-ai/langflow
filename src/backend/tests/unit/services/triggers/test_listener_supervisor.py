@@ -215,8 +215,9 @@ async def test_a_revoked_connection_moves_its_triggers_to_needs_reconnect(
 
 
 @pytest.mark.parametrize("timing", ["before_claim", "idle", "delivery_rejected"])
+@pytest.mark.parametrize("reconcile_order", ["holder_first", "peer_first"])
 async def test_withdrawing_background_consent_stops_listeners_without_restarting(
-    make_connection, make_trigger, adapter_registry, timing
+    make_connection, make_trigger, adapter_registry, timing, reconcile_order
 ) -> None:
     emit_next = asyncio.Event()
 
@@ -253,6 +254,22 @@ async def test_withdrawing_background_consent_stops_listeners_without_restarting
             emit_next.set()
             await asyncio.wait_for(task, timeout=5)
             assert connection_id not in first.workers
+            async with session_scope() as session:
+                assert (
+                    await connection_leases.current_holder(session, connection_id=connection_id, ttl_s=300)
+                    == "replica-a"
+                )
+
+        if reconcile_order == "peer_first":
+            await second.reconcile()
+            for trigger_id in trigger_ids:
+                assert await _state(trigger_id) == (TriggerState.NEEDS_RECONNECT.value, "connection_not_authorized")
+            if timing == "delivery_rejected":
+                async with session_scope() as session:
+                    assert (
+                        await connection_leases.current_holder(session, connection_id=connection_id, ttl_s=300)
+                        == "replica-a"
+                    )
 
         for _ in range(3):
             await first.reconcile()

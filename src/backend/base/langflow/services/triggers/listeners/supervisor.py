@@ -405,9 +405,13 @@ class ListenerSupervisor:
             self.live_replicas = await replicas.live_replicas(
                 session, reap_after_s=max(settings.listener_lease_ttl_s * 10, 300.0)
             )
+            held_connections = await connection_leases.held_by(
+                session, holder=self.holder, ttl_s=settings.listener_lease_ttl_s
+            )
 
         # Connections we hold but no longer want.
-        for connection_id in (self.workers.keys() | reconnect_reasons.keys()) - desired.keys():
+        # A peer may have disarmed triggers after a rejected delivery removed our worker.
+        for connection_id in (self.workers.keys() | held_connections | reconnect_reasons.keys()) - desired.keys():
             await self._drop(connection_id)
 
         self.fair_share = replicas.fair_share(total=len(desired), replicas=self.live_replicas)
