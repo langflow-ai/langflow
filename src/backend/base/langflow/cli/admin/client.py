@@ -325,6 +325,16 @@ class AdminClient:
     def configure_directory_connection(self, **trust: str) -> dict[str, Any]:
         return self.request("PUT", "authz/directory/connection", json=trust)
 
+    def rotate_directory_connection_token(self) -> dict[str, Any]:
+        try:
+            return self.request("POST", "authz/directory/connection/token")
+        except AdminAPIError as exc:
+            raise AdminAPIError(
+                status_code=exc.status_code,
+                detail="Directory token creation failed",
+                error_code=exc.error_code,
+            ) from None
+
     def validate_directory_connection(self) -> dict[str, Any]:
         return self.request("POST", "authz/directory/connection/validate")
 

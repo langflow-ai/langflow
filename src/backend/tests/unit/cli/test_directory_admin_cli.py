@@ -5,16 +5,20 @@ from __future__ import annotations
 import json
 from copy import deepcopy
 from http import HTTPStatus
-from typing import Any
+from stat import S_IMODE
+from typing import TYPE_CHECKING, Any
 
 import httpx
 import pytest
 from langflow.__main__ import app
 from langflow.cli.admin.client import AdminAPIError, AdminClient
 from langflow.cli.admin.directory_reconcile import DirectoryReconciler, DirectoryResolutionError
-from langflow.cli.admin.manifest import DirectoryState
+from langflow.cli.admin.manifest import DirectoryState, dump_directory_state, load_directory_state
 from pydantic import ValidationError
 from typer.testing import CliRunner
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _state() -> DirectoryState:
@@ -358,3 +362,276 @@ def test_directory_client_preserves_bare_resource_404_when_plugin_is_available()
         client.get_directory_user("missing-user")
     assert error.value.status_code == 404
     assert error.value.detail == "Not Found"
+
+
+def _generic_connection() -> dict[str, str]:
+    return {
+        "auth_mode": "bearer_token",
+        "display_name": "Corporate directory",
+        "sso_provider_key": "okta",
+        "sso_issuer": "https://identity.example.com",
+        "subject_claim": "sub",
+    }
+
+
+def _connection_state(connection: dict[str, Any]) -> DirectoryState:
+    return DirectoryState.model_validate(
+        {"apiVersion": "langflow.ai/v1", "kind": "DirectoryState", "connection": connection}
+    )
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"tenant_id": "mixed"},
+        {"issuer": "https://mixed.example"},
+        {"token": "private-value"},
+        {"bearer_token_hash": "private-value"},
+        {"bearer_token_expires_at": "2099-01-01"},
+        {"token_configured": True},
+        {"state": "enabled"},
+    ],
+)
+def test_generic_manifest_rejects_mixed_trust_and_server_state(extra: dict[str, Any]) -> None:
+    with pytest.raises(ValidationError):
+        _connection_state({**_generic_connection(), **extra})
+
+
+@pytest.mark.parametrize("mode", ["unknown", "", None])
+def test_directory_manifest_rejects_unknown_auth_modes(mode: str | None) -> None:
+    with pytest.raises(ValidationError):
+        _connection_state({**_generic_connection(), "auth_mode": mode})
+
+
+def test_generic_export_round_trip_and_apply_are_public_and_idempotent(tmp_path: Path) -> None:
+    client = _FakeDirectoryClient()
+    client.connection = {
+        **_generic_connection(),
+        "state": "disabled",
+        "token_configured": True,
+        "bearer_token_expires_at": "2099-01-01T00:00:00Z",
+        "token": "never-export-this-token",
+        "bearer_token_hash": "never-export-this-hash",
+    }
+    reconciler = DirectoryReconciler(client)
+    exported = reconciler.export_state()
+    text = dump_directory_state(exported, format_name="json")
+    path = tmp_path / "directory.json"
+    path.write_text(text)
+    loaded = load_directory_state(path)
+
+    assert json.loads(text)["connection"] == _generic_connection()
+    assert "never-export" not in text
+    assert reconciler.diff(loaded) == []
+    assert reconciler.apply(loaded)["applied"] == []
+    assert client.calls == []
+
+
+@pytest.mark.parametrize("operation", ["export", "diff", "apply"])
+def test_directory_unknown_api_mode_fails_before_mutations(operation: str) -> None:
+    client = _FakeDirectoryClient()
+    client.connection["auth_mode"] = "future-provider"
+    reconciler = DirectoryReconciler(client)
+    args = [] if operation == "export" else [_state()]
+    method = reconciler.export_state if operation == "export" else getattr(reconciler, operation)
+    with pytest.raises(AdminAPIError, match="unsupported authentication mode") as exc_info:
+        method(*args)
+    assert exc_info.value.error_code == "invalid_directory_connection"
+    assert client.calls == []
+
+
+def test_generic_apply_only_configures_public_intent() -> None:
+    client = _FakeDirectoryClient()
+    client.connection["state"] = "disabled"
+    desired = _connection_state(_generic_connection())
+    reconciler = DirectoryReconciler(client)
+
+    assert [item["action"] for item in reconciler.diff(desired)] == ["configure"]
+    assert reconciler.apply(desired)["status"] == "success"
+    assert client.calls == ["connection:configure"]
+    assert client.connection["state"] == "disabled"
+    assert "token" not in client.connection
+    assert reconciler.diff(desired) == []
+
+
+def test_legacy_manifest_omits_default_mode_and_preserves_optional_display_name() -> None:
+    original = json.loads(dump_directory_state(_state(), format_name="json"))["connection"]
+    assert set(original) == {"tenant_id", "issuer", "audience", "jwks_url", "allowed_client_id"}
+    desired = _connection_state({**original, "auth_mode": "entra_jwt", "display_name": "Existing Entra"})
+    client = _FakeDirectoryClient()
+    client.connection["display_name"] = "Existing Entra"
+    assert DirectoryReconciler(client).diff(desired) == []
+    connection = json.loads(dump_directory_state(desired, format_name="json"))["connection"]
+    assert connection["display_name"] == "Existing Entra"
+
+
+def _mock_cli_client(monkeypatch, handler) -> AdminClient:
+    client = AdminClient(
+        url="https://langflow.example",
+        api_key="test-key",  # pragma: allowlist secret
+        operation_id="generic-directory-contract",
+        transport=httpx.MockTransport(handler),
+    )
+    monkeypatch.setattr("langflow.cli.admin.commands._client_from_context", lambda _ctx: client)
+    return client
+
+
+@pytest.mark.parametrize("generic", [False, True])
+def test_directory_configure_sends_mode_specific_payload(monkeypatch, *, generic: bool) -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, json={"state": "disabled"})
+
+    _mock_cli_client(monkeypatch, handler)
+    if generic:
+        flags = [
+            "--auth-mode",
+            "bearer_token",
+            "--display-name",
+            "Corporate directory",
+            "--sso-provider-key",
+            "okta",
+            "--sso-issuer",
+            "https://identity.example.com",
+        ]
+        expected = _generic_connection()
+    else:
+        expected = json.loads(dump_directory_state(_state(), format_name="json"))["connection"]
+        flags = [argument for key, value in expected.items() for argument in (f"--{key.replace('_', '-')}", value)]
+
+    result = CliRunner().invoke(app, ["admin", "directory", "connection", "configure", *flags])
+
+    assert result.exit_code == 0, result.output
+    assert len(requests) == 1
+    assert requests[0].method == "PUT"
+    assert requests[0].url.path == "/api/v1/authz/directory/connection"
+    assert json.loads(requests[0].read()) == expected
+
+
+@pytest.mark.parametrize(
+    "flags",
+    [
+        [],
+        ["--auth-mode", "unknown"],
+        ["--auth-mode", "bearer_token"],
+        ["--auth-mode", "bearer_token", "--tenant-id", "mixed"],
+        ["--sso-provider-key", "okta", "--sso-issuer", "https://identity.example.com"],
+    ],
+)
+def test_directory_configure_invalid_mode_fields_fail_before_http(monkeypatch, flags: list[str]) -> None:
+    def no_client(_ctx):
+        pytest.fail("Invalid configuration reached HTTP")
+
+    monkeypatch.setattr("langflow.cli.admin.commands._client_from_context", no_client)
+    result = CliRunner().invoke(app, ["admin", "directory", "connection", "configure", *flags])
+    assert result.exit_code == 2
+    assert "Traceback" not in result.output
+
+
+@pytest.mark.parametrize("output", ["table", "json"])
+def test_directory_token_goes_only_to_new_private_file(monkeypatch, capsys, tmp_path: Path, output: str) -> None:
+    path = tmp_path / "token.json"
+    requests: list[httpx.Request] = []
+    response = {"token": "only-in-private-file", "expires_at": "2099-01-01T00:00:00Z"}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        assert path.exists()
+        assert S_IMODE(path.stat().st_mode) == 0o600
+        return httpx.Response(200, json=response)
+
+    _mock_cli_client(monkeypatch, handler)
+    result = CliRunner().invoke(
+        app, ["admin", "--output", output, "directory", "connection", "token", "--yes", "--output-file", str(path)]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert [(request.method, request.url.path) for request in requests] == [
+        ("POST", "/api/v1/authz/directory/connection/token")
+    ]
+    assert json.loads(path.read_text()) == response
+    assert S_IMODE(path.stat().st_mode) == 0o600
+    captured = capsys.readouterr()
+    output_text = result.output + captured.out + captured.err
+    assert response["token"] not in output_text
+    assert str(path) in output_text
+    assert response["expires_at"] in output_text
+
+
+@pytest.mark.parametrize("failure", ["no-confirmation", "no-file", "existing", "unwritable"])
+def test_directory_token_preflight_rejects_before_http(monkeypatch, tmp_path: Path, failure: str) -> None:
+    def no_client(_ctx):
+        pytest.fail("Unsafe token command reached HTTP")
+
+    monkeypatch.setattr("langflow.cli.admin.commands._client_from_context", no_client)
+    path = tmp_path / "token.json"
+    flags = ["--yes", "--output-file", str(path)]
+    if failure == "no-confirmation":
+        flags = ["--output-file", str(path)]
+    elif failure == "no-file":
+        flags = ["--yes"]
+    elif failure == "existing":
+        path.write_text("preserve-existing")
+    else:
+        flags[-1] = str(tmp_path / "missing-parent" / "token.json")
+
+    result = CliRunner().invoke(app, ["admin", "directory", "connection", "token", *flags])
+    assert result.exit_code == 2
+    if failure == "existing":
+        assert path.read_text() == "preserve-existing"
+    else:
+        assert not path.exists()
+
+
+def test_directory_token_failure_never_prints_secret_response(monkeypatch, tmp_path: Path) -> None:
+    path = tmp_path / "token.json"
+    _mock_cli_client(monkeypatch, lambda _request: httpx.Response(500, json={"detail": "private-error-token"}))
+    result = CliRunner().invoke(app, ["admin", "directory", "connection", "token", "--yes", "--output-file", str(path)])
+    assert result.exit_code == 1
+    assert "private-error-token" not in result.output
+    assert not path.exists()
+
+
+def test_generic_manifest_supplies_default_subject_claim() -> None:
+    connection = _generic_connection()
+    del connection["subject_claim"]
+    desired = _connection_state(connection)
+    assert desired.connection.subject_claim == "sub"
+    assert json.loads(dump_directory_state(desired, format_name="json"))["connection"] == _generic_connection()
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        [],
+        {"expires_at": "2099-01-01T00:00:00Z"},
+        {"token": "private-token", "expires_at": "private-invalid-expiry"},
+    ],
+)
+def test_directory_token_rejects_malformed_response_without_secret_output(
+    monkeypatch, capsys, tmp_path: Path, response: Any
+) -> None:
+    path = tmp_path / "token.json"
+    _mock_cli_client(monkeypatch, lambda _request: httpx.Response(200, json=response))
+    result = CliRunner().invoke(app, ["admin", "directory", "connection", "token", "--yes", "--output-file", str(path)])
+    captured = capsys.readouterr()
+    assert result.exit_code == 1
+    assert "private-" not in result.output + captured.out + captured.err
+    assert not path.exists()
+
+
+def test_directory_token_preflight_rejects_unwritable_file_before_http(monkeypatch, tmp_path: Path) -> None:
+    def no_client(_ctx):
+        pytest.fail("Unwritable token command reached HTTP")
+
+    def permission_denied(*_args, **_kwargs):
+        raise PermissionError
+
+    monkeypatch.setattr("langflow.cli.admin.commands._client_from_context", no_client)
+    monkeypatch.setattr("langflow.cli.admin.commands.os.open", permission_denied)
+    result = CliRunner().invoke(
+        app, ["admin", "directory", "connection", "token", "--yes", "--output-file", str(tmp_path / "token.json")]
+    )
+    assert result.exit_code == 2
