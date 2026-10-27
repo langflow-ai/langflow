@@ -27,7 +27,7 @@ export function TriggerStatusSummary({
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2">
-        <TriggerStateBadge state={trigger.state} />
+        <TriggerStateBadge state={trigger.state} reason={trigger.reason} />
         {fix && (
           <button
             type="button"
