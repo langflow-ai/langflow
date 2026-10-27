@@ -130,11 +130,16 @@ function retiredComponentMessage(component: ComponentsToUpdateType): string {
     const type = ref.split(".").pop() ?? ref;
     return templates[type]?.display_name ?? type;
   });
-  return `${component.display_name ?? component.id} was retired in ${component.retiredIn} and fails when the flow runs. ${
+  return i18n.t(
     replacements.length > 0
-      ? `Use ${replacements.join(", ")}.`
-      : "No direct replacement."
-  }`;
+      ? "errors.retiredComponentWithReplacement"
+      : "errors.retiredComponentWithoutReplacement",
+    {
+      component: component.display_name ?? component.id,
+      version: component.retiredIn,
+      replacement: replacements.join(", "),
+    },
+  );
 }
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
@@ -1124,16 +1129,20 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         const blockedTitle = allowCustomComponents
           ? "Components disabled by an administrator must be removed before building"
           : "Custom components are blocked while custom components are disabled";
-        const outdatedTitle =
+        const outdatedTitle = i18n.t(
           outdatedComponents.length > 0
-            ? "Outdated components must be updated"
-            : "Retired components must be replaced";
+            ? "errors.outdatedComponents"
+            : "errors.retiredComponents",
+        );
+        const outdatedBuildTitle = i18n.t(
+          outdatedComponents.length > 0
+            ? "errors.outdatedComponentsBeforeBuilding"
+            : "errors.retiredComponentsBeforeBuilding",
+        );
 
         setErrorData({
           title:
-            blockedComponents.length > 0
-              ? blockedTitle
-              : `${outdatedTitle} before building`,
+            blockedComponents.length > 0 ? blockedTitle : outdatedBuildTitle,
           list: errorList,
         });
         get().setIsBuilding(false);

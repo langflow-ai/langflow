@@ -57,7 +57,7 @@ export default function NodeLegacyComponent({
             className="mb-px flex-1 text-mmd font-medium"
             data-testid="retired-component-bar"
           >
-            Retired in {retiredIn}. This component fails when the flow runs.
+            {t("node.retiredWarning", { version: retiredIn })}
           </div>
         ) : (
           <>
