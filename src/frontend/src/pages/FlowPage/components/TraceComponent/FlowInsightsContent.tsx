@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   useDeleteTracesMutation,
   useGetTracesQuery,
@@ -514,7 +515,16 @@ export function FlowInsightsContent({
         </div>
 
         <div className="ag-flush-mode flex-1 overflow-hidden">
-          {groupBySession ? (
+          {isLoading && rows.length === 0 ? (
+            <div
+              className="flex flex-col gap-2 p-4"
+              data-testid="flow-activity-skeleton"
+            >
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-9 w-full rounded-md" />
+              ))}
+            </div>
+          ) : groupBySession ? (
             renderGroupedSessionContent({
               groupedRows,
               isLoading,
