@@ -10,3 +10,5 @@ This project uses [AGENTS.md](https://agents.md/) as the standard for providing 
 Write feature notes in `docs/features/`. That folder is not published.
 
 User-facing pages live in `docs/docs/` and `docs/versioned_docs/`, with navigation in `docs/sidebars.js`. Edit those only when the task is a user-facing docs change the docs writer should review. A pull request that touches `docs/` flags the docs team. That notice is optional and does not block merge.
+
+Released model docs are generated at version cut and committed under `docs/static/llms.txt` and `docs/static/llms/<version>/`. Leave those files unchanged.
