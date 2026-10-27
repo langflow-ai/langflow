@@ -477,6 +477,23 @@ class BaseFileComponent(Component, ABC):
             await storage_service.delete_file(namespace_id, file_name)
             return
 
+        user_scope = component_authenticated_user_scope(self)
+        if user_scope is not None:
+            # A graph's flow ID cannot prove ownership of an untyped storage
+            # directory. Match S3 cleanup's authenticated-user-only boundary.
+            config_dir = getattr(settings, "config_dir", None)
+            if config_dir is None:
+                self.log("Skipping local file cleanup because the storage directory is unavailable.")
+                return
+            try:
+                user_root = (Path(config_dir) / user_scope).resolve()
+                owned_path = file.path.resolve().is_relative_to(user_root)
+            except (OSError, RuntimeError):
+                owned_path = False
+            if not owned_path:
+                self.log("Skipping local file cleanup outside the authenticated user's storage namespace.")
+                return
+
         await asyncio.to_thread(self._delete_local_path, file.path)
 
     @staticmethod
