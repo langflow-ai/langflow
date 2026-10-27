@@ -9,6 +9,7 @@ import {
   pickFirstNumber,
 } from "./flowTraceColumnsHelpers";
 
+/** Returns AgGrid column definitions for the Flow Activity trace table. Token counts use toLocaleString for readable thousands formatting. */
 export function createFlowTracesColumns({
   flowId,
   flowName,

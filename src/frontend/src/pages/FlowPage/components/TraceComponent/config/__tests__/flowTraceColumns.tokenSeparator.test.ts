@@ -1,43 +1,89 @@
-// Unit tests for the token column valueGetter in flowTraceColumns.
-// The valueGetter must return locale-formatted strings (toLocaleString) so
-// large numbers like 12345 render as "12,345" in the table.
+// Tests for the token column returned by createFlowTracesColumns.
+// Calls the actual production valueGetter to verify locale-formatted output.
 
-import { pickFirstNumber } from "../flowTraceColumnsHelpers";
+jest.mock("@/components/common/genericIconComponent", () => ({
+  __esModule: true,
+  default: () => null,
+}));
 
-function tokenValueGetter(totalTokens: unknown, total_tokens: unknown): string {
-  const tokens = pickFirstNumber(totalTokens, total_tokens);
-  return tokens === null ? "" : tokens.toLocaleString();
+jest.mock("@/i18n", () => ({
+  __esModule: true,
+  default: { t: (k: string) => k },
+}));
+
+jest.mock("@/utils/dateTime", () => ({
+  formatSmartTimestamp: () => "",
+}));
+
+jest.mock("../../traceViewHelpers", () => ({
+  formatTotalLatency: () => "",
+  getStatusIconProps: () => ({
+    colorClass: "",
+    iconName: "Circle",
+    shouldSpin: false,
+  }),
+}));
+
+import type { ColDef } from "ag-grid-community";
+import { createFlowTracesColumns } from "../flowTraceColumns";
+
+function getTokenColumn(): ColDef {
+  const cols = createFlowTracesColumns({ flowId: "f1", flowName: "Flow" });
+  const col = cols.find((c) => c.field === "totalTokens");
+  if (!col) throw new Error("totalTokens column not found");
+  return col;
 }
 
-describe("token column valueGetter — locale-formatted output", () => {
-  it("returns empty string when no token data", () => {
-    expect(tokenValueGetter(undefined, undefined)).toBe("");
-    expect(tokenValueGetter(null, null)).toBe("");
-    expect(tokenValueGetter("", "")).toBe("");
+function callValueGetter(col: ColDef, data: Record<string, unknown>): string {
+  if (typeof col.valueGetter !== "function") {
+    throw new Error("valueGetter is not a function");
+  }
+  return col.valueGetter({ data } as never) as string;
+}
+
+describe("flowTraceColumns — totalTokens column valueGetter", () => {
+  it("returns empty string when both totalTokens and total_tokens are absent", () => {
+    const col = getTokenColumn();
+    expect(callValueGetter(col, {})).toBe("");
+    expect(
+      callValueGetter(col, { totalTokens: undefined, total_tokens: undefined }),
+    ).toBe("");
+    expect(
+      callValueGetter(col, { totalTokens: null, total_tokens: null }),
+    ).toBe("");
   });
 
-  it("formats numbers below 1000 without separator", () => {
-    const result = tokenValueGetter(42, undefined);
-    expect(result).toBe((42).toLocaleString());
+  it("formats small numbers with toLocaleString (camelCase field)", () => {
+    const col = getTokenColumn();
+    expect(callValueGetter(col, { totalTokens: 42 })).toBe(
+      (42).toLocaleString(),
+    );
   });
 
-  it("formats large numbers with locale separator", () => {
-    const result = tokenValueGetter(12345, undefined);
+  it("formats large numbers with locale thousands separator (camelCase field)", () => {
+    const col = getTokenColumn();
+    const result = callValueGetter(col, { totalTokens: 12345 });
     expect(result).toBe((12345).toLocaleString());
     expect(result).not.toBe("12345");
   });
 
-  it("prefers totalTokens over total_tokens", () => {
-    expect(tokenValueGetter(100, 200)).toBe((100).toLocaleString());
+  it("falls back to snake_case total_tokens when camelCase is empty", () => {
+    const col = getTokenColumn();
+    const result = callValueGetter(col, { totalTokens: "", total_tokens: 999 });
+    expect(result).toBe((999).toLocaleString());
   });
 
-  it("falls back to total_tokens when totalTokens is empty", () => {
-    expect(tokenValueGetter("", 999)).toBe((999).toLocaleString());
+  it("prefers camelCase totalTokens over snake_case total_tokens", () => {
+    const col = getTokenColumn();
+    expect(callValueGetter(col, { totalTokens: 100, total_tokens: 200 })).toBe(
+      (100).toLocaleString(),
+    );
   });
 
-  it("formats a million tokens with separator", () => {
-    const result = tokenValueGetter(1000000, undefined);
-    expect(result).toBe((1000000).toLocaleString());
+  it("formats a million tokens with locale separator", () => {
+    const col = getTokenColumn();
+    const result = callValueGetter(col, { totalTokens: 1_000_000 });
+    expect(result).toBe((1_000_000).toLocaleString());
     expect(result.length).toBeGreaterThan(7);
   });
 });
