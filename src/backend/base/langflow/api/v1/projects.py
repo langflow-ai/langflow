@@ -1142,6 +1142,12 @@ async def _replace_project_operation_once(
                     if name is None:
                         # The receipt can outlive the project. Reuse a committed
                         # audit name rather than the retry's caller-supplied name.
+                        await logger.ainfo(
+                            "Expired replacement receipt: looking up the project name in audit history "
+                            "(project_id={}, operation_id={})",
+                            project_id,
+                            operation_id,
+                        )
                         name = (
                             await session.exec(
                                 select(AuditEvent.resource_name)
@@ -1156,7 +1162,15 @@ async def _replace_project_operation_once(
                                 .limit(1)
                             )
                         ).first()
-                    audited.identify(resource_name=name)
+                        if name is None:
+                            await logger.awarning(
+                                "Expired replacement receipt: no project name remains in audit history "
+                                "(project_id={}, operation_id={})",
+                                project_id,
+                                operation_id,
+                            )
+                    # Clear the attempted name if retention removed the fallback.
+                    audited.resource_name = name
                 raise HTTPException(
                     status_code=status.HTTP_410_GONE,
                     detail=REPLACEMENT_RECEIPT_EXPIRED_DETAIL,

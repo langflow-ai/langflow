@@ -11,13 +11,14 @@ from fastapi import HTTPException
 from langflow.api.v1 import projects as projects_module
 from langflow.services.audit.details import DESCRIPTION_LIMIT
 from langflow.services.authorization.refusal import mark_authorization_refusal
+from langflow.services.database.models.audit_event.model import AuditEvent
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.project_replacement_operation import ProjectReplacementOperation
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
 from sqlalchemy import event as sqlalchemy_event
 from sqlalchemy.exc import OperationalError
-from sqlmodel import select
+from sqlmodel import delete, select
 
 from .audit_helpers import enabled_audit, events_for
 
@@ -55,7 +56,7 @@ def _url(project_id, operation_id=None):
 @pytest.mark.parametrize("create", [True, False])
 @pytest.mark.parametrize("deleted", [True, False])
 async def test_expired_receipt_retry_retains_name_in_audit_export(
-    client, active_super_user, logged_in_headers_super_user, create, deleted
+    client, active_super_user, logged_in_headers_super_user, monkeypatch, create, deleted
 ):
     """Keep expired failures searchable after either creation, replacement, or deletion."""
     project_id, operation_id = uuid4(), uuid4()
@@ -74,6 +75,8 @@ async def test_expired_receipt_retry_retains_name_in_audit_export(
         removed = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers_super_user)
         assert removed.status_code == 204, removed.text
 
+    fallback_log = AsyncMock()
+    monkeypatch.setattr(projects_module.logger, "ainfo", fallback_log)
     retry = await client.put(url, json=body, headers=logged_in_headers_super_user)
     assert retry.status_code == 410, retry.text
     assert retry.headers["X-Langflow-Error-Code"] == "replacement_receipt_expired"
@@ -88,6 +91,10 @@ async def test_expired_receipt_retry_retains_name_in_audit_export(
     )
     assert exported.status_code == 200, exported.text
     assert str(failure.id) in {json.loads(line)["id"] for line in exported.text.splitlines()}
+    fallback_calls = [call for call in fallback_log.call_args_list if "Expired replacement receipt" in call.args[0]]
+    assert len(fallback_calls) == int(deleted)
+    if deleted:
+        assert fallback_calls[0].args[1:] == (project_id, operation_id)
     async with session_scope() as session:
         project = await session.get(Folder, project_id)
         if deleted:
@@ -95,6 +102,35 @@ async def test_expired_receipt_retry_retains_name_in_audit_export(
         else:
             assert project.description == "committed"
         assert (await session.get(ProjectReplacementOperation, (project_id, operation_id))).result is None
+
+
+async def test_expired_receipt_warns_when_project_and_audit_history_are_gone(
+    client, active_user, logged_in_headers, monkeypatch
+):
+    """Retain the failed event by ID without trusting a retry's attempted name."""
+    project_id, operation_id = uuid4(), uuid4()
+    await _seed_project(active_user, project_id)
+    url = _url(project_id, operation_id)
+    body = {"description": "committed", "flows": []}
+    response = await client.put(url, json=body, headers=logged_in_headers)
+    assert response.status_code == 200, response.text
+    removed = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert removed.status_code == 204, removed.text
+    async with session_scope() as session:
+        receipt = await session.get(ProjectReplacementOperation, (project_id, operation_id))
+        receipt.result = None
+        session.add(receipt)
+        await session.exec(delete(AuditEvent).where(AuditEvent.resource_id == project_id))
+    warning_log = AsyncMock()
+    monkeypatch.setattr(projects_module.logger, "awarning", warning_log)
+
+    retry = await client.put(url, json={**body, "project_name": "untrusted retry name"}, headers=logged_in_headers)
+    assert retry.status_code == 410, retry.text
+    [failure] = await events_for(project_id)
+    assert (failure.resource_name, failure.result, failure.error_code) == (None, "failed", "CONSTRAINT_VIOLATION")
+    warnings = [call for call in warning_log.call_args_list if "no project name remains" in call.args[0]]
+    assert len(warnings) == 1
+    assert warnings[0].args[1:] == (project_id, operation_id)
 
 
 @pytest.mark.parametrize("create", [True, False])
