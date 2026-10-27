@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
+from datetime import datetime
 from http import HTTPStatus
 from stat import S_IMODE
 from typing import TYPE_CHECKING, Any
@@ -650,3 +651,134 @@ def test_directory_token_requires_private_posix_file_support(monkeypatch, capsys
     assert result.exit_code == 2
     assert "requires POSIX" in result.output + captured.out + captured.err
     assert not path.exists()
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://langflow.example",
+        "http://localhost.example",
+        "http://localhost.attacker.example",
+        "http://127.0.0.1.attacker.example",
+        "http://example.localhost",
+        "http://localhost.",
+        "http://192.168.1.1",
+        "http://128.0.0.1",
+        "http://[2001:db8::1]",
+        "http://127.1",
+    ],
+)
+def test_directory_token_client_rejects_remote_http_before_dispatch(url: str) -> None:
+    def no_http(_request: httpx.Request) -> httpx.Response:
+        pytest.fail("Unsafe token creation reached HTTP")
+
+    client = AdminClient(
+        url=url,
+        api_key="private-admin-key",  # pragma: allowlist secret
+        operation_id="token-transport",
+        transport=httpx.MockTransport(no_http),
+    )
+    with pytest.raises(AdminAPIError, match="requires HTTPS") as exc_info:
+        client.rotate_directory_connection_token()
+    assert exc_info.value.error_code == "insecure_directory_token_transport"
+    assert "private-admin-key" not in str(exc_info.value)
+    assert url not in str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://langflow.example",
+        "http://localhost:7860",
+        "http://127.0.0.1:7860",
+        "http://127.12.34.56:7860",
+        "http://[::1]:7860",
+    ],
+)
+def test_directory_token_client_allows_https_and_http_loopback(url: str) -> None:
+    requests: list[httpx.Request] = []
+    response = {"token": "private-directory-token", "expires_at": "2099-01-01T00:00:00Z"}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, json=response)
+
+    client = AdminClient(
+        url=url,
+        api_key="private-admin-key",  # pragma: allowlist secret
+        operation_id="token-transport",
+        transport=httpx.MockTransport(handler),
+    )
+    assert client.rotate_directory_connection_token() == response
+    assert len(requests) == 1
+    assert requests[0].method == "POST"
+    assert requests[0].url.path == "/api/v1/authz/directory/connection/token"
+
+
+def test_directory_token_cli_rejects_remote_http_without_file_or_secrets(monkeypatch, capsys, tmp_path: Path) -> None:
+    path = tmp_path / "token.json"
+
+    def no_http(_request: httpx.Request) -> httpx.Response:
+        pytest.fail("Unsafe token creation reached HTTP")
+
+    client = AdminClient(
+        url="http://langflow.example",
+        api_key="private-admin-key",  # pragma: allowlist secret
+        operation_id="token-transport",
+        transport=httpx.MockTransport(no_http),
+    )
+    monkeypatch.setattr("langflow.cli.admin.commands._client_from_context", lambda _ctx: client)
+    result = CliRunner().invoke(app, ["admin", "directory", "connection", "token", "--yes", "--output-file", str(path)])
+    captured = capsys.readouterr()
+    output = result.output + captured.out + captured.err
+    assert result.exit_code == 1
+    assert "requires HTTPS" in output
+    assert "private-admin-key" not in output
+    assert not path.exists()
+
+
+def test_directory_token_normalizes_utc_expiry_for_python310(monkeypatch, tmp_path: Path) -> None:
+    path = tmp_path / "token.json"
+    response = {"token": "private-directory-token", "expires_at": "2099-01-01T00:00:00Z"}
+    parsed: list[str] = []
+
+    class Python310DateTime:
+        @staticmethod
+        def fromisoformat(value: str) -> datetime:
+            assert not value.endswith("Z")
+            parsed.append(value)
+            return datetime.fromisoformat(value)
+
+    _mock_cli_client(monkeypatch, lambda _request: httpx.Response(200, json=response))
+    monkeypatch.setattr("langflow.cli.admin.commands.datetime", Python310DateTime)
+    result = CliRunner().invoke(app, ["admin", "directory", "connection", "token", "--yes", "--output-file", str(path)])
+    assert result.exit_code == 0, result.output
+    assert parsed == ["2099-01-01T00:00:00+00:00"]
+    assert json.loads(path.read_text()) == response
+
+
+@pytest.mark.parametrize(
+    ("url", "proxied"),
+    [
+        ("http://localhost:7860", False),
+        ("http://127.0.0.1:7860", False),
+        ("http://127.12.34.56:7860", False),
+        ("http://[::1]:7860", False),
+        ("https://langflow.example", True),
+        ("https://localhost:7860", True),
+        ("http://langflow.example", True),
+    ],
+)
+def test_admin_client_proxy_transport_keeps_http_loopback_local(monkeypatch, url: str, *, proxied: bool) -> None:
+    for name in ("http_proxy", "https_proxy", "all_proxy", "no_proxy"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("HTTP_PROXY", "http://proxy.example:8080")
+    monkeypatch.setenv("HTTPS_PROXY", "http://proxy.example:8080")
+    monkeypatch.setenv("NO_PROXY", "")
+    with AdminClient(
+        url=url,
+        api_key="test-key",  # pragma: allowlist secret
+        operation_id="loopback-proxy-contract",
+    ) as client:
+        transport = client._client._transport_for_url(httpx.URL(url))
+        assert (transport is not client._client._transport) is proxied

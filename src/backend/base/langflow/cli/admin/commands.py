@@ -649,13 +649,15 @@ def directory_connection_token(
             token, expires_at = result.get("token"), result.get("expires_at")
             if not isinstance(token, str) or not token or not isinstance(expires_at, str):
                 raise ValueError(invalid_response)
-            datetime.fromisoformat(expires_at)
+            datetime.fromisoformat(expires_at.removesuffix("Z") + "+00:00" if expires_at.endswith("Z") else expires_at)
             json.dump({"token": token, "expires_at": expires_at}, stream)
             stream.write("\n")
             stream.flush()
             os.fsync(stream.fileno())
-    except (AdminAPIError, httpx.HTTPError, ConnectionConfigurationError, OSError, TypeError, ValueError):
+    except (AdminAPIError, httpx.HTTPError, ConnectionConfigurationError, OSError, TypeError, ValueError) as exc:
         output_file.unlink(missing_ok=True)
+        if isinstance(exc, AdminAPIError) and exc.error_code == "insecure_directory_token_transport":
+            _fail(exc)
         _fail(ValueError("Directory token creation failed. Check the connection before retrying."))
     invocation: AdminInvocation = ctx.ensure_object(AdminInvocation)
     if invocation.output == "json":
