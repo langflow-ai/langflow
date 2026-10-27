@@ -6,6 +6,9 @@ runs:
     - name: Use the stable Python ABI for older PyO3 extensions
       shell: bash
       run: echo "PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1" >> "$GITHUB_ENV"
+    - name: Enable the HTTP/3 API required by impit source builds
+      shell: bash
+      run: echo "RUSTFLAGS=${RUSTFLAGS:+$RUSTFLAGS }--cfg reqwest_unstable" >> "$GITHUB_ENV"
     - name: Install Linux native build dependencies
       if: runner.os == 'Linux'
       shell: bash
