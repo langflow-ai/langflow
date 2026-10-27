@@ -18,7 +18,7 @@ from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
-from langflow.upgrade_check import SourceDatabaseError, read_only_connection, read_source
+from langflow.upgrade_check import SourceDatabaseError, open_source, read_only_connection
 
 FIXTURES = Path(__file__).parents[2] / "data" / "upgrade_check"
 
@@ -60,7 +60,9 @@ def test_reads_a_database_each_release_saved(release, tmp_path):
     database = _load(release, tmp_path)
     before = database.read_bytes()
 
-    source = read_source(_url(database))
+    with open_source(_url(database)) as source:
+        flows = {flow.name: flow for flow in source.flows()}
+        versions = list(source.flow_versions())
 
     assert source.dialect == "sqlite"
     assert source.alembic_revisions == [revision]
@@ -68,7 +70,6 @@ def test_reads_a_database_each_release_saved(release, tmp_path):
     assert set(users) == {"langflow", "fixture-user"}
     project = next(project for project in source.projects if project.name == "Fixture project")
 
-    flows = {flow.name: flow for flow in source.flows}
     assert set(flows) == {"Fixture nested groups", "Fixture saved component"}
     flow, component = flows["Fixture nested groups"], flows["Fixture saved component"]
     assert (flow.is_component, component.is_component) == (False, True)
@@ -89,7 +90,7 @@ def test_reads_a_database_each_release_saved(release, tmp_path):
     assert source.has_deployments
     assert source.has_triggers is has_triggers
     if has_triggers:
-        [version] = source.flow_versions
+        [version] = versions
         assert version.flow_id == flow.id
         assert version.version_number == 1
         assert len(version.pinned_by_triggers) == 1
@@ -97,7 +98,7 @@ def test_reads_a_database_each_release_saved(release, tmp_path):
         assert version.data["nodes"] == flow.data["nodes"]
     else:
         # Versions exist, but nothing pins them or has them attached, so none still runs.
-        assert source.flow_versions == []
+        assert versions == []
 
     assert database.read_bytes() == before
     assert _side_files(database) == []
@@ -121,9 +122,10 @@ def test_wal_mode_database_keeps_its_bytes(tmp_path):
     connection.close()
     before = database.read_bytes()
 
-    source = read_source(_url(database))
+    with open_source(_url(database)) as source:
+        names = {flow.name for flow in source.flows()}
 
-    assert {flow.name for flow in source.flows} == {"Fixture nested groups", "Fixture saved component"}
+    assert names == {"Fixture nested groups", "Fixture saved component"}
     assert database.read_bytes() == before
 
 
@@ -141,7 +143,8 @@ def test_wal_mode_database_in_a_read_only_folder(tmp_path):
     folder.chmod(0o555)
     try:
         try:
-            source = read_source(_url(database))
+            with open_source(_url(database)) as source:
+                pass
         except SourceDatabaseError as exc:
             assert "Mount the folder writable for the check" in str(exc)  # noqa: PT017
             assert "copy the database into a writable folder" in str(exc)  # noqa: PT017
@@ -154,13 +157,13 @@ def test_wal_mode_database_in_a_read_only_folder(tmp_path):
 
 @pytest.mark.parametrize("url", ["sqlite://", "sqlite:///:memory:", "mysql://user@localhost/langflow"])
 def test_refuses_what_it_cannot_read(url):
-    with pytest.raises(ValueError, match=r"SQLite|PostgreSQL"):
-        read_source(url)
+    with pytest.raises(ValueError, match=r"SQLite|PostgreSQL"), open_source(url):
+        pass
 
 
 def test_missing_sqlite_file(tmp_path):
-    with pytest.raises(FileNotFoundError, match="no SQLite database"):
-        read_source(_url(tmp_path / "missing.db"))
+    with pytest.raises(FileNotFoundError, match="no SQLite database"), open_source(_url(tmp_path / "missing.db")):
+        pass
 
 
 def test_reading_starts_no_service_and_writes_no_secret_key(tmp_path):
@@ -170,10 +173,11 @@ def test_reading_starts_no_service_and_writes_no_secret_key(tmp_path):
     config.mkdir()
     script = (
         "import json, sys\n"
-        "from langflow.upgrade_check import read_source\n"
+        "from langflow.upgrade_check import open_source\n"
         "from lfx.services.manager import get_service_manager\n"
-        "source = read_source(sys.argv[1])\n"
-        "print(json.dumps({'flows': len(source.flows), 'services': sorted(get_service_manager().services)}))\n"
+        "with open_source(sys.argv[1]) as source:\n"
+        "    flows = len(list(source.flows()))\n"
+        "print(json.dumps({'flows': flows, 'services': sorted(get_service_manager().services)}))\n"
     )
     env = {**os.environ, "LANGFLOW_CONFIG_DIR": str(config), "DO_NOT_TRACK": "true"}
     result = subprocess.run(  # noqa: S603
@@ -227,12 +231,14 @@ def test_postgres_source_is_read_in_a_read_only_transaction():
             )
         writer.dispose()
 
-        source = read_source(url.render_as_string(hide_password=False))
+        with open_source(url.render_as_string(hide_password=False)) as source:
+            flows = list(source.flows())
+            versions = list(source.flow_versions())
 
         assert source.dialect == "postgresql"
         assert source.alembic_revisions == [REVISION]
         assert [(user.id, user.username) for user in source.users] == [(str(user_id), "fixture-user")]
-        [flow] = source.flows
+        [flow] = flows
         assert (flow.id, flow.folder_id, flow.is_component, flow.data) == (
             str(flow_id),
             str(folder_id),
@@ -240,7 +246,7 @@ def test_postgres_source_is_read_in_a_read_only_transaction():
             flow_data,
         )
         assert (source.has_triggers, source.has_deployments) == (True, False)
-        [version] = source.flow_versions
+        [version] = versions
         assert (version.id, version.pinned_by_triggers) == (str(version_id), (str(trigger_id),))
         with (
             read_only_connection(url.render_as_string(hide_password=False)) as connection,

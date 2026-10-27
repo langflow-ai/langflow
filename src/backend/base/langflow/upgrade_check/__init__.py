@@ -7,9 +7,9 @@ from langflow.upgrade_check.reader import (
     SourceFlowVersion,
     SourceProject,
     SourceUser,
+    open_source,
     read_connection,
     read_only_connection,
-    read_source,
 )
 
 __all__ = [
@@ -19,7 +19,7 @@ __all__ = [
     "SourceFlowVersion",
     "SourceProject",
     "SourceUser",
+    "open_source",
     "read_connection",
     "read_only_connection",
-    "read_source",
 ]

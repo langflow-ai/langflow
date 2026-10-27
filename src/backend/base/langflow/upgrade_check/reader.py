@@ -38,6 +38,9 @@ if TYPE_CHECKING:
 # The Postgres drivers Langflow ships do not include asyncpg, and this reader is synchronous.
 _SYNC_POSTGRES_DRIVER = "postgresql+psycopg"
 
+# Flow data can be megabytes per row, so rows are fetched in small batches.
+_ROWS_PER_FETCH = 50
+
 _READ_ONLY_FOLDER = (
     "SQLite could not read the database because its folder is not writable: a database in WAL mode "
     "needs its -shm file next to it, even to read. Mount the folder writable for the check, or copy the "
@@ -93,22 +96,48 @@ class SourceFlowVersion:
 
 @dataclass
 class SourceDatabase:
+    """A source database open for reading.
+
+    Users and projects are read up front. Flows and flow versions are read one row at a time,
+    because their saved data can be large: iterate them inside ``open_source``, while the
+    connection is open.
+    """
+
+    connection: sa.Connection
     dialect: str
     alembic_revisions: list[str]
     users: list[SourceUser] = field(default_factory=list)
     projects: list[SourceProject] = field(default_factory=list)
-    flows: list[SourceFlow] = field(default_factory=list)
-    flow_versions: list[SourceFlowVersion] = field(default_factory=list)
     # Which of the tables that later releases added this source has.
     has_flow_versions: bool = False
     has_triggers: bool = False
     has_deployments: bool = False
 
+    def flows(self) -> Iterator[SourceFlow]:
+        """Yield every flow and saved component."""
+        columns = ("id", "name", "data", "user_id", "folder_id", "is_component", "updated_at")
+        for row in _select(self.connection, "flow", *columns, stream=True):
+            yield SourceFlow(
+                id=_uuid(row.id),
+                name=row.name,
+                user_id=_uuid(row.user_id),
+                folder_id=_uuid(row.folder_id),
+                is_component=bool(row.is_component),
+                updated_at=_timestamp(row.updated_at),
+                **_flow_data(row.data),
+            )
 
-def read_source(database_url: str) -> SourceDatabase:
-    """Read everything the upgrade check needs from the database at ``database_url``."""
+    def flow_versions(self) -> Iterator[SourceFlowVersion]:
+        """Yield the saved versions that still run: pinned by a trigger or attached to a deployment."""
+        if self.has_flow_versions:
+            yield from _running_flow_versions(self)
+
+
+@contextmanager
+def open_source(database_url: str) -> Iterator[SourceDatabase]:
+    """Open the database at ``database_url`` read-only for the upgrade check."""
     with read_only_connection(database_url) as connection:
-        return read_connection(connection)
+        yield read_connection(connection)
 
 
 @contextmanager
@@ -179,6 +208,7 @@ def read_connection(connection: sa.Connection) -> SourceDatabase:
     """Read the source through ``connection``, which the caller made read-only."""
     tables = set(sa.inspect(connection).get_table_names())
     source = SourceDatabase(
+        connection=connection,
         dialect=connection.dialect.name,
         alembic_revisions=_alembic_revisions(connection, tables),
         has_flow_versions="flow_version" in tables,
@@ -187,28 +217,11 @@ def read_connection(connection: sa.Connection) -> SourceDatabase:
     )
     source.users = [SourceUser(_uuid(row.id), row.username) for row in _select(connection, "user", "id", "username")]
     source.projects = [SourceProject(_uuid(row.id), row.name) for row in _select(connection, "folder", "id", "name")]
-    # ponytail: every flow's data is held in memory at once; stream rows if large sources need it.
-    source.flows = [
-        SourceFlow(
-            id=_uuid(row.id),
-            name=row.name,
-            user_id=_uuid(row.user_id),
-            folder_id=_uuid(row.folder_id),
-            is_component=bool(row.is_component),
-            updated_at=_timestamp(row.updated_at),
-            **_flow_data(row.data),
-        )
-        for row in _select(
-            connection, "flow", "id", "name", "data", "user_id", "folder_id", "is_component", "updated_at"
-        )
-    ]
-    if source.has_flow_versions:
-        source.flow_versions = _running_flow_versions(connection, source)
     return source
 
 
-def _running_flow_versions(connection: sa.Connection, source: SourceDatabase) -> list[SourceFlowVersion]:
-    """Read the saved versions that still run: pinned by a trigger or attached to a deployment."""
+def _running_flow_versions(source: SourceDatabase) -> Iterator[SourceFlowVersion]:
+    connection = source.connection
     triggers: dict[Any, list[str]] = {}
     if source.has_triggers and "flow_version_id" in _columns(connection, "trigger"):
         trigger = sa.table("trigger", sa.column("id"), sa.column("flow_version_id"))
@@ -221,14 +234,14 @@ def _running_flow_versions(connection: sa.Connection, source: SourceDatabase) ->
             deployments.setdefault(row.flow_version_id, []).append(_uuid(row.deployment_id))
     running = triggers.keys() | deployments.keys()
     if not running:
-        return []
+        return
     version = sa.table(
         "flow_version",
         *(sa.column(name) for name in ("id", "flow_id", "version_number", "data", "user_id", "created_at")),
     )
-    rows = connection.execute(sa.select(version).where(version.c.id.in_(list(running))))
-    return [
-        SourceFlowVersion(
+    query = sa.select(version).where(version.c.id.in_(list(running))).execution_options(yield_per=_ROWS_PER_FETCH)
+    for row in connection.execute(query):
+        yield SourceFlowVersion(
             id=_uuid(row.id),
             flow_id=_uuid(row.flow_id),
             version_number=row.version_number,
@@ -238,8 +251,6 @@ def _running_flow_versions(connection: sa.Connection, source: SourceDatabase) ->
             attached_to_deployments=tuple(sorted(deployments.get(row.id, []))),
             **_flow_data(row.data),
         )
-        for row in rows
-    ]
 
 
 def _alembic_revisions(connection: sa.Connection, tables: set[str]) -> list[str]:
@@ -248,10 +259,14 @@ def _alembic_revisions(connection: sa.Connection, tables: set[str]) -> list[str]
     return sorted(row.version_num for row in _select(connection, "alembic_version", "version_num"))
 
 
-def _select(connection: sa.Connection, table_name: str, *column_names: str):
+def _select(connection: sa.Connection, table_name: str, *column_names: str, stream: bool = False):
     # sa.table quotes names a dialect reserves, such as Postgres's "user".
     table = sa.table(table_name, *(sa.column(name) for name in column_names))
-    return connection.execute(sa.select(table))
+    query = sa.select(table)
+    if stream:
+        # Fetch a few rows at a time (a server-side cursor on Postgres) instead of the whole table.
+        query = query.execution_options(yield_per=_ROWS_PER_FETCH)
+    return connection.execute(query)
 
 
 def _columns(connection: sa.Connection, table_name: str) -> set[str]:
