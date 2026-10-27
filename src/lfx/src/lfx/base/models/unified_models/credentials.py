@@ -586,6 +586,11 @@ def validate_model_provider_key(
     # provider and follows the same rule.
     # Provider IDs such as "typesafe" and display names reach the same decision checks.
     decision_provider = _canonical_provider_name(provider)
+    if decision_provider == "OpenRouter":
+        provider = decision_provider
+        if model_type == "decision" and not secret_value_to_str(variables.get("OPENROUTER_API_KEY"), strip=True):
+            msg = "Enter the OpenRouter API key."
+            raise ValueError(msg)
     if model_type is None and model_name and _is_decision_only_model(decision_provider, model_name):
         # An untyped request for a model that exists only as a decision model, such as a legacy
         # status update, must not be validated as a chat completion.
@@ -601,11 +606,21 @@ def validate_model_provider_key(
         purpose=ModelProviderPolicyPurpose.USE,
         attributes=policy_attributes,
     )
-    if model_type == "decision" or decision_provider in DECISION_ONLY_PROVIDERS:
+    if (model_type == "decision" and decision_provider != "OpenRouter") or decision_provider in DECISION_ONLY_PROVIDERS:
         from lfx.base.models.decision_constants import DECISION_MODELS_DETAILED
         from lfx.base.models.decisions.providers import validate_decision_provider_key
 
         offered = [row["name"] for row in DECISION_MODELS_DETAILED if row["provider"] == decision_provider]
+        if decision_provider == "TypeSafe":
+            from lfx.base.models.decisions.typesafe import get_models
+
+            # Explicit/pinned IDs are validated by System One; discover a default only when needed.
+            policy.require(decision_provider)
+            key = secret_value_to_str(variables.get("TYPESAFE_API_KEY"), strip=True)
+            if model_name:
+                offered = [model_name]
+            elif key:
+                offered = [row["name"] for row in get_models(key)]
         if not model_name and not offered:
             msg = f"{decision_provider} has no decision models."
             raise ValueError(msg)

@@ -54,6 +54,7 @@ const ProviderList = ({
             provider?.models,
             modelType,
             provider?.live_discovery,
+            provider.provider,
           ),
       )
       .map((provider) => {

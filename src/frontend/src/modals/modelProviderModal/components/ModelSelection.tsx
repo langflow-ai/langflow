@@ -31,10 +31,12 @@ export const hasProviderOwnedEmptyState = (
   providerName: string | undefined,
   modelType: ModelTypeFilter,
 ): boolean =>
-  !!providerName &&
-  deploymentKindsOfFilter(modelType).length > 0 &&
-  (CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName) ||
-    providerName.toLowerCase() === "ollama");
+  (providerName === "OpenRouter" &&
+    kindsOfFilter(modelType).includes("decision")) ||
+  (!!providerName &&
+    deploymentKindsOfFilter(modelType).length > 0 &&
+    (CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName) ||
+      providerName.toLowerCase() === "ollama"));
 
 export interface ModelProviderSelectionProps extends ProviderScopeParams {
   availableModels: Model[];
@@ -281,12 +283,16 @@ const ModelSelection = ({
 
   const visibleKinds = kindsOfFilter(modelType);
   const visibleDeploymentTypes = useMemo(
-    () => deploymentKindsOfFilter(modelType),
-    [modelType],
+    () =>
+      providerName === "OpenRouter"
+        ? kindsOfFilter(modelType).filter((kind) => kind === "decision")
+        : deploymentKindsOfFilter(modelType),
+    [modelType, providerName],
   );
   const supportsCustomDeployments =
     !!providerName &&
-    CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName) &&
+    (CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName) ||
+      providerName === "OpenRouter") &&
     visibleDeploymentTypes.length > 0;
 
   // Merge enabled free-text deployments; typed API wins, legacy customs default to llm.
@@ -325,7 +331,7 @@ const ModelSelection = ({
             model_name: name,
             metadata: {
               model_type: deploymentType,
-              icon: "Azure",
+              icon: providerName === "OpenRouter" ? "OpenRouter" : "Azure",
             },
           });
         }
@@ -492,7 +498,10 @@ const ModelSelection = ({
   // decision view the generic one: discovery finds only chat and embedding
   // models.
   const awaitsCredentialDiscovery =
-    !!liveDiscovery && !isConfigured && !isOllama && modelType !== "decision";
+    !!liveDiscovery &&
+    !isConfigured &&
+    !isOllama &&
+    (modelType !== "decision" || providerName === "OpenRouter");
   // Use the unfiltered list for the empty-state check so an
   // ollama-no-models warning still fires when the search field happens to be
   // populated.
@@ -505,13 +514,16 @@ const ModelSelection = ({
 
   const showSearchInput = supportsCustomDeployments || !noModelsAvailable;
 
-  const searchInputLabel = supportsCustomDeployments
-    ? t("modelProviders.searchOrAddDeployment", {
-        defaultValue: "Search or add a deployment name…",
-      })
-    : t("modelProviders.searchModels", {
-        defaultValue: "Search models…",
-      });
+  const searchInputLabel =
+    providerName === "OpenRouter" && supportsCustomDeployments
+      ? t("modelProviders.searchOrAddModel")
+      : supportsCustomDeployments
+        ? t("modelProviders.searchOrAddDeployment", {
+            defaultValue: "Search or add a deployment name…",
+          })
+        : t("modelProviders.searchModels", {
+            defaultValue: "Search models…",
+          });
 
   // A refusal won't change on retry: this user can't read the policy.
   const isAccessError = isAccessRefusal(enabledModelsError);
@@ -553,10 +565,12 @@ const ModelSelection = ({
           className="text-xs text-muted-foreground leading-relaxed"
           data-testid="custom-deployment-hint"
         >
-          {t("modelProviders.customDeploymentHint", {
-            defaultValue:
-              "Use your Azure AI Foundry deployment names from the portal (not catalog model IDs). Search or type a name to add one.",
-          })}
+          {providerName === "OpenRouter"
+            ? t("modelProviders.openRouterModelHint")
+            : t("modelProviders.customDeploymentHint", {
+                defaultValue:
+                  "Use your Azure AI Foundry deployment names from the portal (not catalog model IDs). Search or type a name to add one.",
+              })}
         </p>
       ) : null}
       {showSearchInput && (
@@ -589,22 +603,26 @@ const ModelSelection = ({
               }}
             >
               <ForwardedIconComponent name="Plus" className="mr-2 h-4 w-4" />
-              {modelType === "all"
-                ? deploymentType === "llm"
-                  ? t("modelProviders.addLanguageDeployment", {
-                      name: trimmedModelQuery,
-                      defaultValue:
-                        'Add deployment "{{name}}" as language model',
-                    })
-                  : t("modelProviders.addEmbeddingDeployment", {
-                      name: trimmedModelQuery,
-                      defaultValue:
-                        'Add deployment "{{name}}" as embedding model',
-                    })
-                : t("modelProviders.addDeployment", {
+              {providerName === "OpenRouter"
+                ? t("modelProviders.addDecisionModel", {
                     name: trimmedModelQuery,
-                    defaultValue: 'Add deployment "{{name}}"',
-                  })}
+                  })
+                : modelType === "all"
+                  ? deploymentType === "llm"
+                    ? t("modelProviders.addLanguageDeployment", {
+                        name: trimmedModelQuery,
+                        defaultValue:
+                          'Add deployment "{{name}}" as language model',
+                      })
+                    : t("modelProviders.addEmbeddingDeployment", {
+                        name: trimmedModelQuery,
+                        defaultValue:
+                          'Add deployment "{{name}}" as embedding model',
+                      })
+                  : t("modelProviders.addDeployment", {
+                      name: trimmedModelQuery,
+                      defaultValue: 'Add deployment "{{name}}"',
+                    })}
             </Button>
           ))}
         </div>

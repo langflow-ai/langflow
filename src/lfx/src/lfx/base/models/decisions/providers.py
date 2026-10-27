@@ -37,6 +37,7 @@ ENDPOINTS = {
     "TypeSafe": "https://api.typesafe.ai/v1/systemone",
     "Perplexity": "https://api.perplexity.ai/v1/decisions",
     "OpenAI": "https://api.openai.com/v1/decisions",
+    "OpenRouter": "https://openrouter.ai/api/v1/systemone",
 }
 MAX_HOSTED_SCORE_LEVELS = 10
 MAX_CHOICES = 255
@@ -147,6 +148,9 @@ def build_payload(provider: str, model: str, request: DecisionRequest) -> dict[s
             raise DecisionConfigurationError(msg)
         outcomes = (("true", request.yes_description), ("false", request.no_description))
         question["criteria"] = {outcome: text for outcome, text in outcomes if text}
+        if provider == "OpenRouter" and not (request.yes_description and request.no_description):
+            msg = "OpenRouter requires both What Yes Means and What No Means when either is provided."
+            raise DecisionConfigurationError(msg)
     if provider == "OpenAI":
         question["name"] = QUESTION_ID
         if request.kind == "choice":
@@ -211,6 +215,10 @@ def parse_response(
         if not isinstance(model, str) or not model.strip():
             msg = "model must be a non-empty string"
             raise ValueError(msg)
+        if provider == "OpenRouter" and request_id is None:
+            candidate = payload.get("id")
+            if isinstance(candidate, str) and re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", candidate):
+                request_id = candidate
         answers = payload["answers"]
         if provider == "OpenAI":
             if not isinstance(answers, list) or len(answers) != 1:

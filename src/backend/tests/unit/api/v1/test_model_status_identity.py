@@ -1117,3 +1117,96 @@ async def test_unreadable_saved_endpoint_returns_validation_error(monkeypatch):
     assert not result.valid
     assert "OPENAI_BASE_URL" in result.error
     validate.assert_not_called()
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_openrouter_discovery_and_custom_decision_enablement(client, logged_in_headers, monkeypatch):
+    from unittest.mock import Mock
+
+    import requests
+    from lfx.base.models import model_utils, unified_models
+    from lfx.base.models.decisions import openrouter
+
+    monkeypatch.setattr(
+        models_api,
+        "_get_enabled_providers_result",
+        AsyncMock(
+            return_value={
+                "provider_status": {"OpenRouter": True},
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        openrouter, "get_models", lambda: [openrouter.model_metadata("author/discovered", default=True)]
+    )
+    monkeypatch.setattr(model_utils, "get_provider_variable_value", lambda *_: None)
+    monkeypatch.setattr(unified_models, "get_all_variables_for_provider", lambda *_: {"OPENROUTER_API_KEY": "test-key"})
+    monkeypatch.setattr(requests, "get", Mock(return_value=Mock(status_code=200)))
+    response = await client.get("api/v1/models", params={"model_type": "decision"}, headers=logged_in_headers)
+    assert response.status_code == 200
+    rows = _decision_rows(response)
+    assert ("OpenRouter", "author/discovered") in rows
+
+    response = await client.post(
+        "api/v1/models/enabled_models",
+        headers=logged_in_headers,
+        json=[
+            {
+                "provider": "OpenRouter",
+                "model_id": "author/new:exacto",
+                "model_type": "decision",
+                "enabled": True,
+            }
+        ],
+    )
+    assert response.status_code == 200, response.text
+    response = await client.get("api/v1/models", params={"model_type": "decision"}, headers=logged_in_headers)
+    assert response.status_code == 200
+    rows = _decision_rows(response)
+    assert ("OpenRouter", "author/new:exacto") in rows
+    assert rows[("OpenRouter", "author/new:exacto")]["capabilities"] == ["choice", "boolean", "score"]
+    response = await client.get(
+        "api/v1/models",
+        params={"model_type": "decision", "model_name": "author/discovered"},
+        headers=logged_in_headers,
+    )
+    assert set(_decision_rows(response)) == {("OpenRouter", "author/discovered")}
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_typesafe_models_are_discovered_as_decisions_only(client, logged_in_headers, monkeypatch):
+    from lfx.base.models.decisions import typesafe
+
+    monkeypatch.setattr(
+        models_api,
+        "_get_enabled_providers_result",
+        AsyncMock(
+            return_value={
+                "provider_status": {"TypeSafe": True},
+            }
+        ),
+    )
+    monkeypatch.setattr("lfx.base.models.model_utils.get_provider_variable_value", lambda *_: "account-key")
+
+    def discover(key):
+        assert key == "account-key"
+        return [
+            {
+                "provider": "TypeSafe",
+                "name": "jev-preview",
+                "model_type": "decision",
+                "default": True,
+                "capabilities": ["choice", "boolean", "score"],
+                "icon": "Bot",
+            }
+        ]
+
+    monkeypatch.setattr(typesafe, "get_models", discover)
+    response = await client.get("api/v1/models", params={"model_type": "decision"}, headers=logged_in_headers)
+    assert response.status_code == 200
+    rows = _decision_rows(response)
+    assert ("TypeSafe", "jev-preview") in rows
+    assert ("TypeSafe", "jev-latest") not in rows
+    response = await client.get("api/v1/models", params={"model_type": "llm"}, headers=logged_in_headers)
+    assert response.status_code == 200
+    assert all(group["provider"] != "TypeSafe" for group in response.json())

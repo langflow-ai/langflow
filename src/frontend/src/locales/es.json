@@ -3324,5 +3324,8 @@
   "triggers.schedule.next": "Próxima ejecución {{time}}",
   "triggers.schedule.notScheduled": "Sin programar",
   "triggers.secret.isSet": "Configurado. Solo se muestra al crearlo o rotarlo.",
-  "triggers.secret.notSet": "Sin configurar. Las solicitudes se rechazan hasta que crees uno."
+  "triggers.secret.notSet": "Sin configurar. Las solicitudes se rechazan hasta que crees uno.",
+  "modelProviders.openRouterModelHint": "Elige un modelo de la lista o introduce un ID de modelo de decisión de OpenRouter. OpenRouter determina qué solicitudes admite el modelo.",
+  "modelProviders.searchOrAddModel": "Buscar o añadir un ID de modelo…",
+  "modelProviders.addDecisionModel": "Añadir modelo de decisión «{{name}}»"
 }

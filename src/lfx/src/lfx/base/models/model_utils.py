@@ -971,6 +971,10 @@ def fetch_live_openrouter_models(user_id: UUID | str | None, model_type: str = "
     """
     from lfx.base.models.openrouter_constants import OPENROUTER_MODELS_DETAILED
 
+    if model_type == "decision":
+        from lfx.base.models.decisions.openrouter import get_models
+
+        return get_models()
     if model_type != "llm":
         return []
 
@@ -1120,6 +1124,13 @@ def get_live_models_for_provider(
     Returns:
         List of model metadata dicts, or empty list if live models not available
     """
+    if provider == "TypeSafe":
+        if model_type != "decision":
+            return []
+        from lfx.base.models.decisions.typesafe import get_models
+
+        key = get_provider_variable_value(user_id, "TYPESAFE_API_KEY")
+        return get_models(key) if key else []
     if provider == "Ollama":
         return fetch_live_ollama_models(user_id, model_type)
     if provider == "IBM WatsonX":
@@ -1235,7 +1246,8 @@ def inject_custom_enabled_models(
     # Stable order across processes (set iteration is unordered).
     for entry in sorted(explicitly_enabled_models):
         provider, custom_name, persisted_type = parse_model_status_key(entry)
-        if provider not in EXPLICIT_ENABLE_ONLY_PROVIDERS:
+        openrouter_decision = provider == "OpenRouter" and persisted_type == "decision"
+        if provider not in EXPLICIT_ENABLE_ONLY_PROVIDERS and not openrouter_decision:
             continue
         custom_name = custom_name.strip()
         if not provider or not custom_name:
@@ -1257,6 +1269,8 @@ def inject_custom_enabled_models(
             "tool_calling": resolved_type == "llm",
             "default": False,
         }
+        if openrouter_decision:
+            metadata["capabilities"] = ["choice", "boolean", "score"]
         if metadata_filters and any(metadata.get(k) != v for k, v in metadata_filters.items()):
             continue
 
@@ -1310,17 +1324,25 @@ def replace_with_live_models(
     Returns:
         The (possibly modified) provider_models list.
     """
-    if not user_id or not enabled_providers or model_type == "decision":
+    if not enabled_providers:
         return provider_models
 
-    for provider in (*LIVE_MODEL_PROVIDERS, *CONDITIONAL_LIVE_MODEL_PROVIDERS):
+    for provider in (*LIVE_MODEL_PROVIDERS, *CONDITIONAL_LIVE_MODEL_PROVIDERS, "TypeSafe"):
         if provider not in enabled_providers:
+            continue
+        if model_type == "decision" and provider not in {"OpenRouter", "TypeSafe"}:
+            continue
+        if provider == "TypeSafe" and model_type not in (None, "decision"):
+            continue
+        if not user_id and model_type != "decision":
             continue
 
         if model_type is None:
             live_llm = get_live_models_for_provider(user_id, provider, "llm")
             live_emb = get_live_models_for_provider(user_id, provider, "embeddings")
             live_models = live_llm + live_emb
+            if provider in {"OpenRouter", "TypeSafe"}:
+                live_models += get_live_models_for_provider(user_id, provider, "decision")
         else:
             live_models = get_live_models_for_provider(user_id, provider, model_type)
 
@@ -1334,7 +1356,16 @@ def replace_with_live_models(
         for provider_dict in provider_models:
             if provider_dict.get("provider") == provider:
                 # Chat/embedding discovery does not establish decision capability.
-                preserved_decisions = [row for row in provider_dict.get("models", []) if is_decision_row(row)]
+                preserved_decisions = [
+                    row
+                    for row in provider_dict.get("models", [])
+                    if (model_type == "decision" and not is_decision_row(row))
+                    or (
+                        is_decision_row(row)
+                        and model_type != "decision"
+                        and not (provider in {"OpenRouter", "TypeSafe"} and model_type is None)
+                    )
+                ]
                 provider_dict["models"] = [*catalog_models, *preserved_decisions]
                 provider_dict["num_models"] = len(provider_dict["models"])
                 replaced = True

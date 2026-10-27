@@ -362,3 +362,25 @@ describe("ProviderList", () => {
     });
   });
 });
+
+it("keeps unconfigured OpenRouter visible in the decision provider list", () => {
+  const hook =
+    require("@/controllers/API/queries/models/use-get-model-providers").useGetModelProviders;
+  hook.mockReturnValueOnce({
+    data: [
+      {
+        provider: "OpenRouter",
+        icon: "OpenRouter",
+        live_discovery: true,
+        is_configured: false,
+        models: [
+          { model_name: "chat-only-seed", metadata: { model_type: "llm" } },
+        ],
+      },
+    ],
+    isLoading: false,
+    isFetching: false,
+  });
+  render(<ProviderList modelType="decision" />);
+  expect(screen.getByTestId("provider-item-OpenRouter")).toBeInTheDocument();
+});

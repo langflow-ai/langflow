@@ -30,8 +30,10 @@ export function providerServesFilter(
   models: readonly { metadata?: Record<string, unknown> | null }[] | undefined,
   filter: ModelTypeFilter,
   liveDiscovery = false,
+  providerName?: string,
 ): boolean {
   if (filter === "all") return true;
+  if (filter === "decision" && providerName === "OpenRouter") return true;
   if (models === undefined) return filter !== "decision";
   if (models.length === 0) return filter !== "decision" && liveDiscovery;
   const decisions = modelsOfFilter(models, "decision").length;

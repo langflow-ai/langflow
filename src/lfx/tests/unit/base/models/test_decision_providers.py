@@ -18,6 +18,7 @@ from lfx.base.models.unified_models import get_provider_secret_variable_key
 PROVIDERS = tuple(providers.ENDPOINTS)
 # Each provider's first catalog row, the model its key is checked with by default.
 DEFAULT_MODELS = {row["provider"]: row["name"] for row in reversed(DECISION_MODELS_DETAILED)}
+DEFAULT_MODELS["OpenRouter"] = "typesafe/jev-1.14"
 
 
 def request_for(kind):
@@ -362,6 +363,7 @@ def test_key_check_never_runs_a_chat_model_that_policy_blocks(monkeypatch):
 @pytest.mark.parametrize("provider", ["typesafe", "TypeSafe"])
 @pytest.mark.parametrize("model_type", [None, "decision"])
 def test_key_validation_treats_provider_ids_like_display_names(monkeypatch, provider, model_type):
+    monkeypatch.setattr("lfx.base.models.decisions.typesafe.get_models", lambda _key: [{"name": "jev-latest"}])
     from lfx.base.models.unified_models import validate_model_provider_key
     from lfx.services.model_provider_policy import (
         ModelProviderPolicyContext,
@@ -600,10 +602,8 @@ def test_each_failure_says_what_to_do(monkeypatch, status, error, says):
     assert f"(HTTP {status})" in str(caught.value)
 
 
-@pytest.mark.parametrize(
-    ("provider", "model_type"), [("OpenAI", "decision"), ("TypeSafe", None), ("Perplexity", "llm")]
-)
-def test_a_key_check_only_runs_catalogued_decision_models(monkeypatch, provider, model_type):
+@pytest.mark.parametrize(("provider", "model_type"), [("OpenAI", "decision"), ("Perplexity", "llm")])
+def test_static_providers_only_validate_catalogued_decision_models(monkeypatch, provider, model_type):
     from lfx.base.models.unified_models import validate_model_provider_key
 
     sent = []
@@ -718,3 +718,30 @@ def test_a_key_with_a_line_break_is_refused_not_sent(monkeypatch):
 def test_a_boolean_timeout_is_refused():
     with pytest.raises(DecisionConfigurationError, match="Timeout"):
         providers.evaluate_provider("TypeSafe", "jev-latest", request_for("boolean"), api_key="k", timeout=True)
+
+
+@pytest.mark.parametrize(("yes", "no"), [("Matches", ""), ("", "Does not match")])
+def test_openrouter_rejects_partial_boolean_criteria(yes, no):
+    request = DecisionRequest(
+        kind="boolean", context="example", question="Match?", yes_description=yes, no_description=no
+    )
+    with pytest.raises(DecisionConfigurationError, match="requires both"):
+        providers.build_payload("OpenRouter", "typesafe/jev-1.14", request)
+
+
+def test_openrouter_preserves_boolean_criteria():
+    request = DecisionRequest(
+        kind="boolean", context="example", question="Match?", yes_description="Matches", no_description="No match"
+    )
+    payload = providers.build_payload("OpenRouter", "typesafe/jev-1.14", request)
+    assert payload["questions"]["decision"]["criteria"] == {"true": "Matches", "false": "No match"}
+
+
+@pytest.mark.parametrize(
+    ("request_id", "expected"), [("gen-dec-123", "gen-dec-123"), ("secret\nheader", None), (123, None)]
+)
+def test_openrouter_response_id_is_safe(request_id, expected):
+    payload = {**response_for("OpenRouter", "boolean"), "id": request_id}
+    result = providers.parse_response("OpenRouter", request_for("boolean"), payload)
+    assert result.request_id == expected
+    assert result.provider == "OpenRouter"

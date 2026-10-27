@@ -3324,5 +3324,8 @@
   "triggers.schedule.next": "Nächster Lauf {{time}}",
   "triggers.schedule.notScheduled": "Nicht geplant",
   "triggers.secret.isSet": "Festgelegt. Nur beim Erstellen oder Rotieren angezeigt.",
-  "triggers.secret.notSet": "Nicht festgelegt. Anfragen werden abgelehnt, bis Sie eines erstellen."
+  "triggers.secret.notSet": "Nicht festgelegt. Anfragen werden abgelehnt, bis Sie eines erstellen.",
+  "modelProviders.openRouterModelHint": "Wähle ein aufgeführtes Modell oder gib eine OpenRouter-Entscheidungsmodell-ID ein. OpenRouter bestimmt, welche Anfragen das Modell unterstützt.",
+  "modelProviders.searchOrAddModel": "Modell-ID suchen oder hinzufügen…",
+  "modelProviders.addDecisionModel": "Entscheidungsmodell „{{name}}“ hinzufügen"
 }
