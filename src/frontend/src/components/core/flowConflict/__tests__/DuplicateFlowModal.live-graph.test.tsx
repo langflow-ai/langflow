@@ -1,5 +1,6 @@
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import useAlertStore from "@/stores/alertStore";
 import type { FlowConflict } from "@/stores/flowConflictStore";
 import useFlowConflictStore from "@/stores/flowConflictStore";
 import useFlowStore from "@/stores/flowStore";
@@ -125,6 +126,22 @@ const editAfterRefusal = () =>
     });
   });
 
+/** The 422 a write gets when an MCP server config the flow carries fails validation. */
+const validationRejection = {
+  response: {
+    status: 422,
+    data: {
+      detail: [
+        {
+          type: "value_error",
+          loc: [],
+          msg: "Value error, Environment variable 'NODE_OPTIONS' is not allowed for security reasons",
+        },
+      ],
+    },
+  },
+};
+
 const textOf = (data: { nodes: AllNodeType[] }, id: string) =>
   (
     data.nodes.find((candidate) => candidate.id === id)?.data
@@ -202,5 +219,37 @@ describe("DuplicateFlowModal after a refused save", () => {
     const [{ data }] = mockOverwriteFlow.mock.calls[0];
     expect(textOf(data, "prompt-1")).toBe("typed after the refusal");
     expect(textOf(data, "chat-1")).toBe("base");
+  });
+
+  it("should_list_why_the_duplicate_was_rejected", async () => {
+    const user = userEvent.setup();
+    render(<DuplicateFlowModal />);
+
+    act(() => useFlowConflictStore.getState().openDialog());
+    await user.click(await screen.findByTestId("confirm-duplicate-flow"));
+    act(() => mockForkFlow.mock.calls[0][1].onError(validationRejection));
+
+    expect(useAlertStore.getState().errorData).toEqual({
+      title: "Could not duplicate the flow",
+      list: [
+        "Value error, Environment variable 'NODE_OPTIONS' is not allowed for security reasons",
+      ],
+    });
+  });
+
+  it("should_list_why_the_update_was_rejected", async () => {
+    const user = userEvent.setup();
+    render(<DuplicateFlowModal />);
+
+    act(() => useFlowConflictStore.getState().openDialog());
+    await user.click(await screen.findByTestId("confirm-overwrite-flow"));
+    act(() => mockOverwriteFlow.mock.calls[0][1].onError(validationRejection));
+
+    expect(useAlertStore.getState().errorData).toEqual({
+      title: "The flow could not be updated.",
+      list: [
+        "Value error, Environment variable 'NODE_OPTIONS' is not allowed for security reasons",
+      ],
+    });
   });
 });

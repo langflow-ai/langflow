@@ -23,6 +23,7 @@ import useAuthStore from "@/stores/authStore";
 import useFlowConflictStore from "@/stores/flowConflictStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { extractApiErrorMessages } from "@/utils/apiError";
 import { clearConflictDraft } from "@/utils/conflict-draft";
 import {
   applySelectedChanges,
@@ -207,9 +208,12 @@ export function DuplicateFlowModal() {
             `/flow/${created.id}${created.folder_id ? `/folder/${created.folder_id}` : ""}`,
           );
         },
-        onError: () => {
+        onError: (error) => {
           releaseSubmission();
-          setErrorData({ title: t("multiEdit.dialog.duplicateFailed") });
+          setErrorData({
+            title: t("multiEdit.dialog.duplicateFailed"),
+            list: extractApiErrorMessages(error),
+          });
         },
       },
     );
@@ -290,7 +294,10 @@ export function DuplicateFlowModal() {
       error.response?.status !== 409 ||
       detail?.code !== "flow_version_conflict"
     ) {
-      setErrorData({ title: t("multiEdit.dialog.overwriteFailed") });
+      setErrorData({
+        title: t("multiEdit.dialog.overwriteFailed"),
+        list: extractApiErrorMessages(error),
+      });
       return;
     }
     setIsRebuilding(true);
