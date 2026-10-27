@@ -64,11 +64,14 @@ class AuditEventFilters:
     actor_id: UUID | None = None
     acting_issuer: str | None = None
     acting_subject: str | None = None
+    represented_issuer: str | None = None
+    represented_subject: str | None = None
     request_id: UUID | None = None
     since: datetime | None = None
     until: datetime | None = None
 
     def fingerprint(self) -> str:
+        """Bind a cursor to its exact filters while preserving legacy cursor fingerprints."""
         canonical: dict[str, Any] = {
             "resource_type": self.resource_type.value,
             "resource_id": str(self.resource_id) if self.resource_id else None,
@@ -84,10 +87,14 @@ class AuditEventFilters:
             "since": to_utc(self.since).isoformat() if self.since else None,
             "until": to_utc(self.until).isoformat() if self.until else None,
         }
+        # Preserve existing cursor fingerprints for queries without represented filters.
+        if self.represented_issuer is not None or self.represented_subject is not None:
+            canonical.update(represented_issuer=self.represented_issuer, represented_subject=self.represented_subject)
         encoded = json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode("utf-8")
         return hashlib.sha256(encoded).hexdigest()
 
     def clauses(self) -> list[ColumnElement[bool]]:
+        """Build resource and identity filters without falling back between identity pairs."""
         clauses: list[ColumnElement[bool]] = [col(AuditEvent.resource_type) == self.resource_type.value]
         exact = {
             AuditEvent.resource_id: self.resource_id,
@@ -95,6 +102,8 @@ class AuditEventFilters:
             AuditEvent.actor_id: self.actor_id,
             AuditEvent.acting_issuer: self.acting_issuer,
             AuditEvent.acting_subject: self.acting_subject,
+            AuditEvent.represented_issuer: self.represented_issuer,
+            AuditEvent.represented_subject: self.represented_subject,
             AuditEvent.request_id: self.request_id,
         }
         clauses.extend(col(column) == value for column, value in exact.items() if value is not None)

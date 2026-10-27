@@ -26,6 +26,8 @@ from langflow.services.audit.vocabulary import AuditActorType, AuditEventType, A
 from langflow.services.database.models.audit_event.model import (
     ACTING_ISSUER_MAX_LENGTH,
     ACTING_SUBJECT_MAX_LENGTH,
+    REPRESENTED_ISSUER_MAX_LENGTH,
+    REPRESENTED_SUBJECT_MAX_LENGTH,
     AuditEvent,
     as_utc,
 )
@@ -51,7 +53,12 @@ _REPEATABLE: dict[str, type[Enum]] = {
     "actor_type": AuditActorType,
 }
 _SINGLE_UUIDS = ("user_id", "actor_id", "request_id")
-_TEXT_LIMITS = {"acting_subject": ACTING_SUBJECT_MAX_LENGTH, "acting_issuer": ACTING_ISSUER_MAX_LENGTH}
+_TEXT_LIMITS = {
+    "acting_subject": ACTING_SUBJECT_MAX_LENGTH,
+    "acting_issuer": ACTING_ISSUER_MAX_LENGTH,
+    "represented_subject": REPRESENTED_SUBJECT_MAX_LENGTH,
+    "represented_issuer": REPRESENTED_ISSUER_MAX_LENGTH,
+}
 _RFC3339 = re.compile(
     r"^(?P<base>\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2})(?:\.(?P<fraction>\d{1,6}))?(?P<offset>[Zz]|[+-]\d{2}:\d{2})$"
 )
@@ -110,10 +117,8 @@ class AuditReadQuery:
 _AUTH_PARAMS = frozenset({"x-api-key"})
 
 #: Query keys the ``flatten_query_string_lists`` middleware must hand over whole.
-#: That middleware splits every value on ``,`` so a repeatable filter can be sent
-#: as one key. A free-text search is not a list — ``q=invoice, q3`` is one phrase
-#: — and splitting it reached the route as a repeated ``q`` and answered 400.
-VERBATIM_QUERY_PARAMS = frozenset({"q"})
+#: Identity filters and free-text searches can contain commas and are never lists.
+VERBATIM_QUERY_PARAMS = frozenset({"q", *_TEXT_LIMITS})
 
 
 def group_query_params(
@@ -169,9 +174,10 @@ def parse_audit_query(
         if key in single and len(single[key]) > limit:
             msg = f"{key} is longer than {limit} characters"
             raise bad_request(msg)
-    if "acting_issuer" in single and "acting_subject" not in single:
-        msg = "acting_issuer must be paired with acting_subject"
-        raise bad_request(msg)
+    for prefix in ("acting", "represented"):
+        if f"{prefix}_issuer" in single and f"{prefix}_subject" not in single:
+            msg = f"{prefix}_issuer must be paired with {prefix}_subject"
+            raise bad_request(msg)
     since = parse_timestamp("since", single["since"]) if "since" in single else None
     until = parse_timestamp("until", single["until"]) if "until" in single else None
     if since is not None and until is not None and until <= since:
@@ -197,6 +203,8 @@ def parse_audit_query(
         actor_id=uuids.get("actor_id"),
         acting_issuer=single.get("acting_issuer"),
         acting_subject=single.get("acting_subject"),
+        represented_issuer=single.get("represented_issuer"),
+        represented_subject=single.get("represented_subject"),
         request_id=uuids.get("request_id"),
         since=since,
         until=until,
@@ -300,7 +308,10 @@ async def owner_visibility(
         and_(ended.isnot(None), or_(began.is_(None), ended >= began), col(AuditEvent.timestamp) > ended),
     )
     if await plugin_decides_visibility():
-        return current_life if resource_id is not None else None
+        # A named-resource window prevents inheriting another owner's old
+        # trail through UUID reuse. It must still retain the caller's own
+        # events after deletion, just as the owner-filtered branch does.
+        return or_(current_life, col(AuditEvent.user_id) == user.id) if resource_id is not None else None
     owned = and_(
         col(AuditEvent.resource_id) != UNKNOWN_RESOURCE_ID,
         col(AuditEvent.resource_id).in_(owned_resource_ids),
@@ -313,15 +324,20 @@ class AuditActorRead(BaseModel):
     type: str
     id: UUID | None
     user_id: UUID | None
+    represented_issuer: str | None
+    represented_subject: str | None
     acting_issuer: str | None
     acting_subject: str | None
 
 
 def actor_of(event: AuditEvent) -> AuditActorRead:
+    """Expose stored acting and represented identities as separate API fields."""
     return AuditActorRead(
         type=event.actor_type,
         id=event.actor_id,
         user_id=event.user_id,
+        represented_issuer=event.represented_issuer,
+        represented_subject=event.represented_subject,
         acting_issuer=event.acting_issuer,
         acting_subject=event.acting_subject,
     )
@@ -379,8 +395,10 @@ def openapi_parameters(id_param: str, id_description: str) -> list[dict[str, Any
         param("user_id", "Exact Langflow account.", {"type": "string", "format": "uuid"}),
         many("actor_type", AuditActorType),
         param("actor_id", "Exact authenticated principal or credential.", {"type": "string", "format": "uuid"}),
-        param("acting_subject", "Exact represented-user subject.", {"type": "string"}),
-        param("acting_issuer", "Represented-user issuer; requires acting_subject.", {"type": "string"}),
+        param("acting_subject", "Exact authenticated-actor subject.", {"type": "string"}),
+        param("acting_issuer", "Authenticated-actor issuer; requires acting_subject.", {"type": "string"}),
+        param("represented_subject", "Exact represented-user subject.", {"type": "string"}),
+        param("represented_issuer", "Represented-user issuer; requires represented_subject.", {"type": "string"}),
         param("request_id", "Exact request correlation id.", {"type": "string", "format": "uuid"}),
         param("since", "Inclusive RFC 3339 timestamp.", {"type": "string", "format": "date-time"}),
         param("until", "Exclusive RFC 3339 timestamp, later than since.", {"type": "string", "format": "date-time"}),

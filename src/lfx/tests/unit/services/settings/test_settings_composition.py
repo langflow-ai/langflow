@@ -143,6 +143,8 @@ EXPECTED_FIELDS = {
     "audit_enabled",
     "audit_retention_days",
     "audit_exclude_events",
+    "audit_trusted_api_key_ids",
+    "audit_trusted_api_key",
     "max_flow_version_entries_per_flow",
     # SecuritySettings
     "cors_origins",
