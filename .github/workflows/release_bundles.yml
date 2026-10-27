@@ -131,13 +131,20 @@ jobs:
     needs: [build-bundles]
     if: needs.build-bundles.outputs.bundles-found == '1'
     runs-on: ${{ matrix.runner }}
+    continue-on-error: ${{ matrix.python-version == '3.15' }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: linux
             runner: ubuntu-latest
-            python-version: "3.10"
+            python-version: "3.11"
+          - os: linux
+            runner: ubuntu-latest
+            python-version: "3.14"
+          - os: linux
+            runner: ubuntu-latest
+            python-version: "3.15"
           - os: linux
             runner: ubuntu-latest
             python-version: "3.12"

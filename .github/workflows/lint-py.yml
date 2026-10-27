@@ -26,7 +26,6 @@ jobs:
           - "3.13"
           - "3.12"
           - "3.11"
-          - "3.10"
     steps:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v7

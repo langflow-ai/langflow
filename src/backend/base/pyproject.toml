@@ -2,7 +2,7 @@
 name = "langflow-base"
 version = "1.14.0"
 description = "A Python package with a built-in web application"
-requires-python = ">=3.10,<3.16"
+requires-python = ">=3.11,<3.16"
 license = "MIT"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 readme = "README.md"

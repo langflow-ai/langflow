@@ -190,7 +190,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:311190439f5c0ab6",
+  "profile_digest": "sha256:93f58a7f5dc3f140",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
@@ -210,6 +210,6 @@
     "lfx-toolguard",
     "lfx-vllm"
   ],
-  "python": ">=3.10,<3.16",
+  "python": ">=3.11,<3.16",
   "schema_version": 1
 }
