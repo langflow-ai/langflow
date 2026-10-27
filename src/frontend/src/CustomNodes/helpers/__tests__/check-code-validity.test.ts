@@ -1,4 +1,105 @@
-import { checkCodeValidity } from "../check-code-validity";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import type { EdgeType } from "@/types/flow";
+import {
+  checkCodeValidity,
+  connectedFieldsByNode,
+} from "../check-code-validity";
+
+type CheckArgs = Parameters<typeof checkCodeValidity>;
+
+// The case table shared with the Python copy of the rule
+// (src/lfx/tests/unit/upgrade/test_component_compat.py). See its README for the format.
+const sharedCases: {
+  name: string;
+  description: string;
+  saved_node: CheckArgs[0]["node"];
+  connected_fields: string[];
+  component: CheckArgs[1][string] | null;
+  expected: string;
+}[] = JSON.parse(
+  readFileSync(
+    resolve(
+      __dirname,
+      "../../../../../lfx/tests/data/component_compat/cases.json",
+    ),
+    "utf8",
+  ),
+);
+
+describe("checkCodeValidity shared cases", () => {
+  it.each(sharedCases.map((c) => [c.name, c] as const))("%s", (_name, c) => {
+    const edges = c.connected_fields.map(
+      (fieldName) =>
+        ({
+          id: `other-${fieldName}`,
+          source: "other",
+          target: "n1",
+          data: { targetHandle: { fieldName, id: "n1" } },
+        }) as EdgeType,
+    );
+    const result = checkCodeValidity(
+      { id: "n1", type: "TestComponent", node: c.saved_node } as CheckArgs[0],
+      c.component ? { TestComponent: c.component } : {},
+      true,
+      connectedFieldsByNode(edges).get("n1") ?? new Set(),
+    );
+    const status = !result
+      ? undefined
+      : result.blocked
+        ? "blocked"
+        : !result.outdated
+          ? "ok"
+          : result.breakingChange
+            ? "outdated_breaking"
+            : "outdated_safe";
+    expect(status).toBe(c.expected);
+  });
+});
+
+describe("connectedFieldsByNode", () => {
+  it("reads the field from the escaped handle string when an edge has no data", () => {
+    const edge = {
+      id: "e1",
+      source: "a",
+      target: "b",
+      targetHandle: "{œfieldNameœ:œinput_valueœ,œidœ:œbœ}",
+    } as EdgeType;
+
+    expect(connectedFieldsByNode([edge]).get("b")).toEqual(
+      new Set(["input_value"]),
+    );
+  });
+
+  it("reads the field from a legacy pipe handle, as the runtime does", () => {
+    const edge = {
+      id: "e1",
+      source: "a",
+      target: "b",
+      targetHandle: "str|input_value|b",
+    } as EdgeType;
+
+    expect(connectedFieldsByNode([edge]).get("b")).toEqual(
+      new Set(["input_value"]),
+    );
+  });
+
+  // Paired with test_edge_field_is_read_from_the_handle_string_when_data_handle_is_not_a_mapping
+  // in src/lfx/tests/unit/upgrade/test_checker.py.
+  it("reads the handle string when data.targetHandle is not an object", () => {
+    const edge = {
+      id: "e1",
+      source: "a",
+      target: "b",
+      data: { targetHandle: "str|other|b" },
+      targetHandle: "str|input_value|b",
+    } as unknown as EdgeType;
+
+    expect(connectedFieldsByNode([edge]).get("b")).toEqual(
+      new Set(["input_value"]),
+    );
+  });
+});
 
 describe("checkCodeValidity", () => {
   const customComponentData = {
@@ -125,8 +226,8 @@ describe("checkCodeValidity", () => {
 
   // Template key sets are compared directionally, not for equality. A field only the
   // current component has is introduced with its declared default when the node is
-  // rebuilt through /custom_component; a field only the saved node has holds a value
-  // the updated code no longer reads. Mirrors the same cases in
+  // rebuilt through /custom_component; a field only the saved node has is dropped with
+  // its value and edges. Mirrors the same cases in
   // src/lfx/tests/unit/upgrade/test_checker.py.
   const nodeWithTemplate = (template: Record<string, unknown>) =>
     ({
@@ -201,7 +302,7 @@ describe("checkCodeValidity", () => {
     }
   });
 
-  // Exercises inputTypesContained: the new field has input_types, but no saved edge can
+  // Exercises sharedFieldsCompatible: the new field has input_types, but no saved edge can
   // feed a field the node predates, so there is nothing to narrow.
   it("does not treat a new handle input as breaking", () => {
     const data = nodeWithTemplate({
@@ -220,7 +321,7 @@ describe("checkCodeValidity", () => {
     });
   });
 
-  it("does not treat a field the component dropped as breaking", () => {
+  it("treats a field the component dropped as breaking", () => {
     const data = nodeWithTemplate({
       code: { value: "old component code" },
       legacy_input: { value: "user set" },
@@ -232,7 +333,7 @@ describe("checkCodeValidity", () => {
     expect(checkCodeValidity(data, templates)).toMatchObject({
       outdated: true,
       blocked: false,
-      breakingChange: false,
+      breakingChange: true,
       userEdited: false,
     });
   });
@@ -240,11 +341,11 @@ describe("checkCodeValidity", () => {
   it("still enforces input_types containment on fields both sides have", () => {
     const data = nodeWithTemplate({
       code: { value: "old component code" },
-      inp: { value: "", input_types: ["Message"] },
+      inp: { value: "", input_types: ["Message", "Data"] },
     });
     const templates = templatesWithTemplate({
       code: { value: "current component code" },
-      inp: { value: "", input_types: ["Message", "Data"] },
+      inp: { value: "", input_types: ["Message"] },
     });
 
     expect(checkCodeValidity(data, templates)).toMatchObject({

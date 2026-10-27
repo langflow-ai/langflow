@@ -213,6 +213,10 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
           prune-cache: false
+      # The component compatibility tests read flows saved on these releases from their tags.
+      # --force because v1.13.0 still moves until 1.13 is final.
+      - name: Fetch source release tags
+        run: git fetch --depth=1 --force origin tag v1.12.6 tag v1.13.0
       - name: Run lfx tests
         run: make lfx_tests
         env:
