@@ -49,6 +49,7 @@ import {
 } from "./traceViewHelpers";
 import { RenderGroupedSessionType } from "./types";
 
+/** Paginated trace list for a flow with search, status/date filters, and a skeleton loading state. */
 export function FlowInsightsContent({
   flowId,
   initialTraceId,
