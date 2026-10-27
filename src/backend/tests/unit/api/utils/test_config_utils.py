@@ -2,6 +2,7 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
+from fastapi import HTTPException
 from httpx import AsyncClient
 from langflow.api.utils.mcp.config_utils import (
     MCPServerValidationResult,
@@ -10,8 +11,8 @@ from langflow.api.utils.mcp.config_utils import (
     project_mcp_server_name_candidates,
     validate_mcp_server_for_project,
 )
-from langflow.api.v2.mcp import get_server
-from langflow.services.auth.mcp_encryption import encrypt_mcp_config
+from langflow.api.v2.mcp import get_server, validate_mcp_server_config
+from langflow.services.auth.mcp_encryption import MCP_CONFIG_VALUE_MASK, encrypt_mcp_config
 from langflow.services.database.models import MCPServer
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
@@ -867,6 +868,67 @@ class TestMCPPatchServerConfig:
                 assert await get_server(server_name, active_user, session, None, None) == legacy_config
         finally:
             await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
+
+    @pytest.mark.asyncio
+    async def test_patch_rejection_does_not_echo_a_short_restored_credential(
+        self, client: AsyncClient, created_api_key, active_user
+    ):
+        """A stored header value that a mask restores must stay out of the 422, however short it is."""
+        server_name = f"short-secret-{uuid4()}"
+        auth_headers = {"x-api-key": created_api_key.api_key}
+        # Create rejects the keyword, so the row is written directly, as a legacy import would. The
+        # keyword check quotes the value, and four characters is under the generic scrub's minimum.
+        legacy_config = {
+            "command": "uvx",
+            "args": ["mcp-proxy", "--headers", "Authorization", "exec", "http://localhost:7860/sse"],
+        }
+        async with session_scope() as session:
+            session.add(MCPServer(user_id=active_user.id, name=server_name, config=encrypt_mcp_config(legacy_config)))
+        # The args as the editor sends them back, with the stored value masked.
+        masked_args = ["mcp-proxy", "--headers", "Authorization", MCP_CONFIG_VALUE_MASK, "http://localhost:7860/sse"]
+
+        try:
+            response = await client.patch(
+                f"/api/v2/mcp/servers/{server_name}", json={"args": masked_args}, headers=auth_headers
+            )
+            assert response.status_code == 422
+            assert "dangerous keyword" in response.text
+            assert "exec" not in response.text
+
+            async with session_scope() as session:
+                assert await get_server(server_name, active_user, session, None, None) == legacy_config
+        finally:
+            await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
+
+    def test_patch_rejection_does_not_chain_the_validation_error(self):
+        """The ValidationError's input is the decrypted merged config, so the 422 must not keep it as context."""
+        with pytest.raises(HTTPException) as exc_info:
+            validate_mcp_server_config({"command": "uvx", "args": ["exec"], "env": {"API_TOKEN": "mcp-canary-token"}})
+
+        assert exc_info.value.status_code == 422
+        assert exc_info.value.__context__ is None
+
+    def test_patch_rejection_survives_a_non_string_header_argument(self):
+        """A config that fails field validation still gets its 422, whatever its args hold."""
+        with pytest.raises(HTTPException) as exc_info:
+            validate_mcp_server_config({"command": "uvx", "args": ["--headers", None, "x"]})
+
+        assert exc_info.value.status_code == 422
+
+    def test_patch_rejection_keeps_whole_markers_around_a_short_credential(self):
+        """A credential that is part of the marker must not rewrite the markers already in the message."""
+        config = {
+            "command": "uvx",
+            "args": ["mcp-proxy", "--headers", "Authorization", "exec"],
+            "env": {"API_TOKEN": "e"},
+        }
+        with pytest.raises(HTTPException) as exc_info:
+            validate_mcp_server_config(config)
+
+        msg = exc_info.value.detail[0]["msg"]
+        assert "exec" not in msg
+        assert "[redacted]" in msg
+        assert msg.count("[") == msg.count("[redacted]")
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(

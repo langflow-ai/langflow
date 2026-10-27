@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import datetime, timezone
 from io import BytesIO
 from typing import Annotated
@@ -22,9 +23,11 @@ from langflow.api.v2.files import (
     upload_user_file,
 )
 from langflow.api.v2.schemas import MCPServerConfig
-from langflow.api.validation_errors import redact_validation_errors
+from langflow.api.validation_errors import REDACTED, redact_validation_errors
 from langflow.logging import logger
 from langflow.services.auth.mcp_encryption import (
+    MCP_SECRET_CONFIG_MAPS,
+    _argv_secret_positions,
     decrypt_mcp_config,
     encrypt_mcp_config,
     redact_mcp_config,
@@ -68,13 +71,41 @@ def ensure_mcp_stdio_access(server_config: dict, current_user: CurrentActiveUser
         )
 
 
+def _credential_values(config: dict) -> set[str]:
+    """The values redact_mcp_config masks: env and headers values, and ``--headers`` argument values."""
+    args = config.get("args")
+    # A non-string arg fails field validation, so the model validator never quotes an arg.
+    scannable = isinstance(args, list) and all(isinstance(arg, str) for arg in args)
+    values = [args[index] for index in _argv_secret_positions(args)] if scannable else []
+    for name in MCP_SECRET_CONFIG_MAPS:
+        if isinstance(config.get(name), dict):
+            values.extend(config[name].values())
+    return {value for value in values if isinstance(value, str) and value}
+
+
 def validate_mcp_server_config(server_config: dict) -> None:
-    """Reject a config that the create route would reject, before it is stored."""
+    """Reject a config that the create route would reject, before it is stored.
+
+    A merged config carries stored credentials the caller cannot read back, and the generic
+    redaction keeps values shorter than eight characters, so every credential value is cut
+    out of the messages whatever its length.
+    """
     try:
         MCPServerConfig.model_validate(server_config)
     except ValidationError as exc:
-        # The config can hold decrypted credentials: redact them from the detail and drop the chain.
-        raise HTTPException(status_code=422, detail=redact_validation_errors(exc.errors())) from None
+        detail = redact_validation_errors(exc.errors())
+    else:
+        return
+    credentials = _credential_values(server_config)
+    if credentials:
+        # One pass, longest first, so a value containing a shorter one is replaced whole. The marker
+        # is an alternative of its own, so a value that is part of it cannot rewrite one in the message.
+        pattern = re.compile("|".join(map(re.escape, sorted({*credentials, REDACTED}, key=len, reverse=True))))
+        for error in detail:
+            error["msg"] = pattern.sub(REDACTED, error["msg"])
+    # Raised outside the handler, so __context__ cannot keep the ValidationError, whose input
+    # is the decrypted config.
+    raise HTTPException(status_code=422, detail=detail)
 
 
 def _enforce_immutable_server_name(server_name: str, server_config: dict) -> dict:
