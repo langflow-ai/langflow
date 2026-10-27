@@ -275,6 +275,7 @@ constraint-dependencies = [
     # Python 3.15 preview: lock releases that ship cp315 wheels so the locked 3.15 install
     # does not fall back to source builds. Scoped to 3.15 so the 3.11-3.14 pins do not move.
     "aiohttp>=3.14.5; python_version >= '3.15'",
+    "beartype>=0.23.1; python_version >= '3.15'",
     "cramjam>=2.13.0; python_version >= '3.15'",
     "crc32c>=2.9.post0; python_version >= '3.15'",
     "duckdb>=2.0.0; python_version >= '3.15'",
