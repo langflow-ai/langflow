@@ -104,6 +104,47 @@ def test_reads_a_database_each_release_saved(release, tmp_path):
     assert _side_files(database) == []
 
 
+def _with_copies(database: Path, copies: int) -> None:
+    """Add ``copies`` flows like the fixture's flow, so reading them takes several pages."""
+    connection = sqlite3.connect(database)
+    connection.row_factory = sqlite3.Row
+    row = dict(connection.execute("SELECT * FROM flow WHERE name = 'Fixture nested groups'").fetchone())
+    for number in range(copies):
+        copy = {**row, "id": uuid4().hex, "name": f"Copy {number}"}
+        if "endpoint_name" in copy:
+            copy["endpoint_name"] = None
+        columns = ", ".join(copy)
+        connection.execute(f"INSERT INTO flow ({columns}) VALUES ({', '.join('?' * len(copy))})", list(copy.values()))  # noqa: S608
+    connection.commit()
+    connection.close()
+
+
+def test_reading_flows_holds_no_transaction_between_pages(tmp_path):
+    """A check can take long. Between pages it holds no read transaction on the source.
+
+    A server that keeps writing to a WAL database could otherwise not checkpoint it until the
+    check ended, and its -wal file would keep growing.
+    """
+    database = _load("1.13.0", tmp_path)
+    _with_copies(database, 120)
+    writer = sqlite3.connect(database)
+    writer.execute("PRAGMA journal_mode=WAL")
+    try:
+        with open_source(_url(database)) as source:
+            flows = source.flows()
+            first = next(flows)
+            writer.execute("UPDATE flow SET name = name || ' (saved later)' WHERE id = ?", (first.id.replace("-", ""),))
+            writer.commit()
+            busy, _, _ = writer.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+            rest = list(flows)
+    finally:
+        writer.close()
+
+    assert busy == 0
+    assert len(rest) == 121
+    assert len({flow.id for flow in [first, *rest]}) == 122
+
+
 @pytest.mark.usefixtures("client")
 async def test_reads_while_langflow_runs_in_the_same_process(tmp_path):
     """Langflow's database service sets its SQLite pragmas on every connection in the process.
@@ -248,9 +289,19 @@ def test_postgres_source_is_read_in_a_read_only_transaction():
         writer.dispose()
 
         with open_source(url.render_as_string(hide_password=False)) as source:
-            flows = list(source.flows())
+            pid = source.connection.exec_driver_sql("SELECT pg_backend_pid()").scalar()
+            source.connection.rollback()
+            reading = source.flows()
+            flows = [next(reading)]
+            # Between pages the reader holds no transaction, so a long check never stops cleanup.
+            with admin.connect() as connection:
+                state = connection.execute(
+                    sa.text("SELECT state FROM pg_stat_activity WHERE pid = :pid"), {"pid": pid}
+                ).scalar()
+            flows += list(reading)
             versions = list(source.flow_versions())
 
+        assert state == "idle"
         assert source.dialect == "postgresql"
         assert source.alembic_revisions == [REVISION]
         assert [(user.id, user.username) for user in source.users] == [(str(user_id), "fixture-user")]

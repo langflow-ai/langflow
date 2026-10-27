@@ -8,8 +8,14 @@ every release from 1.10 on, and the tables that came later are checked before th
 read.
 
 Read-only is enforced at the connection, not by care: SQLite opens in ``mode=ro`` and
-keeps its journal mode, and Postgres reads inside a read-only transaction. Nothing here
+keeps its journal mode, and every Postgres transaction starts read-only. Nothing here
 starts Langflow's services, builds its settings, or touches a secret key.
+
+A check can run for a long time against a live database, so no read keeps a transaction
+open while the check works: flows are read in pages, each in its own short transaction.
+A long open transaction would stop Postgres from cleaning up old rows, and stop a server
+from checkpointing a WAL database. The pages are not one snapshot: a flow saved while the
+check runs is read as it is when its page comes.
 
 Langflow keeps SQLite in WAL mode, and SQLite reads a WAL database through a ``-shm``
 index next to the file, creating it (and an empty ``-wal``) when they are missing, even
@@ -38,8 +44,8 @@ if TYPE_CHECKING:
 # The Postgres drivers Langflow ships do not include asyncpg, and this reader is synchronous.
 _SYNC_POSTGRES_DRIVER = "postgresql+psycopg"
 
-# Flow data can be megabytes per row, so rows are fetched in small batches.
-_ROWS_PER_FETCH = 50
+# Flow data can be megabytes per row, so rows are read in small pages.
+_ROWS_PER_PAGE = 50
 
 _READ_ONLY_FOLDER = (
     "SQLite could not read the database because its folder is not writable: a database in WAL mode "
@@ -98,7 +104,7 @@ class SourceFlowVersion:
 class SourceDatabase:
     """A source database open for reading.
 
-    Users and projects are read up front. Flows and flow versions are read one row at a time,
+    Users and projects are read up front. Flows and flow versions are read a page at a time,
     because their saved data can be large: iterate them inside ``open_source``, while the
     connection is open.
     """
@@ -115,8 +121,11 @@ class SourceDatabase:
 
     def flows(self) -> Iterator[SourceFlow]:
         """Yield every flow and saved component."""
-        columns = ("id", "name", "data", "user_id", "folder_id", "is_component", "updated_at")
-        for row in _select(self.connection, "flow", *columns, stream=True):
+        flow = sa.table(
+            "flow",
+            *(sa.column(name) for name in ("id", "name", "data", "user_id", "folder_id", "is_component", "updated_at")),
+        )
+        for row in _pages(self.connection, flow):
             yield SourceFlow(
                 id=_uuid(row.id),
                 name=row.name,
@@ -153,6 +162,8 @@ def read_only_connection(database_url: str) -> Iterator[sa.Connection]:
         engine = _sqlite_engine(url)
     elif backend in {"postgresql", "postgres"}:
         engine = sa.create_engine(url.set(drivername=_sync_postgres_driver(url)), poolclass=NullPool)
+        # The reader runs many short transactions. Each one's first statement makes it refuse writes.
+        sa.event.listen(engine, "begin", lambda connection: connection.exec_driver_sql("SET TRANSACTION READ ONLY"))
     else:
         msg = f"the upgrade check reads SQLite and PostgreSQL databases, not {backend}"
         raise ValueError(msg)
@@ -160,9 +171,6 @@ def read_only_connection(database_url: str) -> Iterator[sa.Connection]:
         with engine.connect() as connection:
             if backend == "sqlite":
                 _check_sqlite_readable(connection)
-            else:
-                # Must be the transaction's first statement; Postgres then refuses every write in it.
-                connection.exec_driver_sql("SET TRANSACTION READ ONLY")
             try:
                 yield connection
             finally:
@@ -217,6 +225,7 @@ def read_connection(connection: sa.Connection) -> SourceDatabase:
     )
     source.users = [SourceUser(_uuid(row.id), row.username) for row in _select(connection, "user", "id", "username")]
     source.projects = [SourceProject(_uuid(row.id), row.name) for row in _select(connection, "folder", "id", "name")]
+    connection.rollback()
     return source
 
 
@@ -239,8 +248,8 @@ def _running_flow_versions(source: SourceDatabase) -> Iterator[SourceFlowVersion
         "flow_version",
         *(sa.column(name) for name in ("id", "flow_id", "version_number", "data", "user_id", "created_at")),
     )
-    query = sa.select(version).where(version.c.id.in_(list(running))).execution_options(yield_per=_ROWS_PER_FETCH)
-    for row in connection.execute(query):
+    connection.rollback()
+    for row in _pages(connection, version, version.c.id.in_(list(running))):
         yield SourceFlowVersion(
             id=_uuid(row.id),
             flow_id=_uuid(row.flow_id),
@@ -259,14 +268,25 @@ def _alembic_revisions(connection: sa.Connection, tables: set[str]) -> list[str]
     return sorted(row.version_num for row in _select(connection, "alembic_version", "version_num"))
 
 
-def _select(connection: sa.Connection, table_name: str, *column_names: str, stream: bool = False):
+def _select(connection: sa.Connection, table_name: str, *column_names: str):
     # sa.table quotes names a dialect reserves, such as Postgres's "user".
     table = sa.table(table_name, *(sa.column(name) for name in column_names))
-    query = sa.select(table)
-    if stream:
-        # Fetch a few rows at a time (a server-side cursor on Postgres) instead of the whole table.
-        query = query.execution_options(yield_per=_ROWS_PER_FETCH)
-    return connection.execute(query)
+    return connection.execute(sa.select(table))
+
+
+def _pages(connection: sa.Connection, table: sa.TableClause, *where: Any) -> Iterator[Any]:
+    """Yield ``table``'s rows in id order, a page at a time, ending the read transaction after each page."""
+    last_id = None
+    while True:
+        query = sa.select(table).where(*where).order_by(table.c.id).limit(_ROWS_PER_PAGE)
+        if last_id is not None:
+            query = query.where(table.c.id > last_id)
+        rows = connection.execute(query).all()
+        connection.rollback()
+        yield from rows
+        if len(rows) < _ROWS_PER_PAGE:
+            return
+        last_id = rows[-1].id
 
 
 def _columns(connection: sa.Connection, table_name: str) -> set[str]:
