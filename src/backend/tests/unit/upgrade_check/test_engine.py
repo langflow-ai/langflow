@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import dataclasses
 import importlib.metadata
 import json
 import os
@@ -21,13 +22,13 @@ from uuid import uuid4
 
 import pytest
 from langflow.upgrade_check import engine, open_source
-from langflow.upgrade_check.engine import check_nodes, check_source, flow_status, target_lookup
+from langflow.upgrade_check.engine import Target, TargetSettings, check_nodes, check_source, flow_status
 from lfx.custom.custom_component.component import Component
 from lfx.custom.utils import build_custom_component_template
-from lfx.upgrade.checker import breaking_reasons
+from lfx.upgrade.checker import breaking_reasons, iter_flow_nodes
 from lfx.upgrade.registry import load_upgrade_registry
 
-from tests.unit.upgrade_check.test_reader import RELEASES, _load, _url
+from tests.unit.upgrade_check.test_reader import RELEASES, _block_components, _execute, _load, _url
 
 REPO = Path(__file__).parents[5]
 COMPAT = REPO / "src" / "lfx" / "tests" / "data" / "component_compat"
@@ -48,8 +49,13 @@ def all_types():
 
 
 @pytest.fixture(scope="module")
-def lookup(all_types):
-    return target_lookup(all_types)
+def target(all_types):
+    return Target.from_registry(all_types)
+
+
+def _with(target: Target, entries: dict) -> Target:
+    """``target`` with other upgrade-rule entries, as a later release could ship them."""
+    return dataclasses.replace(target, lookup={**target.lookup, **entries})
 
 
 def _hard_flow(release: str, name: str) -> dict:
@@ -79,11 +85,11 @@ def _add_flow(database: Path, name: str, **columns) -> None:
 
 
 @pytest.mark.parametrize("release", RELEASES)
-def test_checks_every_flow_each_release_saved(release, all_types, tmp_path):
+def test_checks_every_flow_each_release_saved(release, target, tmp_path):
     database = _load(release, tmp_path)
 
     with open_source(_url(database)) as source:
-        results = list(check_source(source, all_types))
+        results = list(check_source(source, target))
         project = next(project for project in source.projects if project.name == "Fixture project")
         raw = {flow.name: flow.data for flow in source.flows()}
 
@@ -125,7 +131,7 @@ def test_checks_every_flow_each_release_saved(release, all_types, tmp_path):
 
 
 @pytest.mark.parametrize("release", ["v1.12.6", "v1.13.0"])
-def test_hard_flows_keep_their_expected_status(release, lookup):
+def test_hard_flows_keep_their_expected_status(release, target):
     """The dry run agrees with every status pinned for the hard flows.
 
     ``expected_statuses.json`` records ok and outdated_safe as ``no_action``. Its retired nodes need
@@ -135,7 +141,7 @@ def test_hard_flows_keep_their_expected_status(release, lookup):
     bundles_installed = bool(importlib.metadata.entry_points(group="lfx.bundles"))
     actual, missing_bundles = {}, {}
     for path in sorted((COMPAT / "hard_flows" / release).glob("*.json")):
-        nodes, ok_nodes = check_nodes(_hard_flow(release, path.name), lookup, user_id=OWNER)
+        nodes, ok_nodes = check_nodes(_hard_flow(release, path.name), target, user_id=OWNER)
         keys = [key for key in expected if key.startswith(f"{path.name}::")]
         assert len(nodes) + ok_nodes == len(keys)
         by_key = {f"{path.name}::{node.id}": node for node in nodes}
@@ -163,11 +169,11 @@ def test_retired_bundle_components_with_lfx_bundles_installed(tmp_path):
         "import json, sys\n"
         "from pathlib import Path\n"
         "from lfx.upgrade.registry import load_upgrade_registry\n"
-        "from langflow.upgrade_check.engine import check_nodes, target_lookup\n"
-        "lookup = target_lookup(load_upgrade_registry(components_path=[]))\n"
+        "from langflow.upgrade_check.engine import Target, check_nodes\n"
+        "target = Target.from_registry(load_upgrade_registry(components_path=[]))\n"
         "found = {}\n"
         "for path in sorted(Path(sys.argv[1]).glob('*.json')):\n"
-        "    for node in check_nodes(json.loads(path.read_text())['data'], lookup)[0]:\n"
+        "    for node in check_nodes(json.loads(path.read_text())['data'], target)[0]:\n"
         "        found[f'{path.name}::{node.id}'] = [node.status, node.bundle, node.replacement]\n"
         "print(json.dumps(found))\n"
     )
@@ -188,13 +194,13 @@ def test_retired_bundle_components_with_lfx_bundles_installed(tmp_path):
     assert all(found[key][2] for key in LFX_BUNDLES_NODES)
 
 
-def test_dry_run_keeps_outputs_the_component_rebuilds(lookup):
+def test_dry_run_keeps_outputs_the_component_rebuilds(target):
     """The Update rebuilds Human Input's outputs from the saved choices, so a custom choice is not lost.
 
     Human Input makes one output per saved choice. Against the index entry alone, the rule calls a
     custom choice a removed output.
     """
-    entry = lookup["HumanInput"]
+    entry = target.lookup["HumanInput"]
     saved, instance = build_custom_component_template(Component(_code=entry["template"]["code"]["value"]))
     saved["template"]["decisions"]["value"] = ["Approve", "Request Changes"]
     saved = asyncio.run(instance.run_and_validate_update_outputs(saved, "decisions", ["Approve", "Request Changes"]))
@@ -202,7 +208,7 @@ def test_dry_run_keeps_outputs_the_component_rebuilds(lookup):
     changed = copy.deepcopy(entry)
     changed["template"]["code"]["value"] += "\n# changed"
 
-    [node], _ = check_nodes(flow, {"HumanInput": changed}, user_id=OWNER)
+    [node], _ = check_nodes(flow, _with(target, {"HumanInput": changed}), user_id=OWNER)
 
     assert node.status == "outdated_safe"
     assert node.dry_run == {"result": "keeps"}
@@ -211,15 +217,15 @@ def test_dry_run_keeps_outputs_the_component_rebuilds(lookup):
     assert [(reason.code, reason.field) for reason in reasons] == [("output_changed", "branch_request_changes")]
 
 
-def test_dry_run_loses_a_connection(lookup):
+def test_dry_run_loses_a_connection(target):
     """A later URL component stops taking connections into urls, which an edge reaches through two groups."""
     flow = _hard_flow("v1.12.6", "nested_groups.json")
-    code = lookup["URLComponent"]["template"]["code"]["value"]
+    code = target.lookup["URLComponent"]["template"]["code"]["value"]
     old = '            input_types=["Message"],\n        ),\n        SliderInput('
     assert old in code
-    changed = _new_code(lookup["URLComponent"], code.replace(old, old.replace('["Message"]', "[]")))
+    changed = _new_code(target.lookup["URLComponent"], code.replace(old, old.replace('["Message"]', "[]")))
 
-    nodes, _ = check_nodes(flow, {**lookup, "URLComponent": changed}, user_id=OWNER)
+    nodes, _ = check_nodes(flow, _with(target, {"URLComponent": changed}), user_id=OWNER)
 
     [url] = [node for node in nodes if node.type == "URLComponent"]
     assert url.status == "outdated_breaking"
@@ -229,12 +235,12 @@ def test_dry_run_loses_a_connection(lookup):
     assert flow_status(nodes) == "fail"
 
 
-def test_dry_run_build_failure(lookup):
+def test_dry_run_build_failure(target):
     flow = _hard_flow("v1.12.6", "nested_groups.json")
-    changed = copy.deepcopy(lookup["SplitText"])
+    changed = copy.deepcopy(target.lookup["SplitText"])
     changed["template"]["code"]["value"] = "import module_this_release_lacks\n" + changed["template"]["code"]["value"]
 
-    nodes, _ = check_nodes(flow, {**lookup, "SplitText": changed}, user_id=OWNER)
+    nodes, _ = check_nodes(flow, _with(target, {"SplitText": changed}), user_id=OWNER)
 
     [split] = [node for node in nodes if node.type == "SplitText"]
     assert split.status == "outdated_safe"
@@ -266,7 +272,7 @@ class CallsOut(Component):
 """
 
 
-def test_dry_run_cannot_reach_the_network():
+def test_dry_run_cannot_reach_the_network(target):
     """A component whose update hook calls out is refused, and the check goes on."""
     with socket.create_server(("127.0.0.1", 0)) as server:
         code = CALLS_OUT.replace("PORT", str(server.getsockname()[1]))
@@ -274,7 +280,7 @@ def test_dry_run_cannot_reach_the_network():
         flow = {"nodes": [{"id": "CallsOut-1", "data": {"type": "CallsOut", "node": saved}}], "edges": []}
         entry, _ = build_custom_component_template(Component(_code=code))
 
-        [node], _ = check_nodes(flow, {"CallsOut": entry}, user_id=OWNER)
+        [node], _ = check_nodes(flow, _with(target, {"CallsOut": entry}), user_id=OWNER)
 
         assert node.status == "outdated_safe"
         assert [reason["code"] for reason in node.reasons] == ["could_not_verify"]
@@ -286,7 +292,7 @@ def test_dry_run_cannot_reach_the_network():
         socket.create_connection(server.getsockname(), timeout=5).close()
 
 
-def test_dry_run_time_limit(monkeypatch):
+def test_dry_run_time_limit(monkeypatch, target):
     monkeypatch.setattr(engine, "DRY_RUN_SECONDS", 0.2)
     code = CALLS_OUT.replace("import socket", "import time").replace(
         'socket.create_connection(("127.0.0.1", PORT), timeout=5).close()', "time.sleep(1)"
@@ -295,7 +301,7 @@ def test_dry_run_time_limit(monkeypatch):
     flow = {"nodes": [{"id": "CallsOut-1", "data": {"type": "CallsOut", "node": saved}}], "edges": []}
     entry, _ = build_custom_component_template(Component(_code=code))
 
-    [node], _ = check_nodes(flow, {"CallsOut": entry}, user_id=OWNER)
+    [node], _ = check_nodes(flow, _with(target, {"CallsOut": entry}), user_id=OWNER)
 
     assert [reason["code"] for reason in node.reasons] == ["could_not_verify"]
     assert "did not finish in 0.2 seconds" in node.reasons[0]["message"]
@@ -305,17 +311,17 @@ def test_dry_run_time_limit(monkeypatch):
             thread.join()
 
 
-def test_missing_custom_type(lookup):
+def test_missing_custom_type(target):
     saved, _ = build_custom_component_template(Component(_code=CALLS_OUT.replace("PORT", "1")))
     flow = {"nodes": [{"id": "CallsOut-1", "data": {"type": "CallsOut", "node": saved}}], "edges": []}
 
-    [node], _ = check_nodes(flow, lookup)
+    [node], _ = check_nodes(flow, target)
 
     assert (node.status, node.bundle) == ("blocked", None)
     assert [reason["code"] for reason in node.reasons] == ["custom_type_missing"]
 
 
-def test_skips_starter_projects(all_types, tmp_path):
+def test_skips_starter_projects(target, tmp_path):
     database = _load("1.13.0", tmp_path)
     connection = sqlite3.connect(database)
     starter, users_folder = uuid4().hex, uuid4().hex
@@ -331,19 +337,19 @@ def test_skips_starter_projects(all_types, tmp_path):
     _add_flow(database, "Mine", folder_id=users_folder)
 
     with open_source(_url(database)) as source:
-        names = [result.name for result in check_source(source, all_types)]
+        names = [result.name for result in check_source(source, target)]
 
     assert "Basic Prompting" not in names
     assert "Mine" in names
 
 
-def test_unreadable_row_and_unset_is_component(all_types, tmp_path):
+def test_unreadable_row_and_unset_is_component(target, tmp_path):
     database = _load("1.10.0", tmp_path)
     _add_flow(database, "Broken", data="{not json")
     _add_flow(database, "Old component", is_component=None)
 
     with open_source(_url(database)) as source:
-        results = {result.name: result for result in check_source(source, all_types)}
+        results = {result.name: result for result in check_source(source, target)}
 
     broken = results["Broken"]
     assert (broken.status, broken.nodes) == ("warn", [])
@@ -361,7 +367,7 @@ def _older_code(flow: dict, component_type: str) -> dict:
     return flow
 
 
-def test_mcp_tools_dry_run(lookup):
+def test_mcp_tools_dry_run(target):
     """MCP Tools adds a field per argument of the selected tool, and the Update does not bring them back.
 
     The tool list comes from update_build_config, which the Update never calls, so the dry run needs
@@ -369,7 +375,7 @@ def test_mcp_tools_dry_run(lookup):
     """
     flow = _older_code(_hard_flow("v1.13.0", "mcp_tools_arguments.json"), "MCPTools")
 
-    nodes, _ = check_nodes(flow, lookup, user_id=OWNER)
+    nodes, _ = check_nodes(flow, target, user_id=OWNER)
 
     [mcp] = [node for node in nodes if node.type == "MCPTools"]
     assert (mcp.status, mcp.dry_run) == ("outdated_breaking", {"result": "loses"})
@@ -379,7 +385,7 @@ def test_mcp_tools_dry_run(lookup):
     ]
 
 
-def test_run_flow_keeps_the_rule_reasons(lookup):
+def test_run_flow_keeps_the_rule_reasons(target):
     """Run Flow's Update loads the selected flow through Langflow's database, which the check never opens.
 
     The dry run cannot decide, so the node keeps the rule's verdict and its reasons: every field the
@@ -389,7 +395,7 @@ def test_run_flow_keeps_the_rule_reasons(lookup):
     flow = _older_code(_hard_flow("v1.13.0", "run_flow_inputs.json"), "RunFlow")
     saved = next(node for node in flow["nodes"] if node["data"]["type"] == "RunFlow")["data"]["node"]
 
-    nodes, _ = check_nodes(flow, lookup, user_id=OWNER)
+    nodes, _ = check_nodes(flow, target, user_id=OWNER)
 
     [run_flow] = [node for node in nodes if node.type == "RunFlow"]
     assert (run_flow.status, run_flow.dry_run) == ("outdated_breaking", {"result": "could_not_verify"})
@@ -416,12 +422,12 @@ def test_check_writes_only_to_its_config_dir(tmp_path):
     script = (
         "import json, sys\n"
         "from langflow.upgrade_check import open_source\n"
-        "from langflow.upgrade_check.engine import check_source\n"
+        "from langflow.upgrade_check.engine import Target, check_source\n"
         "from lfx.services.manager import get_service_manager\n"
         "from lfx.upgrade.registry import load_upgrade_registry\n"
-        "all_types = load_upgrade_registry(components_path=[])\n"
+        "target = Target.from_registry(load_upgrade_registry(components_path=[]))\n"
         "with open_source(sys.argv[1]) as source:\n"
-        "    statuses = {result.name: result.status for result in check_source(source, all_types)}\n"
+        "    statuses = {result.name: result.status for result in check_source(source, target)}\n"
         "print(json.dumps({'statuses': statuses, 'services': sorted(get_service_manager().services)}))\n"
     )
     env = {name: value for name, value in os.environ.items() if not name.startswith("LANGFLOW_")}
@@ -436,3 +442,163 @@ def test_check_writes_only_to_its_config_dir(tmp_path):
     assert list(home.rglob("*")) == []
     assert sorted(path.name for path in tmp_path.iterdir()) == ["config", "home", database.name]
     assert database.read_bytes() == before
+
+
+def _saved_node(release: str, flow_name: str, node_id: str) -> dict:
+    flow = _hard_flow(release, flow_name)
+    return next(
+        copy.deepcopy(node) for node, _, _ in iter_flow_nodes(flow["nodes"], flow["edges"]) if node["id"] == node_id
+    )
+
+
+# What each node runs under each setting, for the nodes listed: a node that is ok and runs is not.
+RUNS = [
+    pytest.param(
+        {}, False, {"outdated": "saved_code", "customized": "saved_code", "custom": "saved_code"}, id="default"
+    ),
+    pytest.param(
+        {"allow_custom_components": False},
+        False,
+        # Substitution swaps the server's code into drifted built-ins, the customized one too.
+        {"outdated": "server_code", "customized": "server_code", "custom": "refused", "interpreter": "refused"},
+        id="custom code blocked",
+    ),
+    pytest.param(
+        {"allow_custom_components": False, "substitute_outdated_component_code": False},
+        False,
+        {"outdated": "refused", "customized": "refused", "custom": "refused", "interpreter": "refused"},
+        id="custom code blocked, no substitution",
+    ),
+    pytest.param(
+        {"block_code_interpreter_components": True},
+        False,
+        {"outdated": "saved_code", "customized": "saved_code", "custom": "saved_code", "interpreter": "refused"},
+        id="interpreters blocked",
+    ),
+    pytest.param(
+        {"custom_component_admin_only": True},
+        False,
+        {"outdated": "refused", "customized": "refused", "custom": "refused", "interpreter": "refused"},
+        id="admin only, regular owner",
+    ),
+    pytest.param(
+        {"custom_component_admin_only": True},
+        True,
+        {"outdated": "saved_code", "customized": "saved_code", "custom": "saved_code"},
+        id="admin only, admin owner",
+    ),
+    pytest.param(
+        {"custom_component_admin_only": True, "allow_custom_components": False},
+        False,
+        {"outdated": "server_code", "customized": "server_code", "custom": "refused", "interpreter": "refused"},
+        id="admin only and custom code blocked",
+    ),
+]
+
+
+@pytest.mark.parametrize(("settings", "is_superuser", "expected"), RUNS)
+def test_runs_under_each_setting(settings, is_superuser, expected, all_types, target):
+    interpreter = target.lookup["PythonREPLTool"]
+    custom, _ = build_custom_component_template(Component(_code=CALLS_OUT.replace("PORT", "1")))
+    nodes = {
+        "ok": _saved_node("v1.13.0", "nested_groups.json", "TextInput-wZQij"),
+        "outdated": _saved_node("v1.12.6", "nested_groups.json", "URLComponent-ewSSi"),
+        "customized": _saved_node("v1.12.6", "customized.json", "URLComponent-fFtci"),
+        "custom": {"id": "CallsOut-1", "data": {"type": "CallsOut", "node": custom}},
+        "interpreter": {
+            "id": "PythonREPLTool-1",
+            "data": {"type": "PythonREPLTool", "node": copy.deepcopy(interpreter)},
+        },
+    }
+    names = {node["id"]: name for name, node in nodes.items()}
+    target = Target.from_registry(all_types, TargetSettings(**settings))
+
+    listed, _ = check_nodes(
+        {"nodes": list(nodes.values()), "edges": []}, target, user_id=OWNER, is_superuser=is_superuser
+    )
+
+    assert {names[node.id]: node.runs for node in listed} == expected
+    for node in listed:
+        refused = [reason for reason in node.reasons if reason["code"] == "refused"]
+        assert bool(refused) == (node.runs == "refused")
+
+
+@pytest.mark.parametrize(
+    ("statement", "data_error"),
+    [
+        (None, None),
+        (
+            "UPDATE policy_bundle_revision SET blocked_template_keys = 'not json' WHERE revision = 2",
+            "blocked_template_keys could not be read",
+        ),
+    ],
+)
+def test_catalog_rule_refuses_a_component(statement, data_error, all_types, tmp_path):
+    """A blocked ChatInput is refused even where it is up to date.
+
+    Rules that cannot be read are the source's error, for the report's errors, not the nodes'. The
+    nodes still get the rules that could be read.
+    """
+    database = _load("1.13.0", tmp_path)
+    _block_components(database, "1.13.0", "ChatInput")
+    if statement:
+        _execute(database, statement)
+
+    with open_source(_url(database)) as source:
+        policy = source.catalog_policy()
+        results = list(check_source(source, Target.from_registry(all_types, catalog_policy=policy.snapshot)))
+
+    if data_error is None:
+        assert policy.data_error is None
+    else:
+        assert data_error in policy.data_error
+    for result in results:
+        [chat_input] = [node for node in result.nodes if node.type == "ChatInput"]
+        assert (chat_input.status, chat_input.runs, result.status) == ("ok", "refused", "fail")
+        [reason] = chat_input.reasons
+        assert reason["message"] == "Flow build blocked: catalog policy blocks components: ChatInput"
+        assert all(node.type == "ChatInput" for node in result.nodes)
+
+
+def test_admin_only_judges_each_flow_by_its_owner(tmp_path):
+    """In admin-only mode a regular user's outdated node is refused, an admin's runs its saved code."""
+    database = _load("1.10.0", tmp_path)
+    connection = sqlite3.connect(database)
+    [(regular,)] = connection.execute("SELECT id FROM user WHERE username = 'fixture-user'")
+    connection.close()
+    _add_flow(database, "Regular user's component", user_id=regular)
+    settings = TargetSettings(custom_component_admin_only=True)
+
+    with open_source(_url(database)) as source:
+        all_types = load_upgrade_registry(components_path=[])
+        results = {result.name: result for result in check_source(source, Target.from_registry(all_types, settings))}
+
+    assert [node.runs for node in results["Fixture saved component"].nodes] == ["saved_code"]
+    assert [node.runs for node in results["Regular user's component"].nodes] == ["refused"]
+
+
+@pytest.mark.parametrize(
+    ("settings", "runs", "message", "status"),
+    [
+        pytest.param({}, "saved_code", "the saved code was edited", "warn", id="edits run"),
+        pytest.param(
+            {"allow_custom_components": False},
+            "server_code",
+            "the saved edits will not run: this server runs its own code for this component",
+            "fail",
+            id="edits replaced",
+        ),
+    ],
+)
+def test_customized_nodes_fail_when_their_edits_will_not_run(settings, runs, message, status, all_types):
+    """A customized node warns while its edits run, and fails its flow when the server runs its own code instead."""
+    flow = _hard_flow("v1.12.6", "customized.json")
+    target = Target.from_registry(all_types, TargetSettings(**settings))
+
+    nodes, _ = check_nodes(flow, target, user_id=OWNER)
+
+    customized = [node for node in nodes if node.status == "customized"]
+    assert {node.id for node in customized} == {"URLComponent-fFtci", "Agent-dsmss"}
+    assert all(node.runs == runs for node in customized)
+    assert all(node.reasons == [{"code": "customized", "field": None, "message": message}] for node in customized)
+    assert flow_status(nodes) == status

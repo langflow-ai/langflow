@@ -9,6 +9,9 @@ would actually lose a connection, a value, a field, or an output.
 A dry run executes component code. While it runs, every network call in the process is refused (an
 audit hook sees each socket connect and name lookup), it has a time limit, and anything it raises
 is recorded on that node instead of stopping the check.
+
+Each node also gets ``runs``: what the upgraded server executes for it under the target's settings
+(its saved code, the server's code, or nothing), decided by the runtime's own build checks.
 """
 
 from __future__ import annotations
@@ -25,8 +28,16 @@ from typing import TYPE_CHECKING, Any
 from lfx.custom.custom_component.component import Component
 from lfx.custom.utils import build_custom_component_template, update_rebuilt_node
 from lfx.extension.migration.loader import load_migration_table
+from lfx.interface.components import ComponentCache
+from lfx.services.catalog_policy import CatalogPolicySnapshot
 from lfx.upgrade.checker import breaking_reasons, build_registry_lookup, classify_node, iter_flow_nodes
 from lfx.utils.flow_code import normalize_code_for_import
+from lfx.utils.flow_validation import (
+    CustomComponentValidationError,
+    is_code_execution_component,
+    prepare_flow_build_for_user_from_cache,
+)
+from lfx.utils.python_repl_security import code_execution_refusal
 
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 
@@ -58,15 +69,73 @@ _dry_run_threads: set[int] = set()
 _refused_calls: list[str] = []
 
 
+@dataclass(frozen=True)
+class TargetSettings:
+    """The upgraded server's settings that decide what a saved node runs.
+
+    The command fills them from its flags, and the report records them. Each field is the server
+    setting of the same name (``LANGFLOW_<NAME>``), so the runtime's checks read them as they are.
+    """
+
+    allow_custom_components: bool = True
+    substitute_outdated_component_code: bool = True
+    block_code_interpreter_components: bool = False
+    custom_component_admin_only: bool = False
+    allow_components_paths_override: bool = True
+    components_path: tuple[str, ...] = ()
+
+    @property
+    def loaded_components_path(self) -> list[str]:
+        """The custom component folders the server loads: none when custom code is blocked without an override."""
+        if self.allow_custom_components or self.allow_components_paths_override:
+            return list(self.components_path)
+        return []
+
+
+@dataclass(frozen=True)
+class Target:
+    """This release as the upgraded server runs it: its components, its settings, and the source's catalog rules."""
+
+    # Every type a saved node can carry, for the upgrade rule.
+    lookup: Mapping[str, dict]
+    # The same components, for the runtime's own build checks.
+    components: ComponentCache
+    settings: TargetSettings
+    catalog_policy: CatalogPolicySnapshot
+
+    @classmethod
+    def from_registry(
+        cls,
+        all_types: Mapping[str, Any],
+        settings: TargetSettings | None = None,
+        catalog_policy: CatalogPolicySnapshot | None = None,
+    ) -> Target:
+        """``all_types`` from ``load_upgrade_registry(settings.loaded_components_path)``.
+
+        ``catalog_policy`` is ``source.catalog_policy().snapshot``; its ``data_error`` belongs in
+        the report's errors, since the upgraded server would not start on it.
+        """
+        components = ComponentCache()
+        components.all_types_dict, components.all_types_ready = dict(all_types), True
+        return cls(
+            target_lookup(all_types),
+            components,
+            settings or TargetSettings(),
+            catalog_policy or CatalogPolicySnapshot(),
+        )
+
+
 @dataclass
 class NodeResult:
-    """A node that needs a look: anything but ``ok``."""
+    """A node that needs a look: anything but ``ok``, or a node the upgraded server refuses."""
 
     id: str
     group_path: list[str]
     type: str
     display_name: str
     status: str
+    # saved_code, server_code, or refused.
+    runs: str | None = None
     reasons: list[dict[str, str | None]] = field(default_factory=list)
     # Set for outdated nodes: ``result`` is keeps, loses, could_not_verify, or build_failed.
     dry_run: dict[str, Any] | None = None
@@ -97,27 +166,27 @@ class FlowResult:
         return asdict(self)
 
 
-def check_source(source: SourceDatabase, all_types: Mapping[str, Any]) -> Iterator[FlowResult]:
+def check_source(source: SourceDatabase, target: Target) -> Iterator[FlowResult]:
     """Yield a result for every flow, saved component, and running flow version of ``source``.
 
-    ``all_types`` is this release's registry, from ``lfx.upgrade.registry.load_upgrade_registry``.
     Iterate inside ``open_source``: the rows stream from its connection. Starter projects are
     skipped, since startup recreates them.
     """
-    lookup = target_lookup(all_types)
-    users = {user.id: user.username for user in source.users}
+    users = {user.id: user for user in source.users}
     projects = {project.id: {"id": project.id, "name": project.name} for project in source.projects}
     starter_projects = {
         project.id for project in source.projects if project.name == STARTER_FOLDER_NAME and project.user_id is None
     }
 
     def result(row, kind: str, name: str | None, folder_id: str | None, last_edited_at: str | None, **extra):
-        owner = {"id": row.user_id, "username": users.get(row.user_id)} if row.user_id else None
+        user = users.get(row.user_id)
+        owner = {"id": row.user_id, "username": user.username if user else None} if row.user_id else None
         flow = FlowResult(row.id, kind, name, owner, projects.get(folder_id), last_edited_at, **extra)
         if row.data_error:
             flow.status, flow.error = "warn", row.data_error
             return flow
-        flow.nodes, flow.ok_nodes = check_nodes(row.data or {}, lookup, user_id=row.user_id)
+        is_superuser = bool(user and user.is_superuser)
+        flow.nodes, flow.ok_nodes = check_nodes(row.data or {}, target, user_id=row.user_id, is_superuser=is_superuser)
         flow.status = flow_status(flow.nodes)
         return flow
 
@@ -160,29 +229,36 @@ def target_lookup(all_types: Mapping[str, Any]) -> dict[str, dict]:
 
 
 def check_nodes(
-    flow_data: dict, lookup: Mapping[str, dict], *, user_id: str | None = None
+    flow_data: dict, target: Target, *, user_id: str | None = None, is_superuser: bool = False
 ) -> tuple[list[NodeResult], int]:
-    """Check every node of ``flow_data``, groups included, against ``lookup`` from ``target_lookup``.
+    """Check every node of ``flow_data``, groups included, against ``target``.
 
-    Returns the nodes that are not ok and the number that are. ``user_id`` owns the dry runs.
+    Returns the nodes that need a look (not ok, or refused) and the number of the others. The
+    owner, ``user_id``, owns the dry runs, and ``is_superuser`` decides admin-only rules.
     """
     _install_network_guard()
     flow_data = normalize_code_for_import(flow_data)
     nodes: list[NodeResult] = []
     ok_nodes = 0
     for node, connected_fields, group_path in iter_flow_nodes(flow_data.get("nodes", []), flow_data.get("edges")):
-        status = classify_node(node, lookup, connected_fields)
+        status = classify_node(node, target.lookup, connected_fields)
         if status is None:
             continue
-        if status.status == "ok":
+        runs, refusal = _runs(node, target, is_superuser=is_superuser)
+        if status.status == "ok" and refusal is None:
             ok_nodes += 1
             continue
-        nodes.append(_node_result(node, status, group_path, connected_fields, lookup, user_id))
+        result = _node_result(node, status, group_path, connected_fields, target.lookup, user_id)
+        result.runs = runs
+        result.reasons += [refusal] if refusal else []
+        if _loses_edits(result):
+            result.reasons = [_reason("customized", None, _EDITS_DO_NOT_RUN)]
+        nodes.append(result)
     return nodes, ok_nodes
 
 
 def flow_status(nodes: list[NodeResult]) -> str:
-    if any(node.status in _FAILING for node in nodes):
+    if any(node.status in _FAILING or node.runs == "refused" or _loses_edits(node) for node in nodes):
         return "fail"
     if any(reason["code"] in _WARNING for node in nodes for reason in node.reasons):
         return "warn"
@@ -219,7 +295,7 @@ def _node_result(
         result.reasons = [_reason("retired", None, f"retired in {status.retired_in}")]
     elif status.status == "customized":
         result.reasons = [_reason("customized", None, "the saved code was edited")]
-    else:
+    elif status.status != "ok":
         rebuilt, failure = _dry_run(entry, node_info, user_id)
         if failure is not None:
             # The rule's own verdict stands, and the node says why the dry run could not decide.
@@ -232,6 +308,42 @@ def _node_result(
             result.reasons = reasons
             result.dry_run = {"result": "loses" if reasons else "keeps"}
     return result
+
+
+_EDITS_DO_NOT_RUN = "the saved edits will not run: this server runs its own code for this component"
+
+
+def _loses_edits(node: NodeResult) -> bool:
+    """A customized node the upgraded server runs with its own code: the flow will not behave as saved."""
+    return node.status == "customized" and node.runs == "server_code"
+
+
+def _runs(node: dict, target: Target, *, is_superuser: bool) -> tuple[str, dict | None]:
+    """What the upgraded server executes for ``node``, and the ``refused`` reason when it executes nothing.
+
+    The runtime's own checks decide, as a build for the owner runs them: the build policy, then
+    the rule the code-execution gate applies when such a component runs.
+    """
+    data = node.get("data", {})
+    try:
+        sanitized = prepare_flow_build_for_user_from_cache(
+            {"nodes": [node], "edges": []},
+            is_superuser=is_superuser,
+            settings=target.settings,
+            cache=target.components,
+            catalog_policy_snapshot=target.catalog_policy,
+        )
+    except CustomComponentValidationError as exc:
+        return "refused", _reason("refused", None, str(exc))
+    if is_code_execution_component(data.get("type"), data.get("node", {}).get("display_name")) and (
+        refusal := code_execution_refusal(target.settings, is_superuser=is_superuser)
+    ):
+        return "refused", _reason("refused", None, refusal)
+    # Stored code runs only when custom code is allowed and admin-only rules did not swap in the
+    # server's copy (resolve_trusted_code_for_build); restricted builds run the server's code.
+    if sanitized is None and target.settings.allow_custom_components:
+        return "saved_code", None
+    return "server_code", None
 
 
 def _dry_run(entry: Mapping[str, Any], saved_node: dict, user_id: str | None) -> tuple[dict | None, dict | None]:

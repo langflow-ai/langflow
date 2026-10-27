@@ -63,6 +63,8 @@ class SourceDatabaseError(RuntimeError):
 class SourceUser:
     id: str
     username: str
+    # In admin-only mode the server runs a regular user's flows under stricter rules.
+    is_superuser: bool
 
 
 @dataclass(frozen=True)
@@ -247,7 +249,10 @@ def read_connection(connection: sa.Connection) -> SourceDatabase:
         has_deployments={"deployment", "flow_version_deployment_attachment"} <= tables,
         has_policy_bundle={"policy_bundle_active", "policy_bundle_revision"} <= tables,
     )
-    source.users = [SourceUser(_uuid(row.id), row.username) for row in _select(connection, "user", "id", "username")]
+    source.users = [
+        SourceUser(_uuid(row.id), row.username, bool(row.is_superuser))
+        for row in _select(connection, "user", "id", "username", "is_superuser")
+    ]
     source.projects = [
         SourceProject(_uuid(row.id), row.name, _uuid(row.user_id))
         for row in _select(connection, "folder", "id", "name", "user_id")
