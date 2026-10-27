@@ -27,7 +27,7 @@ def _score_cells(result: EvaluationResult, scorer_names: Sequence[str]) -> list[
 def export_results(results: Sequence[EvaluationResult], scorer_names: Sequence[str]) -> Iterator[str]:
     buffer = io.StringIO()
     writer = csv.writer(buffer, lineterminator="\r\n")
-    score_headers = [label for name in scorer_names for label in (name, f"{name} comment")]
+    score_headers = [csv_safe_cell(label) for name in scorer_names for label in (name, f"{name} comment")]
     writer.writerow([*BASE_HEADERS, *score_headers, *METRIC_HEADERS])
     yield "﻿" + buffer.getvalue()
     for result in results:

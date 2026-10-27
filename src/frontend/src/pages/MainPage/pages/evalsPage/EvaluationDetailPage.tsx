@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams, useSearchParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -9,19 +9,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  type RunStatus,
-  TERMINAL_RUN_STATUSES,
-} from "@/controllers/API/queries/evals/types";
+import { TERMINAL_RUN_STATUSES } from "@/controllers/API/queries/evals/types";
 import {
   exportUrl,
-  RUN_POLL_MS,
   useCancelEvaluationRun,
-  useEstimateEvaluation,
   useGetEvaluation,
   useGetEvaluationRun,
   useGetEvaluationRuns,
-  useStartEvaluationRun,
 } from "@/controllers/API/queries/evals/use-evaluations";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import ConfirmRunDialog from "@/modals/evaluateFlowModal/ConfirmRunDialog";
@@ -29,8 +23,10 @@ import useAlertStore from "@/stores/alertStore";
 import { extractApiErrorMessages } from "@/utils/apiError";
 import BackLink from "./components/BackLink";
 import EvalsPageShell from "./components/EvalsPageShell";
+import { EvalsEmptyState } from "./components/EvalsStates";
 import RunResults from "./components/RunResults";
-import RunsTable from "./components/RunsTable";
+import RunsTable, { versionTag } from "./components/RunsTable";
+import { useRerun } from "./hooks/use-rerun";
 import { downloadCsv } from "./utils/download-csv";
 
 export default function EvaluationDetailPage() {
@@ -41,17 +37,13 @@ export default function EvaluationDetailPage() {
   const onError = (title: string) => (error: unknown) =>
     setErrorData({ title, list: extractApiErrorMessages(error) });
 
-  const { data: evaluation } = useGetEvaluation({ evaluationId });
-  const { data: runsPage } = useGetEvaluationRuns({ evaluationId }, {
-    refetchInterval: (query: {
-      state: { data?: { items: { status: RunStatus }[] } };
-    }) =>
-      query.state.data?.items.some(
-        (run) => !TERMINAL_RUN_STATUSES.has(run.status),
-      )
-        ? RUN_POLL_MS
-        : false,
-  } as Parameters<typeof useGetEvaluationRuns>[1]);
+  const { data: evaluation, isError: evaluationFailed } = useGetEvaluation({
+    evaluationId,
+  });
+  const { data: runsPage, refetch: refetchRuns } = useGetEvaluationRuns({
+    evaluationId,
+    poll: true,
+  });
   const runs = runsPage?.items ?? [];
   const anyActive = runs.some((run) => !TERMINAL_RUN_STATUSES.has(run.status));
   const selectedRunId = searchParams.get("run") ?? runs[0]?.id ?? null;
@@ -60,14 +52,29 @@ export default function EvaluationDetailPage() {
   });
   useDocumentTitle(evaluation?.name ?? t("evals.evaluations.title"));
 
+  // Only the selected run polls fast; the list row follows its progress instead of polling alongside.
+  const progress = selectedRun
+    ? {
+        id: selectedRun.id,
+        step: `${selectedRun.status}:${selectedRun.completed_items}`,
+      }
+    : null;
+  const lastProgress = useRef(progress);
+  useEffect(() => {
+    const previous = lastProgress.current;
+    lastProgress.current = progress;
+    if (
+      previous &&
+      progress &&
+      previous.id === progress.id &&
+      previous.step !== progress.step
+    ) {
+      void refetchRuns();
+    }
+  }, [progress?.id, progress?.step, refetchRuns]);
+
   const selectRun = (runId: string) => setSearchParams({ run: runId });
-  const startRun = useStartEvaluationRun(
-    { evaluationId },
-    {
-      onSuccess: (run) => selectRun(run.id),
-      onError: onError(t("evals.runs.startError")),
-    },
-  );
+  const rerun = useRerun(evaluation, selectRun);
   const cancelRun = useCancelEvaluationRun(
     { runId: selectedRun?.id ?? "", evaluationId },
     { onError: onError(t("evals.runs.cancelError")) },
@@ -75,29 +82,7 @@ export default function EvaluationDetailPage() {
   const selectedActive = Boolean(
     selectedRun && !TERMINAL_RUN_STATUSES.has(selectedRun.status),
   );
-  const canRerun = Boolean(evaluation?.flow_id && evaluation?.dataset_id);
-  const [pendingVersion, setPendingVersion] = useState<
-    string | null | undefined
-  >(undefined);
-  const { data: rerunEstimate } = useEstimateEvaluation(
-    {
-      flowId: evaluation?.flow_id ?? "",
-      datasetId: evaluation?.dataset_id ?? "",
-      scorers: evaluation?.scorers ?? [],
-    },
-    { enabled: pendingVersion !== undefined && canRerun },
-  );
-  // Ask before spending tokens; a run with no model call starts right away.
-  const requestRerun = (flowVersionId: string | null) => {
-    setPendingVersion(flowVersionId);
-  };
-  useEffect(() => {
-    if (pendingVersion === undefined || !rerunEstimate) return;
-    if (rerunEstimate.llm_calls === 0) {
-      startRun.mutate({ flowVersionId: pendingVersion });
-      setPendingVersion(undefined);
-    }
-  }, [pendingVersion, rerunEstimate]);
+  const rerunBusy = rerun.estimating || rerun.starting;
 
   const handleExport = () => {
     if (!selectedRun) return;
@@ -106,16 +91,31 @@ export default function EvaluationDetailPage() {
     );
   };
 
+  const back = (
+    <BackLink to="/assets/evaluations" label={t("evals.evaluations.back")} />
+  );
+  if (evaluationFailed) {
+    return (
+      <EvalsPageShell
+        title={t("evals.evaluations.notFoundTitle")}
+        titleTestId="evaluation-detail-title"
+        back={back}
+      >
+        <EvalsEmptyState
+          icon="CircleAlert"
+          title={t("evals.evaluations.notFoundTitle")}
+          description={t("evals.evaluations.notFoundBody")}
+          testId="evaluation-not-found"
+        />
+      </EvalsPageShell>
+    );
+  }
+
   return (
     <EvalsPageShell
       title={evaluation?.name ?? ""}
       titleTestId="evaluation-detail-title"
-      back={
-        <BackLink
-          to="/assets/evaluations"
-          label={t("evals.evaluations.back")}
-        />
-      }
+      back={back}
       actions={
         <>
           {selectedRun && (
@@ -138,7 +138,8 @@ export default function EvaluationDetailPage() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
-                  disabled={!canRerun || anyActive || startRun.isPending}
+                  disabled={!rerun.canRerun || anyActive || rerunBusy}
+                  loading={rerunBusy}
                   data-testid="rerun-button"
                 >
                   <ForwardedIconComponent name="RotateCw" className="h-4 w-4" />
@@ -147,18 +148,18 @@ export default function EvaluationDetailPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  onClick={() => requestRerun(null)}
+                  onClick={() => rerun.request(null)}
                   data-testid="rerun-latest"
                 >
                   {t("evals.runs.rerunLatest")}
                 </DropdownMenuItem>
                 {selectedRun?.flow_version_id && (
                   <DropdownMenuItem
-                    onClick={() => requestRerun(selectedRun.flow_version_id)}
+                    onClick={() => rerun.request(selectedRun.flow_version_id)}
                     data-testid="rerun-same-version"
                   >
                     {t("evals.runs.rerunSame", {
-                      version: `v${selectedRun.flow_version_number}`,
+                      version: versionTag(selectedRun.flow_version_number, t),
                     })}
                   </DropdownMenuItem>
                 )}
@@ -205,26 +206,19 @@ export default function EvaluationDetailPage() {
             <h2 id="results-heading" className="text-base font-semibold">
               {t("evals.results.title")}
             </h2>
-            <RunResults run={selectedRun} />
+            <RunResults key={selectedRun.id} run={selectedRun} />
           </section>
         )}
       </div>
-      {rerunEstimate &&
-        pendingVersion !== undefined &&
-        rerunEstimate.llm_calls > 0 && (
-          <ConfirmRunDialog
-            open
-            setOpen={(open) => !open && setPendingVersion(undefined)}
-            estimate={rerunEstimate}
-            loading={startRun.isPending}
-            onConfirm={() => {
-              startRun.mutate(
-                { flowVersionId: pendingVersion },
-                { onSettled: () => setPendingVersion(undefined) },
-              );
-            }}
-          />
-        )}
+      {rerun.confirmEstimate && (
+        <ConfirmRunDialog
+          open
+          setOpen={(open) => !open && rerun.cancel()}
+          estimate={rerun.confirmEstimate}
+          loading={rerun.starting}
+          onConfirm={rerun.confirm}
+        />
+      )}
     </EvalsPageShell>
   );
 }

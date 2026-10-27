@@ -23,6 +23,17 @@ class TestPreview:
         assert headers == ["q", "a"]
         assert total == 1
 
+    def test_should_keep_commas_in_a_single_column_file(self):
+        headers, rows, total = preview("question\nWhat is 2, 3 and 4?\nName a, b\n")
+        assert headers == ["question"]
+        assert rows == [["What is 2, 3 and 4?"], ["Name a, b"]]
+        assert total == 2
+
+    def test_should_take_the_delimiter_from_the_header_only(self):
+        headers, rows, _ = preview("question\tanswer\nOne, two\tThree; four\n")
+        assert headers == ["question", "answer"]
+        assert rows == [["One, two", "Three; four"]]
+
     def test_should_fail_on_an_empty_file(self):
         with pytest.raises(CsvFormatError, match="header"):
             preview("\n \n")
@@ -52,7 +63,7 @@ class TestPlanImport:
         text = "q\n" + "".join(f"row {i}\n" for i in range(5))
         plan = plan_import(text, input_column="q", expected_column=None, max_rows=3)
         assert len(plan.rows) == 3
-        assert [reason for _, reason in plan.skipped] == ["Row limit of 3 reached"] * 2
+        assert plan.skipped == [(5, "Row limit of 3 reached: 2 more rows were not imported")]
 
     def test_should_tolerate_short_rows(self):
         plan = plan_import("q,a\nonly-q\n", input_column="q", expected_column="a", max_rows=10)
@@ -72,3 +83,12 @@ class TestExport:
         text = "".join(export_rows(rows)).removeprefix("﻿")
         plan = plan_import(text, input_column="input", expected_column="expected_output", max_rows=10)
         assert [(row.input, row.expected_output) for row in plan.rows] == rows
+
+
+class TestResultsExport:
+    def test_should_neutralize_formula_scorer_names_in_the_header(self):
+        from langflow.services.evaluations.results_export import export_results
+
+        header = next(export_results([], ["-A1"]))
+        assert ",-A1," not in header
+        assert "'-A1" in header

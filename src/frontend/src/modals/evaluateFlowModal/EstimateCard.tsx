@@ -33,11 +33,23 @@ function BreakdownRow({
 export default function EstimateCard({
   estimate,
   loading,
+  failed = false,
 }: {
   estimate?: RunEstimate;
   loading: boolean;
+  failed?: boolean;
 }) {
   const { t } = useTranslation();
+  if (failed) {
+    return (
+      <div
+        className="rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground"
+        data-testid="evaluate-estimate-error"
+      >
+        {t("evals.estimate.error")}
+      </div>
+    );
+  }
   if (!estimate) {
     return (
       <div className="rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">

@@ -34,13 +34,16 @@ export default function RunResults({ run }: { run: EvaluationRun }) {
   const [search, setSearch] = useState("");
   const [opened, setOpened] = useState<EvaluationResult | null>(null);
   const active = !TERMINAL_RUN_STATUSES.has(run.status);
-  const { data, isLoading } = useGetEvaluationResults({
-    runId: run.id,
-    size: RESULTS_SIZE,
-    poll: active,
-    // Only the final status change forces a refetch; while running the 5 s poll is enough.
-    progressKey: active ? "active" : run.status,
-  });
+  const { data, isLoading } = useGetEvaluationResults(
+    {
+      runId: run.id,
+      size: RESULTS_SIZE,
+      // The run is what polls; new rows load only when it reports progress or ends.
+      progressKey: `${run.status}:${run.completed_items}`,
+    },
+    // Each progress step is a new key; drop the superseded snapshots of a live run at once.
+    active ? { gcTime: 0 } : undefined,
+  );
   const scorerNames = run.config.scorers.map((scorer) => scorer.name);
   const rows = useMemo(
     () => (data?.items ?? []).filter((result) => matches(result, filter)),
@@ -102,6 +105,7 @@ export default function RunResults({ run }: { run: EvaluationRun }) {
         />
       </div>
       <ResultDetailDialog
+        runId={run.id}
         result={opened}
         scorerNames={scorerNames}
         onClose={() => setOpened(null)}

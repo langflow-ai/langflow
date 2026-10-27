@@ -7,21 +7,23 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import func, update
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
 
 from langflow.services.authorization import DatasetAction, FlowAction
 from langflow.services.database.models.evaluation import EvaluationResult, EvaluationRun
 from langflow.services.database.models.evaluation.evaluation import TERMINAL_RUN_STATUSES
-from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
+from langflow.services.database.models.jobs.model import JobType
 from langflow.services.deps import get_job_service, get_settings_service, get_task_service
-from langflow.services.evaluations.access import load_eval_dataset, load_eval_flow
+from langflow.services.evaluations.access import load_eval_dataset, load_eval_flow, load_evaluation
 from langflow.services.evaluations.dataset_service import count_items
 from langflow.services.evaluations.errors import EvalsConflictError, EvalsNotFoundError, EvalsValidationError
 from langflow.services.evaluations.estimate import estimate_run
 from langflow.services.evaluations.evaluation_service import has_active_run
 from langflow.services.evaluations.flow_checks import check_flow, resolve_output_vertex
+from langflow.services.evaluations.run_reconcile import ACTIVE_STATUSES, reconcile_runs
 from langflow.services.evaluations.runner import cancel_local_run, run_evaluation
-from langflow.services.evaluations.summary import build_summary
+from langflow.services.evaluations.summary import build_summary, summary_rows
 from langflow.services.evaluations.versioning import pin_history_version, pin_latest
 
 if TYPE_CHECKING:
@@ -33,9 +35,6 @@ if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
     from langflow.services.database.models.flow_version.model import FlowVersion
     from langflow.services.database.models.user.model import User
-
-WORKER_LOST_ERROR = "The server stopped while this run was in progress. Finished rows are kept."
-ACTIVE_STATUSES = ("queued", "running")
 
 
 def _now() -> datetime:
@@ -78,6 +77,20 @@ async def start_evaluation_run(
     if items > max_items:
         msg = f"The dataset has {items} items; the limit per run is {max_items}."
         raise EvalsValidationError(msg)
+    run = EvaluationRun(
+        evaluation_id=evaluation.id,
+        user_id=user.id,
+        job_id=uuid.uuid4(),
+        flow_id=flow.id,
+        flow_name=flow.name,
+        dataset_id=dataset.id,
+        dataset_name=dataset.name,
+        dataset_revision=dataset.revision,
+        status="queued",
+        total_items=items,
+    )
+    # Claim the one-active-run slot before pinning, so concurrent starts never race on the snapshot.
+    await _claim_active_slot(session, run)
     version, source = await _pin_version(session, flow, user, flow_version_id)
     report = check_flow(version.data, evaluation.output_vertex_id)
     if report.blocking:
@@ -90,35 +103,30 @@ async def start_evaluation_run(
         scorers=evaluation.scorers,
         judge_max_output_tokens=get_settings_service().settings.evals_judge_max_output_tokens,
     )
-    run = EvaluationRun(
-        evaluation_id=evaluation.id,
-        user_id=user.id,
-        flow_id=flow.id,
-        flow_name=flow.name,
-        flow_version_id=version.id,
-        flow_version_number=version.version_number,
-        flow_version_source=source,
-        dataset_id=dataset.id,
-        dataset_name=dataset.name,
-        dataset_revision=dataset.revision,
-        config={
-            "scorers": evaluation.scorers,
-            "pass_threshold": evaluation.pass_threshold,
-            "output_vertex_id": resolve_output_vertex(version.data or {}, evaluation.output_vertex_id),
-        },
-        status="queued",
-        total_items=items,
-        estimate=estimate.model_dump(),
-    )
-    session.add(run)
-    await session.flush()
-    job_id = uuid.uuid4()
-    run.job_id = job_id
+    run.flow_version_id = version.id
+    run.flow_version_number = version.version_number
+    run.flow_version_source = source
+    run.config = {
+        "scorers": evaluation.scorers,
+        "pass_threshold": evaluation.pass_threshold,
+        "output_vertex_id": resolve_output_vertex(version.data or {}, evaluation.output_vertex_id),
+    }
+    run.estimate = estimate.model_dump()
     session.add(run)
     # The coordinator reads the run in its own session, so it must be committed before launch.
     await session.commit()
-    await _launch_coordinator(job_id, run.id, flow.id, user.id)
+    await _launch_coordinator(run.job_id, run.id, flow.id, user.id)
     return run
+
+
+async def _claim_active_slot(session: AsyncSession, run: EvaluationRun) -> None:
+    session.add(run)
+    try:
+        await session.flush()
+    except IntegrityError as exc:
+        await session.rollback()
+        msg = "This evaluation is already running."
+        raise EvalsConflictError(msg) from exc
 
 
 async def _launch_coordinator(job_id: UUID, run_id: UUID, flow_id: UUID, user_id: UUID) -> None:
@@ -156,37 +164,16 @@ async def cancel_evaluation_run(session: AsyncSession, run: EvaluationRun) -> Ev
     return run
 
 
-async def reconcile_runs(session: AsyncSession, runs: list[EvaluationRun]) -> None:
-    """Fail active runs whose job is gone or finished: the process that ran them stopped."""
-    active = [run for run in runs if run.status in ACTIVE_STATUSES]
-    job_ids = [run.job_id for run in active if run.job_id is not None]
-    if not active:
-        return
-    jobs = {job.job_id: job for job in (await session.exec(select(Job).where(col(Job.job_id).in_(job_ids)))).all()}
-    lost = [
-        run
-        for run in active
-        if run.job_id not in jobs or jobs[run.job_id].status not in (JobStatus.QUEUED, JobStatus.IN_PROGRESS)
-    ]
-    if not lost:
-        return
-    await session.exec(
-        update(EvaluationRun)
-        .where(col(EvaluationRun.id).in_([run.id for run in lost]), col(EvaluationRun.status).in_(ACTIVE_STATUSES))
-        .values(status="failed", error=WORKER_LOST_ERROR, finished_at=_now())
-    )
-    await session.commit()
-    for run in lost:
-        await session.refresh(run)
-
-
 async def get_run(session: AsyncSession, user: User, run_id: UUID) -> EvaluationRun:
-    run = (
-        await session.exec(select(EvaluationRun).where(EvaluationRun.id == run_id, EvaluationRun.user_id == user.id))
-    ).first()
+    run = (await session.exec(select(EvaluationRun).where(EvaluationRun.id == run_id))).first()
     if run is None:
         msg = "Evaluation run not found"
         raise EvalsNotFoundError(msg)
+    try:
+        await load_evaluation(session, user, run.evaluation_id)
+    except EvalsNotFoundError:
+        msg = "Evaluation run not found"
+        raise EvalsNotFoundError(msg) from None
     await reconcile_runs(session, [run])
     return run
 
@@ -230,11 +217,23 @@ async def list_results(
     return list(rows), total
 
 
+async def get_result(session: AsyncSession, run_id: UUID, result_id: UUID) -> EvaluationResult:
+    row = (
+        await session.exec(
+            select(EvaluationResult).where(EvaluationResult.id == result_id, EvaluationResult.run_id == run_id)
+        )
+    ).first()
+    if row is None:
+        msg = "Evaluation result not found"
+        raise EvalsNotFoundError(msg)
+    return row
+
+
 async def live_summary(session: AsyncSession, run: EvaluationRun) -> dict[str, Any] | None:
     """Aggregates over the rows finished so far, for a run still in progress; never persisted."""
     if run.status not in ACTIVE_STATUSES or run.summary is not None:
         return run.summary
-    results = list((await session.exec(select(EvaluationResult).where(EvaluationResult.run_id == run.id))).all())
+    results = await summary_rows(session, run.id)
     if not results:
         return None
     return build_summary(results, [spec["name"] for spec in run.config.get("scorers", [])])

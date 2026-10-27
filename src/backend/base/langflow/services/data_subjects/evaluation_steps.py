@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from sqlalchemy import update
 from sqlmodel import col, select
 
 from langflow.services.data_subjects.batching import delete_batch
@@ -45,6 +46,15 @@ async def erase_evaluation_runs(session: AsyncSession, ctx: EraseContext) -> int
     )
 
 
+async def reassign_started_runs(session: AsyncSession, ctx: EraseContext) -> int:
+    """Runs the subject started on someone else's evaluation stay with that evaluation's owner."""
+    owner = select(Evaluation.user_id).where(Evaluation.id == EvaluationRun.evaluation_id).scalar_subquery()
+    result = await session.exec(
+        update(EvaluationRun).where(EvaluationRun.user_id == ctx.subject_user_id).values(user_id=owner)
+    )
+    return result.rowcount or 0
+
+
 async def erase_evaluations(session: AsyncSession, ctx: EraseContext) -> int:
     return await delete_batch(session, Evaluation, Evaluation.user_id == ctx.subject_user_id)
 
@@ -61,6 +71,7 @@ async def erase_datasets(session: AsyncSession, ctx: EraseContext) -> int:
 EVALUATION_STEPS = (
     ("evaluation_results", erase_evaluation_results),
     ("evaluation_runs", erase_evaluation_runs),
+    ("evaluation_run_starters", reassign_started_runs),
     ("evaluations", erase_evaluations),
     ("dataset_items", erase_dataset_items),
     ("datasets", erase_datasets),

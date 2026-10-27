@@ -1,5 +1,8 @@
+from uuid import uuid4
+
 from langflow.services.evaluations.failure_breaker import FailureBreaker, failure_detail
 from langflow.services.evaluations.row_scoring import RowScores
+from langflow.services.evaluations.scorers.llm_judge import UNREADABLE_VERDICT
 from langflow.services.evaluations.scorers.types import ScoreResult
 
 RETIRED = "Error code: 404 - The model `o4-mini` has been deprecated (request req_{n})"
@@ -46,3 +49,20 @@ def test_should_show_the_provider_sentence_instead_of_the_raw_body():
     breaker = FailureBreaker(threshold=1)
     breaker.record(raw)
     assert breaker.tripped_with == "The model `o4-mini` has been deprecated"
+
+
+def test_should_trip_on_errors_that_differ_only_by_a_uuid():
+    breaker = FailureBreaker(threshold=3)
+    tripped = [breaker.record(f"Request {uuid4()} failed: quota exceeded") for _ in range(3)]
+    assert tripped == [False, False, True]
+
+
+def test_should_ignore_the_case_of_hex_ids():
+    breaker = FailureBreaker(threshold=2)
+    breaker.record("trace ABCDEF0123 failed")
+    assert breaker.record("trace 0123abcdef failed") is True
+
+
+def test_should_count_an_unreadable_judge_verdict_as_a_failure():
+    scored = RowScores(scores={"judge": ScoreResult(value=None, comment=UNREADABLE_VERDICT)})
+    assert failure_detail(None, scored, JUDGE) == UNREADABLE_VERDICT

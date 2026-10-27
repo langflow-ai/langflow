@@ -23,6 +23,7 @@ import EstimateCard from "./EstimateCard";
 import EvaluationPreflight from "./EvaluationPreflight";
 import FlowPicker from "./FlowPicker";
 import ScorerFields from "./ScorerFields";
+import { submitDecision } from "./submitDecision";
 import { LATEST_VERSION, useEvaluateFlowForm } from "./useEvaluateFlowForm";
 
 interface EvaluateFlowModalProps {
@@ -63,6 +64,7 @@ export default function EvaluateFlowModal({
     setPickedFlowId(id);
     set.setVersionId(LATEST_VERSION);
     set.setOutputVertexId("");
+    set.setJudgeModel([]);
   };
   const { data: datasets } = useGetDatasets({ size: 200 }, { enabled: open });
   const { data: versions } = useGetFlowVersions(
@@ -70,7 +72,10 @@ export default function EvaluateFlowModal({
     { enabled: open && Boolean(flowId) },
   );
   const outputs = form.check.data?.output_vertices ?? [];
-  const estimate = form.estimate.data;
+  const estimateFailed = form.estimate.isError;
+  // A failed refetch keeps the previous numbers in `data`; they no longer describe this run.
+  const estimate = estimateFailed ? undefined : form.estimate.data;
+  const decision = submitDecision(form.estimate);
 
   const run = async () => {
     setSubmitting(true);
@@ -93,7 +98,8 @@ export default function EvaluateFlowModal({
 
   // A run that calls a model spends real money: show the numbers and ask once more.
   const handleSubmit = () => {
-    if (estimate && estimate.llm_calls > 0) {
+    if (!form.canSubmit || submitting || decision === "wait") return;
+    if (decision === "confirm") {
       setConfirmOpen(true);
       return;
     }
@@ -287,7 +293,10 @@ export default function EvaluateFlowModal({
             </Section>
 
             <Section title={t("evals.evaluate.beforeYouRun")}>
-              <EvaluationPreflight report={form.check.data} />
+              <EvaluationPreflight
+                report={form.check.data}
+                failed={form.check.isError}
+              />
               {form.judgeMissingModel ? (
                 <div className="rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">
                   {t("evals.estimate.pickJudge")}
@@ -296,6 +305,7 @@ export default function EvaluateFlowModal({
                 <EstimateCard
                   estimate={estimate}
                   loading={form.estimate.isFetching}
+                  failed={estimateFailed}
                 />
               )}
             </Section>
@@ -305,12 +315,12 @@ export default function EvaluateFlowModal({
           submit={{
             label: t("evals.evaluate.createAndRun"),
             loading: submitting && !confirmOpen,
-            disabled: !form.canSubmit || submitting,
+            disabled: !form.canSubmit || submitting || decision === "wait",
             dataTestId: "evaluate-submit",
           }}
         />
       </BaseModal>
-      {estimate && confirmOpen && (
+      {confirmOpen && (
         <ConfirmRunDialog
           open={confirmOpen}
           setOpen={setConfirmOpen}

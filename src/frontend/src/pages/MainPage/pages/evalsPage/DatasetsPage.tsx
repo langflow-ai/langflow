@@ -37,23 +37,40 @@ export default function DatasetsPage() {
   const onError = (title: string) => (error: unknown) =>
     setErrorData({ title, list: extractApiErrorMessages(error) });
   const { data, isLoading, isError } = useGetDatasets({ size: LIST_SIZE });
-  const deleteDataset = useDeleteDataset({
-    onError: onError(t("evals.datasets.deleteError")),
-  });
+  // Failures are reported once for the whole batch, below.
+  const deleteDataset = useDeleteDataset();
   const duplicateDataset = useDuplicateDataset({
     onError: onError(t("evals.datasets.duplicateError")),
   });
   const open = (dataset: Dataset) => navigate(`/assets/datasets/${dataset.id}`);
 
   const handleConfirmDelete = async () => {
-    await Promise.all(
-      pendingDelete.map((dataset) =>
-        deleteDataset.mutateAsync({ datasetId: dataset.id }),
-      ),
-    );
-    setPendingDelete([]);
-    setSelected([]);
-    setQuantitySelected(0);
+    try {
+      const outcomes = await Promise.allSettled(
+        pendingDelete.map((dataset) =>
+          deleteDataset.mutateAsync({ datasetId: dataset.id }),
+        ),
+      );
+      const failures = outcomes.filter(
+        (outcome): outcome is PromiseRejectedResult =>
+          outcome.status === "rejected",
+      );
+      if (failures.length > 0) {
+        setErrorData({
+          title:
+            failures.length === outcomes.length
+              ? t("evals.datasets.deleteError")
+              : t("evals.datasets.deletePartialError"),
+          list: failures.flatMap((failure) =>
+            extractApiErrorMessages(failure.reason),
+          ),
+        });
+      }
+    } finally {
+      setPendingDelete([]);
+      setSelected([]);
+      setQuantitySelected(0);
+    }
   };
 
   const columns = datasetColumns(t, {

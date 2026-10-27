@@ -7,8 +7,9 @@ from fastapi import APIRouter, Query, status
 from fastapi.responses import StreamingResponse
 
 from langflow.api.utils import CurrentActiveUser, DbSession
-from langflow.api.v1.evals_errors import evals_http_errors
+from langflow.api.v1.evals_errors import evals_http_errors, evals_write
 from langflow.services.authorization import DatasetAction, FlowAction
+from langflow.services.database.models.evaluation import Evaluation, EvaluationResult, EvaluationRun
 from langflow.services.deps import get_settings_service
 from langflow.services.evaluations import evaluation_service, run_service
 from langflow.services.evaluations.access import load_eval_dataset, load_eval_flow, load_evaluation
@@ -32,6 +33,8 @@ from langflow.services.evaluations.schemas import (
 )
 
 router = APIRouter(tags=["Evals"])
+
+RESULT_PREVIEW_CHARS = 500
 
 PageParam = Annotated[int, Query(ge=1)]
 SizeParam = Annotated[int, Query(ge=1, le=200)]
@@ -66,15 +69,20 @@ async def create_evaluation(
     session: DbSession,
     run: bool = False,  # noqa: FBT001, FBT002 - query flag for "Create & Run"
 ) -> EvaluationRead | EvaluationRunRead:
-    async with evals_http_errors():
+    async def operation() -> Evaluation | EvaluationRun:
         evaluation = await evaluation_service.create_evaluation(session, current_user, payload)
         if run:
-            started = await run_service.start_evaluation_run(session, current_user, evaluation, None)
-            return evaluation_service.to_run_read(started)
-    return await _evaluation_read(session, evaluation)
+            return await run_service.start_evaluation_run(session, current_user, evaluation, payload.flow_version_id)
+        return evaluation
+
+    async with evals_http_errors():
+        created = await evals_write(session, "create_evaluation", operation)
+    if isinstance(created, EvaluationRun):
+        return evaluation_service.to_run_read(created)
+    return await _evaluation_read(session, created)
 
 
-@router.post("/evaluations/check", response_model=FlowCheckReport)
+@router.get("/evaluations/check", response_model=FlowCheckReport)
 async def check_flow_for_evaluation(
     current_user: CurrentActiveUser,
     session: DbSession,
@@ -122,9 +130,12 @@ async def update_evaluation(
 
 @router.delete("/evaluations/{evaluation_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_evaluation(evaluation_id: UUID, current_user: CurrentActiveUser, session: DbSession) -> None:
-    async with evals_http_errors():
+    async def operation() -> None:
         evaluation = await load_evaluation(session, current_user, evaluation_id)
         await evaluation_service.delete_evaluation(session, evaluation)
+
+    async with evals_http_errors():
+        await evals_write(session, "delete_evaluation", operation)
 
 
 @router.post(
@@ -137,10 +148,14 @@ async def start_evaluation_run_endpoint(
     payload: RunStart | None = None,
 ) -> EvaluationRunRead:
     # A repeated click cannot start two runs: an evaluation allows one active run (409 otherwise).
-    async with evals_http_errors():
+    version_id = payload.flow_version_id if payload else None
+
+    async def operation() -> EvaluationRun:
         evaluation = await load_evaluation(session, current_user, evaluation_id)
-        version_id = payload.flow_version_id if payload else None
-        run = await run_service.start_evaluation_run(session, current_user, evaluation, version_id)
+        return await run_service.start_evaluation_run(session, current_user, evaluation, version_id)
+
+    async with evals_http_errors():
+        run = await evals_write(session, "start_evaluation_run", operation)
     return evaluation_service.to_run_read(run)
 
 
@@ -174,10 +189,43 @@ async def get_evaluation_run(run_id: UUID, current_user: CurrentActiveUser, sess
 async def cancel_evaluation_run_endpoint(
     run_id: UUID, current_user: CurrentActiveUser, session: DbSession
 ) -> EvaluationRunRead:
-    async with evals_http_errors():
+    async def operation() -> EvaluationRun:
         run = await run_service.get_run(session, current_user, run_id)
-        run = await run_service.cancel_evaluation_run(session, run)
+        return await run_service.cancel_evaluation_run(session, run)
+
+    async with evals_http_errors():
+        run = await evals_write(session, "cancel_evaluation_run", operation)
     return evaluation_service.to_run_read(run)
+
+
+def _clip(text: str | None, limit: int | None) -> tuple[str | None, bool]:
+    if text is None or limit is None or len(text) <= limit:
+        return text, False
+    return text[:limit], True
+
+
+def _result_read(row: EvaluationResult, *, preview_chars: int | None) -> EvaluationResultRead:
+    question, clipped_input = _clip(item_text(row.input) or "", preview_chars)
+    expected, clipped_expected = _clip(item_text(row.expected_output), preview_chars)
+    actual, clipped_actual = _clip(row.actual_output, preview_chars)
+    return EvaluationResultRead(
+        id=row.id,
+        position=row.position,
+        input=question or "",
+        expected_output=expected,
+        actual_output=actual,
+        output_truncated=row.output_truncated,
+        error=row.error,
+        scores=row.scores or {},
+        passed=row.passed,
+        duration_ms=row.duration_ms,
+        tokens_flow=row.tokens_flow,
+        tokens_judge=row.tokens_judge,
+        cost_flow=row.cost_flow,
+        cost_judge=row.cost_judge,
+        trace_id=row.trace_id,
+        preview=clipped_input or clipped_expected or clipped_actual,
+    )
 
 
 @router.get("/evaluation-runs/{run_id}/results", response_model=EvaluationResultPage)
@@ -192,27 +240,19 @@ async def list_evaluation_results(
     async with evals_http_errors():
         run = await run_service.get_run(session, current_user, run_id)
     rows, total = await run_service.list_results(session, run.id, passed=passed, page=page, size=size)
-    items = [
-        EvaluationResultRead(
-            id=row.id,
-            position=row.position,
-            input=item_text(row.input) or "",
-            expected_output=item_text(row.expected_output),
-            actual_output=row.actual_output,
-            output_truncated=row.output_truncated,
-            error=row.error,
-            scores=row.scores or {},
-            passed=row.passed,
-            duration_ms=row.duration_ms,
-            tokens_flow=row.tokens_flow,
-            tokens_judge=row.tokens_judge,
-            cost_flow=row.cost_flow,
-            cost_judge=row.cost_judge,
-            trace_id=row.trace_id,
-        )
-        for row in rows
-    ]
+    # The table loads a whole run and refetches while it runs: full texts would be megabytes per poll.
+    items = [_result_read(row, preview_chars=RESULT_PREVIEW_CHARS) for row in rows]
     return EvaluationResultPage(items=items, total=total, page=page, size=size)
+
+
+@router.get("/evaluation-runs/{run_id}/results/{result_id}", response_model=EvaluationResultRead)
+async def get_evaluation_result(
+    run_id: UUID, result_id: UUID, current_user: CurrentActiveUser, session: DbSession
+) -> EvaluationResultRead:
+    async with evals_http_errors():
+        run = await run_service.get_run(session, current_user, run_id)
+        row = await run_service.get_result(session, run.id, result_id)
+    return _result_read(row, preview_chars=None)
 
 
 @router.get("/evaluation-runs/{run_id}/export")

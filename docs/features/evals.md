@@ -30,7 +30,7 @@ are not mounted and the UI hides every entry point.
 | Layer | Path |
 |---|---|
 | Models | `langflow/services/database/models/evaluation/` |
-| Migration | `alembic/versions/876a81df5a20_add_evals_tables.py` (EXPAND) |
+| Migrations | `alembic/versions/876a81df5a20_add_evals_tables.py` (EXPAND), `a1d7e3c5b9f2_backfill_dataset_system_role_permissions.py` (MIGRATE: `dataset:*` on the built-in roles) |
 | Services | `langflow/services/evaluations/` |
 | Routes | `langflow/api/v1/datasets.py`, `langflow/api/v1/evaluations.py` |
 | Settings | `lfx/services/settings/groups/evals.py` |
@@ -106,8 +106,10 @@ and `expected_output`, `actual_output` (capped at
 `POST /api/v1/evaluations/{id}/runs` with an optional `{"flow_version_id": ...}`.
 
 1. Loads the flow (execute permission) and the dataset (read permission).
-2. Refuses a second active run of the same evaluation (409). This also makes a
-   double click harmless.
+2. Refuses a second active run of the same evaluation (409). A partial unique
+   index (`uq_evaluation_run_one_active`) enforces it in the database, and the
+   run row is inserted before the version is pinned, so concurrent starts
+   cannot both win and a double click is harmless.
 3. Checks the item count: 0 or more than `evals_max_items` is 422.
 4. Pins the version:
    - **Latest** (no id): reuses the newest `flow_version` when its data hashes
@@ -119,9 +121,24 @@ and `expected_output`, `actual_output` (capped at
      already retained for another reason, so version pruning cannot remove it.
 5. Runs the static flow checks on the **pinned** version (see below). Any
    blocking issue is 422 with `{"message", "issues": [{code, message, components}]}`.
-6. Computes and stores the estimate, inserts the run (`queued`), commits, then
+6. Computes and stores the estimate on the run (`queued`), commits, then
    creates the job and launches the coordinator with
    `JobService.execute_with_status(..., keep_alive=True)`.
+
+`POST /api/v1/evaluations?run=true` creates the evaluation and starts its first
+run in one request; `flow_version_id` in the body picks a history version. A
+start that fails leaves no evaluation behind.
+
+Each row is saved in one short write-first transaction. On SQLite, very fast
+rows (a flow without model calls finishes in milliseconds) commit so often,
+together with the per-row trace, that another read-then-write request can
+exhaust its lock retries; the Evals write routes retry and answer 503 with
+`Retry-After` when they cannot, as the flow routes do. Rows that call a model
+take far longer than the retry window, so this does not show in practice.
+
+While a run is active, its dataset's items cannot be added, edited, deleted or
+imported, and the dataset cannot be deleted (409): rows are matched to items by
+position.
 
 The frontend saves the flow before opening the Evaluate modal: autosave is
 debounced, and "Latest" means the saved draft.
@@ -143,7 +160,7 @@ debounced, and "Latest" means the saved draft.
 | `external_memory` | A component exposing a `Memory` output; it is read and written for real and cannot be isolated |
 | `frozen_components` | Frozen components return the same cached result for every row |
 
-`POST /api/v1/evaluations/check?flow_id=` returns the same report for the saved draft.
+`GET /api/v1/evaluations/check?flow_id=` returns the same report for the saved draft.
 
 ## Coordinator (`runner.py`)
 
@@ -199,7 +216,7 @@ other row task is cancelled before the run is closed.
 |---|---|---|
 | `exact_match` | 1 when equal after NFKC normalization, whitespace collapse and case folding (`config.case_sensitive` keeps case) | yes |
 | `contains` | 1 when the expected text is inside the answer | yes |
-| `similarity` | `difflib.SequenceMatcher` ratio, inputs capped at 5000 characters | yes |
+| `similarity` | `difflib.SequenceMatcher` ratio, inputs capped at 2000 characters, computed off the event loop | yes |
 | `llm_judge` | Structured `{score, reason}` from `config.model`, with optional `config.rubric` | no |
 
 A scorer that cannot judge a row (no expected output) returns `value: null`
@@ -278,7 +295,7 @@ Datasets (owner scope; `dataset` authz resource)
 Evaluations
   GET    /api/v1/evaluations?project_id=&flow_id=&page=&size=
   POST   /api/v1/evaluations[?run=true]             run=true starts the first run on Latest
-  POST   /api/v1/evaluations/check?flow_id=&output_vertex_id=
+  GET    /api/v1/evaluations/check?flow_id=&output_vertex_id=
   POST   /api/v1/evaluations/estimate
   GET    /api/v1/evaluations/{id}
   PATCH  /api/v1/evaluations/{id}
@@ -289,17 +306,20 @@ Evaluations
 Runs
   GET    /api/v1/evaluation-runs/{run_id}
   POST   /api/v1/evaluation-runs/{run_id}/cancel    409 when already finished
-  GET    /api/v1/evaluation-runs/{run_id}/results?passed=&page=&size=   size up to 5000
+  GET    /api/v1/evaluation-runs/{run_id}/results?passed=&page=&size=   size up to 5000; texts are 500-character previews (`preview: true`)
+  GET    /api/v1/evaluation-runs/{run_id}/results/{result_id}           one result with full texts
   GET    /api/v1/evaluation-runs/{run_id}/export    text/csv, one value and one comment column per scorer
 ```
 
 ### CSV import
 
 UTF-8 only (a BOM is stripped; other encodings are rejected with a clear
-message). The delimiter is sniffed among `,`, `;`, tab and `|`. The first
-non-blank row is the header. Rows with an empty input are skipped and reported
-with their row number, as are rows past `evals_csv_max_rows` and cells longer
-than 100,000 characters. Upload size follows `max_file_size_upload`. Export
+message). The delimiter is taken from the header row only, among `,`, `;`, tab and `|`;
+a header without any of them is a single column, so commas in the text are kept.
+The first non-blank row is the header. Rows with an empty input are skipped and reported
+with their row number, as are cells longer than 100,000 characters; rows past
+`evals_csv_max_rows` are reported as one entry with their count. Uploads are
+capped at `evals_csv_max_bytes` and parsed off the event loop. Export
 prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
 (`langflow.utils.csv_safety.csv_safe_cell`, shared with the audit export).
 
@@ -309,22 +329,25 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
   `ensure_dataset_permission`). Without a plugin the OSS floor applies: owner
   or superuser. With `LANGFLOW_AUTHZ_ENABLED=true` and only the OSS stub,
   visibility does not widen.
-- Evaluations and runs are owner-scoped. Starting a run re-checks
+- Evaluations are owner-scoped; a run is readable by whoever can read its
+  evaluation. Creating or duplicating a dataset checks `DatasetAction.CREATE`,
+  and a duplicate lands in the caller's account. Starting a run re-checks
   `FlowAction.EXECUTE` on the flow and read on the dataset every time, so a
   user who lost access cannot start runs.
 - Fetches go through `authorized_or_owner_scoped`, so a registered plugin with
-  cross-user fetch can widen dataset and flow access; plugin denials surface as 404.
+  cross-user fetch can widen dataset and flow access; plugin denials (403) surface as 404; other guard errors, such as a 503 from the
+  plugin, are returned unchanged.
 
 ## Lifecycle and deletion
 
 | Event | Effect |
 |---|---|
-| Flow deleted | `evaluation.flow_id` and `evaluation_run.flow_version_id` set to NULL; results stay readable; Re-run is refused (422) |
+| Flow deleted | `evaluation.flow_id` and `evaluation_run.flow_version_id` set to NULL and the flow's project is frozen on the evaluation; results stay readable; Re-run is refused (422) |
 | Dataset deleted | `evaluation.dataset_id` set to NULL; results keep their copies |
-| Project deleted | Its evaluations, runs and results are deleted; active runs are cancelled first |
+| Project deleted | Evaluations of the flows currently in it (and of deleted flows that were in it) are deleted with their runs and results; a flow moved to another project keeps its evaluations. A run still executing on another worker stops writing once its run row is gone |
 | Evaluation deleted | Its runs and results are deleted; versions retained only for those runs are released |
-| Server restarted mid-run | The stale job is marked failed by the existing sweep; the next read of the run marks it `failed` with "The server stopped while this run was in progress". Finished rows are kept; the in-flight row is not replayed |
-| GDPR erase of a user | Results, runs, evaluations, items and datasets of that user are deleted (`data_subjects/evaluation_steps.py`) |
+| Server or pod stopped mid-run | The job is lost when it is no longer queued or in progress, or when its heartbeat is older than `background_lease_ttl_s` (a dead pod leaves its job in progress until some process restarts); the next read of the run (or the next start, delete or dataset edit that checks for active runs) marks it `failed` with "The server stopped while this run was in progress"; a run younger than 30 seconds without a job row is still launching and is left alone. Finished rows are kept; the in-flight row is not replayed |
+| GDPR erase of a user | Results, runs, evaluations, items and datasets of that user are deleted; runs the user started on someone else's evaluation move to that evaluation's owner (`data_subjects/evaluation_steps.py`) |
 
 ## Settings (`LANGFLOW_` prefix)
 
@@ -337,6 +360,7 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
 | `EVALS_ROW_TIMEOUT_S` | 300 | Seconds per row (flow plus scoring) |
 | `EVALS_ACTUAL_OUTPUT_MAX_CHARS` | 20000 | Output kept per result; the full output stays in the trace |
 | `EVALS_CSV_MAX_ROWS` | 5000 | Rows one CSV import may add |
+| `EVALS_CSV_MAX_BYTES` | 20971520 | Largest CSV upload, in bytes |
 | `EVALS_JUDGE_MAX_OUTPUT_TOKENS` | 300 | Output cap per judge call |
 | `EVALS_ABORT_AFTER_IDENTICAL_FAILURES` | 3 | Consecutive identical failures before a run stops; 0 never stops |
 

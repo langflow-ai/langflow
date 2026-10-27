@@ -35,9 +35,20 @@ export function formatScore(value: number | null | undefined): string {
   return value === null || value === undefined ? UNKNOWN : value.toFixed(2);
 }
 
-export function formatDuration(ms: number | null | undefined): string {
+/** Milliseconds under a second, seconds above; the unit is written by the locale, not hardcoded. */
+export function formatDuration(
+  ms: number | null | undefined,
+  locale?: string,
+): string {
   if (ms === null || ms === undefined) return UNKNOWN;
-  return ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(1)} s`;
+  const seconds = ms >= 1000;
+  return new Intl.NumberFormat(locale, {
+    style: "unit",
+    unit: seconds ? "second" : "millisecond",
+    unitDisplay: "short",
+    maximumFractionDigits: seconds ? 1 : 0,
+    minimumFractionDigits: seconds ? 1 : 0,
+  }).format(seconds ? ms / 1000 : ms);
 }
 
 export function formatRunDate(iso: string | null | undefined): string {

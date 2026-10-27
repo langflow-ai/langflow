@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
@@ -22,6 +23,7 @@ from langflow.services.evaluations.pricing import cost_usd, model_identity
 from langflow.services.model_provider_policy_scope import provider_policy_attributes_for_flow
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from uuid import UUID
 
     from langflow.services.database.models.flow.model import Flow
@@ -101,6 +103,19 @@ def build_row_graph(graph_data: dict[str, Any], flow: Flow, user: User) -> Graph
     return graph
 
 
+@contextmanager
+def flow_policy_scope(flow: Flow, user: User) -> Iterator[None]:
+    """The flow's model-provider policy scope; the judge is resolved inside it too."""
+    token = set_current_model_provider_policy_context(
+        user_id=user.id,
+        attributes=provider_policy_attributes_for_flow(flow, is_superuser=bool(user.is_superuser), required=True),
+    )
+    try:
+        yield
+    finally:
+        reset_current_model_provider_policy_context(token)
+
+
 async def execute_row(
     *,
     graph_data: dict[str, Any],
@@ -114,10 +129,6 @@ async def execute_row(
     trace_id = str(uuid4())
     started = time.perf_counter()
     isolation_token = set_evals_memory_isolated(True)
-    policy_token = set_current_model_provider_policy_context(
-        user_id=user.id,
-        attributes=provider_policy_attributes_for_flow(flow, is_superuser=bool(user.is_superuser), required=True),
-    )
     graph: Graph | None = None
     try:
         graph = build_row_graph(graph_data, flow, user)
@@ -134,7 +145,6 @@ async def execute_row(
     except Exception as exc:  # noqa: BLE001 - any flow failure is recorded on the row, never fatal to the run
         actual, error = None, _short_error(exc)
     finally:
-        reset_current_model_provider_policy_context(policy_token)
         reset_evals_memory_isolated(isolation_token)
     tokens, cost = flow_usage(graph) if graph is not None else (None, None)
     return RowExecution(

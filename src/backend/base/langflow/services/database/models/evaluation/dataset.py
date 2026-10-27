@@ -3,6 +3,7 @@ from uuid import UUID, uuid4
 
 import sqlalchemy as sa
 from sqlalchemy import JSON, CheckConstraint, Column, DateTime, ForeignKey, Index, Text, UniqueConstraint
+from sqlalchemy.sql.naming import conv
 from sqlmodel import Field, SQLModel
 
 DATASET_NAME_MAX_LENGTH = 255
@@ -33,7 +34,7 @@ class DatasetItem(SQLModel, table=True):  # type: ignore[call-arg]
     __tablename__ = "dataset_item"
     __table_args__ = (
         Index("ix_dataset_item_dataset_position", "dataset_id", "position"),
-        CheckConstraint("source IN ('manual', 'csv', 'logs')", name="ck_dataset_item_source"),
+        CheckConstraint("source IN ('manual', 'csv', 'logs')", name=conv("ck_dataset_item_source")),
     )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)

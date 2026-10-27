@@ -6,13 +6,18 @@ import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from langflow.services.evaluations.scorers.llm_judge import UNREADABLE_VERDICT
+
 if TYPE_CHECKING:
     from langflow.services.evaluations.row_scoring import RowScores
 
 SCORER_FAILED_PREFIX = "Scorer failed: "
 SIGNATURE_MAX_CHARS = 300
 # Request ids, timestamps and counters differ between otherwise identical provider errors.
-_VOLATILE = re.compile(r"\b(?:req_[A-Za-z0-9]+|[0-9a-f]{8,}|\d+)\b")
+_VOLATILE = re.compile(
+    r"\b(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|req_[A-Za-z0-9]+|[0-9a-f]{8,}|\d+)\b",
+    re.IGNORECASE,
+)
 # Provider SDK errors embed a JSON-ish body; its "message" is the sentence a person can act on.
 _PROVIDER_MESSAGE = re.compile(r"""['"]message['"]\s*:\s*(['"])(?P<message>.+?)\1""")
 
@@ -32,7 +37,7 @@ def failure_detail(error: str | None, scored: RowScores | None, scorers: list[di
             continue
         entry = scored.scores.get(spec["name"])
         comment = (entry.comment if entry else None) or ""
-        if comment.startswith(SCORER_FAILED_PREFIX):
+        if comment.startswith(SCORER_FAILED_PREFIX) or comment == UNREADABLE_VERDICT:
             return comment
     return None
 

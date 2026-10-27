@@ -126,6 +126,16 @@ async def update_dataset(session: AsyncSession, dataset: Dataset, payload: Datas
     return dataset
 
 
+async def ensure_idle(session: AsyncSession, dataset_id: UUID) -> None:
+    """Refuse item changes while a run reads this dataset: rows are matched to items by position."""
+    from langflow.services.database.models.evaluation import EvaluationRun
+    from langflow.services.evaluations.run_reconcile import active_runs
+
+    if await active_runs(session, EvaluationRun.dataset_id == dataset_id):
+        msg = "An evaluation run is using this dataset. Wait for it to finish or cancel it, then try again."
+        raise EvalsConflictError(msg)
+
+
 async def delete_dataset(session: AsyncSession, dataset: Dataset) -> None:
     # Evaluations keep their history: the FK nulls dataset_id, and results hold their own copies.
     from langflow.services.database.models.evaluation import Evaluation
@@ -146,10 +156,11 @@ async def _unique_copy_name(session: AsyncSession, user_id: UUID, name: str) -> 
     return candidate
 
 
-async def duplicate_dataset(session: AsyncSession, dataset: Dataset) -> Dataset:
+async def duplicate_dataset(session: AsyncSession, dataset: Dataset, owner_id: UUID) -> Dataset:
+    """Copy ``dataset`` into ``owner_id``'s account (the caller, who may only have read access)."""
     copy = Dataset(
-        user_id=dataset.user_id,
-        name=await _unique_copy_name(session, dataset.user_id, dataset.name),
+        user_id=owner_id,
+        name=await _unique_copy_name(session, owner_id, dataset.name),
         description=dataset.description,
     )
     session.add(copy)

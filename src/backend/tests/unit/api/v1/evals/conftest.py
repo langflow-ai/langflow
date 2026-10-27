@@ -5,6 +5,9 @@ from pathlib import Path
 
 import pytest
 from langflow.api import router as api_router_module
+from langflow.services.database.models.message.model import MessageTable
+from langflow.services.deps import session_scope
+from sqlmodel import col, func, select
 
 DATA_DIR = Path(__file__).resolve().parents[4] / "data"
 TERMINAL = {"completed", "failed", "cancelled"}
@@ -82,3 +85,18 @@ async def results(client, headers, run_id: str, **params) -> list[dict]:
     )
     assert response.status_code == 200, response.text
     return response.json()["items"]
+
+
+async def eval_message_count() -> int:
+    """Chat messages written under an Evals row session (there must never be any)."""
+    async with session_scope() as session:
+        stmt = select(func.count()).select_from(MessageTable).where(col(MessageTable.session_id).startswith("eval:"))
+        return int((await session.exec(stmt)).one())
+
+
+async def login_headers(client, user) -> dict[str, str]:
+    # The user fixtures share this fixed test password; it is not a credential.
+    credentials = {"username": user.username, "password": "hashed_password"}  # pragma: allowlist secret
+    login = await client.post("api/v1/login", data=credentials)
+    assert login.status_code == 200, login.text
+    return {"Authorization": f"Bearer {login.json()['access_token']}"}

@@ -1,7 +1,7 @@
 """Pre-run token and cost range.
 
-The flow part comes from this flow's last finished run when there is one (the most accurate
-basis), otherwise from the model estimate. The judge part always comes from the model
+The flow part comes from this flow's last finished run when it ran the same flow content (the
+most accurate basis), otherwise from the model estimate. The judge part always comes from the model
 estimate, because the last run may not have used a judge.
 """
 
@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 from sqlmodel import col, select
 
 from langflow.services.database.models.evaluation import DatasetItem, EvaluationRun
+from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.evaluations.dataset_service import item_text
 from langflow.services.evaluations.estimate_model import (
     DatasetStats,
@@ -47,19 +48,26 @@ async def dataset_stats(session: AsyncSession, dataset_id: UUID) -> DatasetStats
     )
 
 
-async def _history_per_row(session: AsyncSession, flow_id: UUID) -> tuple[float, float | None] | None:
+async def _history_per_row(
+    session: AsyncSession, flow_id: UUID, flow_data: dict[str, Any] | None
+) -> tuple[float, float | None] | None:
+    """Per-row flow usage of the last completed run, only when it ran exactly this flow content."""
     stmt = (
-        select(EvaluationRun.summary)
+        select(EvaluationRun.summary, FlowVersion.data)
+        .join(FlowVersion, col(FlowVersion.id) == EvaluationRun.flow_version_id)
         .where(EvaluationRun.flow_id == flow_id, EvaluationRun.status == "completed")
         .order_by(col(EvaluationRun.created_at).desc())
         .limit(1)
     )
-    summary = (await session.exec(stmt)).first()
-    if not isinstance(summary, dict):
+    row = (await session.exec(stmt)).first()
+    if row is None or row[1] != flow_data or not isinstance(row[0], dict):
         return None
-    rows = (summary.get("rows") or {}).get("total") or 0
+    summary = row[0]
+    counts = summary.get("rows") or {}
+    # Errored rows spent little or nothing, so they would drag the per-row figure down.
+    rows = (counts.get("total") or 0) - (counts.get("errored") or 0)
     tokens = (summary.get("tokens") or {}).get("flow")
-    if not rows or not tokens:
+    if rows <= 0 or not tokens:
         return None
     cost = (summary.get("cost_usd") or {}).get("flow")
     return tokens / rows, (cost / rows if cost is not None else None)
@@ -90,8 +98,10 @@ async def estimate_run(
 ) -> EstimateRead:
     stats = await dataset_stats(session, dataset_id)
     nodes = flow_llm_nodes(flow_data or {})
-    history = await _history_per_row(session, flow_id)
-    flow = _from_history(history, stats.items) if history else estimate_flow(nodes, stats)
+    history = await _history_per_row(session, flow_id, flow_data)
+    modeled = estimate_flow(nodes, stats)
+    flow = _from_history(history, stats.items) if history else modeled
+    unpriced = modeled.unpriced if flow.cost_low is None else flow.unpriced
     judge_specs = [spec for spec in scorers if isinstance(spec, dict)]
     judge = estimate_judges(judge_specs, stats, judge_max_output_tokens)
     judge_calls = stats.items * sum(1 for spec in judge_specs if spec.get("type") == "llm_judge")
@@ -108,6 +118,6 @@ async def estimate_run(
         tokens_high=flow.tokens_high + judge.tokens_high,
         cost_low=_sum_cost(flow.cost_low, judge.cost_low),
         cost_high=_sum_cost(flow.cost_high, judge.cost_high),
-        unpriced_models=sorted({*flow.unpriced, *judge.unpriced}),
+        unpriced_models=sorted({*unpriced, *judge.unpriced}),
         has_agent=any(node.agent for node in nodes),
     )

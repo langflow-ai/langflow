@@ -5,8 +5,10 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { usePermissions } from "@/contexts/permissionsContext";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import EvaluateFlowModal from "@/modals/evaluateFlowModal";
+import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
+import { extractApiErrorMessages } from "@/utils/apiError";
 import { cn } from "@/utils/utils";
 
 const EvaluateButton = ({ hasIO }: { hasIO: boolean }) => {
@@ -15,6 +17,7 @@ const EvaluateButton = ({ hasIO }: { hasIO: boolean }) => {
   const [saving, setSaving] = useState(false);
   const { can } = usePermissions();
   const saveFlow = useSaveFlow();
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const evalsEnabled = useUtilityStore(
     (state) => state.featureFlags.evals === true,
   );
@@ -24,14 +27,19 @@ const EvaluateButton = ({ hasIO }: { hasIO: boolean }) => {
   const disabled = !hasIO || !can(currentFlowId, "execute") || saving;
 
   // "Latest" means the saved draft, and autosave is debounced; save first so the
-  // checks and the run see exactly what is on the canvas.
+  // checks and the run see exactly what is on the canvas; a failed save would evaluate a stale draft.
   const handleEvaluateClick = async () => {
     setSaving(true);
     try {
-      await saveFlow();
+      await saveFlow(undefined, { suppressErrorToast: true });
+      setOpen(true);
+    } catch (error) {
+      setErrorData({
+        title: t("evals.evaluate.saveError"),
+        list: extractApiErrorMessages(error),
+      });
     } finally {
       setSaving(false);
-      setOpen(true);
     }
   };
 

@@ -74,7 +74,9 @@ async def create_flow_version_entry(
                 await session.refresh(entry)
             break
         except IntegrityError as exc:
-            if "unique_flow_version_number" not in str(exc).lower():
+            # PostgreSQL names the constraint; SQLite only lists its columns.
+            message = str(exc).lower()
+            if "unique_flow_version_number" not in message and "flow_version.version_number" not in message:
                 raise  # Not a version collision — don't retry
             if attempt == MAX_VERSION_RETRIES - 1:
                 msg = (

@@ -93,7 +93,7 @@ test(
     await page.runA11yScan("evals-csv-import-preview");
     await page.getByTestId("csv-import-submit").click();
     await expect(page.getByTestId("csv-import-result")).toHaveText(
-      "1 rows imported",
+      "1 row imported",
     );
     await page.getByTestId("csv-import-submit").click();
     await expect(page.locator(".ag-center-cols-container .ag-row")).toHaveCount(
@@ -133,6 +133,13 @@ test(
     await expect(page.getByTestId("run-status-completed")).toHaveCount(2, {
       timeout: 60000,
     });
+
+    // A shared or bookmarked run link must open the run, not bounce to /flows.
+    await page.reload();
+    await expect(page.getByTestId("evaluation-detail-title")).toBeVisible({
+      timeout: 30000,
+    });
+    await expect(page.getByTestId("run-row")).toHaveCount(2);
 
     await page.getByTestId("sidebar-evaluations").click();
     await expect(page.getByTestId("evaluations-title")).toBeVisible();

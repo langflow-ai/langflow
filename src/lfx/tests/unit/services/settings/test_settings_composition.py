@@ -151,6 +151,7 @@ EXPECTED_FIELDS = {
     "evals_row_timeout_s",
     "evals_actual_output_max_chars",
     "evals_csv_max_rows",
+    "evals_csv_max_bytes",
     "evals_judge_max_output_tokens",
     "evals_abort_after_identical_failures",
     # SecuritySettings

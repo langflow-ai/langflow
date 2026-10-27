@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Any
 
 from langflow.services.evaluations.scorers.llm_judge import score_llm_judge
@@ -39,7 +40,8 @@ async def run_scorer(
     text_scorer = _TEXT_SCORERS.get(scorer_type)
     if text_scorer is None:
         return ScoreResult(value=None, comment=f"Unknown scorer type {scorer_type!r}")
-    return text_scorer(actual, expected, config)
+    # Similarity is quadratic in pure Python: keep it off the event loop that serves the API.
+    return await asyncio.to_thread(text_scorer, actual, expected, config)
 
 
 __all__ = ["ScoreResult", "run_scorer"]

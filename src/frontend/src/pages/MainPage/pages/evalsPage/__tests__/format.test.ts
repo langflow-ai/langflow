@@ -23,9 +23,12 @@ describe("evals formatting", () => {
     expect(formatUsd(0)).toContain("0.00");
   });
 
-  it("should format durations in ms or seconds", () => {
-    expect(formatDuration(250)).toBe("250 ms");
-    expect(formatDuration(1500)).toBe("1.5 s");
+  it("should format durations in ms or seconds with the locale's unit", () => {
+    // ICU versions differ on which space they put before the unit.
+    const plain = (value: string) => value.replace(/\s/g, " ");
+    expect(plain(formatDuration(250, "en-US"))).toBe("250 ms");
+    expect(plain(formatDuration(1500, "en-US"))).toBe("1.5 sec");
+    expect(plain(formatDuration(1500, "de-DE"))).toBe("1,5 Sek.");
   });
 
   it("should give a signed delta only when both totals exist", () => {

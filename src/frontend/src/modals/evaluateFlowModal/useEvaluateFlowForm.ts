@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
 import type { ModelOption } from "@/components/core/parameterRenderComponent/components/modelInputComponent/types";
-import { api } from "@/controllers/API/api";
-import { getURL } from "@/controllers/API/helpers/constants";
 import type {
+  Evaluation,
   EvaluationRun,
   ScorerSpec,
   ScorerType,
 } from "@/controllers/API/queries/evals/types";
 import {
+  type EvaluationCreatePayload,
   useCheckFlowForEvaluation,
   useCreateEvaluation,
   useEstimateEvaluation,
@@ -50,6 +50,10 @@ export function buildScorers(
   return scorers;
 }
 
+function isRun(created: Evaluation | EvaluationRun): created is EvaluationRun {
+  return "evaluation_id" in created;
+}
+
 export function useEvaluateFlowForm(flowId: string) {
   const [name, setName] = useState("");
   const [datasetId, setDatasetId] = useState("");
@@ -89,24 +93,25 @@ export function useEvaluateFlowForm(flowId: string) {
     !judgeMissingModel &&
     (check.data?.blocking.length ?? 1) === 0;
 
-  /** Create the evaluation, then start its first run on the chosen version. */
+  /** Create the evaluation and start its first run on the chosen version, in one atomic request. */
   const createAndRun = async (): Promise<EvaluationRun> => {
-    const evaluation = await createEvaluation.mutateAsync({
+    const payload: EvaluationCreatePayload = {
+      flow_id: flowId,
+      dataset_id: datasetId,
+      name: name.trim() || undefined,
+      output_vertex_id: outputVertexId || null,
+      scorers,
+      pass_threshold: threshold,
+    };
+    const started = await createEvaluation.mutateAsync({
       payload: {
-        flow_id: flowId,
-        dataset_id: datasetId,
-        name: name.trim() || undefined,
-        output_vertex_id: outputVertexId || null,
-        scorers,
-        pass_threshold: threshold,
+        ...payload,
+        flow_version_id: versionId === LATEST_VERSION ? null : versionId,
       },
-      run: false,
+      run: true,
     });
-    const response = await api.post<EvaluationRun>(
-      `${getURL("EVALUATIONS")}/${evaluation.id}/runs`,
-      { flow_version_id: versionId === LATEST_VERSION ? null : versionId },
-    );
-    return response.data;
+    if (!isRun(started)) throw new Error("The server did not start a run.");
+    return started;
   };
 
   return {

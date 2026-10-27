@@ -170,6 +170,8 @@ export interface EvaluationResult {
   cost_flow: number | null;
   cost_judge: number | null;
   trace_id: string | null;
+  /** True in the results list when texts are clipped; the single-result read has them in full. */
+  preview?: boolean;
 }
 
 export interface FlowCheckIssue {

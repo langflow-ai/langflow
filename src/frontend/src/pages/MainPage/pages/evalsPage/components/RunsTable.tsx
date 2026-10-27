@@ -24,10 +24,17 @@ interface RunsTableProps {
   onSelect: (runId: string) => void;
 }
 
-function versionLabel(run: EvaluationRun, latestLabel: string): string {
-  const tag =
-    run.flow_version_number === null ? "—" : `v${run.flow_version_number}`;
-  return run.flow_version_source === "latest" ? `${latestLabel} → ${tag}` : tag;
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
+
+export function versionTag(number: number | null, t: TranslateFn): string {
+  return number === null ? "—" : t("evals.runs.versionTag", { number });
+}
+
+function versionLabel(run: EvaluationRun, t: TranslateFn): string {
+  const version = versionTag(run.flow_version_number, t);
+  return run.flow_version_source === "latest"
+    ? t("evals.runs.latestTag", { version })
+    : version;
 }
 
 export default function RunsTable({
@@ -79,7 +86,7 @@ export default function RunsTable({
               <TableCell>
                 <RunStatusBadge status={run.status} />
               </TableCell>
-              <TableCell>{versionLabel(run, t("evals.latest"))}</TableCell>
+              <TableCell>{versionLabel(run, t)}</TableCell>
               <TableCell className="text-right">
                 {formatPercent(run.summary?.pass_rate)}
               </TableCell>

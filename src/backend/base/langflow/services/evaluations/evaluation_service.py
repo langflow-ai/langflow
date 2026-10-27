@@ -5,15 +5,15 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from sqlalchemy import delete, func
+from sqlalchemy import ColumnElement, and_, delete, func, or_
 from sqlmodel import col, select
 
 from langflow.services.authorization import DatasetAction, FlowAction
 from langflow.services.database.models.evaluation import Dataset, Evaluation, EvaluationResult, EvaluationRun
-from langflow.services.database.models.evaluation.evaluation import TERMINAL_RUN_STATUSES
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.evaluations.access import load_eval_dataset, load_eval_flow
-from langflow.services.evaluations.errors import EvalsValidationError
+from langflow.services.evaluations.errors import EvalsConflictError
+from langflow.services.evaluations.run_reconcile import active_runs
 from langflow.services.evaluations.schemas import EvaluationRead, EvaluationRunRead
 from langflow.services.evaluations.versioning import release_unused_versions
 
@@ -75,16 +75,21 @@ async def update_evaluation(
 
 
 async def has_active_run(session: AsyncSession, evaluation_id: UUID) -> bool:
-    stmt = select(EvaluationRun.id).where(
-        EvaluationRun.evaluation_id == evaluation_id, col(EvaluationRun.status).not_in(list(TERMINAL_RUN_STATUSES))
+    return bool(await active_runs(session, EvaluationRun.evaluation_id == evaluation_id))
+
+
+def in_project(project_id: UUID) -> ColumnElement[bool]:
+    """An evaluation belongs to its flow's current project; only a flow-less one keeps the stored project."""
+    return or_(
+        Flow.folder_id == project_id,
+        and_(col(Evaluation.flow_id).is_(None), Evaluation.project_id == project_id),
     )
-    return (await session.exec(stmt.limit(1))).first() is not None
 
 
 async def delete_evaluation(session: AsyncSession, evaluation: Evaluation) -> None:
     if await has_active_run(session, evaluation.id):
         msg = "Cancel the running evaluation before deleting it."
-        raise EvalsValidationError(msg)
+        raise EvalsConflictError(msg)
     runs = (await session.exec(select(EvaluationRun).where(EvaluationRun.evaluation_id == evaluation.id))).all()
     run_ids = [run.id for run in runs]
     version_ids = {run.flow_version_id for run in runs if run.flow_version_id is not None}
@@ -107,17 +112,14 @@ async def list_evaluations(
 ) -> tuple[list[Evaluation], int]:
     where = [Evaluation.user_id == user.id]
     if project_id is not None:
-        where.append(Evaluation.project_id == project_id)
+        where.append(in_project(project_id))
     if flow_id is not None:
         where.append(Evaluation.flow_id == flow_id)
-    total = int((await session.exec(select(func.count()).select_from(Evaluation).where(*where))).one())
+    joined = select(Evaluation).outerjoin(Flow, col(Flow.id) == Evaluation.flow_id).where(*where)
+    total = int((await session.exec(select(func.count()).select_from(joined.subquery()))).one())
     rows = (
         await session.exec(
-            select(Evaluation)
-            .where(*where)
-            .order_by(col(Evaluation.updated_at).desc(), col(Evaluation.id))
-            .offset((page - 1) * size)
-            .limit(size)
+            joined.order_by(col(Evaluation.updated_at).desc(), col(Evaluation.id)).offset((page - 1) * size).limit(size)
         )
     ).all()
     return list(rows), total
@@ -127,6 +129,13 @@ async def _names(session: AsyncSession, model: type[Flow | Dataset], ids: set[UU
     if not ids:
         return {}
     rows = (await session.exec(select(model.id, model.name).where(col(model.id).in_(list(ids))))).all()
+    return dict(rows)
+
+
+async def _flow_projects(session: AsyncSession, ids: set[UUID]) -> dict[UUID, UUID | None]:
+    if not ids:
+        return {}
+    rows = (await session.exec(select(Flow.id, Flow.folder_id).where(col(Flow.id).in_(list(ids))))).all()
     return dict(rows)
 
 
@@ -152,14 +161,18 @@ async def _last_runs(session: AsyncSession, evaluation_ids: list[UUID]) -> dict[
 
 
 async def to_evaluation_reads(session: AsyncSession, evaluations: list[Evaluation]) -> list[EvaluationRead]:
-    flow_names = await _names(session, Flow, {e.flow_id for e in evaluations if e.flow_id is not None})
+    flow_ids = {e.flow_id for e in evaluations if e.flow_id is not None}
+    flow_names = await _names(session, Flow, flow_ids)
+    flow_projects = await _flow_projects(session, flow_ids)
     dataset_names = await _names(session, Dataset, {e.dataset_id for e in evaluations if e.dataset_id is not None})
     last_runs = await _last_runs(session, [e.id for e in evaluations])
     return [
         EvaluationRead(
             id=evaluation.id,
             name=evaluation.name,
-            project_id=evaluation.project_id,
+            project_id=flow_projects.get(evaluation.flow_id, evaluation.project_id)
+            if evaluation.flow_id
+            else evaluation.project_id,
             flow_id=evaluation.flow_id,
             flow_name=flow_names.get(evaluation.flow_id) if evaluation.flow_id else None,
             dataset_id=evaluation.dataset_id,

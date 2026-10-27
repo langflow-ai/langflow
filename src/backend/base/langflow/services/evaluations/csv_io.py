@@ -46,12 +46,26 @@ def decode_upload(content: bytes) -> str:
         raise CsvFormatError(msg) from exc
 
 
-def _dialect(text: str) -> type[csv.Dialect] | csv.Dialect:
-    sample = text[:SNIFF_SAMPLE_CHARS]
-    try:
-        return csv.Sniffer().sniff(sample, delimiters=CANDIDATE_DELIMITERS)
-    except csv.Error:
-        return csv.excel
+class _SingleColumn(csv.excel):
+    # A header without any candidate delimiter means one column: commas in the text are not separators.
+    delimiter = "\x1f"
+
+
+def _header_line(text: str) -> str:
+    for line in text[:SNIFF_SAMPLE_CHARS].splitlines():
+        if line.strip():
+            return line
+    return ""
+
+
+def _dialect(text: str) -> type[csv.Dialect]:
+    """Pick the delimiter from the header row only: data rows often contain commas or semicolons."""
+    header = _header_line(text)
+    counts = {delimiter: header.count(delimiter) for delimiter in CANDIDATE_DELIMITERS}
+    delimiter, count = max(counts.items(), key=lambda pair: pair[1])
+    if count == 0:
+        return _SingleColumn
+    return type("_Detected", (csv.excel,), {"delimiter": delimiter})
 
 
 def _reader(text: str) -> Iterator[list[str]]:
@@ -112,8 +126,9 @@ def plan_import(text: str, *, input_column: str, expected_column: str | None, ma
         if not any(cell.strip() for cell in row):
             continue
         if len(plan.rows) >= max_rows:
-            plan.skipped.append((line_number, f"Row limit of {max_rows} reached"))
-            continue
+            extra = 1 + sum(1 for rest in rows if any(cell.strip() for cell in rest))
+            plan.skipped.append((line_number, f"Row limit of {max_rows} reached: {extra} more rows were not imported"))
+            break
         input_text = (_cell(row, input_index) or "").strip()
         if not input_text:
             plan.skipped.append((line_number, "Input is empty"))

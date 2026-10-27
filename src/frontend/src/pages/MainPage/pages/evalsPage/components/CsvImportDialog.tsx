@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
@@ -45,16 +45,19 @@ export default function CsvImportDialog({
   const [inputColumn, setInputColumn] = useState("");
   const [expectedColumn, setExpectedColumn] = useState(NO_COLUMN);
   const [result, setResult] = useState<CsvImportResult | null>(null);
+  // A preview that answers after its file was removed or replaced, or the dialog closed, is dropped.
+  const currentFile = useRef<File | null>(null);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const onError = (error: unknown) =>
     setErrorData({
       title: t("evals.csv.error"),
       list: extractApiErrorMessages(error),
     });
-  const previewCsv = usePreviewCsvImport({ datasetId }, { onError });
+  const previewCsv = usePreviewCsvImport({ datasetId });
   const importCsv = useImportCsv({ datasetId }, { onError });
 
   const reset = () => {
+    currentFile.current = null;
     setFile(null);
     setPreview(null);
     setInputColumn("");
@@ -68,18 +71,22 @@ export default function CsvImportDialog({
   };
 
   const handleFile = (selected: File) => {
+    currentFile.current = selected;
     setFile(selected);
     setPreview(null);
     previewCsv.mutate(
       { file: selected },
       {
         onSuccess: (data) => {
+          if (currentFile.current !== selected) return;
           const headers = data.headers.filter(Boolean);
           setPreview({ ...data, headers });
           setInputColumn(headers[0] ?? "");
           setExpectedColumn(headers[1] ?? NO_COLUMN);
         },
         onError: (error) => {
+          if (currentFile.current !== selected) return;
+          currentFile.current = null;
           setFile(null);
           onError(error);
         },

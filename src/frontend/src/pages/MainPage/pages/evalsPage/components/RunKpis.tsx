@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   type EvaluationRun,
@@ -44,9 +44,31 @@ export default function RunKpis({ run }: { run: EvaluationRun }) {
     : 0;
   const scores = Object.entries(summary?.scores ?? {});
   const estimate = run.estimate;
+  const [announcement, setAnnouncement] = useState("");
+  const previousStatus = useRef(run.status);
+  // WCAG 4.1.3: a run ending is a status change screen readers must hear without moving focus.
+  useEffect(() => {
+    const wasActive = !TERMINAL_RUN_STATUSES.has(previousStatus.current);
+    previousStatus.current = run.status;
+    if (wasActive && TERMINAL_RUN_STATUSES.has(run.status)) {
+      setAnnouncement(
+        t("evals.results.runEnded", {
+          status: t(`evals.status.${run.status}`),
+        }),
+      );
+    }
+  }, [run.status, t]);
 
   return (
     <div className="flex flex-col gap-3">
+      <p
+        role="status"
+        aria-live="polite"
+        className="sr-only"
+        data-testid="run-status-announcement"
+      >
+        {announcement}
+      </p>
       {active && (
         <div className="flex flex-col gap-2 rounded-lg border px-4 py-3">
           <div className="flex items-center justify-between text-sm">

@@ -8,8 +8,9 @@ from typing import Any
 
 from langflow.services.evaluations.scorers.types import NOT_APPLICABLE_NO_EXPECTED, ScoreResult
 
-# SequenceMatcher is quadratic; beyond this many characters the ratio is computed on a prefix.
-SIMILARITY_MAX_CHARS = 5000
+# SequenceMatcher is quadratic (about 40 ms for 2,000 characters of prose, 400 ms for 5,000);
+# beyond this many characters the ratio is computed on a prefix.
+SIMILARITY_MAX_CHARS = 2000
 
 
 def normalize_text(text: str, *, case_sensitive: bool = False) -> str:
@@ -49,7 +50,7 @@ def score_similarity(actual: str, expected: str | None, config: dict[str, Any]) 
     case_sensitive = _case_sensitive(config)
     left = normalize_text(actual, case_sensitive=case_sensitive)[:SIMILARITY_MAX_CHARS]
     right = normalize_text(expected, case_sensitive=case_sensitive)[:SIMILARITY_MAX_CHARS]
-    if not left and not right:
+    if left == right:
         return ScoreResult(value=1.0)
     ratio = SequenceMatcher(None, left, right, autojunk=False).ratio()
     return ScoreResult(value=round(ratio, 4))

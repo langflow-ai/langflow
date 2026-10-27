@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
 import pytest
@@ -7,17 +8,16 @@ from langflow.schema.message import Message
 from langflow.services.database.models.evaluation import EvaluationRun
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.jobs.model import JobStatus
-from langflow.services.database.models.message.model import MessageTable
 from langflow.services.deps import get_job_service, get_settings_service, session_scope
 from langflow.services.evaluations import runner
 from langflow.services.evaluations.row_runner import RowExecution
-from langflow.services.evaluations.scorers.types import ScoreResult
-from sqlmodel import col, func, select
+from sqlmodel import select
 
 from .conftest import (
     create_dataset,
     create_evaluation,
     create_flow,
+    eval_message_count,
     load_flow_data,
     results,
     start_run,
@@ -25,12 +25,6 @@ from .conftest import (
 )
 
 PLAYGROUND_NOTE = "PRIVATE-PLAYGROUND-NOTE"
-
-
-async def _eval_message_count() -> int:
-    async with session_scope() as session:
-        stmt = select(func.count()).select_from(MessageTable).where(col(MessageTable.session_id).startswith("eval:"))
-        return int((await session.exec(stmt)).one())
 
 
 class TestRunLifecycle:
@@ -60,7 +54,7 @@ class TestRunLifecycle:
         assert all(item["trace_id"] for item in items)
         assert run["passed_items"] == 3
         assert run["summary"]["pass_rate"] == pytest.approx(0.75)
-        assert await _eval_message_count() == 0
+        assert await eval_message_count() == 0
 
         failed_only = await results(client, logged_in_headers, run["id"], passed="false")
         assert [item["position"] for item in failed_only] == [3]
@@ -133,6 +127,38 @@ class TestFlowVersions:
         )
         assert response.status_code == 404
 
+    async def test_should_create_and_run_a_chosen_version_atomically(self, client, logged_in_headers):
+        flow = await create_flow(client, logged_in_headers)
+        other = await create_flow(client, logged_in_headers, name="Other")
+        own = (await client.post(f"api/v1/flows/{flow['id']}/versions/", json={}, headers=logged_in_headers)).json()
+        foreign = (
+            await client.post(f"api/v1/flows/{other['id']}/versions/", json={}, headers=logged_in_headers)
+        ).json()
+        dataset = await create_dataset(client, logged_in_headers, "create-run", [("x", "x")])
+        body = {
+            "flow_id": flow["id"],
+            "dataset_id": dataset["id"],
+            "scorers": [{"type": "exact_match", "name": "exact"}],
+        }
+        refused = await client.post(
+            "api/v1/evaluations",
+            params={"run": True},
+            json={**body, "flow_version_id": foreign["id"]},
+            headers=logged_in_headers,
+        )
+        assert refused.status_code == 404
+        listed = await client.get("api/v1/evaluations", params={"flow_id": flow["id"]}, headers=logged_in_headers)
+        assert listed.json()["total"] == 0
+        started = await client.post(
+            "api/v1/evaluations",
+            params={"run": True},
+            json={**body, "flow_version_id": own["id"]},
+            headers=logged_in_headers,
+        )
+        assert started.status_code == 201, started.text
+        run = await wait_for_run(client, logged_in_headers, started.json()["id"])
+        assert (run["flow_version_id"], run["flow_version_source"]) == (own["id"], "history")
+
     async def test_should_check_the_chosen_version_not_the_draft(self, client, logged_in_headers):
         flow = await create_flow(client, logged_in_headers)
         dataset = await create_dataset(client, logged_in_headers, "old-version", [("x", "x")])
@@ -192,7 +218,7 @@ class TestMemoryIsolation:
         assert len(outputs) == 2
         assert all(PLAYGROUND_NOTE not in output for output in outputs), outputs
         assert all("row one" not in output for output in outputs[1:]), "row two must not see row one"
-        assert await _eval_message_count() == 0
+        assert await eval_message_count() == 0
 
     async def test_should_hide_stored_history_from_explicit_reads_during_a_row(self, client, active_user):  # noqa: ARG002
         from langflow.memory import aget_messages
@@ -359,6 +385,7 @@ class TestStoppingRuns:
                 dataset_revision=1,
                 status="running",
                 total_items=1,
+                created_at=datetime.now(timezone.utc) - timedelta(minutes=5),
             )
             session.add(orphan)
             await session.flush()
@@ -418,121 +445,3 @@ class TestDeletions:
         assert (
             await client.get(f"api/v1/evaluations/{evaluation['id']}", headers=logged_in_headers)
         ).status_code == 404
-
-
-class TestStress:
-    async def test_should_run_300_rows_with_bounded_concurrency(self, client, logged_in_headers, monkeypatch):
-        in_flight = 0
-        peak = 0
-        real_execute = runner.execute_row
-
-        async def counting(**kwargs):
-            nonlocal in_flight, peak
-            in_flight += 1
-            peak = max(peak, in_flight)
-            try:
-                return await real_execute(**kwargs)
-            finally:
-                in_flight -= 1
-
-        monkeypatch.setattr(runner, "execute_row", counting)
-        monkeypatch.setattr(get_settings_service().settings, "evals_row_concurrency", 3)
-        flow = await create_flow(client, logged_in_headers)
-        rows = [(f"question {i}", f"question {i}") for i in range(300)]
-        dataset = await create_dataset(client, logged_in_headers, "stress", rows)
-        evaluation = await create_evaluation(client, logged_in_headers, flow["id"], dataset["id"])
-        run = await wait_for_run(
-            client, logged_in_headers, (await start_run(client, logged_in_headers, evaluation["id"]))["id"], timeout=300
-        )
-        assert run["status"] == "completed", run
-        assert (run["completed_items"], run["failed_items"], run["passed_items"]) == (300, 0, 300)
-        assert 1 < peak <= 3
-        page = (
-            await client.get(
-                f"api/v1/evaluation-runs/{run['id']}/results",
-                params={"page": 2, "size": 200},
-                headers=logged_in_headers,
-            )
-        ).json()
-        assert page["total"] == 300
-        assert [item["position"] for item in page["items"]] == list(range(200, 300))
-        assert await _eval_message_count() == 0
-
-
-def _failing_execute_row(message: str):
-    async def fake(**_kwargs):
-        return RowExecution(actual=None, error=message, duration_ms=1, tokens=None, cost=None, trace_id="t")
-
-    return fake
-
-
-class TestEarlyStop:
-    async def test_should_stop_a_run_whose_rows_keep_failing_the_same_way(self, client, logged_in_headers, monkeypatch):
-        monkeypatch.setattr(runner, "execute_row", _failing_execute_row("The model `o4-mini` has been deprecated"))
-        monkeypatch.setattr(get_settings_service().settings, "evals_row_concurrency", 1)
-        flow = await create_flow(client, logged_in_headers)
-        dataset = await create_dataset(client, logged_in_headers, "doomed", [(f"q{i}", None) for i in range(30)])
-        evaluation = await create_evaluation(client, logged_in_headers, flow["id"], dataset["id"])
-        run = await wait_for_run(
-            client, logged_in_headers, (await start_run(client, logged_in_headers, evaluation["id"]))["id"]
-        )
-        assert run["status"] == "failed"
-        assert run["completed_items"] == 3
-        assert "same error" in run["error"]
-        assert "o4-mini" in run["error"]
-
-    async def test_should_stop_when_the_judge_keeps_failing(self, client, logged_in_headers, monkeypatch):
-        from langflow.services.evaluations import row_scoring
-
-        async def broken_scorer(spec, **_kwargs):
-            if spec["type"] == "llm_judge":
-                msg = "Error code: 404 - model retired"
-                raise RuntimeError(msg)
-            return ScoreResult(value=1.0)
-
-        monkeypatch.setattr(row_scoring, "run_scorer", broken_scorer)
-        monkeypatch.setattr(get_settings_service().settings, "evals_row_concurrency", 1)
-        flow = await create_flow(client, logged_in_headers)
-        dataset = await create_dataset(
-            client, logged_in_headers, "judge-doomed", [(f"q{i}", f"q{i}") for i in range(20)]
-        )
-        judge = [{"name": "j", "provider": "OpenAI", "metadata": {}}]
-        evaluation = await create_evaluation(
-            client,
-            logged_in_headers,
-            flow["id"],
-            dataset["id"],
-            scorers=[{"type": "llm_judge", "name": "judge", "config": {"model": judge}}],
-        )
-        run = await wait_for_run(
-            client, logged_in_headers, (await start_run(client, logged_in_headers, evaluation["id"]))["id"]
-        )
-        assert run["status"] == "failed"
-        assert run["completed_items"] == 3
-        assert "model retired" in run["error"]
-
-    async def test_should_keep_going_when_failures_differ(self, client, logged_in_headers, monkeypatch):
-        calls = {"n": 0}
-
-        async def varied(**kwargs):
-            calls["n"] += 1
-            return RowExecution(
-                actual=None,
-                error=f"input {kwargs['input_text']} rejected",
-                duration_ms=1,
-                tokens=None,
-                cost=None,
-                trace_id="t",
-            )
-
-        monkeypatch.setattr(runner, "execute_row", varied)
-        flow = await create_flow(client, logged_in_headers)
-        dataset = await create_dataset(
-            client, logged_in_headers, "varied", [("alpha", None), ("beta", None), ("gamma", None), ("delta", None)]
-        )
-        evaluation = await create_evaluation(client, logged_in_headers, flow["id"], dataset["id"])
-        run = await wait_for_run(
-            client, logged_in_headers, (await start_run(client, logged_in_headers, evaluation["id"]))["id"]
-        )
-        assert run["status"] == "completed"
-        assert run["failed_items"] == 4

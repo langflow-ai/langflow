@@ -3,12 +3,46 @@
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
+
+from sqlmodel import select
+
+from langflow.services.database.models.evaluation import EvaluationResult
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
+    from uuid import UUID
 
-    from langflow.services.database.models.evaluation import EvaluationResult
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+
+class SummaryRow(Protocol):
+    scores: dict
+    error: str | None
+    passed: bool | None
+    duration_ms: int
+    tokens_flow: int | None
+    tokens_judge: int | None
+    cost_flow: float | None
+    cost_judge: float | None
+
+
+_SUMMARY_COLUMNS = (
+    EvaluationResult.scores,
+    EvaluationResult.error,
+    EvaluationResult.passed,
+    EvaluationResult.duration_ms,
+    EvaluationResult.tokens_flow,
+    EvaluationResult.tokens_judge,
+    EvaluationResult.cost_flow,
+    EvaluationResult.cost_judge,
+)
+
+
+async def summary_rows(session: AsyncSession, run_id: UUID) -> list[SummaryRow]:
+    """Only the columns the summary reads: outputs can be 20k characters per row."""
+    stmt = select(*_SUMMARY_COLUMNS).where(EvaluationResult.run_id == run_id)
+    return list((await session.exec(stmt)).all())
 
 
 def percentile(values: Sequence[float], fraction: float) -> float | None:
@@ -44,7 +78,7 @@ def _sum_or_none(values: Iterable[float | None], *, required: bool) -> float | N
     return round(total, 6) if seen else None
 
 
-def build_summary(results: Sequence[EvaluationResult], scorer_names: Sequence[str]) -> dict[str, Any]:
+def build_summary(results: Sequence[SummaryRow], scorer_names: Sequence[str]) -> dict[str, Any]:
     scores: dict[str, dict[str, float | None]] = {}
     for name in scorer_names:
         values = [

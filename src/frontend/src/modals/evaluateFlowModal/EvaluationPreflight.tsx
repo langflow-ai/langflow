@@ -40,9 +40,24 @@ function IssueItem({
 /** Blocking problems first (announced), then warnings; renders nothing when the flow is clean. */
 export default function EvaluationPreflight({
   report,
+  failed = false,
 }: {
   report?: FlowCheckReport;
+  /** The check itself could not run, so Submit stays disabled: say why. */
+  failed?: boolean;
 }) {
+  const { t } = useTranslation();
+  if (failed) {
+    return (
+      <p
+        role="alert"
+        className="rounded-lg border border-destructive/40 px-4 py-3 text-sm"
+        data-testid="evaluate-check-error"
+      >
+        {t("evals.evaluate.checkError")}
+      </p>
+    );
+  }
   if (
     !report ||
     (report.blocking.length === 0 && report.warnings.length === 0)

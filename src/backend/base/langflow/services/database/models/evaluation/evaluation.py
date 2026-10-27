@@ -3,6 +3,7 @@ from uuid import UUID, uuid4
 
 import sqlalchemy as sa
 from sqlalchemy import JSON, CheckConstraint, Column, DateTime, ForeignKey, Index, Text, UniqueConstraint
+from sqlalchemy.sql.naming import conv
 from sqlmodel import Field, SQLModel
 
 RUN_STATUSES = ("queued", "running", "completed", "failed", "cancelled")
@@ -45,10 +46,18 @@ class EvaluationRun(SQLModel, table=True):  # type: ignore[call-arg]
     __tablename__ = "evaluation_run"
     __table_args__ = (
         Index("ix_evaluation_run_evaluation_created", "evaluation_id", "created_at"),
-        CheckConstraint(
-            "status IN ('queued', 'running', 'completed', 'failed', 'cancelled')", name="ck_evaluation_run_status"
+        # One active run per evaluation, enforced by the database so concurrent starts cannot both win.
+        Index(
+            "uq_evaluation_run_one_active",
+            "evaluation_id",
+            unique=True,
+            sqlite_where=sa.text("status IN ('queued', 'running')"),
+            postgresql_where=sa.text("status IN ('queued', 'running')"),
         ),
-        CheckConstraint("flow_version_source IN ('latest', 'history')", name="ck_evaluation_run_version_source"),
+        CheckConstraint(
+            "status IN ('queued', 'running', 'completed', 'failed', 'cancelled')", name=conv("ck_evaluation_run_status")
+        ),
+        CheckConstraint("flow_version_source IN ('latest', 'history')", name=conv("ck_evaluation_run_version_source")),
     )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
@@ -65,7 +74,7 @@ class EvaluationRun(SQLModel, table=True):  # type: ignore[call-arg]
     )
     flow_version_number: int | None = Field(default=None, sa_column=Column(sa.Integer(), nullable=True))
     flow_version_source: str = Field(default="latest", sa_column=Column(sa.String(16), nullable=False))
-    dataset_id: UUID | None = Field(default=None, sa_column=Column(sa.Uuid(), nullable=True))
+    dataset_id: UUID | None = Field(default=None, sa_column=Column(sa.Uuid(), nullable=True, index=True))
     dataset_name: str = Field(sa_column=Column(sa.String(255), nullable=False))
     dataset_revision: int = Field(sa_column=Column(sa.Integer(), nullable=False))
     # Scorers and threshold as they were when the run started, so editing the evaluation never rewrites history.

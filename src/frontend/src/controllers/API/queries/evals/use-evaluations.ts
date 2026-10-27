@@ -6,15 +6,15 @@ import type {
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
-import {
-  type Evaluation,
-  type EvaluationResult,
-  type EvaluationRun,
-  type FlowCheckReport,
-  type Page,
-  type RunEstimate,
-  type ScorerSpec,
-  TERMINAL_RUN_STATUSES,
+import { runRefetchInterval, runsListRefetchInterval } from "./polling";
+import type {
+  Evaluation,
+  EvaluationResult,
+  EvaluationRun,
+  FlowCheckReport,
+  Page,
+  RunEstimate,
+  ScorerSpec,
 } from "./types";
 
 const EVALUATIONS_KEY = "useGetEvaluations";
@@ -22,7 +22,6 @@ const EVALUATION_KEY = "useGetEvaluation";
 const RUNS_KEY = "useGetEvaluationRuns";
 const RUN_KEY = "useGetEvaluationRun";
 const RESULTS_KEY = "useGetEvaluationResults";
-export const RUN_POLL_MS = 5000;
 
 export interface EvaluationCreatePayload {
   flow_id: string;
@@ -31,6 +30,8 @@ export interface EvaluationCreatePayload {
   output_vertex_id?: string | null;
   scorers: ScorerSpec[];
   pass_threshold: number;
+  /** With run=true: the history version to run; null runs the latest draft. */
+  flow_version_id?: string | null;
 }
 
 export const useGetEvaluations: useQueryFunctionType<
@@ -80,7 +81,9 @@ export const useGetEvaluationRuns: useQueryFunctionType<
       ).data,
     {
       enabled: Boolean(evaluationId),
-      refetchInterval: poll ? RUN_POLL_MS : false,
+      refetchInterval: poll
+        ? (query) => runsListRefetchInterval(query.state)
+        : false,
       ...options,
     },
   );
@@ -98,14 +101,9 @@ export const useGetEvaluationRun: useQueryFunctionType<
         .data,
     {
       enabled: Boolean(runId),
-      refetchInterval: (state: { state: { data?: EvaluationRun } }) => {
-        const status = state.state.data?.status;
-        return status && TERMINAL_RUN_STATUSES.has(status)
-          ? false
-          : RUN_POLL_MS;
-      },
+      refetchInterval: (query) => runRefetchInterval(query.state),
       ...options,
-    } as Parameters<typeof query>[2],
+    },
   );
 };
 
@@ -114,12 +112,11 @@ export const useGetEvaluationResults: useQueryFunctionType<
     runId: string;
     page?: number;
     size?: number;
-    poll?: boolean;
-    /** Changes whenever the run makes progress, so the last rows load even after polling stops. */
+    /** Changes whenever the run makes progress; the run is what polls, the results follow it. */
     progressKey?: string;
   },
   Page<EvaluationResult>
-> = ({ runId, page = 1, size = 50, poll = false, progressKey }, options) => {
+> = ({ runId, page = 1, size = 50, progressKey }, options) => {
   const { query } = UseRequestProcessor();
   return query(
     [RESULTS_KEY, runId, { page, size, progressKey }],
@@ -132,10 +129,26 @@ export const useGetEvaluationResults: useQueryFunctionType<
       ).data,
     {
       enabled: Boolean(runId),
-      refetchInterval: poll ? RUN_POLL_MS : false,
       placeholderData: keepPreviousData,
       ...options,
     },
+  );
+};
+
+export const useGetEvaluationResult: useQueryFunctionType<
+  { runId: string; resultId: string },
+  EvaluationResult
+> = ({ runId, resultId }, options) => {
+  const { query } = UseRequestProcessor();
+  return query(
+    ["useGetEvaluationResult", runId, resultId],
+    async () =>
+      (
+        await api.get<EvaluationResult>(
+          `${getURL("EVALUATION_RUNS")}/${runId}/results/${resultId}`,
+        )
+      ).data,
+    { enabled: Boolean(runId && resultId), ...options },
   );
 };
 
@@ -148,16 +161,12 @@ export const useCheckFlowForEvaluation: useQueryFunctionType<
     ["useCheckFlowForEvaluation", flowId, outputVertexId ?? null],
     async () =>
       (
-        await api.post<FlowCheckReport>(
-          `${getURL("EVALUATIONS")}/check`,
-          null,
-          {
-            params: {
-              flow_id: flowId,
-              output_vertex_id: outputVertexId || undefined,
-            },
+        await api.get<FlowCheckReport>(`${getURL("EVALUATIONS")}/check`, {
+          params: {
+            flow_id: flowId,
+            output_vertex_id: outputVertexId || undefined,
           },
-        )
+        })
       ).data,
     // The flow may have changed since the last open: always check the saved draft again.
     {
@@ -175,7 +184,8 @@ export const useEstimateEvaluation: useQueryFunctionType<
 > = ({ flowId, datasetId, scorers }, options) => {
   const { query } = UseRequestProcessor();
   return query(
-    ["useEstimateEvaluation", flowId, datasetId, scorers.map((s) => s.type)],
+    // The whole spec: the judge model and rubric change the price, not only the scorer types.
+    ["useEstimateEvaluation", flowId, datasetId, scorers],
     async () =>
       (
         await api.post<RunEstimate>(`${getURL("EVALUATIONS")}/estimate`, {
@@ -223,7 +233,7 @@ export const useCreateEvaluation: useMutationFunctionType<
           { params: { run } },
         )
       ).data,
-    { ...options, onSettled: () => invalidate() },
+    { retry: false, ...options, onSettled: () => invalidate() },
   );
 };
 

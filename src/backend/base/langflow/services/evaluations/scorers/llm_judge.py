@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 REASON_MAX_CHARS = 300
 JUDGED_TEXT_MAX_CHARS = 8000
 DEFAULT_RUBRIC = "Score how correct, relevant and complete the answer is for the question."
+UNREADABLE_VERDICT = "Judge returned an unreadable verdict"
 
 SYSTEM_PROMPT = (
     "You grade answers produced by an AI application. "
@@ -32,7 +33,9 @@ class JudgeVerdict(BaseModel):
 
 
 def _clip(text: str) -> str:
-    return text if len(text) <= JUDGED_TEXT_MAX_CHARS else text[:JUDGED_TEXT_MAX_CHARS] + " [truncated]"
+    clipped = text if len(text) <= JUDGED_TEXT_MAX_CHARS else text[:JUDGED_TEXT_MAX_CHARS] + " [truncated]"
+    # Graded text must not be able to close its own tag and speak outside it.
+    return clipped.replace("<", "&lt;").replace(">", "&gt;")
 
 
 def build_judge_messages(question: str, actual: str, expected: str | None, rubric: str | None) -> list[Any]:
@@ -68,6 +71,6 @@ async def score_llm_judge(
     cost = cost_usd(model_identity(selection), input_tokens, output_tokens)
     parsed = response.get("parsed") if isinstance(response, dict) else None
     if not isinstance(parsed, JudgeVerdict):
-        return ScoreResult(value=None, comment="Judge returned an unreadable verdict", tokens=tokens, cost=cost)
+        return ScoreResult(value=None, comment=UNREADABLE_VERDICT, tokens=tokens, cost=cost)
     reason = parsed.reason.strip()[:REASON_MAX_CHARS] or None
     return ScoreResult(value=round(parsed.score, 4), comment=reason, tokens=tokens, cost=cost)

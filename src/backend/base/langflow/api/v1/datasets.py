@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Annotated
 from uuid import UUID
 
@@ -7,11 +8,12 @@ from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile, sta
 from fastapi.responses import StreamingResponse
 
 from langflow.api.utils import CurrentActiveUser, DbSession
-from langflow.api.v1.evals_errors import evals_http_errors
+from langflow.api.v1.evals_errors import evals_http_errors, evals_write
 from langflow.services.authorization import DatasetAction
+from langflow.services.database.models.evaluation import DatasetItem
 from langflow.services.deps import get_settings_service
 from langflow.services.evaluations import csv_io, dataset_service
-from langflow.services.evaluations.access import load_eval_dataset
+from langflow.services.evaluations.access import ensure_dataset_create, load_eval_dataset
 from langflow.services.evaluations.schemas import (
     CsvImportResult,
     CsvPreview,
@@ -37,10 +39,12 @@ SearchParam = Annotated[str | None, Query(max_length=200)]
 
 
 async def _read_upload(file: UploadFile) -> str:
-    max_bytes = get_settings_service().settings.max_file_size_upload * 1024 * 1024
+    settings = get_settings_service().settings
+    max_bytes = min(settings.evals_csv_max_bytes, settings.max_file_size_upload * 1024 * 1024)
     content = await file.read(max_bytes + 1)
     if len(content) > max_bytes:
-        raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail="The file is too large.")
+        detail = f"The file is larger than {max_bytes // (1024 * 1024)} MB."
+        raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail=detail)
     try:
         return csv_io.decode_upload(content)
     except csv_io.CsvFormatError as exc:
@@ -62,6 +66,7 @@ async def list_datasets(
 @router.post("/", response_model=DatasetRead, status_code=status.HTTP_201_CREATED)
 async def create_dataset(payload: DatasetCreate, current_user: CurrentActiveUser, session: DbSession) -> DatasetRead:
     async with evals_http_errors():
+        await ensure_dataset_create(current_user)
         dataset = await dataset_service.create_dataset(session, current_user.id, payload)
     return dataset_service.to_dataset_read(dataset, 0)
 
@@ -85,16 +90,21 @@ async def update_dataset(
 
 @router.delete("/{dataset_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_dataset(dataset_id: UUID, current_user: CurrentActiveUser, session: DbSession) -> None:
-    async with evals_http_errors():
+    async def operation() -> None:
         dataset = await load_eval_dataset(session, current_user, dataset_id, DatasetAction.DELETE)
+        await dataset_service.ensure_idle(session, dataset.id)
         await dataset_service.delete_dataset(session, dataset)
+
+    async with evals_http_errors():
+        await evals_write(session, "delete_dataset", operation)
 
 
 @router.post("/{dataset_id}/duplicate", response_model=DatasetRead, status_code=status.HTTP_201_CREATED)
 async def duplicate_dataset(dataset_id: UUID, current_user: CurrentActiveUser, session: DbSession) -> DatasetRead:
     async with evals_http_errors():
         source = await load_eval_dataset(session, current_user, dataset_id, DatasetAction.READ)
-        copy = await dataset_service.duplicate_dataset(session, source)
+        await ensure_dataset_create(current_user)
+        copy = await dataset_service.duplicate_dataset(session, source, current_user.id)
     return dataset_service.to_dataset_read(copy, await dataset_service.count_items(session, copy.id))
 
 
@@ -117,9 +127,13 @@ async def list_dataset_items(
 async def add_dataset_items(
     dataset_id: UUID, payload: DatasetItemsCreate, current_user: CurrentActiveUser, session: DbSession
 ) -> list[DatasetItemRead]:
-    async with evals_http_errors():
+    async def operation() -> list[DatasetItem]:
         dataset = await load_eval_dataset(session, current_user, dataset_id, DatasetAction.WRITE)
-        created = await dataset_service.add_items(session, dataset, payload.items, source="manual")
+        await dataset_service.ensure_idle(session, dataset.id)
+        return await dataset_service.add_items(session, dataset, payload.items, source="manual")
+
+    async with evals_http_errors():
+        created = await evals_write(session, "add_dataset_items", operation)
     return [dataset_service.to_item_read(item) for item in created]
 
 
@@ -127,9 +141,13 @@ async def add_dataset_items(
 async def update_dataset_item(
     dataset_id: UUID, item_id: UUID, payload: DatasetItemUpdate, current_user: CurrentActiveUser, session: DbSession
 ) -> DatasetItemRead:
-    async with evals_http_errors():
+    async def operation() -> DatasetItem:
         dataset = await load_eval_dataset(session, current_user, dataset_id, DatasetAction.WRITE)
-        item = await dataset_service.update_item(session, dataset, item_id, payload)
+        await dataset_service.ensure_idle(session, dataset.id)
+        return await dataset_service.update_item(session, dataset, item_id, payload)
+
+    async with evals_http_errors():
+        item = await evals_write(session, "update_dataset_item", operation)
     return dataset_service.to_item_read(item)
 
 
@@ -137,9 +155,13 @@ async def update_dataset_item(
 async def delete_dataset_items(
     dataset_id: UUID, payload: DatasetItemsDelete, current_user: CurrentActiveUser, session: DbSession
 ) -> dict[str, int]:
-    async with evals_http_errors():
+    async def operation() -> int:
         dataset = await load_eval_dataset(session, current_user, dataset_id, DatasetAction.WRITE)
-        deleted = await dataset_service.delete_items(session, dataset, payload.ids)
+        await dataset_service.ensure_idle(session, dataset.id)
+        return await dataset_service.delete_items(session, dataset, payload.ids)
+
+    async with evals_http_errors():
+        deleted = await evals_write(session, "delete_dataset_items", operation)
     return {"deleted": deleted}
 
 
@@ -154,7 +176,7 @@ async def preview_csv_import(
         await load_eval_dataset(session, current_user, dataset_id, DatasetAction.WRITE)
     text = await _read_upload(file)
     try:
-        headers, rows, total = csv_io.preview(text)
+        headers, rows, total = await asyncio.to_thread(csv_io.preview, text)
     except csv_io.CsvFormatError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     return CsvPreview(headers=headers, rows=rows, total_rows=total)
@@ -171,9 +193,11 @@ async def import_csv(
 ) -> CsvImportResult:
     async with evals_http_errors():
         dataset = await load_eval_dataset(session, current_user, dataset_id, DatasetAction.WRITE)
+        await dataset_service.ensure_idle(session, dataset.id)
     text = await _read_upload(file)
     try:
-        plan = csv_io.plan_import(
+        plan = await asyncio.to_thread(
+            csv_io.plan_import,
             text,
             input_column=input_column,
             expected_column=expected_column or None,
@@ -182,7 +206,14 @@ async def import_csv(
     except csv_io.CsvFormatError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     if plan.rows:
-        await dataset_service.add_items(session, dataset, plan.rows, source="csv")
+
+        async def operation() -> None:
+            target = await load_eval_dataset(session, current_user, dataset.id, DatasetAction.WRITE)
+            await dataset_service.ensure_idle(session, target.id)
+            await dataset_service.add_items(session, target, plan.rows, source="csv")
+
+        async with evals_http_errors():
+            await evals_write(session, "import_dataset_items", operation)
     return CsvImportResult(
         imported=len(plan.rows), skipped=[SkippedRow(row=row, reason=reason) for row, reason in plan.skipped]
     )

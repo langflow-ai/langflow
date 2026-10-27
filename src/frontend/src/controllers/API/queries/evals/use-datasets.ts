@@ -93,7 +93,7 @@ export const useCreateDataset: useMutationFunctionType<
     ["useCreateDataset"],
     async (payload) =>
       (await api.post<Dataset>(`${getURL("DATASETS")}/`, payload)).data,
-    { ...options, onSettled: () => invalidate() },
+    { retry: false, ...options, onSettled: () => invalidate() },
   );
 };
 
@@ -127,7 +127,7 @@ export const useAddDatasetItems: useMutationFunctionType<
           payload,
         )
       ).data,
-    { ...options, onSettled: () => invalidate(datasetId) },
+    { retry: false, ...options, onSettled: () => invalidate(datasetId) },
   );
 };
 
@@ -221,7 +221,7 @@ export const useImportCsv: useMutationFunctionType<
         )
       ).data;
     },
-    { ...options, onSettled: () => invalidate(datasetId) },
+    { retry: false, ...options, onSettled: () => invalidate(datasetId) },
   );
 };
 
@@ -237,6 +237,6 @@ export const useDuplicateDataset: useMutationFunctionType<
     async ({ datasetId }) =>
       (await api.post<Dataset>(`${getURL("DATASETS")}/${datasetId}/duplicate`))
         .data,
-    { ...options, onSettled: () => invalidate() },
+    { retry: false, ...options, onSettled: () => invalidate() },
   );
 };

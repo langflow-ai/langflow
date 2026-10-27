@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
@@ -11,6 +12,9 @@ from langflow.services.database.models.evaluation.dataset import DATASET_NAME_MA
 ScorerType = Literal["exact_match", "contains", "similarity", "llm_judge"]
 TEXT_MAX_CHARS = 100_000
 RUBRIC_MAX_CHARS = 4000
+# Room for a judge model selection plus the longest rubric.
+SCORER_CONFIG_MAX_CHARS = 16000
+TEXT_SCORER_CONFIG_KEYS = frozenset({"case_sensitive"})
 MAX_SCORERS = 10
 MAX_ITEMS_PER_REQUEST = 500
 
@@ -122,15 +126,23 @@ class ScorerSpec(BaseModel):
 
     @model_validator(mode="after")
     def validate_config(self) -> ScorerSpec:
-        if self.type == "llm_judge":
-            model = self.config.get("model")
-            if not isinstance(model, list) or not model or not isinstance(model[0], dict):
-                msg = "llm_judge requires config.model: a model selection"
+        if len(json.dumps(self.config, default=str)) > SCORER_CONFIG_MAX_CHARS:
+            msg = f"Scorer config must be at most {SCORER_CONFIG_MAX_CHARS} characters"
+            raise ValueError(msg)
+        if self.type != "llm_judge":
+            unknown = set(self.config) - TEXT_SCORER_CONFIG_KEYS
+            if unknown:
+                msg = f"Unknown config for {self.type}: {', '.join(sorted(unknown))}"
                 raise ValueError(msg)
-            rubric = self.config.get("rubric")
-            if rubric is not None and (not isinstance(rubric, str) or len(rubric) > RUBRIC_MAX_CHARS):
-                msg = f"llm_judge config.rubric must be text of at most {RUBRIC_MAX_CHARS} characters"
-                raise ValueError(msg)
+            return self
+        model = self.config.get("model")
+        if not isinstance(model, list) or not model or not isinstance(model[0], dict):
+            msg = "llm_judge requires config.model: a model selection"
+            raise ValueError(msg)
+        rubric = self.config.get("rubric")
+        if rubric is not None and (not isinstance(rubric, str) or len(rubric) > RUBRIC_MAX_CHARS):
+            msg = f"llm_judge config.rubric must be text of at most {RUBRIC_MAX_CHARS} characters"
+            raise ValueError(msg)
         return self
 
 
@@ -149,6 +161,8 @@ class EvaluationCreate(BaseModel):
     output_vertex_id: str | None = Field(default=None, max_length=255)
     scorers: list[ScorerSpec] = Field(min_length=1, max_length=MAX_SCORERS)
     pass_threshold: float = Field(default=0.5, ge=0, le=1)
+    flow_version_id: UUID | None = None
+    """With ``?run=true``: the history version to run (default: the latest draft). Not stored."""
 
     @field_validator("scorers")
     @classmethod
@@ -238,6 +252,8 @@ class EvaluationResultRead(BaseModel):
     cost_flow: float | None
     cost_judge: float | None
     trace_id: str | None
+    preview: bool = False
+    """True when the texts are clipped previews (the results list); the single-result read has them in full."""
 
 
 class EvaluationResultPage(Page):

@@ -9,6 +9,7 @@ from sqlmodel import col, select
 
 from langflow.services.database.models.evaluation import Evaluation, EvaluationResult, EvaluationRun
 from langflow.services.database.models.evaluation.evaluation import TERMINAL_RUN_STATUSES
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version.model import FlowVersion
 
 if TYPE_CHECKING:
@@ -19,7 +20,11 @@ if TYPE_CHECKING:
 
 async def detach_flow(session: AsyncSession, flow_id: UUID) -> None:
     """Past results stay readable after the flow is gone; Re-run is then refused (no flow)."""
-    await session.exec(update(Evaluation).where(Evaluation.flow_id == flow_id).values(flow_id=None))
+    # Freeze the flow's current project, so deleting that project later still finds these evaluations.
+    current_project = select(Flow.folder_id).where(Flow.id == flow_id).scalar_subquery()
+    await session.exec(
+        update(Evaluation).where(Evaluation.flow_id == flow_id).values(flow_id=None, project_id=current_project)
+    )
     version_ids = select(FlowVersion.id).where(FlowVersion.flow_id == flow_id)
     await session.exec(
         update(EvaluationRun).where(col(EvaluationRun.flow_version_id).in_(version_ids)).values(flow_version_id=None)
@@ -27,9 +32,17 @@ async def detach_flow(session: AsyncSession, flow_id: UUID) -> None:
 
 
 async def delete_project_evaluations(session: AsyncSession, project_id: UUID) -> None:
+    """Rows of a run still executing elsewhere are dropped by the runner once its run row is gone."""
+    from langflow.services.evaluations.evaluation_service import in_project
     from langflow.services.evaluations.runner import cancel_local_run
 
-    evaluation_ids = list((await session.exec(select(Evaluation.id).where(Evaluation.project_id == project_id))).all())
+    evaluation_ids = list(
+        (
+            await session.exec(
+                select(Evaluation.id).outerjoin(Flow, col(Flow.id) == Evaluation.flow_id).where(in_project(project_id))
+            )
+        ).all()
+    )
     if not evaluation_ids:
         return
     runs = (

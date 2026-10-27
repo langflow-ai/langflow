@@ -40,7 +40,7 @@ TABLE_POLICY: dict[str, str] = {
     "deployment_provider_account": BUILDER_ROWS,
     "evaluation": BUILDER_ROWS,
     "evaluation_result": "deleted with its evaluation run",
-    "evaluation_run": "deleted with its evaluation",
+    "evaluation_run": "deleted with its evaluation; runs started on another owner's evaluation move to that owner",
     "execution_signals": ERASED_WITH_FLOW,
     "file": BUILDER_ROWS,
     "flow": ERASED_WITH_FLOW,

@@ -56,7 +56,7 @@ def _create_dataset_tables() -> None:
         sa.Column("meta", sa.JSON(), nullable=True),
         sa.Column("source", sa.String(16), nullable=False),
         *_timestamps(),
-        sa.CheckConstraint("source IN ('manual', 'csv', 'logs')", name="ck_dataset_item_source"),
+        sa.CheckConstraint("source IN ('manual', 'csv', 'logs')", name=op.f("ck_dataset_item_source")),
         sa.ForeignKeyConstraint(["dataset_id"], ["dataset.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -115,9 +115,11 @@ def _create_run_table() -> None:
         sa.Column("finished_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.CheckConstraint(
-            "status IN ('queued', 'running', 'completed', 'failed', 'cancelled')", name="ck_evaluation_run_status"
+            "status IN ('queued', 'running', 'completed', 'failed', 'cancelled')", name=op.f("ck_evaluation_run_status")
         ),
-        sa.CheckConstraint("flow_version_source IN ('latest', 'history')", name="ck_evaluation_run_version_source"),
+        sa.CheckConstraint(
+            "flow_version_source IN ('latest', 'history')", name=op.f("ck_evaluation_run_version_source")
+        ),
         sa.ForeignKeyConstraint(["evaluation_id"], ["evaluation.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["flow_version_id"], ["flow_version.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
@@ -126,6 +128,15 @@ def _create_run_table() -> None:
     op.create_index(op.f("ix_evaluation_run_user_id"), "evaluation_run", ["user_id"])
     op.create_index(op.f("ix_evaluation_run_flow_version_id"), "evaluation_run", ["flow_version_id"])
     op.create_index("ix_evaluation_run_evaluation_created", "evaluation_run", ["evaluation_id", "created_at"])
+    op.create_index(op.f("ix_evaluation_run_dataset_id"), "evaluation_run", ["dataset_id"])
+    op.create_index(
+        "uq_evaluation_run_one_active",
+        "evaluation_run",
+        ["evaluation_id"],
+        unique=True,
+        sqlite_where=sa.text("status IN ('queued', 'running')"),
+        postgresql_where=sa.text("status IN ('queued', 'running')"),
+    )
 
 
 def _create_result_table() -> None:

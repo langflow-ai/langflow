@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import type { EvaluationResult } from "@/controllers/API/queries/evals/types";
+import { useGetEvaluationResult } from "@/controllers/API/queries/evals/use-evaluations";
 import BaseModal from "@/modals/baseModal";
 import {
   formatDuration,
@@ -21,7 +22,15 @@ function TextBlock({
   return (
     <div className="flex flex-col gap-1.5">
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
-      <div className="max-h-48 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border bg-muted/40 px-3 py-2 text-sm">
+      {/* A read-only textbox is a focusable widget, so long text scrolls from the keyboard. */}
+      <div
+        role="textbox"
+        aria-readonly="true"
+        aria-multiline="true"
+        aria-label={label}
+        tabIndex={0}
+        className="max-h-48 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border bg-muted/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      >
         {children}
       </div>
     </div>
@@ -29,6 +38,7 @@ function TextBlock({
 }
 
 interface ResultDetailDialogProps {
+  runId: string;
   result: EvaluationResult | null;
   scorerNames: string[];
   onClose: () => void;
@@ -36,11 +46,18 @@ interface ResultDetailDialogProps {
 
 /** The full row: long text is never cut here, and the judge's reason is readable. */
 export default function ResultDetailDialog({
-  result,
+  runId,
+  result: listed,
   scorerNames,
   onClose,
 }: ResultDetailDialogProps) {
   const { t } = useTranslation();
+  // The results list carries clipped previews; read the row in full once it is opened.
+  const full = useGetEvaluationResult(
+    { runId, resultId: listed?.id ?? "" },
+    { enabled: Boolean(listed?.preview) },
+  );
+  const result = listed?.preview ? (full.data ?? listed) : listed;
   if (!result) return null;
   const totalTokens = (result.tokens_flow ?? 0) + (result.tokens_judge ?? 0);
   const cost =
@@ -99,7 +116,9 @@ export default function ResultDetailDialog({
                 return (
                   <li key={name} className="flex flex-col gap-0.5 px-3 py-2">
                     <div className="flex items-center justify-between text-sm">
-                      <span>{name}</span>
+                      <span>
+                        {t(`evals.scorers.${name}`, { defaultValue: name })}
+                      </span>
                       <span className="font-medium tabular-nums">
                         {formatScore(entry?.value)}
                       </span>

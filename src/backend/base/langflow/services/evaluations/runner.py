@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 from lfx.log.logger import logger
 from lfx.utils.flow_validation import prepare_flow_build_for_user
 from sqlalchemy import update
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
 
 from langflow.api.v1.global_variable_defaults import apply_global_variable_defaults
@@ -22,9 +23,9 @@ from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.evaluations.dataset_service import all_items, item_text
 from langflow.services.evaluations.failure_breaker import FailureBreaker, RunAbortedError, failure_detail
-from langflow.services.evaluations.row_runner import execute_row
+from langflow.services.evaluations.row_runner import execute_row, flow_policy_scope
 from langflow.services.evaluations.row_scoring import score_row
-from langflow.services.evaluations.summary import build_summary
+from langflow.services.evaluations.summary import build_summary, summary_rows
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -79,7 +80,7 @@ def cancel_local_run(run_id: UUID) -> bool:
 
 
 async def _pending_rows(session: AsyncSession, run: EvaluationRun) -> list[tuple[int, DatasetItem]]:
-    """Rows still to run, by dataset position, so a resumed run never re-executes a finished row."""
+    """Rows to run, by dataset position; item writes are refused while a run is active, so positions hold."""
     if run.dataset_id is None:
         return []
     done = set((await session.exec(select(EvaluationResult.position).where(EvaluationResult.run_id == run.id))).all())
@@ -123,19 +124,35 @@ async def _load_context(run_id: UUID) -> RunContext | None:
     )
 
 
-async def _store_result(run_id: UUID, result: EvaluationResult) -> None:
+class _RowNotStoredError(Exception):
+    """Rolls back a row save whose run is gone or whose position is already stored."""
+
+
+async def _store_result(run_id: UUID, result: EvaluationResult) -> bool:
+    """Persist one row; False when the run row is gone (deleted with its project) or the row already exists."""
     errored = result.error is not None
-    async with session_scope() as session:
-        session.add(result)
-        await session.exec(
-            update(EvaluationRun)
-            .where(EvaluationRun.id == run_id)
-            .values(
-                completed_items=EvaluationRun.completed_items + 1,
-                failed_items=EvaluationRun.failed_items + (1 if errored else 0),
-                passed_items=EvaluationRun.passed_items + (1 if result.passed else 0),
+    try:
+        # Write first: on SQLite a read that later upgrades to a write fails at once instead of waiting.
+        async with session_scope() as session:
+            counted = await session.exec(
+                update(EvaluationRun)
+                .where(EvaluationRun.id == run_id)
+                .values(
+                    completed_items=EvaluationRun.completed_items + 1,
+                    failed_items=EvaluationRun.failed_items + (1 if errored else 0),
+                    passed_items=EvaluationRun.passed_items + (1 if result.passed else 0),
+                )
             )
-        )
+            if not counted.rowcount:
+                raise _RowNotStoredError
+            session.add(result)
+            try:
+                await session.flush()
+            except IntegrityError as exc:
+                raise _RowNotStoredError from exc
+    except _RowNotStoredError:
+        return False
+    return True
 
 
 async def _record_row(ctx: RunContext, position: int, item: DatasetItem) -> None:
@@ -143,25 +160,28 @@ async def _record_row(ctx: RunContext, position: int, item: DatasetItem) -> None
     config = ctx.run.config
     question = item_text(item.input) or ""
     expected = item_text(item.expected_output)
-    execution = await execute_row(
-        graph_data=ctx.graph_data,
-        flow=ctx.flow,
-        user=ctx.user,
-        run_id=ctx.run.id,
-        position=position,
-        input_text=question,
-        output_vertex_id=config["output_vertex_id"],
-    )
-    scored = await score_row(
-        scorers=config["scorers"],
-        threshold=float(config["pass_threshold"]),
-        question=question,
-        actual=execution.actual,
-        expected=expected,
-        errored=execution.error is not None,
-        user_id=ctx.user.id,
-        judge_max_output_tokens=settings.evals_judge_max_output_tokens,
-    )
+    with flow_policy_scope(ctx.flow, ctx.user):
+        execution = await execute_row(
+            graph_data=ctx.graph_data,
+            flow=ctx.flow,
+            user=ctx.user,
+            run_id=ctx.run.id,
+            position=position,
+            input_text=question,
+            output_vertex_id=config["output_vertex_id"],
+        )
+        scored = await score_row(
+            scorers=config["scorers"],
+            threshold=float(config["pass_threshold"]),
+            question=question,
+            actual=execution.actual,
+            expected=expected,
+            errored=execution.error is not None,
+            user_id=ctx.user.id,
+            judge_max_output_tokens=settings.evals_judge_max_output_tokens,
+        )
+    if ctx.breaker.tripped_with is not None:
+        return
     actual = execution.actual
     limit = settings.evals_actual_output_max_chars
     truncated = actual is not None and len(actual) > limit
@@ -196,8 +216,10 @@ def _check_breaker(ctx: RunContext, detail: str | None) -> None:
 
 
 async def _record_timeout(ctx: RunContext, position: int, item: DatasetItem) -> None:
+    if ctx.breaker.tripped_with is not None:
+        return
     timeout = int(ctx.settings.evals_row_timeout_s)
-    await _store_result(
+    stored = await _store_result(
         ctx.run.id,
         EvaluationResult(
             run_id=ctx.run.id,
@@ -211,24 +233,38 @@ async def _record_timeout(ctx: RunContext, position: int, item: DatasetItem) -> 
             duration_ms=timeout * 1000,
         ),
     )
-    _check_breaker(ctx, f"Timed out after {timeout} seconds")
+    if stored:
+        _check_breaker(ctx, f"Timed out after {timeout} seconds")
 
 
 async def _run_one(ctx: RunContext, position: int, item: DatasetItem, run_limit: asyncio.Semaphore) -> None:
-    async with _global_limit(ctx.settings.evals_max_concurrency), run_limit:
+    # Per-run slot first: a run waiting on its own limit must not hold a process-wide slot.
+    async with run_limit, _global_limit(ctx.settings.evals_max_concurrency):
+        # A run already stopped early must not start (or pay for) any further row.
+        if ctx.breaker.tripped_with is not None:
+            return
         try:
             await asyncio.wait_for(_record_row(ctx, position, item), timeout=ctx.settings.evals_row_timeout_s)
         except asyncio.TimeoutError:
             await _record_timeout(ctx, position, item)
 
 
+async def _run_status(run_id: UUID) -> str | None:
+    async with session_scope() as session:
+        return (await session.exec(select(EvaluationRun.status).where(EvaluationRun.id == run_id))).first()
+
+
 async def _watch_for_cancel(run_id: UUID, rows: asyncio.Future[Any]) -> None:
     """Pick up a cancel written by any process (another pod, or this one) while rows run."""
     while not rows.done():
         await asyncio.sleep(CANCEL_POLL_SECONDS)
-        async with session_scope() as session:
-            status = (await session.exec(select(EvaluationRun.status).where(EvaluationRun.id == run_id))).first()
-        if status == "cancelled":
+        try:
+            status = await _run_status(run_id)
+        except Exception as exc:  # noqa: BLE001 - a failed poll must not end the run; the next poll retries
+            await logger.awarning(f"evals_cancel_poll_failed run_id={run_id} error={type(exc).__name__}")
+            continue
+        # A missing run was deleted with its project: stop spending on it.
+        if status in {"cancelled", None}:
             rows.cancel(USER_CANCELLED)
             return
 
@@ -236,7 +272,7 @@ async def _watch_for_cancel(run_id: UUID, rows: asyncio.Future[Any]) -> None:
 async def _finalize_run(run_id: UUID, scorer_names: list[str], status: str, error: str | None = None) -> str:
     """Write the summary and the terminal status; a cancel written meanwhile wins. Returns the final status."""
     async with session_scope() as session:
-        results = list((await session.exec(select(EvaluationResult).where(EvaluationResult.run_id == run_id))).all())
+        results = await summary_rows(session, run_id)
         values: dict[str, Any] = {"summary": build_summary(results, scorer_names), "finished_at": _now()}
         await session.exec(update(EvaluationRun).where(EvaluationRun.id == run_id).values(**values))
         terminal: dict[str, Any] = {"status": status}
@@ -247,8 +283,9 @@ async def _finalize_run(run_id: UUID, scorer_names: list[str], status: str, erro
             .where(EvaluationRun.id == run_id, col(EvaluationRun.status) != "cancelled")
             .values(**terminal)
         )
-        final = (await session.exec(select(EvaluationRun.status).where(EvaluationRun.id == run_id))).one()
-    return str(final)
+        final = (await session.exec(select(EvaluationRun.status).where(EvaluationRun.id == run_id))).first()
+    # A run deleted with its project counts as cancelled.
+    return str(final) if final is not None else "cancelled"
 
 
 async def run_evaluation(run_id: UUID) -> None:
