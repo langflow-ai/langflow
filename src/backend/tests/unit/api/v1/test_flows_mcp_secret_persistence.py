@@ -399,6 +399,23 @@ async def test_should_reject_a_carried_config_the_server_api_rejects(
         assert variable_name_for(server_name, "API_TOKEN") not in names
 
 
+async def test_should_reject_a_carried_config_with_a_non_string_header_argument(
+    client: AsyncClient, logged_in_headers, active_user
+):
+    """A carried config that fails field validation gets the create route's 422, not a server error."""
+    server_name = f"non-string-{uuid.uuid4().hex[:6]}"
+    config = {"command": "uvx", "args": ["mcp-proxy", "--headers", None, "x", "http://localhost/sse"]}
+    create = await client.post(f"api/v2/mcp/servers/{server_name}", json=config, headers=logged_in_headers)
+    assert create.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, create.text
+
+    response = await client.post("api/v1/flows/", json=_flow_payload(server_name, config), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    assert [error["msg"] for error in response.json()["detail"]] == [error["msg"] for error in create.json()["detail"]]
+    async with session_scope() as session:
+        assert await get_server(server_name, active_user, session, None, None) is None
+
+
 async def test_should_reject_a_rotation_that_breaks_the_stored_config(
     client: AsyncClient, logged_in_headers, active_user
 ):
