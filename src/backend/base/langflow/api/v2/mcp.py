@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile
 from lfx.base.agents.utils import safe_cache_get, safe_cache_set
 from lfx.base.mcp.util import update_tools
+from pydantic import ValidationError
 from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
@@ -21,6 +22,7 @@ from langflow.api.v2.files import (
     upload_user_file,
 )
 from langflow.api.v2.schemas import MCPServerConfig
+from langflow.api.validation_errors import redact_validation_errors
 from langflow.logging import logger
 from langflow.services.auth.mcp_encryption import (
     decrypt_mcp_config,
@@ -64,6 +66,15 @@ def ensure_mcp_stdio_access(server_config: dict, current_user: CurrentActiveUser
             status_code=403,
             detail="MCP stdio servers are restricted to administrators when custom code execution is restricted.",
         )
+
+
+def validate_mcp_server_config(server_config: dict) -> None:
+    """Reject a config that the create route would reject, before it is stored."""
+    try:
+        MCPServerConfig.model_validate(server_config)
+    except ValidationError as exc:
+        # The config can hold decrypted credentials: redact them from the detail and drop the chain.
+        raise HTTPException(status_code=422, detail=redact_validation_errors(exc.errors())) from None
 
 
 def _enforce_immutable_server_name(server_name: str, server_config: dict) -> dict:
@@ -516,6 +527,7 @@ async def update_server(
             previous = decrypt_mcp_config(existing.config or {})
             resolved_config = _restore_config_secrets(server_config, previous)
             merged = {**previous, **resolved_config}
+            validate_mcp_server_config(merged)
             ensure_mcp_stdio_access(merged, current_user, settings)
             updated = await session.execute(
                 update(MCPServer)

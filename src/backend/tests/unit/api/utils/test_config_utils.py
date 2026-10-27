@@ -11,6 +11,8 @@ from langflow.api.utils.mcp.config_utils import (
     validate_mcp_server_for_project,
 )
 from langflow.api.v2.mcp import get_server
+from langflow.services.auth.mcp_encryption import encrypt_mcp_config
+from langflow.services.database.models import MCPServer
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
@@ -802,6 +804,99 @@ class TestMCPPatchServerConfig:
 
             response = await client.get(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
             assert response.status_code == 404
+        finally:
+            await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
+
+    @pytest.mark.asyncio
+    async def test_patch_rejects_args_that_make_stored_stdio_config_invalid(
+        self, client: AsyncClient, created_api_key, active_user
+    ):
+        """PATCH should validate the merged config, so args are checked against the stored command."""
+        server_name = f"invalid-merge-{uuid4()}"
+        auth_headers = {"x-api-key": created_api_key.api_key}
+        initial_config = {
+            "command": "python",
+            "args": ["-m", "mcp_server_time"],
+            "env": {"API_TOKEN": "mcp-canary-token"},
+        }
+        patch_config = {"args": ["-c", "pass"]}
+
+        create_response = await client.post(
+            f"/api/v2/mcp/servers/{server_name}", json={**initial_config, **patch_config}, headers=auth_headers
+        )
+        assert create_response.status_code == 422
+
+        response = await client.post(f"/api/v2/mcp/servers/{server_name}", json=initial_config, headers=auth_headers)
+        assert response.status_code == 200
+
+        try:
+            response = await client.patch(f"/api/v2/mcp/servers/{server_name}", json=patch_config, headers=auth_headers)
+            assert response.status_code == 422
+            assert [error["msg"] for error in response.json()["detail"]] == [
+                error["msg"] for error in create_response.json()["detail"]
+            ]
+            assert "mcp-canary-token" not in response.text
+
+            async with session_scope() as session:
+                assert await get_server(server_name, active_user, session, None, None) == initial_config
+        finally:
+            await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
+
+    @pytest.mark.asyncio
+    async def test_patch_rejection_does_not_echo_stored_args(self, client: AsyncClient, created_api_key, active_user):
+        """A 422 for an invalid stored config must not quote the decrypted args it holds."""
+        server_name = f"legacy-args-{uuid4()}"
+        auth_headers = {"x-api-key": created_api_key.api_key}
+        # Create rejects the ';', so the row is written directly, as a legacy import would.
+        legacy_config = {
+            "command": "uvx",
+            "args": ["mcp-proxy", "--headers", "Cookie", "sid=mcp-canary-cookie; x=1", "http://localhost:7860/sse"],
+        }
+        async with session_scope() as session:
+            session.add(MCPServer(user_id=active_user.id, name=server_name, config=encrypt_mcp_config(legacy_config)))
+
+        try:
+            response = await client.patch(
+                f"/api/v2/mcp/servers/{server_name}", json={"env": {"X_OK": "y"}}, headers=auth_headers
+            )
+            assert response.status_code == 422
+            assert "dangerous shell metacharacter" in response.text
+            assert "mcp-canary-cookie" not in response.text
+
+            async with session_scope() as session:
+                assert await get_server(server_name, active_user, session, None, None) == legacy_config
+        finally:
+            await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "patch_config",
+        [
+            {"args": ["mcp-server-time"]},
+            {"env": {"API_TOKEN": "new-token"}},
+            {"headers": {"X-My-Header": "value"}},
+        ],
+    )
+    async def test_patch_accepts_partial_update_of_valid_stdio_config(
+        self, client: AsyncClient, created_api_key, active_user, patch_config
+    ):
+        """PATCH should still store a partial update that leaves the merged config valid."""
+        server_name = f"valid-merge-{uuid4()}"
+        auth_headers = {"x-api-key": created_api_key.api_key}
+        initial_config = {"command": "uvx", "args": ["mcp-server-fetch"]}
+
+        response = await client.post(f"/api/v2/mcp/servers/{server_name}", json=initial_config, headers=auth_headers)
+        assert response.status_code == 200
+
+        try:
+            response = await client.patch(f"/api/v2/mcp/servers/{server_name}", json=patch_config, headers=auth_headers)
+            assert response.status_code == 200
+
+            async with session_scope() as session:
+                assert await get_server(server_name, active_user, session, None, None) == {
+                    **initial_config,
+                    **patch_config,
+                }
         finally:
             await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
 
