@@ -104,6 +104,22 @@ def test_reads_a_database_each_release_saved(release, tmp_path):
     assert _side_files(database) == []
 
 
+@pytest.mark.usefixtures("client")
+async def test_reads_while_langflow_runs_in_the_same_process(tmp_path):
+    """Langflow's database service sets its SQLite pragmas on every connection in the process.
+
+    The journal mode pragma cannot run on a read-only connection, and that must not stop the read.
+    """
+    database = _load("1.13.0", tmp_path)
+    before = database.read_bytes()
+
+    with open_source(_url(database)) as source:
+        names = {flow.name for flow in source.flows()}
+
+    assert names == {"Fixture nested groups", "Fixture saved component"}
+    assert database.read_bytes() == before
+
+
 def test_the_reader_connection_refuses_writes(tmp_path):
     database = _load("1.13.0", tmp_path)
     before = database.read_bytes()
