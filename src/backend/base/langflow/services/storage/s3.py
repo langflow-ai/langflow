@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import hashlib
 import os
+import re
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
@@ -23,21 +25,32 @@ STREAM_PART_SIZE = 8 * 1024 * 1024
 UPLOAD_LINK_TTL = 3600
 # Server-side encryption modes whose ETag is not the body's MD5.
 _ETAG_NOT_MD5_ENCRYPTION = {"aws:kms", "aws:kms:dsse"}
+# User metadata key (``x-amz-meta-md5``) holding the body's MD5, written with every object this
+# service stores, so the checksum is known even where the ETag is not one.
+MD5_METADATA_KEY = "md5"
+_MD5_PATTERN = re.compile(r"[0-9a-f]{32}")
+
+
+def _md5_hex(data: bytes) -> str:
+    return hashlib.md5(data, usedforsecurity=False).hexdigest()
 
 
 def md5_from_head(head: dict[str, Any]) -> str | None:
-    """The body's MD5 when a HeadObject response's ETag is one, otherwise None.
+    """The body's MD5 from a HeadObject response: the ETag when it is one, else the stored label.
 
     S3 sets the ETag to the MD5 of the body only for a single-part upload stored in
     plain or SSE-S3 form. A multipart ETag carries a ``-``, and objects under SSE-KMS or
-    customer-provided keys (SSE-C) get an ETag that is not an MD5 at all.
+    customer-provided keys (SSE-C) get an ETag that is not an MD5 at all. For those the
+    ``md5`` metadata this service writes answers instead. The ETag wins when both exist,
+    since S3 computes it and a label is only what the writer said. Any rewrite of the
+    object that does not carry the label drops it, so a stale label cannot outlive its body.
     """
     etag = head.get("ETag", "").strip('"')
-    if not etag or "-" in etag:
-        return None
-    if head.get("ServerSideEncryption") in _ETAG_NOT_MD5_ENCRYPTION or head.get("SSECustomerAlgorithm"):
-        return None
-    return etag
+    encrypted = head.get("ServerSideEncryption") in _ETAG_NOT_MD5_ENCRYPTION or head.get("SSECustomerAlgorithm")
+    if etag and "-" not in etag and not encrypted:
+        return etag
+    label = (head.get("Metadata") or {}).get(MD5_METADATA_KEY, "").lower()
+    return label if _MD5_PATTERN.fullmatch(label) else None
 
 
 if TYPE_CHECKING:
@@ -331,6 +344,7 @@ class S3StorageService(StorageService):
                     "Bucket": self.bucket_name,
                     "Key": key,
                     "Body": data,
+                    "Metadata": {MD5_METADATA_KEY: await asyncio.to_thread(_md5_hex, data)},
                 }
 
                 if self.tags:
@@ -500,7 +514,9 @@ class S3StorageService(StorageService):
             raise
         return removed
 
-    async def create_upload_link(self, flow_id: str, file_name: str, *, expires_in: int = UPLOAD_LINK_TTL) -> str:
+    async def create_upload_link(
+        self, flow_id: str, file_name: str, *, expires_in: int = UPLOAD_LINK_TTL, md5: str | None = None
+    ) -> str:
         """A presigned ``PUT`` for exactly this key, good for ``expires_in`` seconds.
 
         See ``StorageService.create_upload_link``. Signing covers the bucket and the key, so a
@@ -520,6 +536,11 @@ class S3StorageService(StorageService):
         the regional host until its DNS settles, and a redirected PUT never lands. A custom
         endpoint (MinIO) keeps botocore's default, since a virtual host would put the bucket
         into that endpoint's hostname; so does a dotted bucket name, which breaks TLS there.
+
+        With ``md5``, the link also signs the ``x-amz-meta-md5`` label, so the uploader must
+        send that header with that value, and the stored object carries its checksum even in
+        a bucket whose ETag is not one. Unlike tags this cannot be added at the promote: the
+        promote's server-side copy never sees the bytes.
         """
         from urllib.parse import urlsplit
 
@@ -531,11 +552,10 @@ class S3StorageService(StorageService):
         regional = host.endswith(".amazonaws.com") and "." not in self.bucket_name
         config = AioConfig(signature_version="s3v4", s3={"addressing_style": "virtual"} if regional else None)
         async with self.session.create_client("s3", config=config) as s3_client:
-            return await s3_client.generate_presigned_url(
-                "put_object",
-                Params={"Bucket": self.bucket_name, "Key": key},
-                ExpiresIn=expires_in,
-            )
+            params: dict[str, Any] = {"Bucket": self.bucket_name, "Key": key}
+            if md5 is not None:
+                params["Metadata"] = {MD5_METADATA_KEY: md5}
+            return await s3_client.generate_presigned_url("put_object", Params=params, ExpiresIn=expires_in)
 
     async def move_file(self, source_namespace: str, target_namespace: str, file_name: str) -> None:
         """Move an object between namespaces with a server-side copy, then delete the source.
@@ -548,7 +568,8 @@ class S3StorageService(StorageService):
         object that arrived through ``create_upload_link`` carries no tags, and ``copy_object``
         copies the source's by default, so inheriting would leave a deployed project's files
         untagged while every file written through ``save_file`` is tagged, and any lifecycle or
-        cost rule keyed on those tags would quietly skip them.
+        cost rule keyed on those tags would quietly skip them. Metadata, the ``md5`` label the
+        upload link signed in among it, is copied as is.
 
         shortcut: ``copy_object`` tops out at 5 GiB per object; above that S3 wants
         ``upload_part_copy``. Add that when a single stored file reaches that size.
@@ -640,7 +661,7 @@ class S3StorageService(StorageService):
             return file_size
 
     async def get_file_md5(self, flow_id: str, file_name: str) -> str | None:
-        """The object's MD5 when its ETag is one (see ``md5_from_head``), otherwise None.
+        """The object's MD5 from its ETag or its ``md5`` label (see ``md5_from_head``), otherwise None.
 
         Raises:
             FileNotFoundError: If the object does not exist, as ``get_file_size`` does.
@@ -663,6 +684,10 @@ class S3StorageService(StorageService):
         A body smaller than one part is a single ``put_object``; anything larger is a
         multipart upload, aborted if any part fails so no partial object is left behind.
         Returns the number of bytes written.
+
+        The ``md5`` label goes on as ``save_file``'s does. A multipart upload fixes its metadata
+        when it starts, before the checksum is known, so it is set afterwards by a server-side
+        copy of the object onto itself; if that copy fails the file stays, unlabelled.
         """
         self._validate_identifiers(flow_id, file_name)
         key = self.build_full_path(flow_id, file_name)
@@ -673,6 +698,7 @@ class S3StorageService(StorageService):
         async with self._get_client() as s3_client:
             buffer = bytearray()
             written = 0
+            digest = hashlib.md5(usedforsecurity=False)
             upload_id: str | None = None
             parts: list[dict[str, Any]] = []
 
@@ -686,14 +712,18 @@ class S3StorageService(StorageService):
                 async for chunk in chunks:
                     buffer += chunk
                     written += len(chunk)
+                    digest.update(chunk)
                     while len(buffer) >= STREAM_PART_SIZE:
                         if upload_id is None:
                             created = await s3_client.create_multipart_upload(Bucket=self.bucket_name, Key=key, **extra)
                             upload_id = created["UploadId"]
                         await upload_part(bytes(buffer[:STREAM_PART_SIZE]))
                         del buffer[:STREAM_PART_SIZE]
+                label = {MD5_METADATA_KEY: digest.hexdigest()}
                 if upload_id is None:
-                    await s3_client.put_object(Bucket=self.bucket_name, Key=key, Body=bytes(buffer), **extra)
+                    await s3_client.put_object(
+                        Bucket=self.bucket_name, Key=key, Body=bytes(buffer), Metadata=label, **extra
+                    )
                     return written
                 if buffer:
                     await upload_part(bytes(buffer))
@@ -705,6 +735,16 @@ class S3StorageService(StorageService):
                     with contextlib.suppress(Exception):
                         await s3_client.abort_multipart_upload(Bucket=self.bucket_name, Key=key, UploadId=upload_id)
                 raise
+            try:
+                await s3_client.copy_object(
+                    Bucket=self.bucket_name,
+                    Key=key,
+                    CopySource={"Bucket": self.bucket_name, "Key": key},
+                    Metadata=label,
+                    MetadataDirective="REPLACE",
+                )
+            except Exception:  # noqa: BLE001 - the file is stored; only its checksum label is missing
+                await logger.awarning(f"Stored {file_name} without its md5 label; a deploy will read it to compare")
         return written
 
     async def teardown(self) -> None:

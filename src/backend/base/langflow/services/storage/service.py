@@ -131,6 +131,7 @@ class StorageService(Service):
         file_name: str,  # noqa: ARG002
         *,
         expires_in: int = 3600,  # noqa: ARG002
+        md5: str | None = None,  # noqa: ARG002
     ) -> str | None:
         """A URL that accepts a ``PUT`` of this one file, or ``None`` when the backend has none.
 
@@ -141,7 +142,8 @@ class StorageService(Service):
         value is what selects the transport and no configuration flag has to say.
 
         The default is ``None``: a backend has to be able to hand out a scoped, expiring write
-        before it says it can.
+        before it says it can. ``md5``, when given, is the file's checksum for the backend to
+        store with it, so ``get_file_md5`` can answer later without reading the file.
         """
         return None
 

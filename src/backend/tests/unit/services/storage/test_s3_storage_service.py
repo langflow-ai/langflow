@@ -9,6 +9,7 @@ Regression for GHSA-rcjh-r59h-gq37 (defense in depth at the S3 backend).
 """
 
 import asyncio
+import hashlib
 import os
 from unittest.mock import AsyncMock, Mock
 
@@ -234,6 +235,7 @@ class TestS3BuildFullPathValidation:
 
 
 MD5 = "0cc175b9c0f1b6a831c399e269772661"  # pragma: allowlist secret - md5("a")
+OTHER = "92eb5ffee6ae2fec3ad71c777531578f"  # pragma: allowlist secret - md5("b")
 
 
 class TestEtagAsMd5:
@@ -252,9 +254,132 @@ class TestEtagAsMd5:
             ({"ETag": f'"{MD5}"', "ServerSideEncryption": "aws:kms:dsse"}, None),
             ({"ETag": f'"{MD5}"', "SSECustomerAlgorithm": "AES256"}, None),
             ({}, None),
+            # Where the ETag is not an MD5, the label this service writes answers instead.
+            ({"ETag": f'"{OTHER}-3"', "Metadata": {"md5": MD5}}, MD5),
+            ({"ETag": f'"{OTHER}"', "ServerSideEncryption": "aws:kms", "Metadata": {"md5": MD5}}, MD5),
+            ({"ETag": f'"{OTHER}-3"', "Metadata": {"md5": MD5.upper()}}, MD5),
+            # The ETag is computed by S3; a label disagreeing with it loses.
+            ({"ETag": f'"{MD5}"', "Metadata": {"md5": OTHER}}, MD5),
+            # A label that is not an MD5 is not trusted as one.
+            ({"ETag": f'"{OTHER}-3"', "Metadata": {"md5": "not-a-checksum"}}, None),
+            ({"ETag": f'"{OTHER}-3"', "Metadata": {}}, None),
         ],
     )
     def test_md5_from_head(self, head, expected):
         from langflow.services.storage.s3 import md5_from_head
 
         assert md5_from_head(head) == expected
+
+
+class _RecordingS3Client:
+    """Records what each write sends; ``copy_error`` makes the label's self-copy fail."""
+
+    def __init__(self, copy_error: Exception | None = None):
+        self.calls: list[tuple[str, dict]] = []
+        self._copy_error = copy_error
+
+    async def put_object(self, **kwargs):
+        self.calls.append(("put_object", kwargs))
+
+    async def create_multipart_upload(self, **kwargs):
+        self.calls.append(("create_multipart_upload", kwargs))
+        return {"UploadId": "u1"}
+
+    async def upload_part(self, **kwargs):
+        self.calls.append(("upload_part", kwargs))
+        return {"ETag": f'"{kwargs["PartNumber"]}"'}
+
+    async def complete_multipart_upload(self, **kwargs):
+        self.calls.append(("complete_multipart_upload", kwargs))
+
+    async def copy_object(self, **kwargs):
+        self.calls.append(("copy_object", kwargs))
+        if self._copy_error is not None:
+            raise self._copy_error
+
+    def named(self, name: str) -> list[dict]:
+        return [kwargs for call, kwargs in self.calls if call == name]
+
+
+def _recording_service(mock_session_service, mock_settings_service, client):
+    from contextlib import asynccontextmanager
+
+    service = S3StorageService(mock_session_service, mock_settings_service)
+
+    @asynccontextmanager
+    async def _client():
+        yield client
+
+    service._get_client = _client
+    return service
+
+
+async def _chunks(*parts: bytes):
+    for part in parts:
+        yield part
+
+
+class TestMd5Label:
+    """Every object this service writes carries its MD5 as ``x-amz-meta-md5``."""
+
+    async def test_save_file_labels_the_object(self, mock_session_service, mock_settings_service):
+        client = _RecordingS3Client()
+        service = _recording_service(mock_session_service, mock_settings_service, client)
+
+        await service.save_file("ns", "a.pdf", b"a")
+
+        assert client.named("put_object")[0]["Metadata"] == {"md5": MD5}
+
+    async def test_a_small_stream_is_one_labelled_put(self, mock_session_service, mock_settings_service):
+        client = _RecordingS3Client()
+        service = _recording_service(mock_session_service, mock_settings_service, client)
+
+        written = await service.save_file_stream("ns", "a.pdf", _chunks(b"a"))
+
+        assert written == 1
+        assert [call for call, _ in client.calls] == ["put_object"]
+        assert client.named("put_object")[0]["Metadata"] == {"md5": MD5}
+
+    async def test_a_multipart_stream_is_labelled_by_a_copy_onto_itself(
+        self, mock_session_service, mock_settings_service
+    ):
+        from langflow.services.storage.s3 import STREAM_PART_SIZE
+
+        client = _RecordingS3Client()
+        service = _recording_service(mock_session_service, mock_settings_service, client)
+        body = [b"x" * STREAM_PART_SIZE, b"tail"]
+
+        written = await service.save_file_stream("ns", "big.pdf", _chunks(*body))
+
+        assert written == STREAM_PART_SIZE + 4
+        assert [call for call, _ in client.calls][-2:] == ["complete_multipart_upload", "copy_object"]
+        copy = client.named("copy_object")[0]
+        assert copy["Key"] == copy["CopySource"]["Key"] == "test-prefix/ns/big.pdf"
+        assert copy["MetadataDirective"] == "REPLACE"
+        assert copy["Metadata"] == {"md5": hashlib.md5(b"".join(body), usedforsecurity=False).hexdigest()}
+
+    async def test_a_failed_label_copy_keeps_the_stored_file(self, mock_session_service, mock_settings_service):
+        from langflow.services.storage.s3 import STREAM_PART_SIZE
+
+        client = _RecordingS3Client(copy_error=RuntimeError("AccessDenied"))
+        service = _recording_service(mock_session_service, mock_settings_service, client)
+
+        written = await service.save_file_stream("ns", "big.pdf", _chunks(b"x" * STREAM_PART_SIZE))
+
+        assert written == STREAM_PART_SIZE
+        assert len(client.named("complete_multipart_upload")) == 1
+
+    async def test_an_upload_link_signs_the_label_only_when_given(
+        self, mock_session_service, mock_settings_service, monkeypatch
+    ):
+        monkeypatch.setenv("AWS_DEFAULT_REGION", "ca-central-1")
+        monkeypatch.setenv("AWS_ACCESS_KEY_ID", "k")
+        monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "s")
+        service = S3StorageService(mock_session_service, mock_settings_service)
+
+        labelled = await service.create_upload_link("ns", "a.pdf", md5=MD5)
+        plain = await service.create_upload_link("ns", "a.pdf")
+
+        # The uploader has to send x-amz-meta-md5 with this value, or S3 refuses the PUT.
+        assert "x-amz-meta-md5" in labelled
+        assert "x-amz-meta-md5" not in plain
