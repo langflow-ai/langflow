@@ -30,7 +30,9 @@ export interface SavedModelAvailabilityParams {
  *
  * - the saved provider is missing from the provider list entirely — it was
  *   never offered to this user, or its approval was revoked;
- * - the saved provider is configured, but its catalog no longer lists the
+ * - the saved decision model is absent from its provider's catalog, even if
+ *   that provider is not configured; for other model kinds, the provider is
+ *   configured, but its catalog no longer lists the
  *   model and the user's enabled-models map has never heard of it — a model
  *   hidden by policy, removed from the catalog, or no longer served live.
  *
@@ -63,12 +65,12 @@ export function isSavedModelUnavailable({
   if (!providerInfo) {
     return true;
   }
-  if (providerInfo.is_configured !== true) {
-    // Unconfigured / disconnected providers keep their existing
-    // "configure the provider" affordance.
+  const isDecision = modelType === "decision";
+  if (!isDecision && providerInfo.is_configured !== true) {
+    // Other model kinds may need credentials to populate their catalogs.
+    // Decision catalogs already identify allowed models before configuration.
     return false;
   }
-  const isDecision = modelType === "decision";
   const listedInCatalog = (providerInfo.models ?? []).some(
     // A decision row never stands in for a language model, nor the reverse.
     (model) =>

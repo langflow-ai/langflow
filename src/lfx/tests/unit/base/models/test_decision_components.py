@@ -77,6 +77,9 @@ def test_packaged_index_preserves_decision_component_sources():
     assert template["template"]["model"]["model_type"] == "decision"
     restored = eval_custom_component_code(template["template"]["code"]["value"])()
     assert restored.name == DecisionModelComponent.name
+    restored.set(context="Old text", structured_context=Data(data={}))
+    with pytest.raises(DecisionConfigurationError, match="Structured Context is empty"):
+        restored._context()
 
 
 def test_components_do_not_import_provider_sdks():
@@ -188,6 +191,8 @@ def test_structured_context_reaches_the_model_as_json(monkeypatch):
         # Connected but empty, as from a Dynamic Create Data with no fields: say so, don't ask to connect it.
         ({"structured_context": Data(data={})}, "Structured Context is empty"),
         ({"structured_context": {}}, "Structured Context is empty"),
+        ({"context": "Old text", "structured_context": Data(data={})}, "Structured Context is empty"),
+        ({"context": "Old text", "structured_context": {}}, "Structured Context is empty"),
         ({"context": "Charged twice", "structured_context": {"order": 1042}}, "not both"),
     ],
 )
