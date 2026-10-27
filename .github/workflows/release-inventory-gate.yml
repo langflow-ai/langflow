@@ -101,6 +101,10 @@ jobs:
           version: latest-known
           enable-cache: false
 
+      - name: Set up Python preview builds
+        if: matrix.python-version == '3.15'
+        uses: ./.github/actions/setup-python-preview
+
       - name: Download SDK wheel
         if: ${{ inputs.sdk-artifact-name != '' }}
         uses: actions/download-artifact@v8
@@ -209,6 +213,10 @@ jobs:
         with:
           version: latest-known
           enable-cache: false
+
+      - name: Set up Python preview builds
+        if: matrix.python-version == '3.15'
+        uses: ./.github/actions/setup-python-preview
 
       - name: Download SDK wheel
         if: ${{ inputs.sdk-artifact-name != '' }}

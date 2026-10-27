@@ -120,6 +120,9 @@ jobs:
           cache-dependency-glob: uv.lock
           python-version: ${{ matrix.python-version }}
           prune-cache: false
+      - name: Set up Python preview builds
+        if: matrix.python-version == '3.15'
+        uses: ./.github/actions/setup-python-preview
       - name: Install the project
         run: uv sync --frozen
       - uses: actions/download-artifact@v8

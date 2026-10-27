@@ -123,6 +123,10 @@ jobs:
           python-version: ${{ matrix.python-version }}
           prune-cache: false
 
+      - name: Set up Python preview builds
+        if: matrix.python-version == '3.15'
+        uses: ./.github/actions/setup-python-preview
+
       - name: Run LFX tests
         run: |
           cd src/lfx

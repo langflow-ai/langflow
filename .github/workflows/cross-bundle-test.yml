@@ -92,6 +92,9 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
 
+      - name: Set up Python preview builds
+        if: matrix.python-version == '3.15'
+        uses: ./.github/actions/setup-python-preview
       - name: Install in-repo lfx + the bundle into a clean venv
         run: |
           uv venv
@@ -120,6 +123,11 @@ jobs:
           for value in modules:
               importlib.import_module(value.split(":", 1)[0])
               print(f"  imported {value}")
+
+          # Valkey loads its SDK lazily, and its unit tests mock the client.
+          # Import the real SDK so source packaging failures remain visible.
+          if name == "lfx-valkey":
+              importlib.import_module("glide_sync")
 
           # The manifest-less metapackage must be discoverable by the loader.
           # This venv installs the bundle WITHOUT its per-provider extras, so

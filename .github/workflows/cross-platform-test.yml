@@ -499,7 +499,9 @@ jobs:
         uses: actions/checkout@v7
         with:
           path: auth-smoke
-          sparse-checkout: scripts/ci/check_authentication.py
+          sparse-checkout: |
+            scripts/ci/check_authentication.py
+            .github/actions/setup-python-preview
           sparse-checkout-cone-mode: false
           persist-credentials: false
 
@@ -532,6 +534,9 @@ jobs:
           version: latest-known
           enable-cache: false
           ignore-empty-workdir: true
+
+      - name: Set up Python preview builds
+        uses: ./auth-smoke/.github/actions/setup-python-preview
 
       - name: Install Protocol Buffers (macOS AMD64)
         if: matrix.os == 'macos' && matrix.arch == 'amd64'

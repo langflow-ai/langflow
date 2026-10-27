@@ -100,6 +100,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
           prune-cache: false
 
+      - name: Set up Python preview builds
+        if: matrix.python-version == '3.15'
+        uses: ./.github/actions/setup-python-preview
       - name: Install the project with the bundles extra
         run: uv sync --extra bundles
 
@@ -185,6 +188,9 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
           prune-cache: false
+      - name: Set up Python preview builds
+        if: matrix.python-version == '3.15'
+        uses: ./.github/actions/setup-python-preview
       - name: Install the project
         run: uv sync
       - name: Run integration tests
@@ -216,6 +222,9 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
           prune-cache: false
+      - name: Set up Python preview builds
+        if: matrix.python-version == '3.15'
+        uses: ./.github/actions/setup-python-preview
       - name: Run lfx tests
         run: make lfx_tests
         env:

@@ -193,6 +193,6 @@ jobs:
       - name: Install only the pinned native wheels
         run: |
           uv venv .sqlite-runtime
-          uv pip install --python .sqlite-runtime --only-binary :all: apsw==3.53.4.0 sqlite-vec==0.1.9
+          uv pip install --python .sqlite-runtime --only-binary :all: apsw==${{ matrix.python == '3.15' && '3.54.1.0' || '3.53.4.0' }} sqlite-vec==0.1.9
       - name: Qualify extension, WAL and reopen
         run: uv run --no-project --python .sqlite-runtime scripts/ci/check_sqlite_runtime.py
