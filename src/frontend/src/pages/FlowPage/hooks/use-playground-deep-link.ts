@@ -23,6 +23,7 @@ export default function usePlaygroundDeepLink({
   const activeRequest = useRef<{
     flowId: string;
     sessionId?: string;
+    cancelled: boolean;
   } | null>(null);
   const mounted = useRef(true);
 
@@ -30,8 +31,28 @@ export default function usePlaygroundDeepLink({
   // its response after this route has unmounted.
   useEffect(() => {
     mounted.current = true;
+    // Remember intervening user actions even if the panel is reopened or the
+    // selection returns to its original value before the lookup finishes.
+    const unsubscribeSession = useSessionManagerStore.subscribe(
+      (state, previous) => {
+        if (
+          activeRequest.current &&
+          (state.flowId !== previous.flowId ||
+            state.activeSessionId !== previous.activeSessionId)
+        ) {
+          activeRequest.current.cancelled = true;
+        }
+      },
+    );
+    const unsubscribePlayground = usePlaygroundStore.subscribe((state) => {
+      if (activeRequest.current && !state.isOpen) {
+        activeRequest.current.cancelled = true;
+      }
+    });
     return () => {
       mounted.current = false;
+      unsubscribeSession();
+      unsubscribePlayground();
     };
   }, []);
 
@@ -46,12 +67,12 @@ export default function usePlaygroundDeepLink({
     ) {
       return;
     }
-    const request = { flowId, sessionId };
-    activeRequest.current = request;
     const store = useSessionManagerStore.getState();
     store.initialize(flowId);
     setOpen(true);
     setFullscreen(true);
+    const request = { flowId, sessionId, cancelled: false };
+    activeRequest.current = request;
 
     if (!sessionId) return;
     if (sessionId === flowId) {
@@ -68,6 +89,7 @@ export default function usePlaygroundDeepLink({
         if (
           !mounted.current ||
           activeRequest.current !== request ||
+          request.cancelled ||
           current.flowId !== flowId ||
           current.activeSessionId !== initialSessionId ||
           !usePlaygroundStore.getState().isOpen ||

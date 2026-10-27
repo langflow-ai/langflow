@@ -265,6 +265,34 @@ describe("Playground deep links", () => {
     expect(useSessionManagerStore.getState().sessions).toEqual([]);
   });
 
+  it("should not revive a lookup after closing and reopening the Playground", async () => {
+    const pending = deferredResponse();
+    mockGetMessages.mockReturnValue(pending.promise);
+    renderDeepLink();
+
+    act(() => {
+      usePlaygroundStore.getState().setIsOpen(false);
+      usePlaygroundStore.getState().setIsOpen(true);
+    });
+    await act(async () => pending.resolve(savedMessage));
+
+    expect(useSessionManagerStore.getState().activeSessionId).toBe(FLOW_ID);
+  });
+
+  it("should not revive a lookup after selecting another session and returning", async () => {
+    const pending = deferredResponse();
+    mockGetMessages.mockReturnValue(pending.promise);
+    renderDeepLink();
+
+    act(() => {
+      useSessionManagerStore.getState().setActiveSessionId("manual");
+      useSessionManagerStore.getState().setActiveSessionId(FLOW_ID);
+    });
+    await act(async () => pending.resolve(savedMessage));
+
+    expect(useSessionManagerStore.getState().activeSessionId).toBe(FLOW_ID);
+  });
+
   it("should preserve manual closing and selection on unrelated rerenders", async () => {
     const hook = renderDeepLink();
     await waitFor(() =>
