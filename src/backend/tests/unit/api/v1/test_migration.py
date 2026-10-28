@@ -699,7 +699,8 @@ async def test_a_record_that_fails_to_save_does_not_leave_the_child_running(
         text=True,
         check=False,
     )
-    assert status.stdout.strip() in {"", "Z"}
+    # ps appends flags such as "l" (multithreaded) after the primary process state.
+    assert status.stdout.strip()[:1] in {"", "Z"}
 
 
 async def test_an_unreadable_record_says_where_it_is(client, logged_in_headers_super_user, config_dir):
