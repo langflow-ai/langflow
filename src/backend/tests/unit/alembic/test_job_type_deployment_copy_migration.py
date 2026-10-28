@@ -7,12 +7,14 @@ to grow for the new member to match the model.
 """
 
 import importlib
+import os
 from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
+from sqlalchemy.engine import make_url
 
 pytestmark = pytest.mark.no_blockbuster
 
@@ -118,3 +120,82 @@ def test_should_be_repeatable_when_upgraded_again_after_a_downgrade(migrated):
     assert _rows(connection) == 18
     _insert(connection, "deployment_copy", str(uuid4()))
     assert _rows(connection) == 19
+
+
+# --- Postgres: the native enum, which is where the rebuild in downgrade() matters -----------
+
+
+def _pg_url() -> str | None:
+    """A sync psycopg URL from LANGFLOW_TEST_DATABASE_URI, as the other PG migration tests read it."""
+    url = os.environ.get("LANGFLOW_TEST_DATABASE_URI")
+    if not url or not url.startswith(("postgresql", "postgres")):
+        return None
+    return "postgresql+psycopg://" + url.split("://", 1)[1]
+
+
+@pytest.fixture
+def pg_engine():
+    """An engine on a database of its own, dropped afterwards.
+
+    Not the rollback-only connection the other PG tests use: ``ADD VALUE`` runs in an autocommit
+    block, so it commits, and it targets the real type and table names.
+    """
+    url = _pg_url()
+    if url is None:
+        pytest.skip("LANGFLOW_TEST_DATABASE_URI not set to PostgreSQL")
+    admin = sa.create_engine(url, isolation_level="AUTOCOMMIT")
+    name = f"lf_job_type_{uuid4().hex[:12]}"
+    with admin.connect() as connection:
+        connection.exec_driver_sql(f'CREATE DATABASE "{name}"')
+    engine = sa.create_engine(make_url(url).set(database=name))
+    try:
+        yield engine
+    finally:
+        engine.dispose()
+        with admin.connect() as connection:
+            connection.exec_driver_sql(f'DROP DATABASE "{name}"')
+        admin.dispose()
+
+
+def _pg_labels(connection) -> list[str]:
+    return list(
+        connection.execute(
+            sa.text(
+                "SELECT e.enumlabel FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid "
+                "WHERE t.typname = 'job_type_enum' ORDER BY e.enumsortorder"
+            )
+        ).scalars()
+    )
+
+
+def test_should_round_trip_the_native_enum_on_postgres(pg_engine):
+    migration = importlib.import_module(_MIGRATION)
+    with pg_engine.connect() as connection:
+        connection.exec_driver_sql("CREATE TYPE job_type_enum AS ENUM ('workflow', 'ingestion', 'evaluation')")
+        connection.exec_driver_sql(
+            "CREATE TABLE job (job_id UUID PRIMARY KEY, flow_id UUID NOT NULL, status VARCHAR NOT NULL, "
+            "created_timestamp TIMESTAMP NOT NULL, type job_type_enum)"
+        )
+        connection.exec_driver_sql("CREATE INDEX ix_job_type ON job (type)")
+        for _ in range(3):
+            _insert(connection, "workflow", str(uuid4()))
+        connection.commit()
+        context = MigrationContext.configure(connection)
+        migration.op = Operations(context)
+
+        # One transaction around the upgrade and what follows it, as env.py runs a whole
+        # ``upgrade head``: the new value has to be usable later in that same transaction.
+        with context.begin_transaction():
+            migration.upgrade()
+            _insert(connection, "deployment_copy", str(uuid4()))
+        assert _pg_labels(connection) == ["workflow", "ingestion", "evaluation", "deployment_copy"]
+
+        with context.begin_transaction():
+            migration.downgrade()
+        assert _pg_labels(connection) == ["workflow", "ingestion", "evaluation"]
+        assert _rows(connection) == 3
+
+        with context.begin_transaction():
+            migration.upgrade()
+            _insert(connection, "deployment_copy", str(uuid4()))
+        assert _rows(connection) == 4

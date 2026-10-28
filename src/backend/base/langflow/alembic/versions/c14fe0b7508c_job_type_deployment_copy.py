@@ -45,9 +45,11 @@ def _job_type(*members: str) -> sa.Enum:
 def upgrade() -> None:
     conn = op.get_bind()
     if conn.dialect.name == "postgresql":
-        # IF NOT EXISTS so a re-run is a no-op. Transaction-safe since PG12 as long as
-        # nothing in the same transaction writes the new value, which nothing here does.
-        op.execute("ALTER TYPE job_type_enum ADD VALUE IF NOT EXISTS 'deployment_copy'")
+        # Committed on its own, as c7412b389256 does: env.py runs a whole ``upgrade head`` in
+        # one transaction, and Postgres refuses any later use of a value added in the same
+        # transaction. IF NOT EXISTS so a re-run is a no-op.
+        with op.get_context().autocommit_block():
+            op.execute("ALTER TYPE job_type_enum ADD VALUE IF NOT EXISTS 'deployment_copy'")
         return
 
     with op.batch_alter_table("job", schema=None) as batch_op:
