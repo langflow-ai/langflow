@@ -6,7 +6,7 @@ from lfx_gitlab.base import GitLabActionComponent, connection_input, project_inp
 
 
 class GitLabGetProjectComponent(GitLabActionComponent):
-    display_name = "GitLab Get Project"
+    display_name = "GitLab: Get Project"
     name = "GitLabGetProjectComponent"
     description = "Get a GitLab project as the connection owner."
     capability_id = "gitlab.project_read"

@@ -307,7 +307,7 @@ PROVIDER = TriggerProvider(
         TriggerKind(
             kind=f"gitlab.{kind}",
             component=f"GitLabOn{label}TriggerComponent",
-            display_name=f"GitLab On {label}",
+            display_name="GitLab: On Merge Request" if kind == "merge_request" else "GitLab: On Issue",
             config_fields=(
                 "connection",
                 "project_id",

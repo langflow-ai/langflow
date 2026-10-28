@@ -6,7 +6,7 @@ from lfx_gitlab.base import GitLabActionComponent, connection_input, project_inp
 
 
 class GitLabGetIssueComponent(GitLabActionComponent):
-    display_name = "GitLab Get Issue"
+    display_name = "GitLab: Get Issue"
     name = "GitLabGetIssueComponent"
     description = "Get a GitLab issue as the connection owner."
     capability_id = "gitlab.issue_read"

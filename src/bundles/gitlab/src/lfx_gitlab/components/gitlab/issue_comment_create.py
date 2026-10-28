@@ -6,7 +6,7 @@ from lfx_gitlab.base import GitLabActionComponent, connection_input, project_inp
 
 
 class GitLabCreateIssueCommentComponent(GitLabActionComponent):
-    display_name = "GitLab Create Issue Comment"
+    display_name = "GitLab: Create Issue Comment"
     name = "GitLabCreateIssueCommentComponent"
     description = "Create a comment as the connection owner."
     capability_id = "gitlab.issue_comment_create"

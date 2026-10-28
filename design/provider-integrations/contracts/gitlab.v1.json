@@ -35,7 +35,7 @@
     "capabilities": [
       {
         "id": "gitlab.project_read",
-        "display_name": "GitLab Get Project",
+        "display_name": "GitLab: Get Project",
         "auth_profile_id": "gitlab-personal-token",
         "identity": "user_delegated",
         "required_scopes": [
@@ -58,7 +58,7 @@
       },
       {
         "id": "gitlab.issue_read",
-        "display_name": "GitLab Get Issue",
+        "display_name": "GitLab: Get Issue",
         "auth_profile_id": "gitlab-personal-token",
         "identity": "user_delegated",
         "required_scopes": [
@@ -81,7 +81,7 @@
       },
       {
         "id": "gitlab.issue_create",
-        "display_name": "GitLab Create Issue",
+        "display_name": "GitLab: Create Issue",
         "auth_profile_id": "gitlab-personal-token",
         "identity": "user_delegated",
         "required_scopes": [
@@ -104,7 +104,7 @@
       },
       {
         "id": "gitlab.issue_update",
-        "display_name": "GitLab Update Issue",
+        "display_name": "GitLab: Update Issue",
         "auth_profile_id": "gitlab-personal-token",
         "identity": "user_delegated",
         "required_scopes": [
@@ -127,7 +127,7 @@
       },
       {
         "id": "gitlab.merge_request_read",
-        "display_name": "GitLab Get Merge Request",
+        "display_name": "GitLab: Get Merge Request",
         "auth_profile_id": "gitlab-personal-token",
         "identity": "user_delegated",
         "required_scopes": [
@@ -150,7 +150,7 @@
       },
       {
         "id": "gitlab.merge_request_create",
-        "display_name": "GitLab Create Merge Request",
+        "display_name": "GitLab: Create Merge Request",
         "auth_profile_id": "gitlab-personal-token",
         "identity": "user_delegated",
         "required_scopes": [
@@ -173,7 +173,7 @@
       },
       {
         "id": "gitlab.merge_request_update",
-        "display_name": "GitLab Update Merge Request",
+        "display_name": "GitLab: Update Merge Request",
         "auth_profile_id": "gitlab-personal-token",
         "identity": "user_delegated",
         "required_scopes": [
@@ -196,7 +196,7 @@
       },
       {
         "id": "gitlab.issue_comment_create",
-        "display_name": "GitLab Create Issue Comment",
+        "display_name": "GitLab: Create Issue Comment",
         "auth_profile_id": "gitlab-personal-token",
         "identity": "user_delegated",
         "required_scopes": [
@@ -219,7 +219,7 @@
       },
       {
         "id": "gitlab.merge_request_comment_create",
-        "display_name": "GitLab Create Merge Request Comment",
+        "display_name": "GitLab: Create Merge Request Comment",
         "auth_profile_id": "gitlab-personal-token",
         "identity": "user_delegated",
         "required_scopes": [
@@ -242,7 +242,7 @@
       },
       {
         "id": "gitlab.trigger.issue",
-        "display_name": "GitLab On Issue",
+        "display_name": "GitLab: On Issue",
         "auth_profile_id": "gitlab-personal-token",
         "identity": "user_delegated",
         "required_scopes": [
@@ -264,7 +264,7 @@
       },
       {
         "id": "gitlab.trigger.merge_request",
-        "display_name": "GitLab On Merge Request",
+        "display_name": "GitLab: On Merge Request",
         "auth_profile_id": "gitlab-personal-token",
         "identity": "user_delegated",
         "required_scopes": [

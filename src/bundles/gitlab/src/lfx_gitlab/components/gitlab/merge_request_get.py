@@ -6,7 +6,7 @@ from lfx_gitlab.base import GitLabActionComponent, connection_input, project_inp
 
 
 class GitLabGetMergeRequestComponent(GitLabActionComponent):
-    display_name = "GitLab Get Merge Request"
+    display_name = "GitLab: Get Merge Request"
     name = "GitLabGetMergeRequestComponent"
     description = "Get a GitLab merge request as the connection owner."
     capability_id = "gitlab.merge_request_read"

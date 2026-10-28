@@ -6,7 +6,7 @@ from lfx_gitlab.base import GitLabActionComponent, connection_input, project_inp
 
 
 class GitLabCreateMergeRequestCommentComponent(GitLabActionComponent):
-    display_name = "GitLab Create Merge Request Comment"
+    display_name = "GitLab: Create Merge Request Comment"
     name = "GitLabCreateMergeRequestCommentComponent"
     description = "Create a comment as the connection owner."
     capability_id = "gitlab.merge_request_comment_create"

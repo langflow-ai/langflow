@@ -6,7 +6,7 @@ from lfx_gitlab.base import GitLabActionComponent, connection_input, project_inp
 
 
 class GitLabUpdateIssueComponent(GitLabActionComponent):
-    display_name = "GitLab Update Issue"
+    display_name = "GitLab: Update Issue"
     name = "GitLabUpdateIssueComponent"
     description = "Update a GitLab issue as the connection owner."
     capability_id = "gitlab.issue_update"
