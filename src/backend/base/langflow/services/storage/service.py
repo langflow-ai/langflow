@@ -30,11 +30,11 @@ __all__ = ["StorageReadiness", "StorageService", "validate_namespace"]
 def _refuse_bad_move(source_namespace: str, target_namespace: str, file_name: str) -> None:
     """Refuse a move that names no file, or moves a file onto itself.
 
-    An empty name resolves to the namespace's own directory on local disk, so a rename
-    would carry every staged file across at once, unverified. A move onto itself would,
-    in the read-write-delete default, delete the only copy.
+    An empty name, ``.`` or ``..`` resolves to a directory on local disk, not a file, so a
+    rename would carry every staged file across at once, unverified. A move onto itself
+    would, in the read-write-delete default, delete the only copy.
     """
-    if not file_name:
+    if file_name in {"", ".", ".."}:
         msg = "move_file needs a file name"
         raise ValueError(msg)
     if source_namespace == target_namespace:

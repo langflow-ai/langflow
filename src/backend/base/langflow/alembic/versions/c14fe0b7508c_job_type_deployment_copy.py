@@ -11,7 +11,10 @@ Create Date: 2026-10-21 15:13:50.460965
 Phase: EXPAND
 Safe to rollback: YES, except that deployment_copy rows are deleted, since the old type has no
     member to hold them. They record a copy's progress and redeploying recreates them.
-Services compatible: All versions. Older services never write the new type.
+Services compatible: New versions only, once anything creates deployment_copy jobs. Older
+    services never write the new type, but they cannot load a row that holds it, and their
+    orphan sweep loads every in-progress job. Roll this out to every replica before the
+    deploy copy that creates these jobs (IBM-Langflow) is turned on.
 """
 
 from collections.abc import Sequence

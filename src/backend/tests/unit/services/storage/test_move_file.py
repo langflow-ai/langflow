@@ -298,7 +298,8 @@ class TestCreateUploadLink:
 
 @pytest.mark.asyncio
 class TestRefusesABadMove:
-    async def test_should_not_move_a_whole_namespace_when_the_name_is_empty(self, tmp_path):
+    @pytest.mark.parametrize("name", ["", ".", ".."])
+    async def test_should_not_move_a_whole_namespace_when_the_name_is_not_a_file(self, tmp_path, name):
         # An empty name resolves to the staging directory itself on local disk, and a rename
         # would then promote every staged file at once, unverified.
         service = LocalStorageService(Mock(), _settings(tmp_path))
@@ -307,7 +308,7 @@ class TestRefusesABadMove:
         (tmp_path / staging / "a.pdf").write_bytes(b"staged")
 
         with pytest.raises(ValueError, match="file name"):
-            await service.move_file(staging, final, "")
+            await service.move_file(staging, final, name)
 
         assert (tmp_path / staging / "a.pdf").read_bytes() == b"staged"
         assert not (tmp_path / final).exists()
