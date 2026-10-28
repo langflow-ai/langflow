@@ -44,6 +44,66 @@ beforeEach(() => {
 });
 
 describe("applyFlowUpdate — boundary validation", () => {
+  describe("configure", () => {
+    it("updates router labels and order without changing edge handles", () => {
+      const previousOutputs = [
+        { name: "category_1_result", display_name: "Billing" },
+        { name: "category_2_result", display_name: "Support" },
+      ];
+      const outputs = [
+        { name: "category_2_result", display_name: "Support" },
+        { name: "category_1_result", display_name: "Payments" },
+      ];
+      const rows = outputs.map((output) => ({
+        route_id: output.name,
+        route_category: output.display_name,
+      }));
+      applyFlowUpdate(
+        asEvent({
+          action: "configure",
+          component_id: "router",
+          params: { routes: rows },
+          outputs,
+        }),
+        asInternals(noopUpdateNodeInternals),
+      );
+      const update = setNodes.mock.calls[0][0];
+      const updated = update([
+        {
+          id: "router",
+          data: {
+            node: {
+              outputs: previousOutputs,
+              template: { routes: { type: "table", value: [] } },
+            },
+          },
+        },
+      ]);
+      expect(updated[0].data.node.outputs).toEqual(outputs);
+      expect(updated[0].data.node.template.routes.value).toEqual(rows);
+      expect(noopUpdateNodeInternals).toHaveBeenCalledWith("router");
+      expect(setEdges).not.toHaveBeenCalled();
+      expect(setNodesAndEdges).not.toHaveBeenCalled();
+    });
+
+    it("keeps existing outputs for older configure events", () => {
+      const outputs = [{ name: "message" }];
+      applyFlowUpdate(
+        asEvent({
+          action: "configure",
+          component_id: "node",
+          params: { input_value: "text" },
+        }),
+        asInternals(noopUpdateNodeInternals),
+      );
+      const updated = setNodes.mock.calls[0][0]([
+        { id: "node", data: { node: { outputs } } },
+      ]);
+      expect(updated[0].data.node.outputs).toEqual(outputs);
+      expect(noopUpdateNodeInternals).not.toHaveBeenCalled();
+    });
+  });
+
   describe("set_flow", () => {
     it("should_skip_canvas_replace_when_flow_data_nodes_is_not_an_array", () => {
       const malformed = {

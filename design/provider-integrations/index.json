@@ -4,6 +4,10 @@
     {
       "provider_id": "confluence",
       "contract": "contracts/confluence.v1.json"
+    },
+    {
+      "provider_id": "github",
+      "contract": "contracts/github.v1.json"
     }
   ]
 }
