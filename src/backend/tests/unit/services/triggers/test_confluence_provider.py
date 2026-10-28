@@ -8,6 +8,7 @@ import pytest
 from langflow.services.connection.oauth.config import OAuthError
 from langflow.services.triggers.ingress.verifiers import IngressRejected, IngressRequest, IngressSecrets, verify
 from langflow.services.triggers.providers.confluence import PROVIDER, collector, oauth
+from langflow.services.triggers.source_errors import SourceConfigurationError
 from lfx.integrations.errors import InvalidRequestError, ProviderUnavailableError
 from lfx_confluence.client import ConfluenceClient
 from lfx_confluence.schema import SCOPES
@@ -128,9 +129,21 @@ async def test_snapshot_bound_and_cursor_retention(monkeypatch):
 
     patch_client(monkeypatch, handler)
     node = trigger()
-    with pytest.raises(InvalidRequestError, match="request limit"):
+    with pytest.raises(SourceConfigurationError, match="smaller approved space and re-enable"):
         await collector.collect(node, lease_for()[0])
     assert node.provider_state == {}
+
+
+@pytest.mark.parametrize("retained", [False, True])
+async def test_page_limits_report_a_source_configuration_error(monkeypatch, retained):
+    monkeypatch.setattr(collector, "MAX_ITEMS", 1)
+    state = {"baseline_complete": True, "started_at": "2026-10-22T10:00:00Z", "pages": {"1": 1}}
+    node = trigger(state=state if retained else {})
+    pages = [page("2")] if retained else [page("1"), page("2")]
+    patch_client(monkeypatch, lambda _request: httpx.Response(200, json={"results": pages}))
+    with pytest.raises(SourceConfigurationError, match="5000"):
+        await collector.collect(node, lease_for()[0])
+    assert node.provider_state == (state if retained else {})
 
 
 @pytest.mark.parametrize(
@@ -170,16 +183,26 @@ def grant():
 
 
 @pytest.mark.parametrize("refresh", [False, True])
-async def test_oauth_initial_and_rotating_grant_prove_site_and_account(monkeypatch, refresh):
+@pytest.mark.parametrize(
+    ("profile", "display"),
+    [
+        ({"displayName": "Example Person", "email": "person@example.com"}, "Example Person"),
+        ({"email": "person@example.com"}, "person@example.com"),
+        ({"displayName": " ", "email": "person@example.com"}, "person@example.com"),
+        ({"displayName": "x" * 256}, None),
+        ({}, None),
+    ],
+)
+async def test_oauth_initial_and_rotating_grant_prove_site_and_account(monkeypatch, refresh, profile, display):
     def handler(request):
         if request.url.path == "/oauth/token/accessible-resources":
             return httpx.Response(200, json=[{"id": SITE, "scopes": list(SCOPES)}])
         assert request.url.path == f"/ex/confluence/{SITE}/wiki/rest/api/user/current"
-        return httpx.Response(200, json={"accountId": "user-1", "type": "known"})
+        return httpx.Response(200, json={"accountId": "user-1", "type": "known", **profile})
 
     monkeypatch.setattr(oauth, "http_client", lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)))
     token, account = await oauth.parse_token(registration(), grant(), refresh=refresh)
-    assert account == {"id": "user-1", "tenant_id": SITE}
+    assert account == {"id": "user-1", "tenant_id": SITE, **({"display": display} if display else {})}
     assert "offline_access" in token["scope"]
 
 

@@ -25,12 +25,32 @@ from lfx_confluence.client import ConfluenceClient
 from lfx_confluence.components.confluence_integrations import (
     ConfluenceCreatePageComponent,
     ConfluenceOnPageCreatedTriggerComponent,
+    ConfluenceOnPageUpdatedTriggerComponent,
     ConfluenceReadPageComponent,
     ConfluenceSearchPagesComponent,
     ConfluenceUpdatePageComponent,
 )
 from lfx_confluence.manifest import load_manifest
 from lfx_confluence.schema import approved_space, cloud_id, next_cursor, numeric_id
+
+
+@pytest.mark.parametrize(
+    "component",
+    [
+        ConfluenceSearchPagesComponent,
+        ConfluenceReadPageComponent,
+        ConfluenceCreatePageComponent,
+        ConfluenceUpdatePageComponent,
+        ConfluenceOnPageCreatedTriggerComponent,
+        ConfluenceOnPageUpdatedTriggerComponent,
+    ],
+)
+def test_palette_and_connection_dialog_use_the_same_provider_labels(component):
+    manifest = load_manifest()
+    capability = next(item for item in manifest.capabilities if item.component_ref == component.__name__)
+    assert capability.display_name == component.display_name
+    assert component.display_name.startswith("Confluence: ")
+    assert component.icon == manifest.icon == "Confluence"
 
 
 async def run(monkeypatch, cls, method, handler, **inputs):

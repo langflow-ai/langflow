@@ -11,7 +11,7 @@ from lfx_confluence.schema import READ, WRITE
 
 
 class ConfluenceActionComponent(Component):
-    icon = "BookOpen"
+    icon = "Confluence"
     capability_id: ClassVar[str] = ""
 
     def client(self):
@@ -34,7 +34,7 @@ class ConfluenceActionComponent(Component):
 class ConfluencePageTriggerComponent(BaseTriggerComponent):
     provider = "confluence"
     needs_connection = True
-    icon = "BookOpen"
+    icon = "Confluence"
 
     def trigger_config(self):
         return {

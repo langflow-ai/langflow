@@ -17,8 +17,8 @@ PROVIDER = TriggerProvider(
             poll_mechanism="confluence.page.poll",
         )
         for kind, component, name in (
-            ("confluence.page_created", "ConfluenceOnPageCreatedTriggerComponent", "Confluence On Page Created"),
-            ("confluence.page_updated", "ConfluenceOnPageUpdatedTriggerComponent", "Confluence On Page Updated"),
+            ("confluence.page_created", "ConfluenceOnPageCreatedTriggerComponent", "Confluence: On Page Created"),
+            ("confluence.page_updated", "ConfluenceOnPageUpdatedTriggerComponent", "Confluence: On Page Updated"),
         )
     ),
     normalize_config=normalize_config,

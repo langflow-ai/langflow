@@ -162,7 +162,7 @@ describe("sourceKeyOf", () => {
     ["salesforce", "Cloud"],
     ["servicenow", "Server"],
     ["jira", "Ticket"],
-    ["confluence", "BookOpen"],
+    ["confluence", "Confluence"],
   ])("shows the %s provider icon", (provider, icon) => {
     expect(sourceIconOf(makeTrigger({ provider }))).toBe(icon);
   });

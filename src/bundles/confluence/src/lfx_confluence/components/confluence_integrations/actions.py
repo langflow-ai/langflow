@@ -27,7 +27,7 @@ def space_input():
 
 
 class ConfluenceSearchPagesComponent(ConfluenceActionComponent):
-    display_name = "Confluence Search Pages"
+    display_name = "Confluence: Search Pages"
     description = "List published pages in one approved space, optionally matching an exact title."
     name = "ConfluenceSearchPages"
     capability_id = "confluence.page.search"
@@ -55,7 +55,7 @@ class ConfluenceSearchPagesComponent(ConfluenceActionComponent):
 
 
 class ConfluenceReadPageComponent(ConfluenceActionComponent):
-    display_name = "Confluence Read Page"
+    display_name = "Confluence: Read Page"
     description = "Read one current page and its storage body from an approved space."
     name = "ConfluenceReadPage"
     capability_id = "confluence.page.read"
@@ -75,7 +75,7 @@ class ConfluenceReadPageComponent(ConfluenceActionComponent):
 
 
 class ConfluenceCreatePageComponent(ConfluenceActionComponent):
-    display_name = "Confluence Create Page"
+    display_name = "Confluence: Create Page"
     description = "Publish one page with a storage-format body in an approved space."
     name = "ConfluenceCreatePage"
     capability_id = "confluence.page.create"
@@ -107,7 +107,7 @@ class ConfluenceCreatePageComponent(ConfluenceActionComponent):
 
 
 class ConfluenceUpdatePageComponent(ConfluenceActionComponent):
-    display_name = "Confluence Update Page"
+    display_name = "Confluence: Update Page"
     description = "Replace a published page only when its current version matches the expected version."
     name = "ConfluenceUpdatePage"
     capability_id = "confluence.page.update"

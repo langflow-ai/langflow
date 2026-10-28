@@ -2,7 +2,7 @@
   "schema_version": 1,
   "provider_id": "confluence",
   "display_name": "Confluence Cloud",
-  "icon": "BookOpen",
+  "icon": "Confluence",
   "docs_url": "https://github.com/langflow-ai/langflow/blob/d4dffe227d3ec238f430736d7ca6d16bbf084c9b/src/bundles/confluence/README.md#setup",
   "auth_profiles": [
     {
@@ -30,7 +30,7 @@
   "capabilities": [
     {
       "id": "confluence.page.search",
-      "display_name": "ConfluenceSearchPages",
+      "display_name": "Confluence: Search Pages",
       "auth_profile_id": "user",
       "identity": "user_delegated",
       "required_scopes": [
@@ -51,7 +51,7 @@
     },
     {
       "id": "confluence.page.read",
-      "display_name": "ConfluenceReadPage",
+      "display_name": "Confluence: Read Page",
       "auth_profile_id": "user",
       "identity": "user_delegated",
       "required_scopes": [
@@ -72,7 +72,7 @@
     },
     {
       "id": "confluence.page.create",
-      "display_name": "ConfluenceCreatePage",
+      "display_name": "Confluence: Create Page",
       "auth_profile_id": "user",
       "identity": "user_delegated",
       "required_scopes": [
@@ -94,7 +94,7 @@
     },
     {
       "id": "confluence.page.update",
-      "display_name": "ConfluenceUpdatePage",
+      "display_name": "Confluence: Update Page",
       "auth_profile_id": "user",
       "identity": "user_delegated",
       "required_scopes": [
@@ -116,7 +116,7 @@
     },
     {
       "id": "confluence.trigger.created",
-      "display_name": "ConfluenceOnPageCreatedTrigger",
+      "display_name": "Confluence: On Page Created",
       "auth_profile_id": "user",
       "identity": "user_delegated",
       "required_scopes": [
@@ -137,7 +137,7 @@
     },
     {
       "id": "confluence.trigger.updated",
-      "display_name": "ConfluenceOnPageUpdatedTrigger",
+      "display_name": "Confluence: On Page Updated",
       "auth_profile_id": "user",
       "identity": "user_delegated",
       "required_scopes": [

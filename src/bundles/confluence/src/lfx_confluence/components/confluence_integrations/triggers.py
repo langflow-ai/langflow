@@ -7,7 +7,7 @@ from lfx_confluence.manifest import connection_input
 
 
 class ConfluenceOnPageCreatedTriggerComponent(ConfluencePageTriggerComponent):
-    display_name = "Confluence On Page Created"
+    display_name = "Confluence: On Page Created"
     description = (
         "Observe newly created pages after an initial approved-space baseline. "
         "Moved old pages do not count as creation."
@@ -26,7 +26,7 @@ class ConfluenceOnPageCreatedTriggerComponent(ConfluencePageTriggerComponent):
 
 
 class ConfluenceOnPageUpdatedTriggerComponent(ConfluencePageTriggerComponent):
-    display_name = "Confluence On Page Updated"
+    display_name = "Confluence: On Page Updated"
     description = "Observe version changes of previously seen published pages. Intermediate edits can be missed."
     name = "ConfluenceOnPageUpdatedTrigger"
     trigger_kind = "confluence.page_updated"

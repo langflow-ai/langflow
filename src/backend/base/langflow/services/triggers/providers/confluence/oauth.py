@@ -97,7 +97,13 @@ async def parse_token(registration, body, *, refresh):  # noqa: ARG001 - rotatin
     except IntegrationError:
         msg = "The Confluence grant could not be verified."
         raise OAuthError(msg, reason="provider-unavailable") from None
-    return token, {"id": account["accountId"], "tenant_id": cloud_id()}
+    identity = {"id": account["accountId"], "tenant_id": cloud_id()}
+    for field in ("displayName", "email"):
+        display = account.get(field)
+        if isinstance(display, str) and display.strip() and len(display) <= MAX_ACCOUNT_LENGTH:
+            identity["display"] = display.strip()
+            break
+    return token, identity
 
 
 OAUTH = OAuthAdapter(

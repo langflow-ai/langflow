@@ -18,6 +18,7 @@ from lfx_confluence.schema import (
     timestamp,
 )
 
+from langflow.services.triggers.source_errors import SourceConfigurationError
 from langflow.services.triggers.source_poll import SourceRound
 
 KINDS = {"confluence.page_created", "confluence.page_updated"}
@@ -104,8 +105,11 @@ async def collect(trigger, lease):
                         }
                     )
             if len(current) > MAX_ITEMS:
-                msg = "The Confluence space exceeds the 5000-page snapshot limit."
-                raise invalid(msg)
+                msg = (
+                    "The Confluence space exceeds the 5000-page snapshot limit. "
+                    "Choose a smaller approved space and re-enable this trigger."
+                )
+                raise SourceConfigurationError(msg)
             if not cursor:
                 break
             if cursor in cursors:
@@ -113,14 +117,17 @@ async def collect(trigger, lease):
                 raise invalid(msg)
             cursors.add(cursor)
         else:
-            msg = "The Confluence space exceeds the 50-page request limit."
-            raise invalid(msg)
+            msg = (
+                "The Confluence space exceeds the 50-page request limit. "
+                "Choose a smaller approved space and re-enable this trigger."
+            )
+            raise SourceConfigurationError(msg)
     finally:
         await client.aclose()
     updated = {**seen, **current}
     if len(updated) > MAX_ITEMS:
         msg = "The source exceeded 5000 observed page IDs. Re-enable it for a fresh baseline."
-        raise invalid(msg)
+        raise SourceConfigurationError(msg)
     return SourceRound(
         items=rows,
         cursor={"baseline_complete": True, "started_at": started, "pages": updated},
