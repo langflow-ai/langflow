@@ -98,7 +98,9 @@ class TestOutboundAuthFailureReporting:
 
     def test_should_not_leak_credentials_from_the_url(self):
         message = util.describe_mcp_connection_failure(
-            "billing-mcp", "https://user:hunter2@serving.internal/mcp?api_key=secret", RuntimeError("HTTP 401")
+            "billing-mcp",
+            "https://user:hunter2@serving.internal/mcp?api_key=secret",  # pragma: allowlist secret
+            RuntimeError("HTTP 401"),
         )
 
         assert "hunter2" not in message
@@ -266,7 +268,7 @@ class TestUrlResolutionProvenance:
             msg = "stop here"
             raise RuntimeError(msg)
 
-        monkeypatch.setattr(util, "validate_connector_url_for_ssrf", fake_validate)
+        monkeypatch.setattr(util, "validate_strict_url_for_ssrf_or_raise", fake_validate)
         return seen
 
     async def test_should_not_resolve_the_url_from_caller_variables(self, monkeypatch):
@@ -397,7 +399,7 @@ def _raise_for_status_error(status: int, url: str) -> httpx.HTTPStatusError:
     raise AssertionError(msg)
 
 
-CREDENTIAL_URL = "https://user:hunter2@serving.internal/mcp?api_key=secret"
+CREDENTIAL_URL = "https://user:hunter2@serving.internal/mcp?api_key=secret"  # pragma: allowlist secret
 
 
 class TestFailureMessagesNeverCarryCredentials:

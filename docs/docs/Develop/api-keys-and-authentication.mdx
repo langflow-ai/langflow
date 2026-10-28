@@ -611,6 +611,8 @@ Use commas to separate Couchbase bootstrap hosts. With connector SSRF validation
 
 In 1.12.4, PGVector connections to `localhost` or `127.0.0.1` are blocked by default, matching the SQL Database components. To keep a trusted local PGVector flow working, set `LANGFLOW_SSRF_ALLOWED_HOSTS=localhost` (and include `127.0.0.1` if used). Connector checks validate bootstrap addresses, but MongoDB, Redis Sentinel, Couchbase, and Valkey clients can discover additional peers after connecting or resolve a validated name again. Use network egress controls to prevent those clients from reaching internal services.
 
+MCP servers using HTTP or SSE require an explicit `LANGFLOW_SSRF_ALLOWED_HOSTS` entry for loopback addresses, even when `LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK=true`. This applies to tool discovery and execution. Add only the hosts your deployment trusts, such as `localhost,127.0.0.1` for an intended local MCP server. When validated DNS addresses are available, MCP connections pin those addresses and bypass environment HTTP proxies. Allowlisted hosts that produce no validated addresses use the default HTTP transport and can use environment HTTP proxies.
+
 #### Model provider endpoints {#provider-allowed-hosts}
 
 Custom model provider endpoints require HTTPS unless the operator explicitly permits HTTP through `LANGFLOW_SSRF_ALLOWED_HOSTS`.
