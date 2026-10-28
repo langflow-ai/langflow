@@ -1,15 +1,18 @@
 """Installed Jira adapter ownership, durable delivery and cleanup contracts."""
 
 import asyncio
+import json
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
-from uuid import uuid4
+from urllib.parse import parse_qs, urlsplit
+from uuid import UUID, uuid4
 
 import httpx
 import pytest
 from langflow.services.connection.oauth.broker import store_tokens
-from langflow.services.database.models.connection.model import Connection
+from langflow.services.database.models.connection import Connection, ConnectionSecret
+from langflow.services.database.models.connection.oauth import ConnectionOAuth
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.trigger.model import Trigger, TriggerCleanup, TriggerEvent, TriggerSubscription
 from langflow.services.database.models.user.model import User
@@ -25,6 +28,7 @@ from lfx.extension.bundle_registry import BundleRecord
 from lfx.integrations.errors import IntegrationPolicyBlockedError, ProviderUnavailableError
 from lfx.services.deps import get_integration_policy_service, get_policy_bundle_service
 from lfx_jira.client import JiraClient
+from lfx_jira.schema import SCOPES
 from sqlmodel import select
 
 from tests.unit.services.triggers.jira_testkit import SITE, issue
@@ -108,6 +112,115 @@ async def connection(owner_id, *, allow=True, identity="user_delegated"):
             ["read:jira-work", "write:jira-work", "read:jira-user", "offline_access"],
         )
         return row.id
+
+
+@pytest.fixture
+def jira_oauth(jira, monkeypatch):  # noqa: ARG001 - install the provider before validating its registration
+    monkeypatch.setenv(
+        "LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS",
+        json.dumps(
+            {
+                "jira-work": {
+                    "provider": "jira",
+                    "client_id": "synthetic-jira-client",
+                    "client_secret": "synthetic-jira-client-secret",  # pragma: allowlist secret
+                    "redirect_uri": "http://localhost/api/v1/connections/oauth/jira/callback",
+                    "tenant": SITE,
+                    "scopes": sorted(SCOPES),
+                }
+            }
+        ),
+    )
+
+
+@pytest.mark.usefixtures("jira_oauth")
+async def test_jira_oauth_requires_offline_access_before_starting_consent(client, logged_in_headers):
+    registrations = await client.get("api/v1/connections/oauth/registrations", headers=logged_in_headers)
+    assert registrations.status_code == 200, registrations.text
+    assert registrations.json()["registrations"][0]["required_scopes"] == ["offline_access"]
+    created = await client.post(
+        "api/v1/connections",
+        headers=logged_in_headers,
+        json={
+            "provider_key": "jira",
+            "name": "actions_only",
+            "display_name": "Jira actions",
+            "executing_identity": {"identity": "user_delegated"},
+        },
+    )
+    assert created.status_code == 201, created.text
+    connection_id = created.json()["id"]
+    rejected = await client.post(
+        f"api/v1/connections/{connection_id}/oauth/start",
+        headers=logged_in_headers,
+        json={"registration_id": "jira-work", "scopes": sorted(SCOPES - {"offline_access"})},
+    )
+    assert rejected.status_code == 400, rejected.text
+    assert "offline_access" in rejected.json()["detail"]
+    assert "set-cookie" not in rejected.headers
+    async with session_scope() as session:
+        assert await session.get(ConnectionOAuth, UUID(connection_id)) is None
+        assert (await session.get(Connection, UUID(connection_id))).status == "pending"
+
+    selected_scopes = sorted(SCOPES - {"write:jira-work"})
+    started = await client.post(
+        f"api/v1/connections/{connection_id}/oauth/start",
+        headers=logged_in_headers,
+        json={"registration_id": "jira-work", "scopes": selected_scopes},
+    )
+    assert started.status_code == 200, started.text
+    query = parse_qs(urlsplit(started.json()["authorization_url"]).query)
+    assert set(query["scope"][0].split()) == set(selected_scopes)
+
+
+@pytest.mark.parametrize("saved_grant", [False, True])
+@pytest.mark.usefixtures("jira_oauth")
+async def test_jira_missing_refresh_token_reports_scope_without_replacing_saved_grant(
+    client, active_user, logged_in_headers, monkeypatch, saved_grant
+):
+    from langflow.services.connection.oauth import providers
+
+    connection_id = await connection(active_user.id)
+    async with session_scope() as session:
+        secret = await session.get(ConnectionSecret, connection_id)
+        previous_payload = secret.encrypted_payload
+        if not saved_grant:
+            await session.delete(secret)
+            row = await session.get(Connection, connection_id)
+            row.status = "pending"
+            row.granted_scopes = []
+            session.add(row)
+    started = await client.post(
+        f"api/v1/connections/{connection_id}/oauth/start",
+        headers=logged_in_headers,
+        json={"registration_id": "jira-work", "scopes": sorted(SCOPES)},
+    )
+    assert started.status_code == 200, started.text
+    query = parse_qs(urlsplit(started.json()["authorization_url"]).query)
+
+    async def exchange(*_args, **_kwargs):
+        return {
+            "access_token": "synthetic-jira-access",
+            "expires_in": 3600,
+            "scope": " ".join(sorted(SCOPES - {"offline_access"})),
+        }
+
+    monkeypatch.setattr(providers, "_request", exchange)
+    failed = await client.get(
+        "api/v1/connections/oauth/jira/callback",
+        params={"state": query["state"][0], "code": "synthetic-jira-code"},
+    )
+    assert failed.status_code == 400, failed.text
+    assert "offline_access" in failed.text
+    assert "synthetic-jira" not in failed.text
+    visible = await client.get("api/v1/connections", headers=logged_in_headers)
+    row = next(item for item in visible.json() if item["id"] == str(connection_id))
+    assert row["status_reason"] == "oauth-refresh-token-missing"
+    assert row["status"] == ("ready" if saved_grant else "error")
+    async with session_scope() as session:
+        secret = await session.get(ConnectionSecret, connection_id)
+        assert (secret.encrypted_payload if secret else None) == (previous_payload if saved_grant else None)
+        assert (await session.get(ConnectionOAuth, connection_id)).state_digest is None
 
 
 async def reconcile(flow_id, owner_id):

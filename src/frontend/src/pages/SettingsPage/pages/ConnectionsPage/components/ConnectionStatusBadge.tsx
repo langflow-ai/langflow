@@ -16,13 +16,16 @@ export function ConnectionStatusBadge({
   const { t } = useTranslation();
   const { status } = connection;
   const oauthReason =
-    connection.status_reason === "oauth-denied"
-      ? t("connections.add.denied")
-      : connection.status_reason === "oauth-expired"
-        ? t("connections.add.expired")
-        : connection.status_reason === "oauth-failed"
-          ? t("connections.add.failed")
-          : null;
+    connection.provider_key === "jira" &&
+    connection.status_reason === "oauth-refresh-token-missing"
+      ? t("connections.add.jiraRefreshMissing")
+      : connection.status_reason === "oauth-denied"
+        ? t("connections.add.denied")
+        : connection.status_reason === "oauth-expired"
+          ? t("connections.add.expired")
+          : connection.status_reason === "oauth-failed"
+            ? t("connections.add.failed")
+            : null;
 
   const action = (label: string) =>
     onAuthorize ? (

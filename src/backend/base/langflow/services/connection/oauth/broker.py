@@ -17,6 +17,7 @@ from langflow.services.auth import utils as auth_utils
 from langflow.services.authorization import ConnectionAction, ensure_connection_permission
 from langflow.services.authorization.guards import audit_guard_in_transaction
 from langflow.services.connection.oauth import providers
+from langflow.services.connection.oauth.adapter import provider_adapter
 from langflow.services.connection.oauth.config import OAuthError, get_oauth_settings
 from langflow.services.connection.oauth.locking import lock_connection
 from langflow.services.database.models.connection import Connection, ConnectionSecret
@@ -57,6 +58,10 @@ async def start(
         raise OAuthError(msg)
     if not scopes or not set(scopes) <= set(registration.scopes):
         msg = "Requested scopes are outside the configured registration."
+        raise OAuthError(msg)
+    adapter = provider_adapter(registration.provider)
+    if adapter and (missing := set(adapter.required_scopes) - set(scopes)):
+        msg = f"Requested scopes must include {', '.join(sorted(missing))} for this connection."
         raise OAuthError(msg)
     if registration.provider == "google" and registration.allowed_tenants and not {"openid", "email"} <= set(scopes):
         msg = "Google tenant restrictions require openid and email scopes."
@@ -209,7 +214,9 @@ async def complete(*, provider: str, state: str, browser: str, code: str | None,
             # metadata when this authorization does not provide identity.
             row.executing_identity = {**row.executing_identity, "account": account}
             session.add(row)
-    except OAuthError:
+    except OAuthError as exc:
+        if exc.code == "oauth-refresh-token-missing":
+            reason = ConnectionStatusReason.OAUTH_REFRESH_TOKEN_MISSING
         await _record_failed_authorization(values["connection_id"], values["generation"], reason)
         raise
 

@@ -266,6 +266,23 @@ async def callback(client, query, **kwargs):
 
 
 @pytest.mark.usefixtures("active_user", "oauth_config")
+@pytest.mark.parametrize("code", [None, "oauth-refresh-token-missing"])
+async def test_callback_uses_fixed_error_text_instead_of_provider_message(client, logged_in_headers, monkeypatch, code):
+    _row, query = await begin(client, logged_in_headers)
+
+    async def reject(*_args, **_kwargs):
+        msg = "private-provider-response"
+        raise OAuthError(msg, code=code)
+
+    monkeypatch.setattr(providers, "exchange", reject)
+    failed = await callback(client, query)
+
+    assert failed.status_code == 400
+    assert "private-provider-response" not in failed.text
+    assert ("offline_access" in failed.text) is (code == "oauth-refresh-token-missing")
+
+
+@pytest.mark.usefixtures("active_user", "oauth_config")
 async def test_callback_pkce_storage_replay_and_revoke(client, logged_in_headers, monkeypatch):
     row, query = await begin(client, logged_in_headers)
     calls = provider_double(monkeypatch, query)

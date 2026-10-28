@@ -380,6 +380,24 @@ describe("ConnectionsPage tabs", () => {
     expect(screen.getByRole("menuitem", { name: "Delete" })).toBeEnabled();
   });
 
+  it("explains missing Jira refresh access while preserving a ready connection", () => {
+    mockUser = { id: SUPERUSER_ID, is_superuser: true };
+    mockConnections = [
+      connection({
+        id: "jira-ready",
+        owner_id: SUPERUSER_ID,
+        provider_key: "jira",
+        status_reason: "oauth-refresh-token-missing",
+      }),
+    ];
+    render(<ConnectionsPage />);
+    const row = within(screen.getByTestId("connection-row-jira_ready"));
+    expect(row.getByText("Ready")).toBeVisible();
+    expect(
+      row.getByText(/Every Jira connection requires offline_access/),
+    ).toBeVisible();
+  });
+
   it("gives a regular user no Other users tab and keeps shared rows under Mine", async () => {
     mockUser = { id: REGULAR_ID, is_superuser: false };
     // A regular user only ever receives another user's row when it was shared

@@ -1,5 +1,6 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { AxiosError } from "axios";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type {
   ConnectionPollBaseline,
@@ -393,7 +394,11 @@ describe("AddConnectionDialog re-authorize", () => {
             : "The provider denied authorization.",
         ),
       ).toBeInTheDocument();
-      expect(mockRemove).not.toHaveBeenCalled();
+      if (mode === "create" && outcome === "denied") {
+        expect(mockRemove).toHaveBeenCalledWith("c1", expect.any(Object));
+      } else {
+        expect(mockRemove).not.toHaveBeenCalled();
+      }
     },
   );
 
@@ -1022,5 +1027,242 @@ describe("AddConnectionDialog create flow", () => {
     } finally {
       openSpy.mockRestore();
     }
+  });
+});
+
+describe("Jira required connection scopes", () => {
+  const JIRA: IntegrationProviderRead = {
+    ...GOOGLE,
+    provider_id: "jira",
+    display_name: "Jira Cloud",
+    capabilities: [
+      {
+        ...capability("jira.issue.read", "JiraGetIssueComponent"),
+        display_name: "Get Issue",
+        required_scopes: ["read:jira-work"],
+      },
+    ],
+  };
+  const pending = () =>
+    connection({
+      provider_key: "jira",
+      status: "pending",
+      has_credentials: false,
+      granted_scopes: [],
+    });
+  let openSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockPolledConnection = undefined;
+    mockTypes = {};
+    mockStartOAuth.mockResolvedValue({ authorization_url: AUTHORIZATION_URL });
+    mockCreate.mockResolvedValue(pending());
+    mockRemove.mockImplementation((_id, options) => options?.onSuccess?.());
+    setRegistrations([
+      registration({
+        id: "jira-work",
+        provider: "jira",
+        scopes: ["read:jira-work", "offline_access"],
+        required_scopes: ["offline_access"],
+      }),
+    ]);
+    openSpy = jest
+      .spyOn(window, "open")
+      .mockReturnValue(popup as unknown as Window);
+  });
+
+  afterEach(() => openSpy.mockRestore());
+
+  const startCreate = async () => {
+    await userEvent.type(screen.getByTestId("connection-name"), "qa831_noofl");
+    await userEvent.type(
+      screen.getByTestId("connection-display-name"),
+      "Jira QA",
+    );
+    await userEvent.click(screen.getByTestId("connection-continue"));
+    await waitFor(() => expect(mockStartOAuth).toHaveBeenCalledTimes(1));
+  };
+
+  it.each(["create", "reconnect"])(
+    "requires refresh access even for action-only %s",
+    async (mode) => {
+      render(
+        dialog(
+          mode === "reconnect"
+            ? connection({
+                provider_key: "jira",
+                granted_scopes: ["read:jira-work"],
+              })
+            : undefined,
+          [JIRA],
+        ),
+      );
+      const scope = scopeBox("offline_access");
+      expect(scope).toBeChecked();
+      expect(scope).toBeDisabled();
+      expect(screen.getByText("Required for this connection")).toBeVisible();
+      await userEvent.click(scope);
+      if (mode === "create") await startCreate();
+      else await userEvent.click(screen.getByTestId("connection-authorize"));
+      await waitFor(() =>
+        expect(mockStartOAuth).toHaveBeenCalledWith({
+          id: "c1",
+          registrationId: "jira-work",
+          scopes: ["read:jira-work", "offline_access"],
+        }),
+      );
+    },
+  );
+
+  it.each(["create", "reconnect"])(
+    "blocks %s when the registration cannot request a required scope",
+    async (mode) => {
+      setRegistrations([
+        registration({
+          id: "jira-work",
+          provider: "jira",
+          scopes: ["read:jira-work"],
+          required_scopes: ["offline_access"],
+        }),
+      ]);
+      render(dialog(mode === "reconnect" ? pending() : undefined, [JIRA]));
+      if (mode === "create") {
+        await userEvent.type(
+          screen.getByTestId("connection-name"),
+          "qa831_noofl",
+        );
+        await userEvent.type(
+          screen.getByTestId("connection-display-name"),
+          "Jira QA",
+        );
+      }
+      expect(
+        screen.getByTestId(
+          mode === "create" ? "connection-continue" : "connection-authorize",
+        ),
+      ).toBeDisabled();
+      expect(screen.getByRole("alert")).toHaveTextContent("offline_access");
+      expect(mockCreate).not.toHaveBeenCalled();
+      expect(mockStartOAuth).not.toHaveBeenCalled();
+    },
+  );
+
+  it("shows safe validation detail and cleans up a failed new start", async () => {
+    mockStartOAuth.mockRejectedValueOnce(
+      Object.assign(new AxiosError("Bad request"), {
+        response: {
+          status: 400,
+          data: {
+            detail: "Jira requires offline_access for every connection.",
+          },
+        },
+      }),
+    );
+    render(dialog(undefined, [JIRA]));
+    await startCreate();
+    expect(
+      await screen.findByText(
+        "Jira requires offline_access for every connection.",
+      ),
+    ).toBeVisible();
+    expect(mockRemove).toHaveBeenCalledWith("c1", expect.any(Object));
+  });
+
+  it("names the missing refresh scope, deletes the new row, and recreates it on retry", async () => {
+    const { rerender } = render(dialog(undefined, [JIRA]));
+    await startCreate();
+    mockPolledConnection = connection({
+      ...pending(),
+      status: "error",
+      status_reason: "oauth-refresh-token-missing",
+      updated_at: "2026-09-16T10:01:00",
+    });
+    rerender(dialog(undefined, [JIRA]));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "offline_access",
+    );
+    await waitFor(() =>
+      expect(mockRemove).toHaveBeenCalledWith("c1", expect.any(Object)),
+    );
+    mockCreate.mockResolvedValueOnce({ ...pending(), id: "c2" });
+    await userEvent.click(screen.getByTestId("connection-try-again"));
+    await waitFor(() => expect(mockStartOAuth).toHaveBeenCalledTimes(2));
+    expect(mockCreate).toHaveBeenCalledTimes(2);
+    expect(mockStartOAuth.mock.calls[1][0]).toEqual({
+      id: "c2",
+      registrationId: "jira-work",
+      scopes: ["read:jira-work", "offline_access"],
+    });
+  });
+
+  it("retains an existing connection when reconnect lacks a refresh grant", async () => {
+    const existing = connection({
+      provider_key: "jira",
+      granted_scopes: ["read:jira-work"],
+    });
+    const { rerender } = render(dialog(existing, [JIRA]));
+    await userEvent.click(screen.getByTestId("connection-authorize"));
+    await waitFor(() => expect(mockStartOAuth).toHaveBeenCalledTimes(1));
+    mockPolledConnection = {
+      ...existing,
+      status_reason: "oauth-refresh-token-missing",
+      updated_at: "2026-09-16T10:01:00",
+    };
+    rerender(dialog(existing, [JIRA]));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "offline_access",
+    );
+    expect(mockRemove).not.toHaveBeenCalled();
+  });
+
+  it("shows a failed recreation after cleaning up the prior consent attempt", async () => {
+    const { rerender } = render(dialog(undefined, [JIRA]));
+    await startCreate();
+    mockPolledConnection = connection({
+      ...pending(),
+      status: "error",
+      status_reason: "oauth-refresh-token-missing",
+      updated_at: "2026-09-16T10:01:00",
+    });
+    rerender(dialog(undefined, [JIRA]));
+    await waitFor(() => expect(mockRemove).toHaveBeenCalled());
+    mockCreate.mockRejectedValueOnce(
+      Object.assign(new AxiosError("Conflict"), {
+        response: {
+          status: 409,
+          data: { detail: "This connection handle is already in use." },
+        },
+      }),
+    );
+    await userEvent.click(screen.getByTestId("connection-try-again"));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "This connection handle is already in use.",
+    );
+  });
+
+  it("waits for cleanup before retry and retains the row if cleanup fails", async () => {
+    let failCleanup: () => void = () => {};
+    mockRemove.mockImplementationOnce((_id, options) => {
+      failCleanup = options.onError;
+    });
+    const { rerender } = render(dialog(undefined, [JIRA]));
+    await startCreate();
+    mockPolledConnection = connection({
+      ...pending(),
+      status: "error",
+      status_reason: "oauth-refresh-token-missing",
+      updated_at: "2026-09-16T10:01:00",
+    });
+    rerender(dialog(undefined, [JIRA]));
+    expect(await screen.findByTestId("connection-try-again")).toBeDisabled();
+    await userEvent.click(screen.getByTestId("connection-try-again"));
+    expect(mockStartOAuth).toHaveBeenCalledTimes(1);
+    await act(async () => failCleanup());
+    expect(screen.getByTestId("connection-try-again")).toBeEnabled();
+    await userEvent.click(screen.getByTestId("connection-try-again"));
+    await waitFor(() => expect(mockStartOAuth).toHaveBeenCalledTimes(2));
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockStartOAuth.mock.calls[1][0].id).toBe("c1");
   });
 });

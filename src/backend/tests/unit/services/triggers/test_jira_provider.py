@@ -180,6 +180,22 @@ async def test_oauth_initial_and_refresh_prove_site_scopes_and_account(monkeypat
     assert len(requests) == 4
 
 
+@pytest.mark.parametrize("refresh_token", [None, "", 42])
+async def test_oauth_missing_refresh_token_names_required_scope(refresh_token):
+    with pytest.raises(OAuthError, match="offline_access") as caught:
+        await oauth.parse_token(
+            registration(),
+            {
+                "access_token": "synthetic-jira-access",
+                "refresh_token": refresh_token,
+                "expires_in": 3600,
+                "scope": "read:jira-work read:jira-user",
+            },
+            refresh=False,
+        )
+    assert caught.value.code == "oauth-refresh-token-missing"
+
+
 @pytest.mark.parametrize(
     ("profile", "display"),
     [
