@@ -20,7 +20,7 @@ def _table():
 
 
 class ServiceNowSearchRecordsComponent(ServiceNowActionComponent):
-    display_name = "ServiceNow Search Tickets"
+    display_name = "ServiceNow: Search Tickets"
     description = "Search one approved ticket table with a single exact filter."
     name = "ServiceNowSearchRecords"
     capability_id = "servicenow.records.search"
@@ -72,7 +72,7 @@ class ServiceNowSearchRecordsComponent(ServiceNowActionComponent):
 
 
 class ServiceNowReadRecordComponent(ServiceNowActionComponent):
-    display_name = "ServiceNow Read Ticket"
+    display_name = "ServiceNow: Read Ticket"
     description = "Read one ticket by its sys_id from an approved table."
     name = "ServiceNowReadRecord"
     capability_id = "servicenow.records.read"
@@ -91,7 +91,7 @@ class ServiceNowReadRecordComponent(ServiceNowActionComponent):
 
 
 class ServiceNowCreateRecordComponent(ServiceNowActionComponent):
-    display_name = "ServiceNow Create Ticket"
+    display_name = "ServiceNow: Create Ticket"
     description = "Create one ticket using approved fields. Automatic write retries are disabled."
     name = "ServiceNowCreateRecord"
     capability_id = "servicenow.records.create"
@@ -107,7 +107,7 @@ class ServiceNowCreateRecordComponent(ServiceNowActionComponent):
 
 
 class ServiceNowUpdateRecordComponent(ServiceNowActionComponent):
-    display_name = "ServiceNow Update Ticket"
+    display_name = "ServiceNow: Update Ticket"
     description = "Patch approved ticket fields. ServiceNow ACLs and business rules still apply."
     name = "ServiceNowUpdateRecord"
     capability_id = "servicenow.records.update"

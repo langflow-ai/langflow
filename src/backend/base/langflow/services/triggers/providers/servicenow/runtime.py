@@ -12,6 +12,7 @@ from lfx_servicenow.schema import READ_SCOPE, origin, record_id, result_record, 
 from langflow.services.database.models.connection.model import Connection
 from langflow.services.triggers.providers.registry import TriggerKind, TriggerProvider
 from langflow.services.triggers.providers.servicenow.oauth import OAUTH
+from langflow.services.triggers.source_errors import SourceConfigurationError
 from langflow.services.triggers.source_poll import SourceRound
 
 _TIME = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$")
@@ -121,8 +122,8 @@ async def collect(trigger, lease) -> SourceRound:
             # After the data-page budget, only an empty exhaustion probe is
             # allowed. This keeps the advertised record limit inclusive.
             if rows and page_index == _MAX_PAGES:
-                msg = "ServiceNow polling exceeded its page limit. The cursor was not advanced."
-                raise ValueError(msg)
+                msg = "ServiceNow polling exceeded its page limit. Choose a smaller table and re-enable this trigger."
+                raise SourceConfigurationError(msg)
             for raw in rows:
                 record = result_record(raw)
                 identifier = record_id(record["sys_id"])
@@ -150,8 +151,11 @@ async def collect(trigger, lease) -> SourceRound:
                     prior_status = states.get(identifier)
                     states[identifier] = status
                     if len(states) > _MAX_TRACKED:
-                        msg = "ServiceNow status polling supports at most 10000 observed records per trigger."
-                        raise ValueError(msg)
+                        msg = (
+                            "ServiceNow status polling supports at most 10000 observed records per trigger. "
+                            "Choose a smaller table and re-enable this trigger."
+                        )
+                        raise SourceConfigurationError(msg)
                     if prior_status is None or prior_status == status:
                         continue
                     version = f"{record['sys_updated_on']}:{modified}:{status}"
@@ -207,11 +211,11 @@ PROVIDER = TriggerProvider(
             poll_mechanism="servicenow.poll",
         )
         for kind, component, name in (
-            ("servicenow.ticket_created", "ServiceNowOnTicketCreatedTriggerComponent", "ServiceNow On Ticket Created"),
+            ("servicenow.ticket_created", "ServiceNowOnTicketCreatedTriggerComponent", "ServiceNow: On Ticket Created"),
             (
                 "servicenow.status_changed",
                 "ServiceNowOnStatusChangeTriggerComponent",
-                "ServiceNow On Observed Status Change",
+                "ServiceNow: On Observed Status Change",
             ),
         )
     ),

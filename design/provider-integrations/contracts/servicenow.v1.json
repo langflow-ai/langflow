@@ -6,7 +6,7 @@
     "schema_version": 1,
     "provider_id": "servicenow",
     "display_name": "ServiceNow",
-    "icon": "Server",
+    "icon": "ServiceNow",
     "docs_url": "https://github.com/langflow-ai/langflow/blob/7864db7185c4eb63cf27de24fe133e920cb3e97c/design/provider-integrations/servicenow.md",
     "auth_profiles": [
       {
@@ -34,7 +34,7 @@
     "capabilities": [
       {
         "id": "servicenow.records.search",
-        "display_name": "ServiceNow Search Tickets",
+        "display_name": "ServiceNow: Search Tickets",
         "auth_profile_id": "user",
         "identity": "user_delegated",
         "required_scopes": [
@@ -54,7 +54,7 @@
       },
       {
         "id": "servicenow.records.read",
-        "display_name": "ServiceNow Read Ticket",
+        "display_name": "ServiceNow: Read Ticket",
         "auth_profile_id": "user",
         "identity": "user_delegated",
         "required_scopes": [
@@ -74,7 +74,7 @@
       },
       {
         "id": "servicenow.records.create",
-        "display_name": "ServiceNow Create Ticket",
+        "display_name": "ServiceNow: Create Ticket",
         "auth_profile_id": "user",
         "identity": "user_delegated",
         "required_scopes": [
@@ -95,7 +95,7 @@
       },
       {
         "id": "servicenow.records.update",
-        "display_name": "ServiceNow Update Ticket",
+        "display_name": "ServiceNow: Update Ticket",
         "auth_profile_id": "user",
         "identity": "user_delegated",
         "required_scopes": [
@@ -116,7 +116,7 @@
       },
       {
         "id": "servicenow.trigger.ticket_created",
-        "display_name": "ServiceNow On Ticket Created",
+        "display_name": "ServiceNow: On Ticket Created",
         "auth_profile_id": "user",
         "identity": "user_delegated",
         "required_scopes": [
@@ -135,7 +135,7 @@
       },
       {
         "id": "servicenow.trigger.status_changed",
-        "display_name": "ServiceNow On Observed Status Change",
+        "display_name": "ServiceNow: On Observed Status Change",
         "auth_profile_id": "user",
         "identity": "user_delegated",
         "required_scopes": [

@@ -10,14 +10,14 @@ from lfx_servicenow.schema import TABLES
 class _ServiceNowSource:
     provider = "servicenow"
     needs_connection = True
-    icon = "Server"
+    icon = "ServiceNow"
 
     def trigger_config(self) -> dict:
         return {"connection": getattr(self, "connection", None), "table": self.table, "delivery_mode": "poll"}
 
 
 class ServiceNowOnTicketCreatedTriggerComponent(_ServiceNowSource, BaseTriggerComponent):
-    display_name = "ServiceNow On Ticket Created"
+    display_name = "ServiceNow: On Ticket Created"
     description = "Observe new tickets after enabling. Requires a self-managed listener."
     name = "ServiceNowOnTicketCreatedTrigger"
     trigger_kind = "servicenow.ticket_created"
@@ -28,7 +28,7 @@ class ServiceNowOnTicketCreatedTriggerComponent(_ServiceNowSource, BaseTriggerCo
 
 
 class ServiceNowOnStatusChangeTriggerComponent(_ServiceNowSource, BaseTriggerComponent):
-    display_name = "ServiceNow On Observed Status Change"
+    display_name = "ServiceNow: On Observed Status Change"
     description = "Compare observed ticket states. Intermediate transitions and deletions are not captured."
     name = "ServiceNowOnStatusChangeTrigger"
     trigger_kind = "servicenow.status_changed"

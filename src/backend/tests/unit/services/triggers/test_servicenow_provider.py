@@ -25,6 +25,7 @@ from langflow.services.triggers.providers import registry
 from langflow.services.triggers.reconciliation import reconcile_flow_triggers
 from langflow.services.triggers.service import TriggerService
 from langflow.services.triggers.source_clients import source_lease
+from langflow.services.triggers.source_errors import SourceConfigurationError
 from langflow.services.triggers.source_poll import collect_source, commit_source
 from lfx.extension.bundle_registry import BundleRecord
 from lfx.extension.loader._types import LoadedIntegration
@@ -489,7 +490,7 @@ async def test_status_record_limit_allows_an_exhaustion_probe(provider, monkeypa
         assert result.cursor["baseline_complete"] is True
         assert result.items == []
     else:
-        with pytest.raises(ValueError, match="page limit"):
+        with pytest.raises(SourceConfigurationError, match="smaller table and re-enable"):
             await provider.runtime.collect(row, FixedLease())
     assert len(requests) == 101
     assert row.provider_state == {}
@@ -523,8 +524,11 @@ async def test_incomplete_rounds_preserve_cursor(provider, monkeypatch, failure)
     monkeypatch.setattr(
         provider.runtime, "ServiceNowClient", partial(ServiceNowClient, transport=httpx.MockTransport(handler))
     )
-    with pytest.raises(ValueError, match="ServiceNow"):
+    expected = SourceConfigurationError if failure in {"page-budget", "record-budget"} else ValueError
+    with pytest.raises(expected, match="ServiceNow") as caught:
         await provider.runtime.collect(row, FixedLease())
+    if failure in {"page-budget", "record-budget"}:
+        assert "re-enable this trigger" in str(caught.value)
     assert row.provider_state == prior
     assert row.provider_state["observed_states"] == {ID: "1"}
 

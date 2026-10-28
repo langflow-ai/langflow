@@ -160,7 +160,7 @@ describe("sourceKeyOf", () => {
     ["discord", "MessageCircle"],
     ["telegram", "Send"],
     ["salesforce", "Cloud"],
-    ["servicenow", "Server"],
+    ["servicenow", "ServiceNow"],
     ["jira", "Ticket"],
     ["confluence", "BookOpen"],
   ])("shows the %s provider icon", (provider, icon) => {

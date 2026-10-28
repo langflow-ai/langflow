@@ -22,7 +22,7 @@ __all__ = [
 
 
 class ServiceNowActionComponent(Component):
-    icon = "Server"
+    icon = "ServiceNow"
     capability_id: ClassVar[str] = ""
     transport: Any = None
 
