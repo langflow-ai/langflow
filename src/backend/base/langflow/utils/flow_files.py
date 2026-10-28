@@ -27,9 +27,11 @@ from dataclasses import field as dataclass_field
 
 from lfx.services.storage.namespace import validate_namespace
 
-# ``_canonical_file_input`` is set at run time by the graph to mark a field whose ``value``
-# is the file path. It is not in stored flow data, so the scan reads ``file_path`` and then
-# ``value`` for every file field rather than relying on it.
+# ``_canonical_file_input`` is set at run time by the graph, only when local file access is
+# restricted (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS), to mark a field whose ``value`` is the
+# file path. It is not in stored flow data, and the plane a flow is deployed to may run
+# either way, so the scan reads ``file_path`` and then ``value`` for every file field: it
+# copies whatever the flow could read there.
 _WINDOWS_DRIVE = re.compile(r"^[A-Za-z]:[/\\]")
 
 
@@ -185,8 +187,9 @@ def _is_file_field(field: dict) -> bool:
 def _raw_values(field: dict) -> list[str]:
     """The strings a file field holds, whether it keeps one or a list.
 
-    ``file_path`` wins over ``value`` because the graph reads it first and falls back to
-    ``value`` only when it is empty.
+    ``file_path`` wins over ``value`` because the graph reads it first. It falls back to
+    ``value`` only when ``file_path`` is empty and local file access is restricted; the scan
+    falls back whenever ``file_path`` is empty, since the target plane may be restricted.
     """
     held = field.get("file_path") or field.get("value")
     # A blank is an optional input nobody filled, not a reference that failed to resolve.

@@ -211,6 +211,7 @@ class LocalStorageService(StorageService):
             if await self._has_object(target_namespace, file_name):
                 return
             raise
+        await logger.ainfo(f"File {file_name} moved from {source_namespace} to {target_namespace}")
 
     async def get_file(self, flow_id: str, file_name: str) -> bytes:
         """Retrieve a file from the local storage.

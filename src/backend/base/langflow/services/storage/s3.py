@@ -617,6 +617,7 @@ class S3StorageService(StorageService):
                     raise FileNotFoundError(msg) from e
                 return
             await s3_client.delete_object(Bucket=self.bucket_name, Key=source_key)
+        await logger.ainfo(f"File {file_name} moved from {source_namespace} to {target_namespace} in S3")
 
     async def delete_file(self, flow_id: str, file_name: str) -> None:
         """Delete a file from S3.
