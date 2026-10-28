@@ -201,7 +201,15 @@ class MixpanelTracer(BaseTracer):
     ) -> None:
         with self._runs_lock:
             parent_run = self._runs.get(parent_run_id) if parent_run_id else None
-            parent = parent_run[0] if parent_run else self.spans.get(component_id or "", self.root_span)
+            if parent_run:
+                parent = parent_run[0]
+            elif component_id:
+                # add_trace is queued, so a model can start before its component span exists.
+                if component_id not in self.spans:
+                    self.spans[component_id] = self._start_span(component_id, self.root_span, {})
+                parent = self.spans[component_id]
+            else:
+                parent = self.root_span
             self._runs[run_id] = (self._start_span(name, parent, attributes), component_id)
 
     def end_run(
@@ -237,7 +245,13 @@ class MixpanelTracer(BaseTracer):
         attributes = {"langflow.component.id": trace_id, "langflow.component.type": trace_type}
         if self.capture_content:
             attributes["langflow.inputs"] = _to_json(inputs)
-        self.spans[trace_id] = self._start_span(trace_name, self.root_span, attributes)
+        with self._runs_lock:
+            span = self.spans.get(trace_id)
+            if span is None:
+                self.spans[trace_id] = self._start_span(trace_name, self.root_span, attributes)
+                return
+        span.update_name(trace_name)
+        span.set_attributes({**self.common_attributes, **attributes})
 
     @override
     def end_trace(
@@ -281,7 +295,10 @@ class MixpanelTracer(BaseTracer):
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
         if not self._ready:
             return None
-        component_id = next(reversed(self.spans)) if self.spans else None
+        from langflow.services.tracing.service import component_context_var
+
+        component_context = component_context_var.get(None)
+        component_id = component_context.trace_id if component_context else None
         return MixpanelCallbackHandler(self, component_id)
 
 

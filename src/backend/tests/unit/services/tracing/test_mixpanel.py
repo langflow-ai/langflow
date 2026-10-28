@@ -8,6 +8,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.outputs import ChatGeneration, LLMResult
 from langflow.services.tracing import mixpanel as mixpanel_module
 from langflow.services.tracing.mixpanel import MixpanelTracer
+from langflow.services.tracing.service import ComponentTraceContext, component_context_var
 from opentelemetry.proto.collector.trace.v1.trace_service_pb2 import ExportTraceServiceRequest
 
 TOKEN = "probe-token"  # noqa: S105
@@ -77,9 +78,17 @@ def _make_tracer(**kwargs) -> MixpanelTracer:
     )
 
 
+def _callback_inside_component(tracer: MixpanelTracer, component_id: str):
+    token = component_context_var.set(ComponentTraceContext(component_id, component_id, "llm", None, {}))
+    try:
+        return tracer.get_langchain_callback()
+    finally:
+        component_context_var.reset(token)
+
+
 def _run_flow(tracer: MixpanelTracer) -> None:
-    tracer.add_trace("OpenAIModel-abc", "OpenAI", "llm", {"input_value": "SECRET-PROMPT"})
-    handler = tracer.get_langchain_callback()
+    # TracingService queues add_trace, so the model usually starts before its component span exists.
+    handler = _callback_inside_component(tracer, "OpenAIModel-abc")
     llm_run, tool_run = uuid.uuid4(), uuid.uuid4()
     handler.on_chat_model_start(
         {},
@@ -87,6 +96,7 @@ def _run_flow(tracer: MixpanelTracer) -> None:
         run_id=llm_run,
         metadata={"ls_provider": "openai", "ls_model_name": "gpt-4o-mini"},
     )
+    tracer.add_trace("OpenAIModel-abc", "OpenAI", "llm", {"input_value": "SECRET-PROMPT"})
     message = AIMessage(
         content="SECRET-COMPLETION",
         usage_metadata={"input_tokens": 12, "output_tokens": 5, "total_tokens": 17},
@@ -119,6 +129,8 @@ def test_exports_flow_component_llm_and_tool_spans_to_mixpanel(receiver):
     assert component["parent_span_id"] == root["span_id"]
     assert llm["parent_span_id"] == component["span_id"]
     assert tool["parent_span_id"] == component["span_id"]
+    assert len(spans) == 4
+    assert component["attributes"]["langflow.component.id"] == "OpenAIModel-abc"
 
     for span in spans.values():
         assert span["attributes"]["user.id"] == "end-user-42"
@@ -170,7 +182,7 @@ def test_authenticated_user_is_not_used_as_the_mixpanel_user(receiver):
 def test_failed_llm_call_and_unfinished_runs_still_end_their_spans(receiver):
     tracer = _make_tracer(tracing_user_id="end-user-42")
     tracer.add_trace("Agent-1", "Agent", "agent", {})
-    handler = tracer.get_langchain_callback()
+    handler = _callback_inside_component(tracer, "Agent-1")
     failed, unfinished = uuid.uuid4(), uuid.uuid4()
     handler.on_chat_model_start({}, [[HumanMessage(content="hi")]], run_id=failed, metadata={"ls_model_name": "m1"})
     handler.on_llm_error(RuntimeError("rate limited"), run_id=failed)
@@ -191,7 +203,7 @@ def test_completion_models_tool_errors_and_open_components_are_recorded(receiver
     monkeypatch.setenv("MIXPANEL_CAPTURE_CONTENT", "1")
     tracer = _make_tracer(tracing_user_id="end-user-42")
     tracer.add_trace("LLM-1", "Legacy LLM", "llm", {"prompt": Message(text="message prompt")})
-    handler = tracer.get_langchain_callback()
+    handler = _callback_inside_component(tracer, "LLM-1")
     completion, tool = uuid.uuid4(), uuid.uuid4()
     handler.on_llm_start({}, ["complete this"], run_id=completion, invocation_params={"model": "claude-2"})
     handler.on_llm_end(LLMResult(generations=[[Generation(text="done")]]), run_id=completion)
