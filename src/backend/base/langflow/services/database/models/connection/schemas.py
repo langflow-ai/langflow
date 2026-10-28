@@ -100,6 +100,15 @@ class ConnectionCreate(BaseModel):
         return normalized
 
 
+class ConnectionTokenRenewal(BaseModel):
+    """Replace a manual token without changing its connection handle or owner."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    credentials: ConnectionCredentialWrite
+    allow_non_interactive: bool = False
+
+
 class ConnectionUpdate(BaseModel):
     """Connection metadata that changes without re-authorizing the provider.
 
