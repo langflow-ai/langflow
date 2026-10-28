@@ -12,6 +12,7 @@ from __future__ import annotations
 import contextlib
 import contextvars
 import copy
+import os
 import re
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any
@@ -59,6 +60,7 @@ from lfx.graph.flow_builder import (
 from lfx.graph.flow_builder import (
     remove_connection as fb_remove_connection,
 )
+from lfx.graph.flow_builder.component import _keep_row_ids
 from lfx.graph.flow_builder.spec import validate_spec_references
 from lfx.log.logger import logger
 from lfx.mcp.client import LangflowClient
@@ -69,6 +71,7 @@ from lfx.mcp.registry import (
     load_registry,
     search_registry,
 )
+from lfx.services.deps import get_settings_service
 from lfx.services.telemetry import MCPToolPayload, TelemetryService
 
 # Session state. Module-level singletons for stdio (single agent), with
@@ -84,7 +87,12 @@ _telemetry: TelemetryService | None = None
 async def _telemetry_lifespan(_server: FastMCP) -> AsyncIterator[dict]:
     """Start/stop the telemetry service with the MCP server lifecycle."""
     global _telemetry  # noqa: PLW0603
-    svc = TelemetryService()
+    settings = get_settings_service().settings
+    svc = TelemetryService(
+        base_url=os.environ.get("LANGFLOW_SEGMENT_API_URL") or settings.segment_api_url,
+        write_key=os.environ.get("LANGFLOW_SEGMENT_WRITE_KEY") or settings.segment_write_key,
+        do_not_track=settings.do_not_track or os.environ.get("DO_NOT_TRACK", "false").lower() in {"1", "true"},
+    )
     svc.start()
     _telemetry = svc
     try:
@@ -767,6 +775,7 @@ async def configure_component(
             else:
                 # Set value in template before sending
                 if key in template and isinstance(template[key], dict):
+                    value = _keep_row_ids(template[key].get("value"), value)
                     template[key]["value"] = value
                     # A value explicitly supplied to this tool is a literal.
                     # Preserve component defaults, but do not let the refresh

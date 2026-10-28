@@ -110,6 +110,9 @@ CASE_CONVERTERS: dict[str, Any] = {
     "swapcase": str.swapcase,
 }
 
+# A markdown table's delimiter row (``|---|:--:|``) separates the header from the body.
+MARKDOWN_DELIMITER_CELL = re.compile(r":?-+:?")
+
 
 class OperationsComponent(Component):
     display_name = "Data Operations"
@@ -691,9 +694,12 @@ class OperationsComponent(Component):
         if main_input and main_input in build_config:
             build_config[main_input]["show"] = True
             build_config[main_input]["required"] = True
-            # The JSON "Combine" operation consumes a list of Data objects.
+            # The JSON "Combine" operation consumes a list of Data objects. The
+            # serialized template stores Input.is_list under "list", which the
+            # canvas and the graph read to decide whether "data" takes many edges.
             if main_input == "data":
-                build_config["data"]["is_list"] = operation == "Combine"
+                build_config["data"]["list"] = operation == "Combine"
+                build_config["data"].pop("is_list", None)
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         # Path Selection: refresh the available JSON paths from the pasted JSON.
@@ -777,7 +783,11 @@ class OperationsComponent(Component):
         return frontend_node
 
     async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict) -> dict:
-        """Keep the operation options and outputs in sync with the saved input type on load."""
+        """Keep the operation options, outputs and field visibility in sync with the saved values on load.
+
+        The rebuilt template carries class-default ``show``/``required`` flags, which the generic merge
+        does not restore, so visibility is re-derived here without touching saved field values.
+        """
         await super().update_frontend_node(new_frontend_node, current_frontend_node)
 
         template = new_frontend_node.get("template", {})
@@ -796,6 +806,23 @@ class OperationsComponent(Component):
         else:
             self.update_outputs(new_frontend_node, "input_type", input_type)
 
+        # Re-apply visibility. Unlike _reset_operation_fields, keep saved values.
+        operation = self._extract_operation_name(operation_value)
+        self._show_main_input(template, input_type, operation)
+        for field in self.ALL_OPERATION_FIELDS:
+            if field in template:
+                template[field]["show"] = field in self.OPERATION_FIELDS.get(operation, [])
+
+        # The merge restores only values, so rebuild Path Selection's dropdown from the saved JSON.
+        if operation == "Path Selection" and "selected_key" in template:
+            mapped_json = template.get("mapped_json_display", {}).get("value")
+            if mapped_json:
+                try:
+                    template["selected_key"]["options"] = self.extract_all_paths(json.loads(mapped_json))
+                except (json.JSONDecodeError, TypeError, ValueError, RecursionError) as e:
+                    logger.warning(f"Error parsing saved mapped JSON: {e}")
+                    template["selected_key"]["show"] = False
+
         return new_frontend_node
 
     # ==================================================================
@@ -807,6 +834,8 @@ class OperationsComponent(Component):
         if operation in JSON_OPERATIONS:
             handler = self._json_handlers().get(operation)
             if handler:
+                if operation != "Combine":
+                    self.validate_data_edges(operation)
                 try:
                     return handler()
                 except Exception as e:
@@ -904,13 +933,31 @@ class OperationsComponent(Component):
             msg = f"{operation} operation is not supported for multiple data objects."
             raise ValueError(msg)
 
+    def validate_data_edges(self, operation: str) -> None:
+        """Fail when several JSON edges feed an operation that takes one input.
+
+        A node keeps its edges when its operation changes, and for every operation but Combine the
+        ``data`` field takes one edge, so the graph would pass only the last edge's data. Count the
+        edges instead of trusting the value.
+        """
+        vertex = getattr(self, "_vertex", None)
+        if vertex is None:
+            return
+        if sum(1 for edge in vertex.incoming_edges if edge.target_param == "data") > 1:
+            msg = (
+                f"{operation} operation is not supported for multiple data objects. "
+                "Connect one JSON input, or use Combine."
+            )
+            raise ValueError(msg)
+
     def select_keys(self) -> Data:
         """Select specific keys from the data dictionary."""
         self.validate_single_data("Select Keys")
         data_dict = self.get_normalized_data()
         filter_criteria: list[str] = self.select_keys_input
 
-        if len(filter_criteria) == 1 and filter_criteria[0] == "data":
+        # Only a dict can be unwrapped into Data; any other value keeps its key.
+        if filter_criteria == ["data"] and isinstance(data_dict.get("data"), dict):
             filtered = data_dict["data"]
         else:
             if not all(key in data_dict for key in filter_criteria):
@@ -985,7 +1032,7 @@ class OperationsComponent(Component):
                         [combined_data[key], value] if not isinstance(value, list) else [combined_data[key], *value]
                     )
 
-        return Data(**combined_data)
+        return Data(data=combined_data)
 
     def append_update(self) -> Data:
         """Append or update the data with new key-value pairs."""
@@ -993,7 +1040,7 @@ class OperationsComponent(Component):
         data_filtered = self.get_normalized_data()
         for key, value in self.append_update_data.items():
             data_filtered[key] = value
-        return Data(**data_filtered)
+        return Data(data=data_filtered)
 
     def json_path(self) -> Data:
         """Extract a value from the data using the selected JQ path."""
@@ -1089,15 +1136,31 @@ class OperationsComponent(Component):
             raise ValueError(msg)
         return handler(df_copy)
 
+    @staticmethod
+    def _comparable_filter_value(column: pd.Series, filter_value: Any) -> Any:
+        """Return a text input as a number when the column is numeric.
+
+        Filter and Replace Value inputs arrive as text, and ``30 == "30"`` never matches in pandas.
+        A blank input stays text: ``pd.to_numeric("")`` is NaN, which would match missing cells.
+        """
+        if filter_value in (None, ""):
+            return filter_value
+        if pd.api.types.is_numeric_dtype(column) and not pd.api.types.is_bool_dtype(column):
+            try:
+                return pd.to_numeric(filter_value)
+            except (ValueError, TypeError):
+                return filter_value
+        return filter_value
+
     def filter_rows_by_value(self, df: DataFrame) -> DataFrame:
         column = df[self.column_name]
         filter_value = self.filter_value
         operator = getattr(self, "filter_operator", "equals")
 
         if operator == "equals":
-            mask = column == filter_value
+            mask = column == self._comparable_filter_value(column, filter_value)
         elif operator == "not equals":
-            mask = column != filter_value
+            mask = column != self._comparable_filter_value(column, filter_value)
         elif operator == "contains":
             mask = column.astype(str).str.contains(str(filter_value), na=False, regex=False)
         elif operator == "not contains":
@@ -1119,7 +1182,7 @@ class OperationsComponent(Component):
             except (ValueError, TypeError):
                 mask = column.astype(str) < str(filter_value)
         else:
-            mask = column == filter_value
+            mask = column == self._comparable_filter_value(column, filter_value)
 
         return DataFrame(df[mask])
 
@@ -1147,7 +1210,24 @@ class OperationsComponent(Component):
         return DataFrame(df.tail(self.num_rows))
 
     def replace_values(self, df: DataFrame) -> DataFrame:
-        df[self.column_name] = df[self.column_name].replace(self.replace_value, self.replacement_value)
+        column = df[self.column_name]
+        replace_val = self._comparable_filter_value(column, self.replace_value)
+        replacement_val = self._comparable_filter_value(column, self.replacement_value)
+        try:
+            result = column.replace(replace_val, replacement_val)
+        except TypeError:
+            if not (
+                isinstance(column.dtype, pd.api.extensions.ExtensionDtype)
+                and pd.api.types.is_integer_dtype(column.dtype)
+            ):
+                raise
+            # Nullable integers reject fractional/text replacements instead of widening like NumPy columns.
+            widened = column.astype("Float64" if pd.api.types.is_float(replacement_val) else object)
+            # A float cannot represent every Int64 value. Preserve unrelated large integers exactly.
+            if not widened.astype(object).equals(column.astype(object)):
+                widened = column.astype(object)
+            result = widened.mask(column.eq(replace_val).fillna(value=False), replacement_val)
+        df[self.column_name] = result
         return DataFrame(df)
 
     def drop_duplicates(self, df: DataFrame) -> DataFrame:
@@ -1180,6 +1260,19 @@ class OperationsComponent(Component):
         merge_on = getattr(self, "merge_on_column", None)
         merge_how = getattr(self, "merge_how", "inner")
 
+        # Track only columns created by this merge, without colliding with input names.
+        right_columns = {}
+        used_columns = set(df_left.columns) | set(df_right.columns)
+        for col in df_left.columns.intersection(df_right.columns):
+            if merge_on and col == merge_on:
+                continue
+            right_col = f"{col}_right"
+            while right_col in used_columns:
+                right_col += "_right"
+            right_columns[col] = right_col
+            used_columns.add(right_col)
+        df_right = df_right.rename(columns=right_columns)
+
         if merge_on:
             if merge_on not in df_left.columns:
                 msg = f"Column '{merge_on}' not found in left DataFrame. Available: {list(df_left.columns)}"
@@ -1187,17 +1280,14 @@ class OperationsComponent(Component):
             if merge_on not in df_right.columns:
                 msg = f"Column '{merge_on}' not found in right DataFrame. Available: {list(df_right.columns)}"
                 raise ValueError(msg)
-            merged = df_left.merge(df_right, on=merge_on, how=merge_how, suffixes=("", "_right"))
+            merged = df_left.merge(df_right, on=merge_on, how=merge_how)
         else:
-            merged = df_left.merge(df_right, left_index=True, right_index=True, how=merge_how, suffixes=("", "_right"))
+            merged = df_left.merge(df_right, left_index=True, right_index=True, how=merge_how)
 
         cols_to_drop = []
-        for col in merged.columns:
-            if col.endswith("_right"):
-                original_col = col[:-6]
-                if original_col in merged.columns:
-                    merged[original_col] = merged[original_col].combine_first(merged[col])
-                    cols_to_drop.append(col)
+        for col, right_col in right_columns.items():
+            merged[col] = merged[col].combine_first(merged[right_col])
+            cols_to_drop.append(right_col)
 
         if cols_to_drop:
             merged = merged.drop(columns=cols_to_drop)
@@ -1279,7 +1369,7 @@ class OperationsComponent(Component):
         separator = getattr(self, "table_separator", "|")
         has_header = getattr(self, "has_header", True)
 
-        rows = self._parse_table_rows(lines, separator)
+        rows = self._parse_table_rows(lines, separator, has_header=has_header)
         if not rows:
             return DataFrame(pd.DataFrame())
 
@@ -1288,16 +1378,19 @@ class OperationsComponent(Component):
         self.log(f"Converted text to DataFrame: {len(df)} rows, {len(df.columns)} columns")
         return DataFrame(df)
 
-    def _parse_table_rows(self, lines: list[str], separator: str) -> list[list[str]]:
+    def _parse_table_rows(self, lines: list[str], separator: str, *, has_header: bool = True) -> list[list[str]]:
         rows = []
-        for line in lines:
+        for index, line in enumerate(lines):
             cleaned_line = line.strip(separator)
             cells = [cell.strip() for cell in cleaned_line.split(separator)]
+            # Skip the markdown delimiter row under the header instead of reading it as data.
+            if has_header and index == 1 and all(MARKDOWN_DELIMITER_CELL.fullmatch(cell) for cell in cells):
+                continue
             rows.append(cells)
         return rows
 
     def _create_dataframe(self, rows: list[list[str]], *, has_header: bool) -> pd.DataFrame:
-        if has_header and len(rows) > 1:
+        if has_header and rows:
             header = rows[0]
             data_rows = rows[1:]
             header_col_count = len(header)

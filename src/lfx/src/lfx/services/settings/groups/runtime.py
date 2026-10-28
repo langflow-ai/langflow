@@ -158,6 +158,17 @@ class RuntimeSettings(BaseModel):
     ``trigger_lease`` row, so N replicas still produce one tick per schedule and
     one run per event. Turn it off on replicas that must never execute triggers
     (and when TRG-3's dedicated listener process hosts the loops instead)."""
+    data_subject_response_days: int = Field(default=30, ge=1, le=90)
+    """Days an administrator has to approve or refuse a data subject request
+    (LANGFLOW_DATA_SUBJECT_RESPONSE_DAYS). Sets the due date of each new request;
+    open requests keep the due date they were created with. GDPR Art. 12(3)
+    allows one month, extendable by two, hence the 90-day ceiling."""
+    data_subject_auto_erase_on_expiry: bool = False
+    """Approve and erase every deletion request still waiting for review once its
+    due date passes (LANGFLOW_DATA_SUBJECT_AUTO_ERASE_ON_EXPIRY). Off by default:
+    nothing is erased until an administrator approves. The same guards as a
+    manual approval apply, so a blocked request stays open for an administrator.
+    Requires LANGFLOW_FEATURE_DATA_SUBJECT_REQUESTS."""
     trigger_dispatcher_poll_interval_s: float = Field(default=5.0, gt=0)
     """How often the dispatcher scans the ledger for claimable events. The lower
     bound on scheduling latency for an event that arrives just after a scan."""
@@ -239,6 +250,8 @@ class RuntimeSettings(BaseModel):
     no inbound provider deliveries at all (a firewalled install using Track B
     listeners only); every ingress request then answers 404 exactly as an
     unknown trigger id does, so disabling it leaks nothing either."""
+    trigger_ingress_origin: str | None = None
+    """Operator-advertised HTTPS origin for push providers without OAuth callbacks."""
     trigger_ingress_max_body_bytes: int = Field(default=1_048_576, gt=0)
     """Per-route body cap for an ingress delivery, independent of the global
     request limit. Provider notifications are small - Graph basic notifications
@@ -340,6 +353,10 @@ class RuntimeSettings(BaseModel):
 
     webhook_polling_interval: int = 0
     """The polling interval for the webhook in ms. Set to 0 to disable (SSE provides real-time updates)."""
+    trigger_polling_interval: int = Field(default=5000, ge=1000)
+    """How often, in ms, the triggers UI re-fetches trigger state. Triggers have no event
+    stream, so state converges at this cadence; the floor keeps a misconfiguration from
+    turning every open settings page into a tight polling loop."""
     fs_flows_polling_interval: int = 10000
     """The polling interval in milliseconds for synchronizing flows from the file system."""
 

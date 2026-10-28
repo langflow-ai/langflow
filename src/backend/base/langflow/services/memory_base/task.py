@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import weakref
 from contextlib import AsyncExitStack
 from dataclasses import dataclass
@@ -386,8 +387,19 @@ async def _ingest_memory_task_in_scope(
                     current_messages = await _fetch_pending_messages(
                         fresh, flow_id=flow_id, session_id=session_id, cursor_id=current_cursor
                     )
-                originals = {message.id: message.model_dump() for message in messages}
-                current = {message.id: message.model_dump() for message in current_messages if message.id in originals}
+                # Compare only the fields that define what gets embedded, not the whole
+                # row. A just-produced output message is still being finalized when
+                # ingestion is dispatched: the flow writes token ``usage``, flips
+                # ``properties.state`` to "complete" and may restamp presentation
+                # metadata after the row first appears. None of that changes the text
+                # the documents were built from, so diffing ``model_dump()`` wholesale
+                # aborted every ingestion that raced its own message's finalization
+                # (it then "worked on retry" once the row settled). ``_source_identity``
+                # still detects a real edit (text / content changed) or a purge (id gone).
+                originals = {message.id: _source_identity(message) for message in messages}
+                current = {
+                    message.id: _source_identity(message) for message in current_messages if message.id in originals
+                }
                 if current_session_id != live_session_id or current_cursor != live_cursor_id or current != originals:
                     msg = "Memory source messages changed during preprocessing. Retry ingestion."
                     raise StorageUnavailableError(msg)
@@ -509,7 +521,10 @@ async def _ingest_memory_task_in_scope(
 
             # ---- 3. Check cancellation before touching the vector store ----
             if await KBIngestionHelper.is_job_cancelled(job_service, task_job_id):
-                return {"message": "Job cancelled before ingestion", "ingested": 0}
+                # A normal return makes execute_with_status record COMPLETED.
+                # Preserve cooperative cancellation through the job wrapper.
+                msg = "LANGFLOW_USER_CANCELLED"
+                raise asyncio.CancelledError(msg)
 
             # ---- 4. Open the KB's vector-store backend, write, then sync metadata ----
             embeddings = await _build_embeddings_for_owner(
@@ -589,7 +604,8 @@ async def _ingest_memory_task_in_scope(
                     backend_config=backend_config,
                     user_id=owner_user_id,
                 )
-                return {"message": "Job cancelled during ingestion", "ingested": 0}
+                msg = "LANGFLOW_USER_CANCELLED"
+                raise asyncio.CancelledError(msg)
 
             # ---- 5. Phase B (preprocessing only) — flip preproc row to ingested ----
             # Staged in the same DB session as the ingestion-record writes and cursor
@@ -628,6 +644,25 @@ async def _ingest_memory_task_in_scope(
                 await storage_stack.aclose()
             finally:
                 await _release_session_lock(db, lock_handle)
+
+
+def _source_identity(message: MessageTable) -> tuple:
+    """Content fingerprint used to detect source edits/purges during ingestion.
+
+    Only the fields that determine the embedded documents are compared — the
+    text, the content blocks, and the error/category flags that decide whether a
+    message is ingested at all. Volatile presentation and bookkeeping metadata
+    (``properties`` such as token ``usage`` and ``state``, ``edit``,
+    ``session_metadata``) is deliberately excluded: the flow finalizes those on
+    the triggering output message after ingestion has already been dispatched,
+    and treating that as a source change aborted otherwise-valid ingestions.
+    """
+    return (
+        message.text,
+        json.dumps(message.content_blocks or [], sort_keys=True, default=str),
+        message.error,
+        message.category,
+    )
 
 
 async def _fetch_pending_messages(

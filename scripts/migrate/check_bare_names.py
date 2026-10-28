@@ -60,6 +60,15 @@ _METAPACKAGE_SOURCE_PREFIX = ("lfx-bundles", "src", "lfx_bundles")
 # removes the component class. Keep those retired names here so the guard still
 # catches accidental misspellings and untracked removals.
 RETIRED_BARE_CLASS_NAMES = {
+    # MrScraper 0.6 exposes Account, Scraper API, and Web Search. The legacy
+    # AI, crawl, batch, rerun, and result operations no longer ship.
+    "MrscraperAiScraper",
+    "MrscraperBatchScrape",
+    "MrscraperCrawlWebsite",
+    "MrscraperGetResult",
+    "MrscraperGetResults",
+    "MrscraperRunAiScraper",
+    "MrscraperRunManualScraper",
     # vLLM graduated to a provider-only bundle; the old component classes no
     # longer ship from lfx-bundles.
     "VllmComponent",
@@ -277,7 +286,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
-    roots = args.components_root if args.components_root else list(DEFAULT_COMPONENT_ROOTS)
+    roots = args.components_root or list(DEFAULT_COMPONENT_ROOTS)
     try:
         class_to_bundles = build_class_to_bundles(roots)
     except RuntimeError as exc:

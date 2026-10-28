@@ -379,7 +379,11 @@ The following sections provide information about specific Langflow environment v
 
 ### Authentication and security
 
-See [API keys and authentication](/api-keys-and-authentication).
+For more information, see [API keys and authentication](/api-keys-and-authentication) and [Authorization](/authorization).
+
+### Audit logging
+
+For more information, see [Audit logging](./audit-logging).
 
 ### Global variables
 
@@ -436,6 +440,7 @@ The following environment variables set base Langflow server configuration, such
 | `LANGFLOW_DANGEROUSLY_ALLOW_MULTI_WORKER_WITHOUT_SHARED_QUEUE` | Boolean | `False` | Allow startup with `LANGFLOW_WORKERS` greater than 1 while `LANGFLOW_JOB_QUEUE_TYPE` is `asyncio`. **Unsupported with the Langflow UI and with MCP over SSE.** See [Run multiple workers without Redis](./deployment-multi-worker#run-multiple-workers-without-redis). |
 | `LANGFLOW_SSL_CERT_FILE` | String | Not set | Path to the SSL certificate file for enabling HTTPS on the Langflow web server. This is separate from [database SSL connections](/configuration-custom-database#connect-langflow-to-a-local-postgresql-database). |
 | `LANGFLOW_SSL_KEY_FILE` | String | Not set | Path to the SSL key file for enabling HTTPS on the Langflow web server. This is separate from [database SSL connections](/configuration-custom-database#connect-langflow-to-a-local-postgresql-database). |
+| `LANGFLOW_ROOT_PATH` | String | Empty | ASGI path prefix for deployments behind a reverse proxy that removes the prefix before forwarding requests, such as `/langflow`. Enter a path only, without a scheme, query string, or fragment. |
 | `LANGFLOW_DEACTIVATE_TRACING` | Boolean | `False` | Deactivate tracing functionality. |
 | `LANGFLOW_CELERY_ENABLED` | Boolean | `False` | Enable Celery for distributed task processing. |
 | `LANGFLOW_ALEMBIC_LOG_TO_STDOUT` | Boolean | `False` | Whether to log Alembic database migration output to stdout instead of a log file. If `true`, Alembic logs to `stdout` and the default log file is ignored. |
@@ -445,6 +450,18 @@ The following environment variables set base Langflow server configuration, such
 For file storage environment variables, see [File storage environment variables](/concepts-file-management#file-storage-environment-variables).
 
 For database environment variables, including PostgreSQL configuration, see [Memory management options](/memory#configure-external-memory).
+
+#### Knowledge Base storage and local file access
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_KNOWLEDGE_BASES_DIR` | String | `~/.langflow/knowledge_bases` | Directory where local Knowledge Bases are stored. |
+| `LANGFLOW_KNOWLEDGE_BASE_AUTO_MIGRATE` | Boolean | `True` | Automatically migrate supported local Chroma stores on startup while retaining the source data. Automatic migration requires one worker and a local filesystem. See [Upgrade Knowledge Base storage](/knowledge-storage-upgrade). |
+| `LANGFLOW_KNOWLEDGE_BASE_STORAGE_POOL_SIZE` | Integer | `20` | Number of PostgreSQL connections reserved per process for remote Knowledge Base coordination. This pool is separate from the application database pool. |
+| `LANGFLOW_KB_DISK_RECONCILE_ENABLED` | Boolean | `False` | Scan the Knowledge Base directory at startup and adopt legacy directories that have no database row. The scan is idempotent and doesn't delete data. |
+| `LANGFLOW_KB_ALLOWED_FOLDER_ROOTS` | List[String] | `[]` | Comma-separated allowlist of directories the Knowledge Base folder-ingestion endpoint can read. An empty list blocks folder ingestion from server paths. |
+| `LANGFLOW_KB_FOLDER_MAX_FILE_SIZE_BYTES` | Integer | `26214400` | Maximum file size, in bytes, accepted by Knowledge Base folder ingestion. The default is 25 MiB. |
+| `LANGFLOW_DIRECTORY_COMPONENT_ALLOWED_ROOTS` | List[String] | `[]` | Comma-separated list of additional directories the legacy **Directory** component can read. The process working directory remains allowed. Parent traversal and symlink escapes are blocked. |
 
 ### Telemetry {#telemetry}
 
@@ -491,7 +508,7 @@ The `exec-sandbox` backend is not included in a default `uv pip install langflow
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
 | `LANGFLOW_AUTO_SAVING` | Boolean | `True` | Whether to automatically save the current flow draft. Auto-save only updates the live draft, and doesn't create [saved flow versions](/concepts-flows#save-and-restore-flow-versions). |
-| `LANGFLOW_AUTO_SAVING_INTERVAL` | Integer | `5000` | Set the auto-save interval in milliseconds if `LANGFLOW_AUTO_SAVING=True`. Saving waits for this long after the last edit, and continuous editing defers it by at most three times this value. |
+| `LANGFLOW_AUTO_SAVING_INTERVAL` | Integer | `5000` | Set the auto-save interval in milliseconds if `LANGFLOW_AUTO_SAVING=True`. Saving waits for this long after the last edit, and continuous editing defers it by at most three times this value. A save built on a replaced graph is refused. For more information, see [Concurrent editing](./concurrent-editing). |
 | `LANGFLOW_BUNDLE_URLS` | List[String] | `[]` | A list of URLs from which to load custom bundles. Supports GitHub URLs. If `LANGFLOW_AUTO_LOGIN=True`, flows from these bundles are loaded into the database. |
 | `LANGFLOW_COMPONENTS_PATH` | String | Not set | Path to a directory containing custom components. Typically used if you have local custom components or you are building a Docker image with custom components. |
 | `LANGFLOW_COMPONENTS_INDEX_PATH` | String | Not set | File path or URL (`http://` or `https://`) to a prebuilt component index JSON file used to populate built-in components in the visual editor. When not set, Langflow uses the included index. Useful for supplying a curated component index, for example in airgapped deployments. For more information, see [Block custom components](/deployment-block-custom-components). |
@@ -521,8 +538,11 @@ The `exec-sandbox` backend is not included in a default `uv pip install langflow
 | `LANGFLOW_MAX_ITEMS_LENGTH` | Integer | `100` | Maximum number of items to store and display in the visual editor. Lists longer than this will be truncated when displayed in the visual editor. Doesn't affect outputs or data passed between components. |
 | `LANGFLOW_MAX_TEXT_LENGTH` | Integer | `1000` | Maximum number of characters to store and display in the visual editor. Responses longer than this will be truncated when displayed in the visual editor. Doesn't truncate outputs or responses passed between components. |
 | `LANGFLOW_MAX_TRANSACTIONS_TO_KEEP` | Integer | `3000` | Maximum number of flow transaction events to keep in the database. |
+| `LANGFLOW_AUDIT_ENABLED` | Boolean | `False` | Record append-only Action events for audited Flow and Project mutations in the `audit_events` table. A committed operation and its event share one transaction. Authorization decisions remain in `authz_audit_log`; Flow runs are outside this initial release. Events never contain Flow graphs, component settings, secrets, or request bodies. |
+| `LANGFLOW_AUDIT_RETENTION_DAYS` | Integer | `90` | Number of days to keep audit events. Cleanup deletes by event time only, never because a Project, Flow, user, or API key was deleted. Set to `0` to keep events indefinitely. |
+| `LANGFLOW_AUDIT_EXCLUDE_EVENTS` | List[String] | Not set | Comma-separated audit actions that are never recorded, written as they appear in the event `action` field: an exact action such as `project:delete`, every action on a resource such as `flow:*`, or one action on every resource such as `*:delete`. An excluded action records no Action event for any outcome. Entries that match no audited action are ignored with a startup warning and exclude nothing. Example: `flow:write,project:delete` stops recording Flow writes and Project deletions. |
 | `LANGFLOW_MAX_VERTEX_BUILDS_TO_KEEP` | Integer | `3000` | Maximum number of vertex builds to keep in the database. Relates to [Playground](/concepts-playground) functionality. |
-| `LANGFLOW_MAX_VERTEX_BUILDS_PER_VERTEX` | Integer | `2` | Maximum number of builds to keep per vertex. Older builds are deleted. Relates to [Playground](/concepts-playground) functionality. |
+| `LANGFLOW_MAX_VERTEX_BUILDS_PER_VERTEX` | Integer | `50` | Maximum number of builds to keep per vertex. Older builds are deleted. Relates to [Playground](/concepts-playground) functionality. |
 | `LANGFLOW_BACKGROUND_RETENTION_DAYS` | Integer | `0` | Number of days to keep finished flow runs (completed, failed, cancelled, or timed out) in the job store, along with their stored events, signals, and checkpoints. Every flow run records a job, including API runs, **Playground** builds, knowledge base ingestion, and trigger runs, so the job tables grow without limit unless this is set. `0` disables cleanup and keeps every run. When set, cleanup starts about five minutes after startup, then runs hourly (both with jitter). Queued, running, and paused runs that are waiting for human input are never deleted. Jobs awaiting trigger reconciliation and ingestion jobs referenced by memory workflow runs are also retained to preserve trigger outcomes and memory auto-capture state. Referenced ingestion jobs can outlive the window until their memory tracking rows are removed. After a run is deleted, the [workflow status endpoint](/workflow-api#get-workflow-status-endpoint) returns `404` for its job ID, and a background request that reuses its `idempotency_key` starts a new run. |
 | `LANGFLOW_PUBLIC_FLOW_CLEANUP_INTERVAL` | Integer | `3600` | The interval in seconds at which data for [shared Playground](/concepts-playground#share-a-flows-playground) flows are cleaned up. Default: 3600 seconds (1 hour). Minimum: 600 seconds (10 minutes). |
 | `LANGFLOW_PUBLIC_FLOW_EXPIRATION` | Integer | `86400` | The time in seconds after which a [shared Playground](/concepts-playground#share-a-flows-playground) flow is considered expired and eligible for cleanup. Default: 86400 seconds (24 hours). Minimum: 600 seconds (10 minutes). |

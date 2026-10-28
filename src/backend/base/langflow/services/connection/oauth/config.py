@@ -11,15 +11,11 @@ from urllib.parse import urlsplit
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-#: The one reason worth telling apart. ``registration-unavailable`` means this
-#: process cannot see a usable registration for a connection - unparsable or
-#: absent ``LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS``, a registration that does
-#: not validate, one that belongs to another deployment context. The
-#: authorization is intact; the process is configured wrong, so a caller that
-#: would otherwise disarm the work (a listener holding a trigger) should retry
-#: instead. Every other OAuthError describes the authorization itself and does
-#: need a human to reconnect.
-OAuthErrorReason = Literal["registration-unavailable"]
+#: These failures do not establish that the authorization is expired.
+#: ``registration-unavailable`` means this process lacks usable OAuth settings.
+#: ``provider-unavailable`` means the exchange failed without a confirmed
+#: credential rejection. Neither should disarm a listener or require reconnect.
+OAuthErrorReason = Literal["registration-unavailable", "provider-unavailable"]
 
 
 class OAuthError(ValueError):
@@ -33,7 +29,7 @@ class OAuthError(ValueError):
 class OAuthRegistration(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
 
-    provider: Literal["google", "microsoft", "slack"]
+    provider: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]*$", max_length=120)
     profile: Literal["user", "bot"] = "user"
     owner: Literal["customer", "langflow"] = "customer"
     context: Literal["self_managed", "hosted", "desktop"] = "self_managed"
@@ -54,6 +50,19 @@ class OAuthRegistration(BaseModel):
 
     @model_validator(mode="after")
     def validate_registration(self) -> OAuthRegistration:
+        from langflow.services.connection.oauth.adapter import provider_adapter
+
+        adapter = None
+        if self.provider not in {"google", "microsoft", "slack"}:
+            adapter = provider_adapter(self.provider)
+            if adapter is None:
+                msg = "OAuth registration field 'provider' is invalid."
+                raise OAuthError(msg, reason="registration-unavailable")
+            adapter.validate_registration(self)
+            adapter.checked_endpoints(self)
+            if self.client_type == "public" and not adapter.supports_pkce:
+                msg = "Public OAuth clients require a provider with PKCE support."
+                raise OAuthError(msg)
         redirect_error = "OAuth redirect must be HTTPS (or loopback HTTP) at the provider callback"
         try:
             uri = urlsplit(self.redirect_uri)
@@ -77,7 +86,11 @@ class OAuthRegistration(BaseModel):
         if self.context == "self_managed" and self.owner != "customer":
             msg = "Self-managed OAuth uses customer-owned registrations"
             raise OAuthError(msg)
-        if self.client_type == "public" and (self.client_secret or self.private_key):
+        # Google Desktop credentials can require client_secret at the token
+        # endpoint even though installed apps cannot keep it confidential.
+        # This provider parameter does not replace public-client PKCE.
+        google_desktop = self.provider == "google" and self.context == "desktop"
+        if self.client_type == "public" and (self.private_key or (self.client_secret and not google_desktop)):
             msg = "Public clients cannot contain registration secrets"
             raise OAuthError(msg)
         if self.client_type == "confidential" and bool(self.client_secret) == bool(self.private_key):
@@ -89,7 +102,7 @@ class OAuthRegistration(BaseModel):
         if self.private_key and not re.fullmatch(r"[0-9a-fA-F]{64}", self.certificate_thumbprint or ""):
             msg = "Certificate thumbprint must be a SHA-256 digest in hexadecimal"
             raise OAuthError(msg)
-        if self.profile == "bot" and (self.provider != "slack" or self.client_type == "public"):
+        if self.profile == "bot" and (self.provider != "slack" or self.client_type == "public") and adapter is None:
             msg = "Only confidential Slack clients support the bot profile"
             raise OAuthError(msg)
         if self.signing_secret is not None and self.provider != "slack":

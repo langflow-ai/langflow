@@ -1,5 +1,6 @@
 from .a2a import A2ACheckpoint, A2ATask
 from .api_key import ApiKey
+from .audit_event import AuditEvent
 from .auth import (
     AuthzAuditLog,
     AuthzEditLock,
@@ -24,6 +25,7 @@ from .auth import (
 from .catalog_policy import CatalogPolicyMode, CatalogPolicyRule, CatalogPolicyScope, CatalogResourceKind
 from .connection import Connection, ConnectionSecret
 from .connection.oauth import ConnectionOAuth
+from .data_subject_request import DataSubjectRequest
 from .deployment import Deployment
 from .deployment_provider_account import DeploymentProviderAccount
 from .file import File
@@ -41,6 +43,7 @@ from .message import MessageTable
 from .model_provider_policy import ModelProviderPolicy
 from .policy_bundle import PolicyBundleActive, PolicyBundleRevision
 from .project_replacement_operation import ProjectReplacementOperation
+from .secret_rotation import SecretRotation
 from .traces.model import SpanTable, TraceTable
 from .transactions import TransactionTable
 from .trigger import (
@@ -59,6 +62,7 @@ __all__ = [
     "A2ACheckpoint",
     "A2ATask",
     "ApiKey",
+    "AuditEvent",
     "AuthzAuditLog",
     "AuthzEditLock",
     "AuthzRole",
@@ -75,6 +79,7 @@ __all__ = [
     "Connection",
     "ConnectionOAuth",
     "ConnectionSecret",
+    "DataSubjectRequest",
     "Deployment",
     "DeploymentProviderAccount",
     "ExecutionSignal",
@@ -109,6 +114,7 @@ __all__ = [
     "SSOSecretError",
     "SSOSettings",
     "SSOUserProfile",
+    "SecretRotation",
     "SignalType",
     "SpanTable",
     "TraceTable",

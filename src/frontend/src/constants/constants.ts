@@ -1,6 +1,7 @@
 // src/constants/constants.ts
 
 import {
+  BASENAME,
   BASE_URL_API as CUSTOM_BASE_URL_API,
   BASE_URL_API_V2 as CUSTOM_BASE_URL_API_V2,
 } from "../customization/config-constants";
@@ -868,10 +869,12 @@ export const TABS_ORDER = [
   "chat widget html",
 ];
 
-export const LANGFLOW_ACCESS_TOKEN = "access_token_lf";
-export const LANGFLOW_API_TOKEN = "apikey_tkn_lflw";
-export const LANGFLOW_AUTO_LOGIN_OPTION = "auto_login_lf";
-export const LANGFLOW_REFRESH_TOKEN = "refresh_token_lf";
+// Cookie paths alone cannot prevent a parent path's cookie from being sent.
+const authCookieSuffix = BASENAME ? `_${encodeURIComponent(BASENAME)}` : "";
+export const LANGFLOW_ACCESS_TOKEN = `access_token_lf${authCookieSuffix}`;
+export const LANGFLOW_API_TOKEN = `apikey_tkn_lflw${authCookieSuffix}`;
+export const LANGFLOW_AUTO_LOGIN_OPTION = `auto_login_lf${authCookieSuffix}`;
+export const LANGFLOW_REFRESH_TOKEN = `refresh_token_lf${authCookieSuffix}`;
 
 export const LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS = 60 * 60 - 60 * 60 * 0.1;
 const viteAccessTokenExpireSeconds =
@@ -1020,6 +1023,16 @@ export const OPENAI_VOICES = [
 export const DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH = 2000;
 
 export const DEFAULT_POLLING_INTERVAL = 5000;
+
+/** Trigger state poll, mirroring the backend's `trigger_polling_interval`. */
+export const DEFAULT_TRIGGER_POLLING_INTERVAL = 5000;
+/** The backend refuses anything faster; a bad value never hammers the API. */
+export const MIN_TRIGGER_POLLING_INTERVAL = 1000;
+
+export const normalizeTriggerPollingInterval = (value: unknown): number =>
+  typeof value === "number" && Number.isFinite(value)
+    ? Math.max(MIN_TRIGGER_POLLING_INTERVAL, Math.round(value))
+    : DEFAULT_TRIGGER_POLLING_INTERVAL;
 export const DEFAULT_TIMEOUT = 30000;
 export const DEFAULT_FILE_PICKER_TIMEOUT = 60000;
 export const DISCORD_URL = "https://discord.com/invite/EqksyE2EX9";

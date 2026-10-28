@@ -23,6 +23,7 @@ from uuid import UUID, uuid4
 
 from lfx.log.logger import logger
 
+from langflow.services.audit.attribution import audit_request_id
 from langflow.services.auth.context import (
     AUTH_METHOD_API_KEY,
     current_auth_context_for_audit,
@@ -131,9 +132,12 @@ def _merge_audit_details(
 ) -> dict[str, Any] | None:
     """Merge request credential metadata centrally while preserving caller details."""
     credential_details = current_auth_context_for_audit() if include_credential else {}
-    if details is None and not credential_details:
+    # The same server-generated id the resource event carries, so one request's
+    # authorization decision and what it then did can be read together.
+    request_details = {"request_id": str(request_id)} if (request_id := audit_request_id()) is not None else {}
+    if details is None and not credential_details and not request_details:
         return details
-    merged = {**(details or {}), **credential_details}
+    merged = {**(details or {}), **request_details, **credential_details}
     # These names are reserved for the first-class columns. Keeping caller
     # values in JSON as well would create a second, spoofable actor identity.
     merged.pop("actor_type", None)
@@ -515,16 +519,20 @@ def stage_audit_decision(
     obj: str,
     result: str,
     details: dict[str, Any] | None = None,
+    required: bool = False,
 ) -> bool:
     """Stage a durable audit row in a caller-owned mutation transaction.
 
     Returns ``True`` when the row was staged. Best-effort mode returns ``False``
     so the caller can submit through the asynchronous audit pipeline after its
-    mutation commits.
+    mutation commits. ``required=True`` always stages the row, independently of
+    the general audit settings, for mutations whose contract requires an audit.
+    Staging failures propagate so the caller can roll back the mutation.
     """
     auth_settings = get_settings_service().auth_settings
-    if not getattr(auth_settings, "AUTHZ_AUDIT_ENABLED", False) or not getattr(
-        auth_settings, "AUTHZ_AUDIT_DURABLE", False
+    if not required and (
+        not getattr(auth_settings, "AUTHZ_AUDIT_ENABLED", False)
+        or not getattr(auth_settings, "AUTHZ_AUDIT_DURABLE", False)
     ):
         return False
 

@@ -1,9 +1,9 @@
 [project]
 name = "lfx-ollama"
-version = "0.1.1"
+version = "0.2.1"
 description = "Ollama model components as a standalone Langflow Extension Bundle."
 readme = "README.md"
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.10,<3.16"
 license = { text = "MIT" }
 authors = [
     { name = "Langflow", email = "contact@langflow.org" },
@@ -14,7 +14,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "ollama", "local-models"]
 # Language Model / Embedding Model provider paths. httpx is imported directly
 # by the components for SSRF-safe model discovery and validation.
 dependencies = [
-    "lfx>=1.13.0.dev0,<2.0.0",
+    "lfx>=1.14.0.dev0,<2.0.0",
     "httpx>=0.24.0,<1.0.0",
     "langchain-ollama~=0.3.10",
 ]

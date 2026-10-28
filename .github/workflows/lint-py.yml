@@ -16,9 +16,12 @@ jobs:
   lint:
     name: Run Mypy
     runs-on: ubuntu-latest
+    # Python 3.15 is a preview lane: it reports ecosystem readiness without failing the run.
+    continue-on-error: ${{ matrix.python-version == '3.15' }}
     strategy:
       matrix:
         python-version:
+          - "3.15"
           - "3.14"
           - "3.13"
           - "3.12"
@@ -33,7 +36,9 @@ jobs:
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v10.0.0
         with:
-          version: latest-known
+          # The uv bundled with this setup-uv only knows CPython 3.15 release candidates;
+          # uv 0.13.0 is the first release that installs 3.15.0 final.
+          version: ${{ matrix.python-version == '3.15' && '0.13.0' || 'latest-known' }}
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}

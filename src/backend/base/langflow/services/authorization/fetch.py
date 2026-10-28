@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, TypeVar
 from fastapi import HTTPException, status
 from sqlmodel import select
 
+from langflow.services.authorization.refusal import mark_authorization_refusal
 from langflow.services.deps import get_authorization_service
 
 if TYPE_CHECKING:
@@ -17,6 +18,17 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 T = TypeVar("T")
+
+
+async def cross_user_fetch_enabled() -> bool:
+    """Whether share-aware routes load a resource by id alone rather than by owner.
+
+    Requires both the plugin's capability and ``AUTHZ_ENABLED``; anything that
+    predicts whether a fetch below will find a row must ask this, not the
+    plugin directly.
+    """
+    authz = get_authorization_service()
+    return await authz.supports_cross_user_fetch() and await authz.is_enabled()
 
 
 async def authorized_or_owner_scoped(
@@ -35,9 +47,8 @@ async def authorized_or_owner_scoped(
     locks the selected row through the caller's transaction. Write paths use
     this to keep authorization of the current scope atomic with the mutation.
     """
-    authz = get_authorization_service()
     # Require both plugin capability and AUTHZ_ENABLED before widening the query.
-    if await authz.supports_cross_user_fetch() and await authz.is_enabled():
+    if await cross_user_fetch_enabled():
         stmt = select(model).where(id_column == resource_id)
     else:
         stmt = select(model).where(id_column == resource_id).where(owner_column == owner_id)
@@ -49,7 +60,8 @@ async def authorized_or_owner_scoped(
 def deny_to_404(exc: HTTPException, detail: str = "Not found") -> HTTPException:
     """Map a 403 permission-deny to 404 (UUID privacy); return any other error unchanged."""
     if exc.status_code == status.HTTP_403_FORBIDDEN:
-        return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
+        # Still a refusal, only relabelled: keep the mark the audit wrapper reads.
+        return mark_authorization_refusal(HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail))
     # Never relabel a non-403 (e.g. 4xx/5xx) as "not found"; surface it unchanged.
     return exc
 
@@ -85,5 +97,5 @@ async def deny_to_404_unless_readable(
             # Reporting a service failure as "not found" hides an outage behind
             # a routine-looking response and sends the caller to check their id.
             return read_exc
-        return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=not_found_detail)
-    return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=denied_detail)
+        return mark_authorization_refusal(HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=not_found_detail))
+    return mark_authorization_refusal(HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=denied_detail))

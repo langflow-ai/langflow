@@ -3,6 +3,7 @@ import {
   DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH,
   DEFAULT_POLLING_INTERVAL,
   DEFAULT_TIMEOUT,
+  normalizeTriggerPollingInterval,
 } from "@/constants/constants";
 import { EventDeliveryType } from "@/constants/enums";
 import { recomputeComponentsToUpdateIfNeeded } from "@/stores/flowStore";
@@ -38,6 +39,8 @@ export interface ConfigResponse extends BaseConfig {
   health_check_max_retries: number;
   feature_flags: Record<string, unknown>;
   webhook_polling_interval: number;
+  /** Milliseconds between trigger state polls (backend default 5000, minimum 1000). */
+  trigger_polling_interval?: number;
   serialization_max_items_length: number;
   webhook_auth_enable: boolean;
   default_folder_name: string;
@@ -53,6 +56,9 @@ export interface ConfigResponse extends BaseConfig {
   agentic_experience: boolean;
   assistant_max_message_length: number;
   local_vector_store_available: boolean;
+  /** Backend a new KB/MB lands on when none is named: postgres | opensearch | sqlite. */
+  default_vector_store_backend?: string;
+  configured_vector_store_backends?: string[];
   /** Component types an administrator blocked. Authenticated callers only:
    *  the public response deliberately withholds the policy contents. */
   blocked_component_types?: string[];
@@ -88,6 +94,9 @@ export const useGetConfig: useQueryFunctionType<
   const setFeatureFlags = useUtilityStore((state) => state.setFeatureFlags);
   const setWebhookPollingInterval = useUtilityStore(
     (state) => state.setWebhookPollingInterval,
+  );
+  const setTriggerPollingInterval = useUtilityStore(
+    (state) => state.setTriggerPollingInterval,
   );
   const setEventDelivery = useUtilityStore((state) => state.setEventDelivery);
   const setWebhookAuthEnable = useUtilityStore(
@@ -141,8 +150,8 @@ export const useGetConfig: useQueryFunctionType<
   const setAssistantMaxMessageLength = useUtilityStore(
     (state) => state.setAssistantMaxMessageLength,
   );
-  const setLocalVectorStoreAvailable = useUtilityStore(
-    (state) => state.setLocalVectorStoreAvailable,
+  const setVectorStoreConfig = useUtilityStore(
+    (state) => state.setVectorStoreConfig,
   );
 
   const { query } = UseRequestProcessor();
@@ -192,6 +201,9 @@ export const useGetConfig: useQueryFunctionType<
         setWebhookPollingInterval(
           data.webhook_polling_interval ?? DEFAULT_POLLING_INTERVAL,
         );
+        setTriggerPollingInterval(
+          normalizeTriggerPollingInterval(data.trigger_polling_interval),
+        );
         setWebhookAuthEnable(data.webhook_auth_enable ?? true);
         setDefaultFolderName(data.default_folder_name ?? "Starter Project");
         setHideGettingStartedProgress(
@@ -211,7 +223,12 @@ export const useGetConfig: useQueryFunctionType<
           data.assistant_max_message_length ??
             DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH,
         );
-        setLocalVectorStoreAvailable(data.local_vector_store_available ?? true);
+        setVectorStoreConfig({
+          localVectorStoreAvailable: data.local_vector_store_available ?? true,
+          defaultVectorStoreBackend: data.default_vector_store_backend,
+          configuredVectorStoreBackends:
+            data.configured_vector_store_backends ?? [],
+        });
       }
     }
     return data;

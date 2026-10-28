@@ -27,9 +27,11 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 from uuid import NAMESPACE_URL, uuid5
 
+from lfx.integrations.errors import IntegrationPolicyBlockedError, ProviderUnavailableError
 from lfx.log.logger import logger
 from sqlmodel import col, func, select, update
 
+from langflow.api.utils.migration_pause import is_paused, writing
 from langflow.services.database.models.trigger.model import Trigger, TriggerEvent, TriggerSubscription
 from langflow.services.database.models.trigger.schemas import (
     IN_FLIGHT_EVENT_STATES,
@@ -40,17 +42,16 @@ from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.triggers import leases
 from langflow.services.triggers.binding import resolve_binding
 from langflow.services.triggers.constants import (
+    CONNECTION_NOT_AUTHORIZED_ERROR,
     DISPATCHER_LEASE_NAME,
     FAMILY_TRIGGER_LISTENER,
-    GOOGLE_SOURCE_KINDS,
-    MICROSOFT_SOURCE_KINDS,
-    PUSH_MECHANISMS,
     TRIGGER_EVENT_FIELD,
 )
 from langflow.services.triggers.correlation import derive_session_id
 from langflow.services.triggers.errors import BindingUnsupportedError
 from langflow.services.triggers.ledger import purge_events
-from langflow.services.triggers.principal import connection_preflight, family_for
+from langflow.services.triggers.principal import connection_preflight, family_for, provider_availability_denial
+from langflow.services.triggers.providers.registry import collecting_kinds, push_mechanisms, source_kinds
 from langflow.services.triggers.source_delivery import SOURCE_HINT_FIELD
 
 if TYPE_CHECKING:
@@ -127,7 +128,7 @@ async def _due_trigger_ids(session: AsyncSession, *, limit: int, source_hints: b
     # Pending source activations may receive hints, but cannot execute until
     # baseline collection and watch creation have both committed.
     statement = statement.where(
-        ~col(Trigger.kind).in_(MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS)
+        ~col(Trigger.kind).in_(source_kinds())
         | ~col(Trigger.state).in_(
             [TriggerState.PENDING.value, TriggerState.ERROR.value, TriggerState.NEEDS_RECONNECT.value]
         )
@@ -217,7 +218,7 @@ async def claim_batch(
         trigger = await _lock_trigger(session, trigger_id)
         if trigger is None:  # pragma: no cover - FK cascade makes this unreachable
             continue
-        if trigger.kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS and trigger.state in {
+        if trigger.kind in source_kinds() and trigger.state in {
             TriggerState.PENDING.value,
             TriggerState.ERROR.value,
             TriggerState.NEEDS_RECONNECT.value,
@@ -458,6 +459,8 @@ async def _record_dispatched(
     event.lease_expires_at = None
     event.updated_at = _now()
     trigger.last_fired_at = _now()
+    if trigger.last_error in {IntegrationPolicyBlockedError.code, ProviderUnavailableError.code}:
+        trigger.last_error = None
     session.add_all([event, trigger])
     await session.flush()
 
@@ -521,7 +524,7 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
     Slack Events API or inbound-webhook run is ``trigger_push``, the rest
     ``trigger_listener``.
     """
-    from langflow.services.database.models.user.model import UserRead
+    from langflow.services.database.models.user.model import User, UserRead
     from langflow.services.deps import get_background_execution_service
 
     trigger = await session.get(Trigger, event.trigger_id)
@@ -533,7 +536,7 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
     if await _recover_submitted_job(session, trigger=trigger, event=event):
         return
 
-    if trigger.kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS and trigger.state in {
+    if trigger.kind in source_kinds() and trigger.state in {
         TriggerState.PENDING.value,
         TriggerState.ERROR.value,
         TriggerState.NEEDS_RECONNECT.value,
@@ -548,6 +551,15 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
 
     if trigger.state not in _DISPATCHABLE_TRIGGER_STATES:
         await _terminalize(session, event=event, state=TriggerEventState.FAILED, error=f"trigger_{trigger.state}")
+        return
+
+    owner = await session.get(User, trigger.user_id)
+    if owner is None or not owner.is_active:
+        await _terminalize(session, event=event, state=TriggerEventState.FAILED, error="owner_inactive")
+        return
+
+    if provider_availability_denial(trigger) is not None:
+        await _defer_unavailable_provider(session, trigger=trigger, event=event)
         return
 
     if (event.payload or {}).get(SOURCE_HINT_FIELD):
@@ -577,6 +589,9 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
             return
         await _fence_event(session, event)
         await _terminalize(session, event=event, state=TriggerEventState.COMPLETED)
+        if trigger.last_error == ProviderUnavailableError.code:
+            trigger.last_error = None
+            session.add(trigger)
         return
 
     try:
@@ -592,11 +607,23 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
 
     denial = await connection_preflight(session, trigger, family=family)
     if denial is not None:
+        if isinstance(denial, ProviderUnavailableError):
+            await _defer_unavailable_provider(session, trigger=trigger, event=event)
+            return
+        if isinstance(denial, IntegrationPolicyBlockedError):
+            # Policy approval cannot be repaired by reconnecting credentials.
+            # Refuse this event but leave the trigger armed so later deliveries
+            # resume after the operator unblocks its capability.
+            await _terminalize(session, event=event, state=TriggerEventState.FAILED, error=denial.code)
+            trigger.last_error = denial.code
+            session.add(trigger)
+            await session.flush()
+            return
         # Fail closed, and say so on the trigger: an unattended run must never
         # fall back to a weaker identity when its connection refuses one.
-        await _terminalize(session, event=event, state=TriggerEventState.FAILED, error="connection_not_authorized")
+        await _terminalize(session, event=event, state=TriggerEventState.FAILED, error=CONNECTION_NOT_AUTHORIZED_ERROR)
         trigger.state = TriggerState.NEEDS_RECONNECT.value
-        trigger.last_error = "connection_not_authorized"
+        trigger.last_error = CONNECTION_NOT_AUTHORIZED_ERROR
         session.add(trigger)
         await session.flush()
         await logger.awarning(
@@ -630,6 +657,20 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
     await _record_dispatched(session, trigger=trigger, event=event, job_id=job_id, session_id=session_id)
 
 
+async def _defer_unavailable_provider(session: AsyncSession, *, trigger: Trigger, event: TriggerEvent) -> None:
+    """Keep queued work while an operator reloads the provider, without consuming attempts."""
+    await _fence_event(session, event)
+    event.state = TriggerEventState.PENDING.value
+    event.error = ProviderUnavailableError.code
+    event.lease_owner = None
+    event.lease_expires_at = None
+    event.available_at = _now() + timedelta(seconds=30)
+    event.updated_at = _now()
+    trigger.last_error = ProviderUnavailableError.code
+    session.add_all([event, trigger])
+    await session.flush()
+
+
 async def run_once(*, owner: str, source_hints: bool | None = None) -> int:
     """One dispatcher pass: sweep, reconcile, claim, dispatch. Returns rows dispatched."""
     settings = get_settings_service().settings
@@ -660,8 +701,13 @@ async def run_once(*, owner: str, source_hints: bool | None = None) -> int:
 async def reconcile_push_sources(*, limit: int = 5) -> int:
     """Scan due push sources even when the provider sent no notification."""
     from langflow.services.database.models.trigger.schemas import TriggerSubscriptionState
-    from langflow.services.triggers.source_runtime import reconcile_source, source_failure_detail
+    from langflow.services.triggers.source_runtime import (
+        mark_interrupted_activations,
+        reconcile_source,
+        source_failure_detail,
+    )
 
+    await mark_interrupted_activations(limit=limit)
     now = _now()
     async with session_scope() as session:
         due = (
@@ -670,9 +716,9 @@ async def reconcile_push_sources(*, limit: int = 5) -> int:
                 .outerjoin(TriggerSubscription, TriggerSubscription.trigger_id == Trigger.id)
                 .where(
                     Trigger.state == TriggerState.ACTIVE.value,
-                    col(Trigger.kind).in_(MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS),
+                    col(Trigger.kind).in_(collecting_kinds()),
                     (col(TriggerSubscription.state) == TriggerSubscriptionState.ACTIVE.value)
-                    | Trigger.config["mechanism_id"].as_string().in_(PUSH_MECHANISMS),
+                    | Trigger.config["mechanism_id"].as_string().in_(push_mechanisms()),
                     (col(Trigger.next_fire_at).is_(None)) | (Trigger.next_fire_at <= now),
                 )
                 .group_by(Trigger.id, Trigger.next_fire_at)
@@ -746,7 +792,9 @@ class TriggerDispatcher:
         settings = get_settings_service().settings
         while not self._stopping.is_set():
             try:
-                dispatched = await self.tick()
+                # A pass holds a place, so a pause waits for one that is under way.
+                with writing(name="trigger_dispatcher") as let_in:
+                    dispatched = await self.tick() if let_in else 0
                 if dispatched >= settings.trigger_max_events_per_poll:
                     # Continue draining full batches without adding a fixed
                     # sleep to every batch in a burst. Yield to other tasks.
@@ -768,6 +816,10 @@ class TriggerDispatcher:
         """
         from langflow.services.triggers.scheduler import run_scheduler_pass
 
+        # A paused instance produces and dispatches nothing. Triggers are not paused one by one, which
+        # would fail their queued events: a due schedule catches up afterwards by its catchup_policy.
+        if is_paused():
+            return 0
         await run_scheduler_pass(owner=self.owner)
         settings = get_settings_service().settings
         async with session_scope() as session:
@@ -818,6 +870,8 @@ class TriggerDispatcher:
         from langflow.services.triggers.source_cleanup import run_cleanup_pass
         from langflow.services.triggers.subscriptions import run_renewal_pass
 
+        if is_paused():
+            return 0
         name = "trigger-source-maintenance"
         async with session_scope() as session:
             if not await leases.acquire(
@@ -837,7 +891,9 @@ class TriggerDispatcher:
     async def _source_loop(self) -> None:
         while not self._stopping.is_set():
             try:
-                await self.source_tick()
+                with writing(name="trigger_sources") as let_in:
+                    if let_in:
+                        await self.source_tick()
             except asyncio.CancelledError:
                 raise
             except Exception as exc:  # noqa: BLE001 - retry independently of dispatch

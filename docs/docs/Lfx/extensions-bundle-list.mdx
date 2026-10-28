@@ -9,7 +9,7 @@ This page lists every official Langflow bundle and the pip **extension** package
 Bundle names are stable identifiers used in saved flows (`ext:<bundle>:<Class>@official`).
 The pip install command is what you run when a bundle is missing from your environment.
 
-This list reflects the bundles included with Langflow 1.12.0.
+This list reflects the bundles included with Langflow 1.13.0.
 Providers can graduate from `lfx-bundles` to a standalone `lfx-<provider>` package without changing the bundle name in your flows.
 
 ## Additional bundles {#additional-bundles}
@@ -37,6 +37,7 @@ The default `uv pip install langflow` includes the following curated standalone 
 | [`openai-compatible`](/bundles-openai-compatible) (OpenAI Compatible) | `uv pip install lfx-openai-compatible` |
 | [`oracle`](/bundles-oracle) (Oracle) | `uv pip install lfx-oracle` |
 | [`slack`](../Components/bundles-slack.mdx) (Slack) | `uv pip install lfx-slack` |
+| [`toolguard`](/policies) (Policies) | `uv pip install lfx-toolguard` |
 | [`vllm`](/bundles-vllm) (vLLM) | `uv pip install lfx-vllm` |
 
 ## Opt-in standalone packages
@@ -145,4 +146,5 @@ To install every provider, including providers that require PyTorch as a depende
 - [Install LFX](./lfx-install)
 - [About bundles](/components-bundle-components)
 
-Chroma and ALTK providers are retired in 1.13. Saved import paths remain available for compatibility, but the retired components require replacement. See [storage upgrade guidance](../Develop/knowledge-storage-upgrade.mdx).
+Chroma is retired in 1.13. Saved import paths remain available for compatibility, but the component requires replacement. See [Upgrade Knowledge and Memory storage](/knowledge-storage-upgrade).
+The [ALTK](/components-bundle-components) component is removed. Replace it with the Agent component.

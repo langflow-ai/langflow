@@ -33,11 +33,28 @@ from lfx.log.logger import logger
 from sqlalchemy import func
 from sqlmodel import select
 
-from langflow.services.database.models.jobs.model import Job, JobType
+from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
 from langflow.services.deps import session_scope
 
 if TYPE_CHECKING:
     from lfx.base.knowledge_bases.ingestion_sources.base import KBIngestionSource
+
+# Statuses a run holds until its own ``finalize_run`` records the outcome.
+_IN_FLIGHT_RUN_STATUSES = frozenset({IngestionRunStatus.PENDING.value, IngestionRunStatus.RUNNING.value})
+
+# What a still-in-flight run ended as when its job reached a terminal status
+# without the run finalizing: the orphan sweep failed it after its worker died,
+# it timed out, or it was cancelled while nothing was left to notice.
+_RUN_STATUS_FOR_ENDED_JOB = {
+    JobStatus.COMPLETED: IngestionRunStatus.SUCCEEDED,
+    JobStatus.FAILED: IngestionRunStatus.FAILED,
+    JobStatus.TIMED_OUT: IngestionRunStatus.FAILED,
+    JobStatus.CANCELLED: IngestionRunStatus.CANCELLED,
+}
+
+_WORKER_LOST_MESSAGE = "Ingestion stopped because the worker running it exited before it finished."
+_TIMED_OUT_MESSAGE = "Ingestion timed out before it finished."
+_UNRECORDED_FAILURE_MESSAGE = "Ingestion failed before it recorded a result."
 
 
 @dataclass
@@ -266,6 +283,7 @@ def _job_to_run_row(job: Job) -> RunRow:
     """
     metadata: dict[str, Any] = dict(job.job_metadata or {})
     kb_id_raw = metadata.get("kb_id")
+    status, error_message = _run_outcome(job, metadata)
     return RunRow(
         id=job.job_id,
         kb_name=metadata.get("kb_name", ""),
@@ -274,8 +292,8 @@ def _job_to_run_row(job: Job) -> RunRow:
         user_id=job.user_id,
         source_type=metadata.get("source_type", ""),
         source_config=dict(metadata.get("source_config") or {}),
-        status=metadata.get("status", IngestionRunStatus.PENDING.value),
-        error_message=metadata.get("error_message"),
+        status=status,
+        error_message=error_message,
         total_items=int(metadata.get("total_items", 0) or 0),
         succeeded=int(metadata.get("succeeded", 0) or 0),
         failed=int(metadata.get("failed", 0) or 0),
@@ -287,6 +305,30 @@ def _job_to_run_row(job: Job) -> RunRow:
         started_at=job.created_timestamp,
         finished_at=job.finished_timestamp,
     )
+
+
+def _run_outcome(job: Job, metadata: dict[str, Any]) -> tuple[str, str | None]:
+    """Return the run's status and error message, following the job when the run never finalized.
+
+    Only ``finalize_run`` writes a terminal ``job_metadata.status``. Anything else
+    that ends the job, such as the orphan sweep after a worker dies, leaves the
+    run reading PENDING or RUNNING forever. A terminal status the run recorded
+    itself is kept, since it is more precise (PARTIAL, a cancel's reason).
+    """
+    status = metadata.get("status", IngestionRunStatus.PENDING.value)
+    error_message = metadata.get("error_message")
+    ended_as = _RUN_STATUS_FOR_ENDED_JOB.get(job.status)
+    if status not in _IN_FLIGHT_RUN_STATUSES or ended_as is None:
+        return status, error_message
+    if error_message is None:
+        error_type = job.error.get("type") if isinstance(job.error, dict) else None
+        if error_type == "worker_lost":
+            error_message = _WORKER_LOST_MESSAGE
+        elif job.status == JobStatus.TIMED_OUT:
+            error_message = _TIMED_OUT_MESSAGE
+        elif job.status == JobStatus.FAILED:
+            error_message = _UNRECORDED_FAILURE_MESSAGE
+    return ended_as.value, error_message
 
 
 async def _patch_job_metadata(job_id: UUID, patch: dict[str, Any]) -> None:

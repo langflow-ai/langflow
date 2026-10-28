@@ -106,6 +106,25 @@ async def test_create_flow(client: AsyncClient, logged_in_headers):
     assert "webhook" in result, "The result must have a 'webhook' key"
 
 
+async def test_flow_create_and_update_normalize_exported_code(client: AsyncClient, logged_in_headers):
+    code = "def build(self):\n    return 'exported'\n"
+    data = _catalog_flow_data("ChatInput")
+    data["nodes"][0]["data"]["node"] = {"template": {"code": {"type": "code", "value": code.split("\n")}}}
+    created = await client.post(
+        "api/v1/flows/", json={"name": "Exported code", "data": data}, headers=logged_in_headers
+    )
+    assert created.status_code == status.HTTP_201_CREATED
+    flow_id = created.json()["id"]
+
+    for response in (
+        created,
+        await client.patch(f"api/v1/flows/{flow_id}", json={"data": data}, headers=logged_in_headers),
+        await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers),
+    ):
+        assert response.status_code in {status.HTTP_200_OK, status.HTTP_201_CREATED}
+        assert response.json()["data"]["nodes"][0]["data"]["node"]["template"]["code"]["value"] == code
+
+
 async def test_create_flow_retries_transient_sqlite_lock_with_fresh_payload(
     client: AsyncClient, logged_in_headers, monkeypatch
 ):
@@ -1702,7 +1721,7 @@ async def test_upload_flow_rejects_endpoint_name_with_dots(client: AsyncClient, 
     """Regression: endpoint_name containing dots must return 422, not 500.
 
     Previously a ValidationError from the Pydantic model escaped the handler
-    and hit the global exception_handler, producing a 500 and a Scarf telemetry
+    and hit the global exception_handler, producing a 500 and a product telemetry
     event.  The import path now wraps FlowCreate construction in a try/except
     and re-raises as HTTPException(422).
     """

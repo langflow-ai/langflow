@@ -4,8 +4,12 @@ This script handles the full key rotation lifecycle:
 1. Reads the current secret key from config directory
 2. Generates a new secret key (or uses one provided)
 3. Re-encrypts all sensitive data in the database (atomic transaction)
-4. Backs up the old key
-5. Saves the new key
+4. Writes the new key to secret_key.new before the transaction commits
+5. Backs up the old key
+6. Moves the new key into place as secret_key
+
+The keys are never printed. The output identifies the new key by a fingerprint,
+the first 12 hex characters of the SHA-256 of the key.
 
 Migrated database fields:
 - user.store_api_key: Langflow Store API keys
@@ -20,60 +24,101 @@ Migrated database fields:
   --headers values in args
 
 Run it with Langflow stopped, no background jobs queued and no OAuth connection
-flows in progress. Queued jobs' request overrides and pending OAuth verifiers are
-also encrypted under the key, are short-lived, and are not rotated.
+flows in progress. Every persisted job request override, OAuth verifier, and trigger cleanup
+credential is covered. The legacy script still refuses active jobs and live
+OAuth flows. New installations should use `langflow secrets rotate`, which also
+records a durable database completion receipt and loads integration hooks.
 
 Usage:
     uv run python scripts/migrate_secret_key.py --help
     uv run python scripts/migrate_secret_key.py --dry-run
     uv run python scripts/migrate_secret_key.py --database-url postgresql://...
+    uv run python scripts/migrate_secret_key.py --old-key-file old.key --new-key-file new.key
+
+Values given on the command line show up in the process list and shell history.
+Keys can come from a file (--old-key-file, --new-key-file) or the environment
+(LANGFLOW_OLD_SECRET_KEY, LANGFLOW_NEW_SECRET_KEY), and the database URL from
+LANGFLOW_MIGRATION_TARGET_URL. A command-line value wins over the environment,
+which wins over the defaults. LANGFLOW_DATABASE_URL is not read.
 """
 
 import argparse
-import base64
-import binascii
-import hashlib
-import json
 import os
 import platform
-import random
 import secrets
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from cryptography.exceptions import InvalidTag
-from cryptography.fernet import Fernet, InvalidToken, MultiFernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-from langflow.services.auth.mcp_encryption import MCP_SECRET_CONFIG_MAPS, _argv_secret_positions
+from cryptography.fernet import Fernet
+from langflow.services.secrets.crypto import (
+    CREDENTIAL_TYPE,
+    FERNET_MIN_TOKEN_BYTES,
+    FERNET_TOKEN_COLUMNS,
+    FERNET_VERSION_BYTE,
+    MINIMUM_KEY_LENGTH,
+    PENDING_KEY_FILENAME,
+    SENSITIVE_AUTH_FIELDS,
+    SSO_AAD,
+    SSO_BASE64URL_ALPHABET,
+    SSO_ENVELOPE_HEADER,
+    SSO_ENVELOPE_PARTS,
+    SSO_HEADER_PARTS,
+    SSO_HKDF_INFO,
+    SSO_HKDF_SALT,
+    SSO_NONCE_BYTES,
+    SSO_TAG_BYTES,
+    _decode_sso_envelope,
+    _derive_sso_key,
+    decrypt_sso_secret_with_key,
+    decrypt_with_key,
+    encrypt_sso_secret_with_key,
+    encrypt_with_key,
+    ensure_valid_key,
+    key_fingerprint,
+    legacy_short_key,
+    looks_like_fernet_token,
+    migrate_auth_settings,
+    migrate_mcp_config,
+    migrate_sso_secret,
+    migrate_value,
+)
 from platformdirs import user_cache_dir
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, inspect, make_url, text
 
-MINIMUM_KEY_LENGTH = 32
-# Columns that hold a single Fernet token: (table, primary key, column, description).
-FERNET_TOKEN_COLUMNS = [
-    # Authentication uses apikey.api_key_hash, but the stored value is lost if not rotated.
-    ("apikey", "id", "api_key", "stored API key values"),
-    ("deployment_provider_account", "id", "api_key", "deployment provider API keys"),
-    ("connection_secret", "connection_id", "encrypted_payload", "connection credentials"),
-    ("trigger", "id", "signing_secret_encrypted", "trigger signing secrets"),
+# Compatibility exports for integrations importing the original script helpers.
+__all__ = [
+    "CREDENTIAL_TYPE",
+    "FERNET_MIN_TOKEN_BYTES",
+    "FERNET_TOKEN_COLUMNS",
+    "FERNET_VERSION_BYTE",
+    "MINIMUM_KEY_LENGTH",
+    "PENDING_KEY_FILENAME",
+    "SENSITIVE_AUTH_FIELDS",
+    "SSO_AAD",
+    "SSO_BASE64URL_ALPHABET",
+    "SSO_ENVELOPE_HEADER",
+    "SSO_ENVELOPE_PARTS",
+    "SSO_HEADER_PARTS",
+    "SSO_HKDF_INFO",
+    "SSO_HKDF_SALT",
+    "SSO_NONCE_BYTES",
+    "SSO_TAG_BYTES",
+    "_decode_sso_envelope",
+    "_derive_sso_key",
+    "decrypt_sso_secret_with_key",
+    "decrypt_with_key",
+    "encrypt_sso_secret_with_key",
+    "encrypt_with_key",
+    "ensure_valid_key",
+    "key_fingerprint",
+    "legacy_short_key",
+    "looks_like_fernet_token",
+    "migrate_auth_settings",
+    "migrate_mcp_config",
+    "migrate_sso_secret",
+    "migrate_value",
 ]
-SENSITIVE_AUTH_FIELDS = ["oauth_client_secret", "api_key"]
-FERNET_VERSION_BYTE = 0x80
-FERNET_MIN_TOKEN_BYTES = 73  # version + timestamp + IV + one AES block + HMAC
-# Must match langflow.services.variable.constants.CREDENTIAL_TYPE
-CREDENTIAL_TYPE = "Credential"
-SSO_ENVELOPE_HEADER = "lf-sso:v1:hkdf-sha256-v1:aes-256-gcm"
-SSO_AAD = SSO_ENVELOPE_HEADER.encode()
-SSO_HKDF_SALT = b"langflow/sso/client-secret/hkdf-salt/v1"
-SSO_HKDF_INFO = b"langflow/sso/client-secret/encryption"
-SSO_NONCE_BYTES = 12
-SSO_TAG_BYTES = 16
-SSO_ENVELOPE_PARTS = 6
-SSO_HEADER_PARTS = 4
-SSO_BASE64URL_ALPHABET = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
 
 
 def get_default_config_dir() -> Path:
@@ -125,6 +170,18 @@ def read_secret_key_from_file(config_dir: Path) -> str | None:
     return None
 
 
+def read_key_file(path: str) -> str:
+    """Read a key from a file given on the command line, stripped like the config directory's secret_key."""
+    try:
+        key = Path(path).read_text(encoding="utf-8").strip()
+    except OSError as e:
+        raise argparse.ArgumentTypeError(e) from e
+    if not key:
+        msg = f"{path} is empty"
+        raise argparse.ArgumentTypeError(msg)
+    return key
+
+
 def write_secret_key_to_file(config_dir: Path, key: str, filename: str = "secret_key") -> None:
     """Write a secret key to file with secure permissions."""
     config_dir.mkdir(parents=True, exist_ok=True)
@@ -133,283 +190,12 @@ def write_secret_key_to_file(config_dir: Path, key: str, filename: str = "secret
     set_secure_permissions(secret_file)
 
 
-def ensure_valid_key(s: str) -> bytes:
-    """Convert a secret key string to the Fernet key the app encrypts with.
-
-    For keys shorter than MINIMUM_KEY_LENGTH (32), the key is the SHA-256 digest
-    of the secret, as the app has done since 1.10.1. For longer keys, pads with
-    '=' to ensure valid base64 encoding.
-
-    NOTE: This mirrors langflow.services.auth.utils.ensure_fernet_key.
-    Keep in sync if encryption logic changes.
-    """
-    if len(s) < MINIMUM_KEY_LENGTH:
-        return base64.urlsafe_b64encode(hashlib.sha256(s.encode()).digest())
-    padding_needed = -len(s) % 4
-    return (s + "=" * padding_needed).encode()
-
-
-def legacy_short_key(s: str) -> bytes:
-    """The pre-1.10.1 key for a short secret, used only to read values written back then.
-
-    Mirrors langflow.services.auth.utils._ensure_legacy_fernet_key.
-    """
-    legacy_random = random.Random(s)  # noqa: S311 - reproduces a historical derivation, never encrypts
-    return base64.urlsafe_b64encode(bytes(legacy_random.getrandbits(8) for _ in range(32)))
-
-
-def decrypt_with_key(encrypted: str, key: str) -> str:
-    """Decrypt data with the given key, reading pre-1.10.1 values of short keys too."""
-    fernet = Fernet(ensure_valid_key(key))
-    if len(key) < MINIMUM_KEY_LENGTH:
-        fernet = MultiFernet([fernet, Fernet(legacy_short_key(key))])
-    return fernet.decrypt(encrypted.encode()).decode()
-
-
-def encrypt_with_key(plaintext: str, key: str) -> str:
-    """Encrypt data with the given key."""
-    fernet = Fernet(ensure_valid_key(key))
-    return fernet.encrypt(plaintext.encode()).decode()
-
-
-def migrate_value(encrypted: str, old_key: str, new_key: str) -> str | None:
-    """Decrypt with old key and re-encrypt with new key.
-
-    Returns:
-        The re-encrypted value, or None if decryption fails (invalid key or corrupted data).
-    """
-    try:
-        plaintext = decrypt_with_key(encrypted, old_key)
-        return encrypt_with_key(plaintext, new_key)
-    except InvalidToken:
-        return None
-
-
-def _derive_sso_key(master_key: str) -> bytes:
-    return HKDF(
-        algorithm=hashes.SHA256(),
-        length=32,
-        salt=SSO_HKDF_SALT,
-        info=SSO_HKDF_INFO,
-    ).derive(master_key.encode())
-
-
-def _decode_sso_envelope(envelope: str) -> tuple[bytes, bytes]:
-    parts = envelope.split(":")
-    if len(parts) != SSO_ENVELOPE_PARTS or ":".join(parts[:SSO_HEADER_PARTS]) != SSO_ENVELOPE_HEADER:
-        msg = "Unsupported SSO client-secret envelope"
-        raise ValueError(msg)
-    decoded_payloads: list[bytes] = []
-    for value in parts[4:]:
-        if not value or any(character not in SSO_BASE64URL_ALPHABET for character in value):
-            msg = "Invalid base64url data in SSO client-secret envelope"
-            raise ValueError(msg)
-        try:
-            decoded_payloads.append(base64.b64decode(value + "=" * (-len(value) % 4), altchars=b"-_", validate=True))
-        except (binascii.Error, ValueError) as exc:
-            msg = "Invalid base64url data in SSO client-secret envelope"
-            raise ValueError(msg) from exc
-    nonce, ciphertext = decoded_payloads
-    if len(nonce) != SSO_NONCE_BYTES or len(ciphertext) < SSO_TAG_BYTES:
-        msg = "Invalid SSO client-secret envelope payload"
-        raise ValueError(msg)
-    return nonce, ciphertext
-
-
-def decrypt_sso_secret_with_key(envelope: str, key: str) -> str:
-    """Decrypt an SSO client-secret envelope with an explicit master key."""
-    nonce, ciphertext = _decode_sso_envelope(envelope)
-    plaintext = AESGCM(_derive_sso_key(key)).decrypt(nonce, ciphertext, SSO_AAD)
-    return plaintext.decode()
-
-
-def encrypt_sso_secret_with_key(plaintext: str, key: str) -> str:
-    """Encrypt an SSO client secret using the application's current envelope format."""
-    nonce = os.urandom(SSO_NONCE_BYTES)
-    ciphertext = AESGCM(_derive_sso_key(key)).encrypt(nonce, plaintext.encode(), SSO_AAD)
-    encoded_nonce = base64.urlsafe_b64encode(nonce).rstrip(b"=").decode()
-    encoded_ciphertext = base64.urlsafe_b64encode(ciphertext).rstrip(b"=").decode()
-    return f"{SSO_ENVELOPE_HEADER}:{encoded_nonce}:{encoded_ciphertext}"
-
-
-def migrate_sso_secret(envelope: str, old_key: str, new_key: str) -> str | None:
-    """Rewrap an SSO client-secret envelope under a replacement master key."""
-    try:
-        plaintext = decrypt_sso_secret_with_key(envelope, old_key)
-        return encrypt_sso_secret_with_key(plaintext, new_key)
-    except (InvalidTag, UnicodeDecodeError, ValueError):
-        return None
-
-
-def migrate_auth_settings(auth_settings: dict, old_key: str, new_key: str) -> tuple[dict, list[str]]:
-    """Re-encrypt sensitive fields in auth_settings dict.
-
-    Returns:
-        Tuple of (migrated_settings, failed_fields) where failed_fields contains
-        names of fields that could not be decrypted with the old key.
-    """
-    result = auth_settings.copy()
-    failed_fields = []
-    for field in SENSITIVE_AUTH_FIELDS:
-        if result.get(field):
-            new_value = migrate_value(result[field], old_key, new_key)
-            if new_value:
-                result[field] = new_value
-            else:
-                failed_fields.append(field)
-    return result, failed_fields
-
-
-def looks_like_fernet_token(value: object) -> bool:
-    """Tell a Fernet token from a plaintext value without knowing the key.
-
-    mcp_server.config can hold plaintext values written before encryption
-    shipped, and those must be left alone rather than counted as failures.
-    """
-    if not isinstance(value, str):
-        return False
-    try:
-        raw = base64.urlsafe_b64decode(value.encode() + b"=" * (-len(value) % 4))
-    except (binascii.Error, ValueError):
-        return False
-    return len(raw) >= FERNET_MIN_TOKEN_BYTES and raw[0] == FERNET_VERSION_BYTE
-
-
-def migrate_mcp_config(config: dict, old_key: str, new_key: str) -> tuple[dict, list[str]]:
-    """Re-encrypt the secret values inside an mcp_server.config entry.
-
-    Returns:
-        Tuple of (migrated_config, failed_fields) where failed_fields names
-        values that look encrypted but cannot be decrypted with the old key.
-    """
-    result = json.loads(json.dumps(config))
-    failed_fields = []
-    for map_name in MCP_SECRET_CONFIG_MAPS:
-        values = result.get(map_name)
-        if not isinstance(values, dict):
-            continue
-        for name, value in values.items():
-            if not isinstance(value, str) or not value or not looks_like_fernet_token(value):
-                continue
-            new_value = migrate_value(value, old_key, new_key)
-            if new_value:
-                values[name] = new_value
-            else:
-                failed_fields.append(f"{map_name}.{name}")
-    args = result.get("args")
-    for position in _argv_secret_positions(args):
-        if not looks_like_fernet_token(args[position]):
-            continue
-        new_value = migrate_value(args[position], old_key, new_key)
-        if new_value:
-            args[position] = new_value
-        else:
-            failed_fields.append(f"args[{position}]")
-    return result, failed_fields
-
-
 def verify_migration(conn, new_key: str) -> tuple[int, int]:
-    """Verify migrated data can be decrypted with the new key.
+    """Verify every persisted secret using the shared offline inventory."""
+    from langflow.services.secrets.rotation import audit, load_participants
 
-    Samples records from each table and attempts decryption.
-
-    Returns:
-        Tuple of (verified_count, failed_count).
-    """
-    verified, failed = 0, 0
-
-    # Verify user.store_api_key (sample up to 3)
-    users = conn.execute(
-        text('SELECT id, store_api_key FROM "user" WHERE store_api_key IS NOT NULL LIMIT 3')
-    ).fetchall()
-    for _, encrypted_key in users:
-        try:
-            decrypt_with_key(encrypted_key, new_key)
-            verified += 1
-        except InvalidToken:
-            failed += 1
-
-    # Verify variable.value (sample up to 3)
-    variables = conn.execute(
-        text("SELECT id, value FROM variable WHERE type = :type AND value IS NOT NULL LIMIT 3"),
-        {"type": CREDENTIAL_TYPE},
-    ).fetchall()
-    for _, encrypted_value in variables:
-        try:
-            decrypt_with_key(encrypted_value, new_key)
-            verified += 1
-        except InvalidToken:
-            failed += 1
-
-    # Verify folder.auth_settings (sample up to 3)
-    folders = conn.execute(
-        text("SELECT id, auth_settings FROM folder WHERE auth_settings IS NOT NULL LIMIT 3")
-    ).fetchall()
-    for _, auth_settings in folders:
-        if not auth_settings:
-            continue
-        try:
-            settings_dict = auth_settings if isinstance(auth_settings, dict) else json.loads(auth_settings)
-            if settings_dict is None:
-                continue
-            for field in SENSITIVE_AUTH_FIELDS:
-                if settings_dict.get(field):
-                    decrypt_with_key(settings_dict[field], new_key)
-                    verified += 1
-        except (InvalidToken, json.JSONDecodeError):
-            failed += 1
-
-    for table, key, column, _ in FERNET_TOKEN_COLUMNS:
-        if not inspect(conn).has_table(table):
-            continue
-        rows = conn.execute(
-            text(f"SELECT {key}, {column} FROM {table} WHERE {column} IS NOT NULL LIMIT 3")  # noqa: S608
-        ).fetchall()
-        for _, encrypted_value in rows:
-            if not isinstance(encrypted_value, str):
-                failed += 1
-                continue
-            if not looks_like_fernet_token(encrypted_value):
-                continue
-            try:
-                decrypt_with_key(encrypted_value, new_key)
-                verified += 1
-            except InvalidToken:
-                failed += 1
-
-    if inspect(conn).has_table("mcp_server"):
-        servers = conn.execute(text("SELECT id, config FROM mcp_server WHERE config IS NOT NULL LIMIT 3")).fetchall()
-        for _, raw_config in servers:
-            try:
-                config = raw_config if isinstance(raw_config, dict) else json.loads(raw_config)
-                for map_name in MCP_SECRET_CONFIG_MAPS:
-                    values = config.get(map_name)
-                    if not isinstance(values, dict):
-                        continue
-                    for value in values.values():
-                        if isinstance(value, str) and looks_like_fernet_token(value):
-                            decrypt_with_key(value, new_key)
-                            verified += 1
-                args = config.get("args")
-                for position in _argv_secret_positions(args):
-                    if looks_like_fernet_token(args[position]):
-                        decrypt_with_key(args[position], new_key)
-                        verified += 1
-            except (InvalidToken, json.JSONDecodeError):
-                failed += 1
-
-    if inspect(conn).has_table("sso_config"):
-        configs = conn.execute(
-            text("SELECT id, client_secret_encrypted FROM sso_config WHERE client_secret_encrypted IS NOT NULL LIMIT 3")
-        ).fetchall()
-        for _, encrypted_secret in configs:
-            try:
-                decrypt_sso_secret_with_key(encrypted_secret, new_key)
-                verified += 1
-            except (InvalidTag, UnicodeDecodeError, ValueError):
-                failed += 1
-
-    return verified, failed
+    report = audit(conn, new_key, participants=load_participants())
+    return report.encrypted, len(report.failures)
 
 
 def get_default_database_url(config_dir: Path) -> str | None:
@@ -420,17 +206,15 @@ def get_default_database_url(config_dir: Path) -> str | None:
     return None
 
 
-DATABASE_URL_DISPLAY_LENGTH = 50
-
-
-def warn_env_secret_key(new_key: str | None = None) -> None:
+def warn_env_secret_key(new_key: str | None = None, key_file: Path | None = None) -> None:
     """Langflow uses LANGFLOW_SECRET_KEY over the key file and writes it back over the file on start."""
     print("\n" + "!" * 50)
     print("LANGFLOW_SECRET_KEY is set in this environment. Langflow uses it instead of")
     print("the secret_key file and writes it back over that file on start. Set it to the")
     print("new key before starting Langflow, or every rotated secret decrypts to empty.")
     if new_key:
-        print(f"\n  LANGFLOW_SECRET_KEY={new_key}")
+        print(f"\n  Set LANGFLOW_SECRET_KEY to the contents of {key_file}")
+        print(f"  (key fingerprint: {key_fingerprint(new_key)})")
     print("!" * 50)
 
 
@@ -472,8 +256,9 @@ def migrate(
         dry_run: If True, simulates migration without making changes.
 
     The migration runs as an atomic transaction - either all database changes
-    succeed or none are applied. Key files are only modified after successful
-    database migration.
+    succeed or none are applied. The new key is written to secret_key.new just
+    before the commit and replaces secret_key after it, so a run that stops in
+    between leaves the key on disk.
     """
     # Determine old key
     if not old_key:
@@ -481,16 +266,22 @@ def migrate(
     if not old_key:
         print("Error: Could not find current secret key.")
         print(f"  Checked: {config_dir}/secret_key")
-        print("  Use --old-key to provide it explicitly")
+        print("  Use --old-key-file or LANGFLOW_OLD_SECRET_KEY to provide it explicitly")
         sys.exit(1)
 
     # Determine new key
     if not new_key:
         new_key = secrets.token_urlsafe(32)
-        print(f"Generated new secret key: {new_key}")
+        print(f"Generated new secret key, fingerprint: {key_fingerprint(new_key)}")
     else:
-        print(f"Using provided new key: {new_key}")
-    print("  (Save this key - you'll need it if the migration fails after database commit)")
+        print(f"Using provided new key, fingerprint: {key_fingerprint(new_key)}")
+    print("  (The key is only written to the key file, never printed)")
+
+    try:
+        Fernet(ensure_valid_key(new_key))
+    except ValueError:
+        print("Error: The new secret key is not usable: 32+ characters must be url-safe base64 of 32 bytes")
+        sys.exit(1)
 
     if old_key == new_key:
         print("Error: Old and new secret keys are the same")
@@ -498,230 +289,85 @@ def migrate(
 
     print("\nConfiguration:")
     print(f"  Config dir: {config_dir}")
-    db_display = (
-        f"{database_url[:DATABASE_URL_DISPLAY_LENGTH]}..."
-        if len(database_url) > DATABASE_URL_DISPLAY_LENGTH
-        else database_url
-    )
-    print(f"  Database: {db_display}")
+    # Drivers take credentials from query parameters too (password, passfile, options), so none are shown.
+    url = make_url(database_url)
+    query_note = " (query parameters not shown)" if url.query else ""
+    redacted_database_url = url.set(query={}).render_as_string(hide_password=True)
+    print(f"  Database: {redacted_database_url}{query_note}")
     print(f"  Dry run: {dry_run}")
     if os.environ.get("LANGFLOW_SECRET_KEY"):
         warn_env_secret_key()
 
+    secret_file = config_dir / "secret_key"
+    pending_file = config_dir / PENDING_KEY_FILENAME
+    if pending_file.exists():
+        pending_fingerprint = key_fingerprint(pending_file.read_text(encoding="utf-8"))
+        print(f"\nA previous run stopped before saving its new key: {pending_file} exists.")
+        print(f"The database may already be encrypted with the key in that file (fingerprint: {pending_fingerprint}).")
+        print(f"To find out, run with --dry-run --old-key-file {pending_file}:")
+        print(f"  0 failures: the database is on that key. Move {pending_file} to {secret_file}.")
+        print(f"  Failures: the database is not on that key. Delete {pending_file}.")
+        if not dry_run:
+            print("Nothing was changed.")
+            sys.exit(1)
+
     if dry_run:
         print("\n[DRY RUN] No changes will be made.\n")
 
-    engine = create_engine(database_url)
+    from langflow.services.secrets.rotation import RotationError, _locations, _lock, audit, load_participants, rewrap
+
+    engine = create_engine(database_url, hide_parameters=True)
+    participants = load_participants()
     total_migrated = 0
     total_failed = 0
-
-    # Use begin() for atomic transaction - all changes commit together or rollback on failure
-    with engine.begin() as conn:
+    step = 1
+    with engine.connect() as conn:
+        if not dry_run:
+            _lock(conn, _locations(conn, participants))
+        conn.execute(text('SELECT id FROM "user" LIMIT 0'))
         ensure_no_pending_encrypted_work(conn)
-
-        # Migrate user.store_api_key
-        print("\n1. Migrating user.store_api_key...")
-        users = conn.execute(text('SELECT id, store_api_key FROM "user" WHERE store_api_key IS NOT NULL')).fetchall()
-
-        migrated, failed = 0, 0
-        for user_id, encrypted_key in users:
-            new_encrypted = migrate_value(encrypted_key, old_key, new_key)
-            if new_encrypted:
-                if not dry_run:
-                    conn.execute(
-                        text('UPDATE "user" SET store_api_key = :val WHERE id = :id'),
-                        {"val": new_encrypted, "id": user_id},
-                    )
-                migrated += 1
-            else:
-                failed += 1
-                print(f"   Warning: Could not decrypt for user {user_id}")
-
-        print(f"   {'Would migrate' if dry_run else 'Migrated'}: {migrated}, Failed: {failed}")
-        total_migrated += migrated
-        total_failed += failed
-
-        # Migrate variable.value (only Credential type variables are encrypted)
-        print("\n2. Migrating credential variable values...")
-        variables = conn.execute(
-            text("SELECT id, name, value FROM variable WHERE type = :type"),
-            {"type": CREDENTIAL_TYPE},
-        ).fetchall()
-
-        migrated, failed, skipped = 0, 0, 0
-        for var_id, var_name, encrypted_value in variables:
-            if not encrypted_value:
-                skipped += 1
-                continue
-            new_encrypted = migrate_value(encrypted_value, old_key, new_key)
-            if new_encrypted:
-                if not dry_run:
-                    conn.execute(
-                        text("UPDATE variable SET value = :val WHERE id = :id"),
-                        {"val": new_encrypted, "id": var_id},
-                    )
-                migrated += 1
-            else:
-                failed += 1
-                print(f"   Warning: Could not decrypt variable '{var_name}' ({var_id})")
-
-        print(f"   {'Would migrate' if dry_run else 'Migrated'}: {migrated}, Failed: {failed}, Skipped: {skipped}")
-        total_migrated += migrated
-        total_failed += failed
-
-        # Migrate folder.auth_settings
-        print("\n3. Migrating folder.auth_settings (MCP)...")
-        folders = conn.execute(
-            text("SELECT id, name, auth_settings FROM folder WHERE auth_settings IS NOT NULL")
-        ).fetchall()
-
-        migrated, failed = 0, 0
-        for folder_id, folder_name, auth_settings in folders:
-            if not auth_settings:
-                continue
-            try:
-                settings_dict = auth_settings if isinstance(auth_settings, dict) else json.loads(auth_settings)
-                if settings_dict is None:  # JSON null, which SQLite returns as the text 'null'
-                    continue
-                new_settings, failed_fields = migrate_auth_settings(settings_dict, old_key, new_key)
-                if failed_fields:
-                    failed += 1
-                    print(f"   Warning: Could not migrate folder '{folder_name}' fields: {', '.join(failed_fields)}")
-                    continue
-                if not dry_run:
-                    conn.execute(
-                        text("UPDATE folder SET auth_settings = :val WHERE id = :id"),
-                        {"val": json.dumps(new_settings), "id": folder_id},
-                    )
-                migrated += 1
-            except (json.JSONDecodeError, InvalidToken, TypeError, KeyError) as e:
-                failed += 1
-                print(f"   Warning: Could not migrate folder '{folder_name}': {e}")
-
-        print(f"   {'Would migrate' if dry_run else 'Migrated'}: {migrated}, Failed: {failed}")
-        total_migrated += migrated
-        total_failed += failed
-
-        # Migrate sso_config.client_secret_encrypted when the optional SSO schema exists.
-        print("\n4. Migrating SSO client secrets...")
-        migrated, failed = 0, 0
-        if inspect(conn).has_table("sso_config"):
-            configs = conn.execute(
-                text("SELECT id, client_secret_encrypted FROM sso_config WHERE client_secret_encrypted IS NOT NULL")
-            ).fetchall()
-            for config_id, encrypted_secret in configs:
-                new_encrypted = migrate_sso_secret(encrypted_secret, old_key, new_key)
-                if new_encrypted:
-                    if not dry_run:
-                        conn.execute(
-                            text("UPDATE sso_config SET client_secret_encrypted = :secret WHERE id = :id"),
-                            {"secret": new_encrypted, "id": config_id},
-                        )
-                    migrated += 1
-                else:
-                    failed += 1
-                    print(f"   Warning: Could not decrypt SSO config {config_id}")
-        print(f"   {'Would migrate' if dry_run else 'Migrated'}: {migrated}, Failed: {failed}")
-        total_migrated += migrated
-        total_failed += failed
-
-        step = 5
-        for table, key, column, description in FERNET_TOKEN_COLUMNS:
-            print(f"\n{step}. Migrating {description}...")
-            step += 1
-            migrated, failed = 0, 0
-            if inspect(conn).has_table(table):
-                rows = conn.execute(
-                    text(f"SELECT {key}, {column} FROM {table} WHERE {column} IS NOT NULL")  # noqa: S608
-                ).fetchall()
-                for row_id, encrypted_value in rows:
-                    if not isinstance(encrypted_value, str):
-                        failed += 1
-                        print(f"   Warning: Unexpected {table}.{column} value for {row_id}")
-                        continue
-                    if not looks_like_fernet_token(encrypted_value):
-                        continue
-                    new_encrypted = migrate_value(encrypted_value, old_key, new_key)
-                    if new_encrypted:
-                        if not dry_run:
-                            conn.execute(
-                                text(f"UPDATE {table} SET {column} = :val WHERE {key} = :id"),  # noqa: S608
-                                {"val": new_encrypted, "id": row_id},
-                            )
-                        migrated += 1
-                    else:
-                        failed += 1
-                        print(f"   Warning: Could not decrypt {table}.{column} for {row_id}")
-            print(f"   {'Would migrate' if dry_run else 'Migrated'}: {migrated}, Failed: {failed}")
-            total_migrated += migrated
-            total_failed += failed
-
-        # Migrate mcp_server.config secret values
-        print(f"\n{step}. Migrating MCP server config secrets...")
-        step += 1
-        migrated, failed = 0, 0
-        if inspect(conn).has_table("mcp_server"):
-            servers = conn.execute(text("SELECT id, name, config FROM mcp_server WHERE config IS NOT NULL")).fetchall()
-            for server_id, server_name, raw_config in servers:
-                try:
-                    config = raw_config if isinstance(raw_config, dict) else json.loads(raw_config)
-                    new_config, failed_fields = migrate_mcp_config(config, old_key, new_key)
-                except (json.JSONDecodeError, TypeError) as e:
-                    failed += 1
-                    print(f"   Warning: Could not parse MCP server '{server_name}' config: {e}")
-                    continue
-                if failed_fields:
-                    failed += 1
-                    print(
-                        f"   Warning: Could not migrate MCP server '{server_name}' fields: {', '.join(failed_fields)}"
-                    )
-                    continue
-                if new_config != config:
-                    if not dry_run:
-                        conn.execute(
-                            text("UPDATE mcp_server SET config = :val WHERE id = :id"),
-                            {"val": json.dumps(new_config), "id": server_id},
-                        )
-                    migrated += 1
-        print(f"   {'Would migrate' if dry_run else 'Migrated'}: {migrated}, Failed: {failed}")
-        total_migrated += migrated
-        total_failed += failed
-
-        if total_failed > 0 and not dry_run:
-            print(f"\nERROR: {total_failed} values could not be migrated.")
+        report = audit(conn, old_key, participants=participants)
+        total_failed = len(report.failures)
+        total_migrated = report.encrypted
+        for finding in report.failures:
+            print(f"   Could not decrypt {finding.table}.{finding.column} for row {finding.row_id}")
+        if total_failed and not dry_run:
+            print(f"ERROR: {total_failed} values could not be migrated.")
             print("Rolling back all database changes; the secret key was not changed.")
-            conn.rollback()
             sys.exit(1)
-
-        # Verify migrated data can be decrypted with new key. A dry run wrote nothing,
-        # so the rows still hold old-key ciphertext and there is nothing to verify.
-        if total_migrated > 0 and not dry_run:
-            print(f"\n{step}. Verifying migration...")
-            verified, verify_failed = verify_migration(conn, new_key)
-            if verify_failed > 0:
-                print(f"   ERROR: {verify_failed} records failed verification!")
-                print("   Rolling back transaction...")
-                conn.rollback()
+        if not dry_run:
+            try:
+                for participant in participants:
+                    participant.preflight()
+                rewrap(conn, old_key, new_key, participants=participants)
+            except RotationError:
+                print("Complete verification failed; rolling back all database changes.")
                 sys.exit(1)
-            if verified > 0:
-                print(f"   Verified {verified} sample records can be decrypted with new key")
-            else:
-                print("   No records to verify (all tables empty)")
-
-        # Rollback if dry run (transaction will auto-commit on exit otherwise)
-        if dry_run:
+            try:
+                write_secret_key_to_file(config_dir, new_key, PENDING_KEY_FILENAME)
+            except BaseException:
+                pending_file.unlink(missing_ok=True)
+                raise
+            conn.commit()
+            print(f"Verified all {total_migrated} encrypted values with the new key")
+        else:
             conn.rollback()
 
-    # Save new key only after successful database migration
+    # Move the new key into place only after the database commit
     if not dry_run:
         backup_file = config_dir / f"secret_key.backup.{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
-        write_secret_key_to_file(config_dir, old_key, backup_file.name)
-        print(f"\n{step + 1}. Backed up old key to: {backup_file}")
-        write_secret_key_to_file(config_dir, new_key)
-        print(f"{step + 2}. Saved new secret key to: {config_dir / 'secret_key'}")
+        try:
+            write_secret_key_to_file(config_dir, old_key, backup_file.name)
+            print(f"\n{step + 1}. Backed up old key to: {backup_file}")
+            pending_file.replace(secret_file)
+        except OSError as e:
+            print(f"\nERROR: The database is now encrypted with the new key, but saving the key failed: {e}")
+            print(f"The new key is in {pending_file}. Move it to {secret_file} before starting Langflow.")
+            sys.exit(1)
+        print(f"{step + 2}. Saved new secret key to: {secret_file}")
     else:
         print(f"\n{step + 1}. [DRY RUN] Would backup old key")
-        print(f"{step + 2}. [DRY RUN] Would save new key to: {config_dir / 'secret_key'}")
+        print(f"{step + 2}. [DRY RUN] Would save new key to: {secret_file}")
 
     # Summary
     print("\n" + "=" * 50)
@@ -734,17 +380,18 @@ def migrate(
         print(f"\nMigrated {total_migrated} items, {total_failed} failures")
         print(f"\nBackup key location: {config_dir}/secret_key.backup.*")
         print("\nNext steps:")
-        print("1. If Langflow gets LANGFLOW_SECRET_KEY (environment, .env file, secret store), set it to the new key")
+        print("1. If Langflow gets LANGFLOW_SECRET_KEY (environment, .env file, secret store), set it to the new key:")
+        print(f"   the contents of {secret_file}")
         print("2. Start Langflow and verify everything works")
         print("3. Users must log in again (JWT sessions invalidated)")
         print("4. Once verified, you may delete the backup key file")
         if os.environ.get("LANGFLOW_SECRET_KEY"):
-            warn_env_secret_key(new_key)
+            warn_env_secret_key(new_key, secret_file)
 
     if total_failed > 0:
         print(f"\nWarning: {total_failed} items could not be migrated.")
         print("These may have been encrypted with a different key or are corrupted.")
-        sys.exit(1 if not dry_run else 0)
+        sys.exit(1)
 
 
 def main():
@@ -762,10 +409,17 @@ Examples:
   %(prog)s
 
   # Custom database and config
-  %(prog)s --database-url postgresql://user:pass@host/db --config-dir /etc/langflow  # pragma: allowlist secret
+  %(prog)s --database-url postgresql://user@host/db --config-dir /etc/langflow
 
-  # Provide keys explicitly
-  %(prog)s --old-key "current-key" --new-key "replacement-key"
+  # Keys from files, which keeps them out of the process list and shell history
+  %(prog)s --old-key-file old.key --new-key-file new.key
+
+Environment variables, used when the matching option is not given:
+  LANGFLOW_MIGRATION_TARGET_URL  Database URL. Use it for a URL that holds a password.
+  LANGFLOW_OLD_SECRET_KEY        Current secret key
+  LANGFLOW_NEW_SECRET_KEY        New secret key
+  LANGFLOW_CONFIG_DIR            Langflow config directory
+LANGFLOW_DATABASE_URL is not read.
         """,
     )
 
@@ -786,38 +440,77 @@ Examples:
         type=str,
         default=None,
         metavar="URL",
-        help="Database connection URL (default: sqlite in config dir)",
+        help="Database connection URL (default: LANGFLOW_MIGRATION_TARGET_URL, then sqlite in config dir)",
     )
-    parser.add_argument(
+    old_key_group = parser.add_mutually_exclusive_group()
+    old_key_group.add_argument(
         "--old-key",
         type=str,
         default=None,
         metavar="KEY",
-        help="Current secret key (default: read from config dir)",
+        help="Current secret key. Shows in the process list: prefer --old-key-file",
     )
-    parser.add_argument(
+    old_key_group.add_argument(
+        "--old-key-file",
+        dest="old_key",
+        type=read_key_file,
+        metavar="PATH",
+        help="File holding the current secret key (default: LANGFLOW_OLD_SECRET_KEY, then secret_key in config dir)",
+    )
+    new_key_group = parser.add_mutually_exclusive_group()
+    new_key_group.add_argument(
         "--new-key",
         type=str,
         default=None,
         metavar="KEY",
-        help="New secret key (default: auto-generated)",
+        help="New secret key. Shows in the process list: prefer --new-key-file",
     )
+    new_key_group.add_argument(
+        "--new-key-file",
+        dest="new_key",
+        type=read_key_file,
+        metavar="PATH",
+        help="File holding the new secret key (default: LANGFLOW_NEW_SECRET_KEY, then auto-generated)",
+    )
+
+    parser.add_argument(
+        "--writers-stopped", action="store_true", help="Attest all web processes, workers, and listeners are stopped"
+    )
+    parser.add_argument("--backup-file", type=Path, help="Verified database backup artifact")
+    parser.add_argument("--backup-sha256", help="Independently recorded SHA-256 of the backup")
 
     args = parser.parse_args()
 
     # Resolve database URL
-    database_url = args.database_url or get_default_database_url(args.config_dir)
+    database_url = (
+        args.database_url
+        or os.environ.get("LANGFLOW_MIGRATION_TARGET_URL")
+        or get_default_database_url(args.config_dir)
+    )
     if not database_url:
         print("Error: Could not determine database URL.")
         print(f"  No database found at {args.config_dir}/langflow.db")
-        print("  Use --database-url to specify the database location")
+        print("  Use --database-url or LANGFLOW_MIGRATION_TARGET_URL to specify the database location")
         sys.exit(1)
+
+    if not args.dry_run:
+        from langflow.services.secrets.rotation import RotationError, verify_backup
+
+        if not args.writers_stopped or args.backup_file is None or not args.backup_sha256:
+            parser.error("Non-dry runs require --writers-stopped, --backup-file, and --backup-sha256")
+        backup_engine = create_engine(database_url, hide_parameters=True)
+        try:
+            verify_backup(backup_engine, args.backup_file, args.backup_sha256)
+        except RotationError as exc:
+            parser.error(str(exc))
+        finally:
+            backup_engine.dispose()
 
     migrate(
         config_dir=args.config_dir,
         database_url=database_url,
-        old_key=args.old_key,
-        new_key=args.new_key,
+        old_key=args.old_key or os.environ.get("LANGFLOW_OLD_SECRET_KEY"),
+        new_key=args.new_key or os.environ.get("LANGFLOW_NEW_SECRET_KEY"),
         dry_run=args.dry_run,
     )
 

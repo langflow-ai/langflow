@@ -224,6 +224,30 @@ the deserialize half is covered by
 
 ## Changelog
 
+- **Decision model inputs (2026-10-22).** `ModelInput` accepts `model_type="decision"`:
+  such a field never connects other models (`input_types=[]`, no external options), and
+  `value="connect_other_models"` is refused. `FloatInput` gains `preserve_empty`
+  (default `False`); when `True`, a blank value stays `None` instead of becoming `0.0`,
+  and a Boolean is refused. Both are additive and existing defaults are unchanged, so
+  `BUNDLE_API_VERSION` remains `1`.
+
+- **Google Workspace network diagnostics (2026-10-15).** `lfx.integrations` exports
+  `IntegrationNetworkError` with the additive `network-error` code. Google transport
+  failures report a fixed reason and API hostname, with server-network guidance in
+  the visible message. They are non-retryable and use HTTP 504 for timeouts or 502
+  for other connectivity failures. HTTP provider failures retain their existing
+  codes. No existing symbol or signature changes, so `BUNDLE_API_VERSION` remains `1`.
+  The stable `lfx-google` wheel requires `lfx>=1.13.0,<2.0.0`, excluding older
+  prereleases that lack this export. Publish the compatible LFX release before
+  the Google bundle. Nightly and RC builds restamp the bundle to a prerelease
+  with a matching LFX requirement instead of weakening the stable wheel's
+  requirement. Nightlies pin LFX exactly so older RCs cannot satisfy the dependency.
+
+- **Output artifact previews.** `Component.custom_repr()` derives automatic
+  previews from the current output's `status` without storing them in
+  `repr_value`. Explicitly configured non-empty `repr_value` overrides remain
+  supported. Public signatures and `BUNDLE_API_VERSION = 1` remain unchanged.
+
 - **Knowledge storage provider defaults.** `DBProviderInput` defaults to the
   application-provided SQLite backend. Its public name, fields and signature
   remain unchanged, so `BUNDLE_API_VERSION` remains `1`. Recognized historical

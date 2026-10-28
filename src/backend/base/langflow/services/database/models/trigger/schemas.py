@@ -12,7 +12,7 @@ from enum import Enum
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 # Trigger kinds are open-ended on purpose: TRG-5/TRG-6 register provider kinds
 # (``slack.message``, ``google.calendar``) without a migration. The pattern is the
@@ -41,6 +41,59 @@ class TriggerState(str, Enum):
 
 #: States that a tick producer or ingress route may append events for.
 LIVE_TRIGGER_STATES = frozenset({TriggerState.ACTIVE.value})
+
+#: States an owner turned on and nothing has told to stop: the rows an operator's
+#: bulk pause takes out of service. ``pending`` is excluded because a canvas save
+#: creates it without the owner's consent, so a bulk resume must never arm it.
+ARMED_TRIGGER_STATES = frozenset(
+    {TriggerState.ACTIVE.value, TriggerState.ERROR.value, TriggerState.NEEDS_RECONNECT.value}
+)
+
+
+class TriggerAction(str, Enum):
+    """Per-trigger operations a client may offer, in display order.
+
+    Each maps to one route, except ``reconnect``, which is the client's own
+    navigation to the connection's reconnect or background-runs consent flow,
+    followed by ``resume``.
+    """
+
+    PAUSE = "pause"  # POST /triggers/{id}/disable
+    RESUME = "resume"  # POST /triggers/{id}/enable
+    TEST = "test"  # POST /triggers/{id}/test
+    RECONNECT = "reconnect"  # client navigation, then resume
+    REPLAY = "replay"  # POST /triggers/{id}/replay
+    DELETE = "delete"  # DELETE /triggers/{id}
+    # An action name, not a credential. POST /triggers/{id}/signing-secret
+    ROTATE_SECRET = "rotate_secret"  # noqa: S105  # pragma: allowlist secret
+
+
+class TriggerReason(str, Enum):
+    """Stable, locale-catalog keys explaining a trigger's state or a refused action.
+
+    ``TriggerRead.reason`` carries one of the state reasons (or null for a
+    healthy, running trigger); ``TriggerRead.blocked_actions`` maps each refused
+    action to a state reason or to one of the caller reasons below. The human
+    detail stays in ``last_error``.
+    """
+
+    # State reasons.
+    PENDING = "pending"
+    CONFIG_INVALID = "config_invalid"
+    DEGRADED = "degraded"
+    PAUSED = "paused"
+    PAUSED_BY_ADMIN = "paused_by_admin"
+    NODE_REMOVED = "node_removed"
+    SOURCE_SETTINGS_CHANGED = "source_settings_changed"
+    ERROR = "error"
+    NEEDS_RECONNECT = "needs_reconnect"
+    CONSENT_REQUIRED = "consent_required"
+    EXPIRED = "expired"
+    DEAD = "dead"
+    # Caller and applicability reasons; only ever values in ``blocked_actions``.
+    INSUFFICIENT_PERMISSION = "insufficient_permission"
+    NOT_CONNECTION_OWNER = "not_connection_owner"
+    RECONNECT_NOT_NEEDED = "reconnect_not_needed"
 
 
 class TriggerEventState(str, Enum):
@@ -202,8 +255,68 @@ class TriggerRead(BaseModel):
     next_fire_at: datetime | None
     last_fired_at: datetime | None
     last_error: str | None
+    admin_paused_at: datetime | None = None
     created_at: datetime | None
     updated_at: datetime | None
+    # Server-computed for the caller; the UI renders these and never re-derives
+    # them from ``state``. An action in neither collection does not apply to
+    # this trigger and is not shown.
+    reason: TriggerReason | None = None
+    allowed_actions: list[TriggerAction] = Field(default_factory=list)
+    blocked_actions: dict[TriggerAction, TriggerReason] = Field(default_factory=dict)
+    # Filled on list responses. ``owner_username`` only in the operator view.
+    flow_name: str | None = None
+    owner_username: str | None = None
+
+
+class TriggerListScope(str, Enum):
+    """Whose triggers ``GET /triggers`` returns."""
+
+    MINE = "mine"
+    ALL = "all"
+
+
+class TriggerBulkRequest(BaseModel):
+    """Select triggers for an operator bulk pause or resume.
+
+    At least one filter is required so an empty body can never mean "every
+    trigger on the instance". Both filters together select their intersection.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    provider: str | None = Field(default=None, max_length=64, pattern=PROVIDER_PATTERN)
+    trigger_ids: list[UUID] | None = Field(default=None, min_length=1, max_length=500)
+    dry_run: bool = False
+
+    @model_validator(mode="after")
+    def _require_a_filter(self) -> TriggerBulkRequest:
+        if self.provider is None and not self.trigger_ids:
+            msg = "Name a provider, trigger_ids, or both."
+            raise ValueError(msg)
+        return self
+
+
+class TriggerBulkFailure(BaseModel):
+    trigger_id: UUID
+    detail: str
+
+
+class TriggerBulkResult(BaseModel):
+    """What a bulk pause or resume did, or would do on a dry run.
+
+    ``matched`` counts every trigger the filter selected; each lands in exactly
+    one of ``changed``, ``unchanged`` (not eligible: already paused, never
+    enabled, or not paused by an operator) or ``failed``.
+    """
+
+    action: TriggerAction
+    dry_run: bool
+    matched: int
+    changed: list[UUID]
+    unchanged: list[UUID]
+    failed: list[TriggerBulkFailure]
+    owners: int = Field(description="Distinct owners of the changed triggers.")
 
 
 class TriggerEventRead(BaseModel):

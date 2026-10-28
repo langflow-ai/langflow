@@ -326,7 +326,7 @@ def test_deploy_requirements_follow_static_model_overrides(
             project_id=uuid4(), project_name="Overrides", snapshots=(snapshot,), limits=ProjectArtifactLimits()
         )
     )
-    _, _, _, requirements = _build_deployment_snapshot_flows((snapshot,), limits=ProjectArtifactLimits())
+    *_, requirements, _mcp = _build_deployment_snapshot_flows((snapshot,), limits=ProjectArtifactLimits())
 
     assert requirements.providers == (provider,)
     assert requirements.models == (ProjectArtifactRequiredModel(provider=provider, name=name, model_type=model_type),)
@@ -450,7 +450,7 @@ def test_identity_free_components_do_not_declare_standalone_providers(policy_mod
             project_id=uuid4(), project_name="Local embeddings", snapshots=(snapshot,), limits=ProjectArtifactLimits()
         )
     )
-    _, _, _, requirements = _build_deployment_snapshot_flows((snapshot,), limits=ProjectArtifactLimits())
+    *_, requirements, _mcp = _build_deployment_snapshot_flows((snapshot,), limits=ProjectArtifactLimits())
 
     assert requirements.providers == ()
     assert requirements.models == ()
@@ -640,7 +640,7 @@ def test_deployment_snapshot_reports_the_same_providers_as_the_manifest() -> Non
         ),
     )
 
-    _, _, _, snapshot_models = _build_deployment_snapshot_flows(snapshots, limits=ProjectArtifactLimits())
+    *_, snapshot_models, _mcp = _build_deployment_snapshot_flows(snapshots, limits=ProjectArtifactLimits())
     manifest = _manifest_of(
         _build_archive(
             project_id=uuid4(),
@@ -661,6 +661,9 @@ def test_deployment_snapshot_reports_the_same_providers_as_the_manifest() -> Non
 def test_shipped_starter_projects_select_no_provider_and_defer_every_model_field() -> None:
     """The templates ship with the model unset, so the honest answer is a count, not a list.
 
+    The exception is a decision field: LLM Gatekeeper and Support Ticket Routing ship their Smart
+    Router set to TypeSafe's jev-latest, because a decision field is never filled in for the user.
+
     This is the regression that keeps the collector from inventing a provider
     out of a bare model name: the day a starter starts resolving to one, that
     is a real change in what deploying it requires, and it should be noticed
@@ -676,5 +679,5 @@ def test_shipped_starter_projects_select_no_provider_and_defer_every_model_field
         providers |= set(requirements.providers)
         unresolved += requirements.unresolved_fields
 
-    assert providers == set()
+    assert providers == {"typesafe"}
     assert unresolved > 0

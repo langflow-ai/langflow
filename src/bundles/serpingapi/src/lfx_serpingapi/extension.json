@@ -1,7 +1,7 @@
 {
   "$schema": "https://schemas.langflow.org/extension/v1.json",
   "id": "lfx-serpingapi",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "name": "Serping API",
   "description": "Serping API Google SERP web-search component as a standalone Langflow Extension Bundle.",
   "lfx": {

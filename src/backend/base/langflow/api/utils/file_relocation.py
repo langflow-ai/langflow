@@ -45,6 +45,7 @@ from langflow.services.settings.service import SettingsService
 from langflow.services.storage.factory import StorageServiceFactory
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from uuid import UUID
 
     from langflow.services.storage.service import StorageService
@@ -59,9 +60,19 @@ DEFAULT_CONCURRENCY = 4
 class SourceNotLocalError(Exception):
     """The instance is already running on object storage, so there is nothing local to read."""
 
+    code = "source_not_local"
+
 
 class NoSuchUserError(Exception):
     """The ``username`` filter names a user this instance does not have."""
+
+    code = "no_such_user"
+
+
+class TargetBucketError(Exception):
+    """The target bucket is missing or out of reach, or the credentials do not open it."""
+
+    code = "bucket_error"
 
 
 @dataclass
@@ -72,6 +83,8 @@ class FileRelocationResult:
     status: RelocationStatus
     size: int = 0
     reason: str | None = None
+    # What went wrong, for a caller to branch on. The reason is the same thing said to a person.
+    code: str | None = None
 
 
 async def relocate_files(
@@ -82,35 +95,61 @@ async def relocate_files(
     username: str | None = None,
     dry_run: bool = False,
     concurrency: int = DEFAULT_CONCURRENCY,
+    on_result: Callable[[FileRelocationResult], None] | None = None,
+    on_progress: Callable[[int, int, int], None] | None = None,
 ) -> list[FileRelocationResult]:
     """Copy every stored file's bytes into the target bucket.
 
     Returns one result per file and never raises for a single file's failure, so
     one unreadable file does not stop the rest. Raises before reading anything if
-    the instance cannot be the source, or if ``username`` names nobody.
+    the instance cannot be the source, if ``username`` names nobody, or if the
+    target bucket cannot be used.
 
     Up to ``concurrency`` files are copied at once. Each streams across holding at
     most one multipart part (8 MiB) in memory, so memory scales with ``concurrency``
     alone.
+
+    ``on_result`` is given each file's result as that file finishes, and ``on_progress``
+    the files finished, the files in all and the bytes copied so far, the first time
+    as soon as the files are listed. The results that are not a file's copy, the rows
+    without bytes and the repoints, follow once the repoints are committed.
     """
     _refuse_a_source_that_is_not_local()
     source = get_storage_service()
     namespaces = await _namespaces(username)
     target = _target_storage(target_bucket, target_prefix, target_tags)
     try:
+        # Asked once here. Left to the copy, a missing bucket is a failure per file, and a
+        # dry run reads "not in the bucket" as "to copy" and promises a run that cannot work.
+        readiness = await target.check_readiness()
+        if not readiness.ok:
+            raise TargetBucketError(readiness.detail)
         work = [(namespace, name) for namespace in namespaces for name in await _stored_names(source, namespace)]
         results: list[FileRelocationResult] = [None] * len(work)  # type: ignore[list-item]
         limiter = anyio.CapacityLimiter(max(1, concurrency))
+        done = copied = 0
+        if on_progress:
+            on_progress(0, len(work), 0)
 
         async def relocate(index: int, namespace: str, file_name: str) -> None:
+            nonlocal done, copied
             async with limiter:
-                results[index] = await _relocate_one(source, target, namespace, file_name, dry_run=dry_run)
+                result = results[index] = await _relocate_one(source, target, namespace, file_name, dry_run=dry_run)
+                done += 1
+                copied += result.size if result.status == "copied" else 0
+                if on_result:
+                    on_result(result)
+                if on_progress:
+                    on_progress(done, len(work), copied)
 
         async with anyio.create_task_group() as group:
             for index, (namespace, file_name) in enumerate(work):
                 group.start_soon(relocate, index, namespace, file_name)
         results += await _rows_without_bytes(set(work), username)
         results += await _repoint_message_attachments(source, set(work), namespaces, dry_run=dry_run)
+        if on_result:
+            for result in results[len(work) :]:
+                on_result(result)
     finally:
         await target.teardown()
     return results
@@ -176,6 +215,7 @@ async def _rows_without_bytes(copied: set[tuple[str, str]], username: str | None
                     key="",
                     status="failed",
                     reason="no bytes in the source storage",
+                    code="no_source_bytes",
                 )
             )
     return missing
@@ -242,6 +282,7 @@ async def _repoint_message_attachments(
                                 f"chat attachment in message {message_id} has no matching file "
                                 f"in source storage; left as {entry}"
                             ),
+                            code="attachment_unmatched",
                         )
                     )
                     continue
@@ -354,6 +395,7 @@ async def _relocate_one(
             result.status = "skipped"
             return result
         if plan.action == "refuse":
+            result.code = "file_conflict"
             return result
         if dry_run:
             result.status = "would_copy"
@@ -363,19 +405,33 @@ async def _relocate_one(
         written = await target.save_file_stream(namespace, file_name, chunks)
         problem = await verify_file(target, namespace, file_name, expected_size=written)
         if problem:
-            result.reason = f"{problem} after the copy"
+            result.reason, result.code = f"{problem} after the copy", "verify_failed"
             return result
         result.status = "copied"
     except FileNotFoundError:
         # Listed a moment ago and gone now. Reported rather than skipped: skipping
         # reads as "nothing to do" in a report someone uses to call the move complete.
-        result.reason = "no bytes in the source storage"
+        result.reason, result.code = "no bytes in the source storage", "no_source_bytes"
     except Exception as exc:  # noqa: BLE001 - reported per file
         # The size makes a timeout on a large file recognisable in the report.
         size = f" ({result.size} bytes)" if result.size else ""
-        result.reason = f"{type(exc).__name__}: {exc}{size}"
+        result.reason, result.code = f"{type(exc).__name__}: {exc}{size}", _failure_code(exc)
         await logger.awarning("Relocating file %s/%s failed: %s", namespace, file_name, exc)
     return result
+
+
+def _failure_code(exc: Exception) -> str:
+    """The code for a file that failed with an exception."""
+    # Both backends refuse a name with separators or traversal in it, in these words.
+    if isinstance(exc, ValueError) and str(exc).startswith("Invalid "):
+        return "bad_name"
+    # Imported here: the target is an S3 backend by now, so botocore is installed.
+    from botocore.exceptions import BotoCoreError, ClientError
+
+    # Credentials, access, a missing bucket, the endpoint or the network.
+    if isinstance(exc, BotoCoreError | ClientError):
+        return "bucket_error"
+    return "copy_failed"
 
 
 async def _target_size(target: StorageService, namespace: str, file_name: str) -> int | None:
