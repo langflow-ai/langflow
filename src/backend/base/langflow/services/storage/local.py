@@ -10,7 +10,7 @@ import aiofiles
 from lfx.services.storage.namespace import remove_namespace_tree
 
 from langflow.logging.logger import logger
-from langflow.services.storage.service import StorageService
+from langflow.services.storage.service import StorageService, _refuse_bad_move
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -201,6 +201,7 @@ class LocalStorageService(StorageService):
         or the whole new one. ``save_file`` cannot promise that: it opens the final path in
         ``"wb"`` or ``"ab"`` and writes into the live file.
         """
+        _refuse_bad_move(source_namespace, target_namespace, file_name)
         source = await self._validated_path(source_namespace, file_name)
         target = await self._validated_path(target_namespace, file_name)
         await (self.data_dir / target_namespace).mkdir(parents=True, exist_ok=True)

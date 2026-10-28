@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Any
 
 from langflow.logging.logger import logger
 
-from .service import StorageReadiness, StorageService, validate_namespace
+from .service import StorageReadiness, StorageService, _refuse_bad_move, validate_namespace
 
 # S3 parts are 5 MiB at least, except the last one.
 STREAM_PART_SIZE = 8 * 1024 * 1024
@@ -585,6 +585,7 @@ class S3StorageService(StorageService):
         shortcut: ``copy_object`` tops out at 5 GiB per object; above that S3 wants
         ``upload_part_copy``. Add that when a single stored file reaches that size.
         """
+        _refuse_bad_move(source_namespace, target_namespace, file_name)
         source_key = self.build_full_path(source_namespace, file_name)
         target_key = self.build_full_path(target_namespace, file_name)
         extra: dict[str, Any] = {}

@@ -14,6 +14,7 @@ from uuid import uuid4
 import pytest
 from langflow.services.storage.local import LocalStorageService
 from langflow.services.storage.s3 import S3StorageService
+from langflow.services.storage.service import StorageService
 
 
 def _settings(tmp_path: Path) -> Mock:
@@ -293,3 +294,40 @@ class TestCreateUploadLink:
 
         with pytest.raises(ValueError, match="Invalid"):
             await service.create_upload_link(namespace, "report.pdf")
+
+
+@pytest.mark.asyncio
+class TestRefusesABadMove:
+    async def test_should_not_move_a_whole_namespace_when_the_name_is_empty(self, tmp_path):
+        # An empty name resolves to the staging directory itself on local disk, and a rename
+        # would then promote every staged file at once, unverified.
+        service = LocalStorageService(Mock(), _settings(tmp_path))
+        staging, final = str(uuid4()), str(uuid4())
+        (tmp_path / staging).mkdir()
+        (tmp_path / staging / "a.pdf").write_bytes(b"staged")
+
+        with pytest.raises(ValueError, match="file name"):
+            await service.move_file(staging, final, "")
+
+        assert (tmp_path / staging / "a.pdf").read_bytes() == b"staged"
+        assert not (tmp_path / final).exists()
+
+    async def test_should_not_delete_the_only_copy_when_moving_onto_itself(self, tmp_path):
+        service = LocalStorageService(Mock(), _settings(tmp_path))
+        namespace = str(uuid4())
+        (tmp_path / namespace).mkdir()
+        (tmp_path / namespace / "a.pdf").write_bytes(b"only copy")
+
+        # The read-write-delete default every outside backend inherits.
+        with pytest.raises(ValueError, match="same namespace"):
+            await StorageService.move_file(service, namespace, namespace, "a.pdf")
+
+        assert (tmp_path / namespace / "a.pdf").read_bytes() == b"only copy"
+
+    async def test_should_refuse_before_calling_s3(self, tmp_path):
+        client = _FakeS3Client({f"files/{uuid4()}/a.pdf"})
+
+        with pytest.raises(ValueError, match="file name"):
+            await _s3_service(tmp_path, client).move_file(str(uuid4()), str(uuid4()), "")
+
+        assert client.copies == []

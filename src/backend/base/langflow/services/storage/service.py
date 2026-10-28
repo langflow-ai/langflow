@@ -27,6 +27,21 @@ if TYPE_CHECKING:
 __all__ = ["StorageReadiness", "StorageService", "validate_namespace"]
 
 
+def _refuse_bad_move(source_namespace: str, target_namespace: str, file_name: str) -> None:
+    """Refuse a move that names no file, or moves a file onto itself.
+
+    An empty name resolves to the namespace's own directory on local disk, so a rename
+    would carry every staged file across at once, unverified. A move onto itself would,
+    in the read-write-delete default, delete the only copy.
+    """
+    if not file_name:
+        msg = "move_file needs a file name"
+        raise ValueError(msg)
+    if source_namespace == target_namespace:
+        msg = f"move_file of {file_name} names the same namespace as source and target"
+        raise ValueError(msg)
+
+
 class StorageService(Service):
     """Storage service for langflow."""
 
@@ -169,7 +184,12 @@ class StorageService(Service):
         The default reads the file and writes it back, holding it in memory, and exists so
         that a backend outside this repo keeps working rather than hitting an abstract
         method. Both shipped backends override it with a rename or a server-side copy.
+
+        Raises:
+            ValueError: If ``file_name`` is empty or the two namespaces are the same (see
+                ``_refuse_bad_move``).
         """
+        _refuse_bad_move(source_namespace, target_namespace, file_name)
         try:
             data = await self.get_file(flow_id=source_namespace, file_name=file_name)
         except FileNotFoundError:
