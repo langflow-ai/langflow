@@ -45,7 +45,7 @@ This component runs a web search through the [Perplexity Search API](https://doc
 Get an API key from the [Perplexity API portal](https://www.perplexity.ai/account/api/keys). For details on the underlying API, see the [Perplexity Search API documentation](https://docs.perplexity.ai/docs/search/quickstart).
 
 It outputs the results as a [`Table`](/data-types#table) with `title`, `url`, `snippet`, `date`, and `last_updated` columns. The `text` of each row is the result snippet. `date` and `last_updated` are empty when the API does not return them.
-If the request fails, for example because the API key is missing or invalid or the rate limit is reached, the table contains a single row with an `error` column that describes the problem.
+If the request fails, for example because the API key is missing or invalid or the rate limit is reached, the table contains a single row with an `error` column that describes the problem. Error rows and log messages never include the API key: the component strips surrounding whitespace from the key before sending it, replaces a malformed key with a fixed message, and redacts the key from any API error body it reports.
 
 In [tool mode](/agents-tools), the component exposes a single tool named `perplexity_search` that an [**Agent** component](/agents) can call with a search query.
 
@@ -59,7 +59,7 @@ In [tool mode](/agents-tools), the component exposes a single tool named `perple
 | Search Query (`query`) | String | Input parameter. The search query to send to the Perplexity Search API. |
 | Max Results (`max_results`) | Integer | Input parameter. The number of results to return, from `1` to `20`. Default: `10`. |
 | Search Type (`search_type`) | String | Input parameter. `web` returns the most relevant results. `fast` trades some depth for lower latency. Default: `web`. |
-| Domain Filter (`search_domain_filter`) | String | Input parameter. Comma-separated list of up to 20 domains to restrict results to, for example `wikipedia.org, arxiv.org`. Prefix a domain with `-` to exclude it. Optional. |
+| Domain Filter (`search_domain_filter`) | String | Input parameter. Comma-separated list of up to 20 domains to restrict results to, for example `wikipedia.org, arxiv.org`. To exclude domains instead, prefix every domain with `-`. Use one mode (include or exclude) per request. Optional. |
 | Recency Filter (`search_recency_filter`) | String | Input parameter. Only return results published within this window: `hour`, `day`, `week`, `month`, or `year`. Optional. |
 
 ## See also

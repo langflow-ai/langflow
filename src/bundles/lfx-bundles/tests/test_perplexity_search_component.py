@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 from lfx_bundles.perplexity import PerplexitySearchComponent
-from lfx_bundles.perplexity.perplexity_search import SEARCH_URL
+from lfx_bundles.perplexity.perplexity_search import INVALID_KEY_FORMAT_MESSAGE, REDACTED, SEARCH_URL
 
 POST_PATCH_TARGET = "httpx.Client.post"
 
@@ -108,7 +108,7 @@ def test_search_sends_bearer_token_integration_headers_and_json_body(component):
 def test_search_includes_optional_filters(component):
     """Domain and recency filters are sent only when set; domains are split and trimmed."""
     component.search_type = "fast"
-    component.search_domain_filter = " wikipedia.org, -pinterest.com ,arxiv.org "
+    component.search_domain_filter = " wikipedia.org ,arxiv.org "
     component.search_recency_filter = "week"
     mock_post = _mock_post(SAMPLE_PAYLOAD)
     with patch(POST_PATCH_TARGET, mock_post):
@@ -117,9 +117,18 @@ def test_search_includes_optional_filters(component):
         "query": "hello",
         "max_results": 10,
         "search_type": "fast",
-        "search_domain_filter": ["wikipedia.org", "-pinterest.com", "arxiv.org"],
+        "search_domain_filter": ["wikipedia.org", "arxiv.org"],
         "search_recency_filter": "week",
     }
+
+
+def test_search_exclusion_domain_filter_keeps_prefix(component):
+    """An exclusion-only filter keeps the '-' prefix the API expects (one mode per request)."""
+    component.search_domain_filter = "-pinterest.com, -quora.com"
+    mock_post = _mock_post(SAMPLE_PAYLOAD)
+    with patch(POST_PATCH_TARGET, mock_post):
+        component._search()
+    assert mock_post.call_args.kwargs["json"]["search_domain_filter"] == ["-pinterest.com", "-quora.com"]
 
 
 def test_too_many_domains_is_an_error_row(component):
@@ -141,13 +150,23 @@ def test_max_results_is_clamped_high(component):
     assert mock_post.call_args.kwargs["json"]["max_results"] == 20
 
 
-def test_max_results_is_clamped_low(component):
-    """max_results below the range is clamped to the 1 lower bound."""
-    component.max_results = -5
+@pytest.mark.parametrize("value", [0, -5])
+def test_max_results_is_clamped_low(component, value):
+    """max_results at or below zero is clamped to the 1 lower bound, not replaced by the default."""
+    component.max_results = value
     mock_post = _mock_post(SAMPLE_PAYLOAD)
     with patch(POST_PATCH_TARGET, mock_post):
         component._search()
     assert mock_post.call_args.kwargs["json"]["max_results"] == 1
+
+
+def test_max_results_none_uses_default(component):
+    """Only an unset max_results falls back to the default of 10."""
+    component.max_results = None
+    mock_post = _mock_post(SAMPLE_PAYLOAD)
+    with patch(POST_PATCH_TARGET, mock_post):
+        component._search()
+    assert mock_post.call_args.kwargs["json"]["max_results"] == 10
 
 
 def test_max_results_range_spec_matches_clamp():
@@ -207,13 +226,82 @@ def test_fetch_content_wraps_timeout(component):
     assert "timed out" in results[0].data["error"]
 
 
-def test_fetch_content_wraps_request_error(component):
-    """A transport error is surfaced as a single error Data, not raised."""
-    mock_post = MagicMock(side_effect=httpx.ConnectError("boom"))
+def test_fetch_content_wraps_request_error_without_exception_text(component):
+    """A transport error is surfaced as a single error Data that names the error type, not its text."""
+    mock_post = MagicMock(side_effect=httpx.ConnectError("boom test-key"))
     with patch(POST_PATCH_TARGET, mock_post):
         results = component.fetch_content()
     assert len(results) == 1
-    assert "boom" in results[0].data["error"]
+    assert "ConnectError" in results[0].data["error"]
+    assert "boom" not in results[0].data["error"]
+    assert "test-key" not in results[0].data["error"]
+
+
+def test_api_key_whitespace_is_stripped_before_building_headers(component):
+    """A key pasted with a trailing newline is sent clean instead of producing an illegal header."""
+    component.api_key = "pplx-trailing\n"  # pragma: allowlist secret
+    mock_post = _mock_post(SAMPLE_PAYLOAD)
+    with patch(POST_PATCH_TARGET, mock_post):
+        results = component.fetch_content()
+    assert mock_post.call_args.kwargs["headers"]["Authorization"] == "Bearer pplx-trailing"  # pragma: allowlist secret
+    assert len(results) == 2
+
+
+def test_malformed_api_key_never_reaches_error_row_or_log(component):
+    """An embedded newline makes h11 reject the header; the key must not appear anywhere we surface."""
+    malformed_key = "pplx-first\npplx-second"  # pragma: allowlist secret
+    component.api_key = malformed_key
+
+    def reject_like_h11(_url, *, headers, **_kwargs):
+        # h11 rejects the header after connecting and echoes the raw value, exactly like this.
+        msg = f"Illegal header value {headers['Authorization'].encode()!r}"
+        raise httpx.LocalProtocolError(msg)
+
+    mock_post = MagicMock(side_effect=reject_like_h11)
+    with patch(POST_PATCH_TARGET, mock_post), patch("lfx_bundles.perplexity.perplexity_search.logger") as mock_logger:
+        results = component.fetch_content()
+    assert mock_post.call_args.kwargs["headers"]["Authorization"] == f"Bearer {malformed_key}"
+    assert len(results) == 1
+    assert results[0].data["error"] == INVALID_KEY_FORMAT_MESSAGE
+    assert results[0].text == INVALID_KEY_FORMAT_MESSAGE
+    logged = " ".join(str(call) for call in mock_logger.error.call_args_list)
+    for fragment in (malformed_key, "pplx-first", "pplx-second"):
+        assert fragment not in results[0].data["error"]
+        assert fragment not in logged
+
+
+def test_local_protocol_error_text_is_not_echoed(component):
+    """Even if the transport raises with the key in the message, the row and log only carry the fixed text."""
+    mock_post = MagicMock(side_effect=httpx.LocalProtocolError("Illegal header value b'Bearer test-key\\n'"))
+    with patch(POST_PATCH_TARGET, mock_post), patch("lfx_bundles.perplexity.perplexity_search.logger") as mock_logger:
+        results = component.fetch_content()
+    assert results[0].data["error"] == INVALID_KEY_FORMAT_MESSAGE
+    assert "test-key" not in " ".join(str(call) for call in mock_logger.error.call_args_list)
+
+
+@pytest.mark.parametrize("status_code", [422, 500])
+def test_error_bodies_that_echo_the_key_are_redacted(component, status_code):
+    """Upstream 422 and 500 bodies may echo the request; the key is replaced before the row or log is written."""
+    body = {"detail": "bad request with Authorization: Bearer test-key for query hello"}
+    mock_post = MagicMock(return_value=_response(status_code, json=body))
+    with patch(POST_PATCH_TARGET, mock_post), patch("lfx_bundles.perplexity.perplexity_search.logger") as mock_logger:
+        results = component.fetch_content()
+    error = results[0].data["error"]
+    assert f"HTTP {status_code}" in error
+    assert "test-key" not in error
+    assert REDACTED in error
+    assert results[0].text == error
+    logged = " ".join(str(call) for call in mock_logger.error.call_args_list)
+    assert "test-key" not in logged
+    assert REDACTED in logged
+
+
+def test_error_text_body_that_echoes_the_key_is_redacted(component):
+    """A non-JSON 500 body is redacted the same way as a JSON one."""
+    mock_post = MagicMock(return_value=_response(500, text="upstream saw Bearer test-key"))
+    with patch(POST_PATCH_TARGET, mock_post):
+        results = component.fetch_content()
+    assert results[0].data["error"] == f"Perplexity Search API returned HTTP 500: upstream saw Bearer {REDACTED}"
 
 
 def test_fetch_content_maps_401_to_invalid_key_message(component):

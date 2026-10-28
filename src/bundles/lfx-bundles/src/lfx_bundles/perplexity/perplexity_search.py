@@ -21,6 +21,11 @@ INTEGRATION_HEADERS = {
     "X-Pplx-Integration": "langflow",
     "User-Agent": "langflow-perplexity-bundle",
 }
+REDACTED = "[REDACTED]"
+INVALID_KEY_FORMAT_MESSAGE = (
+    "Perplexity API Key contains characters that cannot be sent in an HTTP header "
+    "(for example a newline). Paste the key again without extra whitespace."
+)
 
 
 class PerplexitySearchComponent(Component):
@@ -67,7 +72,8 @@ class PerplexitySearchComponent(Component):
             display_name="Domain Filter",
             info=(
                 "Comma-separated list of up to 20 domains to restrict results to, for example "
-                "'wikipedia.org, arxiv.org'. Prefix a domain with '-' to exclude it."
+                "'wikipedia.org, arxiv.org'. To exclude domains instead, prefix every domain with '-'. "
+                "Use one mode (include or exclude) per request."
             ),
             advanced=True,
         ),
@@ -91,8 +97,8 @@ class PerplexitySearchComponent(Component):
             msg = "Search Query is required."
             raise ValueError(msg)
 
-        max_results = int(self.max_results or DEFAULT_MAX_RESULTS)
-        max_results = max(MIN_RESULTS, min(MAX_RESULTS, max_results))
+        requested = DEFAULT_MAX_RESULTS if self.max_results is None else int(self.max_results)
+        max_results = max(MIN_RESULTS, min(MAX_RESULTS, requested))
 
         payload: dict = {
             "query": query,
@@ -112,6 +118,18 @@ class PerplexitySearchComponent(Component):
 
         return payload
 
+    def _api_key_value(self) -> str:
+        """Return the configured API key with surrounding whitespace removed."""
+        return str(self.api_key or "").strip()
+
+    def _redact(self, message: str) -> str:
+        """Remove the API key from text before it reaches an error row, the status, or the log."""
+        raw = str(self.api_key or "")
+        for secret in (raw, raw.strip()):
+            if secret:
+                message = message.replace(secret, REDACTED)
+        return message
+
     @staticmethod
     def _format_http_error(exc: httpx.HTTPStatusError) -> str:
         status = exc.response.status_code
@@ -127,20 +145,21 @@ class PerplexitySearchComponent(Component):
             return "Perplexity Search API rate limit reached (HTTP 429). Retry later."
         return f"Perplexity Search API returned HTTP {status}: {detail}"
 
-    @staticmethod
-    def _error_result(error_message: str) -> list[Data]:
+    def _error_result(self, error_message: str) -> list[Data]:
+        error_message = self._redact(error_message)
         logger.error(error_message)
         return [Data(text=error_message, data={"error": error_message})]
 
     def _search(self) -> dict:
         """POST the search request and return the decoded JSON body."""
-        if not self.api_key:
+        api_key = self._api_key_value()
+        if not api_key:
             msg = "Perplexity API Key is required."
             raise ValueError(msg)
 
         payload = self._build_payload()
         headers = {
-            "Authorization": f"Bearer {self.api_key}",
+            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
             **INTEGRATION_HEADERS,
         }
@@ -163,8 +182,11 @@ class PerplexitySearchComponent(Component):
             return self._error_result(f"Perplexity Search API request timed out ({REQUEST_TIMEOUT_SECONDS:.0f}s).")
         except httpx.HTTPStatusError as exc:
             return self._error_result(self._format_http_error(exc))
+        except httpx.LocalProtocolError:
+            # h11 echoes the offending header value (the key) in the exception text, so do not surface it.
+            return self._error_result(INVALID_KEY_FORMAT_MESSAGE)
         except httpx.RequestError as exc:
-            return self._error_result(f"Perplexity Search API request failed: {exc}")
+            return self._error_result(f"Perplexity Search API request failed: {type(exc).__name__}")
         except (ValueError, TypeError) as exc:
             return self._error_result(str(exc))
 
