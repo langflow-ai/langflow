@@ -1,8 +1,14 @@
+import os
+
+import httpx
 from langchain_mistralai import ChatMistralAI
 from lfx.base.models.model import LCModelComponent
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed, provider_httpx_client_kwargs
 from lfx.field_typing import LanguageModel
 from lfx.io import BoolInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
 from pydantic.v1 import SecretStr
+
+DEFAULT_MISTRAL_ENDPOINT = "https://api.mistral.ai/v1"
 
 
 class MistralAIModelComponent(LCModelComponent):
@@ -93,11 +99,31 @@ class MistralAIModelComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
+        api_key = SecretStr(self.api_key).get_secret_value() if self.api_key else os.getenv("MISTRAL_API_KEY")
+        endpoint = self.mistral_api_base or DEFAULT_MISTRAL_ENDPOINT
+        ensure_credential_endpoint_allowed(
+            api_key, endpoint, default_url=DEFAULT_MISTRAL_ENDPOINT, sdk_env_fallback="MISTRAL_API_KEY"
+        )
+        sync_kwargs, async_kwargs = provider_httpx_client_kwargs(endpoint, default_url=DEFAULT_MISTRAL_ENDPOINT)
+        client_kwargs = {}
+        if sync_kwargs or async_kwargs:
+            headers = {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            }
+            if api_key:
+                headers["Authorization"] = f"Bearer {api_key}"
+            client_kwargs["client"] = httpx.Client(
+                base_url=endpoint, headers=headers, timeout=self.timeout, **sync_kwargs
+            )
+            client_kwargs["async_client"] = httpx.AsyncClient(
+                base_url=endpoint, headers=headers, timeout=self.timeout, **async_kwargs
+            )
         try:
             return ChatMistralAI(
                 model_name=self.model_name,
-                mistral_api_key=SecretStr(self.api_key).get_secret_value() if self.api_key else None,
-                endpoint=self.mistral_api_base or "https://api.mistral.ai/v1",
+                mistral_api_key=api_key,
+                endpoint=endpoint,
                 max_tokens=self.max_tokens or None,
                 temperature=self.temperature,
                 max_retries=self.max_retries,
@@ -107,6 +133,7 @@ class MistralAIModelComponent(LCModelComponent):
                 random_seed=self.random_seed,
                 safe_mode=self.safe_mode,
                 streaming=self.stream,
+                **client_kwargs,
             )
         except Exception as e:
             msg = "Could not connect to MistralAI API."
