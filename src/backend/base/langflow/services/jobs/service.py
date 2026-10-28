@@ -691,12 +691,24 @@ class JobService(Service):
         This is the liveness signal a reconciler reads to tell a live in-flight
         run from a genuinely orphaned one: only the running owner refreshes it,
         and a reconciler only fails/requeues a job whose heartbeat is STALE
-        (``is_lease_stale``). Stored in ``job_metadata`` (no new column, matching
-        the attempt-accounting decision in the design) via a shallow merge so the
-        persisted request / retry flags are preserved.
+        (``is_lease_stale``).
+
+        Written to BOTH ``job_metadata["heartbeat_at"]`` (the claim token the
+        guarded release/terminalize paths compare exactly) and the typed
+        ``lease_heartbeat_at`` column (what the claim poll can filter on in SQL),
+        in ONE write so the two can never disagree about whether this lease is
+        live. The metadata side is a shallow merge, so persisted request / retry
+        flags are preserved.
         """
-        now = datetime.now(timezone.utc).isoformat()
-        await self.update_job_metadata(job_id, {"owner": owner, "heartbeat_at": now})
+        now = datetime.now(timezone.utc)
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None:
+                return
+            job.job_metadata = {**(job.job_metadata or {}), "owner": owner, "heartbeat_at": now.isoformat()}
+            job.lease_heartbeat_at = now
+            session.add(job)
+            await session.flush()
 
     @staticmethod
     def is_lease_stale(job: Job, *, lease_ttl_s: float) -> bool:
@@ -890,7 +902,9 @@ class JobService(Service):
         from sqlmodel import update
 
         hb_expr = col(Job.job_metadata)["heartbeat_at"].as_string()
-        claim_heartbeat = heartbeat_at or datetime.now(timezone.utc).isoformat()
+        # The lease starts now whether or not the caller supplied its own token.
+        claim_now = datetime.now(timezone.utc)
+        claim_heartbeat = heartbeat_at or claim_now.isoformat()
         async with session_scope() as session:
             job = await session.get(Job, job_id)
             if job is None or job.status != JobStatus.QUEUED:
@@ -907,7 +921,7 @@ class JobService(Service):
             stmt = (
                 update(Job)
                 .where(Job.job_id == job_id, Job.status == JobStatus.QUEUED, guard)
-                .values(job_metadata=merged)
+                .values(job_metadata=merged, lease_heartbeat_at=claim_now)
             )
             result = await session.exec(stmt)  # type: ignore[call-overload]
             await session.flush()
@@ -934,17 +948,36 @@ class JobService(Service):
         concurrently spread across N distinct jobs instead of all retrying the
         head of the queue.
 
-        Staleness is enforced by ``claim_queued_lease`` (a QUEUED row with a
-        FRESH lease belongs to a worker that just claimed it and is about to
-        start), so a candidate list slightly larger than the worker fleet is
-        enough; the next poll picks up anything beyond it.
+        The candidate window EXCLUDES rows whose lease is still fresh. Those
+        belong to a worker that just claimed them and is about to start, so
+        ``claim_queued_lease`` would reject every one of them anyway. Filtering
+        them out in SQL instead of discovering it per row is what keeps the
+        window useful: it is read once per poll and never re-read, so a worker
+        that keeps re-leasing rows it cannot run (one whose secret key does not
+        match the API's, for instance) would otherwise fill every slot with rows
+        no one can claim and starve the whole fleet, however deep the queue is.
+
+        A fresh lease on a QUEUED row only ever lasts ``lease_ttl_s``, so a row
+        hidden here is never hidden for long, and a crashed claimant's row
+        reappears on its own.
         """
         # ponytail: plain SELECT + per-row conditional claim; add FOR UPDATE
         # SKIP LOCKED on postgres if claim contention ever measurably matters.
+        from sqlalchemy import or_
+
+        lease_cutoff = datetime.now(timezone.utc) - timedelta(seconds=lease_ttl_s)
         async with session_scope() as session:
             stmt = (
                 select(Job.job_id)
-                .where(Job.status == JobStatus.QUEUED, Job.type == JobType.WORKFLOW)
+                .where(
+                    Job.status == JobStatus.QUEUED,
+                    Job.type == JobType.WORKFLOW,
+                    # NULL covers legacy rows and any lease cleared on release.
+                    or_(
+                        col(Job.lease_heartbeat_at).is_(None),
+                        col(Job.lease_heartbeat_at) <= lease_cutoff,
+                    ),
+                )
                 .order_by(col(Job.created_timestamp).asc())
                 .limit(candidates)
             )
@@ -1094,7 +1127,7 @@ class JobService(Service):
                     owner_expr == owner,
                     hb_expr == heartbeat_at,
                 )
-                .values(job_metadata=metadata or None)
+                .values(job_metadata=metadata or None, lease_heartbeat_at=None)
             )
             result = await session.exec(stmt)  # type: ignore[call-overload]
             await session.flush()
@@ -1199,7 +1232,7 @@ class JobService(Service):
                     Job.status == JobStatus.IN_PROGRESS,
                     owner_expr == owner,
                 )
-                .values(status=JobStatus.QUEUED, job_metadata=metadata or None)
+                .values(status=JobStatus.QUEUED, job_metadata=metadata or None, lease_heartbeat_at=None)
             )
             result = await session.exec(stmt)  # type: ignore[call-overload]
             await session.flush()

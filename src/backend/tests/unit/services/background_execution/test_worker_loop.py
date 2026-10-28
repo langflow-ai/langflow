@@ -5,7 +5,11 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-from langflow.services.background_execution.worker import run_worker_loop
+from langflow.services.background_execution.worker import (
+    _CLAIM_BACKOFF_CAP_S,
+    _claim_backoff_s,
+    run_worker_loop,
+)
 
 
 class _FakeBackend:
@@ -144,3 +148,22 @@ async def test_worker_boots_when_the_startup_reconcile_fails():
     await run_worker_loop(backend, _RecordingRunner(), stop_event=stop_event, idle_block_ms=1)
 
     assert backend.claimed, "the worker must reach its claim loop despite a failed startup reconcile"
+
+
+@pytest.mark.parametrize("failures", [0, 1, 5, 1023, 1024, 10**6])
+def test_claim_backoff_stays_finite_however_long_the_database_is_down(failures):
+    """A worker that cannot reach the database must keep retrying, not die of OverflowError.
+
+    Capping only the product leaves 2**failures itself to overflow once the
+    counter passes 1023, which at the 30s ceiling is a few hours of downtime.
+    """
+    backoff = _claim_backoff_s(idle_block_ms=1000, failures=failures)
+
+    assert 0.0 < backoff <= _CLAIM_BACKOFF_CAP_S
+
+
+def test_claim_backoff_grows_then_settles_at_the_cap():
+    early = [_claim_backoff_s(idle_block_ms=1000, failures=n) for n in (1, 2, 3)]
+
+    assert early == sorted(early), "backoff must grow while the database is down"
+    assert _claim_backoff_s(idle_block_ms=1000, failures=50) == _CLAIM_BACKOFF_CAP_S

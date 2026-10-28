@@ -22,6 +22,7 @@ from langflow.services.background_execution.runner import JobRunner
 from langflow.services.background_execution.service import (
     _REQUEST_OVERRIDES_ERROR,
     RequestOverridesCorruptedError,
+    RequestOverridesUnavailableError,
 )
 
 if TYPE_CHECKING:
@@ -157,6 +158,16 @@ class WorkerJobRunner:
 _CLAIM_BACKOFF_CAP_S = 30.0
 
 
+def _claim_backoff_s(idle_block_ms: int, failures: int) -> float:
+    """Exponential backoff for consecutive claim failures, capped at _CLAIM_BACKOFF_CAP_S.
+
+    The exponent is capped, not just the product: 2**failures is an int and
+    multiplying it by a float raises OverflowError once the counter passes
+    1023, which would kill the claim loop after hours of a down database.
+    """
+    return min(_CLAIM_BACKOFF_CAP_S, idle_block_ms / 1000.0 * (2 ** min(failures, 16)))
+
+
 async def _watchdog_loop(
     backend: Any,
     *,
@@ -228,6 +239,10 @@ async def run_worker_loop(
         await logger.aexception("Worker: startup lease reconcile failed; the watchdog will retry")
     # Consecutive claim failures, driving the backoff. Reset on any good claim.
     claim_failures = 0
+    # Consecutive run failures, counted separately: one bad flow resets on the next
+    # good run, while a worker that can claim but never run (a mis-keyed secret) keeps
+    # backing off instead of spinning through the queue leasing rows it cannot start.
+    run_failures = 0
 
     watchdog_task: asyncio.Task | None = None
     if watchdog_interval_s is not None:
@@ -250,7 +265,7 @@ async def run_worker_loop(
                 # Back off with jitter instead, so the fleet does not resynchronise
                 # into a thundering retry the moment the database comes back.
                 claim_failures += 1
-                backoff = min(_CLAIM_BACKOFF_CAP_S, idle_block_ms / 1000.0 * (2**claim_failures))
+                backoff = _claim_backoff_s(idle_block_ms, claim_failures)
                 await logger.aexception(
                     f"Worker: claim failed ({claim_failures} in a row); retrying in about {backoff:.1f}s"
                 )
@@ -278,7 +293,22 @@ async def run_worker_loop(
                 # The durable job row + watchdog decide whether the work should
                 # be retried; there is no separate lease to release — the row's
                 # status and heartbeat are the only queue state.
+                run_failures += 1
                 await logger.aexception(f"Worker: runner failed for job {job_id}: {exc}")
+                if isinstance(exc, RequestOverridesUnavailableError):
+                    # Silent otherwise: this worker holds a valid lease on every row it
+                    # touches and fails after the claim, so the queue looks busy while
+                    # nothing runs. Name the usual cause.
+                    await logger.aerror(
+                        "Worker: could not decrypt this job's stored request. A worker whose "
+                        "LANGFLOW_SECRET_KEY differs from the API's can claim jobs but never run "
+                        "them. Check that every worker shares the API's LANGFLOW_SECRET_KEY."
+                    )
+                backoff = _claim_backoff_s(idle_block_ms, run_failures)
+                with contextlib.suppress(asyncio.TimeoutError):
+                    await asyncio.wait_for(stop_event.wait(), timeout=backoff * random.uniform(0.75, 1.25))  # noqa: S311
+                continue
+            run_failures = 0
     finally:
         if watchdog_task is not None:
             watchdog_task.cancel()
