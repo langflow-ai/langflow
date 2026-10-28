@@ -701,8 +701,13 @@ async def run_once(*, owner: str, source_hints: bool | None = None) -> int:
 async def reconcile_push_sources(*, limit: int = 5) -> int:
     """Scan due push sources even when the provider sent no notification."""
     from langflow.services.database.models.trigger.schemas import TriggerSubscriptionState
-    from langflow.services.triggers.source_runtime import reconcile_source, source_failure_detail
+    from langflow.services.triggers.source_runtime import (
+        mark_interrupted_activations,
+        reconcile_source,
+        source_failure_detail,
+    )
 
+    await mark_interrupted_activations(limit=limit)
     now = _now()
     async with session_scope() as session:
         due = (
