@@ -13,7 +13,7 @@ import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-ins
 
 This page describes the components that are available in the **Perplexity** bundle.
 
-For more information about Perplexity features and functionality used by Perplexity components, see the [Perplexity documentation](https://perplexity.ai/).
+For more information about Perplexity features and functionality used by Perplexity components, see the [Perplexity documentation](https://docs.perplexity.ai/).
 
 ## Perplexity text generation
 
@@ -37,3 +37,32 @@ For more information, see [Language model components](/components-models).
 | temperature | Float | Input parameter. Controls randomness in the output. Default: 0.75. |
 | top_p | Float | Input parameter. The maximum cumulative probability of tokens to consider when sampling. |
 | n | Integer | Input parameter. Number of chat completions to generate for each prompt. |
+
+## Perplexity Search
+
+This component runs a web search through the [Perplexity Search API](https://docs.perplexity.ai/docs/search/quickstart) and returns ranked results with snippets.
+
+Get an API key from the [Perplexity API portal](https://www.perplexity.ai/account/api/keys). For details on the underlying API, see the [Perplexity Search API documentation](https://docs.perplexity.ai/docs/search/quickstart).
+
+It outputs the results as a [`Table`](/data-types#table) with `title`, `url`, `snippet`, `date`, and `last_updated` columns. The `text` of each row is the result snippet. `date` and `last_updated` are empty when the API does not return them.
+If the request fails, for example because the API key is missing or invalid or the rate limit is reached, the table contains a single row with an `error` column that describes the problem.
+
+In [tool mode](/agents-tools), the component exposes a single tool named `perplexity_search` that an [**Agent** component](/agents) can call with a search query.
+
+### Perplexity Search parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| Perplexity API Key (`api_key`) | SecretString | Input parameter. Your Perplexity API key. |
+| Search Query (`query`) | String | Input parameter. The search query to send to the Perplexity Search API. |
+| Max Results (`max_results`) | Integer | Input parameter. The number of results to return, from `1` to `20`. Default: `10`. |
+| Search Type (`search_type`) | String | Input parameter. `web` returns the most relevant results. `fast` trades some depth for lower latency. Default: `web`. |
+| Domain Filter (`search_domain_filter`) | String | Input parameter. Comma-separated list of up to 20 domains to restrict results to, for example `wikipedia.org, arxiv.org`. Prefix a domain with `-` to exclude it. Optional. |
+| Recency Filter (`search_recency_filter`) | String | Input parameter. Only return results published within this window: `hour`, `day`, `week`, `month`, or `year`. Optional. |
+
+## See also
+
+* [**Web Search** component](/web-search)
+* [**Exa** bundle](/bundles-exa)
