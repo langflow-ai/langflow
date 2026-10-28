@@ -123,7 +123,10 @@ class PerplexitySearchComponent(Component):
         return str(self.api_key or "").strip()
 
     def _redact(self, message: str) -> str:
-        """Remove the API key from text before it reaches an error row, the status, or the log."""
+        """Defense in depth: remove the key from any message before it reaches an error row or the log.
+
+        Error messages are fixed strings that never include the response body, so this is a last resort.
+        """
         raw = str(self.api_key or "")
         for secret in (raw, raw.strip()):
             if secret:
@@ -132,18 +135,20 @@ class PerplexitySearchComponent(Component):
 
     @staticmethod
     def _format_http_error(exc: httpx.HTTPStatusError) -> str:
+        """Map an HTTP error to a fixed message. The response body is never forwarded."""
         status = exc.response.status_code
-        try:
-            detail = exc.response.json()
-        except ValueError:
-            detail = exc.response.text
         if status == httpx.codes.UNAUTHORIZED:
             return "Perplexity Search API rejected the API key (HTTP 401). Check the Perplexity API Key input."
         if status == httpx.codes.UNPROCESSABLE_ENTITY:
-            return f"Perplexity Search API rejected the request (HTTP 422): {detail}"
+            return (
+                "Perplexity Search API rejected the request parameters (HTTP 422). "
+                "Check the query, max results, domain filter, and recency filter inputs."
+            )
         if status == httpx.codes.TOO_MANY_REQUESTS:
             return "Perplexity Search API rate limit reached (HTTP 429). Retry later."
-        return f"Perplexity Search API returned HTTP {status}: {detail}"
+        if httpx.codes.is_server_error(status):
+            return f"Perplexity Search API server error (HTTP {status}). Retry later."
+        return f"Perplexity Search API returned HTTP {status}."
 
     def _error_result(self, error_message: str) -> list[Data]:
         error_message = self._redact(error_message)

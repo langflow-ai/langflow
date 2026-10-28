@@ -279,29 +279,50 @@ def test_local_protocol_error_text_is_not_echoed(component):
     assert "test-key" not in " ".join(str(call) for call in mock_logger.error.call_args_list)
 
 
+ECHOED_KEY_FORMS = (
+    "test-key",
+    "test%2Dkey",  # percent-encoded
+    "dGVzdC1rZXk=",  # base64
+    "BODY-MARKER-9f3a",
+)
+
+
 @pytest.mark.parametrize("status_code", [422, 500])
-def test_error_bodies_that_echo_the_key_are_redacted(component, status_code):
-    """Upstream 422 and 500 bodies may echo the request; the key is replaced before the row or log is written."""
-    body = {"detail": "bad request with Authorization: Bearer test-key for query hello"}
+def test_error_bodies_are_never_forwarded(component, status_code):
+    """422 and 500 bodies may echo the request in any encoding; the row and log carry only the fixed message."""
+    body = {"detail": "bad request with Authorization: Bearer " + " / ".join(ECHOED_KEY_FORMS)}
     mock_post = MagicMock(return_value=_response(status_code, json=body))
     with patch(POST_PATCH_TARGET, mock_post), patch("lfx_bundles.perplexity.perplexity_search.logger") as mock_logger:
         results = component.fetch_content()
     error = results[0].data["error"]
-    assert f"HTTP {status_code}" in error
-    assert "test-key" not in error
-    assert REDACTED in error
-    assert results[0].text == error
+    expected = (
+        "Perplexity Search API rejected the request parameters (HTTP 422). "
+        "Check the query, max results, domain filter, and recency filter inputs."
+        if status_code == 422
+        else "Perplexity Search API server error (HTTP 500). Retry later."
+    )
+    assert error == expected
+    assert results[0].text == expected
+    assert repr(results[0]).count(expected) >= 1
     logged = " ".join(str(call) for call in mock_logger.error.call_args_list)
-    assert "test-key" not in logged
-    assert REDACTED in logged
+    assert mock_logger.error.call_count == 1
+    for fragment in (*ECHOED_KEY_FORMS, "detail", "bad request"):
+        assert fragment not in error
+        assert fragment not in repr(results[0])
+        assert fragment not in logged
 
 
-def test_error_text_body_that_echoes_the_key_is_redacted(component):
-    """A non-JSON 500 body is redacted the same way as a JSON one."""
-    mock_post = MagicMock(return_value=_response(500, text="upstream saw Bearer test-key"))
+def test_error_text_body_is_never_forwarded(component):
+    """A non-JSON 500 body is dropped the same way as a JSON one."""
+    mock_post = MagicMock(return_value=_response(500, text="upstream saw Bearer test-key dGVzdC1rZXk="))
     with patch(POST_PATCH_TARGET, mock_post):
         results = component.fetch_content()
-    assert results[0].data["error"] == f"Perplexity Search API returned HTTP 500: upstream saw Bearer {REDACTED}"
+    assert results[0].data["error"] == "Perplexity Search API server error (HTTP 500). Retry later."
+
+
+def test_redact_is_defense_in_depth(component):
+    """`_redact` still scrubs an exact key occurrence if a future message ever carried one."""
+    assert component._redact("x test-key y") == f"x {REDACTED} y"
 
 
 def test_fetch_content_maps_401_to_invalid_key_message(component):
@@ -314,14 +335,15 @@ def test_fetch_content_maps_401_to_invalid_key_message(component):
     assert "Perplexity API Key" in results[0].data["error"]
 
 
-def test_fetch_content_surfaces_422_validation_detail(component):
-    """A 422 keeps the API's validation detail."""
+def test_fetch_content_maps_422_to_fixed_parameter_message(component):
+    """A 422 becomes a fixed parameter message; the validation detail body is not forwarded."""
     body = {"detail": [{"loc": ["body", "max_results"], "msg": "ensure this value is less than or equal to 20"}]}
     mock_post = MagicMock(return_value=_response(422, json=body))
     with patch(POST_PATCH_TARGET, mock_post):
         results = component.fetch_content()
     assert "HTTP 422" in results[0].data["error"]
-    assert "less than or equal to 20" in results[0].data["error"]
+    assert "request parameters" in results[0].data["error"]
+    assert "less than or equal to 20" not in results[0].data["error"]
 
 
 def test_fetch_content_maps_429_to_rate_limit_message(component):
@@ -333,12 +355,20 @@ def test_fetch_content_maps_429_to_rate_limit_message(component):
     assert "rate limit" in results[0].data["error"]
 
 
-def test_fetch_content_http_error_without_json_body(component):
-    """A non-JSON error body falls back to the raw text."""
+def test_fetch_content_maps_5xx_to_server_error_message(component):
+    """Any 5xx becomes a fixed server error message that names the status and drops the body."""
     mock_post = MagicMock(return_value=_response(502, text="upstream down"))
     with patch(POST_PATCH_TARGET, mock_post):
         results = component.fetch_content()
-    assert results[0].data["error"] == "Perplexity Search API returned HTTP 502: upstream down"
+    assert results[0].data["error"] == "Perplexity Search API server error (HTTP 502). Retry later."
+
+
+def test_fetch_content_maps_other_4xx_to_status_only_message(component):
+    """Unmapped 4xx statuses report the status code only."""
+    mock_post = MagicMock(return_value=_response(403, json={"error": "forbidden because test-key"}))
+    with patch(POST_PATCH_TARGET, mock_post):
+        results = component.fetch_content()
+    assert results[0].data["error"] == "Perplexity Search API returned HTTP 403."
 
 
 def test_perplexity_search_dataframe_shape(component):
