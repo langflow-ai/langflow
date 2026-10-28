@@ -194,7 +194,7 @@ export const sourceIconOf = (
     case "discord":
       return "MessageCircle";
     case "telegram":
-      return "Send";
+      return "Telegram";
     case "salesforce":
       return "Cloud";
     case "servicenow":

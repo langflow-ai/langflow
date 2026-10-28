@@ -158,7 +158,7 @@ describe("sourceKeyOf", () => {
     ["gitlab", "Gitlab"],
     ["whatsapp", "MessageCircle"],
     ["discord", "MessageCircle"],
-    ["telegram", "Send"],
+    ["telegram", "Telegram"],
     ["salesforce", "Cloud"],
     ["servicenow", "Server"],
     ["jira", "Ticket"],

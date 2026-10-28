@@ -33,7 +33,7 @@ def connection_input(*, capabilities: list[str], required: bool = True) -> Conne
 class TelegramActionComponent(Component):
     """Resolve and govern each action through the common connection service."""
 
-    icon = "Send"
+    icon = "Telegram"
     capability_id: ClassVar[str] = ""
 
     async def send(self, payload: dict, *, expected_bot_id: str | None = None) -> Data:

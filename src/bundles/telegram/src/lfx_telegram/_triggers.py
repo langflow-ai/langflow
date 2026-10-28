@@ -54,7 +54,7 @@ class TelegramTriggerComponent(BaseTriggerComponent):
     """Hand the server-verified event to the downstream flow."""
 
     provider = "telegram"
-    icon = "Send"
+    icon = "Telegram"
     needs_connection = True
     config_fields: ClassVar[tuple[str, ...]] = (
         "connection",
