@@ -28,6 +28,8 @@ import contextlib
 import uuid
 from typing import TYPE_CHECKING, Any
 
+from lfx.log.logger import logger
+
 from langflow.services.database.models.jobs.model import JobStatus, SignalType
 
 if TYPE_CHECKING:
@@ -164,31 +166,42 @@ class DBBackgroundQueue:
         """
         requeued: list[str] = []
         for job_id in await self._job_service.in_progress_workflow_job_ids():
-            job = await self._job_service.get_job_by_job_id(job_id)
-            if job is None or job.status != JobStatus.IN_PROGRESS:
-                continue
-            if not self._job_service.is_lease_stale(job, lease_ttl_s=lease_ttl_s):
-                continue
+            try:
+                await self._reconcile_one(job_id, lease_ttl_s=lease_ttl_s, requeued=requeued)
+            except Exception:  # noqa: BLE001 -- one bad row must not abandon the rest of the pass
+                # in_progress_workflow_job_ids has no ordering, so without this a row
+                # that always raises strands whichever rows the database happens to
+                # return after it, every pass, for as long as it exists.
+                await logger.aexception(f"Worker: lease reconcile failed for job {job_id}; continuing")
+        return requeued
 
-            meta = job.job_metadata or {}
-            if meta.get("retry_safe"):
-                attempt = int(meta.get("attempt", 1))
-                max_attempts = int(meta.get("max_attempts", 1))
-                if attempt < max_attempts:
-                    # Atomic bump+flip guarded by attempt==expected AND
-                    # status==IN_PROGRESS, so concurrent watchdogs cannot push a
-                    # job past max_attempts (the loser sees rowcount 0).
-                    if await self._job_service.retry_requeue_claim(job.job_id, expected_attempt=attempt):
-                        requeued.append(str(job_id))
-                    continue
-            # Default at-most-once, or retries exhausted: fail worker_lost with
-            # a terminal event so any reattached tail terminates cleanly. The
-            # conditional IN_PROGRESS->FAILED flip (which carries the error blob
-            # in the same UPDATE) is the single-flight token: only the watchdog
-            # whose UPDATE matched appends run_failed, so N concurrent watchdogs
-            # cannot append duplicate terminal milestones.
-            if await self._job_service.fail_in_progress_job(job.job_id, error={"type": "worker_lost"}):
-                await self._job_service.append_event(job.job_id, "run_failed", {"type": "worker_lost"})
+    async def _reconcile_one(self, job_id, *, lease_ttl_s: float, requeued: list[str]) -> None:
+        """Reconcile a single orphan. Raising here costs this row, not the pass."""
+        job = await self._job_service.get_job_by_job_id(job_id)
+        if job is None or job.status != JobStatus.IN_PROGRESS:
+            return None
+        if not self._job_service.is_lease_stale(job, lease_ttl_s=lease_ttl_s):
+            return None
+
+        meta = job.job_metadata or {}
+        if meta.get("retry_safe"):
+            attempt = int(meta.get("attempt", 1))
+            max_attempts = int(meta.get("max_attempts", 1))
+            if attempt < max_attempts:
+                # Atomic bump+flip guarded by attempt==expected AND
+                # status==IN_PROGRESS, so concurrent watchdogs cannot push a
+                # job past max_attempts (the loser sees rowcount 0).
+                if await self._job_service.retry_requeue_claim(job.job_id, expected_attempt=attempt):
+                    requeued.append(str(job_id))
+                return None
+        # Default at-most-once, or retries exhausted: fail worker_lost with
+        # a terminal event so any reattached tail terminates cleanly. The
+        # conditional IN_PROGRESS->FAILED flip (which carries the error blob
+        # in the same UPDATE) is the single-flight token: only the watchdog
+        # whose UPDATE matched appends run_failed, so N concurrent watchdogs
+        # cannot append duplicate terminal milestones.
+        if await self._job_service.fail_in_progress_job(job.job_id, error={"type": "worker_lost"}):
+            await self._job_service.append_event(job.job_id, "run_failed", {"type": "worker_lost"})
         return requeued
 
     # ------------------------------------------------------------- event tail

@@ -104,8 +104,9 @@ class RuntimeSettings(BaseModel):
     """Max number of background workflow jobs the in-process executor runs
     concurrently. Jobs beyond this queue and start as workers free up. Kept
     small by default so background runs cannot starve the request event loop;
-    raise it for dedicated worker processes. The redis backend ignores this in
-    favor of its own worker-process pool. Must be > 0."""
+    raise it when the API process is dedicated to background work. The scaled
+    backend ignores this: each ``langflow worker`` runs one job at a time, so its
+    concurrency is the size of the fleet. Must be > 0."""
     background_job_timeout: float | None = None
     """Wall-clock seconds a single background job may run before it is marked
     TIMED_OUT. ``None`` (default) means no timeout. Applies per job, enforced by
@@ -271,6 +272,8 @@ class RuntimeSettings(BaseModel):
     no inbound provider deliveries at all (a firewalled install using Track B
     listeners only); every ingress request then answers 404 exactly as an
     unknown trigger id does, so disabling it leaks nothing either."""
+    trigger_ingress_origin: str | None = None
+    """Operator-advertised HTTPS origin for push providers without OAuth callbacks."""
     trigger_ingress_max_body_bytes: int = Field(default=1_048_576, gt=0)
     """Per-route body cap for an ingress delivery, independent of the global
     request limit. Provider notifications are small - Graph basic notifications

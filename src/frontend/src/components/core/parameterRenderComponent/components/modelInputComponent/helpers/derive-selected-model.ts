@@ -1,4 +1,6 @@
 import type { ModelProviderWithStatus } from "@/controllers/API/queries/models/use-get-model-providers";
+import type { ModelType } from "@/types/models";
+import { isUserOwnedModelKind } from "@/utils/model-kind";
 import type { ModelOption, SelectedModel } from "../types";
 import { matchesModelIdentity } from "./model-option-identity";
 import { providerNamesMatch } from "./provider-identity";
@@ -25,6 +27,22 @@ export interface DeriveSelectedModelParams {
   enabledModels?: Record<string, Record<string, boolean>>;
   /** Whether `providers` AND `enabledModels` are settled; gates the unavailable branch. */
   modelStatusIsReliable?: boolean;
+  /** The field's kind; a decision field always shows its own saved model. */
+  modelType?: ModelType;
+}
+
+/** The saved model as the trigger shows it, with `metadata` explaining its state. */
+function savedSelection(
+  saved: ModelOption,
+  metadata: Record<string, unknown>,
+): SelectedModel {
+  return {
+    ...(saved.id && { id: saved.id }),
+    name: saved.name,
+    icon: saved.icon || "Bot",
+    provider: saved.provider || "Unknown",
+    metadata,
+  } as SelectedModel;
 }
 
 /**
@@ -41,6 +59,7 @@ export function deriveSelectedModel({
   providerStatusIsReliable,
   enabledModels,
   modelStatusIsReliable = false,
+  modelType,
 }: DeriveSelectedModelParams): SelectedModel | null {
   if (isConnectionMode) {
     return {
@@ -75,22 +94,14 @@ export function deriveSelectedModel({
       providers,
       enabledModels,
       modelStatusIsReliable,
+      modelType,
     })
   ) {
     // Drop a backend-injected `not_enabled_locally` tag: that flag drives the
     // "configure this provider" wrench, which has nothing to configure here.
     const { not_enabled_locally: _notEnabledLocally, ...savedMetadata } =
       saved.metadata ?? {};
-    return {
-      ...(saved.id && { id: saved.id }),
-      name: saved.name,
-      icon: saved.icon || "Bot",
-      provider: saved.provider || "Unknown",
-      metadata: {
-        ...savedMetadata,
-        unavailable: true,
-      },
-    } as SelectedModel;
+    return savedSelection(saved, { ...savedMetadata, unavailable: true });
   }
 
   if (saved) {
@@ -100,17 +111,16 @@ export function deriveSelectedModel({
             providerNamesMatch(p.provider, saved.provider) && p.is_configured,
         )
       : undefined;
-    if (!savedProviderConfigured) {
-      return {
-        ...(saved.id && { id: saved.id }),
-        name: saved.name,
-        icon: saved.icon || "Bot",
-        provider: saved.provider || "Unknown",
-        metadata: {
-          ...(saved.metadata ?? {}),
-          not_enabled_locally: true,
-        },
-      } as SelectedModel;
+    // A language or embedding field shows the option auto-select is about to
+    // write. A decision field is never rewritten, so showing another option
+    // would present a model it is not set to: it names its own, switched off.
+    if (!savedProviderConfigured || isUserOwnedModelKind(modelType ?? null)) {
+      return savedSelection(saved, {
+        ...(saved.metadata ?? {}),
+        not_enabled_locally: true,
+        // Its provider is set up, so the user switched this model off.
+        ...(savedProviderConfigured && { switched_off: true }),
+      });
     }
   }
 

@@ -52,6 +52,33 @@ async def test_owner_action_refreshes_state_after_an_operator_change(
         assert result.unchanged == [trigger_id], "an owner's pause must never be re-armed by the operator"
 
 
+async def test_resume_leaves_an_owner_pause_unchanged_after_its_connection_is_removed(make_trigger, trigger_owner):
+    trigger_id = await make_trigger(
+        kind="github.issue",
+        provider="github",
+        config={"connection": "github/removed"},
+        connection_id=None,
+        state="paused",
+        admin_paused_at=None,
+        last_error="owner-selected-pause",
+    )
+    async with session_scope() as session:
+        result = await operator.bulk_resume(
+            session,
+            get_trigger_service(),
+            request=TriggerBulkRequest(trigger_ids=[trigger_id]),
+            actor_id=trigger_owner,
+        )
+        assert result.matched == 1
+        assert result.unchanged == [trigger_id]
+        assert result.failed == []
+        assert result.changed == []
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger_id)
+        assert (row.state, row.admin_paused_at, row.last_error) == ("paused", None, "owner-selected-pause")
+        assert not (await session.exec(select(AuthzAuditLog).where(AuthzAuditLog.resource_id == trigger_id))).all()
+
+
 @pytest.mark.parametrize(("enabled", "durable"), [(False, False), (True, False), (True, True)])
 async def test_operator_changes_always_commit_their_audit(make_trigger, trigger_owner, monkeypatch, enabled, durable):
     trigger_id = await make_trigger(config=SCHEDULE)

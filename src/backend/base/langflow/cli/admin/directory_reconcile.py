@@ -6,19 +6,53 @@ from dataclasses import dataclass
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
+from pydantic import ValidationError
+
 from langflow.cli.admin.client import AdminAPIError
 from langflow.cli.admin.manifest import (
+    BearerDirectoryConnectionTrust,
+    DirectoryConnection,
     DirectoryConnectionTrust,
     DirectoryRoleMapping,
     DirectoryState,
     DirectoryTeamLink,
     ManifestDomain,
+    directory_connection_payload,
 )
 
 if TYPE_CHECKING:
     from langflow.cli.admin.client import AdminClient
 
-_TRUST_FIELDS = ("tenant_id", "issuer", "audience", "jwks_url", "allowed_client_id")
+
+def _public_connection(connection: dict[str, Any]) -> DirectoryConnection:
+    """Validate the API mode before selecting credential-free modeled fields."""
+    mode = connection.get("auth_mode", "entra_jwt")
+    if mode == "entra_jwt":
+        model = DirectoryConnectionTrust
+    elif mode == "bearer_token":
+        model = BearerDirectoryConnectionTrust
+    else:
+        raise AdminAPIError(
+            status_code=HTTPStatus.BAD_GATEWAY,
+            detail="Directory connection response has an unsupported authentication mode",
+            error_code="invalid_directory_connection",
+        )
+    fields = model.model_fields
+    missing = sorted(name for name, field in fields.items() if field.is_required() and connection.get(name) is None)
+    if missing:
+        raise AdminAPIError(
+            status_code=HTTPStatus.BAD_GATEWAY,
+            detail=f"Directory connection response is missing trust fields: {', '.join(missing)}",
+            error_code="invalid_directory_connection",
+        )
+    try:
+        return model.model_validate({name: connection[name] for name in fields if name in connection})
+    except ValidationError as exc:
+        raise AdminAPIError(
+            status_code=HTTPStatus.BAD_GATEWAY,
+            detail="Directory connection response has invalid public configuration",
+            error_code="invalid_directory_connection",
+        ) from exc
 
 
 class DirectoryResolutionError(ValueError):
@@ -44,19 +78,13 @@ class DirectoryReconciler:
 
     def export_state(self) -> DirectoryState:
         connection = self.client.get_directory_connection()
-        missing = sorted(field for field in _TRUST_FIELDS if connection.get(field) is None)
-        if missing:
-            raise AdminAPIError(
-                status_code=HTTPStatus.BAD_GATEWAY,
-                detail=f"Directory connection response is missing trust fields: {', '.join(missing)}",
-                error_code="invalid_directory_connection",
-            )
+        public_connection = _public_connection(connection)
         groups = self.client.list_directory_groups()
         mappings = self.client.list_directory_role_mappings()
         return DirectoryState(
             apiVersion="langflow.ai/v1",
             kind="DirectoryState",
-            connection=DirectoryConnectionTrust(**{field: connection[field] for field in _TRUST_FIELDS}),
+            connection=public_connection,
             teamLinks=sorted(
                 [
                     DirectoryTeamLink(
@@ -115,6 +143,7 @@ class DirectoryReconciler:
 
     def _build_plan(self, state: DirectoryState, *, prune: bool) -> list[_Operation]:
         current_connection = self._current_connection()
+        public_connection = _public_connection(current_connection) if current_connection is not None else None
         has_desired_mappings = bool(state.team_links or state.role_mappings)
         if current_connection is None:
             if has_desired_mappings:
@@ -129,20 +158,25 @@ class DirectoryReconciler:
         operations: list[_Operation] = []
 
         if state.connection is not None:
-            trust = state.connection.model_dump(mode="json")
-            current_trust = (
-                {field: current_connection.get(field) for field in _TRUST_FIELDS}
-                if current_connection is not None
-                else None
-            )
+            trust = directory_connection_payload(state.connection)
+            current_trust = directory_connection_payload(public_connection) if public_connection is not None else None
+            if current_trust is not None and isinstance(state.connection, DirectoryConnectionTrust):
+                if public_connection.auth_mode == "entra_jwt":
+                    if "auth_mode" in trust:
+                        current_trust["auth_mode"] = public_connection.auth_mode
+                    else:
+                        current_trust.pop("auth_mode", None)
+                if state.connection.display_name is None:
+                    current_trust.pop("display_name", None)
             if current_trust != trust:
-                operations.extend(
-                    [
-                        _Operation("configure", "connection", "primary", trust),
-                        _Operation("validate", "connection", "primary", {}),
-                        _Operation("enable", "connection", "primary", {}),
-                    ]
-                )
+                operations.append(_Operation("configure", "connection", "primary", trust))
+                if isinstance(state.connection, DirectoryConnectionTrust):
+                    operations.extend(
+                        [
+                            _Operation("validate", "connection", "primary", {}),
+                            _Operation("enable", "connection", "primary", {}),
+                        ]
+                    )
 
         current_links = {
             str(group["id"]): group["team_link"] for group in groups if (group.get("team_link") or {}).get("active")

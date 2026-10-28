@@ -68,6 +68,7 @@ from langflow.services.triggers.constants import (
     SLACK_TRIGGER_KINDS,
     TRANSPORT_SOCKET,
 )
+from langflow.services.triggers.listeners.adapters import ListenerDeliveryRejectedError
 from langflow.services.triggers.ownership import UNUSABLE_CONNECTION_STATUSES, owned_by_trigger_owner
 from langflow.services.triggers.providers.slack.events import SlackControl, SlackEvent, normalize
 from langflow.services.triggers.providers.slack.filters import matches
@@ -224,6 +225,10 @@ class SlackSocketModeAdapter:
         #: snapshot that still lacks the app id means it was cleared - the
         #: trigger moved to another connection and back - and is written again.
         self._recorded: dict[UUID, ListenerTrigger] = {}
+        # Startup and overlapping socket readers can all observe a snapshot
+        # without its app ID. Wait for any pending proof write before another
+        # recorder checks the snapshot or an event can be acknowledged.
+        self._record_lock = asyncio.Lock()
 
     # ------------------------------------------------------------------ #
     # ListenerAdapter
@@ -520,24 +525,40 @@ class SlackSocketModeAdapter:
             )
         if isinstance(event, SlackEvent):
             await self._record_app_id(ctx)
-            for trigger_id in await self._targets(ctx, event):
+            for target in await self._targets(ctx, event):
                 # Committed before the envelope is acknowledged (see module docstring).
-                await self._emit(ctx, trigger_id, event)
+                await self._emit(ctx, target, event)
 
-    async def _emit(self, ctx: ListenerContext, trigger_id: UUID, event: SlackEvent) -> None:
-        """Write one trigger's ledger row, skipping a trigger deleted since it was targeted.
-
-        Targets come from the last reconcile and from a same-app read up to
-        ``same_app_ttl_s`` old, so a trigger can be deleted in between - with the
-        cross-connection fan-out, by another person deleting their own flow. Its
-        ledger row then fails the foreign key (Postgres; SQLite does not enforce
-        it). Raising would close every socket on this connection over one
-        trigger that no longer exists, so only that trigger is skipped. Any other
-        write failure still raises, and the envelope stays unacknowledged.
-        """
+    async def _emit(self, ctx: ListenerContext, target: _SameAppTrigger, event: SlackEvent) -> None:
+        """Write a matching target, refreshing one changed destination before acknowledgment."""
+        trigger_id = target.id
         try:
-            await ctx.emit(trigger_id=trigger_id, dedupe_key=event.dedupe_key, payload=event.payload)
-        except IntegrityError:
+            await ctx.emit(
+                trigger_id=trigger_id,
+                dedupe_key=event.dedupe_key,
+                payload=event.payload,
+                expected_config=target.config,
+                expected_kind=target.kind,
+            )
+        except (IntegrityError, ListenerDeliveryRejectedError) as exc:
+            if isinstance(exc, ListenerDeliveryRejectedError) and exc.reason == "slack_target_changed":
+                # The supervisor already fenced the source socket separately.
+                # Re-match the fresh destination, including our own filters if
+                # they changed before reconcile. A second race propagates and
+                # leaves the envelope unacknowledged for provider redelivery.
+                self._same_app_cache = None
+                for current in await self._load_same_app_triggers(ctx, target_id=trigger_id):
+                    if matches(current.kind, current.config, event):
+                        await ctx.emit(
+                            trigger_id=current.id,
+                            dedupe_key=event.dedupe_key,
+                            payload=event.payload,
+                            expected_config=current.config,
+                            expected_kind=current.kind,
+                        )
+                return
+            if isinstance(exc, ListenerDeliveryRejectedError) and exc.reason != "target_removed":
+                raise
             if await _trigger_exists(trigger_id):
                 raise
             self._same_app_cache = None
@@ -552,15 +573,15 @@ class SlackSocketModeAdapter:
     # Targets
     # ------------------------------------------------------------------ #
 
-    async def _targets(self, ctx: ListenerContext, event: SlackEvent) -> list[UUID]:
+    async def _targets(self, ctx: ListenerContext, event: SlackEvent) -> list[_SameAppTrigger]:
         own = {trigger.id for trigger in ctx.triggers}
         targets = [
-            trigger.id
+            _SameAppTrigger(id=trigger.id, kind=trigger.kind, config=dict(trigger.config))
             for trigger in list(ctx.triggers)
             if trigger.mechanism_id == MECHANISM_SLACK_SOCKET_MODE and matches(trigger.kind, trigger.config, event)
         ]
         elsewhere = [
-            row.id
+            row
             for row in await self._same_app_triggers(ctx)
             if row.id not in own and matches(row.kind, row.config, event)
         ]
@@ -595,7 +616,9 @@ class SlackSocketModeAdapter:
         self._same_app_cache = (loop.time(), rows)
         return rows
 
-    async def _load_same_app_triggers(self, ctx: ListenerContext) -> list[_SameAppTrigger]:
+    async def _load_same_app_triggers(
+        self, ctx: ListenerContext, *, target_id: UUID | None = None
+    ) -> list[_SameAppTrigger]:
         from langflow.services.deps import session_scope
 
         mechanism = col(Trigger.config)["mechanism_id"].as_string()
@@ -605,14 +628,19 @@ class SlackSocketModeAdapter:
             .join(Connection, col(Connection.id) == col(Trigger.connection_id))
             .where(
                 Trigger.state == TriggerState.ACTIVE.value,
+                Trigger.provider == "slack",
                 col(Trigger.kind).in_(SLACK_TRIGGER_KINDS),
                 mechanism == MECHANISM_SLACK_SOCKET_MODE,
                 app_id == self._app_id,
-                col(Trigger.connection_id) != ctx.connection_id,
                 owned_by_trigger_owner(),
+                Connection.provider_key == "slack",
                 col(Connection.status).not_in(UNUSABLE_CONNECTION_STATUSES),
+                col(Connection.allow_non_interactive).is_(True),
             )
             .order_by(col(Trigger.id))
+        )
+        statement = statement.where(
+            Trigger.id == target_id if target_id is not None else col(Trigger.connection_id) != ctx.connection_id
         )
         async with session_scope() as session:
             return [
@@ -628,16 +656,17 @@ class SlackSocketModeAdapter:
         """
         if self._app_id is None:
             return
-        for trigger in list(ctx.triggers):
-            if (trigger.provider_state or {}).get(PROVIDER_STATE_APP_ID) == self._app_id:
-                continue
-            if self._recorded.get(trigger.id) is trigger:
-                continue
-            await ctx.save_cursor(
-                trigger_id=trigger.id,
-                provider_state={**(trigger.provider_state or {}), PROVIDER_STATE_APP_ID: self._app_id},
-            )
-            self._recorded[trigger.id] = trigger
+        async with self._record_lock:
+            for trigger in list(ctx.triggers):
+                if (trigger.provider_state or {}).get(PROVIDER_STATE_APP_ID) == self._app_id:
+                    continue
+                if self._recorded.get(trigger.id) is trigger:
+                    continue
+                await ctx.save_cursor(
+                    trigger_id=trigger.id,
+                    provider_state={**(trigger.provider_state or {}), PROVIDER_STATE_APP_ID: self._app_id},
+                )
+                self._recorded[trigger.id] = trigger
 
 
 async def _trigger_exists(trigger_id: UUID) -> bool:

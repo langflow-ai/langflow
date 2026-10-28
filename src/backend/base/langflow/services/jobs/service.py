@@ -35,7 +35,12 @@ from langflow.services.database.models.jobs.model import (
     SignalType,
 )
 from langflow.services.deps import session_scope
-from langflow.services.jobs.exceptions import HUMAN_INPUT_REQUIRED_EVENT, DuplicateJobError, PauseRequested
+from langflow.services.jobs.exceptions import (
+    HUMAN_INPUT_REQUIRED_EVENT,
+    DuplicateJobError,
+    JobNotClaimable,
+    PauseRequested,
+)
 
 # Bounded retries for append_event's optimistic seq assignment — contention is at most a
 # couple of concurrent appenders per job (worker + orphan sweep, or scaled-out processes).
@@ -686,12 +691,24 @@ class JobService(Service):
         This is the liveness signal a reconciler reads to tell a live in-flight
         run from a genuinely orphaned one: only the running owner refreshes it,
         and a reconciler only fails/requeues a job whose heartbeat is STALE
-        (``is_lease_stale``). Stored in ``job_metadata`` (no new column, matching
-        the attempt-accounting decision in the design) via a shallow merge so the
-        persisted request / retry flags are preserved.
+        (``is_lease_stale``).
+
+        Written to BOTH ``job_metadata["heartbeat_at"]`` (the claim token the
+        guarded release/terminalize paths compare exactly) and the typed
+        ``lease_heartbeat_at`` column (what the claim poll can filter on in SQL),
+        in ONE write so the two can never disagree about whether this lease is
+        live. The metadata side is a shallow merge, so persisted request / retry
+        flags are preserved.
         """
-        now = datetime.now(timezone.utc).isoformat()
-        await self.update_job_metadata(job_id, {"owner": owner, "heartbeat_at": now})
+        now = datetime.now(timezone.utc)
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None:
+                return
+            job.job_metadata = {**(job.job_metadata or {}), "owner": owner, "heartbeat_at": now.isoformat()}
+            job.lease_heartbeat_at = now
+            session.add(job)
+            await session.flush()
 
     @staticmethod
     def is_lease_stale(job: Job, *, lease_ttl_s: float) -> bool:
@@ -885,7 +902,9 @@ class JobService(Service):
         from sqlmodel import update
 
         hb_expr = col(Job.job_metadata)["heartbeat_at"].as_string()
-        claim_heartbeat = heartbeat_at or datetime.now(timezone.utc).isoformat()
+        # The lease starts now whether or not the caller supplied its own token.
+        claim_now = datetime.now(timezone.utc)
+        claim_heartbeat = heartbeat_at or claim_now.isoformat()
         async with session_scope() as session:
             job = await session.get(Job, job_id)
             if job is None or job.status != JobStatus.QUEUED:
@@ -902,7 +921,7 @@ class JobService(Service):
             stmt = (
                 update(Job)
                 .where(Job.job_id == job_id, Job.status == JobStatus.QUEUED, guard)
-                .values(job_metadata=merged)
+                .values(job_metadata=merged, lease_heartbeat_at=claim_now)
             )
             result = await session.exec(stmt)  # type: ignore[call-overload]
             await session.flush()
@@ -929,17 +948,36 @@ class JobService(Service):
         concurrently spread across N distinct jobs instead of all retrying the
         head of the queue.
 
-        Staleness is enforced by ``claim_queued_lease`` (a QUEUED row with a
-        FRESH lease belongs to a worker that just claimed it and is about to
-        start), so a candidate list slightly larger than the worker fleet is
-        enough; the next poll picks up anything beyond it.
+        The candidate window EXCLUDES rows whose lease is still fresh. Those
+        belong to a worker that just claimed them and is about to start, so
+        ``claim_queued_lease`` would reject every one of them anyway. Filtering
+        them out in SQL instead of discovering it per row is what keeps the
+        window useful: it is read once per poll and never re-read, so a worker
+        that keeps re-leasing rows it cannot run (one whose secret key does not
+        match the API's, for instance) would otherwise fill every slot with rows
+        no one can claim and starve the whole fleet, however deep the queue is.
+
+        A fresh lease on a QUEUED row only ever lasts ``lease_ttl_s``, so a row
+        hidden here is never hidden for long, and a crashed claimant's row
+        reappears on its own.
         """
         # ponytail: plain SELECT + per-row conditional claim; add FOR UPDATE
         # SKIP LOCKED on postgres if claim contention ever measurably matters.
+        from sqlalchemy import or_
+
+        lease_cutoff = datetime.now(timezone.utc) - timedelta(seconds=lease_ttl_s)
         async with session_scope() as session:
             stmt = (
                 select(Job.job_id)
-                .where(Job.status == JobStatus.QUEUED, Job.type == JobType.WORKFLOW)
+                .where(
+                    Job.status == JobStatus.QUEUED,
+                    Job.type == JobType.WORKFLOW,
+                    # NULL covers legacy rows and any lease cleared on release.
+                    or_(
+                        col(Job.lease_heartbeat_at).is_(None),
+                        col(Job.lease_heartbeat_at) <= lease_cutoff,
+                    ),
+                )
                 .order_by(col(Job.created_timestamp).asc())
                 .limit(candidates)
             )
@@ -976,7 +1014,34 @@ class JobService(Service):
             await session.flush()
             return result.rowcount == 1
 
-    async def complete_live_job(self, job_id: UUID, *, owner: str | None = None) -> bool:
+    async def begin_live_job(self, job_id: UUID, *, owner: str | None = None) -> bool:
+        """Flip a still-live job to IN_PROGRESS. Returns True if we won.
+
+        Guarded on the row not already being terminal, NOT on it being QUEUED. A
+        resume legitimately re-enters a SUSPENDED row, which is live work waiting on
+        a human rather than a finished verdict, so a QUEUED-only guard rejects every
+        resumed run. What must never happen is a late starter dragging a row that
+        already COMPLETED or FAILED back to IN_PROGRESS, which re-arms every terminal
+        write below it.
+
+        Shares ``terminalize_live_job``'s owner predicate, including letting an absent
+        owner through: a requeued row can still name the worker that lost it.
+        """
+        from sqlalchemy import or_
+        from sqlmodel import update
+
+        owner_expr = col(Job.job_metadata)["owner"].as_string()
+        conditions = [Job.job_id == job_id, col(Job.status).not_in(_RETAINABLE_STATUSES)]
+        if owner is not None:
+            conditions.append(or_(owner_expr.is_(None), owner_expr == owner))
+        async with session_scope() as session:
+            result = await session.exec(
+                update(Job).where(*conditions).values(status=JobStatus.IN_PROGRESS)  # type: ignore[call-overload]
+            )
+            await session.flush()
+            return result.rowcount == 1
+
+    async def terminalize_live_job(self, job_id: UUID, status: JobStatus, *, owner: str | None = None) -> bool:
         """Atomically flip a still-live job to COMPLETED. Returns True if we won.
 
         The success write used to be unconditional while the watchdog's failure
@@ -1009,14 +1074,30 @@ class JobService(Service):
         if owner is not None:
             conditions.append(or_(owner_expr.is_(None), owner_expr == owner))
         async with session_scope() as session:
-            stmt = (
-                update(Job)
-                .where(*conditions)
-                .values(status=JobStatus.COMPLETED, finished_timestamp=datetime.now(timezone.utc))
-            )
+            stmt = update(Job).where(*conditions).values(status=status, finished_timestamp=datetime.now(timezone.utc))
             result = await session.exec(stmt)  # type: ignore[call-overload]
             await session.flush()
             return result.rowcount == 1
+
+    async def _terminalize_or_log(self, job_id: UUID, status: JobStatus, *, owner: str | None) -> None:
+        """Write a terminal status if the row is still ours, and say so when it is not.
+
+        Losing here means something terminal landed under us, almost always a watchdog
+        reconciling this run after its heartbeat stalled. The durable row keeps the
+        verdict that was already reported to any reattached client, and this is logged
+        rather than swallowed because the race firing is worth seeing.
+        """
+        from lfx.log import logger
+
+        if not await self.terminalize_live_job(job_id, status, owner=owner):
+            await logger.awarning(
+                f"Job {job_id} ended {status.value} but its row was no longer live; "
+                "leaving the terminal status already written"
+            )
+
+    async def complete_live_job(self, job_id: UUID, *, owner: str | None = None) -> bool:
+        """Terminalize as COMPLETED. Thin alias kept for the success path's readability."""
+        return await self.terminalize_live_job(job_id, JobStatus.COMPLETED, owner=owner)
 
     async def release_queued_lease(self, job_id: UUID, *, owner: str, heartbeat_at: str) -> bool:
         """Release this owner's QUEUED lease without clearing a newer claim.
@@ -1046,7 +1127,7 @@ class JobService(Service):
                     owner_expr == owner,
                     hb_expr == heartbeat_at,
                 )
-                .values(job_metadata=metadata or None)
+                .values(job_metadata=metadata or None, lease_heartbeat_at=None)
             )
             result = await session.exec(stmt)  # type: ignore[call-overload]
             await session.flush()
@@ -1151,7 +1232,7 @@ class JobService(Service):
                     Job.status == JobStatus.IN_PROGRESS,
                     owner_expr == owner,
                 )
-                .values(status=JobStatus.QUEUED, job_metadata=metadata or None)
+                .values(status=JobStatus.QUEUED, job_metadata=metadata or None, lease_heartbeat_at=None)
             )
             result = await session.exec(stmt)  # type: ignore[call-overload]
             await session.flush()
@@ -1551,7 +1632,14 @@ class JobService(Service):
         try:
             if mark_in_progress:
                 await logger.adebug(f"Updating job {job_id} status to IN_PROGRESS")
-                await self.update_job_status(job_id, JobStatus.IN_PROGRESS)
+                # Conditional on the row still being QUEUED and not already somebody
+                # else's. An unconditional flip let a late starter drag a row that had
+                # already finished back to IN_PROGRESS. Raised rather than returned,
+                # and raised OUTSIDE the try below, so no handler writes a terminal
+                # status onto a job another worker is now running.
+                if not await self.begin_live_job(job_id, owner=owner):
+                    msg = f"Job {job_id} is no longer claimable"
+                    raise JobNotClaimable(msg)
 
             if keep_alive:
                 await self.start_keep_alive(job_id, beat_now=False)
@@ -1572,13 +1660,13 @@ class JobService(Service):
         except AssertionError as e:
             # Handle missing required arguments
             await logger.aerror(f"Job {job_id} failed with AssertionError: {e}")
-            await self.update_job_status(job_id, JobStatus.FAILED, finished_timestamp=True)
+            await self._terminalize_or_log(job_id, JobStatus.FAILED, owner=owner)
             raise
 
         except asyncio.TimeoutError as e:
             # Handle timeout specifically
             await logger.aerror(f"Job {job_id} timed out: {e}")
-            await self.update_job_status(job_id, JobStatus.TIMED_OUT, finished_timestamp=True)
+            await self._terminalize_or_log(job_id, JobStatus.TIMED_OUT, owner=owner)
             raise
 
         except asyncio.CancelledError as exc:
@@ -1586,17 +1674,17 @@ class JobService(Service):
             if exc.args and exc.args[0] == "LANGFLOW_USER_CANCELLED":
                 # User-initiated cancellation, update status to CANCELLED
                 await logger.awarning(f"Job {job_id} was cancelled by user")
-                await self.update_job_status(job_id, JobStatus.CANCELLED, finished_timestamp=True)
+                await self._terminalize_or_log(job_id, JobStatus.CANCELLED, owner=owner)
             else:
                 # System-initiated cancellation - update status to FAILED
                 await logger.awarning(f"Job {job_id} was cancelled by system")
-                await self.update_job_status(job_id, JobStatus.FAILED, finished_timestamp=True)
+                await self._terminalize_or_log(job_id, JobStatus.FAILED, owner=owner)
             raise
 
         except Exception as e:
             # Handle any other error
             await logger.aexception(f"Job {job_id} failed with unexpected error: {e}")
-            await self.update_job_status(job_id, JobStatus.FAILED, finished_timestamp=True)
+            await self._terminalize_or_log(job_id, JobStatus.FAILED, owner=owner)
             raise
         else:
             # Update to COMPLETED
