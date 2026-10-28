@@ -77,7 +77,14 @@ class RegexExtractorComponent(Component):
             self.status = message
             return message
 
-        result = "\n".join(match.data["match"] for match in matches)
+        if isinstance(matches[0].data["match"], tuple):
+            # Preserve grouped JSON values; Text represents each complete regex match.
+            result = (
+                "\n".join(match.group(0) for match in re.finditer(self.pattern, self.input_text) if match.group(0))
+                or "No matches found"
+            )
+        else:
+            result = "\n".join(match.data["match"] for match in matches)
         message = Message(text=result)
         self.status = message
         return message
