@@ -9,6 +9,7 @@ import re
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed
 from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.services.variable import VariableNotFoundError
@@ -19,6 +20,7 @@ from lfx.utils.secrets import secret_value_to_str
 from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 from .provider_queries import (
+    _canonical_provider_name,
     get_model_provider_variable_mapping,
     get_model_providers,
     get_provider_all_variables,
@@ -29,7 +31,7 @@ if TYPE_CHECKING:
     from lfx.services.model_provider_policy import ModelProviderPolicySnapshot
 
 MODEL_STATUS_KEY_SEPARATOR = "::"
-MODEL_STATUS_TYPES = ("llm", "embeddings")
+MODEL_STATUS_TYPES = ("llm", "embeddings", "decision")
 
 
 def model_status_key(provider: str, model_name: str, model_type: str | None = None) -> str:
@@ -47,7 +49,7 @@ def parse_model_status_key(entry: str) -> tuple[str | None, str, str | None]:
 
     The split is deliberately bounded so deployment names containing ``::``
     survive intact. Legacy provider-qualified entries have no type; only the
-    canonical ``llm`` and ``embeddings`` second segments identify typed keys.
+    canonical ``llm``, ``embeddings`` and ``decision`` second segments identify typed keys.
     """
     parts = entry.split(MODEL_STATUS_KEY_SEPARATOR, 2)
     match parts:
@@ -77,6 +79,16 @@ def model_status_contains(
     return any(
         model_status_key(provider, model_name, candidate_type) in entries for candidate_type in MODEL_STATUS_TYPES
     )
+
+
+def _get_standalone_variable(name: str) -> str | None:
+    """Resolve native LFX request/in-memory variables without opening an owner-scoped DB lookup."""
+    from lfx.services.variable.service import VariableService
+
+    service = get_variable_service()
+    if type(service) is VariableService:
+        return secret_value_to_str(run_until_complete(service.get_variable(name=name)), strip=True)
+    return None
 
 
 def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key: Any = None) -> str | None:
@@ -179,6 +191,8 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
                     return None
 
         api_key = run_until_complete(_get_variable())
+    else:
+        api_key = _get_standalone_variable(variable_name)
 
     api_key = secret_value_to_str(api_key, strip=True)
     if api_key:
@@ -215,28 +229,30 @@ def provider_variable_from_env(var_key: str) -> str | None:
     return None
 
 
-def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) -> dict[str, str]:
-    """Get all configured variables for a provider from database or environment."""
+def get_all_variables_for_provider(
+    user_id: UUID | str | None, provider: str, *, include_secrets: bool = True
+) -> dict[str, str]:
+    """Get configured provider variables, optionally resolving only non-secret settings."""
     result: dict[str, str] = {}
 
     # Get all variable definitions for this provider
     provider_vars = get_provider_all_variables(provider)
+    if not include_secrets:
+        provider_vars = [variable for variable in provider_vars if not variable.get("is_secret")]
     if not provider_vars:
         return result
 
-    # If no user_id, only check environment variables. Honor the request's no-env-fallback
-    # contract: a served flow under no_env_fallback stays isolated from process-wide
-    # credentials, so return nothing rather than leaking os.environ into provider_vars
-    # (which would defeat the _env_if_allowed guards in instantiation.py).
+    # Native LFX request-scoped variables must win over ambient credentials,
+    # including requests with no represented user and no environment fallback.
     if user_id is None or (isinstance(user_id, str) and user_id == "None"):
-        if is_env_fallback_disabled():
-            return result
         for var_info in provider_vars:
             var_key = var_info.get("variable_key")
             if var_key:
-                env_value = provider_variable_from_env(var_key)
-                if env_value:
-                    result[var_key] = env_value
+                value = _get_standalone_variable(var_key)
+                if not value and not is_env_fallback_disabled():
+                    value = provider_variable_from_env(var_key)
+                if value:
+                    result[var_key] = value
         return result
 
     # Try to get from global variables (database)
@@ -386,19 +402,38 @@ class _VarWithValue:
         self.value = value
 
 
-async def _get_model_status(user_id: UUID | str) -> tuple[set[str], set[str]]:
+def _keeps_model_settings() -> bool:
+    """Whether Model Providers settings are saved anywhere.
+
+    Standalone LFX has none: `lfx serve` uses the env-backed VariableService and `lfx run` has no
+    variable service at all, only a generated user id. Policy and request-scoped credentials
+    still apply there.
+    """
+    from lfx.services.variable.service import VariableService
+
+    variable_service = get_variable_service()
+    return not (variable_service is None or type(variable_service) is VariableService)
+
+
+async def _get_model_status(user_id: UUID | str, *, strict: bool = False) -> tuple[set[str], set[str]]:
     """Fetch disabled and explicitly enabled model sets for a user.
 
     Returns:
         A tuple of (disabled_models, explicitly_enabled_models).
     """
+    variable_service = get_variable_service()
+    # A variable service of any type but standalone LFX's still fails closed below.
+    if strict and not _keeps_model_settings():
+        return set(), set()
     async with session_scope() as session:
-        variable_service = get_variable_service()
         if variable_service is None:
             return set(), set()
         from langflow.services.variable.service import DatabaseVariableService
 
         if not isinstance(variable_service, DatabaseVariableService):
+            if strict:
+                msg = "User model configuration cannot be read from this variable service"
+                raise RuntimeError(msg)
             return set(), set()
         all_vars = await variable_service.get_all(
             user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
@@ -407,6 +442,16 @@ async def _get_model_status(user_id: UUID | str) -> tuple[set[str], set[str]]:
         disabled: set[str] = set()
         enabled: set[str] = set()
         for var in all_vars:
+            if strict and var.name in {"__disabled_models__", "__enabled_models__"}:
+                parsed = json.loads(var.value)
+                if not isinstance(parsed, list) or any(not isinstance(item, str) for item in parsed):
+                    msg = "Invalid persisted model enablement configuration"
+                    raise ValueError(msg)
+                if var.name == "__disabled_models__":
+                    disabled = set(parsed)
+                else:
+                    enabled = set(parsed)
+                continue
             if var.name == "__disabled_models__" and var.value:
                 with contextlib.suppress(json.JSONDecodeError, TypeError):
                     disabled = set(json.loads(var.value))
@@ -502,26 +547,111 @@ async def _fetch_enabled_providers_for_user(
         return _validate_and_get_enabled_providers(all_provider_variables, provider_candidates)
 
 
-def validate_model_provider_key(provider: str, variables: dict[str, str], model_name: str | None = None) -> None:
+def _is_decision_only_model(provider: str, model_name: str) -> bool:
+    """Whether the catalog lists this provider/model as a decision model and not as a chat model."""
+    from lfx.base.models.decision_constants import DECISION_MODELS_DETAILED
+
+    if not any(row["provider"] == provider and row["name"] == model_name for row in DECISION_MODELS_DETAILED):
+        return False
+    from .model_catalog import get_unified_models_detailed
+
+    chat_rows = get_unified_models_detailed(
+        providers=[provider], model_type="llm", include_deprecated=True, include_unsupported=True
+    )
+    return not any(row.get("model_name") == model_name for group in chat_rows for row in group.get("models", []))
+
+
+def validate_model_provider_key(
+    provider: str,
+    variables: dict[str, str],
+    model_name: str | None = None,
+    *,
+    model_type: str | None = None,
+    user_id: UUID | str | None = None,
+    policy_attributes: dict[str, Any] | None = None,
+) -> None:
     """Validate a model provider by making a minimal test call."""
     if not provider:
         return
 
+    from lfx.base.models.decision_constants import DECISION_ONLY_PROVIDERS
+
+    # A key gets one billed check, for the kind of model it is about to serve, never one per kind.
+    # Decision-only providers (TypeSafe, and Perplexity, whose chat models live in its own component
+    # rather than in Model Providers) always get a decision check. A mixed provider such as OpenAI is
+    # checked for the kind the caller names: Model Providers asks for "decision" when it was opened
+    # from a decision picker and otherwise names none, which means a chat check. Every other kind is
+    # checked when it is registered: update_enabled_models validates each model switched on with that
+    # model's own type. If Perplexity chat models join Model Providers, Perplexity becomes a mixed
+    # provider and follows the same rule.
+    # Provider IDs such as "typesafe" and display names reach the same decision checks.
+    decision_provider = _canonical_provider_name(provider)
+    if model_type is None and model_name and _is_decision_only_model(decision_provider, model_name):
+        # An untyped request for a model that exists only as a decision model, such as a legacy
+        # status update, must not be validated as a chat completion.
+        model_type = "decision"
+
+    from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
+
+    # A check runs a real model, so it needs the same model-level permission as a flow run, for a
+    # model the caller names and for one chosen by default.
+    policy = resolve_model_provider_policy(
+        user_id=user_id,
+        providers=[decision_provider],
+        purpose=ModelProviderPolicyPurpose.USE,
+        attributes=policy_attributes,
+    )
+    if model_type == "decision" or decision_provider in DECISION_ONLY_PROVIDERS:
+        from lfx.base.models.decision_constants import DECISION_MODELS_DETAILED
+        from lfx.base.models.decisions.providers import validate_decision_provider_key
+
+        offered = [row["name"] for row in DECISION_MODELS_DETAILED if row["provider"] == decision_provider]
+        if not model_name and not offered:
+            msg = f"{decision_provider} has no decision models."
+            raise ValueError(msg)
+        # The caller names the kind, so a name that isn't a catalogued decision model, such as a chat
+        # model policy blocks, never reaches a decisions endpoint or gets switched on as one.
+        if model_name and model_name not in offered:
+            msg = f"{decision_provider} has no decision model by that name."
+            raise ValueError(msg)
+        # As for chat, the default is the first decision model policy allows, so one blocked model
+        # does not stop a key from being saved for the others.
+        effective_model = model_name or next(
+            (name for name in offered if policy.allows_model(decision_provider, name, model_type="decision")),
+            offered[0],
+        )
+        policy.require_model(decision_provider, effective_model, model_type="decision")
+        validate_decision_provider_key(decision_provider, variables, effective_model)
+        return
+
+    if model_name:
+        policy.require_model(provider, model_name, model_type=model_type)
+    # The check below is a chat call, so it only runs a chat model. A model named for another kind,
+    # such as an embedding model, was authorized for its own kind above; the key is then checked with
+    # the first chat model policy allows, never with that name as a chat model.
+    chat_model_name = model_name if model_type in (None, "llm") else None
     first_model = None
     provider_models: list[dict[str, Any]] = []
     try:
         from .model_catalog import get_unified_models_detailed
 
-        models = get_unified_models_detailed(providers=[provider])
+        models = get_unified_models_detailed(providers=[provider], model_type="llm")
         if models and models[0].get("models"):
             provider_models = models[0]["models"]
-            first_model = provider_models[0]["model_name"]
+            first_model = next(
+                (
+                    row["model_name"]
+                    for row in provider_models
+                    if policy.allows_model(provider, row["model_name"], model_type="llm")
+                ),
+                None,
+            )
     except Exception as e:  # noqa: BLE001
         logger.error(f"Error getting unified models for provider {provider}: {e}")
 
     # WatsonX's static catalog is not region-specific. When no model was
     # requested, select one from the configured endpoint below instead.
-    validation_model = model_name if provider == "IBM WatsonX" else model_name or first_model
+    validation_model = chat_model_name if provider == "IBM WatsonX" else chat_model_name or first_model
     validation_metadata = next(
         (model.get("metadata", {}) for model in provider_models if model.get("model_name") == validation_model),
         {},
@@ -573,6 +703,12 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
 
                 transformed_base_url = transform_localhost_url(base_url)
                 validate_connector_url_for_ssrf(transformed_base_url)
+                # A key from the server's environment may only go to OpenAI's own endpoint or an
+                # operator-allowlisted host, as for a flow's OpenAI components: a user's saved base URL
+                # must not receive it when they switch a model on without a key of their own.
+                ensure_credential_endpoint_allowed(
+                    api_key, transformed_base_url, default_url="https://api.openai.com/v1"
+                )
                 llm_kwargs["base_url"] = transformed_base_url
             llm = ChatOpenAI(**llm_kwargs)
             llm.invoke("test")
@@ -609,11 +745,13 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
                 # Static WatsonX seeds may all be deprecated and filtered out.
                 # Use a current regional chat model instead of skipping validation.
                 live_models = get_watsonx_llm_models(url, default_models=[])
-                if not live_models:
+                validation_model = next(
+                    (name for name in live_models if policy.allows_model(provider, name, model_type="llm")), None
+                )
+                if not validation_model:
                     msg = "No IBM WatsonX chat model is available to validate credentials"
                     logger.warning(msg)
                     raise ValueError(msg)
-                validation_model = live_models[0]
 
             from langchain_ibm import ChatWatsonx
 

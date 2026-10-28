@@ -4,6 +4,7 @@ import type {
   ModelOptionType,
 } from "@/types/api";
 import type { AllNodeType } from "@/types/flow";
+import { isUserOwnedModelKind, modelKindOfField } from "./model-kind";
 
 /** Checks if a node has a model-type input field */
 export function isModelNode(node: AllNodeType): boolean {
@@ -15,11 +16,17 @@ export function isModelNode(node: AllNodeType): boolean {
   return Object.values(template).some((field: any) => field?.type === "model");
 }
 
-/** Finds the model field key in a template */
-export function findModelFieldKey(
-  template: APITemplateType,
-): string | undefined {
-  return Object.keys(template).find((key) => template[key]?.type === "model");
+/**
+ * The model fields a refresh must cover: every shown one. Smart Router has a
+ * language and a decision model field and shows one per mode. A node whose
+ * model fields are all hidden falls back to its first, as before.
+ */
+export function findModelFieldKeys(template: APITemplateType): string[] {
+  const keys = Object.keys(template).filter(
+    (key) => template[key]?.type === "model",
+  );
+  const shown = keys.filter((key) => template[key]?.show !== false);
+  return shown.length > 0 ? shown : keys.slice(0, 1);
 }
 
 /** Builds the refresh API payload with flow context */
@@ -64,6 +71,11 @@ export function validateModelValue(
 ): APITemplateType {
   const modelField = template[modelFieldKey];
   if (!modelField) return template;
+  // Only language and embedding fields are corrected on load. A missing or
+  // unavailable decision model stays as saved and fails clearly when the flow
+  // runs, and a field of unknown kind is left for the picker to refuse.
+  const kind = modelKindOfField(modelField);
+  if (kind === null || isUserOwnedModelKind(kind)) return template;
 
   const options = modelField.options || [];
   const currentValue = modelField.value;
