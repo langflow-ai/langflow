@@ -109,6 +109,9 @@ class TestRegexExtractorComponent(ComponentTestBaseWithoutClient):
             (r"(a)?(b)", "b ab", [("", "b"), ("a", "b")], "b\nab"),
             (r"(john): (\d+)", "John: 25", [], "No matches found"),
             (r"(?i)(john): (\d+)", "John: 25", [("John", "25")], "John: 25"),
+            (r"(?=(a)(b))", "ab", [("a", "b")], '["a", "b"]'),
+            (r"(?=(a)(b))|ab", "ab", [("a", "b"), ("", "")], '["a", "b"]\nab'),
+            (r"(?=(a)?(b))", "b", [("", "b")], '["", "b"]'),
         ],
     )
     def test_text_output_preserves_single_captures_and_formats_multiple_captures(
