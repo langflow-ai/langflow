@@ -52,6 +52,7 @@ async def test_run_conversations_reduces_batch_and_retries_rate_limited_rows():
         response = SimpleNamespace(headers={"Retry-After": "7.5"})
 
     def handle_batch(batch):
+        """Return rate-limit errors once, then successful responses."""
         if not model.batch_sizes[:-1]:
             return [RateLimitError("busy") for _ in batch]
         return [f"ok:{item[0]['content']}" for item in batch]
@@ -110,6 +111,7 @@ async def test_run_conversations_uses_exponential_backoff_without_retry_after():
     attempts = 0
 
     def handle_batch(batch):
+        """Rate-limit the first two attempts before returning successful responses."""
         nonlocal attempts
         attempts += 1
         if attempts < 3:
@@ -136,12 +138,15 @@ async def test_run_batch_retries_only_rate_limited_rows_and_preserves_order():
 
     class MixedResultModel:
         def __init__(self):
+            """Track calls so the first response can mix successes and 429s."""
             self.calls = 0
 
         def with_config(self, *_, **__):
+            """Return this model unchanged, as a configured runnable would."""
             return self
 
         async def abatch(self, conversations, **_kwargs):
+            """Mix successful messages with rate limits, then answer retries."""
             self.calls += 1
             if self.calls == 1:
                 return [
