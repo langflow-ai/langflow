@@ -214,10 +214,7 @@ const SideBarFoldersButtonsComponent = ({
                     console.error(err);
                     setErrorData({
                       title: t("sidebar.projectUploadError"),
-                      list: [
-                        err?.response?.data?.detail ??
-                          (err instanceof Error ? err.message : String(err)),
-                      ],
+                      list: extractApiErrorMessages(err),
                     });
                   },
                 },

@@ -1,8 +1,15 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import SideBarFoldersButtonsComponent from "..";
 
 const mockMutateAddFolder = jest.fn();
 const mockMutateUpdateFolder = jest.fn();
+const mockMutateUploadFolders = jest.fn();
 const mockSetErrorData = jest.fn();
 const mockCan = jest.fn(
   (_projectId: string | undefined | null, _action: string) => true,
@@ -91,7 +98,7 @@ jest.mock("@/controllers/API/queries/folders", () => ({
     mutate: mockMutateAddFolder,
     isPending: false,
   }),
-  usePostUploadFolders: () => ({ mutate: jest.fn() }),
+  usePostUploadFolders: () => ({ mutate: mockMutateUploadFolders }),
 }));
 
 jest.mock("@/controllers/API/queries/folders/use-get-download-folders", () => ({
@@ -163,10 +170,21 @@ jest.mock("../../../hooks/use-on-file-drop", () => ({
   }),
 }));
 jest.mock("../components/header-buttons", () => ({
-  HeaderButtons: ({ addNewFolder }: { addNewFolder: () => void }) => (
-    <button type="button" onClick={addNewFolder}>
-      New Project
-    </button>
+  HeaderButtons: ({
+    addNewFolder,
+    handleUploadFlowsToFolder,
+  }: {
+    addNewFolder: () => void;
+    handleUploadFlowsToFolder: () => void;
+  }) => (
+    <>
+      <button type="button" onClick={addNewFolder}>
+        New Project
+      </button>
+      <button type="button" onClick={handleUploadFlowsToFolder}>
+        Upload Project
+      </button>
+    </>
   ),
 }));
 jest.mock("../components/input-edit-folder-name", () => ({
@@ -224,6 +242,48 @@ describe("project creation errors", () => {
     expect(mockSetErrorData).toHaveBeenCalledWith({
       title: "Unable to create project.",
       list: ["Not enough permissions"],
+    });
+  });
+
+  it("surfaces the messages of a validation error list when a project upload fails", async () => {
+    render(<SideBarFoldersButtonsComponent handleChangeFolder={jest.fn()} />);
+    const project = JSON.stringify({ folder_name: "Imported", flows: [] });
+    const file = new File([project], "project.json", {
+      type: "application/json",
+    });
+    // jsdom's File has no text()
+    Object.defineProperty(file, "text", { value: async () => project });
+
+    fireEvent.click(screen.getByRole("button", { name: "Upload Project" }));
+    fireEvent.change(screen.getByTestId("hidden-file-input"), {
+      target: { files: [file] },
+    });
+    await waitFor(() => expect(mockMutateUploadFolders).toHaveBeenCalled());
+    const mutationOptions = mockMutateUploadFolders.mock.calls[0][1];
+
+    // The 422 an upload gets when an MCP server config a flow carries fails validation.
+    act(() => {
+      mutationOptions.onError({
+        response: {
+          status: 422,
+          data: {
+            detail: [
+              {
+                type: "value_error",
+                loc: [],
+                msg: "Value error, Environment variable 'NODE_OPTIONS' is not allowed for security reasons",
+              },
+            ],
+          },
+        },
+      });
+    });
+
+    expect(mockSetErrorData).toHaveBeenCalledWith({
+      title: "sidebar.projectUploadError",
+      list: [
+        "Value error, Environment variable 'NODE_OPTIONS' is not allowed for security reasons",
+      ],
     });
   });
 
