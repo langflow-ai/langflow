@@ -56,6 +56,16 @@ class JobBase(SQLModel):
         default=None,
         sa_column=Column(DateTime(timezone=True), nullable=True),
     )
+    # Typed mirror of job_metadata["heartbeat_at"], written by the same UPDATE that
+    # takes the lease. The scaled claim poll needs the lease age in its WHERE clause
+    # so a QUEUED row whose lease is still fresh never occupies a candidate slot; a
+    # JSON string cannot be compared to a cutoff in SQL without per-dialect
+    # extraction and casting. is_lease_stale still reads the metadata copy, which
+    # stays the claim token for the guarded release and terminalize paths.
+    lease_heartbeat_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
     type: JobType | None = Field(
         default=JobType.WORKFLOW,
         sa_column=Column(

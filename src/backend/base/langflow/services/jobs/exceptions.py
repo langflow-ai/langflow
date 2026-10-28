@@ -42,3 +42,11 @@ class PauseRequested(JobError):  # noqa: N818
         # on suspend so the resumed pass — which starts a fresh capture list and
         # skips re-emitting already-built vertices — does not drop them.
         self.output_events = output_events or []
+
+
+class JobNotClaimable(JobError):  # noqa: N818
+    """This runner lost the row: it is no longer QUEUED, or it belongs to someone else.
+
+    Raised before any work starts, so the caller must stop without writing a status.
+    Writing one would stamp a verdict onto a job another worker is running.
+    """

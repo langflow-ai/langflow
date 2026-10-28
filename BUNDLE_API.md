@@ -224,6 +224,13 @@ the deserialize half is covered by
 
 ## Changelog
 
+- **Decision model inputs (2026-10-22).** `ModelInput` accepts `model_type="decision"`:
+  such a field never connects other models (`input_types=[]`, no external options), and
+  `value="connect_other_models"` is refused. `FloatInput` gains `preserve_empty`
+  (default `False`); when `True`, a blank value stays `None` instead of becoming `0.0`,
+  and a Boolean is refused. Both are additive and existing defaults are unchanged, so
+  `BUNDLE_API_VERSION` remains `1`.
+
 - **Google Workspace network diagnostics (2026-10-15).** `lfx.integrations` exports
   `IntegrationNetworkError` with the additive `network-error` code. Google transport
   failures report a fixed reason and API hostname, with server-network guidance in

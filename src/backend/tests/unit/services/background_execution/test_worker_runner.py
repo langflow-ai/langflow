@@ -109,3 +109,58 @@ def test_in_process_backend_adapter_honors_expose_graph_state():
 
     legacy = InProcessBackend._build_adapter({"stream_protocol": "langflow"}, uuid.uuid4(), uuid.uuid4())
     assert legacy.context.expose_graph_state is True
+
+
+async def test_corrupt_override_envelope_is_terminalized_not_retried_forever(active_user):
+    """A job whose overrides can never hydrate must not hold a claim slot forever.
+
+    A structurally corrupt envelope fails the same way on every attempt. Left
+    QUEUED it is re-claimed on each lease expiry, and because the claim window is
+    the oldest N queued rows, enough of them starve every newer job. This is the
+    contract the default backend's startup sweep already applies, moved to the
+    worker, which is the only thing that runs in scaled mode.
+    """
+    from langflow.services.background_execution.db_backend import DBBackgroundQueue
+
+    jobs = get_job_service()
+    job_id = uuid.uuid4()
+    owner = "worker:test:corrupt"
+    await jobs.create_job(job_id=job_id, flow_id=uuid.uuid4(), user_id=active_user.id)
+    # Non-ASCII ciphertext cannot be a valid envelope, so hydrating it raises the
+    # fail-closed Corrupted error rather than the retryable unavailable one.
+    await jobs.update_job_metadata(
+        job_id,
+        {
+            "request": {"stream_protocol": "langflow"},
+            "request_overrides_format": "fernet-json-v1",
+            "request_overrides": "not-a-fernet-token-\N{SNOWMAN}",
+        },
+    )
+
+    # Claim it the way a worker does, so the row carries a real lease token.
+    claimed = await DBBackgroundQueue(job_service=jobs, owner=owner).claim(block_ms=0)
+    assert str(claimed) == str(job_id)
+
+    ran: list[str] = []
+
+    def _never_runs(**_kw):
+        ran.append("built")
+        return _scripted_source
+
+    runner = WorkerJobRunner(
+        settings=get_settings_service().settings,
+        live_bus=_RecordingBus(),
+        frame_source_factory=_never_runs,
+        owner=owner,
+    )
+    await runner.run(str(job_id))
+
+    refreshed = await jobs.get_job_by_job_id(job_id)
+    assert refreshed.status == JobStatus.FAILED, "a corrupt envelope must reach a terminal status"
+    assert refreshed.error == {"type": "request_overrides_unavailable"}
+    assert refreshed.finished_timestamp is not None
+    assert ran == [], "the graph must never be built for a job that cannot hydrate"
+
+    # Exactly one terminal milestone, so a reattached client sees the run end.
+    events = await jobs.read_events(job_id)
+    assert [(e.event_type, e.payload) for e in events] == [("run_failed", {"type": "request_overrides_unavailable"})]

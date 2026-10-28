@@ -90,3 +90,53 @@ async def test_a_run_that_finishes_before_its_first_heartbeat_still_completes():
     assert await service.complete_live_job(job_id, owner="worker:1:aaaa") is True
     job = await service.get_job_by_job_id(job_id)
     assert job.status == JobStatus.COMPLETED
+
+
+@pytest.mark.usefixtures("client")
+async def test_a_late_starter_cannot_drag_a_finished_row_back_to_in_progress():
+    """The flip is the other half of the race, and it runs before any work.
+
+    An unconditional flip let a worker that started late reopen a job another
+    worker had already finished, which also re-armed every terminal write below it.
+    """
+    from langflow.services.jobs.exceptions import JobNotClaimable
+
+    service = JobService()
+    job_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), job_type=JobType.WORKFLOW, user_id=uuid4())
+    await service.update_job_status(job_id, JobStatus.COMPLETED, finished_timestamp=True)
+
+    async def _work():
+        msg = "this must never run"
+        raise AssertionError(msg)
+
+    with pytest.raises(JobNotClaimable):
+        await service.execute_with_status(job_id, _work)
+
+    job = await service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.COMPLETED, "a finished row must not be reopened"
+
+
+@pytest.mark.usefixtures("client")
+async def test_a_stalled_worker_cannot_fail_a_job_another_worker_completed():
+    """The failure writes needed the same fence the success write got.
+
+    Worker B finishes the job. Stalled worker A then unblocks and its coroutine
+    raises, and before this its handler wrote FAILED straight over B's verdict.
+    """
+    service = JobService()
+    job_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), job_type=JobType.WORKFLOW, user_id=uuid4())
+    await service.update_job_status(job_id, JobStatus.IN_PROGRESS)
+
+    # Worker B completes it while A is stalled inside its own run.
+    async def _work():
+        assert await service.terminalize_live_job(job_id, JobStatus.COMPLETED)
+        msg = "A's component blew up after B had already finished"
+        raise RuntimeError(msg)
+
+    with pytest.raises(RuntimeError):
+        await service.execute_with_status(job_id, _work, mark_in_progress=False)
+
+    job = await service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.COMPLETED, "a terminal verdict must not be overwritten by a loser"

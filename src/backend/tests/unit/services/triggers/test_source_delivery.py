@@ -157,3 +157,20 @@ async def test_competing_source_collectors_cannot_overwrite_the_cursor(make_trig
     assert sum(isinstance(result, RuntimeError) and "cursor changed" in str(result) for result in outcomes) == 3
     async with session_scope() as session:
         assert len((await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger_id))).all()) == 1
+
+
+async def test_invalid_batch_is_rejected_before_any_source_rows_or_cursor_are_written(make_trigger):
+    trigger_id = await make_trigger(kind="google.calendar", provider="google")
+    malformed = _item("e2", "v1")
+    malformed.pop("id")
+    async with session_scope() as session:
+        with pytest.raises(ValueError, match="invalid id"):
+            await append_and_advance(
+                session, trigger_id=trigger_id, items=[_item("e1", "v1"), malformed], cursor={"sync_token": "new"}
+            )
+    async with session_scope() as session:
+        assert (await session.get(Trigger, trigger_id)).provider_state == {}
+        assert not (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger_id))).all()
+        assert not (
+            await session.exec(select(TriggerSourceVersion).where(TriggerSourceVersion.trigger_id == trigger_id))
+        ).all()
