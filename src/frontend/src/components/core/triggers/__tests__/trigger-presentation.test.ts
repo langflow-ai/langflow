@@ -157,7 +157,7 @@ describe("sourceKeyOf", () => {
   it.each([
     ["gitlab", "Gitlab"],
     ["whatsapp", "MessageCircle"],
-    ["discord", "MessageCircle"],
+    ["discord", "discord"],
     ["telegram", "Send"],
     ["salesforce", "Cloud"],
     ["servicenow", "Server"],

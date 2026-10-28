@@ -11,7 +11,7 @@ from lfx_discord._base import connection_input
 
 class DiscordTriggerComponent(BaseTriggerComponent):
     provider = "discord"
-    icon = "MessageCircle"
+    icon = "discord"
     needs_connection = True
     config_fields: ClassVar[tuple[str, ...]] = (
         "connection",

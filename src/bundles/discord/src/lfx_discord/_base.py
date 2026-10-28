@@ -34,7 +34,7 @@ MAX_MESSAGE_UNITS = 2000
 
 
 class DiscordActionComponent(Component):
-    icon = "MessageCircle"
+    icon = "discord"
     capability_id: ClassVar[str] = ""
 
     async def send(
