@@ -47,8 +47,14 @@ def test_bound_account_discovery_never_uses_environment(monkeypatch, reason):
     monkeypatch.setattr(model_utils, "session_scope", session_scope)
     monkeypatch.setattr(model_utils, "get_variable_service", BoundService)
     monkeypatch.setattr(model_utils, "_environment_variable_value", forbidden_environment)
-    with pytest.raises(RuntimeVariableError, match="Account lookup refused"):
-        get_provider_variable_value("00000000-0000-0000-0000-000000000001", "OLLAMA_BASE_URL")
+    user_id = "00000000-0000-0000-0000-000000000001"
+    if reason in {"absent", "variable_not_approved"}:
+        assert get_provider_variable_value(user_id, "OLLAMA_BASE_URL") is None
+        assert model_utils.fetch_live_ollama_models(user_id) == []
+        assert model_utils.fetch_live_openai_compatible_models(user_id) == []
+    else:
+        with pytest.raises(RuntimeVariableError, match="Account lookup refused"):
+            get_provider_variable_value(user_id, "OLLAMA_BASE_URL")
 
 
 @pytest.fixture(autouse=True)

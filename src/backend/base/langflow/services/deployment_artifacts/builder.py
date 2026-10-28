@@ -711,7 +711,7 @@ def mcp_config_url(config: dict[str, Any]) -> object:
 
 def _mcp_config_requirements(
     server_name: object, config: object
-) -> tuple[set[str], set[ProjectArtifactRequiredMcpProject]]:
+) -> tuple[set[str], set[ProjectArtifactRequiredMcpProject], dict[str, str]]:
     """Read one server's config for the variables and the project it depends on.
 
     Mirrors what ``strip_config_secrets`` touches, so the two cannot drift: the
@@ -729,11 +729,14 @@ def _mcp_config_requirements(
     carried -- and it is the authoring plane's key, which the target must never be
     asked to hold. Declaring it refuses every internal connection for a variable
     nobody should set.
+
+    Literal values are returned only for alias validation and are never exported.
     """
     variables: set[str] = set()
     projects: set[ProjectArtifactRequiredMcpProject] = set()
+    literals: dict[str, str] = {}
     if not isinstance(config, dict) or not isinstance(server_name, str) or not server_name:
-        return variables, projects
+        return variables, projects, literals
     url = mcp_config_url(config)
     url_variables = set(GLOBAL_VARIABLE_PLACEHOLDER_PATTERN.findall(url)) if isinstance(url, str) else set()
     if url_variable := variable_reference_name(url):
@@ -744,7 +747,7 @@ def _mcp_config_requirements(
         # asks for something harmless; the other way mints a key for a stranger.
         variables.update(url_variables)
     elif project_id := project_id_from_mcp_url(url):
-        return variables, {ProjectArtifactRequiredMcpProject(server_name=server_name, project_id=project_id)}
+        return variables, {ProjectArtifactRequiredMcpProject(server_name=server_name, project_id=project_id)}, literals
     for key in MCP_SECRET_CONFIG_MAPS:
         entries = config.get(key)
         if not isinstance(entries, dict):
@@ -759,8 +762,34 @@ def _mcp_config_requirements(
             # is already a reference keeps its name; a literal read from the address
             # book is declared under the name the scrubber would have given it, because
             # that is the name it travels as.
-            variables.add(variable_reference_name(entry_value) or variable_name_for(server_name, str(entry_key)))
-    return variables, projects
+            reference = variable_reference_name(entry_value)
+            name = reference or variable_name_for(server_name, str(entry_key))
+            variables.add(name)
+            if reference is None and isinstance(entry_value, str):
+                if name in literals and literals[name] != entry_value:
+                    msg = "conflicting MCP credential aliases"
+                    raise ProjectArtifactError(msg)
+                literals[name] = entry_value
+    return variables, projects, literals
+
+
+def _literal_mcp_variable_names(
+    snapshots: Iterable[_FlowSnapshot], registered: Mapping[str, dict[str, Any]] | None
+) -> frozenset[str]:
+    """Verify generated aliases across the project, returning only their names."""
+    literals: dict[str, str] = {}
+    for snapshot in snapshots:
+        for value in iter_mcp_field_values(snapshot.payload.get("data")):
+            name = value.get("name")
+            _, _, field_literals = _mcp_config_requirements(
+                name, effective_mcp_config(name, value.get("config"), registered)
+            )
+            for alias, literal in field_literals.items():
+                if alias in literals and literals[alias] != literal:
+                    msg = "conflicting MCP credential aliases"
+                    raise ProjectArtifactError(msg)
+                literals[alias] = literal
+    return frozenset(literals)
 
 
 def iter_mcp_field_values(flow_data: object) -> Iterator[dict[str, Any]]:
@@ -877,7 +906,7 @@ def _collect_mcp_requirements(
     projects: set[ProjectArtifactRequiredMcpProject] = set()
     for value in iter_mcp_field_values(flow_data):
         name = value.get("name")
-        field_variables, field_projects = _mcp_config_requirements(
+        field_variables, field_projects, _ = _mcp_config_requirements(
             name, effective_mcp_config(name, value.get("config"), registered)
         )
         variables.update(field_variables)
@@ -982,22 +1011,34 @@ async def _known_variable_kinds(
 async def _export_variable_metadata(
     session: AsyncSession, owner_id: UUID | None
 ) -> tuple[frozenset[str], dict[str, Literal["secret", "plain"] | None] | None]:
-    if not get_settings_service().settings.deployment_typed_variables_enabled:
+    settings = get_settings_service().settings
+    if not settings.deployment_typed_variables_enabled:
         return await _known_variable_names(session, owner_id), None
+    if settings.variable_store != "db":
+        msg = "Typed deployment variables require the database variable store"
+        raise ProjectArtifactError(msg)
     kinds = await _known_variable_kinds(session, owner_id)
     return frozenset(kinds), kinds
 
 
 def _variable_declarations(
-    names: Iterable[str], kinds: Mapping[str, Literal["secret", "plain"] | None] | None
+    names: Iterable[str],
+    kinds: Mapping[str, Literal["secret", "plain"] | None] | None,
+    *,
+    literal_mcp_names: Collection[str] = (),
 ) -> tuple[ProjectArtifactRequiredVariable, ...]:
     if kinds is None:
         return ()
-    names = set(names)
-    if names - kinds.keys():
-        msg = "required variable metadata is unavailable"
-        raise ProjectArtifactError(msg)
-    return tuple(ProjectArtifactRequiredVariable(name=name, kind=kinds[name]) for name in sorted(names))
+    declarations: list[ProjectArtifactRequiredVariable] = []
+    for name in sorted(set(names)):
+        kind = kinds.get(name)
+        if name in literal_mcp_names:
+            if name in kinds and kind != "secret":
+                msg = "conflicting variable kinds"
+                raise ProjectArtifactError(msg)
+            kind = "secret"
+        declarations.append(ProjectArtifactRequiredVariable(name=name, kind=kind))
+    return tuple(declarations)
 
 
 def _merge_variable_declarations(
@@ -1294,6 +1335,9 @@ def _build_archive(
         _json_string_size(snapshot.name)
 
     external_mcp: dict[str, ProjectArtifactExternalMcpServer] = {}
+    literal_mcp_names = (
+        _literal_mcp_variable_names(snapshots, registered_mcp_servers) if variable_kinds is not None else frozenset()
+    )
     for snapshot in snapshots:
         path = f"flows/{snapshot.flow_id}.json"
         # Read from the payload as saved, before scrubbing: the packaged graph below
@@ -1337,7 +1381,9 @@ def _build_archive(
                 required_mcp_variables=mcp_requirements.variables,
                 required_mcp_projects=mcp_requirements.projects,
                 required_variable_declarations=_variable_declarations(
-                    (*required_variables, *mcp_requirements.variables), variable_kinds
+                    (*required_variables, *mcp_requirements.variables),
+                    variable_kinds,
+                    literal_mcp_names=literal_mcp_names,
                 ),
                 version_id=snapshot.version_id,
             )
@@ -2219,6 +2265,9 @@ def _build_deployment_snapshot_flows(
     required_connections_by_handle: dict[tuple[str, str], set[str]] = {}
     model_requirements: list[_ModelRequirements] = []
     mcp_requirements: list[_McpRequirements] = []
+    literal_mcp_names = (
+        _literal_mcp_variable_names(snapshots, registered_mcp_servers) if variable_kinds is not None else frozenset()
+    )
     expanded_size = initial_expanded_bytes
     for snapshot in snapshots:
         _json_string_size(snapshot.name)
@@ -2277,7 +2326,9 @@ def _build_deployment_snapshot_flows(
                 gradient=snapshot.payload.get("gradient"),
                 required_variables=variable_references,
                 required_variable_declarations=_variable_declarations(
-                    (*variable_references, *flow_mcp_requirements.variables), variable_kinds
+                    (*variable_references, *flow_mcp_requirements.variables),
+                    variable_kinds,
+                    literal_mcp_names=literal_mcp_names,
                 ),
             )
         )

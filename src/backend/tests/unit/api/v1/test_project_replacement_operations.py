@@ -134,6 +134,7 @@ async def test_activation_guard_failure_rolls_back_flows_variables_and_receipt(
         raise HTTPException(status_code=409, detail="readiness failed")
 
     monkeypatch.setattr(activation, "_activation_guard", refuse_after_variable_write)
+    monkeypatch.setattr(activation, "_extensions_loaded", True)
     operation_id = uuid4()
     response = await client.put(
         f"api/v1/projects/{project['id']}/replacement-operations/{operation_id}",
@@ -159,6 +160,7 @@ async def test_variable_activation_without_extension_fails_closed(
     from langflow.services.deployment_artifacts import activation
 
     monkeypatch.setattr(activation, "_activation_guard", None)
+    monkeypatch.setattr(activation, "_extensions_loaded", True)
     project = await _create_project(active_user)
     response = await client.put(
         f"api/v1/projects/{project['id']}/replacement-operations/{uuid4()}",

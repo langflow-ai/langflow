@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import zipfile
+from dataclasses import asdict
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -13,6 +14,7 @@ from langflow.api.v1 import projects
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deployment_artifacts import builder
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
+from langflow.utils.mcp_config_secrets import variable_name_for
 from lfx.services.settings.base import Settings
 
 from .test_project_artifact import MODULE, _flow, _session_with_flows, _snapshot_session_for_flows
@@ -26,6 +28,35 @@ def test_typed_deployment_variables_are_disabled_by_default(monkeypatch):
 def test_typed_deployment_variables_can_be_enabled(monkeypatch):
     monkeypatch.setenv("LANGFLOW_DEPLOYMENT_TYPED_VARIABLES_ENABLED", "true")
     assert Settings().deployment_typed_variables_enabled is True
+
+
+@pytest.mark.asyncio
+async def test_typed_metadata_rejects_kubernetes_store_before_querying_database():
+    settings = SimpleNamespace(deployment_typed_variables_enabled=True, variable_store="kubernetes")
+    with (
+        patch(f"{MODULE}.get_settings_service", return_value=SimpleNamespace(settings=settings)),
+        patch(f"{MODULE}._known_variable_kinds", new_callable=AsyncMock, return_value={}) as query_kinds,
+        pytest.raises(
+            builder.ProjectArtifactError, match="Typed deployment variables require the database variable store"
+        ),
+    ):
+        await builder._export_variable_metadata(AsyncMock(), uuid4())
+    query_kinds.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_untyped_metadata_preserves_kubernetes_variable_names():
+    owner_id = uuid4()
+    session = AsyncMock()
+    settings = SimpleNamespace(deployment_typed_variables_enabled=False, variable_store="kubernetes")
+    service = SimpleNamespace(list_variables=AsyncMock(return_value=["KUBERNETES_KEY"]))
+    with (
+        patch(f"{MODULE}.get_settings_service", return_value=SimpleNamespace(settings=settings)),
+        patch(f"{MODULE}.get_variable_service", return_value=service),
+    ):
+        assert await builder._export_variable_metadata(session, owner_id) == (frozenset({"KUBERNETES_KEY"}), None)
+    service.list_variables.assert_awaited_once_with(user_id=owner_id, session=session)
+    session.exec.assert_not_awaited()
 
 
 def _bound_flow(owner_id, project_id, names):
@@ -48,8 +79,14 @@ def _bound_flow(owner_id, project_id, names):
     return flow
 
 
-async def _typed_export(project, flows, kinds, *, snapshot=False):
+async def _typed_export(project, flows, kinds, *, snapshot=False, registered_mcp_servers=None):
     session = _snapshot_session_for_flows(project, flows) if snapshot else _session_with_flows(flows)
+    if registered_mcp_servers is not None:
+        query_results = list(session.exec.side_effect)
+        query_results[-2 if snapshot else -1].all.return_value = [
+            SimpleNamespace(name=name, config=config) for name, config in registered_mcp_servers.items()
+        ]
+        session.exec.side_effect = query_results
     with (
         patch(f"{MODULE}.authorized_or_owner_scoped", new_callable=AsyncMock, return_value=project),
         patch(f"{MODULE}.ensure_project_permission", new_callable=AsyncMock),
@@ -59,6 +96,7 @@ async def _typed_export(project, flows, kinds, *, snapshot=False):
             return_value=SimpleNamespace(
                 settings=SimpleNamespace(
                     deployment_typed_variables_enabled=True,
+                    variable_store="db",
                 )
             ),
         ),
@@ -189,10 +227,99 @@ def test_merge_variable_declarations_rejects_conflicting_kinds():
         )
 
 
-def test_typed_declarations_refuse_unverified_mcp_names_without_echoing_them():
-    with pytest.raises(builder.ProjectArtifactError, match="required variable metadata is unavailable") as raised:
-        builder._variable_declarations(["UNVERIFIED_PRIVATE_NAME"], {})
-    assert "UNVERIFIED_PRIVATE_NAME" not in str(raised.value)
+def test_typed_declarations_keep_unknown_mcp_names_unresolved():
+    assert builder._variable_declarations(["UNKNOWN_MCP_NAME"], {}) == (
+        builder.ProjectArtifactRequiredVariable(name="UNKNOWN_MCP_NAME", kind=None),
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("snapshot", [False, True])
+async def test_typed_export_declares_literal_mcp_credentials_without_values(snapshot):
+    owner_id = uuid4()
+    project = Folder(id=uuid4(), name="Literal MCP requirements", user_id=owner_id)
+    flow = _bound_flow(owner_id, project.id, [])
+    flow.data["nodes"][0]["data"]["node"]["template"]["mcp_server"] = {"type": "mcp", "value": {"name": "demo"}}
+    credential_value = "literal-credential-never-exported"
+    registered = {
+        "demo": {
+            "url": "https://example.com/mcp",
+            "headers": {"Authorization": credential_value, "X-Known": "{{KNOWN}}", "X-Missing": "{{MISSING}}"},
+        }
+    }
+    exported = await _typed_export(
+        project, [flow], {"KNOWN": "plain"}, snapshot=snapshot, registered_mcp_servers=registered
+    )
+    if snapshot:
+        declarations = [asdict(item) for item in exported.required_variable_declarations]
+        exported_text = json.dumps(asdict(exported), default=str)
+    else:
+        declarations = _manifest(exported)["required_variable_declarations"]
+        with zipfile.ZipFile(io.BytesIO(exported.content)) as archive:
+            exported_text = "".join(archive.read(name).decode() for name in archive.namelist())
+    assert declarations == sorted(
+        [
+            {"name": "KNOWN", "kind": "plain"},
+            {"name": "MISSING", "kind": None},
+            {"name": variable_name_for("demo", "Authorization"), "kind": "secret"},
+        ],
+        key=lambda item: item["name"],
+    )
+    assert credential_value not in exported_text
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("snapshot", [False, True])
+async def test_typed_export_rejects_literal_mcp_alias_with_plain_variable(snapshot):
+    owner_id = uuid4()
+    project = Folder(id=uuid4(), name="Conflicting MCP requirements", user_id=owner_id)
+    flow = _bound_flow(owner_id, project.id, [])
+    flow.data["nodes"][0]["data"]["node"]["template"]["mcp_server"] = {"type": "mcp", "value": {"name": "demo"}}
+    registered = {"demo": {"url": "https://example.com/mcp", "headers": {"Authorization": "literal-credential"}}}
+    with pytest.raises(builder.ProjectArtifactError, match="conflicting variable kinds"):
+        await _typed_export(
+            project,
+            [flow],
+            {variable_name_for("demo", "Authorization"): "plain"},
+            snapshot=snapshot,
+            registered_mcp_servers=registered,
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("snapshot", [False, True])
+async def test_typed_export_rejects_conflicting_literal_mcp_alias_values(snapshot):
+    owner_id = uuid4()
+    project = Folder(id=uuid4(), name="Conflicting MCP credentials", user_id=owner_id)
+    flow = _bound_flow(owner_id, project.id, [])
+    flow.data["nodes"][0]["data"]["node"]["template"]["mcp_server"] = {"type": "mcp", "value": {"name": "demo"}}
+    registered = {
+        "demo": {
+            "url": "https://example.com/mcp",
+            "headers": {"TOKEN": "first-literal-credential"},
+            "env": {"TOKEN": "second-literal-credential"},
+        }
+    }
+    with pytest.raises(builder.ProjectArtifactError, match="conflicting MCP credential aliases") as raised:
+        await _typed_export(project, [flow], {}, snapshot=snapshot, registered_mcp_servers=registered)
+    assert "literal-credential" not in str(raised.value)
+
+
+@pytest.mark.asyncio
+async def test_typed_artifact_rejects_conflicting_literal_mcp_aliases_across_flows():
+    owner_id = uuid4()
+    project = Folder(id=uuid4(), name="Conflicting flow credentials", user_id=owner_id)
+    flows = [_bound_flow(owner_id, project.id, []) for _ in range(2)]
+    for index, flow in enumerate(flows):
+        flow.data["nodes"][0]["data"]["node"]["template"]["mcp_server"] = {
+            "type": "mcp",
+            "value": {
+                "name": "demo",
+                "config": {"url": "https://example.com/mcp", "headers": {"Authorization": f"credential-{index}"}},
+            },
+        }
+    with pytest.raises(builder.ProjectArtifactError, match="conflicting MCP credential aliases"):
+        await _typed_export(project, flows, {})
 
 
 @pytest.mark.asyncio

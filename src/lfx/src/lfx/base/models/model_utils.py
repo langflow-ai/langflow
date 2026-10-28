@@ -498,7 +498,14 @@ def get_provider_variable_value(user_id: UUID | str | None, variable_key: str) -
                 # treat absence as "no value" rather than propagating.
                 return None
 
-    return _to_str(run_until_complete(_get_variable())) or _environment_variable_value(variable_key)
+    try:
+        value = run_until_complete(_get_variable())
+    except RuntimeVariableError as exc:
+        if exc.reason not in {"absent", "variable_not_approved"}:
+            raise
+        # An account policy's absence must not resolve from a shared environment.
+        return None
+    return _to_str(value) or _environment_variable_value(variable_key)
 
 
 def fetch_live_ollama_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
