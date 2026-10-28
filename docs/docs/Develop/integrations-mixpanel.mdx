@@ -1,0 +1,72 @@
+---
+title: Mixpanel
+slug: /integrations-mixpanel
+---
+
+[Mixpanel Agent Intelligence](https://docs.mixpanel.com/docs/agent-intelligence) turns LLM traces into Mixpanel events tied to the end user who made the request, so you can analyze flow runs, model usage, token counts, and errors next to your product analytics.
+
+You can configure Langflow to send OpenTelemetry traces of your flow executions to Mixpanel.
+Each flow run produces a root span, one span per component, and a span for each LLM call and tool call made through LangChain.
+
+## Prerequisites
+
+- A [Mixpanel project](https://docs.mixpanel.com/docs/orgs-and-projects/managing-projects) and its project token
+- A [running Langflow server](/get-started-installation) with a [flow](/concepts-flows) that you want to trace
+
+:::tip
+If you need a flow to test the Mixpanel integration, see the [Langflow quickstart](/get-started-quickstart).
+:::
+
+## Integrate Mixpanel with Langflow
+
+1. In Mixpanel, copy the project token from your project settings.
+
+2. Set the following environment variables in the same environment where you run Langflow:
+
+    ```bash
+    export MIXPANEL_PROJECT_TOKEN="your-project-token"
+    export MIXPANEL_REGION="us"
+    ```
+
+    | Variable | Description |
+    |----------|-------------|
+    | `MIXPANEL_PROJECT_TOKEN` | Required. The project token. Setting it enables the integration. |
+    | `MIXPANEL_REGION` | Optional. The data residency region of your project: `us`, `eu`, or `in`. Default: `us`. |
+    | `MIXPANEL_ENDPOINT` | Optional. A full OTLP traces URL that replaces the regional endpoint, for example a proxy. |
+    | `MIXPANEL_CAPTURE_CONTENT` | Optional. Set to `true` to send component inputs and outputs, prompts, completions, and tool arguments. Default: `false`. |
+
+3. Start Langflow in the same terminal or environment where you set the environment variables:
+
+    ```bash
+    uv run langflow run
+    ```
+
+4. Run a flow with the Langflow API and pass the end user's ID in the `user_id` field of the request body:
+
+    ```bash
+    curl -X POST \
+      "$LANGFLOW_SERVER_URL/api/v1/run/$FLOW_ID" \
+      -H "Content-Type: application/json" \
+      -H "x-api-key: $LANGFLOW_API_KEY" \
+      -d '{
+        "input_value": "Tell me a story",
+        "session_id": "chat-123",
+        "user_id": "user-123"
+      }'
+    ```
+
+    Mixpanel attributes each span to the `user.id` attribute and drops spans that don't have one.
+    Langflow sets `user.id` only from the `user_id` field, so runs without it, including Playground runs, don't appear in Mixpanel.
+    The authenticated Langflow user, such as the owner of the API key, is sent as `langflow.user_id` instead, so that every end user of a shared API key isn't counted as one user.
+
+5. In Mixpanel, open **Agent Intelligence** to view the traced runs.
+
+## Prompt and completion content
+
+By default, Langflow sends span names, timing, status, model names, and token counts, but not the text of inputs, outputs, prompts, or completions.
+Set `MIXPANEL_CAPTURE_CONTENT=true` to include them.
+Review your privacy requirements before you enable content capture, because the content can include personal data that your users enter.
+
+## Disable the Mixpanel integration
+
+To disable the Mixpanel integration, remove the `MIXPANEL_PROJECT_TOKEN` environment variable, and then restart Langflow.

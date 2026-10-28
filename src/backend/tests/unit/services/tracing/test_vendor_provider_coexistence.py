@@ -8,13 +8,14 @@ the global provider and FastAPIInstrumentor's HTTP spans started landing in Lang
 The vendors that are OpenTelemetry-based avoid this by building their own isolated provider
 (``langfuse.py`` passes ``tracer_provider=``, ``langwatch.py`` sets
 ``skip_open_telemetry_setup=True``, ``arize_phoenix.py`` hands its provider to the
-instrumentors), and ``langsmith.py`` does the same for its OpenTelemetry transports. The three
-that are not OpenTelemetry-based in the mode covered here (langsmith over REST, openlayer, opik)
-have no provider at all. Either way the property is the same and is what this pins: after
-constructing the vendor's tracer, the global provider is still the object the bootstrap
-installed, and the vendor is still receiving its own traces.
+instrumentors, ``mixpanel.py`` exports through a provider of its own), and ``langsmith.py``
+does the same for its OpenTelemetry transports. The three that are not OpenTelemetry-based in
+the mode covered here (langsmith over REST, openlayer, opik) have no provider at all. Either
+way the property is the same and is what this pins: after constructing the vendor's tracer,
+the global provider is still the object the bootstrap installed, and the vendor is still
+receiving its own traces.
 
-Two of the eight registered tracers are absent. Traceloop is the one vendor that does *not* hold
+Two of the nine registered tracers are absent. Traceloop is the one vendor that does *not* hold
 this property, since it adopts whichever provider is global, and it has its own test file.
 ``native`` writes to Langflow's own database and imports no OpenTelemetry at all, so a case for
 it would pass without exercising anything.
@@ -89,6 +90,15 @@ _VENDORS = {
         "env": {
             "LANGWATCH_API_KEY": "probe-key",  # pragma: allowlist secret
             "LANGWATCH_ENDPOINT": "http://127.0.0.1:{vendor_port}",
+        },
+    },
+    "mixpanel": {
+        "requires": "opentelemetry.exporter.otlp.proto.http",
+        "module": "langflow.services.tracing.mixpanel",
+        "cls": "MixpanelTracer",
+        "env": {
+            "MIXPANEL_PROJECT_TOKEN": "probe-token",
+            "MIXPANEL_ENDPOINT": "http://127.0.0.1:{vendor_port}/v1/ai/otel/traces",
         },
     },
     "openlayer": {
@@ -252,7 +262,7 @@ def _run(vendor: str, probe: str) -> dict:
     # developer's shell (OTEL_TRACES_EXPORTER=none, a real LANGFUSE_HOST) would route exporters
     # away from the loopback stubs or point a client at a real backend.
     prefixes = ("OTEL_", "LANGFUSE_", "LANGCHAIN_", "LANGSMITH_", "LANGWATCH_", "PHOENIX_", "ARIZE_")
-    prefixes += ("OPENLAYER_", "OPIK_", "COMET_", "TRACELOOP_")
+    prefixes += ("OPENLAYER_", "OPIK_", "COMET_", "TRACELOOP_", "MIXPANEL_")
     env = {k: v for k, v in os.environ.items() if not k.startswith(prefixes)}
     # A developer's proxy would swallow the loopback traffic these assertions read.
     env = {k: v for k, v in env.items() if k.upper() not in {"HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"}}

@@ -159,6 +159,10 @@ def mock_tracers():
             "langflow.services.tracing.service._get_openlayer_tracer",
             return_value=MockTracer,
         ),
+        patch(
+            "langflow.services.tracing.service._get_mixpanel_tracer",
+            return_value=MockTracer,
+        ),
     ):
         yield
 
@@ -193,6 +197,7 @@ async def test_start_end_tracers(tracing_service):
     assert "traceloop" in trace_context.tracers
     assert "native" in trace_context.tracers
     assert "openlayer" in trace_context.tracers
+    assert "mixpanel" in trace_context.tracers
 
     await tracing_service.end_tracers(outputs)
 
@@ -229,6 +234,7 @@ async def test_start_tracers_continues_after_one_initializer_fails(tracing_servi
         "traceloop",
         "native",
         "openlayer",
+        "mixpanel",
     }
 
     await tracing_service.end_tracers({})
@@ -273,6 +279,19 @@ async def test_start_tracers_without_override_keeps_auth_user_and_no_tracing_use
     langfuse = trace_context_var.get().tracers["langfuse"]
     assert langfuse.user_id == "auth-uuid"
     assert langfuse.tracing_user_id is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("mock_tracers")
+async def test_start_tracers_forwards_tracing_user_id_to_mixpanel(tracing_service):
+    await tracing_service.start_tracers(
+        uuid.uuid4(), "run", "auth-uuid", "session-abc", "project", tracing_user_id="end-user-123"
+    )
+
+    mixpanel = trace_context_var.get().tracers["mixpanel"]
+    assert mixpanel.user_id == "auth-uuid"
+    assert mixpanel.tracing_user_id == "end-user-123"
+    assert mixpanel.session_id == "session-abc"
 
 
 @pytest.mark.asyncio
