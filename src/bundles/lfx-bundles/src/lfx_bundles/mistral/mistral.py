@@ -1,3 +1,5 @@
+import os
+
 import httpx
 from langchain_mistralai import ChatMistralAI
 from lfx.base.models.model import LCModelComponent
@@ -97,7 +99,7 @@ class MistralAIModelComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
-        api_key = SecretStr(self.api_key).get_secret_value() if self.api_key else None
+        api_key = SecretStr(self.api_key).get_secret_value() if self.api_key else os.getenv("MISTRAL_API_KEY")
         endpoint = self.mistral_api_base or DEFAULT_MISTRAL_ENDPOINT
         ensure_credential_endpoint_allowed(
             api_key, endpoint, default_url=DEFAULT_MISTRAL_ENDPOINT, sdk_env_fallback="MISTRAL_API_KEY"
@@ -108,8 +110,9 @@ class MistralAIModelComponent(LCModelComponent):
             headers = {
                 "Content-Type": "application/json",
                 "Accept": "application/json",
-                "Authorization": f"Bearer {api_key}",
             }
+            if api_key:
+                headers["Authorization"] = f"Bearer {api_key}"
             client_kwargs["client"] = httpx.Client(
                 base_url=endpoint, headers=headers, timeout=self.timeout, **sync_kwargs
             )

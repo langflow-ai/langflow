@@ -123,7 +123,7 @@ def test_connection_sdk_construction_has_destination_guards() -> None:
                 calls.add(f"{node.func.value.id}.{node.func.attr}")
         if not calls & _CONNECTION_SDK_NAMES:
             continue
-        relative = str(path.relative_to(root))
+        relative = path.relative_to(root).as_posix()
         found.add(relative)
         assert relative in _CONNECTION_SDK_GUARDS, f"Register destination guards for {relative}"
         assert _CONNECTION_SDK_GUARDS[relative] <= calls

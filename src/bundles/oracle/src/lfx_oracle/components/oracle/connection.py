@@ -81,6 +81,7 @@ def _validate_connection_targets(params: dict[str, Any]) -> dict[str, Any]:
     if not hosts or not all(hosts):
         msg = "Oracle connection string must contain a network host."
         raise SSRFProtectionError(msg)
+    # Hostname validation does not pin DNS. The driver may resolve these hosts again when connecting.
     for host in [*hosts, *proxies, params.get("host"), params.get("https_proxy")]:
         if host:
             validate_connector_hostname_for_ssrf(host)
