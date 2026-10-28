@@ -379,6 +379,47 @@ async def test_should_reject_unresolved_flow_credential_masks(
         assert variable_name_for(server_name, "Content-Type") not in names
 
 
+async def test_should_reject_a_carried_config_the_server_api_rejects(
+    client: AsyncClient, logged_in_headers, active_user
+):
+    """A flow must not store a server config that the create route would refuse."""
+    server_name = f"invalid-{uuid.uuid4().hex[:6]}"
+    config = {"command": "python", "args": ["-c", "pass"], "env": {"API_TOKEN": SECRET}}
+    create = await client.post(f"api/v2/mcp/servers/{server_name}", json=config, headers=logged_in_headers)
+    assert create.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, create.text
+
+    response = await client.post("api/v1/flows/", json=_flow_payload(server_name, config), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    assert [error["msg"] for error in response.json()["detail"]] == [error["msg"] for error in create.json()["detail"]]
+    assert SECRET not in response.text
+    async with session_scope() as session:
+        assert await get_server(server_name, active_user, session, None, None) is None
+        names = await get_variable_service().list_variables(active_user.id, session)
+        assert variable_name_for(server_name, "API_TOKEN") not in names
+
+
+async def test_should_reject_a_rotation_that_breaks_the_stored_config(
+    client: AsyncClient, logged_in_headers, active_user
+):
+    """Rotating a credential from a flow must leave a server config the create route would accept."""
+    server_name = f"rotate-invalid-{uuid.uuid4().hex[:6]}"
+    config = {"command": "uvx", "args": ["mcp-server-fetch"], "env": {"API_TOKEN": SECRET}}
+    flow, _ = await _saved_flow(client, logged_in_headers, server_name, config)
+
+    payload = _flow_payload(server_name, {**config, "env": {"NODE_OPTIONS": "--max-old-space-size=512"}})
+    response = await client.patch(
+        f"api/v1/flows/{flow['id']}", json={"data": payload["data"]}, headers=logged_in_headers
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    assert "NODE_OPTIONS" in response.text
+    async with session_scope() as session:
+        assert await get_server(server_name, active_user, session, None, None) == config
+        names = await get_variable_service().list_variables(active_user.id, session)
+        assert variable_name_for(server_name, "NODE_OPTIONS") not in names
+
+
 async def test_should_not_resolve_flow_masks_from_another_users_server(
     client: AsyncClient, logged_in_headers, active_user, user_two
 ):

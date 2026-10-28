@@ -18,6 +18,7 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
+from langflow.api.v2.mcp import validate_mcp_server_config
 from langflow.logging import logger
 from langflow.services.auth.mcp_encryption import (
     MCP_CONFIG_VALUE_MASK,
@@ -289,6 +290,14 @@ async def stage_mcp_secrets(
             resolved_config = restore_mcp_config_secrets(config, previous)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+        # Validate what will be stored before any write: on SQLite the variables' savepoints
+        # commit as they are released, so a refusal after them would leave them behind.
+        if previous is None:
+            validate_mcp_server_config(resolved_config)
+        elif rotatable_servers and name in rotatable_servers:
+            rotated = _rotated_config(previous, resolved_config)
+            if rotated is not None:
+                validate_mcp_server_config(rotated)
         _, config_variables, _ = strip_config_secrets(resolved_config, name)
         for variable_name, value in config_variables.items():
             if resolved_variables.get(variable_name) == MCP_CONFIG_VALUE_MASK:
@@ -397,17 +406,21 @@ async def _ensure_variables(variables: dict[str, str], user_id: UUID, session) -
     return failed
 
 
-def _apply_rotated_secrets(existing: MCPServer, config: dict[str, Any]) -> None:
-    """Overwrite only the secret-bearing maps of a stored server config."""
-    stored = decrypt_mcp_config(existing.config or {})
-    changed = False
+def _rotated_config(stored: dict[str, Any], config: dict[str, Any]) -> dict[str, Any] | None:
+    """``stored`` with the secret-bearing maps that ``config`` carries, or None when nothing changes."""
+    rotated = dict(stored)
     for key in MCP_SECRET_CONFIG_MAPS:
         incoming = config.get(key)
-        if isinstance(incoming, dict) and incoming and stored.get(key) != incoming:
-            stored[key] = incoming
-            changed = True
-    if changed:
-        existing.config = encrypt_mcp_config(stored)
+        if isinstance(incoming, dict) and incoming:
+            rotated[key] = incoming
+    return rotated if rotated != stored else None
+
+
+def _apply_rotated_secrets(existing: MCPServer, config: dict[str, Any]) -> None:
+    """Overwrite only the secret-bearing maps of a stored server config."""
+    rotated = _rotated_config(decrypt_mcp_config(existing.config or {}), config)
+    if rotated is not None:
+        existing.config = encrypt_mcp_config(rotated)
 
 
 async def _rotate_variable(variable_service, name: str, value: str, user_id: UUID, session) -> bool:
