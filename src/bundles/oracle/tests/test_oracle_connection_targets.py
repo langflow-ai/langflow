@@ -53,24 +53,24 @@ def test_rejects_public_hostname_resolving_to_internal_host():
 
 def test_allows_public_host_and_preserves_connection_arguments():
     with patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]):
-        assert build_connection_params(dsn="db.example.test:1521/service", user="user") == {
-            "dsn": "db.example.test:1521/service",
-            "user": "user",
-        }
+        params = build_connection_params(dsn="db.example.test:1521/service", user="user")
+    assert params["user"] == "user"
+    assert "HOST=db.example.test" in params["dsn"]
 
 
 def test_allows_operator_approved_internal_host(monkeypatch):
     monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "10.1.2.3")
-    assert build_connection_params(dsn="10.1.2.3:1521/service")["dsn"] == "10.1.2.3:1521/service"
+    assert "HOST=10.1.2.3" in build_connection_params(dsn="10.1.2.3:1521/service")["dsn"]
 
 
-def test_materializes_validated_alias(tmp_path):
+@pytest.mark.parametrize("alias", ["LOCAL", "SAFE:ALIAS", '"SAFE/ALIAS"'])
+def test_materializes_validated_alias(tmp_path, alias):
     (tmp_path / "tnsnames.ora").write_text(
-        "LOCAL=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=127.0.0.1)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=service)))"
+        f"{alias}=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=127.0.0.1)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=service)))"
     )
-    params = build_connection_params({"config_dir": str(tmp_path)}, dsn="LOCAL")
+    params = build_connection_params({"config_dir": str(tmp_path)}, dsn=alias)
     assert "HOST=127.0.0.1" in params["dsn"]
-    assert params["dsn"] != "LOCAL"
+    assert params["dsn"] != alias
 
 
 def test_rejects_remote_configuration_protocol_before_parsing():

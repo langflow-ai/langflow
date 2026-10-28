@@ -22,6 +22,7 @@ from lfx.schema.data import Data
 from lfx_oracle.components.oracle import OracleVectorStoreComponent
 from lfx_oracle.components.oracle.connection import build_connection_params, split_credentialized_dsn
 from oracle_test_utils import (
+    get_oracle_connect_string,
     get_oracle_connection_inputs,
     get_oracle_connection_params,
     get_oracle_embedding_params,
@@ -87,7 +88,7 @@ def test_connection_params_allows_non_secret_sharding_keys() -> None:
     )
 
     assert params == {
-        "dsn": "host/service",
+        "dsn": get_oracle_connect_string("host/service"),
         "shardingkey": ["tenant"],
         "supershardingkey": ["region"],
     }
@@ -101,7 +102,7 @@ def test_build_connection_params_parses_credentials_from_dsn() -> None:
 
     assert params == {
         "config_dir": "/wallet/config",
-        "dsn": "host/service",
+        "dsn": get_oracle_connect_string("host/service"),
         "password": "p" + "@ssword",
         "user": "user",
     }

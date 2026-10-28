@@ -85,8 +85,8 @@ def _validate_connection_targets(params: dict[str, Any]) -> dict[str, Any]:
         if host:
             validate_connector_hostname_for_ssrf(host)
 
-    if dsn and not any(character in dsn for character in "/:("):
-        # Freeze aliases after validation so another lookup cannot choose a different host.
+    if dsn:
+        # Freeze the parsed address so aliases cannot be resolved again during connection.
         params = {**params, "dsn": parsed.get_connect_string()}
     return params
 

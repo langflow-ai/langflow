@@ -6,6 +6,14 @@ from typing import Any
 from uuid import uuid4
 
 
+def get_oracle_connect_string(dsn: str) -> str:
+    import oracledb
+
+    params = oracledb.ConnectParams()
+    params.parse_connect_string(dsn)
+    return params.get_connect_string()
+
+
 def get_oracle_connection_params() -> dict[str, Any] | None:
     raw_params = os.getenv("ORACLE_CONNECTION_PARAMS")
     if raw_params:
