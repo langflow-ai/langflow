@@ -2,6 +2,7 @@ from typing import Any
 
 from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
 from lfx.base.models.model import LCModelComponent
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed, validate_provider_base_url
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, SliderInput, StrInput
@@ -12,6 +13,7 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 
 # Constants
 DEFAULT_MODEL = "meta-llama/Llama-3.3-70B-Instruct"
+DEFAULT_INFERENCE_ENDPOINT = "https://api-inference.huggingface.co/models/"
 
 
 class HuggingFaceEndpointsComponent(LCModelComponent):
@@ -91,7 +93,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         StrInput(
             name="inference_endpoint",
             display_name="Inference Endpoint",
-            value="https://api-inference.huggingface.co/models/",
+            value=DEFAULT_INFERENCE_ENDPOINT,
             info="Custom inference endpoint URL.",
             required=True,
         ),
@@ -150,6 +152,16 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
     ) -> HuggingFaceEndpoint:
         retry_attempts = self.retry_attempts
         endpoint_url = self.get_api_url()
+        default_endpoint = (
+            f"{DEFAULT_INFERENCE_ENDPOINT}{self.custom_model if self.model_id == 'custom' else self.model_id}"
+        )
+        ensure_credential_endpoint_allowed(
+            huggingfacehub_api_token or None,
+            endpoint_url,
+            default_url=default_endpoint,
+            sdk_env_fallback="HUGGINGFACEHUB_API_TOKEN",
+        )
+        validate_provider_base_url(endpoint_url, default_url=default_endpoint)
 
         @retry(stop=stop_after_attempt(retry_attempts), wait=wait_fixed(2))
         def _attempt_create():

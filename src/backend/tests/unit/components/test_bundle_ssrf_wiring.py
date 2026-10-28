@@ -73,6 +73,62 @@ def _bundles_root() -> Path:
 
 BUNDLES_ROOT = _bundles_root()
 
+_CONNECTION_SDK_GUARDS = {
+    "lfx-bundles/src/lfx_bundles/mistral/mistral.py": {
+        "provider_httpx_client_kwargs",
+        "ensure_credential_endpoint_allowed",
+    },
+    "lfx-bundles/src/lfx_bundles/huggingface/huggingface.py": {
+        "validate_provider_base_url",
+        "ensure_credential_endpoint_allowed",
+    },
+    "lfx-bundles/src/lfx_bundles/cloudflare/cloudflare.py": {
+        "validate_provider_base_url",
+        "ensure_credential_endpoint_allowed",
+    },
+    "lfx-bundles/src/lfx_bundles/unstructured/unstructured.py": {
+        "provider_httpx_client_kwargs",
+        "ensure_credential_endpoint_allowed",
+    },
+    "oracle/src/lfx_oracle/components/oracle/oraclevs.py": {"build_connection_params"},
+    "oracle/src/lfx_oracle/components/oracle/oracledb_embeddings.py": {"build_connection_params"},
+    "oracle/src/lfx_oracle/components/oracle/oracledb_loaders.py": {"build_connection_params"},
+    "ibm/src/lfx_ibm/components/ibm/db2_vector.py": {"validate_hostname"},
+}
+_CONNECTION_SDK_NAMES = {
+    "ChatMistralAI",
+    "HuggingFaceEndpoint",
+    "CompatibleCloudflareEmbeddings",
+    "UnstructuredLoader",
+    "oracledb.connect",
+    "ibm_db_dbi.connect",
+}
+
+
+def test_connection_sdk_construction_has_destination_guards() -> None:
+    """Discover these SDK constructors even when no guard has been imported."""
+    root = BUNDLES_ROOT.parents[2]
+    found = set()
+    for path in root.rglob("*.py"):
+        if "tests" in path.parts:
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        calls = set()
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            if isinstance(node.func, ast.Name):
+                calls.add(node.func.id)
+            elif isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
+                calls.add(f"{node.func.value.id}.{node.func.attr}")
+        if not calls & _CONNECTION_SDK_NAMES:
+            continue
+        relative = str(path.relative_to(root))
+        found.add(relative)
+        assert relative in _CONNECTION_SDK_GUARDS, f"Register destination guards for {relative}"
+        assert _CONNECTION_SDK_GUARDS[relative] <= calls
+    assert found == set(_CONNECTION_SDK_GUARDS)
+
 
 def _parse(rel_path: str) -> ast.Module:
     path = BUNDLES_ROOT / rel_path

@@ -3,6 +3,13 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from lfx.utils.ssrf_protection import (
+    SSRFProtectionError,
+    is_connector_ssrf_validation_enabled,
+    is_ssrf_protection_enabled,
+    validate_connector_hostname_for_ssrf,
+)
+
 _SENSITIVE_CONNECTION_PARAM_KEYS = {
     "access_token",
     "connection_string",
@@ -45,6 +52,45 @@ def split_credentialized_dsn(dsn: str) -> tuple[str | None, str | None, str]:
     return user or None, password or None, dsn_without_credentials
 
 
+def _validate_connection_targets(params: dict[str, Any]) -> dict[str, Any]:
+    """Validate every address the Oracle driver can use before connecting."""
+    if not is_connector_ssrf_validation_enabled() or not is_ssrf_protection_enabled():
+        return params
+
+    import oracledb
+
+    unsupported = {"params", "pool", "pool_alias", "conn_class", "handle", "debug_jdwp"} & params.keys()
+    if unsupported:
+        msg = "Oracle connection overrides cannot bypass destination validation."
+        raise SSRFProtectionError(msg)
+
+    dsn = params.get("dsn")
+    if isinstance(dsn, str) and "://" in dsn and not dsn.lower().startswith(("tcp://", "tcps://")):
+        msg = "Oracle connection strings must use TCP or TCPS."
+        raise SSRFProtectionError(msg)
+    try:
+        parsed = oracledb.ConnectParams(**{key: value for key, value in params.items() if key not in {"dsn", "schema"}})
+        if dsn:
+            parsed.parse_connect_string(dsn)
+    except (oracledb.Error, TypeError, ValueError) as exc:
+        msg = "Oracle connection string could not be validated. Use an Easy Connect address or a configured TNS alias."
+        raise SSRFProtectionError(msg) from exc
+
+    hosts = parsed.host if isinstance(parsed.host, list) else [parsed.host]
+    proxies = parsed.https_proxy if isinstance(parsed.https_proxy, list) else [parsed.https_proxy]
+    if not hosts or not all(hosts):
+        msg = "Oracle connection string must contain a network host."
+        raise SSRFProtectionError(msg)
+    for host in [*hosts, *proxies, params.get("host"), params.get("https_proxy")]:
+        if host:
+            validate_connector_hostname_for_ssrf(host)
+
+    if dsn and not any(character in dsn for character in "/:("):
+        # Freeze aliases after validation so another lookup cannot choose a different host.
+        params = {**params, "dsn": parsed.get_connect_string()}
+    return params
+
+
 def build_connection_params(
     connection_params: dict[str, Any] | None = None,
     *,
@@ -80,4 +126,4 @@ def build_connection_params(
     if wallet_password:
         params["wallet_password"] = wallet_password
 
-    return params
+    return _validate_connection_targets(params)
