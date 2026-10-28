@@ -1,7 +1,13 @@
 from typing import Any
+from urllib.parse import urlsplit
 
 from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
 from lfx.base.models.model import LCModelComponent
+from lfx.base.models.provider_ssrf import (
+    ensure_credential_endpoint_allowed,
+    get_provider_credential_allowed_hosts,
+    validate_provider_base_url,
+)
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, SliderInput, StrInput
@@ -12,6 +18,28 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 
 # Constants
 DEFAULT_MODEL = "meta-llama/Llama-3.3-70B-Instruct"
+DEFAULT_INFERENCE_ENDPOINT = "https://api-inference.huggingface.co/models/"
+
+
+def _validate_implicit_token_endpoint(endpoint_url: str, default_url: str) -> None:
+    """Restrict SDK-managed credentials without reading or changing the shared login state."""
+    if endpoint_url.rstrip("/") == default_url.rstrip("/"):
+        return
+    parsed = urlsplit(endpoint_url)
+    hostname = (parsed.hostname or "").lower()
+    host_port = f"{hostname}:{parsed.port}" if parsed.port else hostname
+    for entry in get_provider_credential_allowed_hosts():
+        pattern = entry.split("://", 1)[-1].rstrip("/")
+        if pattern in {hostname, host_port} or (pattern.startswith("*.") and hostname.endswith(pattern[1:])):
+            if parsed.scheme == "http" and not entry.startswith("http://"):
+                msg = "Implicit Hugging Face credentials require HTTPS unless the operator explicitly allows HTTP."
+                raise ValueError(msg)
+            return
+    msg = (
+        "Implicit Hugging Face credentials require the default endpoint or a host approved through "
+        "LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS. Set an explicit token to use another endpoint."
+    )
+    raise ValueError(msg)
 
 
 class HuggingFaceEndpointsComponent(LCModelComponent):
@@ -91,7 +119,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         StrInput(
             name="inference_endpoint",
             display_name="Inference Endpoint",
-            value="https://api-inference.huggingface.co/models/",
+            value=DEFAULT_INFERENCE_ENDPOINT,
             info="Custom inference endpoint URL.",
             required=True,
         ),
@@ -150,6 +178,19 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
     ) -> HuggingFaceEndpoint:
         retry_attempts = self.retry_attempts
         endpoint_url = self.get_api_url()
+        default_endpoint = (
+            f"{DEFAULT_INFERENCE_ENDPOINT}{self.custom_model if self.model_id == 'custom' else self.model_id}"
+        )
+        ensure_credential_endpoint_allowed(
+            huggingfacehub_api_token or None,
+            endpoint_url,
+            default_url=default_endpoint,
+            sdk_env_fallback="HUGGINGFACEHUB_API_TOKEN",
+        )
+        if not huggingfacehub_api_token:
+            # The SDK can load a login token later, even if no token exists during this check.
+            _validate_implicit_token_endpoint(endpoint_url, default_endpoint)
+        validate_provider_base_url(endpoint_url, default_url=default_endpoint)
 
         @retry(stop=stop_after_attempt(retry_attempts), wait=wait_fixed(2))
         def _attempt_create():

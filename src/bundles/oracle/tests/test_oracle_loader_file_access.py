@@ -9,7 +9,9 @@ from lfx_oracle.components.oracle.oracledb_loaders import (
     OracleAutonomousDatabaseLoaderComponent,
     OracleDocLoaderComponent,
 )
-from oracle_test_utils import get_oracle_test_connection_inputs
+from oracle_test_utils import MOCK_ORACLE_DSN, get_oracle_test_connection_inputs
+
+pytestmark = pytest.mark.usefixtures("trusted_mock_oracle_endpoint")
 
 _DOC_LOADER_OPTIONS = ("file", "dir", "config_dir", "wallet_location")
 _CONNECTION_OPTIONS = ("config_dir", "wallet_location")
@@ -33,7 +35,7 @@ def _doc_component(*, path_option: str, path: str) -> OracleDocLoaderComponent:
     else:
         connection_params[path_option] = path
     component = OracleDocLoaderComponent().set(
-        dsn="db.invalid/service",
+        dsn=MOCK_ORACLE_DSN,
         params=params,
         connection_params=connection_params,
     )
@@ -111,7 +113,7 @@ def test_oracle_doc_loader_allows_file_and_connection_paths_inside_component_sco
         "wallet_location": str(allowed / "wallet"),
     }
     component = OracleDocLoaderComponent().set(
-        dsn="db.invalid/service",
+        dsn=MOCK_ORACLE_DSN,
         params=params,
         connection_params=connection_params,
     )

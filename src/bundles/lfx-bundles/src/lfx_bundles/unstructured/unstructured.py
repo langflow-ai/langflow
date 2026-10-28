@@ -1,7 +1,15 @@
+import os
+from contextlib import ExitStack
+
+import httpx
 from langchain_unstructured import UnstructuredLoader
 from lfx.base.data.base_file import BaseFileComponent
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed, provider_httpx_client_kwargs
 from lfx.inputs.inputs import DropdownInput, MessageTextInput, NestedDictInput, SecretStrInput
 from lfx.schema.data import Data
+from unstructured_client import UnstructuredClient
+
+DEFAULT_UNSTRUCTURED_ENDPOINT = "https://api.unstructuredapp.io/general/v0/general"
 
 
 class UnstructuredComponent(BaseFileComponent):
@@ -93,22 +101,30 @@ class UnstructuredComponent(BaseFileComponent):
             return file_list
 
         # https://docs.unstructured.io/api-reference/api-services/api-parameters
-        args = self.unstructured_args or {}
+        args = dict(self.unstructured_args or {})
+        if "client" in args:
+            msg = "Set the Unstructured API URL and key instead of supplying a client."
+            raise ValueError(msg)
 
         if self.chunking_strategy:
             args["chunking_strategy"] = self.chunking_strategy
 
-        args["api_key"] = self.api_key
+        api_key = self.api_key or os.getenv("UNSTRUCTURED_API_KEY") or ""
+        endpoint = self.api_url or args.get("url") or os.getenv("UNSTRUCTURED_URL") or DEFAULT_UNSTRUCTURED_ENDPOINT
+        ensure_credential_endpoint_allowed(api_key, endpoint, default_url=DEFAULT_UNSTRUCTURED_ENDPOINT)
+        sync_kwargs, _ = provider_httpx_client_kwargs(endpoint, default_url=DEFAULT_UNSTRUCTURED_ENDPOINT)
+        args["api_key"] = api_key
         args["partition_via_api"] = True
-        if self.api_url:
-            args["url"] = self.api_url
+        args["url"] = endpoint
 
-        loader = UnstructuredLoader(
-            file_paths,
-            **args,
-        )
-
-        documents = loader.load()
+        with ExitStack() as stack:
+            if sync_kwargs:
+                client = stack.enter_context(httpx.Client(**sync_kwargs))
+                args["client"] = UnstructuredClient(api_key_auth=api_key, server_url=endpoint, client=client)
+                args.pop("api_key")
+                args.pop("url")
+            loader = UnstructuredLoader(file_paths, **args)
+            documents = loader.load()
 
         processed_data: list[Data | None] = [Data.from_document(doc) if doc else None for doc in documents]
 
