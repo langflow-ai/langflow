@@ -111,6 +111,11 @@ def _is_blocked_attribute(attr: str | None) -> bool:
 # Secret/env exfiltration is the concrete threat — components must use
 # Langflow's variable/secret service, never raw process env.
 DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
+    (
+        "lfx.custom.custom_component.component",
+        "inspect",
+        "The component module's inspect re-export is forbidden in components (runtime and file access)",
+    ),
     ("os", "environ", "os.environ is forbidden — use Langflow's variable/secret service"),
     ("os", "environb", "os.environb is forbidden. Use Langflow's variable/secret service"),
     ("gc", "garbage", "gc.garbage is forbidden in components (server object recovery)"),
@@ -313,6 +318,10 @@ DANGEROUS_IMPORTS: set[str] = {
     "codeop",
     "compileall",
     "importlib",
+    # These helpers expose live frames, arbitrary source files, or raw file readers.
+    "inspect",
+    "linecache",
+    "fileinput",
     # These profiling helpers execute source strings, bypassing AST checks on
     # the outer component (profilers, tracers, debuggers, and doctest runners).
     "timeit",
@@ -452,6 +461,11 @@ def _is_dangerous_submodule(dotted: str) -> bool:
     ``urllib.parse`` do not.
     """
     return any(dotted == prefix or dotted.startswith(prefix + ".") for prefix in DANGEROUS_SUBMODULES)
+
+
+def _is_forbidden_module_reference(dotted: str) -> bool:
+    """Whether a resolved reference belongs to a forbidden module."""
+    return dotted in DANGEROUS_IMPORTS or dotted in DANGEROUS_SUBMODULES
 
 
 def _dotted_parts(node: ast.AST) -> list[str] | None:
@@ -811,13 +825,11 @@ _RESTRICTED_MODULE_REEXPORTS: dict[str, dict[str, str]] = {
     "tempfile": {"_os": "os", "_sys": "sys"},
 }
 
-# A stdlib module that runs ``import os`` / ``import sys`` at module level
-# re-exports the real restricted module under its original name
-# (``platform.os is os``), which is how the allowlist above would otherwise be
-# bypassed (``platform.os.system(...)``). Unlike third-party modules, a
-# stdlib-rooted attribute named ``os`` or ``sys`` is near-certainly the stdlib
-# module, so canonicalize it for every stdlib host.
-_STDLIB_REEXPORTED_MODULE_NAMES: frozenset[str] = frozenset({"os", "sys"})
+# Stdlib reexports retain the original module's restrictions. For example,
+# dataclasses.inspect and traceback.linecache expose the same runtime and file
+# readers as direct imports. Third-party attributes with these names may be
+# unrelated objects, so canonicalization remains limited to stdlib hosts.
+_STDLIB_REEXPORTED_MODULE_NAMES: frozenset[str] = frozenset({"os", "sys", "inspect", "linecache", "fileinput"})
 _STDLIB_MODULE_NAMES: frozenset[str] = frozenset(sys.stdlib_module_names)
 
 
@@ -997,7 +1009,7 @@ class _SecurityChecker(ast.NodeVisitor):
             self._module_global_state = None
 
     def _resolved_member_names(self, base_names: frozenset[str], member_name: str) -> frozenset[str]:
-        """Resolve a member while canonicalizing imported modules that re-export ``os``."""
+        """Resolve a member while canonicalizing restricted stdlib reexports."""
         resolved: set[str] = set()
         for base_name in base_names:
             if member_name == "__call__":
@@ -1150,6 +1162,8 @@ class _SecurityChecker(ast.NodeVisitor):
     @staticmethod
     def _dangerous_callable_message(resolved_name: str) -> str | None:
         """Return the violation for a resolved builtin or module callable."""
+        if resolved_name.split(".")[0] in DANGEROUS_IMPORTS:
+            return f"Access to '{resolved_name}' is forbidden in components"
         if resolved_name in DANGEROUS_CALLS:
             return DANGEROUS_CALLS[resolved_name]
 
@@ -1482,7 +1496,8 @@ class _SecurityChecker(ast.NodeVisitor):
                 # `from urllib import request` / `from http import client`:
                 # the imported name *is* a blocked submodule. This also
                 # applies to packages with other restricted member names.
-                if _is_dangerous_submodule(f"{node.module}.{alias.name}"):
+                imported_name = _reexported_restricted_module(node.module, alias.name) or f"{node.module}.{alias.name}"
+                if _is_forbidden_module_reference(imported_name) or _is_dangerous_submodule(imported_name):
                     self.violations.append(f"Import of '{node.module}.{alias.name}' is forbidden in components")
 
         for alias in node.names:
@@ -2037,13 +2052,6 @@ class _SecurityChecker(ast.NodeVisitor):
                 self.violations.append(violation)
         return self.generic_visit(node)
 
-    def _resolved_dotted(self, node: ast.Attribute) -> frozenset[str]:
-        """Possible dotted names of an attribute chain, with its root alias-resolved."""
-        parts = _dotted_parts(node)
-        if not parts:
-            return frozenset()
-        return frozenset(".".join([root, *parts[1:]]) for root in self._resolved_names(parts[0]))
-
     def _resolved_receiver_names(self, node: ast.Name | ast.Attribute) -> frozenset[str]:
         """Resolve a direct or dotted module receiver to its canonical names."""
         return self._resolved_names(node.id) if isinstance(node, ast.Name) else self._resolved_assignment_value(node)
@@ -2051,7 +2059,10 @@ class _SecurityChecker(ast.NodeVisitor):
     def _dangerous_submodule_access(self, node: ast.Attribute) -> str | None:
         # Exact match (not prefix): the ``urllib.request`` node itself is visited
         # within ``urllib.request.urlopen``, so matching exactly avoids double-flagging.
-        return next((name for name in sorted(self._resolved_dotted(node)) if name in DANGEROUS_SUBMODULES), None)
+        return next(
+            (name for name in sorted(self._resolved_assignment_value(node)) if _is_forbidden_module_reference(name)),
+            None,
+        )
 
     def visit_Name(self, node: ast.Name):
         """Catch wildcard-imported reads (``from os import *``; ``environ[...]``)."""
@@ -2063,7 +2074,7 @@ class _SecurityChecker(ast.NodeVisitor):
                 if resolved_name.rsplit(".", 1)[-1] in _RUNTIME_LOADER_NAMES:
                     self.violations.append(f"Access to '{resolved_name}' is forbidden in components (runtime loader)")
                     break
-                if resolved_name in DANGEROUS_SUBMODULES:
+                if _is_forbidden_module_reference(resolved_name):
                     self.violations.append(f"Access to '{resolved_name}' is forbidden in components")
                     break
                 if violation := next(
