@@ -49,7 +49,7 @@ def text_body(value: str) -> dict:
 
 
 class WhatsAppActionComponent(Component):
-    icon = "MessageCircle"
+    icon = "WhatsApp"
     capability_id: ClassVar[str] = ""
 
     async def send(self, payload: dict, *, expected_phone: str | None = None, expected_waba: str | None = None) -> Data:

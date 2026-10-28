@@ -15,7 +15,7 @@ PROVIDER = TriggerProvider(
         TriggerKind(
             kind="whatsapp.event",
             component="WhatsAppOnEventTriggerComponent",
-            display_name="WhatsApp On Message or Status",
+            display_name="WhatsApp: On Message or Status",
             config_fields=("connection", "allowed_senders", "receive_messages", "receive_statuses", "delivery_mode"),
             required_scopes=SCOPES,
             identity="service",

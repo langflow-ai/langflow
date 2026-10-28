@@ -18,7 +18,7 @@ MAX_PARAMETER_LENGTH = 1024
 
 
 class WhatsAppSendTemplateComponent(WhatsAppActionComponent):
-    display_name = "WhatsApp Send Template"
+    display_name = "WhatsApp: Send Template"
     description = (
         "Send an existing approved template with positional text body parameters. Obtain recipient consent first."
     )

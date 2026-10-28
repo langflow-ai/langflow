@@ -6,7 +6,7 @@
     "schema_version": 1,
     "provider_id": "whatsapp",
     "display_name": "WhatsApp Business",
-    "icon": "MessageCircle",
+    "icon": "WhatsApp",
     "docs_url": "https://github.com/langflow-ai/langflow/blob/483810b364409a23be81f604b0ad0565eafc562b/design/provider-integrations/whatsapp.md",
     "auth_profiles": [
       {
@@ -32,7 +32,7 @@
     "capabilities": [
       {
         "id": "whatsapp.message.send",
-        "display_name": "WhatsApp Send Text",
+        "display_name": "WhatsApp: Send Text",
         "auth_profile_id": "whatsapp-system-user",
         "identity": "service",
         "required_scopes": [
@@ -53,7 +53,7 @@
       },
       {
         "id": "whatsapp.template.send",
-        "display_name": "WhatsApp Send Template",
+        "display_name": "WhatsApp: Send Template",
         "auth_profile_id": "whatsapp-system-user",
         "identity": "service",
         "required_scopes": [
@@ -74,7 +74,7 @@
       },
       {
         "id": "whatsapp.message.reply",
-        "display_name": "WhatsApp Reply to Message",
+        "display_name": "WhatsApp: Reply to Message",
         "auth_profile_id": "whatsapp-system-user",
         "identity": "service",
         "required_scopes": [
@@ -95,7 +95,7 @@
       },
       {
         "id": "whatsapp.trigger.event.webhook",
-        "display_name": "WhatsApp On Message or Status",
+        "display_name": "WhatsApp: On Message or Status",
         "auth_profile_id": "whatsapp-system-user",
         "identity": "service",
         "required_scopes": [

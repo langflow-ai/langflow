@@ -12,7 +12,7 @@ from lfx_whatsapp._components import connection_input
 
 
 class WhatsAppOnEventTriggerComponent(BaseTriggerComponent):
-    display_name = "WhatsApp On Message or Status"
+    display_name = "WhatsApp: On Message or Status"
     description = (
         "Receive text and delivery statuses for one phone. This trigger owns the app's WABA-wide callback override."
     )
@@ -20,7 +20,7 @@ class WhatsAppOnEventTriggerComponent(BaseTriggerComponent):
     provider = "whatsapp"
     trigger_kind = "whatsapp.event"
     capability_ids = ("whatsapp.trigger.event.webhook",)
-    icon = "MessageCircle"
+    icon = "WhatsApp"
     needs_connection = True
     config_fields: ClassVar[tuple[str, ...]] = (
         "connection",

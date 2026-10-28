@@ -103,3 +103,11 @@ describe("SIDEBAR_BUNDLES", () => {
     );
   });
 });
+
+it("uses the WhatsApp logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "WhatsApp",
+    name: "whatsapp",
+    icon: "WhatsApp",
+  });
+});

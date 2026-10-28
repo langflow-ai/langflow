@@ -12,7 +12,7 @@ from lfx_whatsapp._components import WhatsAppActionComponent, connection_input, 
 
 
 class WhatsAppReplyComponent(WhatsAppActionComponent):
-    display_name = "WhatsApp Reply to Message"
+    display_name = "WhatsApp: Reply to Message"
     description = "Reply to a normalized inbound text event using its sender and message context."
     name = "WhatsAppReply"
     capability_id = "whatsapp.message.reply"

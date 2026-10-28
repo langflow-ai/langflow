@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 class WhatsAppSendTextComponent(WhatsAppActionComponent):
-    display_name = "WhatsApp Send Text"
+    display_name = "WhatsApp: Send Text"
     description = (
         "Send plain text during an eligible customer service conversation. Meta enforces eligibility and limits."
     )

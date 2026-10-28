@@ -191,6 +191,7 @@ export const sourceIconOf = (
     case "gitlab":
       return "Gitlab";
     case "whatsapp":
+      return "WhatsApp";
     case "discord":
       return "MessageCircle";
     case "telegram":
