@@ -9,6 +9,7 @@ from lfx.integrations.errors import InvalidRequestError
 from lfx_salesforce.client import SalesforceClient
 from lfx_salesforce.schema import API_ROOT, invalid, iso, object_name, record_id, selected_fields, timestamp
 
+from langflow.services.triggers.source_errors import SourceConfigurationError
 from langflow.services.triggers.source_poll import SourceRound
 
 if TYPE_CHECKING:
@@ -85,7 +86,7 @@ async def collect(trigger: Trigger, lease: CredentialLease) -> SourceRound:
         ids = response["ids"]
         if len(ids) > MAX_IDS:
             msg = "The Salesforce replication window exceeds 5000 IDs. Reduce source volume before retrying."
-            raise invalid(msg)
+            raise SourceConfigurationError(msg)
         ids = list(dict.fromkeys(record_id(value) for value in ids))
         covered = timestamp(response.get("latestDateCovered"))
         if covered < previous or covered > end:

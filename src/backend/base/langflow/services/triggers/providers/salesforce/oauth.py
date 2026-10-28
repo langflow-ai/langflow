@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import json
 import re
 from urllib.parse import urlsplit
 
+import httpx
 from lfx.integrations.errors import InvalidRequestError
+from lfx.utils.ssrf_httpx import ssrf_protected_strict_httpx_client_kwargs_for_url
+from lfx.utils.ssrf_protection import SSRFProtectionError
+from lfx.utils.url_redaction import suppress_sensitive_http_logs
 from lfx_salesforce.schema import origin
 
 from langflow.services.connection.oauth.adapter import OAuthAdapter
@@ -13,6 +18,55 @@ from langflow.services.connection.oauth.config import OAuthError, OAuthRegistrat
 
 _SCOPES = frozenset({"api", "id", "refresh_token"})
 _IDENTITY = re.compile(r"^/id/([A-Za-z0-9]{15}(?:[A-Za-z0-9]{3})?)/([A-Za-z0-9]{15}(?:[A-Za-z0-9]{3})?)$")
+_MAX_IDENTITY_BYTES = 65536
+_MAX_DISPLAY_LENGTH = 255
+_SALESFORCE_ID = re.compile(r"[A-Za-z0-9]{15}(?:[A-Za-z0-9]{3})?")
+
+
+def same_identity_id(actual: object, expected: str) -> bool:
+    return isinstance(actual, str) and bool(_SALESFORCE_ID.fullmatch(actual)) and actual[:15] == expected[:15]
+
+
+def identity_http_client(root: str) -> httpx.AsyncClient:
+    kwargs = ssrf_protected_strict_httpx_client_kwargs_for_url(root)[1]
+    return httpx.AsyncClient(timeout=20, follow_redirects=False, trust_env=False, **kwargs)
+
+
+async def account_identity(root: str, path: str, org_id: str, user_id: str, token: str) -> dict:
+    unavailable = "The Salesforce account identity could not be verified. Reconnect and retry."
+    try:
+        async with (
+            identity_http_client(root) as client,
+            suppress_sensitive_http_logs(),
+            client.stream(
+                "GET", root + path, headers={"Authorization": f"Bearer {token}", "Accept": "application/json"}
+            ) as response,
+        ):
+            if response.status_code != httpx.codes.OK:
+                raise OAuthError(unavailable, reason="provider-unavailable")
+            raw = bytearray()
+            async for part in response.aiter_bytes():
+                raw.extend(part)
+                if len(raw) > _MAX_IDENTITY_BYTES:
+                    raise OAuthError(unavailable, reason="provider-unavailable")
+            profile = json.loads(raw)
+    except (httpx.HTTPError, SSRFProtectionError, ValueError, UnicodeDecodeError):
+        raise OAuthError(unavailable, reason="provider-unavailable") from None
+    if (
+        not isinstance(profile, dict)
+        or not same_identity_id(profile.get("organization_id"), org_id)
+        or not same_identity_id(profile.get("user_id"), user_id)
+        or profile.get("active") is not True
+        or profile.get("asserted_user") is not True
+    ):
+        raise OAuthError(unavailable, reason="provider-unavailable")
+    account = {"id": f"{org_id}/{user_id}", "tenant_id": root}
+    for field in ("display_name", "email", "username"):
+        display = profile.get(field)
+        if isinstance(display, str) and display.strip() and len(display) <= _MAX_DISPLAY_LENGTH:
+            account["display"] = display.strip()
+            break
+    return account
 
 
 def configured_origin() -> str:
@@ -89,7 +143,7 @@ async def parse_token(registration: OAuthRegistration, body: dict, *, refresh: b
         if not valid:
             msg = "Salesforce returned invalid account metadata."
             raise OAuthError(msg, reason="provider-unavailable")
-        account = {"id": f"{match[1]}/{match[2]}", "tenant_id": root}
+        account = await account_identity(root, identity.path, match[1], match[2], body["access_token"])
     return token, account
 
 

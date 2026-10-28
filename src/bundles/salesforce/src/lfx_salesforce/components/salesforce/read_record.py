@@ -6,7 +6,7 @@ from lfx_salesforce.schema import API_ROOT, FIELDS, invalid, object_name, record
 
 
 class SalesforceReadRecordComponent(SalesforceActionComponent):
-    display_name = "Salesforce Read Record"
+    display_name = "Salesforce: Read Record"
     description = "Read supported scalar fields from one visible Salesforce record."
     name = "SalesforceReadRecord"
     capability_id = "salesforce.record.read"

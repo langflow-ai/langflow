@@ -8,13 +8,13 @@ from lfx_salesforce.schema import FIELDS
 
 
 class SalesforceOnRecordTriggerComponent(BaseTriggerComponent):
-    display_name = "Salesforce On Record Change"
+    display_name = "Salesforce: On Record Change"
     description = "Poll added or changed record IDs and deliver their latest visible state."
     name = "SalesforceOnRecordTrigger"
     trigger_kind = "salesforce.record"
     provider = "salesforce"
     needs_connection = True
-    icon = "Cloud"
+    icon = "Salesforce"
     inputs = [
         connection_input("salesforce.trigger.record", required=False),
         DropdownInput(name="object_name", display_name="Object", options=list(FIELDS), value="Account"),

@@ -11,7 +11,7 @@ PROVIDER = TriggerProvider(
         TriggerKind(
             kind="salesforce.record",
             component="SalesforceOnRecordTriggerComponent",
-            display_name="Salesforce On Record Change",
+            display_name="Salesforce: On Record Change",
             config_fields=("connection", "delivery_mode", "object_name", "fields"),
             required_scopes=("api", "refresh_token"),
             poll_mechanism="salesforce.record.poll",

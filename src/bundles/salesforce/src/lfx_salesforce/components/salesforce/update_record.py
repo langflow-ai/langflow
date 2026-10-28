@@ -6,7 +6,7 @@ from lfx_salesforce.schema import API_ROOT, FIELDS, object_name, record_id, valu
 
 
 class SalesforceUpdateRecordComponent(SalesforceActionComponent):
-    display_name = "Salesforce Update Record"
+    display_name = "Salesforce: Update Record"
     description = "Update supported fields on one existing Salesforce record."
     name = "SalesforceUpdateRecord"
     capability_id = "salesforce.record.update"

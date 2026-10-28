@@ -23,7 +23,7 @@ __all__ = [
 
 
 class SalesforceActionComponent(Component):
-    icon = "Cloud"
+    icon = "Salesforce"
     capability_id: ClassVar[str] = ""
     salesforce_transport: Any = None
 

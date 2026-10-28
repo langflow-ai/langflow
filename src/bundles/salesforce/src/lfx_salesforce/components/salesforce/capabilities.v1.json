@@ -2,7 +2,7 @@
   "schema_version": 1,
   "provider_id": "salesforce",
   "display_name": "Salesforce",
-  "icon": "Cloud",
+  "icon": "Salesforce",
   "docs_url": "https://github.com/langflow-ai/langflow/blob/71a160e50f8c4a6578f199759ec7369b8243f744/src/bundles/salesforce/README.md#authentication-and-deployment",
   "auth_profiles": [
     {
@@ -30,7 +30,7 @@
   "capabilities": [
     {
       "id": "salesforce.record.read",
-      "display_name": "Salesforce Read Record",
+      "display_name": "Salesforce: Read Record",
       "auth_profile_id": "user",
       "identity": "user_delegated",
       "required_scopes": [
@@ -51,7 +51,7 @@
     },
     {
       "id": "salesforce.record.create",
-      "display_name": "Salesforce Create Record",
+      "display_name": "Salesforce: Create Record",
       "auth_profile_id": "user",
       "identity": "user_delegated",
       "required_scopes": [
@@ -72,7 +72,7 @@
     },
     {
       "id": "salesforce.record.update",
-      "display_name": "Salesforce Update Record",
+      "display_name": "Salesforce: Update Record",
       "auth_profile_id": "user",
       "identity": "user_delegated",
       "required_scopes": [
@@ -93,7 +93,7 @@
     },
     {
       "id": "salesforce.trigger.record",
-      "display_name": "Salesforce On Record Change",
+      "display_name": "Salesforce: On Record Change",
       "auth_profile_id": "user",
       "identity": "user_delegated",
       "required_scopes": [

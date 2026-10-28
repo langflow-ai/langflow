@@ -6,7 +6,7 @@ from lfx_salesforce.schema import API_ROOT, FIELDS, invalid, object_name, record
 
 
 class SalesforceCreateRecordComponent(SalesforceActionComponent):
-    display_name = "Salesforce Create Record"
+    display_name = "Salesforce: Create Record"
     description = "Create one record using supported fields and the connected account's permissions."
     name = "SalesforceCreateRecord"
     capability_id = "salesforce.record.create"

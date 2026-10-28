@@ -7,6 +7,7 @@ import httpx
 import pytest
 from langflow.services.connection.oauth.config import OAuthError
 from langflow.services.triggers.providers.salesforce import PROVIDER, collector, oauth
+from langflow.services.triggers.source_errors import SourceConfigurationError
 from lfx.integrations.errors import InvalidRequestError, ProviderUnavailableError
 from lfx_salesforce.client import SalesforceClient
 from lfx_salesforce.schema import iso
@@ -17,6 +18,28 @@ from tests.unit.services.triggers.salesforce_testkit import ORG, RECORD, lease_f
 @pytest.fixture(autouse=True)
 def configured_org(monkeypatch):
     monkeypatch.setenv("LANGFLOW_SALESFORCE_ORIGIN", ORG)
+
+
+def identity_profile(**changes):
+    return {
+        "organization_id": "00D000000000001AAA",
+        "user_id": "005000000000001AAA",
+        "active": True,
+        "asserted_user": True,
+        "display_name": "Example Person",
+        **changes,
+    }
+
+
+@pytest.fixture(autouse=True)
+def identity_transport(monkeypatch):
+    monkeypatch.setattr(
+        oauth,
+        "identity_http_client",
+        lambda _root: httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda _request: httpx.Response(200, json=identity_profile()))
+        ),
+    )
 
 
 @pytest.fixture
@@ -68,11 +91,84 @@ def token(**changes):
 async def test_oauth_initial_and_refresh_bind_exact_org():
     initial, account = await oauth.parse_token(registration(), token(), refresh=False)
     assert account["tenant_id"] == ORG
+    assert account["display"] == "Example Person"
     assert initial["refresh_token"] == "synthetic-refresh"  # noqa: S105 - synthetic fixture
     assert "instance_url" not in initial
     refresh, account = await oauth.parse_token(registration(), token(), refresh=True)
     assert account is None
     assert refresh["access_token"] == "synthetic-access"  # noqa: S105 - synthetic fixture
+
+
+@pytest.mark.parametrize(
+    ("profile", "display"),
+    [
+        (identity_profile(), "Example Person"),
+        (identity_profile(display_name="", email="person@example.com"), "person@example.com"),
+        (identity_profile(display_name="x" * 256, username="person@example.com"), "person@example.com"),
+        (identity_profile(display_name=None), None),
+        (identity_profile(organization_id="00D000000000001", user_id="005000000000001"), "Example Person"),
+    ],
+)
+async def test_verified_identity_display_uses_only_the_configured_org(monkeypatch, profile, display):
+    def handler(request):
+        assert str(request.url) == ORG + "/id/00D000000000001AAA/005000000000001AAA"
+        assert request.headers["Authorization"] == "Bearer synthetic-access"
+        return httpx.Response(200, json=profile)
+
+    monkeypatch.setattr(
+        oauth, "identity_http_client", lambda _root: httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    )
+    _, account = await oauth.parse_token(registration(), token(), refresh=False)
+    assert account["id"] == "00D000000000001AAA/005000000000001AAA"
+    assert account.get("display") == display
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [{"organization_id": "other"}, {"user_id": "other"}, {"active": False}, {"asserted_user": False}],
+)
+async def test_identity_cannot_rebind_a_grant(monkeypatch, changes):
+    monkeypatch.setattr(
+        oauth,
+        "identity_http_client",
+        lambda _root: httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda _request: httpx.Response(200, json=identity_profile(**changes)))
+        ),
+    )
+    with pytest.raises(OAuthError, match="could not be verified"):
+        await oauth.parse_token(registration(), token(), refresh=False)
+
+
+@pytest.mark.parametrize("status", [302, 403, 503])
+async def test_identity_errors_do_not_follow_redirects_or_echo_tokens(monkeypatch, status):
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(status, headers={"Location": "https://evil.invalid"}, text="synthetic-access")
+
+    monkeypatch.setattr(
+        oauth,
+        "identity_http_client",
+        lambda _root: httpx.AsyncClient(transport=httpx.MockTransport(handler), follow_redirects=False),
+    )
+    with pytest.raises(OAuthError) as caught:
+        await oauth.parse_token(registration(), token(), refresh=False)
+    assert len(calls) == 1
+    assert "synthetic-access" not in str(caught.value)
+
+
+@pytest.mark.parametrize("body", [b"not-json", b" " * 65537])
+async def test_identity_response_is_bounded_json(monkeypatch, body):
+    monkeypatch.setattr(
+        oauth,
+        "identity_http_client",
+        lambda _root: httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda _request: httpx.Response(200, content=body))
+        ),
+    )
+    with pytest.raises(OAuthError, match="could not be verified"):
+        await oauth.parse_token(registration(), token(), refresh=False)
 
 
 @pytest.mark.parametrize("refresh", [True, False])
@@ -233,8 +329,11 @@ async def test_invalid_round_never_mutates_persisted_cursor(monkeypatch, source_
 
     attach_transport(monkeypatch, response)
     lease, _ = lease_for()
-    with pytest.raises((InvalidRequestError, ProviderUnavailableError)):
+    expected = SourceConfigurationError if failure == "too-many" else (InvalidRequestError, ProviderUnavailableError)
+    with pytest.raises(expected) as caught:
         await collector.collect(source_trigger, lease)
+    if failure == "too-many":
+        assert "Reduce source volume before retrying" in str(caught.value)
     assert source_trigger.provider_state == before
 
 
