@@ -7,6 +7,8 @@
  * them and drifting.
  */
 
+import type { ConditionalScopeRequirement } from "@/utils/connection-scopes";
+
 export type Iso8601 = string;
 
 export type ConnectionOwnershipMode = "user" | "instance";
@@ -95,6 +97,12 @@ export interface ConnectionCreate {
   credentials?: ConnectionCredentialWrite | null;
 }
 
+/** Write-only replacement for a provider-validated manual credential. */
+export interface ConnectionTokenRenewal {
+  credentials: ConnectionCredentialWrite;
+  allow_non_interactive: boolean;
+}
+
 /** Only these two change without re-authorizing the provider. */
 export interface ConnectionUpdate {
   display_name?: string;
@@ -125,6 +133,8 @@ export interface IntegrationCapabilityRead {
   display_name: string;
   policy_keys: string[];
   risk: string;
+  required_scopes?: string[];
+  conditional_scopes?: ConditionalScopeRequirement[];
   maturity: string;
   substrate: string;
   identity: IntegrationIdentity;
@@ -145,6 +155,14 @@ export interface IntegrationProviderRead {
   enabled: boolean;
   connection_count: number;
   capabilities: IntegrationCapabilityRead[];
+  manual_token_profiles?: ManualTokenProfileRead[];
+}
+
+export interface ManualTokenProfileRead {
+  id: string;
+  identity: IntegrationIdentity;
+  required_scopes: string[];
+  requires_expiry?: boolean;
 }
 
 /** Which deployment this instance is (`LANGFLOW_CONNECTION_OAUTH_CONTEXT`). */

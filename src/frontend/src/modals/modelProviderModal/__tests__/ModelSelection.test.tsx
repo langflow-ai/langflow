@@ -62,14 +62,22 @@ describe("hasProviderOwnedEmptyState", () => {
   it.each(["Azure AI Foundry", "ollama", "OLLAMA"])(
     "returns true for %s",
     (providerName) => {
-      expect(hasProviderOwnedEmptyState(providerName)).toBe(true);
+      expect(hasProviderOwnedEmptyState(providerName, "all")).toBe(true);
     },
   );
 
   it.each(["Anthropic", "", undefined])(
     "returns false for %s",
     (providerName) => {
-      expect(hasProviderOwnedEmptyState(providerName)).toBe(false);
+      expect(hasProviderOwnedEmptyState(providerName, "all")).toBe(false);
+    },
+  );
+
+  // Neither serves decision models, so the generic empty state applies.
+  it.each(["Azure AI Foundry", "Ollama"])(
+    "returns false for %s in the decision view",
+    (providerName) => {
+      expect(hasProviderOwnedEmptyState(providerName, "decision")).toBe(false);
     },
   );
 });
@@ -167,6 +175,23 @@ describe("ModelSelection", () => {
   });
 
   describe("Model Display", () => {
+    it("tells the same model's switches apart by their section", () => {
+      render(
+        <ModelSelection
+          {...defaultProps}
+          availableModels={[
+            { model_name: "gpt-6-luna", metadata: { model_type: "llm" } },
+            { model_name: "gpt-6-luna", metadata: { model_type: "decision" } },
+          ]}
+        />,
+      );
+
+      for (const section of ["Language Models", "Decision Models"]) {
+        const group = screen.getByRole("group", { name: section });
+        expect(within(group).getAllByRole("switch")).toHaveLength(1);
+      }
+    });
+
     it("should render model names", () => {
       render(<ModelSelection {...defaultProps} />);
 
@@ -307,8 +332,53 @@ describe("ModelSelection", () => {
         "An unexpected error occurred",
       );
       expect(screen.queryByText("gpt-4")).not.toBeInTheDocument();
-      await user.click(screen.getByRole("button", { name: "Retry" }));
+      await user.click(
+        screen.getByRole("button", { name: "Retry loading models" }),
+      );
       expect(mockRefetchEnabledModels).toHaveBeenCalledTimes(1);
+    });
+
+    it("still offers a retry for a rate limit", () => {
+      useGetEnabledModels.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        isSuccess: false,
+        isFetching: false,
+        isFetchedAfterMount: true,
+        fetchStatus: "idle",
+        isError: true,
+        error: Object.assign(new Error("busy"), { response: { status: 429 } }),
+        refetch: mockRefetchEnabledModels,
+      });
+
+      render(<ModelSelection {...defaultProps} />);
+
+      expect(
+        screen.getByRole("button", { name: "Retry loading models" }),
+      ).toBeInTheDocument();
+    });
+
+    it("asks for access instead of offering a retry that can't work", () => {
+      useGetEnabledModels.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        isSuccess: false,
+        isFetching: false,
+        isFetchedAfterMount: true,
+        fetchStatus: "idle",
+        isError: true,
+        error: Object.assign(new Error("forbidden"), {
+          response: { status: 403 },
+        }),
+        refetch: mockRefetchEnabledModels,
+      });
+
+      render(<ModelSelection {...defaultProps} />);
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Ask an administrator for access",
+      );
+      expect(screen.queryByRole("button")).not.toBeInTheDocument();
     });
   });
 
@@ -884,6 +954,201 @@ describe("ModelSelection", () => {
       expect(
         screen.queryByTestId("embeddings-tag-embedding-embed-only"),
       ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Decision models (LE-3129)", () => {
+    // gpt-6-luna is both an OpenAI chat model and a decision model.
+    const lunaChat: Model = {
+      model_name: "gpt-6-luna",
+      metadata: { model_type: "llm", icon: "OpenAI" },
+    };
+    const lunaDecision: Model = {
+      model_name: "gpt-6-luna",
+      metadata: { model_type: "decision", icon: "OpenAI" },
+    };
+    const openAiModels = [lunaChat, lunaDecision, ...mockEmbeddingModels];
+
+    const mockEnabled = (data: Record<string, unknown>) =>
+      useGetEnabledModels.mockReturnValue({
+        data,
+        isLoading: false,
+        isSuccess: true,
+        isFetching: false,
+        isFetchedAfterMount: true,
+        fetchStatus: "idle",
+        isError: false,
+        refetch: mockRefetchEnabledModels,
+      });
+
+    it("lists decision models in their own section in the all view", () => {
+      mockEnabled({
+        enabled_models: { OpenAI: { "gpt-6-luna": true } },
+        enabled_models_by_type: {
+          OpenAI: { llm: { "gpt-6-luna": true }, decision: {} },
+        },
+      });
+      render(
+        <ModelSelection {...defaultProps} availableModels={openAiModels} />,
+      );
+
+      const section = screen.getByTestId("decision-models-section");
+      expect(within(section).getByText("Decision Models")).toBeVisible();
+      expect(
+        within(section).getByTestId("decision-toggle-gpt-6-luna"),
+      ).toBeInTheDocument();
+      // Same name, separate switches: chat on, decision off.
+      expect(screen.getByTestId("llm-toggle-gpt-6-luna")).toBeChecked();
+      expect(
+        screen.getByTestId("decision-toggle-gpt-6-luna"),
+      ).not.toBeChecked();
+    });
+
+    it("shows only decision models in the decision view", () => {
+      mockEnabled({
+        enabled_models: {},
+        enabled_models_by_type: {
+          OpenAI: { decision: { "gpt-6-luna": true } },
+        },
+      });
+      render(
+        <ModelSelection
+          {...defaultProps}
+          modelType="decision"
+          availableModels={openAiModels}
+        />,
+      );
+
+      expect(screen.getByTestId("decision-toggle-gpt-6-luna")).toBeChecked();
+      expect(
+        screen.queryByTestId("llm-models-section"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("embeddings-models-section"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("never reads a decision switch from the untyped map", () => {
+      // A provider with no typed map: the untyped map says yes to the name.
+      mockEnabled({
+        enabled_models: { Perplexity: { "pplx-decider-latest": true } },
+      });
+      render(
+        <ModelSelection
+          {...defaultProps}
+          modelType="decision"
+          providerName="Perplexity"
+          availableModels={[
+            {
+              model_name: "pplx-decider-latest",
+              metadata: { model_type: "decision", icon: "Perplexity" },
+            },
+          ]}
+        />,
+      );
+
+      expect(
+        screen.getByTestId("decision-toggle-pplx-decider-latest"),
+      ).not.toBeChecked();
+    });
+
+    it("toggles a decision model as a decision model", async () => {
+      const user = userEvent.setup();
+      const onModelToggle = jest.fn();
+      mockEnabled({
+        enabled_models: { OpenAI: { "gpt-6-luna": true } },
+        enabled_models_by_type: {
+          OpenAI: { llm: { "gpt-6-luna": true }, decision: {} },
+        },
+      });
+      render(
+        <ModelSelection
+          {...defaultProps}
+          availableModels={openAiModels}
+          onModelToggle={onModelToggle}
+        />,
+      );
+
+      await user.click(screen.getByTestId("decision-toggle-gpt-6-luna"));
+
+      expect(onModelToggle).toHaveBeenCalledTimes(1);
+      expect(onModelToggle).toHaveBeenCalledWith(
+        "gpt-6-luna",
+        true,
+        "decision",
+      );
+    });
+
+    it("searches decision models by name", async () => {
+      const user = userEvent.setup();
+      mockEnabled({ enabled_models: {}, enabled_models_by_type: {} });
+      render(
+        <ModelSelection
+          {...defaultProps}
+          modelType="decision"
+          providerName="Perplexity"
+          availableModels={[
+            {
+              model_name: "pplx-decider-latest",
+              metadata: { model_type: "decision" },
+            },
+            {
+              model_name: "pplx-decider-flash-latest",
+              metadata: { model_type: "decision" },
+            },
+          ]}
+        />,
+      );
+
+      await user.type(screen.getByTestId("model-search-input"), "flash");
+
+      expect(
+        screen.getByTestId("decision-toggle-pplx-decider-flash-latest"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("decision-toggle-pplx-decider-latest"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("gives Ollama no install hint in the decision view", () => {
+      render(
+        <ModelSelection
+          {...defaultProps}
+          modelType="decision"
+          providerName="Ollama"
+          availableModels={[]}
+        />,
+      );
+
+      expect(
+        screen.queryByText("Check Ollama Library"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("offers no custom deployments in the decision view", () => {
+      mockEnabled({
+        enabled_models: { "Azure AI Foundry": { "team-chat": true } },
+        enabled_models_by_type: {
+          "Azure AI Foundry": { llm: { "team-chat": true } },
+        },
+      });
+      render(
+        <ModelSelection
+          {...defaultProps}
+          modelType="decision"
+          providerName="Azure AI Foundry"
+          availableModels={[]}
+        />,
+      );
+
+      expect(
+        screen.queryByTestId("custom-deployment-hint"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("model-search-input"),
+      ).not.toBeInTheDocument();
+      // The enabled language deployment is not listed as a decision model.
+      expect(screen.queryByText("team-chat")).not.toBeInTheDocument();
     });
   });
 });

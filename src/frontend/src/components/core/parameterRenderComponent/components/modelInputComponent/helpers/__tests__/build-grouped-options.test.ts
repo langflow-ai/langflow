@@ -50,6 +50,101 @@ describe("buildGroupedOptions", () => {
     expect(grouped.OpenAI.map((o) => o.name)).toEqual(["gpt-4"]);
   });
 
+  it("drops a decision option whose provider has no enabled-map entry", () => {
+    // A provider missing from the map used to pass every option through, so
+    // Smart Router listed decision models whether or not they were enabled.
+    const grouped = buildGroupedOptions({
+      ...base,
+      modelType: "decision",
+      options: [opt("jev-latest", "TypeSafe"), opt("gpt-6-luna", "OpenAI")],
+      enabledModels: { OpenAI: { "gpt-6-luna": true } },
+    });
+    expect(grouped).toEqual({ OpenAI: [opt("gpt-6-luna", "OpenAI")] });
+  });
+
+  it("keeps passing untracked providers through for language models", () => {
+    const grouped = buildGroupedOptions({
+      ...base,
+      options: [opt("custom", "Local")],
+      enabledModels: { OpenAI: {} },
+    });
+    expect(grouped.Local.map((o) => o.name)).toEqual(["custom"]);
+  });
+
+  it("injects only registry models of the field's kind for same-name models", () => {
+    const providers: ModelProviderWithStatus[] = [
+      {
+        provider: "OpenAI",
+        is_enabled: true,
+        is_configured: true,
+        models: [
+          { model_name: "gpt-6-luna", metadata: { model_type: "llm" } },
+          { model_name: "gpt-6-luna", metadata: { model_type: "decision" } },
+        ],
+      },
+    ];
+    const grouped = buildGroupedOptions({
+      ...base,
+      modelType: "decision",
+      options: [],
+      providers,
+      enabledModels: { OpenAI: { "gpt-6-luna": true } },
+      providerStatusIsReliable: true,
+    });
+    expect(grouped.OpenAI).toEqual([
+      {
+        name: "gpt-6-luna",
+        icon: "Bot",
+        provider: "OpenAI",
+        metadata: { model_type: "decision" },
+      },
+    ]);
+  });
+
+  it("never offers a language field a saved decision-only model", () => {
+    const grouped = buildGroupedOptions({
+      ...base,
+      options: [],
+      savedValue: opt("jev-latest", "TypeSafe"),
+      providers: [
+        {
+          provider: "TypeSafe",
+          is_enabled: true,
+          is_configured: true,
+          models: [
+            { model_name: "jev-latest", metadata: { model_type: "decision" } },
+          ],
+        },
+      ],
+      enabledModels: {},
+      providerStatusIsReliable: true,
+    });
+    expect(grouped.TypeSafe).toBeUndefined();
+  });
+
+  it("never offers a decision field's saved model that is switched off", () => {
+    const luna = opt("gpt-6-luna", "OpenAI", { model_type: "decision" });
+    const grouped = buildGroupedOptions({
+      ...base,
+      modelType: "decision",
+      options: [],
+      savedValue: luna,
+      providers: [
+        {
+          provider: "OpenAI",
+          is_enabled: true,
+          is_configured: true,
+          models: [
+            { model_name: "gpt-6-luna", metadata: { model_type: "decision" } },
+          ],
+        },
+      ],
+      enabledModels: { OpenAI: {} },
+      providerStatusIsReliable: true,
+    });
+    expect(grouped.OpenAI).toBeUndefined();
+  });
+
   it("drops a sticky not_enabled_locally option — it is never selectable", () => {
     const options = [opt("legacy", "OpenAI", { not_enabled_locally: true })];
     expect(buildGroupedOptions({ ...base, options })).toEqual({});

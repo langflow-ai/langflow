@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from typing import Annotated, Any, cast
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Response, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Response, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
@@ -22,6 +22,8 @@ from langflow.api.utils import (
     CurrentActiveUser,
     DbSession,
     DbSessionReadOnly,
+    PageQuery,
+    SizeQuery,
     cascade_delete_flow,
     custom_params,
 )
@@ -52,6 +54,7 @@ from langflow.api.v1.schemas.deployment_snapshot import (
     DeploymentSnapshotRequiredConnection,
     DeploymentSnapshotRequiredMcpProject,
     DeploymentSnapshotRequiredModel,
+    DeploymentSnapshotRequiredVariable,
 )
 from langflow.api.v1.schemas.replacement_operations import (
     ProjectReplacementRequest,
@@ -104,7 +107,7 @@ from langflow.services.database.models.deployment.exceptions import (
 )
 from langflow.services.database.models.deployment.guards import check_project_has_deployments
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_moves_allowed
-from langflow.services.database.models.flow.model import Flow, FlowRead
+from langflow.services.database.models.flow.model import Flow, FlowRead, is_virtual_flow_id
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import (
     Folder,
@@ -632,6 +635,11 @@ async def read_project_deployment_snapshot(
         ],
         dependencies=snapshot.dependencies,
         required_variables=list(snapshot.required_variables),
+        required_variable_declarations=[
+            DeploymentSnapshotRequiredVariable(name=item.name, kind=item.kind)
+            for item in snapshot.required_variable_declarations
+        ],
+        schema_version=snapshot.schema_version,
         required_connections=[
             DeploymentSnapshotRequiredConnection(
                 provider=connection.provider,
@@ -665,8 +673,8 @@ async def read_project(
     project_id: UUID,
     current_user: CurrentActiveUser,
     params: Annotated[Params | None, Depends(custom_params)],
-    page: Annotated[int | None, Query()] = None,
-    size: Annotated[int | None, Query()] = None,
+    page: PageQuery = None,
+    size: SizeQuery = None,
     is_component: bool = False,
     is_flow: bool = False,
     search: str = "",
@@ -845,6 +853,8 @@ def _replacement_request_digest(request_body: ProjectReplacementRequest) -> str:
     # compatible while binding any non-empty opaque manifest to the operation.
     if not request_body.dependencies:
         normalized.pop("dependencies", None)
+    if request_body.variables is None:
+        normalized.pop("variables", None)
     try:
         return canonical_json_digest(normalized)
     except UnicodeEncodeError as exc:
@@ -1081,6 +1091,7 @@ async def _replace_project_operation_once(
 ):
     """Apply one replacement attempt, committing its content and receipt together."""
     request_digest = _replacement_request_digest(request_body)
+    activation_request = request_body.model_copy(deep=True)
     memory_base_cleanups = []
     newly_created_project: Folder | None = None
     try:
@@ -1540,6 +1551,15 @@ async def _replace_project_operation_once(
                 reraise_database_errors=True,
             )
             result_flows.append(flow_read)
+
+        from langflow.services.deployment_artifacts.activation import guard_project_activation
+
+        await guard_project_activation(
+            session=session,
+            project=project,
+            current_user=current_user,
+            request=activation_request,
+        )
 
         result = ProjectReplacementResult(
             project=FolderRead.model_validate(project, from_attributes=True, update={"auth_settings": None}),
@@ -2277,9 +2297,13 @@ async def delete_project(
             memory_base_cleanups.clear()
             await _lock_project_for_delete(session, project_id)
             target_name = target.name
-            flows = (
-                await session.exec(select(Flow).where(Flow.folder_id == project_id, Flow.user_id == project_owner_id))
-            ).all()
+            flows = (await session.exec(select(Flow).where(Flow.folder_id == project_id))).all()
+            # Folder deletion also cascades through flows owned by other contributors.
+            if any(is_virtual_flow_id(flow.id) for flow in flows):
+                raise HTTPException(
+                    status_code=400, detail="UUID5 flow IDs are reserved for public execution histories."
+                )
+            flows = [flow for flow in flows if flow.user_id == project_owner_id]
             removed_flows = {flow.id: flow.name for flow in flows}
             if len(flows) > 0:
                 for flow in flows:
@@ -2345,6 +2369,10 @@ async def delete_project(
         mark_committed()
         await finalize_flow_memory_base_cleanup(memory_base_cleanups)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
+    except HTTPException:
+        # Preserve intentional client errors (e.g. the reserved UUID5 flow
+        # guard in cascade_delete_flow) instead of masking them as 500s.
+        raise
     except Exception as e:
         await araise_if_deployment_guard_error_or_skip(
             e,

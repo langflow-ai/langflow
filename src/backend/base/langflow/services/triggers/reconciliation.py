@@ -48,6 +48,7 @@ from langflow.services.triggers.constants import (
     PROVIDER_SLACK,
     SLACK_TRIGGER_KINDS,
 )
+from langflow.services.triggers.providers.registry import component_kind, get_kind, source_kinds
 from langflow.services.triggers.schedule_config import (
     InvalidScheduleError,
     schedule_timing_changed,
@@ -183,6 +184,11 @@ def normalize_webhook_config(config: dict[str, Any]) -> dict[str, Any]:
 #: trigger paused, and the reason is still the explanation.
 NODE_REMOVED_ERROR = "trigger node removed from the flow"
 
+#: Why an armed Microsoft or Google source was paused by a save that changed its
+#: settings: the provider subscription was retired with the old settings, so it
+#: takes an explicit enable to subscribe again with the new ones.
+SOURCE_SETTINGS_CHANGED_ERROR = "Source settings changed. Enable the trigger again to resubscribe."
+
 #: States whose ``last_error`` a schedule verdict owns. The provider states and
 #: the terminal ``dead`` state carry reasons that a schedule edit cannot fix.
 _VERDICT_STATES = frozenset(
@@ -247,9 +253,13 @@ def find_trigger_nodes(flow_data: dict[str, Any] | None) -> list[tuple[str, str,
         node_id = node.get("id")
         if not isinstance(node_id, str) or not node_id:
             continue
-        config = {
-            key: _template_value(node_data, field, default) for field, key, default in _CONFIG_FIELDS.get(kind, ())
-        }
+        extension = get_kind(kind)
+        fields = (
+            tuple((field, field, None) for field in extension.config_fields)
+            if extension is not None
+            else _CONFIG_FIELDS.get(kind, ())
+        )
+        config = {key: _template_value(node_data, field, default) for field, key, default in fields}
         found.append((node_id, kind, config))
     return found
 
@@ -264,13 +274,16 @@ def _node_kind(node_type: Any) -> str | None:
     match = _BUNDLE_NODE_TYPE.match(node_type)
     if match is None:
         return None
-    return BUNDLE_TRIGGER_COMPONENT_KINDS.get((match["bundle"], match["cls"]))
+    return BUNDLE_TRIGGER_COMPONENT_KINDS.get((match["bundle"], match["cls"])) or component_kind(
+        match["bundle"], match["cls"]
+    )
 
 
 def _display_name(config: dict[str, Any], kind: str) -> str:
     if kind == "schedule" and config.get("cron"):
         return f"Schedule {config['cron']}"
-    return _KIND_DISPLAY_NAMES.get(kind) or kind.replace("_", " ").title()
+    extension = get_kind(kind)
+    return extension.display_name if extension else _KIND_DISPLAY_NAMES.get(kind) or kind.replace("_", " ").title()
 
 
 async def _reconcile_slack(
@@ -360,6 +373,15 @@ async def reconcile_flow_triggers(
     from sqlmodel import select
 
     nodes = {node_id: (kind, config) for node_id, kind, config in find_trigger_nodes(flow_data)}
+    unclassified_bundle_nodes = {
+        node.get("id")
+        for node in (flow_data or {}).get("nodes", []) or []
+        if isinstance(node.get("id"), str)
+        and isinstance((node.get("data") or {}).get("type"), str)
+        and _BUNDLE_NODE_TYPE.fullmatch((node.get("data") or {})["type"])
+        and _node_kind((node.get("data") or {})["type"]) is None
+    }
+    known_sources = source_kinds() | SLACK_TRIGGER_KINDS
     statement = select(Trigger).where(Trigger.flow_id == flow_id, Trigger.node_id.is_not(None))  # type: ignore[union-attr]
     existing = {row.node_id: row for row in (await session.exec(statement)).all()}
 
@@ -373,7 +395,7 @@ async def reconcile_flow_triggers(
         if kind in SLACK_TRIGGER_KINDS:
             provider = PROVIDER_SLACK
             config, connection_id, error = await _reconcile_slack(session, kind=kind, owner_id=owner_id, raw=raw_config)
-        elif kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS:
+        elif kind in source_kinds():
             from langflow.services.triggers.source_arming import normalize_source_config, resolve_arming
 
             provider = kind.split(".", 1)[0]
@@ -409,9 +431,7 @@ async def reconcile_flow_triggers(
                     provider=provider,
                     node_id=node_id,
                     connection_id=connection_id,
-                    public_id=secrets.token_urlsafe(24)
-                    if kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS
-                    else None,
+                    public_id=secrets.token_urlsafe(24) if kind in source_kinds() else None,
                     config=config,
                     provider_state={},
                     state=TriggerState.PENDING.value,
@@ -423,7 +443,7 @@ async def reconcile_flow_triggers(
             )
             touched += 1
             continue
-        if kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS and not row.public_id:
+        if kind in source_kinds() and not row.public_id:
             row.public_id = secrets.token_urlsafe(24)
             session.add(row)
             touched += 1
@@ -456,13 +476,13 @@ async def reconcile_flow_triggers(
         elif kind in SLACK_TRIGGER_KINDS:
             verdict = await _apply_slack_verdict(session, row, error=error, moved=moved, filters_changed=config_changed)
             changed = verdict or changed
-        elif kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS:
+        elif kind in source_kinds():
             if row.state == TriggerState.ACTIVE.value and (error or config_changed or moved):
                 from langflow.services.triggers.subscriptions import revoke_for_trigger
 
                 await revoke_for_trigger(session, trigger_id=row.id)
                 row.state = TriggerState.PAUSED.value
-                row.last_error = error or "Source settings changed. Enable the trigger again to resubscribe."
+                row.last_error = error or SOURCE_SETTINGS_CHANGED_ERROR
                 row.provider_state = {}
                 changed = True
             elif row.last_error != error and row.state != TriggerState.ACTIVE.value:
@@ -477,9 +497,20 @@ async def reconcile_flow_triggers(
     from langflow.services.triggers.subscriptions import revoke_for_trigger
 
     for node_id, row in existing.items():
-        if node_id in nodes or row.state in {TriggerState.PAUSED.value, TriggerState.DEAD.value}:
+        if node_id in nodes or row.state == TriggerState.DEAD.value:
+            continue
+        if node_id in unclassified_bundle_nodes and "." in row.kind and row.kind not in known_sources:
+            # Missing runtime metadata cannot prove that an existing bundle
+            # node was deleted. Preserve its last known binding and remote
+            # subscription until it can be classified again.
+            continue
+        # A pause the owner chose stays theirs. An operator's pause does not:
+        # removing the node is the owner's own off switch, and the operator's
+        # bulk resume must not re-arm a trigger whose node is gone.
+        if row.state == TriggerState.PAUSED.value and row.admin_paused_at is None:
             continue
         row.state = TriggerState.PAUSED.value
+        row.admin_paused_at = None
         row.last_error = NODE_REMOVED_ERROR
         session.add(row)
         # Retire the provider subscription with the node, for the same reason

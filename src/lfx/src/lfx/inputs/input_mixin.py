@@ -158,7 +158,7 @@ class ModelInputMixin(BaseModel):
     model_name: str | None = None
     """Name of the model to be used in the input."""
     model_type: str | None = "language"
-    """Type of model: 'language' or 'embedding'. Defaults to 'language'."""
+    """Type of model: 'language', 'embedding', or 'decision'. Defaults to 'language'."""
     model_options: list[dict[str, Any]] | None = Field(
         default=None,
         validation_alias="options",

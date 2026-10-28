@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
+from lfx.integrations.capabilities import ConditionalScopeRequirement
 from lfx.integrations.models import PROVIDER_ID_PATTERN
 from lfx.services.deps import get_integration_policy_service
 from lfx.services.integration_policy import IntegrationPolicyPurpose, aresolve_integration_policy
@@ -40,6 +41,8 @@ class IntegrationCapabilityRead(BaseModel):
     display_name: str
     policy_keys: list[str]
     risk: str
+    required_scopes: list[str] = Field(default_factory=list)
+    conditional_scopes: list[ConditionalScopeRequirement] = Field(default_factory=list)
     maturity: str
     substrate: str
     identity: str
@@ -52,6 +55,15 @@ class IntegrationCapabilityRead(BaseModel):
         default=None,
         description="The first denied policy key, so an operator panel can explain the decision.",
     )
+
+
+class ManualTokenProfileRead(BaseModel):
+    """A token profile whose server hook verifies identity and permission grants."""
+
+    id: str
+    identity: str
+    required_scopes: list[str]
+    requires_expiry: bool = False
 
 
 class IntegrationProviderRead(BaseModel):
@@ -70,6 +82,7 @@ class IntegrationProviderRead(BaseModel):
     )
     connection_count: int
     capabilities: list[IntegrationCapabilityRead]
+    manual_token_profiles: list[ManualTokenProfileRead] = Field(default_factory=list)
 
 
 class IntegrationListRead(BaseModel):
@@ -165,6 +178,8 @@ async def list_integrations(
                     display_name=capability.display_name,
                     policy_keys=list(capability.policy_keys),
                     risk=capability.risk,
+                    required_scopes=list(capability.required_scopes),
+                    conditional_scopes=list(capability.conditional_scopes),
                     maturity=capability.maturity,
                     substrate=capability.substrate,
                     identity=capability.identity,
@@ -181,6 +196,28 @@ async def list_integrations(
             # a picker could offer, so do not advertise the provider either.
             continue
         connection_count = counts.get(provider_id, 0)
+        from langflow.services.triggers.providers.registry import get_provider
+
+        runtime = get_provider(provider_id)
+        manual_profiles = []
+        if runtime is not None and runtime.validate_manual_credential is not None:
+            for profile in manifest.auth_profiles:
+                available = [
+                    item
+                    for item in capabilities
+                    if item.auth_profile_id == profile.id
+                    and item.allowed
+                    and deployment_context() in item.deployment_contexts
+                ]
+                if profile.kind == "api_key" and available and deployment_context() in profile.client_type_by_context:
+                    manual_profiles.append(
+                        ManualTokenProfileRead(
+                            id=profile.id,
+                            identity=profile.identity,
+                            required_scopes=sorted({scope for item in available for scope in item.required_scopes}),
+                            requires_expiry=runtime.manual_token_requires_expiry,
+                        )
+                    )
         providers.append(
             IntegrationProviderRead(
                 provider_id=provider_id,
@@ -191,6 +228,7 @@ async def list_integrations(
                 enabled=approved and connection_count > 0,
                 connection_count=connection_count,
                 capabilities=capabilities,
+                manual_token_profiles=manual_profiles,
             )
         )
     return IntegrationListRead(providers=providers, deployment_context=deployment_context())

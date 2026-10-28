@@ -21,6 +21,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import ts from "typescript";
+import { BASENAME } from "../customization/config-constants";
 
 const MANIFEST_PATH = join("scripts", "a11y", "a11y_routes.json");
 const ROUTES_PATH = join("src", "frontend", "src", "routes.tsx");
@@ -29,11 +30,6 @@ const FEATURE_FLAGS_PATH = join(
   FRONTEND_SRC,
   "customization",
   "feature-flags.ts",
-);
-const CONFIG_CONSTANTS_PATH = join(
-  FRONTEND_SRC,
-  "customization",
-  "config-constants.ts",
 );
 
 const MANIFEST_SECTIONS = ["static", "dynamic", "gated", "excluded"] as const;
@@ -135,7 +131,6 @@ function parseExportedLiterals(
 }
 
 const featureFlags = parseExportedLiterals(FEATURE_FLAGS_PATH);
-const configConstants = parseExportedLiterals(CONFIG_CONSTANTS_PATH);
 
 /** `"ENABLE_FILE_MANAGEMENT is true, so /assets routes are active."` */
 const assumedFlags = new Map<string, boolean>(
@@ -386,7 +381,7 @@ describe("a11y route manifest", () => {
 
   it("keeps route paths rooted at / as the manifest assumes", () => {
     expect(assumesEmptyBasename).toBe(true);
-    expect(configConstants.get("BASENAME")).toBe("");
+    expect(BASENAME).toBe("");
   });
 
   it("resolves every route declaration in routes.tsx", () => {

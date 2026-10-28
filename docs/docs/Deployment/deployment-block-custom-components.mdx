@@ -23,7 +23,7 @@ In the event that Langflow could execute untrusted or LLM-generated code, run La
 
 ## Multi-user deployments and code execution{#multi-user-code-execution}
 
-Custom component code runs on the Langflow server at flow-build time. In a single-user deployment (`LANGFLOW_AUTO_LOGIN=true`, the default) the only account is the superuser, so this is code you already trust.
+Custom component code runs on the Langflow server at flow-build time. In a trusted single-user deployment with `LANGFLOW_AUTO_LOGIN=true`, requests use the auto-login superuser account, so this is code you already trust.
 
 In a multi-user deployment (`LANGFLOW_AUTO_LOGIN=false`), any **active non-admin user** can author component code and have the server execute it — for example by saving a flow with custom code and triggering it through the [webhook](/webhook) or [`/run`](/api-flows-run) endpoints. This is expected behavior of the custom-component feature, not a defect, but it means every regular user effectively has code execution on the host unless you restrict it.
 
