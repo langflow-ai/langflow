@@ -5,7 +5,7 @@ documents into the plane that serves it. One such job per flow, so ``flow_id`` s
 for every job type.
 
 Revision ID: c14fe0b7508c
-Revises: 1d8d193028c8
+Revises: c6a81d3e9502
 Create Date: 2026-10-21 15:13:50.460965
 
 Phase: EXPAND
@@ -21,7 +21,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "c14fe0b7508c"  # pragma: allowlist secret
-down_revision: str | None = "1d8d193028c8"  # pragma: allowlist secret
+down_revision: str | None = "c6a81d3e9502"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
