@@ -157,6 +157,14 @@
           ]
         },
         {
+          "distribution": "lfx-github",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-github"
+          ]
+        },
+        {
           "distribution": "lfx-telegram",
           "extras": [],
           "version": ">=0.1.0,<1.0.0",

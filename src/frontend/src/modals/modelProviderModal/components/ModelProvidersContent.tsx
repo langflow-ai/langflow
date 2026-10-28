@@ -7,6 +7,7 @@ import ProviderList from "@/modals/modelProviderModal/components/ProviderList";
 import { Provider } from "@/modals/modelProviderModal/components/types";
 import type { ModelTypeFilter } from "@/types/models";
 import { cn } from "@/utils/utils";
+import { modelsOfFilter } from "../helpers/view-kinds";
 import { useProviderConfiguration } from "../hooks/useProviderConfiguration";
 import ModelSelection, { hasProviderOwnedEmptyState } from "./ModelSelection";
 import ProviderConfigurationForm from "./ProviderConfigurationForm";
@@ -58,6 +59,7 @@ const ModelProvidersContent = ({
     selectedProvider,
     flowId,
     projectId,
+    modelType,
   });
 
   // Expose flushPendingChanges and hasUserMadeChanges to the parent
@@ -86,20 +88,22 @@ const ModelProvidersContent = ({
     );
   };
 
-  const typedModelCount = (syncedSelectedProvider?.models ?? []).filter(
-    (model) => modelType === "all" || model.metadata?.model_type === modelType,
+  const typedModelCount = modelsOfFilter(
+    syncedSelectedProvider?.models ?? [],
+    modelType,
   ).length;
   // Providers whose catalog is discovered from their endpoint have no models
   // to show until credentials are configured; ModelSelection renders a
   // configure-credentials hint for them instead of the generic empty state.
   const awaitingLiveDiscovery =
     !!syncedSelectedProvider?.live_discovery &&
-    !syncedSelectedProvider?.is_configured;
+    !syncedSelectedProvider?.is_configured &&
+    modelType !== "decision";
   const showNoAvailableModels =
     !!syncedSelectedProvider &&
     typedModelCount === 0 &&
     !awaitingLiveDiscovery &&
-    !hasProviderOwnedEmptyState(syncedSelectedProvider.provider);
+    !hasProviderOwnedEmptyState(syncedSelectedProvider.provider, modelType);
 
   return (
     <div className="flex flex-row w-full h-full overflow-hidden">
