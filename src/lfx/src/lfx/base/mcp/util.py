@@ -46,7 +46,9 @@ from lfx.schema.data import Data
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.services.deps import get_settings_service
 from lfx.utils.async_helpers import run_until_complete
-from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
+from lfx.utils.ssrf_httpx import validate_strict_url_for_ssrf_or_raise
+from lfx.utils.ssrf_protection import is_connector_ssrf_validation_enabled, validate_and_resolve_url
+from lfx.utils.ssrf_transport import SSRFProtectedTransport, pin_host_for_url
 from lfx.utils.url_redaction import redact_urls_in_text, sanitize_url_for_display
 
 MCP_TOOL_SPAN_NAME = "mcp.tool.call"
@@ -184,6 +186,7 @@ def create_mcp_http_client_with_ssl_option(
     auth: httpx.Auth | None = None,
     *,
     verify_ssl: bool = True,
+    pinned_ips: dict[str, list[str]] | None = None,
 ) -> httpx.AsyncClient:
     """Create an httpx AsyncClient with configurable SSL verification.
 
@@ -199,6 +202,7 @@ def create_mcp_http_client_with_ssl_option(
         timeout: Request timeout as httpx.Timeout object.
         auth: Optional authentication handler.
         verify_ssl: Whether to verify SSL certificates (default: True).
+        pinned_ips: Validated addresses for this MCP server, when protection is enabled.
 
     Returns:
         Configured httpx.AsyncClient instance.
@@ -207,6 +211,10 @@ def create_mcp_http_client_with_ssl_option(
         "follow_redirects": False,
         "verify": verify_ssl,
     }
+
+    if pinned_ips:
+        kwargs["transport"] = SSRFProtectedTransport(pinned_ips=pinned_ips, verify=verify_ssl)
+        kwargs["trust_env"] = False
 
     if timeout is None:
         kwargs["timeout"] = httpx.Timeout(30.0)
@@ -1219,6 +1227,16 @@ def _is_mcp_session_bust_error(exc: BaseException) -> bool:
 # (``lfx.base.mcp.pinned``) needs ``serverInfo`` to compare the server it reached
 # against the one its bundle pinned.
 _INITIALIZE_RESULT_ATTR = "_lf_initialize_result"
+_HTTP_CONNECTION_ATTR = "_lf_http_connection"
+
+
+@dataclass(frozen=True, slots=True)
+class _MCPHTTPConnection:
+    """Validated destination and HTTP configuration retained for session cleanup."""
+
+    url: str
+    headers: dict[str, str]
+    client_factory: Callable[..., httpx.AsyncClient]
 
 
 @dataclass(frozen=True, slots=True)
@@ -1768,6 +1786,12 @@ class MCPSessionManager:
         sse_preference_locked: list[bool] = [False]
 
         verify_ssl = connection_params.get("verify_ssl", True)
+        url = connection_params["url"]
+        pinned_ips = None
+        if is_connector_ssrf_validation_enabled():
+            url, resolved_ips = await asyncio.to_thread(validate_and_resolve_url, url)
+            if resolved_ips:
+                pinned_ips = {pin_host_for_url(url): resolved_ips}
         # A pinned preset pins the transport as well as the tools: an endpoint that
         # answers on a transport the pin does not name is drift, not a fallback
         # opportunity, and a misleading SSE connection error would mask it.
@@ -1781,8 +1805,10 @@ class MCPSessionManager:
             auth: httpx.Auth | None = None,
         ) -> httpx.AsyncClient:
             return create_mcp_http_client_with_ssl_option(
-                headers=headers, timeout=timeout, auth=auth, verify_ssl=verify_ssl
+                headers=headers, timeout=timeout, auth=auth, verify_ssl=verify_ssl, pinned_ips=pinned_ips
             )
+
+        http_connection = _MCPHTTPConnection(url, dict(connection_params["headers"]), custom_httpx_factory)
 
         async def session_task():
             """Background task that keeps the session alive."""
@@ -1796,7 +1822,7 @@ class MCPSessionManager:
                             f"(attempt {attempt + 1}/{STREAMABLE_HTTP_CONNECT_ATTEMPTS})"
                         )
                         async with streamablehttp_client(
-                            url=connection_params["url"],
+                            url=url,
                             headers=connection_params["headers"],
                             timeout=connection_params["timeout_seconds"],
                             httpx_client_factory=custom_httpx_factory,
@@ -1805,6 +1831,8 @@ class MCPSessionManager:
                             async with session:
                                 initialize_result = await asyncio.wait_for(session.initialize(), timeout=2.0)
                                 _remember_initialize_result(session, initialize_result)
+                                with contextlib.suppress(AttributeError, TypeError):
+                                    session.__dict__[_HTTP_CONNECTION_ATTR] = http_connection
                                 used_transport.append("streamable_http")
                                 await logger.ainfo(f"Session {session_id} connected via Streamable HTTP")
                                 session_future.set_result(session)
@@ -1869,7 +1897,7 @@ class MCPSessionManager:
                 sse_read_timeout = connection_params.get("sse_read_timeout_seconds", 30)
 
                 async with sse_client(
-                    connection_params["url"],
+                    url,
                     connection_params["headers"],
                     connection_params["timeout_seconds"],
                     sse_read_timeout,
@@ -1879,6 +1907,8 @@ class MCPSessionManager:
                     async with session:
                         initialize_result = await session.initialize()
                         _remember_initialize_result(session, initialize_result)
+                        with contextlib.suppress(AttributeError, TypeError):
+                            session.__dict__[_HTTP_CONNECTION_ATTR] = http_connection
                         used_transport.append("sse")
                         sse_preference_locked[0] = True
                         fallback_msg = " (fallback)" if streamable_error else " (preferred)"
@@ -2594,11 +2624,12 @@ class MCPStreamableHttpClient(_PooledSessionClient):
 
     async def _terminate_remote_session(self) -> None:
         """Attempt to explicitly terminate the remote MCP session via HTTP DELETE (best-effort)."""
-        # Only relevant for Streamable HTTP or SSE transport
-        if not self._connection_params or "url" not in self._connection_params:
+        # A rejected connection has no validated session and must not send credentials during cleanup.
+        http_connection = getattr(self.session, "__dict__", {}).get(_HTTP_CONNECTION_ATTR)
+        if not isinstance(http_connection, _MCPHTTPConnection):
             return
 
-        url: str = self._connection_params["url"]
+        url = http_connection.url
 
         # Retrieve session id from the underlying SDK if exposed
         session_id = None
@@ -2606,12 +2637,12 @@ class MCPStreamableHttpClient(_PooledSessionClient):
             # Common attributes in MCP python SDK: `session_id` or `id`
             session_id = getattr(self.session, "session_id", None) or getattr(self.session, "id", None)
 
-        headers: dict[str, str] = dict(self._connection_params.get("headers", {}))
+        headers = dict(http_connection.headers)
         if session_id:
             headers["Mcp-Session-Id"] = str(session_id)
 
         try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
+            async with http_connection.client_factory(timeout=httpx.Timeout(5.0)) as client:
                 await client.delete(url, headers=headers)
         except Exception as e:  # noqa: BLE001
             # DELETE is advisory—log and continue
@@ -2962,7 +2993,7 @@ async def update_tools(
         # SECURITY: a tenant-embedded MCP HTTP config could point at an internal service or
         # the cloud-metadata endpoint. Guard the URL with the same SSRF posture as other
         # outbound fetches (no-op when SSRF protection is disabled / host is allowlisted).
-        validate_connector_url_for_ssrf(url)
+        await asyncio.to_thread(validate_strict_url_for_ssrf_or_raise, url)
         # Serving-plane: forward the end-user identity to a SIBLING project (an operator-
         # allowlisted internal host) so it attributes the run to the same end user. Fail-closed —
         # external hosts never receive the PII header; no-op when the feature is off / no end user.
