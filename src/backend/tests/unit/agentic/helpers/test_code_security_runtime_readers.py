@@ -60,6 +60,8 @@ def test_rejects_runtime_and_file_reader_capabilities(source: str) -> None:
         "langflow.custom.utils",
         "langflow.interface.components",
         "langflow.services.factory",
+        "langflow.base.mcp.preset",
+        "langflow.base.mcp.util",
     ],
 )
 @pytest.mark.parametrize(
@@ -96,6 +98,100 @@ def test_rejects_runtime_readers_through_package_aliases(source: str) -> None:
     assert not scan_code_security(source).is_safe
 
 
+@pytest.mark.parametrize("package", ["lfx.custom", "langflow.custom"])
+@pytest.mark.parametrize(
+    "source",
+    [
+        "from {package} import *\ncontents = utils.inspect.linecache.getlines('/unused')",
+        "from {package} import *\ncontents = custom_component.component.inspect.linecache.getlines('/unused')",
+        "import {package} as c\ndef read(module):\n"
+        "    return module.utils.inspect.linecache.getlines('/unused')\ncontents = read(c)",
+        "import {package} as c\ndef get_reader():\n"
+        "    return c\ncontents = get_reader().utils.inspect.linecache.getlines('/unused')",
+        "import {package} as c\nclass Carrier:\n"
+        "    reader = c\ncontents = Carrier.reader.utils.inspect.linecache.getlines('/unused')",
+        "import {package} as c\ndef read(namespace):\n"
+        "    return namespace['utils'].inspect.linecache.getlines('/unused')\ncontents = read(vars(c))",
+    ],
+)
+def test_rejects_runtime_readers_through_parent_packages(package: str, source: str) -> None:
+    assert not scan_code_security(source.format(package=package)).is_safe
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "from langflow.custom import *\ncontents = custom.utils.inspect.linecache.getlines('/unused')",
+        "import langflow.custom as c\ncontents = c.custom.utils.inspect.linecache.getlines('/unused')",
+        "import langflow.custom as c\ndef read(module):\n"
+        "    return module.utils.inspect.linecache.getlines('/unused')\ncontents = read(c.custom)",
+    ],
+)
+def test_rejects_runtime_readers_through_legacy_custom_alias(source: str) -> None:
+    assert not scan_code_security(source).is_safe
+
+
+@pytest.mark.parametrize("member", ["util", "preset"])
+@pytest.mark.parametrize(
+    "source",
+    [
+        "from langflow.base.mcp import {member} as c\nc.inspect.linecache.getlines('/unused')",
+        "import langflow.base.mcp as c\nc.{member}.inspect.linecache.getlines('/unused')",
+        "import langflow.base as c\nc.mcp.{member}.inspect.linecache.getlines('/unused')",
+        "import langflow.base.mcp as c\ndef read(module):\n"
+        "    return module.{member}.inspect.linecache.getlines('/unused')\nread(c)",
+    ],
+)
+def test_rejects_legacy_runtime_readers_through_parent_packages(member: str, source: str) -> None:
+    assert not scan_code_security(source.format(member=member)).is_safe
+
+
+@pytest.mark.parametrize("package", ["lfx.base.mcp", "langflow.base.mcp"])
+@pytest.mark.parametrize("member", ["util", "preset"])
+def test_rejects_loaded_runtime_readers_through_mcp_wildcard_exports(package: str, member: str) -> None:
+    source = (
+        f"import {package}.{member}\nfrom {package} import *\ncontents = {member}.inspect.linecache.getlines('/unused')"
+    )
+    assert not scan_code_security(source).is_safe
+
+
+@pytest.mark.parametrize(
+    ("module", "package", "reader"),
+    [
+        ("lfx.custom.utils", "lfx", "custom.utils"),
+        ("langflow.custom.utils", "langflow", "custom.utils"),
+        ("lfx.base.mcp.util", "lfx.base", "mcp.util"),
+        ("langflow.base.mcp.util", "langflow.base", "mcp.util"),
+        ("lfx.events.event_manager", "lfx.events", "event_manager"),
+        ("lfx.graph.vertex.base", "lfx.graph.vertex", "base"),
+        ("lfx.interface.components", "lfx.interface", "components"),
+        ("langflow.interface.components", "langflow.interface", "components"),
+        ("langflow.services.auth.utils", "langflow.services.auth", "utils"),
+        ("langflow.services.knowledge_base_storage.runtime", "langflow.services.knowledge_base_storage", "runtime"),
+    ],
+)
+def test_rejects_loaded_runtime_readers_through_ancestor_wildcard_exports(
+    module: str, package: str, reader: str
+) -> None:
+    source = f"import {module}\nfrom {package} import *\ncontents = {reader}.inspect.linecache.getlines('/unused')"
+    assert not scan_code_security(source).is_safe
+
+
+@pytest.mark.parametrize("package", ["lfx.custom", "langflow.custom"])
+@pytest.mark.parametrize(
+    "source",
+    [
+        "from {package} import *\nclass Example(Component):\n    pass",
+        "from {package} import *\nname = utils.get_instance_name(component)",
+        "from {package} import *\nclass Example(custom_component.component.Component):\n    pass",
+        "import {package} as c\nclass Example(c.Component):\n    pass",
+        "import {package} as c\nname = c.utils.get_instance_name(component)",
+    ],
+)
+def test_preserves_safe_parent_package_exports(package: str, source: str) -> None:
+    assert scan_code_security(source.format(package=package)).is_safe
+
+
 @pytest.mark.parametrize(
     "source",
     [
@@ -106,6 +202,10 @@ def test_rejects_runtime_readers_through_package_aliases(source: str) -> None:
         "from lfx.custom.utils import get_instance_name\nname = get_instance_name(component)",
         "from langflow.custom.utils import get_instance_name\nname = get_instance_name(component)",
         "import lfx.custom.utils as c\nname = c.get_instance_name(component)",
+        "from langflow.base.mcp.util import sanitize_mcp_name\nname = sanitize_mcp_name('example')",
+        "from langflow.base.mcp.preset import MCPPresetComponent\nclass Example(MCPPresetComponent):\n    pass",
+        "from langflow.custom import *\nclass Example(custom.Component):\n    pass",
+        "import langflow.custom as c\nname = c.custom.utils.get_instance_name(component)",
         "class Client:\n    inspect = None\nclient = Client()\nvalue = client.inspect",
     ],
 )
@@ -113,7 +213,16 @@ def test_preserves_component_classes_and_unrelated_inspect_attributes(source: st
     assert scan_code_security(source).is_safe
 
 
-@pytest.mark.parametrize("module", ["lfx.custom.utils", "lfx.custom.code_parser.code_parser", "langflow.custom.utils"])
+@pytest.mark.parametrize(
+    "module",
+    [
+        "lfx.custom.utils",
+        "lfx.custom.code_parser.code_parser",
+        "langflow.custom.utils",
+        "langflow.base.mcp.util",
+        "langflow.base.mcp.preset",
+    ],
+)
 def test_rejects_real_shipped_file_reader_reexports(module: str, tmp_path: Path) -> None:
     marker = tmp_path / "runtime-reader-marker.txt"
     marker.write_text("review-owned marker\n", encoding="utf-8")

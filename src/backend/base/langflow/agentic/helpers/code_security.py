@@ -119,6 +119,8 @@ DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
         for module in (
             "langflow.__main__",
             "langflow.agentic.services.helpers.flow_loader",
+            "langflow.base.mcp.preset",
+            "langflow.base.mcp.util",
             "langflow.custom.custom_component.component",
             "langflow.custom.utils",
             "langflow.interface.components",
@@ -761,8 +763,31 @@ _DANGEROUS_CALL_MEMBERS, _DANGEROUS_READ_MEMBERS = _build_dangerous_members()
 # Importing arbitrary packages to inspect ``__all__`` would execute code during
 # the scan. These are verified star exports from packages with nested sinks;
 # the sink tables below determine which of the exported names need binding.
+# Packages without ``__all__`` also export their already-imported public children.
 _KNOWN_WILDCARD_SUBMODULE_EXPORTS: dict[str, frozenset[str]] = {
     "concurrent": frozenset({"futures"}),
+    "langflow": frozenset({"agentic", "base", "custom", "interface", "schema", "services"}),
+    "langflow.agentic": frozenset({"services"}),
+    "langflow.agentic.services": frozenset({"helpers"}),
+    "langflow.base": frozenset({"mcp"}),
+    "langflow.base.mcp": frozenset({"preset", "util"}),
+    "langflow.custom": frozenset({"custom_component", "utils"}),
+    "langflow.custom.custom_component": frozenset({"component"}),
+    "langflow.interface": frozenset({"components", "initialize"}),
+    "langflow.interface.initialize": frozenset({"loading"}),
+    "langflow.services.auth": frozenset({"external", "utils"}),
+    "langflow.services.knowledge_base_storage": frozenset({"runtime"}),
+    "lfx": frozenset(
+        {"base", "cli", "custom", "events", "extension", "graph", "interface", "run", "services", "utils"}
+    ),
+    "lfx.base": frozenset({"mcp"}),
+    "lfx.base.mcp": frozenset({"preset", "util"}),
+    "lfx.custom": frozenset({"custom_component", "utils"}),
+    "lfx.custom.custom_component": frozenset({"component"}),
+    "lfx.events": frozenset({"event_manager"}),
+    "lfx.graph.vertex": frozenset({"base"}),
+    "lfx.interface": frozenset({"components", "initialize"}),
+    "lfx.interface.initialize": frozenset({"loading"}),
     "numpy": frozenset({"lib"}),
     "numpy.lib": frozenset({"format", "npyio"}),
     "os": frozenset({"path"}),
@@ -770,6 +795,11 @@ _KNOWN_WILDCARD_SUBMODULE_EXPORTS: dict[str, frozenset[str]] = {
     "pandas.io": frozenset({"api", "pickle"}),
     "pandas.core": frozenset({"generic"}),
     "urllib": frozenset({"error", "request"}),
+}
+
+# These verified wildcard exports use a different path from their owning package.
+_SHIPPED_MODULE_REEXPORTS: dict[str, dict[str, str]] = {
+    "langflow.custom": {"custom": "lfx.custom"},
 }
 
 
@@ -790,7 +820,7 @@ def _build_wildcard_submodule_bindings() -> dict[str, dict[str, str]]:
     module_paths = {path.rpartition(".")[0] for path in sink_paths}
     module_paths.update(DANGEROUS_SUBMODULES)
 
-    bindings: dict[str, dict[str, str]] = {}
+    bindings = {package: dict(exports) for package, exports in _SHIPPED_MODULE_REEXPORTS.items()}
     for module_path in module_paths:
         parts = module_path.split(".")
         for index in range(1, len(parts)):
@@ -835,7 +865,7 @@ _PACKAGE_REEXPORT_MODULE_PATHS: dict[str, str] = {
 }
 
 
-# Known stdlib modules that expose restricted modules as attributes, mapping
+# Known modules that expose restricted modules as attributes, mapping
 # the attribute name to the canonical restricted module it resolves to. Keep
 # this exact-host allowlist narrow: an arbitrary third-party module's ``.os``
 # or ``.sys`` attribute is not necessarily the stdlib module. ``tempfile``
@@ -847,6 +877,7 @@ _PACKAGE_REEXPORT_MODULE_PATHS: dict[str, str] = {
 # still have their ``.os`` / ``.sys`` members canonicalized — see
 # _reexported_restricted_module below.
 _RESTRICTED_MODULE_REEXPORTS: dict[str, dict[str, str]] = {
+    **_SHIPPED_MODULE_REEXPORTS,
     "glob": {"os": "os", "sys": "sys"},
     "logging": {"os": "os"},
     "os": {"sys": "sys"},
@@ -884,6 +915,15 @@ _RESTRICTED_MODULE_REFERENCES: set[str] = {
     *_RESTRICTED_MODULE_REEXPORTS,
     "builtins",
     "__builtins__",
+}
+
+# A shipped parent package can pass the same readers through a helper.
+# Track the package objects while leaving their safe classes and functions usable.
+_RESTRICTED_MODULE_REFERENCES |= {
+    ".".join(module.split(".")[:depth])
+    for module in _RESTRICTED_MODULE_REFERENCES
+    if module.startswith(("langflow.", "lfx."))
+    for depth in range(1, module.count(".") + 1)
 }
 
 
