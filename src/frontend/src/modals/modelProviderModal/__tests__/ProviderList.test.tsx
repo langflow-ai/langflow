@@ -275,4 +275,90 @@ describe("ProviderList", () => {
       ).not.toBeInTheDocument();
     });
   });
+
+  describe("Decision model counts (LE-3129)", () => {
+    const decisionProviders = [
+      {
+        provider: "TypeSafe",
+        icon: "TypeSafe",
+        is_enabled: true,
+        models: [
+          { model_name: "jev-latest", metadata: { model_type: "decision" } },
+        ],
+      },
+      {
+        provider: "OpenAI",
+        icon: "OpenAI",
+        is_enabled: true,
+        models: [
+          { model_name: "gpt-6-luna", metadata: { model_type: "llm" } },
+          { model_name: "gpt-6-luna", metadata: { model_type: "decision" } },
+          // A kind the dialog does not list is not counted.
+          { model_name: "rerank-1", metadata: { model_type: "rerank" } },
+        ],
+      },
+    ];
+
+    const renderWith = (modelType: "all" | "llm" | "decision") => {
+      const useGetModelProvidersMock =
+        require("@/controllers/API/queries/models/use-get-model-providers").useGetModelProviders;
+      useGetModelProvidersMock.mockReturnValueOnce({
+        data: decisionProviders,
+        isLoading: false,
+        isFetching: false,
+      });
+      render(<ProviderList modelType={modelType} />);
+    };
+
+    it("counts every listed kind in the all view", () => {
+      renderWith("all");
+      expect(screen.getByTestId("provider-item-TypeSafe")).toHaveTextContent(
+        "TypeSafe - 1 models",
+      );
+      expect(screen.getByTestId("provider-item-OpenAI")).toHaveTextContent(
+        "OpenAI - 2 models",
+      );
+    });
+
+    it("counts only decision models in the decision view", () => {
+      renderWith("decision");
+      expect(screen.getByTestId("provider-item-TypeSafe")).toHaveTextContent(
+        "TypeSafe - 1 models",
+      );
+      expect(screen.getByTestId("provider-item-OpenAI")).toHaveTextContent(
+        "OpenAI - 1 models",
+      );
+    });
+
+    it("leaves decision-only providers out of the language view", () => {
+      renderWith("llm");
+      expect(screen.queryByTestId("provider-item-TypeSafe")).toBeNull();
+      expect(screen.getByTestId("provider-item-OpenAI")).toHaveTextContent(
+        "OpenAI - 1 models",
+      );
+    });
+
+    it("lists only providers with decision models in the decision view", () => {
+      const useGetModelProvidersMock =
+        require("@/controllers/API/queries/models/use-get-model-providers").useGetModelProviders;
+      useGetModelProvidersMock.mockReturnValueOnce({
+        data: [
+          ...decisionProviders,
+          {
+            provider: "Anthropic",
+            icon: "Anthropic",
+            is_enabled: true,
+            models: [
+              { model_name: "claude-3", metadata: { model_type: "llm" } },
+            ],
+          },
+        ],
+        isLoading: false,
+        isFetching: false,
+      });
+      render(<ProviderList modelType="decision" />);
+      expect(screen.getByTestId("provider-item-TypeSafe")).toBeInTheDocument();
+      expect(screen.queryByTestId("provider-item-Anthropic")).toBeNull();
+    });
+  });
 });
