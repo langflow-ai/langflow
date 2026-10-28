@@ -111,11 +111,42 @@ def _is_blocked_attribute(attr: str | None) -> bool:
 # Secret/env exfiltration is the concrete threat — components must use
 # Langflow's variable/secret service, never raw process env.
 DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
-    (
-        "lfx.custom.custom_component.component",
-        "inspect",
-        "The component module's inspect re-export is forbidden in components (runtime and file access)",
-    ),
+    # These shipped modules expose the real inspect module, including legacy
+    # wildcard re-exports. Restrict the member, not safe classes or functions
+    # from the same module. This also protects aliases and opaque transfers.
+    *[
+        (module, "inspect", f"{module}.inspect is forbidden in components (runtime and file access)")
+        for module in (
+            "langflow.__main__",
+            "langflow.agentic.services.helpers.flow_loader",
+            "langflow.custom.custom_component.component",
+            "langflow.custom.utils",
+            "langflow.interface.components",
+            "langflow.interface.initialize.loading",
+            "langflow.schema.playground_events",
+            "langflow.services.auth.external",
+            "langflow.services.auth.utils",
+            "langflow.services.authorization.decorators",
+            "langflow.services.factory",
+            "langflow.services.knowledge_base_storage.runtime",
+            "lfx.base.mcp.preset",
+            "lfx.base.mcp.util",
+            "lfx.cli.script_loader",
+            "lfx.custom.code_parser.code_parser",
+            "lfx.custom.custom_component.component",
+            "lfx.custom.utils",
+            "lfx.events.event_manager",
+            "lfx.extension.loader._detection",
+            "lfx.graph.utils",
+            "lfx.graph.vertex.base",
+            "lfx.interface.components",
+            "lfx.interface.initialize.loading",
+            "lfx.run.hitl",
+            "lfx.services.manager",
+            "lfx.utils.flow_requirements",
+            "lfx.utils.util",
+        )
+    ],
     ("os", "environ", "os.environ is forbidden — use Langflow's variable/secret service"),
     ("os", "environb", "os.environb is forbidden. Use Langflow's variable/secret service"),
     ("gc", "garbage", "gc.garbage is forbidden in components (server object recovery)"),
