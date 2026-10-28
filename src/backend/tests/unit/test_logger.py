@@ -12,6 +12,7 @@ This test suite covers all aspects of the logger module including:
 import builtins
 import contextlib
 import importlib
+import io
 import json
 import logging
 import os
@@ -1200,6 +1201,21 @@ class TestProductionObservability:
         assert "log-credential-marker" not in output
         assert "upstream request failed" in output
         assert "ValueError" in output
+
+    @pytest.mark.parametrize("repetitions", [3, 60])
+    def test_pretty_tracebacks_redact_before_color_and_wrapping(self, repetitions):
+        output = io.StringIO()
+        configure(log_env="", log_level="INFO", output_file=output, cache=False)
+        credential = "abcde" * repetitions
+        try:
+            msg = f"https://example.com/api?x-api-key={credential}&view=short"
+            raise ValueError(msg)
+        except ValueError:
+            structlog.get_logger().exception("failed")
+        text = _strip_ansi(output.getvalue())
+        assert credential not in "".join(text.split())
+        assert "x-api-key=***&view=short" in "".join(text.split())
+        assert "ValueError" in text
 
     def test_otel_processor_no_op_when_no_span(self, capsys):
         # OTel SDK may be installed but no span is active. Processor must

@@ -7,6 +7,7 @@ import logging.handlers
 import os
 import re
 import sys
+import traceback
 import warnings
 from collections import deque
 from collections.abc import Iterator
@@ -285,9 +286,7 @@ def _build_redact_processor(extra_keys: frozenset[str]) -> Any:
         finally:
             ancestors.remove(identity)
 
-    def redact(_logger: Any, _method_name: str, event_dict: dict[str, Any] | str) -> dict[str, Any] | str:
-        if isinstance(event_dict, str):
-            return _scrub(event_dict, 0, set())
+    def redact(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
         for key in list(event_dict.keys()):
             if isinstance(key, str) and key.lower() in sensitive:
                 event_dict[key] = _REDACTED
@@ -1205,15 +1204,20 @@ def configure(
                 processors.append(redact_processor)
                 processors.append(structlog.processors.KeyValueRenderer())
             else:
-                # structlog's default rich formatter renders frame locals, so pass the
-                # same opt-in gate as the JSON tracebacks above.
+
+                def format_safe_console_exception(sio: Any, exc_info: Any) -> None:
+                    # Redact before color or line wrapping can split a credential.
+                    exception = traceback.TracebackException(*exc_info, capture_locals=show_locals)
+                    text = "".join(exception.format())
+                    safe = redact_processor(None, "error", {"exception": text})["exception"]
+                    sio.write("\n" + safe)
+
                 processors.append(
                     structlog.dev.ConsoleRenderer(
                         colors=True,
-                        exception_formatter=structlog.dev.RichTracebackFormatter(show_locals=show_locals),
+                        exception_formatter=format_safe_console_exception,
                     )
                 )
-                processors.append(redact_processor)
         else:
             _append_json_tail()
 
