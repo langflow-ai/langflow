@@ -137,10 +137,34 @@ def test_run_transport_error(run):
     assert data.data["error"] == "down"
 
 
-def test_run_non_json_error_falls_back_to_reason(run):
+def test_run_non_json_error_keeps_body_excerpt(run):
     with patch(POST_PATCH_TARGET, MagicMock(return_value=_response("POST", RUN_URL, 502, text="bad"))):
         data = run.bowmark_run()
+    assert data.data["error"] == "Bowmark API error 502: bad"
+
+
+def test_run_empty_error_body_falls_back_to_reason(run):
+    with patch(POST_PATCH_TARGET, MagicMock(return_value=_response("POST", RUN_URL, 502, text=""))):
+        data = run.bowmark_run()
     assert data.data["error"] == "Bowmark API error 502: Bad Gateway"
+
+
+def test_run_needs_user_returns_handoff(run):
+    payload = {
+        "ok": False,
+        "status": "needs_user",
+        "result": None,
+        "needs": [{"site": "linkedin.com"}],
+        "meta": {"handoff": {"url": "https://bowmark.ai/h/abc"}},
+        "runId": "run-7",
+    }
+    with patch(POST_PATCH_TARGET, MagicMock(return_value=_response("POST", RUN_URL, json=payload))):
+        data = run.bowmark_run()
+    assert "error" not in data.data
+    assert data.data["status"] == "needs_user"
+    assert data.data["handoff_url"] == "https://bowmark.ai/h/abc"
+    assert data.data["needs"] == [{"site": "linkedin.com"}]
+    assert "https://bowmark.ai/h/abc" in data.text
 
 
 def test_run_non_object_payload(run):

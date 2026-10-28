@@ -38,5 +38,8 @@ def http_error_message(error: httpx.HTTPStatusError) -> str:
             detail = body_error
     except ValueError:
         detail = None
+    if not detail:
+        body = (response.text or "").strip()
+        detail = body[:300] or None
     reason = detail or response.reason_phrase or "request failed"
     return f"Bowmark API error {response.status_code}: {reason}"

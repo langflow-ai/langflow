@@ -84,6 +84,23 @@ class BowmarkRunComponent(Component):
 
         if not isinstance(payload, dict):
             return self._error("Bowmark returned an unexpected response (expected a JSON object).")
+        if payload.get("status") == "needs_user":
+            # A site needs the user to sign in. Not a failure: hand back the single-use
+            # link; after signing in, run the same script again.
+            handoff = (payload.get("meta") or {}).get("handoff") or {}
+            url = handoff.get("url")
+            needs = payload.get("needs") or []
+            data = Data(
+                text=f"Sign-in needed to continue. Open {url}, sign in, then run again.",
+                data={
+                    "status": "needs_user",
+                    "handoff_url": url,
+                    "needs": needs,
+                    "run_id": payload.get("runId"),
+                },
+            )
+            self.status = data
+            return data
         if not payload.get("ok", False):
             error = payload.get("error") or payload.get("status") or "run failed"
             if isinstance(error, dict):
