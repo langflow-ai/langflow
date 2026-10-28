@@ -20,6 +20,8 @@ from oracle_test_utils import (
     get_oracle_test_connection_inputs,
 )
 
+pytestmark = pytest.mark.usefixtures("trusted_mock_oracle_endpoint")
+
 
 @pytest.fixture(scope="module")
 def connection_params() -> dict[str, str] | None:

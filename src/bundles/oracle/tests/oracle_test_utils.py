@@ -5,6 +5,9 @@ import os
 from typing import Any
 from uuid import uuid4
 
+MOCK_ORACLE_HOST = "oracle.mock.test"
+MOCK_ORACLE_DSN = f"{MOCK_ORACLE_HOST}:1521/service"
+
 
 def get_oracle_connect_string(dsn: str) -> str:
     import oracledb
@@ -80,7 +83,7 @@ def get_oracle_test_connection_inputs(*, include_wallet_password: bool = False) 
     inputs = {
         "user": os.getenv("ORACLE_TEST_USER") or os.getenv("VECDB_USER") or uuid4().hex,
         "password": os.getenv("ORACLE_TEST_PASSWORD") or os.getenv("VECDB_PASS") or uuid4().hex,
-        "dsn": os.getenv("ORACLE_TEST_DSN") or os.getenv("VECDB_HOST") or uuid4().hex,
+        "dsn": MOCK_ORACLE_DSN,
     }
     if include_wallet_password:
         inputs["wallet_password"] = os.getenv("ORACLE_TEST_WALLET_PASSWORD") or uuid4().hex

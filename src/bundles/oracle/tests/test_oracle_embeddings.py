@@ -11,6 +11,8 @@ from oracle_test_utils import (
     get_oracle_test_connection_inputs,
 )
 
+pytestmark = pytest.mark.usefixtures("trusted_mock_oracle_endpoint")
+
 
 def test_oracle_embeddings_connection_secrets_are_password_inputs():
     inputs = {input_.name: input_ for input_ in OracleEmbeddingsComponent.inputs}
