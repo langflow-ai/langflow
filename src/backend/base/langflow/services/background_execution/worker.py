@@ -19,6 +19,10 @@ from lfx.log.logger import logger
 
 from langflow.services.background_execution.db_backend import _coerce_uuid
 from langflow.services.background_execution.runner import JobRunner
+from langflow.services.background_execution.service import (
+    _REQUEST_OVERRIDES_ERROR,
+    RequestOverridesCorruptedError,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -84,7 +88,29 @@ class WorkerJobRunner:
             from langflow.services.deps import get_settings_service
 
             self._facade = BackgroundExecutionService(settings_service=get_settings_service())
-        request = self._facade._reconstruct_request(job)  # noqa: SLF001
+        try:
+            request = self._facade._reconstruct_request(job)  # noqa: SLF001
+        except RequestOverridesCorruptedError:
+            # A structurally corrupt envelope can never hydrate, so re-claiming it on
+            # every lease expiry would hold a slot in the FIFO claim window forever and
+            # starve newer work. Terminalize it on the same contract the default
+            # backend's startup sweep uses, including its error blob.
+            #
+            # Caught alone, and before any RequestOverridesUnavailableError handler,
+            # because Corrupted subclasses it. The plain unavailable case (a worker
+            # whose secret key does not match the API's) is recoverable once the key is
+            # fixed, so it is deliberately left to expire its lease and be retried. Do
+            # not release the lease here either: that would make the row instantly
+            # re-claimable and turn a misconfigured worker into a hot retry loop.
+            meta = job.job_metadata or {}
+            await job_service.fail_queued_job(
+                job_uuid,
+                owner=meta.get("owner"),
+                heartbeat_at=meta.get("heartbeat_at"),
+                error=dict(_REQUEST_OVERRIDES_ERROR),
+                event_type="run_failed",
+            )
+            return
         user = BackgroundExecutionService._user_stub(job.user_id)  # noqa: SLF001
         adapter = self._build_adapter(request, job_uuid, job.flow_id)
         factory = self._resolve_frame_source_factory()
@@ -98,6 +124,11 @@ class WorkerJobRunner:
             job_timeout=self._settings.background_job_timeout,
             owner=self._owner,
             heartbeat_interval_s=self._settings.background_heartbeat_interval_s,
+            # A scaled run suspends in THIS process, so the worker has to stamp the
+            # human-input deadline the in-process path stamps: the API-side sweep
+            # only fails SUSPENDED rows that carry input_deadline_at, so without it
+            # a scaled run waits for a human forever.
+            input_deadline_s=self._settings.background_input_deadline_s,
         )
         await runner.run(job_id=job_uuid, source_kwargs={"job_id": job_uuid})
 
@@ -119,6 +150,11 @@ class WorkerJobRunner:
                 expose_graph_state=request.get("expose_graph_state", True),
             ),
         )
+
+
+# Ceiling on the exponential backoff after a failed claim. Bounds how long a
+# worker stays idle once the database comes back.
+_CLAIM_BACKOFF_CAP_S = 30.0
 
 
 async def _watchdog_loop(
@@ -144,8 +180,12 @@ async def _watchdog_loop(
     with contextlib.suppress(asyncio.TimeoutError):
         await asyncio.wait_for(stop_event.wait(), timeout=random.uniform(0, interval_s))  # noqa: S311
     while not stop_event.is_set():
-        with contextlib.suppress(Exception):
+        try:
             await backend.requeue_lost(lease_ttl_s=lease_ttl_s)
+        except Exception:  # noqa: BLE001 -- a failed pass must stay visible, not fatal
+            # Suppressed silently, a watchdog failing every pass looked identical to
+            # one with nothing to do, so orphans piled up unnoticed.
+            await logger.aexception("Worker: lease watchdog pass failed; retrying next tick")
         try:
             # +/-25% jitter so ticks stay spread out instead of re-converging.
             await asyncio.wait_for(stop_event.wait(), timeout=interval_s * random.uniform(0.75, 1.25))  # noqa: S311
@@ -179,8 +219,15 @@ async def run_worker_loop(
         watchdog_interval_s: how often the periodic watchdog runs; None disables
             it (startup-only reconcile, the prior behaviour).
     """
-    # Startup reconcile: requeue work lost by a previously-crashed worker.
-    await backend.requeue_lost(lease_ttl_s=lease_ttl_s)
+    # Startup reconcile: requeue work lost by a previously-crashed worker. A
+    # database briefly unreachable at boot must not stop this worker from ever
+    # starting, so the pass is best effort and the periodic watchdog retries it.
+    try:
+        await backend.requeue_lost(lease_ttl_s=lease_ttl_s)
+    except Exception:  # noqa: BLE001 -- the watchdog retries; refusing to boot helps nobody
+        await logger.aexception("Worker: startup lease reconcile failed; the watchdog will retry")
+    # Consecutive claim failures, driving the backoff. Reset on any good claim.
+    claim_failures = 0
 
     watchdog_task: asyncio.Task | None = None
     if watchdog_interval_s is not None:
@@ -195,7 +242,22 @@ async def run_worker_loop(
 
     try:
         while not stop_event.is_set():
-            job_id = await backend.claim(block_ms=idle_block_ms)
+            try:
+                job_id = await backend.claim(block_ms=idle_block_ms)
+            except Exception:  # noqa: BLE001 -- a database blip must not take the fleet down
+                # Every idle worker polls on the same cadence, so an unguarded raise
+                # here exits every worker process at once on a single database hiccup.
+                # Back off with jitter instead, so the fleet does not resynchronise
+                # into a thundering retry the moment the database comes back.
+                claim_failures += 1
+                backoff = min(_CLAIM_BACKOFF_CAP_S, idle_block_ms / 1000.0 * (2**claim_failures))
+                await logger.aexception(
+                    f"Worker: claim failed ({claim_failures} in a row); retrying in about {backoff:.1f}s"
+                )
+                with contextlib.suppress(asyncio.TimeoutError):
+                    await asyncio.wait_for(stop_event.wait(), timeout=backoff * random.uniform(0.75, 1.25))  # noqa: S311
+                continue
+            claim_failures = 0
             if job_id is None:
                 # claim() sleeps out its block window on an empty queue, but a
                 # backend that returns None promptly (error path, test double)

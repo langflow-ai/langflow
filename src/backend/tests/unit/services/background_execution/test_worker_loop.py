@@ -74,3 +74,73 @@ async def test_worker_survives_a_runner_crash_and_keeps_claiming():
     # A runner crash must not kill the loop: the durable job row + watchdog own
     # the crashed job's fate, and the worker moves on to the next claim.
     assert runner.ran == ["j2"]
+
+
+class _FlakyBackend:
+    """Claim side whose database is briefly unreachable, then recovers."""
+
+    def __init__(self, fail_times, ids, stop_event):
+        self._fail_left = fail_times
+        self._ids = list(ids)
+        self._stop_event = stop_event
+        self.reconciled = False
+        self.claim_calls = 0
+
+    async def requeue_lost(self, *, lease_ttl_s=45.0):  # noqa: ARG002 - part of the contract
+        self.reconciled = True
+        return []
+
+    async def claim(self, *, block_ms=1000):  # noqa: ARG002 - part of the claim contract
+        self.claim_calls += 1
+        if self._fail_left > 0:
+            self._fail_left -= 1
+            msg = "connection reset by peer"
+            raise ConnectionError(msg)
+        if self._ids:
+            return self._ids.pop(0)
+        self._stop_event.set()
+        return None
+
+
+@pytest.mark.usefixtures("client")
+async def test_worker_survives_a_database_blip_instead_of_exiting():
+    """A failing claim must not end the worker process.
+
+    Every idle worker polls on the same cadence, so an unguarded raise here takes
+    the whole fleet down together on one database hiccup.
+    """
+    stop_event = asyncio.Event()
+    backend = _FlakyBackend(fail_times=3, ids=["j1"], stop_event=stop_event)
+    runner = _RecordingRunner()
+
+    await run_worker_loop(backend, runner, stop_event=stop_event, idle_block_ms=1)
+
+    assert backend.claim_calls > 3, "the loop must keep polling after a failed claim"
+    assert runner.ran == ["j1"], "and must still run the job once the database comes back"
+
+
+class _StartupFailsBackend:
+    """The startup reconcile raises; the worker should still come up."""
+
+    def __init__(self, stop_event):
+        self._stop_event = stop_event
+        self.claimed = False
+
+    async def requeue_lost(self, *, lease_ttl_s=45.0):  # noqa: ARG002 - part of the contract
+        msg = "pool timeout at boot"
+        raise TimeoutError(msg)
+
+    async def claim(self, *, block_ms=1000):  # noqa: ARG002 - part of the claim contract
+        self.claimed = True
+        self._stop_event.set()
+
+
+@pytest.mark.usefixtures("client")
+async def test_worker_boots_when_the_startup_reconcile_fails():
+    """Refusing to boot because the reconcile failed helps nobody; the watchdog retries."""
+    stop_event = asyncio.Event()
+    backend = _StartupFailsBackend(stop_event)
+
+    await run_worker_loop(backend, _RecordingRunner(), stop_event=stop_event, idle_block_ms=1)
+
+    assert backend.claimed, "the worker must reach its claim loop despite a failed startup reconcile"
