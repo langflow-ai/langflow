@@ -1,8 +1,11 @@
 from lfx.base.models.model import LCModelComponent
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed, validate_provider_base_url
 from lfx.field_typing import Embeddings
 from lfx.io import BoolInput, DictInput, IntInput, MessageTextInput, Output, SecretStrInput
 
 from lfx_bundles.cloudflare.cloudflare_common import CompatibleCloudflareEmbeddings
+
+DEFAULT_CLOUDFLARE_ENDPOINT = "https://api.cloudflare.com/client/v4/accounts"
 
 
 class CloudflareWorkersAIEmbeddingsComponent(LCModelComponent):
@@ -48,7 +51,7 @@ class CloudflareWorkersAIEmbeddingsComponent(LCModelComponent):
             name="api_base_url",
             display_name="Cloudflare API base URL",
             advanced=True,
-            value="https://api.cloudflare.com/client/v4/accounts",
+            value=DEFAULT_CLOUDFLARE_ENDPOINT,
         ),
         DictInput(
             name="headers",
@@ -64,6 +67,13 @@ class CloudflareWorkersAIEmbeddingsComponent(LCModelComponent):
     ]
 
     def build_embeddings(self) -> Embeddings:
+        ensure_credential_endpoint_allowed(
+            self.api_token,
+            self.api_base_url,
+            default_url=DEFAULT_CLOUDFLARE_ENDPOINT,
+            sdk_env_fallback="CF_AI_API_TOKEN",
+        )
+        validate_provider_base_url(self.api_base_url, default_url=DEFAULT_CLOUDFLARE_ENDPOINT)
         try:
             embeddings = CompatibleCloudflareEmbeddings(
                 account_id=self.account_id,

@@ -73,13 +73,12 @@ class OracleDocLoaderComponent(Component):
             raise LocalFileAccessError(msg)
 
         connection_params = build_connection_params(
-            self.connection_params,
+            _validate_local_file_paths(self, self.connection_params, ("config_dir", "wallet_location")),
             user=self.user,
             password=self.password,
             dsn=self.dsn,
             wallet_password=self.wallet_password,
         )
-        connection_params = _validate_local_file_paths(self, connection_params, ("config_dir", "wallet_location"))
         params = _validate_local_file_paths(self, self.params, ("file", "dir"))
         with oracledb.connect(**connection_params) as connection:
             loader = OracleDocLoader(connection, params)
@@ -155,13 +154,12 @@ class OracleAutonomousDatabaseLoaderComponent(Component):
 
     def _parse_connection_params(self) -> dict[str, Any]:
         connection_params = build_connection_params(
-            self.connection_params,
+            _validate_local_file_paths(self, self.connection_params, ("config_dir", "wallet_location")),
             user=self.user,
             password=self.password,
             dsn=self.dsn,
             wallet_password=self.wallet_password,
         )
-        connection_params = _validate_local_file_paths(self, connection_params, ("config_dir", "wallet_location"))
         dsn = connection_params.get("dsn") or connection_params.get("connection_string") or connection_params.get("tns")
 
         user = connection_params.get("user") or connection_params.get("username")
