@@ -111,6 +111,11 @@ def _is_blocked_attribute(attr: str | None) -> bool:
 # Secret/env exfiltration is the concrete threat — components must use
 # Langflow's variable/secret service, never raw process env.
 DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
+    (
+        "lfx.custom.custom_component.component",
+        "inspect",
+        "The component module's inspect re-export is forbidden in components (runtime and file access)",
+    ),
     ("os", "environ", "os.environ is forbidden — use Langflow's variable/secret service"),
     ("os", "environb", "os.environb is forbidden. Use Langflow's variable/secret service"),
     ("gc", "garbage", "gc.garbage is forbidden in components (server object recovery)"),

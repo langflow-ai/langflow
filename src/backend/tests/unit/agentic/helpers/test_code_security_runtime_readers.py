@@ -41,3 +41,34 @@ def test_rejects_runtime_and_file_reader_imports(module: str, source: str) -> No
 )
 def test_rejects_runtime_and_file_reader_capabilities(source: str) -> None:
     assert not scan_code_security(source).is_safe
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "import lfx.custom.custom_component.component as c\nc.inspect.linecache.getlines('/unused')",
+        "import lfx.custom.custom_component.component\n"
+        "lfx.custom.custom_component.component.inspect.linecache.getlines('/unused')",
+        "from lfx.custom.custom_component.component import inspect as reader\nreader.linecache.getlines('/unused')",
+        "from lfx.custom.custom_component.component import *\ninspect.linecache.getlines('/unused')",
+        "import lfx.custom.custom_component.component as c\nreader = c.inspect\nreader.getmembers(value)",
+        "import lfx.custom.custom_component.component as c\ngetattr(c, 'inspect').getmembers(value)",
+        "import lfx.custom.custom_component.component as c\nvars(c)['inspect'].getmembers(value)",
+        "import lfx.custom.custom_component.component as c\n"
+        "def read(module):\n    return module.inspect.linecache.getlines('/unused')\nread(c)",
+    ],
+)
+def test_rejects_shipped_component_runtime_reader_reexport(source: str) -> None:
+    assert not scan_code_security(source).is_safe
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "from lfx.custom.custom_component.component import Component",
+        "import lfx.custom.custom_component.component as c\nclass Example(c.Component):\n    pass",
+        "class Client:\n    inspect = None\nclient = Client()\nvalue = client.inspect",
+    ],
+)
+def test_preserves_component_classes_and_unrelated_inspect_attributes(source: str) -> None:
+    assert scan_code_security(source).is_safe
