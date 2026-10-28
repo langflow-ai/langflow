@@ -28,6 +28,7 @@ from langflow.services.database.models.auth import (
     AuthzTeamMember,
 )
 from langflow.services.database.models.flow.model import Flow, FlowType
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
 from lfx.services.deps import get_settings_service
 
@@ -125,25 +126,50 @@ async def test_get_agent_card_returns_valid_card(client: AsyncClient, active_use
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
-async def test_agent_card_does_not_execute_stored_component_code(client: AsyncClient, active_user, flow_data, tmp_path):
+@pytest.mark.parametrize("admin_only", [False, True])
+async def test_agent_card_does_not_execute_stored_component_code(
+    client: AsyncClient, active_user, flow_data, tmp_path, monkeypatch, admin_only
+):
     """The card is served to anonymous callers, so building its schema must not run stored source.
 
-    A module-level assignment in a node's stored code runs whenever that component is
-    instantiated; the marker exists only if the card request executed it.
+    Discovery stays data-only even with the admin-only policy on and after the
+    non-admin owner is disabled. The marker exists only if a stored class body ran.
     """
+    monkeypatch.setattr(get_settings_service().settings, "custom_component_admin_only", admin_only)
     marker = tmp_path / "stored-code-executed"
-    payload = f"_SCHEMA_PROBE = __import__('pathlib').Path({str(marker)!r}).write_text('executed')\n"
+    payload = f"    _SCHEMA_PROBE = __import__('pathlib').Path({str(marker)!r}).write_text('executed')\n"
+    modified_nodes = 0
     for node in flow_data["nodes"]:
         code_field = node.get("data", {}).get("node", {}).get("template", {}).get("code")
         if isinstance(code_field, dict) and isinstance(code_field.get("value"), str):
-            code_field["value"] = payload + code_field["value"]
+            lines = code_field["value"].splitlines(keepends=True)
+            class_line = next(index for index, line in enumerate(lines) if line.startswith("class "))
+            lines.insert(class_line + 1, payload)
+            code_field["value"] = "".join(lines)
+            modified_nodes += 1
+    assert modified_nodes > 0
     flow_id = await _create_flow(active_user.id, data=flow_data)
 
     response = await client.get(_card_url(flow_id))
 
     assert response.status_code == 200
+    assert "authorization" not in response.request.headers
+    assert "cookie" not in response.request.headers
     assert not marker.exists()
-    assert "input_value" in response.json()["skills"][0]["inputSchema"]["properties"]
+    schema = response.json()["skills"][0]["inputSchema"]
+    assert schema["properties"]["input_value"]["type"] == "string"
+    assert schema["properties"]["session_id"]["type"] == "string"
+
+    async with session_scope() as session:
+        owner = await session.get(User, active_user.id)
+        owner.is_active = False
+        await session.commit()
+
+    response = await client.get(_card_url(flow_id))
+
+    assert response.status_code == 200
+    assert response.json()["skills"][0]["inputSchema"] == schema
+    assert not marker.exists()
 
 
 @pytest.mark.usefixtures("a2a_flag_on")

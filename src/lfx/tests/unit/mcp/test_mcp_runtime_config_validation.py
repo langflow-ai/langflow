@@ -174,7 +174,7 @@ async def test_update_tools_does_not_apply_stdio_policy_to_streamable_http(monke
     stdio_client = AsyncMock()
     http_client = AsyncMock()
     http_client.connect_to_server.return_value = []
-    monkeypatch.setattr(mcp_util, "validate_connector_url_for_ssrf", lambda _url: None)
+    monkeypatch.setattr(mcp_util, "validate_strict_url_for_ssrf_or_raise", lambda _url: None)
 
     await update_tools(
         "safe-http",
@@ -203,7 +203,7 @@ async def test_update_tools_validates_streamable_http_url_before_connecting(monk
         msg = "blocked by connector SSRF policy"
         raise ValueError(msg)
 
-    monkeypatch.setattr(mcp_util, "validate_connector_url_for_ssrf", reject_metadata_url)
+    monkeypatch.setattr(mcp_util, "validate_strict_url_for_ssrf_or_raise", reject_metadata_url)
 
     with pytest.raises(ValueError, match="blocked by connector SSRF policy"):
         await update_tools(

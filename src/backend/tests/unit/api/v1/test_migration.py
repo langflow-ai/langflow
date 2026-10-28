@@ -699,7 +699,7 @@ async def test_a_record_that_fails_to_save_does_not_leave_the_child_running(
         text=True,
         check=False,
     )
-    # ps appends flags such as "l" (multithreaded) after the primary process state.
+    # ps may append flags to the state, such as "Zl" for a multithreaded zombie on Linux.
     assert status.stdout.strip()[:1] in {"", "Z"}
 
 

@@ -279,9 +279,12 @@ async def test_stdio_session_creation_waits_with_configured_budget():
 
 
 @pytest.mark.asyncio
-async def test_streamable_http_session_creation_waits_with_configured_budget():
+async def test_streamable_http_session_creation_waits_with_configured_budget(monkeypatch):
     """LE-2507: the same budget must reach the Streamable HTTP readiness wait."""
     manager = MCPSessionManager()
+    from lfx.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().settings, "ssrf_allowed_hosts", ["127.0.0.1"])
     observed: list[float] = []
     http_client = MagicMock()
     http_client.return_value.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock(), MagicMock()))
