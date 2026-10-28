@@ -10,6 +10,7 @@ import httpx
 import pytest
 from langflow.services.connection.oauth.broker import store_tokens
 from langflow.services.database.models.connection.model import Connection
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.trigger.model import Trigger, TriggerCleanup, TriggerEvent, TriggerSubscription
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
@@ -142,6 +143,132 @@ async def activate(trigger_id):
         await TriggerService().enable_and_activate(session, row=row)
         assert row.state == "active"
         assert row.config["mechanism_id"] == "jira.issue.poll"
+
+
+@pytest.mark.usefixtures("jira")
+async def test_reconnected_jira_trigger_offers_resume_in_list_and_detail(client, active_user, logged_in_headers):
+    connection_id = await connection(active_user.id)
+    async with session_scope() as session:
+        flow = Flow(name="Reconnected Jira", user_id=active_user.id)
+        session.add(flow)
+        await session.flush()
+        flow_id = flow.id
+    trigger = await reconcile(flow_id, active_user.id)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        row.state = "needs_reconnect"
+        row.last_error = "The connection was revoked or expired. Reconnect it to resume this trigger."
+        session.add(row)
+        restored = await session.get(Connection, connection_id)
+        restored.status = "revoked"
+        session.add(restored)
+
+    revoked = await client.get(f"api/v1/triggers/{trigger.id}", headers=logged_in_headers)
+    assert revoked.status_code == 200, revoked.text
+    assert "reconnect" in revoked.json()["allowed_actions"]
+
+    async with session_scope() as session:
+        restored = await session.get(Connection, connection_id)
+        await store_tokens(
+            session,
+            restored,
+            {"version": 1, "access_token": "synthetic-jira-reconnected", "token_type": "Bearer"},
+            ["read:jira-work", "offline_access"],
+        )
+
+    for url in (f"api/v1/triggers/{trigger.id}", f"api/v1/triggers?flow_id={flow_id}", "api/v1/triggers"):
+        response = await client.get(url, headers=logged_in_headers)
+        assert response.status_code == 200, response.text
+        body = response.json()
+        if isinstance(body, list):
+            body = next(row for row in body if row["id"] == str(trigger.id))
+        assert body["state"] == "needs_reconnect"
+        assert body["reason"] == "ready_to_resume"
+        assert "resume" in body["allowed_actions"]
+        assert "reconnect" not in body["allowed_actions"]
+        assert body["blocked_actions"]["reconnect"] == "reconnect_not_needed"
+
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        assert row.state == "needs_reconnect"
+        assert row.last_error == "The connection was revoked or expired. Reconnect it to resume this trigger."
+
+    resumed = await client.post(f"api/v1/triggers/{trigger.id}/enable", headers=logged_in_headers)
+    assert resumed.status_code == 200, resumed.text
+    assert resumed.json()["state"] == "active"
+
+
+@pytest.mark.parametrize(
+    ("changes", "reason"),
+    [
+        ({"status": "revoked"}, "needs_reconnect"),
+        ({"status": "expired"}, "needs_reconnect"),
+        ({"status": "pending"}, "needs_reconnect"),
+        ({"status": "error"}, "needs_reconnect"),
+        ({"allow_non_interactive": False}, "consent_required"),
+        ({"granted_scopes": ["offline_access"]}, "needs_reconnect"),
+        ({"executing_identity": {"identity": "bot"}}, "needs_reconnect"),
+        ({"provider_key": "google"}, "config_invalid"),
+        ({"name": "different"}, "config_invalid"),
+        ({"ownership_mode": "instance", "owner_id": None}, "needs_reconnect"),
+    ],
+)
+@pytest.mark.usefixtures("jira")
+async def test_jira_recovery_requires_usable_owned_connection_metadata(
+    client, active_user, logged_in_headers, changes, reason
+):
+    connection_id = await connection(active_user.id)
+    async with session_scope() as session:
+        flow = Flow(name="Jira recovery prerequisites", user_id=active_user.id)
+        session.add(flow)
+        await session.flush()
+        flow_id = flow.id
+    trigger = await reconcile(flow_id, active_user.id)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        row.state = "needs_reconnect"
+        session.add(row)
+        source = await session.get(Connection, connection_id)
+        for field, value in changes.items():
+            setattr(source, field, value)
+        session.add(source)
+
+    response = await client.get(f"api/v1/triggers/{trigger.id}", headers=logged_in_headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["reason"] == reason
+    assert "resume" not in response.json()["allowed_actions"]
+    assert response.json()["blocked_actions"]["resume"] == reason
+
+
+@pytest.mark.parametrize("missing", [False, True], ids=["another-owner", "missing-connection"])
+@pytest.mark.usefixtures("jira")
+async def test_jira_recovery_does_not_offer_resume_for_missing_or_foreign_connections(
+    client, active_user, logged_in_headers, trigger_owner, missing
+):
+    connection_id = await connection(active_user.id)
+    async with session_scope() as session:
+        flow = Flow(name="Jira recovery ownership", user_id=active_user.id)
+        session.add(flow)
+        await session.flush()
+        flow_id = flow.id
+    trigger = await reconcile(flow_id, active_user.id)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        row.state = "needs_reconnect"
+        if missing:
+            row.connection_id = uuid4()
+        else:
+            source = await session.get(Connection, connection_id)
+            source.owner_id = trigger_owner
+            session.add(source)
+        session.add(row)
+
+    response = await client.get(f"api/v1/triggers/{trigger.id}", headers=logged_in_headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["reason"] == "needs_reconnect"
+    assert "resume" not in response.json()["allowed_actions"]
 
 
 async def test_registered_listener_adapter_baselines_delivers_dedupes_and_pauses(
