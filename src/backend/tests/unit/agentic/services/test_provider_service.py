@@ -633,3 +633,40 @@ class TestBugsAndEdgeCases:
             result = get_default_model("TestProvider")
 
         assert result is None
+
+
+@pytest.mark.asyncio
+async def test_decision_only_providers_are_never_assistant_candidates():
+    """A configured decision provider cannot become the assistant's generating model."""
+    from langflow.services.variable.service import DatabaseVariableService
+
+    creds = []
+    for name in ("PERPLEXITY_API_KEY", "TYPESAFE_API_KEY", "OPENAI_API_KEY"):
+        cred = MagicMock()
+        cred.name = name
+        cred.type = "Credential"
+        creds.append(cred)
+    service = MagicMock(spec=DatabaseVariableService)
+    service.get_all = AsyncMock(return_value=creds)
+
+    with (
+        patch("langflow.agentic.services.provider_service.get_variable_service", return_value=service),
+        patch("langflow.agentic.services.provider_service.os.getenv", return_value=None),
+    ):
+        enabled, status = await get_enabled_providers_for_user("user-1", MagicMock())
+
+    assert "OpenAI" in enabled
+    assert not {"TypeSafe", "Perplexity"} & (set(enabled) | set(status))
+
+
+@pytest.mark.parametrize("provider", ["TypeSafe", "Perplexity"])
+def test_decision_only_provider_has_no_assistant_default_model(provider):
+    assert get_default_model(provider) is None
+
+
+def test_assistant_catalog_default_is_never_a_decision_model():
+    with (
+        patch("langflow.agentic.services.provider_service.list_installed_tool_calling_models", return_value=[]),
+        patch("langflow.agentic.services.provider_service._preferred_model", return_value=None),
+    ):
+        assert get_default_model("OpenAI") != "gpt-6-luna"

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-github",
+  "version": "0.1.0",
+  "name": "GitHub",
+  "description": "GitHub App repository, issue, pull request and comment actions with signed repository event triggers.",
+  "lfx": {
+    "compat": [
+      "1"
+    ]
+  },
+  "bundles": [
+    {
+      "name": "github",
+      "path": "components/github"
+    }
+  ],
+  "integrations": [
+    {
+      "provider_id": "github",
+      "bundle": "github",
+      "path": "capabilities.v1.json"
+    }
+  ]
+}
