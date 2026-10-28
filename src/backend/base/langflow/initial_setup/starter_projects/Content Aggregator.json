@@ -841,6 +841,9 @@
               "project_id",
               "system_message",
               "df",
+              "batch_size",
+              "delay_between_batches",
+              "max_rate_limit_retries",
               "column_name",
               "output_column_name",
               "enable_metadata"
