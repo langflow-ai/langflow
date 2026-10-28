@@ -11,21 +11,27 @@ from tests.base import ComponentTestBaseWithoutClient
 
 
 class _BatchModel:
+    """Small async model double that records the size of each submitted batch."""
+
     def __init__(self, handler):
+        """Store the batch response handler and initialize call tracking."""
         self.handler = handler
         self.batch_sizes = []
 
     async def abatch(self, conversations, **_kwargs):
+        """Return handler responses for one batch and record its size."""
         self.batch_sizes.append(len(conversations))
         return self.handler(conversations)
 
 
 def _conversations(count):
+    """Build simple user-only conversations for the requested number of rows."""
     return [[{"role": "user", "content": str(index)}] for index in range(count)]
 
 
 @pytest.mark.asyncio
 async def test_run_conversations_limits_batch_size_and_delays_between_batches():
+    """Submit no more than the configured batch size and pause between batches."""
     model = _BatchModel(lambda batch: [item[0]["content"] for item in batch])
     component = BatchRunComponent(batch_size=2, delay_between_batches=0.25)
 
@@ -39,6 +45,8 @@ async def test_run_conversations_limits_batch_size_and_delays_between_batches():
 
 @pytest.mark.asyncio
 async def test_run_conversations_reduces_batch_and_retries_rate_limited_rows():
+    """Retry 429 responses with a smaller batch and provider-specified delay."""
+
     class RateLimitError(Exception):
         status_code = 429
         response = SimpleNamespace(headers={"Retry-After": "7.5"})
@@ -60,6 +68,7 @@ async def test_run_conversations_reduces_batch_and_retries_rate_limited_rows():
 
 
 def test_rate_limit_detection_and_retry_after_bounds():
+    """Recognize common rate-limit signals and bound numeric retry delays."""
     component = BatchRunComponent()
 
     assert component._is_rate_limit_error(SimpleNamespace(status_code=429))
@@ -73,6 +82,8 @@ def test_rate_limit_detection_and_retry_after_bounds():
 
 @pytest.mark.asyncio
 async def test_run_conversations_stops_after_retry_limit():
+    """Raise the provider error without sleeping when retries are disabled."""
+
     class RateLimitError(Exception):
         status_code = 429
 
@@ -87,6 +98,104 @@ async def test_run_conversations_stops_after_retry_limit():
 
     assert model.batch_sizes == [2]
     sleep.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_run_conversations_uses_exponential_backoff_without_retry_after():
+    """Apply increasing fallback delays when a provider omits Retry-After."""
+
+    class RateLimitError(Exception):
+        status_code = 429
+
+    attempts = 0
+
+    def handle_batch(batch):
+        nonlocal attempts
+        attempts += 1
+        if attempts < 3:
+            return [RateLimitError("busy") for _ in batch]
+        return [f"ok:{item[0]['content']}" for item in batch]
+
+    model = _BatchModel(handle_batch)
+    component = BatchRunComponent(batch_size=4, max_rate_limit_retries=2)
+
+    with patch("lfx.components.llm_operations.batch_run.asyncio.sleep", new_callable=AsyncMock) as sleep:
+        results = await component._run_conversations(model, _conversations(1))
+
+    assert results == ["ok:0"]
+    assert model.batch_sizes == [1, 1, 1]
+    assert sleep.await_args_list == [call(1), call(2)]
+
+
+@pytest.mark.asyncio
+async def test_run_batch_retries_only_rate_limited_rows_and_preserves_order():
+    """Keep successful rows and return retried rows in their original order."""
+
+    class RateLimitError(Exception):
+        status_code = 429
+
+    class MixedResultModel:
+        def __init__(self):
+            self.calls = 0
+
+        def with_config(self, *_, **__):
+            return self
+
+        async def abatch(self, conversations, **_kwargs):
+            self.calls += 1
+            if self.calls == 1:
+                return [
+                    AIMessage(content="response-0"),
+                    RateLimitError("busy-1"),
+                    AIMessage(content="response-2"),
+                    RateLimitError("busy-3"),
+                ]
+            return [AIMessage(content=f"response-{conversation[-1]['content']}") for conversation in conversations]
+
+    model = MixedResultModel()
+    component = BatchRunComponent(
+        model=model,
+        df=DataFrame({"text": ["0", "1", "2", "3"]}),
+        column_name="text",
+        batch_size=4,
+        max_rate_limit_retries=1,
+    )
+
+    with patch("lfx.components.llm_operations.batch_run.asyncio.sleep", new_callable=AsyncMock) as sleep:
+        result = await component.run_batch()
+
+    assert result["model_response"].tolist() == ["response-0", "response-1", "response-2", "response-3"]
+    assert result["batch_index"].tolist() == [0, 1, 2, 3]
+    assert model.calls == 2
+    sleep.assert_awaited_once_with(1)
+
+
+@pytest.mark.asyncio
+async def test_run_conversations_propagates_non_rate_limit_errors_immediately():
+    """Propagate ordinary model failures instead of retrying them."""
+    error = ValueError("invalid request")
+    model = _BatchModel(lambda batch: [error for _ in batch])
+    component = BatchRunComponent(batch_size=2, max_rate_limit_retries=3)
+
+    with (
+        patch("lfx.components.llm_operations.batch_run.asyncio.sleep", new_callable=AsyncMock) as sleep,
+        pytest.raises(ValueError, match="invalid request") as raised,
+    ):
+        await component._run_conversations(model, _conversations(2))
+
+    assert raised.value is error
+    assert model.batch_sizes == [2]
+    sleep.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_run_conversations_rejects_response_count_mismatch():
+    """Reject providers that return fewer responses than submitted requests."""
+    model = _BatchModel(lambda _batch: ["only one response"])
+    component = BatchRunComponent(batch_size=2)
+
+    with pytest.raises(ValueError, match="different number of responses"):
+        await component._run_conversations(model, _conversations(2))
 
 
 class _MockLLM:
