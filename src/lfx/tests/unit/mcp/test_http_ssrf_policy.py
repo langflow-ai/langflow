@@ -10,6 +10,14 @@ from lfx.utils.ssrf_protection import SSRFProtectionError
 
 @pytest.fixture(autouse=True)
 def strict_defaults(monkeypatch):
+    for variable in (
+        "LANGFLOW_SSRF_PROTECTION_ENABLED",
+        "LANGFLOW_SSRF_ALLOWED_HOSTS",
+        "LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED",
+        "LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK",
+    ):
+        monkeypatch.delenv(variable, raising=False)
+
     settings = get_settings_service().settings
     monkeypatch.setattr(settings, "ssrf_protection_enabled", True)
     monkeypatch.setattr(settings, "connector_ssrf_validation_enabled", True)
