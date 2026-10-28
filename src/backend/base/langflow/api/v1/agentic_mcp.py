@@ -76,9 +76,9 @@ async def _loopback_client(request: Request) -> LangflowClient:
     host, port = request.scope.get("server") or (settings.host, settings.runtime_port or settings.port)
     host = {"0.0.0.0": "127.0.0.1", "::": "::1"}.get(host, host)  # noqa: S104
     scheme = "https" if settings.ssl_cert_file and settings.ssl_key_file else "http"
-    # TLS keeps the presented hostname for certificate verification while the
-    # transport connects only to the actual listener address below.
-    tls_host = request.url.hostname if scheme == "https" else None
+    # Verify the operator's certificate name while connecting to the listener.
+    # Without an override, the certificate must cover the listener address.
+    tls_host = settings.ssl_cert_hostname if scheme == "https" else None
     server_url = httpx.URL(
         scheme=scheme,
         host=tls_host or host,

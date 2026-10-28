@@ -19,17 +19,22 @@ pytestmark = pytest.mark.asyncio
 
 
 @pytest.mark.parametrize(
-    ("host", "runtime_port", "root_path", "tls", "expected"),
+    ("host", "runtime_port", "root_path", "tls", "cert_hostname", "expected"),
     [
-        ("localhost", None, "", False, "http://localhost:7860"),
-        ("0.0.0.0", 7865, "/langflow", False, "http://127.0.0.1:7865/langflow"),  # noqa: S104
-        ("::", 7865, "/langflow/", False, "http://[::1]:7865/langflow"),
-        ("127.0.0.1", None, "/nested/langflow", True, "https://attacker.example:7860/nested/langflow"),
-        ("::1", None, "", True, "https://attacker.example:7860"),
-        ("backend.internal", None, "", False, "http://backend.internal:7860"),
+        ("localhost", None, "", False, None, "http://localhost:7860"),
+        ("0.0.0.0", 7865, "/langflow", False, None, "http://127.0.0.1:7865/langflow"),  # noqa: S104
+        ("::", 7865, "/langflow/", False, None, "http://[::1]:7865/langflow"),
+        ("127.0.0.1", None, "/nested/langflow", True, None, "https://127.0.0.1:7860/nested/langflow"),
+        ("::1", None, "", True, None, "https://[::1]:7860"),
+        ("127.0.0.1", None, "", True, "backend.internal", "https://backend.internal:7860"),
+        ("::1", None, "", True, "backend.internal", "https://backend.internal:7860"),
+        ("0.0.0.0", None, "", True, "backend.internal", "https://backend.internal:7860"),  # noqa: S104
+        ("::", None, "", True, "backend.internal", "https://backend.internal:7860"),
+        ("127.0.0.1", None, "", False, "backend.internal", "http://127.0.0.1:7860"),
+        ("backend.internal", None, "", False, None, "http://backend.internal:7860"),
     ],
 )
-async def test_loopback_uses_operator_origin(monkeypatch, host, runtime_port, root_path, tls, expected):
+async def test_loopback_uses_operator_origin(monkeypatch, host, runtime_port, root_path, tls, cert_hostname, expected):
     settings = SimpleNamespace(
         host=host,
         port=7860,
@@ -37,6 +42,7 @@ async def test_loopback_uses_operator_origin(monkeypatch, host, runtime_port, ro
         root_path=root_path,
         ssl_cert_file="cert.pem" if tls else None,
         ssl_key_file="key.pem" if tls else None,
+        ssl_cert_hostname=cert_hostname,
     )
     monkeypatch.setattr(agentic_mcp, "get_settings_service", lambda: SimpleNamespace(settings=settings))
     request = Request(
@@ -139,13 +145,14 @@ async def test_direct_transport_honors_configured_ca_file(monkeypatch, tmp_path)
     assert any(call.kwargs.get("cafile") == str(ca_file) for call in configured_context.call_args_list)
 
 
-async def test_loopback_tls_uses_certificate_hostname_and_listener_address(monkeypatch, tmp_path):
+@pytest.mark.parametrize("cert_hostname", ["backend.internal", "wrong.internal"])
+async def test_loopback_tls_uses_certificate_hostname_and_listener_address(monkeypatch, tmp_path, cert_hostname):
     from cryptography import x509
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import ec
     from cryptography.x509.oid import NameOID
 
-    hostname = "mcp.example.test"
+    hostname = "backend.internal"
     key = ec.generate_private_key(ec.SECP256R1())
     name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, hostname)])
     now = datetime.now(timezone.utc)
@@ -187,6 +194,7 @@ async def test_loopback_tls_uses_certificate_hostname_and_listener_address(monke
             root_path="",
             ssl_cert_file=str(cert_file),
             ssl_key_file=str(key_file),
+            ssl_cert_hostname=cert_hostname,
         )
         monkeypatch.setattr(agentic_mcp, "get_settings_service", lambda: SimpleNamespace(settings=settings))
         request = Request(
@@ -196,17 +204,24 @@ async def test_loopback_tls_uses_certificate_hostname_and_listener_address(monke
                 "server": ("127.0.0.1", port),
                 "path": "/api/v1/agentic/mcp",
                 "query_string": b"",
-                "headers": [(b"host", f"{hostname}:9999".encode()), (b"authorization", b"Bearer caller-token")],
+                "headers": [(b"host", b"public.example:9999"), (b"authorization", b"Bearer caller-token")],
             }
         )
         loopback = await agentic_mcp._loopback_client(request)
         try:
-            assert await loopback.get("/flows/") == {}
+            if cert_hostname == hostname:
+                assert await loopback.get("/flows/") == {}
+            else:
+                with pytest.raises(RuntimeError, match="CERTIFICATE_VERIFY_FAILED"):
+                    await loopback.get("/flows/")
         finally:
             await loopback.aclose()
-    assert len(seen) == 1
-    assert f"Host: {hostname}:{port}" in seen[0]
-    assert "Authorization: Bearer caller-token" in seen[0]
+    if cert_hostname == hostname:
+        assert len(seen) == 1
+        assert f"Host: {hostname}:{port}" in seen[0]
+        assert "Authorization: Bearer caller-token" in seen[0]
+    else:
+        assert seen == []
 
 
 @pytest.mark.parametrize("target", ["https://other.example/", "https://local.example:9001/", "http://local.example/"])
