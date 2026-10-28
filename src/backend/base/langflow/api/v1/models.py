@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import json
-from collections.abc import Collection
+from collections.abc import Collection, Iterator
+from contextlib import contextmanager
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query
@@ -22,6 +24,7 @@ from lfx.base.models.unified_models import (
     get_unified_models_detailed,
 )
 from lfx.base.models.unified_models.credentials import (
+    MODEL_STATUS_TYPES,
     model_status_contains,
     model_status_key,
     parse_model_status_key,
@@ -107,6 +110,7 @@ async def _aresolve_read_policy(
         purpose=requested,
         candidate_provider_ids=baseline.candidate_provider_ids,
         allowed_provider_ids=baseline.allowed_provider_ids & requested_snapshot.allowed_provider_ids,
+        blocked_model_keys=baseline.blocked_model_keys | requested_snapshot.blocked_model_keys,
     )
 
 
@@ -116,6 +120,22 @@ def _require_provider_from_policy(provider_policy: ModelProviderPolicySnapshot, 
     except ModelProviderPolicyError as exc:
         # Do not confirm whether a hidden provider is registered or merely blocked.
         raise HTTPException(status_code=404, detail="Model provider not found") from exc
+
+
+@contextmanager
+def _policy_denial_as_not_found() -> Iterator[None]:
+    """Do not confirm whether a hidden model is registered or merely blocked."""
+    try:
+        yield
+    except ModelProviderPolicyError as exc:
+        raise HTTPException(status_code=404, detail="Model not found") from exc
+
+
+def _not_a_blocked_decision_model(
+    provider_policy: ModelProviderPolicySnapshot, provider: str, model_name: str, model_type: str | None
+) -> bool:
+    """True unless this is a decision model that policy blocks; other kinds keep their own checks."""
+    return model_type != "decision" or provider_policy.allows_model(provider, model_name, model_type="decision")
 
 
 async def _require_provider(
@@ -152,7 +172,7 @@ class ModelStatusUpdate(BaseModel):
     provider: str
     model_id: str
     enabled: bool
-    model_type: Literal["llm", "embeddings"] | None = None
+    model_type: Literal["llm", "embeddings", "decision"] | None = None
 
     @field_validator("model_id", "provider")
     @classmethod
@@ -172,6 +192,8 @@ class ValidateProviderRequest(BaseModel):
 
     provider: str
     variables: dict[str, str]  # {variable_key: value}
+    model_type: Literal["llm", "embeddings", "decision"] | None = None
+    model_name: str | None = None
 
     @field_validator("provider")
     @classmethod
@@ -349,7 +371,7 @@ async def list_models(
 
     # Get default model if model_type is specified
     default_provider = None
-    if model_type:
+    if model_type and model_type != "decision":
         try:
             default_model_result = await get_default_model(
                 session=session,
@@ -438,6 +460,21 @@ async def list_models(
         provider_dict["is_configured"] = provider_configured_status.get(prov_name, False)
         provider_dict["live_discovery"] = prov_name in live_discovery_providers
         prov_models_status = enabled_models_map.get(prov_name, {})
+        # Decision model blocks apply to every listing, typed or not.
+        allowed = [
+            row
+            for row in provider_dict["models"]
+            if _not_a_blocked_decision_model(
+                provider_policy, prov_name, row["model_name"], (row.get("metadata") or {}).get("model_type")
+            )
+        ]
+        if len(allowed) != len(provider_dict["models"]):
+            provider_dict["models"] = allowed
+            provider_dict["num_models"] = len(allowed)
+        if model_type == "decision":
+            prov_models_status = (
+                enabled_models_result.get("enabled_models_by_type", {}).get(prov_name, {}).get("decision", {})
+            )
         has_active_model = any(prov_models_status.values())
         provider_dict["is_enabled"] = has_active_model
 
@@ -620,11 +657,33 @@ async def validate_provider(
         provider_policy_attributes,
     )
 
-    from lfx.base.models.unified_models import validate_model_provider_key
+    from lfx.base.models.unified_models import (
+        get_all_variables_for_provider,
+        validate_model_provider_key,
+    )
 
+    # Check the configuration the key will run with: a saved setting the dialog can't read back, such as a
+    # Credential-type OPENAI_BASE_URL, counts, as it does when the key is saved and when a flow runs. A
+    # secret never comes from storage here: only a key the caller sends is checked, so a saved or server
+    # key can't be sent to an endpoint the caller names. What the dialog sends wins, including "" for a
+    # value it is clearing.
     try:
+        saved = await asyncio.to_thread(
+            get_all_variables_for_provider, current_user.id, request.provider, include_secrets=False
+        )
+        variables = {**saved, **request.variables}
         # Validate the credentials
-        validate_model_provider_key(request.provider, request.variables)
+        # Decision models and decision-only providers are validated with a decision, never chat.
+        with _policy_denial_as_not_found():
+            await asyncio.to_thread(
+                validate_model_provider_key,
+                request.provider,
+                variables,
+                request.model_name,
+                model_type=request.model_type,
+                user_id=current_user.id,
+                policy_attributes=provider_policy_attributes,
+            )
         return ValidateProviderResponse(valid=True, error=None)
     except ValueError as e:
         return ValidateProviderResponse(valid=False, error=str(e))
@@ -765,7 +824,7 @@ def _build_model_default_flags(
             legacy_key = model_status_key(provider, model_name)
             # OR defaults across typed rows sharing a provider/name identity.
             is_default_model[legacy_key] = is_default_model.get(legacy_key, False) or is_default
-            if model_type in {"llm", "embeddings"}:
+            if model_type in MODEL_STATUS_TYPES:
                 is_default_model[model_status_key(provider, model_name, model_type)] = is_default
 
     return is_default_model
@@ -791,7 +850,7 @@ def _build_model_types_by_identity(
             if not isinstance(model_name, str):
                 continue
             model_type = model.get("metadata", {}).get("model_type", "llm")
-            if model_type not in {"llm", "embeddings"}:
+            if model_type not in MODEL_STATUS_TYPES:
                 continue
             identity = model_status_key(provider, model_name)
             model_types_by_identity.setdefault(identity, set()).add(model_type)
@@ -1012,7 +1071,7 @@ async def _get_enabled_models_result(
             is_not_supported = metadata.get("not_supported", False)
             is_default = metadata.get("default", False)
             model_type = metadata.get("model_type", "llm")
-            if model_type not in {"llm", "embeddings"}:
+            if model_type not in MODEL_STATUS_TYPES:
                 model_type = "llm"
 
             # Foundry requires explicit enable; seed defaults are not auto-on.
@@ -1035,6 +1094,7 @@ async def _get_enabled_models_result(
                 and not is_not_supported
                 and (explicitly_on if requires_explicit else (is_default or explicitly_on))
                 and not explicitly_off
+                and _not_a_blocked_decision_model(provider_policy, provider, model_name, model_type)
             )
             # Per-type map is exact; flat map ORs rows that share provider/name.
             models_for_type = enabled_models_by_type[provider].setdefault(model_type, {})
@@ -1159,7 +1219,7 @@ async def update_enabled_models(
     disabled_models = normalize_model_status_entries(disabled_models, providers_by_name)
     explicitly_enabled_models = normalize_model_status_entries(explicitly_enabled_models, providers_by_name)
 
-    unavailable_models: dict[tuple[str, str], str] = {}
+    unavailable_models: dict[tuple[str, str, str | None], str] = {}
     for provider_dict in all_models_by_provider:
         provider = provider_dict.get("provider")
         if not isinstance(provider, str):
@@ -1170,16 +1230,18 @@ async def update_enabled_models(
                 continue
             metadata = model.get("metadata", {})
             if metadata.get("deprecated", False):
-                unavailable_models[(provider, model_name)] = "deprecated"
+                unavailable_models[(provider, model_name, None)] = "deprecated"
+                unavailable_models[(provider, model_name, metadata.get("model_type", "llm"))] = "deprecated"
             elif metadata.get("not_supported", False):
-                unavailable_models[(provider, model_name)] = "not supported"
+                unavailable_models[(provider, model_name, None)] = "not supported"
+                unavailable_models[(provider, model_name, metadata.get("model_type", "llm"))] = "not supported"
 
     # Update model sets based on user requests
     # For any model being enabled, validate the provider credentials
     for update in updates:
         if update.enabled:
             _require_provider_from_policy(provider_policy, update.provider)
-            unavailable_reason = unavailable_models.get((update.provider, update.model_id))
+            unavailable_reason = unavailable_models.get((update.provider, update.model_id, update.model_type))
             if unavailable_reason:
                 raise HTTPException(
                     status_code=400,
@@ -1189,17 +1251,26 @@ async def update_enabled_models(
             from lfx.base.models.unified_models import get_all_variables_for_provider, validate_model_provider_key
 
             # Get variables from DB or environment
-            variables = get_all_variables_for_provider(current_user.id, update.provider)
+            variables = await asyncio.to_thread(get_all_variables_for_provider, current_user.id, update.provider)
 
             try:
                 # Validate the credentials
-                validate_model_provider_key(update.provider, variables, model_name=update.model_id)
+                with _policy_denial_as_not_found():
+                    await asyncio.to_thread(
+                        validate_model_provider_key,
+                        update.provider,
+                        variables,
+                        model_name=update.model_id,
+                        model_type=update.model_type,
+                        user_id=current_user.id,
+                        policy_attributes=provider_policy_attributes,
+                    )
+            except HTTPException:
+                raise
             except ValueError as e:
-                # Validation failed - return 400 with error message
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Validation failed for {update.provider}: {e}",
-                ) from e
+                # Validation failed - return 400 with error message. Decision messages name the provider.
+                detail = str(e) if update.model_type == "decision" else f"Validation failed for {update.provider}: {e}"
+                raise HTTPException(status_code=400, detail=detail) from e
             except Exception as e:
                 logger.exception("Unexpected error validating provider %s", update.provider)
                 raise HTTPException(

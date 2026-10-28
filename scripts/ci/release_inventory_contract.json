@@ -68,7 +68,9 @@
         "lfx-azure",
         "lfx-cohere",
         "lfx-datastax",
+        "lfx-discord",
         "lfx-docling",
+        "lfx-github",
         "lfx-google",
         "lfx-ibm",
         "lfx-microsoft",
@@ -78,8 +80,7 @@
         "lfx-oracle",
         "lfx-slack",
         "lfx-toolguard",
-        "lfx-vllm",
-        "lfx-discord"
+        "lfx-vllm"
       ],
       "forbidden_distributions_add": [
         "lfx-arxiv",
@@ -107,6 +108,7 @@
           "lfx-datastax",
           "lfx-discord",
           "lfx-docling",
+          "lfx-github",
           "lfx-google",
           "lfx-ibm",
           "lfx-microsoft",
@@ -160,6 +162,11 @@
         "lfx-toolguard": [
           "lfx_toolguard/extension.json",
           "lfx_toolguard/components/models_and_agents/policies_component.py"
+        ],
+        "lfx-github": [
+          "lfx_github/extension.json",
+          "lfx_github/components/github/capabilities.v1.json",
+          "lfx_github/components/github/issue_trigger.py"
         ],
         "lfx-discord": [
           "lfx_discord/extension.json",
@@ -250,6 +257,7 @@
           "lfx-empiriolabs",
           "lfx-exa",
           "lfx-firecrawl",
+          "lfx-github",
           "lfx-google",
           "lfx-ibm",
           "lfx-microsoft",

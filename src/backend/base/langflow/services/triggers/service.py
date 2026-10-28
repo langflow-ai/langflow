@@ -281,6 +281,13 @@ class TriggerService(Service):
                 row.connection_id != arming.connection_id
                 or (row.config or {}).get("mechanism_id") != arming.mechanism_id
             )
+            if (
+                row.state == TriggerState.ACTIVE.value
+                and not changed
+                and row.config == {**config, "mechanism_id": arming.mechanism_id}
+                and arming.mechanism_id in push_mechanisms()
+            ):
+                return row
             row.connection_id = arming.connection_id
             row.config = {**config, "mechanism_id": arming.mechanism_id}
             if changed:
@@ -328,7 +335,11 @@ class TriggerService(Service):
         Commits ``session`` first, so callers must not hold a savepoint open
         across this call.
         """
-        if row.kind not in source_kinds() or (row.config or {}).get("mechanism_id") not in push_mechanisms():
+        if (
+            row.state != TriggerState.PENDING.value
+            or row.kind not in source_kinds()
+            or (row.config or {}).get("mechanism_id") not in push_mechanisms()
+        ):
             return row
         from langflow.services.triggers.source_runtime import initialize_source
 
