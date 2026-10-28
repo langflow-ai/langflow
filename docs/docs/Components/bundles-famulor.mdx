@@ -1,0 +1,93 @@
+---
+title: Famulor
+slug: /bundles-famulor
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="famulor" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Famulor** bundle.
+
+[Famulor](https://www.famulor.io) is an AI voice and phone platform. These components call the public REST API at `https://app.famulor.io/api/v1` with a workspace API key (`fam_...`).
+
+Create the key under **Settings, API & MCP**. For the request and response shapes, see the [Famulor API reference](https://docs.famulor.io/api-reference/introduction).
+
+If a request fails, for example because the API key is missing or the destination is not allowed, the component returns a single result whose `error` field describes the problem.
+
+## Famulor Make Call
+
+This component starts an outbound AI phone call. The assistant must be active and have an outbound-capable phone number. The API returns the created call immediately, usually with status `queued`.
+
+It sends `POST /calls` with `assistant_id`, `to_number`, and any variables you set.
+
+It outputs the call as [`Data`](/data-types#json). The `text` is a short status line. The **Message** output repeats that text for a chat connection.
+
+In [tool mode](/agents-tools), the component exposes a single tool named `famulor_make_call`. The API key stays on the component.
+
+### Famulor Make Call parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Famulor API Key (`famulor_api_key`) | SecretString | Input parameter. Your Famulor workspace API key. |
+| Assistant ID (`assistant_id`) | String | Input parameter. UUID of the active assistant that places the call. |
+| Phone Number (`phone_number`) | String | Input parameter. Destination in E.164 format, for example `+4930123456`. |
+| Variables (`call_variables`) | Object | Input parameter. Optional per-call values sent as `variables`. Each entry must be a string, number, or boolean. |
+| Caller ID (`phone_number_id`) | String | Input parameter. Optional phone-number UUID to use as the caller ID. Leave empty to use the assistant's number. |
+
+## Famulor Get Call
+
+This component reads one call, including its status, AI summary, and transcript.
+
+It sends `GET /calls/{id}`.
+
+It outputs the call as [`Data`](/data-types#json). The `text` includes the status, the summary when one exists, and the spoken transcript. The **Message** output carries the same text.
+
+In tool mode, the component exposes a single tool named `famulor_get_call`.
+
+### Famulor Get Call parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Famulor API Key (`famulor_api_key`) | SecretString | Input parameter. Your Famulor workspace API key. |
+| Call ID (`call_id`) | String | Input parameter. UUID of the call returned by **Famulor Make Call**. |
+
+## Famulor List Assistants
+
+This component lists assistants in the workspace, newest first.
+
+It sends `GET /assistants` with `limit` and `offset`.
+
+It outputs a page as [`Data`](/data-types#json) with `items`, `limit`, `offset`, and `total`. Each item includes `id`, `name`, `mode`, `is_active`, `stt_language`, `greeting_mode`, and `updated_at`. The **Table** output is one row per assistant. The **Message** output is a one-line count.
+
+In tool mode, the component exposes a single tool named `famulor_list_assistants`.
+
+### Famulor List Assistants parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Famulor API Key (`famulor_api_key`) | SecretString | Input parameter. Your Famulor workspace API key. |
+| Limit (`limit`) | Integer | Input parameter. Page size, from `1` to `200`. Default: `50`. |
+| Offset (`offset`) | Integer | Input parameter. Number of assistants to skip. Default: `0`. |
+
+## Famulor List Campaigns
+
+This component lists campaigns, optionally filtered by status.
+
+It sends `GET /campaigns` with `limit`, `offset`, and `status` when a status other than **all** is selected.
+
+It outputs a page as [`Data`](/data-types#json) with `items`, `limit`, `offset`, `total`, and `status`. Each item includes `id`, `name`, `status`, `channel`, `assistant_id`, `timezone`, and `updated_at`. The **Table** output is one row per campaign.
+
+In tool mode, the component exposes a single tool named `famulor_list_campaigns`.
+
+### Famulor List Campaigns parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Famulor API Key (`famulor_api_key`) | SecretString | Input parameter. Your Famulor workspace API key. |
+| Status (`campaign_status`) | String | Input parameter. One of `all`, `draft`, `running`, `paused`, `completed`, or `archived`. Default: `all`. Sent as the `status` query parameter. |
+| Limit (`limit`) | Integer | Input parameter. Page size, from `1` to `200`. Default: `50`. |
+| Offset (`offset`) | Integer | Input parameter. Number of campaigns to skip. Default: `0`. |
