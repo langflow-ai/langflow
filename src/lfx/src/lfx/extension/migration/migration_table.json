@@ -5274,7 +5274,12 @@
     {
       "bare_class_name": "SerpKiteSearchComponent",
       "target": "ext:serpkite:SerpKiteSearchComponent@official",
-      "added_in": "1.13.0"
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "SerpKiteAssistantComponent",
+      "target": "ext:serpkite:SerpKiteAssistantComponent@official",
+      "added_in": "1.14.0"
     }
   ],
   "ambiguous_bare_names": [

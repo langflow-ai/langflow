@@ -1,7 +1,7 @@
 [project]
 name = "lfx-serpkite"
 version = "0.1.0"
-description = "SerpKite Google SERP web-search component as a standalone Langflow Extension Bundle."
+description = "SerpKite Google search and AI assistant components as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.16"
 license = { text = "MIT" }
