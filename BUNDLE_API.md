@@ -224,6 +224,13 @@ the deserialize half is covered by
 
 ## Changelog
 
+- **Headless integration context checks (2026-10-28).** `Component` checks the
+  selected capability's declared deployment contexts before resolving a
+  connection or running an integration action. Unsupported headless actions
+  raise `IntegrationContextUnsupportedError` with the existing
+  `action-unsupported` code instead of suggesting credential setup. Supported
+  contexts and public signatures are unchanged, so `BUNDLE_API_VERSION` remains `1`.
+
 - **Google Workspace network diagnostics (2026-10-15).** `lfx.integrations` exports
   `IntegrationNetworkError` with the additive `network-error` code. Google transport
   failures report a fixed reason and API hostname, with server-network guidance in
