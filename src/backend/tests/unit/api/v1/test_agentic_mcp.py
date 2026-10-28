@@ -297,6 +297,7 @@ class TestAgenticMcpToolDelegation:
             headers = {"Authorization": "Bearer tok-123", "x-api-key": "key-456"}
             cookies: dict = {}
             query_params: dict = {}
+            scope: dict = {}
 
         client = await _loopback_client(FakeRequest())
         assert client.server_url == "http://localhost:7860"

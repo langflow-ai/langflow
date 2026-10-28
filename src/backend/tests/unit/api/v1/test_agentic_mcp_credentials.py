@@ -2,12 +2,16 @@
 
 import asyncio
 import json
+import ssl
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
 from fastapi import Request, status
 from httpx import AsyncClient
+from httpx import Request as HttpRequest
 from langflow.api.v1 import agentic_mcp
 from lfx.mcp.client import LangflowClient
 
@@ -20,8 +24,8 @@ pytestmark = pytest.mark.asyncio
         ("localhost", None, "", False, "http://localhost:7860"),
         ("0.0.0.0", 7865, "/langflow", False, "http://127.0.0.1:7865/langflow"),  # noqa: S104
         ("::", 7865, "/langflow/", False, "http://[::1]:7865/langflow"),
-        ("127.0.0.1", None, "/nested/langflow", True, "https://127.0.0.1:7860/nested/langflow"),
-        ("::1", None, "", True, "https://[::1]:7860"),
+        ("127.0.0.1", None, "/nested/langflow", True, "https://attacker.example:7860/nested/langflow"),
+        ("::1", None, "", True, "https://attacker.example:7860"),
         ("backend.internal", None, "", False, "http://backend.internal:7860"),
     ],
 )
@@ -39,7 +43,7 @@ async def test_loopback_uses_operator_origin(monkeypatch, host, runtime_port, ro
         {
             "type": "http",
             "scheme": "https",
-            "server": ("untrusted.example", 443),
+            "server": (host, runtime_port or 7860),
             "root_path": "/untrusted-prefix",
             "path": "/api/v1/agentic/mcp",
             "headers": [
@@ -54,6 +58,7 @@ async def test_loopback_uses_operator_origin(monkeypatch, host, runtime_port, ro
     )
     loopback = await agentic_mcp._loopback_client(request)
     assert loopback.server_url == expected
+    assert list(loopback._pinned_ips.values()) == [[{"0.0.0.0": "127.0.0.1", "::": "::1"}.get(host, host)]]  # noqa: S104
     assert loopback._headers()["Authorization"] == "Bearer caller-token"
 
 
@@ -81,7 +86,7 @@ async def test_loopback_does_not_send_credentials_through_environment_proxy(monk
             {
                 "type": "http",
                 "scheme": "http",
-                "server": ("attacker.example", 80),
+                "server": ("127.0.0.1", port),
                 "path": "/api/v1/agentic/mcp",
                 "headers": [(b"host", b"attacker.example"), (b"authorization", b"Bearer caller-token")],
                 "query_string": b"",
@@ -97,6 +102,120 @@ async def test_loopback_does_not_send_credentials_through_environment_proxy(monk
     assert f"Host: 127.0.0.1:{port}" in seen[0]
     assert "Authorization: Bearer caller-token" in seen[0]
     assert "X-LANGFLOW-GLOBAL-VAR-TEST: synthetic-value" in seen[0]
+
+
+async def test_loopback_uses_actual_listener_port(monkeypatch):
+    settings = SimpleNamespace(
+        host="localhost", port=7860, runtime_port=None, root_path="", ssl_cert_file=None, ssl_key_file=None
+    )
+    monkeypatch.setattr(agentic_mcp, "get_settings_service", lambda: SimpleNamespace(settings=settings))
+    request = Request(
+        {
+            "type": "http",
+            "scheme": "https",
+            "server": ("127.0.0.1", 7861),
+            "path": "/api/v1/agentic/mcp",
+            "headers": [(b"host", b"attacker.example"), (b"x-forwarded-proto", b"https")],
+            "query_string": b"",
+        }
+    )
+    loopback = await agentic_mcp._loopback_client(request)
+    assert loopback.server_url == "http://127.0.0.1:7861"
+
+
+async def test_direct_transport_honors_configured_ca_file(monkeypatch, tmp_path):
+    import certifi
+
+    ca_file = tmp_path / "operator-ca.pem"
+    ca_file.write_bytes(Path(certifi.where()).read_bytes())
+    monkeypatch.setenv("SSL_CERT_FILE", str(ca_file))
+    create_context = ssl.create_default_context
+    with patch("ssl.create_default_context", wraps=create_context) as configured_context:
+        loopback = LangflowClient(use_env_proxies=False)
+        try:
+            await loopback._client()
+        finally:
+            await loopback.aclose()
+    assert any(call.kwargs.get("cafile") == str(ca_file) for call in configured_context.call_args_list)
+
+
+async def test_loopback_tls_uses_certificate_hostname_and_listener_address(monkeypatch, tmp_path):
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.x509.oid import NameOID
+
+    hostname = "mcp.example.test"
+    key = ec.generate_private_key(ec.SECP256R1())
+    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, hostname)])
+    now = datetime.now(timezone.utc)
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now - timedelta(days=1))
+        .not_valid_after(now + timedelta(days=1))
+        .add_extension(x509.SubjectAlternativeName([x509.DNSName(hostname)]), critical=False)
+        .sign(key, hashes.SHA256())
+    )
+    cert_file, key_file = tmp_path / "cert.pem", tmp_path / "key.pem"
+    cert_file.write_bytes(cert.public_bytes(serialization.Encoding.PEM))
+    key_file.write_bytes(
+        key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption())
+    )
+    tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    tls.load_cert_chain(cert_file, key_file)
+    monkeypatch.setenv("SSL_CERT_FILE", str(cert_file))
+    monkeypatch.setenv("HTTPS_PROXY", "http://127.0.0.1:1")
+    seen = []
+
+    async def serve(reader, writer):
+        seen.append((await reader.readuntil(b"\r\n\r\n")).decode())
+        writer.write(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}")
+        await writer.drain()
+        writer.close()
+        await writer.wait_closed()
+
+    async with await asyncio.start_server(serve, "127.0.0.1", 0, ssl=tls) as server:
+        port = server.sockets[0].getsockname()[1]
+        settings = SimpleNamespace(
+            host="0.0.0.0",  # noqa: S104
+            port=7860,
+            runtime_port=None,
+            root_path="",
+            ssl_cert_file=str(cert_file),
+            ssl_key_file=str(key_file),
+        )
+        monkeypatch.setattr(agentic_mcp, "get_settings_service", lambda: SimpleNamespace(settings=settings))
+        request = Request(
+            {
+                "type": "http",
+                "scheme": "https",
+                "server": ("127.0.0.1", port),
+                "path": "/api/v1/agentic/mcp",
+                "query_string": b"",
+                "headers": [(b"host", f"{hostname}:9999".encode()), (b"authorization", b"Bearer caller-token")],
+            }
+        )
+        loopback = await agentic_mcp._loopback_client(request)
+        try:
+            assert await loopback.get("/flows/") == {}
+        finally:
+            await loopback.aclose()
+    assert len(seen) == 1
+    assert f"Host: {hostname}:{port}" in seen[0]
+    assert "Authorization: Bearer caller-token" in seen[0]
+
+
+@pytest.mark.parametrize("target", ["https://other.example/", "https://local.example:9001/", "http://local.example/"])
+async def test_pinned_client_rejects_origin_changes_without_global_variables(target):
+    client = LangflowClient(
+        server_url="https://local.example", use_env_global_vars=False, pinned_ips={"local.example": ["127.0.0.1"]}
+    )
+    with pytest.raises(RuntimeError, match="outside the Langflow server origin"):
+        await client._check_request_origin(HttpRequest("GET", target))
 
 
 @pytest.mark.parametrize(

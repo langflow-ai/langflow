@@ -31,6 +31,7 @@ from lfx.log.logger import logger
 from lfx.mcp.client import LangflowClient
 from lfx.mcp.server import client_scope
 from lfx.mcp.server import mcp as lfx_mcp
+from lfx.utils.ssrf_transport import pin_host_for_url
 from mcp import types
 from mcp.server import Server
 
@@ -70,14 +71,18 @@ async def _loopback_client(request: Request) -> LangflowClient:
     """
     access_token = await oauth2_login(request)
     api_key = None if access_token else request.query_params.get("x-api-key") or request.headers.get("x-api-key")
-    # Derive the destination from operator settings, never caller-controlled headers.
+    # The ASGI server address comes from the listener, never the request headers.
     settings = get_settings_service().settings
-    host = {"0.0.0.0": "127.0.0.1", "::": "::1"}.get(settings.host, settings.host)  # noqa: S104
+    host, port = request.scope.get("server") or (settings.host, settings.runtime_port or settings.port)
+    host = {"0.0.0.0": "127.0.0.1", "::": "::1"}.get(host, host)  # noqa: S104
     scheme = "https" if settings.ssl_cert_file and settings.ssl_key_file else "http"
+    # TLS keeps the presented hostname for certificate verification while the
+    # transport connects only to the actual listener address below.
+    tls_host = request.url.hostname if scheme == "https" else None
     server_url = httpx.URL(
         scheme=scheme,
-        host=host,
-        port=settings.runtime_port or settings.port,
+        host=tls_host or host,
+        port=port,
         path=settings.root_path.rstrip("/"),
     )
     return LangflowClient(
@@ -85,7 +90,8 @@ async def _loopback_client(request: Request) -> LangflowClient:
         api_key=api_key,
         access_token=access_token,
         use_env_api_key=False,
-        trust_env=False,
+        use_env_proxies=False,
+        pinned_ips={pin_host_for_url(str(server_url)): [host]},
     )
 
 
