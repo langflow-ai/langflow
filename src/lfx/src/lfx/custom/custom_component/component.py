@@ -1624,6 +1624,7 @@ class Component(CustomComponent):
 
         effective_purpose = purpose or IntegrationPolicyPurpose.USE
         capability_ids = self._selected_integration_capabilities(input_model.provider, input_model.capabilities)
+        self._require_headless_integration_support(input_model.provider, capability_ids)
         require_integration_actions(
             user_id=self.user_id,
             provider_id=input_model.provider,
@@ -1632,6 +1633,14 @@ class Component(CustomComponent):
             purpose=effective_purpose,
         )
         return capability_ids
+
+    def _require_headless_integration_support(self, provider_id: str, capability_ids: Iterable[str]) -> None:
+        from lfx.services.integration_policy.utils import require_headless_integration_support
+
+        graph = getattr(self, "graph", None)
+        principal = getattr(graph, "execution_principal", None)
+        if principal is not None and principal.kind == "headless_operator":
+            require_headless_integration_support(provider_id, capability_ids)
 
     def require_integration_policy(self, purpose=None) -> None:
         """Gate the selected integration actions before any adapter can run.
@@ -1655,6 +1664,7 @@ class Component(CustomComponent):
 
         for provider_id, capabilities in integration_capabilities_for_component_class(type(self).__name__).items():
             selected = self._selected_integration_capabilities(provider_id, capabilities)
+            self._require_headless_integration_support(provider_id, selected)
             require_integration_actions(
                 user_id=self.user_id,
                 provider_id=provider_id,
