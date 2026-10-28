@@ -1227,6 +1227,16 @@ def _is_mcp_session_bust_error(exc: BaseException) -> bool:
 # (``lfx.base.mcp.pinned``) needs ``serverInfo`` to compare the server it reached
 # against the one its bundle pinned.
 _INITIALIZE_RESULT_ATTR = "_lf_initialize_result"
+_HTTP_CONNECTION_ATTR = "_lf_http_connection"
+
+
+@dataclass(frozen=True, slots=True)
+class _MCPHTTPConnection:
+    """Validated destination and HTTP configuration retained for session cleanup."""
+
+    url: str
+    headers: dict[str, str]
+    client_factory: Callable[..., httpx.AsyncClient]
 
 
 @dataclass(frozen=True, slots=True)
@@ -1776,9 +1786,10 @@ class MCPSessionManager:
         sse_preference_locked: list[bool] = [False]
 
         verify_ssl = connection_params.get("verify_ssl", True)
+        url = connection_params["url"]
         pinned_ips = None
         if is_connector_ssrf_validation_enabled():
-            url, resolved_ips = await asyncio.to_thread(validate_and_resolve_url, connection_params["url"])
+            url, resolved_ips = await asyncio.to_thread(validate_and_resolve_url, url)
             if resolved_ips:
                 pinned_ips = {pin_host_for_url(url): resolved_ips}
         # A pinned preset pins the transport as well as the tools: an endpoint that
@@ -1797,6 +1808,8 @@ class MCPSessionManager:
                 headers=headers, timeout=timeout, auth=auth, verify_ssl=verify_ssl, pinned_ips=pinned_ips
             )
 
+        http_connection = _MCPHTTPConnection(url, dict(connection_params["headers"]), custom_httpx_factory)
+
         async def session_task():
             """Background task that keeps the session alive."""
             streamable_error = None
@@ -1809,7 +1822,7 @@ class MCPSessionManager:
                             f"(attempt {attempt + 1}/{STREAMABLE_HTTP_CONNECT_ATTEMPTS})"
                         )
                         async with streamablehttp_client(
-                            url=connection_params["url"],
+                            url=url,
                             headers=connection_params["headers"],
                             timeout=connection_params["timeout_seconds"],
                             httpx_client_factory=custom_httpx_factory,
@@ -1818,6 +1831,8 @@ class MCPSessionManager:
                             async with session:
                                 initialize_result = await asyncio.wait_for(session.initialize(), timeout=2.0)
                                 _remember_initialize_result(session, initialize_result)
+                                with contextlib.suppress(AttributeError, TypeError):
+                                    session.__dict__[_HTTP_CONNECTION_ATTR] = http_connection
                                 used_transport.append("streamable_http")
                                 await logger.ainfo(f"Session {session_id} connected via Streamable HTTP")
                                 session_future.set_result(session)
@@ -1882,7 +1897,7 @@ class MCPSessionManager:
                 sse_read_timeout = connection_params.get("sse_read_timeout_seconds", 30)
 
                 async with sse_client(
-                    connection_params["url"],
+                    url,
                     connection_params["headers"],
                     connection_params["timeout_seconds"],
                     sse_read_timeout,
@@ -1892,6 +1907,8 @@ class MCPSessionManager:
                     async with session:
                         initialize_result = await session.initialize()
                         _remember_initialize_result(session, initialize_result)
+                        with contextlib.suppress(AttributeError, TypeError):
+                            session.__dict__[_HTTP_CONNECTION_ATTR] = http_connection
                         used_transport.append("sse")
                         sse_preference_locked[0] = True
                         fallback_msg = " (fallback)" if streamable_error else " (preferred)"
@@ -2607,11 +2624,12 @@ class MCPStreamableHttpClient(_PooledSessionClient):
 
     async def _terminate_remote_session(self) -> None:
         """Attempt to explicitly terminate the remote MCP session via HTTP DELETE (best-effort)."""
-        # Only relevant for Streamable HTTP or SSE transport
-        if not self._connection_params or "url" not in self._connection_params:
+        # A rejected connection has no validated session and must not send credentials during cleanup.
+        http_connection = getattr(self.session, "__dict__", {}).get(_HTTP_CONNECTION_ATTR)
+        if not isinstance(http_connection, _MCPHTTPConnection):
             return
 
-        url: str = self._connection_params["url"]
+        url = http_connection.url
 
         # Retrieve session id from the underlying SDK if exposed
         session_id = None
@@ -2619,12 +2637,12 @@ class MCPStreamableHttpClient(_PooledSessionClient):
             # Common attributes in MCP python SDK: `session_id` or `id`
             session_id = getattr(self.session, "session_id", None) or getattr(self.session, "id", None)
 
-        headers: dict[str, str] = dict(self._connection_params.get("headers", {}))
+        headers = dict(http_connection.headers)
         if session_id:
             headers["Mcp-Session-Id"] = str(session_id)
 
         try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
+            async with http_connection.client_factory(timeout=httpx.Timeout(5.0)) as client:
                 await client.delete(url, headers=headers)
         except Exception as e:  # noqa: BLE001
             # DELETE is advisory—log and continue
