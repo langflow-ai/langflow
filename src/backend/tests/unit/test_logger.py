@@ -1136,9 +1136,10 @@ class TestProductionObservability:
 
     @pytest.mark.parametrize("logger_name", ["uvicorn.access", "gunicorn.access"])
     @pytest.mark.parametrize("file_mode", [False, True])
-    def test_access_logs_redact_query_credentials(self, capsys, tmp_path, logger_name, file_mode):
+    @pytest.mark.parametrize("log_env", ["container", "container_json", "container_csv", ""])
+    def test_access_logs_redact_query_credentials(self, capsys, tmp_path, logger_name, file_mode, log_env):
         log_file = tmp_path / "access.json" if file_mode else None
-        configure(log_env="container", log_level="INFO", log_file=log_file, cache=False)
+        configure(log_env=log_env, log_level="INFO", log_file=log_file, cache=False)
         access_logger = logging.getLogger(logger_name)
         old_handlers, old_propagate, old_level = access_logger.handlers, access_logger.propagate, access_logger.level
         access_logger.handlers = [get_file_handler()] if file_mode else [InterceptHandler()]
@@ -1159,11 +1160,14 @@ class TestProductionObservability:
                 output = log_file.read_text()
             else:
                 output = capsys.readouterr().out
-            records = [json.loads(line) for line in output.splitlines() if line.startswith("{")]
-            record = next(record for record in records if record.get("logger") == logger_name)
             assert "log-credential-marker" not in output
-            assert "/api/v1/flows?x-api-key=***&view=short" in record["event"]
-            assert record["event"].endswith('HTTP/1.1" 200')
+            if log_env in {"container", "container_json"}:
+                records = [json.loads(line) for line in output.splitlines() if line.startswith("{")]
+                record = next(record for record in records if record.get("logger") == logger_name)
+                assert "/api/v1/flows?x-api-key=***&view=short" in record["event"]
+                assert record["event"].endswith('HTTP/1.1" 200')
+            else:
+                assert "/api/v1/flows?x-api-key=***&view=short" in _strip_ansi(output)
         finally:
             access_logger.handlers, access_logger.propagate, access_logger.level = (
                 old_handlers,
@@ -1216,6 +1220,25 @@ class TestProductionObservability:
         assert credential not in "".join(text.split())
         assert "x-api-key=***&view=short" in "".join(text.split())
         assert "ValueError" in text
+
+    @pytest.mark.parametrize("logger_name", ["uvicorn.error", "gunicorn.error"])
+    @pytest.mark.parametrize("log_env", ["container", "container_json", "container_csv", ""])
+    def test_file_formatter_redacts_foreign_exception_queries(self, tmp_path, logger_name, log_env):
+        log_file = tmp_path / "foreign-error.log"
+        configure(log_env=log_env, log_level="INFO", log_file=log_file, cache=False)
+        try:
+            msg = "https://example.com/api?x-api-key=log-credential-marker&view=short"
+            raise ValueError(msg)
+        except ValueError as exc:
+            record = logging.LogRecord(
+                logger_name, logging.ERROR, __file__, 0, "request failed", (), (type(exc), exc, exc.__traceback__)
+            )
+            get_file_handler().handle(record)
+        get_file_handler().flush()
+        output = log_file.read_text()
+        assert "log-credential-marker" not in output
+        assert "request failed" in output
+        assert "ValueError" in output
 
     def test_otel_processor_no_op_when_no_span(self, capsys):
         # OTel SDK may be installed but no span is active. Processor must

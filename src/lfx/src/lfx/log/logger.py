@@ -244,6 +244,10 @@ _REDACTED = "***"
 _REDACT_MAX_DEPTH = 32
 
 
+def _extra_redact_keys() -> frozenset[str]:
+    return frozenset(k.strip().lower() for k in os.getenv("LANGFLOW_LOG_REDACT_KEYS", "").split(",") if k.strip())
+
+
 def _build_redact_processor(extra_keys: frozenset[str]) -> Any:
     """Scrub credential fields and query parameters before rendering.
 
@@ -962,13 +966,26 @@ def setup_loguru_logger(log_level: str, *, enqueue: bool = False) -> None:
     )
 
 
+class _RedactingFileFormatter(logging.Formatter):
+    """Scrub foreign records that bypass structlog in plain file modes."""
+
+    def __init__(self) -> None:
+        super().__init__("%(message)s")
+        self._redact = _build_redact_processor(_extra_redact_keys())
+
+    def format(self, record: logging.LogRecord) -> str:
+        text = super().format(record)
+        return self._redact(None, record.levelname.lower(), {"event": text})["event"]
+
+
 def setup_log_file(log_file: Path, *, max_bytes: int, formatter: logging.Formatter | None = None) -> None:
     """Set up Langflow's rotating file handler.
 
     ``formatter`` lets JSON modes attach a ``structlog.stdlib.ProcessorFormatter``
     so third-party stdlib records (uvicorn, sqlalchemy, httpx, ...) are rendered
     as JSON through the same processor chain as application logs. When omitted,
-    the handler writes the message verbatim (structlog has already rendered it).
+    the handler preserves plain formatting and scrubs credentials from the final
+    message and traceback, including foreign records that bypass structlog.
     """
     global _file_handler  # noqa: PLW0603
 
@@ -981,7 +998,7 @@ def setup_log_file(log_file: Path, *, max_bytes: int, formatter: logging.Formatt
         maxBytes=max_bytes,
         backupCount=5,
     )
-    _file_handler.setFormatter(formatter if formatter is not None else logging.Formatter("%(message)s"))
+    _file_handler.setFormatter(formatter if formatter is not None else _RedactingFileFormatter())
     logging.root.addHandler(_file_handler)
 
 
@@ -1089,10 +1106,7 @@ def configure(
             event_dict.setdefault(key, value)
         return event_dict
 
-    extra_redact = frozenset(
-        k.strip().lower() for k in os.getenv("LANGFLOW_LOG_REDACT_KEYS", "").split(",") if k.strip()
-    )
-    redact_processor = _build_redact_processor(extra_redact)
+    redact_processor = _build_redact_processor(_extra_redact_keys())
 
     processors: list[Any] = [
         structlog.contextvars.merge_contextvars,
