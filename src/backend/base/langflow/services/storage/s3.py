@@ -7,6 +7,7 @@ file upload, download, deletion, and listing operations.
 from __future__ import annotations
 
 import asyncio
+import base64
 import contextlib
 import hashlib
 import os
@@ -537,16 +538,25 @@ class S3StorageService(StorageService):
         endpoint (MinIO) keeps botocore's default, since a virtual host would put the bucket
         into that endpoint's hostname; so does a dotted bucket name, which breaks TLS there.
 
-        With ``md5``, the link also signs the ``x-amz-meta-md5`` label, so the uploader must
-        send that header with that value, and the stored object carries its checksum even in
-        a bucket whose ETag is not one. Unlike tags this cannot be added at the promote: the
+        With ``md5``, the link also signs the ``x-amz-meta-md5`` label and ``Content-MD5``, so
+        the uploader must send both headers with those values. The label gives the stored
+        object its checksum even in a bucket whose ETag is not one; ``Content-MD5`` is what
+        makes S3 refuse a body that does not match it (``BadDigest``), since S3 never checks a
+        label. Without it, a leaked link could replace a staged file with other bytes that
+        still carry the expected label. Unlike tags this cannot be added at the promote: the
         promote's server-side copy never sees the bytes.
+
+        Raises:
+            ValueError: If ``md5`` is not 32 lowercase hex digits.
         """
         from urllib.parse import urlsplit
 
         from aiobotocore.config import AioConfig
 
         key = self.build_full_path(flow_id, file_name)
+        if md5 is not None and not _MD5_PATTERN.fullmatch(md5):
+            msg = f"Invalid md5 for {file_name}: expected 32 lowercase hex digits"
+            raise ValueError(msg)
         async with self.session.create_client("s3") as probe:
             host = urlsplit(probe.meta.endpoint_url).hostname or ""
         regional = host.endswith(".amazonaws.com") and "." not in self.bucket_name
@@ -555,6 +565,7 @@ class S3StorageService(StorageService):
             params: dict[str, Any] = {"Bucket": self.bucket_name, "Key": key}
             if md5 is not None:
                 params["Metadata"] = {MD5_METADATA_KEY: md5}
+                params["ContentMD5"] = base64.b64encode(bytes.fromhex(md5)).decode()
             return await s3_client.generate_presigned_url("put_object", Params=params, ExpiresIn=expires_in)
 
     async def move_file(self, source_namespace: str, target_namespace: str, file_name: str) -> None:

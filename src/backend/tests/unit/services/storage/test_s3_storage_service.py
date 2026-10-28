@@ -380,6 +380,20 @@ class TestMd5Label:
         labelled = await service.create_upload_link("ns", "a.pdf", md5=MD5)
         plain = await service.create_upload_link("ns", "a.pdf")
 
-        # The uploader has to send x-amz-meta-md5 with this value, or S3 refuses the PUT.
-        assert "x-amz-meta-md5" in labelled
+        # The uploader has to send x-amz-meta-md5 and Content-MD5 with these values, or S3
+        # refuses the PUT; Content-MD5 is what makes S3 refuse a body that does not match.
+        assert "content-md5%3Bhost%3Bx-amz-meta-md5" in labelled
         assert "x-amz-meta-md5" not in plain
+        assert "content-md5" not in plain
+
+    @pytest.mark.parametrize("bad", ["not-a-checksum", MD5.upper(), MD5[:-1]])
+    async def test_an_upload_link_refuses_a_checksum_that_is_not_an_md5(
+        self, mock_session_service, mock_settings_service, monkeypatch, bad
+    ):
+        monkeypatch.setenv("AWS_DEFAULT_REGION", "ca-central-1")
+        monkeypatch.setenv("AWS_ACCESS_KEY_ID", "k")
+        monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "s")
+        service = S3StorageService(mock_session_service, mock_settings_service)
+
+        with pytest.raises(ValueError, match="md5"):
+            await service.create_upload_link("ns", "a.pdf", md5=bad)
