@@ -46,6 +46,10 @@ class ServerSettings(BaseModel):
     """Path to the SSL certificate file on the local system."""
     ssl_key_file: str | None = None
     """Path to the SSL key file on the local system."""
+    ssl_cert_hostname: str | None = None
+    """Certificate hostname for internal HTTPS calls. Defaults to the listener address.
+    Set LANGFLOW_SSL_CERT_HOSTNAME when the backend certificate uses a DNS name.
+    Connections still use the actual listener address and verify the certificate."""
     root_path: str = ""
     """ASGI root_path for deployments behind a reverse proxy that strips a URL
     prefix (e.g. '/langflow').  When set, the MCP SSE transport includes this
