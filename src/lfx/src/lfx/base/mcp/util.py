@@ -46,7 +46,9 @@ from lfx.schema.data import Data
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.services.deps import get_settings_service
 from lfx.utils.async_helpers import run_until_complete
-from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
+from lfx.utils.ssrf_httpx import validate_strict_url_for_ssrf_or_raise
+from lfx.utils.ssrf_protection import is_connector_ssrf_validation_enabled, validate_and_resolve_url
+from lfx.utils.ssrf_transport import SSRFProtectedTransport, pin_host_for_url
 from lfx.utils.url_redaction import redact_urls_in_text, sanitize_url_for_display
 
 MCP_TOOL_SPAN_NAME = "mcp.tool.call"
@@ -184,6 +186,7 @@ def create_mcp_http_client_with_ssl_option(
     auth: httpx.Auth | None = None,
     *,
     verify_ssl: bool = True,
+    pinned_ips: dict[str, list[str]] | None = None,
 ) -> httpx.AsyncClient:
     """Create an httpx AsyncClient with configurable SSL verification.
 
@@ -199,6 +202,7 @@ def create_mcp_http_client_with_ssl_option(
         timeout: Request timeout as httpx.Timeout object.
         auth: Optional authentication handler.
         verify_ssl: Whether to verify SSL certificates (default: True).
+        pinned_ips: Validated addresses for this MCP server, when protection is enabled.
 
     Returns:
         Configured httpx.AsyncClient instance.
@@ -207,6 +211,10 @@ def create_mcp_http_client_with_ssl_option(
         "follow_redirects": False,
         "verify": verify_ssl,
     }
+
+    if pinned_ips:
+        kwargs["transport"] = SSRFProtectedTransport(pinned_ips=pinned_ips, verify=verify_ssl)
+        kwargs["trust_env"] = False
 
     if timeout is None:
         kwargs["timeout"] = httpx.Timeout(30.0)
@@ -1768,6 +1776,11 @@ class MCPSessionManager:
         sse_preference_locked: list[bool] = [False]
 
         verify_ssl = connection_params.get("verify_ssl", True)
+        pinned_ips = None
+        if is_connector_ssrf_validation_enabled():
+            url, resolved_ips = await asyncio.to_thread(validate_and_resolve_url, connection_params["url"])
+            if resolved_ips:
+                pinned_ips = {pin_host_for_url(url): resolved_ips}
         # A pinned preset pins the transport as well as the tools: an endpoint that
         # answers on a transport the pin does not name is drift, not a fallback
         # opportunity, and a misleading SSE connection error would mask it.
@@ -1781,7 +1794,7 @@ class MCPSessionManager:
             auth: httpx.Auth | None = None,
         ) -> httpx.AsyncClient:
             return create_mcp_http_client_with_ssl_option(
-                headers=headers, timeout=timeout, auth=auth, verify_ssl=verify_ssl
+                headers=headers, timeout=timeout, auth=auth, verify_ssl=verify_ssl, pinned_ips=pinned_ips
             )
 
         async def session_task():
@@ -2962,7 +2975,7 @@ async def update_tools(
         # SECURITY: a tenant-embedded MCP HTTP config could point at an internal service or
         # the cloud-metadata endpoint. Guard the URL with the same SSRF posture as other
         # outbound fetches (no-op when SSRF protection is disabled / host is allowlisted).
-        validate_connector_url_for_ssrf(url)
+        await asyncio.to_thread(validate_strict_url_for_ssrf_or_raise, url)
         # Serving-plane: forward the end-user identity to a SIBLING project (an operator-
         # allowlisted internal host) so it attributes the run to the same end user. Fail-closed —
         # external hosts never receive the PII header; no-op when the feature is off / no end user.
