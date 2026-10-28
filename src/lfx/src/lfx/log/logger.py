@@ -261,16 +261,22 @@ def _build_redact_processor(extra_keys: frozenset[str]) -> Any:
         "".join(f"(?:{re.escape(char)}|%{ord(char):02x})" for char in key)
         for key in sorted(sensitive, key=len, reverse=True)
     ]
-    query_credentials = re.compile(
-        rf"(?P<name>(?<![\w%+.-])(?:{'|'.join(names)})=)[^\s&#\"'<>]*",
+    sensitive_names = "|".join(names)
+    credential_values = re.compile(
+        rf"(?P<name>(?<![\w%+.-])(?:(?:{sensitive_names})\s*=\s*"
+        rf"|(?P<key_quote>[\"'])(?:{sensitive_names})(?P=key_quote)\s*:\s*))"
+        r"(?:(?P<quote>[\"'])(?:\\[^\r\n]|(?!(?P=quote))[^\\\r\n])*(?P=quote)"
+        r"|[\"'][^\r\n]*|[^\s&#\"'<>]*)",
         re.IGNORECASE,
     )
 
     def _scrub(value: Any, depth: int, ancestors: set[int]) -> Any:
         if isinstance(value, str):
-            if "=" not in value:
+            if "=" not in value and ":" not in value:
                 return value
-            return query_credentials.sub(lambda match: match["name"] + _REDACTED, value)
+            return credential_values.sub(
+                lambda match: match["name"] + (match["quote"] or "") + _REDACTED + (match["quote"] or ""), value
+            )
         if not isinstance(value, (dict, list, tuple)):
             return value
         identity = id(value)

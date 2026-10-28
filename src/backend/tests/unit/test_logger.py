@@ -1112,6 +1112,53 @@ class TestProductionObservability:
         records = self._emit_and_parse(capsys, lambda: structlog.get_logger().info(text))
         assert records[-1]["event"] == text
 
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            ('token="log-credential-marker"', 'token="***"'),
+            ("token='log-credential-marker'", "token='***'"),
+            ('token="log-credential-marker with spaces"', 'token="***"'),
+            ('token="log-credential-marker', "token=***"),
+            ("token='log-credential-marker with spaces", "token=***"),
+            (r'token="log-credential-marker\"tail"', 'token="***"'),
+            (r"token='log-credential-marker\'tail'", "token='***'"),
+            (
+                'Client(api_key="log-credential-marker", timeout=5)',  # pragma: allowlist secret
+                'Client(api_key="***", timeout=5)',
+            ),
+            (
+                '{"api_key": "log-credential-marker", "view": "short"}',  # pragma: allowlist secret
+                '{"api_key": "***", "view": "short"}',
+            ),
+            (
+                "{'token': 'log-credential-marker', 'view': 'short'}",  # pragma: allowlist secret
+                "{'token': '***', 'view': 'short'}",
+            ),
+        ],
+    )
+    def test_redaction_covers_quoted_credential_values(self, text, expected):
+        processor = _build_redact_processor(frozenset())
+        assert processor(None, "info", {"event": text})["event"] == expected
+
+    @pytest.mark.parametrize("log_env", ["container", "container_json", "container_csv", ""])
+    @pytest.mark.parametrize(
+        "text",
+        [
+            'Client(api_key="log-credential-marker", timeout=5)',  # pragma: allowlist secret
+            '{"api_key":"log-credential-marker", "view":"short"}',  # pragma: allowlist secret
+        ],
+    )
+    def test_file_formatter_redacts_foreign_quoted_credentials(self, tmp_path, log_env, text):
+        log_file = tmp_path / "foreign-credentials.log"
+        configure(log_env=log_env, log_level="INFO", log_file=log_file, cache=False)
+        record = logging.LogRecord("third_party.credentials", logging.INFO, __file__, 0, text, (), None)
+        get_file_handler().handle(record)
+        get_file_handler().flush()
+        output = log_file.read_text()
+        assert "log-credential-marker" not in output
+        event = json.loads(output)["event"] if log_env in {"container", "container_json"} else output.rstrip()
+        assert event == text.replace("log-credential-marker", "***")
+
     def test_extra_redact_keys_apply_to_query_parameters(self, capsys, monkeypatch):
         monkeypatch.setenv("LANGFLOW_LOG_REDACT_KEYS", "session_id")
         configure(log_env="container", log_level="INFO", cache=False)
