@@ -13,7 +13,10 @@ import {
 import { useGetDatasets } from "@/controllers/API/queries/evals/use-datasets";
 import { useGetFlowVersions } from "@/controllers/API/queries/flow-version";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import { QUIET_SELECT_TRIGGER } from "@/pages/MainPage/pages/evalsPage/utils/styles";
+import {
+  DIALOG_CONTAINER,
+  QUIET_SELECT_TRIGGER,
+} from "@/pages/MainPage/pages/evalsPage/utils/styles";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { extractApiErrorMessages } from "@/utils/apiError";
@@ -112,6 +115,7 @@ export default function EvaluateFlowModal({
         open={open}
         setOpen={setOpen}
         size="medium-h-full"
+        className={DIALOG_CONTAINER}
         onSubmit={handleSubmit}
       >
         <BaseModal.Header description={t("evals.evaluate.description")}>
@@ -260,6 +264,10 @@ export default function EvaluateFlowModal({
                 onJudgeModel={set.setJudgeModel}
                 rubric={state.rubric}
                 onRubric={set.setRubric}
+                judgeLimits={state.judgeLimits}
+                onJudgeLimits={set.setJudgeLimits}
+                judgeRowBudgetInvalid={form.judgeRowBudgetInvalid}
+                judgeRunBudgetInvalid={form.judgeRunBudgetInvalid}
               />
               <div className="flex items-center gap-3">
                 <Label htmlFor="evaluation-threshold" className="shrink-0">

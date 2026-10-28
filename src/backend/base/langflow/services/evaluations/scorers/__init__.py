@@ -24,7 +24,6 @@ async def run_scorer(
     actual: str,
     expected: str | None,
     user_id: UUID,
-    judge_max_output_tokens: int,
 ) -> ScoreResult:
     scorer_type = spec["type"]
     config = spec.get("config") or {}
@@ -35,7 +34,6 @@ async def run_scorer(
             expected=expected,
             config=config,
             user_id=user_id,
-            max_output_tokens=judge_max_output_tokens,
         )
     text_scorer = _TEXT_SCORERS.get(scorer_type)
     if text_scorer is None:

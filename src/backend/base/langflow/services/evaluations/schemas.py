@@ -8,6 +8,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from langflow.services.database.models.evaluation.dataset import DATASET_NAME_MAX_LENGTH
+from langflow.services.evaluations.scorers.llm_judge import MAX_OUTPUT_TOKENS_CEILING, MAX_RUN_OUTPUT_TOKENS_CEILING
 
 ScorerType = Literal["exact_match", "contains", "similarity", "llm_judge"]
 TEXT_MAX_CHARS = 100_000
@@ -143,7 +144,26 @@ class ScorerSpec(BaseModel):
         if rubric is not None and (not isinstance(rubric, str) or len(rubric) > RUBRIC_MAX_CHARS):
             msg = f"llm_judge config.rubric must be text of at most {RUBRIC_MAX_CHARS} characters"
             raise ValueError(msg)
+        row_budget = _whole_number_in(self.config, "max_output_tokens", MAX_OUTPUT_TOKENS_CEILING)
+        run_budget = _whole_number_in(self.config, "max_run_output_tokens", MAX_RUN_OUTPUT_TOKENS_CEILING)
+        if row_budget is not None and run_budget is not None and run_budget < row_budget:
+            msg = "llm_judge config.max_run_output_tokens must be at least max_output_tokens"
+            raise ValueError(msg)
+        stop = self.config.get("stop_on_output_limit")
+        if stop is not None and not isinstance(stop, bool):
+            msg = "llm_judge config.stop_on_output_limit must be true or false"
+            raise ValueError(msg)
         return self
+
+
+def _whole_number_in(config: dict[str, Any], key: str, ceiling: int) -> int | None:
+    value = config.get(key)
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= ceiling:
+        msg = f"llm_judge config.{key} must be a whole number from 1 to {ceiling}"
+        raise ValueError(msg)
+    return value
 
 
 def _validate_scorer_names(scorers: list[ScorerSpec]) -> list[ScorerSpec]:

@@ -94,7 +94,6 @@ async def estimate_run(
     flow_data: dict[str, Any] | None,
     dataset_id: UUID,
     scorers: list[Any],
-    judge_max_output_tokens: int,
 ) -> EstimateRead:
     stats = await dataset_stats(session, dataset_id)
     nodes = flow_llm_nodes(flow_data or {})
@@ -103,7 +102,7 @@ async def estimate_run(
     flow = _from_history(history, stats.items) if history else modeled
     unpriced = modeled.unpriced if flow.cost_low is None else flow.unpriced
     judge_specs = [spec for spec in scorers if isinstance(spec, dict)]
-    judge = estimate_judges(judge_specs, stats, judge_max_output_tokens)
+    judge = estimate_judges(judge_specs, stats)
     judge_calls = stats.items * sum(1 for spec in judge_specs if spec.get("type") == "llm_judge")
     return EstimateRead(
         items=stats.items,

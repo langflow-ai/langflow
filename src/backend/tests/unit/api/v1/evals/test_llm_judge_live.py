@@ -4,7 +4,7 @@ import pytest
 
 from .conftest import create_dataset, create_evaluation, create_flow, results, start_run, wait_for_run
 
-# The cheapest capable model; the judge output is capped by evals_judge_max_output_tokens.
+# The cheapest capable model; the judge output is capped by the scorer's max_output_tokens (default 300).
 JUDGE_MODEL = [{"name": "gpt-4o-mini", "provider": "OpenAI", "metadata": {}}]
 ROWS = [
     ("What is the capital of France?", "Paris"),

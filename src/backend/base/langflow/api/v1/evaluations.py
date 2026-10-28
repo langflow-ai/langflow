@@ -10,7 +10,6 @@ from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.evals_errors import evals_http_errors, evals_write
 from langflow.services.authorization import DatasetAction, FlowAction
 from langflow.services.database.models.evaluation import Evaluation, EvaluationResult, EvaluationRun
-from langflow.services.deps import get_settings_service
 from langflow.services.evaluations import evaluation_service, run_service
 from langflow.services.evaluations.access import load_eval_dataset, load_eval_flow, load_evaluation
 from langflow.services.evaluations.dataset_service import item_text
@@ -107,7 +106,6 @@ async def estimate_evaluation(
         flow_data=flow.data,
         dataset_id=dataset.id,
         scorers=[spec.model_dump() for spec in payload.scorers],
-        judge_max_output_tokens=get_settings_service().settings.evals_judge_max_output_tokens,
     )
 
 

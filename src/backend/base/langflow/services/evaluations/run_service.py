@@ -101,7 +101,6 @@ async def start_evaluation_run(
         flow_data=version.data,
         dataset_id=dataset.id,
         scorers=evaluation.scorers,
-        judge_max_output_tokens=get_settings_service().settings.evals_judge_max_output_tokens,
     )
     run.flow_version_id = version.id
     run.flow_version_number = version.version_number

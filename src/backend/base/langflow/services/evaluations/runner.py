@@ -23,6 +23,7 @@ from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.evaluations.dataset_service import all_items, item_text
 from langflow.services.evaluations.failure_breaker import FailureBreaker, RunAbortedError, failure_detail
+from langflow.services.evaluations.judge_budget import JudgeRunBudget
 from langflow.services.evaluations.row_runner import execute_row, flow_policy_scope
 from langflow.services.evaluations.row_scoring import score_row
 from langflow.services.evaluations.summary import build_summary, summary_rows
@@ -38,6 +39,7 @@ if TYPE_CHECKING:
 CANCEL_POLL_SECONDS = 2.0
 USER_CANCELLED = "LANGFLOW_USER_CANCELLED"
 INTERRUPTED_ERROR = "The run was interrupted before it finished."
+OUTPUT_LIMIT_STOPPED = "Stopped at row {row}, as set on this evaluation: {reason}"
 ABORTED_ERROR = (
     "Stopped early: the last {count} rows failed with the same error, so the rest would most likely fail too. "
     "Fix the cause and re-run. Error: {error}"
@@ -55,6 +57,7 @@ class RunContext:
     rows: list[tuple[int, DatasetItem]]
     settings: Settings
     breaker: FailureBreaker
+    judge_budget: JudgeRunBudget
 
 
 def _now() -> datetime:
@@ -121,6 +124,7 @@ async def _load_context(run_id: UUID) -> RunContext | None:
         rows=rows,
         settings=settings,
         breaker=FailureBreaker(threshold=settings.evals_abort_after_identical_failures),
+        judge_budget=JudgeRunBudget(),
     )
 
 
@@ -178,7 +182,7 @@ async def _record_row(ctx: RunContext, position: int, item: DatasetItem) -> None
             expected=expected,
             errored=execution.error is not None,
             user_id=ctx.user.id,
-            judge_max_output_tokens=settings.evals_judge_max_output_tokens,
+            judge_budget=ctx.judge_budget,
         )
     if ctx.breaker.tripped_with is not None:
         return
@@ -206,6 +210,10 @@ async def _record_row(ctx: RunContext, position: int, item: DatasetItem) -> None
             trace_id=execution.trace_id,
         ),
     )
+    if scored.stop_reason is not None:
+        # Marking the breaker tripped makes rows still in flight drop their results instead of saving them.
+        ctx.breaker.tripped_with = scored.stop_reason
+        raise RunAbortedError(OUTPUT_LIMIT_STOPPED.format(row=position + 1, reason=scored.stop_reason))
     _check_breaker(ctx, failure_detail(execution.error, scored, config["scorers"]))
 
 

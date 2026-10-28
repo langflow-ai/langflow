@@ -10,8 +10,12 @@ import {
 
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
-const MUTED_CELL = "text-muted-foreground cursor-pointer select-text";
-const PRIMARY_CELL = "text-primary cursor-pointer select-text";
+// Every column is right-aligned. A column's own cellClass replaces the one its "rightAligned" type
+// sets, so the alignment class is part of each cell class.
+const MUTED_CELL =
+  "text-muted-foreground cursor-pointer select-text ag-right-aligned-cell";
+const PRIMARY_CELL =
+  "text-primary cursor-pointer select-text ag-right-aligned-cell";
 
 function rowCost(result: EvaluationResult): number | null {
   if (result.cost_flow === null && result.cost_judge === null) return null;
@@ -23,6 +27,7 @@ export function resultColumns(t: TranslateFn, scorerNames: string[]): ColDef[] {
     {
       headerName: "#",
       colId: "position",
+      type: "rightAligned",
       width: 70,
       checkboxSelection: false,
       headerCheckboxSelection: false,
@@ -33,6 +38,7 @@ export function resultColumns(t: TranslateFn, scorerNames: string[]): ColDef[] {
     {
       headerName: t("evals.items.input"),
       field: "input",
+      type: "rightAligned",
       flex: 2,
       minWidth: 160,
       cellClass: PRIMARY_CELL,
@@ -41,6 +47,7 @@ export function resultColumns(t: TranslateFn, scorerNames: string[]): ColDef[] {
     {
       headerName: t("evals.items.expected"),
       field: "expected_output",
+      type: "rightAligned",
       flex: 1.5,
       minWidth: 140,
       cellClass: MUTED_CELL,
@@ -50,6 +57,7 @@ export function resultColumns(t: TranslateFn, scorerNames: string[]): ColDef[] {
     {
       headerName: t("evals.results.actual"),
       colId: "actual",
+      type: "rightAligned",
       flex: 2,
       minWidth: 180,
       cellClass: PRIMARY_CELL,
@@ -74,6 +82,8 @@ export function resultColumns(t: TranslateFn, scorerNames: string[]): ColDef[] {
       field: "passed",
       width: 120,
       sortable: true,
+      type: "rightAligned",
+      cellClass: "cursor-pointer ag-right-aligned-cell",
       cellRenderer: (params: { data: EvaluationResult }) => (
         <PassedBadge passed={params.data.passed} />
       ),

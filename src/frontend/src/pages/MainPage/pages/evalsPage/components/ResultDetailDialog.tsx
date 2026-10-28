@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import type { EvaluationResult } from "@/controllers/API/queries/evals/types";
+import type {
+  EvaluationResult,
+  ScorerSpec,
+} from "@/controllers/API/queries/evals/types";
 import { useGetEvaluationResult } from "@/controllers/API/queries/evals/use-evaluations";
 import BaseModal from "@/modals/baseModal";
 import {
@@ -10,7 +13,9 @@ import {
   formatTokenCount,
   formatUsd,
 } from "../utils/format";
+import { DIALOG_CONTAINER } from "../utils/styles";
 import PassedBadge from "./PassedBadge";
+import ScoreBreakdownNote from "./ScoreBreakdownNote";
 
 function TextBlock({
   label,
@@ -40,7 +45,8 @@ function TextBlock({
 interface ResultDetailDialogProps {
   runId: string;
   result: EvaluationResult | null;
-  scorerNames: string[];
+  scorers: ScorerSpec[];
+  threshold: number;
   onClose: () => void;
 }
 
@@ -48,10 +54,12 @@ interface ResultDetailDialogProps {
 export default function ResultDetailDialog({
   runId,
   result: listed,
-  scorerNames,
+  scorers,
+  threshold,
   onClose,
 }: ResultDetailDialogProps) {
   const { t } = useTranslation();
+  const scorerNames = scorers.map((scorer) => scorer.name);
   // The results list carries clipped previews; read the row in full once it is opened.
   const full = useGetEvaluationResult(
     { runId, resultId: listed?.id ?? "" },
@@ -69,6 +77,7 @@ export default function ResultDetailDialog({
       open
       setOpen={(open) => !open && onClose()}
       size="smaller-h-full"
+      className={DIALOG_CONTAINER}
     >
       <BaseModal.Header
         description={t("evals.results.detailDescription", {
@@ -133,6 +142,11 @@ export default function ResultDetailDialog({
               })}
             </ul>
           </div>
+          <ScoreBreakdownNote
+            result={result}
+            scorers={scorers}
+            threshold={threshold}
+          />
         </div>
       </BaseModal.Content>
     </BaseModal>

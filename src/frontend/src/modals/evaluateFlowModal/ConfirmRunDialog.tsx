@@ -6,6 +6,7 @@ import {
   formatTokenCount,
   formatUsd,
 } from "@/pages/MainPage/pages/evalsPage/utils/format";
+import { DIALOG_CONTAINER } from "@/pages/MainPage/pages/evalsPage/utils/styles";
 import BaseModal from "../baseModal";
 
 interface ConfirmRunDialogProps {
@@ -64,6 +65,7 @@ export default function ConfirmRunDialog({
       open={open}
       setOpen={setOpen}
       size="small-update"
+      className={DIALOG_CONTAINER}
       onSubmit={onConfirm}
     >
       <BaseModal.Header description={t("evals.confirm.description")}>

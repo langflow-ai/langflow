@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { ScorerType } from "@/controllers/API/queries/evals/types";
 import { cn } from "@/utils/utils";
+import JudgeLimitFields, { type JudgeLimits } from "./JudgeLimitFields";
+import { isReasoningModel } from "./judgeLimits";
 import { useJudgeModelOptions } from "./useJudgeModelOptions";
 
 const SCORERS: { type: ScorerType; icon: string }[] = [
@@ -23,6 +25,10 @@ interface ScorerFieldsProps {
   onJudgeModel: (value: ModelOption[]) => void;
   rubric: string;
   onRubric: (value: string) => void;
+  judgeLimits: JudgeLimits;
+  onJudgeLimits: (value: JudgeLimits) => void;
+  judgeRowBudgetInvalid: boolean;
+  judgeRunBudgetInvalid: boolean;
 }
 
 export default function ScorerFields({
@@ -33,6 +39,10 @@ export default function ScorerFields({
   onJudgeModel,
   rubric,
   onRubric,
+  judgeLimits,
+  onJudgeLimits,
+  judgeRowBudgetInvalid,
+  judgeRunBudgetInvalid,
 }: ScorerFieldsProps) {
   const { t } = useTranslation();
   const judgeOn = selected.has("llm_judge");
@@ -120,6 +130,13 @@ export default function ScorerFields({
               onChange={(event) => onRubric(event.target.value)}
             />
           </div>
+          <JudgeLimitFields
+            value={judgeLimits}
+            onChange={onJudgeLimits}
+            rowInvalid={judgeRowBudgetInvalid}
+            runInvalid={judgeRunBudgetInvalid}
+            reasoningModel={isReasoningModel(judgeModel[0]?.metadata)}
+          />
         </div>
       )}
     </fieldset>

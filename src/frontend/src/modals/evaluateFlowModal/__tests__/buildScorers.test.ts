@@ -1,4 +1,9 @@
 import type { ScorerType } from "@/controllers/API/queries/evals/types";
+import {
+  isReasoningModel,
+  parseJudgeMaxTokens,
+  parseJudgeRunMaxTokens,
+} from "../judgeLimits";
 import { buildScorers } from "../useEvaluateFlowForm";
 
 const JUDGE = [
@@ -28,6 +33,9 @@ describe("buildScorers", () => {
         config: {
           model: [JUDGE[0]],
           rubric: "be strict",
+          max_output_tokens: 600,
+          max_run_output_tokens: 8192,
+          stop_on_output_limit: true,
         },
       },
     ]);
@@ -40,5 +48,38 @@ describe("buildScorers", () => {
   it("should omit a blank rubric", () => {
     const [judge] = buildScorers(new Set(["llm_judge"]), JUDGE, "   ");
     expect(judge.config?.rubric).toBeUndefined();
+  });
+
+  it("should send the judge's output budget and stop choice", () => {
+    const [judge] = buildScorers(new Set(["llm_judge"]), JUDGE, "", {
+      maxOutputTokens: "2048",
+      maxRunOutputTokens: "50000",
+      stopOnOutputLimit: false,
+    });
+    expect(judge.config?.max_output_tokens).toBe(2048);
+    expect(judge.config?.max_run_output_tokens).toBe(50000);
+    expect(judge.config?.stop_on_output_limit).toBe(false);
+  });
+});
+
+describe("parseJudgeMaxTokens", () => {
+  it("should accept whole numbers in range only", () => {
+    expect(parseJudgeMaxTokens("300")).toBe(300);
+    expect(parseJudgeMaxTokens(" 2048 ")).toBe(2048);
+    for (const bad of ["", "0", "-5", "1.5", "abc", "40000"]) {
+      expect(parseJudgeMaxTokens(bad)).toBeNull();
+    }
+  });
+
+  it("should need the run budget to cover at least one row", () => {
+    expect(parseJudgeRunMaxTokens("8192", 600)).toBe(8192);
+    expect(parseJudgeRunMaxTokens("500", 600)).toBeNull();
+    expect(parseJudgeRunMaxTokens("x", 600)).toBeNull();
+  });
+
+  it("should spot a reasoning model from its catalog metadata", () => {
+    expect(isReasoningModel({ reasoning: true })).toBe(true);
+    expect(isReasoningModel({ reasoning: false })).toBe(false);
+    expect(isReasoningModel(undefined)).toBe(false);
   });
 });

@@ -18,7 +18,5 @@ class EvalsSettings(BaseModel):
     """Most rows one CSV import may add to a dataset."""
     evals_csv_max_bytes: int = Field(default=20 * 1024 * 1024, gt=0)
     """Largest CSV upload, in bytes; the whole file is parsed in memory."""
-    evals_judge_max_output_tokens: int = Field(default=300, gt=0)
-    """Output token cap for each LLM judge call, so a misbehaving judge cannot run up cost."""
     evals_abort_after_identical_failures: int = Field(default=3, ge=0)
     """Stop a run once this many consecutive rows fail with the same error (0 never stops early)."""

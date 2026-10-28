@@ -10,7 +10,12 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from langflow.services.evaluations.pricing import model_identity, prices_per_million
-from langflow.services.evaluations.scorers.llm_judge import DEFAULT_RUBRIC, SYSTEM_PROMPT
+from langflow.services.evaluations.scorers.llm_judge import (
+    DEFAULT_RUBRIC,
+    SYSTEM_PROMPT,
+    judge_output_budget,
+    judge_run_budget,
+)
 
 CHARS_PER_TOKEN = 4
 DEFAULT_ANSWER_TOKENS = 256
@@ -109,7 +114,7 @@ def estimate_flow(nodes: list[LlmNode], stats: DatasetStats) -> TokenRange:
     return total
 
 
-def estimate_judges(scorers: list[dict[str, Any]], stats: DatasetStats, max_output_tokens: int) -> TokenRange:
+def estimate_judges(scorers: list[dict[str, Any]], stats: DatasetStats) -> TokenRange:
     total = TokenRange()
     fixed_chars = len(SYSTEM_PROMPT) + 120
     for spec in scorers:
@@ -122,9 +127,11 @@ def estimate_judges(scorers: list[dict[str, Any]], stats: DatasetStats, max_outp
         # The judged answer is assumed about as long as the expected one.
         row_chars = stats.items * (fixed_chars + len(rubric)) + stats.input_chars + 2 * stats.expected_chars
         input_tokens = _tokens(row_chars)
+        config = spec.get("config") or {}
+        run_cap = judge_run_budget(config)
         total.add(
             model,
-            (input_tokens, JUDGE_REASON_TOKENS * stats.items),
-            (input_tokens * 1.5, max_output_tokens * stats.items),
+            (input_tokens, min(JUDGE_REASON_TOKENS * stats.items, run_cap)),
+            (input_tokens * 1.5, min(judge_output_budget(config) * stats.items, run_cap)),
         )
     return total

@@ -69,7 +69,6 @@ class TestTextScorers:
             actual="a",
             expected="a",
             user_id=None,
-            judge_max_output_tokens=1,
         )
         assert seen == [False]
 
@@ -166,7 +165,11 @@ class TestLlmJudge:
 
         monkeypatch.setattr(llm_judge, "get_llm", fake_get_llm)
         result = await score_llm_judge(
-            question="Q?", actual="A", expected="A", config={"model": JUDGE_MODEL}, user_id="u", max_output_tokens=123
+            question="Q?",
+            actual="A",
+            expected="A",
+            config={"model": JUDGE_MODEL, "max_output_tokens": 123},
+            user_id="u",
         )
         assert result.value == 0.8
         assert result.comment == "Mostly right."
@@ -178,7 +181,7 @@ class TestLlmJudge:
         fake = _FakeLLM({"raw": _raw(10, 5), "parsed": None, "parsing_error": ValueError("bad json")})
         monkeypatch.setattr(llm_judge, "get_llm", lambda *_args, **_kwargs: fake)
         result = await score_llm_judge(
-            question="Q?", actual="A", expected=None, config={"model": JUDGE_MODEL}, user_id="u", max_output_tokens=50
+            question="Q?", actual="A", expected=None, config={"model": JUDGE_MODEL}, user_id="u"
         )
         assert result.value is None
         assert result.tokens == 15
@@ -188,6 +191,87 @@ class TestLlmJudge:
         monkeypatch.setattr(llm_judge, "get_llm", lambda *_args, **_kwargs: fake)
         unpriced = [{"name": "mystery", "provider": "Nowhere", "metadata": {}}]
         result = await score_llm_judge(
-            question="Q?", actual="A", expected=None, config={"model": unpriced}, user_id="u", max_output_tokens=50
+            question="Q?", actual="A", expected=None, config={"model": unpriced}, user_id="u"
         )
         assert result.cost is None
+
+
+REASONING_JUDGE = [{"name": "gpt-5-mini", "provider": "OpenAI", "metadata": {"reasoning": True}}]
+
+
+def _capturing(monkeypatch, fake):
+    captured = {}
+
+    def fake_get_llm(_selection, _user_id, **kwargs):
+        captured.update(kwargs)
+        return fake
+
+    monkeypatch.setattr(llm_judge, "get_llm", fake_get_llm)
+    return captured
+
+
+class TestJudgeOutputBudget:
+    async def test_should_use_the_evaluations_row_budget_and_default_to_600(self, monkeypatch):
+        fake = _FakeLLM({"raw": _raw(10, 5), "parsed": JudgeVerdict(score=1, reason="ok"), "parsing_error": None})
+        captured = _capturing(monkeypatch, fake)
+        await score_llm_judge(question="Q?", actual="A", expected=None, config={"model": JUDGE_MODEL}, user_id="u")
+        assert captured["max_tokens"] == 600
+        assert captured["overrides"] is None
+        await score_llm_judge(
+            question="Q?",
+            actual="A",
+            expected=None,
+            config={"model": REASONING_JUDGE, "max_output_tokens": 2048},
+            user_id="u",
+        )
+        assert captured["max_tokens"] == 2048
+        assert captured["overrides"] == {"reasoning_effort": "low"}
+
+    async def test_should_explain_a_judge_that_ran_out_of_output_tokens_and_keep_its_cost(self, monkeypatch):
+        class LengthFinishReasonError(Exception):
+            def __init__(self, message):
+                super().__init__(message)
+                usage = SimpleNamespace(prompt_tokens=1000, completion_tokens=300)
+                self.completion = SimpleNamespace(usage=usage)
+
+        class _Exhausted(_FakeStructured):
+            async def ainvoke(self, _messages):
+                msg = "Could not parse response content as the length limit was reached - CompletionUsage(...)"
+                raise LengthFinishReasonError(msg)
+
+        fake = _FakeLLM(None)
+        fake.structured = _Exhausted(None)
+        monkeypatch.setattr(llm_judge, "get_llm", lambda *_args, **_kwargs: fake)
+        with pytest.raises(
+            llm_judge.JudgeOutputLimitError, match="whole output budget for this row \\(600 tokens\\)"
+        ) as raised:
+            await score_llm_judge(
+                question="Q?", actual="A", expected=None, config={"model": REASONING_JUDGE}, user_id="u"
+            )
+        assert raised.value.tokens == 1300
+        assert raised.value.output_tokens == 300
+        assert raised.value.cost == pytest.approx((1000 * 1.0 + 300 * 2.0) / 1_000_000) or raised.value.cost is None
+
+    def test_should_validate_the_budget_and_the_stop_flag(self):
+        from langflow.services.evaluations.schemas import ScorerSpec
+        from pydantic import ValidationError
+
+        for bad in (
+            {"max_output_tokens": 0},
+            {"max_output_tokens": "300"},
+            {"max_output_tokens": 40_000},
+            {"max_run_output_tokens": 0},
+            {"max_output_tokens": 600, "max_run_output_tokens": 500},
+            {"stop_on_output_limit": "yes"},
+        ):
+            with pytest.raises(ValidationError):
+                ScorerSpec(type="llm_judge", name="j", config={"model": JUDGE_MODEL, **bad})
+        spec = ScorerSpec(
+            type="llm_judge",
+            name="j",
+            config={"model": JUDGE_MODEL, "max_output_tokens": 2048, "stop_on_output_limit": False},
+        )
+        assert llm_judge.judge_output_budget(spec.config) == 2048
+        assert llm_judge.stops_on_output_limit(spec.config) is False
+        assert llm_judge.stops_on_output_limit({}) is True
+        assert llm_judge.judge_run_budget({}) == 8192

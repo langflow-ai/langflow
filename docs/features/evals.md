@@ -225,9 +225,21 @@ raises records `value: null` and a "Scorer failed: ..." comment; the row is
 not failed by it.
 
 The judge prompt fences the question, the expected answer and the answer as
-data and tells the model to ignore instructions inside them. Output is capped by
-`evals_judge_max_output_tokens`. An unparseable verdict scores `null`; there is
-no regex fallback.
+data and tells the model to ignore instructions inside them. An unparseable
+verdict scores `null`; there is no regex fallback.
+
+Each judge carries its own output budgets in its config, set in the Evaluate
+modal: `max_output_tokens` per row (default 600, up to 32768),
+`max_run_output_tokens` for the whole run (default 8192, at least the per-row
+value) and `stop_on_output_limit` (default true). A reasoning model counts its
+thinking in these budgets, so the modal suggests 2048 per row for one, and an
+OpenAI reasoning judge runs at `reasoning_effort=low`. When a row hits its
+budget, or the run's judge output reaches the run budget, the row keeps no judge
+score (the tokens it used are still counted) and the run either stops there
+("Stopped at row N, as set on this evaluation: ...") or continues with the
+remaining rows unjudged; the failure breaker never counts it. Rows already in
+progress when the run budget is reached still finish, so a run can go over by at
+most those rows.
 
 **Pass rule:** an errored row never passes. Otherwise the row passes when the
 weighted mean of the scores that judged it reaches `pass_threshold`; when no
@@ -361,7 +373,6 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
 | `EVALS_ACTUAL_OUTPUT_MAX_CHARS` | 20000 | Output kept per result; the full output stays in the trace |
 | `EVALS_CSV_MAX_ROWS` | 5000 | Rows one CSV import may add |
 | `EVALS_CSV_MAX_BYTES` | 20971520 | Largest CSV upload, in bytes |
-| `EVALS_JUDGE_MAX_OUTPUT_TOKENS` | 300 | Output cap per judge call |
 | `EVALS_ABORT_AFTER_IDENTICAL_FAILURES` | 3 | Consecutive identical failures before a run stops; 0 never stops |
 
 ## Frontend

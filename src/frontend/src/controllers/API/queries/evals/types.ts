@@ -19,6 +19,12 @@ export interface ScorerSpec {
     model?: JudgeModelSelection[];
     rubric?: string;
     case_sensitive?: boolean;
+    /** LLM judge: most output tokens per row (default 600). */
+    max_output_tokens?: number;
+    /** LLM judge: most output tokens over the whole run (default 8192). */
+    max_run_output_tokens?: number;
+    /** LLM judge: stop the run when either limit is reached (default true). */
+    stop_on_output_limit?: boolean;
   };
 }
 

@@ -23,7 +23,7 @@ import useAlertStore from "@/stores/alertStore";
 import { extractApiErrorMessages } from "@/utils/apiError";
 import { formatFileSize } from "@/utils/stringManipulation";
 import { cn } from "@/utils/utils";
-import { QUIET_SELECT_TRIGGER } from "../utils/styles";
+import { DIALOG_CONTAINER, QUIET_SELECT_TRIGGER } from "../utils/styles";
 import CsvDropzone from "./CsvDropzone";
 
 const NO_COLUMN = "__none__";
@@ -115,6 +115,7 @@ export default function CsvImportDialog({
       open={open}
       setOpen={handleOpenChange}
       size="smaller-h-full"
+      className={DIALOG_CONTAINER}
       onSubmit={handleSubmit}
     >
       <BaseModal.Header description={t("evals.csv.description")}>

@@ -12,6 +12,13 @@ import {
   useCreateEvaluation,
   useEstimateEvaluation,
 } from "@/controllers/API/queries/evals/use-evaluations";
+import type { JudgeLimits } from "./JudgeLimitFields";
+import {
+  DEFAULT_JUDGE_MAX_OUTPUT_TOKENS,
+  DEFAULT_JUDGE_MAX_RUN_OUTPUT_TOKENS,
+  parseJudgeMaxTokens,
+  parseJudgeRunMaxTokens,
+} from "./judgeLimits";
 
 export const LATEST_VERSION = "latest";
 export const TEXT_SCORERS: ScorerType[] = [
@@ -20,17 +27,24 @@ export const TEXT_SCORERS: ScorerType[] = [
   "similarity",
 ];
 const DEFAULT_THRESHOLD = 0.5;
+const DEFAULT_JUDGE_LIMITS: JudgeLimits = {
+  maxOutputTokens: String(DEFAULT_JUDGE_MAX_OUTPUT_TOKENS),
+  maxRunOutputTokens: String(DEFAULT_JUDGE_MAX_RUN_OUTPUT_TOKENS),
+  stopOnOutputLimit: true,
+};
 
 export function buildScorers(
   selected: ReadonlySet<ScorerType>,
   judgeModel: ModelOption[],
   rubric: string,
+  judgeLimits: JudgeLimits = DEFAULT_JUDGE_LIMITS,
 ): ScorerSpec[] {
   const scorers: ScorerSpec[] = TEXT_SCORERS.filter((type) =>
     selected.has(type),
   ).map((type) => ({ type, name: type }));
   if (selected.has("llm_judge") && judgeModel[0]) {
     const model = judgeModel[0];
+    const rowBudget = parseJudgeMaxTokens(judgeLimits.maxOutputTokens);
     scorers.push({
       type: "llm_judge",
       name: "llm_judge",
@@ -44,6 +58,11 @@ export function buildScorers(
           },
         ],
         rubric: rubric.trim() || undefined,
+        max_output_tokens: rowBudget ?? DEFAULT_JUDGE_MAX_OUTPUT_TOKENS,
+        max_run_output_tokens:
+          parseJudgeRunMaxTokens(judgeLimits.maxRunOutputTokens, rowBudget) ??
+          DEFAULT_JUDGE_MAX_RUN_OUTPUT_TOKENS,
+        stop_on_output_limit: judgeLimits.stopOnOutputLimit,
       },
     });
   }
@@ -64,11 +83,13 @@ export function useEvaluateFlowForm(flowId: string) {
   );
   const [judgeModel, setJudgeModel] = useState<ModelOption[]>([]);
   const [rubric, setRubric] = useState("");
+  const [judgeLimits, setJudgeLimits] =
+    useState<JudgeLimits>(DEFAULT_JUDGE_LIMITS);
   const [threshold, setThreshold] = useState(DEFAULT_THRESHOLD);
 
   const scorers = useMemo(
-    () => buildScorers(selected, judgeModel, rubric),
-    [selected, judgeModel, rubric],
+    () => buildScorers(selected, judgeModel, rubric, judgeLimits),
+    [selected, judgeModel, rubric, judgeLimits],
   );
   const check = useCheckFlowForEvaluation({
     flowId,
@@ -77,6 +98,13 @@ export function useEvaluateFlowForm(flowId: string) {
   const estimate = useEstimateEvaluation({ flowId, datasetId, scorers });
   const createEvaluation = useCreateEvaluation();
   const judgeMissingModel = selected.has("llm_judge") && !judgeModel[0];
+  const judgeOn = selected.has("llm_judge");
+  const rowBudget = parseJudgeMaxTokens(judgeLimits.maxOutputTokens);
+  const judgeRowBudgetInvalid = judgeOn && rowBudget === null;
+  const judgeRunBudgetInvalid =
+    judgeOn &&
+    parseJudgeRunMaxTokens(judgeLimits.maxRunOutputTokens, rowBudget) === null;
+  const judgeLimitsInvalid = judgeRowBudgetInvalid || judgeRunBudgetInvalid;
 
   const toggleScorer = (type: ScorerType, on: boolean) =>
     setSelected((current) => {
@@ -91,6 +119,7 @@ export function useEvaluateFlowForm(flowId: string) {
     Boolean(datasetId) &&
     scorers.length > 0 &&
     !judgeMissingModel &&
+    !judgeLimitsInvalid &&
     (check.data?.blocking.length ?? 1) === 0;
 
   /** Create the evaluation and start its first run on the chosen version, in one atomic request. */
@@ -123,6 +152,7 @@ export function useEvaluateFlowForm(flowId: string) {
       selected,
       judgeModel,
       rubric,
+      judgeLimits,
       threshold,
     },
     set: {
@@ -133,12 +163,15 @@ export function useEvaluateFlowForm(flowId: string) {
       toggleScorer,
       setJudgeModel,
       setRubric,
+      setJudgeLimits,
       setThreshold,
     },
     check,
     estimate,
     canSubmit,
     judgeMissingModel,
+    judgeRowBudgetInvalid,
+    judgeRunBudgetInvalid,
     createAndRun,
   };
 }

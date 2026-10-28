@@ -11,6 +11,7 @@ import {
 import BaseModal from "@/modals/baseModal";
 import useAlertStore from "@/stores/alertStore";
 import { extractApiErrorMessages } from "@/utils/apiError";
+import { DIALOG_CONTAINER } from "../utils/styles";
 
 interface DatasetItemDialogProps {
   datasetId: string;
@@ -65,6 +66,7 @@ export default function DatasetItemDialog({
       open={open}
       setOpen={setOpen}
       size="small-h-full"
+      className={DIALOG_CONTAINER}
       onSubmit={handleSave}
     >
       <BaseModal.Header description={t("evals.items.dialogDescription")}>

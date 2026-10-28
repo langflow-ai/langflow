@@ -9,6 +9,7 @@ import { useCreateDataset } from "@/controllers/API/queries/evals/use-datasets";
 import BaseModal from "@/modals/baseModal";
 import useAlertStore from "@/stores/alertStore";
 import { extractApiErrorMessages } from "@/utils/apiError";
+import { DIALOG_CONTAINER } from "../utils/styles";
 
 interface CreateDatasetDialogProps {
   open: boolean;
@@ -51,6 +52,7 @@ export default function CreateDatasetDialog({
       open={open}
       setOpen={setOpen}
       size="x-small"
+      className={DIALOG_CONTAINER}
       onSubmit={handleCreate}
     >
       <BaseModal.Header description={t("evals.datasets.createDescription")}>

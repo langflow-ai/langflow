@@ -11,6 +11,8 @@ class ScoreResult:
     comment: str | None = None
     tokens: int | None = None
     cost: float | None = None
+    output_tokens: int | None = None
+    """Tokens the scorer's model wrote (the LLM judge), counted against the run's judge budget."""
 
     def to_json(self) -> dict[str, float | str | None]:
         payload: dict[str, float | str | None] = {"value": self.value}

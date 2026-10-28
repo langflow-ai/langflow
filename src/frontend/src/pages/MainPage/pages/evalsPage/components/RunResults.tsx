@@ -107,7 +107,8 @@ export default function RunResults({ run }: { run: EvaluationRun }) {
       <ResultDetailDialog
         runId={run.id}
         result={opened}
-        scorerNames={scorerNames}
+        scorers={run.config.scorers}
+        threshold={run.config.pass_threshold}
         onClose={() => setOpened(null)}
       />
     </div>

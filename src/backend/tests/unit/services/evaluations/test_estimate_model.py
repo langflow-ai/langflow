@@ -65,9 +65,9 @@ class TestFlowEstimate:
 class TestJudgeEstimate:
     def test_should_bound_the_judge_output_by_its_token_cap(self):
         scorers = [{"type": "llm_judge", "name": "j", "config": {"model": [PRICED]}}]
-        result = estimate_judges(scorers, STATS, max_output_tokens=300)
+        result = estimate_judges(scorers, STATS)
         assert result.tokens_high > result.tokens_low > 0
         assert result.tokens_high >= 300 * STATS.items
 
     def test_should_skip_text_scorers(self):
-        assert estimate_judges([{"type": "exact_match", "name": "e"}], STATS, 300).tokens_high == 0
+        assert estimate_judges([{"type": "exact_match", "name": "e"}], STATS).tokens_high == 0
