@@ -1137,10 +1137,12 @@ class TestProductionObservability:
     @pytest.mark.parametrize("logger_name", ["uvicorn.access", "gunicorn.access"])
     @pytest.mark.parametrize("file_mode", [False, True])
     @pytest.mark.parametrize("log_env", ["container", "container_json", "container_csv", ""])
-    def test_access_logs_redact_query_credentials(self, capsys, tmp_path, logger_name, file_mode, log_env):
+    def test_access_logs_redact_query_credentials(self, capsys, tmp_path, monkeypatch, logger_name, file_mode, log_env):
         log_file = tmp_path / "access.json" if file_mode else None
         configure(log_env=log_env, log_level="INFO", log_file=log_file, cache=False)
         access_logger = logging.getLogger(logger_name)
+        # Optional clients may install filters that remove the entire query first.
+        monkeypatch.setattr(access_logger, "filters", [])
         old_handlers, old_propagate, old_level = access_logger.handlers, access_logger.propagate, access_logger.level
         access_logger.handlers = [get_file_handler()] if file_mode else [InterceptHandler()]
         access_logger.propagate = False
