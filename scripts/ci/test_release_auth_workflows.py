@@ -76,7 +76,7 @@ def test_base_startup_installs_release_lfx_after_workspace_dependencies() -> Non
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/release.yml").read_text())
     commands = next(step["run"] for step in workflow["jobs"]["build-base"]["steps"] if step.get("name") == "Test CLI")
     assert (
-        commands.index("uv pip install src/backend/base/dist/*.whl")
+        commands.index('uv pip install "${FIND_LINKS[@]}" --prerelease=allow src/backend/base/dist/*.whl')
         < commands.index("uv pip install --force-reinstall --no-deps lfx-dist/*.whl")
         < commands.index("uv run --no-sync python -m langflow run")
     )

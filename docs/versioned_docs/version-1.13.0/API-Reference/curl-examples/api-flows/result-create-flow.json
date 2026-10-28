@@ -1,0 +1,17 @@
+{
+  "name": "string2",
+  "description": "string",
+  "icon": "string",
+  "icon_bg_color": "#FF0000",
+  "gradient": "string",
+  "data": {},
+  "is_component": false,
+  "updated_at": "2025-02-04T21:07:36+00:00",
+  "webhook": false,
+  "endpoint_name": "string",
+  "tags": ["string"],
+  "locked": false,
+  "id": "e8d81c37-714b-49ae-ba82-e61141f020ee",
+  "user_id": "f58396d4-a387-4bb8-b749-f40825c3d9f3",
+  "project_id": "1415de42-8f01-4f36-bf34-539f23e47466"
+}

@@ -19,6 +19,7 @@ from lfx.base.mcp.constants import GLOBAL_VARIABLE_PLACEHOLDER_PATTERN
 from lfx.base.models.provider_registry import model_component_provider_id, resolve_provider_id
 from lfx.helpers.base_model import coalesce_bool
 from lfx.integrations.models import ConnectionRef
+from pydantic import ValidationError
 from sqlmodel import col, select
 
 from langflow.services.auth.mcp_encryption import decrypt_mcp_config
@@ -32,6 +33,7 @@ from langflow.services.authorization import (
 )
 from langflow.services.authorization.fetch import authorized_or_owner_scoped
 from langflow.services.database.models.flow.model import AccessTypeEnum, Flow, FlowRead, FlowType
+from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
 from langflow.services.database.models.mcp_server.model import MCPServer
@@ -138,6 +140,9 @@ class ProjectArtifactFlow:
     required_mcp_variables: tuple[str, ...] = ()
     required_mcp_projects: tuple[ProjectArtifactRequiredMcpProject, ...] = ()
     required_variable_declarations: tuple[ProjectArtifactRequiredVariable, ...] = ()
+    # The saved version whose graph was packaged, or None for the live row. Not
+    # written to manifest.json: the package has the same shape either way.
+    version_id: UUID | None = None
 
 
 @dataclass(frozen=True, order=True, slots=True)
@@ -309,6 +314,7 @@ class _FlowSnapshot:
     name: str
     payload: dict[str, Any]
     owner_id: UUID | None = None
+    version_id: UUID | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -1199,22 +1205,37 @@ def _snapshot_rows(
     limits: ProjectArtifactLimits,
     remaining_expanded_bytes: int,
     remaining_items: int,
+    picked_versions: Mapping[UUID, tuple[UUID, dict[str, Any]]] | None = None,
 ) -> _SnapshotBatch:
-    """Detach and bound one small database page outside the event loop."""
+    """Detach and bound one small database page outside the event loop.
+
+    A flow in ``picked_versions`` is packaged with that saved version's graph in
+    place of its live one; every other field still comes from the live row.
+    """
     snapshots: list[_FlowSnapshot] = []
     estimated_bytes = 0
     item_count = 0
     for flow in rows:
+        version_id, graph = (picked_versions or {}).get(flow.id, (None, flow.data))
         # Bound the persisted graph before Pydantic copies it into a detached
         # payload, then bound the complete exported model against both the
         # per-flow and remaining aggregate budgets.
         _preflight_json_value(
-            flow.data,
+            graph,
             flow_id=flow.id,
             max_bytes=limits.max_flow_bytes,
             max_items=_MAX_JSON_ITEMS,
         )
-        payload = FlowRead.model_validate(flow, from_attributes=True).model_dump(mode="json")
+        # The graph that ships is validated as the live one always was; a picked
+        # flow's live graph is never validated or copied.
+        try:
+            payload = FlowRead.model_validate({**flow.model_dump(exclude={"data"}), "data": graph}).model_dump(
+                mode="json"
+            )
+        except ValidationError as exc:
+            source = f"flow version {version_id}" if version_id else f"flow {flow.id}"
+            msg = f"{source} is not a valid flow: {exc.errors()[0]['msg']}"
+            raise ProjectArtifactError(msg) from exc
         flow_size, flow_items = _preflight_json_value(
             payload,
             flow_id=flow.id,
@@ -1229,7 +1250,11 @@ def _snapshot_rows(
             raise ProjectArtifactLimitError(msg)
         estimated_bytes += flow_size
         item_count += flow_items
-        snapshots.append(_FlowSnapshot(flow_id=flow.id, name=flow.name, payload=payload, owner_id=flow.user_id))
+        snapshots.append(
+            _FlowSnapshot(
+                flow_id=flow.id, name=flow.name, payload=payload, owner_id=flow.user_id, version_id=version_id
+            )
+        )
     return _SnapshotBatch(tuple(snapshots), estimated_bytes, item_count)
 
 
@@ -1314,6 +1339,7 @@ def _build_archive(
                 required_variable_declarations=_variable_declarations(
                     (*required_variables, *mcp_requirements.variables), variable_kinds
                 ),
+                version_id=snapshot.version_id,
             )
         )
 
@@ -1890,6 +1916,31 @@ async def load_registered_mcp_servers(session: AsyncSession, owner_id: UUID | No
     return servers
 
 
+async def _picked_version_graphs(
+    session: AsyncSession, picks: Mapping[UUID, UUID]
+) -> dict[UUID, tuple[UUID, dict[str, Any]]]:
+    """Each picked flow's version id and graph; refuses a version that is not that flow's."""
+    rows = (
+        await session.exec(
+            select(FlowVersion.id, FlowVersion.flow_id, FlowVersion.data).where(
+                col(FlowVersion.id).in_(list(picks.values()))
+            )
+        )
+    ).all()
+    found = {version_id: (flow_id, data) for version_id, flow_id, data in rows}
+    graphs: dict[UUID, tuple[UUID, dict[str, Any]]] = {}
+    for flow_id, version_id in picks.items():
+        version_flow_id, data = found.get(version_id, (None, None))
+        if version_flow_id != flow_id:
+            msg = f"flow version {version_id} is not a version of flow {flow_id}"
+            raise ProjectArtifactNotFoundError(msg)
+        if not isinstance(data, dict):
+            msg = f"flow version {version_id} has no graph data"
+            raise ProjectArtifactError(msg)
+        graphs[flow_id] = (version_id, data)
+    return graphs
+
+
 async def _prepare_project_snapshot_data(
     session: AsyncSession,
     user: User | UserRead,
@@ -1898,6 +1949,7 @@ async def _prepare_project_snapshot_data(
     flow_ids: Sequence[UUID] | None,
     limits: ProjectArtifactLimits,
     strict_snapshot: bool,
+    flow_versions: Mapping[UUID, UUID] | None = None,
 ) -> _ProjectSnapshotData:
     """Authorize, load, and bound every flow a package or snapshot needs.
 
@@ -1913,6 +1965,10 @@ async def _prepare_project_snapshot_data(
     is never applied to another author's flow, and every check must pass before
     any flow is packaged. Flow authorship and revision are revalidated while
     packaging so either kind of concurrent change fails consistently.
+
+    ``flow_versions`` maps a packaged flow to the saved version whose graph it
+    ships. A version is any version of that flow: reading the flow is what
+    authorizes it, as for the live graph.
     """
     selected_flow_ids: tuple[UUID, ...] | None = None
     if flow_ids is not None:
@@ -1966,6 +2022,10 @@ async def _prepare_project_snapshot_data(
 
     ordered_revisions = tuple(sorted(revision_rows, key=lambda revision: str(revision[0])))
     ordered_flow_ids = tuple(flow_id for flow_id, _flow_user_id, _updated_at in ordered_revisions)
+    picks = flow_versions or {}
+    if not picks.keys() <= set(ordered_flow_ids):
+        msg = "one or more flows with a picked version are not among the flows being packaged"
+        raise ProjectArtifactNotFoundError(msg)
     initial_revisions = {flow_id: (flow_user_id, updated_at) for flow_id, flow_user_id, updated_at in ordered_revisions}
     actor_owned_flow_ids = [
         flow_id for flow_id, flow_user_id, _updated_at in ordered_revisions if flow_user_id == user.id
@@ -2021,6 +2081,8 @@ async def _prepare_project_snapshot_data(
         if remaining_items <= 0:
             msg = f"artifact exceeds the {_MAX_ARTIFACT_JSON_ITEMS}-item structural limit"
             raise ProjectArtifactLimitError(msg)
+        page_picks = {flow_id: picks[flow_id] for flow_id in page_ids if flow_id in picks}
+        picked_versions = await _picked_version_graphs(session, page_picks) if page_picks else None
         batch = await _run_sync_non_abandoning(
             partial(
                 _snapshot_rows,
@@ -2028,6 +2090,7 @@ async def _prepare_project_snapshot_data(
                 limits=limits,
                 remaining_expanded_bytes=remaining_expanded_bytes,
                 remaining_items=remaining_items,
+                picked_versions=picked_versions,
             )
         )
         snapshots.extend(batch.snapshots)
@@ -2071,10 +2134,12 @@ async def build_project_artifact(
     flow_ids: Sequence[UUID] | None = None,
     limits: ProjectArtifactLimits | None = None,
     strict_snapshot: bool = False,
+    flow_versions: Mapping[UUID, UUID] | None = None,
 ) -> ProjectArtifact:
     """Package selected readable flows, or every flow assigned to the project, into a zip.
 
-    See ``_prepare_project_snapshot_data`` for the shared authorization,
+    ``flow_versions`` packages a flow from one of its saved versions instead of its
+    live graph. See ``_prepare_project_snapshot_data`` for the shared authorization,
     revision-consistency, and dependency-resolution behavior.
     """
     effective_limits = limits or ProjectArtifactLimits()
@@ -2085,6 +2150,7 @@ async def build_project_artifact(
         flow_ids=flow_ids,
         limits=effective_limits,
         strict_snapshot=strict_snapshot,
+        flow_versions=flow_versions,
     )
 
     # The owner's address book, read once: a flow references a server by name and

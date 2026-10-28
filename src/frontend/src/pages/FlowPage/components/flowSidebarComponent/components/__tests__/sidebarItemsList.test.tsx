@@ -39,6 +39,7 @@ jest.mock("@/stores/utilityStore", () => ({
 }));
 
 jest.mock("@/utils/componentConstraints", () => ({
+  placementKeysOf: jest.fn((type: string) => [type]),
   getPresentComponentTypes: jest.fn(
     (nodes: Array<{ data?: { type?: string } }>) =>
       new Set(nodes.map((node) => node?.data?.type).filter(Boolean)),
@@ -50,15 +51,18 @@ jest.mock("@/utils/utils", () => ({
 }));
 
 jest.mock("../../helpers/disable-item", () => ({
-  disableItem: jest.fn(
-    (itemName, present: ReadonlySet<string>) =>
+  disableItem: jest.fn((candidate, present: ReadonlySet<string>) => {
+    const itemName = [candidate].flat()[0];
+    return (
       (itemName === "ChatInput" && present.has("ChatInput")) ||
-      (itemName === "Webhook" && present.has("Webhook")),
-  ),
+      (itemName === "Webhook" && present.has("Webhook"))
+    );
+  }),
 }));
 
 jest.mock("../../helpers/get-disabled-tooltip", () => ({
-  getDisabledTooltip: jest.fn((itemName, present: ReadonlySet<string>) => {
+  getDisabledTooltip: jest.fn((candidate, present: ReadonlySet<string>) => {
+    const itemName = [candidate].flat()[0];
     if (itemName === "ChatInput" && present.has("ChatInput"))
       return "Chat Input already added";
     if (itemName === "Webhook" && present.has("Webhook"))

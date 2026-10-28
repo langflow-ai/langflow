@@ -2,6 +2,8 @@ import {
   evaluatePlacement,
   filterPlaceableSelection,
   getPresentComponentTypes,
+  placementKeysOf,
+  TRIGGER_PLACEMENT_KEY,
 } from "../componentConstraints";
 
 function node(id: string, type?: string) {
@@ -139,5 +141,70 @@ describe("filterPlaceableSelection", () => {
     expect(result.nodes).toEqual([]);
     expect(result.edges).toEqual([]);
     expect(result.violations).toEqual([]);
+  });
+});
+
+describe("one trigger per flow", () => {
+  const trigger = (id: string, type: string) => ({
+    id,
+    data: { type, node: { metadata: { trigger_kind: "x" } } },
+  });
+
+  it("gives a trigger node the trigger key besides its type", () => {
+    expect(
+      placementKeysOf("ScheduleTrigger", {
+        metadata: { trigger_kind: "schedule" },
+      }),
+    ).toEqual(["ScheduleTrigger", TRIGGER_PLACEMENT_KEY]);
+    expect(placementKeysOf("TextInput", { metadata: {} })).toEqual([
+      "TextInput",
+    ]);
+  });
+
+  it("ignores a trigger_kind that is not a string", () => {
+    expect(placementKeysOf("X", { metadata: { trigger_kind: 1 } })).toEqual([
+      "X",
+    ]);
+  });
+
+  it("blocks a second trigger of a different kind", () => {
+    const present = getPresentComponentTypes([trigger("a", "ScheduleTrigger")]);
+
+    expect(
+      evaluatePlacement(["SlackOnMessage", TRIGGER_PLACEMENT_KEY], present),
+    ).toEqual({ type: TRIGGER_PLACEMENT_KEY, reason: "singleton" });
+  });
+
+  it("allows the first trigger", () => {
+    expect(
+      evaluatePlacement(["SlackOnMessage", TRIGGER_PLACEMENT_KEY], new Set()),
+    ).toBeNull();
+  });
+
+  it("drops a pasted trigger when the flow already has one", () => {
+    const result = filterPlaceableSelection(
+      { nodes: [trigger("b", "SlackOnMessage"), node("c", "LLM")], edges: [] },
+      [trigger("a", "ScheduleTrigger")],
+    );
+
+    expect(result.nodes.map((n) => n.id)).toEqual(["c"]);
+    expect(result.violations).toEqual([
+      { type: TRIGGER_PLACEMENT_KEY, reason: "singleton" },
+    ]);
+  });
+
+  it("keeps only the first of two triggers pasted together", () => {
+    const result = filterPlaceableSelection(
+      {
+        nodes: [
+          trigger("a", "ScheduleTrigger"),
+          trigger("b", "SlackOnMessage"),
+        ],
+        edges: [],
+      },
+      [],
+    );
+
+    expect(result.nodes.map((n) => n.id)).toEqual(["a"]);
   });
 });
