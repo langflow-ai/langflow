@@ -5,6 +5,7 @@ import json
 import logging
 import logging.handlers
 import os
+import re
 import sys
 import warnings
 from collections import deque
@@ -234,42 +235,64 @@ DEFAULT_REDACT_KEYS: frozenset[str] = frozenset(
         "cookie",
         "set-cookie",
         "x-api-key",
+        "x_api_key",
         "x-auth-token",
     }
 )
 _REDACTED = "***"
-_REDACT_MAX_DEPTH = 4
+_REDACT_MAX_DEPTH = 32
 
 
 def _build_redact_processor(extra_keys: frozenset[str]) -> Any:
-    """Build a structlog processor that scrubs sensitive keys.
+    """Scrub credential fields and query parameters before rendering.
 
-    Matches case-insensitively, walks nested dicts and lists up to a small
-    depth, and replaces values with a fixed sentinel so logs still show the
-    shape of the data without leaking the value.
+    Preserve ordinary query parameters and container structure. Replace cycles
+    and containers beyond the walk limit rather than exposing their contents.
     """
     sensitive = {k.lower() for k in DEFAULT_REDACT_KEYS | extra_keys}
 
-    def _scrub(value: Any, depth: int) -> Any:
-        if depth >= _REDACT_MAX_DEPTH:
-            return value
-        if isinstance(value, dict):
-            return {
-                k: (_REDACTED if isinstance(k, str) and k.lower() in sensitive else _scrub(v, depth + 1))
-                for k, v in value.items()
-            }
-        if isinstance(value, list):
-            return [_scrub(item, depth + 1) for item in value]
-        if isinstance(value, tuple):
-            return tuple(_scrub(item, depth + 1) for item in value)
-        return value
+    # Query parameter names may be percent encoded before the server decodes them.
+    names = [
+        "".join(f"(?:{re.escape(char)}|%{ord(char):02x})" for char in key)
+        for key in sorted(sensitive, key=len, reverse=True)
+    ]
+    query_credentials = re.compile(
+        rf"(?P<name>(?<![\w%+.-])(?:{'|'.join(names)})=)[^\s&#\"'<>]*",
+        re.IGNORECASE,
+    )
 
-    def redact(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
+    def _scrub(value: Any, depth: int, ancestors: set[int]) -> Any:
+        if isinstance(value, str):
+            if "=" not in value:
+                return value
+            return query_credentials.sub(lambda match: match["name"] + _REDACTED, value)
+        if not isinstance(value, (dict, list, tuple)):
+            return value
+        identity = id(value)
+        if depth >= _REDACT_MAX_DEPTH or identity in ancestors:
+            return _REDACTED
+        ancestors.add(identity)
+        try:
+            if isinstance(value, dict):
+                return {
+                    k: (_REDACTED if isinstance(k, str) and k.lower() in sensitive else _scrub(v, depth + 1, ancestors))
+                    for k, v in value.items()
+                }
+            if len(value) == 2 and isinstance(value[0], str) and value[0].lower() in sensitive:  # noqa: PLR2004
+                return (value[0], _REDACTED) if isinstance(value, tuple) else [value[0], _REDACTED]
+            scrubbed = [_scrub(item, depth + 1, ancestors) for item in value]
+            return tuple(scrubbed) if isinstance(value, tuple) else scrubbed
+        finally:
+            ancestors.remove(identity)
+
+    def redact(_logger: Any, _method_name: str, event_dict: dict[str, Any] | str) -> dict[str, Any] | str:
+        if isinstance(event_dict, str):
+            return _scrub(event_dict, 0, set())
         for key in list(event_dict.keys()):
             if isinstance(key, str) and key.lower() in sensitive:
                 event_dict[key] = _REDACTED
             else:
-                event_dict[key] = _scrub(event_dict[key], 1)
+                event_dict[key] = _scrub(event_dict[key], 1, {id(event_dict)})
         return event_dict
 
     return redact
@@ -1152,17 +1175,20 @@ def configure(
                 processors=[
                     structlog.stdlib.ProcessorFormatter.remove_processors_meta,
                     json_traceback,
+                    redact_processor,
                     structlog.processors.JSONRenderer(),
                 ],
             )
         else:
             processors.append(json_traceback)
+            processors.append(redact_processor)
             processors.append(structlog.processors.JSONRenderer())
 
     if log_env.lower() in ("container", "container_json"):
         _append_json_tail()
     elif log_env.lower() == "container_csv":
         processors.append(structlog.processors.format_exc_info)
+        processors.append(redact_processor)
         # Include callsite fields in key order when DEV is enabled
         key_order = ["timestamp", "level", "event"]
         if DEV:
@@ -1176,6 +1202,7 @@ def configure(
             # If custom format is provided, use KeyValueRenderer with custom format
             if log_format:
                 processors.append(structlog.processors.format_exc_info)
+                processors.append(redact_processor)
                 processors.append(structlog.processors.KeyValueRenderer())
             else:
                 # structlog's default rich formatter renders frame locals, so pass the
@@ -1186,6 +1213,7 @@ def configure(
                         exception_formatter=structlog.dev.RichTracebackFormatter(show_locals=show_locals),
                     )
                 )
+                processors.append(redact_processor)
         else:
             _append_json_tail()
 

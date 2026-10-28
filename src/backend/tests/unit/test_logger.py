@@ -27,9 +27,11 @@ from lfx.log.logger import (
     VALID_LOG_LEVELS,
     InterceptHandler,
     SizedLogBuffer,
+    _build_redact_processor,
     add_serialized,
     buffer_writer,
     configure,
+    get_file_handler,
     log_buffer,
     setup_gunicorn_logger,
     setup_uvicorn_logger,
@@ -1076,17 +1078,128 @@ class TestProductionObservability:
         assert rec["users_tuple"][0]["token"] == "***"  # noqa: S105
         assert rec["users_tuple"][0]["name"] == "bob"
 
-    def test_redaction_depth_limit_documents_contract(self, capsys):
-        # The 4-level walk is a deliberate trade-off; this test pins it down
-        # so a future change to the depth constant has to be intentional.
+    def test_redaction_covers_deep_credentials(self, capsys):
         configure(log_env="container", log_level="DEBUG", cache=False)
         log = structlog.get_logger("redact.depth")
         marker = "leak-at-5"  # pragma: allowlist secret
         deep = {"l1": {"l2": {"l3": {"l4": {"password": marker}}}}}
         records = self._emit_and_parse(capsys, lambda: log.info("deep", payload=deep))
         rec = records[-1]
-        # At depth 5 (beyond the limit) the password value is passed through.
-        assert rec["payload"]["l1"]["l2"]["l3"]["l4"]["password"] == marker
+        assert marker not in json.dumps(rec)
+        assert rec["payload"]["l1"]["l2"]["l3"]["l4"]["password"] == "***"  # noqa: S105
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "x-api-key=log-credential-marker",
+            "https://example.com/api?view=short&X-Api-Key=log-credential-marker&limit=5",
+            "GET /api/v1/flows?x_api_key=log-credential-marker HTTP/1.1",
+            "/api/v1/flows?%78%2Dapi%2Dkey=log-credential-marker&view=short",
+            "/api?x-api-key=log-credential-marker&x-api-key=log-credential-marker&view=short",
+        ],
+    )
+    def test_redaction_covers_credentials_in_strings(self, capsys, text):
+        configure(log_env="container", log_level="INFO", cache=False)
+        records = self._emit_and_parse(capsys, lambda: structlog.get_logger().info(text, url=text))
+        assert "log-credential-marker" not in json.dumps(records)
+        assert records[-1]["event"] == text.replace("log-credential-marker", "***")
+        assert records[-1]["url"] == text.replace("log-credential-marker", "***")
+
+    def test_redaction_preserves_unrelated_strings(self, capsys):
+        configure(log_env="container", log_level="INFO", cache=False)
+        text = "GET /api?token_count=42&view=short HTTP/1.1"
+        records = self._emit_and_parse(capsys, lambda: structlog.get_logger().info(text))
+        assert records[-1]["event"] == text
+
+    def test_extra_redact_keys_apply_to_query_parameters(self, capsys, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_LOG_REDACT_KEYS", "session_id")
+        configure(log_env="container", log_level="INFO", cache=False)
+        records = self._emit_and_parse(
+            capsys,
+            lambda: structlog.get_logger().info("GET /api?session_id=log-credential-marker&view=short"),
+        )
+        assert records[-1]["event"] == "GET /api?session_id=***&view=short"
+
+    def test_redaction_covers_credential_alias_and_pairs(self, capsys):
+        configure(log_env="container", log_level="INFO", cache=False)
+        records = self._emit_and_parse(
+            capsys,
+            lambda: structlog.get_logger().info(
+                "headers",
+                x_api_key="log-credential-marker",  # pragma: allowlist secret
+                headers=[("x-api-key", "log-credential-marker"), ("accept", "application/json")],
+            ),
+        )
+        assert "log-credential-marker" not in json.dumps(records)
+        assert records[-1]["headers"][1] == ["accept", "application/json"]
+
+    @pytest.mark.parametrize("logger_name", ["uvicorn.access", "gunicorn.access"])
+    @pytest.mark.parametrize("file_mode", [False, True])
+    def test_access_logs_redact_query_credentials(self, capsys, tmp_path, logger_name, file_mode):
+        log_file = tmp_path / "access.json" if file_mode else None
+        configure(log_env="container", log_level="INFO", log_file=log_file, cache=False)
+        access_logger = logging.getLogger(logger_name)
+        old_handlers, old_propagate, old_level = access_logger.handlers, access_logger.propagate, access_logger.level
+        access_logger.handlers = [get_file_handler()] if file_mode else [InterceptHandler()]
+        access_logger.propagate = False
+        access_logger.setLevel(logging.INFO)
+        try:
+            access_logger.info(
+                '%s - "%s %s HTTP/%s" %d',
+                "127.0.0.1:54321",
+                "GET",
+                "/api/v1/flows?x-api-key=log-credential-marker&view=short",
+                "1.1",
+                200,
+            )
+            if log_file:
+                for handler in logging.root.handlers:
+                    handler.flush()
+                output = log_file.read_text()
+            else:
+                output = capsys.readouterr().out
+            records = [json.loads(line) for line in output.splitlines() if line.startswith("{")]
+            record = next(record for record in records if record.get("logger") == logger_name)
+            assert "log-credential-marker" not in output
+            assert "/api/v1/flows?x-api-key=***&view=short" in record["event"]
+            assert record["event"].endswith('HTTP/1.1" 200')
+        finally:
+            access_logger.handlers, access_logger.propagate, access_logger.level = (
+                old_handlers,
+                old_propagate,
+                old_level,
+            )
+
+    def test_redaction_bounds_cycles_and_extreme_depth(self):
+        processor = _build_redact_processor(frozenset())
+        cycle = {"safe": "ok"}
+        cycle["self"] = cycle
+        deep = {"x-api-key": "log-credential-marker"}
+        for _ in range(100):
+            deep = {"child": deep}
+        result = processor(None, "info", {"event": "bounded", "cycle": cycle, "deep": deep})
+        assert "log-credential-marker" not in json.dumps(result)
+        assert result["cycle"]["safe"] == "ok"
+
+    @pytest.mark.parametrize("log_env", ["container", "container_csv", ""])
+    @pytest.mark.parametrize("file_mode", [False, True])
+    def test_redaction_covers_query_credentials_in_tracebacks(self, capsys, tmp_path, log_env, file_mode):
+        log_file = tmp_path / "error.log" if file_mode else None
+        configure(log_env=log_env, log_level="INFO", log_file=log_file, cache=False)
+        try:
+            msg = "Request failed for https://example.com/api?x-api-key=log-credential-marker&view=short"
+            raise ValueError(msg)
+        except ValueError:
+            structlog.get_logger().exception("upstream request failed")
+        if log_file:
+            for handler in logging.root.handlers:
+                handler.flush()
+            output = log_file.read_text()
+        else:
+            output = capsys.readouterr().out
+        assert "log-credential-marker" not in output
+        assert "upstream request failed" in output
+        assert "ValueError" in output
 
     def test_otel_processor_no_op_when_no_span(self, capsys):
         # OTel SDK may be installed but no span is active. Processor must
@@ -1985,7 +2098,7 @@ class TestConfigureEarlyReturnFingerprint:
         second = structlog.get_config()["processors"]
 
         assert first is not second
-        assert isinstance(second[-1], structlog.dev.ConsoleRenderer)
+        assert any(isinstance(processor, structlog.dev.ConsoleRenderer) for processor in second)
         assert not any(isinstance(h, InterceptHandler) for h in logging.root.handlers)
 
     def test_same_level_new_output_file_takes_effect(self):
