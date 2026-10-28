@@ -69,6 +69,7 @@ class LangflowClient:
         *,
         use_env_api_key: bool = True,
         use_env_global_vars: bool = True,
+        trust_env: bool = True,
     ):
         self.server_url = (server_url or os.environ.get("LANGFLOW_SERVER_URL", "http://localhost:7860")).rstrip("/")
         # HTTP mounts must not substitute process credentials for their caller.
@@ -76,6 +77,7 @@ class LangflowClient:
         self.access_token = access_token
         # Keep environment-based configuration consistent for this client's lifetime.
         self.global_var_headers = _global_var_headers() if use_env_global_vars else {}
+        self._trust_env = trust_env
         self._http: httpx.AsyncClient | None = None
         self._lock = asyncio.Lock()
 
@@ -83,7 +85,9 @@ class LangflowClient:
         async with self._lock:
             if self._http is None or self._http.is_closed:
                 self._http = httpx.AsyncClient(
-                    follow_redirects=True, event_hooks={"request": [self._check_request_origin]}
+                    follow_redirects=True,
+                    event_hooks={"request": [self._check_request_origin]},
+                    trust_env=self._trust_env,
                 )
             return self._http
 

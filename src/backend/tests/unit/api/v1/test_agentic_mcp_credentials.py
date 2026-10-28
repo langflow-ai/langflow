@@ -1,6 +1,8 @@
 """Agentic MCP loopback calls must keep the authenticated caller's credentials."""
 
+import asyncio
 import json
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -10,6 +12,91 @@ from langflow.api.v1 import agentic_mcp
 from lfx.mcp.client import LangflowClient
 
 pytestmark = pytest.mark.asyncio
+
+
+@pytest.mark.parametrize(
+    ("host", "runtime_port", "root_path", "tls", "expected"),
+    [
+        ("localhost", None, "", False, "http://localhost:7860"),
+        ("0.0.0.0", 7865, "/langflow", False, "http://127.0.0.1:7865/langflow"),  # noqa: S104
+        ("::", 7865, "/langflow/", False, "http://[::1]:7865/langflow"),
+        ("127.0.0.1", None, "/nested/langflow", True, "https://127.0.0.1:7860/nested/langflow"),
+        ("::1", None, "", True, "https://[::1]:7860"),
+        ("backend.internal", None, "", False, "http://backend.internal:7860"),
+    ],
+)
+async def test_loopback_uses_operator_origin(monkeypatch, host, runtime_port, root_path, tls, expected):
+    settings = SimpleNamespace(
+        host=host,
+        port=7860,
+        runtime_port=runtime_port,
+        root_path=root_path,
+        ssl_cert_file="cert.pem" if tls else None,
+        ssl_key_file="key.pem" if tls else None,
+    )
+    monkeypatch.setattr(agentic_mcp, "get_settings_service", lambda: SimpleNamespace(settings=settings))
+    request = Request(
+        {
+            "type": "http",
+            "scheme": "https",
+            "server": ("untrusted.example", 443),
+            "root_path": "/untrusted-prefix",
+            "path": "/api/v1/agentic/mcp",
+            "headers": [
+                (b"host", b"attacker.example:8902"),
+                (b"x-forwarded-host", b"forwarded.example"),
+                (b"x-forwarded-proto", b"https"),
+                (b"x-forwarded-prefix", b"/attacker-prefix"),
+                (b"authorization", b"Bearer caller-token"),
+            ],
+            "query_string": b"",
+        }
+    )
+    loopback = await agentic_mcp._loopback_client(request)
+    assert loopback.server_url == expected
+    assert loopback._headers()["Authorization"] == "Bearer caller-token"
+
+
+async def test_loopback_does_not_send_credentials_through_environment_proxy(monkeypatch):
+    seen = []
+
+    async def serve(reader, writer):
+        seen.append((await reader.readuntil(b"\r\n\r\n")).decode())
+        writer.write(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}")
+        await writer.drain()
+        writer.close()
+        await writer.wait_closed()
+
+    async with await asyncio.start_server(serve, "127.0.0.1", 0) as server:
+        port = server.sockets[0].getsockname()[1]
+        settings = SimpleNamespace(
+            host="127.0.0.1", port=port, runtime_port=None, root_path="", ssl_cert_file=None, ssl_key_file=None
+        )
+        monkeypatch.setattr(agentic_mcp, "get_settings_service", lambda: SimpleNamespace(settings=settings))
+        monkeypatch.setenv("HTTP_PROXY", "http://127.0.0.1:1")
+        monkeypatch.setenv("ALL_PROXY", "http://127.0.0.1:1")
+        monkeypatch.setenv("NO_PROXY", "")
+        monkeypatch.setenv("X-LANGFLOW-GLOBAL-VAR-TEST", "synthetic-value")
+        request = Request(
+            {
+                "type": "http",
+                "scheme": "http",
+                "server": ("attacker.example", 80),
+                "path": "/api/v1/agentic/mcp",
+                "headers": [(b"host", b"attacker.example"), (b"authorization", b"Bearer caller-token")],
+                "query_string": b"",
+            }
+        )
+        loopback = await agentic_mcp._loopback_client(request)
+        try:
+            assert await loopback.get("/flows/") == {}
+        finally:
+            await loopback.aclose()
+
+    assert len(seen) == 1
+    assert f"Host: 127.0.0.1:{port}" in seen[0]
+    assert "Authorization: Bearer caller-token" in seen[0]
+    assert "X-LANGFLOW-GLOBAL-VAR-TEST: synthetic-value" in seen[0]
 
 
 @pytest.mark.parametrize(
@@ -142,7 +229,7 @@ async def test_mcp_tools_cannot_read_or_delete_another_users_flow(
         denied = await caller.delete(f"/api/v1/flows/{admin_flow_id}", headers=headers, params=params)
         assert denied.status_code in (status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND)
 
-        headers = {**headers, "Accept": "application/json, text/event-stream"}
+        headers = {**headers, "Accept": "application/json, text/event-stream", "Host": "attacker.example"}
 
         async def get_http(_self):
             return loopback_http

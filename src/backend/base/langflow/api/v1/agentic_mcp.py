@@ -25,6 +25,7 @@ code-generating endpoints.
 from contextvars import ContextVar
 from typing import Any
 
+import httpx
 from fastapi import APIRouter, HTTPException, Request, Response
 from lfx.log.logger import logger
 from lfx.mcp.client import LangflowClient
@@ -69,11 +70,22 @@ async def _loopback_client(request: Request) -> LangflowClient:
     """
     access_token = await oauth2_login(request)
     api_key = None if access_token else request.query_params.get("x-api-key") or request.headers.get("x-api-key")
+    # Derive the destination from operator settings, never caller-controlled headers.
+    settings = get_settings_service().settings
+    host = {"0.0.0.0": "127.0.0.1", "::": "::1"}.get(settings.host, settings.host)  # noqa: S104
+    scheme = "https" if settings.ssl_cert_file and settings.ssl_key_file else "http"
+    server_url = httpx.URL(
+        scheme=scheme,
+        host=host,
+        port=settings.runtime_port or settings.port,
+        path=settings.root_path.rstrip("/"),
+    )
     return LangflowClient(
-        server_url=str(request.base_url).rstrip("/"),
+        server_url=str(server_url),
         api_key=api_key,
         access_token=access_token,
         use_env_api_key=False,
+        trust_env=False,
     )
 
 
@@ -166,7 +178,8 @@ async def handle_agentic_streamable_http(
     await db.close()
     # start() is idempotent; called here so the session manager only runs once the endpoint is used.
     await _streamable_http.start()
-    context_token = current_loopback_client_ctx.set(await _loopback_client(request))
+    client = await _loopback_client(request)
+    context_token = current_loopback_client_ctx.set(client)
     try:
         manager = _streamable_http.get_manager()
         await manager.handle_request(request.scope, request.receive, request._send)  # noqa: SLF001
@@ -177,4 +190,5 @@ async def handle_agentic_streamable_http(
         raise HTTPException(status_code=500, detail="Internal server error in agentic MCP transport") from exc
     finally:
         current_loopback_client_ctx.reset(context_token)
+        await client.aclose()
     return ResponseNoOp()
