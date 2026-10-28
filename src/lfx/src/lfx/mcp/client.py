@@ -16,6 +16,7 @@ import httpx
 from starlette.status import HTTP_204_NO_CONTENT
 
 from lfx.log.logger import logger
+from lfx.utils.ssrf_transport import SSRFProtectedTransport
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -69,6 +70,8 @@ class LangflowClient:
         *,
         use_env_api_key: bool = True,
         use_env_global_vars: bool = True,
+        use_env_proxies: bool = True,
+        pinned_ips: dict[str, list[str]] | None = None,
     ):
         self.server_url = (server_url or os.environ.get("LANGFLOW_SERVER_URL", "http://localhost:7860")).rstrip("/")
         # HTTP mounts must not substitute process credentials for their caller.
@@ -76,20 +79,31 @@ class LangflowClient:
         self.access_token = access_token
         # Keep environment-based configuration consistent for this client's lifetime.
         self.global_var_headers = _global_var_headers() if use_env_global_vars else {}
+        self._use_env_proxies = use_env_proxies
+        self._pinned_ips = {host: list(addresses) for host, addresses in (pinned_ips or {}).items()}
         self._http: httpx.AsyncClient | None = None
         self._lock = asyncio.Lock()
 
     async def _client(self) -> httpx.AsyncClient:
         async with self._lock:
             if self._http is None or self._http.is_closed:
+                transport = (
+                    SSRFProtectedTransport(pinned_ips=self._pinned_ips)
+                    if self._pinned_ips
+                    else None
+                    if self._use_env_proxies
+                    else httpx.AsyncHTTPTransport()
+                )
                 self._http = httpx.AsyncClient(
-                    follow_redirects=True, event_hooks={"request": [self._check_request_origin]}
+                    follow_redirects=True,
+                    event_hooks={"request": [self._check_request_origin]},
+                    **({"transport": transport} if transport is not None else {}),
                 )
             return self._http
 
     async def _check_request_origin(self, request: httpx.Request) -> None:
         """Keep environment overrides on the configured server's origin."""
-        if not self.global_var_headers:
+        if not self.global_var_headers and not self._pinned_ips:
             return
         server = httpx.URL(self.server_url)
         defaults = {"http": 80, "https": 443}
@@ -98,7 +112,7 @@ class LangflowClient:
         if request_origin != server_origin:
             # HTTPX strips Authorization across origins, but retains custom
             # headers, including global variables containing provider keys.
-            msg = "Refusing to forward global variable overrides outside the Langflow server origin"
+            msg = "Refusing to forward credentials outside the Langflow server origin"
             raise RuntimeError(msg)
 
     async def aclose(self) -> None:
