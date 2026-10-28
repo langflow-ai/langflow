@@ -29,7 +29,8 @@ def same_identity_id(actual: object, expected: str) -> bool:
 
 def identity_http_client(root: str) -> httpx.AsyncClient:
     kwargs = ssrf_protected_strict_httpx_client_kwargs_for_url(root)[1]
-    return httpx.AsyncClient(timeout=20, follow_redirects=False, trust_env=False, **kwargs)
+    kwargs["follow_redirects"] = False
+    return httpx.AsyncClient(timeout=20, trust_env=False, **kwargs)
 
 
 async def account_identity(root: str, path: str, org_id: str, user_id: str, token: str) -> dict:

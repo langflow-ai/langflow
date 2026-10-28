@@ -33,6 +33,7 @@ def identity_profile(**changes):
 
 @pytest.fixture(autouse=True)
 def identity_transport(monkeypatch):
+    original_factory = oauth.identity_http_client
     monkeypatch.setattr(
         oauth,
         "identity_http_client",
@@ -40,6 +41,19 @@ def identity_transport(monkeypatch):
             transport=httpx.MockTransport(lambda _request: httpx.Response(200, json=identity_profile()))
         ),
     )
+    return original_factory
+
+
+async def test_identity_client_retains_pinned_transport_and_disables_redirects(monkeypatch, identity_transport):
+    transport = httpx.MockTransport(lambda _request: httpx.Response(200, json=identity_profile()))
+    monkeypatch.setattr(
+        oauth,
+        "ssrf_protected_strict_httpx_client_kwargs_for_url",
+        lambda _root: ({}, {"transport": transport, "follow_redirects": False}),
+    )
+    async with identity_transport(ORG) as client:
+        assert client.follow_redirects is False
+        assert (await client.get(ORG + "/id/example/user")).status_code == 200
 
 
 @pytest.fixture
