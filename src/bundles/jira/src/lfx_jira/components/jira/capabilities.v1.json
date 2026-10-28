@@ -2,7 +2,7 @@
   "schema_version": 1,
   "provider_id": "jira",
   "display_name": "Jira Cloud",
-  "icon": "Ticket",
+  "icon": "Jira",
   "docs_url": "https://github.com/langflow-ai/langflow/blob/aeec0212b435e7e023fd89f53309e95d278d610e/design/provider-integrations/jira.md",
   "auth_profiles": [
     {
@@ -30,7 +30,7 @@
   "capabilities": [
     {
       "id": "jira.issue.search",
-      "display_name": "JiraSearchIssues",
+      "display_name": "Jira: Search Issues",
       "auth_profile_id": "user",
       "identity": "user_delegated",
       "required_scopes": [
@@ -51,7 +51,7 @@
     },
     {
       "id": "jira.issue.read",
-      "display_name": "JiraReadIssue",
+      "display_name": "Jira: Read Issue",
       "auth_profile_id": "user",
       "identity": "user_delegated",
       "required_scopes": [
@@ -72,7 +72,7 @@
     },
     {
       "id": "jira.issue.create",
-      "display_name": "JiraCreateIssue",
+      "display_name": "Jira: Create Issue",
       "auth_profile_id": "user",
       "identity": "user_delegated",
       "required_scopes": [
@@ -94,7 +94,7 @@
     },
     {
       "id": "jira.issue.update",
-      "display_name": "JiraUpdateIssue",
+      "display_name": "Jira: Update Issue",
       "auth_profile_id": "user",
       "identity": "user_delegated",
       "required_scopes": [
@@ -116,7 +116,7 @@
     },
     {
       "id": "jira.issue.transition",
-      "display_name": "JiraTransitionIssue",
+      "display_name": "Jira: Transition Issue",
       "auth_profile_id": "user",
       "identity": "user_delegated",
       "required_scopes": [
@@ -138,7 +138,7 @@
     },
     {
       "id": "jira.trigger.created",
-      "display_name": "JiraOnIssueCreatedTrigger",
+      "display_name": "Jira: On Issue Created",
       "auth_profile_id": "user",
       "identity": "user_delegated",
       "required_scopes": [
@@ -159,7 +159,7 @@
     },
     {
       "id": "jira.trigger.updated",
-      "display_name": "JiraOnIssueUpdatedTrigger",
+      "display_name": "Jira: On Issue Updated",
       "auth_profile_id": "user",
       "identity": "user_delegated",
       "required_scopes": [
@@ -180,7 +180,7 @@
     },
     {
       "id": "jira.trigger.status",
-      "display_name": "JiraOnIssueStatusChangedTrigger",
+      "display_name": "Jira: On Issue Status Changed",
       "auth_profile_id": "user",
       "identity": "user_delegated",
       "required_scopes": [

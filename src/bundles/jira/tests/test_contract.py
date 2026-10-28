@@ -4,6 +4,7 @@ import importlib.abc
 import json
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import httpx
 import pytest
@@ -12,12 +13,14 @@ from lfx.extension import load_extension, validate_extension
 from lfx.integrations.errors import (
     AuthExpiredError,
     ConnectionNotAuthorizedError,
+    IntegrationContextUnsupportedError,
     IntegrationNetworkError,
     InvalidRequestError,
     ProviderUnavailableError,
     RateLimitedError,
     ResourceNotFoundError,
     ScopeMissingError,
+    normalize_integration_error,
 )
 from lfx.integrations.models import ConnectionAccount
 from lfx_jira.base import JiraActionComponent
@@ -301,3 +304,49 @@ def test_standalone_bundle_discovery_blocks_server_imports():
         assert node.trigger_config() == {"connection": "jira/work", "project": "DEMO", "delivery_mode": "poll"}
     finally:
         sys.meta_path.remove(blocker)
+
+
+def test_palette_and_connection_capabilities_share_jira_labels_and_icon():
+    import lfx_jira.components.jira as components
+
+    manifest = load_manifest()
+    assert manifest.icon == "Jira"
+    for capability in manifest.capabilities:
+        component = getattr(components, capability.component_ref)
+        assert component.display_name == capability.display_name
+        assert component.display_name.startswith("Jira: ")
+        assert component.icon == "Jira"
+
+
+@pytest.mark.parametrize("check_variables", [False, True])
+async def test_standalone_run_reports_unsupported_jira_before_credential_setup(
+    monkeypatch, tmp_path, capsys, *, check_variables
+):
+    from lfx.run.base import RunError, run_flow
+
+    integration = SimpleNamespace(provider_id="jira", capability_manifest=load_manifest())
+    monkeypatch.setattr(
+        "lfx.extension.bundle_registry.get_default_registry",
+        lambda: SimpleNamespace(list_integrations=lambda: [integration]),
+    )
+    monkeypatch.delenv("LANGFLOW_JIRA_CLOUD_ID", raising=False)
+    monkeypatch.delenv("LF_CONNECTION__JIRA__WORK", raising=False)
+    script = tmp_path / "jira_flow.py"
+    script.write_text(
+        "from lfx.graph import Graph\n"
+        "from lfx.components.input_output import ChatInput, ChatOutput\n"
+        "from lfx_jira.components.jira import JiraReadIssueComponent\n"
+        "chat = ChatInput(_id='chat').set(input_value='DEMO-1')\n"
+        "jira = JiraReadIssueComponent(_id='jira', connection='jira/work').set(issue=chat.message_response)\n"
+        "output = ChatOutput(_id='output').set(input_value=jira.read_issue)\n"
+        "graph = Graph(start=chat, end=output)\n"
+    )
+    with pytest.raises(RunError, match="Jira Cloud connections are not available in headless lfx") as raised:
+        await run_flow(script_path=script, check_variables=check_variables)
+    assert "LF_CONNECTION" not in str(raised.value)
+    assert isinstance(
+        normalize_integration_error(raised.value.original_exception, provider="jira"),
+        IntegrationContextUnsupportedError,
+    )
+    output = capsys.readouterr()
+    assert "Traceback" not in output.out + output.err

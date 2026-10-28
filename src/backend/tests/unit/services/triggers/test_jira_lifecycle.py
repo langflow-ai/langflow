@@ -222,6 +222,21 @@ async def test_failed_fetch_and_stale_replica_cannot_advance_cursor(jira, trigge
             await commit_source(session, trigger_id=row.id, source_round=second)
 
 
+async def test_arming_rejects_invalid_issue_type_before_provider_io(jira, trigger_owner, owned_flow):
+    await connection(trigger_owner)
+    row = await reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        current = await session.get(Trigger, row.id)
+        current.config = {**current.config, "issue_type_id": "Bug"}
+        session.add(current)
+    async with session_scope() as session:
+        current = await session.get(Trigger, row.id)
+        with pytest.raises(ValueError, match="Issue Type ID must be a positive numeric ID"):
+            await TriggerService().enable_and_activate(session, row=current)
+        assert current.state == "pending"
+    assert not jira.calls
+
+
 @pytest.mark.parametrize("failure", ["owner", "consent", "identity", "scope", "policy"])
 async def test_activation_enforces_owner_consent_identity_scopes_policy(jira, trigger_owner, owned_flow, failure):
     owner = trigger_owner

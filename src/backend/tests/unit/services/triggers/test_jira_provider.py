@@ -9,6 +9,7 @@ from langflow.services.connection.oauth.config import OAuthError
 from langflow.services.triggers.ingress.verifiers import IngressRejected, IngressRequest, IngressSecrets, verify
 from langflow.services.triggers.providers.jira import PROVIDER, collector, oauth
 from langflow.services.triggers.providers.registry import get_provider
+from langflow.services.triggers.source_errors import SourceConfigurationError
 from lfx.integrations.errors import InvalidRequestError, ProviderUnavailableError
 from lfx_jira.client import JiraClient
 from lfx_jira.schema import SCOPES
@@ -132,7 +133,11 @@ async def test_unrelated_duplicate_and_broken_pages_fail_without_advancing(monke
 )
 def test_invalid_trigger_targets_and_push_modes_rejected(raw):
     with pytest.raises(
-        ValueError, match=r"^(Choose an owned Jira connection|Unsupported Jira trigger|Jira issue sources)"
+        ValueError,
+        match=(
+            r"^(Choose an owned Jira connection|Use an uppercase Jira project key|"
+            r"Issue Type ID|Unsupported Jira trigger|Jira issue sources)"
+        ),
     ):
         collector.normalize_config("jira.issue_created", raw)
 
@@ -159,7 +164,7 @@ async def test_oauth_initial_and_refresh_prove_site_scopes_and_account(monkeypat
         if request.url.path == "/oauth/token/accessible-resources":
             return httpx.Response(200, json=[{"id": SITE, "scopes": list(SCOPES - {"offline_access"})}])
         assert request.url.path == f"/ex/jira/{SITE}/rest/api/3/myself"
-        return httpx.Response(200, json={"accountId": "user-1", "active": True})
+        return httpx.Response(200, json={"accountId": "user-1", "active": True, "displayName": "Jira User"})
 
     monkeypatch.setattr(oauth, "http_client", lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)))
     body = {
@@ -170,9 +175,39 @@ async def test_oauth_initial_and_refresh_prove_site_scopes_and_account(monkeypat
     }
     for refresh in [False, True]:
         token, account = await oauth.parse_token(registration(), body, refresh=refresh)
-        assert account == {"id": "user-1", "tenant_id": SITE}
+        assert account == {"id": "user-1", "tenant_id": SITE, "display": "Jira User"}
         assert "offline_access" in token["scope"]
     assert len(requests) == 4
+
+
+@pytest.mark.parametrize(
+    ("profile", "display"),
+    [
+        ({"displayName": " Jira User ", "emailAddress": "jira@example.com"}, "Jira User"),
+        ({"displayName": " ", "emailAddress": "jira@example.com"}, "jira@example.com"),
+        ({"displayName": 42, "emailAddress": "jira@example.com"}, "jira@example.com"),
+        ({"displayName": "x" * 256}, None),
+        ({}, None),
+    ],
+)
+async def test_oauth_account_display_uses_optional_verified_profile(monkeypatch, profile, display):
+    def handler(request):
+        if request.url.path == "/oauth/token/accessible-resources":
+            return httpx.Response(200, json=[{"id": SITE, "scopes": list(SCOPES)}])
+        return httpx.Response(200, json={"accountId": "user-1", "active": True, **profile})
+
+    monkeypatch.setattr(oauth, "http_client", lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    _, account = await oauth.parse_token(
+        registration(),
+        {
+            "access_token": "synthetic-access",
+            "refresh_token": "synthetic-refresh",
+            "expires_in": 3600,
+            "scope": " ".join(SCOPES),
+        },
+        refresh=False,
+    )
+    assert account == {"id": "user-1", "tenant_id": SITE, **({"display": display} if display else {})}
 
 
 @pytest.mark.parametrize("failure", ["site", "scopes", "account", "response"])
@@ -313,7 +348,7 @@ async def test_snapshot_limit_fails_without_cursor_mutation(monkeypatch):
 
     patch_client(monkeypatch, handler)
     node = trigger()
-    with pytest.raises(InvalidRequestError, match="5000"):
+    with pytest.raises(SourceConfigurationError, match=r"5000.*Issue Type ID"):
         await collector.collect(node, lease_for()[0])
     assert node.provider_state == {}
 

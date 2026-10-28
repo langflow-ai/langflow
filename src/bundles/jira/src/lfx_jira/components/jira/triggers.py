@@ -7,7 +7,7 @@ from lfx_jira.manifest import connection_input
 
 
 class JiraOnIssueCreatedTriggerComponent(JiraIssueTriggerComponent):
-    display_name = "Jira On Issue Created"
+    display_name = "Jira: On Issue Created"
     description = "Observe newly created visible issues after an initial project baseline."
     name = "JiraOnIssueCreatedTrigger"
     trigger_kind = "jira.issue_created"
@@ -23,7 +23,7 @@ class JiraOnIssueCreatedTriggerComponent(JiraIssueTriggerComponent):
 
 
 class JiraOnIssueUpdatedTriggerComponent(JiraIssueTriggerComponent):
-    display_name = "Jira On Issue Updated"
+    display_name = "Jira: On Issue Updated"
     description = "Observe changed latest states of previously seen issues. Intermediate edits can be missed."
     name = "JiraOnIssueUpdatedTrigger"
     trigger_kind = "jira.issue_updated"
@@ -39,7 +39,7 @@ class JiraOnIssueUpdatedTriggerComponent(JiraIssueTriggerComponent):
 
 
 class JiraOnIssueStatusChangedTriggerComponent(JiraIssueTriggerComponent):
-    display_name = "Jira On Issue Status Changed"
+    display_name = "Jira: On Issue Status Changed"
     description = "Observe status differences between polls. Intermediate transitions can be missed."
     name = "JiraOnIssueStatusChangedTrigger"
     trigger_kind = "jira.issue_status"

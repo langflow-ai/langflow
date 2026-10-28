@@ -11,7 +11,7 @@ from lfx_jira.schema import READ, WRITE
 
 
 class JiraActionComponent(Component):
-    icon = "Ticket"
+    icon = "Jira"
     capability_id: ClassVar[str] = ""
 
     def client(self):
@@ -34,7 +34,7 @@ class JiraActionComponent(Component):
 class JiraIssueTriggerComponent(BaseTriggerComponent):
     provider = "jira"
     needs_connection = True
-    icon = "Ticket"
+    icon = "Jira"
 
     def trigger_config(self):
         config = {

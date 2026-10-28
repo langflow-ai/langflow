@@ -93,7 +93,18 @@ async def parse_token(registration, body, *, refresh):  # noqa: ARG001 - initial
     except IntegrationError:
         msg = "The Jira grant could not be verified."
         raise OAuthError(msg, reason="provider-unavailable") from None
-    return token, {"id": account["accountId"], "tenant_id": cloud_id()}
+    display = next(
+        (
+            value.strip()
+            for key in ("displayName", "emailAddress")
+            if isinstance(value := account.get(key), str) and 0 < len(value.strip()) <= MAX_ACCOUNT_LENGTH
+        ),
+        None,
+    )
+    identity = {"id": account["accountId"], "tenant_id": cloud_id()}
+    if display:
+        identity["display"] = display
+    return token, identity
 
 
 OAUTH = OAuthAdapter(

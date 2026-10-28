@@ -7,6 +7,7 @@ from lfx.integrations.models import ConnectionRef
 from lfx_jira.client import JiraClient
 from lfx_jira.schema import cloud_id, invalid, issue_data, numeric_id, project_key, search_body, timestamp
 
+from langflow.services.triggers.source_errors import SourceConfigurationError
 from langflow.services.triggers.source_poll import SourceRound
 
 MAX_ISSUES = 5000
@@ -31,10 +32,18 @@ def normalize_config(kind, config):
         ref = ConnectionRef.parse(config.get("connection", ""))
         if ref.provider != "jira":
             raise ValueError
-        project = project_key(config.get("project"))
-        issue_type = numeric_id(config["issue_type_id"]) if config.get("issue_type_id") else ""
     except (ValueError, TypeError, InvalidRequestError):
-        msg = "Choose an owned Jira connection and a valid project key."
+        msg = "Choose an owned Jira connection."
+        raise ValueError(msg) from None
+    try:
+        project = project_key(config.get("project"))
+    except InvalidRequestError as exc:
+        raise ValueError(str(exc)) from None
+    raw_issue_type = config.get("issue_type_id")
+    try:
+        issue_type = "" if raw_issue_type is None or raw_issue_type == "" else numeric_id(raw_issue_type)
+    except InvalidRequestError:
+        msg = "Issue Type ID must be a positive numeric ID, or empty to include all issue types."
         raise ValueError(msg) from None
     return {**config, "connection": str(ref), "project": project, "issue_type_id": issue_type, "delivery_mode": "poll"}
 
@@ -118,14 +127,17 @@ async def collect(trigger, lease):
                 raise invalid(msg)
             tokens.add(page)
         else:
-            msg = "The Jira project exceeds the 5000-issue snapshot limit."
-            raise invalid(msg)
+            msg = "The Jira project exceeds the 5000-issue snapshot limit. Narrow the source with an Issue Type ID."
+            raise SourceConfigurationError(msg)
     finally:
         await client.aclose()
     updated = {**seen, **current}
     if len(updated) > MAX_ISSUES:
-        msg = "The Jira source exceeded 5000 observed issues. Re-enable it for a fresh baseline."
-        raise invalid(msg)
+        msg = (
+            "The Jira source exceeded 5000 observed issues. Narrow the source with an Issue Type ID "
+            "and re-enable it for a fresh baseline."
+        )
+        raise SourceConfigurationError(msg)
     return SourceRound(
         items=rows,
         cursor={"baseline_complete": True, "started_at": started, "issues": updated},

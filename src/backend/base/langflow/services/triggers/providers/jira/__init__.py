@@ -17,9 +17,9 @@ PROVIDER = TriggerProvider(
             poll_mechanism="jira.issue.poll",
         )
         for kind, component, name in (
-            ("jira.issue_created", "JiraOnIssueCreatedTriggerComponent", "Jira On Issue Created"),
-            ("jira.issue_updated", "JiraOnIssueUpdatedTriggerComponent", "Jira On Issue Updated"),
-            ("jira.issue_status", "JiraOnIssueStatusChangedTriggerComponent", "Jira On Issue Status Changed"),
+            ("jira.issue_created", "JiraOnIssueCreatedTriggerComponent", "Jira: On Issue Created"),
+            ("jira.issue_updated", "JiraOnIssueUpdatedTriggerComponent", "Jira: On Issue Updated"),
+            ("jira.issue_status", "JiraOnIssueStatusChangedTriggerComponent", "Jira: On Issue Status Changed"),
         )
     ),
     normalize_config=normalize_config,

@@ -21,7 +21,7 @@ PAGE_SIZE = 100
 
 
 class JiraSearchIssuesComponent(JiraActionComponent):
-    display_name = "Jira Search Issues"
+    display_name = "Jira: Search Issues"
     description = "Search one project by optional status ID with explicit continuation."
     name = "JiraSearchIssues"
     capability_id = "jira.issue.search"
@@ -55,7 +55,7 @@ class JiraSearchIssuesComponent(JiraActionComponent):
 
 
 class JiraReadIssueComponent(JiraActionComponent):
-    display_name = "Jira Read Issue"
+    display_name = "Jira: Read Issue"
     description = "Read the summary, status, project and timestamps of one issue."
     name = "JiraReadIssue"
     capability_id = "jira.issue.read"
@@ -69,7 +69,7 @@ class JiraReadIssueComponent(JiraActionComponent):
 
 
 class JiraCreateIssueComponent(JiraActionComponent):
-    display_name = "Jira Create Issue"
+    display_name = "Jira: Create Issue"
     description = "Create one issue with a summary, type ID and optional plain text description."
     name = "JiraCreateIssue"
     capability_id = "jira.issue.create"
@@ -99,7 +99,7 @@ class JiraCreateIssueComponent(JiraActionComponent):
 
 
 class JiraUpdateIssueComponent(JiraActionComponent):
-    display_name = "Jira Update Issue"
+    display_name = "Jira: Update Issue"
     description = "Update one issue summary and optionally replace its plain text description."
     name = "JiraUpdateIssue"
     capability_id = "jira.issue.update"
@@ -121,7 +121,7 @@ class JiraUpdateIssueComponent(JiraActionComponent):
 
 
 class JiraTransitionIssueComponent(JiraActionComponent):
-    display_name = "Jira Transition Issue"
+    display_name = "Jira: Transition Issue"
     description = "Apply an available transition ID after checking the issue workflow."
     name = "JiraTransitionIssue"
     capability_id = "jira.issue.transition"
