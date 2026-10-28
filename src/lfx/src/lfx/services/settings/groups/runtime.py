@@ -272,6 +272,8 @@ class RuntimeSettings(BaseModel):
     no inbound provider deliveries at all (a firewalled install using Track B
     listeners only); every ingress request then answers 404 exactly as an
     unknown trigger id does, so disabling it leaks nothing either."""
+    trigger_ingress_origin: str | None = None
+    """Operator-advertised HTTPS origin for push providers without OAuth callbacks."""
     trigger_ingress_max_body_bytes: int = Field(default=1_048_576, gt=0)
     """Per-route body cap for an ingress delivery, independent of the global
     request limit. Provider notifications are small - Graph basic notifications

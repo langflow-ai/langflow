@@ -968,8 +968,13 @@ class TestMigrateEndToEnd:
             conn.execute(
                 text("CREATE TABLE connection_secret (connection_id TEXT PRIMARY KEY, encrypted_payload TEXT)")
             )
-            conn.execute(text("CREATE TABLE job (status TEXT)"))
-            conn.execute(text("CREATE TABLE connection_oauth (encrypted_verifier TEXT, expires_at TEXT)"))
+            conn.execute(text("CREATE TABLE job (job_id TEXT PRIMARY KEY, status TEXT, job_metadata TEXT)"))
+            conn.execute(
+                text(
+                    "CREATE TABLE connection_oauth (connection_id TEXT PRIMARY KEY, "
+                    "encrypted_verifier TEXT, expires_at TEXT)"
+                )
+            )
             conn.execute(
                 text("INSERT INTO deployment_provider_account VALUES ('d1', :k)"),
                 {"k": migrate_module.encrypt_with_key("wxo-api-key", old_key)},
@@ -1062,7 +1067,7 @@ class TestMigrateEndToEnd:
     def test_active_job_blocks_rotation(self, migrate_module, rotation_db, old_key, new_key, status):
         engine, config_dir, url = rotation_db
         with engine.begin() as conn:
-            conn.execute(text("INSERT INTO job VALUES (:status)"), {"status": status})
+            conn.execute(text("INSERT INTO job VALUES ('job1', :status, NULL)"), {"status": status})
 
         with pytest.raises(SystemExit):
             migrate_module.migrate(config_dir, url, old_key=old_key, new_key=new_key)
@@ -1076,7 +1081,7 @@ class TestMigrateEndToEnd:
         engine, config_dir, url = rotation_db
         with engine.begin() as conn:
             conn.execute(
-                text("INSERT INTO connection_oauth VALUES (:verifier, '2999-01-01')"),
+                text("INSERT INTO connection_oauth VALUES ('oauth1', :verifier, '2999-01-01')"),
                 {"verifier": migrate_module.encrypt_with_key("verifier", old_key)},
             )
 
@@ -1091,9 +1096,9 @@ class TestMigrateEndToEnd:
     def test_finished_work_does_not_block_rotation(self, migrate_module, rotation_db, old_key, new_key):
         engine, config_dir, url = rotation_db
         with engine.begin() as conn:
-            conn.execute(text("INSERT INTO job VALUES ('completed')"))
+            conn.execute(text("INSERT INTO job VALUES ('job1', 'completed', NULL)"))
             conn.execute(
-                text("INSERT INTO connection_oauth VALUES (:verifier, '2000-01-01')"),
+                text("INSERT INTO connection_oauth VALUES ('oauth1', :verifier, '2000-01-01')"),
                 {"verifier": migrate_module.encrypt_with_key("expired", old_key)},
             )
 
@@ -1217,7 +1222,29 @@ def test_printed_sqlite_url_is_whole(migrate_module, tmp_path, old_key, capsys):
 
 
 def _run_cli(migrate_module, monkeypatch, *args):
-    monkeypatch.setattr(sys, "argv", ["migrate_secret_key.py", *map(str, args)])
+    args = list(map(str, args))
+    if "--dry-run" not in args:
+        # Every mutation test supplies the same offline attestations as an operator.
+        url = (
+            args[args.index("--database-url") + 1]
+            if "--database-url" in args
+            else os.environ.get("LANGFLOW_MIGRATION_TARGET_URL")
+        )
+        if url and make_url(url).drivername == "sqlite":
+            database = Path(make_url(url).database)
+            if database.is_file():
+                backup = database.with_suffix(".backup")
+                backup.write_bytes(database.read_bytes())
+                args.extend(
+                    [
+                        "--writers-stopped",
+                        "--backup-file",
+                        str(backup),
+                        "--backup-sha256",
+                        hashlib.sha256(backup.read_bytes()).hexdigest(),
+                    ]
+                )
+    monkeypatch.setattr(sys, "argv", ["migrate_secret_key.py", *args])
     migrate_module.main()
 
 
@@ -1373,7 +1400,7 @@ class TestRefusals:
         output = capsys.readouterr().out
         assert exit_info.value.code == 1
         assert "DRY RUN COMPLETE" in output
-        assert "Would migrate 4 items, 1 failures" in output
+        assert "Would migrate 5 items, 1 failures" in output
         assert "Warning: 1 items could not be migrated." in output
         assert list(config_dir.iterdir()) == []
 
@@ -1446,7 +1473,7 @@ class TestRefusals:
 
         output = capsys.readouterr().out
         assert exit_info.value.code == 1
-        assert "Warning: Could not decrypt variable 'OPENAI_API_KEY' (v1)" in output
+        assert "Could not decrypt variable.value for row v1" in output
         assert "ERROR: 5 values could not be migrated." in output
         assert self.malformed_key not in output
         assert list(config_dir.iterdir()) == []
@@ -1610,7 +1637,7 @@ class TestPendingKeyFile:
             *("--config-dir", config_dir, "--database-url", url, "--dry-run", "--old-key-file", pending),
         )
 
-        assert "Would migrate 5 items, 0 failures" in capsys.readouterr().out
+        assert "Would migrate 6 items, 0 failures" in capsys.readouterr().out
         assert pending.read_text() == new_key
 
 
