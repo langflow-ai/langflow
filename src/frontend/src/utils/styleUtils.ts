@@ -535,6 +535,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Vectara", name: "vectara", icon: "Vectara" },
   { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
   { display_name: "vLLM", name: "vllm", icon: "vLLM" },
+  { display_name: "Wally", name: "wally", icon: "Wally" },
   { display_name: "Weaviate", name: "weaviate", icon: "Weaviate" },
   { display_name: "Vertex AI", name: "vertexai", icon: "VertexAI" },
   { display_name: "Wikipedia", name: "wikipedia", icon: "Wikipedia" },
