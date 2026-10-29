@@ -1088,6 +1088,8 @@
   "components.decisionmodel.inputs.context.info.fec1ba28": "The text the question is about, such as a message or a document.",
   "components.decisionmodel.inputs.kind.display_name.afd0b29f": "Decision Type",
   "components.decisionmodel.inputs.kind.info.990dc20c": "Choice picks one option. Boolean answers yes or no. Score places the input on ordered levels.",
+  "components.decisionmodel.inputs.levels.display_name.b1482131": "Levels",
+  "components.decisionmodel.inputs.levels.info.a9d0207d": "Levels ordered from lowest to highest, 2 to 10. The model scores the input from 0 (the first level) up to one less than the number of levels. ID is a short unique key the result uses; Label is the name the model reads.",
   "components.decisionmodel.inputs.model.display_name.9aa9d2da": "Decision Model",
   "components.decisionmodel.inputs.model.placeholder.56590d8e": "Setup Provider",
   "components.decisionmodel.inputs.no_description.display_name.eed98f65": "What No Means (Optional)",
