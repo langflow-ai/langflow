@@ -4,6 +4,6 @@ This preview bundle provides search, read, create, update and workflow transitio
 
 Its three triggers observe new issues, changed issue states and changed statuses through authenticated project snapshots.
 
-The server runtime requires the provider runtime prerequisite in PR 15947. See [setup and recovery](../../../design/provider-integrations/jira.md) for the deployment matrix and delivery limits.
+See the [Jira Cloud setup guide](https://docs.langflow.org/next/bundles-jira) for the capability matrix, Atlassian app registration, connection setup, background runs, event identity, and recovery. The [guide source](../../../docs/docs/Components/bundles-jira.mdx) is included in this repository.
 
-Install this wheel alongside Langflow 1.14 with the matching server runtime. Standalone lfx imports the components and manifest without importing Langflow. The server discovers its adapter through the installed distribution entry point.
+Install this wheel alongside Langflow 1.14 with the matching server runtime. Actions support hosted and self-managed servers. Triggers require a self-managed server and a running Langflow listener. Standalone lfx can import the components and manifest, but running Jira flows through headless lfx is unsupported. Langflow Desktop and Jira Data Center are also unsupported.

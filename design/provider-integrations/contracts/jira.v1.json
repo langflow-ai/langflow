@@ -7,7 +7,7 @@
     "provider_id": "jira",
     "display_name": "Jira Cloud",
     "icon": "Jira",
-    "docs_url": "https://github.com/langflow-ai/langflow/blob/aeec0212b435e7e023fd89f53309e95d278d610e/design/provider-integrations/jira.md",
+    "docs_url": "https://docs.langflow.org/next/bundles-jira",
     "auth_profiles": [
       {
         "id": "user",
@@ -238,7 +238,7 @@
     "Hosted and self-managed actions are supported. Data Center, Desktop, headless and push triggers are unsupported."
   ],
   "evidence_paths": [
-    "design/provider-integrations/jira.md",
+    "docs/docs/Components/bundles-jira.mdx",
     "src/bundles/jira/src/lfx_jira/components/jira/capabilities.v1.json",
     "src/backend/base/langflow/services/triggers/providers/jira",
     "src/backend/tests/unit/services/triggers/test_jira_lifecycle.py",
