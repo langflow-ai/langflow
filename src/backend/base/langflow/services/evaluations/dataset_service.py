@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.evaluations.csv_io import ParsedRow
+    from langflow.services.evaluations.examples import DatasetExample, ExampleRow
     from langflow.services.evaluations.schemas import DatasetCreate, DatasetItemUpdate, DatasetItemWrite, DatasetUpdate
 
 DUPLICATE_SUFFIX = " (copy)"
@@ -146,8 +147,7 @@ async def delete_dataset(session: AsyncSession, dataset: Dataset) -> None:
     await session.flush()
 
 
-async def _unique_copy_name(session: AsyncSession, user_id: UUID, name: str) -> str:
-    base = f"{name}{DUPLICATE_SUFFIX}"
+async def _unique_name(session: AsyncSession, user_id: UUID, base: str) -> str:
     candidate = base
     attempt = 2
     while await _name_taken(session, user_id, candidate):
@@ -160,7 +160,7 @@ async def duplicate_dataset(session: AsyncSession, dataset: Dataset, owner_id: U
     """Copy ``dataset`` into ``owner_id``'s account (the caller, who may only have read access)."""
     copy = Dataset(
         user_id=owner_id,
-        name=await _unique_copy_name(session, owner_id, dataset.name),
+        name=await _unique_name(session, owner_id, f"{dataset.name}{DUPLICATE_SUFFIX}"),
         description=dataset.description,
     )
     session.add(copy)
@@ -182,6 +182,18 @@ async def duplicate_dataset(session: AsyncSession, dataset: Dataset, owner_id: U
     )
     await session.flush()
     return copy
+
+
+async def create_from_example(session: AsyncSession, user_id: UUID, example: DatasetExample) -> Dataset:
+    dataset = Dataset(
+        user_id=user_id,
+        name=await _unique_name(session, user_id, example.name),
+        description=example.description,
+    )
+    session.add(dataset)
+    await _flush_or_conflict(session, dataset.name)
+    await add_items(session, dataset, example.rows, source="manual")
+    return dataset
 
 
 async def list_items(
@@ -221,7 +233,7 @@ def _payload(text: str | None) -> dict | None:
 
 
 async def add_items(
-    session: AsyncSession, dataset: Dataset, items: Sequence[DatasetItemWrite | ParsedRow], *, source: str
+    session: AsyncSession, dataset: Dataset, items: Sequence[DatasetItemWrite | ParsedRow | ExampleRow], *, source: str
 ) -> list[DatasetItem]:
     position = await _next_position(session, dataset.id)
     now = _now()

@@ -64,12 +64,14 @@ test(
     await awaitBootstrapTest(page, { skipModal: true });
     const flowId = await seedEchoFlow(page, `Evals echo ${suffix}`);
 
-    await page.getByTestId("sidebar-datasets").click();
+    await page.getByTestId("sidebar-evaluations").click();
+    await page.getByTestId("evals-tab-datasets").click();
     await expect(page.getByTestId("datasets-title")).toBeVisible();
     await page.runA11yScan("evals-datasets-list");
+    // One click creates the dataset and opens it with its name ready to type.
     await page.getByTestId("new-dataset-button").click();
     await page.getByTestId("dataset-name-input").fill(datasetName);
-    await page.getByTestId("dataset-create-submit").click();
+    await page.getByTestId("dataset-name-input").press("Enter");
 
     await expect(page.getByTestId("dataset-detail-title")).toHaveText(
       datasetName,
@@ -82,9 +84,7 @@ test(
     await waitForGridReady(page);
     await page.runA11yScan("evals-dataset-detail");
 
-    await page.getByTestId("csv-import-button").click();
-    await page.runA11yScan("evals-csv-import-empty");
-    await page.setInputFiles('[data-testid="csv-file-input"]', {
+    await page.setInputFiles('[data-testid="csv-import-button-input"]', {
       name: "extra.csv",
       mimeType: "text/csv",
       buffer: Buffer.from("question;answer\nPing;Ping\n;skipped\n"),
@@ -165,5 +165,30 @@ test(
     await expect(page.getByTestId("run-status-completed")).toBeVisible({
       timeout: 60000,
     });
+  },
+);
+
+test(
+  "user adds an example dataset in one click",
+  { tag: ["@release", "@workspace"] },
+  async ({ page }) => {
+    await awaitBootstrapTest(page, { skipModal: true });
+    await page.getByTestId("sidebar-evaluations").click();
+    await page.getByTestId("evals-tab-datasets").click();
+    await expect(page.getByTestId("datasets-title")).toBeVisible();
+
+    const fromEmptyState = page.getByTestId("dataset-example-support-triage");
+    if (await fromEmptyState.isVisible()) {
+      await page.runA11yScan("evals-datasets-empty-examples");
+      await fromEmptyState.click();
+    } else {
+      await page.getByTestId("dataset-examples-menu").click();
+      await page.getByTestId("dataset-example-menu-support-triage").click();
+    }
+
+    await expect(page.getByTestId("dataset-detail-title")).toContainText(
+      "Support ticket triage",
+    );
+    await expect(page.getByText(/^12 items · /)).toBeVisible();
   },
 );

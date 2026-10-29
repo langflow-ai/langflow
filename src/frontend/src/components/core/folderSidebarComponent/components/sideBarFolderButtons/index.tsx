@@ -639,38 +639,21 @@ const SideBarFoldersButtonsComponent = ({
                   </SidebarMenuButton>
                 )}
                 {evalsEnabled && (
-                  <>
-                    <SidebarMenuButton
-                      onClick={() => _navigate("/assets/datasets")}
-                      size="md"
-                      className={cn(
-                        "text-sm",
-                        projectSidebar.footerItemClassName,
-                      )}
-                      data-testid="sidebar-datasets"
-                    >
-                      <ForwardedIconComponent
-                        name="Table"
-                        className="h-4 w-4"
-                      />
-                      {t("sidebar.datasets")}
-                    </SidebarMenuButton>
-                    <SidebarMenuButton
-                      onClick={() => _navigate("/assets/evaluations")}
-                      size="md"
-                      className={cn(
-                        "text-sm",
-                        projectSidebar.footerItemClassName,
-                      )}
-                      data-testid="sidebar-evaluations"
-                    >
-                      <ForwardedIconComponent
-                        name="FlaskConical"
-                        className="h-4 w-4"
-                      />
-                      {t("sidebar.evaluations")}
-                    </SidebarMenuButton>
-                  </>
+                  <SidebarMenuButton
+                    onClick={() => _navigate("/assets/evaluations")}
+                    size="md"
+                    className={cn(
+                      "text-sm",
+                      projectSidebar.footerItemClassName,
+                    )}
+                    data-testid="sidebar-evaluations"
+                  >
+                    <ForwardedIconComponent
+                      name="FlaskConical"
+                      className="h-4 w-4"
+                    />
+                    {t("sidebar.evaluations")}
+                  </SidebarMenuButton>
                 )}
                 <SidebarMenuButton
                   onClick={handleFilesNavigation}

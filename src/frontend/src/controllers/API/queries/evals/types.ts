@@ -45,6 +45,13 @@ export interface Dataset {
   updated_at: string;
 }
 
+export interface DatasetExample {
+  key: string;
+  name: string;
+  description: string;
+  item_count: number;
+}
+
 export interface DatasetItem {
   id: string;
   position: number;

@@ -1,7 +1,7 @@
 import type { RowClickedEvent } from "ag-grid-community";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import DataTableTab from "@/components/core/dataTableTabComponent";
 import { Button } from "@/components/ui/button";
@@ -10,17 +10,22 @@ import {
   useDeleteDatasetItems,
   useGetDataset,
   useGetDatasetItems,
+  useUpdateDataset,
 } from "@/controllers/API/queries/evals/use-datasets";
 import { exportUrl } from "@/controllers/API/queries/evals/use-evaluations";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import { extractApiErrorMessages } from "@/utils/apiError";
 import BackLink from "./components/BackLink";
+import CsvDropzone from "./components/CsvDropzone";
 import CsvImportDialog from "./components/CsvImportDialog";
 import DatasetItemDialog from "./components/DatasetItemDialog";
 import EvalsPageShell from "./components/EvalsPageShell";
 import { EvalsEmptyState, EvalsLoadingState } from "./components/EvalsStates";
+import ImportCsvButton from "./components/ImportCsvButton";
+import InlineEditableText from "./components/InlineEditableText";
 import { datasetItemColumns } from "./config/columns";
 import { useShiftKey } from "./hooks/use-shift-key";
 import { downloadCsv } from "./utils/download-csv";
@@ -28,6 +33,12 @@ import { formatRunDate } from "./utils/format";
 
 // The table pages on the client; a dataset holds at most a few thousand rows.
 const ITEMS_SIZE = 5000;
+
+/** Set by the Datasets page when it creates a dataset and opens it. */
+interface DatasetHandoff {
+  importFile?: File;
+  rename?: boolean;
+}
 
 export default function DatasetDetailPage() {
   const { t } = useTranslation();
@@ -37,6 +48,11 @@ export default function DatasetDetailPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<DatasetItem | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [editingName, setEditingName] = useState(false);
+  const [editingDescription, setEditingDescription] = useState(false);
+  const location = useLocation();
+  const navigate = useCustomNavigate();
   const [selected, setSelected] = useState<DatasetItem[]>([]);
   const [quantitySelected, setQuantitySelected] = useState(0);
   const [pendingDelete, setPendingDelete] = useState<DatasetItem[]>([]);
@@ -52,7 +68,32 @@ export default function DatasetDetailPage() {
     { datasetId },
     { onError: onError(t("evals.items.deleteError")) },
   );
+  const updateDataset = useUpdateDataset(
+    { datasetId },
+    { onError: onError(t("evals.datasets.updateError")) },
+  );
   useDocumentTitle(dataset?.name ?? t("evals.datasets.title"));
+
+  // Consumed once, then dropped from history so a reload or Back does not repeat it.
+  useEffect(() => {
+    const handoff = location.state as DatasetHandoff | null;
+    if (!handoff) return;
+    if (handoff.importFile) startImport(handoff.importFile);
+    if (handoff.rename) setEditingName(true);
+    navigate(`${location.pathname}${location.search}`, {
+      replace: true,
+      state: null,
+    });
+  }, [location.state]);
+
+  const startImport = (file: File | null) => {
+    setImportFile(file);
+    setImportOpen(true);
+  };
+  const handleImportOpenChange = (next: boolean) => {
+    if (!next) setImportFile(null);
+    setImportOpen(next);
+  };
 
   const openEditor = (item: DatasetItem | null) => {
     setEditing(item);
@@ -70,15 +111,7 @@ export default function DatasetDetailPage() {
   };
 
   const importButton = (
-    <Button
-      variant="outline"
-      className="flex items-center gap-2 font-semibold"
-      onClick={() => setImportOpen(true)}
-      data-testid="csv-import-button"
-    >
-      <ForwardedIconComponent name="FileUp" className="h-4 w-4" />
-      {t("evals.csv.title")}
-    </Button>
+    <ImportCsvButton testId="csv-import-button" onFile={startImport} />
   );
   const addButton = (
     <Button
@@ -93,18 +126,45 @@ export default function DatasetDetailPage() {
 
   return (
     <EvalsPageShell
-      title={dataset?.name ?? t("evals.datasets.title")}
+      title={
+        dataset ? (
+          <InlineEditableText
+            value={dataset.name}
+            onSave={(name) => updateDataset.mutate({ name })}
+            label={t("evals.datasets.rename")}
+            required
+            maxLength={255}
+            editing={editingName}
+            setEditing={setEditingName}
+            className="text-xl font-semibold"
+            testId="dataset-name"
+          />
+        ) : (
+          t("evals.datasets.title")
+        )
+      }
       titleTestId="dataset-detail-title"
       back={<BackLink to="/assets/datasets" label={t("evals.datasets.back")} />}
       meta={
         dataset && (
-          <p className="text-sm text-muted-foreground">
-            {dataset.description ? `${dataset.description} · ` : ""}
-            {t("evals.datasets.meta", {
-              count: dataset.item_count,
-              date: formatRunDate(dataset.updated_at),
-            })}
-          </p>
+          <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+            <InlineEditableText
+              value={dataset.description ?? ""}
+              onSave={(description) => updateDataset.mutate({ description })}
+              label={t("evals.datasets.editDescription")}
+              emptyLabel={t("evals.datasets.addDescription")}
+              maxLength={2000}
+              editing={editingDescription}
+              setEditing={setEditingDescription}
+              testId="dataset-description"
+            />
+            <p>
+              {t("evals.datasets.meta", {
+                count: dataset.item_count,
+                date: formatRunDate(dataset.updated_at),
+              })}
+            </p>
+          </div>
         )
       }
     >
@@ -127,10 +187,10 @@ export default function DatasetDetailPage() {
               title={t("evals.items.emptyTitle")}
               description={t("evals.items.emptyBody")}
               actions={
-                <>
-                  {importButton}
-                  {addButton}
-                </>
+                <div className="flex w-full max-w-md flex-col items-stretch gap-3">
+                  <CsvDropzone onFile={startImport} />
+                  <div className="flex justify-center">{addButton}</div>
+                </div>
               }
             />
           }
@@ -192,7 +252,8 @@ export default function DatasetDetailPage() {
           <CsvImportDialog
             datasetId={datasetId}
             open={importOpen}
-            setOpen={setImportOpen}
+            setOpen={handleImportOpenChange}
+            initialFile={importFile}
           />
           <DeleteConfirmationModal
             open={pendingDelete.length > 0}

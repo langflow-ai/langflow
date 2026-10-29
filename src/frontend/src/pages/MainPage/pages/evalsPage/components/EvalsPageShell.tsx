@@ -3,10 +3,11 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
 interface EvalsPageShellProps {
-  title: string;
+  title: ReactNode;
   titleTestId: string;
   back?: ReactNode;
   actions?: ReactNode;
+  tabs?: ReactNode;
   meta?: ReactNode;
   children: ReactNode;
 }
@@ -17,6 +18,7 @@ export default function EvalsPageShell({
   titleTestId,
   back,
   actions,
+  tabs,
   meta,
   children,
 }: EvalsPageShellProps) {
@@ -51,6 +53,7 @@ export default function EvalsPageShell({
                 </div>
               )}
             </div>
+            {tabs}
             {meta && <div className="-mt-2 pb-4">{meta}</div>}
             <div className="flex h-full flex-col">{children}</div>
           </div>

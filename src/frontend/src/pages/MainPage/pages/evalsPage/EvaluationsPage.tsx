@@ -17,6 +17,7 @@ import useAlertStore from "@/stores/alertStore";
 import { extractApiErrorMessages } from "@/utils/apiError";
 import EvalsPageShell from "./components/EvalsPageShell";
 import { EvalsEmptyState, EvalsLoadingState } from "./components/EvalsStates";
+import EvalsTabs from "./components/EvalsTabs";
 import { evaluationColumns } from "./config/columns";
 
 const LIST_SIZE = 200;
@@ -58,6 +59,7 @@ export default function EvaluationsPage() {
     <EvalsPageShell
       title={t("evals.evaluations.title")}
       titleTestId="evaluations-title"
+      tabs={<EvalsTabs active="evaluations" />}
     >
       {isError ? (
         <p role="alert" className="text-sm text-destructive">

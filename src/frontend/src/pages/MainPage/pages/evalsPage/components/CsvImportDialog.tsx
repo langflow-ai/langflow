@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
@@ -32,12 +32,15 @@ interface CsvImportDialogProps {
   datasetId: string;
   open: boolean;
   setOpen: (open: boolean) => void;
+  /** A file already chosen elsewhere (dropped on the page, or picked when the dataset was created). */
+  initialFile?: File | null;
 }
 
 export default function CsvImportDialog({
   datasetId,
   open,
   setOpen,
+  initialFile = null,
 }: CsvImportDialogProps) {
   const { t } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
@@ -93,6 +96,11 @@ export default function CsvImportDialog({
       },
     );
   };
+
+  // Preview a handed-over file once per opening, not on every render.
+  useEffect(() => {
+    if (open && initialFile) handleFile(initialFile);
+  }, [open, initialFile]);
 
   const handleSubmit = () => {
     if (result) {

@@ -15,11 +15,16 @@ import { useDocumentTitle } from "@/hooks/use-document-title";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import { extractApiErrorMessages } from "@/utils/apiError";
-import CreateDatasetDialog from "./components/CreateDatasetDialog";
+import DatasetExamples from "./components/DatasetExamples";
 import EvalsPageShell from "./components/EvalsPageShell";
 import { EvalsEmptyState, EvalsLoadingState } from "./components/EvalsStates";
+import EvalsTabs from "./components/EvalsTabs";
+import ExamplesMenu from "./components/ExamplesMenu";
+import ImportCsvButton from "./components/ImportCsvButton";
 import { datasetColumns } from "./config/columns";
+import { useQuickCreateDataset } from "./hooks/use-quick-create-dataset";
 import { useShiftKey } from "./hooks/use-shift-key";
+import { datasetNameFromFile } from "./utils/unique-name";
 
 const LIST_SIZE = 200;
 
@@ -29,7 +34,6 @@ export default function DatasetsPage() {
   const navigate = useCustomNavigate();
   const isShiftPressed = useShiftKey();
   const [search, setSearch] = useState("");
-  const [createOpen, setCreateOpen] = useState(false);
   const [selected, setSelected] = useState<Dataset[]>([]);
   const [quantitySelected, setQuantitySelected] = useState(0);
   const [pendingDelete, setPendingDelete] = useState<Dataset[]>([]);
@@ -43,6 +47,26 @@ export default function DatasetsPage() {
     onError: onError(t("evals.datasets.duplicateError")),
   });
   const open = (dataset: Dataset) => navigate(`/assets/datasets/${dataset.id}`);
+  const quickCreate = useQuickCreateDataset(
+    (data?.items ?? []).map((dataset) => dataset.name),
+  );
+  const [creating, setCreating] = useState<"blank" | "csv" | null>(null);
+  // The dataset page opens the column mapping for this file as soon as it loads.
+  const createAndOpen = async (kind: "blank" | "csv", file?: File) => {
+    setCreating(kind);
+    try {
+      const dataset = await quickCreate.createUnique(
+        file ? datasetNameFromFile(file.name) : t("evals.datasets.untitled"),
+      );
+      if (dataset) {
+        navigate(`/assets/datasets/${dataset.id}`, {
+          state: file ? { importFile: file } : { rename: true },
+        });
+      }
+    } finally {
+      setCreating(null);
+    }
+  };
 
   const handleConfirmDelete = async () => {
     try {
@@ -80,21 +104,30 @@ export default function DatasetsPage() {
     onDelete: (dataset) => setPendingDelete([dataset]),
   });
 
-  const newButton = (
-    <Button
-      className="flex items-center gap-2 font-semibold"
-      onClick={() => setCreateOpen(true)}
-      data-testid="new-dataset-button"
-    >
-      <ForwardedIconComponent name="Plus" className="h-4 w-4" />
-      {t("evals.datasets.new")}
-    </Button>
+  const createButtons = (
+    <>
+      <ImportCsvButton
+        testId="import-dataset-button"
+        loading={creating === "csv"}
+        onFile={(file) => void createAndOpen("csv", file)}
+      />
+      <Button
+        className="flex items-center gap-2 font-semibold"
+        loading={creating === "blank"}
+        onClick={() => void createAndOpen("blank")}
+        data-testid="new-dataset-button"
+      >
+        <ForwardedIconComponent name="Plus" className="h-4 w-4" />
+        {t("evals.datasets.new")}
+      </Button>
+    </>
   );
 
   return (
     <EvalsPageShell
-      title={t("evals.datasets.title")}
+      title={t("evals.evaluations.title")}
       titleTestId="datasets-title"
+      tabs={<EvalsTabs active="datasets" />}
     >
       {isError ? (
         <p role="alert" className="text-sm text-destructive">
@@ -113,7 +146,12 @@ export default function DatasetsPage() {
               icon="Table"
               title={t("evals.datasets.emptyTitle")}
               description={t("evals.datasets.emptyBody")}
-              actions={newButton}
+              actions={
+                <div className="flex w-full flex-col items-center gap-8">
+                  <div className="flex gap-2">{createButtons}</div>
+                  <DatasetExamples />
+                </div>
+              }
             />
           }
           searchPlaceholder={t("evals.datasets.search")}
@@ -133,7 +171,10 @@ export default function DatasetsPage() {
                   {t("evals.deleteSelected", { count: quantitySelected })}
                 </Button>
               ) : (
-                newButton
+                <>
+                  <ExamplesMenu />
+                  {createButtons}
+                </>
               )}
             </div>
           }
@@ -149,11 +190,6 @@ export default function DatasetsPage() {
           getRowId={(params) => params.data.id}
           gridOptions={{ paginationAutoPageSize: true }}
         >
-          <CreateDatasetDialog
-            open={createOpen}
-            setOpen={setCreateOpen}
-            onCreated={open}
-          />
           <DeleteConfirmationModal
             open={pendingDelete.length > 0}
             setOpen={(next) => !next && setPendingDelete([])}

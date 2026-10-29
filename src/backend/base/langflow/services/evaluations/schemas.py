@@ -60,6 +60,13 @@ class DatasetRead(BaseModel):
     updated_at: datetime
 
 
+class DatasetExampleRead(BaseModel):
+    key: str
+    name: str
+    description: str
+    item_count: int
+
+
 class DatasetItemWrite(BaseModel):
     input: str = Field(min_length=1, max_length=TEXT_MAX_CHARS)
     expected_output: str | None = Field(default=None, max_length=TEXT_MAX_CHARS)

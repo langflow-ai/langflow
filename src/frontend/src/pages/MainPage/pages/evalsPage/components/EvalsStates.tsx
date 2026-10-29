@@ -45,7 +45,11 @@ export function EvalsEmptyState({
           {description}
         </EmptyDescription>
       </EmptyHeader>
-      {actions && <EmptyContent className="gap-2">{actions}</EmptyContent>}
+      {actions && (
+        <EmptyContent className="w-full justify-center gap-2">
+          {actions}
+        </EmptyContent>
+      )}
     </Empty>
   );
 }

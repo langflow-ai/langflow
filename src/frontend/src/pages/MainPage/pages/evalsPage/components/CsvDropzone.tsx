@@ -9,7 +9,7 @@ interface CsvDropzoneProps {
   disabled?: boolean;
 }
 
-function isCsv(file: File): boolean {
+export function isCsv(file: File): boolean {
   return file.name.toLowerCase().endsWith(".csv") || file.type === "text/csv";
 }
 

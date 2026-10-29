@@ -9,6 +9,7 @@ import type {
   CsvImportResult,
   CsvPreview,
   Dataset,
+  DatasetExample,
   DatasetItem,
   Page,
 } from "./types";
@@ -94,6 +95,22 @@ export const useCreateDataset: useMutationFunctionType<
     async (payload) =>
       (await api.post<Dataset>(`${getURL("DATASETS")}/`, payload)).data,
     { retry: false, ...options, onSettled: () => invalidate() },
+  );
+};
+
+export const useUpdateDataset: useMutationFunctionType<
+  { datasetId: string },
+  { name?: string; description?: string },
+  Dataset
+> = ({ datasetId }, options) => {
+  const { mutate } = UseRequestProcessor();
+  const invalidate = useInvalidateDatasets();
+  return mutate(
+    ["useUpdateDataset", datasetId],
+    async (payload) =>
+      (await api.patch<Dataset>(`${getURL("DATASETS")}/${datasetId}`, payload))
+        .data,
+    { retry: false, ...options, onSettled: () => invalidate(datasetId) },
   );
 };
 
@@ -237,6 +254,34 @@ export const useDuplicateDataset: useMutationFunctionType<
     async ({ datasetId }) =>
       (await api.post<Dataset>(`${getURL("DATASETS")}/${datasetId}/duplicate`))
         .data,
+    { retry: false, ...options, onSettled: () => invalidate() },
+  );
+};
+
+export const useGetDatasetExamples: useQueryFunctionType<
+  undefined,
+  DatasetExample[]
+> = (options) => {
+  const { query } = UseRequestProcessor();
+  return query(
+    ["useGetDatasetExamples"],
+    async () =>
+      (await api.get<DatasetExample[]>(`${getURL("DATASETS")}/examples`)).data,
+    { staleTime: Number.POSITIVE_INFINITY, ...options },
+  );
+};
+
+export const useCreateDatasetFromExample: useMutationFunctionType<
+  undefined,
+  { key: string },
+  Dataset
+> = (options) => {
+  const { mutate } = UseRequestProcessor();
+  const invalidate = useInvalidateDatasets();
+  return mutate(
+    ["useCreateDatasetFromExample"],
+    async ({ key }) =>
+      (await api.post<Dataset>(`${getURL("DATASETS")}/examples/${key}`)).data,
     { retry: false, ...options, onSettled: () => invalidate() },
   );
 };

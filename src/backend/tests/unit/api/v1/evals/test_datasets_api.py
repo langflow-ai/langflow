@@ -155,3 +155,38 @@ class TestCsv:
             headers=logged_in_headers,
         )
         assert response.status_code == 422
+
+
+class TestDatasetExamples:
+    async def test_should_list_the_examples_with_their_sizes(self, client, logged_in_headers):
+        response = await client.get("api/v1/datasets/examples", headers=logged_in_headers)
+        assert response.status_code == 200
+        examples = response.json()
+        assert [example["key"] for example in examples] == ["support-triage", "grounded-answers", "safety-checks"]
+        assert all(example["item_count"] >= 10 for example in examples)
+
+    async def test_should_create_a_dataset_with_the_example_rows(self, client, logged_in_headers):
+        created = await client.post("api/v1/datasets/examples/support-triage", headers=logged_in_headers)
+        assert created.status_code == 201
+        dataset = created.json()
+        assert dataset["name"] == "Support ticket triage"
+        assert dataset["item_count"] == 12
+
+        items = await client.get(f"api/v1/datasets/{dataset['id']}/items", headers=logged_in_headers)
+        first = items.json()["items"][0]
+        assert first["input"] == "I was charged twice for my subscription this month."
+        assert first["expected_output"] == "billing"
+
+    async def test_should_pick_a_free_name_when_added_twice(self, client, logged_in_headers):
+        await client.post("api/v1/datasets/examples/safety-checks", headers=logged_in_headers)
+        again = await client.post("api/v1/datasets/examples/safety-checks", headers=logged_in_headers)
+        assert again.status_code == 201
+        assert again.json()["name"] == "Safety and prompt injection 2"
+
+    async def test_should_return_404_for_an_unknown_example(self, client, logged_in_headers):
+        response = await client.post("api/v1/datasets/examples/nope", headers=logged_in_headers)
+        assert response.status_code == 404
+
+    async def test_should_require_authentication(self, client):
+        response = await client.post("api/v1/datasets/examples/support-triage")
+        assert response.status_code in {401, 403}

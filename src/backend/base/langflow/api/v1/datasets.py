@@ -14,10 +14,12 @@ from langflow.services.database.models.evaluation import DatasetItem
 from langflow.services.deps import get_settings_service
 from langflow.services.evaluations import csv_io, dataset_service
 from langflow.services.evaluations.access import ensure_dataset_create, load_eval_dataset
+from langflow.services.evaluations.examples import EXAMPLES, find_example
 from langflow.services.evaluations.schemas import (
     CsvImportResult,
     CsvPreview,
     DatasetCreate,
+    DatasetExampleRead,
     DatasetItemPage,
     DatasetItemRead,
     DatasetItemsCreate,
@@ -69,6 +71,27 @@ async def create_dataset(payload: DatasetCreate, current_user: CurrentActiveUser
         await ensure_dataset_create(current_user)
         dataset = await dataset_service.create_dataset(session, current_user.id, payload)
     return dataset_service.to_dataset_read(dataset, 0)
+
+
+@router.get("/examples", response_model=list[DatasetExampleRead])
+async def list_dataset_examples(current_user: CurrentActiveUser) -> list[DatasetExampleRead]:  # noqa: ARG001
+    return [
+        DatasetExampleRead(
+            key=example.key, name=example.name, description=example.description, item_count=len(example.rows)
+        )
+        for example in EXAMPLES
+    ]
+
+
+@router.post("/examples/{key}", response_model=DatasetRead, status_code=status.HTTP_201_CREATED)
+async def create_dataset_from_example(key: str, current_user: CurrentActiveUser, session: DbSession) -> DatasetRead:
+    example = find_example(key)
+    if example is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No example dataset named {key!r}")
+    async with evals_http_errors():
+        await ensure_dataset_create(current_user)
+        dataset = await dataset_service.create_from_example(session, current_user.id, example)
+    return dataset_service.to_dataset_read(dataset, len(example.rows))
 
 
 @router.get("/{dataset_id}", response_model=DatasetRead)

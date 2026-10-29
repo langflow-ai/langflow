@@ -44,7 +44,7 @@ export default function FlowPicker({
           role="combobox"
           aria-expanded={open}
           data-testid="evaluate-flow"
-          className="h-8 w-full justify-between px-4 font-normal focus-visible:ring-1 focus-visible:ring-offset-0"
+          className="h-9 w-full justify-between px-4 font-normal focus-visible:ring-1 focus-visible:ring-offset-0"
         >
           <span
             className={cn("truncate", !selected && "text-muted-foreground")}

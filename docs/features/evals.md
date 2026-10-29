@@ -292,6 +292,8 @@ private), 409 (conflict) and 422 (cannot run, with `issues`).
 Datasets (owner scope; `dataset` authz resource)
   GET    /api/v1/datasets/?search=&page=&size=
   POST   /api/v1/datasets/                          409 on a duplicate name
+  GET    /api/v1/datasets/examples                  ready-made datasets: key, name, description, item_count
+  POST   /api/v1/datasets/examples/{key}            copies one into the caller's account under a free name
   GET    /api/v1/datasets/{id}
   PATCH  /api/v1/datasets/{id}
   DELETE /api/v1/datasets/{id}                      evaluations keep their results
@@ -377,16 +379,23 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
 
 ## Frontend
 
-- Sidebar: **Datasets** and **Evaluations** under Assets, behind the flag
-  (`EvalsRoute` redirects to Flows when it is off).
+- Sidebar: one **Evaluations** entry, behind the flag (`EvalsRoute` redirects
+  to Flows when it is off). The page has `Evaluations | Datasets` tabs; each tab
+  is its own route.
 - Datasets and items use the shared `DataTableTab` (AG Grid), like Knowledge and
   Files: search, row action menu, multi-select delete, empty state with actions.
-- CSV import: drop zone, file card, column mapping with a preview of the mapped
-  columns, result summary with skipped rows.
+- New dataset is one click: it creates "Untitled dataset" (a free name) and opens
+  it with the name in edit mode. Name and description are edited in place.
+  **Import CSV** on the list creates a dataset named after the file and opens the
+  column mapping. The empty list offers the three example datasets as cards; the
+  toolbar has them in an **Examples** menu.
+- CSV import: drop zone (also on an empty dataset), file card, column mapping
+  with a preview of the mapped columns, result summary with skipped rows.
 - Evaluate: the canvas button (between Playground and Share) saves the flow and
   opens the modal; **New evaluation** on the Evaluations page opens the same
-  modal with a searchable flow picker. The modal shows flow checks, the estimate
-  and, for runs with model calls, a confirmation.
+  modal with a searchable flow picker. Name, flow version and pass threshold sit
+  under **More options**. The modal shows flow checks, the estimate once a
+  dataset is chosen and, for runs with model calls, a confirmation.
 - Evaluation page: runs table (version, pass rate, tokens and change against
   the previous run, cost), metric cards, Passed/Failed/Errored filter, and a row
   detail dialog with the full texts and each score's reason. Active runs poll
