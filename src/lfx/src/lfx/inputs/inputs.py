@@ -148,8 +148,9 @@ class DecisionQuestionsInput(BaseInputMixin, MetadataTraceMixin):
     rows of ``{"id", "label", "description"}``. Add question appends a copy of ``new_question``.
 
     With ``connection_prefix``, each question's text can also be connected: the question whose ``id``
-    is X takes its connection through the hidden template field ``<connection_prefix>X``, which the
-    editor creates for a new question by copying ``<connection_prefix>1``.
+    is X takes its connection through the hidden template field ``<connection_prefix>X``, or through
+    the field its ``input_field`` names, and the editor creates one for a new question by copying
+    ``<connection_prefix>1``.
     """
 
     field_type: SerializableFieldTypes = FieldTypes.DECISION_QUESTIONS

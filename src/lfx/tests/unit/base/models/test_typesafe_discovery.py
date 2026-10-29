@@ -99,6 +99,15 @@ def test_standalone_picker_discovers_env_configured_models(monkeypatch):
     assert [o["name"] for o in options] == ["jev-preview"]
 
 
+def test_a_whitespace_only_key_does_not_turn_on_discovery(monkeypatch, catalog):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "  \n")
+    errors = {}
+    options = get_decision_model_options(provider_policy=policy(), discovery_errors=errors)
+    catalog.assert_not_called()
+    assert errors == {}
+    assert "jev-preview" not in [o["name"] for o in options]
+
+
 def test_default_validation_discovers_using_unsaved_key(monkeypatch, catalog):
     monkeypatch.setattr("lfx.services.model_provider_policy.resolve_model_provider_policy", lambda **_: policy())
     validate = Mock()

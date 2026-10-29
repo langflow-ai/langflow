@@ -16,7 +16,9 @@ const decisionNode = (questionsShown: boolean) =>
             type: "decision_questions",
             show: questionsShown,
             connection_prefix: "question_input_",
+            value: [{ id: "1", input_field: "question" }],
           },
+          question: { show: false, display_name: "Question 1" },
           question_input_x1: { show: false, display_name: "Question 2" },
           structured_context: { show: false, display_name: "Structured" },
         },
@@ -52,5 +54,12 @@ describe("edges into a question card's connection", () => {
     expect(filterHiddenFieldsEdges(edge, [edge], decisionNode(true))).toEqual(
       [],
     );
+  });
+
+  it("include the old Question field a migrated question names", () => {
+    const edge = edgeInto("question");
+    expect(filterHiddenFieldsEdges(edge, [edge], decisionNode(true))).toEqual([
+      edge,
+    ]);
   });
 });

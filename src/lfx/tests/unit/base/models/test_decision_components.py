@@ -338,6 +338,31 @@ async def test_a_migrated_global_variable_binding_is_refused_not_read_as_text():
 
 
 @pytest.mark.asyncio
+async def test_a_question_wired_before_the_list_stays_wired_after_update():
+    """An edge into the old Question targets the field name question, so the migrated question keeps it."""
+    from copy import deepcopy
+
+    from lfx.schema.message import Message
+
+    component = DecisionModelComponent()
+    saved = component.to_frontend_node()["data"]["node"]
+    del saved["template"]["questions"]
+    saved["template"].update({"kind": {"value": "Boolean"}, "question": {"value": "", "input_types": ["Message"]}})
+    updated = await component.update_frontend_node(component.to_frontend_node()["data"]["node"], saved)
+    [question] = updated["template"]["questions"]["value"]
+    assert question["input_field"] == "question"
+    field = updated["template"]["question"]
+    assert (field["type"], field["input_types"], field["show"]) == ("str", ["Message"], False)
+
+    again = await component.update_frontend_node(component.to_frontend_node()["data"]["node"], deepcopy(updated))
+    assert again["template"]["question"] == field
+
+    component.set(context="text", questions=[question])
+    component._attributes["question"] = Message(text="Is this a refund?")
+    assert component._request().question == "Is this a refund?"
+
+
+@pytest.mark.asyncio
 async def test_a_dev_node_with_the_questions_table_starts_with_no_questions():
     """Multiple mode's questions table never shipped; its rows don't match a question list item."""
     component = DecisionModelComponent()
@@ -395,12 +420,17 @@ async def test_connection_fields_of_added_questions_survive_component_update():
     from copy import deepcopy
 
     component = mixed_question_component()
+    component.questions[1]["id"] = "x1"
     saved, _ = create_component_template(component_extractor=component)
+    saved["template"]["questions"]["value"] = deepcopy(component.questions)
     added = {**deepcopy(saved["template"]["question_input_1"]), "name": "question_input_x1", "display_name": "Q2"}
     saved["template"]["question_input_x1"] = added
+    # A field no question uses any more is not carried over.
+    saved["template"]["question_input_gone"] = {**added, "name": "question_input_gone"}
     new, _ = create_component_template(component_extractor=DecisionModelComponent())
     updated = await component.update_frontend_node(new, deepcopy(saved))
     assert updated["template"]["question_input_x1"] == added
+    assert "question_input_gone" not in updated["template"]
     assert updated["template"]["question_input_1"]["input_types"] == ["Message"]
     assert not updated["template"]["question_input_1"]["show"]
 

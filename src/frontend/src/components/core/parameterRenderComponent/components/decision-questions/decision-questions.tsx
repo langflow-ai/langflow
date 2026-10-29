@@ -43,11 +43,13 @@ export default function DecisionQuestionsComponent({
 
   const questions = Array.isArray(value) ? value : [];
   const template = nodeClass?.template;
-  // Each question's text can be connected through its own hidden node field.
+  // Each question's text can be connected through its own hidden node field: the one it names
+  // (a question migrated from the old Question field), or <prefix><id>.
   const connectionOf = (question: DecisionQuestion) =>
-    connectionPrefix && question.id
+    question.input_field ??
+    (connectionPrefix && question.id
       ? `${connectionPrefix}${question.id}`
-      : undefined;
+      : undefined);
   const firstConnection =
     connectionPrefix && template?.[`${connectionPrefix}1`];
   const edgesInto = (field?: string) =>
@@ -82,20 +84,23 @@ export default function DecisionQuestionsComponent({
     const removed = questions
       .filter((question) => !kept.has(question.id))
       .map(connectionOf)
-      // The first question's field belongs to the component class, so it stays.
-      .filter((field) => field && field !== `${connectionPrefix}1`);
+      .filter((field): field is string => !!field);
     const added = next
       .map(connectionOf)
       .filter((field) => field && !template?.[field]);
+    // One snapshot before any change, so Undo restores the questions and their wiring together.
+    takeSnapshot();
     const staleEdges = removed.flatMap((field) => edgesInto(field));
     if (staleEdges.length) deleteEdge(staleEdges.map((edge) => edge.id));
     if (!nodeClass || !handleNodeClass || !fieldName || !firstConnection) {
-      handleOnNewValue({ value: next });
+      handleOnNewValue({ value: next }, { skipSnapshot: true });
       return;
     }
-    takeSnapshot();
     const newNodeClass = cloneDeep(nodeClass);
-    for (const field of removed) delete newNodeClass.template[field!];
+    // The first question's field belongs to the component class and is what new questions copy.
+    for (const field of removed) {
+      if (field !== `${connectionPrefix}1`) delete newNodeClass.template[field];
+    }
     for (const field of added) {
       newNodeClass.template[field!] = {
         ...cloneDeep(firstConnection),

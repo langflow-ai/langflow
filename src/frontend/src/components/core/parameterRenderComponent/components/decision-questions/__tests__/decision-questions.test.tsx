@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import DecisionQuestionsComponent from "../decision-questions";
 
 jest.mock("@/components/common/genericIconComponent", () =>
@@ -253,5 +254,50 @@ describe("the question editor", () => {
       screen.getByTestId("questions_modal_question_connected"),
     ).toHaveTextContent("Another component supplies this question's text.");
     expect(screen.queryByTestId("questions_modal_question_text")).toBeNull();
+  });
+
+  it("removes the edge into question 1 but keeps the field new questions copy", () => {
+    const deleteEdge = jest.fn();
+    useFlowStore.setState({
+      edges: [edgeInto("question_input_1")] as never,
+      deleteEdge,
+    });
+    const { handleNodeClass } = renderQuestions([team]);
+    fireEvent.click(screen.getByTestId("questions_edit"));
+    fireEvent.click(screen.getByTestId("questions_modal_delete"));
+    fireEvent.click(screen.getByTestId("questions_modal_done"));
+    expect(deleteEdge).toHaveBeenCalledWith(["edge-question_input_1"]);
+    const [[updated]] = handleNodeClass.mock.calls;
+    expect(updated.template.question_input_1).toEqual(connection);
+  });
+
+  it("takes the undo snapshot before removing a connected question's edge", () => {
+    const calls: string[] = [];
+    useFlowStore.setState({
+      edges: [edgeInto("question_input_x1")] as never,
+      deleteEdge: () => calls.push("deleteEdge"),
+    });
+    const takeSnapshot = useFlowsManagerStore.getState().takeSnapshot;
+    useFlowsManagerStore.setState({
+      takeSnapshot: () => calls.push("snapshot"),
+    });
+    renderQuestions([team, urgent]);
+    fireEvent.click(screen.getByTestId("questions_question_1"));
+    fireEvent.click(screen.getByTestId("questions_modal_delete"));
+    fireEvent.click(screen.getByTestId("questions_modal_done"));
+    useFlowsManagerStore.setState({ takeSnapshot });
+    expect(calls).toEqual(["snapshot", "deleteEdge"]);
+  });
+
+  it("keeps a migrated question wired through the old Question field", () => {
+    useFlowStore.setState({ edges: [edgeInto("question")] as never });
+    const migrated = { ...team, input_field: "question" };
+    renderQuestions([migrated], {
+      question: { ...connection, name: "question" },
+    });
+    expect(screen.getByTestId("handle_question")).toBeInTheDocument();
+    expect(screen.getByTestId("questions_question_0")).toHaveTextContent(
+      "Connected",
+    );
   });
 });

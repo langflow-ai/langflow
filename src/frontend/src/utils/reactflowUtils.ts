@@ -382,8 +382,8 @@ const isAdvancedField = (data: APIClassType, fieldName: string): boolean => {
   return field && "advanced" in field && field.advanced === true;
 };
 
-// A shown question list draws its questions' connection handles on its own cards, so those
-// fields stay hidden as rows but keep their edges.
+// A shown question list draws its questions' connection handles on its own rows, so those
+// fields stay hidden as rows but keep their edges: <prefix><id>, or the field a question names.
 const isDrawnByQuestionList = (
   template: APITemplateType,
   fieldName: string,
@@ -392,8 +392,10 @@ const isDrawnByQuestionList = (
     (field) =>
       field?.type === "decision_questions" &&
       field.show &&
-      !!field.connection_prefix &&
-      fieldName.startsWith(field.connection_prefix),
+      ((!!field.connection_prefix &&
+        fieldName.startsWith(field.connection_prefix)) ||
+        (Array.isArray(field.value) &&
+          field.value.some((question) => question?.input_field === fieldName))),
   );
 
 export function filterHiddenFieldsEdges(

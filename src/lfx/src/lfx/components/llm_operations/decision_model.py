@@ -185,7 +185,8 @@ class DecisionModelComponent(Component):
 
     def _connected_question(self, item: dict) -> str | None:
         """The text a component connected to this question's card sends, if any."""
-        value = self._attributes.get(f"{_CONNECTION_PREFIX}{item.get('id')}") if item.get("id") else None
+        field = _connection_field(item)
+        value = self._attributes.get(field) if field else None
         if value in (None, ""):
             return None
         return value.text if isinstance(value, Message) else str(value)
@@ -280,10 +281,19 @@ class DecisionModelComponent(Component):
         saved = current_frontend_node.get("template", {})
         if (saved.get("questions") or {}).get("type") != "decision_questions":
             template["questions"]["value"] = [_legacy_question(saved)] if "question" in saved else []
-        # Questions added in the editor bring their own connection fields; the class has only the first.
-        for name, field in saved.items():
-            if name.startswith(_CONNECTION_PREFIX) and name not in template:
-                template[name] = deepcopy(field)
+            if "question" in saved:
+                # The old Question keeps its field name as the migrated question's connection, so an
+                # edge wired into it stays connected.
+                template["question"] = {
+                    **deepcopy(template[f"{_CONNECTION_PREFIX}1"]),
+                    "name": "question",
+                    "display_name": "Question 1",
+                }
+        # Each question's connection field lives on the node; the class has only the one to copy.
+        for item in template["questions"]["value"]:
+            name = _connection_field(item) if isinstance(item, dict) else None
+            if name and name not in template and name in saved:
+                template[name] = deepcopy(saved[name])
         if template["question_mode"]["value"] not in {_FORM, _JSON}:
             template["question_mode"]["value"] = _FORM
         self._show_fields(template)
@@ -305,6 +315,11 @@ class DecisionModelComponent(Component):
         if "questions_json" in config:
             config["questions_json"]["show"] = not form
             config["questions_json"]["advanced"] = form
+
+
+def _connection_field(item: dict) -> str | None:
+    """The hidden node field a question's text can be connected through."""
+    return item.get("input_field") or (f"{_CONNECTION_PREFIX}{item['id']}" if item.get("id") else None)
 
 
 def _legacy_question(saved: dict) -> dict:
@@ -332,6 +347,7 @@ def _legacy_question(saved: dict) -> dict:
     return {
         **deepcopy(_NEW_QUESTION),
         "id": "1",
+        "input_field": "question",
         "kind": kind,
         "question": value("question", ""),
         "options": options,

@@ -47,7 +47,8 @@ it("shows translated Decision Types but saves the canonical one", async () => {
   );
   await user.click(screen.getByRole("tab", { name: "Bewertung" }));
   await user.click(screen.getByTestId("questions_modal_done"));
-  expect(handleOnNewValue).toHaveBeenLastCalledWith({
-    value: [{ ...question, kind: "Score" }],
-  });
+  expect(handleOnNewValue).toHaveBeenLastCalledWith(
+    { value: [{ ...question, kind: "Score" }] },
+    { skipSnapshot: true },
+  );
 });

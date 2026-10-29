@@ -16,6 +16,7 @@ type Row = { id?: string; label?: string; description?: string };
 
 export type DecisionQuestion = {
   id?: string;
+  input_field?: string;
   name?: string;
   kind?: string;
   question?: string;
