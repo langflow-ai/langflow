@@ -140,6 +140,7 @@ async def test_run_batch_retries_only_rate_limited_rows_and_preserves_order():
         def __init__(self):
             """Track calls so the first response can mix successes and 429s."""
             self.calls = 0
+            self.submitted_ids = []
 
         def with_config(self, *_, **__):
             """Return this model unchanged, as a configured runnable would."""
@@ -148,6 +149,8 @@ async def test_run_batch_retries_only_rate_limited_rows_and_preserves_order():
         async def abatch(self, conversations, **_kwargs):
             """Mix successful messages with rate limits, then answer retries."""
             self.calls += 1
+            submitted_ids = [conversation[-1]["content"] for conversation in conversations]
+            self.submitted_ids.append(submitted_ids)
             if self.calls == 1:
                 return [
                     AIMessage(content="response-0"),
@@ -172,6 +175,39 @@ async def test_run_batch_retries_only_rate_limited_rows_and_preserves_order():
     assert result["model_response"].tolist() == ["response-0", "response-1", "response-2", "response-3"]
     assert result["batch_index"].tolist() == [0, 1, 2, 3]
     assert model.calls == 2
+    assert model.submitted_ids == [["0", "1", "2", "3"], ["1", "3"]]
+    sleep.assert_awaited_once_with(1)
+
+
+@pytest.mark.asyncio
+async def test_custom_abatch_fallback_retries_direct_rate_limit_errors():
+    """Retry whole-batch 429s from custom models without return_exceptions."""
+
+    class RateLimitError(Exception):
+        status_code = 429
+
+    class CustomModel:
+        def __init__(self):
+            """Track submitted rows and fail the first call with a direct 429."""
+            self.calls = []
+
+        async def abatch(self, conversations):
+            """Expose the legacy signature and raise a batch-level rate limit."""
+            ids = [conversation[-1]["content"] for conversation in conversations]
+            self.calls.append(ids)
+            if len(self.calls) == 1:
+                error_message = "busy"
+                raise RateLimitError(error_message)
+            return [f"ok:{row_id}" for row_id in ids]
+
+    model = CustomModel()
+    component = BatchRunComponent(batch_size=2, max_rate_limit_retries=1)
+
+    with patch("lfx.components.llm_operations.batch_run.asyncio.sleep", new_callable=AsyncMock) as sleep:
+        results = await component._run_conversations(model, _conversations(2))
+
+    assert results == ["ok:0", "ok:1"]
+    assert model.calls == [["0", "1"], ["0"], ["1"]]
     sleep.assert_awaited_once_with(1)
 
 

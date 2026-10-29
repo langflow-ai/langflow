@@ -238,7 +238,14 @@ class BatchRunComponent(Component):
                 # abatch(inputs) without LangChain's optional return_exceptions argument.
                 if "unexpected keyword argument 'return_exceptions'" not in str(error):
                     raise
-                batch_responses = await model.abatch(inputs)
+                try:
+                    batch_responses = await model.abatch(inputs)
+                except Exception as error:
+                    if not self._is_rate_limit_error(error):
+                        raise
+                    # A custom runnable without return_exceptions can only report a
+                    # rate limit for the whole submitted batch, so retry each row.
+                    batch_responses = [error] * len(current_indices)
             if len(batch_responses) != len(current_indices):
                 msg = "The model returned a different number of responses than input conversations."
                 raise ValueError(msg)
