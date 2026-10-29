@@ -1,4 +1,43 @@
+from collections.abc import Iterator
+from contextlib import contextmanager
+
 import sqlalchemy as sa
+
+
+@contextmanager
+def preserve_sqlite_triggers(conn: sa.Connection, *table_names: str) -> Iterator[None]:
+    """Preserve installed triggers while rebuilding a SQLite table.
+
+    Include both the rebuilt table and tables whose triggers reference it.
+    SQLite drops triggers attached to the old table, while surviving triggers
+    can prevent Alembic from renaming the replacement table. A savepoint rolls
+    back the schema and triggers if the rebuild or trigger restoration fails.
+    """
+    if conn.dialect.name != "sqlite":
+        yield
+        return
+
+    triggers = conn.execute(
+        sa.text(
+            """
+            SELECT name, sql FROM sqlite_master
+            WHERE type = 'trigger' AND tbl_name IN :table_names
+            ORDER BY rowid
+            """
+        ).bindparams(sa.bindparam("table_names", expanding=True)),
+        {"table_names": table_names},
+    ).all()
+    if not triggers:
+        yield
+        return
+
+    with conn.begin_nested():
+        for name, _ in triggers:
+            quoted_name = conn.dialect.identifier_preparer.quote_identifier(name)
+            conn.exec_driver_sql(f"DROP TRIGGER main.{quoted_name}")
+        yield
+        for _, sql in triggers:
+            conn.exec_driver_sql(sql)
 
 
 def table_exists(name, conn):
