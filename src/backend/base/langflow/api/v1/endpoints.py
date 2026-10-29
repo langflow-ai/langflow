@@ -1571,7 +1571,8 @@ async def experimental_run_flow(
       Tweaks can be overridden by the input values.
     - `stream` (bool, optional): Specifies whether the results should be streamed. Defaults to False.
     - `session_id` (Union[None, str], optional): An optional session ID to utilize existing session data for the flow
-      execution.
+      execution. If no session is cached under it, the flow is built from its stored data under the current caller
+      instead of failing.
     - `api_key_user` (User): The user associated with the current API key. Automatically resolved from the API key.
 
     ### Returns:
@@ -1631,9 +1632,16 @@ async def experimental_run_flow(
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(client_error)) from exc
         graph, _artifacts = session_data or (None, None)
         if graph is None:
-            msg = f"Session {session_id} not found"
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
-        if not _graph_executes_as_actor(graph, api_key_user, flow_id=flow.id):
+            # A caller-supplied session_id that has never been cached (nothing
+            # ever populates this cache for advanced runs) must not 404: fall
+            # through and build the graph from the stored flow under the
+            # current actor, exactly as for a stale or foreign-principal
+            # cached graph below. The /run endpoint accepts the same value.
+            await logger.awarning(
+                "No cached advanced-run session for flow %s; building from stored flow",
+                flow.id,
+            )
+        elif not _graph_executes_as_actor(graph, api_key_user, flow_id=flow.id):
             # Cache keys are legacy and not actor-scoped. Reusing an instantiated
             # graph across principals would retain the first actor's component
             # credentials, variables, files, and tweaks. Rebuild the immutable
