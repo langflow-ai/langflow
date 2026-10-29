@@ -42,7 +42,7 @@ components appear in the palette under the `ibm` bundle group.
 >   or install `ibm-db` from source if you need Db2 on aarch64.
 > * `ibm-watsonx-ai` (>=1.5.13) and `langchain-ibm` (>=1.1.0) added Python 3.14
 >   support upstream, so the watsonx components are importable on every
->   supported Python version (3.10-3.14). Earlier releases capped at `<3.14`;
+>   supported Python version (3.11-3.14). Earlier releases capped at `<3.14`;
 >   the bundle pins were bumped to pick up the 3.14-capable builds.
 
 ## Develop
