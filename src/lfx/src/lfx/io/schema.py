@@ -70,6 +70,7 @@ _serialized_field_type_to_type: dict[str, type] = {
     FieldTypes.MCP.value: dict,
     FieldTypes.MODEL.value: list,
     FieldTypes.DATA_DISPLAY.value: dict,
+    FieldTypes.DECISION_QUESTIONS.value: list,
     FieldTypes.DB_PROVIDER.value: str,
 }
 

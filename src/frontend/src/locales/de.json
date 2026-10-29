@@ -3328,5 +3328,21 @@
   "modelProviders.openRouterModelHint": "Wähle ein aufgeführtes Modell oder gib eine OpenRouter-Entscheidungsmodell-ID ein. OpenRouter bestimmt, welche Anfragen das Modell unterstützt.",
   "modelProviders.searchOrAddModel": "Modell-ID suchen oder hinzufügen…",
   "modelProviders.addDecisionModel": "Entscheidungsmodell „{{name}}“ hinzufügen",
-  "modelProviders.decisionDiscoveryError": "Entscheidungsmodelle konnten nicht geladen werden. Prüfen Sie die Zugangsdaten dieses Anbieters und versuchen Sie es erneut. Andere Anbieter sind weiterhin verfügbar."
+  "modelProviders.decisionDiscoveryError": "Entscheidungsmodelle konnten nicht geladen werden. Prüfen Sie die Zugangsdaten dieses Anbieters und versuchen Sie es erneut. Andere Anbieter sind weiterhin verfügbar.",
+  "decisionQuestions.title": "Frage {{number}}",
+  "decisionQuestions.remove": "Frage {{number}} entfernen",
+  "decisionQuestions.name": "Name von Frage {{number}}",
+  "decisionQuestions.namePlaceholder": "Name (optional, Standard: q{{number}})",
+  "decisionQuestions.kind": "Entscheidungstyp von Frage {{number}}",
+  "decisionQuestions.question": "Text von Frage {{number}}",
+  "decisionQuestions.questionPlaceholder": "Was über den Kontext entschieden werden soll",
+  "decisionQuestions.options": "Optionen",
+  "decisionQuestions.optionsInfo": "Die Optionen, zwischen denen gewählt wird. Die ID ist der Schlüssel im Ergebnis; das Label ist der Name, den das Modell liest.",
+  "decisionQuestions.optionsEdit": "Optionen bearbeiten",
+  "decisionQuestions.levels": "Stufen",
+  "decisionQuestions.levelsInfo": "Stufen von der niedrigsten zur höchsten. Die ID ist der Schlüssel im Ergebnis; das Label ist der Name, den das Modell liest.",
+  "decisionQuestions.levelsEdit": "Stufen bearbeiten",
+  "decisionQuestions.yes_description": "Was Ja bedeutet (optional)",
+  "decisionQuestions.no_description": "Was Nein bedeutet (optional)",
+  "decisionQuestions.add": "Frage hinzufügen"
 }

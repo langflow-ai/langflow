@@ -15,55 +15,21 @@ from lfx.base.models.decisions.schema import (
 )
 from lfx.base.models.unified_models import handle_model_input_update
 from lfx.custom.custom_component.component import Component
-from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import (
-    DropdownInput,
+    DecisionQuestionsInput,
     FloatInput,
     HandleInput,
-    IntInput,
     MessageTextInput,
     ModelInput,
     MultilineInput,
     Output,
     TabInput,
-    TableInput,
 )
 from lfx.schema.data import Data
 from lfx.schema.table import EditMode
 
 _KINDS = ("Choice", "Boolean", "Score")
 _FORM, _JSON = "Form", "JSON"
-# More questions go in Questions JSON; every form question is a hidden group on every node.
-_MAX_FORM_QUESTIONS = 5
-# Fields whose change re-runs _show_fields; the editor sends the new value beside the config.
-_REFRESHED_FIELDS = {"question_mode", "number_of_questions", "kind"} | {
-    f"kind_{number}" for number in range(2, _MAX_FORM_QUESTIONS + 1)
-}
-_DEFAULT_CANDIDATES = {
-    "Choice": [
-        {"id": "a", "label": "Option A", "description": ""},
-        {"id": "b", "label": "Option B", "description": ""},
-    ],
-    "Score": [
-        {"id": "low", "label": "Low", "description": ""},
-        {"id": "medium", "label": "Medium", "description": ""},
-        {"id": "high", "label": "High", "description": ""},
-    ],
-}
-# The table's name and help follow the Decision Type.
-_TABLE = {
-    "Choice": (
-        "Options",
-        "The options to choose between, 2 to 255. ID is a short unique key the result uses, such as refund; "
-        "Label is the name the model reads.",
-    ),
-    "Score": (
-        "Levels",
-        "Levels ordered from lowest to highest, 2 to 10. The model scores the input from 0 (the first level) up "
-        "to one less than the number of levels. ID is a short unique key the result uses; Label is the name the "
-        "model reads.",
-    ),
-}
 _TABLE_SCHEMA = [
     {
         "name": "id",
@@ -88,6 +54,23 @@ _TABLE_SCHEMA = [
         "default": "",
     },
 ]
+# What Add question appends; a node starts with one.
+_NEW_QUESTION = {
+    "name": "",
+    "kind": "Choice",
+    "question": "",
+    "options": [
+        {"id": "a", "label": "Option A", "description": ""},
+        {"id": "b", "label": "Option B", "description": ""},
+    ],
+    "levels": [
+        {"id": "low", "label": "Low", "description": ""},
+        {"id": "medium", "label": "Medium", "description": ""},
+        {"id": "high", "label": "High", "description": ""},
+    ],
+    "yes_description": "",
+    "no_description": "",
+}
 
 # What an agent learns about this component when it is a tool.
 _RESULT_INFO = (
@@ -105,88 +88,6 @@ _RESULT_INFO = (
 #   in `state`, OpenAI image inputs. Needs size limits and SSRF checks for each format.
 # - Pinned model versions, such as pplx-decider-v1.2: policy allows models by name, so each version
 #   needs its own catalog and policy entry.
-
-
-def _field(role: str, number: int) -> str:
-    """Question 1 keeps the original field names, so saved single-question flows still load."""
-    return role if number == 1 else f"{role}_{number}"
-
-
-def _question_inputs(number: int) -> list:
-    """One question's group. Question 1 shows by default; the others show as Number of Questions grows."""
-    first = number == 1
-    suffix = "" if first else f" {number}"
-    return [
-        MessageTextInput(
-            name=_field("question_name", number),
-            display_name=f"Question Name{suffix}",
-            info=f"Optional: this answer's key in the result, such as urgent. Defaults to q{number}.",
-            show=False,
-        ),
-        DropdownInput(
-            name=_field("kind", number),
-            display_name=f"Decision Type{suffix}",
-            options=list(_KINDS),
-            value="Choice",
-            info="Choice picks one option. Boolean answers yes or no. Score places the input on ordered levels.",
-            real_time_refresh=True,
-            show=first,
-        ),
-        MessageTextInput(
-            name=_field("question", number),
-            display_name=f"Question{suffix}",
-            info='What to decide about the Context, such as "Which team should handle this message?"',
-            required=first,
-            show=first,
-        ),
-        TableInput(
-            name=_field("candidates", number),
-            display_name=f"{_TABLE['Choice'][0]}{suffix}",
-            # Options are typed in, not connected: connected rows arrive with NaN cells and number IDs.
-            input_types=[],
-            value=[row.copy() for row in _DEFAULT_CANDIDATES["Choice"]],
-            info=_TABLE["Choice"][1],
-            table_schema=_TABLE_SCHEMA,
-            show=first,
-        ),
-        TableInput(
-            name=_field("levels", number),
-            display_name=f"{_TABLE['Score'][0]}{suffix}",
-            input_types=[],
-            value=[row.copy() for row in _DEFAULT_CANDIDATES["Score"]],
-            info=_TABLE["Score"][1],
-            table_schema=_TABLE_SCHEMA,
-            show=False,
-        ),
-        MessageTextInput(
-            name=_field("yes_description", number),
-            display_name=f"What Yes Means{suffix} (Optional)",
-            info=(
-                "Optional: what a Yes answer means. Some decision models don't accept this; if yours "
-                "doesn't, the run stops and asks you to clear it."
-            ),
-            show=False,
-            advanced=True,
-        ),
-        MessageTextInput(
-            name=_field("no_description", number),
-            display_name=f"What No Means{suffix} (Optional)",
-            info=(
-                "Optional: what a No answer means. Some decision models don't accept this; if yours "
-                "doesn't, the run stops and asks you to clear it."
-            ),
-            show=False,
-            advanced=True,
-        ),
-    ]
-
-
-def _question_count(value) -> int:
-    """The editor's Number of Questions, kept in range for showing fields; a run checks it strictly."""
-    try:
-        return min(max(int(value), 1), _MAX_FORM_QUESTIONS)
-    except (TypeError, ValueError):
-        return 1
 
 
 class DecisionModelComponent(Component):
@@ -226,16 +127,16 @@ class DecisionModelComponent(Component):
             info="The text the questions are about, such as a message or a document.",
             tool_mode=True,
         ),
-        IntInput(
-            name="number_of_questions",
-            display_name="Number of Questions",
-            value=1,
-            range_spec=RangeSpec(min=1, max=_MAX_FORM_QUESTIONS, step=1, step_type="int"),
-            real_time_refresh=True,
-            info=f"Ask up to {_MAX_FORM_QUESTIONS} questions about the same Context in one call; use Questions "
-            "JSON for more. With more than one, the result holds each answer under its Question Name.",
+        DecisionQuestionsInput(
+            name="questions",
+            display_name="Questions",
+            value=[deepcopy(_NEW_QUESTION)],
+            new_question=_NEW_QUESTION,
+            table_schema=_TABLE_SCHEMA,
+            info="Each question has its own Decision Type: Choice picks one option, Boolean answers yes or no, and "
+            "Score places the input on ordered levels. With more than one question, they are sent in one call and "
+            "the result holds each answer under its Name, which defaults to q1, q2 and so on.",
         ),
-        *[field for number in range(1, _MAX_FORM_QUESTIONS + 1) for field in _question_inputs(number)],
         HandleInput(
             name="structured_context",
             display_name="Structured Context",
@@ -293,24 +194,24 @@ class DecisionModelComponent(Component):
             msg = f"Check Questions: {validation_summary(exc)}"
             raise DecisionConfigurationError(msg) from None
 
-    def _form_question(self, number: int) -> dict:
-        """One form question's fields, only those its Decision Type uses."""
-        kind = getattr(self, _field("kind", number))
-        # A tweak can send anything here; the dropdown only offers these three.
+    @staticmethod
+    def _question_fields(item, number: int) -> dict:
+        """One question's fields, only those its Decision Type uses."""
+        # A tweak can send anything here; the editor only offers these three types.
+        kind = item.get("kind") if isinstance(item, dict) else None
         if kind not in _KINDS:
-            where = "" if number == 1 else f" for Question {number}"
-            msg = f"Pick a Decision Type{where}: Choice, Boolean or Score."
+            msg = f"Pick a Decision Type for Question {number}: Choice, Boolean or Score."
             raise DecisionConfigurationError(msg)
         kind = kind.lower()
         boolean = kind == "boolean"
         return {
             "kind": kind,
-            "question": getattr(self, _field("question", number)),
-            "options": getattr(self, _field("candidates", number)) if kind == "choice" else (),
-            "levels": getattr(self, _field("levels", number)) if kind == "score" else (),
-            # Hidden for other types, so a value left from Boolean never applies to them.
-            "yes_description": (getattr(self, _field("yes_description", number)) or "") if boolean else "",
-            "no_description": (getattr(self, _field("no_description", number)) or "") if boolean else "",
+            "question": item.get("question"),
+            "options": (item.get("options") or ()) if kind == "choice" else (),
+            "levels": (item.get("levels") or ()) if kind == "score" else (),
+            # Ignored for other types, so a value left from Boolean never applies to them.
+            "yes_description": (item.get("yes_description") or "") if boolean else "",
+            "no_description": (item.get("no_description") or "") if boolean else "",
         }
 
     def _request(self):
@@ -320,20 +221,21 @@ class DecisionModelComponent(Component):
         if self.question_mode != _FORM:
             msg = "Pick a Questions Mode: Form or JSON."
             raise DecisionConfigurationError(msg)
-        count = self.number_of_questions
-        if type(count) is not int or not 1 <= count <= _MAX_FORM_QUESTIONS:
-            msg = f"Number of Questions must be a whole number from 1 to {_MAX_FORM_QUESTIONS}."
+        items = self.questions
+        if not isinstance(items, list) or not items:
+            msg = "Add a question."
             raise DecisionConfigurationError(msg)
-        if count == 1:
-            return decision_request(context=context, **self._form_question(1))
+        if len(items) == 1:
+            return decision_request(context=context, **self._question_fields(items[0], 1))
         questions = {}
-        for number in range(1, count + 1):
-            name = str(getattr(self, _field("question_name", number)) or "").strip() or f"q{number}"
+        for number, item in enumerate(items, start=1):
+            fields = self._question_fields(item, number)
+            name = str(item.get("name") or "").strip() or f"q{number}"
             if name in questions:
-                msg = f"Two questions are named {name!r}. Give each question a different Question Name."
+                msg = f"Two questions are named {name!r}. Give each question a different Name."
                 raise DecisionConfigurationError(msg)
             try:
-                questions[name] = DecisionQuestion(**self._form_question(number))
+                questions[name] = DecisionQuestion(**fields)
             except ValidationError as exc:
                 msg = f"Question {number}: {configuration_summary(exc)}"
                 raise DecisionConfigurationError(msg) from None
@@ -363,51 +265,58 @@ class DecisionModelComponent(Component):
         return data
 
     async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):
-        """Re-apply the saved Decision Type's fields after a code update.
+        """Carry a node saved before the question list over to it, then show the saved mode's fields.
 
-        Update rebuilds the node from the class, which shows Choice's fields, and copies only values back.
-        Without this a Boolean node came back with What Yes Means and What No Means hidden, so the run
-        dropped them.
+        Update rebuilds the node from the class and copies back only values whose field names match.
         """
         await super().update_frontend_node(new_frontend_node, current_frontend_node)
         template = new_frontend_node.get("template", {})
-        saved_template = current_frontend_node.get("template", {})
-        if "levels" not in saved_template and (saved_template.get("kind") or {}).get("value") == "Score":
-            # Older Score nodes stored their rubric in the shared candidates field.
-            template["levels"]["value"] = deepcopy(saved_template["candidates"]["value"])
-            template["candidates"]["value"] = deepcopy(_DEFAULT_CANDIDATES["Choice"])
+        saved = current_frontend_node.get("template", {})
+        if (saved.get("questions") or {}).get("type") != "decision_questions":
+            template["questions"]["value"] = (
+                [_legacy_question(saved)] if "question" in saved else [deepcopy(_NEW_QUESTION)]
+            )
+        if template["question_mode"]["value"] not in {_FORM, _JSON}:
+            template["question_mode"]["value"] = _FORM
         self._show_fields(template)
         return new_frontend_node
 
     def update_build_config(self, build_config: dict, field_value, field_name: str | None = None) -> dict:
         config = handle_model_input_update(self, build_config, field_value, field_name)
-        if field_name in _REFRESHED_FIELDS and field_name in config:
-            config[field_name]["value"] = field_value
+        if field_name == "question_mode":
+            config["question_mode"]["value"] = field_value
         self._show_fields(config)
         return config
 
     @staticmethod
     def _show_fields(config: dict) -> None:
-        """Show the active mode's inputs and each shown question's type fields, keeping every value."""
+        """Show the question list in Form mode and Questions JSON in JSON mode, keeping both values."""
         form = config.get("question_mode", {}).get("value", _FORM) != _JSON
-        count = _question_count(config.get("number_of_questions", {}).get("value", 1)) if form else 0
-        shown = {"number_of_questions": form, "questions_json": not form}
-        for number in range(1, _MAX_FORM_QUESTIONS + 1):
-            active = number <= count
-            kind = config.get(_field("kind", number), {}).get("value", "Choice")
-            shown |= {
-                _field("question_name", number): active and count > 1,
-                _field("kind", number): active,
-                _field("question", number): active,
-                _field("candidates", number): active and kind == "Choice",
-                _field("levels", number): active and kind == "Score",
-                _field("yes_description", number): active and kind == "Boolean",
-                _field("no_description", number): active and kind == "Boolean",
-            }
-            if (name := _field("question", number)) in config:
-                config[name]["required"] = active
-        for name, show in shown.items():
-            if name in config:
-                config[name]["show"] = show
+        if "questions" in config:
+            config["questions"]["show"] = form
         if "questions_json" in config:
+            config["questions_json"]["show"] = not form
             config["questions_json"]["advanced"] = form
+
+
+def _legacy_question(saved: dict) -> dict:
+    """The one question a node held in separate fields before the question list."""
+
+    def value(name: str, default):
+        return deepcopy((saved.get(name) or {}).get("value", default))
+
+    kind = value("kind", "Choice")
+    options = value("candidates", _NEW_QUESTION["options"])
+    levels = value("levels", _NEW_QUESTION["levels"])
+    if "levels" not in saved and kind == "Score":
+        # Older Score nodes stored their rubric in the shared candidates field.
+        options, levels = deepcopy(_NEW_QUESTION["options"]), options
+    return {
+        **deepcopy(_NEW_QUESTION),
+        "kind": kind,
+        "question": value("question", ""),
+        "options": options,
+        "levels": levels,
+        "yes_description": value("yes_description", ""),
+        "no_description": value("no_description", ""),
+    }

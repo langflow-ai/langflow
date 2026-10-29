@@ -689,6 +689,7 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "mcp",
   "tools",
   "data_display",
+  "decision_questions",
 ]);
 
 export const FLEX_VIEW_TYPES = ["bool"];

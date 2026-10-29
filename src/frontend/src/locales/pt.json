@@ -3328,5 +3328,21 @@
   "modelProviders.openRouterModelHint": "Escolha um modelo listado ou insira um ID de modelo de decisão do OpenRouter. O OpenRouter determina quais solicitações o modelo suporta.",
   "modelProviders.searchOrAddModel": "Pesquisar ou adicionar um ID de modelo…",
   "modelProviders.addDecisionModel": "Adicionar modelo de decisão \"{{name}}\"",
-  "modelProviders.decisionDiscoveryError": "Não foi possível carregar os modelos de decisão. Verifique as credenciais deste provedor e tente novamente. Os outros provedores continuam disponíveis."
+  "modelProviders.decisionDiscoveryError": "Não foi possível carregar os modelos de decisão. Verifique as credenciais deste provedor e tente novamente. Os outros provedores continuam disponíveis.",
+  "decisionQuestions.title": "Pergunta {{number}}",
+  "decisionQuestions.remove": "Remover a pergunta {{number}}",
+  "decisionQuestions.name": "Nome da pergunta {{number}}",
+  "decisionQuestions.namePlaceholder": "Nome (opcional, padrão q{{number}})",
+  "decisionQuestions.kind": "Tipo de decisão da pergunta {{number}}",
+  "decisionQuestions.question": "Texto da pergunta {{number}}",
+  "decisionQuestions.questionPlaceholder": "O que decidir sobre o contexto",
+  "decisionQuestions.options": "Opções",
+  "decisionQuestions.optionsInfo": "As opções entre as quais escolher. O ID é a chave usada no resultado; o rótulo é o nome que o modelo lê.",
+  "decisionQuestions.optionsEdit": "Editar opções",
+  "decisionQuestions.levels": "Níveis",
+  "decisionQuestions.levelsInfo": "Níveis do mais baixo ao mais alto. O ID é a chave usada no resultado; o rótulo é o nome que o modelo lê.",
+  "decisionQuestions.levelsEdit": "Editar níveis",
+  "decisionQuestions.yes_description": "O que Sim significa (opcional)",
+  "decisionQuestions.no_description": "O que Não significa (opcional)",
+  "decisionQuestions.add": "Adicionar pergunta"
 }

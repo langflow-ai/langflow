@@ -66,6 +66,7 @@ def test_create_schema():
         ("mcp", dict),
         ("model", list),
         ("data_display", dict),
+        ("decision_questions", list),
         ("knowledge_backend", str),
     ],
 )

@@ -3327,5 +3327,21 @@
   "modelProviders.openRouterModelHint": "选择列表中的模型，或输入 OpenRouter 决策模型 ID。模型支持哪些请求由 OpenRouter 决定。",
   "modelProviders.searchOrAddModel": "搜索或添加模型 ID…",
   "modelProviders.addDecisionModel": "添加决策模型“{{name}}”",
-  "modelProviders.decisionDiscoveryError": "无法加载决策模型。请检查此提供商的凭据并重试。其他提供商仍然可用。"
+  "modelProviders.decisionDiscoveryError": "无法加载决策模型。请检查此提供商的凭据并重试。其他提供商仍然可用。",
+  "decisionQuestions.title": "问题 {{number}}",
+  "decisionQuestions.remove": "删除问题 {{number}}",
+  "decisionQuestions.name": "问题 {{number}} 的名称",
+  "decisionQuestions.namePlaceholder": "名称（可选，默认为 q{{number}}）",
+  "decisionQuestions.kind": "问题 {{number}} 的决策类型",
+  "decisionQuestions.question": "问题 {{number}} 的内容",
+  "decisionQuestions.questionPlaceholder": "要就上下文做出的判断",
+  "decisionQuestions.options": "选项",
+  "decisionQuestions.optionsInfo": "可供选择的选项。ID 是结果使用的键；标签是模型读取的名称。",
+  "decisionQuestions.optionsEdit": "编辑选项",
+  "decisionQuestions.levels": "等级",
+  "decisionQuestions.levelsInfo": "从低到高排列的等级。ID 是结果使用的键；标签是模型读取的名称。",
+  "decisionQuestions.levelsEdit": "编辑等级",
+  "decisionQuestions.yes_description": "“是”的含义（可选）",
+  "decisionQuestions.no_description": "“否”的含义（可选）",
+  "decisionQuestions.add": "添加问题"
 }

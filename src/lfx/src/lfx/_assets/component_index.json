@@ -18162,42 +18162,7 @@
             "question_mode",
             "questions_json",
             "context",
-            "number_of_questions",
-            "question_name",
-            "kind",
-            "question",
-            "candidates",
-            "levels",
-            "yes_description",
-            "no_description",
-            "question_name_2",
-            "kind_2",
-            "question_2",
-            "candidates_2",
-            "levels_2",
-            "yes_description_2",
-            "no_description_2",
-            "question_name_3",
-            "kind_3",
-            "question_3",
-            "candidates_3",
-            "levels_3",
-            "yes_description_3",
-            "no_description_3",
-            "question_name_4",
-            "kind_4",
-            "question_4",
-            "candidates_4",
-            "levels_4",
-            "yes_description_4",
-            "no_description_4",
-            "question_name_5",
-            "kind_5",
-            "question_5",
-            "candidates_5",
-            "levels_5",
-            "yes_description_5",
-            "no_description_5",
+            "questions",
             "structured_context",
             "timeout"
           ],
@@ -18205,7 +18170,7 @@
           "icon": "Split",
           "legacy": false,
           "metadata": {
-            "code_hash": "a6a76c8f5936",
+            "code_hash": "c407df439036",
             "component_class_name": "DecisionModelComponent",
             "dependencies": {
               "dependencies": [
@@ -18243,306 +18208,6 @@
           "pinned": false,
           "template": {
             "_type": "Component",
-            "candidates": {
-              "_input_type": "TableInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Options",
-              "dynamic": false,
-              "info": "The options to choose between, 2 to 255. ID is a short unique key the result uses, such as refund; Label is the name the model reads.",
-              "input_types": [],
-              "is_list": true,
-              "list_add_label": "Add More",
-              "name": "candidates",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": true,
-              "table_icon": "Table",
-              "table_schema": [
-                {
-                  "description": "A short unique key, such as refund. The result uses it.",
-                  "display_name": "ID",
-                  "edit_mode": "inline",
-                  "name": "id",
-                  "type": "str"
-                },
-                {
-                  "description": "The name the model reads. Labels must differ, ignoring case.",
-                  "display_name": "Label",
-                  "edit_mode": "inline",
-                  "name": "label",
-                  "type": "str"
-                },
-                {
-                  "default": "",
-                  "description": "Optional: more about when this one applies.",
-                  "display_name": "Description",
-                  "edit_mode": "popover",
-                  "name": "description",
-                  "type": "str"
-                }
-              ],
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "trigger_icon": "Table",
-              "trigger_text": "Open table",
-              "type": "table",
-              "value": [
-                {
-                  "description": "",
-                  "id": "a",
-                  "label": "Option A"
-                },
-                {
-                  "description": "",
-                  "id": "b",
-                  "label": "Option B"
-                }
-              ]
-            },
-            "candidates_2": {
-              "_input_type": "TableInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Options 2",
-              "dynamic": false,
-              "info": "The options to choose between, 2 to 255. ID is a short unique key the result uses, such as refund; Label is the name the model reads.",
-              "input_types": [],
-              "is_list": true,
-              "list_add_label": "Add More",
-              "name": "candidates_2",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "table_icon": "Table",
-              "table_schema": [
-                {
-                  "description": "A short unique key, such as refund. The result uses it.",
-                  "display_name": "ID",
-                  "edit_mode": "inline",
-                  "name": "id",
-                  "type": "str"
-                },
-                {
-                  "description": "The name the model reads. Labels must differ, ignoring case.",
-                  "display_name": "Label",
-                  "edit_mode": "inline",
-                  "name": "label",
-                  "type": "str"
-                },
-                {
-                  "default": "",
-                  "description": "Optional: more about when this one applies.",
-                  "display_name": "Description",
-                  "edit_mode": "popover",
-                  "name": "description",
-                  "type": "str"
-                }
-              ],
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "trigger_icon": "Table",
-              "trigger_text": "Open table",
-              "type": "table",
-              "value": [
-                {
-                  "description": "",
-                  "id": "a",
-                  "label": "Option A"
-                },
-                {
-                  "description": "",
-                  "id": "b",
-                  "label": "Option B"
-                }
-              ]
-            },
-            "candidates_3": {
-              "_input_type": "TableInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Options 3",
-              "dynamic": false,
-              "info": "The options to choose between, 2 to 255. ID is a short unique key the result uses, such as refund; Label is the name the model reads.",
-              "input_types": [],
-              "is_list": true,
-              "list_add_label": "Add More",
-              "name": "candidates_3",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "table_icon": "Table",
-              "table_schema": [
-                {
-                  "description": "A short unique key, such as refund. The result uses it.",
-                  "display_name": "ID",
-                  "edit_mode": "inline",
-                  "name": "id",
-                  "type": "str"
-                },
-                {
-                  "description": "The name the model reads. Labels must differ, ignoring case.",
-                  "display_name": "Label",
-                  "edit_mode": "inline",
-                  "name": "label",
-                  "type": "str"
-                },
-                {
-                  "default": "",
-                  "description": "Optional: more about when this one applies.",
-                  "display_name": "Description",
-                  "edit_mode": "popover",
-                  "name": "description",
-                  "type": "str"
-                }
-              ],
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "trigger_icon": "Table",
-              "trigger_text": "Open table",
-              "type": "table",
-              "value": [
-                {
-                  "description": "",
-                  "id": "a",
-                  "label": "Option A"
-                },
-                {
-                  "description": "",
-                  "id": "b",
-                  "label": "Option B"
-                }
-              ]
-            },
-            "candidates_4": {
-              "_input_type": "TableInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Options 4",
-              "dynamic": false,
-              "info": "The options to choose between, 2 to 255. ID is a short unique key the result uses, such as refund; Label is the name the model reads.",
-              "input_types": [],
-              "is_list": true,
-              "list_add_label": "Add More",
-              "name": "candidates_4",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "table_icon": "Table",
-              "table_schema": [
-                {
-                  "description": "A short unique key, such as refund. The result uses it.",
-                  "display_name": "ID",
-                  "edit_mode": "inline",
-                  "name": "id",
-                  "type": "str"
-                },
-                {
-                  "description": "The name the model reads. Labels must differ, ignoring case.",
-                  "display_name": "Label",
-                  "edit_mode": "inline",
-                  "name": "label",
-                  "type": "str"
-                },
-                {
-                  "default": "",
-                  "description": "Optional: more about when this one applies.",
-                  "display_name": "Description",
-                  "edit_mode": "popover",
-                  "name": "description",
-                  "type": "str"
-                }
-              ],
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "trigger_icon": "Table",
-              "trigger_text": "Open table",
-              "type": "table",
-              "value": [
-                {
-                  "description": "",
-                  "id": "a",
-                  "label": "Option A"
-                },
-                {
-                  "description": "",
-                  "id": "b",
-                  "label": "Option B"
-                }
-              ]
-            },
-            "candidates_5": {
-              "_input_type": "TableInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Options 5",
-              "dynamic": false,
-              "info": "The options to choose between, 2 to 255. ID is a short unique key the result uses, such as refund; Label is the name the model reads.",
-              "input_types": [],
-              "is_list": true,
-              "list_add_label": "Add More",
-              "name": "candidates_5",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "table_icon": "Table",
-              "table_schema": [
-                {
-                  "description": "A short unique key, such as refund. The result uses it.",
-                  "display_name": "ID",
-                  "edit_mode": "inline",
-                  "name": "id",
-                  "type": "str"
-                },
-                {
-                  "description": "The name the model reads. Labels must differ, ignoring case.",
-                  "display_name": "Label",
-                  "edit_mode": "inline",
-                  "name": "label",
-                  "type": "str"
-                },
-                {
-                  "default": "",
-                  "description": "Optional: more about when this one applies.",
-                  "display_name": "Description",
-                  "edit_mode": "popover",
-                  "name": "description",
-                  "type": "str"
-                }
-              ],
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "trigger_icon": "Table",
-              "trigger_text": "Open table",
-              "type": "table",
-              "value": [
-                {
-                  "description": "",
-                  "id": "a",
-                  "label": "Option A"
-                },
-                {
-                  "description": "",
-                  "id": "b",
-                  "label": "Option B"
-                }
-              ]
-            },
             "code": {
               "advanced": true,
               "api_editable": false,
@@ -18560,7 +18225,7 @@
               "show": true,
               "title_case": false,
               "type": "code",
-              "value": "import json\nfrom copy import deepcopy\n\nfrom pydantic import ValidationError\n\nfrom lfx.base.models.decisions.providers import unique_json_object\nfrom lfx.base.models.decisions.runtime import decision_token_usage, evaluate_decision, request_variables_of\nfrom lfx.base.models.decisions.schema import (\n    DecisionBatchRequest,\n    DecisionConfigurationError,\n    DecisionQuestion,\n    configuration_summary,\n    decision_request,\n    validation_summary,\n)\nfrom lfx.base.models.unified_models import handle_model_input_update\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.io import (\n    DropdownInput,\n    FloatInput,\n    HandleInput,\n    IntInput,\n    MessageTextInput,\n    ModelInput,\n    MultilineInput,\n    Output,\n    TabInput,\n    TableInput,\n)\nfrom lfx.schema.data import Data\nfrom lfx.schema.table import EditMode\n\n_KINDS = (\"Choice\", \"Boolean\", \"Score\")\n_FORM, _JSON = \"Form\", \"JSON\"\n# More questions go in Questions JSON; every form question is a hidden group on every node.\n_MAX_FORM_QUESTIONS = 5\n# Fields whose change re-runs _show_fields; the editor sends the new value beside the config.\n_REFRESHED_FIELDS = {\"question_mode\", \"number_of_questions\", \"kind\"} | {\n    f\"kind_{number}\" for number in range(2, _MAX_FORM_QUESTIONS + 1)\n}\n_DEFAULT_CANDIDATES = {\n    \"Choice\": [\n        {\"id\": \"a\", \"label\": \"Option A\", \"description\": \"\"},\n        {\"id\": \"b\", \"label\": \"Option B\", \"description\": \"\"},\n    ],\n    \"Score\": [\n        {\"id\": \"low\", \"label\": \"Low\", \"description\": \"\"},\n        {\"id\": \"medium\", \"label\": \"Medium\", \"description\": \"\"},\n        {\"id\": \"high\", \"label\": \"High\", \"description\": \"\"},\n    ],\n}\n# The table's name and help follow the Decision Type.\n_TABLE = {\n    \"Choice\": (\n        \"Options\",\n        \"The options to choose between, 2 to 255. ID is a short unique key the result uses, such as refund; \"\n        \"Label is the name the model reads.\",\n    ),\n    \"Score\": (\n        \"Levels\",\n        \"Levels ordered from lowest to highest, 2 to 10. The model scores the input from 0 (the first level) up \"\n        \"to one less than the number of levels. ID is a short unique key the result uses; Label is the name the \"\n        \"model reads.\",\n    ),\n}\n_TABLE_SCHEMA = [\n    {\n        \"name\": \"id\",\n        \"display_name\": \"ID\",\n        \"type\": \"str\",\n        \"description\": \"A short unique key, such as refund. The result uses it.\",\n        \"edit_mode\": EditMode.INLINE,\n    },\n    {\n        \"name\": \"label\",\n        \"display_name\": \"Label\",\n        \"type\": \"str\",\n        \"description\": \"The name the model reads. Labels must differ, ignoring case.\",\n        \"edit_mode\": EditMode.INLINE,\n    },\n    {\n        \"name\": \"description\",\n        \"display_name\": \"Description\",\n        \"type\": \"str\",\n        \"description\": \"Optional: more about when this one applies.\",\n        \"edit_mode\": EditMode.POPOVER,\n        \"default\": \"\",\n    },\n]\n\n# What an agent learns about this component when it is a tool.\n_RESULT_INFO = (\n    \"Answers the configured questions about the context and returns JSON. Several questions return an answers \"\n    \"object keyed by question name, with shared usage counted once. Choice gives \"\n    \"probabilities by option ID and, when the provider names one, selected_option (otherwise take the most \"\n    \"probable option); Boolean gives probability_true, the \"\n    \"probability the answer is yes, from 0 to 1; Score gives score, from 0 (the first level) up to one less than \"\n    \"the number of levels, and probabilities by level ID. confidence is the provider's own measure, not an \"\n    \"option's probability.\"\n)\n\n# Follow-ups, deferred until there is demand:\n# - Images: TypeSafe `assets` behind its TypeSafe-Danger-Zone-Images header, Perplexity image parts\n#   in `state`, OpenAI image inputs. Needs size limits and SSRF checks for each format.\n# - Pinned model versions, such as pplx-decider-v1.2: policy allows models by name, so each version\n#   needs its own catalog and policy entry.\n\n\ndef _field(role: str, number: int) -> str:\n    \"\"\"Question 1 keeps the original field names, so saved single-question flows still load.\"\"\"\n    return role if number == 1 else f\"{role}_{number}\"\n\n\ndef _question_inputs(number: int) -> list:\n    \"\"\"One question's group. Question 1 shows by default; the others show as Number of Questions grows.\"\"\"\n    first = number == 1\n    suffix = \"\" if first else f\" {number}\"\n    return [\n        MessageTextInput(\n            name=_field(\"question_name\", number),\n            display_name=f\"Question Name{suffix}\",\n            info=f\"Optional: this answer's key in the result, such as urgent. Defaults to q{number}.\",\n            show=False,\n        ),\n        DropdownInput(\n            name=_field(\"kind\", number),\n            display_name=f\"Decision Type{suffix}\",\n            options=list(_KINDS),\n            value=\"Choice\",\n            info=\"Choice picks one option. Boolean answers yes or no. Score places the input on ordered levels.\",\n            real_time_refresh=True,\n            show=first,\n        ),\n        MessageTextInput(\n            name=_field(\"question\", number),\n            display_name=f\"Question{suffix}\",\n            info='What to decide about the Context, such as \"Which team should handle this message?\"',\n            required=first,\n            show=first,\n        ),\n        TableInput(\n            name=_field(\"candidates\", number),\n            display_name=f\"{_TABLE['Choice'][0]}{suffix}\",\n            # Options are typed in, not connected: connected rows arrive with NaN cells and number IDs.\n            input_types=[],\n            value=[row.copy() for row in _DEFAULT_CANDIDATES[\"Choice\"]],\n            info=_TABLE[\"Choice\"][1],\n            table_schema=_TABLE_SCHEMA,\n            show=first,\n        ),\n        TableInput(\n            name=_field(\"levels\", number),\n            display_name=f\"{_TABLE['Score'][0]}{suffix}\",\n            input_types=[],\n            value=[row.copy() for row in _DEFAULT_CANDIDATES[\"Score\"]],\n            info=_TABLE[\"Score\"][1],\n            table_schema=_TABLE_SCHEMA,\n            show=False,\n        ),\n        MessageTextInput(\n            name=_field(\"yes_description\", number),\n            display_name=f\"What Yes Means{suffix} (Optional)\",\n            info=(\n                \"Optional: what a Yes answer means. Some decision models don't accept this; if yours \"\n                \"doesn't, the run stops and asks you to clear it.\"\n            ),\n            show=False,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=_field(\"no_description\", number),\n            display_name=f\"What No Means{suffix} (Optional)\",\n            info=(\n                \"Optional: what a No answer means. Some decision models don't accept this; if yours \"\n                \"doesn't, the run stops and asks you to clear it.\"\n            ),\n            show=False,\n            advanced=True,\n        ),\n    ]\n\n\ndef _question_count(value) -> int:\n    \"\"\"The editor's Number of Questions, kept in range for showing fields; a run checks it strictly.\"\"\"\n    try:\n        return min(max(int(value), 1), _MAX_FORM_QUESTIONS)\n    except (TypeError, ValueError):\n        return 1\n\n\nclass DecisionModelComponent(Component):\n    \"\"\"Evaluates named judgments through the same runtime as the Smart Router.\"\"\"\n\n    display_name = \"Decision Model\"\n    description = \"Evaluate one or more choices, probabilities, or ordered scores\"\n    name = \"DecisionModel\"\n    icon = \"Split\"\n\n    inputs = [\n        ModelInput(\n            model_type=\"decision\", name=\"model\", display_name=\"Decision Model\", required=True, real_time_refresh=True\n        ),\n        TabInput(\n            name=\"question_mode\",\n            display_name=\"Questions Mode\",\n            options=[_FORM, _JSON],\n            value=_FORM,\n            real_time_refresh=True,\n            info=\"Fill in the questions here, or paste Questions JSON. All questions share the same Context.\",\n        ),\n        MultilineInput(\n            name=\"questions_json\",\n            display_name=\"Questions JSON\",\n            advanced=True,\n            show=False,\n            value=\"\",\n            info=\"In JSON mode, paste an object keyed by question name. Each value uses kind (choice, boolean, \"\n            \"score), question, and options or levels as arrays of {id, label, description}. Boolean descriptions \"\n            'are optional. Example: {\"urgent\":{\"kind\":\"boolean\",\"question\":\"Is this urgent?\"}}. '\n            \"This replaces the form for this run; its values are preserved.\",\n        ),\n        MessageTextInput(\n            name=\"context\",\n            display_name=\"Context\",\n            info=\"The text the questions are about, such as a message or a document.\",\n            tool_mode=True,\n        ),\n        IntInput(\n            name=\"number_of_questions\",\n            display_name=\"Number of Questions\",\n            value=1,\n            range_spec=RangeSpec(min=1, max=_MAX_FORM_QUESTIONS, step=1, step_type=\"int\"),\n            real_time_refresh=True,\n            info=f\"Ask up to {_MAX_FORM_QUESTIONS} questions about the same Context in one call; use Questions \"\n            \"JSON for more. With more than one, the result holds each answer under its Question Name.\",\n        ),\n        *[field for number in range(1, _MAX_FORM_QUESTIONS + 1) for field in _question_inputs(number)],\n        HandleInput(\n            name=\"structured_context\",\n            display_name=\"Structured Context\",\n            info=(\n                \"Optional: JSON to judge in place of Context, such as a record from another component. \"\n                \"Use Context or Structured Context, not both.\"\n            ),\n            input_types=[\"Data\", \"JSON\"],\n            advanced=True,\n        ),\n        FloatInput(\n            name=\"timeout\",\n            display_name=\"Timeout (seconds)\",\n            info=\"How long to wait for the decision model: more than 0 and at most 300 seconds.\",\n            value=60,\n            advanced=True,\n        ),\n    ]\n    outputs = [Output(name=\"result\", display_name=\"Decision Result\", method=\"evaluate\", info=_RESULT_INFO)]\n\n    def _context(self) -> str | dict:\n        \"\"\"Context as text, or Structured Context as JSON; exactly one of them.\"\"\"\n        text = str(self.context or \"\").strip()\n        structured = self.structured_context\n        # An unconnected handle holds an empty string.\n        connected = structured not in (None, \"\")\n        if isinstance(structured, Data):\n            structured = structured.data\n        # Empty JSON gives the model nothing to judge.\n        if not structured:\n            structured = None\n        if structured is None:\n            if connected or not text:\n                msg = (\n                    \"Structured Context is empty. Give the component it comes from at least one field, or use Context.\"\n                    if connected\n                    else \"Enter a Context, or connect a Structured Context.\"\n                )\n                raise DecisionConfigurationError(msg)\n            return self.context\n        if text:\n            msg = \"Use Context or Structured Context, not both.\"\n            raise DecisionConfigurationError(msg)\n        return structured\n\n    def _json_request(self, context: str | dict) -> DecisionBatchRequest:\n        try:\n            questions = json.loads(self.questions_json or \"\", object_pairs_hook=unique_json_object)\n        except (ValueError, TypeError) as exc:\n            msg = f\"Questions JSON must be a valid JSON object keyed by question name: {exc}\"\n            raise DecisionConfigurationError(msg) from None\n        try:\n            return DecisionBatchRequest(context=context, questions=questions)\n        except ValidationError as exc:\n            msg = f\"Check Questions: {validation_summary(exc)}\"\n            raise DecisionConfigurationError(msg) from None\n\n    def _form_question(self, number: int) -> dict:\n        \"\"\"One form question's fields, only those its Decision Type uses.\"\"\"\n        kind = getattr(self, _field(\"kind\", number))\n        # A tweak can send anything here; the dropdown only offers these three.\n        if kind not in _KINDS:\n            where = \"\" if number == 1 else f\" for Question {number}\"\n            msg = f\"Pick a Decision Type{where}: Choice, Boolean or Score.\"\n            raise DecisionConfigurationError(msg)\n        kind = kind.lower()\n        boolean = kind == \"boolean\"\n        return {\n            \"kind\": kind,\n            \"question\": getattr(self, _field(\"question\", number)),\n            \"options\": getattr(self, _field(\"candidates\", number)) if kind == \"choice\" else (),\n            \"levels\": getattr(self, _field(\"levels\", number)) if kind == \"score\" else (),\n            # Hidden for other types, so a value left from Boolean never applies to them.\n            \"yes_description\": (getattr(self, _field(\"yes_description\", number)) or \"\") if boolean else \"\",\n            \"no_description\": (getattr(self, _field(\"no_description\", number)) or \"\") if boolean else \"\",\n        }\n\n    def _request(self):\n        context = self._context()\n        if self.question_mode == _JSON:\n            return self._json_request(context)\n        if self.question_mode != _FORM:\n            msg = \"Pick a Questions Mode: Form or JSON.\"\n            raise DecisionConfigurationError(msg)\n        count = self.number_of_questions\n        if type(count) is not int or not 1 <= count <= _MAX_FORM_QUESTIONS:\n            msg = f\"Number of Questions must be a whole number from 1 to {_MAX_FORM_QUESTIONS}.\"\n            raise DecisionConfigurationError(msg)\n        if count == 1:\n            return decision_request(context=context, **self._form_question(1))\n        questions = {}\n        for number in range(1, count + 1):\n            name = str(getattr(self, _field(\"question_name\", number)) or \"\").strip() or f\"q{number}\"\n            if name in questions:\n                msg = f\"Two questions are named {name!r}. Give each question a different Question Name.\"\n                raise DecisionConfigurationError(msg)\n            try:\n                questions[name] = DecisionQuestion(**self._form_question(number))\n            except ValidationError as exc:\n                msg = f\"Question {number}: {configuration_summary(exc)}\"\n                raise DecisionConfigurationError(msg) from None\n        try:\n            return DecisionBatchRequest(context=context, questions=questions)\n        except ValidationError as exc:\n            raise DecisionConfigurationError(configuration_summary(exc)) from None\n\n    def evaluate(self) -> Data:\n        request = self._request()\n        result = evaluate_decision(\n            request,\n            model=self.model,\n            user_id=self.user_id,\n            request_variables=request_variables_of(self),\n            timeout=self.timeout,\n        )\n        self._token_usage = decision_token_usage(result)\n        # Only what this decision returned and asked: no empty fields from the other types.\n        data = Data(\n            data={\n                **result.model_dump(mode=\"json\", exclude_none=True),\n                \"request\": request.model_dump(mode=\"json\", exclude={\"context\"}, exclude_defaults=True),\n            }\n        )\n        self.status = data\n        return data\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"Re-apply the saved Decision Type's fields after a code update.\n\n        Update rebuilds the node from the class, which shows Choice's fields, and copies only values back.\n        Without this a Boolean node came back with What Yes Means and What No Means hidden, so the run\n        dropped them.\n        \"\"\"\n        await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        template = new_frontend_node.get(\"template\", {})\n        saved_template = current_frontend_node.get(\"template\", {})\n        if \"levels\" not in saved_template and (saved_template.get(\"kind\") or {}).get(\"value\") == \"Score\":\n            # Older Score nodes stored their rubric in the shared candidates field.\n            template[\"levels\"][\"value\"] = deepcopy(saved_template[\"candidates\"][\"value\"])\n            template[\"candidates\"][\"value\"] = deepcopy(_DEFAULT_CANDIDATES[\"Choice\"])\n        self._show_fields(template)\n        return new_frontend_node\n\n    def update_build_config(self, build_config: dict, field_value, field_name: str | None = None) -> dict:\n        config = handle_model_input_update(self, build_config, field_value, field_name)\n        if field_name in _REFRESHED_FIELDS and field_name in config:\n            config[field_name][\"value\"] = field_value\n        self._show_fields(config)\n        return config\n\n    @staticmethod\n    def _show_fields(config: dict) -> None:\n        \"\"\"Show the active mode's inputs and each shown question's type fields, keeping every value.\"\"\"\n        form = config.get(\"question_mode\", {}).get(\"value\", _FORM) != _JSON\n        count = _question_count(config.get(\"number_of_questions\", {}).get(\"value\", 1)) if form else 0\n        shown = {\"number_of_questions\": form, \"questions_json\": not form}\n        for number in range(1, _MAX_FORM_QUESTIONS + 1):\n            active = number <= count\n            kind = config.get(_field(\"kind\", number), {}).get(\"value\", \"Choice\")\n            shown |= {\n                _field(\"question_name\", number): active and count > 1,\n                _field(\"kind\", number): active,\n                _field(\"question\", number): active,\n                _field(\"candidates\", number): active and kind == \"Choice\",\n                _field(\"levels\", number): active and kind == \"Score\",\n                _field(\"yes_description\", number): active and kind == \"Boolean\",\n                _field(\"no_description\", number): active and kind == \"Boolean\",\n            }\n            if (name := _field(\"question\", number)) in config:\n                config[name][\"required\"] = active\n        for name, show in shown.items():\n            if name in config:\n                config[name][\"show\"] = show\n        if \"questions_json\" in config:\n            config[\"questions_json\"][\"advanced\"] = form\n"
+              "value": "import json\nfrom copy import deepcopy\n\nfrom pydantic import ValidationError\n\nfrom lfx.base.models.decisions.providers import unique_json_object\nfrom lfx.base.models.decisions.runtime import decision_token_usage, evaluate_decision, request_variables_of\nfrom lfx.base.models.decisions.schema import (\n    DecisionBatchRequest,\n    DecisionConfigurationError,\n    DecisionQuestion,\n    configuration_summary,\n    decision_request,\n    validation_summary,\n)\nfrom lfx.base.models.unified_models import handle_model_input_update\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import (\n    DecisionQuestionsInput,\n    FloatInput,\n    HandleInput,\n    MessageTextInput,\n    ModelInput,\n    MultilineInput,\n    Output,\n    TabInput,\n)\nfrom lfx.schema.data import Data\nfrom lfx.schema.table import EditMode\n\n_KINDS = (\"Choice\", \"Boolean\", \"Score\")\n_FORM, _JSON = \"Form\", \"JSON\"\n_TABLE_SCHEMA = [\n    {\n        \"name\": \"id\",\n        \"display_name\": \"ID\",\n        \"type\": \"str\",\n        \"description\": \"A short unique key, such as refund. The result uses it.\",\n        \"edit_mode\": EditMode.INLINE,\n    },\n    {\n        \"name\": \"label\",\n        \"display_name\": \"Label\",\n        \"type\": \"str\",\n        \"description\": \"The name the model reads. Labels must differ, ignoring case.\",\n        \"edit_mode\": EditMode.INLINE,\n    },\n    {\n        \"name\": \"description\",\n        \"display_name\": \"Description\",\n        \"type\": \"str\",\n        \"description\": \"Optional: more about when this one applies.\",\n        \"edit_mode\": EditMode.POPOVER,\n        \"default\": \"\",\n    },\n]\n# What Add question appends; a node starts with one.\n_NEW_QUESTION = {\n    \"name\": \"\",\n    \"kind\": \"Choice\",\n    \"question\": \"\",\n    \"options\": [\n        {\"id\": \"a\", \"label\": \"Option A\", \"description\": \"\"},\n        {\"id\": \"b\", \"label\": \"Option B\", \"description\": \"\"},\n    ],\n    \"levels\": [\n        {\"id\": \"low\", \"label\": \"Low\", \"description\": \"\"},\n        {\"id\": \"medium\", \"label\": \"Medium\", \"description\": \"\"},\n        {\"id\": \"high\", \"label\": \"High\", \"description\": \"\"},\n    ],\n    \"yes_description\": \"\",\n    \"no_description\": \"\",\n}\n\n# What an agent learns about this component when it is a tool.\n_RESULT_INFO = (\n    \"Answers the configured questions about the context and returns JSON. Several questions return an answers \"\n    \"object keyed by question name, with shared usage counted once. Choice gives \"\n    \"probabilities by option ID and, when the provider names one, selected_option (otherwise take the most \"\n    \"probable option); Boolean gives probability_true, the \"\n    \"probability the answer is yes, from 0 to 1; Score gives score, from 0 (the first level) up to one less than \"\n    \"the number of levels, and probabilities by level ID. confidence is the provider's own measure, not an \"\n    \"option's probability.\"\n)\n\n# Follow-ups, deferred until there is demand:\n# - Images: TypeSafe `assets` behind its TypeSafe-Danger-Zone-Images header, Perplexity image parts\n#   in `state`, OpenAI image inputs. Needs size limits and SSRF checks for each format.\n# - Pinned model versions, such as pplx-decider-v1.2: policy allows models by name, so each version\n#   needs its own catalog and policy entry.\n\n\nclass DecisionModelComponent(Component):\n    \"\"\"Evaluates named judgments through the same runtime as the Smart Router.\"\"\"\n\n    display_name = \"Decision Model\"\n    description = \"Evaluate one or more choices, probabilities, or ordered scores\"\n    name = \"DecisionModel\"\n    icon = \"Split\"\n\n    inputs = [\n        ModelInput(\n            model_type=\"decision\", name=\"model\", display_name=\"Decision Model\", required=True, real_time_refresh=True\n        ),\n        TabInput(\n            name=\"question_mode\",\n            display_name=\"Questions Mode\",\n            options=[_FORM, _JSON],\n            value=_FORM,\n            real_time_refresh=True,\n            info=\"Fill in the questions here, or paste Questions JSON. All questions share the same Context.\",\n        ),\n        MultilineInput(\n            name=\"questions_json\",\n            display_name=\"Questions JSON\",\n            advanced=True,\n            show=False,\n            value=\"\",\n            info=\"In JSON mode, paste an object keyed by question name. Each value uses kind (choice, boolean, \"\n            \"score), question, and options or levels as arrays of {id, label, description}. Boolean descriptions \"\n            'are optional. Example: {\"urgent\":{\"kind\":\"boolean\",\"question\":\"Is this urgent?\"}}. '\n            \"This replaces the form for this run; its values are preserved.\",\n        ),\n        MessageTextInput(\n            name=\"context\",\n            display_name=\"Context\",\n            info=\"The text the questions are about, such as a message or a document.\",\n            tool_mode=True,\n        ),\n        DecisionQuestionsInput(\n            name=\"questions\",\n            display_name=\"Questions\",\n            value=[deepcopy(_NEW_QUESTION)],\n            new_question=_NEW_QUESTION,\n            table_schema=_TABLE_SCHEMA,\n            info=\"Each question has its own Decision Type: Choice picks one option, Boolean answers yes or no, and \"\n            \"Score places the input on ordered levels. With more than one question, they are sent in one call and \"\n            \"the result holds each answer under its Name, which defaults to q1, q2 and so on.\",\n        ),\n        HandleInput(\n            name=\"structured_context\",\n            display_name=\"Structured Context\",\n            info=(\n                \"Optional: JSON to judge in place of Context, such as a record from another component. \"\n                \"Use Context or Structured Context, not both.\"\n            ),\n            input_types=[\"Data\", \"JSON\"],\n            advanced=True,\n        ),\n        FloatInput(\n            name=\"timeout\",\n            display_name=\"Timeout (seconds)\",\n            info=\"How long to wait for the decision model: more than 0 and at most 300 seconds.\",\n            value=60,\n            advanced=True,\n        ),\n    ]\n    outputs = [Output(name=\"result\", display_name=\"Decision Result\", method=\"evaluate\", info=_RESULT_INFO)]\n\n    def _context(self) -> str | dict:\n        \"\"\"Context as text, or Structured Context as JSON; exactly one of them.\"\"\"\n        text = str(self.context or \"\").strip()\n        structured = self.structured_context\n        # An unconnected handle holds an empty string.\n        connected = structured not in (None, \"\")\n        if isinstance(structured, Data):\n            structured = structured.data\n        # Empty JSON gives the model nothing to judge.\n        if not structured:\n            structured = None\n        if structured is None:\n            if connected or not text:\n                msg = (\n                    \"Structured Context is empty. Give the component it comes from at least one field, or use Context.\"\n                    if connected\n                    else \"Enter a Context, or connect a Structured Context.\"\n                )\n                raise DecisionConfigurationError(msg)\n            return self.context\n        if text:\n            msg = \"Use Context or Structured Context, not both.\"\n            raise DecisionConfigurationError(msg)\n        return structured\n\n    def _json_request(self, context: str | dict) -> DecisionBatchRequest:\n        try:\n            questions = json.loads(self.questions_json or \"\", object_pairs_hook=unique_json_object)\n        except (ValueError, TypeError) as exc:\n            msg = f\"Questions JSON must be a valid JSON object keyed by question name: {exc}\"\n            raise DecisionConfigurationError(msg) from None\n        try:\n            return DecisionBatchRequest(context=context, questions=questions)\n        except ValidationError as exc:\n            msg = f\"Check Questions: {validation_summary(exc)}\"\n            raise DecisionConfigurationError(msg) from None\n\n    @staticmethod\n    def _question_fields(item, number: int) -> dict:\n        \"\"\"One question's fields, only those its Decision Type uses.\"\"\"\n        # A tweak can send anything here; the editor only offers these three types.\n        kind = item.get(\"kind\") if isinstance(item, dict) else None\n        if kind not in _KINDS:\n            msg = f\"Pick a Decision Type for Question {number}: Choice, Boolean or Score.\"\n            raise DecisionConfigurationError(msg)\n        kind = kind.lower()\n        boolean = kind == \"boolean\"\n        return {\n            \"kind\": kind,\n            \"question\": item.get(\"question\"),\n            \"options\": (item.get(\"options\") or ()) if kind == \"choice\" else (),\n            \"levels\": (item.get(\"levels\") or ()) if kind == \"score\" else (),\n            # Ignored for other types, so a value left from Boolean never applies to them.\n            \"yes_description\": (item.get(\"yes_description\") or \"\") if boolean else \"\",\n            \"no_description\": (item.get(\"no_description\") or \"\") if boolean else \"\",\n        }\n\n    def _request(self):\n        context = self._context()\n        if self.question_mode == _JSON:\n            return self._json_request(context)\n        if self.question_mode != _FORM:\n            msg = \"Pick a Questions Mode: Form or JSON.\"\n            raise DecisionConfigurationError(msg)\n        items = self.questions\n        if not isinstance(items, list) or not items:\n            msg = \"Add a question.\"\n            raise DecisionConfigurationError(msg)\n        if len(items) == 1:\n            return decision_request(context=context, **self._question_fields(items[0], 1))\n        questions = {}\n        for number, item in enumerate(items, start=1):\n            fields = self._question_fields(item, number)\n            name = str(item.get(\"name\") or \"\").strip() or f\"q{number}\"\n            if name in questions:\n                msg = f\"Two questions are named {name!r}. Give each question a different Name.\"\n                raise DecisionConfigurationError(msg)\n            try:\n                questions[name] = DecisionQuestion(**fields)\n            except ValidationError as exc:\n                msg = f\"Question {number}: {configuration_summary(exc)}\"\n                raise DecisionConfigurationError(msg) from None\n        try:\n            return DecisionBatchRequest(context=context, questions=questions)\n        except ValidationError as exc:\n            raise DecisionConfigurationError(configuration_summary(exc)) from None\n\n    def evaluate(self) -> Data:\n        request = self._request()\n        result = evaluate_decision(\n            request,\n            model=self.model,\n            user_id=self.user_id,\n            request_variables=request_variables_of(self),\n            timeout=self.timeout,\n        )\n        self._token_usage = decision_token_usage(result)\n        # Only what this decision returned and asked: no empty fields from the other types.\n        data = Data(\n            data={\n                **result.model_dump(mode=\"json\", exclude_none=True),\n                \"request\": request.model_dump(mode=\"json\", exclude={\"context\"}, exclude_defaults=True),\n            }\n        )\n        self.status = data\n        return data\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"Carry a node saved before the question list over to it, then show the saved mode's fields.\n\n        Update rebuilds the node from the class and copies back only values whose field names match.\n        \"\"\"\n        await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        template = new_frontend_node.get(\"template\", {})\n        saved = current_frontend_node.get(\"template\", {})\n        if (saved.get(\"questions\") or {}).get(\"type\") != \"decision_questions\":\n            template[\"questions\"][\"value\"] = (\n                [_legacy_question(saved)] if \"question\" in saved else [deepcopy(_NEW_QUESTION)]\n            )\n        if template[\"question_mode\"][\"value\"] not in {_FORM, _JSON}:\n            template[\"question_mode\"][\"value\"] = _FORM\n        self._show_fields(template)\n        return new_frontend_node\n\n    def update_build_config(self, build_config: dict, field_value, field_name: str | None = None) -> dict:\n        config = handle_model_input_update(self, build_config, field_value, field_name)\n        if field_name == \"question_mode\":\n            config[\"question_mode\"][\"value\"] = field_value\n        self._show_fields(config)\n        return config\n\n    @staticmethod\n    def _show_fields(config: dict) -> None:\n        \"\"\"Show the question list in Form mode and Questions JSON in JSON mode, keeping both values.\"\"\"\n        form = config.get(\"question_mode\", {}).get(\"value\", _FORM) != _JSON\n        if \"questions\" in config:\n            config[\"questions\"][\"show\"] = form\n        if \"questions_json\" in config:\n            config[\"questions_json\"][\"show\"] = not form\n            config[\"questions_json\"][\"advanced\"] = form\n\n\ndef _legacy_question(saved: dict) -> dict:\n    \"\"\"The one question a node held in separate fields before the question list.\"\"\"\n\n    def value(name: str, default):\n        return deepcopy((saved.get(name) or {}).get(\"value\", default))\n\n    kind = value(\"kind\", \"Choice\")\n    options = value(\"candidates\", _NEW_QUESTION[\"options\"])\n    levels = value(\"levels\", _NEW_QUESTION[\"levels\"])\n    if \"levels\" not in saved and kind == \"Score\":\n        # Older Score nodes stored their rubric in the shared candidates field.\n        options, levels = deepcopy(_NEW_QUESTION[\"options\"]), options\n    return {\n        **deepcopy(_NEW_QUESTION),\n        \"kind\": kind,\n        \"question\": value(\"question\", \"\"),\n        \"options\": options,\n        \"levels\": levels,\n        \"yes_description\": value(\"yes_description\", \"\"),\n        \"no_description\": value(\"no_description\", \"\"),\n    }\n"
             },
             "context": {
               "_input_type": "MessageTextInput",
@@ -18588,481 +18253,6 @@
               "type": "str",
               "value": ""
             },
-            "kind": {
-              "_input_type": "DropdownInput",
-              "advanced": false,
-              "api_editable": false,
-              "combobox": false,
-              "dialog_inputs": {},
-              "display_name": "Decision Type",
-              "dynamic": false,
-              "external_options": {},
-              "info": "Choice picks one option. Boolean answers yes or no. Score places the input on ordered levels.",
-              "name": "kind",
-              "options": [
-                "Choice",
-                "Boolean",
-                "Score"
-              ],
-              "options_metadata": [],
-              "override_skip": false,
-              "placeholder": "",
-              "real_time_refresh": true,
-              "required": false,
-              "show": true,
-              "title_case": false,
-              "toggle": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": true,
-              "type": "str",
-              "value": "Choice"
-            },
-            "kind_2": {
-              "_input_type": "DropdownInput",
-              "advanced": false,
-              "api_editable": false,
-              "combobox": false,
-              "dialog_inputs": {},
-              "display_name": "Decision Type 2",
-              "dynamic": false,
-              "external_options": {},
-              "info": "Choice picks one option. Boolean answers yes or no. Score places the input on ordered levels.",
-              "name": "kind_2",
-              "options": [
-                "Choice",
-                "Boolean",
-                "Score"
-              ],
-              "options_metadata": [],
-              "override_skip": false,
-              "placeholder": "",
-              "real_time_refresh": true,
-              "required": false,
-              "show": false,
-              "title_case": false,
-              "toggle": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": true,
-              "type": "str",
-              "value": "Choice"
-            },
-            "kind_3": {
-              "_input_type": "DropdownInput",
-              "advanced": false,
-              "api_editable": false,
-              "combobox": false,
-              "dialog_inputs": {},
-              "display_name": "Decision Type 3",
-              "dynamic": false,
-              "external_options": {},
-              "info": "Choice picks one option. Boolean answers yes or no. Score places the input on ordered levels.",
-              "name": "kind_3",
-              "options": [
-                "Choice",
-                "Boolean",
-                "Score"
-              ],
-              "options_metadata": [],
-              "override_skip": false,
-              "placeholder": "",
-              "real_time_refresh": true,
-              "required": false,
-              "show": false,
-              "title_case": false,
-              "toggle": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": true,
-              "type": "str",
-              "value": "Choice"
-            },
-            "kind_4": {
-              "_input_type": "DropdownInput",
-              "advanced": false,
-              "api_editable": false,
-              "combobox": false,
-              "dialog_inputs": {},
-              "display_name": "Decision Type 4",
-              "dynamic": false,
-              "external_options": {},
-              "info": "Choice picks one option. Boolean answers yes or no. Score places the input on ordered levels.",
-              "name": "kind_4",
-              "options": [
-                "Choice",
-                "Boolean",
-                "Score"
-              ],
-              "options_metadata": [],
-              "override_skip": false,
-              "placeholder": "",
-              "real_time_refresh": true,
-              "required": false,
-              "show": false,
-              "title_case": false,
-              "toggle": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": true,
-              "type": "str",
-              "value": "Choice"
-            },
-            "kind_5": {
-              "_input_type": "DropdownInput",
-              "advanced": false,
-              "api_editable": false,
-              "combobox": false,
-              "dialog_inputs": {},
-              "display_name": "Decision Type 5",
-              "dynamic": false,
-              "external_options": {},
-              "info": "Choice picks one option. Boolean answers yes or no. Score places the input on ordered levels.",
-              "name": "kind_5",
-              "options": [
-                "Choice",
-                "Boolean",
-                "Score"
-              ],
-              "options_metadata": [],
-              "override_skip": false,
-              "placeholder": "",
-              "real_time_refresh": true,
-              "required": false,
-              "show": false,
-              "title_case": false,
-              "toggle": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": true,
-              "type": "str",
-              "value": "Choice"
-            },
-            "levels": {
-              "_input_type": "TableInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Levels",
-              "dynamic": false,
-              "info": "Levels ordered from lowest to highest, 2 to 10. The model scores the input from 0 (the first level) up to one less than the number of levels. ID is a short unique key the result uses; Label is the name the model reads.",
-              "input_types": [],
-              "is_list": true,
-              "list_add_label": "Add More",
-              "name": "levels",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "table_icon": "Table",
-              "table_schema": [
-                {
-                  "description": "A short unique key, such as refund. The result uses it.",
-                  "display_name": "ID",
-                  "edit_mode": "inline",
-                  "name": "id",
-                  "type": "str"
-                },
-                {
-                  "description": "The name the model reads. Labels must differ, ignoring case.",
-                  "display_name": "Label",
-                  "edit_mode": "inline",
-                  "name": "label",
-                  "type": "str"
-                },
-                {
-                  "default": "",
-                  "description": "Optional: more about when this one applies.",
-                  "display_name": "Description",
-                  "edit_mode": "popover",
-                  "name": "description",
-                  "type": "str"
-                }
-              ],
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "trigger_icon": "Table",
-              "trigger_text": "Open table",
-              "type": "table",
-              "value": [
-                {
-                  "description": "",
-                  "id": "low",
-                  "label": "Low"
-                },
-                {
-                  "description": "",
-                  "id": "medium",
-                  "label": "Medium"
-                },
-                {
-                  "description": "",
-                  "id": "high",
-                  "label": "High"
-                }
-              ]
-            },
-            "levels_2": {
-              "_input_type": "TableInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Levels 2",
-              "dynamic": false,
-              "info": "Levels ordered from lowest to highest, 2 to 10. The model scores the input from 0 (the first level) up to one less than the number of levels. ID is a short unique key the result uses; Label is the name the model reads.",
-              "input_types": [],
-              "is_list": true,
-              "list_add_label": "Add More",
-              "name": "levels_2",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "table_icon": "Table",
-              "table_schema": [
-                {
-                  "description": "A short unique key, such as refund. The result uses it.",
-                  "display_name": "ID",
-                  "edit_mode": "inline",
-                  "name": "id",
-                  "type": "str"
-                },
-                {
-                  "description": "The name the model reads. Labels must differ, ignoring case.",
-                  "display_name": "Label",
-                  "edit_mode": "inline",
-                  "name": "label",
-                  "type": "str"
-                },
-                {
-                  "default": "",
-                  "description": "Optional: more about when this one applies.",
-                  "display_name": "Description",
-                  "edit_mode": "popover",
-                  "name": "description",
-                  "type": "str"
-                }
-              ],
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "trigger_icon": "Table",
-              "trigger_text": "Open table",
-              "type": "table",
-              "value": [
-                {
-                  "description": "",
-                  "id": "low",
-                  "label": "Low"
-                },
-                {
-                  "description": "",
-                  "id": "medium",
-                  "label": "Medium"
-                },
-                {
-                  "description": "",
-                  "id": "high",
-                  "label": "High"
-                }
-              ]
-            },
-            "levels_3": {
-              "_input_type": "TableInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Levels 3",
-              "dynamic": false,
-              "info": "Levels ordered from lowest to highest, 2 to 10. The model scores the input from 0 (the first level) up to one less than the number of levels. ID is a short unique key the result uses; Label is the name the model reads.",
-              "input_types": [],
-              "is_list": true,
-              "list_add_label": "Add More",
-              "name": "levels_3",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "table_icon": "Table",
-              "table_schema": [
-                {
-                  "description": "A short unique key, such as refund. The result uses it.",
-                  "display_name": "ID",
-                  "edit_mode": "inline",
-                  "name": "id",
-                  "type": "str"
-                },
-                {
-                  "description": "The name the model reads. Labels must differ, ignoring case.",
-                  "display_name": "Label",
-                  "edit_mode": "inline",
-                  "name": "label",
-                  "type": "str"
-                },
-                {
-                  "default": "",
-                  "description": "Optional: more about when this one applies.",
-                  "display_name": "Description",
-                  "edit_mode": "popover",
-                  "name": "description",
-                  "type": "str"
-                }
-              ],
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "trigger_icon": "Table",
-              "trigger_text": "Open table",
-              "type": "table",
-              "value": [
-                {
-                  "description": "",
-                  "id": "low",
-                  "label": "Low"
-                },
-                {
-                  "description": "",
-                  "id": "medium",
-                  "label": "Medium"
-                },
-                {
-                  "description": "",
-                  "id": "high",
-                  "label": "High"
-                }
-              ]
-            },
-            "levels_4": {
-              "_input_type": "TableInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Levels 4",
-              "dynamic": false,
-              "info": "Levels ordered from lowest to highest, 2 to 10. The model scores the input from 0 (the first level) up to one less than the number of levels. ID is a short unique key the result uses; Label is the name the model reads.",
-              "input_types": [],
-              "is_list": true,
-              "list_add_label": "Add More",
-              "name": "levels_4",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "table_icon": "Table",
-              "table_schema": [
-                {
-                  "description": "A short unique key, such as refund. The result uses it.",
-                  "display_name": "ID",
-                  "edit_mode": "inline",
-                  "name": "id",
-                  "type": "str"
-                },
-                {
-                  "description": "The name the model reads. Labels must differ, ignoring case.",
-                  "display_name": "Label",
-                  "edit_mode": "inline",
-                  "name": "label",
-                  "type": "str"
-                },
-                {
-                  "default": "",
-                  "description": "Optional: more about when this one applies.",
-                  "display_name": "Description",
-                  "edit_mode": "popover",
-                  "name": "description",
-                  "type": "str"
-                }
-              ],
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "trigger_icon": "Table",
-              "trigger_text": "Open table",
-              "type": "table",
-              "value": [
-                {
-                  "description": "",
-                  "id": "low",
-                  "label": "Low"
-                },
-                {
-                  "description": "",
-                  "id": "medium",
-                  "label": "Medium"
-                },
-                {
-                  "description": "",
-                  "id": "high",
-                  "label": "High"
-                }
-              ]
-            },
-            "levels_5": {
-              "_input_type": "TableInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Levels 5",
-              "dynamic": false,
-              "info": "Levels ordered from lowest to highest, 2 to 10. The model scores the input from 0 (the first level) up to one less than the number of levels. ID is a short unique key the result uses; Label is the name the model reads.",
-              "input_types": [],
-              "is_list": true,
-              "list_add_label": "Add More",
-              "name": "levels_5",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "table_icon": "Table",
-              "table_schema": [
-                {
-                  "description": "A short unique key, such as refund. The result uses it.",
-                  "display_name": "ID",
-                  "edit_mode": "inline",
-                  "name": "id",
-                  "type": "str"
-                },
-                {
-                  "description": "The name the model reads. Labels must differ, ignoring case.",
-                  "display_name": "Label",
-                  "edit_mode": "inline",
-                  "name": "label",
-                  "type": "str"
-                },
-                {
-                  "default": "",
-                  "description": "Optional: more about when this one applies.",
-                  "display_name": "Description",
-                  "edit_mode": "popover",
-                  "name": "description",
-                  "type": "str"
-                }
-              ],
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "trigger_icon": "Table",
-              "trigger_text": "Open table",
-              "type": "table",
-              "value": [
-                {
-                  "description": "",
-                  "id": "low",
-                  "label": "Low"
-                },
-                {
-                  "description": "",
-                  "id": "medium",
-                  "label": "Medium"
-                },
-                {
-                  "description": "",
-                  "id": "high",
-                  "label": "High"
-                }
-              ]
-            },
             "model": {
               "_input_type": "ModelInput",
               "advanced": false,
@@ -19089,294 +18279,6 @@
               "type": "model",
               "value": ""
             },
-            "no_description": {
-              "_input_type": "MessageTextInput",
-              "advanced": true,
-              "api_editable": false,
-              "display_name": "What No Means (Optional)",
-              "dynamic": false,
-              "info": "Optional: what a No answer means. Some decision models don't accept this; if yours doesn't, the run stops and asks you to clear it.",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "no_description",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            },
-            "no_description_2": {
-              "_input_type": "MessageTextInput",
-              "advanced": true,
-              "api_editable": false,
-              "display_name": "What No Means 2 (Optional)",
-              "dynamic": false,
-              "info": "Optional: what a No answer means. Some decision models don't accept this; if yours doesn't, the run stops and asks you to clear it.",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "no_description_2",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            },
-            "no_description_3": {
-              "_input_type": "MessageTextInput",
-              "advanced": true,
-              "api_editable": false,
-              "display_name": "What No Means 3 (Optional)",
-              "dynamic": false,
-              "info": "Optional: what a No answer means. Some decision models don't accept this; if yours doesn't, the run stops and asks you to clear it.",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "no_description_3",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            },
-            "no_description_4": {
-              "_input_type": "MessageTextInput",
-              "advanced": true,
-              "api_editable": false,
-              "display_name": "What No Means 4 (Optional)",
-              "dynamic": false,
-              "info": "Optional: what a No answer means. Some decision models don't accept this; if yours doesn't, the run stops and asks you to clear it.",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "no_description_4",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            },
-            "no_description_5": {
-              "_input_type": "MessageTextInput",
-              "advanced": true,
-              "api_editable": false,
-              "display_name": "What No Means 5 (Optional)",
-              "dynamic": false,
-              "info": "Optional: what a No answer means. Some decision models don't accept this; if yours doesn't, the run stops and asks you to clear it.",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "no_description_5",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            },
-            "number_of_questions": {
-              "_input_type": "IntInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Number of Questions",
-              "dynamic": false,
-              "info": "Ask up to 5 questions about the same Context in one call; use Questions JSON for more. With more than one, the result holds each answer under its Question Name.",
-              "list": false,
-              "list_add_label": "Add More",
-              "name": "number_of_questions",
-              "override_skip": false,
-              "placeholder": "",
-              "range_spec": {
-                "max": 5.0,
-                "min": 1.0,
-                "step": 1.0,
-                "step_type": "int"
-              },
-              "real_time_refresh": true,
-              "required": false,
-              "show": true,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_metadata": true,
-              "track_in_telemetry": true,
-              "type": "int",
-              "value": 1
-            },
-            "question": {
-              "_input_type": "MessageTextInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Question",
-              "dynamic": false,
-              "info": "What to decide about the Context, such as \"Which team should handle this message?\"",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "question",
-              "override_skip": false,
-              "placeholder": "",
-              "required": true,
-              "show": true,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            },
-            "question_2": {
-              "_input_type": "MessageTextInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Question 2",
-              "dynamic": false,
-              "info": "What to decide about the Context, such as \"Which team should handle this message?\"",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "question_2",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            },
-            "question_3": {
-              "_input_type": "MessageTextInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Question 3",
-              "dynamic": false,
-              "info": "What to decide about the Context, such as \"Which team should handle this message?\"",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "question_3",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            },
-            "question_4": {
-              "_input_type": "MessageTextInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Question 4",
-              "dynamic": false,
-              "info": "What to decide about the Context, such as \"Which team should handle this message?\"",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "question_4",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            },
-            "question_5": {
-              "_input_type": "MessageTextInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Question 5",
-              "dynamic": false,
-              "info": "What to decide about the Context, such as \"Which team should handle this message?\"",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "question_5",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            },
             "question_mode": {
               "_input_type": "TabInput",
               "advanced": false,
@@ -19401,135 +18303,120 @@
               "type": "tab",
               "value": "Form"
             },
-            "question_name": {
-              "_input_type": "MessageTextInput",
+            "questions": {
+              "_input_type": "DecisionQuestionsInput",
               "advanced": false,
               "api_editable": false,
-              "display_name": "Question Name",
+              "display_name": "Questions",
               "dynamic": false,
-              "info": "Optional: this answer's key in the result, such as urgent. Defaults to q1.",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "question_name",
+              "info": "Each question has its own Decision Type: Choice picks one option, Boolean answers yes or no, and Score places the input on ordered levels. With more than one question, they are sent in one call and the result holds each answer under its Name, which defaults to q1, q2 and so on.",
+              "name": "questions",
+              "new_question": {
+                "kind": "Choice",
+                "levels": [
+                  {
+                    "description": "",
+                    "id": "low",
+                    "label": "Low"
+                  },
+                  {
+                    "description": "",
+                    "id": "medium",
+                    "label": "Medium"
+                  },
+                  {
+                    "description": "",
+                    "id": "high",
+                    "label": "High"
+                  }
+                ],
+                "name": "",
+                "no_description": "",
+                "options": [
+                  {
+                    "description": "",
+                    "id": "a",
+                    "label": "Option A"
+                  },
+                  {
+                    "description": "",
+                    "id": "b",
+                    "label": "Option B"
+                  }
+                ],
+                "question": "",
+                "yes_description": ""
+              },
               "override_skip": false,
               "placeholder": "",
               "required": false,
-              "show": false,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            },
-            "question_name_2": {
-              "_input_type": "MessageTextInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Question Name 2",
-              "dynamic": false,
-              "info": "Optional: this answer's key in the result, such as urgent. Defaults to q2.",
-              "input_types": [
-                "Message"
+              "show": true,
+              "table_schema": [
+                {
+                  "description": "A short unique key, such as refund. The result uses it.",
+                  "display_name": "ID",
+                  "edit_mode": "inline",
+                  "name": "id",
+                  "type": "str"
+                },
+                {
+                  "description": "The name the model reads. Labels must differ, ignoring case.",
+                  "display_name": "Label",
+                  "edit_mode": "inline",
+                  "name": "label",
+                  "type": "str"
+                },
+                {
+                  "default": "",
+                  "description": "Optional: more about when this one applies.",
+                  "display_name": "Description",
+                  "edit_mode": "popover",
+                  "name": "description",
+                  "type": "str"
+                }
               ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "question_name_2",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
               "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
               "trace_as_metadata": true,
               "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            },
-            "question_name_3": {
-              "_input_type": "MessageTextInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Question Name 3",
-              "dynamic": false,
-              "info": "Optional: this answer's key in the result, such as urgent. Defaults to q3.",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "question_name_3",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            },
-            "question_name_4": {
-              "_input_type": "MessageTextInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Question Name 4",
-              "dynamic": false,
-              "info": "Optional: this answer's key in the result, such as urgent. Defaults to q4.",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "question_name_4",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            },
-            "question_name_5": {
-              "_input_type": "MessageTextInput",
-              "advanced": false,
-              "api_editable": false,
-              "display_name": "Question Name 5",
-              "dynamic": false,
-              "info": "Optional: this answer's key in the result, such as urgent. Defaults to q5.",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "question_name_5",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
+              "type": "decision_questions",
+              "value": [
+                {
+                  "kind": "Choice",
+                  "levels": [
+                    {
+                      "description": "",
+                      "id": "low",
+                      "label": "Low"
+                    },
+                    {
+                      "description": "",
+                      "id": "medium",
+                      "label": "Medium"
+                    },
+                    {
+                      "description": "",
+                      "id": "high",
+                      "label": "High"
+                    }
+                  ],
+                  "name": "",
+                  "no_description": "",
+                  "options": [
+                    {
+                      "description": "",
+                      "id": "a",
+                      "label": "Option A"
+                    },
+                    {
+                      "description": "",
+                      "id": "b",
+                      "label": "Option B"
+                    }
+                  ],
+                  "question": "",
+                  "yes_description": ""
+                }
+              ]
             },
             "questions_json": {
               "_input_type": "MultilineInput",
@@ -19606,136 +18493,6 @@
               "track_in_telemetry": true,
               "type": "float",
               "value": 60.0
-            },
-            "yes_description": {
-              "_input_type": "MessageTextInput",
-              "advanced": true,
-              "api_editable": false,
-              "display_name": "What Yes Means (Optional)",
-              "dynamic": false,
-              "info": "Optional: what a Yes answer means. Some decision models don't accept this; if yours doesn't, the run stops and asks you to clear it.",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "yes_description",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            },
-            "yes_description_2": {
-              "_input_type": "MessageTextInput",
-              "advanced": true,
-              "api_editable": false,
-              "display_name": "What Yes Means 2 (Optional)",
-              "dynamic": false,
-              "info": "Optional: what a Yes answer means. Some decision models don't accept this; if yours doesn't, the run stops and asks you to clear it.",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "yes_description_2",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            },
-            "yes_description_3": {
-              "_input_type": "MessageTextInput",
-              "advanced": true,
-              "api_editable": false,
-              "display_name": "What Yes Means 3 (Optional)",
-              "dynamic": false,
-              "info": "Optional: what a Yes answer means. Some decision models don't accept this; if yours doesn't, the run stops and asks you to clear it.",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "yes_description_3",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            },
-            "yes_description_4": {
-              "_input_type": "MessageTextInput",
-              "advanced": true,
-              "api_editable": false,
-              "display_name": "What Yes Means 4 (Optional)",
-              "dynamic": false,
-              "info": "Optional: what a Yes answer means. Some decision models don't accept this; if yours doesn't, the run stops and asks you to clear it.",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "yes_description_4",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            },
-            "yes_description_5": {
-              "_input_type": "MessageTextInput",
-              "advanced": true,
-              "api_editable": false,
-              "display_name": "What Yes Means 5 (Optional)",
-              "dynamic": false,
-              "info": "Optional: what a Yes answer means. Some decision models don't accept this; if yours doesn't, the run stops and asks you to clear it.",
-              "input_types": [
-                "Message"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "name": "yes_description_5",
-              "override_skip": false,
-              "placeholder": "",
-              "required": false,
-              "show": false,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
             }
           },
           "tool_mode": false
@@ -34595,6 +33352,6 @@
     "num_components": 131,
     "num_modules": 17
   },
-  "sha256": "1cde3ef3c57119ddfc88374ee33375f865525042c8c7eee27d5a648427d2d84b",
+  "sha256": "58576f07510758af3a62bf7b54f3065ebcbb0d46d170e53271a450afb21f5150",
   "version": "1.14.0"
 }

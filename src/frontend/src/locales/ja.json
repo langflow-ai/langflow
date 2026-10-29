@@ -3328,5 +3328,21 @@
   "modelProviders.openRouterModelHint": "一覧からモデルを選択するか、OpenRouterの判断モデルIDを入力してください。モデルが対応するリクエストはOpenRouterが決定します。",
   "modelProviders.searchOrAddModel": "モデルIDを検索または追加…",
   "modelProviders.addDecisionModel": "判断モデル「{{name}}」を追加",
-  "modelProviders.decisionDiscoveryError": "意思決定モデルを読み込めませんでした。このプロバイダーの認証情報を確認して、もう一度お試しください。他のプロバイダーは引き続き利用できます。"
+  "modelProviders.decisionDiscoveryError": "意思決定モデルを読み込めませんでした。このプロバイダーの認証情報を確認して、もう一度お試しください。他のプロバイダーは引き続き利用できます。",
+  "decisionQuestions.title": "質問 {{number}}",
+  "decisionQuestions.remove": "質問 {{number}} を削除",
+  "decisionQuestions.name": "質問 {{number}} の名前",
+  "decisionQuestions.namePlaceholder": "名前（任意、既定は q{{number}}）",
+  "decisionQuestions.kind": "質問 {{number}} の判定タイプ",
+  "decisionQuestions.question": "質問 {{number}} の本文",
+  "decisionQuestions.questionPlaceholder": "コンテキストについて判定する内容",
+  "decisionQuestions.options": "選択肢",
+  "decisionQuestions.optionsInfo": "選ぶ対象の選択肢。ID は結果で使われるキー、ラベルはモデルが読む名前です。",
+  "decisionQuestions.optionsEdit": "選択肢を編集",
+  "decisionQuestions.levels": "レベル",
+  "decisionQuestions.levelsInfo": "低いものから高いものへ並べたレベル。ID は結果で使われるキー、ラベルはモデルが読む名前です。",
+  "decisionQuestions.levelsEdit": "レベルを編集",
+  "decisionQuestions.yes_description": "「はい」の意味（任意）",
+  "decisionQuestions.no_description": "「いいえ」の意味（任意）",
+  "decisionQuestions.add": "質問を追加"
 }

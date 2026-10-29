@@ -265,11 +265,15 @@ def _component_result(monkeypatch, scenario: ResultScenario) -> dict:
     component = DecisionModelComponent()
     component.set(
         model=[{"provider": scenario.provider, "name": scenario.model}],
-        kind=scenario.kind,
         context="I was charged twice for my October invoice. Support fixed it quickly, thanks!",
-        question=scenario.question,
-        # Score keeps its levels in their own table.
-        **{"levels" if scenario.kind == "Score" else "candidates": scenario.candidates},
+        questions=[
+            {
+                "kind": scenario.kind,
+                "question": scenario.question,
+                # Score keeps its levels in their own table.
+                "levels" if scenario.kind == "Score" else "options": scenario.candidates,
+            }
+        ],
     )
     return component.evaluate().data
 

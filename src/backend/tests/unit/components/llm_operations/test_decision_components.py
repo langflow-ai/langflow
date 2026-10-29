@@ -42,12 +42,16 @@ class TestDecisionModelComponent(ComponentTestBaseWithoutClient):
     def default_kwargs(self, provider):
         return {
             "model": [{"provider": provider, "name": MODELS[provider]}],
-            "kind": "Choice",
             "context": "The invoice was charged twice.",
-            "question": "Which team handles this?",
-            "candidates": [
-                {"id": "a", "label": "Support", "description": ""},
-                {"id": "b", "label": "Billing", "description": "Payments and invoices"},
+            "questions": [
+                {
+                    "kind": "Choice",
+                    "question": "Which team handles this?",
+                    "options": [
+                        {"id": "a", "label": "Support", "description": ""},
+                        {"id": "b", "label": "Billing", "description": "Payments and invoices"},
+                    ],
+                }
             ],
         }
 

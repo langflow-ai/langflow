@@ -179,6 +179,11 @@ export type TabComponentType = {
   options: string[];
 };
 
+export type DecisionQuestionsComponentType = {
+  columns?: ColumnField[];
+  newQuestion?: Record<string, unknown>;
+};
+
 export type NodeInfoType = {
   flowId: string;
   nodeType: string;

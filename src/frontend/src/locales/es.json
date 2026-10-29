@@ -3328,5 +3328,21 @@
   "modelProviders.openRouterModelHint": "Elige un modelo de la lista o introduce un ID de modelo de decisión de OpenRouter. OpenRouter determina qué solicitudes admite el modelo.",
   "modelProviders.searchOrAddModel": "Buscar o añadir un ID de modelo…",
   "modelProviders.addDecisionModel": "Añadir modelo de decisión «{{name}}»",
-  "modelProviders.decisionDiscoveryError": "No se pudieron cargar los modelos de decisión. Comprueba las credenciales de este proveedor e inténtalo de nuevo. Los demás proveedores siguen disponibles."
+  "modelProviders.decisionDiscoveryError": "No se pudieron cargar los modelos de decisión. Comprueba las credenciales de este proveedor e inténtalo de nuevo. Los demás proveedores siguen disponibles.",
+  "decisionQuestions.title": "Pregunta {{number}}",
+  "decisionQuestions.remove": "Quitar la pregunta {{number}}",
+  "decisionQuestions.name": "Nombre de la pregunta {{number}}",
+  "decisionQuestions.namePlaceholder": "Nombre (opcional, por defecto q{{number}})",
+  "decisionQuestions.kind": "Tipo de decisión de la pregunta {{number}}",
+  "decisionQuestions.question": "Texto de la pregunta {{number}}",
+  "decisionQuestions.questionPlaceholder": "Qué decidir sobre el contexto",
+  "decisionQuestions.options": "Opciones",
+  "decisionQuestions.optionsInfo": "Las opciones entre las que elegir. El ID es la clave que usa el resultado; la etiqueta es el nombre que lee el modelo.",
+  "decisionQuestions.optionsEdit": "Editar opciones",
+  "decisionQuestions.levels": "Niveles",
+  "decisionQuestions.levelsInfo": "Niveles de menor a mayor. El ID es la clave que usa el resultado; la etiqueta es el nombre que lee el modelo.",
+  "decisionQuestions.levelsEdit": "Editar niveles",
+  "decisionQuestions.yes_description": "Qué significa Sí (opcional)",
+  "decisionQuestions.no_description": "Qué significa No (opcional)",
+  "decisionQuestions.add": "Añadir pregunta"
 }

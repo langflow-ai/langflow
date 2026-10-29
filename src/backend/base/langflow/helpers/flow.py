@@ -785,6 +785,7 @@ _JSON_SCHEMA_TYPE_BY_FIELD_TYPE = {
     "auth": "object",
     "mcp": "object",
     "data_display": "object",
+    "decision_questions": "array",
     "object": "object",
     "array": "array",
     "connect": "string",

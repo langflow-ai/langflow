@@ -140,6 +140,20 @@ class DataDisplayInput(BaseInputMixin):
     button_icon: str = "Eye"
 
 
+class DecisionQuestionsInput(BaseInputMixin, MetadataTraceMixin):
+    """Decision questions the editor shows as cards, with Add question and Remove buttons.
+
+    Each item is ``{"name", "kind", "question", "options", "levels", "yes_description",
+    "no_description"}``; ``kind`` is Choice, Boolean or Score, and ``options`` and ``levels`` are
+    table rows in ``table_schema``. Add question appends a copy of ``new_question``.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.DECISION_QUESTIONS
+    value: list[dict] = Field(default_factory=list)
+    table_schema: list[dict] = Field(default_factory=list)
+    new_question: dict = Field(default_factory=dict)
+
+
 class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
     """Represents an Input that has a Handle to a specific type (e.g. BaseLanguageModel, BaseRetriever, etc.).
 
@@ -1163,6 +1177,7 @@ InputTypes: TypeAlias = (
     | ActionPickerInput
     | DurationInput
     | DataDisplayInput
+    | DecisionQuestionsInput
 )
 
 InputTypesMap: dict[str, type[InputTypes]] = {t.__name__: t for t in get_args(InputTypes)}
