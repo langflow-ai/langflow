@@ -13,11 +13,14 @@ from lfx_oracle.components.oracle.oracledb_loaders import (
     OracleDocLoaderComponent,
 )
 from oracle_test_utils import (
+    get_oracle_connect_string,
     get_oracle_connection_inputs,
     get_oracle_connection_params,
     get_oracle_owner,
     get_oracle_test_connection_inputs,
 )
+
+pytestmark = pytest.mark.usefixtures("trusted_mock_oracle_endpoint")
 
 
 @pytest.fixture(scope="module")
@@ -127,7 +130,7 @@ def test_oracle_doc_loader_component_integration(
         assert all(isinstance(d, Data) for d in data_list)
         assert {d.text for d in data_list} == {"row1", "row2"}
         assert component.status == data_list
-        mock_connect.assert_called_once_with(dsn=test_connection_inputs["dsn"])
+        mock_connect.assert_called_once_with(dsn=get_oracle_connect_string(test_connection_inputs["dsn"]))
         mock_loader.assert_called_once()
         return
 
@@ -201,7 +204,7 @@ def test_oracle_doc_loader_component_empty_table(
         assert isinstance(data_list, list)
         assert data_list == []
         assert component.status == []
-        mock_connect.assert_called_once_with(dsn=test_connection_inputs["dsn"])
+        mock_connect.assert_called_once_with(dsn=get_oracle_connect_string(test_connection_inputs["dsn"]))
         mock_loader.assert_called_once()
         return
 
@@ -261,7 +264,7 @@ def test_oracle_autonomous_database_loader_component_load_documents(
             "user": test_connection_inputs["user"],
             "password": test_connection_inputs["password"],
             "schema": None,
-            "dsn": test_connection_inputs["dsn"],
+            "dsn": get_oracle_connect_string(test_connection_inputs["dsn"]),
             "config_dir": None,
             "wallet_location": None,
             "wallet_password": None,
@@ -335,7 +338,7 @@ def test_oracle_autonomous_database_loader_component_maps_aliases_and_optional_a
         user=test_connection_inputs["user"],
         password=test_connection_inputs["password"],
         schema="MY_SCHEMA",
-        dsn=test_connection_inputs["dsn"],
+        dsn=get_oracle_connect_string(test_connection_inputs["dsn"]),
         config_dir="/wallet/config",
         wallet_location="/wallet",
         wallet_password=test_connection_inputs["wallet_password"],
@@ -384,7 +387,7 @@ def test_oracle_autonomous_database_loader_component_parses_credentials_from_dsn
         "user": test_connection_inputs["user"],
         "password": test_connection_inputs["password"],
         "schema": None,
-        "dsn": test_connection_inputs["dsn"],
+        "dsn": get_oracle_connect_string(test_connection_inputs["dsn"]),
         "config_dir": None,
         "wallet_location": None,
         "wallet_password": None,
