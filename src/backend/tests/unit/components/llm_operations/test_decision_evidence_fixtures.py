@@ -268,7 +268,8 @@ def _component_result(monkeypatch, scenario: ResultScenario) -> dict:
         kind=scenario.kind,
         context="I was charged twice for my October invoice. Support fixed it quickly, thanks!",
         question=scenario.question,
-        candidates=scenario.candidates,
+        # Score keeps its levels in their own table.
+        **{"levels" if scenario.kind == "Score" else "candidates": scenario.candidates},
     )
     return component.evaluate().data
 
