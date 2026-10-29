@@ -83,6 +83,11 @@ fn apply_case(case: &Value) -> Result<(), Failed> {
         &ignoring_order(&state.to_value()),
         &ignoring_order(&case["expected"]),
     )?;
+    // The bindings print the graph with to_json, which must write the text of to_value.
+    let printed = state.to_value().to_string();
+    if state.to_json() != printed {
+        return Err("to_json does not write the text of to_value".into());
+    }
     let forward = Value::Array(applied.forward.iter().map(Operation::to_value).collect());
     let expected_forward = case
         .get("forward_operations")
