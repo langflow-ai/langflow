@@ -944,7 +944,9 @@ def _update_model_sets(
             _discard_typed_status_variants(explicitly_enabled_models, update.provider, update.model_id)
             status_key = legacy_key
 
-        model_is_default = is_default_model.get(status_key, is_default_model.get(legacy_key, False))
+        # A chat default must not erase an explicit custom decision with the same name.
+        fallback_default = False if update.model_type == "decision" else is_default_model.get(legacy_key, False)
+        model_is_default = is_default_model.get(status_key, fallback_default)
 
         if update.enabled:
             # User wants to enable the model
@@ -1039,9 +1041,9 @@ async def _get_enabled_models_result(
     model_type: str | None = None,
 ):
     """Get enabled models for the current user."""
+    # Defaults must match status writes; filtering by type would choose a different first five.
     all_models_by_provider = get_unified_models_detailed(
         providers=providers,
-        model_type=model_type,
         include_unsupported=True,
         include_deprecated=True,
     )
