@@ -703,10 +703,15 @@ async def complete_connection_oauth(provider: str, request: Request, service: Co
         )
     except OAuthError as exc:
         response.status_code = 400
-        response.body = (
-            b"The provider did not return a refresh token. Reconnect with the required offline_access scope."
-            if exc.code == "oauth-refresh-token-missing"
-            else b"OAuth authorization failed. Return to connections and start again."
-        )
+        if exc.code == "oauth-refresh-token-missing":
+            adapter = provider_adapter(provider)
+            message = "The provider did not return a refresh token."
+            if adapter and adapter.required_scopes:
+                message += f" Reconnect with the required scopes {', '.join(adapter.required_scopes)}."
+            else:
+                message += " Check the provider's refresh-access settings and reconnect."
+            response.body = message.encode("utf-8")
+        else:
+            response.body = b"OAuth authorization failed. Return to connections and start again."
         response.headers["content-length"] = str(len(response.body))
     return response

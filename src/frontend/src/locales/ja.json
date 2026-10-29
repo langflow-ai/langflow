@@ -3047,6 +3047,8 @@
   "connections.scope.required": "この接続に必須",
   "connections.add.requiredScopesUnavailable": "この登録では、この接続に必要な {{scopes}} を要求できません。運用担当者に登録の更新を依頼してください。",
   "connections.add.jiraRefreshMissing": "Jira からリフレッシュトークンが返されませんでした。すべての Jira 接続には offline_access が必要です。再試行するか、管理者に OAuth 登録の確認を依頼してください。",
+  "connections.add.refreshMissing": "The provider did not return a refresh token. Check its refresh-access settings and reconnect.",
+  "connections.add.refreshMissingScopes": "The provider did not return a refresh token. Every connection requires {{scopes}}. Try again or ask an administrator to check the OAuth registration.",
   "connections.add.scopes": "要求するスコープ",
   "connections.add.noScopes": "このプロバイダーのアクションはスコープを宣言していません。",
   "connections.add.scopesOutsideCeiling": "この登録では {{scopes}} が許可されていないため、要求しません。",

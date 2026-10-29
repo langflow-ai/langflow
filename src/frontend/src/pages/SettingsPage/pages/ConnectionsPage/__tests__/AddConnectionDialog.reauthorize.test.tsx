@@ -1241,6 +1241,50 @@ describe("Jira required connection scopes", () => {
     );
   });
 
+  it.each([
+    ["confluence", "offline_access"],
+    ["salesforce", "refresh_token"],
+    ["servicenow", "langflow_table_read"],
+  ])("explains missing refresh access for %s", async (providerId, scope) => {
+    const provider: IntegrationProviderRead = {
+      ...JIRA,
+      provider_id: providerId,
+      display_name: providerId,
+      capabilities: [
+        {
+          ...capability(`${providerId}.read`, "ReadComponent"),
+          required_scopes: [scope],
+        },
+      ],
+    };
+    const row = connection({ ...pending(), provider_key: providerId });
+    mockCreate.mockResolvedValue(row);
+    setRegistrations([
+      registration({
+        id: "provider-work",
+        provider: providerId,
+        scopes: [scope],
+        required_scopes: [scope],
+      }),
+    ]);
+    const { rerender } = render(dialog(undefined, [provider]));
+    await startCreate();
+    mockPolledConnection = {
+      ...row,
+      status: "error",
+      status_reason: "oauth-refresh-token-missing",
+      updated_at: "2026-09-16T10:01:00",
+    };
+    rerender(dialog(undefined, [provider]));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("did not return a refresh token");
+    expect(alert).toHaveTextContent(scope);
+    expect(alert).not.toHaveTextContent("Jira");
+    await waitFor(() =>
+      expect(mockRemove).toHaveBeenCalledWith("c1", expect.any(Object)),
+    );
+  });
+
   it("waits for cleanup before retry and retains the row if cleanup fails", async () => {
     let failCleanup: () => void = () => {};
     mockRemove.mockImplementationOnce((_id, options) => {

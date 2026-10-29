@@ -345,6 +345,9 @@ export function AddConnectionDialog({
     [reauthorize, remove.mutate, setErrorData, t],
   );
 
+  const requiredRefreshScopes =
+    selectedRegistration?.required_scopes?.join(", ") ?? "";
+
   // Consent lands on the server: only a row that moved on from the state it had
   // when consent started carries this authorization's outcome.
   useEffect(() => {
@@ -359,11 +362,17 @@ export function AddConnectionDialog({
           row.provider_key === "jira" &&
           row.status_reason === "oauth-refresh-token-missing"
             ? t("connections.add.jiraRefreshMissing")
-            : row.status_reason === "oauth-denied"
-              ? t("connections.add.denied")
-              : row.status_reason === "oauth-expired"
-                ? t("connections.add.expired")
-                : t("connections.add.failed");
+            : row.status_reason === "oauth-refresh-token-missing"
+              ? requiredRefreshScopes
+                ? t("connections.add.refreshMissingScopes", {
+                    scopes: requiredRefreshScopes,
+                  })
+                : t("connections.add.refreshMissing")
+              : row.status_reason === "oauth-denied"
+                ? t("connections.add.denied")
+                : row.status_reason === "oauth-expired"
+                  ? t("connections.add.expired")
+                  : t("connections.add.failed");
         setAuthorize({ kind: "failed", message });
         discardFailedNewConnection(row);
       } else if (row.status === "ready" && row.has_credentials) {
@@ -376,7 +385,14 @@ export function AddConnectionDialog({
       }
       return;
     }
-  }, [isAwaitingConsent, poll.data, baseline, discardFailedNewConnection, t]);
+  }, [
+    isAwaitingConsent,
+    poll.data,
+    baseline,
+    discardFailedNewConnection,
+    requiredRefreshScopes,
+    t,
+  ]);
 
   // A provider's Cross-Origin-Opener-Policy can make an open popup report
   // `closed`. Keep polling the server and avoid inferring user cancellation.

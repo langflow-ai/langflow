@@ -351,6 +351,8 @@ async def activate(trigger_id):
 
 @pytest.mark.usefixtures("jira")
 async def test_reconnected_jira_trigger_offers_resume_in_list_and_detail(client, active_user, logged_in_headers):
+    from langflow.services.triggers.listeners.supervisor import mark_needs_reconnect
+
     connection_id = await connection(active_user.id)
     async with session_scope() as session:
         flow = Flow(name="Reconnected Jira", user_id=active_user.id)
@@ -359,10 +361,11 @@ async def test_reconnected_jira_trigger_offers_resume_in_list_and_detail(client,
         flow_id = flow.id
     trigger = await reconcile(flow_id, active_user.id)
     async with session_scope() as session:
-        row = await session.get(Trigger, trigger.id)
-        row.state = "needs_reconnect"
-        row.last_error = "The connection was revoked or expired. Reconnect it to resume this trigger."
-        session.add(row)
+        await mark_needs_reconnect(
+            session,
+            trigger_ids=[trigger.id],
+            reason="The connection was revoked or expired. Reconnect it to resume this trigger.",
+        )
         restored = await session.get(Connection, connection_id)
         restored.status = "revoked"
         session.add(restored)

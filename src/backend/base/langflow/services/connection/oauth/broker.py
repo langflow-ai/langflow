@@ -252,6 +252,7 @@ async def store_tokens(session: AsyncSession, row: Connection, payload: dict, sc
     row.health = "healthy"
     row.health_checked_at = datetime.now(timezone.utc)
     row.updated_at = row.health_checked_at
+    secret.updated_at = row.health_checked_at
     session.add(secret)
     session.add(row)
     await session.flush()

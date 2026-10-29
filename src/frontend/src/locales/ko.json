@@ -3046,6 +3046,8 @@
   "connections.scope.required": "이 연결에 필수",
   "connections.add.requiredScopesUnavailable": "이 등록은 이 연결에 필요한 {{scopes}}을(를) 요청할 수 없습니다. 운영자에게 등록 업데이트를 요청하세요.",
   "connections.add.jiraRefreshMissing": "Jira가 새로 고침 토큰을 반환하지 않았습니다. 모든 Jira 연결에는 offline_access가 필요합니다. 다시 시도하거나 관리자에게 OAuth 등록 확인을 요청하세요.",
+  "connections.add.refreshMissing": "The provider did not return a refresh token. Check its refresh-access settings and reconnect.",
+  "connections.add.refreshMissingScopes": "The provider did not return a refresh token. Every connection requires {{scopes}}. Try again or ask an administrator to check the OAuth registration.",
   "connections.add.scopes": "요청할 권한 범위",
   "connections.add.noScopes": "이 Provider의 작업에는 필요한 권한 범위가 없습니다.",
   "connections.add.scopesOutsideCeiling": "이 등록에서 허용하지 않는 권한 범위라 요청하지 않습니다: {{scopes}}",

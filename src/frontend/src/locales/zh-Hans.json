@@ -3046,6 +3046,8 @@
   "connections.scope.required": "此连接必需",
   "connections.add.requiredScopesUnavailable": "此注册无法请求此连接必需的 {{scopes}}。请让运维人员更新注册。",
   "connections.add.jiraRefreshMissing": "Jira 未返回刷新令牌。每个 Jira 连接都需要 offline_access。请重试或让管理员检查 OAuth 注册。",
+  "connections.add.refreshMissing": "The provider did not return a refresh token. Check its refresh-access settings and reconnect.",
+  "connections.add.refreshMissingScopes": "The provider did not return a refresh token. Every connection requires {{scopes}}. Try again or ask an administrator to check the OAuth registration.",
   "connections.add.scopes": "要申请的权限范围",
   "connections.add.noScopes": "该提供方的操作未声明权限范围。",
   "connections.add.scopesOutsideCeiling": "该注册不允许 {{scopes}}，因此不会申请。",

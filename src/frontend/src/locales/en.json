@@ -3046,6 +3046,8 @@
   "connections.scope.required": "Required for this connection",
   "connections.add.requiredScopesUnavailable": "This registration cannot request {{scopes}}, which this connection requires. Ask an operator to update it.",
   "connections.add.jiraRefreshMissing": "Jira did not return a refresh token. Every Jira connection requires offline_access. Try again or ask an administrator to check the OAuth registration.",
+  "connections.add.refreshMissing": "The provider did not return a refresh token. Check its refresh-access settings and reconnect.",
+  "connections.add.refreshMissingScopes": "The provider did not return a refresh token. Every connection requires {{scopes}}. Try again or ask an administrator to check the OAuth registration.",
   "connections.add.scopes": "Scopes to request",
   "connections.add.noScopes": "This provider's actions declare no scopes.",
   "connections.add.scopesOutsideCeiling": "This registration does not allow {{scopes}}, so those are not requested.",

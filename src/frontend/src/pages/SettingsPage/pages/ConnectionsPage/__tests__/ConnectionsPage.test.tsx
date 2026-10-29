@@ -398,6 +398,26 @@ describe("ConnectionsPage tabs", () => {
     ).toBeVisible();
   });
 
+  it.each(["confluence", "salesforce", "servicenow"])(
+    "explains a missing refresh token for %s without Jira-specific advice",
+    (provider) => {
+      mockUser = { id: SUPERUSER_ID, is_superuser: true };
+      mockConnections = [
+        connection({
+          id: "provider-ready",
+          owner_id: SUPERUSER_ID,
+          provider_key: provider,
+          status_reason: "oauth-refresh-token-missing",
+        }),
+      ];
+      render(<ConnectionsPage />);
+      const row = within(screen.getByTestId("connection-row-provider_ready"));
+      expect(row.getByText("Ready")).toBeVisible();
+      expect(row.getByText(/did not return a refresh token/)).toBeVisible();
+      expect(row.queryByText(/Jira|offline_access/)).not.toBeInTheDocument();
+    },
+  );
+
   it("gives a regular user no Other users tab and keeps shared rows under Mine", async () => {
     mockUser = { id: REGULAR_ID, is_superuser: false };
     // A regular user only ever receives another user's row when it was shared

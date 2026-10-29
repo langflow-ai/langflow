@@ -40,7 +40,7 @@ from langflow.services.authorization import (
 )
 from langflow.services.authorization.fetch import cross_user_fetch_enabled
 from langflow.services.authorization.utils import _resolve_authz_domain
-from langflow.services.database.models.connection.model import Connection
+from langflow.services.database.models.connection.model import Connection, ConnectionSecret
 from langflow.services.database.models.connection.schemas import PersistedConnectionStatus
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.model import Folder
@@ -49,9 +49,11 @@ from langflow.services.database.models.trigger.schemas import TriggerRead, Trigg
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service
 from langflow.services.triggers.capabilities import NO_ACCESS, TriggerCaller, trigger_capabilities
+from langflow.services.triggers.connection_recovery import as_utc, connection_failure
 from langflow.services.triggers.ownership import is_owned_by
 
 if TYPE_CHECKING:
+    from datetime import datetime
     from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -125,9 +127,13 @@ async def present(
     # rows here also lets readiness validators use the session's identity map.
     connections = (
         {
-            connection.id: connection
-            for connection in (
-                await session.exec(select(Connection).where(col(Connection.id).in_(connection_ids)))
+            connection.id: (connection, credential_updated_at)
+            for connection, credential_updated_at in (
+                await session.exec(
+                    select(Connection, ConnectionSecret.updated_at)
+                    .outerjoin(ConnectionSecret, ConnectionSecret.connection_id == Connection.id)
+                    .where(col(Connection.id).in_(connection_ids))
+                )
             ).all()
         }
         if connection_ids
@@ -141,8 +147,9 @@ async def present(
         caller = callers[flow.id]
         # The trigger owner owns its connection, so only they may reconnect it.
         owns = caller is not NO_ACCESS and row.user_id == user.id
+        connection, credential_updated_at = connections.get(row.connection_id, (None, None))
         recovery_reason = (
-            await _connection_recovery_reason(session, row, connections.get(row.connection_id))
+            await _connection_recovery_reason(session, row, connection, credential_updated_at)
             if row.state == TriggerState.NEEDS_RECONNECT.value
             else None
         )
@@ -162,7 +169,7 @@ async def present(
 
 
 async def _connection_recovery_reason(
-    session: AsyncSession, row: Trigger, connection: Connection | None
+    session: AsyncSession, row: Trigger, connection: Connection | None, credential_updated_at: datetime | None
 ) -> TriggerReason:
     """Read current connection metadata without arming or contacting the provider."""
     if connection is None or row.user_id is None or not is_owned_by(connection, row.user_id):
@@ -181,6 +188,10 @@ async def _connection_recovery_reason(
         return TriggerReason.NEEDS_RECONNECT
     if not connection.allow_non_interactive:
         return TriggerReason.CONSENT_REQUIRED
+    failed_at, consent_required = connection_failure(row)
+    replaced_at = as_utc(credential_updated_at)
+    if replaced_at is None or (not consent_required and (failed_at is None or replaced_at <= failed_at)):
+        return TriggerReason.NEEDS_RECONNECT
 
     from langflow.services.triggers.constants import SLACK_TRIGGER_KINDS
     from langflow.services.triggers.providers.registry import source_kinds
