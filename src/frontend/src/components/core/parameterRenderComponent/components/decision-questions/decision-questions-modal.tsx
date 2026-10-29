@@ -53,29 +53,45 @@ export default function DecisionQuestionsModal({
   // Edits stay here until Done; closing any other way discards them.
   const [draft, setDraft] = useState<DecisionQuestion[]>([]);
   const [selected, setSelected] = useState(0);
+  // Done shows which question still needs its text.
+  const [checked, setChecked] = useState(false);
+  const blank = () => ({
+    ...cloneDeep(newQuestion ?? {}),
+    id: newQuestionId(),
+  });
   useEffect(() => {
     if (open) {
-      setDraft(cloneDeep(questions));
+      // A node with no questions opens on a new one.
+      setDraft(questions.length ? cloneDeep(questions) : [blank()]);
       setSelected(initialIndex);
+      setChecked(false);
     }
   }, [open]);
 
-  const question = draft[selected] ?? {};
-  const number = selected + 1;
+  const question = draft[selected];
+  const needsText = (item: DecisionQuestion) =>
+    !isConnected(item) && !item.question?.trim();
   const kindLabels = KINDS.map((kind) => t(`decisionQuestions.kind${kind}`));
-  const table = TABLE[question.kind as keyof typeof TABLE];
-  const rows = (table && question[table]) ?? [];
+  const table = TABLE[question?.kind as keyof typeof TABLE];
+  const rows = (table && question?.[table]) ?? [];
   const update = (change: DecisionQuestion) =>
     setDraft(draft.map((q, i) => (i === selected ? { ...q, ...change } : q)));
   const setRows = (next: Row[]) => table && update({ [table]: next });
   const fieldId = (name: string) => `${id}_${name}_${selected}`;
 
   const addQuestion = () => {
-    setDraft([
-      ...draft,
-      { ...cloneDeep(newQuestion ?? {}), id: newQuestionId() },
-    ]);
+    setDraft([...draft, blank()]);
     setSelected(draft.length);
+  };
+  const done = () => {
+    const missing = draft.findIndex(needsText);
+    if (missing !== -1) {
+      setSelected(missing);
+      setChecked(true);
+      return;
+    }
+    onDone(draft);
+    setOpen(false);
   };
   const deleteQuestion = () => {
     setDraft(draft.filter((_, i) => i !== selected));
@@ -128,116 +144,142 @@ export default function DecisionQuestionsModal({
               {t("decisionQuestions.add")}
             </Button>
           </div>
-          <div className="flex min-w-0 flex-1 flex-col gap-5 overflow-y-auto pr-1">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-2">
-                <label
-                  htmlFor={fieldId("name")}
-                  className="text-sm font-medium"
-                >
-                  {t("decisionQuestions.name")}
-                </label>
-                <Input
-                  id={fieldId("name")}
-                  data-testid={`${id}_modal_name`}
-                  value={question.name ?? ""}
-                  className="font-mono"
-                  onChange={(event) => update({ name: event.target.value })}
-                />
-                <span className="text-xs text-muted-foreground">
-                  {t("decisionQuestions.nameHint", { number })}
-                </span>
+          {!question ? (
+            <p className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+              {t("decisionQuestions.empty")}
+            </p>
+          ) : (
+            <div className="flex min-w-0 flex-1 flex-col gap-5 overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <label
+                    htmlFor={fieldId("name")}
+                    className="text-sm font-medium"
+                  >
+                    {t("decisionQuestions.name")}
+                  </label>
+                  <Input
+                    id={fieldId("name")}
+                    data-testid={`${id}_modal_name`}
+                    value={question.name ?? ""}
+                    className="font-mono"
+                    onChange={(event) => update({ name: event.target.value })}
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    {t("decisionQuestions.nameHint")}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <span
+                    id={fieldId("kind_label")}
+                    className="text-sm font-medium"
+                  >
+                    {t("decisionQuestions.kind")}
+                  </span>
+                  {/* The tabs show translated names; the value saved stays the canonical type. */}
+                  <TabComponent
+                    id={fieldId("kind")}
+                    value={kindLabels[KINDS.indexOf(question.kind ?? "")] ?? ""}
+                    options={kindLabels}
+                    editNode={false}
+                    disabled={false}
+                    ariaLabelledBy={fieldId("kind_label")}
+                    handleOnNewValue={({ value }) =>
+                      update({ kind: KINDS[kindLabels.indexOf(value)] })
+                    }
+                  />
+                  {question.kind && (
+                    <span className="text-xs text-muted-foreground">
+                      {t(`decisionQuestions.kind${question.kind}Hint`)}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex flex-col gap-2">
-                <span
-                  id={fieldId("kind_label")}
+                <label
+                  htmlFor={fieldId("question")}
                   className="text-sm font-medium"
                 >
-                  {t("decisionQuestions.kind")}
-                </span>
-                {/* The tabs show translated names; the value saved stays the canonical type. */}
-                <TabComponent
-                  id={fieldId("kind")}
-                  value={kindLabels[KINDS.indexOf(question.kind ?? "")] ?? ""}
-                  options={kindLabels}
-                  editNode={false}
-                  disabled={false}
-                  ariaLabelledBy={fieldId("kind_label")}
-                  handleOnNewValue={({ value }) =>
-                    update({ kind: KINDS[kindLabels.indexOf(value)] })
-                  }
-                />
-                {question.kind && (
-                  <span className="text-xs text-muted-foreground">
-                    {t(`decisionQuestions.kind${question.kind}Hint`)}
+                  {t("decisionQuestions.question")}
+                  <span className="text-destructive"> *</span>
+                </label>
+                {isConnected(question) ? (
+                  <div
+                    id={fieldId("question")}
+                    className="rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground"
+                    data-testid={`${id}_modal_question_connected`}
+                  >
+                    {t("decisionQuestions.questionConnectedHint")}
+                  </div>
+                ) : (
+                  <Textarea
+                    id={fieldId("question")}
+                    data-testid={`${id}_modal_question_text`}
+                    value={question.question ?? ""}
+                    required
+                    aria-invalid={checked && needsText(question)}
+                    aria-describedby={fieldId("question_error")}
+                    className={cn(
+                      "min-h-20",
+                      checked && needsText(question) && "border-destructive",
+                    )}
+                    onChange={(event) =>
+                      update({ question: event.target.value })
+                    }
+                  />
+                )}
+                {checked && needsText(question) && (
+                  <span
+                    id={fieldId("question_error")}
+                    className="text-xs text-destructive"
+                    data-testid={`${id}_modal_question_error`}
+                  >
+                    {t("decisionQuestions.questionRequired")}
                   </span>
                 )}
               </div>
-            </div>
-            <div className="flex flex-col gap-2">
-              <label
-                htmlFor={fieldId("question")}
-                className="text-sm font-medium"
-              >
-                {t("decisionQuestions.question")}
-              </label>
-              {isConnected(question) ? (
-                <div
-                  id={fieldId("question")}
-                  className="rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground"
-                  data-testid={`${id}_modal_question_connected`}
-                >
-                  {t("decisionQuestions.questionConnectedHint")}
-                </div>
-              ) : (
-                <Textarea
-                  id={fieldId("question")}
-                  data-testid={`${id}_modal_question_text`}
-                  value={question.question ?? ""}
-                  className="min-h-20"
-                  onChange={(event) => update({ question: event.target.value })}
+              {table && (
+                <RowsEditor
+                  id={id}
+                  kind={question.kind as "Choice" | "Score"}
+                  rows={rows}
+                  setRows={setRows}
                 />
               )}
+              {question.kind === "Boolean" &&
+                (["yes_description", "no_description"] as const).map((key) => (
+                  <div key={key} className="flex flex-col gap-2">
+                    <label
+                      htmlFor={fieldId(key)}
+                      className="text-sm font-medium"
+                    >
+                      {t(`decisionQuestions.${key}`)}
+                    </label>
+                    <Input
+                      id={fieldId(key)}
+                      data-testid={`${id}_modal_${key}`}
+                      value={question[key] ?? ""}
+                      onChange={(event) =>
+                        update({ [key]: event.target.value })
+                      }
+                    />
+                  </div>
+                ))}
             </div>
-            {table && (
-              <RowsEditor
-                id={id}
-                kind={question.kind as "Choice" | "Score"}
-                rows={rows}
-                setRows={setRows}
-              />
-            )}
-            {question.kind === "Boolean" &&
-              (["yes_description", "no_description"] as const).map((key) => (
-                <div key={key} className="flex flex-col gap-2">
-                  <label htmlFor={fieldId(key)} className="text-sm font-medium">
-                    {t(`decisionQuestions.${key}`)}
-                  </label>
-                  <Input
-                    id={fieldId(key)}
-                    data-testid={`${id}_modal_${key}`}
-                    value={question[key] ?? ""}
-                    onChange={(event) => update({ [key]: event.target.value })}
-                  />
-                </div>
-              ))}
-          </div>
+          )}
         </div>
       </BaseModal.Content>
       <BaseModal.Footer
         submit={{
           label: t("decisionQuestions.done"),
           dataTestId: `${id}_modal_done`,
-          onClick: () => {
-            onDone(draft);
-            setOpen(false);
-          },
+          onClick: done,
         }}
       >
         <Button
           variant="ghost"
           className="text-destructive"
-          disabled={draft.length <= 1}
+          disabled={!question}
           data-testid={`${id}_modal_delete`}
           onClick={deleteQuestion}
         >
@@ -265,14 +307,7 @@ export function QuestionPreview({
       </span>
     );
   }
-  if (!question.question?.trim()) {
-    return (
-      <span className="flex items-center gap-1 text-sm italic text-accent-amber-foreground">
-        <IconComponent name="TriangleAlert" className="h-3.5 w-3.5 shrink-0" />
-        {t("decisionQuestions.noQuestion")}
-      </span>
-    );
-  }
+  if (!question.question?.trim()) return null;
   return <span className="truncate text-sm">{question.question}</span>;
 }
 

@@ -98,17 +98,23 @@ describe("DecisionQuestionsComponent on the node", () => {
     const second = screen.getByTestId("questions_question_1");
     expect(second).toHaveTextContent("q2");
     expect(second).toHaveTextContent("Yes / No");
-    expect(second).toHaveTextContent("No question written yet");
     expect(screen.getByTestId("handle_question_input_1")).toBeInTheDocument();
     expect(screen.getByTestId("handle_question_input_x1")).toBeInTheDocument();
   });
 
-  it("marks a connected question instead of warning that it has no text", () => {
+  it("marks a connected question", () => {
     useFlowStore.setState({ edges: [edgeInto("question_input_x1")] as never });
     renderQuestions([team, urgent]);
-    const second = screen.getByTestId("questions_question_1");
-    expect(second).toHaveTextContent("Connected");
-    expect(second).not.toHaveTextContent("No question written yet");
+    expect(screen.getByTestId("questions_question_1")).toHaveTextContent(
+      "Connected",
+    );
+  });
+
+  it("starts empty, offering to add questions", () => {
+    renderQuestions([]);
+    expect(screen.queryByTestId("questions_question_0")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Add questions/ }));
+    expect(screen.getByTestId("questions_modal_name")).toHaveValue("");
   });
 
   it("opens the editor on the question that was clicked", () => {
@@ -149,10 +155,13 @@ describe("the question editor", () => {
     const { handleNodeClass } = renderQuestions([team]);
     fireEvent.click(screen.getByTestId("questions_edit"));
     fireEvent.click(screen.getByTestId("questions_modal_add"));
+    fireEvent.change(screen.getByTestId("questions_modal_question_text"), {
+      target: { value: "Is it urgent?" },
+    });
     fireEvent.click(screen.getByTestId("questions_modal_done"));
     const [[updated]] = handleNodeClass.mock.calls;
     const [, added] = updated.template.questions.value;
-    expect(added).toMatchObject({ kind: "Choice", name: "" });
+    expect(added).toMatchObject({ kind: "Choice", question: "Is it urgent?" });
     expect(updated.template[`question_input_${added.id}`]).toMatchObject({
       name: `question_input_${added.id}`,
       input_types: ["Message"],
@@ -176,10 +185,41 @@ describe("the question editor", () => {
     expect(updated.template.question_input_x1).toBeUndefined();
   });
 
-  it("keeps at least one question", () => {
-    renderQuestions([team]);
+  it("can delete every question", () => {
+    const { handleNodeClass } = renderQuestions([team]);
     fireEvent.click(screen.getByTestId("questions_edit"));
+    fireEvent.click(screen.getByTestId("questions_modal_delete"));
+    expect(screen.getByText(/No questions yet/)).toBeInTheDocument();
     expect(screen.getByTestId("questions_modal_delete")).toBeDisabled();
+    fireEvent.click(screen.getByTestId("questions_modal_done"));
+    const [[updated]] = handleNodeClass.mock.calls;
+    expect(updated.template.questions.value).toEqual([]);
+  });
+
+  it("requires each question's text before Done", () => {
+    const { handleNodeClass } = renderQuestions([team, urgent]);
+    fireEvent.click(screen.getByTestId("questions_edit"));
+    fireEvent.click(screen.getByTestId("questions_modal_done"));
+    expect(handleNodeClass).not.toHaveBeenCalled();
+    // Done moves to the question that needs text and says so.
+    expect(screen.getByTestId("questions_modal_name")).toHaveValue("");
+    expect(
+      screen.getByTestId("questions_modal_question_error"),
+    ).toHaveTextContent("Enter a question.");
+    fireEvent.change(screen.getByTestId("questions_modal_question_text"), {
+      target: { value: "Is it urgent?" },
+    });
+    expect(screen.queryByTestId("questions_modal_question_error")).toBeNull();
+    fireEvent.click(screen.getByTestId("questions_modal_done"));
+    expect(handleNodeClass).toHaveBeenCalledTimes(1);
+  });
+
+  it("doesn't ask for text a connection supplies", () => {
+    useFlowStore.setState({ edges: [edgeInto("question_input_x1")] as never });
+    const { handleNodeClass } = renderQuestions([team, urgent]);
+    fireEvent.click(screen.getByTestId("questions_edit"));
+    fireEvent.click(screen.getByTestId("questions_modal_done"));
+    expect(handleNodeClass).toHaveBeenCalledTimes(1);
   });
 
   it("edits the selected type's options or levels", async () => {

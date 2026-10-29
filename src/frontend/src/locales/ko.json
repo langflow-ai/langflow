@@ -3337,7 +3337,7 @@
   "decisionQuestions.delete": "질문 삭제",
   "decisionQuestions.done": "완료",
   "decisionQuestions.name": "이름",
-  "decisionQuestions.nameHint": "Decision Result에서 쓰는 키입니다. 비워 두면 q{{number}}를 씁니다.",
+  "decisionQuestions.nameHint": "이 질문의 이름을 정하세요. Decision Result는 이 이름으로 답을 반환합니다.",
   "decisionQuestions.kind": "유형",
   "decisionQuestions.kindChoice": "선택",
   "decisionQuestions.kindBoolean": "참거짓",
@@ -3348,7 +3348,6 @@
   "decisionQuestions.question": "질문",
   "decisionQuestions.questionConnected": "연결됨",
   "decisionQuestions.questionConnectedHint": "다른 Component가 이 질문의 내용을 보냅니다.",
-  "decisionQuestions.noQuestion": "아직 질문이 없습니다",
   "decisionQuestions.options": "옵션",
   "decisionQuestions.optionsHint": "모델은 정확히 하나를 고릅니다.",
   "decisionQuestions.optionsDescription": "고르는 조건",
@@ -3364,5 +3363,8 @@
   "decisionQuestions.levelCount": "수준: {{count}}",
   "decisionQuestions.yesNo": "예 / 아니요",
   "decisionQuestions.yes_description": "예의 의미(선택 사항)",
-  "decisionQuestions.no_description": "아니요의 의미(선택 사항)"
+  "decisionQuestions.no_description": "아니요의 의미(선택 사항)",
+  "decisionQuestions.addQuestions": "질문 추가",
+  "decisionQuestions.questionRequired": "질문을 입력하세요.",
+  "decisionQuestions.empty": "아직 질문이 없습니다. 질문을 추가해 시작하세요."
 }

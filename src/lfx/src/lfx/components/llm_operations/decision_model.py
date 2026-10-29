@@ -34,7 +34,7 @@ _FORM, _JSON = "Form", "JSON"
 _LEGACY_LABELS = {"question": "Question", "yes_description": "What Yes Means", "no_description": "What No Means"}
 # Question X's text can be connected through the hidden field <prefix>X.
 _CONNECTION_PREFIX = "question_input_"
-# What Add question appends; a node starts with one.
+# What Add question appends; a node starts with none.
 _NEW_QUESTION = {
     "name": "",
     "kind": "Choice",
@@ -110,15 +110,15 @@ class DecisionModelComponent(Component):
         DecisionQuestionsInput(
             name="questions",
             display_name="Questions",
-            value=[{**deepcopy(_NEW_QUESTION), "id": "1"}],
+            value=[],
             new_question=_NEW_QUESTION,
             connection_prefix=_CONNECTION_PREFIX,
             info="Each question has its own Decision Type: Choice picks one option, Boolean answers yes or no, and "
             "Score places the input on ordered levels. With more than one question, they are sent in one call and "
             "the result holds each answer under its Name, which defaults to q1, q2 and so on.",
         ),
-        # The first question's connection. The editor copies it for each question it adds, and draws
-        # the handle on that question's card.
+        # The connection of a question migrated from the single-question fields (id "1"), and the field
+        # the editor copies for each question it adds; the handle is drawn on that question's row.
         MessageTextInput(
             name=f"{_CONNECTION_PREFIX}1",
             display_name="Question 1",
@@ -279,9 +279,7 @@ class DecisionModelComponent(Component):
         template = new_frontend_node.get("template", {})
         saved = current_frontend_node.get("template", {})
         if (saved.get("questions") or {}).get("type") != "decision_questions":
-            template["questions"]["value"] = (
-                [_legacy_question(saved)] if "question" in saved else [{**deepcopy(_NEW_QUESTION), "id": "1"}]
-            )
+            template["questions"]["value"] = [_legacy_question(saved)] if "question" in saved else []
         # Questions added in the editor bring their own connection fields; the class has only the first.
         for name, field in saved.items():
             if name.startswith(_CONNECTION_PREFIX) and name not in template:

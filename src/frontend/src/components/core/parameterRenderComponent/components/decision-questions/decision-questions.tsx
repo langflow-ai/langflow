@@ -165,8 +165,15 @@ export default function DecisionQuestionsComponent({
         data-testid={`${id}_edit`}
         onClick={() => openEditor(0)}
       >
-        <IconComponent name="Pencil" className="mr-1 h-4 w-4" />
-        {t("decisionQuestions.edit")}
+        <IconComponent
+          name={questions.length ? "Pencil" : "Plus"}
+          className="mr-1 h-4 w-4"
+        />
+        {t(
+          questions.length
+            ? "decisionQuestions.edit"
+            : "decisionQuestions.addQuestions",
+        )}
       </Button>
       <DecisionQuestionsModal
         id={id}

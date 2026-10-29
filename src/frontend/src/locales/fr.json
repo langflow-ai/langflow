@@ -3338,7 +3338,7 @@
   "decisionQuestions.delete": "Supprimer la question",
   "decisionQuestions.done": "Terminé",
   "decisionQuestions.name": "Nom",
-  "decisionQuestions.nameHint": "La clé dans Decision Result. Laissez vide pour utiliser q{{number}}.",
+  "decisionQuestions.nameHint": "Nommez cette question. Decision Result renvoie sa réponse sous ce nom.",
   "decisionQuestions.kind": "Type",
   "decisionQuestions.kindChoice": "Choix",
   "decisionQuestions.kindBoolean": "Booléen",
@@ -3349,7 +3349,6 @@
   "decisionQuestions.question": "Question",
   "decisionQuestions.questionConnected": "Connectée",
   "decisionQuestions.questionConnectedHint": "Un autre composant fournit le texte de cette question.",
-  "decisionQuestions.noQuestion": "Aucune question rédigée",
   "decisionQuestions.options": "Options",
   "decisionQuestions.optionsHint": "Le modèle en choisit exactement une.",
   "decisionQuestions.optionsDescription": "Quand la choisir",
@@ -3365,5 +3364,8 @@
   "decisionQuestions.levelCount": "Niveaux : {{count}}",
   "decisionQuestions.yesNo": "Oui / Non",
   "decisionQuestions.yes_description": "Ce que signifie Oui (facultatif)",
-  "decisionQuestions.no_description": "Ce que signifie Non (facultatif)"
+  "decisionQuestions.no_description": "Ce que signifie Non (facultatif)",
+  "decisionQuestions.addQuestions": "Ajouter des questions",
+  "decisionQuestions.questionRequired": "Saisissez une question.",
+  "decisionQuestions.empty": "Aucune question pour l'instant. Ajoutez-en une pour commencer."
 }

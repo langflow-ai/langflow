@@ -338,14 +338,14 @@ async def test_a_migrated_global_variable_binding_is_refused_not_read_as_text():
 
 
 @pytest.mark.asyncio
-async def test_a_dev_node_with_the_questions_table_starts_a_fresh_list():
+async def test_a_dev_node_with_the_questions_table_starts_with_no_questions():
     """Multiple mode's questions table never shipped; its rows don't match a question list item."""
     component = DecisionModelComponent()
     saved = component.to_frontend_node()["data"]["node"]
     saved["template"]["questions"] = {"type": "table", "value": [{"id": "team", "kind": "Choice"}]}
     saved["template"]["question_mode"]["value"] = "Multiple"
     updated = await component.update_frontend_node(component.to_frontend_node()["data"]["node"], saved)
-    assert updated["template"]["questions"]["value"] == [{**NEW_QUESTION, "id": "1"}]
+    assert updated["template"]["questions"]["value"] == []
     assert updated["template"]["question_mode"]["value"] == "Form"
 
 
@@ -405,12 +405,18 @@ async def test_connection_fields_of_added_questions_survive_component_update():
     assert not updated["template"]["question_input_1"]["show"]
 
 
-def test_a_new_node_can_connect_its_first_question():
+def test_a_new_node_starts_with_no_questions_and_a_connection_to_copy():
     template, _ = create_component_template(component_extractor=DecisionModelComponent())
-    [first] = template["template"]["questions"]["value"]
-    assert first["id"] == "1"
+    assert template["template"]["questions"]["value"] == []
     assert template["template"]["questions"]["connection_prefix"] == "question_input_"
     assert template["template"]["question_input_1"]["input_types"] == ["Message"]
+
+
+def test_a_node_with_no_questions_asks_for_one():
+    component = mixed_question_component()
+    component._attributes["questions"] = []
+    with pytest.raises(DecisionConfigurationError, match="Add a question"):
+        component._request()
 
 
 def test_form_and_json_build_identical_requests():

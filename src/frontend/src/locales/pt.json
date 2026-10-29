@@ -3338,7 +3338,7 @@
   "decisionQuestions.delete": "Excluir pergunta",
   "decisionQuestions.done": "Concluído",
   "decisionQuestions.name": "Nome",
-  "decisionQuestions.nameHint": "A chave em Decision Result. Deixe vazio para usar q{{number}}.",
+  "decisionQuestions.nameHint": "Dê um nome a esta pergunta. Decision Result retorna a resposta com este nome.",
   "decisionQuestions.kind": "Tipo",
   "decisionQuestions.kindChoice": "Escolha",
   "decisionQuestions.kindBoolean": "Booleano",
@@ -3349,7 +3349,6 @@
   "decisionQuestions.question": "Pergunta",
   "decisionQuestions.questionConnected": "Conectada",
   "decisionQuestions.questionConnectedHint": "Outro componente fornece o texto desta pergunta.",
-  "decisionQuestions.noQuestion": "Nenhuma pergunta escrita ainda",
   "decisionQuestions.options": "Opções",
   "decisionQuestions.optionsHint": "O modelo escolhe exatamente uma.",
   "decisionQuestions.optionsDescription": "Quando escolher",
@@ -3365,5 +3364,8 @@
   "decisionQuestions.levelCount": "Níveis: {{count}}",
   "decisionQuestions.yesNo": "Sim / Não",
   "decisionQuestions.yes_description": "O que Sim significa (opcional)",
-  "decisionQuestions.no_description": "O que Não significa (opcional)"
+  "decisionQuestions.no_description": "O que Não significa (opcional)",
+  "decisionQuestions.addQuestions": "Adicionar perguntas",
+  "decisionQuestions.questionRequired": "Digite uma pergunta.",
+  "decisionQuestions.empty": "Nenhuma pergunta ainda. Adicione uma para começar."
 }

@@ -3337,7 +3337,7 @@
   "decisionQuestions.delete": "删除问题",
   "decisionQuestions.done": "完成",
   "decisionQuestions.name": "名称",
-  "decisionQuestions.nameHint": "Decision Result 中的键。留空则使用 q{{number}}。",
+  "decisionQuestions.nameHint": "为此问题命名。Decision Result 会以此名称返回其答案。",
   "decisionQuestions.kind": "类型",
   "decisionQuestions.kindChoice": "选择",
   "decisionQuestions.kindBoolean": "布尔",
@@ -3348,7 +3348,6 @@
   "decisionQuestions.question": "问题",
   "decisionQuestions.questionConnected": "已连接",
   "decisionQuestions.questionConnectedHint": "此问题的文本由另一个组件提供。",
-  "decisionQuestions.noQuestion": "尚未填写问题",
   "decisionQuestions.options": "选项",
   "decisionQuestions.optionsHint": "模型只选一个。",
   "decisionQuestions.optionsDescription": "何时选择",
@@ -3364,5 +3363,8 @@
   "decisionQuestions.levelCount": "等级：{{count}}",
   "decisionQuestions.yesNo": "是 / 否",
   "decisionQuestions.yes_description": "“是”的含义（可选）",
-  "decisionQuestions.no_description": "“否”的含义（可选）"
+  "decisionQuestions.no_description": "“否”的含义（可选）",
+  "decisionQuestions.addQuestions": "添加问题",
+  "decisionQuestions.questionRequired": "请输入问题。",
+  "decisionQuestions.empty": "还没有问题。添加一个即可开始。"
 }

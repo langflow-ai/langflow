@@ -3338,7 +3338,7 @@
   "decisionQuestions.delete": "質問を削除",
   "decisionQuestions.done": "完了",
   "decisionQuestions.name": "名前",
-  "decisionQuestions.nameHint": "Decision Result でのキー。空欄の場合は q{{number}} を使います。",
+  "decisionQuestions.nameHint": "この質問に名前を付けてください。Decision Result はこの名前で回答を返します。",
   "decisionQuestions.kind": "タイプ",
   "decisionQuestions.kindChoice": "選択",
   "decisionQuestions.kindBoolean": "真偽値",
@@ -3349,7 +3349,6 @@
   "decisionQuestions.question": "質問",
   "decisionQuestions.questionConnected": "接続済み",
   "decisionQuestions.questionConnectedHint": "この質問の本文は別のコンポーネントから渡されます。",
-  "decisionQuestions.noQuestion": "質問がまだありません",
   "decisionQuestions.options": "選択肢",
   "decisionQuestions.optionsHint": "モデルは必ず1つを選びます。",
   "decisionQuestions.optionsDescription": "選ぶ条件",
@@ -3365,5 +3364,8 @@
   "decisionQuestions.levelCount": "レベル: {{count}}",
   "decisionQuestions.yesNo": "はい / いいえ",
   "decisionQuestions.yes_description": "「はい」の意味（任意）",
-  "decisionQuestions.no_description": "「いいえ」の意味（任意）"
+  "decisionQuestions.no_description": "「いいえ」の意味（任意）",
+  "decisionQuestions.addQuestions": "質問を追加",
+  "decisionQuestions.questionRequired": "質問を入力してください。",
+  "decisionQuestions.empty": "まだ質問がありません。追加して始めましょう。"
 }

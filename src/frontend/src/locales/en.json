@@ -3337,7 +3337,7 @@
   "decisionQuestions.delete": "Delete question",
   "decisionQuestions.done": "Done",
   "decisionQuestions.name": "Name",
-  "decisionQuestions.nameHint": "The key in Decision Result. Leave empty to use q{{number}}.",
+  "decisionQuestions.nameHint": "Name this question. Decision Result returns its answer under this name.",
   "decisionQuestions.kind": "Type",
   "decisionQuestions.kindChoice": "Choice",
   "decisionQuestions.kindBoolean": "Boolean",
@@ -3348,7 +3348,6 @@
   "decisionQuestions.question": "Question",
   "decisionQuestions.questionConnected": "Connected",
   "decisionQuestions.questionConnectedHint": "Another component supplies this question's text.",
-  "decisionQuestions.noQuestion": "No question written yet",
   "decisionQuestions.options": "Options",
   "decisionQuestions.optionsHint": "The model picks exactly one.",
   "decisionQuestions.optionsDescription": "When to pick it",
@@ -3364,5 +3363,8 @@
   "decisionQuestions.levelCount": "Levels: {{count}}",
   "decisionQuestions.yesNo": "Yes / No",
   "decisionQuestions.yes_description": "What Yes means (optional)",
-  "decisionQuestions.no_description": "What No means (optional)"
+  "decisionQuestions.no_description": "What No means (optional)",
+  "decisionQuestions.addQuestions": "Add questions",
+  "decisionQuestions.questionRequired": "Enter a question.",
+  "decisionQuestions.empty": "No questions yet. Add one to get started."
 }

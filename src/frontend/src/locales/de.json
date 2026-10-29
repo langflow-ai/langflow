@@ -3338,7 +3338,7 @@
   "decisionQuestions.delete": "Frage löschen",
   "decisionQuestions.done": "Fertig",
   "decisionQuestions.name": "Name",
-  "decisionQuestions.nameHint": "Der Schlüssel im Decision Result. Leer lassen, um q{{number}} zu verwenden.",
+  "decisionQuestions.nameHint": "Benenne diese Frage. Decision Result gibt ihre Antwort unter diesem Namen zurück.",
   "decisionQuestions.kind": "Typ",
   "decisionQuestions.kindChoice": "Auswahl",
   "decisionQuestions.kindBoolean": "Boolesch",
@@ -3349,7 +3349,6 @@
   "decisionQuestions.question": "Frage",
   "decisionQuestions.questionConnected": "Verbunden",
   "decisionQuestions.questionConnectedHint": "Eine andere Komponente liefert den Text dieser Frage.",
-  "decisionQuestions.noQuestion": "Noch keine Frage geschrieben",
   "decisionQuestions.options": "Optionen",
   "decisionQuestions.optionsHint": "Das Modell wählt genau eine.",
   "decisionQuestions.optionsDescription": "Wann sie gewählt wird",
@@ -3365,5 +3364,8 @@
   "decisionQuestions.levelCount": "Stufen: {{count}}",
   "decisionQuestions.yesNo": "Ja / Nein",
   "decisionQuestions.yes_description": "Was Ja bedeutet (optional)",
-  "decisionQuestions.no_description": "Was Nein bedeutet (optional)"
+  "decisionQuestions.no_description": "Was Nein bedeutet (optional)",
+  "decisionQuestions.addQuestions": "Fragen hinzufügen",
+  "decisionQuestions.questionRequired": "Gib eine Frage ein.",
+  "decisionQuestions.empty": "Noch keine Fragen. Füge eine hinzu, um zu beginnen."
 }
