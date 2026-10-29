@@ -107,7 +107,14 @@ class TestDeletingDuringARun:
         evaluation = await create_evaluation(client, logged_in_headers, flow["id"], dataset["id"])
         run = await start_run(client, logged_in_headers, evaluation["id"])
         await asyncio.sleep(0.5)
+        # Millisecond rows can hold the SQLite lock past the route's retries; the route then answers 503 with
+        # Retry-After, and a client retries as told.
         deleted = await client.delete(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)
+        for _ in range(10):
+            if deleted.status_code != 503:
+                break
+            await asyncio.sleep(float(deleted.headers["Retry-After"]))
+            deleted = await client.delete(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)
         assert deleted.status_code == 200, deleted.text
         finished = await wait_for_run(client, logged_in_headers, run["id"])
         assert finished["status"] in {"completed", "failed", "cancelled"}
