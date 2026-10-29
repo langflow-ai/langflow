@@ -30,6 +30,13 @@ MODULES = {
     "ChromaVectorStoreComponent": "lfx.components.chroma.chroma",
     "LocalDBComponent": "lfx.components.chroma.local_db",
     "ALTKAgentComponent": "lfx.components.altk.altk_agent",
+    "MrscraperAiScraper": "lfx.base.mrscraper.retired",
+    "MrscraperBatchScrape": "lfx.base.mrscraper.retired",
+    "MrscraperCrawlWebsite": "lfx.base.mrscraper.retired",
+    "MrscraperGetResult": "lfx.base.mrscraper.retired",
+    "MrscraperGetResults": "lfx.base.mrscraper.retired",
+    "MrscraperRunAiScraper": "lfx.base.mrscraper.retired",
+    "MrscraperRunManualScraper": "lfx.base.mrscraper.retired",
 }
 TARGET_CLASSES = {
     "MemoryRetrievalComponent": "MemoryBaseComponent",
@@ -57,9 +64,14 @@ def main() -> None:
         paths = [
             path
             for path in git("ls-tree", "-r", "--name-only", tag).splitlines()
-            if "/components/" in path
-            and path.endswith(".py")
-            and re.search(r"chroma|local_?db|knowledge|memory|retrieval|ingestion|altk", path, re.IGNORECASE)
+            if path.endswith(".py")
+            and (
+                (
+                    "/components/" in path
+                    and re.search(r"chroma|local_?db|knowledge|memory|retrieval|ingestion|altk", path, re.IGNORECASE)
+                )
+                or "/lfx_bundles/mrscraper/" in path
+            )
         ]
         for path in paths:
             source = git("show", f"{tag}:{path}")
