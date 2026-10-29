@@ -757,7 +757,11 @@ class S3StorageService(StorageService):
                     MetadataDirective="REPLACE",
                 )
             except Exception:  # noqa: BLE001 - the file is stored; only its checksum label is missing
-                await logger.awarning(f"Stored {file_name} without its md5 label; a deploy will read it to compare")
+                # Said plainly because nothing reads the object back: without the label, a probe or
+                # a relocation re-run compares this file by size alone.
+                await logger.awarning(
+                    f"Stored {file_name} without its md5 label; it will be compared by size only until it is rewritten"
+                )
         return written
 
     async def teardown(self) -> None:
