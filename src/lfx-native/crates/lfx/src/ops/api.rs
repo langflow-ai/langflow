@@ -211,17 +211,18 @@ pub fn diff(base: &str, target: &str) -> ApiResult {
     Ok(operations_json(diff_flow_data(&parse(base)?, &parse(target)?)?).to_string())
 }
 
-/// The operations that turn `base` into `target`, verified by replay: `{"operations", "flow_data"}`.
+/// The operations that turn `base` into `target`, verified by replay: `{"operations"}`.
+///
+/// The replayed graph is the target, which the caller has, so it is not returned.
 ///
 /// # Errors
 ///
 /// A graph does not parse or breaks the rules, or the operations do not replay.
 pub fn derive(base: &str, target: &str) -> ApiResult {
     let derived = derive_flow_operations(parse(base)?, &parse(target)?)?;
-    Ok(
-        json!({"operations": operations_json(derived.operations), "flow_data": derived.flow_data})
-            .to_string(),
-    )
+    let mut out = Map::new();
+    out.insert("operations".into(), operations_json(derived.operations));
+    Ok(Value::Object(out).to_string())
 }
 
 /// Every rule a graph breaks, against the stored graph a write replaces when given.
@@ -319,7 +320,11 @@ impl<'v> Fields<'v> {
     }
 }
 
-/// The engine's part of a save: `{"base", "stored_repaired", "target", "repairs", "operations"}`.
+/// The engine's part of a save: `{"base"?, "stored_repaired", "target"?, "repairs", "operations"}`.
+///
+/// `base` and `target` are there only when the save changed the stored or
+/// the submitted graph: filled in or repaired. Without them, the base is
+/// `stored` and the graph to store is `target`, as given.
 ///
 /// `options` is `{"started", "repair_invalid_graph"}`.
 ///
@@ -337,14 +342,17 @@ pub fn prepare_write(stored: &str, target: &str, options: &str) -> ApiResult {
     let prepared =
         crate::ops::write::prepare_write(parse(stored)?, parse(target)?, &write_options)?;
     let repairs = prepared.repairs_json();
-    Ok(json!({
-        "base": prepared.base,
-        "stored_repaired": prepared.stored_repaired,
-        "target": prepared.target,
-        "repairs": repairs,
-        "operations": operations_json(prepared.operations),
-    })
-    .to_string())
+    let mut out = Map::new();
+    if let Some(base) = prepared.base {
+        out.insert("base".into(), base);
+    }
+    out.insert("stored_repaired".into(), prepared.stored_repaired.into());
+    if let Some(target) = prepared.target {
+        out.insert("target".into(), target);
+    }
+    out.insert("repairs".into(), repairs);
+    out.insert("operations".into(), operations_json(prepared.operations));
+    Ok(Value::Object(out).to_string())
 }
 
 // --- Restore fixes --------------------------------------------------------------------------

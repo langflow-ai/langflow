@@ -12,6 +12,7 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { describe, test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ops = createRequire(import.meta.url)(join(here, "../pkg/node/lfx_native.js"));
@@ -143,7 +144,11 @@ cases("property_cases.json", "sequences", (sequence) => {
 cases("diff_cases.json", "cases", (c) => {
   const [base, target] = [dump(c.base), dump(c.target)];
   check(strict, "operations", parse(ops.diff(base, target)), c.operations);
-  assert.ok(ops.graphsEqual(dump(parse(ops.derive(base, target)).flow_data), target));
+  const derived = parse(ops.derive(base, target));
+  assert.deepEqual(Object.keys(derived), ["operations"]);
+  const replayed = new ops.GraphState(base);
+  replayed.apply(dump(derived.operations), {});
+  assert.ok(ops.graphsEqual(replayed.toJson(), target));
   const state = new ops.GraphState(base);
   for (const operation of c.operations) state.apply(dump([operation]), {});
   assert.ok(ops.graphsEqual(state.toJson(), target));
@@ -270,7 +275,13 @@ cases("write_cases.json", "cases", (c) => {
   if (result.error) {
     const details = parse(result.error.details);
     actual = { error: { graph: details.graph, violations: details.violations } };
-  } else actual = { expected: result.value };
+  } else {
+    // A graph comes back only when the save changed it; the caller has the others.
+    for (const [key, given] of [["base", c.stored], ["target", c.target]]) {
+      assert.ok(!(key in result.value) || !isDeepStrictEqual(result.value[key], given), `${key} comes back unchanged`);
+    }
+    actual = { expected: { base: c.stored, target: c.target, ...result.value } };
+  }
   check(matches, "prepared write", actual, c.error ? { error: c.error } : { expected: c.expected });
 });
 
