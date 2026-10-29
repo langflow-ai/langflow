@@ -343,6 +343,8 @@ export const lazyIconsMapping = {
     import("@/icons/Listennotes").then((mod) => ({
       default: mod.ListennotesIcon,
     })),
+  Mailtrap: () =>
+    import("@/icons/Mailtrap").then((mod) => ({ default: mod.MailtrapIcon })),
   Maritalk: () =>
     import("@/icons/Maritalk").then((mod) => ({ default: mod.MaritalkIcon })),
   Mcp: () => import("@/icons/MCP").then((mod) => ({ default: mod.McpIcon })),

@@ -1,0 +1,60 @@
+[project]
+name = "lfx-mailtrap"
+version = "0.1.0"
+description = "Mailtrap email components (send, Email Sandbox) as a standalone Langflow Extension Bundle."
+readme = "README.md"
+requires-python = ">=3.10,<3.16"
+license = { text = "MIT" }
+authors = [
+    { name = "Langflow", email = "contact@langflow.org" },
+]
+keywords = ["langflow", "lfx", "extension", "bundle", "mailtrap", "email", "sandbox"]
+
+# Runtime deps: lfx (the BUNDLE_API surface) plus the official Mailtrap Python
+# SDK, which every component calls.  The SDK is floored at 2.11.0, the release
+# the bundle is tested against; its runtime deps (requests, pydantic) are
+# already in the Langflow lock.
+# lfx is floored at the current major.minor line and capped below the next lfx
+# major; the floor is read from src/lfx/pyproject.toml at port time and
+# re-synced on ``make patch`` via scripts/ci/sync_bundle_lfx_pin.py.
+# Fine-grained BUNDLE_API compatibility is enforced via extension.json's
+# lfx.compat list against BUNDLE_API_VERSION.
+dependencies = [
+    "lfx>=1.14.0.dev0,<2.0.0",
+    "mailtrap>=2.11.0,<3.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org/extensions"
+Repository = "https://github.com/langflow-ai/langflow"
+
+# Manifest-shipping distributions are discovered via the
+# ``langflow.extensions`` entry-point.  Editable installs whose
+# ``dist.files`` only surfaces dist-info entries fall back to this
+# entry-point to find the manifest.
+[project.entry-points."langflow.extensions"]
+lfx-mailtrap = "lfx_mailtrap"
+
+[build-system]
+requires = ["hatchling==1.31.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# extension.json, the components and the shared helpers live inside the
+# lfx_mailtrap package so ``importlib.metadata.files(dist)`` finds them and
+# the loader resolves bundles[].path relative to the manifest's directory.
+packages = ["src/lfx_mailtrap"]
+include = [
+    "src/lfx_mailtrap/extension.json",
+    "src/lfx_mailtrap/*.py",
+    "src/lfx_mailtrap/components/**/*.py",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_mailtrap",
+    "extension.json",
+    "README.md",
+    "pyproject.toml",
+]

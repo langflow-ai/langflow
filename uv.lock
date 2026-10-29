@@ -56,6 +56,7 @@ members = [
     "lfx-github",
     "lfx-google",
     "lfx-ibm",
+    "lfx-mailtrap",
     "lfx-microsoft",
     "lfx-nextplaid",
     "lfx-ollama",
@@ -8943,6 +8944,7 @@ bundles = [
     { name = "lfx-empiriolabs" },
     { name = "lfx-exa" },
     { name = "lfx-firecrawl" },
+    { name = "lfx-mailtrap" },
     { name = "lfx-nextplaid" },
     { name = "lfx-paddle" },
     { name = "lfx-serpingapi" },
@@ -9063,6 +9065,7 @@ requires-dist = [
     { name = "lfx-github", editable = "src/bundles/github" },
     { name = "lfx-google", editable = "src/bundles/google" },
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
+    { name = "lfx-mailtrap", marker = "extra == 'bundles'", editable = "src/bundles/mailtrap" },
     { name = "lfx-microsoft", editable = "src/bundles/microsoft" },
     { name = "lfx-nextplaid", marker = "extra == 'bundles'", editable = "src/bundles/nextplaid" },
     { name = "lfx-ollama", editable = "src/bundles/ollama" },
@@ -11381,6 +11384,21 @@ requires-dist = [
 ]
 
 [[package]]
+name = "lfx-mailtrap"
+version = "0.1.0"
+source = { editable = "src/bundles/mailtrap" }
+dependencies = [
+    { name = "lfx" },
+    { name = "mailtrap" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "lfx", editable = "src/lfx" },
+    { name = "mailtrap", specifier = ">=2.11.0,<3.0.0" },
+]
+
+[[package]]
 name = "lfx-microsoft"
 version = "0.1.5"
 source = { editable = "src/bundles/microsoft" }
@@ -12264,6 +12282,20 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/9c/6e/2cee08e0d6fbce02a301d5ab72ef5ffe8f47dd59ac3d8ce61324d8a9143a/mail_parser-4.4.0.tar.gz", hash = "sha256:82d2c0fa98a138620feaa87a378af2a2643b2941b2e125d7abfc65dd21094b33", size = 2852896, upload-time = "2026-06-11T06:56:49.789Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/26/a7/99dfed167ba728384521acd54fadbb7649ce49333018f42e1f190ed25911/mail_parser-4.4.0-py3-none-any.whl", hash = "sha256:46f7931817660fec4f7723e6f1722e66a9cce44c2daeacbeb9e705078379561f", size = 35504, upload-time = "2026-06-11T06:56:48.348Z" },
+]
+
+[[package]]
+name = "mailtrap"
+version = "2.11.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic", version = "2.13.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
+    { name = "pydantic", version = "2.14.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/70/18/772327cae2e695d29e69503edbdb15821ccdcf5ba65935bfced15f29935f/mailtrap-2.11.0.tar.gz", hash = "sha256:9f2848e55b958ef9d02dbcbb73e6a32de17efa0ebf95c43c7eab18251a1913cf", size = 41577, upload-time = "2026-10-08T06:16:46.223Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d9/a8/ffc70bef1f690523aaf3fb96fbd18ea51c73c8d6a2ae018f8400f6a120d8/mailtrap-2.11.0-py3-none-any.whl", hash = "sha256:8471ea13d4fdc728009dc6133b4f767122e3e97814167951244178009715a626", size = 65715, upload-time = "2026-10-08T06:16:45.065Z" },
 ]
 
 [[package]]

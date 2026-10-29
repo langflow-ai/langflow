@@ -576,6 +576,7 @@ module.exports = {
             "Components/bundles-langchain",
             "Components/bundles-lite-llm",
             "Components/bundles-lmstudio",
+            "Components/bundles-mailtrap",
             "Components/bundles-maritalk",
             "Components/bundles-mem0",
             "Components/bundles-microsoft",

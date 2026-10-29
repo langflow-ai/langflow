@@ -1,0 +1,152 @@
+---
+title: Mailtrap
+slug: /bundles-mailtrap
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="mailtrap" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Mailtrap** bundle.
+
+[Mailtrap](https://mailtrap.io) is an email platform. With these components, a flow or an [**Agent**](/agents) can send email through the Email API and test email in the Email Sandbox.
+The components call Mailtrap through the official [`mailtrap` Python SDK](https://github.com/mailtrap/mailtrap-python).
+
+## Prerequisites
+
+* A Mailtrap API token. Create one at [mailtrap.io/api-tokens](https://mailtrap.io/api-tokens), with access to the resources that your flow uses.
+* To send real email: a verified sending domain in Mailtrap.
+* For the Email Sandbox components: the ID of a Sandbox inbox and your Mailtrap account ID.
+
+Every component has a **Mailtrap API Token** input. To reuse one token across components, store it as a [global variable](/configuration-global-variables).
+
+The components only call the fixed Mailtrap API hosts. No component has a URL or host input.
+
+### Limit the recipients
+
+**Mailtrap: Send Email** has an **Allowed Recipient Domains** advanced input.
+If you set it, the component rejects any recipient outside the list before it sends a request.
+Enter comma-separated domains, such as `example.com, example.org`. A full address, such as `me@gmail.com`, allows only that address.
+
+Set this input when an Agent picks the recipients. The Agent receives the rejection as the tool's result, and no email is sent.
+
+## Mailtrap: Send Email
+
+This component sends one email through the [Mailtrap Email API](https://docs.mailtrap.io), or into an Email Sandbox inbox.
+
+The **Stream** input selects where the email goes:
+
+* **Transactional**: Real email from a verified sending domain, for messages that a user triggers, such as a password reset.
+* **Bulk**: Real email from a verified sending domain, on the stream for marketing and other mass email.
+* **Sandbox**: The email goes into the Sandbox inbox that you set in **Sandbox Inbox ID**. It reaches no real recipient.
+
+To send a Mailtrap email template, set **Template UUID**, and leave **Subject**, **Text Body**, and **HTML Body** empty.
+
+It outputs a [`JSON`](/data-types#json) object with `success`, the Mailtrap `message_ids`, the `sending_stream`, and the `to` addresses.
+
+In [tool mode](/agents-tools), the tool is named `mailtrap_send_email`. The Agent can fill the recipients, the subject, and the bodies.
+
+### Mailtrap: Send Email parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Mailtrap API Token (`api_token`) | SecretString | Input parameter. Your Mailtrap API token. |
+| Stream (`sending_stream`) | String | Input parameter. `Transactional`, `Bulk`, or `Sandbox`. Default: `Transactional`. |
+| Sandbox Inbox ID (`sandbox_inbox_id`) | String | Input parameter. The Sandbox inbox to send to. Shown and required only when **Stream** is `Sandbox`. |
+| From (`from_email`) | String | Input parameter. The sender, such as `Acme <hello@acme.com>`. For Transactional and Bulk, the address must be on a verified sending domain. |
+| To (`to`) | List | Input parameter. Recipient addresses, such as `jane@example.com` or `Jane <jane@example.com>`. |
+| Cc (`cc`) | List | Input parameter. Carbon-copy addresses. |
+| Bcc (`bcc`) | List | Input parameter. Blind carbon-copy addresses. |
+| Subject (`subject`) | String | Input parameter. Required unless **Template UUID** is set. |
+| Text Body (`text`) | String | Input parameter. The plain-text body. Set **Text Body**, **HTML Body**, or both, unless **Template UUID** is set. |
+| HTML Body (`html`) | String | Input parameter. The HTML body. |
+| Template UUID (`template_uuid`) | String | Input parameter. A Mailtrap email template. The template sets the subject, the body, and the category. |
+| Template Variables (`template_variables`) | JSON | Input parameter. Values for the template's variables. |
+| Category (`category`) | String | Input parameter. The Mailtrap category, which groups the email in stats and logs. Not used with a template. Default: `langflow`. |
+| Allowed Recipient Domains (`allowed_recipient_domains`) | String | Input parameter. See [Limit the recipients](#limit-the-recipients). |
+
+## Mailtrap: List Sandbox Messages
+
+This component lists the messages in an Email Sandbox inbox, newest first, 30 per page.
+
+It outputs a [`JSON`](/data-types#json) object with the `page` and a `messages` list. Each message has the fields `id`, `subject`, `from_email`, `from_name`, `to_email`, `to_name`, `sent_at`, `is_read`, and `size`.
+
+The tool is named `mailtrap_list_sandbox_messages`. The Agent can set the search text and the page.
+
+### Mailtrap: List Sandbox Messages parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Mailtrap API Token (`api_token`) | SecretString | Input parameter. Your Mailtrap API token. |
+| Account ID (`account_id`) | String | Input parameter. Your Mailtrap account ID. |
+| Sandbox Inbox ID (`sandbox_inbox_id`) | String | Input parameter. The Sandbox inbox to read. |
+| Search (`search`) | String | Input parameter. Only list messages whose subject, To address, or To name contains this text. |
+| Page (`page`) | Integer | Input parameter. The page to return, starting at `1`. Default: `1`. |
+
+## Mailtrap: Get Sandbox Message
+
+This component gets one Email Sandbox message with its text and HTML bodies.
+
+It outputs a [`JSON`](/data-types#json) object with the message fields from **Mailtrap: List Sandbox Messages**, plus `text_body` and `html_body`.
+A body longer than 20,000 characters is cut, and `text_body_truncated` or `html_body_truncated` is `true`.
+
+The tool is named `mailtrap_get_sandbox_message`.
+
+### Mailtrap: Get Sandbox Message parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Mailtrap API Token (`api_token`) | SecretString | Input parameter. Your Mailtrap API token. |
+| Account ID (`account_id`) | String | Input parameter. Your Mailtrap account ID. |
+| Sandbox Inbox ID (`sandbox_inbox_id`) | String | Input parameter. The Sandbox inbox that holds the message. |
+| Message ID (`message_id`) | String | Input parameter. The message `id` from **Mailtrap: List Sandbox Messages**. |
+
+## Mailtrap: Check Sandbox Message
+
+This component gets the spam score and the HTML analysis of an Email Sandbox message.
+
+It outputs a [`JSON`](/data-types#json) object with these fields:
+
+* `spam_score`, `spam_threshold`, and `is_spam`.
+* `spam_rules`: The spam rules that matched, with their points.
+* `html_issues`: The HTML and CSS features in the message that some email clients do not support, with the line and the desktop, mobile, and web clients.
+* `html_analysis_status`, and `html_analysis_message` if the analysis failed.
+
+The tool is named `mailtrap_check_sandbox_message`.
+
+### Mailtrap: Check Sandbox Message parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Mailtrap API Token (`api_token`) | SecretString | Input parameter. Your Mailtrap API token. |
+| Account ID (`account_id`) | String | Input parameter. Your Mailtrap account ID. |
+| Sandbox Inbox ID (`sandbox_inbox_id`) | String | Input parameter. The Sandbox inbox that holds the message. |
+| Message ID (`message_id`) | String | Input parameter. The message `id` from **Mailtrap: List Sandbox Messages**. |
+
+## Example: An Agent sends a transactional email
+
+1. Add an **Agent** component, and connect a **Chat Input** and a **Chat Output** component to it.
+2. Add a **Mailtrap: Send Email** component, and enable **Tool Mode**.
+3. Set **Mailtrap API Token**, and set **From** to an address on your verified sending domain.
+4. Set **Allowed Recipient Domains** to the domains that the Agent can send to.
+5. Connect the **Toolset** output to the Agent's **Tools** input.
+6. In the **Playground**, ask the Agent to send an email, for example: `Send jane@example.com a short note that her order has shipped.`
+
+The Agent calls `mailtrap_send_email` with the recipient, a subject, and a body, and then reports the result.
+
+## Example: Test in the Sandbox, then go live
+
+1. In the flow from the previous example, set **Stream** to `Sandbox` on **Mailtrap: Send Email**, and set **Sandbox Inbox ID**.
+2. Add **Mailtrap: List Sandbox Messages** and **Mailtrap: Check Sandbox Message** in **Tool Mode**, set their **Account ID** and **Sandbox Inbox ID**, and connect them to the Agent's **Tools** input.
+3. Ask the Agent to send the email and then check it, for example: `Send the order email to jane@example.com, then check its spam score and HTML issues.`
+4. The email lands in the Sandbox inbox, and the Agent reports the spam score and the HTML issues.
+5. When the result is good, set **Stream** to `Transactional`. The same flow now sends real email.
+
+## See also
+
+* [**Agent** component](/agents)
+* [Use components as tools](/agents-tools)
+* [Mailtrap API documentation](https://docs.mailtrap.io)
