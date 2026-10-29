@@ -1,0 +1,1 @@
+"""Telegram component namespace."""

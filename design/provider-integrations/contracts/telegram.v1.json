@@ -1,0 +1,206 @@
+{
+  "schema_version": 1,
+  "provider_id": "telegram",
+  "distribution": "lfx-telegram",
+  "manifest": {
+    "schema_version": 1,
+    "provider_id": "telegram",
+    "display_name": "Telegram",
+    "icon": "Telegram",
+    "docs_url": "https://docs.langflow.org/next/bundles-telegram",
+    "auth_profiles": [
+      {
+        "id": "telegram-bot-token",
+        "kind": "api_key",
+        "identity": "bot",
+        "supports_pkce": false,
+        "supports_refresh": false,
+        "default_scopes": [],
+        "client_type_by_context": {
+          "hosted": "external",
+          "self_managed": "external",
+          "desktop": "external",
+          "headless": "external"
+        },
+        "owner_by_context": {
+          "hosted": "customer",
+          "self_managed": "customer",
+          "desktop": "customer",
+          "headless": "customer"
+        }
+      }
+    ],
+    "capabilities": [
+      {
+        "id": "telegram.trigger.message.webhook",
+        "display_name": "Telegram: On Message",
+        "auth_profile_id": "telegram-bot-token",
+        "identity": "bot",
+        "required_scopes": [],
+        "policy_keys": [
+          "integrations.telegram.trigger.message"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "hosted",
+          "self_managed"
+        ],
+        "risk": "read",
+        "component_ref": "TelegramOnMessageTriggerComponent"
+      },
+      {
+        "id": "telegram.trigger.message.poll",
+        "display_name": "Telegram: On Message",
+        "auth_profile_id": "telegram-bot-token",
+        "identity": "bot",
+        "required_scopes": [],
+        "policy_keys": [
+          "integrations.telegram.trigger.message"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "self_managed",
+          "desktop"
+        ],
+        "risk": "read",
+        "component_ref": "TelegramOnMessageTriggerComponent"
+      },
+      {
+        "id": "telegram.trigger.command.webhook",
+        "display_name": "Telegram: On Command",
+        "auth_profile_id": "telegram-bot-token",
+        "identity": "bot",
+        "required_scopes": [],
+        "policy_keys": [
+          "integrations.telegram.trigger.command"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "hosted",
+          "self_managed"
+        ],
+        "risk": "read",
+        "component_ref": "TelegramOnCommandTriggerComponent"
+      },
+      {
+        "id": "telegram.trigger.command.poll",
+        "display_name": "Telegram: On Command",
+        "auth_profile_id": "telegram-bot-token",
+        "identity": "bot",
+        "required_scopes": [],
+        "policy_keys": [
+          "integrations.telegram.trigger.command"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "self_managed",
+          "desktop"
+        ],
+        "risk": "read",
+        "component_ref": "TelegramOnCommandTriggerComponent"
+      },
+      {
+        "id": "telegram.bot.send",
+        "display_name": "Telegram: Send Message",
+        "auth_profile_id": "telegram-bot-token",
+        "identity": "bot",
+        "required_scopes": [],
+        "policy_keys": [
+          "integrations.telegram.bot.send"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "hosted",
+          "self_managed",
+          "desktop",
+          "headless"
+        ],
+        "risk": "write",
+        "component_ref": "TelegramSendMessageComponent"
+      },
+      {
+        "id": "telegram.bot.reply",
+        "display_name": "Telegram: Reply to Message",
+        "auth_profile_id": "telegram-bot-token",
+        "identity": "bot",
+        "required_scopes": [],
+        "policy_keys": [
+          "integrations.telegram.bot.reply"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "hosted",
+          "self_managed",
+          "desktop",
+          "headless"
+        ],
+        "risk": "write",
+        "component_ref": "TelegramReplyComponent"
+      },
+      {
+        "id": "telegram.bot.notify",
+        "display_name": "Telegram: Send Notification",
+        "auth_profile_id": "telegram-bot-token",
+        "identity": "bot",
+        "required_scopes": [],
+        "policy_keys": [
+          "integrations.telegram.bot.notify"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "hosted",
+          "self_managed",
+          "desktop",
+          "headless"
+        ],
+        "risk": "write",
+        "component_ref": "TelegramNotifyComponent"
+      }
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://core.telegram.org/bots/api",
+      "title": "Telegram Bot API",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://core.telegram.org/bots/faq",
+      "title": "Telegram bot privacy and delivery FAQ",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://core.telegram.org/bots/api-changelog",
+      "title": "Telegram Bot API private forum topic support",
+      "verified_on": "2026-10-22"
+    }
+  ],
+  "transport_limitations": [
+    "One active trigger per verified bot account in one Langflow database. Each bot must be dedicated to one installation because Telegram provides no cross-installation receiver coordination.",
+    "Webhooks support hosted and self-managed public HTTPS ingress. Polling supports self-managed and Desktop, never simultaneously with a registered bot webhook.",
+    "New text messages and commands only. Channel posts, edits, attachments, callbacks, business messages, anonymous senders, and bot messages are excluded.",
+    "Only is_topic_message=true marks message_thread_id as a reply destination. Supported topics include forum supergroups and private chats with bot forum mode enabled.",
+    "Pending provider updates expire after 24 hours. One getUpdates page commits with its next offset before any subsequent confirmation request.",
+    "Manual BotFather tokens have no OAuth scopes or automatic refresh. Complete cleanup before revoking or rotating tokens.",
+    "Live Telegram account acceptance and production replica failover have not been verified."
+  ],
+  "evidence_paths": [
+    "docs/docs/Components/bundles-telegram.mdx",
+    "src/bundles/telegram/src/lfx_telegram/components/telegram/capabilities.v1.json",
+    "src/backend/base/langflow/services/triggers/providers/telegram",
+    "src/backend/tests/unit/services/triggers/providers/telegram",
+    "src/backend/tests/unit/services/triggers/test_telegram_runtime.py",
+    "src/bundles/telegram/tests"
+  ],
+  "owner_acceptance": {
+    "status": "pending",
+    "note": "The one-active-trigger-per-bot implementation limit is approved. Live provider acceptance and final owner sign-off remain pending."
+  }
+}

@@ -46,7 +46,7 @@ export function TriggerStatusSummary({
           {t(reasonKey(trigger))}
         </span>
       )}
-      {trigger.last_error && (
+      {trigger.last_error && trigger.reason !== "ready_to_resume" && (
         <span
           className="line-clamp-2 max-w-[16rem] break-words text-xs text-muted-foreground"
           title={trigger.last_error}

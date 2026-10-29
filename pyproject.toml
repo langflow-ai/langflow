@@ -45,6 +45,7 @@ dependencies = [
     "lfx-google>=0.4.0,<1.0.0",
     "lfx-microsoft>=0.1.5,<1.0.0",
     "lfx-slack>=0.2.3,<1.0.0",
+    "lfx-telegram>=0.1.0,<1.0.0",
     "lfx-github>=0.1.0,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
@@ -134,6 +135,7 @@ lfx-serply = { workspace = true }
 lfx-serpingapi = { workspace = true }
 lfx-microsoft = { workspace = true }
 lfx-slack = { workspace = true }
+lfx-telegram = { workspace = true }
 lfx-github = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
@@ -175,6 +177,7 @@ members = [
     "src/bundles/serpingapi",
     "src/bundles/microsoft",
     "src/bundles/slack",
+    "src/bundles/telegram",
     "src/bundles/github",
     # langflow-extensions:bundle-members-end
 ]
