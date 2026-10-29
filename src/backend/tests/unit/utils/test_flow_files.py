@@ -16,6 +16,7 @@ from langflow.utils.flow_files import (
     flow_file_target_key,
     rewrite_flow_file_keys_in_place,
 )
+from lfx.components.files_and_knowledge.file import FileComponent
 
 USER = str(uuid4())
 FLOW = str(uuid4())
@@ -29,7 +30,54 @@ def _node(node_id: str, template: dict, nested: dict | None = None) -> dict:
 
 
 def _file_field(**kwargs) -> dict:
-    return {"type": "file", **kwargs}
+    return {"type": "file", "show": True, **kwargs}
+
+
+@pytest.mark.parametrize("location", ["AWS", "Google Drive"])
+def test_should_ignore_local_file_after_switching_to_cloud_storage(location):
+    key = f"{USER}/removed-local.pdf"
+    template = {"path": _file_field(file_path=[key], list=True)}
+    component = FileComponent()
+    component.update_build_config(template, [{"name": location}], "storage_location")
+    data = {"nodes": [_node("File-a", template)]}
+
+    found = collect_flow_files(data)
+    mapping = rewrite_flow_file_keys_in_place(data, FLOW)
+
+    assert found.keys == []
+    assert found.unresolved == []
+    assert mapping == {}
+    assert template["path"]["file_path"] == [key]
+
+    component.update_build_config(template, [{"name": "Local"}], "storage_location")
+
+    assert collect_flow_files(data).keys == [key]
+    assert rewrite_flow_file_keys_in_place(data, FLOW) == {key: f"{FLOW}/removed-local.pdf"}
+
+
+@pytest.mark.parametrize(
+    ("field_name", "flags", "active"),
+    [
+        ("path", {"show": True}, True),
+        ("path", {"show": False}, False),
+        ("path", {}, False),
+        ("path", {"show": False, "override_skip": True}, True),
+        ("_type", {"show": True}, False),
+        ("code", {"show": False}, True),
+        ("path", {"show": True, "type": "other", "_input_type": "FileInput"}, False),
+    ],
+)
+def test_should_collect_and_rewrite_only_active_file_inputs(field_name, flags, active):
+    key = f"{USER}/report.pdf"
+    field = {"type": "file", "file_path": key, **flags}
+    data = {"nodes": [_node("File-a", {field_name: field})]}
+
+    found = collect_flow_files(data)
+    mapping = rewrite_flow_file_keys_in_place(data, FLOW)
+
+    assert found.keys == ([key] if active else [])
+    assert mapping == ({key: f"{FLOW}/report.pdf"} if active else {})
+    assert field["file_path"] == (f"{FLOW}/report.pdf" if active else key)
 
 
 def test_should_return_the_key_when_a_file_field_holds_one():
@@ -64,7 +112,9 @@ def test_should_return_every_entry_when_the_field_holds_a_list():
 
 
 def test_should_recognise_a_file_field_by_input_type():
-    data = {"nodes": [_node("File-aaa", {"path": {"_input_type": "FileInput", "value": f"{FLOW}/x.pdf"}})]}
+    data = {
+        "nodes": [_node("File-aaa", {"path": {"_input_type": "FileInput", "show": True, "value": f"{FLOW}/x.pdf"}})]
+    }
 
     assert collect_flow_files(data).keys == [f"{FLOW}/x.pdf"]
 
@@ -280,3 +330,67 @@ def test_should_agree_with_the_scan_on_which_keys_move():
     mapping = rewrite_flow_file_keys_in_place(data, FLOW)
 
     assert sorted(mapping) == scanned
+
+
+def test_should_rewrite_mapped_keys_and_keep_the_default_for_other_files():
+    field = _file_field(file_path=[f"{FLOW.upper()}/report.pdf", f"{USER}/other.pdf"], list=True)
+    data = {"nodes": [_node("File-a", {"path": field})]}
+    target = f"{FLOW}/report-version-one.pdf"
+
+    mapping = rewrite_flow_file_keys_in_place(data, FLOW, key_mapping={f"{FLOW}/report.pdf": target})
+
+    assert mapping == {f"{FLOW}/report.pdf": target, f"{USER}/other.pdf": f"{FLOW}/other.pdf"}
+    assert field["file_path"] == [target, f"{FLOW}/other.pdf"]
+
+
+def test_should_normalize_the_mapped_target_namespace():
+    field = _file_field(file_path=f"{USER}/report.pdf")
+    data = {"nodes": [_node("File-a", {"path": field})]}
+    target = f"{FLOW}/report-version-one.pdf"
+
+    mapping = rewrite_flow_file_keys_in_place(
+        data, FLOW, key_mapping={f"{USER}/report.pdf": f"{FLOW.upper()}/report-version-one.pdf"}
+    )
+
+    assert mapping == {f"{USER}/report.pdf": target}
+    assert field["file_path"] == target
+
+
+@pytest.mark.parametrize("map_both", [False, True])
+def test_should_refuse_a_mapped_key_collision(map_both):
+    data = {
+        "nodes": [
+            _node("File-a", {"path": _file_field(file_path=f"{USER}/a.pdf")}),
+            _node("File-b", {"path": _file_field(file_path=f"{USER}/b.pdf")}),
+        ]
+    }
+    key_mapping = {f"{USER}/a.pdf": f"{FLOW}/b.pdf"}
+    if map_both:
+        key_mapping[f"{USER}/b.pdf"] = f"{FLOW}/b.pdf"
+
+    with pytest.raises(FileKeyCollisionError, match=r"b\.pdf"):
+        rewrite_flow_file_keys_in_place(data, FLOW, key_mapping=key_mapping)
+
+
+@pytest.mark.parametrize(
+    "target",
+    [
+        "",
+        "report.pdf",
+        "/var/data/report.pdf",
+        f"{USER}/report.pdf",
+        f"{FLOW}/../report.pdf",
+        f"{FLOW}/sub/report.pdf",
+        f"{FLOW}/.",
+        f"{FLOW}/bad\x00.pdf",
+        None,
+    ],
+)
+def test_should_refuse_a_mapped_target_outside_the_flow_storage(target):
+    field = _file_field(file_path=f"{USER}/report.pdf")
+    data = {"nodes": [_node("File-a", {"path": field})]}
+
+    with pytest.raises(ValueError, match="mapped file key"):
+        rewrite_flow_file_keys_in_place(data, FLOW, key_mapping={f"{USER}/report.pdf": target})
+
+    assert field["file_path"] == f"{USER}/report.pdf"

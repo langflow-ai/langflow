@@ -24,8 +24,12 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
+from typing import TYPE_CHECKING
 
 from lfx.services.storage.namespace import validate_namespace
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 # ``_canonical_file_input`` is set at run time by the graph, only when local file access is
 # restricted (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS), to mark a field whose ``value`` is the
@@ -93,13 +97,19 @@ def flow_file_target_key(key: str, flow_id: str) -> str:
     return f"{validate_namespace(flow_id)}/{file_name}"
 
 
-def rewrite_flow_file_keys_in_place(flow_data: dict | None, flow_id: str) -> dict[str, str]:
+def rewrite_flow_file_keys_in_place(
+    flow_data: dict | None, flow_id: str, *, key_mapping: Mapping[str, str] | None = None
+) -> dict[str, str]:
     """Point every storage key a flow's file inputs read at the flow's own namespace.
 
     Mutates ``flow_data``, so pass a copy: this is for the package a deploy sends, and the
     flow as stored keeps its original keys. Rewrites exactly the slot ``collect_flow_files``
     reads, which is the one the graph reads, so the files a copy carries and the keys the
     package names cannot disagree. Absolute paths and bare names are left as they are.
+
+    ``key_mapping`` can give canonical source keys explicit destinations for versioned
+    documents. Each destination must remain in the deployed flow's namespace. Unmapped
+    keys keep their file names and use the default destination.
 
     Returns ``{source key: target key}`` for every key rewritten, including one already in
     the flow's namespace, which maps to itself.
@@ -118,6 +128,16 @@ def rewrite_flow_file_keys_in_place(flow_data: dict | None, flow_id: str) -> dic
         namespace, _, file_name = value.partition("/")
         source = f"{validate_namespace(namespace)}/{file_name}"
         target = flow_file_target_key(source, flow_id)
+        if key_mapping is not None and source in key_mapping:
+            target = key_mapping[source]
+            invalid_target = "A mapped file key must name a file in the deployed flow's namespace"
+            if _why_not_a_key(target) is not None:
+                raise ValueError(invalid_target)
+            target_namespace, _, target_name = target.partition("/")
+            target_namespace = validate_namespace(target_namespace)
+            if target_namespace != validate_namespace(flow_id) or target_name == "." or "\x00" in target_name:
+                raise ValueError(invalid_target)
+            target = f"{target_namespace}/{target_name}"
         holder = claimed.setdefault(target, source)
         if holder != source:
             msg = (
@@ -165,8 +185,16 @@ def _file_fields(flow_data: dict | None):
             template = inner.get("template")
             if isinstance(template, dict):
                 for field_name, field in template.items():
-                    if isinstance(field, dict) and _is_file_field(field):
-                        yield node_id, field_name, field
+                    if not isinstance(field, dict) or not _is_file_field(field):
+                        continue
+                    # Match the runtime's skip rules before collecting or rewriting a file.
+                    if not field.get("override_skip") and (
+                        field.get("type") == "other"
+                        or field_name == "_type"
+                        or (not field.get("show") and field_name != "code")
+                    ):
+                        continue
+                    yield node_id, field_name, field
             # A node can carry another flow's data: a group node, which lfx's ``ungroup_node``
             # expands into the parent graph at build time. Its components therefore run as the
             # deployed flow and read files of their own, so they count here.

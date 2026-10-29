@@ -26,7 +26,7 @@ OTHER_USER = str(uuid4())
 
 
 def _file_node(node_id: str, value: object, *, slot: str = "file_path") -> dict:
-    return {"id": node_id, "data": {"node": {"template": {"path": {"type": "file", slot: value}}}}}
+    return {"id": node_id, "data": {"node": {"template": {"path": {"type": "file", "show": True, slot: value}}}}}
 
 
 def _snapshot(nodes: list, *, flow_id=None) -> _FlowSnapshot:
