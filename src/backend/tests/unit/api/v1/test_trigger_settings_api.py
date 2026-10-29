@@ -82,6 +82,18 @@ async def _trigger(flow_id: UUID, owner_id: UUID, *, state: str = "active", **fi
         return row.id
 
 
+async def _username(user_id: UUID) -> str:
+    async with session_scope() as session:
+        user = await session.get(User, user_id)
+        assert user is not None
+        return user.username
+
+
+async def _trigger_ids(flow_id: UUID) -> list[UUID]:
+    async with session_scope() as session:
+        return [row.id for row in (await session.exec(select(Trigger).where(Trigger.flow_id == flow_id))).all()]
+
+
 async def _stored(trigger_id: UUID) -> Trigger:
     async with session_scope() as session:
         row = await session.get(Trigger, trigger_id)
@@ -530,6 +542,67 @@ async def test_removing_the_node_hands_an_operator_pause_to_the_owner(client: As
     )
     assert resumed.json()["unchanged"] == [str(trigger_id)]
     assert (await _stored(trigger_id)).state == "paused"
+
+
+async def _save_canvas(flow_id: UUID, owner_id: UUID, nodes: list[dict]) -> None:
+    """Save the flow's canvas and reconcile its triggers, as a save from the editor does."""
+    data = {"nodes": nodes, "edges": []}
+    async with session_scope() as session:
+        flow = await session.get(Flow, flow_id)
+        flow.data = data
+        session.add(flow)
+        await reconcile_flow_triggers(session, flow_id=flow_id, owner_id=owner_id, flow_data=data)
+
+
+async def test_a_trigger_whose_node_was_removed_cannot_be_resumed_until_the_node_is_back(
+    client: AsyncClient, trigger_owner_flow
+) -> None:
+    """Resuming would arm a trigger with nothing on the canvas to run, so every event would fail."""
+    owner_id, flow_id, node = trigger_owner_flow
+    headers = await _login(client, await _username(owner_id))
+    await _save_canvas(flow_id, owner_id, [node])
+    trigger_id = (await _trigger_ids(flow_id))[0]
+    enabled = await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=headers)
+    assert enabled.status_code == 200, enabled.text
+
+    await _save_canvas(flow_id, owner_id, [])
+
+    shown = (await client.get(f"api/v1/triggers/{trigger_id}", headers=headers)).json()
+    assert shown["reason"] == "node_removed"
+    assert "resume" not in shown["allowed_actions"]
+    assert shown["blocked_actions"]["resume"] == "node_removed"
+    refused = await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=headers)
+    assert refused.status_code == 409, refused.text
+    assert "removed from the flow" in refused.json()["detail"]
+    assert (await _stored(trigger_id)).state == "paused"
+
+    await _save_canvas(flow_id, owner_id, [node])
+
+    shown = (await client.get(f"api/v1/triggers/{trigger_id}", headers=headers)).json()
+    assert (shown["state"], shown["reason"], shown["last_error"]) == ("paused", "paused", None)
+    assert "resume" in shown["allowed_actions"]
+    resumed = await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=headers)
+    assert resumed.status_code == 200, resumed.text
+    assert resumed.json()["state"] == "active"
+
+
+async def test_removing_the_node_of_a_trigger_the_owner_paused_still_blocks_resume(
+    client: AsyncClient, trigger_owner_flow
+) -> None:
+    """Pausing first must not be a way around the block: the node is gone either way."""
+    owner_id, flow_id, node = trigger_owner_flow
+    headers = await _login(client, await _username(owner_id))
+    await _save_canvas(flow_id, owner_id, [node])
+    trigger_id = (await _trigger_ids(flow_id))[0]
+    assert (await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=headers)).status_code == 200
+    assert (await client.post(f"api/v1/triggers/{trigger_id}/disable", headers=headers)).status_code == 200
+
+    await _save_canvas(flow_id, owner_id, [])
+
+    shown = (await client.get(f"api/v1/triggers/{trigger_id}", headers=headers)).json()
+    assert (shown["state"], shown["reason"]) == ("paused", "node_removed")
+    assert shown["blocked_actions"]["resume"] == "node_removed"
+    assert (await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=headers)).status_code == 409
 
 
 async def test_one_failure_does_not_undo_or_stop_the_rest_of_a_bulk_pause(client: AsyncClient, monkeypatch) -> None:

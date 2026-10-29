@@ -73,6 +73,22 @@ def test_an_admin_pause_is_a_distinct_reason_the_owner_can_still_resume() -> Non
     assert caps.blocked_actions == {A.TEST: R.PAUSED_BY_ADMIN, A.REPLAY: R.PAUSED_BY_ADMIN}
 
 
+def test_a_trigger_whose_node_was_removed_cannot_be_resumed() -> None:
+    """Nothing on the canvas would run, so resuming would only arm failures."""
+    caps = trigger_capabilities(_row("paused", last_error=NODE_REMOVED_ERROR), caller=FULL)
+
+    assert caps.reason is R.NODE_REMOVED
+    assert caps.allowed_actions == (A.DELETE,)
+    assert caps.blocked_actions == {A.RESUME: R.NODE_REMOVED, A.TEST: R.NODE_REMOVED, A.REPLAY: R.NODE_REMOVED}
+
+
+def test_a_reader_is_told_the_node_is_gone_not_that_they_lack_permission() -> None:
+    """A state reason outranks a caller reason."""
+    caps = trigger_capabilities(_row("paused", last_error=NODE_REMOVED_ERROR), caller=READER)
+
+    assert caps.blocked_actions[A.RESUME] is R.NODE_REMOVED
+
+
 def test_a_stale_admin_marker_on_a_running_trigger_is_ignored() -> None:
     """The marker only explains a pause; it never outlives the pause it explains."""
     row = _row("active", admin_paused_at=datetime.now(timezone.utc))

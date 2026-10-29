@@ -37,7 +37,7 @@ from langflow.services.triggers.errors import TriggerNotFoundError
 from langflow.services.triggers.locking import lock_trigger, lock_trigger_for_admission
 from langflow.services.triggers.ownership import require_owned_connection
 from langflow.services.triggers.providers.registry import canvas_only_kinds, push_mechanisms, source_kinds
-from langflow.services.triggers.reconciliation import apply_config_verdict
+from langflow.services.triggers.reconciliation import NODE_REMOVED_ERROR, apply_config_verdict
 from langflow.services.triggers.schedule_config import schedule_timing_changed, validate_schedule_config
 
 if TYPE_CHECKING:
@@ -260,6 +260,11 @@ class TriggerService(Service):
             raise ValueError(msg)
         if row.state not in _ENABLEABLE_STATES:
             msg = f"Trigger in state {row.state!r} cannot be enabled."
+            raise ValueError(msg)
+        if row.last_error == NODE_REMOVED_ERROR:
+            # Arming a trigger whose node is gone runs a flow with no trigger in
+            # it, so every event fails. Adding the node back clears this.
+            msg = "The trigger node was removed from the flow. Add it back to resume the trigger."
             raise ValueError(msg)
         if "." in row.kind and row.kind not in source_kinds() | SLACK_TRIGGER_KINDS:
             msg = "This trigger provider is unavailable. Install its integration bundle before enabling it."

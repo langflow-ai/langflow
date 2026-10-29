@@ -180,8 +180,9 @@ def normalize_webhook_config(config: dict[str, Any]) -> dict[str, Any]:
 
 
 #: Why a trigger whose node left the canvas was paused. Reconciliation owns this
-#: reason, and a clean save must not erase it: re-adding the node leaves the
-#: trigger paused, and the reason is still the explanation.
+#: reason: it blocks resuming while the node is gone, and the save that adds the
+#: node back clears it. A config verdict must not erase it, since a schedule edit
+#: through the API does not bring the node back.
 NODE_REMOVED_ERROR = "trigger node removed from the flow"
 
 #: Why an armed Microsoft or Google source was paused by a save that changed its
@@ -454,6 +455,11 @@ async def reconcile_flow_triggers(
                 row.next_fire_at = None
             row.config = config
             row.session_policy = session_policy
+        if row.last_error == NODE_REMOVED_ERROR:
+            # The node is back, so the removal no longer explains the pause. The
+            # trigger stays paused: arming it again is still the owner's act.
+            row.last_error = None
+            changed = True
         moved = False
         if provider is not None:
             if row.provider != provider:
@@ -516,8 +522,13 @@ async def reconcile_flow_triggers(
             continue
         # A pause the owner chose stays theirs. An operator's pause does not:
         # removing the node is the owner's own off switch, and the operator's
-        # bulk resume must not re-arm a trigger whose node is gone.
+        # bulk resume must not re-arm a trigger whose node is gone. Either way
+        # the reason records the removal, so the owner cannot resume it either.
         if row.state == TriggerState.PAUSED.value and row.admin_paused_at is None:
+            if row.last_error != NODE_REMOVED_ERROR:
+                row.last_error = NODE_REMOVED_ERROR
+                session.add(row)
+                touched += 1
             continue
         row.state = TriggerState.PAUSED.value
         row.admin_paused_at = None
