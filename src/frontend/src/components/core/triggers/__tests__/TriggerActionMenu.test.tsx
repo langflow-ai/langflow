@@ -82,6 +82,35 @@ describe("TriggerStatusSummary", () => {
     expect(onFix).toHaveBeenCalledWith(trigger, "reconnect");
   });
 
+  it("offers Resume after reconnecting without repeating the stale connection error", async () => {
+    const onFix = jest.fn();
+    const trigger = makeTrigger({
+      state: "needs_reconnect",
+      reason: "ready_to_resume",
+      last_error:
+        "The connection was revoked or expired. Reconnect it to resume this trigger.",
+      allowed_actions: ["pause", "resume", "delete"],
+      blocked_actions: { reconnect: "reconnect_not_needed" },
+    });
+    render(<TriggerStatusSummary trigger={trigger} onFix={onFix} />);
+
+    expect(screen.getByTestId("trigger-state-badge")).toHaveTextContent(
+      "Ready to resume",
+    );
+    expect(
+      screen.getByText(
+        "The connection is ready. Resume this trigger to listen for events.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("trigger-last-error")).toBeNull();
+    expect(screen.queryByTestId("trigger-fix-reconnect")).toBeNull();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Resume Slack: On Message" }),
+    );
+    expect(onFix).toHaveBeenCalledWith(trigger, "resume");
+  });
+
   it("shows a dead trigger as Error with the dead reason and no fix", () => {
     render(
       <TriggerStatusSummary

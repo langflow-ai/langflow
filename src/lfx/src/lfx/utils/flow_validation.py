@@ -2042,6 +2042,26 @@ def validate_public_flow_no_code_execution(
         raise PublicFlowValidationError(message)
 
 
+def flow_has_connection_refs(target: Mapping[str, Any] | Any) -> bool:
+    """Identify flows whose connection checks need installed integration metadata."""
+    if isinstance(target, Mapping):
+        data = _normalize_flow_data(target) or {}
+        node_data = [node.get("data", {}) for node in data.get("nodes", []) if isinstance(node, Mapping)]
+    else:
+        node_data = [vertex.data for vertex in getattr(target, "vertices", ())]
+    for data in node_data:
+        node = data.get("node", {})
+        if any(
+            isinstance(field, Mapping) and field.get("type") == "connection_ref"
+            for field in node.get("template", {}).values()
+        ):
+            return True
+        nested = node.get("flow")
+        if isinstance(nested, Mapping) and flow_has_connection_refs(nested):
+            return True
+    return False
+
+
 async def ensure_component_hash_lookups_loaded(*, force: bool = False) -> dict[str, set[str]] | None:
     """Ensure component lookups required by active runtime policies are available.
 

@@ -3,7 +3,7 @@
   "provider_id": "whatsapp",
   "display_name": "WhatsApp Business",
   "icon": "WhatsApp",
-  "docs_url": "https://github.com/langflow-ai/langflow/blob/483810b364409a23be81f604b0ad0565eafc562b/design/provider-integrations/whatsapp.md",
+  "docs_url": "https://docs.langflow.org/next/bundles-whatsapp",
   "auth_profiles": [
     {
       "id": "whatsapp-system-user",

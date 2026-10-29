@@ -1,0 +1,94 @@
+---
+title: WhatsApp Business components
+slug: /bundles-whatsapp
+---
+
+The WhatsApp Business bundle connects flows to the WhatsApp Cloud API through a customer-owned Meta app, WhatsApp Business Account (WABA), and business phone. This preview provides text and template actions and a webhook trigger for incoming text messages and delivery statuses. Tokens stay in managed connections outside exported flows.
+
+## Supported environments
+
+| Environment | Actions | Event trigger |
+| --- | --- | --- |
+| Configured hosted server | Supported | Public HTTPS webhook |
+| Configured self-managed server | Supported | Public HTTPS webhook |
+| Desktop | Unsupported | Unsupported |
+| Headless `lfx` | Unsupported | Unsupported |
+
+Install `lfx-whatsapp` with a matching Langflow 1.14 release in the API and worker environments, then restart those processes. The full Langflow distribution includes the curated bundle. Use `lfx extension list` to confirm discovery.
+
+| Component | Purpose |
+| --- | --- |
+| WhatsApp: Send Text | Send a text message to a recipient number |
+| WhatsApp: Send Template | Send an existing approved template with positional text body parameters |
+| WhatsApp: Reply to Message | Reply using the sender and message ID from an inbound event |
+| WhatsApp: On Message or Status | Start a flow for incoming text messages, delivery statuses, or both |
+
+This version supports one configured phone per deployment and one active trigger per app and WABA. It does not support Embedded Signup, OAuth refresh, the on-premises API, media downloads, or business-scoped user IDs.
+
+## Prepare the Meta account
+
+1. Create a Meta business portfolio, business app, WABA, and registered Cloud API business phone. Complete the production access, business verification, app review, and billing requirements that apply to your account. Meta's [Cloud API setup collection](https://www.postman.com/meta/whatsapp-business-platform/collection/wlk6lh4/whatsapp-cloud-api) explains how to find the app, WABA, and phone IDs.
+2. Configure the app's WhatsApp `messages` webhook field and subscribe the app to your WABA. Keep a working app-default callback for recovery. Langflow installs a WABA callback override when you enable a trigger. It does not configure the app webhook or subscribe an unconfigured app.
+3. Use a dedicated WABA for this receiver. A WABA callback override affects all its phones, while this integration routes only the configured phone. Other phones and unsupported event types are acknowledged without starting a flow. Do not use a WABA whose app-default callback serves other active phones, or configure a higher-priority phone callback override.
+4. Generate a system-user access token for your app with both `whatsapp_business_management` and `whatsapp_business_messaging`. Assign the system user access to the WABA and phone. A temporary user token from the app dashboard does not satisfy this connection's system-user requirement.
+
+Meta enforces recipient consent, the customer service window, approved template status, messaging eligibility, quality restrictions, and rate limits. Follow those requirements and honor opt-outs. An accepted send response does not guarantee delivery.
+
+## Configure the server and connection
+
+Set these values in the API and worker environments through your deployment's secret and configuration management.
+
+| Setting | Value |
+| --- | --- |
+| `LANGFLOW_WHATSAPP_APP_ID` | Meta app ID |
+| `LANGFLOW_WHATSAPP_WABA_ID` | WhatsApp Business Account ID |
+| `LANGFLOW_WHATSAPP_PHONE_ID` | Registered Cloud API phone number ID |
+| `LANGFLOW_WHATSAPP_APP_SECRET` | Meta app secret used for webhook signatures and token validation |
+| `LANGFLOW_WHATSAPP_GRAPH_VERSION` | A Graph API version currently supported by Meta |
+
+The app secret stays on the server. Do not put it in the connection dialog or a flow. API and worker processes must share the same database, `LANGFLOW_SECRET_KEY`, and installed bundle.
+
+For triggers, configure public HTTPS ingress and workers as described in [Deploy trigger webhooks](/deployment-trigger-webhooks). Set `LANGFLOW_TRIGGER_INGRESS_ORIGIN` to this deployment's public HTTPS origin. The resulting callback URL must be no longer than 200 characters. Langflow generates the callback and verification token when it provisions the trigger.
+
+1. Open **Settings > Connections** and select **Add connection**.
+2. Choose **WhatsApp Business**, give the connection a name such as `work`, and enter the system-user token. Create your own connection for the flow.
+3. Save the connection. Langflow checks the token's app, type, permissions, expiry, and WABA phone membership with Meta. The connection shows the verified business phone.
+4. Add **WhatsApp: Send Text**, select the connection, and set **Recipient** and **Text**. Recipient numbers contain digits only, including the country code.
+
+For **WhatsApp: Send Template**, provide the approved template name, language code, and positional body parameters in their defined order. This version supports text body parameters only. It does not create templates or support header, button, media, or named parameters.
+
+## Enable an event trigger
+
+1. Add **WhatsApp: On Message or Status** and select your connection.
+2. Choose **Receive Text Messages**, **Receive Delivery Statuses**, or both. **Allowed Sender Numbers** optionally restricts inbound senders and status recipients. An empty list allows all senders for the configured business phone.
+3. Save the flow. Allow background execution using **Allow background runs** on the connection input, or **Allow scheduled and deployed runs** in the connection's **Actions** menu.
+4. Open **Settings > Triggers** and enable the trigger. Langflow reserves the app and WABA receiver and installs its callback override. A different existing WABA override blocks setup.
+5. Send a text message to the business phone or send an outbound message and inspect the trigger's event list for a delivery status.
+
+Incoming POST requests must have a valid Meta HMAC-SHA256 signature over the original request bytes. GET verification checks the generated verification token and responds to the numeric challenge without creating an event.
+
+The receiver accepts batches of at most 256 records and 1 MiB. A malformed supported record rejects the batch before any item is admitted. Valid notifications receive HTTP 200 after durable intake. There is no polling schedule or receiver renewal timer.
+
+## Event identity and recovery
+
+Incoming message IDs identify message events. A delivery status uses the message ID together with its status and timestamp, so retries of the same notification do not start another run even when Meta changes the batch. Statuses include sent, delivered, read, failed, and deleted.
+
+Normalized events contain the WABA, business phone, sender or status recipient, message ID, timestamp, and text or status. They omit raw contacts, profile data, media URLs, provider error text, and unknown fields. Conversation sessions use the WABA, business phone, and sender together. Incoming text and status updates for that sender share a session.
+
+**WhatsApp: Reply to Message** verifies that the selected connection still targets the original business phone and sends the received message ID as reply context. The event establishes routing context. Your flow remains responsible for recipient consent.
+
+| Symptom | Recovery |
+| --- | --- |
+| Token expired or was revoked | Reconnect with a system-user token for the same app, WABA, and phone. If the trigger shows **Ready to resume**, select **Resume**. Tokens do not refresh automatically. |
+| Background execution is blocked | Allow background runs on the connection, then resume the trigger. |
+| Callback setup is blocked | Check for an existing WABA override or unfinished cleanup. Keep the original account configuration until cleanup completes. |
+| No new events arrive | Check Meta's webhook delivery dashboard, app subscription, callback routing, signature secret, selected event types, and sender allowlist. |
+| Events arrived while the receiver was unavailable | Meta may retry delivery within its retry window. Langflow cannot retrieve missed message history after provider retries end. Replay an event from the event list only if it was already received. |
+
+The receiver does not periodically detect callback changes made outside Langflow. Repair the routing in Meta before enabling the receiver again. Rotate the server app secret with Meta's configuration and restart every process that uses it. Signatures fail while the secrets disagree.
+
+Pause or disable the trigger and let receiver cleanup finish before changing its account binding or replacing it. Cleanup checks that the current WABA override still belongs to this receiver, then resets that override to the app default. It leaves unrelated replacement callbacks and app subscriptions intact. Pending cleanup blocks a replacement receiver.
+
+Outbound sends are not automatically retried after an uncertain network failure. Retrying a flow or action can send a duplicate. Use delivery status events to inspect the later result of an accepted send.
+
+See Meta's [token debugger](https://www.postman.com/meta/whatsapp-business-platform/request/i1mz7w8/debug-token), [send text endpoint](https://www.postman.com/meta/whatsapp-business-platform/request/8gvd47s/send-text-message), and [WABA callback override endpoint](https://www.postman.com/meta/whatsapp-business-platform/request/un84tul/override-callback-url) for the provider APIs used by this integration.

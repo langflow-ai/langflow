@@ -608,6 +608,7 @@ module.exports = {
             "Components/bundles-vertexai",
             "Components/bundles-vllm",
             "Components/bundles-weaviate",
+            "Components/bundles-whatsapp",
             "Components/bundles-wikipedia",
             "Components/bundles-xai",
           ],
