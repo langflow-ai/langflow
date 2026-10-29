@@ -614,6 +614,7 @@ module.exports = {
             "Components/bundles-vectara",
             "Components/bundles-vertexai",
             "Components/bundles-vllm",
+            "Components/bundles-wally",
             "Components/bundles-weaviate",
             "Components/bundles-wikipedia",
             "Components/bundles-xai",
