@@ -54,6 +54,8 @@ _TABLE_SCHEMA = [
         "default": "",
     },
 ]
+# Text fields a node held before the question list, which could be bound to a global variable.
+_LEGACY_LABELS = {"question": "Question", "yes_description": "What Yes Means", "no_description": "What No Means"}
 # What Add question appends; a node starts with one.
 _NEW_QUESTION = {
     "name": "",
@@ -204,6 +206,14 @@ class DecisionModelComponent(Component):
             raise DecisionConfigurationError(msg)
         kind = kind.lower()
         boolean = kind == "boolean"
+        # A migrated field still holding the name of the global variable it was bound to; see _legacy_question.
+        for field, variable in (item.get("global_variables") or {}).items():
+            if (field == "question" or boolean) and item.get(field) == variable:
+                msg = (
+                    f"Question {number}'s {_LEGACY_LABELS.get(field, field)} was read from the global variable "
+                    f"{variable!r}, which question cards can't use. Type the text into the card, or clear it."
+                )
+                raise DecisionConfigurationError(msg)
         return {
             "kind": kind,
             "question": item.get("question"),
@@ -300,10 +310,20 @@ class DecisionModelComponent(Component):
 
 
 def _legacy_question(saved: dict) -> dict:
-    """The one question a node held in separate fields before the question list."""
+    """The one question a node held in separate fields before the question list.
+
+    A question card has no global variables, so a field bound to one keeps the variable's name and
+    records the binding; the run refuses it until the card holds real text.
+    """
 
     def value(name: str, default):
         return deepcopy((saved.get(name) or {}).get("value", default))
+
+    bound = {
+        name: value(name, "")
+        for name in _LEGACY_LABELS
+        if (saved.get(name) or {}).get("load_from_db") and value(name, "")
+    }
 
     kind = value("kind", "Choice")
     options = value("candidates", _NEW_QUESTION["options"])
@@ -319,4 +339,5 @@ def _legacy_question(saved: dict) -> dict:
         "levels": levels,
         "yes_description": value("yes_description", ""),
         "no_description": value("no_description", ""),
+        **({"global_variables": bound} if bound else {}),
     }

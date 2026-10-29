@@ -315,6 +315,34 @@ async def test_a_node_saved_before_the_question_list_keeps_its_question(legacy, 
 
 
 @pytest.mark.asyncio
+async def test_a_migrated_global_variable_binding_is_refused_not_read_as_text():
+    """A card can't read a global variable, so a bound field must not run as the variable's name."""
+    component = DecisionModelComponent()
+    saved = component.to_frontend_node()["data"]["node"]
+    del saved["template"]["questions"]
+    saved["template"].update(
+        {
+            "kind": {"value": "Boolean"},
+            "question": {"value": "ROUTING_QUESTION", "load_from_db": True},
+            "yes_description": {"value": "YES_MEANS", "load_from_db": True},
+            "no_description": {"value": "Anything else", "load_from_db": False},
+        }
+    )
+    updated = await component.update_frontend_node(component.to_frontend_node()["data"]["node"], saved)
+    [question] = updated["template"]["questions"]["value"]
+    assert question["global_variables"] == {"question": "ROUTING_QUESTION", "yes_description": "YES_MEANS"}
+
+    component.set(context="text", questions=[question])
+    with pytest.raises(DecisionConfigurationError, match="Question 1's Question was read from the global variable"):
+        component._request()
+    question["question"] = "Refund?"
+    with pytest.raises(DecisionConfigurationError, match="What Yes Means was read from the global variable 'YES_MEANS"):
+        component._request()
+    question["yes_description"] = ""
+    assert component._request().question == "Refund?"
+
+
+@pytest.mark.asyncio
 async def test_a_dev_node_with_the_questions_table_starts_a_fresh_list():
     """Multiple mode's questions table never shipped; its rows don't match a question list item."""
     component = DecisionModelComponent()

@@ -3344,5 +3344,8 @@
   "decisionQuestions.levelsEdit": "Stufen bearbeiten",
   "decisionQuestions.yes_description": "Was Ja bedeutet (optional)",
   "decisionQuestions.no_description": "Was Nein bedeutet (optional)",
-  "decisionQuestions.add": "Frage hinzufügen"
+  "decisionQuestions.add": "Frage hinzufügen",
+  "decisionQuestions.kindChoice": "Auswahl",
+  "decisionQuestions.kindBoolean": "Boolesch",
+  "decisionQuestions.kindScore": "Bewertung"
 }

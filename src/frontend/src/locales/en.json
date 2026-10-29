@@ -3343,5 +3343,8 @@
   "decisionQuestions.levelsEdit": "Edit levels",
   "decisionQuestions.yes_description": "What Yes means (optional)",
   "decisionQuestions.no_description": "What No means (optional)",
-  "decisionQuestions.add": "Add question"
+  "decisionQuestions.add": "Add question",
+  "decisionQuestions.kindChoice": "Choice",
+  "decisionQuestions.kindBoolean": "Boolean",
+  "decisionQuestions.kindScore": "Score"
 }

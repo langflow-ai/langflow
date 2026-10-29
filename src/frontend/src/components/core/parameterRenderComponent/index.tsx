@@ -3,7 +3,7 @@ import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-va
 import CodeAreaComponent from "@/components/core/parameterRenderComponent/components/codeAreaComponent";
 import DataDisplayComponent from "@/components/core/parameterRenderComponent/components/dataDisplayComponent";
 import DBProviderInputComponent from "@/components/core/parameterRenderComponent/components/dbProviderInputComponent";
-import DecisionQuestionsComponent from "@/components/core/parameterRenderComponent/components/decisionQuestionsComponent";
+import DecisionQuestionsComponent from "@/components/core/parameterRenderComponent/components/decision-questions/decision-questions";
 import ModelInputComponent from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import SliderComponent from "@/components/core/parameterRenderComponent/components/sliderComponent";
 import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";

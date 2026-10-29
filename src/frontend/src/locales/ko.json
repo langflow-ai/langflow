@@ -3343,5 +3343,8 @@
   "modelProviders.openRouterModelHint": "목록에서 Model을 고르거나 OpenRouter decision model ID를 입력하세요. Model이 지원하는 요청은 OpenRouter가 정합니다.",
   "modelProviders.searchOrAddModel": "Model ID 검색 또는 추가…",
   "modelProviders.addDecisionModel": "Decision Model \"{{name}}\" 추가",
-  "modelProviders.decisionDiscoveryError": "Decision Model을 불러오지 못했습니다. 이 Provider의 인증 정보를 확인하고 다시 시도하세요. 다른 Provider는 계속 쓸 수 있습니다."
+  "modelProviders.decisionDiscoveryError": "Decision Model을 불러오지 못했습니다. 이 Provider의 인증 정보를 확인하고 다시 시도하세요. 다른 Provider는 계속 쓸 수 있습니다.",
+  "decisionQuestions.kindChoice": "선택",
+  "decisionQuestions.kindBoolean": "참거짓",
+  "decisionQuestions.kindScore": "점수"
 }

@@ -37,6 +37,8 @@ export default function DecisionQuestionsComponent({
   const update = (index: number, change: DecisionQuestion) =>
     save(questions.map((q, i) => (i === index ? { ...q, ...change } : q)));
   const inputClass = editNode ? "input-edit-node" : "";
+  // The tabs show translated names; the value saved stays the canonical type.
+  const kindLabels = KINDS.map((kind) => t(`decisionQuestions.kind${kind}`));
 
   return (
     <div className="flex w-full flex-col gap-3">
@@ -69,6 +71,7 @@ export default function DecisionQuestionsComponent({
               </Button>
             </div>
             <Input
+              data-testid={`${id}_name_${index}`}
               value={question.name ?? ""}
               placeholder={t("decisionQuestions.namePlaceholder", { number })}
               aria-label={t("decisionQuestions.name", { number })}
@@ -81,14 +84,17 @@ export default function DecisionQuestionsComponent({
             </span>
             <TabComponent
               id={`${id}_kind_${index}`}
-              value={question.kind ?? ""}
-              options={KINDS}
+              value={kindLabels[KINDS.indexOf(question.kind ?? "")] ?? ""}
+              options={kindLabels}
               editNode={editNode}
               disabled={disabled}
               ariaLabelledBy={kindLabelId}
-              handleOnNewValue={({ value }) => update(index, { kind: value })}
+              handleOnNewValue={({ value }) =>
+                update(index, { kind: KINDS[kindLabels.indexOf(value)] })
+              }
             />
             <Input
+              data-testid={`${id}_question_text_${index}`}
               value={question.question ?? ""}
               placeholder={t("decisionQuestions.questionPlaceholder")}
               aria-label={t("decisionQuestions.question", { number })}
@@ -117,6 +123,7 @@ export default function DecisionQuestionsComponent({
               (["yes_description", "no_description"] as const).map((key) => (
                 <Input
                   key={key}
+                  data-testid={`${id}_${key}_${index}`}
                   value={question[key] ?? ""}
                   placeholder={t(`decisionQuestions.${key}`)}
                   aria-label={t(`decisionQuestions.${key}`)}

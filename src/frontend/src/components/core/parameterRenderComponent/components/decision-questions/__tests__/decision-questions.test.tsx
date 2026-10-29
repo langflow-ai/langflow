@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { axe } from "@/utils/a11y-test";
 import { mockGenericIconComponent } from "../../__tests__/a11y-mock-helpers";
-import DecisionQuestionsComponent from "..";
+import DecisionQuestionsComponent from "../decision-questions";
 
 jest.mock("@/modals/tableModal", () => ({
   __esModule: true,

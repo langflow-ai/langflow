@@ -3343,5 +3343,8 @@
   "decisionQuestions.levelsEdit": "编辑等级",
   "decisionQuestions.yes_description": "“是”的含义（可选）",
   "decisionQuestions.no_description": "“否”的含义（可选）",
-  "decisionQuestions.add": "添加问题"
+  "decisionQuestions.add": "添加问题",
+  "decisionQuestions.kindChoice": "选择",
+  "decisionQuestions.kindBoolean": "布尔",
+  "decisionQuestions.kindScore": "评分"
 }

@@ -3344,5 +3344,8 @@
   "decisionQuestions.levelsEdit": "Editar niveles",
   "decisionQuestions.yes_description": "Qué significa Sí (opcional)",
   "decisionQuestions.no_description": "Qué significa No (opcional)",
-  "decisionQuestions.add": "Añadir pregunta"
+  "decisionQuestions.add": "Añadir pregunta",
+  "decisionQuestions.kindChoice": "Elección",
+  "decisionQuestions.kindBoolean": "Booleano",
+  "decisionQuestions.kindScore": "Puntuación"
 }

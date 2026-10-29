@@ -3344,5 +3344,8 @@
   "decisionQuestions.levelsEdit": "Modifier les niveaux",
   "decisionQuestions.yes_description": "Ce que signifie Oui (facultatif)",
   "decisionQuestions.no_description": "Ce que signifie Non (facultatif)",
-  "decisionQuestions.add": "Ajouter une question"
+  "decisionQuestions.add": "Ajouter une question",
+  "decisionQuestions.kindChoice": "Choix",
+  "decisionQuestions.kindBoolean": "Booléen",
+  "decisionQuestions.kindScore": "Score"
 }

@@ -3344,5 +3344,8 @@
   "decisionQuestions.levelsEdit": "レベルを編集",
   "decisionQuestions.yes_description": "「はい」の意味（任意）",
   "decisionQuestions.no_description": "「いいえ」の意味（任意）",
-  "decisionQuestions.add": "質問を追加"
+  "decisionQuestions.add": "質問を追加",
+  "decisionQuestions.kindChoice": "選択",
+  "decisionQuestions.kindBoolean": "真偽値",
+  "decisionQuestions.kindScore": "スコア"
 }
