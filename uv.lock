@@ -52,6 +52,7 @@ members = [
     "lfx-duckduckgo",
     "lfx-empiriolabs",
     "lfx-exa",
+    "lfx-fastaf",
     "lfx-firecrawl",
     "lfx-github",
     "lfx-google",
@@ -8942,6 +8943,7 @@ bundles = [
     { name = "lfx-duckduckgo" },
     { name = "lfx-empiriolabs" },
     { name = "lfx-exa" },
+    { name = "lfx-fastaf" },
     { name = "lfx-firecrawl" },
     { name = "lfx-nextplaid" },
     { name = "lfx-paddle" },
@@ -9059,6 +9061,7 @@ requires-dist = [
     { name = "lfx-duckduckgo", marker = "extra == 'bundles'", editable = "src/bundles/duckduckgo" },
     { name = "lfx-empiriolabs", marker = "extra == 'bundles'", editable = "src/bundles/empiriolabs" },
     { name = "lfx-exa", marker = "extra == 'bundles'", editable = "src/bundles/exa" },
+    { name = "lfx-fastaf", marker = "extra == 'bundles'", editable = "src/bundles/fastaf" },
     { name = "lfx-firecrawl", marker = "extra == 'bundles'", editable = "src/bundles/firecrawl" },
     { name = "lfx-github", editable = "src/bundles/github" },
     { name = "lfx-google", editable = "src/bundles/google" },
@@ -11277,6 +11280,21 @@ dependencies = [
 requires-dist = [
     { name = "exa-py", specifier = ">=1.14,<3" },
     { name = "langchain-core", specifier = ">=1.2.28,<2.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-fastaf"
+version = "0.1.0"
+source = { editable = "src/bundles/fastaf" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
 ]
 

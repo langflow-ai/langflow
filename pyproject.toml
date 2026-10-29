@@ -120,6 +120,7 @@ lfx-ollama = { workspace = true }
 lfx-amazon = { workspace = true }
 lfx-cohere = { workspace = true }
 lfx-oracle = { workspace = true }
+lfx-fastaf = { workspace = true }
 lfx-firecrawl = { workspace = true }
 lfx-nextplaid = { workspace = true }
 lfx-paddle = { workspace = true }
@@ -161,6 +162,7 @@ members = [
     "src/bundles/amazon",
     "src/bundles/cohere",
     "src/bundles/oracle",
+    "src/bundles/fastaf",
     "src/bundles/firecrawl",
     "src/bundles/nextplaid",
     "src/bundles/paddle",
@@ -194,6 +196,7 @@ bundles = [
     "lfx-duckduckgo>=0.2.1,<1.0.0",
     "lfx-empiriolabs>=0.2.1,<1.0.0",
     "lfx-exa>=0.2.1,<1.0.0",
+    "lfx-fastaf>=0.1.0,<1.0.0",
     "lfx-firecrawl>=0.2.1,<1.0.0",
     "lfx-nextplaid>=0.2.1,<1.0.0",
     "lfx-paddle>=0.2.1,<1.0.0",

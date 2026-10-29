@@ -1,6 +1,18 @@
 import { SIDEBAR_BUNDLES } from "../styleUtils";
 
 describe("SIDEBAR_BUNDLES", () => {
+  it("classifies FastAF as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "FastAF",
+          icon: "FastAF",
+          name: "fastaf",
+        }),
+      ]),
+    );
+  });
+
   it("classifies PaddleOCR as a sidebar bundle", () => {
     expect(SIDEBAR_BUNDLES).toEqual(
       expect.arrayContaining([

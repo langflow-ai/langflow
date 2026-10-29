@@ -1,0 +1,33 @@
+[project]
+name = "lfx-fastaf"
+version = "0.1.0"
+description = "FastAF public web data, search, AI extraction and screenshots as a Langflow Extension Bundle."
+readme = "README.md"
+requires-python = ">=3.10,<3.16"
+license = { text = "MIT" }
+authors = [{ name = "FastAF", email = "dev@fastaf.co" }]
+keywords = ["langflow", "lfx", "extension", "bundle", "fastaf", "scraping", "search", "serp"]
+# Match the release branch's BUNDLE_API dependency floor. No vendor SDK.
+dependencies = [
+    "lfx>=1.14.0.dev0,<2.0.0",
+    "httpx>=0.24.0,<1.0.0",
+]
+
+[project.urls]
+Homepage = "https://fastaf.co"
+Documentation = "https://fastaf.co/docs/"
+Repository = "https://github.com/langflow-ai/langflow"
+
+[project.entry-points."langflow.extensions"]
+lfx-fastaf = "lfx_fastaf"
+
+[build-system]
+requires = ["hatchling==1.31.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lfx_fastaf"]
+include = ["src/lfx_fastaf/**/*.py", "src/lfx_fastaf/extension.json"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/lfx_fastaf", "README.md", "pyproject.toml", "tests"]
