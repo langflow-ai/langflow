@@ -61,7 +61,9 @@ from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import TriggerState
 from langflow.services.deps import get_connection_resolver_service, get_settings_service, session_scope
 from langflow.services.triggers import ledger
+from langflow.services.triggers.connection_recovery import record_connection_failure
 from langflow.services.triggers.constants import (
+    CONNECTION_NOT_AUTHORIZED_ERROR,
     FAMILY_TRIGGER_LISTENER,
     MECHANISM_SLACK_SOCKET_MODE,
     SLACK_PROVIDER_STATE_APP_ID,
@@ -189,7 +191,9 @@ async def unusable_connection_ids(session: AsyncSession, connection_ids: list[UU
     return unusable | (set(connection_ids) - found)
 
 
-async def mark_needs_reconnect(session: AsyncSession, *, trigger_ids: list[UUID], reason: str) -> None:
+async def mark_needs_reconnect(
+    session: AsyncSession, *, trigger_ids: list[UUID], reason: str, consent_required: bool = False
+) -> None:
     """Move triggers to ``needs_reconnect`` and stop listening for them."""
     if not trigger_ids:
         return
@@ -199,6 +203,7 @@ async def mark_needs_reconnect(session: AsyncSession, *, trigger_ids: list[UUID]
         row.state = TriggerState.NEEDS_RECONNECT.value
         row.last_error = reason
         row.updated_at = _now()
+        record_connection_failure(row, failed_at=row.updated_at, consent_required=consent_required)
         session.add(row)
     await session.flush()
 
@@ -942,10 +947,18 @@ class ListenerSupervisor:
         )
         with contextlib.suppress(Exception):
             async with session_scope() as session:
+                consent_required = (
+                    isinstance(exc, ConnectionNotAuthorizedError) and exc.reason == "non-interactive-opt-in-required"
+                )
                 await mark_needs_reconnect(
                     session,
                     trigger_ids=[t.id for t in worker.triggers],
-                    reason="The connection is no longer authorized. Reconnect it to resume this trigger.",
+                    reason=(
+                        CONNECTION_NOT_AUTHORIZED_ERROR
+                        if consent_required
+                        else "The connection is no longer authorized. Reconnect it to resume this trigger."
+                    ),
+                    consent_required=consent_required,
                 )
         await self._drop(worker.connection_id)
 

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-whatsapp",
+  "version": "0.1.1",
+  "name": "WhatsApp Business",
+  "description": "Customer-owned WhatsApp Business Cloud API messaging and webhook triggers.",
+  "lfx": {
+    "compat": [
+      "1"
+    ]
+  },
+  "bundles": [
+    {
+      "name": "whatsapp",
+      "path": "components/whatsapp"
+    }
+  ],
+  "integrations": [
+    {
+      "provider_id": "whatsapp",
+      "bundle": "whatsapp",
+      "path": "capabilities.v1.json"
+    }
+  ]
+}
