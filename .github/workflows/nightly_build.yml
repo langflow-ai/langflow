@@ -261,7 +261,7 @@ jobs:
     needs: [resolve-release-branch, create-nightly-tag]
     uses: ./.github/workflows/python_test.yml
     with:
-      python-versions: '["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]'
+      python-versions: '["3.11", "3.12", "3.13", "3.14", "3.15"]'
       runs-on: ${{ inputs['runs_on'] || github.event.inputs['runs_on'] || 'ubuntu-latest' }}
       ref: ${{ needs.resolve-release-branch.outputs.branch }}
     secrets:
@@ -276,7 +276,7 @@ jobs:
   #   needs: create-nightly-tag
   #   uses: ./.github/workflows/integration_tests.yml
   #   with:
-  #     python-versions: '["3.10", "3.11", "3.12", "3.13"]'
+  #     python-versions: '["3.11", "3.12", "3.13"]'
   #     ref: ${{ needs.create-nightly-tag.outputs.tag }}
 
   stress-tests:
