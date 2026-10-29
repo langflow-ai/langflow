@@ -3,6 +3,7 @@ from copy import deepcopy
 
 from pydantic import ValidationError
 
+from lfx.base.models.decisions.providers import unique_json_object
 from lfx.base.models.decisions.runtime import decision_token_usage, evaluate_decision, request_variables_of
 from lfx.base.models.decisions.schema import (
     DecisionBatchRequest,
@@ -20,12 +21,15 @@ from lfx.io import (
     ModelInput,
     MultilineInput,
     Output,
+    TabInput,
     TableInput,
 )
 from lfx.schema.data import Data
 from lfx.schema.table import EditMode
 
 _KINDS = ("Choice", "Boolean", "Score")
+_SINGLE, _MULTIPLE, _JSON = "Single", "Multiple", "JSON"
+_MODES = (_SINGLE, _MULTIPLE, _JSON)
 _DEFAULT_CANDIDATES = {
     "Choice": [
         {"id": "a", "label": "Option A", "description": ""},
@@ -121,11 +125,11 @@ class DecisionModelComponent(Component):
         ModelInput(
             model_type="decision", name="model", display_name="Decision Model", required=True, real_time_refresh=True
         ),
-        DropdownInput(
+        TabInput(
             name="question_mode",
             display_name="Questions Mode",
-            options=["Single", "Multiple", "JSON"],
-            value="Single",
+            options=list(_MODES),
+            value=_SINGLE,
             real_time_refresh=True,
             info="Use one question, edit several named questions, or paste Questions JSON. All share the same context.",
         ),
@@ -274,23 +278,11 @@ class DecisionModelComponent(Component):
         return structured
 
     def _batch_request(self, context: str | dict) -> DecisionBatchRequest:
-        if self.question_mode == "JSON":
-
-            def unique_keys(pairs):
-                result = {}
-                for key, value in pairs:
-                    if key in result:
-                        msg = "Questions JSON contains a duplicate key. Give every question and field a unique key."
-                        raise DecisionConfigurationError(msg)
-                    result[key] = value
-                return result
-
+        if self.question_mode == _JSON:
             try:
-                questions = json.loads(self.questions_json or "", object_pairs_hook=unique_keys)
+                questions = json.loads(self.questions_json or "", object_pairs_hook=unique_json_object)
             except (ValueError, TypeError) as exc:
-                if isinstance(exc, DecisionConfigurationError):
-                    raise
-                msg = "Questions JSON must be a valid JSON object keyed by question ID."
+                msg = f"Questions JSON must be a valid JSON object keyed by question ID: {exc}"
                 raise DecisionConfigurationError(msg) from None
         else:
             questions = {}
@@ -332,9 +324,9 @@ class DecisionModelComponent(Component):
 
     def _request(self):
         context = self._context()
-        if self.question_mode in {"Multiple", "JSON"}:
+        if self.question_mode in {_MULTIPLE, _JSON}:
             return self._batch_request(context)
-        if self.question_mode != "Single":
+        if self.question_mode != _SINGLE:
             msg = "Pick a Questions Mode: Single, Multiple or JSON."
             raise DecisionConfigurationError(msg)
         # A tweak can send anything here; the dropdown only offers these three.
@@ -403,8 +395,8 @@ class DecisionModelComponent(Component):
     @staticmethod
     def _show_fields(config: dict, kind: str) -> None:
         """Show only the active type's inputs without modifying either table's values."""
-        mode = config.get("question_mode", {}).get("value", "Single")
-        single = mode == "Single"
+        mode = config.get("question_mode", {}).get("value", _SINGLE)
+        single = mode == _SINGLE
         for name in ("kind", "question"):
             if name in config:
                 config[name]["show"] = single
@@ -412,10 +404,10 @@ class DecisionModelComponent(Component):
             config["question"]["required"] = single
         for name in ("questions", "question_options", "question_levels"):
             if name in config:
-                config[name]["show"] = mode == "Multiple"
+                config[name]["show"] = mode == _MULTIPLE
         if "questions_json" in config:
-            config["questions_json"]["show"] = mode == "JSON"
-            config["questions_json"]["advanced"] = mode != "JSON"
+            config["questions_json"]["show"] = mode == _JSON
+            config["questions_json"]["advanced"] = mode != _JSON
         config["candidates"]["show"] = single and kind == "Choice"
         config["levels"]["show"] = single and kind == "Score"
         for name in ("yes_description", "no_description"):

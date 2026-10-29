@@ -491,9 +491,10 @@ async def list_models(
         if len(allowed) != len(provider_dict["models"]):
             provider_dict["models"] = allowed
             provider_dict["num_models"] = len(allowed)
-        if model_type == "decision":
+        if model_type:
+            # The flat map spans every type; a typed listing is active only through its own type.
             prov_models_status = (
-                enabled_models_result.get("enabled_models_by_type", {}).get(prov_name, {}).get("decision", {})
+                enabled_models_result.get("enabled_models_by_type", {}).get(prov_name, {}).get(model_type, {})
             )
         has_active_model = any(prov_models_status.values())
         provider_dict["is_enabled"] = has_active_model

@@ -2,6 +2,7 @@
 
 import copy
 import json
+from unittest.mock import Mock
 
 import httpx
 import pytest
@@ -814,8 +815,27 @@ def test_batch_rejects_incomplete_or_malformed_answers(provider, mutation):
             answer["type"] = "choice"
         else:
             answer["probability" if provider == "OpenAI" else "noul"] = 4
-    with pytest.raises(DecisionEvaluationError, match="couldn't use"):
+    with pytest.raises(DecisionEvaluationError, match="couldn't use") as raised:
         providers.parse_response(provider, batch_request(), body)
+    message = str(raised.value)
+    assert message.count("couldn't use") == 1
+    assert message.count("Try again") == 1
+    if mutation in {"wrong_type", "invalid_probability"}:
+        assert "question 'boolean'" in message
+
+
+def test_batch_question_cap_fails_before_any_call(monkeypatch):
+    from lfx.base.models.decisions.schema import DecisionBatchRequest, DecisionQuestion
+
+    post = Mock()
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", post)
+    question = DecisionQuestion(kind="boolean", question="Relevant?")
+    request = DecisionBatchRequest(
+        context="Example", questions={f"q{i}": question for i in range(providers.MAX_QUESTIONS + 1)}
+    )
+    with pytest.raises(DecisionConfigurationError, match=f"at most {providers.MAX_QUESTIONS} questions"):
+        providers.evaluate_provider("OpenAI", DEFAULT_MODELS["OpenAI"], request, api_key="test")
+    post.assert_not_called()
 
 
 def test_openai_batch_matches_names_not_order_and_preserves_partial_refusal():

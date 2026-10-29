@@ -84,15 +84,12 @@ def evaluate_decision(
         if selected is None:
             msg = "The selected Decision Model is no longer offered. Pick another Decision Model."
             raise DecisionConfigurationError(msg)
-        kinds = (
-            {question.kind for question in request.questions.values()}
-            if isinstance(request, DecisionBatchRequest)
-            else {request.kind}
-        )
-        if not kinds.issubset(selected.get("metadata", {}).get("capabilities", [])):
+        capabilities = selected.get("metadata", {}).get("capabilities", [])
+        unsupported = sorted({q.kind for q in request.questions.values()} - set(capabilities))
+        if unsupported:
+            names = " or ".join(kind.title() for kind in unsupported)
             msg = (
-                f"{model_name} doesn't support the requested Decision Type. "
-                "Pick another Decision Type or Decision Model."
+                f"{model_name} doesn't support the {names} Decision Type. Pick another Decision Type or Decision Model."
             )
             raise DecisionConfigurationError(msg)
 

@@ -12,6 +12,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from lfx.base.models.decisions.schema import (
+    QUESTION_ID,
     DecisionBatchRequest,
     DecisionBatchResult,
     DecisionConfigurationError,
@@ -45,8 +46,8 @@ ENDPOINTS = {
 MAX_HOSTED_SCORE_LEVELS = 10
 MAX_CHOICES = 255
 MAX_TIMEOUT = 300
-# Legacy single-question requests retain this identity.
-QUESTION_ID = "decision"
+# Perplexity documents 128 questions and OpenAI 400; TypeSafe and OpenRouter publish no cap.
+MAX_QUESTIONS = 128
 
 OFFICIAL_OPENAI_BASE_URL = "https://api.openai.com/v1"
 # Requests may send each name in any form a request variable takes (see variable_name_forms).
@@ -117,11 +118,11 @@ def _try_again(provider: str, request_id: str | None) -> str:
     return f"Try again; if it keeps happening, {contact}."
 
 
-def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+def unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for key, value in pairs:
         if key in result:
-            msg = "Duplicate JSON key in decision response."
+            msg = f"Duplicate JSON key {key!r}."
             raise ValueError(msg)
         result[key] = value
     return result
@@ -132,8 +133,10 @@ def build_payload(provider: str, model: str, request: DecisionRequest | Decision
     if provider not in ENDPOINTS:
         msg = f"{provider} has no decision models."
         raise DecisionConfigurationError(msg)
-    questions = request.questions if isinstance(request, DecisionBatchRequest) else {QUESTION_ID: request}
-    translated = {name: _build_question(provider, name, question) for name, question in questions.items()}
+    if len(request.questions) > MAX_QUESTIONS:
+        msg = f"Decision models take at most {MAX_QUESTIONS} questions per request."
+        raise DecisionConfigurationError(msg)
+    translated = {name: _build_question(provider, name, question) for name, question in request.questions.items()}
     if provider == "OpenAI":
         context = request.context
         if not isinstance(context, str):
@@ -215,131 +218,130 @@ def _token_usage(raw: Any) -> dict | None:
         return None
 
 
+_ANSWER_ERRORS = (ValidationError, DecisionEvaluationError, KeyError, TypeError, ValueError)
+
+
+def _failure_detail(exc: Exception) -> str:
+    if isinstance(exc, ValidationError):
+        return validation_summary(exc, field_only=True)
+    if isinstance(exc, KeyError):
+        return f"missing field {exc.args[0]!r}"
+    return str(exc) or "unexpected answer shape"
+
+
+def _named_answers(provider: str, answers: Any, names: set[str]) -> dict[str, Any]:
+    """Answers keyed by question name, holding exactly the requested questions."""
+    if provider == "OpenAI":
+        if not isinstance(answers, list) or any(not isinstance(answer, dict) for answer in answers):
+            msg = "answers must be a list of named answers"
+            raise ValueError(msg)
+        mapped = {answer["name"]: answer for answer in answers}
+        if len(mapped) != len(answers):
+            msg = "answers repeat a question"
+            raise ValueError(msg)
+        answers = mapped
+    if not isinstance(answers, dict) or set(answers) != names:
+        msg = "answers must hold exactly the requested questions"
+        raise ValueError(msg)
+    return answers
+
+
+def _parse_answer(provider: str, request: DecisionQuestion, answer: Any, common: dict[str, Any]) -> DecisionResult:
+    common = {**common, "kind": request.kind}
+    # Only OpenAI documents a refusal answer. TypeSafe and Perplexity always answer with the
+    # requested type, so any other type there is an invalid response, never a refusal.
+    if provider == "OpenAI" and answer["type"] == "refusal":
+        reason = answer.get("refusal")
+        refusal = reason if isinstance(reason, str) and reason.strip() else None
+        return DecisionResult(**common, status="refusal", refusal=refusal)
+    expected_type = _answer_type(provider, request.kind)
+    if answer["type"] != expected_type:
+        # Never echo provider text: it reaches errors and evidence.
+        msg = f"the answer type does not match the requested {expected_type!r}"
+        raise ValueError(msg)
+    if request.kind == "boolean":
+        result = DecisionResult(
+            **common,
+            probability_true=answer["probability" if provider == "OpenAI" else "noul"],
+            confidence=answer.get("confidence"),
+        )
+    else:
+        probabilities = answer["probabilities"]
+        if provider == "OpenAI":
+            if not isinstance(probabilities, list):
+                msg = "probabilities must be a list"
+                raise ValueError(msg)
+            key = "value" if request.kind == "choice" else "label"
+            mapped = {item[key]: item["probability"] for item in probabilities}
+            if len(mapped) != len(probabilities):
+                msg = "probabilities repeat an option"
+                raise ValueError(msg)
+            if request.kind == "score":
+                indices = {level.id: i for i, level in enumerate(request.levels)}
+                if any(
+                    type(item["value"]) is not int or indices.get(item["label"]) != item["value"]
+                    for item in probabilities
+                ):
+                    msg = "score levels do not match their requested indices"
+                    raise ValueError(msg)
+            probabilities = mapped
+        elif request.kind == "score":
+            expected_keys = {str(i) for i in range(len(request.levels))}
+            legend = {str(i): _description(level) for i, level in enumerate(request.levels)}
+            if set(probabilities) != expected_keys or answer["legend"] != legend:
+                msg = "score levels or legend do not match the requested rubric"
+                raise ValueError(msg)
+            probabilities = {level.id: probabilities[str(i)] for i, level in enumerate(request.levels)}
+        result = DecisionResult(
+            **common,
+            probabilities=probabilities,
+            confidence=answer.get("confidence"),
+            selected_option=answer.get("choice") if request.kind == "choice" else None,
+            score=answer["score"] if request.kind == "score" else None,
+        )
+    return result.validate_for(request)
+
+
 def parse_response(
-    provider: str, request: DecisionQuestion | DecisionBatchRequest, payload: Any, *, request_id: str | None = None
+    provider: str, request: DecisionRequest | DecisionBatchRequest, payload: Any, *, request_id: str | None = None
 ) -> DecisionResult | DecisionBatchResult:
     """Reject missing/mismatched evidence; never turn a malformed answer into uncertainty."""
+    if provider == "OpenRouter" and request_id is None and isinstance(payload, dict):
+        candidate = payload.get("id")
+        if isinstance(candidate, str) and re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", candidate):
+            request_id = candidate
+    batch = isinstance(request, DecisionBatchRequest)
     try:
         model = payload["model"]
         if not isinstance(model, str) or not model.strip():
             msg = "model must be a non-empty string"
             raise ValueError(msg)
-        if provider == "OpenRouter" and request_id is None:
-            candidate = payload.get("id")
-            if isinstance(candidate, str) and re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", candidate):
-                request_id = candidate
-        answers = payload["answers"]
-        if isinstance(request, DecisionBatchRequest):
-            if provider == "OpenAI":
-                if not isinstance(answers, list) or any(not isinstance(answer, dict) for answer in answers):
-                    msg = "answers must be a list of named answers"
-                    raise ValueError(msg)
-                mapped = {answer["name"]: answer for answer in answers}
-                if len(mapped) != len(answers):
-                    msg = "answers repeat a question"
-                    raise ValueError(msg)
-                answers = mapped
-            if not isinstance(answers, dict) or set(answers) != set(request.questions):
-                msg = "answers must hold exactly the requested questions"
-                raise ValueError(msg)
-            results = {}
-            for name, question in request.questions.items():
-                answer = answers[name]
-                single_payload = {
-                    "model": model,
-                    "answers": [{**answer, "name": QUESTION_ID}] if provider == "OpenAI" else {QUESTION_ID: answer},
-                }
-                results[name] = parse_response(
-                    provider,
-                    question,
-                    single_payload,
-                    request_id=request_id,
-                )
-            return DecisionBatchResult(answers=results, usage=_token_usage(payload.get("usage")), request_id=request_id)
-        if provider == "OpenAI":
-            if not isinstance(answers, list) or len(answers) != 1:
-                msg = "answers must hold exactly one answer"
-                raise ValueError(msg)
-            answer = answers[0]
-            if answer["name"] != QUESTION_ID:
-                msg = "answer is for a different question"
-                raise ValueError(msg)
-        else:
-            if not isinstance(answers, dict) or set(answers) != {QUESTION_ID}:
-                msg = "answers must hold exactly the requested question"
-                raise ValueError(msg)
-            answer = answers[QUESTION_ID]
+        usage = _token_usage(payload.get("usage"))
         common: dict[str, Any] = {
-            "kind": request.kind,
             "provider": provider,
             "model": model,
             # Perplexity explicitly documents that this field echoes the requested alias.
             "model_source": "request" if provider == "Perplexity" else "response",
-            "usage": _token_usage(payload.get("usage")),
+            # A batch shares one usage block, reported once on the batch.
+            "usage": None if batch else usage,
             "request_id": request_id,
         }
-        # Only OpenAI documents a refusal answer. TypeSafe and Perplexity always answer with the
-        # requested type, so any other type there is an invalid response, never a refusal.
-        if provider == "OpenAI" and answer["type"] == "refusal":
-            reason = answer.get("refusal")
-            refusal = reason if isinstance(reason, str) and reason.strip() else None
-            return DecisionResult(**common, status="refusal", refusal=refusal)
-        expected_type = _answer_type(provider, request.kind)
-        if answer["type"] != expected_type:
-            # Never echo provider text: it reaches errors and evidence.
-            msg = f"the answer type does not match the requested {expected_type!r}"
-            raise ValueError(msg)
-        if request.kind == "boolean":
-            result = DecisionResult(
-                **common,
-                probability_true=answer["probability" if provider == "OpenAI" else "noul"],
-                confidence=answer.get("confidence"),
-            )
-        else:
-            probabilities = answer["probabilities"]
-            if provider == "OpenAI":
-                if not isinstance(probabilities, list):
-                    msg = "probabilities must be a list"
-                    raise ValueError(msg)
-                key = "value" if request.kind == "choice" else "label"
-                mapped = {item[key]: item["probability"] for item in probabilities}
-                if len(mapped) != len(probabilities):
-                    msg = "probabilities repeat an option"
-                    raise ValueError(msg)
-                if request.kind == "score":
-                    indices = {level.id: i for i, level in enumerate(request.levels)}
-                    if any(
-                        type(item["value"]) is not int or indices.get(item["label"]) != item["value"]
-                        for item in probabilities
-                    ):
-                        msg = "score levels do not match their requested indices"
-                        raise ValueError(msg)
-                probabilities = mapped
-            elif request.kind == "score":
-                expected_keys = {str(i) for i in range(len(request.levels))}
-                legend = {str(i): _description(level) for i, level in enumerate(request.levels)}
-                if set(probabilities) != expected_keys or answer["legend"] != legend:
-                    msg = "score levels or legend do not match the requested rubric"
-                    raise ValueError(msg)
-                probabilities = {level.id: probabilities[str(i)] for i, level in enumerate(request.levels)}
-            result = DecisionResult(
-                **common,
-                probabilities=probabilities,
-                confidence=answer.get("confidence"),
-                selected_option=answer.get("choice") if request.kind == "choice" else None,
-                score=answer["score"] if request.kind == "score" else None,
-            )
-        result.validate_for(request)
-    except ValidationError as exc:
-        detail = validation_summary(exc, field_only=True)
-    except DecisionEvaluationError as exc:
-        detail = str(exc)
-    except KeyError as exc:
-        detail = f"missing field {exc.args[0]!r}"
-    except (TypeError, ValueError) as exc:
-        detail = str(exc) or "unexpected answer shape"
+        answers = _named_answers(provider, payload["answers"], set(request.questions))
+        results = {}
+        for name, question in request.questions.items():
+            try:
+                results[name] = _parse_answer(provider, question, answers[name], common)
+            except _ANSWER_ERRORS as exc:
+                if not batch:
+                    raise
+                msg = f"question {name!r}: {_failure_detail(exc)}"
+                raise ValueError(msg) from exc
+    except _ANSWER_ERRORS as exc:
+        detail = _failure_detail(exc)
     else:
-        return result
+        return (
+            DecisionBatchResult(answers=results, usage=usage, request_id=request_id) if batch else results[QUESTION_ID]
+        )
     msg = f"{provider} sent an answer Langflow couldn't use{_reference(request_id=request_id)}: {detail}. "
     raise DecisionEvaluationError(msg + _try_again(provider, request_id), category="invalid_response")
 
@@ -438,7 +440,7 @@ def evaluate_provider(
         msg = f"{provider} decision request failed{ref}."
         raise DecisionEvaluationError(msg, category="http_error")
     try:
-        body = json.loads(response.content, object_pairs_hook=_unique_json_object)
+        body = json.loads(response.content, object_pairs_hook=unique_json_object)
     except ValueError:
         msg = f"{provider} sent an answer Langflow couldn't read{_reference(request_id=request_id)}. "
         raise DecisionEvaluationError(msg + _try_again(provider, request_id), category="invalid_response") from None

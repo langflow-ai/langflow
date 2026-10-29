@@ -1327,3 +1327,47 @@ async def test_embedding_defaults_match_unfiltered_status(monkeypatch):
         filtered["enabled_models_by_type"]["OpenAI"]["embeddings"]
         == unfiltered["enabled_models_by_type"]["OpenAI"]["embeddings"]
     )
+
+
+async def test_typed_listing_is_enabled_only_through_its_own_type(monkeypatch):
+    from lfx.base.models.unified_models import get_unified_models_detailed
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicyPurpose,
+        ModelProviderPolicySnapshot,
+    )
+
+    policy = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(),
+        purpose=ModelProviderPolicyPurpose.DISCOVER,
+        candidate_provider_ids=frozenset({"openai"}),
+        allowed_provider_ids=frozenset({"openai"}),
+    )
+    embeddings = {
+        model_status_key("OpenAI", row["model_name"], "embeddings")
+        for group in get_unified_models_detailed(providers=["OpenAI"], model_type="embeddings")
+        for row in group["models"]
+    }
+    monkeypatch.setattr(models_api, "_aresolve_read_policy", AsyncMock(return_value=policy))
+    monkeypatch.setattr(
+        models_api, "_get_enabled_providers_result", AsyncMock(return_value={"provider_status": {"OpenAI": True}})
+    )
+    # Every embedding model is off while the default chat models stay on.
+    monkeypatch.setattr(models_api, "_get_disabled_models", AsyncMock(return_value=embeddings))
+    monkeypatch.setattr(models_api, "_get_enabled_models", AsyncMock(return_value=set()))
+    monkeypatch.setattr(models_api, "get_default_model", AsyncMock(return_value={}))
+    monkeypatch.setattr(models_api, "replace_with_live_models", lambda *_, **__: None)
+
+    async def is_enabled(model_type):
+        result = await models_api.list_models(
+            provider=["OpenAI"],
+            model_type=model_type,
+            session=object(),
+            current_user=SimpleNamespace(id=uuid4()),
+            provider_policy_attributes={},
+        )
+        return next(row for row in result if row["provider"] == "OpenAI")["is_enabled"]
+
+    assert embeddings
+    assert await is_enabled("llm") is True
+    assert await is_enabled("embeddings") is False

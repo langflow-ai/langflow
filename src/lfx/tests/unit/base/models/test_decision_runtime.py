@@ -158,7 +158,7 @@ def test_unoffered_model_and_capability_are_authoritative(execution, monkeypatch
     with pytest.raises(DecisionConfigurationError, match="no longer offered"):
         evaluate_decision(request, model=model)
     options.return_value = [{**model, "metadata": {"capabilities": ["choice"]}}]
-    with pytest.raises(DecisionConfigurationError, match="Decision Type"):
+    with pytest.raises(DecisionConfigurationError, match=f"support the {request.kind.title()} Decision Type"):
         evaluate_decision(request, model=model)
     transport.assert_not_called()
 

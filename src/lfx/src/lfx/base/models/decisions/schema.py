@@ -6,7 +6,16 @@ import json
 import math
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError, field_validator, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    JsonValue,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 
 DecisionKind = Literal["choice", "boolean", "score"]
 Probability = Annotated[float, Field(strict=True, ge=0, le=1, allow_inf_nan=False)]
@@ -15,6 +24,16 @@ NonEmpty = Annotated[str, Field(strict=True, min_length=1, pattern=r"\S")]
 # Provider-reported model names are stored in evidence; anything longer is not a model name.
 ModelName = Annotated[str, Field(strict=True, min_length=1, max_length=128, pattern=r"\S")]
 MIN_CANDIDATES = 2
+# A single question keeps this wire name.
+QUESTION_ID = "decision"
+
+
+def _json_safe(value: str | dict[str, JsonValue]) -> str | dict[str, JsonValue]:
+    json.dumps(value, allow_nan=False)
+    return value
+
+
+Context = Annotated[str | dict[str, JsonValue], AfterValidator(_json_safe)]
 # Providers report rounded numbers: TypeSafe's probabilities only "roughly" sum to 1, and its answers
 # come back to two decimals, so each reported probability and score can be off by up to 0.005.
 REPORTED_ROUNDING = 0.005
@@ -145,25 +164,19 @@ class DecisionQuestion(BaseModel):
 
 
 class DecisionRequest(DecisionQuestion):
-    context: str | dict[str, JsonValue]
+    context: Context
 
-    @field_validator("context")
-    @classmethod
-    def validate_context(cls, value: str | dict[str, JsonValue]) -> str | dict[str, JsonValue]:
-        json.dumps(value, allow_nan=False)
-        return value
+    @property
+    def questions(self) -> dict[str, DecisionQuestion]:
+        """The same view a batch has, so callers handle one shape."""
+        return {QUESTION_ID: self}
 
 
 class DecisionBatchRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    context: str | dict[str, JsonValue]
+    context: Context
     questions: dict[NonEmpty, DecisionQuestion] = Field(min_length=1)
-
-    @field_validator("context")
-    @classmethod
-    def validate_context(cls, value: str | dict[str, JsonValue]) -> str | dict[str, JsonValue]:
-        return DecisionRequest.validate_context(value)
 
 
 def decision_request(**fields: Any) -> DecisionRequest:
