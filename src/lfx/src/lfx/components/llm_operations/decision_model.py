@@ -27,34 +27,9 @@ from lfx.io import (
 )
 from lfx.schema.data import Data
 from lfx.schema.message import Message
-from lfx.schema.table import EditMode
 
 _KINDS = ("Choice", "Boolean", "Score")
 _FORM, _JSON = "Form", "JSON"
-_TABLE_SCHEMA = [
-    {
-        "name": "id",
-        "display_name": "ID",
-        "type": "str",
-        "description": "A short unique key, such as refund. The result uses it.",
-        "edit_mode": EditMode.INLINE,
-    },
-    {
-        "name": "label",
-        "display_name": "Label",
-        "type": "str",
-        "description": "The name the model reads. Labels must differ, ignoring case.",
-        "edit_mode": EditMode.INLINE,
-    },
-    {
-        "name": "description",
-        "display_name": "Description",
-        "type": "str",
-        "description": "Optional: more about when this one applies.",
-        "edit_mode": EditMode.POPOVER,
-        "default": "",
-    },
-]
 # Text fields a node held before the question list, which could be bound to a global variable.
 _LEGACY_LABELS = {"question": "Question", "yes_description": "What Yes Means", "no_description": "What No Means"}
 # Question X's text can be connected through the hidden field <prefix>X.
@@ -137,7 +112,6 @@ class DecisionModelComponent(Component):
             display_name="Questions",
             value=[{**deepcopy(_NEW_QUESTION), "id": "1"}],
             new_question=_NEW_QUESTION,
-            table_schema=_TABLE_SCHEMA,
             connection_prefix=_CONNECTION_PREFIX,
             info="Each question has its own Decision Type: Choice picks one option, Boolean answers yes or no, and "
             "Score places the input on ordered levels. With more than one question, they are sent in one call and "

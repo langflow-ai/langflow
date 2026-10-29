@@ -1,37 +1,29 @@
 import { cloneDeep } from "lodash";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import type { APITemplateType } from "@/types/api";
 import { scapeJSONParse } from "@/utils/reactflowUtils";
 import type { DecisionQuestionsComponentType, InputProps } from "../../types";
-import TableNodeComponent from "../TableNodeComponent";
-import TabComponent from "../tabComponent";
+import DecisionQuestionsModal, {
+  type DecisionQuestion,
+  KINDS,
+  QuestionPreview,
+} from "./decision-questions-modal";
 import QuestionHandle from "./question-handle";
 
-const KINDS = ["Choice", "Boolean", "Score"];
+export type { DecisionQuestion };
 
-export type DecisionQuestion = {
-  id?: string;
-  name?: string;
-  kind?: string;
-  question?: string;
-  options?: Record<string, unknown>[];
-  levels?: Record<string, unknown>[];
-  yes_description?: string;
-  no_description?: string;
-};
-
+// One compact row per question on the node; questions are edited in the modal.
 export default function DecisionQuestionsComponent({
   id,
   value,
   handleOnNewValue,
   disabled,
   editNode,
-  columns,
   newQuestion,
   connectionPrefix,
   fieldName,
@@ -45,12 +37,13 @@ export default function DecisionQuestionsComponent({
   const edges = useFlowStore((state) => state.edges);
   const deleteEdge = useFlowStore((state) => state.deleteEdge);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
+  const [open, setOpen] = useState(false);
+  const [openAt, setOpenAt] = useState(0);
   if (!showParameter) return null;
 
   const questions = Array.isArray(value) ? value : [];
-  const save = (next: DecisionQuestion[]) => handleOnNewValue({ value: next });
-  // Each question's text can be connected through its own hidden node field.
   const template = nodeClass?.template;
+  // Each question's text can be connected through its own hidden node field.
   const connectionOf = (question: DecisionQuestion) =>
     connectionPrefix && question.id
       ? `${connectionPrefix}${question.id}`
@@ -65,186 +58,126 @@ export default function DecisionQuestionsComponent({
         edge.targetHandle &&
         scapeJSONParse(edge.targetHandle).fieldName === field,
     );
-  // Adding or removing a question also adds or removes its connection field, in one node update.
-  const saveWithFields = (
-    next: DecisionQuestion[],
-    changeFields: (template: APITemplateType) => void,
-  ) => {
-    if (!nodeClass || !handleNodeClass || !fieldName) return save(next);
+  const isConnected = (question: DecisionQuestion) =>
+    edgesInto(connectionOf(question)).length > 0;
+  // The edit dialog and inspection panel have no canvas, so no handles.
+  const drawsHandles = !editNode && !inspectionPanel && !!nodeId;
+  const kindLabel = (kind?: string) =>
+    KINDS.includes(kind ?? "") ? t(`decisionQuestions.kind${kind}`) : kind;
+  const summary = (question: DecisionQuestion) =>
+    question.kind === "Choice"
+      ? t("decisionQuestions.optionCount", {
+          count: question.options?.length ?? 0,
+        })
+      : question.kind === "Score"
+        ? t("decisionQuestions.levelCount", {
+            count: question.levels?.length ?? 0,
+          })
+        : t("decisionQuestions.yesNo");
+
+  // Done applies the modal's questions, adding or removing each question's connection field
+  // (and any edge into a removed one) in the same node update.
+  const applyQuestions = (next: DecisionQuestion[]) => {
+    const kept = new Set(next.map((question) => question.id));
+    const removed = questions
+      .filter((question) => !kept.has(question.id))
+      .map(connectionOf)
+      // The first question's field belongs to the component class, so it stays.
+      .filter((field) => field && field !== `${connectionPrefix}1`);
+    const added = next
+      .map(connectionOf)
+      .filter((field) => field && !template?.[field]);
+    const staleEdges = removed.flatMap((field) => edgesInto(field));
+    if (staleEdges.length) deleteEdge(staleEdges.map((edge) => edge.id));
+    if (!nodeClass || !handleNodeClass || !fieldName || !firstConnection) {
+      handleOnNewValue({ value: next });
+      return;
+    }
     takeSnapshot();
     const newNodeClass = cloneDeep(nodeClass);
-    changeFields(newNodeClass.template);
-    newNodeClass.template[fieldName].value = next;
-    handleNodeClass(newNodeClass);
-  };
-  const addQuestion = () => {
-    const question: DecisionQuestion = cloneDeep(newQuestion ?? {});
-    if (!firstConnection) return save([...questions, question]);
-    question.id = Math.random().toString(36).slice(2, 10);
-    const field = connectionOf(question)!;
-    saveWithFields([...questions, question], (fields) => {
-      fields[field] = {
+    for (const field of removed) delete newNodeClass.template[field!];
+    for (const field of added) {
+      newNodeClass.template[field!] = {
         ...cloneDeep(firstConnection),
         name: field,
         display_name: t("decisionQuestions.title", {
-          number: questions.length + 1,
+          number: next.findIndex((q) => connectionOf(q) === field) + 1,
         }),
         value: "",
       };
-    });
+    }
+    newNodeClass.template[fieldName].value = next;
+    handleNodeClass(newNodeClass);
   };
-  const removeQuestion = (index: number) => {
-    const next = questions.filter((_, i) => i !== index);
-    const field = connectionOf(questions[index]);
-    const connected = edgesInto(field);
-    if (connected.length) deleteEdge(connected.map((edge) => edge.id));
-    // The first question's field belongs to the component class, so it stays.
-    if (!field || field === `${connectionPrefix}1`) return save(next);
-    saveWithFields(next, (fields) => {
-      delete fields[field];
-    });
+  const openEditor = (index: number) => {
+    setOpenAt(index);
+    setOpen(true);
   };
-  const update = (index: number, change: DecisionQuestion) =>
-    save(questions.map((q, i) => (i === index ? { ...q, ...change } : q)));
-  const inputClass = editNode ? "input-edit-node" : "";
-  // The tabs show translated names; the value saved stays the canonical type.
-  const kindLabels = KINDS.map((kind) => t(`decisionQuestions.kind${kind}`));
 
   return (
-    <div className="flex w-full flex-col gap-3">
+    <div className="flex w-full flex-col gap-2">
       {questions.map((question, index) => {
-        const number = index + 1;
-        const title = t("decisionQuestions.title", { number });
-        const kindLabelId = `${id}_kind_label_${index}`;
         const connection = connectionOf(question);
-        const isConnected = edgesInto(connection).length > 0;
-        // The edit dialog and inspection panel have no canvas, so no handle.
-        const showHandle =
-          !editNode &&
-          !inspectionPanel &&
-          !!nodeId &&
-          !!template?.[connection ?? ""];
-        // One table per type, edited in the same modal the Options field uses.
-        const table = { Choice: "options", Score: "levels" }[
-          question.kind ?? ""
-        ] as "options" | "levels" | undefined;
         return (
-          <fieldset
-            key={index}
-            className="flex flex-col gap-2 rounded-md border border-border p-3"
-            data-testid={`${id}_question_${index}`}
-          >
-            <legend className="sr-only">{title}</legend>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">{title}</span>
-              <Button
-                variant="ghost"
-                size="iconSm"
-                disabled={disabled || questions.length === 1}
-                aria-label={t("decisionQuestions.remove", { number })}
-                data-testid={`${id}_remove_${index}`}
-                onClick={() => removeQuestion(index)}
-              >
-                <IconComponent name="Trash2" className="h-4 w-4" />
-              </Button>
-            </div>
-            <Input
-              data-testid={`${id}_name_${index}`}
-              value={question.name ?? ""}
-              placeholder={t("decisionQuestions.namePlaceholder", { number })}
-              aria-label={t("decisionQuestions.name", { number })}
-              className={inputClass}
-              disabled={disabled}
-              onChange={(event) => update(index, { name: event.target.value })}
-            />
-            <span id={kindLabelId} className="sr-only">
-              {t("decisionQuestions.kind", { number })}
-            </span>
-            <TabComponent
-              id={`${id}_kind_${index}`}
-              value={kindLabels[KINDS.indexOf(question.kind ?? "")] ?? ""}
-              options={kindLabels}
-              editNode={editNode}
-              disabled={disabled}
-              ariaLabelledBy={kindLabelId}
-              handleOnNewValue={({ value }) =>
-                update(index, { kind: KINDS[kindLabels.indexOf(value)] })
-              }
-            />
-            {/* Spans to the node's left border, where the handle sits like any field's. */}
-            <div className="relative -ml-[33px] pl-[33px]">
-              {showHandle && connection && (
-                <QuestionHandle
-                  nodeId={nodeId!}
-                  fieldName={connection}
-                  field={template![connection]}
-                  title={title}
-                />
-              )}
-              {isConnected ? (
-                <div
-                  className="flex h-9 items-center rounded-md border border-dashed border-border px-3 text-sm text-muted-foreground"
-                  data-testid={`${id}_question_connected_${index}`}
-                >
-                  {t("decisionQuestions.questionConnected")}
-                </div>
-              ) : (
-                <Input
-                  data-testid={`${id}_question_text_${index}`}
-                  value={question.question ?? ""}
-                  placeholder={t("decisionQuestions.questionPlaceholder")}
-                  aria-label={t("decisionQuestions.question", { number })}
-                  className={inputClass}
-                  disabled={disabled}
-                  onChange={(event) =>
-                    update(index, { question: event.target.value })
-                  }
-                />
-              )}
-            </div>
-            {table && (
-              <TableNodeComponent
-                id={`${id}_${table}_${index}`}
-                value={question[table] ?? []}
-                columns={columns}
-                editNode={editNode}
-                disabled={disabled}
-                tableTitle={t(`decisionQuestions.${table}`)}
-                description={t(`decisionQuestions.${table}Info`)}
-                trigger_text={t(`decisionQuestions.${table}Edit`)}
-                handleOnNewValue={({ value }) =>
-                  update(index, { [table]: value })
-                }
+          // Spans to the node's left border, where the handle sits like any field's.
+          <div key={question.id ?? index} className="relative -ml-5 pl-5">
+            {drawsHandles && connection && template?.[connection] && (
+              <QuestionHandle
+                nodeId={nodeId!}
+                fieldName={connection}
+                field={template[connection]}
+                title={t("decisionQuestions.title", { number: index + 1 })}
               />
             )}
-            {question.kind === "Boolean" &&
-              (["yes_description", "no_description"] as const).map((key) => (
-                <Input
-                  key={key}
-                  data-testid={`${id}_${key}_${index}`}
-                  value={question[key] ?? ""}
-                  placeholder={t(`decisionQuestions.${key}`)}
-                  aria-label={t(`decisionQuestions.${key}`)}
-                  className={inputClass}
-                  disabled={disabled}
-                  onChange={(event) =>
-                    update(index, { [key]: event.target.value })
-                  }
-                />
-              ))}
-          </fieldset>
+            <button
+              type="button"
+              disabled={disabled}
+              data-testid={`${id}_question_${index}`}
+              aria-label={t("decisionQuestions.editQuestion", {
+                number: index + 1,
+              })}
+              onClick={() => openEditor(index)}
+              className="flex w-full flex-col gap-1 rounded-md border border-border p-2 text-left hover:bg-muted disabled:pointer-events-none"
+            >
+              <span className="flex w-full items-center gap-2">
+                <span className="truncate font-mono text-sm">
+                  {question.name || `q${index + 1}`}
+                </span>
+                <Badge variant="secondaryStatic" size="tag">
+                  {kindLabel(question.kind)}
+                </Badge>
+                <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                  {summary(question)}
+                </span>
+              </span>
+              <QuestionPreview
+                question={question}
+                connected={isConnected(question)}
+              />
+            </button>
+          </div>
         );
       })}
       <Button
         variant="outline"
         size="sm"
         disabled={disabled}
-        data-testid={`${id}_add`}
-        onClick={addQuestion}
+        data-testid={`${id}_edit`}
+        onClick={() => openEditor(0)}
       >
-        <IconComponent name="Plus" className="mr-1 h-4 w-4" />
-        {t("decisionQuestions.add")}
+        <IconComponent name="Pencil" className="mr-1 h-4 w-4" />
+        {t("decisionQuestions.edit")}
       </Button>
+      <DecisionQuestionsModal
+        id={id}
+        open={open}
+        setOpen={setOpen}
+        questions={questions}
+        initialIndex={openAt}
+        newQuestion={newQuestion}
+        isConnected={isConnected}
+        onDone={applyQuestions}
+      />
     </div>
   );
 }

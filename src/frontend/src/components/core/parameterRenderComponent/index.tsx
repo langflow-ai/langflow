@@ -411,7 +411,6 @@ export function ParameterRenderComponent({
           <DecisionQuestionsComponent
             {...baseInputProps}
             id={`decision_questions_${id}`}
-            columns={templateData?.table_schema}
             newQuestion={templateData?.new_question}
             connectionPrefix={templateData?.connection_prefix}
             fieldName={name}

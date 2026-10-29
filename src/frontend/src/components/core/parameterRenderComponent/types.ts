@@ -180,7 +180,6 @@ export type TabComponentType = {
 };
 
 export type DecisionQuestionsComponentType = {
-  columns?: ColumnField[];
   newQuestion?: Record<string, unknown>;
   connectionPrefix?: string;
   fieldName?: string;

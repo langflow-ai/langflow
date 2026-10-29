@@ -36,11 +36,17 @@ it("shows translated Decision Types but saves the canonical one", async () => {
     </I18nextProvider>,
   );
 
+  expect(screen.getByTestId("questions_question_0")).toHaveTextContent(
+    "Auswahl",
+  );
+  const user = userEvent.setup();
+  await user.click(screen.getByTestId("questions_edit"));
   expect(screen.getByRole("tab", { name: "Auswahl" })).toHaveAttribute(
     "aria-selected",
     "true",
   );
-  await userEvent.setup().click(screen.getByRole("tab", { name: "Bewertung" }));
+  await user.click(screen.getByRole("tab", { name: "Bewertung" }));
+  await user.click(screen.getByTestId("questions_modal_done"));
   expect(handleOnNewValue).toHaveBeenLastCalledWith({
     value: [{ ...question, kind: "Score" }],
   });

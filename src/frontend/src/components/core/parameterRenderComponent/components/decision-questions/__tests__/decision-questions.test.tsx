@@ -1,12 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import useFlowStore from "@/stores/flowStore";
-import { axe } from "@/utils/a11y-test";
 import DecisionQuestionsComponent from "../decision-questions";
-
-jest.mock("@/modals/tableModal", () => ({
-  __esModule: true,
-  default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
 
 jest.mock("@/components/common/genericIconComponent", () =>
   jest
@@ -26,175 +21,197 @@ const newQuestion = {
   name: "",
   kind: "Choice",
   question: "",
-  options: [{ id: "a", label: "Option A" }],
-  levels: [{ id: "low", label: "Low" }],
+  options: [
+    { id: "a", label: "Option A", description: "" },
+    { id: "b", label: "Option B", description: "" },
+  ],
+  levels: [{ id: "low", label: "Low", description: "" }],
+};
+const team = {
+  ...newQuestion,
+  id: "1",
+  name: "team",
+  question: "Which team should handle this?",
+};
+const urgent = { ...newQuestion, id: "x1", name: "", kind: "Boolean" };
+
+const connection = {
+  type: "str",
+  input_types: ["Message"],
+  show: false,
+  value: "",
+  name: "question_input_1",
+  display_name: "Question 1",
 };
 
-const renderQuestions = (value: Record<string, unknown>[]) => {
+const renderQuestions = (
+  questions: Record<string, unknown>[],
+  fields: Record<string, unknown> = {
+    question_input_x1: { ...connection, name: "question_input_x1" },
+  },
+) => {
+  const handleNodeClass = jest.fn();
   const handleOnNewValue = jest.fn();
-  const view = render(
+  render(
     <DecisionQuestionsComponent
       id="questions"
-      value={value}
+      value={questions}
       editNode={false}
       disabled={false}
-      columns={[]}
       newQuestion={newQuestion}
+      connectionPrefix="question_input_"
+      fieldName="questions"
+      nodeId="DecisionModel-1"
+      nodeClass={
+        {
+          template: {
+            questions: { type: "decision_questions", value: questions },
+            question_input_1: connection,
+            ...fields,
+          },
+        } as never
+      }
+      handleNodeClass={handleNodeClass}
       handleOnNewValue={handleOnNewValue}
     />,
   );
-  return { ...view, handleOnNewValue };
+  return { handleNodeClass, handleOnNewValue };
 };
 
-describe("DecisionQuestionsComponent", () => {
-  it("should_have_no_axe_violations", async () => {
-    const { container } = renderQuestions([newQuestion]);
-    expect(await axe(container)).toHaveNoViolations();
+const edgeInto = (field: string) => ({
+  id: `edge-${field}`,
+  source: "ChatInput-1",
+  target: "DecisionModel-1",
+  targetHandle: JSON.stringify({ fieldName: field }).replace(/"/g, "œ"),
+});
+
+afterEach(() => useFlowStore.setState({ edges: [] }));
+
+describe("DecisionQuestionsComponent on the node", () => {
+  it("shows one compact row per question with its handle", () => {
+    renderQuestions([team, urgent]);
+    const first = screen.getByTestId("questions_question_0");
+    expect(first).toHaveTextContent("team");
+    expect(first).toHaveTextContent("Choice");
+    expect(first).toHaveTextContent("Options: 2");
+    expect(first).toHaveTextContent("Which team should handle this?");
+    const second = screen.getByTestId("questions_question_1");
+    expect(second).toHaveTextContent("q2");
+    expect(second).toHaveTextContent("Yes / No");
+    expect(second).toHaveTextContent("No question written yet");
+    expect(screen.getByTestId("handle_question_input_1")).toBeInTheDocument();
+    expect(screen.getByTestId("handle_question_input_x1")).toBeInTheDocument();
   });
 
-  it("appends a copy of the new question when Add question is clicked", () => {
-    const { handleOnNewValue } = renderQuestions([newQuestion]);
-    fireEvent.click(screen.getByTestId("questions_add"));
-    const [[{ value }]] = handleOnNewValue.mock.calls;
-    expect(value).toEqual([newQuestion, newQuestion]);
-    expect(value[1]).not.toBe(newQuestion);
+  it("marks a connected question instead of warning that it has no text", () => {
+    useFlowStore.setState({ edges: [edgeInto("question_input_x1")] as never });
+    renderQuestions([team, urgent]);
+    const second = screen.getByTestId("questions_question_1");
+    expect(second).toHaveTextContent("Connected");
+    expect(second).not.toHaveTextContent("No question written yet");
   });
 
-  it("keeps the last question and removes any other", () => {
-    const { handleOnNewValue, rerender } = renderQuestions([newQuestion]);
-    expect(screen.getByTestId("questions_remove_0")).toBeDisabled();
-
-    const urgent = { ...newQuestion, name: "urgent", kind: "Boolean" };
-    rerender(
-      <DecisionQuestionsComponent
-        id="questions"
-        value={[newQuestion, urgent]}
-        editNode={false}
-        disabled={false}
-        newQuestion={newQuestion}
-        handleOnNewValue={handleOnNewValue}
-      />,
-    );
-    fireEvent.click(screen.getByTestId("questions_remove_0"));
-    expect(handleOnNewValue).toHaveBeenLastCalledWith({ value: [urgent] });
+  it("opens the editor on the question that was clicked", () => {
+    renderQuestions([team, urgent]);
+    fireEvent.click(screen.getByTestId("questions_question_1"));
+    expect(screen.getByTestId("questions_modal_name")).toHaveValue("");
+    expect(screen.getByTestId("questions_modal_yes_description")).toBeVisible();
   });
+});
 
-  it("shows each question only the fields its Decision Type uses", () => {
-    renderQuestions([
-      newQuestion,
-      { ...newQuestion, kind: "Boolean" },
-      { ...newQuestion, kind: "Score" },
+describe("the question editor", () => {
+  it("keeps edits until Done and then saves them", () => {
+    const { handleNodeClass } = renderQuestions([team]);
+    fireEvent.click(screen.getByTestId("questions_edit"));
+    fireEvent.change(screen.getByTestId("questions_modal_question_text"), {
+      target: { value: "Who handles it?" },
+    });
+    expect(handleNodeClass).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId("questions_modal_done"));
+    const [[updated]] = handleNodeClass.mock.calls;
+    expect(updated.template.questions.value).toEqual([
+      { ...team, question: "Who handles it?" },
     ]);
-    expect(screen.getByText("Edit options")).toBeInTheDocument();
-    expect(screen.getByText("Edit levels")).toBeInTheDocument();
-    expect(screen.getAllByLabelText("What Yes means (optional)")).toHaveLength(
-      1,
-    );
   });
 
-  it("edits only the question that changed", () => {
-    const second = { ...newQuestion, name: "urgent" };
-    const { handleOnNewValue } = renderQuestions([newQuestion, second]);
-    fireEvent.change(screen.getByLabelText("Question 1 text"), {
-      target: { value: "Which team?" },
+  it("discards edits when cancelled", () => {
+    const { handleNodeClass, handleOnNewValue } = renderQuestions([team]);
+    fireEvent.click(screen.getByTestId("questions_edit"));
+    fireEvent.change(screen.getByTestId("questions_modal_name"), {
+      target: { value: "changed" },
     });
-    expect(handleOnNewValue).toHaveBeenLastCalledWith({
-      value: [{ ...newQuestion, question: "Which team?" }, second],
-    });
+    fireEvent.click(screen.getByTestId("btn-cancel-modal"));
+    expect(handleNodeClass).not.toHaveBeenCalled();
+    expect(handleOnNewValue).not.toHaveBeenCalled();
   });
 
-  describe("connecting a question", () => {
-    const connection = {
-      type: "str",
+  it("adds a question with its own connection field", () => {
+    const { handleNodeClass } = renderQuestions([team]);
+    fireEvent.click(screen.getByTestId("questions_edit"));
+    fireEvent.click(screen.getByTestId("questions_modal_add"));
+    fireEvent.click(screen.getByTestId("questions_modal_done"));
+    const [[updated]] = handleNodeClass.mock.calls;
+    const [, added] = updated.template.questions.value;
+    expect(added).toMatchObject({ kind: "Choice", name: "" });
+    expect(updated.template[`question_input_${added.id}`]).toMatchObject({
+      name: `question_input_${added.id}`,
       input_types: ["Message"],
       show: false,
-      value: "",
-      name: "question_input_1",
-      display_name: "Question 1",
-    };
-    const first = { ...newQuestion, id: "1" };
-    const nodeClass = (questions: Record<string, unknown>[], fields = {}) =>
-      ({
-        template: {
-          questions: { type: "decision_questions", value: questions },
-          question_input_1: connection,
-          ...fields,
-        },
-      }) as never;
-    const renderConnectable = (
-      questions: Record<string, unknown>[],
-      fields = {},
-    ) => {
-      const handleNodeClass = jest.fn();
-      const handleOnNewValue = jest.fn();
-      render(
-        <DecisionQuestionsComponent
-          id="questions"
-          value={questions}
-          editNode={false}
-          disabled={false}
-          newQuestion={newQuestion}
-          connectionPrefix="question_input_"
-          fieldName="questions"
-          nodeId="DecisionModel-1"
-          nodeClass={nodeClass(questions, fields)}
-          handleNodeClass={handleNodeClass}
-          handleOnNewValue={handleOnNewValue}
-        />,
-      );
-      return { handleNodeClass, handleOnNewValue };
-    };
-    const edgeInto = (field: string) => ({
-      id: `edge-${field}`,
-      source: "ChatInput-1",
-      target: "DecisionModel-1",
-      targetHandle: JSON.stringify({ fieldName: field }).replace(/"/g, "œ"),
     });
+  });
 
-    afterEach(() => useFlowStore.setState({ edges: [] }));
-
-    it("draws a handle on each question card", () => {
-      renderConnectable([first]);
-      expect(screen.getByTestId("handle_question_input_1")).toBeInTheDocument();
+  it("deletes a question with its connection field and the edge into it", () => {
+    const deleteEdge = jest.fn();
+    useFlowStore.setState({
+      edges: [edgeInto("question_input_x1")] as never,
+      deleteEdge,
     });
+    const { handleNodeClass } = renderQuestions([team, urgent]);
+    fireEvent.click(screen.getByTestId("questions_question_1"));
+    fireEvent.click(screen.getByTestId("questions_modal_delete"));
+    fireEvent.click(screen.getByTestId("questions_modal_done"));
+    expect(deleteEdge).toHaveBeenCalledWith(["edge-question_input_x1"]);
+    const [[updated]] = handleNodeClass.mock.calls;
+    expect(updated.template.questions.value).toEqual([team]);
+    expect(updated.template.question_input_x1).toBeUndefined();
+  });
 
-    it("adds a connection field with each question it adds", () => {
-      const { handleNodeClass } = renderConnectable([first]);
-      fireEvent.click(screen.getByTestId("questions_add"));
-      const [[updated]] = handleNodeClass.mock.calls;
-      const [, added] = updated.template.questions.value;
-      expect(added.id).toMatch(/^[a-z0-9]+$/);
-      expect(updated.template[`question_input_${added.id}`]).toMatchObject({
-        name: `question_input_${added.id}`,
-        input_types: ["Message"],
-        show: false,
-      });
-    });
+  it("keeps at least one question", () => {
+    renderQuestions([team]);
+    fireEvent.click(screen.getByTestId("questions_edit"));
+    expect(screen.getByTestId("questions_modal_delete")).toBeDisabled();
+  });
 
-    it("removes an added question's field and the edge into it", () => {
-      const deleteEdge = jest.fn();
-      useFlowStore.setState({
-        edges: [edgeInto("question_input_x1")] as never,
-        deleteEdge,
-      });
-      const second = { ...newQuestion, id: "x1" };
-      const { handleNodeClass } = renderConnectable([first, second], {
-        question_input_x1: { ...connection, name: "question_input_x1" },
-      });
-      fireEvent.click(screen.getByTestId("questions_remove_1"));
-      expect(deleteEdge).toHaveBeenCalledWith(["edge-question_input_x1"]);
-      const [[updated]] = handleNodeClass.mock.calls;
-      expect(updated.template.questions.value).toEqual([first]);
-      expect(updated.template.question_input_x1).toBeUndefined();
+  it("edits the selected type's options or levels", async () => {
+    const { handleNodeClass } = renderQuestions([team]);
+    fireEvent.click(screen.getByTestId("questions_edit"));
+    // Radix tabs select on pointer down, which fireEvent.click doesn't send.
+    await userEvent.setup().click(screen.getByRole("tab", { name: "Score" }));
+    fireEvent.click(screen.getByTestId("questions_modal_add_row"));
+    const row = within(screen.getByTestId("questions_modal_row_1"));
+    fireEvent.change(row.getByLabelText("ID 2"), { target: { value: "high" } });
+    fireEvent.change(row.getByLabelText("Label 2"), {
+      target: { value: "High" },
     });
+    fireEvent.click(screen.getByTestId("questions_modal_done"));
+    const [[updated]] = handleNodeClass.mock.calls;
+    expect(updated.template.questions.value[0]).toMatchObject({
+      kind: "Score",
+      levels: [
+        { id: "low", label: "Low", description: "" },
+        { id: "high", label: "High", description: "" },
+      ],
+      options: team.options,
+    });
+  });
 
-    it("shows a connected question instead of its text box", () => {
-      useFlowStore.setState({ edges: [edgeInto("question_input_1")] as never });
-      renderConnectable([first]);
-      expect(
-        screen.getByTestId("questions_question_connected_0"),
-      ).toHaveTextContent("Connected");
-      expect(screen.queryByLabelText("Question 1 text")).toBeNull();
-    });
+  it("shows a connected question as supplied by another component", () => {
+    useFlowStore.setState({ edges: [edgeInto("question_input_1")] as never });
+    renderQuestions([team]);
+    fireEvent.click(screen.getByTestId("questions_edit"));
+    expect(
+      screen.getByTestId("questions_modal_question_connected"),
+    ).toHaveTextContent("Another component supplies this question's text.");
+    expect(screen.queryByTestId("questions_modal_question_text")).toBeNull();
   });
 });

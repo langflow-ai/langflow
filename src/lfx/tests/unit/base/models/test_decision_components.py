@@ -112,14 +112,9 @@ assert DecisionModelComponent().name
 
 
 def test_row_added_in_the_editor_accepts_blank_description(monkeypatch):
-    """The editor fills a new row's cells with each column's default, or null when it has none."""
+    """The question editor adds a row as blank ID, Label and description, and a description may stay blank."""
     component = DecisionModelComponent()
-    columns = next(item for item in component.inputs if item.name == "questions").table_schema
-    rows = []
-    for row_id, label in (("a", "Low"), ("b", "High")):
-        row = {column["name"]: column.get("default") for column in columns}
-        row.update(id=row_id, label=label)
-        rows.append(row)
+    rows = [{"id": row_id, "label": label, "description": ""} for row_id, label in (("a", "Low"), ("b", "High"))]
     component.set(
         model=[{"provider": "TypeSafe", "name": "model"}],
         context="text",
