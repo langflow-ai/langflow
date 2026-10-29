@@ -3,7 +3,7 @@
   "provider_id": "telegram",
   "display_name": "Telegram",
   "icon": "Telegram",
-  "docs_url": "https://github.com/langflow-ai/langflow/blob/b61a355acc2f4bfdcc6b043850c05cdca3cdbdc6/src/bundles/telegram/README.md#installation-and-connection",
+  "docs_url": "https://docs.langflow.org/next/bundles-telegram",
   "auth_profiles": [
     {
       "id": "telegram-bot-token",

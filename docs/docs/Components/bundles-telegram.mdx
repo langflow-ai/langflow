@@ -1,0 +1,143 @@
+---
+title: Telegram components
+slug: /bundles-telegram
+---
+
+The Telegram bundle provides text-message and command triggers, message actions, replies, and notifications.
+These components are in preview and use a [managed connection](../Develop/connections.mdx) for a Telegram bot.
+Saved flows contain a connection handle instead of the bot token.
+
+## Supported contexts
+
+| Context | Actions | Trigger receiver |
+| --- | --- | --- |
+| Hosted Langflow | Supported | Public HTTPS webhook |
+| Self-managed Langflow with public HTTPS ingress | Supported | Webhook or polling |
+| Self-managed Langflow without public ingress | Supported | Polling |
+| Langflow Desktop | Supported | Polling with a running listener |
+| Headless lfx | Supported through its connection resolver | No standalone receiver |
+
+Install `lfx-telegram` with the matching Langflow 1.14 runtime in the API and listener environments.
+Restart those processes after installation and confirm the bundle appears in `lfx extension list`.
+Standalone actions require lfx and the bundle, without the Langflow server package.
+
+## Capabilities and permissions
+
+| Component | Behavior and inputs |
+| --- | --- |
+| **Telegram: On Message** | Receives new text messages from explicitly allowed numeric chat IDs. An optional sender allowlist narrows delivery. |
+| **Telegram: On Command** | Receives leading bot commands from the allowed chats and senders. Commands addressed to another bot are ignored. |
+| **Telegram: Send Message** | Sends plain text to a numeric chat ID and optional topic ID. |
+| **Telegram: Reply to Message** | Replies to a recorded trigger event using its original bot, chat, topic, and message ID. |
+| **Telegram: Send Notification** | Sends plain text and defaults to a silent notification. |
+
+Bot tokens have no OAuth scopes or refresh tokens.
+Telegram privacy settings, group membership, and chat permissions determine which messages the bot can receive and send.
+A Langflow allowlist filters those messages and does not grant additional access.
+Langflow's integration policy can further restrict a provider or action.
+
+Actions accept up to 4096 UTF-16 code units of plain text.
+Formatting modes, arbitrary Bot API methods, file downloads, and paid broadcasts are unsupported.
+Triggers ignore bot authors, anonymous senders, channel posts, edits, attachments, callbacks, and business-account events.
+
+## Create a bot and connect it
+
+1. Open the verified [BotFather](https://t.me/BotFather) account in Telegram, send `/newbot`, and follow its prompts.
+   Store the resulting token in your secret manager.
+   See [Telegram's bot setup guide](https://core.telegram.org/bots/tutorial#obtain-your-bot-token).
+2. Start a private conversation with your bot, or add it to the target group.
+   Review its BotFather privacy settings and group permissions for the messages you intend to receive.
+   See [Telegram's privacy guidance](https://core.telegram.org/bots/faq#what-messages-will-my-bot-get).
+3. Open **Settings**, **Connections**, and **Add connection** in Langflow.
+   Choose **Telegram**, enter a handle such as `work`, and save the bot token as your own connection.
+   Langflow checks `getMe` and records the verified bot ID and username.
+4. Select that connection in a component's **Telegram Connection** field.
+   The saved handle is `telegram/work`.
+
+Find each chat's numeric ID from an update delivered to your bot through the Bot API or your existing bot administration tooling.
+For a new bot, inspect `getUpdates` before enabling the Langflow receiver, then stop that temporary consumer.
+Do not run a second update consumer while Langflow owns the bot.
+Use numeric IDs, including the negative sign for a group, rather than usernames or request URLs.
+
+For a headless action flow using `telegram/work`, supply its bot token through `LF_CONNECTION__TELEGRAM__WORK` in the process environment or the configured connection resolver.
+Use your secret manager to populate the value.
+Do not add a token to exported JSON or component inputs.
+This enables actions and does not start a Telegram receiver in `lfx run` or `lfx serve`.
+
+## Enable a trigger
+
+1. Add **Telegram: On Message** or **Telegram: On Command** at the start of a flow you own.
+   Select your connection and fill **Allowed Chat IDs** with at least one numeric ID.
+2. Set **Allowed Sender IDs** when only specific people should start the flow.
+   For command triggers, set the **Commands** filter as needed.
+3. Choose **Delivery** and save the flow.
+   The default selects the transport available in the deployment.
+4. Enable **Allow background runs** in the trigger node controls.
+   Alternatively, open the connection's **Actions** menu in **Settings**, **Connections**, and enable **Allow scheduled and deployed runs**.
+5. Enable the trigger, or select **Resume** in **Settings**, **Triggers**.
+   Open its event list after sending a matching Telegram message.
+
+One active trigger owns each verified bot in a Langflow database, including duplicate connections to that bot.
+Choose either a message trigger or a command trigger for a bot.
+Additional independent receivers require additional bots.
+Dedicate each bot to one Langflow installation because another application can consume its update queue or replace its webhook.
+
+### Polling without public ingress
+
+Run `langflow listeners` alongside the API, or configure `LANGFLOW_LISTENERS_MODE=subprocess`.
+Use the same database, `LANGFLOW_SECRET_KEY`, and installed bundle in both processes.
+See [Deploy trigger listeners](../Deployment/deployment-trigger-listeners.mdx).
+
+Each poll requests up to 100 updates with a 20-second long-poll timeout.
+The listener then waits around `max(LANGFLOW_LISTENER_POLL_INTERVAL_S, 30)` seconds with jitter.
+Network failures, rate limits, and processing time can add delay.
+Polling refuses an existing Telegram webhook and never removes it to gain access to the update queue.
+
+### Webhooks with public ingress
+
+Configure `LANGFLOW_TRIGGER_INGRESS_ENABLED=true` and a public HTTPS `LANGFLOW_TRIGGER_INGRESS_ORIGIN` on a Telegram-supported port.
+Enable the server's trigger workers and follow the [webhook deployment guide](../Deployment/deployment-trigger-webhooks.mdx).
+Langflow generates the callback URL and webhook secret when it enables the trigger.
+An unrelated existing webhook prevents setup.
+
+Each delivery must include the matching `X-Telegram-Bot-Api-Secret-Token` header before its body enters the event ledger.
+The bot token and webhook secret never appear in flow JSON.
+See the [Bot API webhook contract](https://core.telegram.org/bots/api#setwebhook).
+
+## Event identity and missed messages
+
+Webhook and polling delivery use the verified bot ID and Telegram update ID as event identity.
+The durable event ledger suppresses repeated updates, including retries and transport changes.
+Polling commits its next offset and normalized events together.
+Only a later request confirms the previously committed page, so a failed commit can safely repeat the page.
+
+The normalized event includes chat, sender, update, message, and topic IDs, text, command arguments, and a conversation session key.
+Choose chat, sender, or thread sessions through **Conversation Session**.
+Thread sessions use a topic only when Telegram marks the message as a topic message.
+Reply verifies the receiving bot and fails if the original message cannot be used as a reply target.
+
+Telegram retains pending updates for at most 24 hours.
+Long downtime can lose events, and Langflow does not reconstruct them from message history.
+The listener abandons an offset older than seven days because Telegram can randomize update IDs after inactivity.
+Use the event list to replay an event Langflow already recorded.
+Replay cannot recover an update Telegram no longer retains.
+
+## Recovery and cleanup
+
+| Symptom | Recovery |
+| --- | --- |
+| The bot token was revoked or reset | Reconnect the connection with a valid token for the same bot. Then select **Resume** for each trigger showing **Ready to resume** in **Settings**, **Triggers**. Reconnecting alone does not restart listening. |
+| Background use is blocked | Enable **Allow background runs** on the trigger or **Allow scheduled and deployed runs** on the connection, then resume. |
+| Another receiver owns the bot | Disable the old trigger and wait for its durable cleanup before enabling a replacement. Check for consumers outside Langflow as well. |
+| Messages are missing | Check numeric chat and sender filters, bot membership, privacy settings, and the provider's update-retention window. |
+| Telegram rejects a send or rate limits it | Check chat access and message limits. Honor the reported retry delay before retrying. |
+
+Before changing transport or rotating a working token, pause the trigger and let cleanup finish.
+Webhook cleanup checks the original bot and callback URL before removing it, leaving a different callback untouched.
+Both webhook setup and deletion retain pending updates.
+If a token was already invalidated, restore access to the original bot or have an operator reconcile pending cleanup before replacing the receiver.
+Do not share a bot token with another application because Telegram cannot make webhook ownership checks and deletion atomic.
+
+After a bot username change, pause and resume webhook receivers so named commands use the new name.
+A timed-out send may already have reached Telegram.
+Langflow does not automatically retry ambiguous sends, and a manual retry can create a duplicate message.
