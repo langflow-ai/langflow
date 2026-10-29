@@ -19,7 +19,7 @@ import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import { extractApiErrorMessages } from "@/utils/apiError";
 import BackLink from "./components/BackLink";
-import CsvDropzone from "./components/CsvDropzone";
+import CsvDropTarget from "./components/CsvDropTarget";
 import CsvImportDialog from "./components/CsvImportDialog";
 import DatasetItemDialog from "./components/DatasetItemDialog";
 import EvalsPageShell from "./components/EvalsPageShell";
@@ -184,17 +184,24 @@ export default function DatasetDetailPage() {
           isLoading={isLoading}
           loadingState={<EvalsLoadingState label={t("evals.items.loading")} />}
           emptyState={
-            <EvalsEmptyState
-              icon="ListPlus"
-              title={t("evals.items.emptyTitle")}
-              description={t("evals.items.emptyBody")}
-              actions={
-                <div className="flex w-full max-w-md flex-col items-stretch gap-3">
-                  <CsvDropzone onFile={startImport} />
-                  <div className="flex justify-center">{addButton}</div>
-                </div>
-              }
-            />
+            <CsvDropTarget onFile={startImport}>
+              <EvalsEmptyState
+                icon="ListPlus"
+                title={t("evals.items.emptyTitle")}
+                description={t("evals.items.emptyBody")}
+                actions={
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="flex gap-2">
+                      {importButton}
+                      {addButton}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {t("evals.csv.dropTitle")}
+                    </p>
+                  </div>
+                }
+              />
+            </CsvDropTarget>
           }
           searchPlaceholder={t("evals.items.search")}
           searchInputTestId="search-items-input"
