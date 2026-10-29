@@ -1,7 +1,7 @@
 """Add the Evals tables: datasets, their items, evaluations, runs and per-row results.
 
 Revision ID: 876a81df5a20
-Revises: 1d8d193028c8
+Revises: c6a81d3e9502
 Create Date: 2026-10-26
 
 Phase: EXPAND
@@ -19,7 +19,7 @@ from alembic import op
 from langflow.utils import migration
 
 revision = "876a81df5a20"  # pragma: allowlist secret
-down_revision = "1d8d193028c8"  # pragma: allowlist secret
+down_revision = "c6a81d3e9502"  # pragma: allowlist secret
 branch_labels = None
 depends_on = None
 
