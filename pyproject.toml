@@ -132,6 +132,7 @@ lfx-google = { workspace = true }
 lfx-confluent = { workspace = true }
 lfx-serply = { workspace = true }
 lfx-serpingapi = { workspace = true }
+lfx-contextfetch = { workspace = true }
 lfx-microsoft = { workspace = true }
 lfx-slack = { workspace = true }
 lfx-github = { workspace = true }
@@ -173,6 +174,7 @@ members = [
     "src/bundles/confluent",
     "src/bundles/serply",
     "src/bundles/serpingapi",
+    "src/bundles/contextfetch",
     "src/bundles/microsoft",
     "src/bundles/slack",
     "src/bundles/github",
@@ -191,6 +193,7 @@ bundles = [
     "lfx-bundles[all-no-torch]>=1.3.1,<2.0",
     "lfx-arxiv>=0.2.1,<1.0.0",
     "lfx-confluent>=0.2.1,<1.0.0",
+    "lfx-contextfetch>=0.1.0,<1.0.0",
     "lfx-duckduckgo>=0.2.1,<1.0.0",
     "lfx-empiriolabs>=0.2.1,<1.0.0",
     "lfx-exa>=0.2.1,<1.0.0",
