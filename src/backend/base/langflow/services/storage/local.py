@@ -10,7 +10,7 @@ import aiofiles
 from lfx.services.storage.namespace import remove_namespace_tree
 
 from langflow.logging.logger import logger
-from langflow.services.storage.service import StorageService
+from langflow.services.storage.service import StorageService, _refuse_bad_move
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -192,6 +192,26 @@ class LocalStorageService(StorageService):
         except Exception:
             logger.exception(f"Error saving file {file_name} in flow {flow_id}")
             raise
+
+    async def move_file(self, source_namespace: str, target_namespace: str, file_name: str) -> None:
+        """Move a file between namespaces with a rename.
+
+        See ``StorageService.move_file``. A rename is atomic within a filesystem and both
+        namespaces sit under ``data_dir``, so a reader sees either the whole previous file
+        or the whole new one. ``save_file`` cannot promise that: it opens the final path in
+        ``"wb"`` or ``"ab"`` and writes into the live file.
+        """
+        _refuse_bad_move(source_namespace, target_namespace, file_name)
+        source = await self._validated_path(source_namespace, file_name)
+        target = await self._validated_path(target_namespace, file_name)
+        await (self.data_dir / target_namespace).mkdir(parents=True, exist_ok=True)
+        try:
+            await source.replace(target)
+        except FileNotFoundError:
+            if await self._has_object(target_namespace, file_name):
+                return
+            raise
+        await logger.ainfo(f"File {file_name} moved from {source_namespace} to {target_namespace}")
 
     async def get_file(self, flow_id: str, file_name: str) -> bytes:
         """Retrieve a file from the local storage.

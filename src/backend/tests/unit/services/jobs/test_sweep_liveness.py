@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
-from langflow.services.database.models.jobs.model import JobStatus
+from langflow.services.database.models.jobs.model import JobStatus, JobType
 from langflow.services.jobs.service import JobService
 
 
@@ -157,3 +157,21 @@ async def test_stop_keep_alive_waits_for_an_in_flight_heartbeat(monkeypatch):
     metadata = (await service.get_job_by_job_id(job_id)).job_metadata
     assert metadata["status"] == "succeeded"
     assert metadata["heartbeat_at"] == stamp
+
+
+@pytest.mark.usefixtures("client")
+async def test_sweep_leaves_a_deployment_copy_alone():
+    """A deploy's document copy never heartbeats: the client's resend drives it, not a worker."""
+    service = JobService()
+    copy = uuid4()
+    orphan = uuid4()
+    await service.create_job(job_id=copy, flow_id=uuid4(), user_id=uuid4(), job_type=JobType.DEPLOYMENT_COPY)
+    await service.update_job_status(copy, JobStatus.IN_PROGRESS)
+    await service.create_job(job_id=orphan, flow_id=uuid4(), user_id=uuid4())
+    await service.update_job_status(orphan, JobStatus.IN_PROGRESS)
+
+    swept = await service.sweep_orphans(lease_ttl_s=30.0)
+
+    assert copy not in swept
+    assert orphan in swept
+    assert (await service.get_job_by_job_id(copy)).status == JobStatus.IN_PROGRESS

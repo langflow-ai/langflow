@@ -27,7 +27,8 @@ class JobType(str, Enum):
 
     WORKFLOW: for workflow execution
     INGESTION: for knowledge base ingestion
-    EVALUATION: for evaluation of workflows.
+    EVALUATION: for evaluation of workflows
+    DEPLOYMENT_COPY: for copying a deployment's content to the plane that serves it.
 
     Can be extended in future for other types of jobs.
     """
@@ -35,6 +36,7 @@ class JobType(str, Enum):
     WORKFLOW = "workflow"
     INGESTION = "ingestion"
     EVALUATION = "evaluation"
+    DEPLOYMENT_COPY = "deployment_copy"
 
 
 class JobBase(SQLModel):
