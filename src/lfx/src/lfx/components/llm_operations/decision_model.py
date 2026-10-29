@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from lfx.base.models.decisions.runtime import decision_token_usage, evaluate_decision, request_variables_of
 from lfx.base.models.decisions.schema import DecisionConfigurationError, decision_request
 from lfx.base.models.unified_models import handle_model_input_update
@@ -7,6 +9,17 @@ from lfx.schema.data import Data
 from lfx.schema.table import EditMode
 
 _KINDS = ("Choice", "Boolean", "Score")
+_DEFAULT_CANDIDATES = {
+    "Choice": [
+        {"id": "a", "label": "Option A", "description": ""},
+        {"id": "b", "label": "Option B", "description": ""},
+    ],
+    "Score": [
+        {"id": "low", "label": "Low", "description": ""},
+        {"id": "medium", "label": "Medium", "description": ""},
+        {"id": "high", "label": "High", "description": ""},
+    ],
+}
 # The table's name and help follow the Decision Type.
 _TABLE = {
     "Choice": (
@@ -21,6 +34,31 @@ _TABLE = {
         "model reads.",
     ),
 }
+_TABLE_SCHEMA = [
+    {
+        "name": "id",
+        "display_name": "ID",
+        "type": "str",
+        "description": "A short unique key, such as refund. The result uses it.",
+        "edit_mode": EditMode.INLINE,
+    },
+    {
+        "name": "label",
+        "display_name": "Label",
+        "type": "str",
+        "description": "The name the model reads. Labels must differ, ignoring case.",
+        "edit_mode": EditMode.INLINE,
+    },
+    {
+        "name": "description",
+        "display_name": "Description",
+        "type": "str",
+        "description": "Optional: more about when this one applies.",
+        "edit_mode": EditMode.POPOVER,
+        "default": "",
+    },
+]
+
 # What an agent learns about this component when it is a tool.
 _RESULT_INFO = (
     "Answers this component's fixed question about the text you pass as context, and returns JSON. Choice gives "
@@ -78,36 +116,18 @@ class DecisionModelComponent(Component):
             display_name=_TABLE["Choice"][0],
             # Options are typed in, not connected: connected rows arrive with NaN cells and number IDs.
             input_types=[],
-            value=[
-                {"id": "low", "label": "Low", "description": ""},
-                {"id": "medium", "label": "Medium", "description": ""},
-                {"id": "high", "label": "High", "description": ""},
-            ],
+            value=[row.copy() for row in _DEFAULT_CANDIDATES["Choice"]],
             info=_TABLE["Choice"][1],
-            table_schema=[
-                {
-                    "name": "id",
-                    "display_name": "ID",
-                    "type": "str",
-                    "description": "A short unique key, such as refund. The result uses it.",
-                    "edit_mode": EditMode.INLINE,
-                },
-                {
-                    "name": "label",
-                    "display_name": "Label",
-                    "type": "str",
-                    "description": "The name the model reads. Labels must differ, ignoring case.",
-                    "edit_mode": EditMode.INLINE,
-                },
-                {
-                    "name": "description",
-                    "display_name": "Description",
-                    "type": "str",
-                    "description": "Optional: more about when this one applies.",
-                    "edit_mode": EditMode.POPOVER,
-                    "default": "",
-                },
-            ],
+            table_schema=_TABLE_SCHEMA,
+        ),
+        TableInput(
+            name="levels",
+            display_name=_TABLE["Score"][0],
+            input_types=[],
+            value=[row.copy() for row in _DEFAULT_CANDIDATES["Score"]],
+            info=_TABLE["Score"][1],
+            table_schema=_TABLE_SCHEMA,
+            show=False,
         ),
         MessageTextInput(
             name="yes_description",
@@ -186,7 +206,7 @@ class DecisionModelComponent(Component):
             question=self.question,
             context=self._context(),
             options=self.candidates if kind == "choice" else (),
-            levels=self.candidates if kind == "score" else (),
+            levels=self.levels if kind == "score" else (),
             # Hidden for other types, so a value left from Boolean never applies to them.
             yes_description=(self.yes_description or "") if boolean else "",
             no_description=(self.no_description or "") if boolean else "",
@@ -218,6 +238,11 @@ class DecisionModelComponent(Component):
         """
         await super().update_frontend_node(new_frontend_node, current_frontend_node)
         template = new_frontend_node.get("template", {})
+        saved_template = current_frontend_node.get("template", {})
+        if "levels" not in saved_template and (saved_template.get("kind") or {}).get("value") == "Score":
+            # Older Score nodes stored their rubric in the shared candidates field.
+            template["levels"]["value"] = deepcopy(saved_template["candidates"]["value"])
+            template["candidates"]["value"] = deepcopy(_DEFAULT_CANDIDATES["Choice"])
         self._show_fields(template, (template.get("kind") or {}).get("value", "Choice"))
         return new_frontend_node
 
@@ -230,10 +255,9 @@ class DecisionModelComponent(Component):
 
     @staticmethod
     def _show_fields(config: dict, kind: str) -> None:
-        """Show the table and the Yes/No meanings for this Decision Type, and name the table for it."""
-        config["candidates"]["show"] = kind != "Boolean"
-        if kind in _TABLE:
-            config["candidates"]["display_name"], config["candidates"]["info"] = _TABLE[kind]
+        """Show only the active type's inputs without modifying either table's values."""
+        config["candidates"]["show"] = kind == "Choice"
+        config["levels"]["show"] = kind == "Score"
         for name in ("yes_description", "no_description"):
             if name in config:
                 config[name]["show"] = kind == "Boolean"

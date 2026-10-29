@@ -32,7 +32,8 @@ def test_component_preserves_evidence_and_executes_once(kind, monkeypatch):
         kind=kind,
         context="sensitive context",
         question="What applies?",
-        candidates=[{"id": "a", "label": "Low"}, {"id": "b", "label": "High"}],
+        candidates=[{"id": "a", "label": "Refund"}, {"id": "b", "label": "Support"}],
+        levels=[{"id": "a", "label": "Low"}, {"id": "b", "label": "High"}],
         timeout=30,
     )
     calls = []
@@ -56,6 +57,8 @@ def test_component_preserves_evidence_and_executes_once(kind, monkeypatch):
     assert len(calls) == 1
     request, kwargs = calls[0]
     assert request.context == "sensitive context"
+    assert [row.label for row in request.options] == (["Refund", "Support"] if kind == "Choice" else [])
+    assert [row.label for row in request.levels] == (["Low", "High"] if kind == "Score" else [])
     assert kwargs["timeout"] == 30
     assert result.data["model"] == "actual-model"
     assert "context" not in result.data["request"]
@@ -226,7 +229,8 @@ def test_yes_and_no_fields_show_only_for_boolean(monkeypatch, kind, shown):
     config = component.update_build_config(config, kind, "kind")
     assert config["yes_description"]["show"] is shown
     assert config["no_description"]["show"] is shown
-    assert config["candidates"]["show"] is not shown
+    assert config["candidates"]["show"] is (kind == "Choice")
+    assert config["levels"]["show"] is (kind == "Score")
 
 
 async def test_an_agent_supplies_the_context_when_used_as_a_tool():
@@ -241,7 +245,8 @@ def test_the_table_is_named_for_the_decision_type(monkeypatch, kind, name):
     monkeypatch.setattr(component_module, "handle_model_input_update", lambda _c, config, *_a, **_k: config)
     component = DecisionModelComponent()
     config = {field: spec.model_dump() for field, spec in component._inputs.items()}
-    assert component.update_build_config(config, kind, "kind")["candidates"]["display_name"] == name
+    field = "candidates" if kind == "Choice" else "levels"
+    assert component.update_build_config(config, kind, "kind")[field]["display_name"] == name
 
 
 async def test_an_agent_learns_what_the_tool_answers():
@@ -288,3 +293,35 @@ async def test_update_keeps_a_boolean_nodes_yes_and_no_meanings_shown():
     assert node["template"]["yes_description"]["show"] is True
     assert node["template"]["no_description"]["show"] is True
     assert node["template"]["candidates"]["show"] is False
+
+
+def test_choice_and_score_have_independent_tables(monkeypatch):
+    monkeypatch.setattr(component_module, "handle_model_input_update", lambda _c, config, *_a, **_k: config)
+    component = DecisionModelComponent()
+    config = {field: spec.model_dump() for field, spec in component._inputs.items()}
+    assert [row["label"] for row in config["candidates"]["value"]] == ["Option A", "Option B"]
+    assert [row["label"] for row in config["levels"]["value"]] == ["Low", "Medium", "High"]
+    choices = [{"id": "refund", "label": "Refund"}, {"id": "support", "label": "Support"}]
+    levels = [{"id": "bad", "label": "Bad"}, {"id": "good", "label": "Good"}]
+    config["candidates"]["value"] = choices
+    config["levels"]["value"] = levels
+    for kind in ("Score", "Boolean", "Choice", "Score"):
+        component.update_build_config(config, kind, "kind")
+        assert config["candidates"]["value"] == choices
+        assert config["levels"]["value"] == levels
+        assert config["candidates"]["show"] is (kind == "Choice")
+        assert config["levels"]["show"] is (kind == "Score")
+
+
+async def test_old_score_node_migrates_shared_rows_only_once():
+    component = DecisionModelComponent()
+    saved = component.to_frontend_node()["data"]["node"]
+    del saved["template"]["levels"]
+    saved["template"]["kind"]["value"] = "Score"
+    rubric = [{"id": "bad", "label": "Bad"}, {"id": "great", "label": "Great"}]
+    saved["template"]["candidates"]["value"] = rubric
+    updated = await component.update_frontend_node(component.to_frontend_node()["data"]["node"], saved)
+    assert updated["template"]["levels"]["value"] == rubric
+    assert updated["template"]["candidates"]["value"] != rubric
+    again = await component.update_frontend_node(component.to_frontend_node()["data"]["node"], updated)
+    assert again["template"]["levels"]["value"] == rubric
