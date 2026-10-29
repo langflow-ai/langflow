@@ -1350,7 +1350,11 @@ class Component(CustomComponent):
     @staticmethod
     def _get_trace_value(input_: Any) -> Any:
         """Return an input value safe to send to tracing providers."""
-        if getattr(input_, "password", False):
+        from lfx.inputs.input_mixin import FieldTypes
+
+        # Auth, connection and MCP values can hold credentials without password=True.
+        credential_types = {FieldTypes.AUTH, FieldTypes.CONNECTION, FieldTypes.MCP}
+        if getattr(input_, "password", False) or getattr(input_, "field_type", None) in credential_types:
             return "**********"
         return _mask_secret_value(input_.value)
 
