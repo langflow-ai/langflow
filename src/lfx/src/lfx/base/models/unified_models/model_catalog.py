@@ -3,14 +3,21 @@
 from __future__ import annotations
 
 import contextlib
+from collections import Counter
 from typing import TYPE_CHECKING, Any
 
+from lfx.base.models.decision_constants import is_decision_row
 from lfx.base.models.model_metadata import EXPLICIT_ENABLE_ONLY_PROVIDERS, get_provider_param_mapping
 from lfx.base.models.model_utils import apply_metadata_filters, inject_custom_enabled_models, replace_with_live_models
 from lfx.utils.async_helpers import run_until_complete
 
 from .class_registry import EMBEDDING_PARAM_MAPPINGS, EMBEDDING_PROVIDER_CLASS_MAPPING
-from .credentials import _fetch_enabled_providers_for_user, _get_model_status, model_status_contains
+from .credentials import (
+    _fetch_enabled_providers_for_user,
+    _get_model_status,
+    _keeps_model_settings,
+    model_status_contains,
+)
 from .provider_queries import get_model_providers, get_models_detailed, model_provider_metadata
 
 if TYPE_CHECKING:
@@ -121,8 +128,13 @@ def get_unified_models_detailed(
 
     for prov, models in provider_map.items():
         models.sort(key=_sort_key)
-        for i, model in enumerate(models):
-            model["metadata"]["default"] = i < default_model_count
+        # Decision rows get their own first five, as language models do, so they never displace a
+        # provider's chat defaults.
+        seen = Counter()
+        for model in models:
+            is_decision = is_decision_row(model)
+            model["metadata"]["default"] = seen[is_decision] < default_model_count
+            seen[is_decision] += 1
 
         # If only_defaults is True, filter to only default models
         if only_defaults:
@@ -514,3 +526,60 @@ def normalize_model_names_to_dicts(
             )
 
     return result
+
+
+def get_decision_model_options(
+    user_id: UUID | str | None = None,
+    *,
+    provider_policy: ModelProviderPolicySnapshot | None = None,
+    require_configured: bool = True,
+) -> list[dict[str, Any]]:
+    """Return enabled decision models; configuration read failures propagate.
+
+    Without a user, and in standalone lfx, which keeps no Model Providers settings, any
+    catalog model policy allows can be selected; its credentials come from request
+    variables or the environment. With saved settings, a user's providers and switches apply.
+    """
+    # A component outside a graph reports the placeholder user id "None".
+    if isinstance(user_id, str) and user_id == "None":
+        user_id = None
+    if provider_policy is None:
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
+
+        provider_policy = resolve_model_provider_policy(
+            user_id=user_id,
+            providers=get_model_providers(),
+            purpose=ModelProviderPolicyPurpose.USE,
+        )
+    disabled: set[str] = set()
+    enabled: set[str] = set()
+    configured: set[str] | None = None
+    saved_settings = bool(user_id) and _keeps_model_settings()
+    if saved_settings:
+        disabled, enabled = run_until_complete(_get_model_status(user_id, strict=True))
+        if require_configured:
+            configured = run_until_complete(_fetch_enabled_providers_for_user(user_id, provider_policy=provider_policy))
+    options: list[dict[str, Any]] = []
+    for group in get_unified_models_detailed(model_type="decision"):
+        provider = group["provider"]
+        if not provider_policy.allows(provider) or (configured is not None and provider not in configured):
+            continue
+        for row in group["models"]:
+            name, metadata = row["model_name"], row["metadata"]
+            if not provider_policy.allows_model(provider, name, model_type="decision"):
+                continue
+            if model_status_contains(disabled, provider, name, model_type="decision"):
+                continue
+            explicitly_on = model_status_contains(enabled, provider, name, model_type="decision")
+            if saved_settings and not (metadata.get("default", False) or explicitly_on):
+                continue
+            options.append(
+                {
+                    "name": name,
+                    "provider": provider,
+                    "category": provider,
+                    "icon": group.get("icon", "Bot"),
+                    "metadata": dict(metadata),
+                }
+            )
+    return options
