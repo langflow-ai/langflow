@@ -194,7 +194,7 @@ class _Usage(BaseModel):
     output_tokens_details: _OutputDetails | None = None
 
 
-def _token_usage(raw: Any) -> dict | None:
+def provider_token_usage(raw: Any) -> dict | None:
     # Usage isn't decision evidence: a block Langflow can't read is dropped, never the decision.
     try:
         return None if raw is None else _Usage.model_validate(raw).model_dump(exclude_none=True)
@@ -231,7 +231,7 @@ def parse_response(
             "model": model,
             # Perplexity explicitly documents that this field echoes the requested alias.
             "model_source": "request" if provider == "Perplexity" else "response",
-            "usage": _token_usage(payload.get("usage")),
+            "usage": provider_token_usage(payload.get("usage")),
             "request_id": request_id,
         }
         # Only OpenAI documents a refusal answer. TypeSafe and Perplexity always answer with the
@@ -310,6 +310,17 @@ def evaluate_provider(
 ) -> DecisionResult:
     """Execute one request through the existing strict SSRF-protected transport."""
     payload = build_payload(provider, model, request)
+    body, request_id = post_decision(provider, payload, api_key=api_key, timeout=timeout)
+    return parse_response(provider, request, body, request_id=request_id)
+
+
+def post_decision(
+    provider: str, payload: dict[str, Any], *, api_key: str, timeout: float = 60
+) -> tuple[dict[str, Any], str | None]:
+    """POST a decision payload to the provider's official endpoint; the decoded body and its request ID.
+
+    Every failure becomes a configuration, permission or evaluation error with the provider's reference.
+    """
     if not api_key:
         msg = f"Add the {provider} API key in Model Providers."
         raise DecisionConfigurationError(msg)
@@ -398,7 +409,7 @@ def evaluate_provider(
     except ValueError:
         msg = f"{provider} sent an answer Langflow couldn't read{_reference(request_id=request_id)}. "
         raise DecisionEvaluationError(msg + _try_again(provider, request_id), category="invalid_response") from None
-    return parse_response(provider, request, body, request_id=request_id)
+    return body, request_id
 
 
 def validate_decision_provider_key(provider: str, variables: dict, model_name: str) -> None:

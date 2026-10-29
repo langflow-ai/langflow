@@ -35,15 +35,17 @@ def decision_token_usage(result: DecisionResult) -> Usage | None:
     return Usage(**counts)
 
 
-def evaluate_decision(
-    request: DecisionRequest,
-    *,
+def authorize_decision_model(
     model: list[dict[str, Any]] | dict[str, Any],
+    *,
+    kinds: tuple[str, ...],
     user_id: UUID | str | None = None,
     request_variables: Mapping[str, Any] | None = None,
-    timeout: float = 60,
-) -> DecisionResult:
-    """Authorize the canonical catalog identity before resolving credentials or invoking HTTP."""
+) -> tuple[str, str, str]:
+    """Check policy, catalog and capabilities, then resolve the provider's own key: (provider, model, key).
+
+    Nothing here calls the provider, so a caller can check a decision model before spending anything.
+    """
     if isinstance(model, list):
         if len(model) != 1:
             msg = "Pick one Decision Model."
@@ -78,14 +80,16 @@ def evaluate_decision(
     if selected is None:
         msg = "The selected Decision Model is no longer offered. Pick another Decision Model."
         raise DecisionConfigurationError(msg)
-    if request.kind not in selected.get("metadata", {}).get("capabilities", []):
-        msg = (
-            f"{model_name} doesn't support the {request.kind.title()} Decision Type. "
-            "Pick another Decision Type or Decision Model."
-        )
-        raise DecisionConfigurationError(msg)
+    capabilities = selected.get("metadata", {}).get("capabilities", [])
+    for kind in kinds:
+        if kind not in capabilities:
+            msg = (
+                f"{model_name} doesn't support the {kind.title()} Decision Type. "
+                "Pick another Decision Type or Decision Model."
+            )
+            raise DecisionConfigurationError(msg)
 
-    from lfx.base.models.decisions.providers import evaluate_provider, require_official_openai_endpoint
+    from lfx.base.models.decisions.providers import require_official_openai_endpoint
 
     # Only the provider's own credential is used; flows cannot supply or name a key. A caller's
     # per-request value for it comes first, in any form a request sends it (X-LANGFLOW-GLOBAL-VAR-*
@@ -109,6 +113,23 @@ def evaluate_decision(
     if not resolved_key:
         msg = f"Add the {provider} API key in Model Providers, or set {own_variable}."
         raise DecisionConfigurationError(msg)
+    return provider, model_name, resolved_key
+
+
+def evaluate_decision(
+    request: DecisionRequest,
+    *,
+    model: list[dict[str, Any]] | dict[str, Any],
+    user_id: UUID | str | None = None,
+    request_variables: Mapping[str, Any] | None = None,
+    timeout: float = 60,
+) -> DecisionResult:
+    """Authorize the canonical catalog identity before resolving credentials or invoking HTTP."""
+    provider, model_name, api_key = authorize_decision_model(
+        model, kinds=(request.kind,), user_id=user_id, request_variables=request_variables
+    )
+
+    from lfx.base.models.decisions.providers import evaluate_provider
 
     # parse_response already validates the evidence against this request.
-    return evaluate_provider(provider, model_name, request, api_key=resolved_key, timeout=timeout)
+    return evaluate_provider(provider, model_name, request, api_key=api_key, timeout=timeout)

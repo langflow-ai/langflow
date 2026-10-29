@@ -9,6 +9,7 @@ import type {
   ScorerType,
 } from "@/controllers/API/queries/evals/types";
 import { cn } from "@/utils/utils";
+import JevJudgeToggle, { isJevModel, JEV_MODEL } from "./JevJudgeToggle";
 import JudgeLimitFields, { type JudgeLimits } from "./JudgeLimitFields";
 import { isReasoningModel } from "./judgeLimits";
 import SafetyCheckFields from "./SafetyCheckFields";
@@ -54,7 +55,8 @@ export default function ScorerFields({
 }: ScorerFieldsProps) {
   const { t } = useTranslation();
   const judgeOn = selected.has("llm_judge");
-  const { options, ready } = useModelOptions(flowId, judgeOn);
+  const jevOn = isJevModel(judgeModel[0]);
+  const { options, ready } = useModelOptions(flowId, judgeOn && !jevOn);
 
   return (
     <fieldset className="flex flex-col gap-3">
@@ -109,23 +111,43 @@ export default function ScorerFields({
       </div>
       {judgeOn && (
         <div className="flex flex-col gap-4 rounded-lg border px-4 py-4">
+          <JevJudgeToggle
+            flowId={flowId}
+            checked={jevOn}
+            onChange={(on) => onJudgeModel(on ? [JEV_MODEL] : [])}
+          />
           <div className="flex flex-col gap-2 [&_button]:h-10">
-            <Label htmlFor="judge-model">
+            <Label
+              id="judge-model-label"
+              htmlFor={jevOn ? undefined : "judge-model"}
+            >
               {t("evals.evaluate.judgeModel")}
             </Label>
-            <ModelInputComponent
-              id="judge-model"
-              value={judgeModel}
-              editNode={false}
-              disabled={!ready}
-              handleOnNewValue={({ value }) => onJudgeModel(value)}
-              options={options}
-              providerScope={{ flowId }}
-              placeholder={t("evals.evaluate.judgeModelPlaceholder")}
-              modelType="llm"
-              showEmptyState
-              aria-label={t("evals.evaluate.judgeModel")}
-            />
+            {jevOn ? (
+              // The picker offers generating models only; Jev stands in for all of them here.
+              <div
+                aria-labelledby="judge-model-label"
+                aria-disabled="true"
+                className="flex h-10 items-center rounded-md border bg-muted px-3 text-sm text-muted-foreground"
+                data-testid="judge-model-jev"
+              >
+                {t("evals.jev.inUse")}
+              </div>
+            ) : (
+              <ModelInputComponent
+                id="judge-model"
+                value={judgeModel}
+                editNode={false}
+                disabled={!ready}
+                handleOnNewValue={({ value }) => onJudgeModel(value)}
+                options={options}
+                providerScope={{ flowId }}
+                placeholder={t("evals.evaluate.judgeModelPlaceholder")}
+                modelType="llm"
+                showEmptyState
+                aria-label={t("evals.evaluate.judgeModel")}
+              />
+            )}
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="judge-rubric">{t("evals.evaluate.rubric")}</Label>
@@ -139,13 +161,15 @@ export default function ScorerFields({
             />
           </div>
           <SafetyCheckFields value={safetyChecks} onChange={onSafetyChecks} />
-          <JudgeLimitFields
-            value={judgeLimits}
-            onChange={onJudgeLimits}
-            rowInvalid={judgeRowBudgetInvalid}
-            runInvalid={judgeRunBudgetInvalid}
-            reasoningModel={isReasoningModel(judgeModel[0]?.metadata)}
-          />
+          {!jevOn && (
+            <JudgeLimitFields
+              value={judgeLimits}
+              onChange={onJudgeLimits}
+              rowInvalid={judgeRowBudgetInvalid}
+              runInvalid={judgeRunBudgetInvalid}
+              reasoningModel={isReasoningModel(judgeModel[0]?.metadata)}
+            />
+          )}
         </div>
       )}
     </fieldset>

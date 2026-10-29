@@ -22,8 +22,10 @@ from langflow.services.evaluations.estimate import estimate_run
 from langflow.services.evaluations.evaluation_service import has_active_run
 from langflow.services.evaluations.flow_checks import check_flow, resolve_output_vertex
 from langflow.services.evaluations.model_overrides import apply_model_overrides
+from langflow.services.evaluations.row_runner import flow_policy_scope
 from langflow.services.evaluations.run_reconcile import ACTIVE_STATUSES, reconcile_runs
 from langflow.services.evaluations.runner import cancel_local_run, run_evaluation
+from langflow.services.evaluations.scorers.jev_judge import check_jev_judges
 from langflow.services.evaluations.summary import build_summary, summary_rows
 from langflow.services.evaluations.versioning import pin_history_version, pin_latest
 
@@ -76,6 +78,8 @@ async def start_evaluation_run(
     if await has_active_run(session, evaluation.id):
         msg = "This evaluation is already running."
         raise EvalsConflictError(msg)
+    with flow_policy_scope(flow, user):
+        await check_jev_judges(evaluation.scorers, user.id)
     items = await count_items(session, dataset.id)
     max_items = get_settings_service().settings.evals_max_items
     if items == 0:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, Any
 
+from langflow.services.evaluations.scorers.jev_judge import is_jev_judge, score_jev_judge
 from langflow.services.evaluations.scorers.llm_judge import score_llm_judge
 from langflow.services.evaluations.scorers.text import score_contains, score_exact_match, score_similarity
 from langflow.services.evaluations.scorers.types import ScoreResult
@@ -28,7 +29,8 @@ async def run_scorer(
     scorer_type = spec["type"]
     config = spec.get("config") or {}
     if scorer_type == "llm_judge":
-        return await score_llm_judge(
+        judge = score_jev_judge if is_jev_judge(config) else score_llm_judge
+        return await judge(
             question=question,
             actual=actual,
             expected=expected,

@@ -284,6 +284,30 @@ call: the run's percentages are counts of the per-row verdicts.
   off topic; a dictated one-word answer flagged in one of two runs). A judge
   asked to translate a text with embedded instructions flags it as injection.
 
+### Jev judge (`scorers/jev_judge.py`)
+
+An `llm_judge` whose `config.model` is a TypeSafe decision model (`jev-latest`)
+is answered by Jev instead of a generating model; the Evaluate modal offers it as
+**Use Jev**, which replaces the judge model picker. Each row is one TypeSafe
+System One call (`lfx.base.models.decisions.system_one.evaluate_system_one`,
+which reuses the Decision Model's policy, catalog, key resolution and
+SSRF-protected transport) with named questions about the state
+`{question, answer, expected_answer?}`:
+
+- `rubric` (noul): the rubric as a statement about the answer; its probability
+  of yes is the score.
+- one noul per safety check; a probability of 0.5 or more flags it. There is no
+  evidence text to check, so the evidence rule above does not apply.
+- `input_attack` (choice) over the five request kinds, when checks are on.
+
+Jev writes no reason, so the comment states the probabilities. Its output budget
+settings do not apply. A run with a Jev judge is refused at start (422) when the
+TypeSafe key or model is not usable, before any row runs. Rate limits, server
+errors, dropped connections and unreadable answers are retried twice with
+backoff; a rejected key, missing access or an input that is too large is not. A
+simulated 60-row run with 30% rate-limited calls scored 58 rows instead of
+stopping at row 42. Jev has no catalog price, so its cost shows as unknown.
+
 **Pass rule:** an errored row never passes, and neither does a row with a
 flagged safety check. Otherwise the row passes when the weighted mean of the
 scores that judged it reaches `pass_threshold`; when no scorer could judge it,
