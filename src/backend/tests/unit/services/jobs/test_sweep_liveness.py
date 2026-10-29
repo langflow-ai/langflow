@@ -116,6 +116,17 @@ async def test_keep_alive_stops_once_the_job_ends():
     await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4(), status=JobStatus.IN_PROGRESS)
     await service.start_keep_alive(job_id, interval_s=0.1)
 
+    # The keep-alive task is scheduled asynchronously. Wait for its initial
+    # heartbeat before ending the job so the assertion below has a timestamp
+    # to compare and does not race the task's first event-loop turn.
+    for _ in range(50):
+        job = await service.get_job_by_job_id(job_id)
+        if job.job_metadata and "heartbeat_at" in job.job_metadata:
+            break
+        await asyncio.sleep(0.1)
+    else:
+        pytest.fail("keep-alive did not record its initial heartbeat")
+
     await service.update_job_status(job_id, JobStatus.CANCELLED, finished_timestamp=True)
     await asyncio.sleep(0.5)
     stamp = (await service.get_job_by_job_id(job_id)).job_metadata["heartbeat_at"]
