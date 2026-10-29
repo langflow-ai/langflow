@@ -1,7 +1,7 @@
 """Decision Model component discovery and the shared execution contract."""
 
 import pytest
-from lfx.base.models.decisions.schema import DecisionConfigurationError, DecisionResult
+from lfx.base.models.decisions.schema import DecisionConfigurationError, DecisionRequest, DecisionResult
 from lfx.components.llm_operations import decision_model as component_module
 from lfx.components.llm_operations.decision_model import DecisionModelComponent
 from lfx.custom.eval import eval_custom_component_code
@@ -255,7 +255,7 @@ async def test_an_agent_learns_what_the_tool_answers():
     [tool] = await component.to_toolkit()
     assert "probability_true" in tool.description
     assert "selected_option" in tool.description
-    assert tool.args["context"]["description"].startswith("The text the question is about")
+    assert tool.args["context"]["description"].startswith("The text the questions are about")
 
 
 def test_the_result_leaves_out_what_this_decision_did_not_return(monkeypatch):
@@ -331,36 +331,49 @@ def mixed_question_component():
     component = DecisionModelComponent()
     component.set(
         context="An urgent billing issue.",
-        question_mode="Multiple",
-        questions=[
-            {"id": "team", "kind": "Choice", "question": "Which team?"},
-            {"id": "urgent", "kind": "Boolean", "question": "Is this urgent?"},
-            {"id": "impact", "kind": "Score", "question": "How much impact?"},
-        ],
-        question_options=[
-            {"question_id": "team", "id": "billing", "label": "Billing"},
-            {"question_id": "team", "id": "support", "label": "Support"},
-        ],
-        question_levels=[
-            {"question_id": "impact", "id": "low", "label": "Low"},
-            {"question_id": "impact", "id": "high", "label": "High"},
-        ],
+        number_of_questions=3,
+        question_name="team",
+        kind="Choice",
+        question="Which team?",
+        candidates=[{"id": "billing", "label": "Billing"}, {"id": "support", "label": "Support"}],
+        question_name_2="urgent",
+        kind_2="Boolean",
+        question_2="Is this urgent?",
+        question_name_3="impact",
+        kind_3="Score",
+        question_3="How much impact?",
+        levels_3=[{"id": "low", "label": "Low"}, {"id": "high", "label": "High"}],
     )
     return component
 
 
-def test_question_tables_and_json_build_identical_requests():
+def test_form_and_json_build_identical_requests():
     import json
 
     component = mixed_question_component()
-    table_request = component._request()
+    form_request = component._request()
     component.set(
         question_mode="JSON",
-        questions_json=json.dumps(table_request.model_dump(mode="json")["questions"]),
+        questions_json=json.dumps(form_request.model_dump(mode="json")["questions"]),
     )
-    assert component._request() == table_request
-    assert [question.kind for question in table_request.questions.values()] == ["choice", "boolean", "score"]
-    assert [level.id for level in table_request.questions["impact"].levels] == ["low", "high"]
+    assert component._request() == form_request
+    assert list(form_request.questions) == ["team", "urgent", "impact"]
+    assert [question.kind for question in form_request.questions.values()] == ["choice", "boolean", "score"]
+    assert [level.id for level in form_request.questions["impact"].levels] == ["low", "high"]
+
+
+def test_unnamed_form_questions_default_to_their_position():
+    component = mixed_question_component()
+    component.set(question_name="", question_name_3=" ")
+    assert list(component._request().questions) == ["q1", "urgent", "q3"]
+
+
+def test_one_form_question_keeps_the_single_result_shape():
+    component = mixed_question_component()
+    component.set(number_of_questions=1)
+    request = component._request()
+    assert isinstance(request, DecisionRequest)
+    assert request.question == "Which team?"
 
 
 @pytest.mark.parametrize(
@@ -387,48 +400,47 @@ def test_invalid_questions_json_fails_before_execution(source, monkeypatch):
         component.evaluate()
 
 
-@pytest.mark.parametrize("change", ["duplicate", "orphan", "wrong_type", "empty", "missing_id"])
-def test_question_tables_reject_ambiguous_rows(change):
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        ({"question_name_3": "team"}, "named 'team'"),
+        ({"question_2": ""}, "Question 2: Question can't be empty"),
+        ({"kind_3": "Rating"}, "Decision Type for Question 3"),
+        ({"levels_3": [{"id": "low", "label": "Low"}]}, "Question 3: Add at least two levels"),
+        ({"number_of_questions": 6}, "from 1 to 5"),
+        ({"number_of_questions": "2"}, "from 1 to 5"),
+    ],
+)
+def test_form_questions_reject_ambiguous_input(change, message):
     component = mixed_question_component()
-    if change == "duplicate":
-        component.questions.append(dict(component.questions[0]))
-    elif change == "orphan":
-        component.question_options[0]["question_id"] = "missing"
-    elif change == "wrong_type":
-        component.question_levels[0]["question_id"] = "team"
-    elif change == "empty":
-        # Component.set treats an empty list as connections; a cleared editor creates a fresh node.
-        component = DecisionModelComponent()
-        component.set(question_mode="Multiple", context="Example")
-    else:
-        component.questions[0]["id"] = None
-    with pytest.raises(DecisionConfigurationError):
+    component.set(**change)
+    with pytest.raises(DecisionConfigurationError, match=message):
         component._request()
 
 
-def test_question_modes_preserve_independent_tables_and_required_fields():
+def test_question_count_shows_only_active_groups_and_keeps_values():
     component = mixed_question_component()
     template, _ = create_component_template(component_extractor=component)
     config = template["template"]
-    before = {
-        name: config[name]["value"]
-        for name in (
-            "candidates",
-            "levels",
-            "questions",
-            "question_options",
-            "question_levels",
-        )
+    values = {name: field.get("value") for name, field in config.items() if isinstance(field, dict)}
+    component.update_build_config(config, 2, "number_of_questions")
+    component.update_build_config(config, "Score", "kind_2")
+    assert [config[f"question_name{suffix}"]["show"] for suffix in ("", "_2", "_3")] == [True, True, False]
+    assert config["levels_2"]["show"]
+    assert not config["candidates_2"]["show"]
+    assert config["question_2"]["required"]
+    assert not config["question_3"]["required"]
+    component.update_build_config(config, 1, "number_of_questions")
+    assert not config["question_name"]["show"]
+    assert not config["kind_2"]["show"]
+    component.update_build_config(config, "JSON", "question_mode")
+    assert config["questions_json"]["show"]
+    assert not any(config[name]["show"] for name in ("number_of_questions", "kind", "question", "candidates"))
+    assert not config["question"]["required"]
+    changed = {"number_of_questions", "kind_2", "question_mode"}
+    assert {name: config[name].get("value") for name in values if name not in changed} == {
+        name: value for name, value in values.items() if name not in changed
     }
-    for mode in ("Multiple", "JSON", "Single"):
-        config["question_mode"]["value"] = mode
-        component._show_fields(config, "Score")
-        assert config["question"]["required"] == (mode == "Single")
-        assert config["question_levels"]["show"] == (mode == "Multiple")
-        assert config["questions_json"]["show"] == (mode == "JSON")
-        assert config["levels"]["show"] == (mode == "Single")
-        assert not config["candidates"]["show"]
-        assert {name: config[name]["value"] for name in before} == before
 
 
 def test_batch_component_preserves_answers_and_shared_usage(monkeypatch):
@@ -508,19 +520,33 @@ def test_mixed_component_runs_through_runtime_and_http_adapter(monkeypatch):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("mode", ["Multiple", "JSON"])
-async def test_saved_multi_question_modes_survive_component_update(mode):
+async def test_saved_form_questions_survive_component_update():
     from copy import deepcopy
 
     component = mixed_question_component()
     saved, _ = create_component_template(component_extractor=component)
-    saved["template"]["question_mode"]["value"] = mode
+    saved["template"]["number_of_questions"]["value"] = 3
+    saved["template"]["question_3"]["value"] = "How much impact?"
+    saved["template"]["kind_3"]["value"] = "Score"
+    new, _ = create_component_template(component_extractor=DecisionModelComponent())
+    updated = await component.update_frontend_node(new, deepcopy(saved))
+    assert updated["template"]["question_3"]["value"] == "How much impact?"
+    assert updated["template"]["question_3"]["show"]
+    assert updated["template"]["levels_3"]["show"]
+    assert updated["template"]["question_name_2"]["show"]
+
+
+@pytest.mark.asyncio
+async def test_saved_json_mode_survives_component_update():
+    from copy import deepcopy
+
+    component = mixed_question_component()
+    saved, _ = create_component_template(component_extractor=component)
+    saved["template"]["question_mode"]["value"] = "JSON"
     saved["template"]["questions_json"]["value"] = '{"urgent":{"kind":"boolean","question":"Urgent?"}}'
     new, _ = create_component_template(component_extractor=DecisionModelComponent())
     updated = await component.update_frontend_node(new, deepcopy(saved))
-    assert updated["template"]["question_mode"]["value"] == mode
-    assert updated["template"]["questions"]["value"] == saved["template"]["questions"]["value"]
+    assert updated["template"]["question_mode"]["value"] == "JSON"
     assert updated["template"]["questions_json"]["value"] == saved["template"]["questions_json"]["value"]
-    assert updated["template"]["questions"]["show"] == (mode == "Multiple")
-    assert updated["template"]["questions_json"]["show"] == (mode == "JSON")
+    assert updated["template"]["questions_json"]["show"]
     assert not updated["template"]["question"]["required"]
