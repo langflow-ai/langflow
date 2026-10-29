@@ -33,6 +33,9 @@ def row_passed(
 ) -> bool | None:
     if errored:
         return False
+    # A safety check the judge flagged fails the row, whatever its score.
+    if any(result.safety and any(result.safety.values()) for result in scores.values()):
+        return False
     score = weighted_score(scores, scorers)
     if score is None:
         return None

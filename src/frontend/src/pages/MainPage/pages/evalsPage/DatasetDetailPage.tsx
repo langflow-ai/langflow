@@ -21,6 +21,7 @@ import { extractApiErrorMessages } from "@/utils/apiError";
 import BackLink from "./components/BackLink";
 import CsvDropTarget from "./components/CsvDropTarget";
 import CsvImportDialog from "./components/CsvImportDialog";
+import DatasetExamples from "./components/DatasetExamples";
 import DatasetItemDialog from "./components/DatasetItemDialog";
 import EvalsPageShell from "./components/EvalsPageShell";
 import { EvalsEmptyState, EvalsLoadingState } from "./components/EvalsStates";
@@ -198,6 +199,9 @@ export default function DatasetDetailPage() {
                     <p className="text-xs text-muted-foreground">
                       {t("evals.csv.dropTitle")}
                     </p>
+                    <div className="mt-6 flex w-full justify-center">
+                      <DatasetExamples datasetId={datasetId} />
+                    </div>
                   </div>
                 }
               />

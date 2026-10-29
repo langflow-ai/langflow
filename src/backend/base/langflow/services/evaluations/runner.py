@@ -22,8 +22,10 @@ from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.evaluations.dataset_service import all_items, item_text
+from langflow.services.evaluations.errors import EvalsValidationError
 from langflow.services.evaluations.failure_breaker import FailureBreaker, RunAbortedError, failure_detail
 from langflow.services.evaluations.judge_budget import JudgeRunBudget
+from langflow.services.evaluations.model_overrides import apply_model_overrides
 from langflow.services.evaluations.row_runner import execute_row, flow_policy_scope
 from langflow.services.evaluations.row_scoring import score_row
 from langflow.services.evaluations.summary import build_summary, summary_rows
@@ -112,7 +114,11 @@ async def _load_context(run_id: UUID) -> RunContext | None:
         rows = await _pending_rows(session, run)
         for row in (run, flow, user, *(item for _, item in rows)):
             session.expunge(row)
-        version_data = dict(version.data)
+        try:
+            version_data = apply_model_overrides(dict(version.data), (run.config or {}).get("model_overrides") or [])
+        except EvalsValidationError as exc:
+            await _fail_run(session, run_id, str(exc))
+            return None
     sanitized = await prepare_flow_build_for_user(version_data, is_superuser=bool(user.is_superuser))
     graph_data = sanitized if sanitized is not None else version_data
     graph_data = await apply_global_variable_defaults(graph_data, user.id)

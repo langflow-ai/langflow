@@ -9,6 +9,12 @@ from lfx.base.models.unified_models.instantiation import get_llm
 from pydantic import BaseModel, Field
 
 from langflow.services.evaluations.pricing import cost_usd, model_identity
+from langflow.services.evaluations.scorers.safety import (
+    confirmed_flags,
+    safety_prompt,
+    selected_checks,
+    verdict_model,
+)
 from langflow.services.evaluations.scorers.types import ScoreResult
 
 if TYPE_CHECKING:
@@ -47,13 +53,16 @@ def _clip(text: str) -> str:
     return clipped.replace("<", "&lt;").replace(">", "&gt;")
 
 
-def build_judge_messages(question: str, actual: str, expected: str | None, rubric: str | None) -> list[Any]:
+def build_judge_messages(
+    question: str, actual: str, expected: str | None, rubric: str | None, checks: list[str] | None = None
+) -> list[Any]:
     parts = [f"Rubric: {rubric.strip() if rubric and rubric.strip() else DEFAULT_RUBRIC}"]
     parts.append(f"<question>\n{_clip(question)}\n</question>")
     if expected is not None:
         parts.append(f"<expected_answer>\n{_clip(expected)}\n</expected_answer>")
     parts.append(f"<answer>\n{_clip(actual)}\n</answer>")
-    return [SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content="\n\n".join(parts))]
+    system = SYSTEM_PROMPT if not checks else f"{SYSTEM_PROMPT}\n\n{safety_prompt(checks)}"
+    return [SystemMessage(content=system), HumanMessage(content="\n\n".join(parts))]
 
 
 class JudgeOutputLimitError(RuntimeError):
@@ -122,10 +131,15 @@ async def score_llm_judge(
 ) -> ScoreResult:
     selection = config["model"]
     budget = judge_output_budget(config)
+    # An empty answer has nothing to check; it is still scored against the rubric.
+    checks = selected_checks(config) if actual.strip() else []
     llm = get_llm(selection, user_id, max_tokens=budget, overrides=_reasoning_overrides(selection))
-    structured = llm.with_structured_output(JudgeVerdict, include_raw=True)
+    schema = verdict_model(JudgeVerdict, checks) if checks else JudgeVerdict
+    structured = llm.with_structured_output(schema, include_raw=True)
     try:
-        response = await structured.ainvoke(build_judge_messages(question, actual, expected, config.get("rubric")))
+        response = await structured.ainvoke(
+            build_judge_messages(question, actual, expected, config.get("rubric"), checks)
+        )
     except Exception as exc:
         if not _is_output_limit(exc):
             raise
@@ -147,5 +161,11 @@ async def score_llm_judge(
         )
     reason = parsed.reason.strip()[:REASON_MAX_CHARS] or None
     return ScoreResult(
-        value=round(parsed.score, 4), comment=reason, tokens=tokens, cost=cost, output_tokens=output_tokens
+        value=round(parsed.score, 4),
+        comment=reason,
+        tokens=tokens,
+        cost=cost,
+        output_tokens=output_tokens,
+        safety=confirmed_flags(parsed, checks, question, actual) if checks else None,
+        input_attack=getattr(parsed, "input_attack", None) if checks else None,
     )

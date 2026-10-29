@@ -3,9 +3,14 @@ import type { ModelOption } from "@/components/core/parameterRenderComponent/com
 import { isModelEnabledForType } from "@/controllers/API/helpers/enabled-model-policy";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
+import type { ModelType } from "@/types/models";
 
-/** Language models the user may run in this flow's scope, for the LLM judge picker. */
-export function useJudgeModelOptions(flowId: string, enabled: boolean) {
+/** Models of one kind the user may run in this flow's scope, for the judge and model override pickers. */
+export function useModelOptions(
+  flowId: string,
+  enabled: boolean,
+  modelType: ModelType = "llm",
+) {
   const providersQuery = useGetModelProviders(
     { flowId, purpose: "use" },
     { enabled: enabled && Boolean(flowId) },
@@ -26,12 +31,12 @@ export function useJudgeModelOptions(flowId: string, enabled: boolean) {
         provider.models
           .filter(
             (model) =>
-              model.metadata?.model_type === "llm" &&
+              model.metadata?.model_type === modelType &&
               isModelEnabledForType(
                 enabledModels,
                 provider.provider,
                 model.model_name,
-                "llm",
+                modelType,
               ),
           )
           .map((model) => ({
@@ -42,7 +47,7 @@ export function useJudgeModelOptions(flowId: string, enabled: boolean) {
             metadata: model.metadata,
           })),
       );
-  }, [ready, enabledModelsQuery.data, providersQuery.data]);
+  }, [ready, enabledModelsQuery.data, providersQuery.data, modelType]);
 
   return { options, ready };
 }

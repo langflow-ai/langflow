@@ -3,6 +3,8 @@ import type { ModelOption } from "@/components/core/parameterRenderComponent/com
 import type {
   Evaluation,
   EvaluationRun,
+  ModelSelection,
+  SafetyCheck,
   ScorerSpec,
   ScorerType,
 } from "@/controllers/API/queries/evals/types";
@@ -19,6 +21,7 @@ import {
   parseJudgeMaxTokens,
   parseJudgeRunMaxTokens,
 } from "./judgeLimits";
+import { buildModelOverrides, type ChosenModels } from "./modelOverrideUtils";
 
 export const LATEST_VERSION = "latest";
 export const TEXT_SCORERS: ScorerType[] = [
@@ -38,6 +41,7 @@ export function buildScorers(
   judgeModel: ModelOption[],
   rubric: string,
   judgeLimits: JudgeLimits = DEFAULT_JUDGE_LIMITS,
+  safetyChecks: readonly SafetyCheck[] = [],
 ): ScorerSpec[] {
   const scorers: ScorerSpec[] = TEXT_SCORERS.filter((type) =>
     selected.has(type),
@@ -63,6 +67,7 @@ export function buildScorers(
           parseJudgeRunMaxTokens(judgeLimits.maxRunOutputTokens, rowBudget) ??
           DEFAULT_JUDGE_MAX_RUN_OUTPUT_TOKENS,
         stop_on_output_limit: judgeLimits.stopOnOutputLimit,
+        ...(safetyChecks.length > 0 && { safety_checks: [...safetyChecks] }),
       },
     });
   }
@@ -86,16 +91,27 @@ export function useEvaluateFlowForm(flowId: string) {
   const [judgeLimits, setJudgeLimits] =
     useState<JudgeLimits>(DEFAULT_JUDGE_LIMITS);
   const [threshold, setThreshold] = useState(DEFAULT_THRESHOLD);
+  const [safetyChecks, setSafetyChecks] = useState<SafetyCheck[]>([]);
+  const [chosenModels, setChosenModels] = useState<ChosenModels>({});
 
   const scorers = useMemo(
-    () => buildScorers(selected, judgeModel, rubric, judgeLimits),
-    [selected, judgeModel, rubric, judgeLimits],
+    () => buildScorers(selected, judgeModel, rubric, judgeLimits, safetyChecks),
+    [selected, judgeModel, rubric, judgeLimits, safetyChecks],
   );
   const check = useCheckFlowForEvaluation({
     flowId,
     outputVertexId: outputVertexId || null,
   });
-  const estimate = useEstimateEvaluation({ flowId, datasetId, scorers });
+  const modelOverrides = useMemo(
+    () => buildModelOverrides(check.data?.model_pickers ?? [], chosenModels),
+    [check.data?.model_pickers, chosenModels],
+  );
+  const estimate = useEstimateEvaluation({
+    flowId,
+    datasetId,
+    scorers,
+    modelOverrides,
+  });
   const createEvaluation = useCreateEvaluation();
   const judgeMissingModel = selected.has("llm_judge") && !judgeModel[0];
   const judgeOn = selected.has("llm_judge");
@@ -105,6 +121,12 @@ export function useEvaluateFlowForm(flowId: string) {
     judgeOn &&
     parseJudgeRunMaxTokens(judgeLimits.maxRunOutputTokens, rowBudget) === null;
   const judgeLimitsInvalid = judgeRowBudgetInvalid || judgeRunBudgetInvalid;
+
+  const chooseModel = (key: string, value: ModelSelection | null) =>
+    setChosenModels((current) => {
+      const { [key]: _dropped, ...rest } = current;
+      return value ? { ...rest, [key]: value } : rest;
+    });
 
   const toggleScorer = (type: ScorerType, on: boolean) =>
     setSelected((current) => {
@@ -136,6 +158,7 @@ export function useEvaluateFlowForm(flowId: string) {
       payload: {
         ...payload,
         flow_version_id: versionId === LATEST_VERSION ? null : versionId,
+        model_overrides: modelOverrides,
       },
       run: true,
     });
@@ -154,6 +177,8 @@ export function useEvaluateFlowForm(flowId: string) {
       rubric,
       judgeLimits,
       threshold,
+      chosenModels,
+      safetyChecks,
     },
     set: {
       setName,
@@ -165,6 +190,9 @@ export function useEvaluateFlowForm(flowId: string) {
       setRubric,
       setJudgeLimits,
       setThreshold,
+      chooseModel,
+      setSafetyChecks,
+      resetModels: () => setChosenModels({}),
     },
     check,
     estimate,

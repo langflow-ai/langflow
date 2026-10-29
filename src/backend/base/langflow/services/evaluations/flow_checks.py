@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from langflow.api.v1.run_validation import flow_requires_hitl
+from langflow.services.evaluations.model_overrides import model_fields
 from langflow.services.evaluations.schemas import FlowCheckIssue, FlowCheckReport
 
 EVAL_INPUT_TYPES = frozenset({"ChatInput", "TextInput"})
@@ -146,6 +147,7 @@ def check_flow(flow_data: dict[str, Any] | None, output_vertex_id: str | None = 
         blocking=_blocking(data, output_vertex_id),
         warnings=_warnings(data),
         output_vertices=output_vertices(data),
+        model_pickers=model_fields(data),
     )
 
 

@@ -190,3 +190,50 @@ class TestDatasetExamples:
     async def test_should_require_authentication(self, client):
         response = await client.post("api/v1/datasets/examples/support-triage")
         assert response.status_code in {401, 403}
+
+    async def test_should_fill_an_existing_dataset_with_the_example_rows(self, client, logged_in_headers):
+        created = await client.post("api/v1/datasets/", json={"name": "Mine"}, headers=logged_in_headers)
+        dataset_id = created.json()["id"]
+
+        filled = await client.post(f"api/v1/datasets/{dataset_id}/examples/grounded-answers", headers=logged_in_headers)
+
+        assert filled.status_code == 200, filled.text
+        body = filled.json()
+        assert (body["id"], body["name"], body["item_count"]) == (dataset_id, "Mine", 10)
+        assert body["description"]
+
+    async def test_should_keep_an_existing_description_and_append_rows(self, client, logged_in_headers):
+        created = await client.post(
+            "api/v1/datasets/", json={"name": "Kept", "description": "My own"}, headers=logged_in_headers
+        )
+        dataset_id = created.json()["id"]
+        await client.post(
+            f"api/v1/datasets/{dataset_id}/items",
+            json={"items": [{"input": "first", "expected_output": None}]},
+            headers=logged_in_headers,
+        )
+
+        filled = await client.post(f"api/v1/datasets/{dataset_id}/examples/safety-checks", headers=logged_in_headers)
+
+        assert filled.json()["description"] == "My own"
+        assert filled.json()["item_count"] == 11
+        items = await client.get(f"api/v1/datasets/{dataset_id}/items", headers=logged_in_headers)
+        assert items.json()["items"][0]["input"] == "first"
+
+    async def test_should_hide_another_users_dataset_from_example_fill(self, client, logged_in_headers, user_two):
+        created = await client.post("api/v1/datasets/", json={"name": "Private"}, headers=logged_in_headers)
+        login = await client.post("api/v1/login", data={"username": user_two.username, "password": "hashed_password"})
+        other_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+        response = await client.post(
+            f"api/v1/datasets/{created.json()['id']}/examples/support-triage", headers=other_headers
+        )
+
+        assert response.status_code == 404
+
+    async def test_should_return_404_when_filling_with_an_unknown_example(self, client, logged_in_headers):
+        created = await client.post("api/v1/datasets/", json={"name": "Unknown"}, headers=logged_in_headers)
+
+        response = await client.post(f"api/v1/datasets/{created.json()['id']}/examples/nope", headers=logged_in_headers)
+
+        assert response.status_code == 404

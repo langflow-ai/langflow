@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 from sqlmodel import select
 
 from langflow.services.database.models.evaluation import EvaluationResult
+from langflow.services.evaluations.scorers.safety import safety_summary
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -87,6 +88,16 @@ def build_summary(results: Sequence[SummaryRow], scorer_names: Sequence[str]) ->
             if isinstance(entry := (result.scores or {}).get(name), dict) and entry.get("value") is not None
         ]
         scores[name] = _stats(values)
+    safety = {
+        name: report
+        for name in scorer_names
+        if (
+            report := safety_summary(
+                [entry for result in results if isinstance(entry := (result.scores or {}).get(name), dict)]
+            )
+        )
+        is not None
+    }
     finished = [result for result in results if result.error is None]
     decided = [result for result in results if result.passed is not None]
     passed = sum(1 for result in decided if result.passed)
@@ -110,4 +121,5 @@ def build_summary(results: Sequence[SummaryRow], scorer_names: Sequence[str]) ->
         },
         "pass_rate": round(passed / len(decided), 4) if decided else None,
         "rows": {"total": len(results), "errored": len(results) - len(finished), "decided": len(decided)},
+        "safety": safety,
     }

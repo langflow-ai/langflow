@@ -285,3 +285,22 @@ export const useCreateDatasetFromExample: useMutationFunctionType<
     { retry: false, ...options, onSettled: () => invalidate() },
   );
 };
+
+export const useAddExampleToDataset: useMutationFunctionType<
+  { datasetId: string },
+  { key: string },
+  Dataset
+> = ({ datasetId }, options) => {
+  const { mutate } = UseRequestProcessor();
+  const invalidate = useInvalidateDatasets();
+  return mutate(
+    ["useAddExampleToDataset", datasetId],
+    async ({ key }) =>
+      (
+        await api.post<Dataset>(
+          `${getURL("DATASETS")}/${datasetId}/examples/${key}`,
+        )
+      ).data,
+    { retry: false, ...options, onSettled: () => invalidate(datasetId) },
+  );
+};

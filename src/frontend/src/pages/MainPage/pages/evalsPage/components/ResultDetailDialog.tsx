@@ -15,6 +15,7 @@ import {
 } from "../utils/format";
 import { DIALOG_CONTAINER } from "../utils/styles";
 import PassedBadge from "./PassedBadge";
+import SafetyFlags from "./SafetyFlags";
 import ScoreBreakdownNote from "./ScoreBreakdownNote";
 
 function TextBlock({
@@ -137,6 +138,7 @@ export default function ResultDetailDialog({
                         {entry.comment}
                       </span>
                     )}
+                    {entry && <SafetyFlags entry={entry} />}
                   </li>
                 );
               })}

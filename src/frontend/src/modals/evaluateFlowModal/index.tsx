@@ -25,6 +25,7 @@ import ConfirmRunDialog from "./ConfirmRunDialog";
 import EstimateCard from "./EstimateCard";
 import EvaluationPreflight from "./EvaluationPreflight";
 import FlowPicker from "./FlowPicker";
+import ModelOverrides from "./ModelOverrides";
 import MoreOptions from "./MoreOptions";
 import ScorerFields from "./ScorerFields";
 import { submitDecision } from "./submitDecision";
@@ -58,6 +59,7 @@ export default function EvaluateFlowModal({
     set.setVersionId(LATEST_VERSION);
     set.setOutputVertexId("");
     set.setJudgeModel([]);
+    set.resetModels();
   };
   const { data: datasets } = useGetDatasets({ size: 200 }, { enabled: open });
   const hasDatasets = (datasets?.items.length ?? 0) > 0;
@@ -217,6 +219,15 @@ export default function EvaluateFlowModal({
               onJudgeLimits={set.setJudgeLimits}
               judgeRowBudgetInvalid={form.judgeRowBudgetInvalid}
               judgeRunBudgetInvalid={form.judgeRunBudgetInvalid}
+              safetyChecks={state.safetyChecks}
+              onSafetyChecks={set.setSafetyChecks}
+            />
+
+            <ModelOverrides
+              flowId={flowId}
+              pickers={form.check.data?.model_pickers ?? []}
+              chosen={state.chosenModels}
+              onChange={set.chooseModel}
             />
 
             <MoreOptions

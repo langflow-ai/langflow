@@ -11,6 +11,7 @@ export interface ScoreTerm {
 
 export type ScoreBreakdown =
   | { kind: "errored" }
+  | { kind: "flagged"; checks: string[] }
   | { kind: "undecided"; skipped: string[] }
   | {
       kind: "scored";
@@ -21,13 +22,22 @@ export type ScoreBreakdown =
       passed: boolean;
     };
 
-/** Mirrors the server's pass rule: a weighted mean of the scores that exist, compared with the threshold. */
+/**
+ * Mirrors the server's pass rule: a safety check the judge flagged fails the row; otherwise a
+ * weighted mean of the scores that exist, compared with the threshold.
+ */
 export function scoreBreakdown(
   result: EvaluationResult,
   scorers: ScorerSpec[],
   threshold: number,
 ): ScoreBreakdown {
   if (result.error) return { kind: "errored" };
+  const flagged = Object.values(result.scores).flatMap((entry) =>
+    Object.entries(entry?.safety ?? {})
+      .filter(([, failed]) => failed)
+      .map(([check]) => check),
+  );
+  if (flagged.length > 0) return { kind: "flagged", checks: flagged };
   const terms: ScoreTerm[] = [];
   const skipped: string[] = [];
   for (const scorer of scorers) {

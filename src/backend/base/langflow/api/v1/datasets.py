@@ -10,7 +10,7 @@ from fastapi.responses import StreamingResponse
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.evals_errors import evals_http_errors, evals_write
 from langflow.services.authorization import DatasetAction
-from langflow.services.database.models.evaluation import DatasetItem
+from langflow.services.database.models.evaluation import Dataset, DatasetItem
 from langflow.services.deps import get_settings_service
 from langflow.services.evaluations import csv_io, dataset_service
 from langflow.services.evaluations.access import ensure_dataset_create, load_eval_dataset
@@ -158,6 +158,24 @@ async def add_dataset_items(
     async with evals_http_errors():
         created = await evals_write(session, "add_dataset_items", operation)
     return [dataset_service.to_item_read(item) for item in created]
+
+
+@router.post("/{dataset_id}/examples/{key}", response_model=DatasetRead)
+async def add_example_to_dataset(
+    dataset_id: UUID, key: str, current_user: CurrentActiveUser, session: DbSession
+) -> DatasetRead:
+    example = find_example(key)
+    if example is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No example dataset named {key!r}")
+
+    async def operation() -> Dataset:
+        dataset = await load_eval_dataset(session, current_user, dataset_id, DatasetAction.WRITE)
+        await dataset_service.ensure_idle(session, dataset.id)
+        return await dataset_service.add_example(session, dataset, example)
+
+    async with evals_http_errors():
+        dataset = await evals_write(session, "add_example_to_dataset", operation)
+    return dataset_service.to_dataset_read(dataset, await dataset_service.count_items(session, dataset.id))
 
 
 @router.patch("/{dataset_id}/items/{item_id}", response_model=DatasetItemRead)

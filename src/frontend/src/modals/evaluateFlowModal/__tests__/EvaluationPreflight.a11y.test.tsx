@@ -16,6 +16,7 @@ const REPORT = {
     },
   ],
   output_vertices: [{ id: "ChatOutput-1", name: "Chat Output" }],
+  model_pickers: [],
 };
 
 const ESTIMATE: RunEstimate = {
@@ -49,7 +50,12 @@ describe("EvaluationPreflight", () => {
   it("should render nothing for a clean flow", () => {
     const { container } = render(
       <EvaluationPreflight
-        report={{ blocking: [], warnings: [], output_vertices: [] }}
+        report={{
+          blocking: [],
+          warnings: [],
+          output_vertices: [],
+          model_pickers: [],
+        }}
       />,
     );
     expect(container).toBeEmptyDOMElement();

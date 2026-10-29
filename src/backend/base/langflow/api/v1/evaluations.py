@@ -15,6 +15,7 @@ from langflow.services.evaluations.access import load_eval_dataset, load_eval_fl
 from langflow.services.evaluations.dataset_service import item_text
 from langflow.services.evaluations.estimate import estimate_run
 from langflow.services.evaluations.flow_checks import check_flow
+from langflow.services.evaluations.model_overrides import apply_model_overrides
 from langflow.services.evaluations.results_export import export_results
 from langflow.services.evaluations.schemas import (
     EstimateRead,
@@ -71,7 +72,9 @@ async def create_evaluation(
     async def operation() -> Evaluation | EvaluationRun:
         evaluation = await evaluation_service.create_evaluation(session, current_user, payload)
         if run:
-            return await run_service.start_evaluation_run(session, current_user, evaluation, payload.flow_version_id)
+            return await run_service.start_evaluation_run(
+                session, current_user, evaluation, payload.flow_version_id, payload.model_overrides
+            )
         return evaluation
 
     async with evals_http_errors():
@@ -100,10 +103,11 @@ async def estimate_evaluation(
     async with evals_http_errors():
         flow = await load_eval_flow(session, current_user, payload.flow_id, FlowAction.READ)
         dataset = await load_eval_dataset(session, current_user, payload.dataset_id, DatasetAction.READ)
+        flow_data = apply_model_overrides(flow.data or {}, payload.model_overrides)
     return await estimate_run(
         session,
         flow_id=flow.id,
-        flow_data=flow.data,
+        flow_data=flow_data,
         dataset_id=dataset.id,
         scorers=[spec.model_dump() for spec in payload.scorers],
     )
@@ -147,10 +151,11 @@ async def start_evaluation_run_endpoint(
 ) -> EvaluationRunRead:
     # A repeated click cannot start two runs: an evaluation allows one active run (409 otherwise).
     version_id = payload.flow_version_id if payload else None
+    overrides = payload.model_overrides if payload else []
 
     async def operation() -> EvaluationRun:
         evaluation = await load_evaluation(session, current_user, evaluation_id)
-        return await run_service.start_evaluation_run(session, current_user, evaluation, version_id)
+        return await run_service.start_evaluation_run(session, current_user, evaluation, version_id, overrides)
 
     async with evals_http_errors():
         run = await evals_write(session, "start_evaluation_run", operation)

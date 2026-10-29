@@ -62,6 +62,24 @@ describe("buildScorers", () => {
   });
 });
 
+describe("buildScorers with safety checks", () => {
+  it("should add the chosen checks to the judge config", () => {
+    const [judge] = buildScorers(
+      new Set<ScorerType>(["llm_judge"]),
+      JUDGE,
+      "",
+      undefined,
+      ["pii_exposure", "jailbreak"],
+    );
+    expect(judge.config?.safety_checks).toEqual(["pii_exposure", "jailbreak"]);
+  });
+
+  it("should leave safety_checks out when none is chosen", () => {
+    const [judge] = buildScorers(new Set<ScorerType>(["llm_judge"]), JUDGE, "");
+    expect(judge.config).not.toHaveProperty("safety_checks");
+  });
+});
+
 describe("parseJudgeMaxTokens", () => {
   it("should accept whole numbers in range only", () => {
     expect(parseJudgeMaxTokens("300")).toBe(300);

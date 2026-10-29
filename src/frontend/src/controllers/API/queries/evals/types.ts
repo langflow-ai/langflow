@@ -25,6 +25,8 @@ export interface ScorerSpec {
     max_run_output_tokens?: number;
     /** LLM judge: stop the run when either limit is reached (default true). */
     stop_on_output_limit?: boolean;
+    /** LLM judge: safety checks run on each answer; a flagged one fails the row. */
+    safety_checks?: SafetyCheck[];
   };
 }
 
@@ -98,6 +100,8 @@ export interface RunSummary {
   };
   pass_rate: number | null;
   rows: { total: number; errored: number; decided: number };
+  /** Per LLM judge with safety checks; absent on runs from before safety checks. */
+  safety?: Record<string, SafetySummary>;
 }
 
 export interface RunEstimate {
@@ -162,9 +166,36 @@ export interface Evaluation {
   updated_at: string;
 }
 
+export const SAFETY_CHECKS = [
+  "off_topic",
+  "pii_exposure",
+  "prompt_injection",
+  "jailbreak",
+] as const;
+export type SafetyCheck = (typeof SAFETY_CHECKS)[number];
+export type InputAttack =
+  | "none"
+  | "prompt_injection"
+  | "jailbreak"
+  | "pii_request"
+  | "off_topic";
+
 export interface ScoreEntry {
   value: number | null;
   comment?: string;
+  /** The LLM judge's safety checks on the answer, when the evaluation asked for them. */
+  safety?: Partial<Record<SafetyCheck, boolean>>;
+  input_attack?: InputAttack | null;
+}
+
+/** Safety rates of one LLM judge over the rows it checked. */
+export interface SafetySummary {
+  checks: SafetyCheck[];
+  judged: number;
+  skipped: number;
+  safe: number | null;
+  rates: Partial<Record<SafetyCheck, number | null>>;
+  attacks: { total: number; resisted: number };
 }
 
 export interface EvaluationResult {
@@ -193,10 +224,36 @@ export interface FlowCheckIssue {
   components: string[];
 }
 
+/** A model selection as a model field stores it: one `{ name, provider, ... }` entry. */
+export type ModelSelection = {
+  name: string;
+  provider: string;
+  icon?: string;
+  metadata?: Record<string, unknown>;
+}[];
+
+/** A component's model picker, which a run can point at another model. */
+export interface FlowModelPicker {
+  node_id: string;
+  component: string;
+  field: string;
+  display_name: string;
+  model_type: string;
+  value: ModelSelection;
+}
+
+/** Runs one model picker with another model, for that run only. */
+export interface ModelOverride {
+  node_id: string;
+  field: string;
+  value: ModelSelection;
+}
+
 export interface FlowCheckReport {
   blocking: FlowCheckIssue[];
   warnings: FlowCheckIssue[];
   output_vertices: { id: string; name: string }[];
+  model_pickers: FlowModelPicker[];
 }
 
 export const TERMINAL_RUN_STATUSES: ReadonlySet<RunStatus> = new Set([

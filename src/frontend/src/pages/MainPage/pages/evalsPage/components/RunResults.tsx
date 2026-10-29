@@ -5,6 +5,7 @@ import DataTableTab from "@/components/core/dataTableTabComponent";
 import {
   type EvaluationResult,
   type EvaluationRun,
+  type SafetyCheck,
   TERMINAL_RUN_STATUSES,
 } from "@/controllers/API/queries/evals/types";
 import { useGetEvaluationResults } from "@/controllers/API/queries/evals/use-evaluations";
@@ -16,6 +17,7 @@ import ResultFilter, {
   type ResultFilterValue,
 } from "./ResultFilter";
 import RunKpis from "./RunKpis";
+import SafetyKpis from "./SafetyKpis";
 
 // The table pages on the client; a run holds at most a few thousand rows.
 const RESULTS_SIZE = 5000;
@@ -33,6 +35,10 @@ export default function RunResults({ run }: { run: EvaluationRun }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
   const [opened, setOpened] = useState<EvaluationResult | null>(null);
+  const [safetyCheck, setSafetyCheck] = useState<SafetyCheck | null>(null);
+  // One judge carries the safety checks; a run made before them has none.
+  const [safetyJudge, safetySummary] =
+    Object.entries(run.summary?.safety ?? {})[0] ?? [];
   const active = !TERMINAL_RUN_STATUSES.has(run.status);
   const { data, isLoading } = useGetEvaluationResults(
     {
@@ -46,8 +52,15 @@ export default function RunResults({ run }: { run: EvaluationRun }) {
   );
   const scorerNames = run.config.scorers.map((scorer) => scorer.name);
   const rows = useMemo(
-    () => (data?.items ?? []).filter((result) => matches(result, filter)),
-    [data, filter],
+    () =>
+      (data?.items ?? []).filter(
+        (result) =>
+          matches(result, filter) &&
+          (!safetyCheck ||
+            !safetyJudge ||
+            result.scores[safetyJudge]?.safety?.[safetyCheck] === true),
+      ),
+    [data, filter, safetyCheck, safetyJudge],
   );
   const counts = useMemo(() => {
     const all = data?.items ?? [];
@@ -62,6 +75,13 @@ export default function RunResults({ run }: { run: EvaluationRun }) {
   return (
     <div className="flex flex-col gap-4">
       <RunKpis run={run} />
+      {safetySummary && (
+        <SafetyKpis
+          summary={safetySummary}
+          active={safetyCheck}
+          onSelect={setSafetyCheck}
+        />
+      )}
       <ResultFilter value={filter} counts={counts} onChange={setFilter} />
       <div className="flex min-h-[420px] flex-col">
         <DataTableTab<EvaluationResult>

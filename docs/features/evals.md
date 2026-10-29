@@ -103,7 +103,8 @@ and `expected_output`, `actual_output` (capped at
 
 ## Starting a run
 
-`POST /api/v1/evaluations/{id}/runs` with an optional `{"flow_version_id": ...}`.
+`POST /api/v1/evaluations/{id}/runs` with an optional
+`{"flow_version_id": ..., "model_overrides": [...]}`.
 
 1. Loads the flow (execute permission) and the dataset (read permission).
 2. Refuses a second active run of the same evaluation (409). A partial unique
@@ -121,13 +122,34 @@ and `expected_output`, `actual_output` (capped at
      already retained for another reason, so version pruning cannot remove it.
 5. Runs the static flow checks on the **pinned** version (see below). Any
    blocking issue is 422 with `{"message", "issues": [{code, message, components}]}`.
-6. Computes and stores the estimate on the run (`queued`), commits, then
+6. Applies the model overrides to a copy of the pinned data (see below), then
+   computes and stores the estimate on the run (`queued`), commits, then
    creates the job and launches the coordinator with
    `JobService.execute_with_status(..., keep_alive=True)`.
 
 `POST /api/v1/evaluations?run=true` creates the evaluation and starts its first
-run in one request; `flow_version_id` in the body picks a history version. A
-start that fails leaves no evaluation behind.
+run in one request; `flow_version_id` in the body picks a history version and
+`model_overrides` swaps models for that run. A start that fails leaves no
+evaluation behind.
+
+### Model overrides (`model_overrides.py`)
+
+A run can point any model picker of the flow (a field of type `model`: language,
+embedding or decision) at another model, without changing the flow. Each override
+is `{node_id, field, value}`, where `value` is one model selection
+(`[{name, provider, ...}]`); at most 50, one per field.
+
+- The flow check returns `model_pickers`: every picker that holds a model and is
+  not fed by an edge, with its component name, kind and current value.
+- Overrides are stored on the run in `config.model_overrides`, not on the
+  evaluation: a Re-run uses the flow's own models unless it sends overrides again.
+- An override for a field the pinned version lacks (or a wired or empty picker)
+  is 422 at start. The coordinator applies the stored overrides again when it
+  loads the run.
+- The estimate takes the same `model_overrides`; overridden data never matches
+  the last run's content, so it falls back to the model estimate.
+- The model-provider policy still applies: a model the user may not run fails
+  the rows, as it would in the flow.
 
 Each row is saved in one short write-first transaction. On SQLite, very fast
 rows (a flow without model calls finishes in milliseconds) commit so often,
@@ -241,9 +263,31 @@ remaining rows unjudged; the failure breaker never counts it. Rows already in
 progress when the run budget is reached still finish, so a run can go over by at
 most those rows.
 
-**Pass rule:** an errored row never passes. Otherwise the row passes when the
-weighted mean of the scores that judged it reaches `pass_threshold`; when no
-scorer could judge it, `passed` is `null`.
+### Safety checks (`scorers/safety.py`)
+
+`config.safety_checks` on an `llm_judge` (any of `off_topic`, `pii_exposure`,
+`prompt_injection`, `jailbreak`) asks the same judge call for one yes/no per
+check on the **answer**, plus `input_attack` (what the question tried: `none`,
+`prompt_injection`, `jailbreak`, `pii_request`, `off_topic`). There is no extra
+call: the run's percentages are counts of the per-row verdicts.
+
+- The judge grades the answer, never the request: a refused or redirected attack
+  is safe. Small judges tend to flag the attack in the question anyway, so every
+  flag needs `<check>_evidence`, the exact words of the answer that show the
+  failure; a flag whose evidence is not in the answer (case, spacing and
+  surrounding quotes ignored) is dropped, and `pii_exposure` evidence the user
+  wrote in the question is the user's own data, not exposure.
+- An empty answer is scored but not checked; it counts as `skipped`.
+- Each row's judge score stores `safety: {check: bool}` and `input_attack`.
+- On a 14-pair benchmark with `gpt-4o-mini` as judge, the evidence rule cut
+  misses from 5 to 2 (a refusal that also answers the on-topic part flagged as
+  off topic; a dictated one-word answer flagged in one of two runs). A judge
+  asked to translate a text with embedded instructions flags it as injection.
+
+**Pass rule:** an errored row never passes, and neither does a row with a
+flagged safety check. Otherwise the row passes when the weighted mean of the
+scores that judged it reaches `pass_threshold`; when no scorer could judge it,
+`passed` is `null`.
 
 ## Summary
 
@@ -257,16 +301,21 @@ active, so the UI shows live aggregates.
   "tokens": {"flow": 1800, "judge": 6400, "total": 8200},
   "cost_usd": {"flow": 0.0004, "judge": 0.0021, "total": 0.0025, "complete": true},
   "pass_rate": 0.75,
-  "rows": {"total": 10, "errored": 0, "decided": 8}
+  "rows": {"total": 10, "errored": 0, "decided": 8},
+  "safety": {"llm_judge": {"checks": ["off_topic", "jailbreak"], "judged": 10, "skipped": 0, "safe": 0.8,
+             "rates": {"off_topic": 0.1, "jailbreak": 0.1}, "attacks": {"total": 4, "resisted": 3}}}
 }
 ```
+
+`safety` has one entry per judge with safety checks; an attack counts as
+resisted when no check flagged its answer.
 
 Percentiles are nearest-rank. `cost_usd.*` is `null` when any priced part is
 unknown, so a partial total never looks complete.
 
 ## Estimate
 
-`POST /api/v1/evaluations/estimate` with `{flow_id, dataset_id, scorers}`.
+`POST /api/v1/evaluations/estimate` with `{flow_id, dataset_id, scorers, model_overrides?}`.
 
 - **Flow part:** from this flow's last completed run (per-row tokens and cost,
   ×0.8 to ×1.25) when there is one; otherwise from the flow's LLM components,
@@ -294,6 +343,7 @@ Datasets (owner scope; `dataset` authz resource)
   POST   /api/v1/datasets/                          409 on a duplicate name
   GET    /api/v1/datasets/examples                  ready-made datasets: key, name, description, item_count
   POST   /api/v1/datasets/examples/{key}            copies one into the caller's account under a free name
+  POST   /api/v1/datasets/{id}/examples/{key}       appends the example's rows to that dataset (and its description when empty)
   GET    /api/v1/datasets/{id}
   PATCH  /api/v1/datasets/{id}
   DELETE /api/v1/datasets/{id}                      evaluations keep their results
@@ -314,7 +364,7 @@ Evaluations
   GET    /api/v1/evaluations/{id}
   PATCH  /api/v1/evaluations/{id}
   DELETE /api/v1/evaluations/{id}                   refused while a run is active; releases retained versions
-  POST   /api/v1/evaluations/{id}/runs              {flow_version_id?} → 202 run
+  POST   /api/v1/evaluations/{id}/runs              {flow_version_id?, model_overrides?} → 202 run
   GET    /api/v1/evaluations/{id}/runs
 
 Runs
@@ -388,18 +438,24 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
   it with the name in edit mode. Name and description are edited in place.
   **Import CSV** on the list creates a dataset named after the file and opens the
   column mapping. The empty list offers the three example datasets as cards; the
-  toolbar has them in an **Examples** menu.
+  toolbar has them in an **Examples** menu. An empty dataset shows the same cards,
+  which fill that dataset instead of creating one.
 - CSV import: drop zone (also on an empty dataset), file card, column mapping
   with a preview of the mapped columns, result summary with skipped rows.
 - Evaluate: the canvas button (between Playground and Share) saves the flow and
   opens the modal; **New evaluation** on the Evaluations page opens the same
-  modal with a searchable flow picker. Name, flow version and pass threshold sit
-  under **More options**. The modal shows flow checks, the estimate once a
+  modal with a searchable flow picker. **Models** lists the flow's model pickers
+  (folded; the summary says how many changed) to run with other models. Name,
+  flow version and pass threshold sit under **More options**. The modal shows flow checks, the estimate once a
   dataset is chosen and, for runs with model calls, a confirmation.
 - Evaluation page: runs table (version, pass rate, tokens and change against
   the previous run, cost), metric cards, Passed/Failed/Errored filter, and a row
   detail dialog with the full texts and each score's reason. Active runs poll
-  every 5 s.
+  every 5 s. With safety checks, a **Safety checks** panel shows the safe rate,
+  each check's rate (a toggle that filters the table to the rows it flagged) and
+  the attacks resisted; the row detail lists each check and what the input
+  tried, and the score note says which check failed the row. The Evaluate modal
+  offers the checks under the LLM judge.
 - All strings are in the eight locale files; every screen passes the Jest axe
   and Playwright `runA11yScan` checks.
 

@@ -10,11 +10,11 @@ export const EXAMPLE_ICONS: Record<string, string> = {
   "safety-checks": "ShieldCheck",
 };
 
-/** One card per ready-made dataset, for the empty Datasets page. */
-export default function DatasetExamples() {
+/** One card per ready-made dataset: on the Datasets page it creates one, on an empty dataset it fills that one. */
+export default function DatasetExamples({ datasetId }: { datasetId?: string }) {
   const { t } = useTranslation();
   const { data: examples } = useGetDatasetExamples();
-  const { add, pendingKey } = useAddExampleDataset();
+  const { add, pendingKey } = useAddExampleDataset(datasetId);
   if (!examples?.length) return null;
 
   return (

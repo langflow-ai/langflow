@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from langflow.services.database.models.evaluation.dataset import DATASET_NAME_MAX_LENGTH
 from langflow.services.evaluations.scorers.llm_judge import MAX_OUTPUT_TOKENS_CEILING, MAX_RUN_OUTPUT_TOKENS_CEILING
+from langflow.services.evaluations.scorers.safety import SAFETY_CHECKS
 
 ScorerType = Literal["exact_match", "contains", "similarity", "llm_judge"]
 TEXT_MAX_CHARS = 100_000
@@ -18,6 +19,8 @@ SCORER_CONFIG_MAX_CHARS = 16000
 TEXT_SCORER_CONFIG_KEYS = frozenset({"case_sensitive"})
 MAX_SCORERS = 10
 MAX_ITEMS_PER_REQUEST = 500
+MAX_MODEL_OVERRIDES = 50
+MODEL_SELECTION_MAX_CHARS = 8000
 
 
 class DatasetCreate(BaseModel):
@@ -156,11 +159,44 @@ class ScorerSpec(BaseModel):
         if row_budget is not None and run_budget is not None and run_budget < row_budget:
             msg = "llm_judge config.max_run_output_tokens must be at least max_output_tokens"
             raise ValueError(msg)
+        checks = self.config.get("safety_checks")
+        if checks is not None and (
+            not isinstance(checks, list) or len(set(checks)) != len(checks) or not set(checks) <= set(SAFETY_CHECKS)
+        ):
+            msg = f"llm_judge config.safety_checks must be distinct values of: {', '.join(SAFETY_CHECKS)}"
+            raise ValueError(msg)
         stop = self.config.get("stop_on_output_limit")
         if stop is not None and not isinstance(stop, bool):
             msg = "llm_judge config.stop_on_output_limit must be true or false"
             raise ValueError(msg)
         return self
+
+
+class ModelOverride(BaseModel):
+    """Run one model field of the flow with another model, for this run only; the flow is not changed."""
+
+    node_id: str = Field(min_length=1, max_length=255)
+    field: str = Field(min_length=1, max_length=255)
+    value: list[dict[str, Any]] = Field(min_length=1, max_length=1)
+
+    @model_validator(mode="after")
+    def validate_selection(self) -> ModelOverride:
+        model = self.value[0]
+        if not isinstance(model.get("name"), str) or not isinstance(model.get("provider"), str):
+            msg = "A model override needs a model name and provider"
+            raise ValueError(msg)  # noqa: TRY004 - pydantic turns a ValueError into a 422
+        if len(json.dumps(self.value, default=str)) > MODEL_SELECTION_MAX_CHARS:
+            msg = f"A model override must be at most {MODEL_SELECTION_MAX_CHARS} characters"
+            raise ValueError(msg)
+        return self
+
+
+def _unique_overrides(value: list[ModelOverride]) -> list[ModelOverride]:
+    keys = [(override.node_id, override.field) for override in value]
+    if len(keys) != len(set(keys)):
+        msg = "Each model field can be overridden once"
+        raise ValueError(msg)
+    return value
 
 
 def _whole_number_in(config: dict[str, Any], key: str, ceiling: int) -> int | None:
@@ -190,6 +226,13 @@ class EvaluationCreate(BaseModel):
     pass_threshold: float = Field(default=0.5, ge=0, le=1)
     flow_version_id: UUID | None = None
     """With ``?run=true``: the history version to run (default: the latest draft). Not stored."""
+    model_overrides: list[ModelOverride] = Field(default_factory=list, max_length=MAX_MODEL_OVERRIDES)
+    """With ``?run=true``: models to swap in for that run only. Stored on the run, not the evaluation."""
+
+    @field_validator("model_overrides")
+    @classmethod
+    def unique_model_overrides(cls, value: list[ModelOverride]) -> list[ModelOverride]:
+        return _unique_overrides(value)
 
     @field_validator("scorers")
     @classmethod
@@ -232,6 +275,12 @@ class EvaluationPage(Page):
 
 class RunStart(BaseModel):
     flow_version_id: UUID | None = None
+    model_overrides: list[ModelOverride] = Field(default_factory=list, max_length=MAX_MODEL_OVERRIDES)
+
+    @field_validator("model_overrides")
+    @classmethod
+    def unique_model_overrides(cls, value: list[ModelOverride]) -> list[ModelOverride]:
+        return _unique_overrides(value)
 
 
 class EvaluationRunRead(BaseModel):
@@ -293,16 +342,34 @@ class FlowCheckIssue(BaseModel):
     components: list[str] = Field(default_factory=list)
 
 
+class FlowModelField(BaseModel):
+    """A model picker of one component, which a run can swap with ``ModelOverride``."""
+
+    node_id: str
+    component: str
+    field: str
+    display_name: str
+    model_type: str
+    value: list[dict[str, Any]]
+
+
 class FlowCheckReport(BaseModel):
     blocking: list[FlowCheckIssue]
     warnings: list[FlowCheckIssue]
     output_vertices: list[dict[str, str]]
+    model_pickers: list[FlowModelField] = Field(default_factory=list)
 
 
 class EstimateRequest(BaseModel):
     flow_id: UUID
     dataset_id: UUID
     scorers: list[ScorerSpec] = Field(default_factory=list, max_length=MAX_SCORERS)
+    model_overrides: list[ModelOverride] = Field(default_factory=list, max_length=MAX_MODEL_OVERRIDES)
+
+    @field_validator("model_overrides")
+    @classmethod
+    def unique_model_overrides(cls, value: list[ModelOverride]) -> list[ModelOverride]:
+        return _unique_overrides(value)
 
 
 class EstimateRead(BaseModel):

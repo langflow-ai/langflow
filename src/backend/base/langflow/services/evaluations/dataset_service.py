@@ -196,6 +196,14 @@ async def create_from_example(session: AsyncSession, user_id: UUID, example: Dat
     return dataset
 
 
+async def add_example(session: AsyncSession, dataset: Dataset, example: DatasetExample) -> Dataset:
+    """Append an example's rows; a dataset without a description takes the example's."""
+    if not dataset.description:
+        dataset.description = example.description
+    await add_items(session, dataset, example.rows, source="manual")
+    return dataset
+
+
 async def list_items(
     session: AsyncSession, dataset_id: UUID, *, search: str | None, page: int, size: int
 ) -> tuple[list[DatasetItemRead], int]:

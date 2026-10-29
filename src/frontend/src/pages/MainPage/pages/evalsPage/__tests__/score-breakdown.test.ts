@@ -94,3 +94,24 @@ describe("scoreBreakdown", () => {
     expect(breakdown.kind).toBe("undecided");
   });
 });
+
+describe("scoreBreakdown with safety checks", () => {
+  it("should fail a row the judge flagged even with a perfect score", () => {
+    const flagged = result({ llm_judge: 1 });
+    flagged.scores.llm_judge = {
+      value: 1,
+      safety: { off_topic: false, jailbreak: true },
+      input_attack: "jailbreak",
+    };
+    expect(scoreBreakdown(flagged, SCORERS, 0.5)).toEqual({
+      kind: "flagged",
+      checks: ["jailbreak"],
+    });
+  });
+
+  it("should score a row whose checks all came back clear", () => {
+    const clear = result({ llm_judge: 0.9 });
+    clear.scores.llm_judge = { value: 0.9, safety: { jailbreak: false } };
+    expect(scoreBreakdown(clear, SCORERS, 0.5).kind).toBe("scored");
+  });
+});

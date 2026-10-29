@@ -16,10 +16,13 @@ from langflow.services.evaluations.scorers.llm_judge import (
     judge_output_budget,
     judge_run_budget,
 )
+from langflow.services.evaluations.scorers.safety import safety_prompt, selected_checks
 
 CHARS_PER_TOKEN = 4
 DEFAULT_ANSWER_TOKENS = 256
 JUDGE_REASON_TOKENS = 60
+# Each safety check adds a JSON key and a boolean to the verdict, plus the input attack once.
+SAFETY_TOKENS_PER_CHECK = 8
 # Agents call the model several times per question (tool calls, retries); the high end assumes three.
 AGENT_CALLS_HIGH = 3
 AGENT_TYPES = frozenset({"Agent"})
@@ -126,12 +129,16 @@ def estimate_judges(scorers: list[dict[str, Any]], stats: DatasetStats) -> Token
         rubric = (spec.get("config") or {}).get("rubric") or DEFAULT_RUBRIC
         # The judged answer is assumed about as long as the expected one.
         row_chars = stats.items * (fixed_chars + len(rubric)) + stats.input_chars + 2 * stats.expected_chars
-        input_tokens = _tokens(row_chars)
         config = spec.get("config") or {}
+        checks = selected_checks(config)
+        if checks:
+            row_chars += stats.items * len(safety_prompt(checks))
+        input_tokens = _tokens(row_chars)
         run_cap = judge_run_budget(config)
+        reason_tokens = JUDGE_REASON_TOKENS + SAFETY_TOKENS_PER_CHECK * len(checks)
         total.add(
             model,
-            (input_tokens, min(JUDGE_REASON_TOKENS * stats.items, run_cap)),
+            (input_tokens, min(reason_tokens * stats.items, run_cap)),
             (input_tokens * 1.5, min(judge_output_budget(config) * stats.items, run_cap)),
         )
     return total

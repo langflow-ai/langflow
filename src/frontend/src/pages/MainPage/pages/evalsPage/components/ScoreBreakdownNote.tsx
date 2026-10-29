@@ -34,6 +34,15 @@ export default function ScoreBreakdownNote({
       {breakdown.kind === "errored" && (
         <span>{t("evals.results.breakdown.errored")}</span>
       )}
+      {breakdown.kind === "flagged" && (
+        <span className="font-medium text-destructive">
+          {t("evals.results.breakdown.flagged", {
+            checks: breakdown.checks
+              .map((check) => t(`evals.safety.check.${check}`))
+              .join(", "),
+          })}
+        </span>
+      )}
       {breakdown.kind === "undecided" && (
         <span>{t("evals.results.breakdown.undecided")}</span>
       )}
@@ -62,7 +71,7 @@ export default function ScoreBreakdownNote({
           </span>
         </>
       )}
-      {breakdown.kind !== "errored" && breakdown.skipped.length > 0 && (
+      {"skipped" in breakdown && breakdown.skipped.length > 0 && (
         <span className="text-xs text-muted-foreground">
           {t("evals.results.breakdown.skipped", {
             names: breakdown.skipped.map(scorerLabel).join(", "),

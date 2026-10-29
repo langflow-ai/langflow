@@ -4,11 +4,15 @@ import ModelInputComponent from "@/components/core/parameterRenderComponent/comp
 import type { ModelOption } from "@/components/core/parameterRenderComponent/components/modelInputComponent/types";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { ScorerType } from "@/controllers/API/queries/evals/types";
+import type {
+  SafetyCheck,
+  ScorerType,
+} from "@/controllers/API/queries/evals/types";
 import { cn } from "@/utils/utils";
 import JudgeLimitFields, { type JudgeLimits } from "./JudgeLimitFields";
 import { isReasoningModel } from "./judgeLimits";
-import { useJudgeModelOptions } from "./useJudgeModelOptions";
+import SafetyCheckFields from "./SafetyCheckFields";
+import { useModelOptions } from "./useModelOptions";
 
 const SCORERS: { type: ScorerType; icon: string }[] = [
   { type: "exact_match", icon: "Equal" },
@@ -29,6 +33,8 @@ interface ScorerFieldsProps {
   onJudgeLimits: (value: JudgeLimits) => void;
   judgeRowBudgetInvalid: boolean;
   judgeRunBudgetInvalid: boolean;
+  safetyChecks: readonly SafetyCheck[];
+  onSafetyChecks: (value: SafetyCheck[]) => void;
 }
 
 export default function ScorerFields({
@@ -43,10 +49,12 @@ export default function ScorerFields({
   onJudgeLimits,
   judgeRowBudgetInvalid,
   judgeRunBudgetInvalid,
+  safetyChecks,
+  onSafetyChecks,
 }: ScorerFieldsProps) {
   const { t } = useTranslation();
   const judgeOn = selected.has("llm_judge");
-  const { options, ready } = useJudgeModelOptions(flowId, judgeOn);
+  const { options, ready } = useModelOptions(flowId, judgeOn);
 
   return (
     <fieldset className="flex flex-col gap-3">
@@ -130,6 +138,7 @@ export default function ScorerFields({
               onChange={(event) => onRubric(event.target.value)}
             />
           </div>
+          <SafetyCheckFields value={safetyChecks} onChange={onSafetyChecks} />
           <JudgeLimitFields
             value={judgeLimits}
             onChange={onJudgeLimits}

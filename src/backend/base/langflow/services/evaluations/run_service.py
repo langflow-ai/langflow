@@ -21,12 +21,14 @@ from langflow.services.evaluations.errors import EvalsConflictError, EvalsNotFou
 from langflow.services.evaluations.estimate import estimate_run
 from langflow.services.evaluations.evaluation_service import has_active_run
 from langflow.services.evaluations.flow_checks import check_flow, resolve_output_vertex
+from langflow.services.evaluations.model_overrides import apply_model_overrides
 from langflow.services.evaluations.run_reconcile import ACTIVE_STATUSES, reconcile_runs
 from langflow.services.evaluations.runner import cancel_local_run, run_evaluation
 from langflow.services.evaluations.summary import build_summary, summary_rows
 from langflow.services.evaluations.versioning import pin_history_version, pin_latest
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -35,6 +37,7 @@ if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
     from langflow.services.database.models.flow_version.model import FlowVersion
     from langflow.services.database.models.user.model import User
+    from langflow.services.evaluations.schemas import ModelOverride
 
 
 def _now() -> datetime:
@@ -56,7 +59,11 @@ async def _pin_version(
 
 
 async def start_evaluation_run(
-    session: AsyncSession, user: User, evaluation: Evaluation, flow_version_id: UUID | None
+    session: AsyncSession,
+    user: User,
+    evaluation: Evaluation,
+    flow_version_id: UUID | None,
+    model_overrides: Sequence[ModelOverride] = (),
 ) -> EvaluationRun:
     if evaluation.flow_id is None:
         msg = "The flow of this evaluation was deleted."
@@ -95,10 +102,11 @@ async def start_evaluation_run(
     report = check_flow(version.data, evaluation.output_vertex_id)
     if report.blocking:
         raise FlowCheckFailedError([issue.model_dump() for issue in report.blocking])
+    run_data = apply_model_overrides(version.data or {}, model_overrides)
     estimate = await estimate_run(
         session,
         flow_id=flow.id,
-        flow_data=version.data,
+        flow_data=run_data,
         dataset_id=dataset.id,
         scorers=evaluation.scorers,
     )
@@ -109,6 +117,7 @@ async def start_evaluation_run(
         "scorers": evaluation.scorers,
         "pass_threshold": evaluation.pass_threshold,
         "output_vertex_id": resolve_output_vertex(version.data or {}, evaluation.output_vertex_id),
+        "model_overrides": [override.model_dump() for override in model_overrides],
     }
     run.estimate = estimate.model_dump()
     session.add(run)

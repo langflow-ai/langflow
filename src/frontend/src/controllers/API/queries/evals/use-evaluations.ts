@@ -12,6 +12,7 @@ import type {
   EvaluationResult,
   EvaluationRun,
   FlowCheckReport,
+  ModelOverride,
   Page,
   RunEstimate,
   ScorerSpec,
@@ -32,6 +33,8 @@ export interface EvaluationCreatePayload {
   pass_threshold: number;
   /** With run=true: the history version to run; null runs the latest draft. */
   flow_version_id?: string | null;
+  /** With run=true: models to swap in for that run; the flow itself is not changed. */
+  model_overrides?: ModelOverride[];
 }
 
 export const useGetEvaluations: useQueryFunctionType<
@@ -179,19 +182,25 @@ export const useCheckFlowForEvaluation: useQueryFunctionType<
 };
 
 export const useEstimateEvaluation: useQueryFunctionType<
-  { flowId: string; datasetId: string; scorers: ScorerSpec[] },
+  {
+    flowId: string;
+    datasetId: string;
+    scorers: ScorerSpec[];
+    modelOverrides?: ModelOverride[];
+  },
   RunEstimate
-> = ({ flowId, datasetId, scorers }, options) => {
+> = ({ flowId, datasetId, scorers, modelOverrides = [] }, options) => {
   const { query } = UseRequestProcessor();
   return query(
     // The whole spec: the judge model and rubric change the price, not only the scorer types.
-    ["useEstimateEvaluation", flowId, datasetId, scorers],
+    ["useEstimateEvaluation", flowId, datasetId, scorers, modelOverrides],
     async () =>
       (
         await api.post<RunEstimate>(`${getURL("EVALUATIONS")}/estimate`, {
           flow_id: flowId,
           dataset_id: datasetId,
           scorers,
+          model_overrides: modelOverrides,
         })
       ).data,
     {
