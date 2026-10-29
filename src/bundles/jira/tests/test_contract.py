@@ -2,6 +2,8 @@
 
 import importlib.abc
 import json
+import os
+import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -316,6 +318,76 @@ def test_palette_and_connection_capabilities_share_jira_labels_and_icon():
         assert component.display_name == capability.display_name
         assert component.display_name.startswith("Jira: ")
         assert component.icon == "Jira"
+
+
+@pytest.mark.parametrize("injected", [False, True])
+@pytest.mark.parametrize("check_variables", [False, True])
+@pytest.mark.parametrize("source", ["json", "python"])
+def test_cli_flow_rejects_jira_without_preloaded_registry(tmp_path, source, *, injected, check_variables):
+    import lfx_jira
+    from lfx.components.input_output import ChatInput, ChatOutput
+    from lfx.graph import Graph
+
+    chat = ChatInput(_id="chat").set(input_value="DEMO-1")
+    jira = JiraReadIssueComponent(_id="jira", connection="jira/work").set(issue=chat.message_response)
+    output = ChatOutput(_id="output").set(input_value=jira.read_issue)
+    exported = Graph(start=chat, end=output).dump()
+    for node in exported["data"]["nodes"]:
+        code = node["data"]["node"]["template"]["code"]
+        code["value"] = code["value"].splitlines()
+    path = tmp_path / "jira.json"
+    path.write_text(json.dumps(exported), encoding="utf-8")
+    if source == "python":
+        path = tmp_path / "jira.py"
+        path.write_text(
+            "from lfx.graph import Graph\n"
+            "from lfx.components.input_output import ChatInput, ChatOutput\n"
+            "from lfx_jira.components.jira import JiraReadIssueComponent\n"
+            "chat = ChatInput(_id='chat').set(input_value='DEMO-1')\n"
+            "jira = JiraReadIssueComponent(_id='jira', connection='jira/work').set(issue=chat.message_response)\n"
+            "output = ChatOutput(_id='output').set(input_value=jira.read_issue)\n"
+            "graph = Graph(start=chat, end=output)\n",
+            encoding="utf-8",
+        )
+    env = os.environ.copy()
+    env["LANGFLOW_ALLOW_CUSTOM_COMPONENTS"] = "true"
+    # Exercise real discovery even when CI imports the bundle directly from source.
+    env["LANGFLOW_SEED_DIR"] = str(Path(lfx_jira.__file__).parent.parent)
+    env["DO_NOT_TRACK"] = "1"
+    env.pop("LF_CONNECTION__JIRA__WORK", None)
+    env.pop("LANGFLOW_JIRA_CLOUD_ID", None)
+    if injected:
+        env["LF_CONNECTION__JIRA__WORK"] = "synthetic-jira-access"
+        env["LANGFLOW_JIRA_CLOUD_ID"] = SITE
+
+    result = subprocess.run(  # noqa: S603 - fixed CLI arguments and a test-generated flow
+        [
+            sys.executable,
+            "-m",
+            "lfx",
+            "run",
+            str(path),
+            "--input-value",
+            "DEMO-1",
+            "--check-variables" if check_variables else "--no-check-variables",
+        ],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+
+    assert result.returncode == 1
+    response = json.loads(result.stdout)
+    message = "Jira Cloud connections are not available in headless lfx. Run this flow on a supported Langflow server."
+    if check_variables:
+        assert response["exception_type"] == "IntegrationContextUnsupportedError"
+        assert response["exception_message"] == message
+    else:
+        assert message in response["exception_message"]
+    assert "LF_CONNECTION" not in result.stdout
+    assert "Traceback" not in result.stdout + result.stderr
 
 
 @pytest.mark.parametrize("check_variables", [False, True])
