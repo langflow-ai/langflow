@@ -204,7 +204,6 @@ async def test_v1_run_rejects_variable_override_before_streaming(
 
     with pytest.raises(HTTPException) as error:
         await _run_flow_internal(
-            background_tasks=BackgroundTasks(),
             flow=flow,
             input_request=SimplifiedAPIRequest(input_value="hello"),
             stream=True,

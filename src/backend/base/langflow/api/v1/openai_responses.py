@@ -3,6 +3,7 @@ import json
 import time
 import uuid
 from collections.abc import AsyncGenerator
+from datetime import datetime, timezone
 from typing import Annotated, Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
@@ -942,6 +943,7 @@ async def create_response(
                 run_success=False,
                 run_error_message=str(exc),
                 run_id=None,  # OpenAI endpoint doesn't use simple_run_flow
+                run_completed_at=datetime.now(timezone.utc),
             ),
         )
 
@@ -958,7 +960,7 @@ async def create_response(
             return JSONResponse(status_code=client_error.status_code, content={"error": error_response["error"]})
         return OpenAIErrorResponse(error=error_response["error"])
 
-    # Log telemetry for successful completion
+    # Capture completion before deferred recording can cross a UTC day boundary.
     if not request.stream:  # Only log for non-streaming responses
         end_time = time.perf_counter()
         background_tasks.add_task(
@@ -969,6 +971,7 @@ async def create_response(
                 run_success=True,
                 run_error_message="",
                 run_id=None,  # OpenAI endpoint doesn't use simple_run_flow
+                run_completed_at=datetime.now(timezone.utc),
             ),
         )
 
