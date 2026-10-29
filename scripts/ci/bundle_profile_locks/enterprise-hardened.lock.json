@@ -63,6 +63,16 @@
       "resolved_version": "0.2.1"
     },
     {
+      "distribution": "lfx-discord",
+      "extras": [],
+      "providers": [
+        "lfx-discord"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-discord==0.1.0",
+      "resolved_version": "0.1.0"
+    },
+    {
       "distribution": "lfx-docling",
       "extras": [],
       "providers": [
@@ -190,13 +200,14 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:311190439f5c0ab6",
+  "profile_digest": "sha256:ed8ea7b0c49c7563",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
     "lfx-azure",
     "lfx-cohere",
     "lfx-datastax",
+    "lfx-discord",
     "lfx-docling",
     "lfx-github",
     "lfx-google",

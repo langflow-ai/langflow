@@ -1,0 +1,1 @@
+"""Discord bot Gateway runtime."""

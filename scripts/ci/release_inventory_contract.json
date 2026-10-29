@@ -68,6 +68,7 @@
         "lfx-azure",
         "lfx-cohere",
         "lfx-datastax",
+        "lfx-discord",
         "lfx-docling",
         "lfx-github",
         "lfx-google",
@@ -105,6 +106,7 @@
           "lfx-azure",
           "lfx-cohere",
           "lfx-datastax",
+          "lfx-discord",
           "lfx-docling",
           "lfx-github",
           "lfx-google",
@@ -165,6 +167,11 @@
           "lfx_github/extension.json",
           "lfx_github/components/github/capabilities.v1.json",
           "lfx_github/components/github/issue_trigger.py"
+        ],
+        "lfx-discord": [
+          "lfx_discord/extension.json",
+          "lfx_discord/components/discord/capabilities.v1.json",
+          "lfx_discord/components/discord/discord_send_message.py"
         ]
       },
       "module_checks": [
@@ -244,6 +251,7 @@
           "lfx-cohere",
           "lfx-confluent",
           "lfx-datastax",
+          "lfx-discord",
           "lfx-docling",
           "lfx-duckduckgo",
           "lfx-empiriolabs",
@@ -380,6 +388,11 @@
         "lfx-bundles": [
           "lfx_bundles/mongodb/mongodb_atlas.py",
           "lfx_bundles/youtube/starter_projects/Youtube Analysis.json"
+        ],
+        "lfx-discord": [
+          "lfx_discord/extension.json",
+          "lfx_discord/components/discord/capabilities.v1.json",
+          "lfx_discord/components/discord/discord_send_message.py"
         ]
       },
       "module_checks": [

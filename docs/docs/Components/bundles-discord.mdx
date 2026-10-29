@@ -1,0 +1,127 @@
+---
+title: Discord components
+slug: /bundles-discord
+---
+
+The Discord bundle provides bot message actions and message or mention triggers.
+These components are in preview and use a [managed connection](../Develop/connections.mdx) containing a bot token.
+Credentials stay outside saved flow JSON.
+
+## Supported contexts
+
+| Context | Actions | Triggers |
+| --- | --- | --- |
+| Self-managed Langflow | Supported | Discord Gateway with a running listener |
+| Hosted Langflow | Supported | Unsupported |
+| Langflow Desktop | Supported | Unsupported |
+| Headless lfx | Supported through its connection resolver | No standalone Gateway receiver |
+
+Install `lfx-discord` with the matching Langflow 1.14 runtime in the API and listener environments.
+Restart those processes and confirm the bundle appears in `lfx extension list`.
+Headless actions require lfx and the bundle, without the server package.
+
+## Capabilities and permissions
+
+| Component | Behavior | Discord access |
+| --- | --- | --- |
+| **Discord: On Message** | Receives new user messages in explicit guild channels or threads. | View Channel and Message Content Intent |
+| **Discord: On Mention** | Receives new user messages that mention the bot. | View Channel and standard Guilds and Guild Messages intents |
+| **Discord: Send Message** | Sends plain text to a guild channel or thread. | View Channel and Send Messages, or Send Messages in Threads |
+| **Discord: Reply to Message** | Replies to the original message from a trigger event. | Sending permissions and Read Message History |
+
+Private threads also require bot membership.
+These are Discord bot permissions and Gateway intents, not OAuth scopes for the token.
+Langflow's integration policy can further restrict actions and providers.
+
+Messages are limited to 2000 UTF-16 code units, and outgoing mentions are disabled.
+Triggers ignore bot authors, webhook posts, edits, deletions, direct messages, and unsupported message types.
+Slash commands, interaction responses, ephemeral messages, and HTTP interaction endpoints are unsupported.
+
+## Create and install a bot
+
+1. Open the [Discord Developer Portal](https://discord.com/developers/applications), create an application, and open its **Bot** settings.
+   Generate or reset its bot token and store it in your secret manager.
+2. For **Discord: On Message**, enable **Message Content Intent** in the bot's privileged intent settings.
+   Obtain Discord approval when required for the app.
+   **Discord: On Mention** does not request that privileged intent.
+3. Configure a guild installation with the `bot` scope and the permissions listed above, then install it in the target server.
+   Review channel permission overrides and private-thread membership as well.
+4. Enable **Developer Mode** in Discord's advanced user settings and copy the server, channel, and thread IDs you need.
+   Select each thread explicitly because choosing its parent channel does not include the thread.
+
+See [Discord's bot setup guide](https://docs.discord.com/developers/quick-start/getting-started) and [Gateway intent requirements](https://docs.discord.com/developers/events/gateway#gateway-intents).
+Use a bot token, not a user token or an OAuth client secret.
+
+## Connect an account and run actions
+
+1. Open **Settings**, **Connections**, and **Add connection** in Langflow.
+   Choose **Discord**, enter a handle such as `work`, and save the bot token as your own connection.
+   Langflow verifies both the bot user and current application before recording the bot identity.
+2. Add **Discord: Send Message** to a flow and select the connection in **Discord Connection**.
+3. Set **Guild ID**, **Channel or Thread ID**, and **Text**, then run the flow.
+   The saved connection handle is `discord/work`.
+
+For a headless action flow, provide the same bot token through `LF_CONNECTION__DISCORD__WORK` or the configured connection resolver.
+Populate the environment from your secret manager instead of embedding the token in the flow.
+This supports actions without running a Gateway receiver.
+Bot tokens have no automatic refresh here and remain revocable even though they have no fixed expiry.
+
+## Enable a Gateway trigger
+
+Run `langflow listeners` alongside the self-managed API, or configure `LANGFLOW_LISTENERS_MODE=subprocess`.
+Use the same database, `LANGFLOW_SECRET_KEY`, and installed bundle in the API and listener.
+See [Deploy trigger listeners](../Deployment/deployment-trigger-listeners.mdx).
+The listener needs outbound HTTPS and WebSocket access to Discord.
+Public ingress, an interactions URL, and a webhook callback are not required.
+
+1. Add **Discord: On Message** or **Discord: On Mention** at the start of a flow you own.
+2. Select your connection, enter **Guild ID**, and specify between 1 and 100 **Channel or Thread IDs**.
+   The listener checks that each target belongs to that guild.
+3. Save the flow and enable **Allow background runs** in the trigger node controls.
+   You can also enable **Allow scheduled and deployed runs** in the connection's **Actions** menu under **Settings**, **Connections**.
+4. Enable the trigger, or select **Resume** in **Settings**, **Triggers**.
+   Send a matching message and inspect the trigger's event list.
+
+One active trigger owns each verified bot in a Langflow database, even if several connections use its token.
+Disable the receiver and finish cleanup before replacing it.
+Do not run another Gateway client using that bot token.
+Only single-shard bots are supported, and other clients still consume Discord's shared session-start allowance.
+
+Gateway delivery is an event stream, without a polling interval.
+Discord supplies the heartbeat interval, and the listener reconnects with bounded backoff.
+Rate limits and session-start limits can delay reconnects.
+
+## Event identity and recovery
+
+Discord message IDs deduplicate replayed message-create events for the receiver.
+Event writes check the current trigger, owner, connection, configuration, and listener lease before committing.
+The saved Gateway sequence advances after the event commit, so a crash can replay a message but cannot skip an uncommitted event.
+The normalized event contains the verified bot, guild, channel or thread, author, message ID, text, and session key.
+**Conversation Session** separates conversations by channel or thread, with an optional sender-specific choice.
+
+After a connection is restored, open **Settings**, **Triggers**, and select **Resume** for each trigger showing **Ready to resume**.
+Reconnect alone does not restart listening.
+If the token was reset, reconnect using the replacement token for the same bot first.
+Fix disallowed intents or missing permissions in Discord before reconnecting and resuming.
+
+A listener handover preserves the saved Gateway session and attempts Discord Resume using the last committed sequence.
+An explicit pause followed by enabling starts a fresh receiver and clears the saved session.
+Discord can invalidate a session or discard its replay window.
+A new Identify starts with current events, without backfilling missed history after long downtime, pause, or bot removal.
+
+The trigger's event list can replay an event already recorded by Langflow.
+It cannot reconstruct a message absent from both the ledger and Discord's available Gateway replay.
+See [Discord Gateway reconnect behavior](https://docs.discord.com/developers/events/gateway#resuming).
+
+Cleanup closes the old leased socket and does not delete the bot or change the Discord application.
+Wait for cleanup to finish before enabling a replacement receiver.
+If background use is blocked, enable the connection's background-run permission before resuming.
+
+## Replies and uncertain sends
+
+**Discord: Reply to Message** uses the event's bot, guild, channel or thread, and original message ID.
+It fails if the reply target is unavailable instead of sending an unrelated message.
+Sends include a nonce derived from the run and component when available, but Discord only deduplicates it within its recent nonce window.
+An ambiguous write failure is not retried automatically.
+Check Discord before manually repeating a send that may have succeeded.
+See [Discord's message API](https://docs.discord.com/developers/resources/message#create-message).
