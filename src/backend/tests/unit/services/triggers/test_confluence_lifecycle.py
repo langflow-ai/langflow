@@ -110,6 +110,99 @@ async def connection(owner_id, *, allow=True, identity="user_delegated"):
         return row.id
 
 
+@pytest.mark.parametrize("narrowed_scopes", [False, True])
+@pytest.mark.usefixtures("confluence")
+async def test_refresh_persists_rotated_grant_without_product_api_availability(
+    trigger_owner, monkeypatch, narrowed_scopes
+):
+    import json
+    from datetime import datetime, timedelta, timezone
+
+    from langflow.services.connection.oauth import broker, providers
+    from langflow.services.connection.oauth.config import OAuthRegistration
+    from langflow.services.connection.service import _decrypt_credential_payload
+    from langflow.services.database.models.connection.model import ConnectionSecret
+    from langflow.services.database.models.connection.oauth import ConnectionOAuth
+    from langflow.services.triggers.providers.confluence import oauth
+    from lfx_confluence.schema import READ, SCOPES, USER
+
+    registration = OAuthRegistration(
+        provider="confluence",
+        client_id="operator-app",
+        client_secret="synthetic-client-secret",  # noqa: S106  # pragma: allowlist secret
+        redirect_uri="https://langflow.example/api/v1/connections/oauth/confluence/callback",
+        tenant=SITE,
+        allowed_tenants=[SITE],
+        scopes=list(SCOPES),
+    )
+    monkeypatch.setenv(
+        "LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS",
+        json.dumps(
+            {
+                "confluence-work": registration.model_dump(mode="json", exclude={"client_secret"})
+                | {"client_secret": "synthetic-client-secret"}  # pragma: allowlist secret
+            }
+        ),  # pragma: allowlist secret
+    )
+    connection_id = await connection(trigger_owner)
+    previous_scopes = {READ, USER, "offline_access"}
+    refreshed_scopes = {USER} if narrowed_scopes else SCOPES
+
+    async def refresh_response(_url, data, **_kwargs):
+        assert data["grant_type"] == "refresh_token"
+        assert data["refresh_token"] == "synthetic-old-refresh"  # noqa: S105 - test fixture
+        return {
+            "access_token": "synthetic-new-access",
+            "refresh_token": "synthetic-new-refresh",
+            "expires_in": 3600,
+            "scope": " ".join(refreshed_scopes),
+        }
+
+    product_requests = []
+
+    def unavailable_product_api(request):
+        product_requests.append(request)
+        return httpx.Response(503)
+
+    monkeypatch.setattr(providers, "_request", refresh_response)
+    monkeypatch.setattr(
+        oauth, "http_client", lambda: httpx.AsyncClient(transport=httpx.MockTransport(unavailable_product_api))
+    )
+    async with session_scope() as session:
+        row = await session.get(Connection, connection_id)
+        identity = row.executing_identity.copy()
+        binding = ConnectionOAuth(
+            connection_id=connection_id,
+            user_id=trigger_owner,
+            registration_id="confluence-work",
+            config_digest=registration.fingerprint(),
+            expires_at=datetime.now(timezone.utc),
+        )
+        session.add(binding)
+        await session.flush()
+        payload = {
+            "access_token": "synthetic-old-access",
+            "refresh_token": "synthetic-old-refresh",
+            "expires_at": (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat(),
+            "oauth": {
+                "registration_id": "confluence-work",
+                "config_digest": registration.fingerprint(),
+                "generation": str(binding.generation),
+            },
+        }
+        await broker.store_tokens(session, row, payload, list(previous_scopes))
+        await broker.refresh_if_needed(session, row, payload)
+
+    async with session_scope() as session:
+        row = await session.get(Connection, connection_id)
+        secret = await session.get(ConnectionSecret, connection_id)
+        saved = _decrypt_credential_payload(secret.encrypted_payload)
+        assert saved["refresh_token"] == "synthetic-new-refresh"  # noqa: S105 - test fixture
+        assert set(row.granted_scopes) == (refreshed_scopes | {"offline_access"}) & previous_scopes
+        assert row.executing_identity == identity
+    assert not product_requests
+
+
 async def reconcile(flow_id, owner_id):
     data = {
         "nodes": [

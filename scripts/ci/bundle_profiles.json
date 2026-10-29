@@ -171,6 +171,14 @@
           "providers": [
             "lfx-confluence"
           ]
+        },
+        {
+          "distribution": "lfx-jira",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-jira"
+          ]
         }
       ]
     }

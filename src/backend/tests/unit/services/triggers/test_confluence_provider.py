@@ -182,7 +182,6 @@ def grant():
     }
 
 
-@pytest.mark.parametrize("refresh", [False, True])
 @pytest.mark.parametrize(
     ("profile", "display"),
     [
@@ -193,7 +192,7 @@ def grant():
         ({}, None),
     ],
 )
-async def test_oauth_initial_and_rotating_grant_prove_site_and_account(monkeypatch, refresh, profile, display):
+async def test_oauth_initial_grant_proves_site_and_account(monkeypatch, profile, display):
     def handler(request):
         if request.url.path == "/oauth/token/accessible-resources":
             return httpx.Response(200, json=[{"id": SITE, "scopes": list(SCOPES)}])
@@ -201,7 +200,7 @@ async def test_oauth_initial_and_rotating_grant_prove_site_and_account(monkeypat
         return httpx.Response(200, json={"accountId": "user-1", "type": "known", **profile})
 
     monkeypatch.setattr(oauth, "http_client", lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)))
-    token, account = await oauth.parse_token(registration(), grant(), refresh=refresh)
+    token, account = await oauth.parse_token(registration(), grant(), refresh=False)
     assert account == {"id": "user-1", "tenant_id": SITE, **({"display": display} if display else {})}
     assert "offline_access" in token["scope"]
 
@@ -225,7 +224,7 @@ async def test_oauth_wrong_tenant_scopes_or_anonymous_account_fail_closed(monkey
 
     monkeypatch.setattr(oauth, "http_client", lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)))
     with pytest.raises(OAuthError):
-        await oauth.parse_token(registration(), grant(), refresh=True)
+        await oauth.parse_token(registration(), grant(), refresh=False)
 
 
 @pytest.mark.parametrize(
@@ -430,7 +429,7 @@ async def test_dialog_scope_defaults_authorize_and_exchange_without_overgrant(mo
     )
     _, granted, account = await providers.exchange(selected, previous_scopes=selected_scopes, **exchange_args)
     assert set(granted) == set(selected_scopes)
-    assert account == {"id": "user-1", "tenant_id": SITE}
+    assert account == (None if refresh else {"id": "user-1", "tenant_id": SITE})
     assert {READ, USER} <= set(granted)
     if policy == "read":
         calls = []

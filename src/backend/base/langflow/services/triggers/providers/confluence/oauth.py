@@ -37,7 +37,7 @@ def validate_registration(registration):
         raise OAuthError(msg, reason="registration-unavailable")
 
 
-async def parse_token(registration, body, *, refresh):  # noqa: ARG001 - rotating grants undergo the same verification
+async def parse_token(registration, body, *, refresh):
     validate_registration(registration)
     if (
         not isinstance(body, dict)
@@ -49,7 +49,7 @@ async def parse_token(registration, body, *, refresh):  # noqa: ARG001 - rotatin
         or type(body.get("expires_in")) is not int
         or not 0 < body["expires_in"] <= MAX_TOKEN_LIFETIME
         or not isinstance(body.get("scope"), str)
-        or not {READ, USER} <= set(body["scope"].split())
+        or (not refresh and not {READ, USER} <= set(body["scope"].split()))
     ):
         msg = "Atlassian did not return a valid refreshable Confluence grant."
         raise OAuthError(msg, reason="provider-unavailable")
@@ -57,6 +57,11 @@ async def parse_token(registration, body, *, refresh):  # noqa: ARG001 - rotatin
         msg = "Atlassian did not return a Confluence refresh token. Reconnect with the required offline_access scope."
         raise OAuthError(msg, reason="provider-unavailable", code="oauth-refresh-token-missing")
     token = {key: body[key] for key in ("access_token", "refresh_token", "expires_in", "scope")}
+    if refresh:
+        # Atlassian has already rotated the refresh token. Product API failures
+        # must not discard its replacement; the broker retains the consent identity.
+        token["scope"] = " ".join(sorted(set(body["scope"].split()) | {"offline_access"}))
+        return token, None
     try:
         async with http_client() as http:
             resources = await send(http, "GET", "/oauth/token/accessible-resources", body["access_token"])
@@ -117,4 +122,5 @@ OAUTH = OAuthAdapter(
     supports_pkce=False,
     required_scopes=("offline_access",),
     refresh_rejection_errors=frozenset({"unauthorized_client"}),
+    limit_refresh_scopes_to_previous=True,
 )
