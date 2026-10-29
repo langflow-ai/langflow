@@ -60,11 +60,12 @@ from langflow.schema.knowledge_base import (
     TestBackendConnectionRequest,
     TestBackendConnectionResponse,
 )
+from langflow.services.auth.context import current_auth_is_restricted_api_key
 from langflow.services.authorization import (
     KnowledgeBaseAction,
     ensure_knowledge_base_permission,
 )
-from langflow.services.authorization.listing import visible_scope_prefilter
+from langflow.services.authorization.listing import filter_visible_resources, visible_scope_prefilter
 from langflow.services.database.models.jobs.model import JobStatus, JobType
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
 from langflow.services.deps import get_job_service, get_settings_service, get_task_service
@@ -1313,7 +1314,8 @@ async def list_knowledge_bases(
     # but a role with ``knowledge_base:read`` revoked entirely is rejected
     # here. Per-row filtering is the authorization plugin's responsibility once
     # KB share grants exist.
-    await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=None)
+    if not current_auth_is_restricted_api_key():
+        await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=None)
     try:
         knowledge_bases: list[KnowledgeBaseInfo] = []
         kb_ids_to_fetch: list[uuid.UUID] = []
@@ -1328,6 +1330,13 @@ async def list_knowledge_bases(
             if visibility is None
             else await knowledge_base_service.list_owned_or_visible(current_user.id, visibility)
         )
+        if visibility is None and current_auth_is_restricted_api_key():
+            rows = await filter_visible_resources(
+                current_user,
+                resource_type="knowledge_base",
+                candidates=rows,
+                act=KnowledgeBaseAction.READ,
+            )
 
         for row in rows:
             metadata = knowledge_base_service.record_to_metadata_dict(row)

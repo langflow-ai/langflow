@@ -28,6 +28,7 @@ from langflow.services.auth.context import (
     AUTH_METHOD_JWT,
     AuthCredentialContext,
     clear_current_auth_context,
+    current_auth_is_restricted_api_key,
     set_current_auth_context,
 )
 from langflow.services.auth.exceptions import (
@@ -1319,7 +1320,7 @@ class AuthService(BaseAuthService):
         return current_user
 
     async def get_current_active_superuser(self, current_user: User | UserRead) -> User | UserRead | None:
-        if not current_user.is_active or not current_user.is_superuser:
+        if current_auth_is_restricted_api_key() or not current_user.is_active or not current_user.is_superuser:
             return None
         set_current_model_provider_policy_context(user_id=current_user.id, attributes={"is_superuser": True})
         return current_user
@@ -1377,7 +1378,9 @@ class AuthService(BaseAuthService):
 
     def create_token(self, data: dict, expires_delta: timedelta):
         from langflow.services.auth.utils import get_jwt_signing_key
+        from langflow.services.database.models.api_key.policy import ensure_api_key_management_allowed
 
+        ensure_api_key_management_allowed()
         settings_service = self.settings
         to_encode = data.copy()
         expire = datetime.now(timezone.utc) + expires_delta

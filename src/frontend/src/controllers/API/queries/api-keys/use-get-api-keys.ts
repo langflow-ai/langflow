@@ -1,4 +1,5 @@
 import type { useQueryFunctionType } from "@/types/api";
+import type { ApiKeyPermissionPolicy } from "@/types/api-key-permissions";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -13,6 +14,7 @@ export interface IApiKeysDataArray {
   user_id: string;
   created_at: string;
   expires_at: string | null;
+  permissions?: ApiKeyPermissionPolicy | null;
 }
 
 interface IApiQueryResponse {

@@ -38,6 +38,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import and_, col, false, or_, select
 
 from langflow.services.auth import utils as auth_utils
+from langflow.services.auth.context import current_auth_is_restricted_api_key
 from langflow.services.authorization import filter_visible_resources, visible_scope_prefilter
 from langflow.services.authorization.listing import (
     apply_owned_or_visible_scope_prefilter,
@@ -425,7 +426,8 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         user: User | UserRead,
         provider_ids: frozenset[str] | None,
     ) -> list[Connection]:
-        is_superuser = bool(getattr(user, "is_superuser", False))
+        restricted_key = current_auth_is_restricted_api_key()
+        is_superuser = bool(getattr(user, "is_superuser", False)) and not restricted_key
         owner_clause = or_(
             Connection.owner_id == user.id,
             Connection.ownership_mode == ConnectionOwnershipMode.INSTANCE.value,
@@ -449,7 +451,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                 stmt = stmt.where(owner_clause)
         stmt = stmt.order_by(col(Connection.display_name), col(Connection.id))
         rows = list((await session.exec(stmt)).all())
-        if not is_superuser and cross_user:
+        if not is_superuser and (cross_user or restricted_key):
             rows = await filter_visible_resources(
                 user,
                 resource_type="connection",
@@ -804,7 +806,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         authz = get_authorization_service()
         if not settings.auth_settings.AUTHZ_ENABLED or not await authz.supports_cross_user_fetch():
             return None
-        context = {"execution_principal_kind": principal.kind}
+        context = {"execution_principal_kind": principal.kind, "execution_principal": principal}
         stmt = select(Connection).where(
             Connection.provider_key == request.ref.provider,
             Connection.name == request.ref.name,

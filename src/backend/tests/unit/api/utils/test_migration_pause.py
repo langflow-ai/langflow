@@ -111,6 +111,7 @@ READS = frozenset(
         "/api/v1/agentic/mcp/",
         "/api/v1/all",
         "/api/v1/api_key/",
+        "/api/v1/api_key/permission-options",
         "/api/v1/audits",
         "/api/v1/audits/",
         "/api/v1/audits/export",

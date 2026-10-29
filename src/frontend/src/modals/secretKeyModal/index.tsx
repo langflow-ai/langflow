@@ -1,8 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import ApiKeyPermissionsEditor, {
+  isApiKeyPermissionPolicyValid,
+} from "@/components/core/apiKeyPermissionsEditor";
 import { extractApiErrorMessage } from "@/controllers/API/helpers/extract-api-error-message";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useGenerateToken } from "@/customization/hooks/use-custom-generate-token";
+import type {
+  ApiKeyPermissionOptions,
+  ApiKeyPermissionPolicy,
+} from "@/types/api-key-permissions";
 import { createApiKey } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import type { ApiKeyType } from "../../types/components";
@@ -21,9 +28,8 @@ export interface ModalConfigProps {
   showIcon?: boolean;
 }
 
-interface SecretKeyModalProps {
-  userId?: string;
-  size?: string;
+interface SecretKeyModalConfiguration extends ModalConfigProps {
+  size?: NonNullable<ApiKeyType["modalProps"]>["size"];
   modalProps?: ModalConfigProps;
 }
 
@@ -32,7 +38,15 @@ export default function SecretKeyModal({
   data,
   onCloseModal,
   modalProps,
-}: ApiKeyType & { modalProps: SecretKeyModalProps }) {
+  permissionOptions,
+  permissionsLoading = false,
+  permissionsError = false,
+}: Omit<ApiKeyType, "modalProps"> & {
+  modalProps?: SecretKeyModalConfiguration;
+  permissionOptions?: ApiKeyPermissionOptions;
+  permissionsLoading?: boolean;
+  permissionsError?: boolean;
+}) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [apiKeyName, setApiKeyName] = useState(data?.apikeyname ?? "");
@@ -43,6 +57,11 @@ export default function SecretKeyModal({
   // Key-creation failure, surfaced inline and associated with the name field
   // (WCAG 3.3.1) — it was previously swallowed entirely.
   const [serverError, setServerError] = useState<string | null>(null);
+  const [permissions, setPermissions] = useState<ApiKeyPermissionPolicy | null>(
+    null,
+  );
+  const [isCreating, setIsCreating] = useState(false);
+  const [scopeEditorEnabled, setScopeEditorEnabled] = useState(false);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const generateToken = useGenerateToken();
@@ -51,17 +70,23 @@ export default function SecretKeyModal({
   useEffect(() => {
     if (open) {
       setRenderKey(false);
+      setScopeEditorEnabled(Boolean(permissionOptions?.supported));
       resetForm();
     } else {
       onCloseModal?.();
     }
   }, [open]);
 
+  useEffect(() => {
+    if (open && permissionOptions?.supported) setScopeEditorEnabled(true);
+  }, [open, permissionOptions?.supported]);
+
   function resetForm() {
     setApiKeyName("");
     setApiKeyValue("");
     setExpiresAt("");
     setServerError(null);
+    setPermissions(null);
   }
 
   const handleCopyClick = async () => {
@@ -86,7 +111,11 @@ export default function SecretKeyModal({
     const isoExpiry = expiresAt
       ? new Date(expiresAt + "T23:59:59").toISOString()
       : null;
-    createApiKey(apiKeyName, isoExpiry)
+    setIsCreating(true);
+    const request = permissionOptions?.supported
+      ? createApiKey(apiKeyName, isoExpiry, permissions)
+      : createApiKey(apiKeyName, isoExpiry);
+    request
       .then((res) => {
         setApiKeyValue(res["api_key"]);
       })
@@ -97,11 +126,14 @@ export default function SecretKeyModal({
         setRenderKey(false);
         const status = err?.response?.status;
         setServerError(
-          typeof status === "number" && status >= 500
-            ? t("errors.errorGeneratingApiKey")
-            : extractApiErrorMessage(err, t("errors.errorGeneratingApiKey")),
+          err?.code === "API_KEY_PERMISSION_MISMATCH"
+            ? t("apiKey.permissions.policyNotApplied")
+            : typeof status === "number" && status >= 500
+              ? t("errors.errorGeneratingApiKey")
+              : extractApiErrorMessage(err, t("errors.errorGeneratingApiKey")),
         );
-      });
+      })
+      .finally(() => setIsCreating(false));
   }
 
   async function handleSubmitForm() {
@@ -125,6 +157,15 @@ export default function SecretKeyModal({
 
   const handleOSSKey = () => {
     if (!renderKey) {
+      if (
+        permissionsLoading ||
+        permissionsError ||
+        (scopeEditorEnabled && !permissionOptions?.supported) ||
+        isCreating ||
+        (permissionOptions?.supported &&
+          !isApiKeyPermissionPolicyValid(permissions, permissionOptions))
+      )
+        return;
       setRenderKey(true);
       handleAddNewKey();
     } else {
@@ -168,21 +209,47 @@ export default function SecretKeyModal({
         ) : ENABLE_DATASTAX_LANGFLOW ? (
           <></>
         ) : (
-          <FormKeyRender
-            modalProps={modalConfigProps}
-            apiKeyName={apiKeyName}
-            inputRef={inputRef}
-            setApiKeyName={(value) => {
-              setApiKeyName(value);
-              setServerError(null);
-            }}
-            expiresAt={expiresAt}
-            setExpiresAt={(value) => {
-              setExpiresAt(value);
-              setServerError(null);
-            }}
-            serverError={serverError}
-          />
+          <>
+            <FormKeyRender
+              modalProps={modalConfigProps}
+              apiKeyName={apiKeyName}
+              inputRef={inputRef}
+              setApiKeyName={(value) => {
+                setApiKeyName(value);
+                setServerError(null);
+              }}
+              expiresAt={expiresAt}
+              setExpiresAt={(value) => {
+                setExpiresAt(value);
+                setServerError(null);
+              }}
+              serverError={serverError}
+            />
+            {permissionsError && (
+              <p role="alert" className="mt-4 text-sm text-destructive">
+                {t("apiKey.permissions.optionsError")}
+              </p>
+            )}
+            {scopeEditorEnabled &&
+              !permissionOptions?.supported &&
+              !permissionsError && (
+                <p role="alert" className="mt-4 text-sm text-destructive">
+                  {t("apiKey.permissions.unavailable")}
+                </p>
+              )}
+            {permissionOptions?.supported && (
+              <div className="mt-4">
+                <ApiKeyPermissionsEditor
+                  options={permissionOptions}
+                  value={permissions}
+                  onChange={(policy) => {
+                    setPermissions(policy);
+                    setServerError(null);
+                  }}
+                />
+              </div>
+            )}
+          </>
         )}
       </BaseModal.Content>
       <BaseModal.Footer
@@ -191,6 +258,20 @@ export default function SecretKeyModal({
             ? t("modal.secretKey.doneButton")
             : (modalConfigProps?.buttonText ?? ""),
           dataTestId: "secret_key_modal_submit_button",
+          loading: isCreating,
+          disabled:
+            !renderKey &&
+            (permissionsLoading ||
+              permissionsError ||
+              (scopeEditorEnabled && !permissionOptions?.supported) ||
+              isCreating ||
+              Boolean(
+                permissionOptions?.supported &&
+                  !isApiKeyPermissionPolicyValid(
+                    permissions,
+                    permissionOptions,
+                  ),
+              )),
         }}
       />
     </BaseModal>

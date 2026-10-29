@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from lfx.services.authorization.base import ResourceVisibilityScope
@@ -13,6 +14,7 @@ from langflow.services.authorization.guards import (
     _api_key_scopes_require_plugin_enforcement,
     _auth_context,
     _coerce_action,
+    require_api_key_scope_support,
     should_apply_owner_override,
 )
 from langflow.services.deps import get_authorization_service, get_settings_service
@@ -52,6 +54,7 @@ async def filter_visible_resources(
     act: FlowAction | str = FlowAction.READ,
 ) -> list[T]:
     """Return candidates the user may read (no-op when AUTHZ_ENABLED is false)."""
+    await require_api_key_scope_support()
     settings = get_settings_service()
     if not settings.auth_settings.AUTHZ_ENABLED or not candidates:
         return candidates
@@ -138,6 +141,7 @@ async def visible_id_prefilter(
     as "preserve today's owner-scoped query plus :func:`filter_visible_resources`"
     so OSS behavior is byte-for-byte unchanged.
     """
+    await require_api_key_scope_support()
     settings = get_settings_service()
     if not settings.auth_settings.AUTHZ_ENABLED:
         return None
@@ -164,6 +168,7 @@ async def visible_scope_prefilter(
     workspace, and project wildcard grants without materializing every matching
     resource UUID. The base service adapts legacy concrete-ID plugins.
     """
+    await require_api_key_scope_support()
     settings = get_settings_service()
     if not settings.auth_settings.AUTHZ_ENABLED:
         return None
@@ -305,6 +310,27 @@ def restrict_to_owned_or_visible_scope(
     project_column: InstrumentedAttribute | None = None,
 ) -> StatementT:
     """Apply owner, concrete-ID, workspace, and project visibility before pagination."""
+    if visibility.intersections:
+        stmt = restrict_to_owned_or_visible_scope(
+            stmt,
+            id_column=id_column,
+            owner_clause=owner_clause,
+            visibility=replace(visibility, intersections=()),
+            workspace_column=workspace_column,
+            workspace_expression=workspace_expression,
+            project_column=project_column,
+        )
+        for ceiling in visibility.intersections:
+            stmt = restrict_to_owned_or_visible_scope(
+                stmt,
+                id_column=id_column,
+                owner_clause=false(),
+                visibility=ceiling,
+                workspace_column=workspace_column,
+                workspace_expression=workspace_expression,
+                project_column=project_column,
+            )
+        return stmt
     excluded = visibility.excluded_resource_ids
 
     if visibility.all_resources:
@@ -390,7 +416,9 @@ async def apply_owned_or_visible_scope_prefilter(
     project_column: InstrumentedAttribute | None = None,
 ) -> StatementT:
     """Apply a structured visibility prefilter, respecting owner override."""
-    effective_owner_clause = owner_clause if await should_apply_owner_override() else false()
+    effective_owner_clause = (
+        owner_clause if visibility.intersections or await should_apply_owner_override() else false()
+    )
     return restrict_to_owned_or_visible_scope(
         stmt,
         id_column=id_column,
@@ -409,6 +437,7 @@ def resource_visible_in_scope(
     workspace_id: UUID | None = None,
     project_id: UUID | None = None,
     project_is_personal: bool | None = None,
+    is_owner: bool = False,
 ) -> bool:
     """Evaluate a scope, requiring project privacy metadata when exclusion is enabled.
 
@@ -418,6 +447,26 @@ def resource_visible_in_scope(
     to project-backed resources. Explicit resource and project grants do not
     require that metadata.
     """
+    if visibility.intersections:
+        return resource_visible_in_scope(
+            resource_id=resource_id,
+            visibility=replace(visibility, intersections=()),
+            workspace_id=workspace_id,
+            project_id=project_id,
+            project_is_personal=project_is_personal,
+            is_owner=is_owner,
+        ) and all(
+            resource_visible_in_scope(
+                resource_id=resource_id,
+                visibility=ceiling,
+                workspace_id=workspace_id,
+                project_id=project_id,
+                project_is_personal=project_is_personal,
+            )
+            for ceiling in visibility.intersections
+        )
+    if is_owner:
+        return True
     if resource_id in visibility.excluded_resource_ids:
         return False
     personal_project_allowed = (

@@ -493,13 +493,25 @@ async def test_list_agents_includes_direct_team_and_scoped_grants(
 async def test_list_agents_scoped_api_key_does_not_inherit_owner_override(
     client: AsyncClient,
     active_user,
-    created_api_key,
     flow_data,
 ):
     """An API-key scope remains authoritative even for resources owned by the key's user."""
     scoped_folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "none"})
     scoped_flow = await _create_flow(active_user.id, data=flow_data, folder_id=scoped_folder_id)
     unscoped_flow = await _create_flow(active_user.id, data=flow_data)
+    key = await _create_api_key(
+        active_user.id,
+        permissions={
+            "restrictions": [
+                {
+                    "resource_type": "flow",
+                    "actions": ["read"],
+                    "domain_type": "project",
+                    "domain_id": str(scoped_folder_id),
+                }
+            ]
+        },
+    )
 
     async with session_scope() as session:
         role = AuthzRole(
@@ -522,7 +534,7 @@ async def test_list_agents_scoped_api_key_does_not_inherit_owner_override(
     with install_policy_authz(get_settings_service()):
         response = await client.get(
             "api/v1/a2a/agents",
-            headers={"x-api-key": created_api_key.api_key},
+            headers={"x-api-key": key},
         )
 
     assert response.status_code == 200
@@ -575,13 +587,19 @@ async def _jsonrpc(client: AsyncClient, flow_id, method, params, rpc_id=1, heade
     )
 
 
-async def _create_api_key(user_id):
+async def _create_api_key(user_id, *, permissions=None):
     """Create a real langflow API key for a user; returns the raw (unmasked) key."""
     from langflow.services.database.models.api_key.crud import create_api_key
-    from langflow.services.database.models.api_key.model import ApiKeyCreate
+    from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
 
     async with session_scope() as session:
         unmasked = await create_api_key(session, ApiKeyCreate(name=f"a2a-key-{uuid.uuid4().hex[:8]}"), user_id)
+        if permissions is not None:
+            # Seed an existing restricted key; issuance validation belongs to the API-key tests.
+            key = await session.get(ApiKey, unmasked.id)
+            assert key is not None
+            key.permissions = permissions
+            session.add(key)
         await session.commit()
         return unmasked.api_key
 
@@ -1962,7 +1980,10 @@ async def test_apikey_folder_enforces_scoped_execute_permission(
     """An owner key is still subject to plugin API-key scope policy before dispatch."""
     folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "apikey"})
     flow_id = await _create_flow(active_user.id, data=echo_flow_data, folder_id=folder_id)
-    key = await _create_api_key(active_user.id)
+    key = await _create_api_key(
+        active_user.id,
+        permissions={"restrictions": [{"resource_type": "flow", "actions": ["execute"]}]},
+    )
     settings_service = get_settings_service()
 
     with install_policy_authz(settings_service):

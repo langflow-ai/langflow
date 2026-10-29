@@ -1,9 +1,9 @@
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from pydantic import field_serializer, field_validator
-from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
+from sqlmodel import JSON, Column, DateTime, Field, Relationship, SQLModel, func
 
 from langflow.schema.serialize import UUIDstr
 
@@ -35,6 +35,7 @@ class ApiKeyBase(SQLModel):
     total_uses: int = Field(default=0)
     is_active: bool = Field(default=True)
     expires_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
+    permissions: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON(none_as_null=True), nullable=True))
 
     @field_serializer("expires_at", "last_used_at", when_used="always")
     def _serialize_expires_last_used(self, v: datetime | None) -> str | None:
@@ -60,6 +61,13 @@ class ApiKeyCreate(ApiKeyBase):
     api_key: str | None = None
     user_id: UUIDstr | None = None
     created_at: datetime | None = Field(default_factory=utc_now)
+
+    @field_validator("permissions", mode="before")
+    @classmethod
+    def validate_permissions(cls, value):
+        from langflow.services.database.models.api_key.permissions import validate_permission_policy
+
+        return validate_permission_policy(value)
 
     @field_validator("created_at", mode="before")
     @classmethod

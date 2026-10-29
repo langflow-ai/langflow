@@ -193,6 +193,7 @@ async def test_filter_visible_resources_api_key_scope_plugin_evaluates_owned_row
             method=AUTH_METHOD_API_KEY,
             api_key_id=uuid4(),
             api_key_source="db",  # pragma: allowlist secret
+            api_key_restricted=True,
         )
     )
 

@@ -166,7 +166,10 @@ async def test_disconnect_lets_the_job_row_reach_failed(monkeypatch):
             await asyncio.sleep(0.01)
         written.append(status)
 
-    job_service = SimpleNamespace(update_job_status=update_job_status)
+    job_service = SimpleNamespace(
+        update_job_status=update_job_status,
+        authorize_job_start=AsyncMock(return_value=None),
+    )
 
     async def run_as_tracked_job() -> None:
         # The build loop wraps a live run in execute_with_status (see generate_flow_events).

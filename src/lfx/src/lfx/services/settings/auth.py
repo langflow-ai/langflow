@@ -297,6 +297,13 @@ class AuthSettings(BaseSettings):
         default=False,
         description="Enable authorization enforcement. Requires an authorization_service plugin.",
     )
+    API_KEY_SCOPES_ENABLED: bool = Field(
+        default=False,
+        description=(
+            "Allow issuing and editing restricted API keys after every API and worker replica supports key scopes. "
+            "Existing restricted keys remain subject to enforcement when this switch is off."
+        ),
+    )
     AUTHZ_SUPERUSER_BYPASS: bool = Field(
         default=True,
         description="When True, active superusers bypass authorization checks (audited by the plugin).",

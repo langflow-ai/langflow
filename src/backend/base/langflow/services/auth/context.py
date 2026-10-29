@@ -32,6 +32,8 @@ class AuthCredentialContext:
     api_key_id: UUID | None = None
     api_key_source: str | None = None
     external_provider: str | None = None
+    api_key_restricted: bool = False
+    api_key_permissions: dict[str, Any] | None = None
 
     @classmethod
     def from_api_key_result(cls, result: ApiKeyAuthResult) -> AuthCredentialContext:
@@ -44,6 +46,8 @@ class AuthCredentialContext:
             method=AUTH_METHOD_API_KEY,
             api_key_id=result.api_key_id,
             api_key_source=result.api_key_source,
+            api_key_restricted=result.api_key_restricted,
+            api_key_permissions=result.api_key_permissions,
         )
 
     def to_authz_context(self) -> dict[str, Any]:
@@ -55,6 +59,9 @@ class AuthCredentialContext:
             context["api_key_source"] = self.api_key_source
         if self.external_provider is not None:
             context["external_provider"] = self.external_provider
+        if self.api_key_restricted:
+            context["api_key_restricted"] = True
+            context["api_key_permissions"] = self.api_key_permissions
         return context
 
     def to_audit_details(self) -> dict[str, str]:
@@ -106,3 +113,9 @@ def current_auth_is_api_key() -> bool:
     """Return True when the active request authenticated with a Langflow API key."""
     context = get_current_auth_context()
     return context is not None and context.method == AUTH_METHOD_API_KEY
+
+
+def current_auth_is_restricted_api_key() -> bool:
+    """Return whether the selected credential carries a key-specific ceiling."""
+    context = get_current_auth_context()
+    return context is not None and context.method == AUTH_METHOD_API_KEY and context.api_key_restricted

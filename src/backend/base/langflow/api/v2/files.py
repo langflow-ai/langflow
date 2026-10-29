@@ -17,9 +17,15 @@ from sqlmodel import col, select
 
 from langflow.api.schemas import UploadFileResponse
 from langflow.api.utils import CurrentActiveUser, DbSession, build_content_disposition
+from langflow.services.auth.context import current_auth_is_restricted_api_key
 from langflow.services.authorization import FileAction, ensure_file_permission
+from langflow.services.authorization.credentials import ensure_mcp_credential_file_access, is_mcp_credential_file
 from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
-from langflow.services.authorization.listing import restrict_to_owned_or_visible_scope, visible_scope_prefilter
+from langflow.services.authorization.listing import (
+    filter_visible_resources,
+    restrict_to_owned_or_visible_scope,
+    visible_scope_prefilter,
+)
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.settings.service import SettingsService
@@ -178,6 +184,14 @@ async def byte_stream_generator(file_input, chunk_size: int = 8192) -> AsyncGene
             yield chunk
 
 
+async def _release_restricted_file_reads(session: DbSession, *files: UserFile) -> None:
+    """Keep loaded rows usable while enforcement opens its own read session."""
+    if current_auth_is_restricted_api_key():
+        for file in files:
+            session.expunge(file)
+        await session.rollback()
+
+
 async def fetch_file_object(file_id: uuid.UUID, current_user: CurrentActiveUser, session: DbSession):
     # Share-aware fetch. Under the OSS pass-through this keeps the existing
     # owner-scoped query (cannot widen visibility). Authorization plugins set
@@ -195,6 +209,12 @@ async def fetch_file_object(file_id: uuid.UUID, current_user: CurrentActiveUser,
     if not file:
         raise HTTPException(status_code=404, detail="File not found")
 
+    await _release_restricted_file_reads(session, file)
+    await ensure_mcp_credential_file_access(
+        user_id=current_user.id,
+        names=(file.name, file.path),
+        session=session,
+    )
     return file
 
 
@@ -259,6 +279,7 @@ async def upload_user_file(
     # Create a new database record for the uploaded file.
     try:
         new_filename = _validate_file_name(file.filename)
+        await ensure_mcp_credential_file_access(user_id=current_user.id, names=(new_filename,), session=session)
 
         # Enforce unique constraint on name, except for the special _mcp_servers file
         try:
@@ -305,6 +326,10 @@ async def upload_user_file(
             # In append mode, check if file exists and reuse the same filename
             existing_file = await get_file_by_name(root_filename, current_user, session)
             if existing_file:
+                if current_auth_is_restricted_api_key():
+                    await ensure_mcp_credential_file_access(
+                        user_id=current_user.id, names=(existing_file.name, existing_file.path), session=session
+                    )
                 # File exists, append to it by reusing the same filename
                 # Extract the filename from the path
                 unique_filename = Path(existing_file.path).name
@@ -337,6 +362,27 @@ async def upload_user_file(
         # The duplicate suffix can push an otherwise valid upload past the
         # filesystem's single-segment byte limit.
         _validate_file_name(unique_filename)
+
+        if current_auth_is_restricted_api_key():
+            if existing_file is not None:
+                session.expunge(existing_file)
+                await session.rollback()
+                await ensure_file_permission(
+                    current_user,
+                    FileAction.WRITE,
+                    file_id=existing_file.id,
+                    file_user_id=existing_file.user_id,
+                )
+            else:
+                # Ephemeral files have no permission-bearing row. A create
+                # grant may create a new path, but cannot replace or append to
+                # an existing path that has no resolvable resource identity.
+                try:
+                    await storage_service.get_file_size(flow_id=str(current_user.id), file_name=unique_filename)
+                except FileNotFoundError:
+                    pass
+                else:
+                    raise HTTPException(status_code=403, detail="Existing file requires write permission")
 
         # Read file content, save with unique filename, and compute file size in one routine
         try:
@@ -471,11 +517,12 @@ async def list_files(
     # storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ) -> list[UserFile]:
     """List the files available to the current user."""
-    await ensure_file_permission(
-        current_user,
-        FileAction.READ,
-        file_user_id=current_user.id,
-    )
+    if not current_auth_is_restricted_api_key():
+        await ensure_file_permission(
+            current_user,
+            FileAction.READ,
+            file_user_id=current_user.id,
+        )
     try:
         # Load sample files if they don't exist
         # TODO: Pending further testing
@@ -501,11 +548,26 @@ async def list_files(
         results = await session.exec(stmt)
 
         full_list = list(results)
+        if visibility is None and current_auth_is_restricted_api_key():
+            full_list = await filter_visible_resources(
+                current_user,
+                resource_type="file",
+                candidates=full_list,
+                act=FileAction.READ,
+            )
 
         # Reserved MCP configuration files are internal implementation details.
         # Derive the reserved name from each row's true owner because a widened
         # visibility scope can return files owned by multiple users.
-        return [file for file in full_list if file.name != f"{MCP_SERVERS_FILE}_{file.user_id!s}"]
+        return [
+            file
+            for file in full_list
+            if file.name != f"{MCP_SERVERS_FILE}_{file.user_id!s}"
+            and (
+                not current_auth_is_restricted_api_key()
+                or not any(is_mcp_credential_file(name) for name in (file.name, file.path))
+            )
+        ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error listing files: {e}") from e
 
@@ -536,6 +598,12 @@ async def delete_files_batch(
         if not files:
             raise HTTPException(status_code=404, detail="No files found")
 
+        await _release_restricted_file_reads(session, *files)
+        await ensure_mcp_credential_file_access(
+            user_id=current_user.id,
+            names=(name for file in files for name in (file.name, file.path)),
+            session=session,
+        )
         # Per-file authorization. Use the true owner so a delete share on
         # someone else's file is enforced against the right object key.
         for file in files:
@@ -622,6 +690,8 @@ async def delete_files_batch(
         else:
             message = "No files were deleted from database"
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting files: {e}") from e
 
@@ -652,6 +722,12 @@ async def download_files_batch(
         if not files:
             raise HTTPException(status_code=404, detail="No files found")
 
+        await _release_restricted_file_reads(session, *files)
+        await ensure_mcp_credential_file_access(
+            user_id=current_user.id,
+            names=(name for file in files for name in (file.name, file.path)),
+            session=session,
+        )
         for file in files:
             await ensure_file_permission(
                 current_user,
@@ -699,6 +775,8 @@ async def download_files_batch(
             headers={"Content-Disposition": cd},
         )
 
+    except HTTPException:
+        raise
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=f"File not found: {e}") from e
     except Exception as e:
@@ -960,6 +1038,12 @@ async def delete_all_files(
         results = await session.exec(stmt)
         files = results.all()
 
+        await _release_restricted_file_reads(session, *files)
+        await ensure_mcp_credential_file_access(
+            user_id=current_user.id,
+            names=(name for file in files for name in (file.name, file.path)),
+            session=session,
+        )
         storage_failures = []
         db_failures = []
 
@@ -1030,6 +1114,8 @@ async def delete_all_files(
         else:
             message = "Failed to delete files. See logs for details."
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting all files: {e}") from e
 

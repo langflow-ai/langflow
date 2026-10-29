@@ -2,6 +2,7 @@ import TableAutoCellRender from "@/components/core/parameterRenderComponent/comp
 import CreatedAtCellRender from "../components/CreatedAtCellRender";
 import ExpiryDateCellRender from "../components/ExpiryDateCellRender";
 import LastUsedAtCellRender from "../components/LastUsedAtCellRender";
+import PermissionsCellRender from "../components/PermissionsCellRender";
 
 export const getColumnDefs = (t: (key: string) => string) => {
   return [
@@ -12,6 +13,12 @@ export const getColumnDefs = (t: (key: string) => string) => {
       headerName: t("settings.apiKeys.columnName"),
       field: "name",
       cellRenderer: TableAutoCellRender,
+      flex: 2,
+    },
+    {
+      headerName: t("apiKey.permissions.title"),
+      field: "permissions",
+      cellRenderer: PermissionsCellRender,
       flex: 2,
     },
     {
