@@ -25,7 +25,7 @@ from langflow.services.triggers.source_cleanup import run_cleanup_pass
 from langflow.services.triggers.source_poll import collect_source, commit_source
 from lfx.extension import load_extension
 from lfx.extension.bundle_registry import BundleRecord
-from lfx.integrations.errors import IntegrationPolicyBlockedError, ProviderUnavailableError
+from lfx.integrations.errors import AuthExpiredError, IntegrationPolicyBlockedError, ProviderUnavailableError
 from lfx.services.deps import get_integration_policy_service, get_policy_bundle_service
 from lfx_jira.client import JiraClient
 from lfx_jira.schema import SCOPES
@@ -221,6 +221,97 @@ async def test_jira_missing_refresh_token_reports_scope_without_replacing_saved_
         secret = await session.get(ConnectionSecret, connection_id)
         assert (secret.encrypted_payload if secret else None) == (previous_payload if saved_grant else None)
         assert (await session.get(ConnectionOAuth, connection_id)).state_digest is None
+
+
+@pytest.mark.usefixtures("jira_oauth")
+async def test_atlassian_access_removal_asks_to_reconnect_instead_of_reporting_an_outage(
+    client, active_user, logged_in_headers, monkeypatch, respx_mock
+):
+    from langflow.services.connection.oauth import providers
+    from langflow.services.connection.oauth.broker import digest
+    from langflow.services.deps import get_connection_resolver_service
+    from langflow.services.triggers.providers.jira import oauth
+    from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest
+    from lfx.services.authorization.base import ExecutionPrincipal
+
+    created = await client.post(
+        "api/v1/connections",
+        headers=logged_in_headers,
+        json={
+            "provider_key": "jira",
+            "name": "work",
+            "display_name": "Jira work",
+            "executing_identity": {"identity": "user_delegated"},
+        },
+    )
+    assert created.status_code == 201, created.text
+    connection_id = created.json()["id"]
+    started = await client.post(
+        f"api/v1/connections/{connection_id}/oauth/start",
+        headers=logged_in_headers,
+        json={"registration_id": "jira-work", "scopes": sorted(SCOPES)},
+    )
+    assert started.status_code == 200, started.text
+    state = parse_qs(urlsplit(started.json()["authorization_url"]).query)["state"][0]
+
+    async def consent(*_args, **_kwargs):
+        return {
+            "access_token": "synthetic-jira-access",
+            "refresh_token": "synthetic-jira-refresh",
+            "expires_in": 3600,
+            "scope": " ".join(sorted(SCOPES)),
+        }
+
+    def atlassian(request):
+        if request.url.path == "/oauth/token/accessible-resources":
+            return httpx.Response(200, json=[{"id": SITE, "scopes": sorted(SCOPES)}])
+        return httpx.Response(200, json={"accountId": "user-1", "active": True})
+
+    monkeypatch.setattr(oauth, "http_client", lambda: httpx.AsyncClient(transport=httpx.MockTransport(atlassian)))
+    with monkeypatch.context() as consent_patch:
+        consent_patch.setattr(providers, "_request", consent)
+        completed = await client.get(
+            "api/v1/connections/oauth/jira/callback", params={"state": state, "code": "synthetic-jira-code"}
+        )
+    assert completed.status_code == 200, completed.text
+
+    # The app's access is removed at Atlassian, so the next call's token and its refresh are both refused.
+    refused = respx_mock.post("https://auth.atlassian.com/oauth/token").mock(
+        return_value=httpx.Response(
+            403, json={"error": "unauthorized_client", "error_description": "refresh_token is invalid"}
+        )
+    )
+    request = ConnectionResolutionRequest(
+        ref=ConnectionRef(provider="jira", name="work"),
+        principal=ExecutionPrincipal(
+            kind="actor", user_id=str(active_user.id), actor_id=str(active_user.id), interactive=True
+        ),
+        rejected_token_digest=digest("synthetic-jira-access"),
+    )
+    with pytest.raises(AuthExpiredError):
+        await get_connection_resolver_service().resolve(request)
+    assert refused.call_count == 1
+    assert json.loads(refused.calls[0].request.content)["grant_type"] == "refresh_token"
+
+    visible = await client.get("api/v1/connections", headers=logged_in_headers)
+    row = next(item for item in visible.json() if item["id"] == connection_id)
+    assert (row["status"], row["health"]) == ("expired", "unhealthy")
+
+    async with session_scope() as session:
+        flow = Flow(name="Jira access removed", user_id=active_user.id)
+        session.add(flow)
+        await session.flush()
+        flow_id = flow.id
+    trigger = await reconcile(flow_id, active_user.id)
+    async with session_scope() as session:
+        disarmed = await session.get(Trigger, trigger.id)
+        disarmed.state = "needs_reconnect"
+        session.add(disarmed)
+    detail = await client.get(f"api/v1/triggers/{trigger.id}", headers=logged_in_headers)
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["reason"] == "needs_reconnect"
+    assert "reconnect" in detail.json()["allowed_actions"]
+    assert "resume" not in detail.json()["allowed_actions"]
 
 
 async def reconcile(flow_id, owner_id):

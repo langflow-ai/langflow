@@ -117,4 +117,7 @@ OAUTH = OAuthAdapter(
     token_encoding="json",  # noqa: S106 - serialization format
     supports_pkce=False,
     required_scopes=("offline_access",),
+    # Atlassian answers a refresh token whose app access was removed with
+    # 403 unauthorized_client ("refresh_token is invalid"), not invalid_grant.
+    refresh_rejection_errors=frozenset({"unauthorized_client"}),
 )

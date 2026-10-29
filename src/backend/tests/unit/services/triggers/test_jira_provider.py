@@ -298,7 +298,7 @@ async def test_oauth_broker_uses_atlassian_json_confidential_exchange(monkeypatc
     async def exchange(url, data, **kwargs):
         requests.append((url, data, kwargs))
         assert url == "https://auth.atlassian.com/oauth/token"
-        assert kwargs == {"json_body": True}
+        assert kwargs["json_body"] is True
         assert "code_verifier" not in data
         return {
             "access_token": "synthetic-access",
@@ -326,6 +326,43 @@ async def test_oauth_broker_uses_atlassian_json_confidential_exchange(monkeypatc
         previous_scopes=list(SCOPES),
     )
     assert requests[1][1]["grant_type"] == "refresh_token"
+
+
+@pytest.mark.parametrize(
+    ("grant", "reason"),
+    [
+        ({"refresh_token": "previous-refresh"}, None),  # pragma: allowlist secret
+        ({"code": "synthetic-code"}, "provider-unavailable"),
+    ],
+    ids=["stored-grant", "consent"],
+)
+async def test_atlassian_unauthorized_client_rejects_only_a_stored_grant(monkeypatch, respx_mock, grant, reason):
+    """Atlassian refuses a refresh token whose app access was removed with unauthorized_client."""
+    from langflow.services.connection.oauth import providers
+    from langflow.services.connection.oauth.config import OAuthRegistration
+    from langflow.services.triggers.providers import registry
+
+    monkeypatch.setattr(registry, "all_providers", lambda: (PROVIDER,))
+    registration = OAuthRegistration(
+        provider="jira",
+        client_id="operator-app",
+        client_secret="synthetic-client-secret",  # noqa: S106  # pragma: allowlist secret
+        redirect_uri="https://langflow.example/api/v1/connections/oauth/jira/callback",
+        tenant=SITE,
+        scopes=list(SCOPES),
+    )
+    token = respx_mock.post("https://auth.atlassian.com/oauth/token").mock(
+        return_value=httpx.Response(
+            403, json={"error": "unauthorized_client", "error_description": "refresh_token is invalid"}
+        )
+    )
+
+    with pytest.raises(OAuthError) as caught:
+        await providers.exchange(registration, previous_scopes=list(SCOPES), **grant)
+
+    assert token.call_count == 1
+    assert caught.value.reason == reason
+    assert "previous-refresh" not in str(caught.value)
 
 
 async def test_continuation_url_is_never_followed_as_a_destination(monkeypatch):
