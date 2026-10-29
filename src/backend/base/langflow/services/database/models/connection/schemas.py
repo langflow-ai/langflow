@@ -36,6 +36,7 @@ class ConnectionStatusReason(str, Enum):
     OAUTH_DENIED = "oauth-denied"
     OAUTH_EXPIRED = "oauth-expired"
     OAUTH_FAILED = "oauth-failed"
+    OAUTH_REFRESH_TOKEN_MISSING = "oauth-refresh-token-missing"  # noqa: S105 - public status reason
 
 
 class ConnectionHealth(str, Enum):
