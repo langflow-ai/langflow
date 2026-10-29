@@ -124,6 +124,8 @@ def test_operator_origin_rejects_unsafe_targets(monkeypatch, bad):
     "payload",
     [
         {"Name": {"nested": True}},
+        {"Name": 123},
+        {"Name": ["Example"]},
         {"Name": True},
         {"OwnerId": RECORD},
         {"Name": "Example", "attributes": {"url": "https://evil.example"}},

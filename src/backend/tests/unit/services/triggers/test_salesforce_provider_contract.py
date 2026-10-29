@@ -102,6 +102,95 @@ def token(**changes):
     }
 
 
+@pytest.mark.parametrize("missing", ["api", "id", "refresh_token"])
+async def test_oauth_start_requires_connection_scopes_before_persisting(monkeypatch, missing):
+    from langflow.services.connection.oauth import broker
+
+    reg = registration()
+    monkeypatch.setattr(broker, "get_oauth_settings", lambda: SimpleNamespace(registration=lambda _id: reg))
+    monkeypatch.setattr(broker, "provider_adapter", lambda _provider: oauth.OAUTH)
+    row = SimpleNamespace(provider_key="salesforce", executing_identity={"identity": "user_delegated"})
+    with pytest.raises(OAuthError, match=f"Requested scopes must include {missing}"):
+        await broker.start(
+            SimpleNamespace(),
+            row=row,
+            user_id=None,
+            registration_id="salesforce-work",
+            scopes=[scope for scope in reg.scopes if scope != missing],
+        )
+
+
+@pytest.mark.parametrize("refresh_token", [None, ""])
+async def test_initial_consent_without_refresh_token_has_recovery_reason(refresh_token):
+    body = token(refresh_token=refresh_token)
+    if refresh_token is None:
+        body.pop("refresh_token")
+    with pytest.raises(OAuthError, match="refresh token") as exc:
+        await oauth.parse_token(registration(), body, refresh=False)
+    assert exc.value.code == "oauth-refresh-token-missing"
+    assert exc.value.reason == "provider-unavailable"
+    assert "synthetic" not in str(exc.value)
+
+
+async def test_missing_refresh_token_is_recorded_by_oauth_broker(monkeypatch, trigger_owner):
+    from dataclasses import replace
+
+    from langflow.services.connection.oauth import broker, providers
+    from langflow.services.connection.oauth.config import OAuthRegistration
+    from langflow.services.database.models.connection import Connection, ConnectionSecret
+    from langflow.services.database.models.connection.oauth import ConnectionOAuth
+    from langflow.services.deps import session_scope
+    from langflow.services.triggers.providers import registry
+
+    configured = replace(PROVIDER, oauth=replace(oauth.OAUTH, allowed_origins=(ORG,)))
+    monkeypatch.setattr(registry, "all_providers", lambda: (configured,))
+    reg = OAuthRegistration(
+        provider="salesforce",
+        client_id="operator-app",
+        client_secret="synthetic-client-secret",  # noqa: S106  # pragma: allowlist secret
+        redirect_uri="https://langflow.example/api/v1/connections/oauth/salesforce/callback",
+        tenant=ORG,
+        scopes=["api", "id", "refresh_token"],
+    )
+    monkeypatch.setattr(broker, "get_oauth_settings", lambda: SimpleNamespace(registration=lambda _id: reg))
+    transport = httpx.MockTransport(lambda _request: httpx.Response(200, json=token(refresh_token=None)))
+    real_client = httpx.AsyncClient
+    monkeypatch.setattr(providers.httpx, "AsyncClient", lambda **kwargs: real_client(transport=transport, **kwargs))
+    async with session_scope() as session:
+        row = Connection(
+            provider_key="salesforce",
+            name="work",
+            display_name="Work",
+            owner_id=trigger_owner,
+            executing_identity={"identity": "user_delegated"},
+        )
+        session.add(row)
+        await session.flush()
+        connection_id = row.id
+        _, state, browser = await broker.start(
+            session, row=row, user_id=trigger_owner, registration_id="salesforce-work", scopes=reg.scopes
+        )
+
+    with pytest.raises(OAuthError):
+        await broker.complete(provider="salesforce", state=state, browser=browser, code="synthetic-code", denied=False)
+
+    async with session_scope() as session:
+        saved = await session.get(Connection, connection_id)
+        binding = await session.get(ConnectionOAuth, connection_id)
+        assert saved.status == "error"
+        assert saved.status_reason == "oauth-refresh-token-missing"
+        assert await session.get(ConnectionSecret, connection_id) is None
+        assert binding.state_digest is None
+
+
+async def test_refresh_response_may_retain_the_existing_refresh_token():
+    body = token()
+    body.pop("refresh_token")
+    parsed, account = await oauth.parse_token(registration(), body, refresh=True)
+    assert "refresh_token" not in parsed
+    assert account is None
+
+
 async def test_oauth_initial_and_refresh_bind_exact_org():
     initial, account = await oauth.parse_token(registration(), token(), refresh=False)
     assert account["tenant_id"] == ORG

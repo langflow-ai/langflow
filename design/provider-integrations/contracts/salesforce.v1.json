@@ -7,7 +7,7 @@
     "provider_id": "salesforce",
     "display_name": "Salesforce",
     "icon": "Salesforce",
-    "docs_url": "https://github.com/langflow-ai/langflow/blob/71a160e50f8c4a6578f199759ec7369b8243f744/src/bundles/salesforce/README.md#authentication-and-deployment",
+    "docs_url": "https://docs.langflow.org/next/bundles-salesforce",
     "auth_profiles": [
       {
         "id": "user",
@@ -171,7 +171,7 @@
     "Actions support hosted and self-managed servers. Desktop, headless and hosted triggers are unsupported."
   ],
   "evidence_paths": [
-    "src/bundles/salesforce/README.md",
+    "docs/docs/Components/bundles-salesforce.mdx",
     "src/bundles/salesforce/src/lfx_salesforce/components/salesforce/capabilities.v1.json",
     "src/backend/base/langflow/services/triggers/providers/salesforce",
     "src/backend/tests/unit/services/triggers/test_salesforce_lifecycle.py",

@@ -40,14 +40,13 @@ class Template(BaseModel):
     def from_dict(cls, data: dict) -> "Template":
         from lfx.inputs.inputs import instantiate_input
 
+        fields = []
         for key, value in data.copy().items():
             if key == "_type":
                 data["type_name"] = value
                 del data[key]
             else:
                 value["name"] = key
-                if "fields" not in data:
-                    data["fields"] = []
                 input_type = value.pop("_input_type", None)
                 if input_type:
                     try:
@@ -58,11 +57,9 @@ class Template(BaseModel):
                 else:
                     input_ = Input(**value)
 
-                data["fields"].append(input_)
+                fields.append(input_)
 
-        # Necessary for components with no inputs(?)
-        if "fields" not in data:
-            data["fields"] = []
+        data["fields"] = fields
 
         return cls(**data)
 

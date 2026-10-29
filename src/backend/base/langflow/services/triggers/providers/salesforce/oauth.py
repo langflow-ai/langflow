@@ -113,14 +113,14 @@ async def parse_token(registration: OAuthRegistration, body: dict, *, refresh: b
         msg = "Salesforce returned an invalid org credential."
         raise OAuthError(msg, reason="provider-unavailable")
     raw_scope = body.get("scope")
-    if raw_scope is not None and (not isinstance(raw_scope, str) or not set(raw_scope.split()) >= _SCOPES):
+    if (not refresh and raw_scope is None) or (
+        raw_scope is not None and (not isinstance(raw_scope, str) or not set(raw_scope.split()) >= _SCOPES)
+    ):
         msg = "Salesforce did not grant the required scopes."
         raise OAuthError(msg, reason="provider-unavailable")
-    if not refresh and (
-        raw_scope is None or not isinstance(body.get("refresh_token"), str) or not body["refresh_token"]
-    ):
-        msg = "Salesforce did not grant a refreshable credential."
-        raise OAuthError(msg, reason="provider-unavailable")
+    if not refresh and (not isinstance(body.get("refresh_token"), str) or not body["refresh_token"]):
+        msg = "Salesforce did not return a refresh token. Check the app's refresh_token scope and refresh-token policy."
+        raise OAuthError(msg, reason="provider-unavailable", code="oauth-refresh-token-missing")
     token = {key: body[key] for key in ("access_token", "refresh_token", "scope", "expires_in") if key in body}
     if "refresh_token" in token and (not isinstance(token["refresh_token"], str) or not token["refresh_token"]):
         msg = "Salesforce returned an invalid refresh credential."
@@ -159,4 +159,5 @@ OAUTH = OAuthAdapter(
     validate_registration=validate_registration,
     parse_token=parse_token,
     supports_pkce=True,
+    required_scopes=("api", "id", "refresh_token"),
 )

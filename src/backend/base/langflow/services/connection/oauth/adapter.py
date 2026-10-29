@@ -24,6 +24,7 @@ class OAuthAdapter:
     scope_separator: str = " "
     token_encoding: Literal["form", "json"] = "form"  # noqa: S105 - serialization format
     supports_pkce: bool = True
+    required_scopes: tuple[str, ...] = ()
 
     def checked_endpoints(self, registration: OAuthRegistration) -> tuple[str, str]:
         """Reject a provider endpoint outside its declared credential hosts."""
