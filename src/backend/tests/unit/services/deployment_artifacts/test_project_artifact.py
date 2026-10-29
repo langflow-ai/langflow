@@ -78,11 +78,15 @@ async def _build_authorized(
     project: Folder,
     limits: ProjectArtifactLimits | None = None,
     flow_ids: list[UUID] | None = None,
+    known_variable_names: frozenset[str] = frozenset(),
 ):
+    variable_service = AsyncMock()
+    variable_service.list_variables.return_value = sorted(known_variable_names)
     with (
         patch(f"{MODULE}.authorized_or_owner_scoped", new_callable=AsyncMock, return_value=project) as load_project,
         patch(f"{MODULE}.ensure_project_permission", new_callable=AsyncMock) as ensure_project,
         patch(f"{MODULE}.ensure_flows_permission", new_callable=AsyncMock) as ensure_flows,
+        patch(f"{MODULE}.get_variable_service", return_value=variable_service),
     ):
         kwargs = {"limits": limits} if limits is not None else {}
         if flow_ids is not None:
@@ -453,6 +457,7 @@ async def test_cancelled_package_waits_for_archive_worker_before_releasing_capac
         patch(f"{MODULE}.ensure_project_permission", new_callable=AsyncMock),
         patch(f"{MODULE}.ensure_flows_permission", new_callable=AsyncMock),
         patch(f"{MODULE}._build_archive", side_effect=blocking_archive),
+        patch(f"{MODULE}._known_variable_names", new_callable=AsyncMock, return_value=frozenset()),
     ):
         task = asyncio.create_task(build_project_artifact(session, user, project_id))
         assert await asyncio.to_thread(worker_started.wait, 2)
@@ -581,6 +586,7 @@ async def test_strict_snapshot_refuses_graph_changes_from_secret_scrubbing() -> 
         patch(f"{MODULE}.authorized_or_owner_scoped", new_callable=AsyncMock, return_value=project),
         patch(f"{MODULE}.ensure_project_permission", new_callable=AsyncMock),
         patch(f"{MODULE}.ensure_flows_permission", new_callable=AsyncMock),
+        patch(f"{MODULE}._known_variable_names", new_callable=AsyncMock, return_value=frozenset()),
         pytest.raises(ProjectArtifactError, match="cannot be safely captured"),
     ):
         await build_project_artifact(
@@ -627,7 +633,12 @@ async def test_build_project_artifact_preserves_variable_references_and_lists_re
     session = _session_with_flows([flow])
     user = SimpleNamespace(id=actor_id, is_superuser=False)
 
-    artifact, *_ = await _build_authorized(session=session, user=user, project=project)
+    artifact, *_ = await _build_authorized(
+        session=session,
+        user=user,
+        project=project,
+        known_variable_names=frozenset({"OPENAI_API_KEY", "MY_INTERNAL_API_URL"}),
+    )
 
     assert b"raw-password" not in artifact.content
     assert b"raw-mislabeled-secret" not in artifact.content
@@ -643,6 +654,92 @@ async def test_build_project_artifact_preserves_variable_references_and_lists_re
     assert template["mislabeled"]["value"] is None
     assert manifest["required_variables"] == ["MY_INTERNAL_API_URL", "OPENAI_API_KEY"]
     assert manifest["flows"][0]["required_variables"] == ["MY_INTERNAL_API_URL", "OPENAI_API_KEY"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("owner_has_variables", [False, True])
+async def test_build_project_artifact_scrubs_unknown_name_shaped_bindings(*, owner_has_variables: bool) -> None:
+    owner_id = uuid4()
+    caller_id = uuid4()
+    project = Folder(id=uuid4(), name="Owner bindings", user_id=owner_id)
+    flow = _flow(owner_id=owner_id, project_id=project.id)
+    fields = {
+        "api_key": {"name": "api_key", "password": True, "load_from_db": True, "value": "OWNER_KEY"},
+        "token": {"name": "token", "password": True, "load_from_db": True, "value": "STALE_SECRET"},
+        "endpoint": {"name": "endpoint", "load_from_db": True, "value": "CALLER_ONLY"},
+    }
+    flow.data = {"nodes": [{"data": {"node": {"template": fields}}}], "edges": []}
+    original = deepcopy(flow.data)
+    session = _session_with_flows([flow])
+    user = SimpleNamespace(id=caller_id, is_superuser=False)
+    variable_service = AsyncMock()
+    variable_service.list_variables.return_value = ["OWNER_KEY"] if owner_has_variables else []
+    with (
+        patch(f"{MODULE}.authorized_or_owner_scoped", new_callable=AsyncMock, return_value=project),
+        patch(f"{MODULE}.ensure_project_permission", new_callable=AsyncMock),
+        patch(f"{MODULE}.ensure_flows_permission", new_callable=AsyncMock),
+        patch(f"{MODULE}.get_variable_service", return_value=variable_service),
+    ):
+        artifact = await build_project_artifact(session, user, project.id)
+
+    with zipfile.ZipFile(io.BytesIO(artifact.content)) as archive:
+        for name in archive.namelist():
+            content = archive.read(name)
+            assert b"STALE_SECRET" not in content
+            assert b"CALLER_ONLY" not in content
+            if not owner_has_variables:
+                assert b"OWNER_KEY" not in content
+        exported = json.loads(archive.read(f"flows/{flow.id}.json"))
+        manifest = json.loads(archive.read("manifest.json"))
+    template = exported["data"]["nodes"][0]["data"]["node"]["template"]
+    assert template["api_key"]["value"] == ("OWNER_KEY" if owner_has_variables else None)
+    assert template["token"]["value"] is None
+    assert template["endpoint"]["value"] is None
+    expected_names = ["OWNER_KEY"] if owner_has_variables else []
+    assert manifest["required_variables"] == expected_names
+    assert manifest["flows"][0]["required_variables"] == expected_names
+    assert artifact.flows[0].required_variables == tuple(expected_names)
+    assert flow.data == original
+    variable_service.list_variables.assert_awaited_once_with(user_id=owner_id, session=session)
+    variable_service.get_variable.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_strict_project_artifact_refuses_unknown_name_shaped_binding() -> None:
+    owner_id = uuid4()
+    project = Folder(id=uuid4(), name="Strict owner bindings", user_id=owner_id)
+    flow = _flow(owner_id=owner_id, project_id=project.id)
+    flow.data = {
+        "nodes": [
+            {
+                "data": {
+                    "node": {
+                        "template": {
+                            "api_key": {
+                                "name": "api_key",
+                                "password": True,
+                                "load_from_db": True,
+                                "value": "STALE_SECRET",
+                            }
+                        }
+                    }
+                }
+            }
+        ],
+        "edges": [],
+    }
+    session = _snapshot_session_for_flows(project, [flow])
+    user = SimpleNamespace(id=owner_id, is_superuser=False)
+    variable_service = AsyncMock()
+    variable_service.list_variables.return_value = []
+    with (
+        patch(f"{MODULE}.authorized_or_owner_scoped", new_callable=AsyncMock, return_value=project),
+        patch(f"{MODULE}.ensure_project_permission", new_callable=AsyncMock),
+        patch(f"{MODULE}.ensure_flows_permission", new_callable=AsyncMock),
+        patch(f"{MODULE}.get_variable_service", return_value=variable_service),
+        pytest.raises(ProjectArtifactError, match="cannot be safely captured"),
+    ):
+        await build_project_artifact(session, user, project.id, strict_snapshot=True)
 
 
 @pytest.mark.asyncio
