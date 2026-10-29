@@ -465,7 +465,14 @@ impl GraphState {
     /// every key is a string.
     #[must_use]
     pub fn to_json(&self) -> String {
-        serde_json::to_string(&GraphJson(self)).expect("a graph's keys are strings")
+        serde_json::to_string(&self.json()).expect("a graph's keys are strings")
+    }
+
+    /// The graph, to serialize as JSON: it writes what [`GraphState::to_json`]
+    /// writes, with any `serde_json` formatter.
+    #[must_use]
+    pub fn json(&self) -> impl Serialize + '_ {
+        GraphJson(self)
     }
 
     /// The graph as a JSON value, without copying it.

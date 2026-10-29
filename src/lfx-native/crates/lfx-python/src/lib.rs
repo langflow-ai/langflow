@@ -29,7 +29,7 @@ fn engine_error(py: Python<'_>, error: &ApiError) -> PyErr {
     let attributes = [
         ("kind", error.kind().to_owned()),
         ("code", error.code().to_owned()),
-        ("details", error.0.to_string()),
+        ("details", api::json_text(&error.0)),
     ];
     for (name, attribute) in attributes {
         if let Err(failure) = value.setattr(name, attribute) {
@@ -116,7 +116,7 @@ impl GraphState {
     /// The graph as JSON text.
     fn to_json(&self, py: Python<'_>) -> String {
         let state = &self.state;
-        py.detach(|| state.to_string())
+        py.detach(|| api::graph_json(state))
     }
 }
 

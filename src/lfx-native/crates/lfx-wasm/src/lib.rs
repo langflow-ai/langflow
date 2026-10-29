@@ -15,7 +15,7 @@ fn thrown(error: &ApiError) -> JsValue {
     for (name, value) in [
         ("kind", error.kind().to_owned()),
         ("code", error.code().to_owned()),
-        ("details", error.0.to_string()),
+        ("details", api::json_text(&error.0)),
     ] {
         // Setting a property on a fresh Error cannot fail.
         let _ = Reflect::set(
@@ -94,7 +94,7 @@ impl GraphState {
     #[wasm_bindgen(js_name = toJson)]
     #[must_use]
     pub fn to_json(&self) -> String {
-        self.state.to_string()
+        api::graph_json(&self.state)
     }
 }
 
