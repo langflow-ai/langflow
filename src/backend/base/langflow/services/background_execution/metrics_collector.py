@@ -27,6 +27,8 @@ from sqlmodel import col, func, select
 from langflow.services.background_execution.metrics import current_backend
 from langflow.services.database.models.jobs.metrics import is_background_job, terminal_counts
 from langflow.services.database.models.jobs.model import Job, JobStatus
+from langflow.services.database.models.worker_registry.crud import count_workers_by_state, prune_stale_workers
+from langflow.services.database.models.worker_registry.model import WorkerState
 from langflow.services.deps import get_telemetry_service, session_scope
 
 if TYPE_CHECKING:
@@ -38,6 +40,12 @@ if TYPE_CHECKING:
 # FAILED / TIMED_OUT / CANCELLED are terminal.
 NONTERMINAL_STATUSES = (JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.SUSPENDED)
 TERMINAL_COUNTS_INTERVAL_SECONDS = 300.0
+# How long a crashed worker stays visible for forensics. An hour is a human
+# timescale rather than a multiple of a heartbeat, so it is a constant, but it
+# must never fall below the online window: a retention shorter than the window
+# would delete rows the same tick still counts as online. A raised lease TTL
+# therefore floors it at twice the window.
+WORKER_ROSTER_RETENTION_SECONDS = 3600.0
 
 
 async def count_nonterminal_jobs(session) -> dict[str, int]:
@@ -152,9 +160,14 @@ class BackgroundMetricsCollector:
         *,
         interval: float,
         duration_window_seconds: float = 300.0,
+        worker_online_window_seconds: float = 45.0,
     ):
         self.interval = interval
         self.duration_window_seconds = duration_window_seconds
+        # Defaults to the background lease TTL: a worker that has not beaten
+        # within the window the watchdog already uses to call a lease dead is
+        # not a worker an operator should count as online.
+        self.worker_online_window_seconds = worker_online_window_seconds
         self._stopped = False
         self._task: asyncio.Task | None = None
         self._last_totals_refresh: float | None = None
@@ -182,6 +195,21 @@ class BackgroundMetricsCollector:
                     {"status": status.value, "backend": backend},
                 )
             ot.update_gauge("langflow_bg_oldest_queued_seconds", oldest, {"backend": backend})
+
+            # Fleet presence from the durable roster. Zero-filled per state for the
+            # same reason the job statuses are: a state that empties must overwrite
+            # its stale prior value rather than keep reporting it. In the default
+            # backend there are no worker processes, so these read 0, which is the
+            # truth rather than a gap.
+            workers = await count_workers_by_state(
+                session, now=now, online_window=timedelta(seconds=self.worker_online_window_seconds)
+            )
+            ot.update_gauge("langflow_bg_workers_online", workers["online"], {"backend": backend})
+            for state in (WorkerState.IDLE, WorkerState.BUSY):
+                ot.update_gauge("langflow_bg_workers", workers[state.value], {"state": state.value, "backend": backend})
+            # Drop owners that aged out, so the roster reflects the live fleet.
+            retention_s = max(WORKER_ROSTER_RETENTION_SECONDS, 2 * self.worker_online_window_seconds)
+            await prune_stale_workers(session, now=now, retention_s=retention_s)
 
             p50, p95 = await duration_percentiles(session, now, self.duration_window_seconds)
             ot.update_gauge("langflow_bg_job_duration_p50_seconds", p50, {"backend": backend})
@@ -271,6 +299,9 @@ async def maybe_start_metrics_collector(app: FastAPI, settings: Any, *, promethe
     try:
         collector = BackgroundMetricsCollector(
             interval=settings.background_metrics_interval,
+            # Defensive like prometheus_enabled above: a settings object without
+            # the lease knob must still get a collector, not silently none.
+            worker_online_window_seconds=getattr(settings, "background_lease_ttl_s", 45.0),
         )
         collector.start()
         app.state.background_metrics_collector = collector
