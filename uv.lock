@@ -10394,7 +10394,7 @@ integration = [
 
 [[package]]
 name = "lfx-amazon"
-version = "0.3.0"
+version = "0.3.1"
 source = { editable = "src/bundles/amazon" }
 dependencies = [
     { name = "boto3" },
