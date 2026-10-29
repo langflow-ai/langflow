@@ -866,7 +866,13 @@ def _decision_rows(response):
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_list_decision_models_returns_only_typed_decision_rows(client, logged_in_headers):
+async def test_list_decision_models_returns_only_typed_decision_rows(client, logged_in_headers, monkeypatch):
+    # Keys from a local .env would otherwise turn on live OpenRouter/TypeSafe discovery here.
+    monkeypatch.setattr(
+        models_api,
+        "_get_enabled_providers_result",
+        AsyncMock(return_value={"enabled_providers": [], "provider_status": {}}),
+    )
     response = await client.get("api/v1/models", params={"model_type": "decision"}, headers=logged_in_headers)
     assert response.status_code == 200
     rows = _decision_rows(response)
