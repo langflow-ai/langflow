@@ -385,6 +385,19 @@ def test_should_refuse_a_mapped_key_collision(map_both):
         f"{FLOW}/bad\x00.pdf",
         None,
     ],
+    # Fixed ids: USER and FLOW are random per process, and xdist refuses to run when its
+    # workers collect different test names.
+    ids=[
+        "empty",
+        "bare-name",
+        "absolute-path",
+        "another-namespace",
+        "traversal",
+        "nested",
+        "dot",
+        "nul-byte",
+        "none",
+    ],
 )
 def test_should_refuse_a_mapped_target_outside_the_flow_storage(target):
     field = _file_field(file_path=f"{USER}/report.pdf")
