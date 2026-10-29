@@ -45,8 +45,11 @@ async def parse_token(registration: OAuthRegistration, body: dict, *, refresh: b
         or not body["access_token"]
         or str(body.get("token_type", "")).lower() != "bearer"
         or "expires_in" not in body
-        or (not refresh and (not isinstance(body.get("refresh_token"), str) or not body["refresh_token"]))
-        or ("refresh_token" in body and (not isinstance(body["refresh_token"], str) or not body["refresh_token"]))
+        or (
+            refresh
+            and "refresh_token" in body
+            and (not isinstance(body["refresh_token"], str) or not body["refresh_token"])
+        )
         or (
             "scope" in body
             and (not isinstance(body["scope"], str) or not set(body["scope"].split()) <= set(registration.scopes))
@@ -55,6 +58,11 @@ async def parse_token(registration: OAuthRegistration, body: dict, *, refresh: b
     ):
         msg = "ServiceNow returned an invalid credential response."
         raise OAuthError(msg, reason="provider-unavailable")
+    if not refresh and (not isinstance(body.get("refresh_token"), str) or not body["refresh_token"]):
+        msg = (
+            "ServiceNow did not return a refresh token. Check the app's confidential authorization code configuration."
+        )
+        raise OAuthError(msg, reason="provider-unavailable", code="oauth-refresh-token-missing")
     token = {key: body[key] for key in ("access_token", "refresh_token", "scope", "expires_in") if key in body}
     root = configured_origin()
     # The token response does not identify the user. Account metadata names only the issuing instance.
@@ -73,4 +81,5 @@ OAUTH = OAuthAdapter(
     validate_registration=validate_registration,
     parse_token=parse_token,
     supports_pkce=True,
+    required_scopes=(READ_SCOPE,),
 )

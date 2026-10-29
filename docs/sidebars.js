@@ -600,6 +600,7 @@ module.exports = {
             "Components/bundles-serper",
             "Components/bundles-serpingapi",
             "Components/bundles-serply",
+            "Components/bundles-servicenow",
             "Components/bundles-slack",
             "Components/bundles-supabase",
             "Components/bundles-upstash",

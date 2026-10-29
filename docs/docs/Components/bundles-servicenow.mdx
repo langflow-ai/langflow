@@ -1,0 +1,198 @@
+---
+title: ServiceNow components
+slug: /bundles-servicenow
+---
+
+The ServiceNow bundle provides four ticket actions and two polling triggers through Table API v1.
+Each component uses a [managed connection](../Develop/connections.mdx) to one configured ServiceNow instance.
+The bundle is in preview.
+
+## Supported contexts
+
+| Context | Actions | Triggers |
+| --- | --- | --- |
+| Self-managed Langflow | Preview with confidential OAuth | Preview with a running Langflow listener |
+| Hosted Langflow | Preview with confidential OAuth | Unsupported |
+| Langflow Desktop | Unsupported | Unsupported |
+| Headless `lfx run` or `lfx serve` | Unsupported | Unsupported |
+| Private ServiceNow hosts and custom domains | Unsupported | Unsupported |
+
+Use Langflow 1.14 with the matching `lfx-servicenow` bundle installed in the API and listener environments.
+Restart the processes after installation and confirm the bundle appears in `lfx extension list`.
+The instance must expose Table API v1 and the OAuth features described below.
+The release, plugins, licensing, ACLs, and business rules still need validation against the intended tenant.
+
+## Capabilities and fields
+
+| Component | Inputs and behavior | Required scopes |
+| --- | --- | --- |
+| **ServiceNow: Search Tickets** | Select **Table**, **Filter Field**, and **Exact Value**. Returns a page of matching tickets. | `langflow_table_read` |
+| **ServiceNow: Read Ticket** | Select **Table** and enter the ticket's **Record ID**. | `langflow_table_read` |
+| **ServiceNow: Create Ticket** | Select **Table** and provide a data object in **Fields**, including `short_description`. | `langflow_table_read`, `langflow_table_write` |
+| **ServiceNow: Update Ticket** | Select **Table**, enter **Record ID**, and provide replacement **Fields**. | `langflow_table_read`, `langflow_table_write` |
+| **ServiceNow: On Ticket Created** | Observes new tickets after activation. | `langflow_table_read` |
+| **ServiceNow: On Observed Status Change** | Compares the current numeric state with a previously observed state. | `langflow_table_read` |
+
+The operator can approve `incident`, `problem`, and `change_request` tables.
+Create and update accept `short_description`, `description`, `state`, `impact`, `urgency`, `assigned_to`, and `assignment_group`.
+Values must be strings of at most 4000 characters.
+Reference values use 32-character lowercase hexadecimal `sys_id` values, not display names.
+State, impact, and urgency use the instance's numeric choice values as strings.
+ServiceNow record and field ACLs and business rules still apply.
+
+Read results include the ticket ID and number, descriptions, state, priority, impact, urgency, assignment, active flag, and system timestamps and modification count when accessible.
+Search supports one exact `number`, `state`, or `assigned_to` filter and a **Page Size** from 1 to 100.
+Use the last returned `sys_id` as **After Record ID** for the next page.
+Search results do not guarantee a complete enumeration when row ACLs hide records.
+Arbitrary tables, encoded queries, scripts, dot-walking, attachments, journal fields, and deletion are unsupported.
+
+## Configure ServiceNow OAuth
+
+The instance administrator creates the application and custom authentication scopes.
+These scopes are not built-in ServiceNow roles and do not replace table or field ACLs.
+
+1. Open **System OAuth**, **Application Registry**, and **New**.
+   Select **Create an OAuth API endpoint for external clients** and name the application.
+2. Configure a confidential authorization code client with a client secret, S256 PKCE, and refresh-token support.
+   Where the client-type selector is available, use **Integration as a User**.
+3. Set **Redirect URL** to `https://YOUR_LANGFLOW_HOST/api/v1/connections/oauth/servicenow/callback`.
+   Record the client ID and secret in the deployment's secret manager.
+4. Create and link `langflow_table_read` to the OAuth entity.
+   Under **API Auth Scopes**, **REST API Auth Scope**, map it to Table API v1 GET.
+5. If writes are needed, create and link `langflow_table_write` and map it to Table API v1 POST and PATCH.
+   Do not replace these bounded scopes with `useraccount`.
+6. Grant the authorizing user access to the approved tables and fields.
+   Verify that the OAuth 2.0, REST API Provider, Authentication scope, and REST API Auth Scope plugins are available.
+
+See ServiceNow's [application registration](https://www.servicenow.com/docs/r/platform-security/authentication/t_CreateEndpointforExternalClients.html), [authorization workflow](https://www.servicenow.com/docs/r/platform-security/authentication/authorization-workflow.html), and [REST API scope configuration](https://www.servicenow.com/docs/r/platform-security/authentication/configure-rest-api-auth-scope.html).
+ServiceNow issues the refresh token through the configured authorization flow.
+This integration does not request an `offline_access` scope.
+
+### Configure the Langflow server
+
+Set `LANGFLOW_SERVICENOW_ORIGIN` to the exact HTTPS origin, such as `https://example.service-now.com`.
+Set `LANGFLOW_SERVICENOW_TABLES` to a comma-separated subset of the approved tables, without spaces.
+It defaults to `incident`.
+For example, `incident,problem` enables those two tables while leaving `change_request` unavailable.
+Canvas inputs cannot change the host or bypass this table list.
+
+Load this object into `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS` through your deployment's secret manager.
+Replace the placeholders and keep the same exact origin in `tenant` and `allowed_tenants`.
+
+```json
+{
+  "servicenow-work": {
+    "provider": "servicenow",
+    "profile": "user",
+    "owner": "customer",
+    "context": "self_managed",
+    "client_type": "confidential",
+    "client_id": "YOUR_CLIENT_ID",
+    "client_secret": "YOUR_CLIENT_SECRET",
+    "redirect_uri": "https://YOUR_LANGFLOW_HOST/api/v1/connections/oauth/servicenow/callback",
+    "tenant": "https://example.service-now.com",
+    "allowed_tenants": ["https://example.service-now.com"],
+    "scopes": ["langflow_table_read", "langflow_table_write"]
+  }
+}
+```
+
+Omit `langflow_table_write` when only reads and triggers are needed.
+The read scope is always required.
+Keep secrets outside flow inputs and frontend configuration.
+The API, listeners, and workers need the same origin, table list, registration, database, and `LANGFLOW_SECRET_KEY`.
+Restart all processes after changing the instance or approved tables.
+
+Hosted registrations use `context` set to `hosted`, `owner` set to `langflow`, and both `LANGFLOW_CONNECTION_OAUTH_CONTEXT=hosted` and `LANGFLOW_CONNECTION_OAUTH_HOSTED_ENABLED=true`.
+See [Configure connection OAuth](../Develop/connection-oauth.mdx) for shared settings.
+
+## Connect an account and run actions
+
+1. Open **Settings**, **Connections**, and **Add connection**.
+2. Select **ServiceNow**, enter a handle such as `work`, and enter a display name.
+3. Keep `langflow_table_read` selected and add `langflow_table_write` for create or update actions.
+4. Select **Continue** and complete ServiceNow consent.
+5. Add **ServiceNow: Read Ticket** to a flow, select the connection, and supply the table and `sys_id` of a visible ticket.
+6. Run the flow to check account access before configuring writes or triggers.
+
+The connection account label says **ServiceNow instance** because the token response does not verify a remote user's name.
+Langflow still checks connection ownership, the exact issuing instance, and the granted scopes.
+Exported flows keep only a handle such as `servicenow/work`.
+The destination server needs its own authorized connection with that handle.
+Pasted bearer tokens and headless environment credentials are unsupported.
+
+## Enable polling triggers
+
+Run `langflow listeners` alongside the self-managed API, or set `LANGFLOW_LISTENERS_MODE=subprocess` before starting Langflow.
+See [Deploy Langflow trigger listeners](../Deployment/deployment-trigger-listeners.mdx).
+The listener uses outbound HTTPS and does not need public ingress.
+
+1. Add one of the ServiceNow triggers to a flow you own.
+   Select your own connection and an approved **Table**.
+2. Save the flow and enable **Allow background runs** in the trigger node controls.
+   The same consent is available under **Settings**, **Connections**, the connection's **Actions** menu, and **Allow scheduled and deployed runs**.
+3. Turn on **Enabled** in the trigger node, or select **Resume** under **Settings**, **Triggers**.
+4. Create a ticket after activation, or change the state of a ticket already observed by the status trigger.
+   Inspect the trigger's event list and run.
+
+Shared and instance connections cannot arm these triggers.
+Polling defaults to 30 seconds and never runs faster than that minimum.
+`LANGFLOW_LISTENER_POLL_INTERVAL_S` can increase the interval.
+Each scan waits five seconds for recently written data and overlaps the previous scan by two minutes.
+Rate limits, retries, and scan duration can delay delivery.
+
+## Event identity and delivery limits
+
+The creation trigger starts at activation time and does not read historical tickets as new events.
+The status trigger first establishes a baseline without emitting old tickets.
+Newly encountered tickets establish their first state without producing a status event.
+
+Within each trigger, the provider, table, trigger kind, ticket `sys_id`, and observed version identify an event.
+A created event uses `sys_created_on` as its version.
+A status event combines `sys_updated_on`, `sys_mod_count`, and the numeric state.
+This suppresses duplicates from overlapping polls while allowing a later return to an earlier state.
+The events and watermark commit together, and failed scans or stale listener commits cannot advance it.
+
+Each round reads at most 100 pages of 100 records.
+The status trigger retains at most 10000 ticket states, including states for tickets that later disappear.
+Exceeding either bound stops advancement and reports the source limit.
+This preview has no trigger query filter, so select a smaller approved table or reduce source volume.
+
+ServiceNow applies its page limit before ACL filtering.
+The listener continues after short pages and requires `X-Total-Count` to prove an empty page has no remaining matches.
+Configure permissions that can enumerate the selected table.
+An empty page with remaining matches fails the round instead of silently discarding tickets.
+
+Polling observes latest state and cannot reconstruct every intermediate transition.
+A ticket created and deleted between polls can be missed.
+Backdated timestamps, tenant restores, changing ACLs, or clock skew beyond the overlap can also leave gaps.
+Keep host clocks synchronized.
+Deletion events and audit-log replay are unsupported.
+
+## Recover a connection or trigger
+
+| Symptom | Recovery |
+| --- | --- |
+| The connection needs authorization | In **Settings**, **Connections**, choose **Actions**, then **Reconnect**, and complete consent. Then use **Resume** for affected triggers under **Settings**, **Triggers**. Reconnect alone does not restart listening. |
+| Background use is blocked | As the owner, enable **Allow background runs** on the trigger or **Allow scheduled and deployed runs** on its connection, then resume it. |
+| A table or record limit is exceeded | Select a smaller approved table and save the flow. Changing the table resets collection. Pausing and resuming the same table retains its state and does not clear the retained-record limit. |
+| A scope or field is unavailable | Check the app's custom scope mappings, requested scopes, and the user's table and field ACLs. Reconnect after changing scopes. |
+| A poll cannot prove the table is fully read | Check record ACLs and the `X-Total-Count` header. The source cannot advance across a page it cannot enumerate. |
+| ServiceNow is unavailable or rate limited | Keep the trigger active while the listener retries. HTTP 429 preserves the watermark and respects the bounded retry delay. |
+
+A listener restart, temporary outage, or pause preserves the watermark.
+Resuming the same source observes the latest accessible state across that interval, subject to the polling limits above.
+Changing its table or connection resets collection.
+Replay in the event list starts another run for an event already recorded by Langflow and cannot recover an unobserved state.
+
+A rejected access token permits one refresh attempt.
+If the refresh grant is expired or revoked, reconnect the connection.
+Other permission failures require correcting access rather than retrying consent without a change.
+An ambiguous create or update timeout is not retried automatically. Check ServiceNow before repeating the write.
+When retiring a connection, revoke its OAuth grant in ServiceNow as well as removing the local credential.
+
+## Webhook boundary
+
+These triggers use authenticated polling only and register no remote webhook or subscription.
+Pausing them stops local polling work, without remote webhook cleanup.
+Public webhook requests do not feed these components.

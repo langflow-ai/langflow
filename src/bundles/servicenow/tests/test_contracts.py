@@ -93,6 +93,8 @@ def test_approved_tables_and_fields(monkeypatch):
     for value in [
         {"sys_created_on": "yesterday"},
         {"state": {"value": "2"}},
+        {"state": 2},
+        {"state": ["2"]},
         {"state": "2^ORactive=true"},
         {"assigned_to": "../x"},
     ]:

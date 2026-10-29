@@ -7,7 +7,7 @@
     "provider_id": "servicenow",
     "display_name": "ServiceNow",
     "icon": "ServiceNow",
-    "docs_url": "https://github.com/langflow-ai/langflow/blob/7864db7185c4eb63cf27de24fe133e920cb3e97c/design/provider-integrations/servicenow.md",
+    "docs_url": "https://docs.langflow.org/next/bundles-servicenow",
     "auth_profiles": [
       {
         "id": "user",
@@ -182,7 +182,7 @@
     "Hosted and self-managed actions use confidential OAuth. Desktop, headless and hosted push triggers are unsupported."
   ],
   "evidence_paths": [
-    "design/provider-integrations/servicenow.md",
+    "docs/docs/Components/bundles-servicenow.mdx",
     "src/bundles/servicenow/src/lfx_servicenow/components/servicenow/capabilities.v1.json",
     "src/backend/base/langflow/services/triggers/providers/servicenow",
     "src/backend/tests/unit/services/triggers/test_servicenow_provider.py"

@@ -199,17 +199,17 @@ async def list_triggers(
         rows = await list_all_triggers(
             session, flow_id=flow_id, provider=provider, state=state, limit=limit, offset=offset
         )
-        return await present(rows, current_user)
+        return await present(session, rows, current_user)
     if flow_id is None:
         rows = await list_visible_triggers(
             session, current_user, provider=provider, state=state, limit=limit, offset=offset
         )
-        return await present(rows, current_user)
+        return await present(session, rows, current_user)
     flow = await _authorized_flow(session, current_user, flow_id, FlowAction.READ)
     triggers = await service.list_for_flows(
         session, flow_ids=[flow_id], limit=limit, offset=offset, provider=provider, state=state
     )
-    return await present([(row, flow, None) for row in triggers], current_user)
+    return await present(session, [(row, flow, None) for row in triggers], current_user)
 
 
 @router.post("/bulk/pause", response_model=TriggerBulkResult)

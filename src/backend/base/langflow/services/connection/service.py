@@ -1010,7 +1010,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                 # usable. Keep that attempt's outcome visible to the dialog.
                 "status_reason": row.status_reason
                 if row.status == PersistedConnectionStatus.ERROR.value
-                or row.status_reason in {"oauth-denied", "oauth-expired", "oauth-failed"}
+                or row.status_reason in {"oauth-denied", "oauth-expired", "oauth-failed", "oauth-refresh-token-missing"}
                 else None,
                 "has_credentials": has_credentials,
             }
