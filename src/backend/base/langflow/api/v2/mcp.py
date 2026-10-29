@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile
 from lfx.base.agents.utils import safe_cache_get, safe_cache_set
 from lfx.base.mcp.util import update_tools
+from lfx.services.variable.exceptions import RuntimeVariableError
 from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
@@ -278,26 +279,31 @@ async def get_servers(
     # Load variables once: AsyncSession cannot be used concurrently by discovery workers.
     request_variables = {}
     try:
-        from langflow.services.auth import utils as auth_utils
-        from langflow.services.database.models.variable.model import Variable
+        from langflow.services.variable.runtime_policy import resolve_runtime_variables
 
-        # Load variables directly from database and decrypt ALL types (including CREDENTIAL)
-        stmt = select(Variable).where(Variable.user_id == current_user.id)
-        variables = list((await session.exec(stmt)).all())
+        request_variables = await resolve_runtime_variables(
+            user_id=current_user.id, session=session, settings=settings_service
+        )
+        if request_variables is None:
+            from langflow.services.auth import utils as auth_utils
+            from langflow.services.database.models.variable.model import Variable
 
-        # Decrypt variables based on type (following the pattern from get_all_decrypted_variables)
-        for variable in variables:
-            if variable.name and variable.value:
-                # Prior to v1.8, both Generic and Credential variables were encrypted.
-                # As such, must attempt to decrypt both types to ensure backwards-compatibility.
-                try:
-                    decrypted_value = auth_utils.decrypt_api_key(variable.value)
-                    request_variables[variable.name] = decrypted_value
-                except Exception as e:  # noqa: BLE001
-                    await logger.aerror(
-                        f"Failed to decrypt credential variable '{variable.name}': {e}. "
-                        "This credential will not be available for MCP server."
-                    )
+            request_variables = {}
+            stmt = select(Variable).where(Variable.user_id == current_user.id)
+            variables = list((await session.exec(stmt)).all())
+            for variable in variables:
+                if variable.name and variable.value:
+                    # Legacy Generic rows may still be encrypted. Preserve the
+                    # historical discovery behavior for unmanaged accounts.
+                    try:
+                        request_variables[variable.name] = auth_utils.decrypt_api_key(variable.value)
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(
+                            f"Failed to decrypt credential variable '{variable.name}': {e}. "
+                            "This credential will not be available for MCP server."
+                        )
+    except RuntimeVariableError:
+        raise HTTPException(status_code=409, detail="Deployment variable resolution failed") from None
     except Exception as e:  # noqa: BLE001
         await logger.awarning(f"Failed to load global variables for MCP server test: {e}")
 
