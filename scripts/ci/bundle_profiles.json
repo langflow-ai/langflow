@@ -17,7 +17,7 @@
       "indexes": [
         "https://pypi.org/simple"
       ],
-      "python": ">=3.10,<3.16",
+      "python": ">=3.11,<3.16",
       "application": {
         "distribution": "langflow",
         "version": ">=1.14.0,<1.15.0",
@@ -111,7 +111,7 @@
         {
           "distribution": "lfx-oracle",
           "extras": [],
-          "version": ">=0.2.1,<1.0.0",
+          "version": ">=0.4.0,<1.0.0",
           "providers": [
             "lfx-oracle"
           ]
