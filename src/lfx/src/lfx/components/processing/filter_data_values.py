@@ -62,11 +62,18 @@ class DataFilterComponent(Component):
             return str(item_value).endswith(filter_value)
         return False
 
+    @staticmethod
+    def _get_input_text(value: str | Data | None) -> str:
+        """Normalize text inputs, which may be plain strings or connected Data values."""
+        if isinstance(value, Data):
+            value = value.get_text()
+        return "" if value is None else str(value)
+
     def filter_data(self) -> list[Data]:
         # Extract inputs
         input_data: list[Data] = self.input_data
-        filter_key: str = self.filter_key.text
-        filter_value: str = self.filter_value.text
+        filter_key = self._get_input_text(self.filter_key)
+        filter_value = self._get_input_text(self.filter_value)
         operator: str = self.operator
 
         # Validate inputs
