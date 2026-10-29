@@ -36,6 +36,8 @@ from lfx.field_typing import Tool  # noqa: TC001
 # Lazy imports avoid circular deps: create_state_model (lfx.graph.state.model),
 # has_chat_output (lfx.graph.utils).
 from lfx.helpers.custom import format_type
+from lfx.log.logger import redact_keys
+from lfx.mcp.redact import is_sensitive_field
 from lfx.memory import astore_message, aupdate_messages, delete_message
 from lfx.schema.artifact import get_artifact_type, post_process_raw
 from lfx.schema.data import Data
@@ -47,7 +49,7 @@ from lfx.serialization.serialization import serialize
 from lfx.template.field.base import UNDEFINED, Input, Output
 from lfx.template.frontend_node.custom_components import ComponentFrontendNode
 from lfx.utils.async_helpers import async_delegate_target, run_until_complete
-from lfx.utils.secrets import is_secret_value, unwrap_secret_value
+from lfx.utils.secrets import is_secret_name, is_secret_value, normalized_secret_name, unwrap_secret_value
 from lfx.utils.util import find_closest_match
 
 from .custom_component import CustomComponent
@@ -101,6 +103,85 @@ def _mask_secret_value(value: Any) -> Any:
     if is_secret_value(value):
         return str(value)
     return value
+
+
+def _is_credential_header(name: Any) -> bool:
+    name = str(name).strip()
+    # Mask every header flow export nulls (is_secret_name). The log redaction list, with the keys an
+    # operator adds through LANGFLOW_LOG_REDACT_KEYS, and the field check in lfx.mcp.redact also
+    # catch names export keeps, such as auth, X-APIKey, X-PassWord and X-RapidAPIKey, which reads
+    # as x_rapid_apikey once normalized.
+    return (
+        is_secret_name(name)
+        or name.lower() in redact_keys()
+        or is_sensitive_field(name)
+        or is_sensitive_field(normalized_secret_name(name))
+    )
+
+
+def _mask_credential_headers(value: Any) -> Any:
+    """Mask credential header values in a header dict or key/value rows, keeping header names.
+
+    Values under other names are searched too, so a credential header nested in them is masked.
+    """
+    if isinstance(value, list):
+        return [_mask_credential_headers(row) for row in value]
+    if isinstance(value, Data):
+        return value.model_copy(update={"data": _mask_credential_headers(value.data)})
+    if not isinstance(value, dict):
+        return _mask_secret_value(value)
+    if "key" in value and "value" in value:
+        masked = "**********" if _is_credential_header(value["key"]) else _mask_credential_headers(value["value"])
+        return {**value, "value": masked}
+    return {
+        name: "**********" if _is_credential_header(name) else _mask_credential_headers(item)
+        for name, item in value.items()
+    }
+
+
+def _header_cells(value: Any) -> Iterator[tuple[Any, Any]]:
+    """Yield (name, value) for each header in a header dict or key/value rows, including rows in Data."""
+    if isinstance(value, list):
+        for row in value:
+            yield from _header_cells(row)
+    elif isinstance(value, Data):
+        yield from _header_cells(value.data)
+    elif isinstance(value, dict):
+        yield from [(value["key"], value["value"])] if "key" in value and "value" in value else value.items()
+
+
+def _credential_header_values(value: Any) -> list[Any]:
+    """Return the header values _mask_credential_headers masks, including ones nested under other names."""
+    return [
+        text
+        for name, item in _header_cells(value)
+        for text in ([item] if _is_credential_header(name) else _credential_header_values(item))
+    ]
+
+
+def _get_trace_secret_texts(input_: Any) -> list[str]:
+    """Return an input's credential-named header and MCP env values, so trace outputs and logs hide them.
+
+    AUTH and CONNECTION values are left out. In-tree they hold status words, redirect URLs and toolkit
+    names, which masking as substrings would garble, and trace inputs already mask them whole.
+    """
+    from lfx.inputs.input_mixin import FieldTypes
+
+    value = getattr(input_, "value", None)
+    if getattr(input_, "field_type", None) == FieldTypes.MCP:
+        # Credential-named env and header entries only, by the header-input rule. The server name,
+        # command, url, args and ordinary entries such as PORT stay visible.
+        config = value.get("config") if isinstance(value, dict) else None
+        if not isinstance(config, dict):
+            return []
+        env = config.get("env") if isinstance(config.get("env"), dict) else {}
+        cells = [*env.items(), *_header_cells(config.get("headers"))]
+        texts = [item for name, item in cells if _is_credential_header(name)]
+    elif "header" in input_.name.lower():
+        texts = _credential_header_values(value)
+    else:
+        return []
+    return [text for text in map(unwrap_secret_value, texts) if isinstance(text, str) and text]
 
 
 def _get_secret_text(input_obj: Any, value: Any) -> str | None:
@@ -1356,6 +1437,9 @@ class Component(CustomComponent):
         credential_types = {FieldTypes.AUTH, FieldTypes.CONNECTION, FieldTypes.MCP}
         if getattr(input_, "password", False) or getattr(input_, "field_type", None) in credential_types:
             return "**********"
+        # Header inputs are plain dicts or tables, so mask credential headers by name.
+        if "header" in input_.name.lower():
+            return _mask_credential_headers(input_.value)
         return _mask_secret_value(input_.value)
 
     def get_trace_as_inputs(self):
@@ -1382,7 +1466,7 @@ class Component(CustomComponent):
         metadata = self.get_trace_as_metadata()
         async with self.tracing_service.trace_component(self, self.trace_name, inputs, metadata):
             results, artifacts = await self._build_results()
-            self.tracing_service.set_outputs(self.trace_name, results)
+            self.tracing_service.set_outputs(self.trace_name, self._sanitize_trace_value(results))
 
         return results, artifacts
 
@@ -1880,42 +1964,52 @@ class Component(CustomComponent):
         raw, artifact_type = post_process_raw(raw, artifact_type)
         return {"repr": custom_repr, "raw": raw, "type": artifact_type}
 
-    def _sanitize_secret_string(self, value: str) -> str:
-        for secret in sorted(self._secret_values, key=len, reverse=True):
+    def _sanitize_secret_string(self, value: str, secret_values: set[str] | None = None) -> str:
+        secret_values = self._secret_values if secret_values is None else secret_values
+        for secret in sorted(secret_values, key=len, reverse=True):
             value = value.replace(secret, "**********")
         return value
 
-    def _sanitize_secret_values(self, value):
-        """Return a sanitized value without mutating caller-owned Message or Data objects."""
-        if not self._secret_values:
+    def _sanitize_secret_values(self, value, secret_values: set[str] | None = None):
+        """Return a sanitized value without mutating caller-owned Message or Data objects.
+
+        Password input values are masked unless ``secret_values`` names the strings to mask.
+        """
+        secret_values = self._secret_values if secret_values is None else secret_values
+        if not secret_values:
             return _mask_secret_value(value)
         value = _mask_secret_value(value)
         if isinstance(value, str):
-            return self._sanitize_secret_string(value)
+            return self._sanitize_secret_string(value, secret_values)
         if isinstance(value, Message):
             sanitized = value.model_copy(
                 update={
-                    "data": self._sanitize_secret_values(value.data),
+                    "data": self._sanitize_secret_values(value.data, secret_values),
                     "content_blocks": list(value.content_blocks),
                 }
             )
             if isinstance(value.text, str):
-                sanitized.text = self._sanitize_secret_string(value.text)
+                sanitized.text = self._sanitize_secret_string(value.text, secret_values)
             return sanitized
         if isinstance(value, Data):
             default_value = value.default_value
             if isinstance(default_value, str):
-                default_value = self._sanitize_secret_string(default_value)
+                default_value = self._sanitize_secret_string(default_value, secret_values)
             return value.model_copy(
-                update={"data": self._sanitize_secret_values(value.data), "default_value": default_value}
+                update={"data": self._sanitize_secret_values(value.data, secret_values), "default_value": default_value}
             )
         if isinstance(value, dict):
-            return {key: self._sanitize_secret_values(item) for key, item in value.items()}
+            return {key: self._sanitize_secret_values(item, secret_values) for key, item in value.items()}
         if isinstance(value, list):
-            return [self._sanitize_secret_values(item) for item in value]
+            return [self._sanitize_secret_values(item, secret_values) for item in value]
         if isinstance(value, tuple):
-            return tuple(self._sanitize_secret_values(item) for item in value)
+            return tuple(self._sanitize_secret_values(item, secret_values) for item in value)
         return value
+
+    def _sanitize_trace_value(self, value):
+        """Return a copy for tracing providers, masking password values and credential header and MCP env values."""
+        trace_secret_values = {text for input_ in self._inputs.values() for text in _get_trace_secret_texts(input_)}
+        return self._sanitize_secret_values(value, self._secret_values | trace_secret_values)
 
     def _process_raw_result(self, result):
         return self.extract_data(result)
@@ -1954,7 +2048,7 @@ class Component(CustomComponent):
         self._artifacts = artifacts
         self._results = results
         if self.tracing_service:
-            self.tracing_service.set_outputs(self.trace_name, results)
+            self.tracing_service.set_outputs(self.trace_name, self._sanitize_trace_value(results))
 
     def custom_repr(self):
         repr_value = self.status if self.repr_value == "" else self.repr_value
@@ -2191,7 +2285,8 @@ class Component(CustomComponent):
         self._logs.append(log)
         if self.tracing_service and self._vertex:
             try:
-                self.tracing_service.add_log(trace_name=self.trace_name, log=log)
+                trace_log = log.model_copy(update={"message": self._sanitize_trace_value(log.message)})
+                self.tracing_service.add_log(trace_name=self.trace_name, log=trace_log)
             except RuntimeError as e:
                 # No component context available (e.g., when called as a tool outside normal execution)
                 # Logs are still stored in self._logs for later retrieval
