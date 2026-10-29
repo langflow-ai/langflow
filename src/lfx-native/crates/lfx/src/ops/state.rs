@@ -21,6 +21,7 @@ use std::fmt;
 use std::str::FromStr;
 
 use indexmap::{IndexMap, IndexSet};
+use serde::ser::{Serialize, SerializeMap, Serializer};
 use serde_json::{Map, Value};
 
 use crate::ops::edges::{EdgeIndex, GraphRead};
@@ -455,6 +456,18 @@ impl GraphState {
         Value::Object(out)
     }
 
+    /// The graph as JSON text: the text of [`GraphState::to_value`], written
+    /// from the graph without copying it.
+    ///
+    /// # Panics
+    ///
+    /// A JSON value that `serde_json` cannot write, which a graph never holds:
+    /// every key is a string.
+    #[must_use]
+    pub fn to_json(&self) -> String {
+        serde_json::to_string(&GraphJson(self)).expect("a graph's keys are strings")
+    }
+
     /// The graph as a JSON value, without copying it.
     #[must_use]
     pub fn into_value(self) -> Value {
@@ -598,7 +611,42 @@ impl FromStr for GraphState {
 /// The graph as JSON text.
 impl fmt::Display for GraphState {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_value())
+        f.write_str(&self.to_json())
+    }
+}
+
+/// Writes a [`GraphState`] as [`GraphState::to_value`] builds it: the root's
+/// keys in order, with the nodes and edges in place of their placeholders.
+struct GraphJson<'s>(&'s GraphState);
+
+impl Serialize for GraphJson<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+        let GraphState { root, graph, .. } = self.0;
+        let mut map = serializer.serialize_map(Some(root.len()))?;
+        for (key, value) in root {
+            match key.as_str() {
+                "nodes" => map.serialize_entry(key, &NodesJson(&graph.nodes))?,
+                "edges" => map.serialize_entry(key, &EdgesJson(&graph.edges))?,
+                _ => map.serialize_entry(key, value)?,
+            }
+        }
+        map.end()
+    }
+}
+
+struct NodesJson<'s>(&'s Layered<Node>);
+
+impl Serialize for NodesJson<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+        serializer.collect_seq(self.0.values().map(Node::as_value))
+    }
+}
+
+struct EdgesJson<'s>(&'s Layered<Edge>);
+
+impl Serialize for EdgesJson<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+        serializer.collect_seq(self.0.values().map(Edge::as_map))
     }
 }
 
