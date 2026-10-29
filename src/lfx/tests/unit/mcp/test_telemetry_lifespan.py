@@ -5,6 +5,33 @@ from lfx.services.deps import get_settings_service
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("edition", "expected"), [("premium", "opensource"), ("", "opensource"), ("enterprise", "enterprise")]
+)
+@pytest.mark.parametrize("opt_out", [False, True])
+async def test_lifespan_resolves_edition_from_fresh_settings(tmp_path, monkeypatch, edition, expected, opt_out) -> None:
+    """MCP startup resolves telemetry editions before constructing its transport."""
+    from lfx.mcp import server
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+
+    monkeypatch.setenv("LANGFLOW_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("LANGFLOW_EDITION", edition)
+    monkeypatch.setenv("LANGFLOW_SEGMENT_WRITE_KEY", "test-key")
+    monkeypatch.setenv("LANGFLOW_DO_NOT_TRACK", str(opt_out).lower())
+    monkeypatch.setenv("DO_NOT_TRACK", str(opt_out).lower())
+    monkeypatch.delitem(get_service_manager().services, ServiceType.SETTINGS_SERVICE, raising=False)
+
+    async with server._telemetry_lifespan(server.mcp):
+        assert get_settings_service().settings.edition == expected
+        assert server._telemetry.edition == expected
+        assert server._telemetry.do_not_track is opt_out
+        assert server._telemetry._running is not opt_out
+
+    assert server._telemetry is None
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("environment_override", [False, True])
 async def test_lifespan_uses_segment_settings(tmp_path, monkeypatch, environment_override) -> None:
     from lfx.mcp import server
