@@ -366,6 +366,11 @@ module.exports = {
           id: "Deployment/security",
           label: "Security",
         },
+        {
+          type: "doc",
+          id: "administration/secret-key-rotation",
+          label: "Offline secret-key audit and rotation",
+        },
       ],
     },
     {
