@@ -2,12 +2,13 @@ import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { I18nextProvider } from "react-i18next";
 import i18n, { loadLanguage } from "@/i18n";
-import { mockGenericIconComponent } from "../../__tests__/a11y-mock-helpers";
 import DecisionQuestionsComponent from "../decision-questions";
 
 jest.unmock("react-i18next");
 jest.mock("@/components/common/genericIconComponent", () =>
-  mockGenericIconComponent(),
+  jest
+    .requireActual("../../__tests__/a11y-mock-helpers")
+    .mockGenericIconComponent(),
 );
 jest.mock("@/modals/tableModal", () => ({
   __esModule: true,

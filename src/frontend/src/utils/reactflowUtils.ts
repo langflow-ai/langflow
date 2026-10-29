@@ -382,6 +382,20 @@ const isAdvancedField = (data: APIClassType, fieldName: string): boolean => {
   return field && "advanced" in field && field.advanced === true;
 };
 
+// A shown question list draws its questions' connection handles on its own cards, so those
+// fields stay hidden as rows but keep their edges.
+const isDrawnByQuestionList = (
+  template: APITemplateType,
+  fieldName: string,
+): boolean =>
+  Object.values(template).some(
+    (field) =>
+      field?.type === "decision_questions" &&
+      field.show &&
+      !!field.connection_prefix &&
+      fieldName.startsWith(field.connection_prefix),
+  );
+
 export function filterHiddenFieldsEdges(
   edge: EdgeType,
   newEdges: EdgeType[],
@@ -396,7 +410,10 @@ export function filterHiddenFieldsEdges(
     const nodeTemplates = targetNode.data.node!.template;
 
     // Only check the specific field the edge is connected to
-    if (nodeTemplates[fieldName]?.show === false) {
+    if (
+      nodeTemplates[fieldName]?.show === false &&
+      !isDrawnByQuestionList(nodeTemplates, fieldName)
+    ) {
       const removed = newEdges.some((e) => e.id === edge.id);
       newEdges = newEdges.filter((e) => e.id !== edge.id);
       // Dropping a connection because its target field went hidden used

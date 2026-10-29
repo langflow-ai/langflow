@@ -3346,5 +3346,6 @@
   "decisionQuestions.add": "Add question",
   "decisionQuestions.kindChoice": "Choice",
   "decisionQuestions.kindBoolean": "Boolean",
-  "decisionQuestions.kindScore": "Score"
+  "decisionQuestions.kindScore": "Score",
+  "decisionQuestions.questionConnected": "Connected"
 }

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import useFlowStore from "@/stores/flowStore";
 import { axe } from "@/utils/a11y-test";
-import { mockGenericIconComponent } from "../../__tests__/a11y-mock-helpers";
 import DecisionQuestionsComponent from "../decision-questions";
 
 jest.mock("@/modals/tableModal", () => ({
@@ -9,8 +9,18 @@ jest.mock("@/modals/tableModal", () => ({
 }));
 
 jest.mock("@/components/common/genericIconComponent", () =>
-  mockGenericIconComponent(),
+  jest
+    .requireActual("../../__tests__/a11y-mock-helpers")
+    .mockGenericIconComponent(),
 );
+
+// The real handle needs a React Flow canvas; a marker shows where one is drawn.
+jest.mock("../question-handle", () => ({
+  __esModule: true,
+  default: ({ fieldName }: { fieldName: string }) => (
+    <span data-testid={`handle_${fieldName}`} />
+  ),
+}));
 
 const newQuestion = {
   name: "",
@@ -90,6 +100,101 @@ describe("DecisionQuestionsComponent", () => {
     });
     expect(handleOnNewValue).toHaveBeenLastCalledWith({
       value: [{ ...newQuestion, question: "Which team?" }, second],
+    });
+  });
+
+  describe("connecting a question", () => {
+    const connection = {
+      type: "str",
+      input_types: ["Message"],
+      show: false,
+      value: "",
+      name: "question_input_1",
+      display_name: "Question 1",
+    };
+    const first = { ...newQuestion, id: "1" };
+    const nodeClass = (questions: Record<string, unknown>[], fields = {}) =>
+      ({
+        template: {
+          questions: { type: "decision_questions", value: questions },
+          question_input_1: connection,
+          ...fields,
+        },
+      }) as never;
+    const renderConnectable = (
+      questions: Record<string, unknown>[],
+      fields = {},
+    ) => {
+      const handleNodeClass = jest.fn();
+      const handleOnNewValue = jest.fn();
+      render(
+        <DecisionQuestionsComponent
+          id="questions"
+          value={questions}
+          editNode={false}
+          disabled={false}
+          newQuestion={newQuestion}
+          connectionPrefix="question_input_"
+          fieldName="questions"
+          nodeId="DecisionModel-1"
+          nodeClass={nodeClass(questions, fields)}
+          handleNodeClass={handleNodeClass}
+          handleOnNewValue={handleOnNewValue}
+        />,
+      );
+      return { handleNodeClass, handleOnNewValue };
+    };
+    const edgeInto = (field: string) => ({
+      id: `edge-${field}`,
+      source: "ChatInput-1",
+      target: "DecisionModel-1",
+      targetHandle: JSON.stringify({ fieldName: field }).replace(/"/g, "œ"),
+    });
+
+    afterEach(() => useFlowStore.setState({ edges: [] }));
+
+    it("draws a handle on each question card", () => {
+      renderConnectable([first]);
+      expect(screen.getByTestId("handle_question_input_1")).toBeInTheDocument();
+    });
+
+    it("adds a connection field with each question it adds", () => {
+      const { handleNodeClass } = renderConnectable([first]);
+      fireEvent.click(screen.getByTestId("questions_add"));
+      const [[updated]] = handleNodeClass.mock.calls;
+      const [, added] = updated.template.questions.value;
+      expect(added.id).toMatch(/^[a-z0-9]+$/);
+      expect(updated.template[`question_input_${added.id}`]).toMatchObject({
+        name: `question_input_${added.id}`,
+        input_types: ["Message"],
+        show: false,
+      });
+    });
+
+    it("removes an added question's field and the edge into it", () => {
+      const deleteEdge = jest.fn();
+      useFlowStore.setState({
+        edges: [edgeInto("question_input_x1")] as never,
+        deleteEdge,
+      });
+      const second = { ...newQuestion, id: "x1" };
+      const { handleNodeClass } = renderConnectable([first, second], {
+        question_input_x1: { ...connection, name: "question_input_x1" },
+      });
+      fireEvent.click(screen.getByTestId("questions_remove_1"));
+      expect(deleteEdge).toHaveBeenCalledWith(["edge-question_input_x1"]);
+      const [[updated]] = handleNodeClass.mock.calls;
+      expect(updated.template.questions.value).toEqual([first]);
+      expect(updated.template.question_input_x1).toBeUndefined();
+    });
+
+    it("shows a connected question instead of its text box", () => {
+      useFlowStore.setState({ edges: [edgeInto("question_input_1")] as never });
+      renderConnectable([first]);
+      expect(
+        screen.getByTestId("questions_question_connected_0"),
+      ).toHaveTextContent("Connected");
+      expect(screen.queryByLabelText("Question 1 text")).toBeNull();
     });
   });
 });

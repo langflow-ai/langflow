@@ -350,7 +350,7 @@ async def test_a_dev_node_with_the_questions_table_starts_a_fresh_list():
     saved["template"]["questions"] = {"type": "table", "value": [{"id": "team", "kind": "Choice"}]}
     saved["template"]["question_mode"]["value"] = "Multiple"
     updated = await component.update_frontend_node(component.to_frontend_node()["data"]["node"], saved)
-    assert updated["template"]["questions"]["value"] == [NEW_QUESTION]
+    assert updated["template"]["questions"]["value"] == [{**NEW_QUESTION, "id": "1"}]
     assert updated["template"]["question_mode"]["value"] == "Form"
 
 
@@ -375,6 +375,47 @@ def mixed_question_component():
         ],
     )
     return component
+
+
+def test_a_connected_question_replaces_its_typed_text():
+    from lfx.schema.message import Message
+
+    component = mixed_question_component()
+    component.questions[1]["id"] = "x1"
+    component._attributes["question_input_x1"] = Message(text="Does the customer need this today?")
+    request = component._request()
+    assert request.questions["urgent"].question == "Does the customer need this today?"
+    assert request.questions["team"].question == "Which team?"
+
+
+def test_an_unconnected_question_keeps_its_typed_text():
+    component = mixed_question_component()
+    component.questions[1]["id"] = "x1"
+    component._attributes["question_input_x1"] = ""
+    assert component._request().questions["urgent"].question == "Is this urgent?"
+
+
+@pytest.mark.asyncio
+async def test_connection_fields_of_added_questions_survive_component_update():
+    from copy import deepcopy
+
+    component = mixed_question_component()
+    saved, _ = create_component_template(component_extractor=component)
+    added = {**deepcopy(saved["template"]["question_input_1"]), "name": "question_input_x1", "display_name": "Q2"}
+    saved["template"]["question_input_x1"] = added
+    new, _ = create_component_template(component_extractor=DecisionModelComponent())
+    updated = await component.update_frontend_node(new, deepcopy(saved))
+    assert updated["template"]["question_input_x1"] == added
+    assert updated["template"]["question_input_1"]["input_types"] == ["Message"]
+    assert not updated["template"]["question_input_1"]["show"]
+
+
+def test_a_new_node_can_connect_its_first_question():
+    template, _ = create_component_template(component_extractor=DecisionModelComponent())
+    [first] = template["template"]["questions"]["value"]
+    assert first["id"] == "1"
+    assert template["template"]["questions"]["connection_prefix"] == "question_input_"
+    assert template["template"]["question_input_1"]["input_types"] == ["Message"]
 
 
 def test_form_and_json_build_identical_requests():

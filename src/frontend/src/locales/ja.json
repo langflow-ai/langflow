@@ -3347,5 +3347,6 @@
   "decisionQuestions.add": "質問を追加",
   "decisionQuestions.kindChoice": "選択",
   "decisionQuestions.kindBoolean": "真偽値",
-  "decisionQuestions.kindScore": "スコア"
+  "decisionQuestions.kindScore": "スコア",
+  "decisionQuestions.questionConnected": "接続済み"
 }

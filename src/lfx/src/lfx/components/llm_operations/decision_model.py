@@ -26,6 +26,7 @@ from lfx.io import (
     TabInput,
 )
 from lfx.schema.data import Data
+from lfx.schema.message import Message
 from lfx.schema.table import EditMode
 
 _KINDS = ("Choice", "Boolean", "Score")
@@ -56,6 +57,8 @@ _TABLE_SCHEMA = [
 ]
 # Text fields a node held before the question list, which could be bound to a global variable.
 _LEGACY_LABELS = {"question": "Question", "yes_description": "What Yes Means", "no_description": "What No Means"}
+# Question X's text can be connected through the hidden field <prefix>X.
+_CONNECTION_PREFIX = "question_input_"
 # What Add question appends; a node starts with one.
 _NEW_QUESTION = {
     "name": "",
@@ -132,12 +135,22 @@ class DecisionModelComponent(Component):
         DecisionQuestionsInput(
             name="questions",
             display_name="Questions",
-            value=[deepcopy(_NEW_QUESTION)],
+            value=[{**deepcopy(_NEW_QUESTION), "id": "1"}],
             new_question=_NEW_QUESTION,
             table_schema=_TABLE_SCHEMA,
+            connection_prefix=_CONNECTION_PREFIX,
             info="Each question has its own Decision Type: Choice picks one option, Boolean answers yes or no, and "
             "Score places the input on ordered levels. With more than one question, they are sent in one call and "
             "the result holds each answer under its Name, which defaults to q1, q2 and so on.",
+        ),
+        # The first question's connection. The editor copies it for each question it adds, and draws
+        # the handle on that question's card.
+        MessageTextInput(
+            name=f"{_CONNECTION_PREFIX}1",
+            display_name="Question 1",
+            info="Connect a component to supply this question's text.",
+            input_types=["Message"],
+            show=False,
         ),
         HandleInput(
             name="structured_context",
@@ -196,8 +209,14 @@ class DecisionModelComponent(Component):
             msg = f"Check Questions: {validation_summary(exc)}"
             raise DecisionConfigurationError(msg) from None
 
-    @staticmethod
-    def _question_fields(item, number: int) -> dict:
+    def _connected_question(self, item: dict) -> str | None:
+        """The text a component connected to this question's card sends, if any."""
+        value = self._attributes.get(f"{_CONNECTION_PREFIX}{item.get('id')}") if item.get("id") else None
+        if value in (None, ""):
+            return None
+        return value.text if isinstance(value, Message) else str(value)
+
+    def _question_fields(self, item, number: int) -> dict:
         """One question's fields, only those its Decision Type uses."""
         # A tweak can send anything here; the editor only offers these three types.
         kind = item.get("kind") if isinstance(item, dict) else None
@@ -206,6 +225,9 @@ class DecisionModelComponent(Component):
             raise DecisionConfigurationError(msg)
         kind = kind.lower()
         boolean = kind == "boolean"
+        connected = self._connected_question(item)
+        if connected is not None:
+            item = {**item, "question": connected}
         # A migrated field still holding the name of the global variable it was bound to; see _legacy_question.
         for field, variable in (item.get("global_variables") or {}).items():
             if (field == "question" or boolean) and item.get(field) == variable:
@@ -284,8 +306,12 @@ class DecisionModelComponent(Component):
         saved = current_frontend_node.get("template", {})
         if (saved.get("questions") or {}).get("type") != "decision_questions":
             template["questions"]["value"] = (
-                [_legacy_question(saved)] if "question" in saved else [deepcopy(_NEW_QUESTION)]
+                [_legacy_question(saved)] if "question" in saved else [{**deepcopy(_NEW_QUESTION), "id": "1"}]
             )
+        # Questions added in the editor bring their own connection fields; the class has only the first.
+        for name, field in saved.items():
+            if name.startswith(_CONNECTION_PREFIX) and name not in template:
+                template[name] = deepcopy(field)
         if template["question_mode"]["value"] not in {_FORM, _JSON}:
             template["question_mode"]["value"] = _FORM
         self._show_fields(template)
@@ -333,6 +359,7 @@ def _legacy_question(saved: dict) -> dict:
         options, levels = deepcopy(_NEW_QUESTION["options"]), options
     return {
         **deepcopy(_NEW_QUESTION),
+        "id": "1",
         "kind": kind,
         "question": value("question", ""),
         "options": options,

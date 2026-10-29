@@ -3346,5 +3346,6 @@
   "modelProviders.decisionDiscoveryError": "Decision Model을 불러오지 못했습니다. 이 Provider의 인증 정보를 확인하고 다시 시도하세요. 다른 Provider는 계속 쓸 수 있습니다.",
   "decisionQuestions.kindChoice": "선택",
   "decisionQuestions.kindBoolean": "참거짓",
-  "decisionQuestions.kindScore": "점수"
+  "decisionQuestions.kindScore": "점수",
+  "decisionQuestions.questionConnected": "연결됨"
 }

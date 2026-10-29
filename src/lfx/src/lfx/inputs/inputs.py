@@ -146,12 +146,17 @@ class DecisionQuestionsInput(BaseInputMixin, MetadataTraceMixin):
     Each item is ``{"name", "kind", "question", "options", "levels", "yes_description",
     "no_description"}``; ``kind`` is Choice, Boolean or Score, and ``options`` and ``levels`` are
     table rows in ``table_schema``. Add question appends a copy of ``new_question``.
+
+    With ``connection_prefix``, each question's text can also be connected: the question whose ``id``
+    is X takes its connection through the hidden template field ``<connection_prefix>X``, which the
+    editor creates for a new question by copying ``<connection_prefix>1``.
     """
 
     field_type: SerializableFieldTypes = FieldTypes.DECISION_QUESTIONS
     value: list[dict] = Field(default_factory=list)
     table_schema: list[dict] = Field(default_factory=list)
     new_question: dict = Field(default_factory=dict)
+    connection_prefix: str = ""
 
 
 class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):

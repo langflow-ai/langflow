@@ -3347,5 +3347,6 @@
   "decisionQuestions.add": "Frage hinzufügen",
   "decisionQuestions.kindChoice": "Auswahl",
   "decisionQuestions.kindBoolean": "Boolesch",
-  "decisionQuestions.kindScore": "Bewertung"
+  "decisionQuestions.kindScore": "Bewertung",
+  "decisionQuestions.questionConnected": "Verbunden"
 }

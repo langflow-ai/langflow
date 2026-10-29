@@ -3346,5 +3346,6 @@
   "decisionQuestions.add": "添加问题",
   "decisionQuestions.kindChoice": "选择",
   "decisionQuestions.kindBoolean": "布尔",
-  "decisionQuestions.kindScore": "评分"
+  "decisionQuestions.kindScore": "评分",
+  "decisionQuestions.questionConnected": "已连接"
 }
