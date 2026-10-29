@@ -132,3 +132,15 @@ def test_explicit_typesafe_ids_are_validated_by_system_one(monkeypatch, catalog,
     credentials.validate_model_provider_key("TypeSafe", {"TYPESAFE_API_KEY": "first-key"}, model_name=name)
     assert validate.call_args.args[2] == name
     catalog.assert_not_called()
+
+
+def test_discovery_strips_surrounding_key_whitespace_but_rejects_embedded_controls(monkeypatch, catalog):
+    from lfx.base.models.model_utils import get_live_models_for_provider
+
+    monkeypatch.setenv("TYPESAFE_API_KEY", " first-key\n")
+    assert get_live_models_for_provider(None, "TypeSafe", "decision")[0]["name"] == "jev-preview"
+    assert catalog.call_args.args[0].headers["authorization"] == "Bearer first-key"
+    monkeypatch.setenv("TYPESAFE_API_KEY", "first\nkey")
+    with pytest.raises(DecisionConfigurationError, match="valid TypeSafe API key"):
+        get_live_models_for_provider(None, "TypeSafe", "decision")
+    assert catalog.call_count == 1

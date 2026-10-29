@@ -1129,7 +1129,7 @@ def get_live_models_for_provider(
             return []
         from lfx.base.models.decisions.typesafe import get_models
 
-        key = get_provider_variable_value(user_id, "TYPESAFE_API_KEY")
+        key = (get_provider_variable_value(user_id, "TYPESAFE_API_KEY") or "").strip()
         return get_models(key) if key else []
     if provider == "Ollama":
         return fetch_live_ollama_models(user_id, model_type)

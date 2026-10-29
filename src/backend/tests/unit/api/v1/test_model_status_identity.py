@@ -1274,3 +1274,56 @@ async def test_decision_discovery_failure_keeps_other_providers_usable(monkeypat
         assert failed["is_configured"] is True
         assert failed["discovery_error"] == "Decision discovery unavailable"
         assert not any(row["metadata"]["model_type"] == "decision" for row in failed["models"])
+
+
+def test_custom_decision_id_sharing_default_chat_name_survives_reload():
+    catalog = [
+        {
+            "provider": "OpenRouter",
+            "models": [
+                {"model_name": "openai/gpt-4o", "metadata": {"model_type": "llm", "default": True}},
+            ],
+        }
+    ]
+    enabled = set()
+    _update_model_sets(
+        [ModelStatusUpdate(provider="OpenRouter", model_id="openai/gpt-4o", model_type="decision", enabled=True)],
+        set(),
+        enabled,
+        _build_model_default_flags(catalog),
+    )
+    assert enabled == {"OpenRouter::decision::openai/gpt-4o"}
+    inject_custom_enabled_models(catalog, enabled)
+    assert {row["metadata"]["model_type"] for row in catalog[0]["models"]} == {"llm", "decision"}
+
+
+async def test_embedding_defaults_match_unfiltered_status(monkeypatch):
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicyPurpose,
+        ModelProviderPolicySnapshot,
+    )
+
+    policy = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(),
+        purpose=ModelProviderPolicyPurpose.DISCOVER,
+        candidate_provider_ids=frozenset({"openai"}),
+        allowed_provider_ids=frozenset({"openai"}),
+    )
+    monkeypatch.setattr(models_api, "_get_disabled_models", AsyncMock(return_value=set()))
+    monkeypatch.setattr(models_api, "_get_enabled_models", AsyncMock(return_value=set()))
+    # Use the real static catalog; this regression is independent of provider HTTP discovery.
+    monkeypatch.setattr(models_api, "replace_with_live_models", lambda *_, **__: None)
+    args = {
+        "session": object(),
+        "current_user": SimpleNamespace(id=uuid4()),
+        "provider_policy": policy,
+        "provider_status": {"OpenAI": True},
+        "providers": ["OpenAI"],
+    }
+    unfiltered = await models_api._get_enabled_models_result(**args)
+    filtered = await models_api._get_enabled_models_result(**args, model_type="embeddings")
+    assert (
+        filtered["enabled_models_by_type"]["OpenAI"]["embeddings"]
+        == unfiltered["enabled_models_by_type"]["OpenAI"]["embeddings"]
+    )
