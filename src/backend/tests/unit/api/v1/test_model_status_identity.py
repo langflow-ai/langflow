@@ -1117,3 +1117,160 @@ async def test_unreadable_saved_endpoint_returns_validation_error(monkeypatch):
     assert not result.valid
     assert "OPENAI_BASE_URL" in result.error
     validate.assert_not_called()
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_openrouter_discovery_and_custom_decision_enablement(client, logged_in_headers, monkeypatch):
+    from unittest.mock import Mock
+
+    import requests
+    from lfx.base.models import model_utils, unified_models
+    from lfx.base.models.decision_constants import decision_model_metadata
+    from lfx.base.models.decisions import openrouter
+
+    monkeypatch.setattr(
+        models_api,
+        "_get_enabled_providers_result",
+        AsyncMock(
+            return_value={
+                "provider_status": {"OpenRouter": True},
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        openrouter,
+        "get_models",
+        lambda: [decision_model_metadata("OpenRouter", "author/discovered", "OpenRouter", default=True)],
+    )
+    monkeypatch.setattr(model_utils, "get_provider_variable_value", lambda *_: None)
+    monkeypatch.setattr(unified_models, "get_all_variables_for_provider", lambda *_: {"OPENROUTER_API_KEY": "test-key"})
+    monkeypatch.setattr(requests, "get", Mock(return_value=Mock(status_code=200)))
+    response = await client.get("api/v1/models", params={"model_type": "decision"}, headers=logged_in_headers)
+    assert response.status_code == 200
+    rows = _decision_rows(response)
+    assert ("OpenRouter", "author/discovered") in rows
+
+    response = await client.post(
+        "api/v1/models/enabled_models",
+        headers=logged_in_headers,
+        json=[
+            {
+                "provider": "OpenRouter",
+                "model_id": "author/new:exacto",
+                "model_type": "decision",
+                "enabled": True,
+            }
+        ],
+    )
+    assert response.status_code == 200, response.text
+    response = await client.get("api/v1/models", params={"model_type": "decision"}, headers=logged_in_headers)
+    assert response.status_code == 200
+    rows = _decision_rows(response)
+    assert ("OpenRouter", "author/new:exacto") in rows
+    assert rows[("OpenRouter", "author/new:exacto")]["capabilities"] == ["choice", "boolean", "score"]
+    response = await client.get(
+        "api/v1/models",
+        params={"model_type": "decision", "model_name": "author/discovered"},
+        headers=logged_in_headers,
+    )
+    assert set(_decision_rows(response)) == {("OpenRouter", "author/discovered")}
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_typesafe_models_are_discovered_as_decisions_only(client, logged_in_headers, monkeypatch):
+    from lfx.base.models.decisions import typesafe
+
+    monkeypatch.setattr(
+        models_api,
+        "_get_enabled_providers_result",
+        AsyncMock(
+            return_value={
+                "provider_status": {"TypeSafe": True},
+            }
+        ),
+    )
+    monkeypatch.setattr("lfx.base.models.model_utils.get_provider_variable_value", lambda *_: "account-key")
+
+    def discover(key):
+        assert key == "account-key"
+        return [
+            {
+                "provider": "TypeSafe",
+                "name": "jev-preview",
+                "model_type": "decision",
+                "default": True,
+                "capabilities": ["choice", "boolean", "score"],
+                "icon": "Bot",
+            }
+        ]
+
+    monkeypatch.setattr(typesafe, "get_models", discover)
+    response = await client.get("api/v1/models", params={"model_type": "decision"}, headers=logged_in_headers)
+    assert response.status_code == 200
+    rows = _decision_rows(response)
+    assert ("TypeSafe", "jev-preview") in rows
+    assert ("TypeSafe", "jev-latest") not in rows
+    response = await client.get("api/v1/models", params={"model_type": "llm"}, headers=logged_in_headers)
+    assert response.status_code == 200
+    assert all(group["provider"] != "TypeSafe" for group in response.json())
+
+
+@pytest.mark.parametrize("failed_provider", ["TypeSafe", "OpenRouter"])
+@pytest.mark.parametrize("filtered", [True, False])
+async def test_decision_discovery_failure_keeps_other_providers_usable(monkeypatch, failed_provider, filtered):
+    from unittest.mock import Mock
+
+    from lfx.base.models import model_utils
+    from lfx.base.models.decisions.schema import DecisionConfigurationError
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicyPurpose,
+        ModelProviderPolicySnapshot,
+    )
+
+    provider_ids = frozenset({"openai", "typesafe", "openrouter"})
+    policy = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(),
+        purpose=ModelProviderPolicyPurpose.DISCOVER,
+        candidate_provider_ids=provider_ids,
+        allowed_provider_ids=provider_ids,
+    )
+    monkeypatch.setattr(models_api, "_aresolve_read_policy", AsyncMock(return_value=policy))
+    monkeypatch.setattr(
+        models_api,
+        "_get_enabled_providers_result",
+        AsyncMock(
+            return_value={
+                "provider_status": {"OpenAI": True, failed_provider: True},
+            }
+        ),
+    )
+    monkeypatch.setattr(models_api, "_get_disabled_models", AsyncMock(return_value=set()))
+    monkeypatch.setattr(models_api, "_get_enabled_models", AsyncMock(return_value=set()))
+    monkeypatch.setattr(models_api, "get_default_model", AsyncMock(return_value={}))
+
+    def fetch(_user, provider, kind):
+        if provider == failed_provider and kind == "decision":
+            msg = "Decision discovery unavailable"
+            raise DecisionConfigurationError(msg)
+        return []
+
+    fetch_mock = Mock(side_effect=fetch)
+    monkeypatch.setattr(model_utils, "get_live_models_for_provider", fetch_mock)
+    result = await models_api.list_models(
+        provider=["OpenAI"] if filtered else None,
+        model_type="llm" if filtered else None,
+        session=object(),
+        current_user=SimpleNamespace(id=uuid4()),
+        provider_policy_attributes={},
+    )
+    openai = next(row for row in result if row["provider"] == "OpenAI")
+    assert any(row["metadata"]["model_type"] == "llm" for row in openai["models"])
+    if filtered:
+        assert {row["provider"] for row in result} == {"OpenAI"}
+        assert all(call.args[1] != failed_provider for call in fetch_mock.call_args_list)
+    else:
+        failed = next(row for row in result if row["provider"] == failed_provider)
+        assert failed["is_configured"] is True
+        assert failed["discovery_error"] == "Decision discovery unavailable"
+        assert not any(row["metadata"]["model_type"] == "decision" for row in failed["models"])

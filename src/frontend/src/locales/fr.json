@@ -3324,5 +3324,9 @@
   "triggers.schedule.next": "Prochaine exécution {{time}}",
   "triggers.schedule.notScheduled": "Non planifié",
   "triggers.secret.isSet": "Défini. Affiché uniquement lors de sa création ou de sa rotation.",
-  "triggers.secret.notSet": "Non défini. Les requêtes sont refusées tant que vous n'en créez pas un."
+  "triggers.secret.notSet": "Non défini. Les requêtes sont refusées tant que vous n'en créez pas un.",
+  "modelProviders.openRouterModelHint": "Choisissez un modèle de la liste ou saisissez un identifiant de modèle de décision OpenRouter. OpenRouter détermine les requêtes prises en charge par le modèle.",
+  "modelProviders.searchOrAddModel": "Rechercher ou ajouter un identifiant de modèle…",
+  "modelProviders.addDecisionModel": "Ajouter le modèle de décision « {{name}} »",
+  "modelProviders.decisionDiscoveryError": "Impossible de charger les modèles de décision. Vérifiez les identifiants de ce fournisseur et réessayez. Les autres fournisseurs restent disponibles."
 }

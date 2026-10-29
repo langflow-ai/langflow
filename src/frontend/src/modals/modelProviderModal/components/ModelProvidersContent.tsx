@@ -103,6 +103,7 @@ const ModelProvidersContent = ({
     !!syncedSelectedProvider &&
     typedModelCount === 0 &&
     !awaitingLiveDiscovery &&
+    !syncedSelectedProvider.discovery_error &&
     !hasProviderOwnedEmptyState(syncedSelectedProvider.provider, modelType);
 
   return (
@@ -182,6 +183,11 @@ const ModelProvidersContent = ({
           )}
         >
           <div className="flex h-full flex-col gap-3 overflow-y-auto px-4 pt-4 pb-6 transition-all duration-300 ease-in-out">
+            {syncedSelectedProvider?.discovery_error && (
+              <p role="alert" className="text-sm text-destructive">
+                {t("modelProviders.decisionDiscoveryError")}
+              </p>
+            )}
             <CustomModelProvidersEmptyState
               kind="models"
               show={showNoAvailableModels}
