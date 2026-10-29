@@ -166,7 +166,25 @@ async def test_disconnect_lets_the_job_row_reach_failed(monkeypatch):
             await asyncio.sleep(0.01)
         written.append(status)
 
-    job_service = SimpleNamespace(update_job_status=update_job_status)
+    async def begin_live_job(_job_id, **_kwargs) -> bool:
+        # The guarded IN_PROGRESS flip. Same multi-await shape as a real write, so
+        # the disconnect still has somewhere to land mid-write.
+        await update_job_status(_job_id, JobStatus.IN_PROGRESS)
+        return True
+
+    async def terminalize_live_job(_job_id, status, **_kwargs) -> bool:
+        await update_job_status(_job_id, status)
+        return True
+
+    async def terminalize_or_log(_job_id, status, **_kwargs) -> None:
+        await terminalize_live_job(_job_id, status)
+
+    job_service = SimpleNamespace(
+        update_job_status=update_job_status,
+        begin_live_job=begin_live_job,
+        terminalize_live_job=terminalize_live_job,
+        _terminalize_or_log=terminalize_or_log,
+    )
 
     async def run_as_tracked_job() -> None:
         # The build loop wraps a live run in execute_with_status (see generate_flow_events).
