@@ -553,6 +553,7 @@ module.exports = {
             "Components/bundles-cuga",
             "Components/bundles-datastax",
             "Components/bundles-deepseek",
+            "Components/bundles-discord",
             "Components/bundles-docling",
             "Components/bundles-duckduckgo",
             "Components/bundles-elastic",

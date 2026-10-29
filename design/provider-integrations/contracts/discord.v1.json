@@ -7,7 +7,7 @@
     "provider_id": "discord",
     "display_name": "Discord",
     "icon": "discord",
-    "docs_url": "https://github.com/langflow-ai/langflow/blob/4c3cbec50c5eb9b070db1ff69845fd3fa2baaa80/design/provider-integrations/discord.md",
+    "docs_url": "https://docs.langflow.org/next/bundles-discord",
     "auth_profiles": [
       {
         "id": "discord-bot-token",
@@ -159,7 +159,7 @@
     "src/backend/base/langflow/services/triggers/providers/discord",
     "src/backend/tests/unit/services/triggers/providers/discord",
     "src/backend/tests/unit/services/triggers/test_discord_runtime.py",
-    "design/provider-integrations/discord.md"
+    "docs/docs/Components/bundles-discord.mdx"
   ],
   "owner_acceptance": {
     "status": "pending",
