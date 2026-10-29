@@ -129,6 +129,12 @@ class WorkerHarness:
         # Keep the worker quiet + deterministic; no telemetry/tracing.
         env["LANGFLOW_DEACTIVATE_TRACING"] = "true"
         env["DO_NOT_TRACK"] = "true"
+        # The worker boots the real service stack, and setup_superuser refuses to
+        # start without credentials. Inheriting them from the developer's shell is
+        # why this harness passed locally and died anywhere that does not export
+        # them, CI included. setdefault so a real environment still wins.
+        env.setdefault("LANGFLOW_SUPERUSER", "harness-admin")
+        env.setdefault("LANGFLOW_SUPERUSER_PASSWORD", "harness-only-not-a-real-secret")  # pragma: allowlist secret
         # A REAL OS subprocess is the whole point of this proof; the argv is a
         # fixed literal, not untrusted input. ``start_new_session`` puts the
         # worker in its OWN process group: ``uv run`` spawns a child python that
