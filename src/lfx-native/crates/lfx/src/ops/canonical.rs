@@ -323,6 +323,9 @@ enum Canon<'a> {
     Object(HashMap<&'a str, Canon<'a>>),
     /// A collection ordered for serialization.
     Array(Vec<Canon<'a>>),
+    /// A node of a graph keyed for comparison, taken as it is. The comparison
+    /// makes it canonical only when it differs from the other node as it is.
+    Node(&'a Value),
 }
 
 /// Whether the canonical form keys collections by id, for comparison, or
@@ -351,12 +354,10 @@ fn canonical_graph(flow: &Value, mode: Mode) -> Canon<'_> {
         };
         let entries: Vec<Canon<'_>> = entries
             .iter()
-            .map(|entry| {
-                if key == "nodes" {
-                    canonical_node(entry, mode)
-                } else {
-                    canonical_edge(entry)
-                }
+            .map(|entry| match (key, mode) {
+                ("nodes", Mode::Keyed) => Canon::Node(entry),
+                ("nodes", Mode::Ordered) => canonical_node(entry, mode),
+                _ => canonical_edge(entry),
             })
             .collect();
         let collection = match mode {
@@ -380,7 +381,7 @@ fn canonical_graph(flow: &Value, mode: Mode) -> Canon<'_> {
 /// The string member `key` of a canonical entry, borrowed from the graph.
 fn entry_id<'a>(entry: &Canon<'a>, key: &str) -> Option<&'a str> {
     match entry {
-        Canon::Raw(value) => value.as_object()?.get(key)?.as_str(),
+        Canon::Raw(value) | Canon::Node(value) => value.as_object()?.get(key)?.as_str(),
         Canon::Object(map) => match map.get(key)? {
             Canon::Raw(value) => value.as_str(),
             _ => None,
@@ -483,6 +484,9 @@ enum View<'c, 'a> {
     Array(&'c [Canon<'a>]),
     /// A value the canonical form shares with the graph, or a handle's object.
     Value(&'c Value),
+    /// A node taken as it is ([`Canon::Node`]). Only [`canon_equal`] reads it,
+    /// and it makes the node canonical first when it needs to.
+    Node(&'a Value),
 }
 
 impl<'c, 'a> View<'c, 'a> {
@@ -492,6 +496,7 @@ impl<'c, 'a> View<'c, 'a> {
             Canon::Handle(value) => Self::Value(value),
             Canon::Object(map) => Self::Object(map),
             Canon::Array(items) => Self::Array(items),
+            Canon::Node(node) => Self::Node(node),
         }
     }
 
@@ -500,6 +505,7 @@ impl<'c, 'a> View<'c, 'a> {
             Self::Object(_) => JsonType::Object,
             Self::Array(_) => JsonType::Array,
             Self::Value(value) => JsonType::from(value),
+            Self::Node(_) => unreachable!("{NODE_READ}"),
         }
     }
 
@@ -510,6 +516,7 @@ impl<'c, 'a> View<'c, 'a> {
             Self::Value(Value::Object(map)) => map.len(),
             Self::Value(Value::Array(items)) => items.len(),
             Self::Value(_) => 0,
+            Self::Node(_) => unreachable!("{NODE_READ}"),
         }
     }
 
@@ -518,6 +525,7 @@ impl<'c, 'a> View<'c, 'a> {
             Self::Object(map) => map.get(key).map(Self::of),
             Self::Value(Value::Object(map)) => map.get(key).map(Self::Value),
             Self::Array(_) | Self::Value(_) => None,
+            Self::Node(_) => unreachable!("{NODE_READ}"),
         }
     }
 
@@ -526,6 +534,7 @@ impl<'c, 'a> View<'c, 'a> {
             Self::Array(items) => items.get(index).map(Self::of),
             Self::Value(Value::Array(items)) => items.get(index).map(Self::Value),
             Self::Object(_) | Self::Value(_) => None,
+            Self::Node(_) => unreachable!("{NODE_READ}"),
         }
     }
 
@@ -548,14 +557,23 @@ impl<'c, 'a> View<'c, 'a> {
                 }
             }
             Self::Array(_) | Self::Value(_) => {}
+            Self::Node(_) => unreachable!("{NODE_READ}"),
         }
         Ok(true)
     }
 }
 
+const NODE_READ: &str = "canon_equal makes a node canonical before it reads it";
+
 fn canon_equal(left: View<'_, '_>, right: View<'_, '_>) -> Result<bool> {
-    if let (View::Value(left), View::Value(right)) = (left, right) {
-        return values_equal(left, right);
+    match (left, right) {
+        (View::Value(left), View::Value(right)) => return values_equal(left, right),
+        (View::Node(left), View::Node(right)) => return nodes_equal(left, right),
+        (View::Node(node), other) | (other, View::Node(node)) => {
+            let node = canonical_node(node, Mode::Keyed);
+            return canon_equal(View::of(&node), other);
+        }
+        _ => {}
     }
     let kind = left.json_type();
     if kind != right.json_type() || left.len() != right.len() {
@@ -576,6 +594,24 @@ fn canon_equal(left: View<'_, '_>, right: View<'_, '_>) -> Result<bool> {
     Ok(true)
 }
 
+/// Whether two nodes have the same canonical form.
+///
+/// Two nodes that are equal as they are have the same canonical form, and
+/// the comparison skips building it. The canonical form only leaves out
+/// display-only keys and keys table rows by id: it parses nothing, and it
+/// reads only numbers that [`values_equal`] has checked. Any other answer,
+/// including an error, comes from the canonical forms.
+fn nodes_equal(left: &Value, right: &Value) -> Result<bool> {
+    if matches!(values_equal(left, right), Ok(true)) {
+        return Ok(true);
+    }
+    let (left, right) = (
+        canonical_node(left, Mode::Keyed),
+        canonical_node(right, Mode::Keyed),
+    );
+    canon_equal(View::of(&left), View::of(&right))
+}
+
 fn write_canon(view: View<'_, '_>, out: &mut String) -> Result<()> {
     match view {
         View::Value(value) => write_canonical(value, out),
@@ -591,6 +627,7 @@ fn write_canon(view: View<'_, '_>, out: &mut String) -> Result<()> {
         View::Array(items) => write_list(out, ('[', ']'), items, |item, out| {
             write_canon(View::of(item), out)
         }),
+        View::Node(node) => write_canon(View::of(&canonical_node(node, Mode::Ordered)), out),
     }
 }
 
@@ -802,5 +839,124 @@ mod tests {
         changed["nodes"][1]["data"]["node"]["template"]["x"] = json!(1);
         assert!(!graphs_equal(&left, &changed).unwrap());
         assert_ne!(graph_hash(&left).unwrap(), graph_hash(&changed).unwrap());
+    }
+
+    /// The comparison that makes every node canonical before it compares
+    /// anything: what `graphs_equal` did before it compared nodes as they are.
+    fn graphs_equal_eager(left: &Value, right: &Value) -> Result<bool> {
+        fn eager(canon: Canon<'_>) -> Canon<'_> {
+            match canon {
+                Canon::Node(node) => canonical_node(node, Mode::Keyed),
+                Canon::Object(map) => Canon::Object(
+                    map.into_iter()
+                        .map(|(key, value)| (key, eager(value)))
+                        .collect(),
+                ),
+                Canon::Array(items) => Canon::Array(items.into_iter().map(eager).collect()),
+                other => other,
+            }
+        }
+        let left = eager(canonical_graph(left, Mode::Keyed));
+        let right = eager(canonical_graph(right, Mode::Keyed));
+        canon_equal(View::of(&left), View::of(&right))
+    }
+
+    /// Every graph in a fixture case, nested ones included.
+    fn graphs<'v>(value: &'v Value, out: &mut Vec<&'v Value>) {
+        match value {
+            Value::Object(map) => {
+                if map.get("nodes").is_some_and(Value::is_array) {
+                    out.push(value);
+                }
+                map.values().for_each(|value| graphs(value, out));
+            }
+            Value::Array(items) => items.iter().for_each(|value| graphs(value, out)),
+            _ => {}
+        }
+    }
+
+    /// The graph with its nodes in reverse order, and `number` under `key`
+    /// on each node.
+    fn reshuffled(graph: &Value, key: &str, number: &str) -> Value {
+        let mut graph = graph.clone();
+        if let Some(Value::Array(nodes)) = graph.get_mut("nodes") {
+            nodes.reverse();
+            for node in nodes.iter_mut().filter_map(Value::as_object_mut) {
+                node.insert(key.to_owned(), serde_json::from_str(number).unwrap());
+            }
+        }
+        graph
+    }
+
+    #[test]
+    fn graphs_equal_answers_as_the_eager_comparison() {
+        const FIXTURES: [&str; 13] = [
+            include_str!("../../../../fixtures/apply_cases.json"),
+            include_str!("../../../../fixtures/backward_cases.json"),
+            include_str!("../../../../fixtures/canonical_cases.json"),
+            include_str!("../../../../fixtures/diff_cases.json"),
+            include_str!("../../../../fixtures/editor_cases.json"),
+            include_str!("../../../../fixtures/limit_cases.json"),
+            include_str!("../../../../fixtures/merge_cases.json"),
+            include_str!("../../../../fixtures/property_cases.json"),
+            include_str!("../../../../fixtures/repair_cases.json"),
+            include_str!("../../../../fixtures/restore_cases.json"),
+            include_str!("../../../../fixtures/table_cases.json"),
+            include_str!("../../../../fixtures/validation_cases.json"),
+            include_str!("../../../../fixtures/write_cases.json"),
+        ];
+        let hidden = NODE_SCHEMA
+            .node_view_state
+            .iter()
+            .min()
+            .expect("a node view-state key");
+        assert!(!NODE_SCHEMA.node_view_state.contains("compared"));
+        let mut pairs = 0;
+        for text in FIXTURES {
+            let file: Value = serde_json::from_str(text).unwrap();
+            let cases = file
+                .as_object()
+                .into_iter()
+                .flat_map(|sections| sections.values())
+                .filter_map(Value::as_array)
+                .flatten();
+            for case in cases {
+                let mut found = Vec::new();
+                graphs(case, &mut found);
+                // Equal in canonical form but not as they are: a display-only
+                // key, with a finite number and with one that is not. And a
+                // number that is not finite where the comparison reads it,
+                // which it refuses.
+                let shuffled: Vec<Value> = found
+                    .iter()
+                    .flat_map(|graph| {
+                        [
+                            reshuffled(graph, hidden, "1"),
+                            reshuffled(graph, hidden, "1e400"),
+                            reshuffled(graph, "compared", "1e400"),
+                        ]
+                    })
+                    .collect();
+                let all: Vec<&Value> = found.into_iter().chain(&shuffled).collect();
+                for left in &all {
+                    for right in &all {
+                        // Two graphs that differ and hold a number that is not
+                        // finite are refused, or not equal, by whichever the
+                        // comparison meets first, which hash order decides. So
+                        // the answers must agree whenever either one is equal,
+                        // and two errors must be the same error.
+                        let (new, old) =
+                            (graphs_equal(left, right), graphs_equal_eager(left, right));
+                        let agree = match (&new, &old) {
+                            (Ok(true), _) | (_, Ok(true)) | (Err(_), Err(_)) => new == old,
+                            _ => true,
+                        };
+                        assert!(agree, "{new:?} against {old:?}\n{left}\n{right}");
+                        pairs += 1;
+                    }
+                }
+            }
+        }
+        assert!(pairs > 10_000, "only {pairs} pairs");
     }
 }
