@@ -213,6 +213,12 @@ def token_payload():
     )
 
 
+@pytest.mark.parametrize("project_id", ["group/project", "-1", str(2**63)])
+def test_invalid_project_id_names_the_field(project_id):
+    with pytest.raises(ValueError, match="Project ID must be a positive integer"):
+        normalize_config("gitlab.issue", {"connection": "gitlab/work", "project_id": project_id})
+
+
 @pytest.mark.parametrize("fault", [None, "scope", "expired", "revoked", "bot", "identity", "no-expiry", "network"])
 async def test_manual_token_uses_actual_scope_identity_origin_and_expiry(monkeypatch, fault):
     expiry = (datetime.now(timezone.utc) + timedelta(days=10)).strftime("%Y-%m-%d")
