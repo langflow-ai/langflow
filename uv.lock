@@ -44,6 +44,7 @@ members = [
     "lfx-anthropic",
     "lfx-arxiv",
     "lfx-azure",
+    "lfx-bowmark",
     "lfx-bundles",
     "lfx-cohere",
     "lfx-confluent",
@@ -8937,6 +8938,7 @@ audio = [
 ]
 bundles = [
     { name = "lfx-arxiv" },
+    { name = "lfx-bowmark" },
     { name = "lfx-bundles", extra = ["all-no-torch"] },
     { name = "lfx-confluent" },
     { name = "lfx-duckduckgo" },
@@ -9048,6 +9050,7 @@ requires-dist = [
     { name = "lfx-anthropic", editable = "src/bundles/anthropic" },
     { name = "lfx-arxiv", marker = "extra == 'bundles'", editable = "src/bundles/arxiv" },
     { name = "lfx-azure", editable = "src/bundles/azure" },
+    { name = "lfx-bowmark", marker = "extra == 'bundles'", editable = "src/bundles/bowmark" },
     { name = "lfx-bundles", extras = ["all-no-torch"], marker = "extra == 'bundles'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-cohere", editable = "src/bundles/cohere" },
     { name = "lfx-confluent", marker = "extra == 'bundles'", editable = "src/bundles/confluent" },
@@ -10455,6 +10458,21 @@ dependencies = [
 requires-dist = [
     { name = "langchain-azure-ai", specifier = ">=1.1.0,<2.0.0" },
     { name = "langchain-openai", specifier = ">=1.1.6" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-bowmark"
+version = "0.1.0"
+source = { editable = "src/bundles/bowmark" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
 ]
 

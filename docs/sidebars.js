@@ -545,6 +545,7 @@ module.exports = {
             "Components/bundles-azure",
             "Components/bundles-baidu",
             "Components/bundles-bing",
+            "Components/bundles-bowmark",
             "Components/bundles-cassandra",
             "Components/bundles-cleanlab",
             "Components/bundles-codeagents",
