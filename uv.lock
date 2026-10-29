@@ -10151,7 +10151,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.3.1"
+version = "1.3.2"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -10501,6 +10501,9 @@ vertexai = [
 vlmrun = [
     { name = "vlmrun", extra = ["all"] },
 ]
+wally = [
+    { name = "langchain-openai" },
+]
 weaviate = [
     { name = "langchain-weaviate" },
     { name = "weaviate-client" },
@@ -10590,6 +10593,7 @@ requires-dist = [
     { name = "langchain-openai", marker = "extra == 'novita'", specifier = ">=1.1.6" },
     { name = "langchain-openai", marker = "extra == 'openrouter'", specifier = ">=1.1.6" },
     { name = "langchain-openai", marker = "extra == 'orcarouter'", specifier = ">=1.1.6" },
+    { name = "langchain-openai", marker = "extra == 'wally'", specifier = ">=1.1.6" },
     { name = "langchain-openai", marker = "extra == 'xai'", specifier = ">=1.1.6" },
     { name = "langchain-perplexity", marker = "extra == 'perplexity'", specifier = ">=1.0.0,<2.0.0" },
     { name = "langchain-pinecone", marker = "python_full_version < '3.14' and extra == 'pinecone'", specifier = "~=0.2.13" },
@@ -10725,6 +10729,8 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["vertexai"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["vlmrun"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["vlmrun"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["wally"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["wally"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["weaviate"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["weaviate"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["wikipedia"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -10781,7 +10787,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "faiss", "figranium", "funasr", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "mrscraper", "needle", "notdiamond", "notion", "novita", "nvidia", "olivya", "ollama", "openrouter", "orcarouter", "perplexity", "pgvector", "pinecone", "plivo", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "spider", "supabase", "tavily", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vlmrun", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all", "all-no-torch"]
+provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "faiss", "figranium", "funasr", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "mrscraper", "needle", "notdiamond", "notion", "novita", "nvidia", "olivya", "ollama", "openrouter", "orcarouter", "perplexity", "pgvector", "pinecone", "plivo", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "spider", "supabase", "tavily", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vlmrun", "wally", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all", "all-no-torch"]
 
 [[package]]
 name = "lfx-cohere"
