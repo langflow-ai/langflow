@@ -1,0 +1,121 @@
+---
+title: Confluence Cloud components
+slug: /bundles-confluence
+---
+
+The Confluence Cloud bundle reads, creates, and updates published pages. Its triggers observe new pages and page versions in an approved space. Components run as the connected Atlassian user and keep that user's Confluence permissions.
+
+This preview uses the **Confluence Integrations** category. Existing Confluence components keep their original category and saved-flow identities.
+
+## Supported deployments
+
+Install `lfx-confluence` with a matching Langflow release that includes the connection and trigger runtime. These components require Langflow 1.14 or later. Restart the API and listener processes after installation. Run `lfx extension list` to check bundle discovery.
+
+| Deployment | Actions | Triggers |
+| --- | --- | --- |
+| Self-managed Langflow server | Supported | Authenticated polling |
+| Hosted Langflow | Supported with an operator-configured app | Unavailable in this preview |
+| Desktop or headless `lfx run` | Unavailable | Unavailable |
+| Confluence Server or Data Center | Unavailable | Unavailable |
+
+Exporting a flow does not make its connection usable in headless LFX. Run it on a supported Langflow server.
+
+## Components and permissions
+
+| Component | Inputs and behavior | Confluence scope |
+| --- | --- | --- |
+| Confluence: Search Pages | List current pages in an approved Space ID, optionally matching an exact title. Use the returned cursor for the next page. | `read:page:confluence` |
+| Confluence: Read Page | Read a numeric Page ID in the selected Space ID, including its storage-format body. | `read:page:confluence` |
+| Confluence: Create Page | Set Space ID, title, and storage-format body. An optional parent must belong to the same space. | Read and `write:page:confluence` |
+| Confluence: Update Page | Supply Page ID, Space ID, title, body, and the expected current version. A version conflict fails without retrying the write. | Read and `write:page:confluence` |
+| Confluence: On Page Created | Observe newly created pages after an initial baseline. | `read:page:confluence` |
+| Confluence: On Page Updated | Observe higher versions of pages already seen by this trigger. | `read:page:confluence` |
+
+Every connection also needs `read:confluence-user` for account verification and `offline_access` for refresh credentials. Grant write permission only for flows that write pages. OAuth scopes do not grant additional space access or override page restrictions. See [Atlassian's Confluence scopes](https://developer.atlassian.com/cloud/confluence/scopes-for-oauth-2-3LO-and-forge-apps/).
+
+Space IDs and Page IDs are positive numeric strings with at most 19 digits. Space keys such as `DOCS` and page URLs are not IDs. Ask your Confluence administrator for approved numeric space IDs. A known page's REST v2 response includes its `spaceId` in the [page API](https://developer.atlassian.com/cloud/confluence/rest/v2/api-group-page/).
+
+## Configure the Atlassian application
+
+The deployment operator registers one confidential OAuth 2.0 application for the approved Confluence Cloud site.
+
+1. Open the [Atlassian developer console](https://developer.atlassian.com/console/myapps/) and create an OAuth 2.0 integration. For these account-level grants, use the account-level grant option when prompted.
+2. Under **Authorization**, configure OAuth 2.0 authorization code grants and register the callback `https://YOUR_LANGFLOW_HOST/api/v1/connections/oauth/confluence/callback`.
+3. Under **Permissions**, add the Confluence APIs with `read:page:confluence`, `write:page:confluence`, and `read:confluence-user`. The authorization request also includes `offline_access` so Atlassian returns a refresh token.
+4. Copy the client ID and client secret from **Settings** into the server's secret configuration. Enable distribution if other users need to authorize the app.
+
+Follow [Atlassian's OAuth setup guide](https://developer.atlassian.com/cloud/confluence/oauth-2-3lo-apps/) for application permissions and distribution. The configured callback must match the application exactly.
+
+Get the site's Cloud ID from `https://YOUR_SITE.atlassian.net/_edge/tenant_info`. Use the `cloudId` UUID, not the site hostname or a Space ID. Atlassian documents this endpoint in [Retrieve my Atlassian site's Cloud ID](https://support.atlassian.com/jira/kb/retrieve-my-atlassian-sites-cloud-id/).
+
+Set these values on the Langflow server and every listener process. Replace the example UUID and space IDs with your site's values.
+
+```bash
+LANGFLOW_CONFLUENCE_CLOUD_ID=12345678-1234-1234-1234-123456789abc
+LANGFLOW_CONFLUENCE_SPACE_IDS=10,20
+```
+
+The allowlist accepts between 1 and 100 numeric space IDs. Configure `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS` as a JSON object with this registration.
+
+```json
+{
+  "confluence-work": {
+    "provider": "confluence",
+    "profile": "user",
+    "owner": "customer",
+    "context": "self_managed",
+    "client_type": "confidential",
+    "client_id": "YOUR_CLIENT_ID",
+    "client_secret": "YOUR_CLIENT_SECRET",
+    "redirect_uri": "https://YOUR_LANGFLOW_HOST/api/v1/connections/oauth/confluence/callback",
+    "tenant": "12345678-1234-1234-1234-123456789abc",
+    "allowed_tenants": ["12345678-1234-1234-1234-123456789abc"],
+    "scopes": ["offline_access", "read:confluence-user", "read:page:confluence", "write:page:confluence"]
+  }
+}
+```
+
+Keep these credentials in server secret storage. The API and listeners need the same registration, Cloud ID, space allowlist, database, and `LANGFLOW_SECRET_KEY`. Restart them after configuration changes.
+
+For hosted actions, set the registration context and `LANGFLOW_CONNECTION_OAUTH_CONTEXT` to `hosted`. Langflow-owned hosted registrations also require `LANGFLOW_CONNECTION_OAUTH_HOSTED_ENABLED=true`.
+
+## Connect an account and run an action
+
+1. Open **Settings > Connections**, select **Add connection**, and choose Confluence Cloud.
+2. Choose the configured registration and a connection name such as `work`. Select the needed actions and retain the required `offline_access` permission.
+3. Complete Atlassian consent with a user who can access the configured Cloud site and spaces.
+4. Confirm the connection is ready. The account display uses the verified name or email when available.
+5. Add a Confluence component to a flow and select the connection. For **Confluence: Read Page**, enter its Space ID and Page ID and run the component.
+
+A `confluence/work` reference identifies the saved connection. It does not contain its credentials. Granting read actions alone omits write scope from consent.
+
+Create and update accept titles up to 255 UTF-8 bytes and storage bodies up to 512 KiB. Reads accept storage bodies up to 1 MiB. Writes are never retried automatically after an uncertain response. Check Confluence before retrying a timed-out write.
+
+## Enable polling triggers
+
+1. Start the listener with `langflow listeners`, or configure `LANGFLOW_LISTENERS_MODE=subprocess` on the server.
+2. Save a flow containing **Confluence: On Page Created** or **Confluence: On Page Updated**. Select the connection and an approved Space ID.
+3. Allow background execution with **Allow background runs** in the trigger, or **Settings > Connections > Actions > Allow scheduled and deployed runs**.
+4. Enable the trigger and check its status under **Settings > Triggers**.
+
+Polling uses a minimum and default interval of 30 seconds. `LANGFLOW_LISTENER_POLL_INTERVAL_S` can increase the interval. Work queues, retries, and provider delays can make observations arrive later.
+
+The first successful complete scan records a baseline without running the flow. Each later scan reads current published pages in the chosen space. A scan accepts at most 50 requests of 100 pages and retains at most 5,000 distinct page IDs. An incomplete scan does not advance the saved state. A space over these limits stops that trigger without invalidating its connection or other triggers.
+
+## Event identity and recovery
+
+Created events use the immutable page ID and the identity `created`. The page's original creation time must fall after the baseline began. Moving an older page into the space does not create a new-page event. Updated events use the page ID and version number. A page first becoming visible is recorded before subsequent higher versions can emit updates.
+
+These are observations of current state. Several edits between polls can produce one observed version. Deleted pages, short-lived pages, and changes during permission gaps can be missed. Pause and resume starts a fresh silent baseline. Event replay covers recorded events only and cannot recover missing Confluence history. Delivery does not promise exactly-once downstream side effects.
+
+| Status or failure | Recovery |
+| --- | --- |
+| Authorization fails because no refresh token was returned | Reconnect and approve required `offline_access`. Confirm the app and registration scopes. |
+| App access was revoked or the connection needs reauthorization | Reconnect in **Settings > Connections**. Then open **Settings > Triggers** and select **Resume** for each **Ready to resume** trigger. Reconnect alone does not resume it. |
+| Background execution is denied | Allow scheduled and deployed runs on the connection, then resume the trigger. |
+| Space ID is invalid or unapproved | Enter a numeric Space ID in the operator's allowlist. Space keys and URLs are rejected. |
+| Space exceeds a scan or retained-ID limit | Choose a smaller approved space or re-enable the trigger for a fresh baseline where appropriate. |
+| Provider outage or rate limit | Wait for retry and restore provider access. These failures alone do not mean the grant was revoked. |
+| Update reports a version conflict | Read the page again, reconcile the content, and submit its current version. |
+
+This preview accepts no Confluence push webhooks. Polling does not require a public callback for page events. The OAuth callback is still required for account authorization.

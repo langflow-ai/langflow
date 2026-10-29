@@ -7,7 +7,7 @@
     "provider_id": "confluence",
     "display_name": "Confluence Cloud",
     "icon": "Confluence",
-    "docs_url": "https://github.com/langflow-ai/langflow/blob/d4dffe227d3ec238f430736d7ca6d16bbf084c9b/src/bundles/confluence/README.md#setup",
+    "docs_url": "https://docs.langflow.org/next/bundles-confluence",
     "auth_profiles": [
       {
         "id": "user",
@@ -187,6 +187,7 @@
     "Each source retains at most 5000 distinct observed IDs and completes at most 50 requests of 100 pages. Partial snapshots never advance cursors."
   ],
   "evidence_paths": [
+    "docs/docs/Components/bundles-confluence.mdx",
     "src/bundles/confluence/tests/test_contract.py",
     "src/backend/tests/unit/services/triggers/test_confluence_provider.py",
     "src/backend/tests/unit/services/triggers/test_confluence_lifecycle.py",

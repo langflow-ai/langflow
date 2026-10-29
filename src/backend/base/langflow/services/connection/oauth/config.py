@@ -16,14 +16,18 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 #: ``provider-unavailable`` means the exchange failed without a confirmed
 #: credential rejection. Neither should disarm a listener or require reconnect.
 OAuthErrorReason = Literal["registration-unavailable", "provider-unavailable"]
+OAuthErrorCode = Literal["oauth-refresh-token-missing"]
 
 
 class OAuthError(ValueError):
     """A deliberately credential-free error safe for API responses."""
 
-    def __init__(self, message: str, *, reason: OAuthErrorReason | None = None) -> None:
+    def __init__(
+        self, message: str, *, reason: OAuthErrorReason | None = None, code: OAuthErrorCode | None = None
+    ) -> None:
         super().__init__(message)
         self.reason: OAuthErrorReason | None = reason
+        self.code = code
 
 
 class OAuthRegistration(BaseModel):

@@ -45,9 +45,7 @@ async def parse_token(registration, body, *, refresh):  # noqa: ARG001 - rotatin
         or not body["access_token"]
         or len(body["access_token"]) > MAX_TOKEN_LENGTH
         or not re.fullmatch(r"[!-~]+", body["access_token"])
-        or not isinstance(body.get("refresh_token"), str)
-        or not body["refresh_token"]
-        or len(body["refresh_token"]) > MAX_TOKEN_LENGTH
+        or (isinstance(body.get("refresh_token"), str) and len(body["refresh_token"]) > MAX_TOKEN_LENGTH)
         or type(body.get("expires_in")) is not int
         or not 0 < body["expires_in"] <= MAX_TOKEN_LIFETIME
         or not isinstance(body.get("scope"), str)
@@ -55,6 +53,9 @@ async def parse_token(registration, body, *, refresh):  # noqa: ARG001 - rotatin
     ):
         msg = "Atlassian did not return a valid refreshable Confluence grant."
         raise OAuthError(msg, reason="provider-unavailable")
+    if not isinstance(body.get("refresh_token"), str) or not body["refresh_token"]:
+        msg = "Atlassian did not return a Confluence refresh token. Reconnect with the required offline_access scope."
+        raise OAuthError(msg, reason="provider-unavailable", code="oauth-refresh-token-missing")
     token = {key: body[key] for key in ("access_token", "refresh_token", "expires_in", "scope")}
     try:
         async with http_client() as http:
@@ -114,4 +115,6 @@ OAUTH = OAuthAdapter(
     authorization_params=lambda _registration: {"audience": "api.atlassian.com", "prompt": "consent"},
     token_encoding="json",  # noqa: S106 - serialization format
     supports_pkce=False,
+    required_scopes=("offline_access",),
+    refresh_rejection_errors=frozenset({"unauthorized_client"}),
 )

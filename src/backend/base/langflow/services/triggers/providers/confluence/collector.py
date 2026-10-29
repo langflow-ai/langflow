@@ -39,9 +39,13 @@ def normalize_config(kind, config):
         ref = ConnectionRef.parse(config.get("connection", ""))
         if ref.provider != "confluence":
             raise ValueError
+    except (ValueError, TypeError):
+        msg = "Choose an owned Confluence connection."
+        raise ValueError(msg) from None
+    try:
         space = approved_space(config.get("space_id"))
-    except (ValueError, TypeError, IntegrationError):
-        msg = "Choose an owned Confluence connection and an approved space."
+    except IntegrationError as exc:
+        msg = f"Space ID. {exc}"
         raise ValueError(msg) from None
     return {**config, "connection": str(ref), "space_id": space, "delivery_mode": "poll"}
 

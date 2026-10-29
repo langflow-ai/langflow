@@ -278,7 +278,8 @@ async def test_shared_oauth_broker_uses_json_and_preserves_rotation(monkeypatch)
     async def exchange(url, data, **kwargs):
         calls.append(data)
         assert url == "https://auth.atlassian.com/oauth/token"
-        assert kwargs == {"json_body": True}
+        assert kwargs["json_body"] is True
+        assert ("unauthorized_client" in kwargs["rejections"]) == (data["grant_type"] == "refresh_token")
         assert "code_verifier" not in data
         return grant()
 
@@ -306,8 +307,50 @@ def test_saved_canvas_defaults_select_polling_and_invalid_space_is_a_validation_
     raw = {"connection": "confluence/work", "space_id": "10", "delivery_mode": None}
     assert normalize_source_config("confluence.page_updated", raw)["delivery_mode"] == "poll"
     raw["space_id"] = "not-a-number"
-    with pytest.raises(ValueError, match="approved space"):
+    with pytest.raises(ValueError, match=r"Space ID.*positive Confluence numeric ID"):
         normalize_source_config("confluence.page_updated", raw)
+
+
+@pytest.mark.parametrize("space_id", ["SPACE", "-1", "10000000000000000000"])
+def test_invalid_space_id_names_the_field(space_id):
+    with pytest.raises(ValueError, match=r"Space ID.*positive Confluence numeric ID"):
+        collector.normalize_config("confluence.page_created", {"connection": "confluence/work", "space_id": space_id})
+
+
+@pytest.mark.parametrize("refresh_token", [None, "", 123])
+async def test_missing_refresh_token_explains_required_consent(monkeypatch, refresh_token):
+    monkeypatch.setattr(oauth, "http_client", lambda: pytest.fail("Unexpected API request"))
+    with pytest.raises(OAuthError, match="offline_access") as caught:
+        await oauth.parse_token(registration(), {**grant(), "refresh_token": refresh_token}, refresh=False)
+    assert caught.value.code == "oauth-refresh-token-missing"
+
+
+@pytest.mark.parametrize("refresh", [False, True])
+async def test_atlassian_unauthorized_client_requires_reconnect_only_on_refresh(monkeypatch, refresh):
+    from langflow.services.connection.oauth import providers
+    from langflow.services.connection.oauth.config import OAuthRegistration
+    from langflow.services.triggers.providers import registry
+
+    monkeypatch.setattr(registry, "all_providers", lambda: (PROVIDER,))
+    selected = OAuthRegistration(
+        provider="confluence",
+        client_id="operator-app",
+        client_secret="synthetic-client-secret",  # noqa: S106  # pragma: allowlist secret
+        redirect_uri="https://langflow.example/api/v1/connections/oauth/confluence/callback",
+        tenant=SITE,
+        scopes=list(SCOPES),
+    )
+    real_client = httpx.AsyncClient
+    transport = httpx.MockTransport(lambda _request: httpx.Response(403, json={"error": "unauthorized_client"}))
+    monkeypatch.setattr(providers.httpx, "AsyncClient", lambda **kwargs: real_client(transport=transport, **kwargs))
+    with pytest.raises(OAuthError) as caught:
+        await providers.exchange(
+            selected,
+            code=None if refresh else "synthetic-code",
+            refresh_token="synthetic-previous" if refresh else None,
+            previous_scopes=list(SCOPES),
+        )
+    assert caught.value.reason == (None if refresh else "provider-unavailable")
 
 
 @pytest.mark.parametrize(

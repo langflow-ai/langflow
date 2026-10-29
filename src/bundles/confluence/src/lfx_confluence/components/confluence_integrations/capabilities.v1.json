@@ -3,7 +3,7 @@
   "provider_id": "confluence",
   "display_name": "Confluence Cloud",
   "icon": "Confluence",
-  "docs_url": "https://github.com/langflow-ai/langflow/blob/d4dffe227d3ec238f430736d7ca6d16bbf084c9b/src/bundles/confluence/README.md#setup",
+  "docs_url": "https://docs.langflow.org/next/bundles-confluence",
   "auth_profiles": [
     {
       "id": "user",

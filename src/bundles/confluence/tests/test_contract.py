@@ -2,6 +2,8 @@
 
 import importlib.abc
 import json
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -32,6 +34,62 @@ from lfx_confluence.components.confluence_integrations import (
 )
 from lfx_confluence.manifest import load_manifest
 from lfx_confluence.schema import approved_space, cloud_id, next_cursor, numeric_id
+
+
+@pytest.mark.parametrize("injected", [False, True])
+@pytest.mark.parametrize("check_variables", [False, True])
+def test_exported_cli_flow_rejects_headless_before_credentials(tmp_path, *, injected, check_variables):
+    import lfx_confluence
+    from lfx.components.input_output import ChatInput, ChatOutput
+    from lfx.graph import Graph
+
+    chat = ChatInput(_id="chat").set(input_value="1")
+    confluence = ConfluenceReadPageComponent(_id="confluence", connection="confluence/work", space_id="10").set(
+        page_id=chat.message_response
+    )
+    output = ChatOutput(_id="output").set(input_value=confluence.read_page)
+    exported = Graph(start=chat, end=output).dump()
+    for node in exported["data"]["nodes"]:
+        code = node["data"]["node"]["template"]["code"]
+        code["value"] = code["value"].splitlines()
+    path = tmp_path / "confluence.json"
+    path.write_text(json.dumps(exported), encoding="utf-8")
+    env = os.environ.copy()
+    env["LANGFLOW_ALLOW_CUSTOM_COMPONENTS"] = "true"
+    # Source-only CI discovers the same extension manifest as an installed wheel.
+    env["LANGFLOW_SEED_DIR"] = str(Path(lfx_confluence.__file__).parent.parent)
+    env["DO_NOT_TRACK"] = "1"
+    for name in ("LF_CONNECTION__CONFLUENCE__WORK", "LANGFLOW_CONFLUENCE_CLOUD_ID", "LANGFLOW_CONFLUENCE_SPACE_IDS"):
+        env.pop(name, None)
+    if injected:
+        env["LF_CONNECTION__CONFLUENCE__WORK"] = "synthetic-confluence-access"
+        env["LANGFLOW_CONFLUENCE_CLOUD_ID"] = SITE
+        env["LANGFLOW_CONFLUENCE_SPACE_IDS"] = "10"
+    result = subprocess.run(  # noqa: S603 - fixed CLI arguments and test-owned flow
+        [
+            sys.executable,
+            "-m",
+            "lfx",
+            "run",
+            str(path),
+            "--input-value",
+            "1",
+            "--check-variables" if check_variables else "--no-check-variables",
+        ],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    assert result.returncode == 1
+    response = json.loads(result.stdout)
+    message = (
+        "Confluence Cloud connections are not available in headless lfx. Run this flow on a supported Langflow server."
+    )
+    assert message in response["exception_message"]
+    assert "LF_CONNECTION" not in result.stdout
+    assert "Traceback" not in result.stdout + result.stderr
 
 
 @pytest.mark.parametrize(
