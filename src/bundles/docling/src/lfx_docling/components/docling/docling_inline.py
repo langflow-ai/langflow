@@ -127,7 +127,7 @@ class DoclingInlineComponent(BaseFileComponent):
 
             try:
                 from docling.datamodel.base_models import ConversionStatus, InputFormat
-                from docling.datamodel.pipeline_options import PdfPipelineOptions
+                from docling.datamodel.pipeline_options import OcrMode, PdfPipelineOptions
                 from docling.document_converter import DocumentConverter, FormatOption, PdfFormatOption
             except ImportError as e:
                 print(json.dumps({"ok": False, "error": f"Docling is not installed: {e}"}))
@@ -145,7 +145,7 @@ class DoclingInlineComponent(BaseFileComponent):
                     except Exception:
                         pipe.do_ocr = False
                 if pipe.do_ocr and force_ocr:
-                    pipe.ocr_options.force_full_page_ocr = True
+                    pipe.ocr_options.mode = OcrMode.FULL_PAGE
 
                 pipe.do_picture_classification = do_picture_cls
 
