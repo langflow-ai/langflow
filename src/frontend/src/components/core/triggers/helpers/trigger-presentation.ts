@@ -10,17 +10,22 @@ import type {
  * Blocked configuration needs attention, while ordinary pending setup is busy.
  * Dead triggers share the Error treatment.
  */
-export type TriggerBadgeState = Exclude<TriggerState, "dead"> | "blocked";
+export type TriggerBadgeState =
+  | Exclude<TriggerState, "dead">
+  | "blocked"
+  | "ready_to_resume";
 
 export const badgeStateOf = (
   state: TriggerState,
   reason?: TriggerRead["reason"],
 ): TriggerBadgeState =>
-  state === "pending" && reason === "config_invalid"
-    ? "blocked"
-    : state === "dead"
-      ? "error"
-      : state;
+  state === "needs_reconnect" && reason === "ready_to_resume"
+    ? "ready_to_resume"
+    : state === "pending" && reason === "config_invalid"
+      ? "blocked"
+      : state === "dead"
+        ? "error"
+        : state;
 
 interface BadgeStyle {
   icon: string;
@@ -53,6 +58,10 @@ export const TRIGGER_BADGE_STYLE: Record<TriggerBadgeState, BadgeStyle> = {
   needs_reconnect: {
     icon: "Unplug",
     className: "bg-accent-amber text-accent-amber-foreground border-0",
+  },
+  ready_to_resume: {
+    icon: "Pause",
+    className: "bg-muted text-muted-foreground border-0",
   },
   error: {
     icon: "TriangleAlert",
@@ -196,7 +205,7 @@ export const sourceIconOf = (
     case "telegram":
       return "Send";
     case "salesforce":
-      return "Cloud";
+      return "Salesforce";
     case "servicenow":
       return "Server";
     case "jira":

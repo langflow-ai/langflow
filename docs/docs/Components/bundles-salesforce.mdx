@@ -1,0 +1,173 @@
+---
+title: Salesforce components
+slug: /bundles-salesforce
+---
+
+The Salesforce bundle provides three record actions and one record change trigger through REST API v66.0.
+Each component uses a [managed connection](../Develop/connections.mdx) bound to one Salesforce org.
+The bundle is in preview.
+
+## Supported contexts
+
+| Context | Actions | Record change trigger |
+| --- | --- | --- |
+| Self-managed Langflow | Preview with confidential OAuth | Preview with a running Langflow listener |
+| Hosted Langflow | Preview with confidential OAuth | Unsupported |
+| Langflow Desktop | Unsupported | Unsupported |
+| Headless `lfx run` or `lfx serve` | Unsupported | Unsupported |
+| Experience Cloud or Salesforce Government Cloud endpoints | Unsupported | Unsupported |
+
+Use Langflow 1.14 with the matching `lfx-salesforce` bundle installed in the API and listener environments.
+Restart the processes after installation and confirm the bundle appears in `lfx extension list`.
+The org must have REST API access and a supported My Domain origin.
+See [Salesforce's supported editions and permissions](https://developer.salesforce.com/docs/platform/api-rest/guide/intro-rest-compatible-editions.html) for edition requirements.
+
+## Capabilities and fields
+
+| Component | Inputs and result |
+| --- | --- |
+| **Salesforce: Read Record** | Select **Object**, enter a 15- or 18-character **Record ID**, and optionally select comma-separated **Fields**. Returns the record's allowed fields. |
+| **Salesforce: Create Record** | Select **Object** and provide a data object in **Field Values**. Returns the new record ID and success status. |
+| **Salesforce: Update Record** | Select **Object**, enter **Record ID**, and provide replacement **Field Values**. Updates that one record. |
+| **Salesforce: On Record Change** | Select **Object** and optional **Fields**. Observes added or changed record IDs and returns their latest visible state. |
+
+| Object | Supported writable fields |
+| --- | --- |
+| Account | `Name`, `Description`, `Phone`, `Website`, `Industry` |
+| Contact | `FirstName`, `LastName`, `Email`, `Phone`, `Title`, `AccountId` |
+| Lead | `FirstName`, `LastName`, `Company`, `Email`, `Phone`, `Status` |
+| Opportunity | `Name`, `StageName`, `CloseDate`, `Amount`, `AccountId` |
+| Case | `Subject`, `Description`, `Status`, `Priority`, `Origin`, `ContactId` |
+
+Read and trigger results also include `Id`, `CreatedDate`, `LastModifiedDate`, and `SystemModstamp`.
+Leaving **Fields** empty selects all supported fields for the object.
+Salesforce still enforces sharing, field access, object permissions, picklists, validation rules, and required fields.
+The trigger also requires an object that Salesforce describes as replicatable.
+An object with required custom fields outside the supported list cannot be created through this bundle.
+
+Custom objects and fields, arbitrary SOQL, query filters, deletion, upsert, bulk writes, attachments, and relationship traversal are unsupported.
+Use downstream flow conditions to filter the returned record state.
+
+## Configure the Salesforce app
+
+1. In Salesforce **Setup**, find **External Client App Manager** and select **New External Client App**.
+   Enter the app name and contact details, then enable OAuth in its API settings.
+   Existing connected apps can also be used. Salesforce restricts new connected app creation starting in Spring 2026.
+2. Configure the authorization code flow with a client secret and S256 PKCE.
+   Set the callback to `https://YOUR_LANGFLOW_HOST/api/v1/connections/oauth/salesforce/callback`.
+3. Add the OAuth scopes `api`, `id`, and `refresh_token`.
+   The last scope permits access-token renewal and is required even for action-only connections.
+4. Save the app, record its client ID and secret, and configure its permitted users and refresh-token policy.
+   The authorizing user needs API access and the intended object and field permissions.
+
+See [Salesforce's app and OAuth setup guide](https://developer.salesforce.com/docs/platform/api-rest/guide/intro-oauth-and-connected-apps.html) and [refresh-token flow](https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_refresh_token_flow.htm&language=en_US&type=5).
+OAuth scopes do not grant object access by themselves.
+
+### Configure the Langflow server
+
+Set `LANGFLOW_SALESFORCE_ORIGIN` to the org's exact My Domain HTTPS origin, such as `https://example.my.salesforce.com`.
+For a sandbox, use its My Domain origin, such as `https://example--uat.sandbox.my.salesforce.com`.
+The configured origin binds consent, refresh, and API calls to that org.
+Canvas inputs cannot change it.
+
+Load this object into `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS` through your deployment's secret manager.
+Replace the placeholders and use the same exact origin for `tenant` and `allowed_tenants`.
+
+```json
+{
+  "salesforce-work": {
+    "provider": "salesforce",
+    "profile": "user",
+    "owner": "customer",
+    "context": "self_managed",
+    "client_type": "confidential",
+    "client_id": "YOUR_CLIENT_ID",
+    "client_secret": "YOUR_CLIENT_SECRET",
+    "redirect_uri": "https://YOUR_LANGFLOW_HOST/api/v1/connections/oauth/salesforce/callback",
+    "tenant": "https://example.my.salesforce.com",
+    "allowed_tenants": ["https://example.my.salesforce.com"],
+    "scopes": ["api", "id", "refresh_token"]
+  }
+}
+```
+
+The registration requires exactly these three scopes.
+Match the app callback exactly, including its hostname, port, and path.
+Keep the client secret outside saved flows and frontend configuration.
+Use the same org origin, registration, database, and `LANGFLOW_SECRET_KEY` on the API and every listener.
+Restart all processes after changing the origin or registration.
+
+For hosted actions, set both the registration context and `LANGFLOW_CONNECTION_OAUTH_CONTEXT` to `hosted`.
+A Langflow-owned registration additionally requires `LANGFLOW_CONNECTION_OAUTH_HOSTED_ENABLED=true`.
+See [Configure connection OAuth](../Develop/connection-oauth.mdx) for shared settings.
+
+## Connect an account and run actions
+
+1. Open **Settings**, **Connections**, and **Add connection**.
+2. Choose **Salesforce**, enter a handle such as `work`, and enter a display name.
+3. Keep `api`, `id`, and `refresh_token` selected, then choose **Continue** and authorize the app in Salesforce.
+4. Add **Salesforce: Read Record** to a flow, select the connection, and supply a visible record's object and ID.
+5. Run the flow to check account access before configuring writes or a trigger.
+
+The connection displays the verified Salesforce account name when available.
+Exported flows contain only its handle, such as `salesforce/work`.
+Each destination Langflow server needs its own authorized connection with that handle.
+Headless lfx cannot use this connection through an environment token.
+
+## Enable a record change trigger
+
+Run `langflow listeners` alongside the self-managed API, or set `LANGFLOW_LISTENERS_MODE=subprocess` before starting Langflow.
+The listener makes outbound HTTPS requests and does not need public ingress.
+See [Deploy Langflow trigger listeners](../Deployment/deployment-trigger-listeners.mdx).
+
+1. Add **Salesforce: On Record Change** to a flow you own.
+   Choose your own Salesforce connection, an **Object**, and optional **Fields**.
+2. Save the flow and enable **Allow background runs** in the trigger node controls.
+   The same consent is available under **Settings**, **Connections**, the connection's **Actions** menu, and **Allow scheduled and deployed runs**.
+3. Turn on **Enabled** in the trigger node, or select **Resume** under **Settings**, **Triggers**.
+4. Wait for the initial baseline, then change a visible record and inspect the trigger's event list and run.
+
+Shared and instance connections cannot arm the trigger.
+Polling defaults to 30 seconds and never runs faster than that minimum.
+`LANGFLOW_LISTENER_POLL_INTERVAL_S` can increase the interval.
+Replication timestamps have minute precision, so an unchanged minute can produce no request.
+Provider rate limits, backlog, and listener retries can delay delivery.
+
+## Event identity and recovery
+
+The initial poll establishes a baseline without emitting the records it finds.
+Later polls request up to five minutes of replication history and fetch the latest visible state of each changed record.
+The source accepts at most 5000 changed IDs per round and fetches records in batches of 200.
+It advances only to Salesforce's `latestDateCovered` after the whole round succeeds.
+See [Salesforce Get Updated](https://developer.salesforce.com/docs/platform/api-rest/guide/resources-getupdated.html).
+
+Within each trigger, the provider, object, record ID, and `SystemModstamp` identify an event.
+Repeated states from overlapping minute boundaries are deduplicated.
+Event records and the cursor commit together, and stale listener replicas cannot overwrite a newer cursor.
+An incomplete response or failed transaction leaves the previous cursor available for retry.
+
+The trigger does not distinguish creation from update or preserve every intermediate edit.
+Records deleted or hidden before retrieval have no payload, and deletion events are not emitted.
+A listener restart or temporary outage preserves the cursor.
+The adapter rejects a cursor older than 29 days because replication history cannot safely cover a longer gap.
+
+| Symptom | Recovery |
+| --- | --- |
+| The connection needs authorization | In **Settings**, **Connections**, choose **Actions**, then **Reconnect**, and complete consent. Then use **Resume** for affected triggers under **Settings**, **Triggers**. Reconnect alone does not restart listening. |
+| Background use is blocked | As the owner, enable **Allow background runs** on the trigger or **Allow scheduled and deployed runs** on its connection, then resume it. |
+| More than 5000 record IDs changed in the window | Reduce the source volume or select a smaller supported object. This trigger has no query filter. Pause and resume deliberately to establish a fresh baseline. |
+| The replication cursor expired | Pause and resume to start a new baseline. The expired history cannot be reconstructed. |
+| Salesforce is unavailable or its API limit is exhausted | Keep the trigger active while the listener retries. Check listener health and org API usage if the failure continues. |
+| A field or record is unavailable | Check the object's permissions, field access, sharing rules, and the component's supported fields. |
+
+Pausing and resuming starts a fresh baseline and skips the paused interval.
+Resuming after reconnecting also starts a fresh baseline.
+The event list can replay an event already recorded by Langflow, but cannot recover an unobserved intermediate state.
+Create and update are not retried after ambiguous network failures. Check Salesforce before repeating the write.
+
+## Webhook boundary
+
+This integration uses replication polling, without CDC, Streaming API, or Pub/Sub subscriptions.
+It registers no Salesforce webhook or remote subscription.
+Pausing or deleting a trigger removes local polling work only.
+Public webhook requests do not feed these components.

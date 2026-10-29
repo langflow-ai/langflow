@@ -24,6 +24,12 @@ describe("badgeStateOf", () => {
     expect(badgeStateOf("dead")).toBe("error");
   });
 
+  it("shows a reconnected trigger as ready to resume", () => {
+    expect(badgeStateOf("needs_reconnect", "ready_to_resume")).toBe(
+      "ready_to_resume",
+    );
+  });
+
   it.each([
     "pending",
     "active",
@@ -159,7 +165,7 @@ describe("sourceKeyOf", () => {
     ["whatsapp", "MessageCircle"],
     ["discord", "MessageCircle"],
     ["telegram", "Send"],
-    ["salesforce", "Cloud"],
+    ["salesforce", "Salesforce"],
     ["servicenow", "Server"],
     ["jira", "Ticket"],
     ["confluence", "BookOpen"],
