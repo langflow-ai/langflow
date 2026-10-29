@@ -5310,6 +5310,11 @@
       "bare_class_name": "OlostepSearchComponent",
       "target": "ext:olostep:OlostepSearchComponent@official",
       "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "WallyComponent",
+      "target": "ext:wally:WallyComponent@official",
+      "added_in": "1.14.0"
     }
   ],
   "ambiguous_bare_names": [
