@@ -203,3 +203,31 @@ def test_configuration_errors_name_what_to_fix(fields, message):
     with pytest.raises(DecisionConfigurationError) as caught:
         decision_request(**{"question": "Which?", "context": "x", **fields})
     assert str(caught.value) == message
+
+
+def test_batch_question_validation_reuses_single_question_rules():
+    from lfx.base.models.decisions.schema import DecisionBatchRequest
+    from pydantic import ValidationError
+
+    for questions in (
+        {},
+        {" ": {"kind": "boolean", "question": "Valid?"}},
+        {"q": {"kind": "choice", "question": "Which?", "options": []}},
+        {"q": {"kind": "boolean", "question": "Valid?", "options": [{"id": "a", "label": "A"}]}},
+        {
+            "q": {
+                "kind": "score",
+                "question": "Rate?",
+                "levels": [
+                    {"id": "a", "label": "Low"},
+                    {"id": "a", "label": "High"},
+                ],
+            }
+        },
+    ):
+        with pytest.raises(ValidationError):
+            DecisionBatchRequest(context="Example", questions=questions)
+    with pytest.raises(ValidationError):
+        DecisionBatchRequest(
+            context={"value": float("nan")}, questions={"q": {"kind": "boolean", "question": "Valid?"}}
+        )

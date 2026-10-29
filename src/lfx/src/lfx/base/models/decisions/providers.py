@@ -12,9 +12,12 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from lfx.base.models.decisions.schema import (
+    DecisionBatchRequest,
+    DecisionBatchResult,
     DecisionConfigurationError,
     DecisionEvaluationError,
     DecisionOption,
+    DecisionQuestion,
     DecisionRequest,
     DecisionResult,
     validation_summary,
@@ -42,7 +45,7 @@ ENDPOINTS = {
 MAX_HOSTED_SCORE_LEVELS = 10
 MAX_CHOICES = 255
 MAX_TIMEOUT = 300
-# One question is sent per request, under this name.
+# Legacy single-question requests retain this identity.
 QUESTION_ID = "decision"
 
 OFFICIAL_OPENAI_BASE_URL = "https://api.openai.com/v1"
@@ -124,13 +127,23 @@ def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return result
 
 
-def build_payload(provider: str, model: str, request: DecisionRequest) -> dict[str, Any]:
-    """Translate one typed question, retaining option identity independently of display text."""
+def build_payload(provider: str, model: str, request: DecisionRequest | DecisionBatchRequest) -> dict[str, Any]:
+    """Translate typed questions, retaining option identity independently of display text."""
     if provider not in ENDPOINTS:
         msg = f"{provider} has no decision models."
         raise DecisionConfigurationError(msg)
-    # TypeSafe and Perplexity document 10 levels. OpenAI publishes no cap, so the same
-    # verified bound applies until a larger one is confirmed against the live API.
+    questions = request.questions if isinstance(request, DecisionBatchRequest) else {QUESTION_ID: request}
+    translated = {name: _build_question(provider, name, question) for name, question in questions.items()}
+    if provider == "OpenAI":
+        context = request.context
+        if not isinstance(context, str):
+            context = json.dumps(context, ensure_ascii=False, allow_nan=False)
+        return {"model": model, "input": context, "questions": list(translated.values())}
+    return {"model": model, "state": request.context, "questions": translated}
+
+
+def _build_question(provider: str, name: str, request: DecisionQuestion) -> dict[str, Any]:
+    # Retain the existing hosted bounds; model-specific capability discovery is separate work.
     if request.kind == "score" and len(request.levels) > MAX_HOSTED_SCORE_LEVELS:
         msg = f"{provider} supports at most {MAX_HOSTED_SCORE_LEVELS} Score levels."
         raise DecisionConfigurationError(msg)
@@ -152,22 +165,18 @@ def build_payload(provider: str, model: str, request: DecisionRequest) -> dict[s
             msg = "OpenRouter requires both What Yes Means and What No Means when either is provided."
             raise DecisionConfigurationError(msg)
     if provider == "OpenAI":
-        question["name"] = QUESTION_ID
+        question["name"] = name
         if request.kind == "choice":
             question["choices"] = [
                 {"value": option.id, "description": _description(option)} for option in request.options
             ]
         elif request.kind == "score":
             question["levels"] = [{"label": level.id, "description": _description(level)} for level in request.levels]
-        context = request.context
-        if not isinstance(context, str):
-            context = json.dumps(context, ensure_ascii=False, allow_nan=False)
-        return {"model": model, "input": context, "questions": [question]}
-    if request.kind == "choice":
+    elif request.kind == "choice":
         question["criteria"] = {option.id: _description(option) for option in request.options}
     elif request.kind == "score":
         question["criteria"] = [_description(level) for level in request.levels]
-    return {"model": model, "state": request.context, "questions": {QUESTION_ID: question}}
+    return question
 
 
 Count = Annotated[int, Field(strict=True, ge=0)]
@@ -207,8 +216,8 @@ def _token_usage(raw: Any) -> dict | None:
 
 
 def parse_response(
-    provider: str, request: DecisionRequest, payload: Any, *, request_id: str | None = None
-) -> DecisionResult:
+    provider: str, request: DecisionQuestion | DecisionBatchRequest, payload: Any, *, request_id: str | None = None
+) -> DecisionResult | DecisionBatchResult:
     """Reject missing/mismatched evidence; never turn a malformed answer into uncertainty."""
     try:
         model = payload["model"]
@@ -220,6 +229,33 @@ def parse_response(
             if isinstance(candidate, str) and re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", candidate):
                 request_id = candidate
         answers = payload["answers"]
+        if isinstance(request, DecisionBatchRequest):
+            if provider == "OpenAI":
+                if not isinstance(answers, list) or any(not isinstance(answer, dict) for answer in answers):
+                    msg = "answers must be a list of named answers"
+                    raise ValueError(msg)
+                mapped = {answer["name"]: answer for answer in answers}
+                if len(mapped) != len(answers):
+                    msg = "answers repeat a question"
+                    raise ValueError(msg)
+                answers = mapped
+            if not isinstance(answers, dict) or set(answers) != set(request.questions):
+                msg = "answers must hold exactly the requested questions"
+                raise ValueError(msg)
+            results = {}
+            for name, question in request.questions.items():
+                answer = answers[name]
+                single_payload = {
+                    "model": model,
+                    "answers": [{**answer, "name": QUESTION_ID}] if provider == "OpenAI" else {QUESTION_ID: answer},
+                }
+                results[name] = parse_response(
+                    provider,
+                    question,
+                    single_payload,
+                    request_id=request_id,
+                )
+            return DecisionBatchResult(answers=results, usage=_token_usage(payload.get("usage")), request_id=request_id)
         if provider == "OpenAI":
             if not isinstance(answers, list) or len(answers) != 1:
                 msg = "answers must hold exactly one answer"
@@ -311,11 +347,11 @@ def parse_response(
 def evaluate_provider(
     provider: str,
     model: str,
-    request: DecisionRequest,
+    request: DecisionRequest | DecisionBatchRequest,
     *,
     api_key: str,
     timeout: float = 60,
-) -> DecisionResult:
+) -> DecisionResult | DecisionBatchResult:
     """Execute one request through the existing strict SSRF-protected transport."""
     payload = build_payload(provider, model, request)
     if not api_key:

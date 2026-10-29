@@ -104,12 +104,11 @@ class DecisionOption(BaseModel):
     description: str = ""
 
 
-class DecisionRequest(BaseModel):
+class DecisionQuestion(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     kind: DecisionKind
     question: NonEmpty
-    context: str | dict[str, JsonValue]
     options: tuple[DecisionOption, ...] = ()
     levels: tuple[DecisionOption, ...] = ()
     # Boolean only: what a Yes and a No answer mean.
@@ -122,14 +121,8 @@ class DecisionRequest(BaseModel):
         # A blank description is no description.
         return value.strip()
 
-    @field_validator("context")
-    @classmethod
-    def validate_context(cls, value: str | dict[str, JsonValue]) -> str | dict[str, JsonValue]:
-        json.dumps(value, allow_nan=False)
-        return value
-
     @model_validator(mode="after")
-    def validate_candidates(self) -> DecisionRequest:
+    def validate_candidates(self) -> DecisionQuestion:
         candidates = self.options if self.kind == "choice" else self.levels
         noun = "Option" if self.kind == "choice" else "Level"
         if self.kind in {"choice", "score"} and len(candidates) < MIN_CANDIDATES:
@@ -149,6 +142,28 @@ class DecisionRequest(BaseModel):
                     msg = f"{noun}s {first} and {position} have the same {column}. Each needs a different one"
                     raise ValueError(msg)
         return self
+
+
+class DecisionRequest(DecisionQuestion):
+    context: str | dict[str, JsonValue]
+
+    @field_validator("context")
+    @classmethod
+    def validate_context(cls, value: str | dict[str, JsonValue]) -> str | dict[str, JsonValue]:
+        json.dumps(value, allow_nan=False)
+        return value
+
+
+class DecisionBatchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    context: str | dict[str, JsonValue]
+    questions: dict[NonEmpty, DecisionQuestion] = Field(min_length=1)
+
+    @field_validator("context")
+    @classmethod
+    def validate_context(cls, value: str | dict[str, JsonValue]) -> str | dict[str, JsonValue]:
+        return DecisionRequest.validate_context(value)
 
 
 def decision_request(**fields: Any) -> DecisionRequest:
@@ -222,7 +237,7 @@ class DecisionResult(BaseModel):
                 raise ValueError(msg)
         return self
 
-    def validate_for(self, request: DecisionRequest) -> DecisionResult:
+    def validate_for(self, request: DecisionQuestion) -> DecisionResult:
         """Reject mismatched or incomplete evidence against the original question."""
         if self.kind != request.kind:
             msg = "Provider answered a different decision question"
@@ -253,3 +268,13 @@ class DecisionResult(BaseModel):
                 msg = "Score disagrees with its ordered-level probability distribution"
                 raise DecisionEvaluationError(msg)
         return self
+
+
+class DecisionBatchResult(BaseModel):
+    """Named evidence from one provider call; shared usage is counted exactly once."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    answers: dict[NonEmpty, DecisionResult]
+    usage: dict[str, JsonValue] | None = None
+    request_id: NonEmpty | None = None

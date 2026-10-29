@@ -745,3 +745,91 @@ def test_openrouter_response_id_is_safe(request_id, expected):
     result = providers.parse_response("OpenRouter", request_for("boolean"), payload)
     assert result.request_id == expected
     assert result.provider == "OpenRouter"
+
+
+def batch_request():
+    from lfx.base.models.decisions.schema import DecisionBatchRequest, DecisionQuestion
+
+    return DecisionBatchRequest(
+        context={"text": "Example"},
+        questions={
+            kind: DecisionQuestion(**request_for(kind).model_dump(exclude={"context"}))
+            for kind in ("choice", "boolean", "score")
+        },
+    )
+
+
+def batch_response(provider):
+    answers = [] if provider == "OpenAI" else {}
+    for kind in ("choice", "boolean", "score"):
+        body = response_for(provider, kind)
+        if provider == "OpenAI":
+            answers.append({**body["answers"][0], "name": kind})
+        else:
+            answers[kind] = body["answers"]["decision"]
+    return {"model": DEFAULT_MODELS[provider], "answers": answers, "usage": {"input_tokens": 17}}
+
+
+@pytest.mark.parametrize("provider", PROVIDERS)
+def test_mixed_questions_share_one_http_request_and_usage(provider, monkeypatch):
+    calls = []
+
+    def post(url, **kwargs):
+        calls.append((url, kwargs))
+        return httpx.Response(200, json=batch_response(provider), headers={"x-request-id": "req_batch"})
+
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", post)
+    result = providers.evaluate_provider(provider, DEFAULT_MODELS[provider], batch_request(), api_key="test")
+    assert len(calls) == 1
+    questions = calls[0][1]["json"]["questions"]
+    if provider == "OpenAI":
+        assert [question["name"] for question in questions] == ["choice", "boolean", "score"]
+        assert [question["type"] for question in questions] == ["choice", "predicate", "score"]
+    else:
+        assert list(questions) == ["choice", "boolean", "score"]
+        assert [question["type"] for question in questions.values()] == ["choice", "noul", "score"]
+    assert result.answers["choice"].selected_option == "b"
+    assert result.answers["boolean"].probability_true == 0.7
+    assert result.answers["score"].score == 0.7
+    assert result.usage == {"input_tokens": 17}
+    assert result.request_id == "req_batch"
+    assert all(answer.usage is None for answer in result.answers.values())
+
+
+@pytest.mark.parametrize("provider", PROVIDERS)
+@pytest.mark.parametrize("mutation", ["missing", "extra", "wrong_type", "invalid_probability"])
+def test_batch_rejects_incomplete_or_malformed_answers(provider, mutation):
+    body = batch_response(provider)
+    answers = body["answers"]
+    if mutation == "missing":
+        answers.pop() if provider == "OpenAI" else answers.pop("boolean")
+    elif mutation == "extra":
+        if provider == "OpenAI":
+            answers.append({**answers[0], "name": "extra"})
+        else:
+            answers["extra"] = answers["choice"]
+    else:
+        answer = answers[1] if provider == "OpenAI" else answers["boolean"]
+        if mutation == "wrong_type":
+            answer["type"] = "choice"
+        else:
+            answer["probability" if provider == "OpenAI" else "noul"] = 4
+    with pytest.raises(DecisionEvaluationError, match="couldn't use"):
+        providers.parse_response(provider, batch_request(), body)
+
+
+def test_openai_batch_matches_names_not_order_and_preserves_partial_refusal():
+    body = batch_response("OpenAI")
+    body["answers"][1] = {"name": "boolean", "type": "refusal", "refusal": "Cannot answer"}
+    body["answers"].reverse()
+    result = providers.parse_response("OpenAI", batch_request(), body)
+    assert result.answers["boolean"].status == "refusal"
+    assert result.answers["choice"].status == "success"
+    assert result.answers["score"].score == 0.7
+
+
+def test_openai_batch_rejects_duplicate_names():
+    body = batch_response("OpenAI")
+    body["answers"].append(body["answers"][0])
+    with pytest.raises(DecisionEvaluationError, match="repeat a question"):
+        providers.parse_response("OpenAI", batch_request(), body)

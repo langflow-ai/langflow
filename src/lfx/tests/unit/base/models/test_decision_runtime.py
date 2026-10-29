@@ -427,3 +427,42 @@ def test_decision_token_usage_reads_the_providers_counts(usage, expected):
 )
 def test_decision_token_usage_is_none_without_counts(usage):
     assert decision_token_usage(_with_usage(usage)) is None
+
+
+def test_batch_uses_same_policy_boundary_and_counts_usage_once(execution):
+    from lfx.base.models.decisions.schema import DecisionBatchRequest, DecisionBatchResult, DecisionQuestion
+
+    request, model, transport = execution
+    batch = DecisionBatchRequest(
+        context=request.context,
+        questions={
+            "urgent": DecisionQuestion(kind="boolean", question="Is this urgent?"),
+            "complaint": DecisionQuestion(kind="boolean", question="Is this a complaint?"),
+        },
+    )
+    evidence = transport.return_value
+    transport.return_value = DecisionBatchResult(
+        answers={"urgent": evidence, "complaint": evidence}, usage={"input_tokens": 23, "output_tokens": 4}
+    )
+    result = evaluate_decision(batch, model=model)
+    transport.assert_called_once_with("OpenAI", "gpt-6-luna", batch, api_key="sk-explicit-test", timeout=60)
+    assert decision_token_usage(result).total_tokens == 27
+
+
+def test_batch_policy_denial_precedes_transport(execution, monkeypatch):
+    from lfx.base.models.decisions.schema import DecisionBatchRequest, DecisionQuestion
+
+    request, model, transport = execution
+    batch = DecisionBatchRequest(
+        context=request.context, questions={"urgent": DecisionQuestion(kind="boolean", question="Urgent?")}
+    )
+    snapshot = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(),
+        purpose=ModelProviderPolicyPurpose.USE,
+        candidate_provider_ids=frozenset({"openai"}),
+        allowed_provider_ids=frozenset(),
+    )
+    monkeypatch.setattr("lfx.services.model_provider_policy.resolve_model_provider_policy", lambda **_: snapshot)
+    with pytest.raises(ModelProviderPolicyError):
+        evaluate_decision(batch, model=model)
+    transport.assert_not_called()

@@ -325,3 +325,202 @@ async def test_old_score_node_migrates_shared_rows_only_once():
     assert updated["template"]["candidates"]["value"] != rubric
     again = await component.update_frontend_node(component.to_frontend_node()["data"]["node"], updated)
     assert again["template"]["levels"]["value"] == rubric
+
+
+def mixed_question_component():
+    component = DecisionModelComponent()
+    component.set(
+        context="An urgent billing issue.",
+        question_mode="Multiple",
+        questions=[
+            {"id": "team", "kind": "Choice", "question": "Which team?"},
+            {"id": "urgent", "kind": "Boolean", "question": "Is this urgent?"},
+            {"id": "impact", "kind": "Score", "question": "How much impact?"},
+        ],
+        question_options=[
+            {"question_id": "team", "id": "billing", "label": "Billing"},
+            {"question_id": "team", "id": "support", "label": "Support"},
+        ],
+        question_levels=[
+            {"question_id": "impact", "id": "low", "label": "Low"},
+            {"question_id": "impact", "id": "high", "label": "High"},
+        ],
+    )
+    return component
+
+
+def test_question_tables_and_json_build_identical_requests():
+    import json
+
+    component = mixed_question_component()
+    table_request = component._request()
+    component.set(
+        question_mode="JSON",
+        questions_json=json.dumps(table_request.model_dump(mode="json")["questions"]),
+    )
+    assert component._request() == table_request
+    assert [question.kind for question in table_request.questions.values()] == ["choice", "boolean", "score"]
+    assert [level.id for level in table_request.questions["impact"].levels] == ["low", "high"]
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "",
+        "{}",
+        "[]",
+        "null",
+        '{"q":',
+        '{"q":{"kind":"boolean","question":"one"},"q":{"kind":"boolean","question":"two"}}',
+        '{"q":{"kind":"boolean","question":"one","kind":"score"}}',
+        '{"q":{"kind":"boolean","question":"one","endpoint":"https://example.com"}}',
+        '{"q":{"kind":"choice","question":"one","options":[]}}',
+    ],
+)
+def test_invalid_questions_json_fails_before_execution(source, monkeypatch):
+    component = mixed_question_component()
+    component.set(question_mode="JSON", questions_json=source)
+    monkeypatch.setattr(
+        component_module, "evaluate_decision", lambda *_a, **_k: pytest.fail("Must not invoke provider")
+    )
+    with pytest.raises(DecisionConfigurationError):
+        component.evaluate()
+
+
+@pytest.mark.parametrize("change", ["duplicate", "orphan", "wrong_type", "empty", "missing_id"])
+def test_question_tables_reject_ambiguous_rows(change):
+    component = mixed_question_component()
+    if change == "duplicate":
+        component.questions.append(dict(component.questions[0]))
+    elif change == "orphan":
+        component.question_options[0]["question_id"] = "missing"
+    elif change == "wrong_type":
+        component.question_levels[0]["question_id"] = "team"
+    elif change == "empty":
+        # Component.set treats an empty list as connections; a cleared editor creates a fresh node.
+        component = DecisionModelComponent()
+        component.set(question_mode="Multiple", context="Example")
+    else:
+        component.questions[0]["id"] = None
+    with pytest.raises(DecisionConfigurationError):
+        component._request()
+
+
+def test_question_modes_preserve_independent_tables_and_required_fields():
+    component = mixed_question_component()
+    template, _ = create_component_template(component_extractor=component)
+    config = template["template"]
+    before = {
+        name: config[name]["value"]
+        for name in (
+            "candidates",
+            "levels",
+            "questions",
+            "question_options",
+            "question_levels",
+        )
+    }
+    for mode in ("Multiple", "JSON", "Single"):
+        config["question_mode"]["value"] = mode
+        component._show_fields(config, "Score")
+        assert config["question"]["required"] == (mode == "Single")
+        assert config["question_levels"]["show"] == (mode == "Multiple")
+        assert config["questions_json"]["show"] == (mode == "JSON")
+        assert config["levels"]["show"] == (mode == "Single")
+        assert not config["candidates"]["show"]
+        assert {name: config[name]["value"] for name in before} == before
+
+
+def test_batch_component_preserves_answers_and_shared_usage(monkeypatch):
+    from lfx.base.models.decisions.schema import DecisionBatchResult
+
+    component = mixed_question_component()
+    calls = []
+
+    def evaluate(request, **_kwargs):
+        calls.append(request)
+        return DecisionBatchResult(
+            answers={
+                "team": DecisionResult(
+                    kind="choice",
+                    provider="TypeSafe",
+                    model="m",
+                    probabilities={"billing": 0.8, "support": 0.2},
+                    selected_option="billing",
+                ),
+                "urgent": DecisionResult(kind="boolean", provider="TypeSafe", model="m", probability_true=0.9),
+                "impact": DecisionResult(
+                    kind="score", provider="TypeSafe", model="m", probabilities={"low": 0.1, "high": 0.9}, score=0.9
+                ),
+            },
+            usage={"input_tokens": 21, "output_tokens": 3},
+            request_id="req_multi",
+        )
+
+    monkeypatch.setattr(component_module, "evaluate_decision", evaluate)
+    data = component.evaluate().data
+    assert len(calls) == 1
+    assert set(data["answers"]) == {"team", "urgent", "impact"}
+    assert "context" not in data["request"]
+    assert data["request_id"] == "req_multi"
+    assert component._token_usage.total_tokens == 24
+    assert all("usage" not in answer for answer in data["answers"].values())
+
+
+def test_mixed_component_runs_through_runtime_and_http_adapter(monkeypatch):
+    import httpx
+    from lfx.base.models.decisions import providers
+
+    component = mixed_question_component()
+    component.set(model=[{"provider": "TypeSafe", "name": "jev-latest"}])
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-only-key")
+    calls = []
+
+    def post(url, **kwargs):
+        assert url == providers.ENDPOINTS["TypeSafe"]
+        calls.append(kwargs["json"])
+        assert kwargs["headers"]["Authorization"] == "Bearer test-only-key"
+        return httpx.Response(
+            200,
+            json={
+                "model": "jev-test",
+                "answers": {
+                    "team": {"type": "choice", "choice": "billing", "probabilities": {"billing": 0.8, "support": 0.2}},
+                    "urgent": {"type": "noul", "noul": 0.9},
+                    "impact": {
+                        "type": "score",
+                        "score": 0.9,
+                        "legend": {"0": "Low", "1": "High"},
+                        "probabilities": {"0": 0.1, "1": 0.9},
+                    },
+                },
+                "usage": {"input_tokens": 30, "output_tokens": 0},
+            },
+        )
+
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", post)
+    data = component.evaluate().data
+    assert len(calls) == 1
+    assert calls[0]["state"] == "An urgent billing issue."
+    assert set(calls[0]["questions"]) == {"team", "urgent", "impact"}
+    assert data["answers"]["impact"]["score"] == 0.9
+    assert component._token_usage.total_tokens == 30
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mode", ["Multiple", "JSON"])
+async def test_saved_multi_question_modes_survive_component_update(mode):
+    from copy import deepcopy
+
+    component = mixed_question_component()
+    saved, _ = create_component_template(component_extractor=component)
+    saved["template"]["question_mode"]["value"] = mode
+    saved["template"]["questions_json"]["value"] = '{"urgent":{"kind":"boolean","question":"Urgent?"}}'
+    new, _ = create_component_template(component_extractor=DecisionModelComponent())
+    updated = await component.update_frontend_node(new, deepcopy(saved))
+    assert updated["template"]["question_mode"]["value"] == mode
+    assert updated["template"]["questions"]["value"] == saved["template"]["questions"]["value"]
+    assert updated["template"]["questions_json"]["value"] == saved["template"]["questions_json"]["value"]
+    assert updated["template"]["questions"]["show"] == (mode == "Multiple")
+    assert updated["template"]["questions_json"]["show"] == (mode == "JSON")
+    assert not updated["template"]["question"]["required"]
