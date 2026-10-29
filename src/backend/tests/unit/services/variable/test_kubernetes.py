@@ -1,9 +1,11 @@
 from unittest.mock import MagicMock
+from uuid import uuid4
 
 import pytest
 from langflow.services.variable.constants import CREDENTIAL_TYPE
 from langflow.services.variable.kubernetes import KubernetesSecretService
 from lfx.services.variable import VariableNotFoundError
+from lfx.services.variable.exceptions import RuntimeVariableError
 
 
 def _service_with_secret(secret: dict[str, str] | None) -> KubernetesSecretService:
@@ -41,3 +43,20 @@ def test_resolve_variable_returns_credential_variable() -> None:
         credential_name,
         "credential-value",
     )
+
+
+@pytest.mark.asyncio
+async def test_bound_account_refusal_precedes_kubernetes_secret_lookup(monkeypatch):
+    from langflow.services.variable import runtime_policy
+
+    service = _service_with_secret({"Credential_API_KEY": "alternate-store-value"})
+    service.settings_service = object()
+
+    async def refused(**_):
+        msg = "Account denied"
+        raise RuntimeVariableError(msg, reason="variable_not_approved")
+
+    monkeypatch.setattr(runtime_policy, "_resolver", refused)
+    with pytest.raises(RuntimeVariableError, match="Account denied"):
+        await service.get_variable(user_id=uuid4(), name="API_KEY", field="", session=None)
+    service.kubernetes_secrets.get_secret.assert_not_called()

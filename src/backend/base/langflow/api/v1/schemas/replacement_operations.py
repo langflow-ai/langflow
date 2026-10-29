@@ -1,9 +1,9 @@
 """API schemas for durable project replacement operations."""
 
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import ConfigDict, field_validator
+from pydantic import ConfigDict, Field, field_validator
 from sqlmodel import SQLModel
 
 from langflow.services.database.models.flow.model import FlowCreate, FlowRead
@@ -32,6 +32,33 @@ class ReplacementFlowCreate(FlowCreate):
         return value
 
 
+class ReplacementVariableDeclaration(SQLModel):
+    """A value-free variable dependency validated by the serving plane."""
+
+    model_config = ConfigDict(extra="forbid", hide_input_in_errors=True)
+
+    name: str = Field(min_length=1, max_length=512)
+    kind: Literal["secret", "plain"] | None
+
+
+class ReplacementVariables(SQLModel):
+    """The approved execution target and an optional staged transfer."""
+
+    model_config = ConfigDict(extra="forbid", hide_input_in_errors=True)
+
+    target_id: UUID
+    transfer_id: UUID | None = None
+    declarations: list[ReplacementVariableDeclaration] = Field(max_length=2000)
+
+    @field_validator("declarations")
+    @classmethod
+    def unique_names(cls, value: list[ReplacementVariableDeclaration]) -> list[ReplacementVariableDeclaration]:
+        if len({item.name for item in value}) != len(value):
+            msg = "Variable declarations must be unique"
+            raise ValueError(msg)
+        return value
+
+
 class ProjectReplacementRequest(SQLModel):
     """Complete target flow set, description, and opaque dependency snapshot."""
 
@@ -45,6 +72,7 @@ class ProjectReplacementRequest(SQLModel):
     # The Control Plane owns dependency validation and provisioning. The serving
     # plane stores the manifest as opaque JSON alongside the committed receipt.
     dependencies: dict[str, Any] | None = None
+    variables: ReplacementVariables | None = None
 
     @field_validator("project_name")
     @classmethod
