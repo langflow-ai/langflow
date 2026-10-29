@@ -40,6 +40,10 @@ jest.mock("@/controllers/API/queries/connections", () => ({
     isPending: false,
   }),
   useDeleteConnectionMutation: () => ({ mutate: mockRemove }),
+  useRenewConnectionTokenMutation: () => ({
+    mutateAsync: jest.fn(),
+    isPending: false,
+  }),
   useStartOAuthMutation: () => ({ mutateAsync: mockStartOAuth }),
   useOAuthRegistrationsQuery: () => mockRegistrations,
   usePendingConnectionPoll: (baseline: ConnectionPollBaseline | null) => ({

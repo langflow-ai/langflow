@@ -38,7 +38,7 @@ export function TriggerNodeBadge({ trigger }: { trigger: TriggerRead }) {
   const [open, setOpen] = useState(false);
   const [eventsFor, setEventsFor] = useState<TriggerRead | null>(null);
   const runner = useTriggerActionRunner({ onViewEvents: setEventsFor });
-  const badgeState = badgeStateOf(trigger.state);
+  const badgeState = badgeStateOf(trigger.state, trigger.reason);
   const style = TRIGGER_BADGE_STYLE[badgeState];
   const label = t(badgeLabelKey(badgeState));
   const lastFired = parseServerTime(trigger.last_fired_at);

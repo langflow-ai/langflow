@@ -54,8 +54,9 @@ jobs:
         run: |
           uv export --quiet --locked --all-packages --all-extras --all-groups --no-emit-workspace \
             --no-annotate --no-header --no-hashes --format requirements.txt -o requirements-workspace-mend.txt
+          # The R2 mirror returns 404 for missing packages, avoiding Mend retries on HTTP 403.
           uv pip compile --quiet --python-version ${{ env.PYTHON_VERSION }} \
-            --python-platform x86_64-unknown-linux-gnu --index https://download.pytorch.org/whl/cpu \
+            --python-platform x86_64-unknown-linux-gnu --index https://download-r2.pytorch.org/whl/cpu \
             --index-strategy unsafe-first-match --emit-index-url --generate-hashes --no-annotate --no-header \
             requirements-workspace-mend.txt -o requirements-mend.txt
           uv pip compile --quiet --python-version ${{ env.PYTHON_VERSION }} \
