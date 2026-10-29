@@ -17,7 +17,7 @@ Guidelines for developing and maintaining Langflow documentation using Docusauru
 
 ## Where notes go
 
-Developer and agent notes for a change go in `docs/features/`. One markdown file per topic, named for the change. That folder is not part of the published site.
+Developer and agent notes for a change go in `docs/features/`. One markdown file per topic, named for the change. That folder is not part of the published site. Follow the [Google Developer Documentation Style Guide](https://developers.google.com/style) for feature notes and user-facing docs.
 
 Published user docs are the pages in `docs/docs/` and `docs/versioned_docs/`, plus `sidebars.js`. Edit those only when the task is a user-facing documentation change that the docs writer should review. The style guide below applies to that published work.
 

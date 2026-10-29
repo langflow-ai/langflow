@@ -7,7 +7,7 @@ This project uses [AGENTS.md](https://agents.md/) as the standard for providing 
 
 ## Documentation
 
-Write feature notes in `docs/features/`. That folder is not published.
+Write feature notes in `docs/features/`. That folder is not published. Follow the [Google Developer Documentation Style Guide](https://developers.google.com/style) for feature notes and user-facing docs.
 
 User-facing pages live in `docs/docs/` and `docs/versioned_docs/`, with navigation in `docs/sidebars.js`. Edit those only when the task is a user-facing docs change the docs writer should review. A pull request that touches `docs/` flags the docs team. That notice is optional and does not block merge.
 
