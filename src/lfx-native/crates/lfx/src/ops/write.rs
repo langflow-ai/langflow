@@ -70,16 +70,21 @@ pub struct WriteOptions {
 }
 
 /// What a save stores, before the caller numbers the operations.
+///
+/// The caller has both graphs it passed. So `base` and `target` hold a graph
+/// only when the save changed it, and copying a whole graph back is rare.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PreparedWrite {
-    /// The stored graph the operations start from, repaired when it had no
-    /// history and broke the rules. It is the revision-0 checkpoint of a flow
-    /// without history.
-    pub base: Value,
+    /// The stored graph the operations start from, when it is not the stored
+    /// graph as given: filled in or repaired, which only happens when the
+    /// flow has no history. It is the revision-0 checkpoint of a flow
+    /// without history. `None` is the stored graph as given.
+    pub base: Option<Value>,
     /// Whether repair changed the stored graph.
     pub stored_repaired: bool,
-    /// The graph to store.
-    pub target: Value,
+    /// The graph to store, when it is not the submitted graph as given:
+    /// filled in or repaired. `None` is the submitted graph as given.
+    pub target: Option<Value>,
     /// Every fix repair made, and the graph it made it in.
     pub repairs: Vec<(Role, Fix)>,
     /// The operations, as recorded. Empty when nothing changed.
@@ -163,9 +168,11 @@ pub fn prepare_write(
 ) -> Result<PreparedWrite, WriteError> {
     let mut repairs = Vec::new();
     let mut stored_repaired = false;
+    let mut base_changed = false;
     let base = if options.started {
         stored
     } else {
+        base_changed = is_absent_graph(&stored);
         let base = normalize_absent_graph(stored);
         let violations = find_graph_violations(&base, Numbers::Check, None)?;
         if violations.is_empty() {
@@ -179,11 +186,13 @@ pub fn prepare_write(
             let repaired =
                 repair_flow_data(&base, None).map_err(|error| invalid(Role::Stored, error))?;
             stored_repaired = true;
+            base_changed = true;
             repairs.extend(repaired.fixes.into_iter().map(|fix| (Role::Stored, fix)));
             repaired.flow_data
         }
     };
 
+    let mut target_changed = is_absent_graph(&target);
     let mut target = normalize_absent_graph(target);
     // Against the stored graph, so the table and edge rules apply to what this
     // write adds or changes, while what it leaves alone is accepted as stored.
@@ -199,16 +208,35 @@ pub fn prepare_write(
             .map_err(|error| invalid(Role::Submitted, error))?;
         repairs.extend(repaired.fixes.into_iter().map(|fix| (Role::Submitted, fix)));
         target = repaired.flow_data;
+        target_changed = true;
     }
 
-    let derived = derive_flow_operations(base.clone(), &target)?;
+    // Deriving replays the operations on the base, so it takes the base. Only
+    // a changed base, which the caller does not have, is copied first.
+    let (operations, base) = if base_changed {
+        let derived = derive_flow_operations(base.clone(), &target)?;
+        (derived.operations, Some(base))
+    } else {
+        (derive_flow_operations(base, &target)?.operations, None)
+    };
     Ok(PreparedWrite {
         base,
         stored_repaired,
-        target,
+        target: target_changed.then_some(target),
         repairs,
-        operations: derived.operations,
+        operations,
     })
+}
+
+/// Whether [`normalize_absent_graph`] fills in `flow`.
+fn is_absent_graph(flow: &Value) -> bool {
+    match flow {
+        Value::Null => true,
+        Value::Object(graph) => ["nodes", "edges"]
+            .iter()
+            .any(|key| graph.get(*key).is_none_or(Value::is_null)),
+        _ => false,
+    }
 }
 
 /// What repair leaves needs the person's choice, so the client fixes it.
@@ -220,5 +248,42 @@ fn invalid(role: Role, error: Error) -> WriteError {
         }
     } else {
         WriteError::Engine(error)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    fn graph(value: &str) -> Value {
+        json!({"nodes": [{"id": "a", "data": {"node": {"template": {"text": {"value": value, "type": "str"}}}}}], "edges": []})
+    }
+
+    fn prepare(stored: Value, target: Value, started: bool) -> PreparedWrite {
+        let options = WriteOptions {
+            started,
+            repair_invalid_graph: false,
+        };
+        prepare_write(stored, target, &options).unwrap()
+    }
+
+    #[test]
+    fn graphs_the_save_did_not_change_are_not_returned() {
+        for started in [true, false] {
+            let prepared = prepare(graph("old"), graph("new"), started);
+            assert_eq!((prepared.base, prepared.target), (None, None));
+            assert_eq!(prepared.operations.len(), 1);
+        }
+    }
+
+    #[test]
+    fn graphs_the_save_filled_in_are_returned() {
+        let empty = json!({"nodes": [], "edges": []});
+        let prepared = prepare(Value::Null, json!({"nodes": []}), false);
+        assert_eq!(prepared.base, Some(empty.clone()));
+        assert_eq!(prepared.target, Some(empty));
+        assert_eq!(prepared.operations, Vec::<Operation>::new());
     }
 }

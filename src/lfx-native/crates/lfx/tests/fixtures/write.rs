@@ -31,18 +31,21 @@ fn write(case: &Value) -> Result<(), Failed> {
             .as_bool()
             .unwrap_or_default(),
     };
-    let actual = match prepare_write(
-        case["stored"].clone(),
-        case["target"].clone(),
-        &write_options,
-    ) {
-        Ok(prepared) => json!({"expected": {
-            "base": prepared.base,
-            "stored_repaired": prepared.stored_repaired,
-            "target": prepared.target,
-            "repairs": prepared.repairs_json(),
-            "operations": prepared.operations.iter().map(Operation::to_value).collect::<Vec<_>>(),
-        }}),
+    let (stored, target) = (&case["stored"], &case["target"]);
+    let actual = match prepare_write(stored.clone(), target.clone(), &write_options) {
+        Ok(prepared) => {
+            // A graph comes back only when the save changed it; the caller has the others.
+            if prepared.base.as_ref() == Some(stored) || prepared.target.as_ref() == Some(target) {
+                return Err("prepared write returns a graph it did not change".into());
+            }
+            json!({"expected": {
+                "base": prepared.base.as_ref().unwrap_or(stored),
+                "stored_repaired": prepared.stored_repaired,
+                "target": prepared.target.as_ref().unwrap_or(target),
+                "repairs": prepared.repairs_json(),
+                "operations": prepared.operations.iter().map(Operation::to_value).collect::<Vec<_>>(),
+            }})
+        }
         Err(WriteError::InvalidGraph { role, violations }) => json!({"error": {
             "graph": role.as_str(),
             "violations": violations.iter().map(Violation::to_value).collect::<Vec<_>>(),

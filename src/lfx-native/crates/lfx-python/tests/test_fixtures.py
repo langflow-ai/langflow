@@ -178,7 +178,11 @@ def test_property_sequence(sequence):
 def test_diff_case(case):
     base, target = dump(case["base"]), dump(case["target"])
     check(strict, "operations", parse(ops.diff(base, target)), case["operations"])
-    assert ops.graphs_equal(dump(parse(ops.derive(base, target))["flow_data"]), target)
+    derived = parse(ops.derive(base, target))
+    assert list(derived) == ["operations"]
+    replayed = ops.GraphState(base)
+    replayed.apply(dump(derived["operations"]))
+    assert ops.graphs_equal(replayed.to_json(), target)
     state = ops.GraphState(base)
     for operation in case["operations"]:
         state.apply(dump([operation]))
@@ -383,9 +387,11 @@ def test_restore(case):
 @pytest.mark.parametrize("case", section("write_cases.json", "cases"))
 def test_write(case):
     try:
-        actual = {
-            "expected": parse(ops.prepare_write(dump(case["stored"]), dump(case["target"]), dump(case["options"])))
-        }
+        prepared = parse(ops.prepare_write(dump(case["stored"]), dump(case["target"]), dump(case["options"])))
+        # A graph comes back only when the save changed it; the caller has the others.
+        for key, given in (("base", case["stored"]), ("target", case["target"])):
+            assert key not in prepared or prepared[key] != given, f"{key} comes back unchanged"
+        actual = {"expected": {"base": case["stored"], "target": case["target"], **prepared}}
     except ops.EngineError as error:
         details = parse(error.details)
         actual = {"error": {"graph": details.get("graph"), "violations": details.get("violations")}}
