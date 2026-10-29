@@ -16,6 +16,8 @@ interface InlineEditableTextProps {
   editing: boolean;
   setEditing: (editing: boolean) => void;
   className?: string;
+  /** Width of the field while editing; it stretches to its container otherwise. */
+  fieldClassName?: string;
   testId: string;
 }
 
@@ -30,11 +32,13 @@ export default function InlineEditableText({
   editing,
   setEditing,
   className,
+  fieldClassName,
   testId,
 }: InlineEditableTextProps) {
   const [draft, setDraft] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
-  const editButtonRef = useRef<HTMLButtonElement>(null);
+  // After editing, focus lands on the text itself: the reader keeps its place without a ring on the pencil.
+  const focusRef = useRef<HTMLSpanElement>(null);
   // Escape and Enter both end editing and then blur the field; only the first one decides.
   const settled = useRef(false);
 
@@ -51,7 +55,7 @@ export default function InlineEditableText({
     const next = draft.trim();
     if (save && next !== value && (next || !required)) onSave(next);
     setEditing(false);
-    requestAnimationFrame(() => editButtonRef.current?.focus());
+    requestAnimationFrame(() => focusRef.current?.focus());
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -72,7 +76,7 @@ export default function InlineEditableText({
         aria-label={label}
         value={draft}
         maxLength={maxLength}
-        className={cn("h-8", className)}
+        className={cn("h-8", className, fieldClassName)}
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={() => finish(true)}
@@ -81,36 +85,42 @@ export default function InlineEditableText({
     );
   }
 
-  if (!value && emptyLabel) {
-    return (
-      <button
-        ref={editButtonRef}
-        type="button"
-        className="self-start text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-        onClick={() => setEditing(true)}
-        data-testid={`${testId}-edit`}
-      >
-        {emptyLabel}
-      </button>
-    );
-  }
-
+  // One element hosts both the empty and the filled view, so focus survives the save's re-render.
   return (
-    <span className="group/inline flex min-w-0 items-center gap-1">
-      <span className={cn("min-w-0 truncate", className)} data-testid={testId}>
-        {value}
-      </span>
-      <Button
-        ref={editButtonRef}
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7 shrink-0 text-muted-foreground"
-        aria-label={label}
-        onClick={() => setEditing(true)}
-        data-testid={`${testId}-edit`}
-      >
-        <ForwardedIconComponent name="Pencil" className="h-3.5 w-3.5" />
-      </Button>
+    <span
+      ref={focusRef}
+      tabIndex={-1}
+      className="flex min-w-0 items-center gap-1 outline-none"
+    >
+      {!value && emptyLabel ? (
+        <button
+          type="button"
+          className="self-start text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          onClick={() => setEditing(true)}
+          data-testid={`${testId}-edit`}
+        >
+          {emptyLabel}
+        </button>
+      ) : (
+        <>
+          <span
+            className={cn("min-w-0 truncate", className)}
+            data-testid={testId}
+          >
+            {value}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0 text-muted-foreground"
+            aria-label={label}
+            onClick={() => setEditing(true)}
+            data-testid={`${testId}-edit`}
+          >
+            <ForwardedIconComponent name="Pencil" className="h-3.5 w-3.5" />
+          </Button>
+        </>
+      )}
     </span>
   );
 }

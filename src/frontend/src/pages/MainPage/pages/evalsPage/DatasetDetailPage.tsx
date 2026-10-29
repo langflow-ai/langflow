@@ -137,6 +137,7 @@ export default function DatasetDetailPage() {
             editing={editingName}
             setEditing={setEditingName}
             className="text-xl font-semibold"
+            fieldClassName="w-80 max-w-full"
             testId="dataset-name"
           />
         ) : (
@@ -156,6 +157,7 @@ export default function DatasetDetailPage() {
               maxLength={2000}
               editing={editingDescription}
               setEditing={setEditingDescription}
+              fieldClassName="w-full max-w-lg"
               testId="dataset-description"
             />
             <p>
