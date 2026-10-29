@@ -568,6 +568,7 @@ module.exports = {
             "Components/bundles-files-ingestion",
             "Components/bundles-firecrawl",
             "Components/bundles-glean",
+            "Components/bundles-gitlab",
             "Components/bundles-google",
             "Components/bundles-groq",
             "Components/bundles-huggingface",

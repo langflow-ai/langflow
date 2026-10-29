@@ -264,6 +264,10 @@ async def _set_trigger_state(session: AsyncSession, *, trigger_id: UUID, state: 
     row.state = state
     row.last_error = reason
     row.updated_at = _now()
+    if state == TriggerState.NEEDS_RECONNECT.value:
+        from langflow.services.triggers.connection_recovery import record_connection_failure
+
+        record_connection_failure(row, failed_at=row.updated_at)
     session.add(row)
     await session.flush()
 

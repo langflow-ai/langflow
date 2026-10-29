@@ -1,0 +1,103 @@
+---
+title: GitLab components
+slug: /bundles-gitlab
+---
+
+The GitLab bundle reads projects and reads, creates, updates, and comments on issues and merge requests. Its two triggers receive signed project webhook events. Every action runs as the personal access token owner, with GitLab enforcing that user's project permissions.
+
+## Supported deployments
+
+Install `lfx-gitlab` with a matching Langflow release that includes the connection and trigger runtime. These components require Langflow 1.14 or later. Restart the API and listener processes after installation. Run `lfx extension list` to check bundle discovery.
+
+| Deployment | Actions | Triggers |
+| --- | --- | --- |
+| Hosted or self-managed Langflow | Verified stored connection | Public HTTPS ingress and background consent |
+| Desktop | Verified stored connection | Unavailable |
+| Headless service | Host resolver providing verified credentials | Langflow server runtime and public HTTPS ingress |
+| Bare environment token | Unavailable because verified identity metadata is missing | Unavailable |
+
+GitLab.com and public self-managed instances use the API v4 contract. Webhook triggers require GitLab 19.1 or later for signing tokens. Private-only instances, path-prefix installations, IP addresses, and custom ports are outside this preview. GitLab Dedicated and custom network topologies have not been validated.
+
+## Configure the instance and create a token
+
+The deployment operator sets `LANGFLOW_GITLAB_ORIGIN` before startup. It defaults to `https://gitlab.com`. For a self-managed instance, provide one public HTTPS DNS origin, such as `https://gitlab.example.com`. Do not include `/api/v4`, a path prefix, or credentials. Requests reject redirects and private network destinations.
+
+Create a personal access token for the user who will run the flows.
+
+1. In GitLab, select your avatar and open **Edit profile**.
+2. Open **Access > Personal access tokens**. Under **Generate token**, choose the legacy token option when shown.
+3. Enter a name, an expiration date, and the `api` scope, then generate the token.
+4. Copy the token when GitLab displays it. GitLab shows this value only once.
+
+The `api` scope is required for this preview. Project and group access tokens, deploy tokens, job tokens, OAuth credentials, and granular tokens without `api` are unavailable. Expiring tokens stop working at midnight UTC on their expiration date. See [GitLab's personal access token instructions](https://docs.gitlab.com/user/profile/personal_access_tokens/).
+
+## Add the connection
+
+1. Open **Settings > Connections**, select **Add connection**, and choose GitLab.
+2. Choose the API token option, enter a connection name such as `work`, and paste the personal access token.
+3. Save the connection and confirm its status is ready.
+
+Langflow verifies the token through GitLab's token-self and current-user endpoints. It records the actual user, instance, scope, and expiration. Entered identity or scope claims do not replace this verification. The displayed account uses the verified GitLab username. The [personal access token API](https://docs.gitlab.com/api/personal_access_tokens/) describes the token metadata.
+
+The saved `gitlab/work` reference contains no token. Keep server processes on the same database and `LANGFLOW_SECRET_KEY`. Headless hosts must supply a trusted resolver with verified account, instance, `api` scope, future expiration, and delegated-user identity. Exporting a flow and setting a plain environment token does not supply that metadata.
+
+## Run actions
+
+Add a GitLab component to a flow and select the saved connection. Use the numeric **Project ID**, not its URL or `group/project` path. Issue and merge request numbers are the project-local numbers shown in GitLab, rather than global database IDs.
+
+| Component | Inputs and behavior |
+| --- | --- |
+| GitLab: Get Project | Read one numeric Project ID. |
+| GitLab: Get Issue | Read an issue by Project ID and issue number. |
+| GitLab: Create Issue | Provide Project ID, title, and optional description. |
+| GitLab: Update Issue | Provide its number and at least one title, description, or close/reopen change. |
+| GitLab: Create Issue Comment | Add a nonempty comment to an issue. |
+| GitLab: Get Merge Request | Read a merge request by Project ID and merge request number. |
+| GitLab: Create Merge Request | Provide title and source and target branches in the same project. |
+| GitLab: Update Merge Request | Provide its number and at least one title, description, or close/reopen change. |
+| GitLab: Create Merge Request Comment | Add a nonempty comment to a merge request. |
+
+Blank title or description inputs on updates preserve the existing field. Clearing an existing description is outside this preview. IDs must be positive integers within the signed 64-bit range. Title and branch inputs allow up to 255 UTF-8 bytes. Requests are limited to 64 KiB and responses to 2 MiB.
+
+Actions do not retry writes. If a response is lost, check GitLab before repeating the action. Deleting items and merging merge requests are outside this component set.
+
+## Enable signed webhook triggers
+
+Trigger setup requires Maintainer or Owner access to the target project. GitLab documents project webhook permissions and signing tokens in its [webhook guide](https://docs.gitlab.com/user/project/integrations/webhooks/).
+
+1. Set `LANGFLOW_TRIGGER_INGRESS_ORIGIN` to the public HTTPS origin of your Langflow API, such as `https://flows.example.com`. Ensure GitLab can reach it.
+2. Start `langflow listeners`, or configure `LANGFLOW_LISTENERS_MODE=subprocess`. The API and listeners need the same GitLab origin, database, and `LANGFLOW_SECRET_KEY`.
+3. Save a flow with **GitLab: On Issue** or **GitLab: On Merge Request**. Select its connection and numeric Project ID.
+4. Choose the event actions that should run the flow. The default selection is open, close, and reopen.
+5. Allow background execution with **Allow background runs** in the trigger, or **Settings > Connections > Actions > Allow scheduled and deployed runs**.
+6. Enable the trigger and check its status under **Settings > Triggers**.
+
+Langflow creates and owns a separate project webhook for each trigger. It supplies the callback and signing token automatically. Do not create a secret-header-only webhook by hand. The receiver requires Standard Webhooks HMAC-SHA256 signatures over the delivery ID, timestamp, and raw body.
+
+Issue triggers support open, update, close, and reopen. Merge request triggers also support merge, approved, unapproved, approval, and unapproval. The receiver checks the project, event type, and selected actions. Merge requests must target the configured project. Confidential issue events are excluded.
+
+Events by the connection owner and actors marked as bots are excluded by default. Keep those exclusions when the flow writes back to GitLab. You can change **Include Own Events** and **Include Bot Events** in advanced settings, but GitLab does not identify every automation account as a bot.
+
+These triggers receive webhooks and have no polling interval. `LANGFLOW_LISTENER_POLL_INTERVAL_S` does not create a GitLab polling fallback.
+
+## Event identity and recovery
+
+Langflow records a durable event identity from the canonical JSON body. An identical payload is deduplicated even if whitespace or delivery headers change. A changed payload remains a separate event. The receiver also checks timestamp freshness, with a default tolerance of 300 seconds. Provider retries outside that window can be rejected.
+
+Webhook delivery is not a complete change history. There is no polling backfill or exactly-once guarantee. Replay in Langflow covers events already recorded. For missed events, inspect the project's GitLab webhook delivery history and use provider redelivery when available after fixing the failure.
+
+Pause and delete queue removal of the trigger's remote webhook. Re-enabling waits for its previous cleanup to finish. Langflow verifies the recorded project, callback, ownership marker, and original token owner before deleting a hook. If the callback was changed outside Langflow, an administrator may need to remove the old hook.
+
+Personal access tokens are not refreshed automatically. Before a planned token replacement, pause affected triggers and let webhook cleanup finish while the old token works. Reconnect the saved connection with a new token, then select **Resume** for each **Ready to resume** trigger. Reconnect alone does not resume it. Do not revoke the old token until its pending cleanup has completed.
+
+| Status or failure | Recovery |
+| --- | --- |
+| Token expired or revoked | Create a replacement personal token and reconnect. Resume affected triggers after resolving any old webhook cleanup. |
+| Permission denied | Check actual `api` scope and project membership. Trigger provisioning requires Maintainer or Owner. A permission failure does not prove token expiration. |
+| Project ID is invalid | Enter a positive numeric Project ID within the supported range. |
+| Background execution is denied | Allow scheduled and deployed runs on the connection, then resume the trigger. |
+| Ingress is unavailable or signatures fail | Check the public origin, proxy routing, server version, signing configuration, and GitLab delivery history. |
+| Cleanup is pending | Restore access to the original instance and original user credential. Wait for cleanup before re-enabling. |
+| Rate limit or provider outage | Restore provider access and wait for retry. Check write results before manually retrying a mutation. |
+
+Keep the original GitLab origin available until its old webhooks are removed. Changing the deployment origin before cleanup can leave remote subscriptions behind.

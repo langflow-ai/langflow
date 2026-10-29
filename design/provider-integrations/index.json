@@ -4,6 +4,10 @@
     {
       "provider_id": "github",
       "contract": "contracts/github.v1.json"
+    },
+    {
+      "provider_id": "gitlab",
+      "contract": "contracts/gitlab.v1.json"
     }
   ]
 }

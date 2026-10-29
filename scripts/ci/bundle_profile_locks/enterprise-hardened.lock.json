@@ -83,6 +83,16 @@
       "resolved_version": "0.1.0"
     },
     {
+      "distribution": "lfx-gitlab",
+      "extras": [],
+      "providers": [
+        "lfx-gitlab"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-gitlab==0.1.0",
+      "resolved_version": "0.1.0"
+    },
+    {
       "distribution": "lfx-google",
       "extras": [],
       "providers": [
@@ -190,7 +200,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:311190439f5c0ab6",
+  "profile_digest": "sha256:5cdd51bab0c6d94c",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
@@ -199,6 +209,7 @@
     "lfx-datastax",
     "lfx-docling",
     "lfx-github",
+    "lfx-gitlab",
     "lfx-google",
     "lfx-ibm",
     "lfx-microsoft",
