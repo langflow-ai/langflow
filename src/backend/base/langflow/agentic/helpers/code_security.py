@@ -78,6 +78,10 @@ _BLOCKED_INTROSPECTION_ATTRS: frozenset[str] = frozenset(
 # alias tracking cannot reliably identify their process-spawning methods.
 _BLOCKED_EXECUTION_ATTRS: frozenset[str] = frozenset({"subprocess_exec", "subprocess_shell"})
 
+# DataFrame instances can arrive through arguments or factory results. Their
+# expression methods execute strings that the outer AST cannot inspect.
+_BLOCKED_EXPRESSION_ATTRS: frozenset[str] = frozenset({"eval", "query"})
+
 # Matches a dunder reached inside a str.format()/Formatter replacement field,
 # e.g. "{0.__globals__}" or "{0[__builtins__]}". Such traversals live inside a
 # literal template string and are invisible to the AST attribute check, so a
@@ -95,16 +99,24 @@ _INERT_DUNDER_ATTRS: frozenset[str] = frozenset({"__name__", "__qualname__", "__
 _RUNTIME_LOADER_NAMES: frozenset[str] = frozenset({"__loader__", "__spec__"})
 
 
-def _is_blocked_attribute(attr: str | None) -> bool:
+def _is_blocked_attribute(attr: str | None, *, include_expression_methods: bool = True) -> bool:
     """True if reading attribute ``attr`` is a sandbox-escape vector on any object.
 
     ``None`` (an attribute name that could not be resolved statically) is not
     blocked here: callers decide separately whether an unresolvable name is a
     violation, because that answer differs by receiver.
+
+    Ordinary mapping keys may name expression methods without exposing a
+    callable. Mapping readers include those names only for namespace mappings.
     """
     if attr is None or attr in _INERT_DUNDER_ATTRS:
         return False
-    return attr.startswith("__") or attr in _BLOCKED_INTROSPECTION_ATTRS or attr in _BLOCKED_EXECUTION_ATTRS
+    return (
+        attr.startswith("__")
+        or attr in _BLOCKED_INTROSPECTION_ATTRS
+        or attr in _BLOCKED_EXECUTION_ATTRS
+        or (include_expression_methods and attr in _BLOCKED_EXPRESSION_ATTRS)
+    )
 
 
 # Non-call attribute *reads* that are forbidden: (module, attr, message).
@@ -298,6 +310,7 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     ("pandas", "read_pickle", "pandas.read_pickle() is forbidden — unsafe pickle deserialization"),
     ("pandas.io.pickle", "read_pickle", "pandas.io.pickle.read_pickle() is forbidden — unsafe pickle deserialization"),
     ("pandas.io.api", "read_pickle", "pandas.io.api.read_pickle() is forbidden — unsafe pickle deserialization"),
+    ("pandas", "eval", "pandas.eval() is forbidden in components (dynamic code execution)"),
 ]
 
 # NumPy's array readers are safe by default, but allow_pickle=True enables
@@ -426,6 +439,8 @@ DANGEROUS_SUBMODULES: tuple[str, ...] = (
     # This compatibility module exposes several pickle entry points, including
     # Unpickler and the underlying pickle module. Block its whole namespace.
     "pandas.compat.pickle_compat",
+    # Alternate parsers and engines expose the same expression evaluation.
+    "pandas.core.computation",
 )
 
 # Imports where only specific names are dangerous (module -> set of dangerous names)
@@ -965,7 +980,16 @@ def _restricted_mapping_owner(resolved_name: str) -> str | None:
 
 
 def _is_restricted_reflective_capability(resolved_name: str) -> bool:
-    """Whether a bound callable can recover restricted module members after alias tracking is lost."""
+    """Whether reflection can recover unsafe members after alias tracking is lost."""
+    if resolved_name in {
+        "getattr",
+        "vars",
+        "builtins.getattr",
+        "builtins.vars",
+        "__builtins__.getattr",
+        "__builtins__.vars",
+    }:
+        return True
     receiver_name, separator, method_name = resolved_name.rpartition(".")
     if separator and method_name == "__getattribute__" and receiver_name in _RESTRICTED_MODULE_REFERENCES:
         return True
@@ -1218,6 +1242,8 @@ class _SecurityChecker(ast.NodeVisitor):
 
     def _call_reaches_namespace_mapping(self, node: ast.Call) -> bool:
         """True if a namespace mapping is this call's receiver or one of its arguments."""
+        if any(".__dict__" in name for name in self._resolved_assignment_value(node.func)):
+            return True
         if isinstance(node.func, ast.Attribute) and any(
             name.endswith(".__dict__") for name in self._resolved_assignment_value(node.func.value)
         ):
@@ -1303,6 +1329,10 @@ class _SecurityChecker(ast.NodeVisitor):
                 return f"Indirect reference to restricted module '{resolved_name}' is forbidden in components"
             if _is_restricted_reflective_capability(resolved_name):
                 return f"Indirect reference to reflective capability '{resolved_name}' is forbidden in components"
+            # Untracked namespace reads could recover an evaluator under a
+            # normal data key after the namespace marker has been lost.
+            if ".__dict__" in resolved_name:
+                return "Indirect reference to a namespace mapping or its methods is forbidden in components"
             if violation := self._dangerous_callable_message(resolved_name):
                 return violation
         if resolved_names:
@@ -1438,6 +1468,11 @@ class _SecurityChecker(ast.NodeVisitor):
             if _is_restricted_reflective_capability(value):
                 self.violations.append(
                     f"Indirect reference to reflective capability '{value}' is forbidden in components"
+                )
+                return
+            if ".__dict__" in value:
+                self.violations.append(
+                    "Indirect reference to a namespace mapping or its methods is forbidden in components"
                 )
                 return
             if violation := self._dangerous_callable_message(value):
@@ -1595,6 +1630,11 @@ class _SecurityChecker(ast.NodeVisitor):
                 self._check_escaping_binding(binding, imported_names)
 
         return self.generic_visit(node)
+
+    def visit_Dict(self, node: ast.Dict):
+        # Nested lookups cannot retain the identity of a stored namespace.
+        self._check_opaque_reference(node)
+        self.generic_visit(node)
 
     def visit_Assign(self, node: ast.Assign):
         self.visit(node.value)
@@ -2066,7 +2106,10 @@ class _SecurityChecker(ast.NodeVisitor):
     def visit_Subscript(self, node: ast.Subscript):
         """Reject dunder-key reads on any receiver and dangerous reads from a module ``__dict__``."""
         member_name = self._static_name(node.slice)
-        if _is_blocked_attribute(member_name):
+        mapping_values = frozenset(
+            name for name in self._resolved_assignment_value(node.value) if name.endswith(".__dict__")
+        )
+        if _is_blocked_attribute(member_name, include_expression_methods=bool(mapping_values)):
             # Dunder keys are sandbox escapes regardless of the receiver:
             # ``vars(X)`` returns ``X.__dict__`` for ANY object, so gating the
             # check on a restricted-module receiver lets
@@ -2076,13 +2119,9 @@ class _SecurityChecker(ast.NodeVisitor):
         if isinstance(node.slice, ast.Slice) or (
             isinstance(node.slice, ast.Constant) and not isinstance(node.slice.value, str)
         ):
-            # ``value[0]`` / ``value[1:2]`` is a sequence read, not a member
-            # lookup. The marker rides through unmodeled calls, so it lands on
-            # values that are not mappings at all (``json.dumps(vars(o))[:100]``).
+            # Namespace-derived values may be sequences rather than mappings.
+            # Numeric indices and slices do not select attribute names.
             return self.generic_visit(node)
-        mapping_values = frozenset(
-            name for name in self._resolved_assignment_value(node.value) if name.endswith(".__dict__")
-        )
         if not mapping_values:
             return self.generic_visit(node)
         restricted_mapping_names = frozenset(name for name in mapping_values if _is_restricted_module_reference(name))
@@ -2338,7 +2377,7 @@ class _SecurityChecker(ast.NodeVisitor):
             namespace_receiver = True
         for selector in selectors:
             member_name = self._static_name(selector)
-            if _is_blocked_attribute(member_name):
+            if _is_blocked_attribute(member_name, include_expression_methods=namespace_receiver):
                 self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
                 break
             if member_name is None and namespace_receiver:

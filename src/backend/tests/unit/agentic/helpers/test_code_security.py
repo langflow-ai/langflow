@@ -3220,25 +3220,39 @@ class TestReflectiveNamespaceProvenance:
             "base = {'a': 1}\nvalues = list(base.values())",
             "base = {'a': 1}\nfor k, v in base.items():\n    pass",
             # A namespace read with a statically known, non-dunder key still works.
-            "import argparse\nparsed = argparse.Namespace()\nconfig = dict(vars(parsed))\nname = config['name']",
-            "class C:\n    x = 1\n\n\nfields = sorted(vars(C).keys())",
-            "class C:\n    x = 1\n\n\ncount = len(vars(C))",
-            # The marker rides onto non-mappings, so sequence reads must stay clean.
-            "import json\n\n\nclass C:\n    x = 1\n\n\ntext = json.dumps(vars(C()))\nhead = text[:100]",
+            "import argparse\nparsed = argparse.Namespace()\nconfig = vars(parsed)\nname = config['name']",
         ],
         ids=[
             "plain-dict-copy",
             "plain-dict-merge",
             "plain-dict-values",
             "plain-dict-items",
+            "namespace-static-key",
+        ],
+    )
+    def test_ordinary_dictionary_copies_still_allowed(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import argparse\nparsed = argparse.Namespace()\nconfig = dict(vars(parsed))\nname = config['name']",
+            "class C:\n    x = 1\n\n\nfields = sorted(vars(C).keys())",
+            "class C:\n    x = 1\n\n\ncount = len(vars(C))",
+            "import json\n\n\nclass C:\n    x = 1\n\n\ntext = json.dumps(vars(C()))\nhead = text[:100]",
+        ],
+        ids=[
             "namespace-copy-static-key",
             "namespace-keys",
             "namespace-length",
             "serialized-namespace-slice",
         ],
     )
-    def test_ordinary_dictionary_copies_still_allowed(self, code):
-        assert scan_code_security(code).is_safe is True
+    def test_namespace_arguments_are_rejected_even_for_benign_consumers(self, code):
+        """Call targets can be replaced, so namespace arguments cannot escape tracking."""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("namespace mapping" in violation for violation in result.violations)
 
 
 class TestScanCodeSecurityDynamicGetattrSandboxBypass:
@@ -3410,6 +3424,130 @@ class TestScanCodeSecurityUnpackedGetattrArguments:
     )
     def test_should_allow_unpacking_outside_getattr(self, code):
         assert scan_code_security(code).is_safe is True
+
+
+class TestScanCodeSecurityExpressionEvaluation:
+    """Expression evaluators must not execute code hidden inside strings."""
+
+    @pytest.mark.parametrize("method", ["eval", "query"])
+    @pytest.mark.parametrize(
+        "source",
+        [
+            "import pandas as pd\npd.DataFrame({'x': [1]}).METHOD('x + 1')",
+            "import pandas as pd\nframe = pd.DataFrame({'x': [1]})\nframe.METHOD('x + 1')",
+            "from pandas import DataFrame as Frame\nFrame.METHOD(frame, 'x + 1')",
+            "def calculate(frame):\n    return frame.METHOD(expression)",
+            "calculate = frame.METHOD\ncalculate(expression)",
+            "callbacks = [frame.METHOD]\ncallbacks[0](expression)",
+            "getattr(frame, 'METHOD')(expression)",
+            "getattr(frame, 'METHOD' + '')(expression)",
+            "vars(type(frame))['METHOD'](frame, expression)",
+            "vars(type(frame)).get('METHOD')(frame, expression)",
+            "dict.get(vars(type(frame)), 'METHOD')(frame, expression)",
+            "namespace = dict(vars(type(frame)))\nnamespace['METHOD'](frame, expression)",
+            "copy_namespace = vars(type(frame)).copy\nnamespace = copy_namespace()\n"
+            "namespace['METHOD'](frame, expression)",
+        ],
+    )
+    def test_rejects_expression_methods(self, source, method):
+        result = scan_code_security(source.replace("METHOD", method))
+        assert result.is_safe is False
+        assert any(method in violation for violation in result.violations)
+
+    @pytest.mark.parametrize("method", ["eval", "query"])
+    @pytest.mark.parametrize(
+        "source",
+        [
+            "def members(value):\n    return vars(type(value))\nmembers(frame)['METHOD'](frame, 'x == 1')",
+            "def members():\n    return vars(pd.DataFrame)\nmembers()['METHOD'](frame, 'x == 1')",
+            "def lookup(namespace):\n    return namespace['METHOD']\nlookup(vars(type(frame)))(frame, 'x == 1')",
+            "def lookup(namespace):\n    return namespace.get('METHOD')\nlookup(vars(type(frame)))(frame, 'x == 1')",
+            "def lookup():\n    return vars(pd.DataFrame).get\nlookup()('METHOD')(frame, 'x == 1')",
+            "class Methods:\n    namespace = vars(pd.DataFrame)\nMethods.namespace['METHOD'](frame, 'x == 1')",
+            "holder.namespace = vars(type(frame))\nholder.namespace['METHOD'](frame, 'x == 1')",
+            "holder.lookup = vars(type(frame)).get\nholder.lookup('METHOD')(frame, 'x == 1')",
+            "def publish():\n    global namespace\n    namespace = vars(type(frame))\n"
+            "publish()\nnamespace['METHOD'](frame, 'x == 1')",
+            "def outer():\n    namespace = {}\n    def publish():\n        nonlocal namespace\n"
+            "        namespace = vars(type(frame))\n    publish()\n    return namespace['METHOD'](frame, 'x == 1')",
+            "def members():\n    yield vars(type(frame))\nnext(members())['METHOD'](frame, 'x == 1')",
+            "def members():\n    return [vars(type(frame))]\nmembers()[0]['METHOD'](frame, 'x == 1')",
+            "def lookup(namespace):\n    return namespace['METHOD']\nlookup(dict(vars(type(frame))))(frame, 'x == 1')",
+            "def copy_namespace():\n    return vars(type(frame)).copy\ncopy_namespace()()['METHOD'](frame, 'x == 1')",
+            "namespaces = {'fields': vars(type(frame))}\nnamespaces['fields']['METHOD'](frame, 'x == 1')",
+            "{'fields': vars(type(frame))}['fields']['METHOD'](frame, 'x == 1')",
+            "namespaces = {'outer': {'fields': vars(type(frame))}}\n"
+            "namespaces['outer']['fields']['METHOD'](frame, 'x == 1')",
+        ],
+    )
+    def test_rejects_namespace_escapes(self, source, method):
+        code = "import pandas as pd\nframe = pd.DataFrame({'x': [1]})\n" + source.replace("METHOD", method)
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize("capability", ["vars", "getattr", "builtins.vars", "builtins.getattr"])
+    @pytest.mark.parametrize(
+        "source",
+        [
+            "lookup = [CAPABILITY][0]",
+            "lookup = (lambda value: value)(CAPABILITY)",
+            "def factory():\n    return CAPABILITY\nlookup = factory()",
+            "holder.lookup = CAPABILITY",
+            "class Helpers:\n    lookup = CAPABILITY",
+            "def factory(lookup=CAPABILITY):\n    return lookup",
+        ],
+    )
+    def test_rejects_reflection_callable_escapes(self, source, capability):
+        code = "import builtins\n" + source.replace("CAPABILITY", capability)
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import pandas as pd\npd.eval('1 + 1')",
+            "from pandas import eval as calculate\ncalculate('1 + 1')",
+            "from pandas import *\neval('1 + 1')",
+            "import pandas.core.computation.eval as expressions\nexpressions.eval('1 + 1')",
+            "from pandas.core.computation.eval import eval as calculate\ncalculate('1 + 1')",
+            "from pandas.core.computation.api import eval as calculate\ncalculate('1 + 1')",
+            "from pandas.core.computation.expr import Expr\nExpr(expression)",
+            "from pandas.core.computation.engines import PythonEngine\nPythonEngine(expression).evaluate()",
+            "import pandas as pd\npd.core.computation.expr.Expr(expression)",
+        ],
+    )
+    def test_rejects_pandas_evaluator_imports(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import pandas as pd\nframe = pd.DataFrame({'x': [1, 2]})\nresult = frame[frame['x'] > 1]",
+            "import pandas as pd\nframe = pd.DataFrame({'x': [1]})\nresult = frame['x'] + 1",
+            "data = {'query': 'text', 'eval': 1}\nresult = data['query'], data['eval']",
+            "data = {}\nresult = data.get('query'), data.get('eval')",
+            "data = {}\nresult = dict.get(data, 'query'), dict.get(data, 'eval')",
+            "def lookup(data):\n    return data['eval']\nresult = lookup({'eval': 1})",
+            "class C:\n    x = 1\nnamespace = vars\nresult = namespace(C)['x']",
+            "class C:\n    x = 1\nlookup = getattr\nresult = lookup(C, 'x')",
+            "import pandas as pd\nframe = pd.DataFrame({'query': [1], 'eval': [2]})\nresult = frame['query']",
+        ],
+    )
+    def test_preserves_data_operations(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    @pytest.mark.parametrize("method", ["eval", "query"])
+    def test_pandas_expression_can_invoke_a_callback(self, method):
+        """Prove the expression reaches Python with an in-memory marker only."""
+        import pandas as pd
+
+        calls = []
+
+        def record():
+            calls.append("called")
+            return 1
+
+        frame = pd.DataFrame({"x": [1]})
+        getattr(frame, method)("x == @record()", engine="python", local_dict={"record": record})
+        assert calls == ["called"]
 
 
 class TestScanCodeSecurityUnsafeDeserialization:
