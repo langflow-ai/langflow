@@ -60,6 +60,7 @@ export default function EvaluateFlowModal({
     set.setJudgeModel([]);
   };
   const { data: datasets } = useGetDatasets({ size: 200 }, { enabled: open });
+  const hasDatasets = (datasets?.items.length ?? 0) > 0;
   const { data: versions } = useGetFlowVersions(
     { flowId },
     { enabled: open && Boolean(flowId) },
@@ -139,6 +140,7 @@ export default function EvaluateFlowModal({
                 <Select
                   value={state.datasetId}
                   onValueChange={set.setDatasetId}
+                  disabled={!hasDatasets}
                 >
                   <SelectTrigger
                     id="evaluation-dataset"
@@ -164,7 +166,7 @@ export default function EvaluateFlowModal({
                     ))}
                   </SelectContent>
                 </Select>
-                {datasets && datasets.items.length === 0 && (
+                {datasets && !hasDatasets && (
                   <button
                     type="button"
                     className="self-start text-xs underline underline-offset-4"
