@@ -9,6 +9,8 @@ let mockMine: TriggerRead[] = [];
 let mockAll: TriggerRead[] = [];
 const mockBulk = jest.fn();
 const mockDryRun = jest.fn();
+const mockEnable = jest.fn();
+const mockNavigate = jest.fn();
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
@@ -27,7 +29,10 @@ jest.mock("@/controllers/API/queries/triggers", () => {
     useTriggerEventsQuery: () => ({ data: [], isLoading: false }),
     useTriggerIngressQuery: () => ({ data: undefined }),
     useTriggerPollingInterval: () => 5000,
-    useEnableTriggerMutation: mutation,
+    useEnableTriggerMutation: () => ({
+      mutateAsync: mockEnable,
+      isPending: false,
+    }),
     useDisableTriggerMutation: mutation,
     useDeleteTriggerMutation: mutation,
     useTestTriggerMutation: mutation,
@@ -53,7 +58,7 @@ jest.mock("@/controllers/API/queries/connections", () => ({
   useUpdateConnectionMutation: () => ({ mutateAsync: jest.fn() }),
 }));
 jest.mock("@/customization/hooks/use-custom-navigate", () => ({
-  useCustomNavigate: () => jest.fn(),
+  useCustomNavigate: () => mockNavigate,
 }));
 jest.mock("@/stores/authStore", () => ({
   __esModule: true,
@@ -130,6 +135,30 @@ describe("TriggersPage", () => {
 
     expect(screen.queryByTestId("trigger-row-a")).toBeNull();
     expect(screen.getByTestId("trigger-row-b")).toBeInTheDocument();
+  });
+
+  it("resumes a reconnected Jira trigger from its inline fix", async () => {
+    mockMine = [
+      makeTrigger({
+        id: "jira-reconnected",
+        name: "Jira: On Issue Created",
+        provider: "jira",
+        kind: "jira.issue_created",
+        state: "needs_reconnect",
+        reason: "ready_to_resume",
+        allowed_actions: ["pause", "resume", "delete"],
+        blocked_actions: { reconnect: "reconnect_not_needed" },
+      }),
+    ];
+    mockEnable.mockResolvedValue(mockMine[0]);
+    render(<TriggersPage />);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Resume Jira: On Issue Created" }),
+    );
+
+    expect(mockEnable).toHaveBeenCalledWith("jira-reconnected");
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it("explains an empty search", async () => {
