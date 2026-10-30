@@ -1,4 +1,5 @@
 import type { ModelProviderWithStatus } from "@/controllers/API/queries/models/use-get-model-providers";
+import type { ModelType } from "@/types/models";
 import type { ModelOption } from "../types";
 import { canonicalProviderName, providerNamesMatch } from "./provider-identity";
 import { recoverModelOption } from "./recover-model-option";
@@ -15,6 +16,8 @@ export interface SavedModelAvailabilityParams {
    * mid-flight fetch must not be read as "the saved model is gone".
    */
   modelStatusIsReliable: boolean;
+  /** The field's kind. A decision model is matched by kind too: a chat model can share its name. */
+  modelType?: ModelType;
 }
 
 /**
@@ -27,7 +30,9 @@ export interface SavedModelAvailabilityParams {
  *
  * - the saved provider is missing from the provider list entirely — it was
  *   never offered to this user, or its approval was revoked;
- * - the saved provider is configured, but its catalog no longer lists the
+ * - the saved decision model is absent from its provider's catalog, even if
+ *   that provider is not configured; for other model kinds, the provider is
+ *   configured, but its catalog no longer lists the
  *   model and the user's enabled-models map has never heard of it — a model
  *   hidden by policy, removed from the catalog, or no longer served live.
  *
@@ -39,6 +44,7 @@ export function isSavedModelUnavailable({
   providers,
   enabledModels,
   modelStatusIsReliable,
+  modelType,
 }: SavedModelAvailabilityParams): boolean {
   if (!modelStatusIsReliable || !providers || enabledModels === undefined) {
     // Nothing can be judged unavailable until both server views have loaded.
@@ -59,16 +65,26 @@ export function isSavedModelUnavailable({
   if (!providerInfo) {
     return true;
   }
-  if (providerInfo.is_configured !== true) {
-    // Unconfigured / disconnected providers keep their existing
-    // "configure the provider" affordance.
+  const isDecision = modelType === "decision";
+  if (!isDecision && providerInfo.is_configured !== true) {
+    // Other model kinds may need credentials to populate their catalogs.
+    // Decision catalogs already identify allowed models before configuration.
     return false;
   }
   const listedInCatalog = (providerInfo.models ?? []).some(
-    (model) => model.model_name === saved.name,
+    // A decision row never stands in for a language model, nor the reverse.
+    (model) =>
+      model.model_name === saved.name &&
+      (model.metadata?.model_type === "decision") === isDecision,
   );
   if (listedInCatalog) {
     return false;
+  }
+  // The typed enabled-models map keeps a decision model policy blocks, switched
+  // off, so it cannot tell a restriction from a deactivation: the catalog,
+  // which leaves blocked models out, decides.
+  if (isDecision) {
+    return true;
   }
   const knownToUserSettings =
     (enabledModels?.[saved.provider] !== undefined &&

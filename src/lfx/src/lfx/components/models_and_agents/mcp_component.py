@@ -27,6 +27,7 @@ from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.services.deps import get_storage_service, session_scope
+from lfx.services.variable.exceptions import RuntimeVariableError
 
 
 def resolve_mcp_config(
@@ -385,6 +386,24 @@ class MCPToolsComponent(ComponentWithCache):
 
         ensure_mcp_stdio_access(server_config, current_user, get_settings_service().settings)
 
+    async def _account_bound_variables(self) -> dict[str, str] | None:
+        """Resolve current account policy before any credential-bearing tool cache."""
+        try:
+            from lfx.services.deps import get_variable_service
+
+            variable_service = get_variable_service()
+            resolve_bound = getattr(type(variable_service), "get_account_bound_variables", None)
+            policy_enabled = getattr(variable_service, "account_bound_variables_enabled", lambda: True)
+            if resolve_bound is not None and policy_enabled():
+                async with session_scope() as db:
+                    return await resolve_bound(variable_service, user_id=self.user_id, session=db)
+        except RuntimeVariableError:
+            raise
+        except Exception as exc:
+            msg = f"Error updating tool list: {exc!s}"
+            raise ValueError(msg) from exc
+        return None
+
     async def update_tool_list(self, mcp_server_value=None):
         # Accepts mcp_server_value as dict {name, config} or uses self.mcp_server
         mcp_server = mcp_server_value if mcp_server_value is not None else getattr(self, "mcp_server", None)
@@ -402,10 +421,15 @@ class MCPToolsComponent(ComponentWithCache):
 
         servers_cache_key = self._mcp_servers_cache_key(server_name)
 
+        # Account-bound credentials and approvals can change between invocations.
+        # Resolve before either cache hit, and do not retain tools whose clients
+        # captured a previous credential snapshot.
+        bound_variables = await self._account_bound_variables()
+
         # Check if caching is enabled, default to False. The cross-request cache must never
         # be used without an authenticated tenant scope; the per-instance TTL cache remains
         # available in standalone/UI contexts.
-        use_cache = getattr(self, "use_cache", False)
+        use_cache = getattr(self, "use_cache", False) and bound_variables is None
         use_shared_cache = use_cache and self._mcp_cache_user_id() is not None
         header_keys = sorted(self._normalized_headers_for_cache().keys())
         await logger.adebug(
@@ -577,8 +601,8 @@ class MCPToolsComponent(ComponentWithCache):
                 # The load must NOT be skipped just because the request carried overrides: a
                 # request that overrides one variable still needs every other referenced
                 # variable resolved from the database.
-                db_variables: dict[str, str] | None = None
-                if config_uses_global_variables(server_config):
+                db_variables: dict[str, str] | None = bound_variables
+                if bound_variables is None and config_uses_global_variables(server_config):
                     try:
                         from lfx.services.deps import get_variable_service
 
@@ -591,6 +615,8 @@ class MCPToolsComponent(ComponentWithCache):
                                 db_variables = await variable_service.get_all_decrypted_variables(
                                     user_id=self.user_id, session=db
                                 )
+                    except RuntimeVariableError:
+                        raise
                     except Exception as e:  # noqa: BLE001
                         await logger.awarning("Failed to load global variables for MCP component", exc_info=e)
 
@@ -602,7 +628,11 @@ class MCPToolsComponent(ComponentWithCache):
                 # The URL still resolves from the database only, via ``url_variables`` below:
                 # request_variables carry the caller's X-Langflow-Global-Var-* values, and a
                 # caller must not be able to choose where this flow connects.
-                request_variables = {**(db_variables or {}), **(request_variables or {})} or None
+                request_variables = (
+                    db_variables
+                    if bound_variables is not None
+                    else {**(db_variables or {}), **(request_variables or {})} or None
+                )
 
                 await logger.adebug(
                     "MCP update_tool_list: calling update_tools server=%r mode_headers=%s",
@@ -665,6 +695,8 @@ class MCPToolsComponent(ComponentWithCache):
                             len(current_servers_cache),
                         )
 
+            except RuntimeVariableError:
+                raise
             except (TimeoutError, asyncio.TimeoutError) as e:
                 msg = (
                     f"Timeout updating tool list: {e!s}. "
@@ -1155,7 +1187,8 @@ class MCPToolsComponent(ComponentWithCache):
         mcp_server = getattr(self, "mcp_server", None)
         srv = mcp_server.get("name") if isinstance(mcp_server, dict) else mcp_server
 
-        ttl = self.TOOL_TTL_SECS
+        bound_variables = await self._account_bound_variables()
+        ttl = self.TOOL_TTL_SECS if bound_variables is None else 0
         ttl_key = self._mcp_servers_cache_key(srv or "") if ttl > 0 and srv else ""
 
         # TTL cache lookup + expired-entry eviction.

@@ -31,6 +31,7 @@ from lfx.extension.bundle_registry import get_default_registry
 from lfx.log.logger import logger
 from lfx.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
 from lfx.utils.component_aliases import flatten_components_with_aliases
+from lfx.utils.flow_code import normalize_code_for_import
 from lfx.utils.util import escape_json_dump
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import selectinload
@@ -1253,7 +1254,7 @@ def _merge_variable_bindings(existing_data, incoming_data):
 
 
 async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: AsyncSession, user_id: UUID) -> None:
-    flow = orjson.loads(file_content)
+    flow = normalize_code_for_import(orjson.loads(file_content))
     flow_endpoint_name = flow.get("endpoint_name")
     if _is_valid_uuid(filename):
         flow["id"] = filename
@@ -1649,7 +1650,7 @@ async def sync_flows_from_fs():
                                     try:
                                         flow_changed = False
                                         for field_name in ("name", "description", "data", "locked"):
-                                            if (new_value := update_data.get(field_name)) and getattr(
+                                            if (new_value := update_data.get(field_name)) is not None and getattr(
                                                 flow, field_name
                                             ) != new_value:
                                                 setattr(flow, field_name, new_value)

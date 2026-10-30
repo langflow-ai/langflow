@@ -39,7 +39,7 @@ from langflow.services.database.models.trigger.schemas import (
     TriggerState,
 )
 from langflow.services.triggers.constants import AUDIT_ADMIN_PAUSE, AUDIT_ADMIN_RESUME
-from langflow.services.triggers.locking import lock_trigger
+from langflow.services.triggers.locking import lock_trigger, lock_trigger_for_admission
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -62,9 +62,12 @@ async def _selected_ids(session: AsyncSession, *, request: TriggerBulkRequest) -
     return list((await session.exec(statement)).all())
 
 
-async def _current(session: AsyncSession, trigger_id: UUID, *, lock: bool) -> Trigger | None:
+async def _current(session: AsyncSession, trigger_id: UUID, *, lock: bool, admission: bool = False) -> Trigger | None:
     """The row as it is now, not as the selection saw it."""
     if lock:
+        if admission:
+            row, _connections = await lock_trigger_for_admission(session, trigger_id)
+            return row
         return await lock_trigger(session, trigger_id)
     return await session.get(Trigger, trigger_id, populate_existing=True)
 
@@ -118,7 +121,25 @@ async def _run(
     trigger_ids = await _selected_ids(session, request=request)
     for trigger_id in trigger_ids:
         try:
-            row = await _current(session, trigger_id, lock=not request.dry_run)
+            if action is TriggerAction.RESUME and not request.dry_run:
+                preliminary = await _current(session, trigger_id, lock=False)
+                if preliminary is None or not eligible(preliminary):
+                    await session.rollback()
+                    unchanged.append(trigger_id)
+                    continue
+            try:
+                row = await _current(
+                    session, trigger_id, lock=not request.dry_run, admission=action is TriggerAction.RESUME
+                )
+            except ValueError as exc:
+                # Parent discovery can refuse a missing or changed connection
+                # before enable runs. Preserve the same audited release as an
+                # enable-time refusal, after dropping all admission locks.
+                await session.rollback()
+                if on_refusal is not None:
+                    await on_refusal(trigger_id, str(exc))
+                failed.append(TriggerBulkFailure(trigger_id=trigger_id, detail=str(exc)))
+                continue
             if row is None or not eligible(row):
                 if not request.dry_run:
                     await session.rollback()  # Release even an unchanged row's lock.

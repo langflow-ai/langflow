@@ -52,6 +52,23 @@ def test_segment_has_no_write_key_in_source_checkout() -> None:
     assert Settings().segment_write_key == DEFAULT_SEGMENT_WRITE_KEY
 
 
+def test_edition_defaults_to_opensource(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LANGFLOW_EDITION", raising=False)
+    assert Settings(_env_file=None).edition == "opensource"
+
+
+def test_edition_reads_operator_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LANGFLOW_EDITION", "enterprise")
+    assert Settings(_env_file=None).edition == "enterprise"
+
+
+@pytest.mark.parametrize("edition", ["premium", ""])
+def test_edition_defaults_for_unsupported_values(monkeypatch: pytest.MonkeyPatch, edition: str) -> None:
+    """An unsupported telemetry edition must not prevent settings initialization."""
+    monkeypatch.setenv("LANGFLOW_EDITION", edition)
+    assert Settings(_env_file=None).edition == "opensource"
+
+
 # Every field the composed Settings must expose: the original monolith fields
 # plus the settings added in 1.10.0 (folded into the mixins during the release
 # back-merge). Asserted as a set so a missing group in the inheritance chain —
@@ -129,6 +146,7 @@ EXPECTED_FIELDS = {
     "do_not_track",
     "segment_write_key",
     "segment_api_url",
+    "edition",
     "transactions_storage_enabled",
     "vertex_builds_storage_enabled",
     "sync_result_storage_enabled",
@@ -203,6 +221,7 @@ EXPECTED_FIELDS = {
     "variable_store",
     "fallback_to_env_var",
     "store_environment_variables",
+    "deployment_typed_variables_enabled",
     "variables_to_get_from_environment",
     "agentic_experience",
     "developer_api_enabled",
@@ -296,6 +315,7 @@ EXPECTED_FIELDS = {
     "listener_backoff_cap_s",
     "listener_failure_threshold",
     # Triggers (TRG-4): provider push ingress and subscription renewal.
+    "trigger_ingress_origin",
     "trigger_ingress_enabled",
     "trigger_ingress_max_body_bytes",
     "trigger_ingress_rate_limit_per_minute",
@@ -356,6 +376,13 @@ def test_all_expected_fields_present():
 def test_field_count_unchanged():
     """The total field count matches the curated expected set (no stray adds/drops)."""
     assert len(Settings.model_fields) == len(EXPECTED_FIELDS)
+
+
+def test_trigger_ingress_origin_is_optional_operator_configuration(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LANGFLOW_TRIGGER_INGRESS_ORIGIN", raising=False)
+    assert Settings(_env_file=None).trigger_ingress_origin is None
+    monkeypatch.setenv("LANGFLOW_TRIGGER_INGRESS_ORIGIN", "https://hooks.langflow.example")
+    assert Settings(_env_file=None).trigger_ingress_origin == "https://hooks.langflow.example"
 
 
 def test_critical_defaults_unchanged():

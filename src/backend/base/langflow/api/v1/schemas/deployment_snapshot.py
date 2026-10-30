@@ -1,6 +1,6 @@
 """Read-only deployment snapshot response models."""
 
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -14,6 +14,13 @@ class DeploymentSnapshotProject(BaseModel):
     id: UUID
     name: str
     description: str | None = None
+
+
+class DeploymentSnapshotRequiredVariable(BaseModel):
+    """A variable name and source kind; null kind requires resolution before activation."""
+
+    name: str = Field(min_length=1)
+    kind: Literal["secret", "plain"] | None
 
 
 class DeploymentSnapshotFlow(BaseModel):
@@ -76,6 +83,8 @@ class DeploymentSnapshot(BaseModel):
     flows: list[DeploymentSnapshotFlow]
     dependencies: dict[str, Any] = Field(default_factory=dict)
     required_variables: list[str] = Field(default_factory=list)
+    required_variable_declarations: list[DeploymentSnapshotRequiredVariable] = Field(default_factory=list)
+    schema_version: int = 1
     required_connections: list[DeploymentSnapshotRequiredConnection] = Field(default_factory=list)
     # Model provider identities the captured flows select, and the number of
     # model fields that selected none. Both default empty, so a caller written

@@ -11,13 +11,19 @@ jest.mock("@/components/common/genericIconComponent", () => ({
   default: () => null,
 }));
 
-const help = (providerId: string, noRegistration = true, usesToken = false) => (
+const help = (
+  providerId: string,
+  noRegistration = true,
+  usesToken = false,
+  docsUrl?: string | null,
+) => (
   <I18nextProvider i18n={i18n}>
     <ConnectionSetupHelp
       key={`${providerId}:${usesToken}`}
       providerId={providerId}
       noRegistration={noRegistration}
       usesToken={usesToken}
+      docsUrl={docsUrl}
     />
   </I18nextProvider>
 );
@@ -105,6 +111,43 @@ describe("connection setup guidance", () => {
     expect(
       screen.queryByTestId("connection-callback-url"),
     ).not.toBeInTheDocument();
+  });
+
+  it("uses provider setup documentation without requiring OAuth for a pasted token", () => {
+    const url = "https://docs.example.com/github/setup";
+    render(help("github", true, true, url));
+    expect(screen.getByRole("link", { name: "Setup guide" })).toHaveAttribute(
+      "href",
+      url,
+    );
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("connection-callback-url"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("preserves tailored setup documentation when provider metadata also supplies a URL", () => {
+    render(help("slack", true, true, "https://docs.example.com/slack"));
+    expect(screen.getByRole("link", { name: "Setup guide" })).toHaveAttribute(
+      "href",
+      "https://docs.langflow.org/bundles-slack#two-executing-identities",
+    );
+  });
+
+  it.each([
+    "javascript:alert(1)",
+    "data:text/html,setup",
+    "file:///setup.html",
+    "//docs.example.com/setup",
+    "/setup",
+    "not a URL",
+    "https://user:password@docs.example.com/setup", // pragma: allowlist secret
+    "https://user@docs.example.com/setup",
+    "",
+    null,
+  ])("does not render unsafe or missing documentation %s", (url) => {
+    render(help("custom-provider", false, true, url));
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 });
 

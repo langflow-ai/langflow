@@ -212,7 +212,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           ref={setRefs}
           {...props}
           disabled={nativeDisabled || undefined}
-          aria-disabled={isBusy || undefined}
+          // Keep a caller's aria-disabled: a blocked control stays focusable so
+          // its reason reaches keyboard and screen-reader users.
+          aria-disabled={isBusy || props["aria-disabled"] || undefined}
           aria-busy={isBusy || undefined}
           onClick={handleClick}
           onKeyDown={handleKeyDown}
