@@ -124,6 +124,7 @@ lfx-vllm = { workspace = true }
 lfx-empiriolabs = { workspace = true }
 lfx-openai-compatible = { workspace = true }
 lfx-exa = { workspace = true }
+lfx-famulor = { workspace = true }
 lfx-valkey = { workspace = true }
 lfx-google = { workspace = true }
 lfx-confluent = { workspace = true }
@@ -164,6 +165,7 @@ members = [
     "src/bundles/empiriolabs",
     "src/bundles/openai-compatible",
     "src/bundles/exa",
+    "src/bundles/famulor",
     "src/bundles/valkey",
     "src/bundles/google",
     "src/bundles/confluent",
@@ -189,6 +191,7 @@ bundles = [
     "lfx-duckduckgo>=0.2.0,<1.0.0",
     "lfx-empiriolabs>=0.2.0,<1.0.0",
     "lfx-exa>=0.2.0,<1.0.0",
+    "lfx-famulor>=0.1.0,<1.0.0",
     "lfx-firecrawl>=0.2.0,<1.0.0",
     "lfx-nextplaid>=0.2.0,<1.0.0",
     "lfx-paddle>=0.2.0,<1.0.0",
