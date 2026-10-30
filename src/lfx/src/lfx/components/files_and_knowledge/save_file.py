@@ -511,15 +511,20 @@ class SaveToFileComponent(Component):
         append_mode = getattr(self, "append_mode", False)
         should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)
 
+        if fmt in ("csv", "excel", "markdown"):
+            # Keep column-oriented lists, mappings, and scalar broadcasting unchanged.
+            is_record = bool(data.data) and all(pd.api.types.is_scalar(value) for value in data.data.values())
+            dataframe = pd.DataFrame([data.data] if is_record else data.data)
+
         if fmt == "csv":
-            pd.DataFrame(data.data).to_csv(
+            dataframe.to_csv(
                 path,
                 index=False,
                 mode="a" if should_append else "w",
                 header=not should_append,
             )
         elif fmt == "excel":
-            pd.DataFrame(data.data).to_excel(path, index=False, engine="openpyxl")
+            dataframe.to_excel(path, index=False, engine="openpyxl")
         elif fmt == "json":
             new_data = jsonable_encoder(data.data)
             if should_append:
@@ -550,7 +555,7 @@ class SaveToFileComponent(Component):
                 content = orjson.dumps(new_data, option=orjson.OPT_INDENT_2).decode("utf-8")
                 path.write_text(content, encoding="utf-8")
         elif fmt == "markdown":
-            content = pd.DataFrame(data.data).to_markdown(index=False)
+            content = dataframe.to_markdown(index=False)
             if should_append:
                 path.write_text(path.read_text(encoding="utf-8") + "\n\n" + content, encoding="utf-8")
             else:
