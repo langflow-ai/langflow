@@ -27,7 +27,11 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 from uuid import NAMESPACE_URL, uuid5
 
-from lfx.integrations.errors import IntegrationPolicyBlockedError, ProviderUnavailableError
+from lfx.integrations.errors import (
+    ConnectionNotAuthorizedError,
+    IntegrationPolicyBlockedError,
+    ProviderUnavailableError,
+)
 from lfx.log.logger import logger
 from sqlmodel import col, func, select, update
 
@@ -41,6 +45,7 @@ from langflow.services.database.models.trigger.schemas import (
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.triggers import leases
 from langflow.services.triggers.binding import resolve_binding
+from langflow.services.triggers.connection_recovery import record_connection_failure
 from langflow.services.triggers.constants import (
     CONNECTION_NOT_AUTHORIZED_ERROR,
     DISPATCHER_LEASE_NAME,
@@ -624,6 +629,14 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
         await _terminalize(session, event=event, state=TriggerEventState.FAILED, error=CONNECTION_NOT_AUTHORIZED_ERROR)
         trigger.state = TriggerState.NEEDS_RECONNECT.value
         trigger.last_error = CONNECTION_NOT_AUTHORIZED_ERROR
+        trigger.updated_at = datetime.now(timezone.utc)
+        record_connection_failure(
+            trigger,
+            failed_at=trigger.updated_at,
+            consent_required=(
+                isinstance(denial, ConnectionNotAuthorizedError) and denial.reason == "non-interactive-opt-in-required"
+            ),
+        )
         session.add(trigger)
         await session.flush()
         await logger.awarning(
@@ -701,8 +714,13 @@ async def run_once(*, owner: str, source_hints: bool | None = None) -> int:
 async def reconcile_push_sources(*, limit: int = 5) -> int:
     """Scan due push sources even when the provider sent no notification."""
     from langflow.services.database.models.trigger.schemas import TriggerSubscriptionState
-    from langflow.services.triggers.source_runtime import reconcile_source, source_failure_detail
+    from langflow.services.triggers.source_runtime import (
+        mark_interrupted_activations,
+        reconcile_source,
+        source_failure_detail,
+    )
 
+    await mark_interrupted_activations(limit=limit)
     now = _now()
     async with session_scope() as session:
         due = (

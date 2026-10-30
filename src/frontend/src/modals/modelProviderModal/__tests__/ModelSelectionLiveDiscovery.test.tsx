@@ -101,6 +101,23 @@ describe("ModelSelection live-discovery empty state", () => {
     expect(screen.getByText("Check Ollama Library")).toBeInTheDocument();
   });
 
+  it("gives the decision view the generic empty state: discovery finds no decision models", () => {
+    render(
+      <ModelSelection
+        modelType="decision"
+        availableModels={[]}
+        onModelToggle={noop}
+        providerName="IBM WatsonX"
+        liveDiscovery
+        isConfigured={false}
+      />,
+    );
+
+    expect(
+      screen.queryByTestId("live-discovery-empty-state"),
+    ).not.toBeInTheDocument();
+  });
+
   it("renders nothing special for static-catalog providers", () => {
     render(
       <ModelSelection

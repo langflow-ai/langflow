@@ -176,22 +176,23 @@ jobs:
     name: Native SQLite - ${{ matrix.runner }} Python ${{ matrix.python }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 10
+    continue-on-error: ${{ matrix.python == '3.15' }}
     strategy:
       fail-fast: false
       matrix:
         runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, macos-15-intel, windows-latest]
-        python: ['3.10', '3.11', '3.12', '3.13', '3.14']
+        python: ['3.11', '3.12', '3.13', '3.14', '3.15']
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
         with:
-          version: latest-known
+          version: ${{ matrix.python == '3.15' && '0.13.0' || 'latest-known' }}
           python-version: ${{ matrix.python }}
       - name: Install only the pinned native wheels
         run: |
           uv venv .sqlite-runtime
-          uv pip install --python .sqlite-runtime --only-binary :all: apsw==3.53.4.0 sqlite-vec==0.1.9
+          uv pip install --python .sqlite-runtime --only-binary :all: apsw==${{ matrix.python == '3.15' && '3.54.1.0' || '3.53.4.0' }} sqlite-vec==0.1.9
       - name: Qualify extension, WAL and reopen
         run: uv run --no-project --python .sqlite-runtime scripts/ci/check_sqlite_runtime.py

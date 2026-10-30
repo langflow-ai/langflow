@@ -43,6 +43,7 @@ from .message import MessageTable
 from .model_provider_policy import ModelProviderPolicy
 from .policy_bundle import PolicyBundleActive, PolicyBundleRevision
 from .project_replacement_operation import ProjectReplacementOperation
+from .secret_rotation import SecretRotation
 from .traces.model import SpanTable, TraceTable
 from .transactions import TransactionTable
 from .trigger import (
@@ -113,6 +114,7 @@ __all__ = [
     "SSOSecretError",
     "SSOSettings",
     "SSOUserProfile",
+    "SecretRotation",
     "SignalType",
     "SpanTable",
     "TraceTable",

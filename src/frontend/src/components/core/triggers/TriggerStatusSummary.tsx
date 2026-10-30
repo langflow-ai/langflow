@@ -27,7 +27,7 @@ export function TriggerStatusSummary({
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2">
-        <TriggerStateBadge state={trigger.state} />
+        <TriggerStateBadge state={trigger.state} reason={trigger.reason} />
         {fix && (
           <button
             type="button"
@@ -46,7 +46,7 @@ export function TriggerStatusSummary({
           {t(reasonKey(trigger))}
         </span>
       )}
-      {trigger.last_error && (
+      {trigger.last_error && trigger.reason !== "ready_to_resume" && (
         <span
           className="line-clamp-2 max-w-[16rem] break-words text-xs text-muted-foreground"
           title={trigger.last_error}

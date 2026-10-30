@@ -14,7 +14,7 @@ on:
         description: "(Optional) Python versions to test"
         required: false
         type: string
-        default: "['3.10', '3.11', '3.12', '3.13', '3.14', '3.15']"
+        default: "['3.11', '3.12', '3.13', '3.14', '3.15']"
       ref:
         description: "(Optional) ref to checkout"
         required: false
@@ -35,7 +35,7 @@ on:
         description: "(Optional) Python versions to test"
         required: true
         type: string
-        default: "['3.10', '3.11', '3.12', '3.13', '3.14', '3.15']"
+        default: "['3.11', '3.12', '3.13', '3.14', '3.15']"
       runs-on:
         description: "Runner to use for the tests"
         required: false
@@ -58,7 +58,7 @@ jobs:
   build:
     uses: ./.github/workflows/backend-unit-tests.yml
     with:
-      python-versions: ${{ inputs.python-versions || '["3.10", "3.14"]' }}
+      python-versions: ${{ inputs.python-versions || '["3.11", "3.14", "3.15"]' }}
       ref: ${{ inputs.ref || github.ref }}
       runs-on: ${{ inputs.runs-on || 'ubuntu-latest' }}
     secrets:
@@ -85,20 +85,24 @@ jobs:
       fail-fast: false
       matrix:
         # Cost control: oldest + newest supported Python, matching cross-bundle-test.yml.
-        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.14"]') }}
+        python-version: ${{ fromJson(inputs.python-versions || '["3.11", "3.14", "3.15"]') }}
     steps:
       - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
           persist-credentials: false
       - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: ${{ matrix.python-version == '3.15' && '0.13.0' || 'latest-known' }}
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
           prune-cache: false
 
+      - name: Set up Python preview builds
+        if: matrix.python-version == '3.15'
+        uses: ./.github/actions/setup-python-preview
       - name: Install the project with the bundles extra
         run: uv sync --extra bundles
 
@@ -167,8 +171,9 @@ jobs:
     continue-on-error: ${{ matrix.python-version == '3.15' }}
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]') }}
+        python-version: ${{ fromJson(inputs.python-versions || '["3.11", "3.12", "3.13", "3.14", "3.15"]') }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -183,6 +188,9 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
           prune-cache: false
+      - name: Set up Python preview builds
+        if: matrix.python-version == '3.15'
+        uses: ./.github/actions/setup-python-preview
       - name: Install the project
         run: uv sync
       - name: Run integration tests
@@ -197,8 +205,9 @@ jobs:
     continue-on-error: ${{ matrix.python-version == '3.15' }}
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]') }}
+        python-version: ${{ fromJson(inputs.python-versions || '["3.11", "3.12", "3.13", "3.14", "3.15"]') }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -213,6 +222,9 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
           prune-cache: false
+      - name: Set up Python preview builds
+        if: matrix.python-version == '3.15'
+        uses: ./.github/actions/setup-python-preview
       - name: Run lfx tests
         run: make lfx_tests
         env:
@@ -220,7 +232,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
-        if: matrix.python-version == '3.10'
+        if: matrix.python-version == '3.11'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./src/lfx/coverage.xml
@@ -231,7 +243,7 @@ jobs:
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v7
-        if: matrix.python-version == '3.10'
+        if: matrix.python-version == '3.11'
         with:
           name: lfx-coverage-report
           path: |
@@ -245,8 +257,9 @@ jobs:
     continue-on-error: ${{ matrix.python-version == '3.15' }}
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]') }}
+        python-version: ${{ fromJson(inputs.python-versions || '["3.11", "3.12", "3.13", "3.14", "3.15"]') }}
     steps:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v7
