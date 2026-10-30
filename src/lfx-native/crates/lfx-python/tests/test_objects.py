@@ -130,3 +130,18 @@ def test_error_details_are_a_dict():
     details = refused.value.details
     assert isinstance(details, dict)
     assert details["code"] == refused.value.code
+
+
+def test_a_result_shares_each_key_as_json_loads_does():
+    flow = {
+        "nodes": [{"id": node, "data": {"node": {"template": {}}}} for node in ("a", "b")],
+        "edges": [],
+    }
+
+    def data_key(node: dict) -> str:
+        return next(key for key in node if key == "data")
+
+    first, second = ops.GraphState(flow).to_dict()["nodes"]
+    assert data_key(first) is data_key(second)
+    parsed = json.loads(json.dumps(flow))["nodes"]
+    assert data_key(parsed[0]) is data_key(parsed[1])
