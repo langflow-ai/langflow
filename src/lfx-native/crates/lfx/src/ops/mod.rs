@@ -38,5 +38,5 @@ pub use ops::{
     AsKey, Change, Edge, FieldUpdate, Node, NodePath, Operation, OperationKind, Segment,
 };
 pub use repair::{Fix, Repaired, repair_flow_data};
-pub use state::GraphState;
+pub use state::{Edges, Entry, GraphState, Nodes};
 pub use write::{PreparedWrite, WriteError, WriteOptions, prepare_write};

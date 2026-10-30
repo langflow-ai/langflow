@@ -475,6 +475,20 @@ impl GraphState {
         GraphJson(self)
     }
 
+    /// The graph's top-level keys in order, each with what [`GraphState::to_value`]
+    /// puts there, borrowed from the graph: for a binding that builds the graph
+    /// in its own language without a copy.
+    pub fn entries(&self) -> impl Iterator<Item = (&str, Entry<'_>)> {
+        self.root.iter().map(|(key, value)| {
+            let entry = match key.as_str() {
+                "nodes" => Entry::Nodes(Nodes(&self.graph.nodes)),
+                "edges" => Entry::Edges(Edges(&self.graph.edges)),
+                _ => Entry::Value(value),
+            };
+            (key.as_str(), entry)
+        })
+    }
+
     /// The graph as a JSON value, without copying it.
     #[must_use]
     pub fn into_value(self) -> Value {
@@ -628,32 +642,64 @@ struct GraphJson<'s>(&'s GraphState);
 
 impl Serialize for GraphJson<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
-        let GraphState { root, graph, .. } = self.0;
-        let mut map = serializer.serialize_map(Some(root.len()))?;
-        for (key, value) in root {
-            match key.as_str() {
-                "nodes" => map.serialize_entry(key, &NodesJson(&graph.nodes))?,
-                "edges" => map.serialize_entry(key, &EdgesJson(&graph.edges))?,
-                _ => map.serialize_entry(key, value)?,
+        let mut map = serializer.serialize_map(Some(self.0.root.len()))?;
+        for (key, entry) in self.0.entries() {
+            match entry {
+                Entry::Value(value) => map.serialize_entry(key, value)?,
+                Entry::Nodes(nodes) => map.serialize_entry(key, &NodesJson(nodes))?,
+                Entry::Edges(edges) => map.serialize_entry(key, &EdgesJson(edges))?,
             }
         }
         map.end()
     }
 }
 
-struct NodesJson<'s>(&'s Layered<Node>);
+struct NodesJson<'s>(Nodes<'s>);
 
 impl Serialize for NodesJson<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
-        serializer.collect_seq(self.0.values().map(Node::as_value))
+        serializer.collect_seq(self.0.iter())
     }
 }
 
-struct EdgesJson<'s>(&'s Layered<Edge>);
+struct EdgesJson<'s>(Edges<'s>);
 
 impl Serialize for EdgesJson<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
-        serializer.collect_seq(self.0.values().map(Edge::as_map))
+        serializer.collect_seq(self.0.iter())
+    }
+}
+
+/// A top-level entry of a [`GraphState`], borrowed from it ([`GraphState::entries`]).
+#[derive(Debug, Clone, Copy)]
+pub enum Entry<'s> {
+    /// A key that no operation writes, as stored.
+    Value(&'s Value),
+    /// The nodes, in the graph's order.
+    Nodes(Nodes<'s>),
+    /// The edges, in the graph's order.
+    Edges(Edges<'s>),
+}
+
+/// The nodes of a [`GraphState`], borrowed from it.
+#[derive(Debug, Clone, Copy)]
+pub struct Nodes<'s>(&'s Layered<Node>);
+
+impl<'s> Nodes<'s> {
+    /// Each node's JSON object.
+    pub fn iter(self) -> impl Iterator<Item = &'s Value> {
+        self.0.values().map(Node::as_value)
+    }
+}
+
+/// The edges of a [`GraphState`], borrowed from it.
+#[derive(Debug, Clone, Copy)]
+pub struct Edges<'s>(&'s Layered<Edge>);
+
+impl<'s> Edges<'s> {
+    /// Each edge's JSON object.
+    pub fn iter(self) -> impl Iterator<Item = &'s Map<String, Value>> {
+        self.0.values().map(Edge::as_map)
     }
 }
 

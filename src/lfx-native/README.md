@@ -7,7 +7,7 @@ The server and the editor use the same engine, through two thin bindings:
 - `lfx-python`: the Python package `lfx-native` (`import lfx_native`).
 - `lfx-wasm`: the npm package `lfx-native`, a WebAssembly build for the editor and for Node.
 
-The bindings hold no rules. Each binding function calls one function of `lfx::ops::api`, which takes JSON text and returns JSON text.
+The bindings hold no rules. Each binding function calls one function of `lfx::ops::api`, which takes JSON text or an already read value and returns a value. The browser binding takes and returns JSON text. The Python binding takes Python values, with `bytes` as JSON text, and returns Python values: reading and building Python objects costs a quarter to a third of writing and parsing the same graph as JSON.
 
 ## Layout
 
@@ -32,7 +32,7 @@ The modules of `lfx::ops`:
 
 | Module | What it holds |
 | --- | --- |
-| `api` | JSON in, JSON out: the functions the bindings call |
+| `api` | the functions the bindings call: JSON text or values in, values out |
 | `ops` | operation types, the strict parser, and the dump |
 | `state` | `GraphState`, the indexed graph that apply works on, kept between batches |
 | `apply` | apply, with backward operations |
