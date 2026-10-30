@@ -3299,6 +3299,8 @@
   "triggers.events.openRun": "Abrir fluxo",
   "triggers.events.runInProgress": "Esta execução ainda está em andamento.",
   "triggers.events.runInProgressHint": "O rastreamento aparecerá aqui quando a execução terminar.",
+  "triggers.events.runNotStarted": "Nenhuma execução foi iniciada para este evento ainda.",
+  "triggers.events.noRunStarted": "Este evento terminou antes de uma execução ser iniciada, então não há execução para abrir.",
   "triggers.events.payload": "Payload",
   "triggers.events.payloadNote": "Somente campos normalizados. A requisição bruta do provedor nunca é enviada ao navegador.",
   "triggers.events.lineage": "Linhagem",

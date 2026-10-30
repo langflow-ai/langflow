@@ -130,6 +130,30 @@ describe("TriggerEventsDrawer", () => {
     expect(screen.queryByTestId("trigger-replay-dialog")).toBeNull();
   });
 
+  it("keeps Open flow reachable and says why when the event never started a run", async () => {
+    mockEvents = [
+      makeEvent({
+        id: "no-run",
+        state: "failed",
+        job_id: null,
+        error: "connection_not_authorized",
+      }),
+    ];
+    open();
+    const openRun = screen.getByTestId("trigger-event-open-run");
+
+    expect(openRun).not.toBeDisabled();
+    expect(openRun).toHaveAttribute("aria-disabled", "true");
+    expect(openRun).toHaveAccessibleDescription(
+      "This event ended before a run was started, so there is no run to open.",
+    );
+    openRun.focus();
+    expect(openRun).toHaveFocus();
+    await userEvent.click(openRun);
+    expect(screen.queryByTestId("trigger-run-dialog")).toBeNull();
+    expect(await axe(document.body)).toHaveNoViolations();
+  });
+
   it("shows lineage from a replay back to its original", async () => {
     mockEvents = [makeEvent({ id: "r", replay_of_event_id: "failed" }), failed];
     open();

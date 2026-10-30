@@ -3299,6 +3299,8 @@
   "triggers.events.openRun": "Abrir flujo",
   "triggers.events.runInProgress": "Esta ejecución sigue en curso.",
   "triggers.events.runInProgressHint": "Su traza aparecerá aquí cuando termine la ejecución.",
+  "triggers.events.runNotStarted": "Todavía no se ha iniciado ninguna ejecución para este evento.",
+  "triggers.events.noRunStarted": "Este evento terminó antes de que se iniciara una ejecución, así que no hay ninguna ejecución que abrir.",
   "triggers.events.payload": "Carga útil",
   "triggers.events.payloadNote": "Solo campos normalizados. La solicitud original del proveedor nunca se envía al navegador.",
   "triggers.events.lineage": "Linaje",

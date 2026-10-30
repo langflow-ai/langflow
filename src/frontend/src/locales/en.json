@@ -3298,6 +3298,8 @@
   "triggers.events.openRun": "Open flow",
   "triggers.events.runInProgress": "This run is still in progress.",
   "triggers.events.runInProgressHint": "Its trace appears here when the run finishes.",
+  "triggers.events.runNotStarted": "No run has started for this event yet.",
+  "triggers.events.noRunStarted": "This event ended before a run was started, so there is no run to open.",
   "triggers.events.payload": "Payload",
   "triggers.events.payloadNote": "Normalized fields only. The raw provider request is never sent to the browser.",
   "triggers.events.lineage": "Lineage",

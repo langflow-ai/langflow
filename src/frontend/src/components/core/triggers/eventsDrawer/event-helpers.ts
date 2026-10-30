@@ -31,6 +31,19 @@ export const eventSummaryOf = (
 export const isEventRunning = (event: Pick<TriggerEventRead, "state">) =>
   event.state === "claimed" || event.state === "dispatched";
 
+/**
+ * Why "Open flow" is unavailable for ``event``, as a catalog key, or null when
+ * its run can be opened. A run exists only once the event is dispatched.
+ */
+export const openRunBlockedKeyOf = (
+  event: Pick<TriggerEventRead, "state" | "job_id">,
+): string | null => {
+  if (event.job_id) return null;
+  return event.state === "pending" || event.state === "claimed"
+    ? "triggers.events.runNotStarted"
+    : "triggers.events.noRunStarted";
+};
+
 export type TriggerEventFilter = "all" | "failed" | "replays" | "tests";
 
 export const TRIGGER_EVENT_FILTERS: readonly TriggerEventFilter[] = [

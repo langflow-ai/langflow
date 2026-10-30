@@ -3,6 +3,7 @@ import {
   isEventRunning,
   lineageOf,
   matchesEventFilter,
+  openRunBlockedKeyOf,
 } from "../eventsDrawer/event-helpers";
 import { filterTriggers, providersOf } from "../helpers/filter-triggers";
 import { formatRelativeTime } from "../helpers/format-relative-time";
@@ -182,5 +183,21 @@ describe("isEventRunning", () => {
     ["dead", false],
   ] as const)("%s → %s", (state, running) => {
     expect(isEventRunning(makeEvent({ state }))).toBe(running);
+  });
+});
+
+describe("openRunBlockedKeyOf", () => {
+  it("offers the run once the event has a job", () => {
+    expect(openRunBlockedKeyOf(makeEvent({ state: "failed" }))).toBeNull();
+  });
+
+  it.each([
+    ["pending", "triggers.events.runNotStarted"],
+    ["claimed", "triggers.events.runNotStarted"],
+    ["failed", "triggers.events.noRunStarted"],
+    ["dead", "triggers.events.noRunStarted"],
+    ["completed", "triggers.events.noRunStarted"],
+  ] as const)("explains a %s event without a run", (state, key) => {
+    expect(openRunBlockedKeyOf(makeEvent({ state, job_id: null }))).toBe(key);
   });
 });

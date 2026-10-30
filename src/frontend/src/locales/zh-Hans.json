@@ -3298,6 +3298,8 @@
   "triggers.events.openRun": "打开流程",
   "triggers.events.runInProgress": "此运行仍在进行中。",
   "triggers.events.runInProgressHint": "运行结束后，追踪信息将显示在此处。",
+  "triggers.events.runNotStarted": "此事件尚未开始运行。",
+  "triggers.events.noRunStarted": "此事件在开始运行之前就已结束，因此没有可打开的运行。",
   "triggers.events.payload": "负载",
   "triggers.events.payloadNote": "仅显示规范化后的字段。提供方的原始请求绝不会发送到浏览器。",
   "triggers.events.lineage": "来源链",

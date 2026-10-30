@@ -3299,6 +3299,8 @@
   "triggers.events.openRun": "フローを開く",
   "triggers.events.runInProgress": "この実行はまだ進行中です。",
   "triggers.events.runInProgressHint": "実行が終わると、ここにトレースが表示されます。",
+  "triggers.events.runNotStarted": "このイベントの実行はまだ開始されていません。",
+  "triggers.events.noRunStarted": "このイベントは実行が開始される前に終了したため、開ける実行はありません。",
   "triggers.events.payload": "ペイロード",
   "triggers.events.payloadNote": "正規化されたフィールドのみです。プロバイダーの元のリクエストがブラウザーに送信されることはありません。",
   "triggers.events.lineage": "系統",
