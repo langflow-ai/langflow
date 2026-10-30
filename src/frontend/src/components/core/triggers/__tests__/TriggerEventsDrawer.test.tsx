@@ -6,6 +6,9 @@ import TriggerEventsDrawer from "../eventsDrawer";
 import { makeEvent, makeTrigger } from "./fixtures";
 
 let mockEvents: TriggerEventRead[] = [];
+// What the server returns for each filter; it filters, the drawer does not.
+let mockFiltered: Record<string, TriggerEventRead[]> = {};
+const mockEventsQuery = jest.fn();
 const mockReplay = jest.fn();
 const mockNavigate = jest.fn();
 const mockFetchNextPage = jest.fn();
@@ -22,14 +25,23 @@ jest.mock("@/components/common/genericIconComponent", () => ({
 }));
 jest.mock("@/controllers/API/queries/triggers", () => ({
   TRIGGER_EVENTS_PAGE_SIZE: 2,
-  useTriggerEventsQuery: () => ({
-    data: mockEvents.slice(0, 2),
-    isLoading: false,
-    isFetching: false,
-    hasNextPage: true,
-    isFetchingNextPage: false,
-    fetchNextPage: mockFetchNextPage,
-  }),
+  useTriggerEventsQuery: (
+    triggerId: string,
+    options?: { filter?: string; enabled?: boolean },
+  ) => {
+    mockEventsQuery(triggerId, options);
+    const rows = options?.filter
+      ? (mockFiltered[options.filter] ?? [])
+      : mockEvents;
+    return {
+      data: options?.enabled === false ? undefined : rows.slice(0, 2),
+      isLoading: false,
+      isFetching: false,
+      hasNextPage: true,
+      isFetchingNextPage: false,
+      fetchNextPage: mockFetchNextPage,
+    };
+  },
   useTriggerQuery: () => ({ data: undefined }),
   useReplayTriggerEventMutation: () => ({
     mutateAsync: mockReplay,
@@ -58,6 +70,7 @@ describe("TriggerEventsDrawer", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockEvents = [failed, test];
+    mockFiltered = { failed: [failed], tests: [test], replays: [] };
   });
 
   const open = () =>
@@ -83,6 +96,10 @@ describe("TriggerEventsDrawer", () => {
     await userEvent.click(screen.getByTestId("trigger-event-failed"));
     await userEvent.click(screen.getByTestId("trigger-events-filter-tests"));
 
+    expect(mockEventsQuery).toHaveBeenLastCalledWith("trg-1", {
+      filter: "tests",
+      enabled: true,
+    });
     expect(screen.queryByTestId("trigger-event-failed")).toBeNull();
     expect(screen.getByTestId("trigger-event-test")).toHaveTextContent(
       "Test event",
@@ -171,8 +188,39 @@ describe("TriggerEventsDrawer", () => {
     expect(screen.getByTestId("trigger-events-load-more")).toBeInTheDocument();
   });
 
-  it("can load older failures when the current page has no matches", async () => {
+  it("lists a failure older than every loaded event, instead of saying none match", async () => {
+    const olderFailure = makeEvent({
+      id: "older-failure",
+      state: "failed",
+      payload: { text: "From an hour ago" },
+    });
     mockEvents = [test];
+    mockFiltered = { failed: [olderFailure] };
+    open();
+
+    await userEvent.click(screen.getByTestId("trigger-events-filter-failed"));
+
+    expect(screen.queryByTestId("trigger-events-empty")).toBeNull();
+    expect(screen.getByTestId("trigger-event-older-failure")).toHaveTextContent(
+      "From an hour ago",
+    );
+    expect(screen.getByTestId("trigger-event-detail")).toHaveTextContent(
+      "From an hour ago",
+    );
+  });
+
+  it("says no events match only when the server found none", async () => {
+    mockFiltered = { replays: [] };
+    open();
+
+    await userEvent.click(screen.getByTestId("trigger-events-filter-replays"));
+
+    expect(screen.getByTestId("trigger-events-empty")).toHaveTextContent(
+      "No events match this filter.",
+    );
+  });
+
+  it("pages through older matches of a filter", async () => {
     open();
     await userEvent.click(screen.getByTestId("trigger-events-filter-failed"));
     await userEvent.click(screen.getByTestId("trigger-events-load-more"));

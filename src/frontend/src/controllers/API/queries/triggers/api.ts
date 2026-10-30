@@ -4,6 +4,7 @@ import type {
   TriggerBulkAction,
   TriggerBulkRequest,
   TriggerBulkResult,
+  TriggerEventFilterParam,
   TriggerEventRead,
   TriggerIngressRead,
   TriggerListParams,
@@ -78,11 +79,16 @@ export async function testTrigger(id: string): Promise<TriggerEventRead> {
 
 export async function listTriggerEvents(
   id: string,
-  options: { limit?: number; offset?: number } = {},
+  options: {
+    limit?: number;
+    offset?: number;
+    filter?: TriggerEventFilterParam;
+  } = {},
 ): Promise<TriggerEventRead[]> {
   const query = new URLSearchParams();
   if (options.limit !== undefined) query.set("limit", String(options.limit));
   if (options.offset) query.set("offset", String(options.offset));
+  if (options.filter) query.set("filter", options.filter);
   const suffix = query.toString();
   const { data } = await api.get<TriggerEventRead[]>(
     suffix ? `${one(id)}/events?${suffix}` : `${one(id)}/events`,

@@ -1,5 +1,7 @@
-import type { TriggerEventRead } from "@/controllers/API/queries/triggers";
-import { eventOriginOf } from "../helpers/trigger-presentation";
+import type {
+  TriggerEventFilterParam,
+  TriggerEventRead,
+} from "@/controllers/API/queries/triggers";
 
 const SUMMARY_KEYS = ["text", "summary", "subject", "title", "name"] as const;
 const MAX_SUMMARY = 80;
@@ -44,7 +46,7 @@ export const openRunBlockedKeyOf = (
     : "triggers.events.noRunStarted";
 };
 
-export type TriggerEventFilter = "all" | "failed" | "replays" | "tests";
+export type TriggerEventFilter = "all" | TriggerEventFilterParam;
 
 export const TRIGGER_EVENT_FILTERS: readonly TriggerEventFilter[] = [
   "all",
@@ -52,22 +54,6 @@ export const TRIGGER_EVENT_FILTERS: readonly TriggerEventFilter[] = [
   "replays",
   "tests",
 ];
-
-export const matchesEventFilter = (
-  event: Pick<TriggerEventRead, "state" | "dedupe_key" | "replay_of_event_id">,
-  filter: TriggerEventFilter,
-): boolean => {
-  switch (filter) {
-    case "all":
-      return true;
-    case "failed":
-      return event.state === "failed" || event.state === "dead";
-    case "replays":
-      return eventOriginOf(event) === "replay";
-    case "tests":
-      return eventOriginOf(event) === "test";
-  }
-};
 
 /** The replay's parent, if loaded, and every loaded replay of this event. */
 export const lineageOf = (

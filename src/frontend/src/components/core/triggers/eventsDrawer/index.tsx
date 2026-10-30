@@ -21,7 +21,6 @@ import { sourceKeyOf } from "../helpers/trigger-presentation";
 import TriggerStateBadge from "../TriggerStateBadge";
 import TriggerTransportLabel from "../TriggerTransportLabel";
 import {
-  matchesEventFilter,
   TRIGGER_EVENT_FILTERS,
   type TriggerEventFilter,
 } from "./event-helpers";
@@ -74,11 +73,27 @@ export function TriggerEventsDrawer({
     setReplayTarget(null);
   }, [triggerId]);
 
-  const eventsQuery = useTriggerEventsQuery(triggerId);
-  const events = eventsQuery.data ?? [];
-  const visible = useMemo(
-    () => events.filter((event) => matchesEventFilter(event, filter)),
-    [events, filter],
+  // The newest events, always loaded: lineage and the open run read them.
+  const allQuery = useTriggerEventsQuery(triggerId);
+  // A filter is applied by the server, so it searches every event, not only
+  // the loaded page, and "Load older" pages through matches.
+  const serverFilter = filter === "all" ? undefined : filter;
+  const filteredQuery = useTriggerEventsQuery(triggerId, {
+    filter: serverFilter,
+    enabled: serverFilter !== undefined,
+  });
+  const eventsQuery = serverFilter ? filteredQuery : allQuery;
+  const visible = eventsQuery.data ?? [];
+  const events = useMemo(
+    () =>
+      Array.from(
+        new Map(
+          [...(allQuery.data ?? []), ...(filteredQuery.data ?? [])].map(
+            (event) => [event.id, event],
+          ),
+        ).values(),
+      ),
+    [allQuery.data, filteredQuery.data],
   );
   const selected =
     visible.find((event) => event.id === selectedId) ?? visible[0] ?? null;
@@ -166,7 +181,7 @@ export function TriggerEventsDrawer({
                   >
                     {t("triggers.events.loading")}
                   </p>
-                ) : eventsQuery.isError && events.length === 0 ? (
+                ) : eventsQuery.isError && visible.length === 0 ? (
                   <p className="p-3 text-sm text-destructive" role="alert">
                     {getAxiosErrorDetail(
                       eventsQuery.error,
@@ -190,7 +205,7 @@ export function TriggerEventsDrawer({
                     maxAttempts={trigger.max_attempts}
                   />
                 )}
-                {eventsQuery.isError && events.length > 0 && (
+                {eventsQuery.isError && visible.length > 0 && (
                   <p className="p-3 text-sm text-destructive" role="alert">
                     {getAxiosErrorDetail(
                       eventsQuery.error,

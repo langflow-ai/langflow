@@ -14,13 +14,13 @@ Everything runs against the real database the ``client`` fixture stands up.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 import pytest
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.trigger.model import Trigger
+from langflow.services.database.models.trigger.model import Trigger, TriggerEvent
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_auth_service, session_scope
 from langflow.services.triggers.reconciliation import NODE_REMOVED_ERROR, reconcile_flow_triggers
@@ -679,3 +679,94 @@ async def test_public_config_does_not_carry_the_trigger_polling_interval(client:
     response = await client.get("api/v1/config")
     assert response.status_code == 200, response.text
     assert "trigger_polling_interval" not in response.json()
+
+
+# --------------------------------------------------------------------------- #
+# Events drawer filters
+# --------------------------------------------------------------------------- #
+
+
+async def _events(trigger_id: UUID, *rows: tuple[str, str, str | None]) -> dict[str, UUID]:
+    """Add ``(name, state, dedupe_key)`` events, oldest first; returns their ids by name.
+
+    A ``dedupe_key`` of ``"replay"`` makes a replay of the previous event.
+    """
+    start = datetime.now(timezone.utc) - timedelta(hours=1)
+    ids: dict[str, UUID] = {}
+    async with session_scope() as session:
+        previous = None
+        for minute, (name, state, key) in enumerate(rows):
+            replay_of = previous if key == "replay" else None
+            event = TriggerEvent(
+                trigger_id=trigger_id,
+                dedupe_key=f"replay:{replay_of}:{uuid4()}" if replay_of else (key or f"tick:{uuid4()}"),
+                state=state,
+                payload={},
+                replay_of_event_id=replay_of,
+                created_at=start + timedelta(minutes=minute),
+            )
+            session.add(event)
+            await session.flush()
+            ids[name] = event.id
+            previous = event.id
+    return ids
+
+
+@pytest.mark.parametrize(
+    ("event_filter", "expected"),
+    [
+        pytest.param(None, ["replay_of_test", "test", "recent", "replay", "dead", "old_failed"], id="all"),
+        pytest.param("failed", ["dead", "old_failed"], id="failed"),
+        pytest.param("replays", ["replay_of_test", "replay"], id="replays"),
+        pytest.param("tests", ["test"], id="tests"),
+    ],
+)
+async def test_the_events_filter_searches_every_event_not_one_page(
+    client: AsyncClient, logged_in_headers: dict[str, str], active_user, event_filter, expected
+) -> None:
+    """The drawer asks the server, so an older match is found without loading every page first."""
+    trigger_id = await _trigger(await _flow(active_user.id), active_user.id)
+    ids = await _events(
+        trigger_id,
+        ("old_failed", "failed", None),
+        ("dead", "dead", None),
+        ("replay", "completed", "replay"),
+        ("recent", "completed", None),
+        ("test", "completed", f"test:{uuid4()}"),
+        ("replay_of_test", "completed", "replay"),
+    )
+    names = {str(event_id): name for name, event_id in ids.items()}
+    query = "" if event_filter is None else f"?filter={event_filter}"
+
+    response = await client.get(f"api/v1/triggers/{trigger_id}/events{query}", headers=logged_in_headers)
+
+    assert response.status_code == 200, response.text
+    assert [names[row["id"]] for row in response.json()] == expected
+
+
+async def test_a_filtered_page_is_a_page_of_matches(
+    client: AsyncClient, logged_in_headers: dict[str, str], active_user
+) -> None:
+    trigger_id = await _trigger(await _flow(active_user.id), active_user.id)
+    ids = await _events(
+        trigger_id,
+        ("oldest", "failed", None),
+        *((f"ok-{index}", "completed", None) for index in range(3)),
+        ("newest", "dead", None),
+    )
+    url = f"api/v1/triggers/{trigger_id}/events?filter=failed&limit=1"
+
+    first = (await client.get(url, headers=logged_in_headers)).json()
+    second = (await client.get(f"{url}&offset=1", headers=logged_in_headers)).json()
+
+    assert [row["id"] for row in first + second] == [str(ids["newest"]), str(ids["oldest"])]
+
+
+async def test_an_unknown_events_filter_is_rejected(
+    client: AsyncClient, logged_in_headers: dict[str, str], active_user
+) -> None:
+    trigger_id = await _trigger(await _flow(active_user.id), active_user.id)
+
+    response = await client.get(f"api/v1/triggers/{trigger_id}/events?filter=everything", headers=logged_in_headers)
+
+    assert response.status_code == 422

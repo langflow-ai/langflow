@@ -25,6 +25,7 @@ import type {
   TriggerBulkAction,
   TriggerBulkRequest,
   TriggerBulkResult,
+  TriggerEventFilterParam,
   TriggerEventRead,
   TriggerIngressRead,
   TriggerListParams,
@@ -67,7 +68,12 @@ export const useTriggersQuery = (
 
 export const useTriggerEventsQuery = (
   triggerId: string | undefined,
-  options?: { limit?: number; enabled?: boolean },
+  options?: {
+    limit?: number;
+    enabled?: boolean;
+    /** Filtered by the server, so older matches page in like any others. */
+    filter?: TriggerEventFilterParam;
+  },
 ) => {
   const interval = useTriggerPollingInterval();
   const limit = Math.min(
@@ -75,11 +81,16 @@ export const useTriggerEventsQuery = (
     Math.max(1, options?.limit ?? TRIGGER_EVENTS_PAGE_SIZE),
   );
   const query = useInfiniteQuery({
-    queryKey: [...triggersKeys.events(triggerId ?? "none"), limit],
+    queryKey: [
+      ...triggersKeys.events(triggerId ?? "none"),
+      limit,
+      options?.filter ?? "all",
+    ],
     queryFn: ({ pageParam }) =>
       listTriggerEvents(triggerId as string, {
         limit: limit + 1,
         offset: pageParam,
+        filter: options?.filter,
       }),
     initialPageParam: 0,
     getNextPageParam: (page, _pages, offset) =>

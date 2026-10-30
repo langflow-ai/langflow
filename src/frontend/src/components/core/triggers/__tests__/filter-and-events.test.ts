@@ -2,7 +2,6 @@ import {
   eventSummaryOf,
   isEventRunning,
   lineageOf,
-  matchesEventFilter,
   openRunBlockedKeyOf,
 } from "../eventsDrawer/event-helpers";
 import { filterTriggers, providersOf } from "../helpers/filter-triggers";
@@ -79,25 +78,6 @@ describe("filterTriggers", () => {
 
   it("lists distinct providers, skipping core triggers", () => {
     expect(providersOf(triggers)).toEqual(["microsoft", "slack"]);
-  });
-});
-
-describe("matchesEventFilter", () => {
-  it("counts dead-lettered events as failed", () => {
-    expect(matchesEventFilter(makeEvent({ state: "dead" }), "failed")).toBe(
-      true,
-    );
-    expect(
-      matchesEventFilter(makeEvent({ state: "completed" }), "failed"),
-    ).toBe(false);
-  });
-
-  it("separates replays from tests", () => {
-    const replay = makeEvent({ replay_of_event_id: "evt-0" });
-    const test = makeEvent({ dedupe_key: "test:1" });
-    expect(matchesEventFilter(replay, "replays")).toBe(true);
-    expect(matchesEventFilter(replay, "tests")).toBe(false);
-    expect(matchesEventFilter(test, "tests")).toBe(true);
   });
 });
 

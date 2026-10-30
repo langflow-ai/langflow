@@ -88,3 +88,32 @@ it("retains loaded rows while fetching older events and clears them for another 
   rerender({ id: "second" });
   expect(result.current.data).toBeUndefined();
 });
+
+it("pages a filter's matches apart from the unfiltered list", async () => {
+  jest
+    .mocked(listTriggerEvents)
+    .mockImplementation(async (_id, options) =>
+      options?.filter === "failed"
+        ? [{ id: "older-failure" } as never]
+        : [{ id: "newest" } as never],
+    );
+  const render = wrapper();
+
+  const all = renderHook(() => useTriggerEventsQuery("t1"), {
+    wrapper: render,
+  });
+  const failed = renderHook(
+    () => useTriggerEventsQuery("t1", { filter: "failed" }),
+    { wrapper: render },
+  );
+
+  await waitFor(() => expect(failed.result.current.data).toHaveLength(1));
+  await waitFor(() => expect(all.result.current.data).toHaveLength(1));
+  expect(failed.result.current.data?.[0].id).toBe("older-failure");
+  expect(all.result.current.data?.[0].id).toBe("newest");
+  expect(listTriggerEvents).toHaveBeenCalledWith("t1", {
+    limit: 51,
+    offset: 0,
+    filter: "failed",
+  });
+});
