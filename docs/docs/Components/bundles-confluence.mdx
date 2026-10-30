@@ -5,7 +5,7 @@ slug: /bundles-confluence
 
 The Confluence Cloud bundle reads, creates, and updates published pages. Its triggers observe new pages and page versions in an approved space. Components run as the connected Atlassian user and keep that user's Confluence permissions.
 
-This preview uses the **Confluence Integrations** category. Existing Confluence components keep their original category and saved-flow identities.
+Find these components under **Confluence** in the component palette. Their names begin with **Confluence:**. Existing Confluence components keep their saved-flow identities.
 
 ## Supported deployments
 
@@ -95,12 +95,20 @@ Create and update accept titles up to 255 UTF-8 bytes and storage bodies up to 5
 
 1. Start the listener with `langflow listeners`, or configure `LANGFLOW_LISTENERS_MODE=subprocess` on the server.
 2. Save a flow containing **Confluence: On Page Created** or **Confluence: On Page Updated**. Select the connection and an approved Space ID.
-3. Allow background execution with **Allow background runs** in the trigger, or **Settings > Connections > Actions > Allow scheduled and deployed runs**.
+3. Open **Settings > Connections**, open the connection's **Actions** menu, and turn on **Allow scheduled and deployed runs**.
 4. Enable the trigger and check its status under **Settings > Triggers**.
 
 Polling uses a minimum and default interval of 30 seconds. `LANGFLOW_LISTENER_POLL_INTERVAL_S` can increase the interval. Work queues, retries, and provider delays can make observations arrive later.
 
 The first successful complete scan records a baseline without running the flow. Each later scan reads current published pages in the chosen space. A scan accepts at most 50 requests of 100 pages and retains at most 5,000 distinct page IDs. An incomplete scan does not advance the saved state. A space over these limits stops that trigger without invalidating its connection or other triggers.
+
+## Provider rate limits
+
+Confluence Cloud applies hourly quotas measured in points and separate limits on request bursts. The applicable quota depends on the app's tier and tenant allocation. These provider limits are independent of Langflow's scan and retained-ID limits. Check [Atlassian's current rate limits](https://developer.atlassian.com/cloud/confluence/rate-limiting/) for the quota model and response headers.
+
+A rate limit returns HTTP `429` with `Retry-After` guidance in seconds. Polling keeps the trigger armed and uses that guidance when choosing a randomized delay with exponential backoff. The client supplies a 60-second delay when the header is missing or invalid. An interrupted scan keeps its saved state for the next attempt. Increasing `LANGFLOW_LISTENER_POLL_INTERVAL_S` reduces polling frequency.
+
+Actions surface rate-limit errors without automatically repeating the request. Wait for the provider's indicated delay before rerunning an action.
 
 ## Event identity and recovery
 

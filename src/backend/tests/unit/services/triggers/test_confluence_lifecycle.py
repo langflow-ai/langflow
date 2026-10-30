@@ -316,6 +316,162 @@ async def test_failed_fetch_and_stale_replica_cannot_advance_cursor(confluence, 
             await commit_source(session, trigger_id=row.id, source_round=second)
 
 
+@pytest.mark.parametrize("kind", ["confluence.page_created", "confluence.page_updated"])
+@pytest.mark.parametrize(
+    ("bound", "message"),
+    [
+        ("requests", "50-page request limit"),
+        ("snapshot", "5000-page snapshot limit"),
+        ("retained", "5000 observed page IDs"),
+    ],
+)
+async def test_scan_limit_stops_only_affected_trigger_until_reenabled(
+    confluence, trigger_owner, make_trigger, monkeypatch, kind, bound, message
+):
+    from langflow.services.triggers.listeners import adapters
+    from langflow.services.triggers.listeners.supervisor import ListenerSupervisor
+    from langflow.services.triggers.providers.confluence import collector
+
+    monkeypatch.setattr(collector, "MAX_PAGES", 2)
+    monkeypatch.setattr(collector, "MAX_ITEMS", 3)
+    connection_id = await connection(trigger_owner)
+    identifiers = []
+    for space in ("10", "20"):
+        identifier = await make_trigger(
+            kind=kind,
+            provider="confluence",
+            connection_id=connection_id,
+            state="paused",
+            config={"connection": "confluence/work", "space_id": space},
+        )
+        await activate(identifier)
+        identifiers.append(identifier)
+    bad_id, good_id = identifiers
+    original = {
+        "baseline_complete": True,
+        "started_at": "2026-10-22T10:00:00Z",
+        "pages": {"1": 1, "8": 1, "9": 1} if bound == "retained" else {"1": 1},
+    }
+    async with session_scope() as session:
+        row = await session.get(Trigger, bad_id)
+        row.provider_state = original
+        session.add(row)
+    calls = []
+
+    def handler(request):
+        space = request.url.params["space-id"]
+        calls.append(space)
+        if space == "20":
+            pages = [page(version=confluence.version, space=space)]
+            if kind == "confluence.page_created":
+                pages.extend(
+                    page(str(number), space=space, created="2099-01-01T00:00:00Z")
+                    for number in range(2, confluence.version + 1)
+                )
+            return httpx.Response(200, json={"results": pages})
+        if bound == "requests":
+            number = int(request.url.params.get("cursor", "0")) + 1
+            return httpx.Response(
+                200,
+                json={
+                    "results": [page(str(number), version=2, created="2099-01-01T00:00:00Z")],
+                    "_links": {"next": f"/wiki/api/v2/pages?cursor={number}"},
+                },
+            )
+        count = 4 if bound == "snapshot" else 2
+        return httpx.Response(
+            200,
+            json={
+                "results": [
+                    page(str(number), version=2, created="2099-01-01T00:00:00Z") for number in range(1, count + 1)
+                ]
+            },
+        )
+
+    monkeypatch.setattr(
+        collector, "ConfluenceClient", lambda lease: ConfluenceClient(lease, transport=httpx.MockTransport(handler))
+    )
+    monkeypatch.setattr(adapters, "_REGISTRY", {})
+    adapters.register_builtin_adapters()
+    supervisor = ListenerSupervisor(holder="confluence-scan-limit")
+
+    def prepare_worker(worker):
+        worker.stopping = asyncio.Event()
+
+    monkeypatch.setattr(supervisor, "_spawn", prepare_worker)
+    try:
+        await supervisor.reconcile()
+        worker = supervisor.workers[connection_id]
+        ctx = supervisor._context(worker)
+        assert await worker.adapter.poll(ctx) == 0
+        failed_calls = calls.count("10")
+        async with session_scope() as session:
+            bad = await session.get(Trigger, bad_id)
+            good = await session.get(Trigger, good_id)
+            assert bad.state == "error"
+            assert message in bad.last_error
+            assert "re-enable" in bad.last_error.lower()
+            assert bad.provider_state == original
+            assert good.state == "active"
+            assert good.last_error is None
+            assert (await session.get(Connection, connection_id)).status == "ready"
+            assert not (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == bad_id))).all()
+        confluence.version = 2
+        assert await worker.adapter.poll(ctx) == 1
+        assert calls.count("10") == failed_calls
+        await supervisor.reconcile()
+        worker = supervisor.workers[connection_id]
+        ctx = supervisor._context(worker)
+        assert await worker.adapter.poll(ctx) == 0
+        assert calls.count("10") == failed_calls
+        async with session_scope() as session:
+            bad = await session.get(Trigger, bad_id)
+            assert bad.state == "error"
+            assert bad.provider_state == original
+            assert not (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == bad_id))).all()
+            assert len((await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == good_id))).all()) == 1
+            bad.config = {**bad.config, "space_id": "20"}
+            session.add(bad)
+        await activate(bad_id)
+        async with session_scope() as session:
+            bad = await session.get(Trigger, bad_id)
+            assert bad.provider_state == {}
+            assert bad.last_error is None
+        await supervisor.reconcile()
+        worker = supervisor.workers[connection_id]
+        ctx = supervisor._context(worker)
+        assert await worker.adapter.poll(ctx) == 0
+        confluence.version = 3
+        assert await worker.adapter.poll(ctx) == 2
+        async with session_scope() as session:
+            assert len((await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == bad_id))).all()) == 1
+            assert (await session.get(Connection, connection_id)).status == "ready"
+    finally:
+        await supervisor.stop()
+
+
+async def test_unchanged_canvas_save_preserves_scan_limit_error(confluence, trigger_owner, owned_flow):
+    await connection(trigger_owner)
+    row = await reconcile(owned_flow, trigger_owner)
+    await activate(row.id)
+    message = (
+        "Source polling failed. The Confluence space exceeds the 50-page request limit. "
+        "Choose a smaller approved space and re-enable this trigger."
+    )
+    async with session_scope() as session:
+        current = await session.get(Trigger, row.id)
+        current.state = "error"
+        current.last_error = message
+        session.add(current)
+
+    saved = await reconcile(owned_flow, trigger_owner)
+
+    assert saved.id == row.id
+    assert saved.state == "error"
+    assert saved.last_error == message
+    assert not confluence.calls
+
+
 @pytest.mark.parametrize("failure", ["owner", "consent", "identity", "scope", "policy"])
 async def test_activation_enforces_owner_consent_identity_scopes_policy(confluence, trigger_owner, owned_flow, failure):
     owner = trigger_owner

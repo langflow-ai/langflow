@@ -165,6 +165,9 @@ export function AddConnectionDialog({
   const { usesToken } = slackToken;
 
   const registrations = useOAuthRegistrationsQuery(providerId, open);
+  const registrationError = registrations.isError
+    ? getAxiosErrorDetail(registrations.error, t("connections.add.failed"))
+    : null;
   const candidates = useMemo(
     () =>
       (registrations.data ?? []).filter(
@@ -482,6 +485,7 @@ export function AddConnectionDialog({
   const canAuthorize =
     reauthorizeSelection.length > 0 &&
     !noRegistration &&
+    !registrations.isError &&
     !registrations.isLoading &&
     requiredUnavailable.length === 0;
   const notRequestable = uniqueNormalizedScopes(providerId, [
@@ -535,7 +539,9 @@ export function AddConnectionDialog({
         (providerId === "slack"
           ? slackToken.tokenKind !== null
           : slackToken.token.trim().length > 0)
-      : !noRegistration && requiredUnavailable.length === 0);
+      : !noRegistration &&
+        !registrations.isError &&
+        requiredUnavailable.length === 0);
 
   /** The server validates pasted tokens before returning the connection. */
   const onCreateWithToken = async () => {
@@ -688,6 +694,7 @@ export function AddConnectionDialog({
                     key={`${providerId}:${usesToken}`}
                     providerId={providerId}
                     noRegistration={noRegistration}
+                    registrationError={registrationError}
                     usesToken={usesToken}
                     docsUrl={provider?.docs_url}
                   />
@@ -788,6 +795,7 @@ export function AddConnectionDialog({
                   key={`${providerId}:${usesToken}`}
                   providerId={providerId}
                   noRegistration={noRegistration}
+                  registrationError={registrationError}
                   usesToken={usesToken}
                   docsUrl={provider?.docs_url}
                 />
@@ -920,6 +928,7 @@ export function AddConnectionDialog({
                 key={providerId}
                 providerId={providerId}
                 noRegistration={noRegistration}
+                registrationError={registrationError}
                 docsUrl={provider?.docs_url}
               />
               {registrationSelect}

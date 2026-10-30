@@ -618,6 +618,8 @@ async def list_oauth_registrations(
     scope ceiling it must stay inside. Only availability and non-secret fields are
     returned, and a registration that this deployment would refuse is omitted
     rather than advertised: a picker must not offer consent that cannot start.
+    A provider-filtered request reports the safe configuration error when none
+    of its configured registrations can start consent and policy allows it.
     """
     check_rate_limit(
         request,
@@ -630,30 +632,37 @@ async def list_oauth_registrations(
     response.headers["Cache-Control"] = "no-store"
     settings = get_oauth_settings()
     available: list[tuple[str, OAuthRegistration]] = []
-    for registration_id in settings.registration_ids():
+    configuration_errors: list[str] = []
+    for registration_id in settings.registration_ids(provider=provider):
         try:
             registration = settings.registration(registration_id)
-        except OAuthError:
-            # Invalid, or configured for another deployment context. The start
-            # request would raise the same error, so leave it out.
+        except OAuthError as exc:
+            # The filtered picker needs the safe reason consent cannot start.
+            if provider is not None:
+                configuration_errors.append(str(exc))
             continue
         if provider is not None and registration.provider != provider:
             continue
         available.append((registration_id, registration))
 
-    if not available:
+    if not available and not configuration_errors:
         return OAuthRegistrationListRead(registrations=[])
 
     # Offer only providers that could pass the policy check at oauth/start.
+    provider_ids = (
+        frozenset({provider})
+        if provider is not None
+        else frozenset(registration.provider for _, registration in available)
+    )
     policy = await aresolve_integration_policy(
         user_id=current_user.id,
-        provider_ids=frozenset(registration.provider for _, registration in available),
+        provider_ids=provider_ids,
         purpose=IntegrationPolicyPurpose.DISCOVER,
         attributes=provider_policy_attributes,
     )
-    available_providers = await providers_with_usable_actions(
-        frozenset(registration.provider for _, registration in available), policy
-    )
+    available_providers = await providers_with_usable_actions(provider_ids, policy)
+    if not available and configuration_errors and provider in available_providers:
+        raise HTTPException(status_code=400, detail=configuration_errors[0], headers={"Cache-Control": "no-store"})
     return OAuthRegistrationListRead(
         registrations=[
             OAuthRegistrationRead(

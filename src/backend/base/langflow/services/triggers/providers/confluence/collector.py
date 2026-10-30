@@ -113,7 +113,7 @@ async def collect(trigger, lease):
                     "The Confluence space exceeds the 5000-page snapshot limit. "
                     "Choose a smaller approved space and re-enable this trigger."
                 )
-                raise SourceConfigurationError(msg)
+                raise SourceConfigurationError(msg, terminal=True)
             if not cursor:
                 break
             if cursor in cursors:
@@ -125,13 +125,13 @@ async def collect(trigger, lease):
                 "The Confluence space exceeds the 50-page request limit. "
                 "Choose a smaller approved space and re-enable this trigger."
             )
-            raise SourceConfigurationError(msg)
+            raise SourceConfigurationError(msg, terminal=True)
     finally:
         await client.aclose()
     updated = {**seen, **current}
     if len(updated) > MAX_ITEMS:
         msg = "The source exceeded 5000 observed page IDs. Re-enable it for a fresh baseline."
-        raise SourceConfigurationError(msg)
+        raise SourceConfigurationError(msg, terminal=True)
     return SourceRound(
         items=rows,
         cursor={"baseline_complete": True, "started_at": started, "pages": updated},

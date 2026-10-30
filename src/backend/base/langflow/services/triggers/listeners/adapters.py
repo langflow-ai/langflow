@@ -258,6 +258,7 @@ class ProviderSourcePollAdapter(PollingListenerAdapter):
                     message=str(exc),
                     expected_config=detached.config,
                     expected_kind=detached.kind,
+                    terminal=exc.terminal,
                 )
                 continue
             if ctx.stopping.is_set():

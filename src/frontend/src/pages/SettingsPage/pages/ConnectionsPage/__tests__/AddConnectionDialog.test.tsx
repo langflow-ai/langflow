@@ -28,6 +28,8 @@ const mockRegistrations = {
     },
   ],
   isSuccess: true,
+  isError: false,
+  error: null as unknown,
 };
 const mockTypesState = { data: {} };
 const mockPoll = { data: undefined };
@@ -120,6 +122,8 @@ describe("AddConnectionDialog ownership", () => {
   beforeEach(() => {
     mockCreate.mockReset();
     mockRegistrations.isSuccess = true;
+    mockRegistrations.isError = false;
+    mockRegistrations.error = null;
     mockResolveRegistrationId.mockReturnValue("google-demo");
     // Consent opens in a popup the dialog creates on the click itself.
     jest.spyOn(window, "open").mockReturnValue({
@@ -213,6 +217,72 @@ describe("AddConnectionDialog ownership", () => {
     );
     expect(screen.getByTestId("connection-continue")).toBeDisabled();
   });
+
+  it.each([false, true])(
+    "shows the site configuration error when reauthorizing is %s",
+    async (reauthorizing) => {
+      mockRegistrations.isSuccess = false;
+      mockRegistrations.isError = true;
+      mockRegistrations.error = {
+        isAxiosError: true,
+        response: {
+          data: {
+            detail: "The deployment Confluence Cloud site is not configured.",
+          },
+        },
+      };
+      const user = userEvent.setup();
+      render(
+        <AddConnectionDialog
+          open
+          onOpenChange={jest.fn()}
+          providers={[
+            {
+              ...google,
+              provider_id: "confluence",
+              display_name: "Confluence Cloud",
+              docs_url: "https://docs.langflow.org/bundles-confluence",
+            },
+          ]}
+          canCreateInstance={false}
+          reauthorize={
+            reauthorizing
+              ? {
+                  ...createdRow("user"),
+                  provider_key: "confluence",
+                  granted_scopes: ["read:page:confluence"],
+                }
+              : undefined
+          }
+        />,
+      );
+      if (!reauthorizing) {
+        await user.type(
+          screen.getByTestId("connection-name"),
+          "confluence_work",
+        );
+        await user.type(
+          screen.getByTestId("connection-display-name"),
+          "Confluence work",
+        );
+      }
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "The deployment Confluence Cloud site is not configured.",
+      );
+      expect(
+        screen.queryByText(/No OAuth registration is configured/i),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS/),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByTestId(
+          reauthorizing ? "connection-authorize" : "connection-continue",
+        ),
+      ).toBeDisabled();
+    },
+  );
 
   it("does not call a registration missing before discovery succeeds", () => {
     mockResolveRegistrationId.mockReturnValue(null);
