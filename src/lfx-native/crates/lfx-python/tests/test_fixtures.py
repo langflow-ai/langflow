@@ -212,11 +212,10 @@ def test_property_sequence(sequence):
 @pytest.mark.parametrize("case", section("diff_cases.json", "cases"))
 def test_diff_case(case):
     base, target = arg(case["base"]), arg(case["target"])
-    check(strict, "operations", ops.diff(base, target), case["operations"])
-    derived = ops.derive(base, target)
-    assert list(derived) == ["operations"]
+    operations = ops.ops_diff(base, target)
+    check(strict, "operations", operations, case["operations"])
     replayed = ops.GraphState(base)
-    replayed.apply(derived["operations"])
+    replayed.apply(operations)
     assert ops.graphs_equal(replayed.to_dict(), target)
     state = ops.GraphState(base)
     for operation in case["operations"]:

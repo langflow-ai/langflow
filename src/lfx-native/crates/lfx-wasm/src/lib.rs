@@ -135,24 +135,14 @@ pub fn normalize_operations(operations: &str) -> Result<String, JsValue> {
     text(api::normalize_operations(operations.into()))
 }
 
-/// The operations that turn `base` into `target`.
-///
-/// # Errors
-///
-/// A graph does not parse or breaks the rules.
-#[wasm_bindgen]
-pub fn diff(base: &str, target: &str) -> Result<String, JsValue> {
-    text(api::diff(base.into(), target.into()))
-}
-
-/// The operations that turn `base` into `target`, verified by replay.
+/// The operations that turn `base` into `target`, checked by replay.
 ///
 /// # Errors
 ///
 /// A graph does not parse or breaks the rules, or the operations do not replay.
-#[wasm_bindgen]
-pub fn derive(base: &str, target: &str) -> Result<String, JsValue> {
-    text(api::derive(base.into(), target.into()))
+#[wasm_bindgen(js_name = opsDiff)]
+pub fn ops_diff(base: &str, target: &str) -> Result<String, JsValue> {
+    text(api::ops_diff(base.into(), target.into()))
 }
 
 /// Every rule a graph breaks, as a JSON list of violations.

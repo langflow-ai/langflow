@@ -66,8 +66,7 @@ This table maps each part of the engine to its callers today, in the Python engi
 
 | Part | Python (`lfx_native.ops`) | Backend callers |
 | --- | --- | --- |
-| The save: validate, repair, derive | `validate`, `repair`, `derive` | `flow_history/recorder.py` (every graph write: PATCH, PUT, import, version activation, the assistant, file sync). The recorder calls them in turn, and numbers the operations and packs them into rows itself. |
-| Diff | `diff` | through `derive` in the recorder |
+| The save: validate, repair, diff | `validate`, `repair`, `ops_diff` | `flow_history/recorder.py` (every graph write: PATCH, PUT, import, version activation, the assistant, file sync). The recorder calls them in turn, and numbers the operations and packs them into rows itself. |
 | Graph hash | `graph_hash` | checkpoints and the check that the stored graph matches its latest revision (`recorder.py`), replay (`flow_history/replay.py`) |
 | Restore fix check | `apply_restore_fixes` | revision restore (`api/v1/flow_revisions.py`), version restore (`api/v1/flow_version.py`) |
 | New edge ids | `new_edge_id` | flow expansion (`processing/expand_flow.py`), the flow builder (`lfx/graph/flow_builder/connect.py`) |

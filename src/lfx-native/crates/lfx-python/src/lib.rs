@@ -399,26 +399,15 @@ fn normalize_operations<'py>(
     call(py, || api::normalize_operations(operations))
 }
 
-/// The operations that turn `base` into `target`.
+/// The operations that turn `base` into `target`, checked by replay.
 #[pyfunction]
-fn diff<'py>(
+fn ops_diff<'py>(
     py: Python<'py>,
     base: &Bound<'_, PyAny>,
     target: &Bound<'_, PyAny>,
 ) -> PyResult<Bound<'py, PyAny>> {
     let (base, target) = (input(base)?, input(target)?);
-    call(py, || api::diff(base, target))
-}
-
-/// The operations that turn `base` into `target`, verified by replay: `{"operations"}`.
-#[pyfunction]
-fn derive<'py>(
-    py: Python<'py>,
-    base: &Bound<'_, PyAny>,
-    target: &Bound<'_, PyAny>,
-) -> PyResult<Bound<'py, PyAny>> {
-    let (base, target) = (input(base)?, input(target)?);
-    call(py, || api::derive(base, target))
+    call(py, || api::ops_diff(base, target))
 }
 
 /// Every rule a graph breaks, as a list of violations.
@@ -638,8 +627,8 @@ mod _native {
     use super::{
         EngineError, GraphState, append_table_rows, apply, apply_restore_fixes,
         assign_changed_node_table_row_ids, assign_changed_table_row_ids, assign_row_ids,
-        assign_table_row_ids, canonical_json, derive, diff, edge_fixes, fixes_for_edges,
-        graph_hash, graphs_equal, new_edge_id, new_table_row_id, node_schema, normalize_operations,
+        assign_table_row_ids, canonical_json, edge_fixes, fixes_for_edges, graph_hash,
+        graphs_equal, new_edge_id, new_table_row_id, node_schema, normalize_operations, ops_diff,
         ordered_rows, repair, strip_flow_table_row_keys, strip_row_keys, table_fields, validate,
         values_equal,
     };
