@@ -522,6 +522,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Serper", name: "serper", icon: "Serper" },
   { display_name: "Serping API", name: "serpingapi", icon: "Search" },
   { display_name: "Serply", name: "serply", icon: "Search" },
+  { display_name: "ServiceNow", name: "servicenow", icon: "ServiceNow" },
   { display_name: "Slack", name: "slack", icon: "Slack" },
   { display_name: "Spider", name: "spider", icon: "Spider" },
   { display_name: "Supabase", name: "supabase", icon: "Supabase" },

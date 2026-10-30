@@ -1,0 +1,28 @@
+[project]
+name = "lfx-servicenow"
+version = "0.1.0"
+description = "ServiceNow approved-table actions and observed ticket triggers."
+readme = "README.md"
+requires-python = ">=3.10,<3.16"
+license = { text = "MIT" }
+dependencies = ["lfx>=1.14.0.dev0,<1.15.0"]
+
+[project.entry-points."langflow.extensions"]
+lfx-servicenow = "lfx_servicenow"
+
+[project.entry-points."langflow.trigger_providers"]
+servicenow = "langflow.services.triggers.providers.servicenow.runtime:PROVIDER"
+
+[build-system]
+requires = ["hatchling==1.31.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lfx_servicenow"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/lfx_servicenow", "README.md", "pyproject.toml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

@@ -1,0 +1,9 @@
+{
+  "id": "lfx-servicenow",
+  "version": "0.1.0",
+  "name": "ServiceNow",
+  "description": "Approved-table actions and observed ticket triggers.",
+  "lfx": {"compat": ["1"]},
+  "bundles": [{"name": "servicenow", "path": "components/servicenow"}],
+  "integrations": [{"provider_id": "servicenow", "bundle": "servicenow", "path": "capabilities.v1.json"}]
+}
