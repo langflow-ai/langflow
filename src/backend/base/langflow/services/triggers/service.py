@@ -37,7 +37,12 @@ from langflow.services.triggers.errors import TriggerNotFoundError
 from langflow.services.triggers.locking import lock_trigger, lock_trigger_for_admission
 from langflow.services.triggers.ownership import require_owned_connection
 from langflow.services.triggers.providers.registry import canvas_only_kinds, push_mechanisms, source_kinds
-from langflow.services.triggers.reconciliation import NODE_REMOVED_ERROR, apply_config_verdict, trigger_node_on_canvas
+from langflow.services.triggers.reconciliation import (
+    NODE_REMOVED_ERROR,
+    apply_config_verdict,
+    sync_display_name,
+    trigger_node_on_canvas,
+)
 from langflow.services.triggers.schedule_config import schedule_timing_changed, validate_schedule_config
 
 if TYPE_CHECKING:
@@ -235,6 +240,8 @@ class TriggerService(Service):
                 row.next_fire_at = None
             # A schedule that validates clears the error a broken one left.
             apply_config_verdict(row, None)
+        if "config" in changes and "name" not in changes:
+            sync_display_name(row, changes["config"])
         for field, value in changes.items():
             setattr(row, field, value.value if hasattr(value, "value") else value)
         row.updated_at = datetime.now(timezone.utc)

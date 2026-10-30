@@ -401,3 +401,54 @@ async def test_a_clean_save_leaves_a_dead_trigger_alone(trigger_owner, owned_flo
 
     (row,) = await _triggers(owned_flow)
     assert (row.state, row.last_error) == (TriggerState.DEAD.value, "dead-lettered")
+
+
+async def _rename(owned_flow, name: str) -> None:
+    async with session_scope() as session:
+        row = (await session.exec(select(Trigger).where(Trigger.flow_id == owned_flow))).one()
+        row.name = name
+        session.add(row)
+
+
+async def test_changing_the_cron_renames_the_schedule(trigger_owner, owned_flow) -> None:
+    """Settings and the events drawer show the name; it must name the cron the trigger fires on."""
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="0 8 * * 1-5"))
+    await _set_state(owned_flow, "active")
+
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="*/5 * * * *"))
+
+    (row,) = await _triggers(owned_flow)
+    assert (row.name, row.config["cron"], row.state) == ("Schedule */5 * * * *", "*/5 * * * *", "active")
+
+
+async def test_a_name_the_owner_chose_survives_a_cron_change(trigger_owner, owned_flow) -> None:
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="0 8 * * 1-5"))
+    await _rename(owned_flow, "Morning digest")
+
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="*/5 * * * *"))
+
+    (row,) = await _triggers(owned_flow)
+    assert row.name == "Morning digest"
+
+
+async def test_a_save_repairs_a_name_an_earlier_cron_change_left_stale(trigger_owner, owned_flow) -> None:
+    """Rows renamed before names followed the config still carry the cron they were created with."""
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="*/5 * * * *"))
+    await _rename(owned_flow, "Schedule 0 8 * * 1-5")
+
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="*/5 * * * *"))
+
+    (row,) = await _triggers(owned_flow)
+    assert row.name == "Schedule */5 * * * *"
+
+
+async def test_an_invalid_cron_drops_out_of_the_name_until_it_is_fixed(trigger_owner, owned_flow) -> None:
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="0 8 * * 1-5"))
+
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="not a cron"))
+    (row,) = await _triggers(owned_flow)
+    assert row.name == "Schedule"
+
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="*/5 * * * *"))
+    (row,) = await _triggers(owned_flow)
+    assert row.name == "Schedule */5 * * * *"

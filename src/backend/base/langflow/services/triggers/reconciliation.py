@@ -34,6 +34,7 @@ import re
 import secrets
 from typing import TYPE_CHECKING, Any
 
+from croniter import croniter
 from lfx.log.logger import logger
 from sqlalchemy.exc import DBAPIError
 
@@ -295,6 +296,32 @@ def _display_name(config: dict[str, Any], kind: str) -> str:
     return extension.display_name if extension else _KIND_DISPLAY_NAMES.get(kind) or kind.replace("_", " ").title()
 
 
+def _is_generated_name(name: str, kind: str, config: dict[str, Any]) -> bool:
+    """Whether ``name`` is one the server made from the config, not one the owner chose."""
+    if name in {_display_name(config, kind), _display_name({}, kind)}:
+        return True
+    # Saves before names followed the config left a schedule named for the cron
+    # it was created with.
+    prefix = "Schedule "
+    return kind == "schedule" and name.startswith(prefix) and croniter.is_valid(name.removeprefix(prefix))
+
+
+def sync_display_name(row: Trigger, config: dict[str, Any] | None) -> bool:
+    """Keep a generated name in step with ``config``; ``None`` is a config that does not validate.
+
+    Settings and the events drawer show the name, so a schedule must not keep
+    the cron it no longer fires on. A name the owner chose stays theirs.
+    Call before ``row.config`` changes. Returns whether the name changed.
+    """
+    if not _is_generated_name(row.name, row.kind, row.config or {}):
+        return False
+    name = _display_name(config or {}, row.kind)
+    if name == row.name:
+        return False
+    row.name = name
+    return True
+
+
 async def _reconcile_slack(
     session: AsyncSession, *, kind: str, owner_id: UUID, raw: dict[str, Any]
 ) -> tuple[dict[str, Any], UUID | None, str | None]:
@@ -456,8 +483,9 @@ async def reconcile_flow_triggers(
             row.public_id = secrets.token_urlsafe(24)
             session.add(row)
             touched += 1
+        renamed = sync_display_name(row, config if error is None else None)
         config_changed = row.config != config
-        changed = config_changed or row.session_policy != session_policy
+        changed = config_changed or row.session_policy != session_policy or renamed
         if changed:
             if schedule_timing_changed(row.config or {}, config):
                 row.next_fire_at = None

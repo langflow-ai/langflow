@@ -755,6 +755,24 @@ async def test_removing_the_node_wins_over_an_enable_that_commits_during_the_sav
     assert (row.state, row.last_error) == ("paused", NODE_REMOVED_ERROR)
 
 
+async def test_a_schedule_edited_through_the_api_is_renamed_unless_the_edit_names_it(
+    client: AsyncClient, logged_in_headers: dict[str, str], active_user
+) -> None:
+    trigger_id = await _trigger(await _flow(active_user.id), active_user.id, name="Schedule 0 8 * * 1-5")
+    url = f"api/v1/triggers/{trigger_id}"
+
+    renamed = await client.patch(
+        url, json={"config": {"cron": "*/5 * * * *", "timezone": "UTC"}}, headers=logged_in_headers
+    )
+    named = await client.patch(
+        url, json={"config": {"cron": "0 9 * * *", "timezone": "UTC"}, "name": "Daily"}, headers=logged_in_headers
+    )
+
+    assert renamed.status_code == 200, renamed.text
+    assert renamed.json()["name"] == "Schedule */5 * * * *"
+    assert named.json()["name"] == "Daily"
+
+
 # --------------------------------------------------------------------------- #
 # Events drawer filters
 # --------------------------------------------------------------------------- #
