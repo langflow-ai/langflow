@@ -17,7 +17,7 @@ from pydantic import (
     model_validator,
 )
 
-DecisionKind = Literal["choice", "boolean", "score"]
+DecisionKind = Literal["choice", "noul", "score"]
 Probability = Annotated[float, Field(strict=True, ge=0, le=1, allow_inf_nan=False)]
 FiniteNumber = Annotated[float, Field(strict=True, allow_inf_nan=False)]
 NonEmpty = Annotated[str, Field(strict=True, min_length=1, pattern=r"\S")]
@@ -130,7 +130,7 @@ class DecisionQuestion(BaseModel):
     question: NonEmpty
     options: tuple[DecisionOption, ...] = ()
     levels: tuple[DecisionOption, ...] = ()
-    # Boolean only: what a Yes and a No answer mean.
+    # Noul only: what a Yes and a No answer mean.
     yes_description: str = ""
     no_description: str = ""
 
@@ -150,8 +150,8 @@ class DecisionQuestion(BaseModel):
         if (self.kind != "choice" and self.options) or (self.kind != "score" and self.levels):
             msg = "Options belong to Choice and ordered levels belong to Score"
             raise ValueError(msg)
-        if self.kind != "boolean" and (self.yes_description or self.no_description):
-            msg = "Yes and No descriptions belong to Boolean"
+        if self.kind != "noul" and (self.yes_description or self.no_description):
+            msg = "Yes and No descriptions belong to Noul"
             raise ValueError(msg)
         ids = [c.id for c in candidates]
         labels = [c.label.strip().casefold() for c in candidates]
@@ -188,7 +188,7 @@ def decision_request(**fields: Any) -> DecisionRequest:
 
 
 class DecisionResult(BaseModel):
-    """Evidence fields retain their meanings; no implicit Boolean/route policy."""
+    """Evidence fields retain their meanings; no implicit Noul/route policy."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -227,11 +227,11 @@ class DecisionResult(BaseModel):
         if self.refusal is not None:
             msg = "Successful judgments cannot contain a refusal"
             raise ValueError(msg)
-        if self.kind == "boolean":
+        if self.kind == "noul":
             if self.probability_true is None or any(
                 value is not None for value in (self.probabilities, self.score, self.selected_option)
             ):
-                msg = "Boolean results require P(true), without a distribution, score or derived Boolean"
+                msg = "Noul results require P(true), without a distribution, score or a derived yes or no"
                 raise ValueError(msg)
         else:
             if not self.probabilities or self.probability_true is not None:

@@ -1,12 +1,12 @@
 {
-  "boolean": {
-    "kind": "boolean",
+  "noul": {
+    "kind": "noul",
     "model": "gpt-6-luna",
     "model_source": "response",
     "probability_true": 0.88,
     "provider": "OpenAI",
     "request": {
-      "kind": "boolean",
+      "kind": "noul",
       "question": "Is the customer asking for a refund?"
     },
     "status": "success",
@@ -58,13 +58,13 @@
     }
   },
   "refusal": {
-    "kind": "boolean",
+    "kind": "noul",
     "model": "gpt-6-luna",
     "model_source": "response",
     "provider": "OpenAI",
     "refusal": "I can't evaluate this request.",
     "request": {
-      "kind": "boolean",
+      "kind": "noul",
       "question": "Is the customer asking for a refund?"
     },
     "status": "refusal"

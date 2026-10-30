@@ -34,7 +34,7 @@ const team = {
   name: "team",
   question: "Which team should handle this?",
 };
-const urgent = { ...newQuestion, id: "x1", name: "", kind: "Boolean" };
+const urgent = { ...newQuestion, id: "x1", name: "", kind: "Noul" };
 
 const connection = {
   type: "str",

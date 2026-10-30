@@ -28,7 +28,7 @@ from lfx.io import (
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 
-_KINDS = ("Choice", "Boolean", "Score")
+_KINDS = ("Choice", "Noul", "Score")
 _FORM, _JSON = "Form", "JSON"
 # Text fields a node held before the question list, which could be bound to a global variable.
 _LEGACY_LABELS = {"question": "Question", "yes_description": "What Yes Means", "no_description": "What No Means"}
@@ -57,7 +57,7 @@ _RESULT_INFO = (
     "Answers the configured questions about the context and returns JSON. Several questions return an answers "
     "object keyed by question name, with shared usage counted once. Choice gives "
     "probabilities by option ID and, when the provider names one, selected_option (otherwise take the most "
-    "probable option); Boolean gives probability_true, the "
+    "probable option); Noul gives probability_true, the "
     "probability the answer is yes, from 0 to 1; Score gives score, from 0 (the first level) up to one less than "
     "the number of levels, and probabilities by level ID. confidence is the provider's own measure, not an "
     "option's probability."
@@ -96,9 +96,9 @@ class DecisionModelComponent(Component):
             advanced=True,
             show=False,
             value="",
-            info="In JSON mode, paste an object keyed by question name. Each value uses kind (choice, boolean, "
-            "score), question, and options or levels as arrays of {id, label, description}. Boolean descriptions "
-            'are optional. Example: {"urgent":{"kind":"boolean","question":"Is this urgent?"}}. '
+            info="In JSON mode, paste an object keyed by question name. Each value uses kind (choice, noul, "
+            "score), question, and options or levels as arrays of {id, label, description}. Noul descriptions "
+            'are optional. Example: {"urgent":{"kind":"noul","question":"Is this urgent?"}}. '
             "This replaces the form for this run; its values are preserved.",
         ),
         MessageTextInput(
@@ -113,7 +113,7 @@ class DecisionModelComponent(Component):
             value=[],
             new_question=_NEW_QUESTION,
             connection_prefix=_CONNECTION_PREFIX,
-            info="Each question has its own Decision Type: Choice picks one option, Boolean answers yes or no, and "
+            info="Each question has its own Decision Type: Choice picks one option, Noul answers yes or no, and "
             "Score places the input on ordered levels. With more than one question, they are sent in one call and "
             "the result holds each answer under its Name, which defaults to q1, q2 and so on.",
         ),
@@ -196,16 +196,16 @@ class DecisionModelComponent(Component):
         # A tweak can send anything here; the editor only offers these three types.
         kind = item.get("kind") if isinstance(item, dict) else None
         if kind not in _KINDS:
-            msg = f"Pick a Decision Type for Question {number}: Choice, Boolean or Score."
+            msg = f"Pick a Decision Type for Question {number}: Choice, Noul or Score."
             raise DecisionConfigurationError(msg)
         kind = kind.lower()
-        boolean = kind == "boolean"
+        noul = kind == "noul"
         connected = self._connected_question(item)
         if connected is not None:
             item = {**item, "question": connected}
         # A migrated field still holding the name of the global variable it was bound to; see _legacy_question.
         for field, variable in (item.get("global_variables") or {}).items():
-            if (field == "question" or boolean) and item.get(field) == variable:
+            if (field == "question" or noul) and item.get(field) == variable:
                 msg = (
                     f"Question {number}'s {_LEGACY_LABELS.get(field, field)} was read from the global variable "
                     f"{variable!r}, which question cards can't use. Type the text into the card, or clear it."
@@ -216,9 +216,9 @@ class DecisionModelComponent(Component):
             "question": item.get("question"),
             "options": (item.get("options") or ()) if kind == "choice" else (),
             "levels": (item.get("levels") or ()) if kind == "score" else (),
-            # Ignored for other types, so a value left from Boolean never applies to them.
-            "yes_description": (item.get("yes_description") or "") if boolean else "",
-            "no_description": (item.get("no_description") or "") if boolean else "",
+            # Ignored for other types, so a value left from Noul never applies to them.
+            "yes_description": (item.get("yes_description") or "") if noul else "",
+            "no_description": (item.get("no_description") or "") if noul else "",
         }
 
     def _request(self):
@@ -289,6 +289,10 @@ class DecisionModelComponent(Component):
                     "name": "question",
                     "display_name": "Question 1",
                 }
+        for item in template["questions"]["value"]:
+            if isinstance(item, dict) and item.get("kind") == "Boolean":
+                # The yes-or-no type was renamed Noul, the providers' own name for it.
+                item["kind"] = "Noul"
         # Each question's connection field lives on the node; the class has only the one to copy.
         for item in template["questions"]["value"]:
             name = _connection_field(item) if isinstance(item, dict) else None
@@ -339,6 +343,7 @@ def _legacy_question(saved: dict) -> dict:
     }
 
     kind = value("kind", "Choice")
+    kind = "Noul" if kind == "Boolean" else kind
     options = value("candidates", _NEW_QUESTION["options"])
     levels = value("levels", _NEW_QUESTION["levels"])
     if "levels" not in saved and kind == "Score":

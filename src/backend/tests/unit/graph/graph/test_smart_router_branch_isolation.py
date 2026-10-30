@@ -894,7 +894,7 @@ async def test_decision_routing_follows_route_ids_not_positions(monkeypatch):
 
 
 class _BooleanSmartRouter(SmartRouterComponent):
-    """Mirrors what ``update_outputs`` produces for a Boolean router: Yes, No and Else."""
+    """Mirrors what ``update_outputs`` produces for a Noul router: Yes, No and Else."""
 
     outputs = [
         Output(display_name="Yes", name="yes_result", method="process_case", group_outputs=True),
@@ -917,7 +917,7 @@ async def test_boolean_router_runs_only_the_answer_it_reaches(monkeypatch, proba
     monkeypatch.setattr(
         "lfx.components.llm_operations.llm_conditional_router.evaluate_decision",
         lambda *_args, **_kwargs: DecisionResult(
-            kind="boolean", provider="Test", model="test-model", probability_true=probability_true
+            kind="noul", provider="Test", model="test-model", probability_true=probability_true
         ),
     )
     router = _make_router(
@@ -925,7 +925,7 @@ async def test_boolean_router_runs_only_the_answer_it_reaches(monkeypatch, proba
         _TWO_ROUTES,  # left over from Choice, and ignored
         routing_mode="Decision Model",
         decision_model=[{"name": "test-model", "provider": "Test"}],
-        decision_kind="Boolean",
+        decision_kind="Noul",
         decision_question="Is the customer asking for a refund?",
         yes_message="Refund team, here we come.",
         minimum_probability=0.7,
@@ -997,7 +997,7 @@ async def test_score_router_runs_only_the_level_its_score_rounds_to(monkeypatch,
 
 
 async def test_a_boolean_tweak_on_a_routes_flow_stops_before_inference(monkeypatch):
-    """Boolean's Yes and No outputs must be the saved ones, or every route branch would run."""
+    """Noul's Yes and No outputs must be the saved ones, or every route branch would run."""
     import pytest
 
     calls = []
@@ -1005,7 +1005,7 @@ async def test_a_boolean_tweak_on_a_routes_flow_stops_before_inference(monkeypat
         "lfx.components.llm_operations.llm_conditional_router.evaluate_decision",
         lambda *args, **_kwargs: calls.append(args),
     )
-    graph, _, sinks = _decision_graph(decision_kind="Boolean", decision_question="Is this a refund?")
+    graph, _, sinks = _decision_graph(decision_kind="Noul", decision_question="Is this a refund?")
     with pytest.raises(Exception, match="outputs don't match its Decision Type"):
         await _run(graph)
     assert not calls

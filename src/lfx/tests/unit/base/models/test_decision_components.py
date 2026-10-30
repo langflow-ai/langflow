@@ -26,7 +26,7 @@ def test_component_template_discoverable():
     assert restored.name == component.name
 
 
-@pytest.mark.parametrize("kind", ["Choice", "Boolean", "Score"])
+@pytest.mark.parametrize("kind", ["Choice", "Noul", "Score"])
 def test_component_preserves_evidence_and_executes_once(kind, monkeypatch):
     component = DecisionModelComponent()
     component.set(
@@ -48,7 +48,7 @@ def test_component_preserves_evidence_and_executes_once(kind, monkeypatch):
         calls.append((request, kwargs))
         fields = (
             {"probability_true": 0.3}
-            if kind == "Boolean"
+            if kind == "Noul"
             else {
                 "probabilities": {"a": 0.3, "b": 0.7},
                 "confidence": 0.25,
@@ -160,13 +160,13 @@ def test_component_takes_no_api_key_from_the_flow():
     assert "api_key" not in {component_input.name for component_input in DecisionModelComponent.inputs}
 
 
-BOOLEAN_RESULT = DecisionResult(kind="boolean", provider="TypeSafe", model="m", probability_true=0.8)
+BOOLEAN_RESULT = DecisionResult(kind="noul", provider="TypeSafe", model="m", probability_true=0.8)
 
 
 _QUESTION_KEYS = {"options", "levels", "yes_description", "no_description"}
 
 
-def _captured(monkeypatch, kind="Boolean", result=BOOLEAN_RESULT, **fields):
+def _captured(monkeypatch, kind="Noul", result=BOOLEAN_RESULT, **fields):
     """Evaluate once with the provider replaced; returns the request the runtime received."""
     question = {"kind": kind, "question": "Refund?", **{k: v for k, v in fields.items() if k in _QUESTION_KEYS}}
     component = DecisionModelComponent()
@@ -229,7 +229,7 @@ def test_yes_and_no_left_from_boolean_never_apply_to_another_type(monkeypatch):
 async def test_an_agent_supplies_the_context_when_used_as_a_tool():
     component = DecisionModelComponent()
     component.set(
-        model=[{"provider": "TypeSafe", "name": "jev-latest"}], questions=[{"kind": "Boolean", "question": "Refund?"}]
+        model=[{"provider": "TypeSafe", "name": "jev-latest"}], questions=[{"kind": "Noul", "question": "Refund?"}]
     )
     [tool] = await component.to_toolkit()
     assert set(tool.args) == {"context"}
@@ -238,7 +238,7 @@ async def test_an_agent_supplies_the_context_when_used_as_a_tool():
 async def test_an_agent_learns_what_the_tool_answers():
     component = DecisionModelComponent()
     component.set(
-        model=[{"provider": "TypeSafe", "name": "jev-latest"}], questions=[{"kind": "Boolean", "question": "Refund?"}]
+        model=[{"provider": "TypeSafe", "name": "jev-latest"}], questions=[{"kind": "Noul", "question": "Refund?"}]
     )
     [tool] = await component.to_toolkit()
     assert "probability_true" in tool.description
@@ -249,7 +249,7 @@ async def test_an_agent_learns_what_the_tool_answers():
 def test_the_result_leaves_out_what_this_decision_did_not_return(monkeypatch):
     component = DecisionModelComponent()
     component.set(
-        model=[{"provider": "TypeSafe", "name": "jev-latest"}], questions=[{"kind": "Boolean", "question": "Refund?"}]
+        model=[{"provider": "TypeSafe", "name": "jev-latest"}], questions=[{"kind": "Noul", "question": "Refund?"}]
     )
     component.set(context="I was charged twice.")
     monkeypatch.setattr(component_module, "evaluate_decision", lambda *_a, **_k: BOOLEAN_RESULT)
@@ -269,7 +269,7 @@ def test_a_structured_context_that_is_a_list_says_it_must_be_one_object(monkeypa
         _captured(monkeypatch, structured_context=[{"order": 1042}, {"order": 1043}])
 
 
-@pytest.mark.parametrize("kind", ["Ranking", None, "boolean"])
+@pytest.mark.parametrize("kind", ["Ranking", None, "noul"])
 def test_an_unknown_decision_type_says_which_ones_exist(monkeypatch, kind):
     with pytest.raises(DecisionConfigurationError, match="Pick a Decision Type for Question 1"):
         _captured(monkeypatch, kind=kind, context="text")
@@ -280,8 +280,8 @@ def test_an_unknown_decision_type_says_which_ones_exist(monkeypatch, kind):
     ("legacy", "expected"),
     [
         (
-            {"kind": "Boolean", "question": "Refund?", "yes_description": "Asks for money back"},
-            {"kind": "Boolean", "question": "Refund?", "yes_description": "Asks for money back"},
+            {"kind": "Noul", "question": "Refund?", "yes_description": "Asks for money back"},
+            {"kind": "Noul", "question": "Refund?", "yes_description": "Asks for money back"},
         ),
         (
             {"kind": "Choice", "question": "Which team?", "candidates": [{"id": "x", "label": "X"}]},
@@ -317,7 +317,7 @@ async def test_a_migrated_global_variable_binding_is_refused_not_read_as_text():
     del saved["template"]["questions"]
     saved["template"].update(
         {
-            "kind": {"value": "Boolean"},
+            "kind": {"value": "Noul"},
             "question": {"value": "ROUTING_QUESTION", "load_from_db": True},
             "yes_description": {"value": "YES_MEANS", "load_from_db": True},
             "no_description": {"value": "Anything else", "load_from_db": False},
@@ -347,7 +347,7 @@ async def test_a_question_wired_before_the_list_stays_wired_after_update():
     component = DecisionModelComponent()
     saved = component.to_frontend_node()["data"]["node"]
     del saved["template"]["questions"]
-    saved["template"].update({"kind": {"value": "Boolean"}, "question": {"value": "", "input_types": ["Message"]}})
+    saved["template"].update({"kind": {"value": "Noul"}, "question": {"value": "", "input_types": ["Message"]}})
     updated = await component.update_frontend_node(component.to_frontend_node()["data"]["node"], saved)
     [question] = updated["template"]["questions"]["value"]
     assert question["input_field"] == "question"
@@ -360,6 +360,25 @@ async def test_a_question_wired_before_the_list_stays_wired_after_update():
     component.set(context="text", questions=[question])
     component._attributes["question"] = Message(text="Is this a refund?")
     assert component._request().question == "Is this a refund?"
+
+
+@pytest.mark.asyncio
+async def test_saved_boolean_questions_become_noul_on_update():
+    from copy import deepcopy
+
+    component = mixed_question_component()
+    saved, _ = create_component_template(component_extractor=component)
+    questions = deepcopy(component.questions)
+    questions[1]["kind"] = "Boolean"
+    saved["template"]["questions"]["value"] = questions
+    updated = await component.update_frontend_node(component.to_frontend_node()["data"]["node"], saved)
+    assert [q["kind"] for q in updated["template"]["questions"]["value"]] == ["Choice", "Noul", "Score"]
+
+    legacy = component.to_frontend_node()["data"]["node"]
+    del legacy["template"]["questions"]
+    legacy["template"].update({"kind": {"value": "Boolean"}, "question": {"value": "Refund?"}})
+    migrated = await component.update_frontend_node(component.to_frontend_node()["data"]["node"], legacy)
+    assert migrated["template"]["questions"]["value"][0]["kind"] == "Noul"
 
 
 @pytest.mark.asyncio
@@ -385,7 +404,7 @@ def mixed_question_component():
                 "question": "Which team?",
                 "options": [{"id": "billing", "label": "Billing"}, {"id": "support", "label": "Support"}],
             },
-            {"name": "urgent", "kind": "Boolean", "question": "Is this urgent?"},
+            {"name": "urgent", "kind": "Noul", "question": "Is this urgent?"},
             {
                 "name": "impact",
                 "kind": "Score",
@@ -460,7 +479,7 @@ def test_form_and_json_build_identical_requests():
     )
     assert component._request() == form_request
     assert list(form_request.questions) == ["team", "urgent", "impact"]
-    assert [question.kind for question in form_request.questions.values()] == ["choice", "boolean", "score"]
+    assert [question.kind for question in form_request.questions.values()] == ["choice", "noul", "score"]
     assert [level.id for level in form_request.questions["impact"].levels] == ["low", "high"]
 
 
@@ -487,9 +506,9 @@ def test_one_form_question_keeps_the_single_result_shape():
         "[]",
         "null",
         '{"q":',
-        '{"q":{"kind":"boolean","question":"one"},"q":{"kind":"boolean","question":"two"}}',
-        '{"q":{"kind":"boolean","question":"one","kind":"score"}}',
-        '{"q":{"kind":"boolean","question":"one","endpoint":"https://example.com"}}',
+        '{"q":{"kind":"noul","question":"one"},"q":{"kind":"noul","question":"two"}}',
+        '{"q":{"kind":"noul","question":"one","kind":"score"}}',
+        '{"q":{"kind":"noul","question":"one","endpoint":"https://example.com"}}',
         '{"q":{"kind":"choice","question":"one","options":[]}}',
     ],
 )
@@ -531,7 +550,7 @@ def test_questions_mode_shows_one_editor_and_keeps_both_values():
     component = mixed_question_component()
     template, _ = create_component_template(component_extractor=component)
     config = template["template"]
-    config["questions_json"]["value"] = '{"q":{"kind":"boolean","question":"Q?"}}'
+    config["questions_json"]["value"] = '{"q":{"kind":"noul","question":"Q?"}}'
     values = {name: config[name]["value"] for name in ("questions", "questions_json")}
     for mode in ("JSON", "Form", "JSON"):
         component.update_build_config(config, mode, "question_mode")
@@ -557,7 +576,7 @@ def test_batch_component_preserves_answers_and_shared_usage(monkeypatch):
                     probabilities={"billing": 0.8, "support": 0.2},
                     selected_option="billing",
                 ),
-                "urgent": DecisionResult(kind="boolean", provider="TypeSafe", model="m", probability_true=0.9),
+                "urgent": DecisionResult(kind="noul", provider="TypeSafe", model="m", probability_true=0.9),
                 "impact": DecisionResult(
                     kind="score", provider="TypeSafe", model="m", probabilities={"low": 0.1, "high": 0.9}, score=0.9
                 ),
@@ -636,7 +655,7 @@ async def test_saved_json_mode_survives_component_update():
     component = mixed_question_component()
     saved, _ = create_component_template(component_extractor=component)
     saved["template"]["question_mode"]["value"] = "JSON"
-    saved["template"]["questions_json"]["value"] = '{"urgent":{"kind":"boolean","question":"Urgent?"}}'
+    saved["template"]["questions_json"]["value"] = '{"urgent":{"kind":"noul","question":"Urgent?"}}'
     new, _ = create_component_template(component_extractor=DecisionModelComponent())
     updated = await component.update_frontend_node(new, deepcopy(saved))
     assert updated["template"]["question_mode"]["value"] == "JSON"

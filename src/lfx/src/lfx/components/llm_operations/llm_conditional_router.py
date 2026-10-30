@@ -45,8 +45,8 @@ _CUSTOM_PROMPT_INFO = (
 _CUSTOM_PROMPT_DECISION_INFO = (
     "Not used in Decision Model mode, which has no prompt. Kept so it applies again in Language Model mode."
 )
-_DECISION_KINDS = {"Choice": "choice", "Boolean": "boolean", "Score": "score"}
-# Boolean's fixed outputs, in place of one output per route.
+_DECISION_KINDS = {"Choice": "choice", "Noul": "noul", "Score": "score"}
+# Noul's fixed outputs, in place of one output per route.
 _YES_OUTPUT, _NO_OUTPUT = "yes_result", "no_result"
 # What Else receives, which differs only for Score: every Score answer reaches a level.
 _ELSE_INFO = {
@@ -69,16 +69,16 @@ _BOOLEAN_FIELDS = (
     "yes_minimum_probability",
     "no_minimum_probability",
 )
-# Switching types swaps only these stock questions, never one the user wrote. Boolean has none:
+# Switching types swaps only these stock questions, never one the user wrote. Noul has none:
 # a yes/no question has to name what it asks.
 _DECISION_QUESTIONS = {
     "choice": "Which route best matches the input?",
-    "boolean": "",
+    "noul": "",
     "score": "Which level best describes the input?",
 }
 _DECISION_QUESTION_INFO = {
     "choice": "Instructions for the decision model. Additional Instructions apply only to Language Model mode.",
-    "boolean": (
+    "noul": (
         'A yes/no question, such as "Is the customer asking for a refund?". A Yes answer goes to the Yes output '
         "and a No answer to the No output."
     ),
@@ -93,7 +93,7 @@ _MINIMUM_PROBABILITY_INFO = {
         "From 0 to 1. The most likely route is used only when its probability is at least this value; otherwise "
         "the message goes to Else. A route can set its own in the Routes table."
     ),
-    "boolean": (
+    "noul": (
         "From 0 to 1. The more likely answer, Yes or No, is used only when its probability is at least this "
         "value; otherwise the message goes to Else. Yes and No can each set their own."
     ),
@@ -172,7 +172,7 @@ class SmartRouterComponent(Component):
             options=list(_DECISION_KINDS),
             value="Choice",
             info=(
-                "Choice picks one route. Boolean answers yes or no through Yes and No outputs. Score places the "
+                "Choice picks one route. Noul answers yes or no through Yes and No outputs. Score places the "
                 "input on its own ordered Levels. Changing the type replaces the outputs and removes their "
                 "connections; Else keeps its own."
             ),
@@ -215,13 +215,13 @@ class SmartRouterComponent(Component):
         MessageTextInput(
             name="yes_message",
             display_name="Yes Message (Optional)",
-            info="Boolean only: the message the Yes output sends. Leave empty to pass the input through.",
+            info="Noul only: the message the Yes output sends. Leave empty to pass the input through.",
             show=False,
         ),
         MessageTextInput(
             name="no_message",
             display_name="No Message (Optional)",
-            info="Boolean only: the message the No output sends. Leave empty to pass the input through.",
+            info="Noul only: the message the No output sends. Leave empty to pass the input through.",
             show=False,
         ),
         FloatInput(
@@ -229,7 +229,7 @@ class SmartRouterComponent(Component):
             preserve_empty=True,
             display_name="Yes Minimum Probability (Optional)",
             info=(
-                "Boolean only: the probability Yes needs, from 0 to 1, when Yes is the more likely answer. Leave "
+                "Noul only: the probability Yes needs, from 0 to 1, when Yes is the more likely answer. Leave "
                 "empty to use Minimum Probability."
             ),
             range_spec=RangeSpec(min=0, max=1, step=0.01),
@@ -241,7 +241,7 @@ class SmartRouterComponent(Component):
             preserve_empty=True,
             display_name="No Minimum Probability (Optional)",
             info=(
-                "Boolean only: the probability No needs, from 0 to 1, when No is the more likely answer. Leave "
+                "Noul only: the probability No needs, from 0 to 1, when No is the more likely answer. Leave "
                 "empty to use Minimum Probability."
             ),
             range_spec=RangeSpec(min=0, max=1, step=0.01),
@@ -462,8 +462,8 @@ class SmartRouterComponent(Component):
 
     @staticmethod
     def _table(*, decision_mode: bool, kind: str) -> str | None:
-        """The table whose rows are this router's outputs: none for Boolean's Yes and No."""
-        if decision_mode and kind == "boolean":
+        """The table whose rows are this router's outputs: none for Noul's Yes and No."""
+        if decision_mode and kind == "noul":
             return None
         return "score_levels" if decision_mode and kind == "score" else "routes"
 
@@ -489,6 +489,10 @@ class SmartRouterComponent(Component):
         """
         await super().update_frontend_node(new_frontend_node, current_frontend_node)
         template = new_frontend_node.get("template", {})
+        kind = template.get("decision_kind") or {}
+        if kind.get("value") == "Boolean":
+            # The yes-or-no type was renamed Noul, the providers' own name for it.
+            kind["value"] = "Noul"
         self._show_fields(template, (template.get("routing_mode") or {}).get("value"), "routing_mode")
         return new_frontend_node
 
@@ -518,11 +522,11 @@ class SmartRouterComponent(Component):
                 required=uses_router_threshold,
                 info=_MINIMUM_PROBABILITY_INFO.get(kind, _MINIMUM_PROBABILITY_INFO["choice"]),
             )
-        # Boolean replaces the routes with its Yes and No fields; the routes are kept for the other types.
-        boolean_mode = decision_mode and kind == "boolean"
+        # Noul replaces the routes with its Yes and No fields; the routes are kept for the other types.
+        noul_mode = decision_mode and kind == "noul"
         for name in _BOOLEAN_FIELDS:
             if name in build_config:
-                build_config[name]["show"] = boolean_mode
+                build_config[name]["show"] = noul_mode
         if "decision_question" in build_config:
             question = build_config["decision_question"]
             question["info"] = _DECISION_QUESTION_INFO[kind]
@@ -737,17 +741,17 @@ class SmartRouterComponent(Component):
             msg = "Enter a Decision Question."
             raise DecisionConfigurationError(msg)
         candidates, thresholds = (
-            self._boolean_branches(threshold) if kind == "boolean" else self._route_branches(kind, threshold)
+            self._noul_branches(threshold) if kind == "noul" else self._route_branches(kind, threshold)
         )
-        boolean = kind == "boolean"
+        noul = kind == "noul"
         request = decision_request(
             kind=kind,
             question=self.decision_question,
             context=self.input_text,
             options=candidates if kind == "choice" else (),
             levels=candidates if kind == "score" else (),
-            yes_description=candidates[0]["description"] if boolean else "",
-            no_description=candidates[1]["description"] if boolean else "",
+            yes_description=candidates[0]["description"] if noul else "",
+            no_description=candidates[1]["description"] if noul else "",
         )
         evidence = {
             "kind": kind,
@@ -767,8 +771,8 @@ class SmartRouterComponent(Component):
             self.log(self._sanitize_secret_values(evidence), name="Decision evidence")
         return self._categorization_result
 
-    def _boolean_branches(self, threshold: float) -> tuple[list[dict], dict]:
-        """Boolean's Yes and No outputs, what each answer means, and the probability each needs."""
+    def _noul_branches(self, threshold: float) -> tuple[list[dict], dict]:
+        """Noul's Yes and No outputs, what each answer means, and the probability each needs."""
         candidates = [
             {"id": _YES_OUTPUT, "label": "Yes", "description": self.yes_description or ""},
             {"id": _NO_OUTPUT, "label": "No", "description": self.no_description or ""},
@@ -851,7 +855,7 @@ class SmartRouterComponent(Component):
             evidence.update(reason="accepted", activated_branch=winner)
             return labels[winner]
         probabilities = result.probabilities
-        if request.kind == "boolean":
+        if request.kind == "noul":
             # The first candidate is Yes and the second No. P(no) is rounded so float error never drops it
             # below a threshold it meets: 1 - 0.33 is 0.6699999999999999.
             yes, no = evidence["options"][0]["id"], evidence["options"][1]["id"]
@@ -892,9 +896,9 @@ class SmartRouterComponent(Component):
         self._excluded_outputs = set()
         self._decision_evidence = None
         self._token_usage = None
-        # Checked before any model is called, so a mismatch never costs an inference. Boolean's
+        # Checked before any model is called, so a mismatch never costs an inference. Noul's
         # Yes and No outputs don't come from a table, but must be the saved ones: a tweak that switches
-        # a routes flow to Boolean would otherwise run every route branch.
+        # a routes flow to Noul would otherwise run every route branch.
         if self._rows_table() is not None:
             self._route_ids()
         elif self._outputs_map and set(self._outputs_map) - {"default_result"} != {_YES_OUTPUT, _NO_OUTPUT}:

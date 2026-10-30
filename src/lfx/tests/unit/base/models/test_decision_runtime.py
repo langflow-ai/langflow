@@ -26,7 +26,7 @@ from pydantic import SecretStr
 
 @pytest.fixture
 def execution(monkeypatch):
-    request = DecisionRequest(kind="boolean", question="Is this a complaint?", context="My payment failed.")
+    request = DecisionRequest(kind="noul", question="Is this a complaint?", context="My payment failed.")
     model = {"provider": "OpenAI", "name": "gpt-6-luna"}
     policy = ModelProviderPolicySnapshot(
         context=ModelProviderPolicyContext(),
@@ -37,7 +37,7 @@ def execution(monkeypatch):
     monkeypatch.setattr("lfx.services.model_provider_policy.resolve_model_provider_policy", lambda **_: policy)
     transport = Mock(
         return_value=DecisionResult(
-            kind="boolean",
+            kind="noul",
             provider="OpenAI",
             model="gpt-6-luna",
             probability_true=0.8,
@@ -390,7 +390,7 @@ def test_per_request_keys_for_other_providers_are_ignored(execution):
 
 
 def _with_usage(usage):
-    return DecisionResult(kind="boolean", provider="TypeSafe", model="jev-1.13.0", probability_true=0.9, usage=usage)
+    return DecisionResult(kind="noul", provider="TypeSafe", model="jev-1.13.0", probability_true=0.9, usage=usage)
 
 
 @pytest.mark.parametrize(
@@ -436,8 +436,8 @@ def test_batch_uses_same_policy_boundary_and_counts_usage_once(execution):
     batch = DecisionBatchRequest(
         context=request.context,
         questions={
-            "urgent": DecisionQuestion(kind="boolean", question="Is this urgent?"),
-            "complaint": DecisionQuestion(kind="boolean", question="Is this a complaint?"),
+            "urgent": DecisionQuestion(kind="noul", question="Is this urgent?"),
+            "complaint": DecisionQuestion(kind="noul", question="Is this a complaint?"),
         },
     )
     evidence = transport.return_value
@@ -454,7 +454,7 @@ def test_batch_policy_denial_precedes_transport(execution, monkeypatch):
 
     request, model, transport = execution
     batch = DecisionBatchRequest(
-        context=request.context, questions={"urgent": DecisionQuestion(kind="boolean", question="Urgent?")}
+        context=request.context, questions={"urgent": DecisionQuestion(kind="noul", question="Urgent?")}
     )
     snapshot = ModelProviderPolicySnapshot(
         context=ModelProviderPolicyContext(),

@@ -33,13 +33,13 @@ def test_choice_keeps_probabilities_separate_from_confidence(options):
 @pytest.mark.parametrize("probability", [float("nan"), float("inf"), -0.01, 1.01, True, "0.5"])
 def test_boolean_rejects_invalid_probability(probability):
     with pytest.raises(ValidationError):
-        DecisionResult(kind="boolean", provider="TypeSafe", model="jev-latest", probability_true=probability)
+        DecisionResult(kind="noul", provider="TypeSafe", model="jev-latest", probability_true=probability)
 
 
 @pytest.mark.parametrize("probability", [0, 0.5, 1])
 def test_boolean_preserves_uncertainty_without_coercion(probability):
-    result = DecisionResult(kind="boolean", provider="TypeSafe", model="jev-latest", probability_true=probability)
-    request = DecisionRequest(kind="boolean", question="Contains a complaint?", context="Maybe")
+    result = DecisionResult(kind="noul", provider="TypeSafe", model="jev-latest", probability_true=probability)
+    request = DecisionRequest(kind="noul", question="Contains a complaint?", context="Maybe")
     assert result.validate_for(request).probability_true == probability
     assert result.selected_option is None
 
@@ -100,15 +100,15 @@ def test_score_must_match_scale_and_distribution(options, score):
 
 
 def test_refusal_is_not_a_zero_probability():
-    request = DecisionRequest(kind="boolean", question="Safe?", context="x")
-    result = DecisionResult(kind="boolean", provider="OpenAI", model="gpt-6-luna", status="refusal", refusal="Declined")
+    request = DecisionRequest(kind="noul", question="Safe?", context="x")
+    result = DecisionResult(kind="noul", provider="OpenAI", model="gpt-6-luna", status="refusal", refusal="Declined")
     assert result.validate_for(request).probability_true is None
     with pytest.raises(ValidationError):
         DecisionResult(**{**result.model_dump(), "probability_true": 0})
 
 
 def test_answer_of_a_different_kind_is_rejected():
-    request = DecisionRequest(kind="boolean", question="Safe?", context="x")
+    request = DecisionRequest(kind="noul", question="Safe?", context="x")
     result = DecisionResult(kind="score", provider="OpenAI", model="gpt-6-luna", probabilities={"a": 1.0}, score=0.0)
     with pytest.raises(DecisionEvaluationError, match="different"):
         result.validate_for(request)
@@ -129,12 +129,12 @@ def test_requires_at_least_two_candidates(kind):
 
 def test_context_must_be_serializable_finite_json():
     with pytest.raises(ValidationError):
-        DecisionRequest(kind="boolean", question="Safe?", context={"number": float("nan")})
+        DecisionRequest(kind="noul", question="Safe?", context={"number": float("nan")})
 
 
 @pytest.mark.parametrize("field", ["yes_description", "no_description"])
 def test_yes_and_no_descriptions_belong_to_boolean(options, field):
-    with pytest.raises(ValidationError, match="belong to Boolean"):
+    with pytest.raises(ValidationError, match="belong to Noul"):
         DecisionRequest(kind="choice", question="Which team?", context="x", options=options, **{field: "Refund"})
 
 
@@ -211,9 +211,9 @@ def test_batch_question_validation_reuses_single_question_rules():
 
     for questions in (
         {},
-        {" ": {"kind": "boolean", "question": "Valid?"}},
+        {" ": {"kind": "noul", "question": "Valid?"}},
         {"q": {"kind": "choice", "question": "Which?", "options": []}},
-        {"q": {"kind": "boolean", "question": "Valid?", "options": [{"id": "a", "label": "A"}]}},
+        {"q": {"kind": "noul", "question": "Valid?", "options": [{"id": "a", "label": "A"}]}},
         {
             "q": {
                 "kind": "score",
@@ -228,6 +228,4 @@ def test_batch_question_validation_reuses_single_question_rules():
         with pytest.raises(ValidationError):
             DecisionBatchRequest(context="Example", questions=questions)
     with pytest.raises(ValidationError):
-        DecisionBatchRequest(
-            context={"value": float("nan")}, questions={"q": {"kind": "boolean", "question": "Valid?"}}
-        )
+        DecisionBatchRequest(context={"value": float("nan")}, questions={"q": {"kind": "noul", "question": "Valid?"}})

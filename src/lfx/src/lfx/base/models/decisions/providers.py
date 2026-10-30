@@ -79,8 +79,8 @@ def require_official_openai_endpoint(*sources: Mapping[str, Any]) -> None:
 
 
 def _answer_type(provider: str, kind: str) -> str:
-    """The provider's name for a decision kind; only Boolean differs."""
-    if kind != "boolean":
+    """The provider's name for a decision kind; only Noul differs."""
+    if kind != "noul":
         return kind
     return "predicate" if provider == "OpenAI" else "noul"
 
@@ -155,7 +155,7 @@ def _build_question(provider: str, name: str, request: DecisionQuestion) -> dict
         raise DecisionConfigurationError(msg)
     question: dict[str, Any] = {"instructions": request.question, "type": _answer_type(provider, request.kind)}
     if request.yes_description or request.no_description:
-        # Only TypeSafe and Perplexity document what a Boolean's outcomes mean.
+        # Only TypeSafe and Perplexity document what a Noul's outcomes mean.
         if provider == "OpenAI":
             msg = (
                 "OpenAI decision models take no descriptions of what Yes and No mean. Clear What Yes Means "
@@ -259,7 +259,7 @@ def _parse_answer(provider: str, request: DecisionQuestion, answer: Any, common:
         # Never echo provider text: it reaches errors and evidence.
         msg = f"the answer type does not match the requested {expected_type!r}"
         raise ValueError(msg)
-    if request.kind == "boolean":
+    if request.kind == "noul":
         result = DecisionResult(
             **common,
             probability_true=answer["probability" if provider == "OpenAI" else "noul"],
@@ -456,7 +456,7 @@ def validate_decision_provider_key(provider: str, variables: dict, model_name: s
     if not api_key:
         msg = f"Enter the {provider} API key."
         raise ValueError(msg)
-    request = DecisionRequest(kind="boolean", context="Connection check.", question="Does the text contain a check?")
+    request = DecisionRequest(kind="noul", context="Connection check.", question="Does the text contain a check?")
     try:
         if provider == "OpenAI":
             require_official_openai_endpoint(variables)

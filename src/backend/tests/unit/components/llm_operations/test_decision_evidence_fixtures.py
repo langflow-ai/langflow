@@ -47,7 +47,7 @@ def _choice(*probabilities: float, refusal: bool = False) -> DecisionResult:
 
 
 def _boolean(probability_true: float) -> DecisionResult:
-    return DecisionResult(kind="boolean", **COMMON, probability_true=probability_true)
+    return DecisionResult(kind="noul", **COMMON, probability_true=probability_true)
 
 
 def _score(*probabilities: float) -> DecisionResult:
@@ -73,7 +73,7 @@ def _adapter_error(outcome: httpx.Response | Exception) -> Exception:
             raise outcome
         return outcome
 
-    request = DecisionRequest(kind="boolean", question="Is this a refund?", context="x")
+    request = DecisionRequest(kind="noul", question="Is this a refund?", context="x")
     original = providers.provider_safe_httpx_post
     providers.provider_safe_httpx_post = post
     try:
@@ -110,9 +110,9 @@ SCENARIOS = {
 }
 
 
-# Boolean and Score routers. Boolean answers through its Yes and No outputs, not the routes.
+# Noul and Score routers. Noul answers through its Yes and No outputs, not the routes.
 BOOLEAN = {
-    "decision_kind": "Boolean",
+    "decision_kind": "Noul",
     "decision_question": "Is the customer asking for a refund?",
     "yes_description": "Asks for money back",
     "no_description": "Anything else",
@@ -205,10 +205,10 @@ RESULT_SCENARIOS = {
             "usage": USAGE,
         },
     ),
-    "boolean": ResultScenario(
+    "noul": ResultScenario(
         "OpenAI",
         "gpt-6-luna",
-        "Boolean",
+        "Noul",
         "Is the customer asking for a refund?",
         [],
         {
@@ -240,7 +240,7 @@ RESULT_SCENARIOS = {
     "refusal": ResultScenario(
         "OpenAI",
         "gpt-6-luna",
-        "Boolean",
+        "Noul",
         "Is the customer asking for a refund?",
         [],
         {
@@ -320,8 +320,8 @@ class TestDecisionEvidenceFixtures:
 
     def test_result_fixtures_keep_each_kind_of_evidence_distinct(self):
         results = json.loads(RESULT_FIXTURES.read_text(encoding="utf-8"))
-        assert results["boolean"]["probability_true"] == 0.88
-        assert "probabilities" not in results["boolean"]
+        assert results["noul"]["probability_true"] == 0.88
+        assert "probabilities" not in results["noul"]
         assert results["score"]["score"] == 2.05
         assert [level["id"] for level in results["score"]["request"]["levels"]] == [r["id"] for r in SATISFACTION]
         assert results["score"]["probabilities"]["satisfied"] == 0.5

@@ -10,7 +10,7 @@ import BaseModal from "@/modals/baseModal";
 import { cn } from "@/utils/utils";
 import TabComponent from "../tabComponent";
 
-export const KINDS = ["Choice", "Boolean", "Score"];
+export const KINDS = ["Choice", "Noul", "Score"];
 
 type Row = { id?: string; label?: string; description?: string };
 
@@ -247,7 +247,7 @@ export default function DecisionQuestionsModal({
                   setRows={setRows}
                 />
               )}
-              {question.kind === "Boolean" &&
+              {question.kind === "Noul" &&
                 (["yes_description", "no_description"] as const).map((key) => (
                   <div key={key} className="flex flex-col gap-2">
                     <label
