@@ -1,9 +1,11 @@
-//! JSON in, JSON out: the functions the Python and browser bindings call.
+//! The functions the Python and browser bindings call.
 //!
-//! Graphs, operations and results pass to and from the bindings as JSON text, so the
-//! engine parses each graph once and keeps every number's original text.
-//! Each function here does no more than parse its inputs, call the engine and
-//! print its result; the bindings only call these and turn an [`ApiError`]
+//! Each argument is an [`Input`]: JSON text, or a value that the binding has
+//! already read, such as a Python dict. Each result is a value; the browser
+//! binding writes it as text with [`json_text`], and the Python binding builds
+//! Python objects from it. Text keeps every number's original text.
+//! Each function here does no more than read its inputs, call the engine and
+//! return its result; the bindings only call these and turn an [`ApiError`]
 //! into their language's exception.
 
 use std::fmt;
@@ -96,8 +98,8 @@ impl From<WriteError> for ApiError {
     }
 }
 
-/// The result of a call: JSON text, or the error.
-pub type ApiResult<T = String> = Result<T, ApiError>;
+/// The result of a call, or the error.
+pub type ApiResult<T = Value> = Result<T, ApiError>;
 
 // --- Output --------------------------------------------------------------------------------
 
@@ -166,26 +168,60 @@ fn operations_json(operations: Vec<Operation>) -> Value {
     Value::Array(operations.into_iter().map(Operation::into_value).collect())
 }
 
-/// Parse a JSON input: a graph, or any other value the engine reads as data.
-fn parse(text: &str) -> ApiResult<Value> {
-    Ok(parse_json(text)?)
+// --- Input ---------------------------------------------------------------------------------
+
+/// An argument: JSON text to parse, or a value a binding has already read,
+/// such as a Python dict.
+///
+/// Text is parsed by what the argument is. Graphs and other data that do not
+/// parse are an invalid graph, and operations that do not parse are invalid
+/// operations, as when every argument was text.
+#[derive(Debug, Clone)]
+pub enum Input<'t> {
+    /// JSON text.
+    Text(&'t str),
+    /// A value, already read.
+    Value(Value),
 }
 
-/// Parse a list of operations.
-fn operations(text: &str) -> ApiResult<Vec<Operation>> {
-    let value: Value = serde_json::from_str(text)
-        .map_err(|error| ApiError::from(invalid!("operations are not valid JSON: {error}")))?;
+impl<'t> From<&'t str> for Input<'t> {
+    fn from(text: &'t str) -> Self {
+        Self::Text(text)
+    }
+}
+
+impl From<Value> for Input<'_> {
+    fn from(value: Value) -> Self {
+        Self::Value(value)
+    }
+}
+
+/// A graph, or any other value the engine reads as data.
+fn data(input: Input<'_>) -> ApiResult<Value> {
+    match input {
+        Input::Text(text) => Ok(parse_json(text)?),
+        Input::Value(value) => Ok(value),
+    }
+}
+
+/// A list of operations.
+fn operations(input: Input<'_>) -> ApiResult<Vec<Operation>> {
+    let value = match input {
+        Input::Text(text) => serde_json::from_str(text)
+            .map_err(|error| ApiError::from(invalid!("operations are not valid JSON: {error}")))?,
+        Input::Value(value) => value,
+    };
     Ok(Operation::list_from_value(value)?)
 }
 
-fn optional(text: Option<&str>) -> ApiResult<Option<Value>> {
-    text.map(parse).transpose()
+fn optional(input: Option<Input<'_>>) -> ApiResult<Option<Value>> {
+    input.map(data).transpose()
 }
 
-/// Parse a list argument, naming it in the error when it is not a list or
-/// an item has the wrong type: `rows: must be a list`.
-fn list<T: FromValue>(text: &str, name: &str) -> ApiResult<Vec<T>> {
-    Ok(Vec::from_value(parse(text)?).map_err(|error| error.into_error(name))?)
+/// A list argument, named in the error when it is not a list or an item
+/// has the wrong type: `rows: must be a list`.
+fn list<T: FromValue>(input: Input<'_>, name: &str) -> ApiResult<Vec<T>> {
+    Ok(Vec::from_value(data(input)?).map_err(|error| error.into_error(name))?)
 }
 
 fn renumber(editor: bool) -> Renumber {
@@ -223,12 +259,12 @@ pub fn applied_json(applied: Applied, options: ApplyOptions) -> Map<String, Valu
 /// # Errors
 ///
 /// The graph or the operations do not parse, or the engine refuses the batch.
-pub fn apply(flow: &str, operations_text: &str, options: ApplyOptions) -> ApiResult {
+pub fn apply(flow: Input<'_>, operations_in: Input<'_>, options: ApplyOptions) -> ApiResult<Value> {
     let (flow_data, applied) =
-        apply_flow_operations(parse(flow)?, operations(operations_text)?, options)?;
+        apply_flow_operations(data(flow)?, operations(operations_in)?, options)?;
     let mut out = applied_json(applied, options);
     out.insert("flow_data".into(), flow_data);
-    Ok(json_text(&Value::Object(out)))
+    Ok(Value::Object(out))
 }
 
 /// Load a graph into a [`GraphState`], to apply many batches to it.
@@ -236,8 +272,8 @@ pub fn apply(flow: &str, operations_text: &str, options: ApplyOptions) -> ApiRes
 /// # Errors
 ///
 /// The graph does not parse or breaks a structural rule.
-pub fn graph_state(flow: &str) -> ApiResult<GraphState> {
-    Ok(GraphState::new(parse(flow)?)?)
+pub fn graph_state(flow: Input<'_>) -> ApiResult<GraphState> {
+    Ok(GraphState::new(data(flow)?)?)
 }
 
 /// Apply a batch to a [`GraphState`]; the result is what [`applied_json`] lists.
@@ -246,9 +282,13 @@ pub fn graph_state(flow: &str) -> ApiResult<GraphState> {
 ///
 /// The operations do not parse, or the engine refuses the batch, which then
 /// changes nothing.
-pub fn apply_to(state: &mut GraphState, operations_text: &str, options: ApplyOptions) -> ApiResult {
-    let applied = state.apply(operations(operations_text)?, options)?;
-    Ok(json_text(&Value::Object(applied_json(applied, options))))
+pub fn apply_to(
+    state: &mut GraphState,
+    operations_in: Input<'_>,
+    options: ApplyOptions,
+) -> ApiResult<Value> {
+    let applied = state.apply(operations(operations_in)?, options)?;
+    Ok(Value::Object(applied_json(applied, options)))
 }
 
 /// Parse operations and print them as the engine records them.
@@ -256,8 +296,8 @@ pub fn apply_to(state: &mut GraphState, operations_text: &str, options: ApplyOpt
 /// # Errors
 ///
 /// The operations do not parse.
-pub fn normalize_operations(operations_text: &str) -> ApiResult {
-    Ok(json_text(&operations_json(operations(operations_text)?)))
+pub fn normalize_operations(operations_in: Input<'_>) -> ApiResult<Value> {
+    Ok(operations_json(operations(operations_in)?))
 }
 
 // --- Diff, validation and repair ------------------------------------------------------------
@@ -267,11 +307,11 @@ pub fn normalize_operations(operations_text: &str) -> ApiResult {
 /// # Errors
 ///
 /// A graph does not parse or breaks the rules.
-pub fn diff(base: &str, target: &str) -> ApiResult {
-    Ok(json_text(&operations_json(diff_flow_data(
-        &parse(base)?,
-        &parse(target)?,
-    )?)))
+pub fn diff(base: Input<'_>, target: Input<'_>) -> ApiResult<Value> {
+    Ok(operations_json(diff_flow_data(
+        &data(base)?,
+        &data(target)?,
+    )?))
 }
 
 /// The operations that turn `base` into `target`, verified by replay: `{"operations"}`.
@@ -281,11 +321,11 @@ pub fn diff(base: &str, target: &str) -> ApiResult {
 /// # Errors
 ///
 /// A graph does not parse or breaks the rules, or the operations do not replay.
-pub fn derive(base: &str, target: &str) -> ApiResult {
-    let derived = derive_flow_operations(parse(base)?, &parse(target)?)?;
+pub fn derive(base: Input<'_>, target: Input<'_>) -> ApiResult<Value> {
+    let derived = derive_flow_operations(data(base)?, &data(target)?)?;
     let mut out = Map::new();
     out.insert("operations".into(), operations_json(derived.operations));
-    Ok(json_text(&Value::Object(out)))
+    Ok(Value::Object(out))
 }
 
 /// Every rule a graph breaks, against the stored graph a write replaces when given.
@@ -293,18 +333,18 @@ pub fn derive(base: &str, target: &str) -> ApiResult {
 /// # Errors
 ///
 /// A graph does not parse, or a check fails in a way that is not a violation.
-pub fn validate(flow: &str, base: Option<&str>, check_values: bool) -> ApiResult {
+pub fn validate(flow: Input<'_>, base: Option<Input<'_>>, check_values: bool) -> ApiResult<Value> {
     let base = optional(base)?;
     let numbers = if check_values {
         Numbers::Check
     } else {
         Numbers::Skip
     };
-    Ok(json_text(&violations(&find_graph_violations(
-        &parse(flow)?,
+    Ok(violations(&find_graph_violations(
+        &data(flow)?,
         numbers,
         base.as_ref(),
-    )?)))
+    )?))
 }
 
 /// Repair what has one fix: `{"flow_data", "fixes"}`.
@@ -312,13 +352,14 @@ pub fn validate(flow: &str, base: Option<&str>, check_values: bool) -> ApiResult
 /// # Errors
 ///
 /// A graph does not parse, or a rule only the client can fix is broken.
-pub fn repair(flow: &str, base: Option<&str>) -> ApiResult {
+pub fn repair(flow: Input<'_>, base: Option<Input<'_>>) -> ApiResult<Value> {
     let base = optional(base)?;
-    let repaired = repair_flow_data(&parse(flow)?, base.as_ref())?;
+    let repaired = repair_flow_data(&data(flow)?, base.as_ref())?;
     let fixes: Vec<Value> = repaired.fixes.iter().map(Fix::to_value).collect();
-    Ok(json_text(
-        &json!({"flow_data": repaired.flow_data, "fixes": fixes}),
-    ))
+    let mut out = Map::new();
+    out.insert("flow_data".into(), repaired.flow_data);
+    out.insert("fixes".into(), Value::Array(fixes));
+    Ok(Value::Object(out))
 }
 
 // --- Canonical form -------------------------------------------------------------------------
@@ -328,8 +369,8 @@ pub fn repair(flow: &str, base: Option<&str>) -> ApiResult {
 /// # Errors
 ///
 /// The graph does not parse, or holds a number that is not finite.
-pub fn graph_hash(flow: &str) -> ApiResult {
-    Ok(canonical::graph_hash(&parse(flow)?)?)
+pub fn graph_hash(flow: Input<'_>) -> ApiResult<String> {
+    Ok(canonical::graph_hash(&data(flow)?)?)
 }
 
 /// Whether two graphs are the same graph.
@@ -337,8 +378,8 @@ pub fn graph_hash(flow: &str) -> ApiResult {
 /// # Errors
 ///
 /// A graph does not parse, or a compared number is not finite.
-pub fn graphs_equal(left: &str, right: &str) -> ApiResult<bool> {
-    Ok(canonical::graphs_equal(&parse(left)?, &parse(right)?)?)
+pub fn graphs_equal(left: Input<'_>, right: Input<'_>) -> ApiResult<bool> {
+    Ok(canonical::graphs_equal(&data(left)?, &data(right)?)?)
 }
 
 /// Whether two JSON values are the same value.
@@ -346,17 +387,17 @@ pub fn graphs_equal(left: &str, right: &str) -> ApiResult<bool> {
 /// # Errors
 ///
 /// A value does not parse, or a compared number is not finite.
-pub fn values_equal(left: &str, right: &str) -> ApiResult<bool> {
-    Ok(canonical::values_equal(&parse(left)?, &parse(right)?)?)
+pub fn values_equal(left: Input<'_>, right: Input<'_>) -> ApiResult<bool> {
+    Ok(canonical::values_equal(&data(left)?, &data(right)?)?)
 }
 
-/// A JSON value in RFC 8785 canonical form.
+/// A JSON value in RFC 8785 canonical form, as text.
 ///
 /// # Errors
 ///
 /// The value does not parse, or holds a number that is not finite.
-pub fn canonical_json(value: &str) -> ApiResult {
-    Ok(canonical::canonical_json(&parse(value)?)?)
+pub fn canonical_json(value: Input<'_>) -> ApiResult<String> {
+    Ok(canonical::canonical_json(&data(value)?)?)
 }
 
 // --- Saves ---------------------------------------------------------------------------------
@@ -396,15 +437,14 @@ impl<'v> Fields<'v> {
 ///
 /// The inputs do not parse, an option is missing or has the wrong type, a
 /// graph breaks the rules, or the engine fails.
-pub fn prepare_write(stored: &str, target: &str, options: &str) -> ApiResult {
-    let options = parse(options)?;
+pub fn prepare_write(stored: Input<'_>, target: Input<'_>, options: Input<'_>) -> ApiResult<Value> {
+    let options = data(options)?;
     let options = Fields::new(&options, "options");
     let write_options = WriteOptions {
         started: options.boolean("started")?,
         repair_invalid_graph: options.boolean("repair_invalid_graph")?,
     };
-    let prepared =
-        crate::ops::write::prepare_write(parse(stored)?, parse(target)?, &write_options)?;
+    let prepared = crate::ops::write::prepare_write(data(stored)?, data(target)?, &write_options)?;
     let repairs = prepared.repairs_json();
     let mut out = Map::new();
     if let Some(base) = prepared.base {
@@ -416,7 +456,7 @@ pub fn prepare_write(stored: &str, target: &str, options: &str) -> ApiResult {
     }
     out.insert("repairs".into(), repairs);
     out.insert("operations".into(), operations_json(prepared.operations));
-    Ok(json_text(&Value::Object(out)))
+    Ok(Value::Object(out))
 }
 
 // --- Restore fixes --------------------------------------------------------------------------
@@ -426,12 +466,16 @@ pub fn prepare_write(stored: &str, target: &str, options: &str) -> ApiResult {
 /// # Errors
 ///
 /// The inputs do not parse, or a fix is not allowed or does not apply.
-pub fn apply_restore_fixes(revision: &str, stored: &str, fixes: &str) -> ApiResult {
-    Ok(json_text(&restore::apply_restore_fixes(
-        &parse(revision)?,
-        &parse(stored)?,
+pub fn apply_restore_fixes(
+    revision: Input<'_>,
+    stored: Input<'_>,
+    fixes: Input<'_>,
+) -> ApiResult<Value> {
+    Ok(restore::apply_restore_fixes(
+        &data(revision)?,
+        &data(stored)?,
         operations(fixes)?,
-    )?))
+    )?)
 }
 
 /// The fixes that turn a revision's edges as read into the edges its preview shows.
@@ -440,9 +484,9 @@ pub fn apply_restore_fixes(revision: &str, stored: &str, fixes: &str) -> ApiResu
 ///
 /// The inputs do not parse, an input is not a list, or a compared handle
 /// holds a number that is not finite.
-pub fn edge_fixes(read: &str, shown: &str) -> ApiResult {
+pub fn edge_fixes(read: Input<'_>, shown: Input<'_>) -> ApiResult<Value> {
     let fixes = restore::edge_fixes(&list(read, "read")?, &list(shown, "shown")?)?;
-    Ok(json_text(&operations_json(fixes)))
+    Ok(operations_json(fixes))
 }
 
 /// The part of the fixes that touches the given edges.
@@ -450,12 +494,12 @@ pub fn edge_fixes(read: &str, shown: &str) -> ApiResult {
 /// # Errors
 ///
 /// The inputs do not parse, or `edge_ids` is not a list of strings.
-pub fn fixes_for_edges(fixes: &str, edge_ids: &str) -> ApiResult {
+pub fn fixes_for_edges(fixes: Input<'_>, edge_ids: Input<'_>) -> ApiResult<Value> {
     let ids: Vec<String> = list(edge_ids, "edge_ids")?;
-    Ok(json_text(&operations_json(restore::fixes_for_edges(
+    Ok(operations_json(restore::fixes_for_edges(
         &operations(fixes)?,
         &ids,
-    ))))
+    )))
 }
 
 // --- Table rows -----------------------------------------------------------------------------
@@ -465,8 +509,8 @@ pub fn fixes_for_edges(fixes: &str, edge_ids: &str) -> ApiResult {
 /// # Errors
 ///
 /// The rows do not parse.
-pub fn strip_row_keys(rows: &str) -> ApiResult {
-    Ok(json_text(&keyed::strip_row_keys(&parse(rows)?)))
+pub fn strip_row_keys(rows: Input<'_>) -> ApiResult<Value> {
+    Ok(keyed::strip_row_keys(&data(rows)?))
 }
 
 /// A flow whose top-level tables have their rows in order and without `__id__` and `__pos__`.
@@ -474,10 +518,10 @@ pub fn strip_row_keys(rows: &str) -> ApiResult {
 /// # Errors
 ///
 /// The flow does not parse.
-pub fn strip_flow_table_row_keys(flow: &str) -> ApiResult {
-    let mut flow = parse(flow)?;
+pub fn strip_flow_table_row_keys(flow: Input<'_>) -> ApiResult<Value> {
+    let mut flow = data(flow)?;
     keyed::strip_flow_table_row_keys(&mut flow);
-    Ok(json_text(&flow))
+    Ok(flow)
 }
 
 /// Rows with the ids and positions a write needs. `editor` renumbers when a gap has no room left.
@@ -486,10 +530,14 @@ pub fn strip_flow_table_row_keys(flow: &str) -> ApiResult {
 ///
 /// The inputs do not parse, `rows` is not a list, or a compared row holds a
 /// number that is not finite.
-pub fn assign_row_ids(rows: &str, previous: Option<&str>, editor: bool) -> ApiResult {
+pub fn assign_row_ids(
+    rows: Input<'_>,
+    previous: Option<Input<'_>>,
+    editor: bool,
+) -> ApiResult<Value> {
     let mut rows = list(rows, "rows")?;
     keyed::assign_row_ids(&mut rows, optional(previous)?.as_ref(), renumber(editor))?;
-    Ok(json_text(&Value::Array(rows)))
+    Ok(Value::Array(rows))
 }
 
 /// A node being added, with ids on every table. `editor` renumbers when a gap has no room left.
@@ -497,10 +545,10 @@ pub fn assign_row_ids(rows: &str, previous: Option<&str>, editor: bool) -> ApiRe
 /// # Errors
 ///
 /// The node does not parse, or a compared row holds a number that is not finite.
-pub fn assign_table_row_ids(node: &str, editor: bool) -> ApiResult {
-    let mut node = parse(node)?;
+pub fn assign_table_row_ids(node: Input<'_>, editor: bool) -> ApiResult<Value> {
+    let mut node = data(node)?;
     keyed::assign_table_row_ids(&mut node, renumber(editor))?;
-    Ok(json_text(&node))
+    Ok(node)
 }
 
 /// `target` with ids on the tables it adds or changes relative to `base`.
@@ -509,10 +557,14 @@ pub fn assign_table_row_ids(node: &str, editor: bool) -> ApiResult {
 /// # Errors
 ///
 /// The graphs do not parse, or a compared row holds a number that is not finite.
-pub fn assign_changed_table_row_ids(base: &str, target: &str, editor: bool) -> ApiResult {
-    let mut target = parse(target)?;
-    keyed::assign_changed_table_row_ids(&parse(base)?, &mut target, renumber(editor))?;
-    Ok(json_text(&target))
+pub fn assign_changed_table_row_ids(
+    base: Input<'_>,
+    target: Input<'_>,
+    editor: bool,
+) -> ApiResult<Value> {
+    let mut target = data(target)?;
+    keyed::assign_changed_table_row_ids(&data(base)?, &mut target, renumber(editor))?;
+    Ok(target)
 }
 
 /// Rows with `new_rows` appended, each with a new id one position past the last.
@@ -521,10 +573,10 @@ pub fn assign_changed_table_row_ids(base: &str, target: &str, editor: bool) -> A
 ///
 /// The inputs do not parse, an input is not a list, or a compared row holds
 /// a number that is not finite.
-pub fn append_table_rows(rows: &str, new_rows: &str) -> ApiResult {
+pub fn append_table_rows(rows: Input<'_>, new_rows: Input<'_>) -> ApiResult<Value> {
     let mut rows = list(rows, "rows")?;
     keyed::append_table_rows(&mut rows, &list(new_rows, "new_rows")?)?;
-    Ok(json_text(&Value::Array(rows)))
+    Ok(Value::Array(rows))
 }
 
 /// A node with ids on the tables it adds or changes relative to `previous`,
@@ -534,17 +586,17 @@ pub fn append_table_rows(rows: &str, new_rows: &str) -> ApiResult {
 ///
 /// The inputs do not parse, or a compared row holds a number that is not finite.
 pub fn assign_changed_node_table_row_ids(
-    node: &str,
-    previous: Option<&str>,
+    node: Input<'_>,
+    previous: Option<Input<'_>>,
     editor: bool,
-) -> ApiResult {
-    let mut node = parse(node)?;
+) -> ApiResult<Value> {
+    let mut node = data(node)?;
     keyed::assign_changed_node_table_row_ids(
         &mut node,
         optional(previous)?.as_ref(),
         renumber(editor),
     )?;
-    Ok(json_text(&node))
+    Ok(node)
 }
 
 /// The names of a node's template fields whose value is a table.
@@ -552,8 +604,8 @@ pub fn assign_changed_node_table_row_ids(
 /// # Errors
 ///
 /// The node does not parse.
-pub fn table_fields(node: &str) -> ApiResult {
-    Ok(json_text(&json!(keyed::table_fields(&parse(node)?))))
+pub fn table_fields(node: Input<'_>) -> ApiResult<Value> {
+    Ok(json!(keyed::table_fields(&data(node)?)))
 }
 
 /// A new random edge id in the editor's format.
@@ -579,14 +631,14 @@ pub fn node_schema() -> &'static str {
 /// # Errors
 ///
 /// The rows do not parse, or are not a list.
-pub fn ordered_rows(rows: &str) -> ApiResult {
+pub fn ordered_rows(rows: Input<'_>) -> ApiResult<Value> {
     let rows: Vec<Value> = list(rows, "rows")?;
-    Ok(json_text(&Value::Array(
+    Ok(Value::Array(
         canonical::ordered_rows(&rows)
             .into_iter()
             .cloned()
             .collect(),
-    )))
+    ))
 }
 
 #[cfg(test)]
@@ -601,26 +653,32 @@ mod tests {
     fn list_arguments_refuse_a_value_that_is_not_a_list() {
         for (error, message) in [
             (
-                refused(assign_row_ids(r#"{"a": 1}"#, None, false)),
+                refused(assign_row_ids(r#"{"a": 1}"#.into(), None, false)),
                 "rows: must be a list",
             ),
-            (refused(ordered_rows("null")), "rows: must be a list"),
+            (refused(ordered_rows("null".into())), "rows: must be a list"),
             (
-                refused(append_table_rows("{}", "[]")),
+                refused(append_table_rows("{}".into(), "[]".into())),
                 "rows: must be a list",
             ),
             (
-                refused(append_table_rows("[]", r#""row""#)),
+                refused(append_table_rows("[]".into(), r#""row""#.into())),
                 "new_rows: must be a list",
             ),
-            (refused(edge_fixes("{}", "[]")), "read: must be a list"),
-            (refused(edge_fixes("[]", "5")), "shown: must be a list"),
             (
-                refused(fixes_for_edges("[]", r#"{"id": "e1"}"#)),
+                refused(edge_fixes("{}".into(), "[]".into())),
+                "read: must be a list",
+            ),
+            (
+                refused(edge_fixes("[]".into(), "5".into())),
+                "shown: must be a list",
+            ),
+            (
+                refused(fixes_for_edges("[]".into(), r#"{"id": "e1"}"#.into())),
                 "edge_ids: must be a list",
             ),
             (
-                refused(fixes_for_edges("[]", r#"["e1", 5]"#)),
+                refused(fixes_for_edges("[]".into(), r#"["e1", 5]"#.into())),
                 "edge_ids[1]: must be a string",
             ),
         ] {
@@ -632,11 +690,29 @@ mod tests {
 
     #[test]
     fn list_arguments_accept_lists() {
-        assert_eq!(assign_row_ids("[]", None, false).unwrap(), "[]");
-        assert_eq!(ordered_rows("[]").unwrap(), "[]");
-        assert_eq!(append_table_rows("[]", "[]").unwrap(), "[]");
-        assert_eq!(edge_fixes("[]", "[]").unwrap(), "[]");
-        assert_eq!(fixes_for_edges("[]", r#"["e1"]"#).unwrap(), "[]");
+        let empty = Value::Array(Vec::new());
+        assert_eq!(assign_row_ids("[]".into(), None, false).unwrap(), empty);
+        assert_eq!(ordered_rows("[]".into()).unwrap(), empty);
+        assert_eq!(append_table_rows("[]".into(), "[]".into()).unwrap(), empty);
+        assert_eq!(edge_fixes("[]".into(), "[]".into()).unwrap(), empty);
+        assert_eq!(
+            fixes_for_edges("[]".into(), r#"["e1"]"#.into()).unwrap(),
+            empty
+        );
+    }
+
+    #[test]
+    fn a_value_reads_as_its_text_does() {
+        let text = r#"{"nodes": [], "edges": [], "n": 1.0}"#;
+        let value: Value = serde_json::from_str(text).unwrap();
+        assert_eq!(
+            graph_hash(text.into()).unwrap(),
+            graph_hash(value.into()).unwrap()
+        );
+        let error = refused(diff("{".into(), "{}".into()));
+        assert_eq!(error.code(), "FLOW_GRAPH_INVALID");
+        let error = refused(normalize_operations("[".into()));
+        assert_eq!(error.code(), "FLOW_OPERATION_INVALID");
     }
 
     #[test]
@@ -654,7 +730,7 @@ mod tests {
     #[test]
     fn graph_json_writes_the_graph_as_ascii() {
         let flow = r#"{"nodes":[{"id":"a","data":{"node":{"template":{"t":{"value":"é","type":"str"}}}}}],"edges":[]}"#;
-        let state = graph_state(flow).unwrap();
+        let state = graph_state(flow.into()).unwrap();
         let written = graph_json(&state);
         assert!(written.is_ascii());
         assert_eq!(

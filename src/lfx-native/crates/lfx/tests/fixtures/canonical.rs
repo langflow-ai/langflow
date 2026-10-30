@@ -93,7 +93,7 @@ fn limit_trials() -> Vec<Trial> {
                 format!("limit_cases::{section}::{name}"),
                 move || {
                     let actual = match lfx::ops::api::canonical_json(
-                        case["json"].as_str().unwrap_or_default(),
+                        case["json"].as_str().unwrap_or_default().into(),
                     ) {
                         Ok(text) => json!({"canonical": text}),
                         Err(error) => {
