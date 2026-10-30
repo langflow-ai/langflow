@@ -54,8 +54,6 @@ export default function DecisionQuestionsModal({
   // Edits stay here until Done; closing any other way discards them.
   const [draft, setDraft] = useState<DecisionQuestion[]>([]);
   const [selected, setSelected] = useState(0);
-  // Done shows which question still needs its text.
-  const [checked, setChecked] = useState(false);
   const blank = () => ({
     ...cloneDeep(newQuestion ?? {}),
     id: newQuestionId(),
@@ -65,13 +63,10 @@ export default function DecisionQuestionsModal({
       // A node with no questions opens on a new one.
       setDraft(questions.length ? cloneDeep(questions) : [blank()]);
       setSelected(initialIndex);
-      setChecked(false);
     }
   }, [open]);
 
   const question = draft[selected];
-  const needsText = (item: DecisionQuestion) =>
-    !isConnected(item) && !item.question?.trim();
   const kindLabels = KINDS.map((kind) => t(`decisionQuestions.kind${kind}`));
   const table = TABLE[question?.kind as keyof typeof TABLE];
   const rows = (table && question?.[table]) ?? [];
@@ -85,12 +80,6 @@ export default function DecisionQuestionsModal({
     setSelected(draft.length);
   };
   const done = () => {
-    const missing = draft.findIndex(needsText);
-    if (missing !== -1) {
-      setSelected(missing);
-      setChecked(true);
-      return;
-    }
     onDone(draft);
     setOpen(false);
   };
@@ -202,7 +191,6 @@ export default function DecisionQuestionsModal({
                   className="text-sm font-medium"
                 >
                   {t("decisionQuestions.question")}
-                  <span className="text-destructive"> *</span>
                 </label>
                 {isConnected(question) ? (
                   <div
@@ -217,26 +205,11 @@ export default function DecisionQuestionsModal({
                     id={fieldId("question")}
                     data-testid={`${id}_modal_question_text`}
                     value={question.question ?? ""}
-                    required
-                    aria-invalid={checked && needsText(question)}
-                    aria-describedby={fieldId("question_error")}
-                    className={cn(
-                      "min-h-20",
-                      checked && needsText(question) && "border-destructive",
-                    )}
+                    className="min-h-20"
                     onChange={(event) =>
                       update({ question: event.target.value })
                     }
                   />
-                )}
-                {checked && needsText(question) && (
-                  <span
-                    id={fieldId("question_error")}
-                    className="text-xs text-destructive"
-                    data-testid={`${id}_modal_question_error`}
-                  >
-                    {t("decisionQuestions.questionRequired")}
-                  </span>
                 )}
               </div>
               {table && (

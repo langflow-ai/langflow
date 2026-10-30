@@ -3366,6 +3366,5 @@
   "decisionQuestions.yes_description": "Ce que signifie Oui (facultatif)",
   "decisionQuestions.no_description": "Ce que signifie Non (facultatif)",
   "decisionQuestions.addQuestions": "Ajouter des questions",
-  "decisionQuestions.questionRequired": "Saisissez une question.",
   "decisionQuestions.empty": "Aucune question pour l'instant. Ajoutez-en une pour commencer."
 }

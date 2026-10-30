@@ -3366,6 +3366,5 @@
   "decisionQuestions.yes_description": "Qué significa Sí (opcional)",
   "decisionQuestions.no_description": "Qué significa No (opcional)",
   "decisionQuestions.addQuestions": "Añadir preguntas",
-  "decisionQuestions.questionRequired": "Escribe una pregunta.",
   "decisionQuestions.empty": "Aún no hay preguntas. Añade una para empezar."
 }

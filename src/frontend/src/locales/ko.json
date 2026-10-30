@@ -3365,6 +3365,5 @@
   "decisionQuestions.yes_description": "예의 의미(선택 사항)",
   "decisionQuestions.no_description": "아니요의 의미(선택 사항)",
   "decisionQuestions.addQuestions": "질문 추가",
-  "decisionQuestions.questionRequired": "질문을 입력하세요.",
   "decisionQuestions.empty": "아직 질문이 없습니다. 질문을 추가해 시작하세요."
 }

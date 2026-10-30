@@ -3365,6 +3365,5 @@
   "decisionQuestions.yes_description": "What Yes means (optional)",
   "decisionQuestions.no_description": "What No means (optional)",
   "decisionQuestions.addQuestions": "Add questions",
-  "decisionQuestions.questionRequired": "Enter a question.",
   "decisionQuestions.empty": "No questions yet. Add one to get started."
 }

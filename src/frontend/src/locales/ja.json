@@ -3366,6 +3366,5 @@
   "decisionQuestions.yes_description": "「はい」の意味（任意）",
   "decisionQuestions.no_description": "「いいえ」の意味（任意）",
   "decisionQuestions.addQuestions": "質問を追加",
-  "decisionQuestions.questionRequired": "質問を入力してください。",
   "decisionQuestions.empty": "まだ質問がありません。追加して始めましょう。"
 }

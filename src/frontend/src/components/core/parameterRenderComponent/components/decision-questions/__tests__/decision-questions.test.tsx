@@ -197,30 +197,12 @@ describe("the question editor", () => {
     expect(updated.template.questions.value).toEqual([]);
   });
 
-  it("requires each question's text before Done", () => {
+  it("saves a question without text, which a connection can supply later", () => {
     const { handleNodeClass } = renderQuestions([team, urgent]);
     fireEvent.click(screen.getByTestId("questions_edit"));
     fireEvent.click(screen.getByTestId("questions_modal_done"));
-    expect(handleNodeClass).not.toHaveBeenCalled();
-    // Done moves to the question that needs text and says so.
-    expect(screen.getByTestId("questions_modal_name")).toHaveValue("");
-    expect(
-      screen.getByTestId("questions_modal_question_error"),
-    ).toHaveTextContent("Enter a question.");
-    fireEvent.change(screen.getByTestId("questions_modal_question_text"), {
-      target: { value: "Is it urgent?" },
-    });
-    expect(screen.queryByTestId("questions_modal_question_error")).toBeNull();
-    fireEvent.click(screen.getByTestId("questions_modal_done"));
-    expect(handleNodeClass).toHaveBeenCalledTimes(1);
-  });
-
-  it("doesn't ask for text a connection supplies", () => {
-    useFlowStore.setState({ edges: [edgeInto("question_input_x1")] as never });
-    const { handleNodeClass } = renderQuestions([team, urgent]);
-    fireEvent.click(screen.getByTestId("questions_edit"));
-    fireEvent.click(screen.getByTestId("questions_modal_done"));
-    expect(handleNodeClass).toHaveBeenCalledTimes(1);
+    const [[updated]] = handleNodeClass.mock.calls;
+    expect(updated.template.questions.value).toEqual([team, urgent]);
   });
 
   it("edits the selected type's options or levels", async () => {

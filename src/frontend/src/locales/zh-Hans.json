@@ -3365,6 +3365,5 @@
   "decisionQuestions.yes_description": "“是”的含义（可选）",
   "decisionQuestions.no_description": "“否”的含义（可选）",
   "decisionQuestions.addQuestions": "添加问题",
-  "decisionQuestions.questionRequired": "请输入问题。",
   "decisionQuestions.empty": "还没有问题。添加一个即可开始。"
 }
