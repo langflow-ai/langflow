@@ -552,6 +552,7 @@ module.exports = {
             "Components/bundles-cloudflare",
             "Components/bundles-cohere",
             "Components/bundles-cometapi",
+            "Components/bundles-companyenrich",
             "Components/bundles-composio",
             "Components/bundles-confluent",
             "Components/bundles-couchbase",

@@ -43,6 +43,7 @@ clickhouse = ["clickhouse-connect==0.7.19", "langchain-community>=0.4.1,<1.0.0"]
 cloudflare = ["langchain-cloudflare~=0.3.9"]
 codeagents = ["smolagents>=1.8.0"]
 cometapi = ["langchain-openai>=1.1.6", "requests>=2.32.0"]
+companyenrich = []
 composio = ["composio==0.16.0", "composio-langchain==0.16.0"]
 confluence = ["atlassian-python-api==3.41.16", "langchain-community>=0.4.1,<1.0.0"]
 couchbase = ["couchbase>=4.2.1", "dnspython>=2.6,<3", "langchain-community>=0.4.1,<1.0.0"]
@@ -117,6 +118,7 @@ all = [
     "lfx-bundles[cloudflare]",
     "lfx-bundles[codeagents]",
     "lfx-bundles[cometapi]",
+    "lfx-bundles[companyenrich]",
     "lfx-bundles[composio]",
     "lfx-bundles[confluence]",
     "lfx-bundles[couchbase]",
@@ -189,6 +191,7 @@ all-no-torch = [
     "lfx-bundles[clickhouse]",
     "lfx-bundles[cloudflare]",
     "lfx-bundles[cometapi]",
+    "lfx-bundles[companyenrich]",
     "lfx-bundles[composio]",
     "lfx-bundles[confluence]",
     "lfx-bundles[couchbase]",
