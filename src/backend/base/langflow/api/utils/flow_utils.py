@@ -139,6 +139,7 @@ async def cascade_delete_flow(
         raise HTTPException(status_code=400, detail="UUID5 flow IDs are reserved for public execution histories.")
     # Imported lazily so this module (loaded early, via ``api.utils``) stays free
     # of the memory-base service import chain.
+    from langflow.services.evaluations.cleanup import detach_flow as detach_flow_from_evaluations
     from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError
     from langflow.services.memory_base.flow_cleanup import purge_flow_memory_bases
 
@@ -160,6 +161,7 @@ async def cascade_delete_flow(
         await session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))
         await session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_id))
         await session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id))
+        await detach_flow_from_evaluations(session, flow_id)
         # Explicit delete despite FK CASCADE -- SQLite doesn't enforce FK cascades
         # by default (requires PRAGMA foreign_keys = ON), and this function follows
         # the existing pattern of explicitly deleting all child records.

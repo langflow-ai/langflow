@@ -7,6 +7,7 @@ import re
 from langflow.services.authorization.actions import (
     AdministrationAction,
     ConnectionAction,
+    DatasetAction,
     DeploymentAction,
     FileAction,
     FlowAction,
@@ -26,6 +27,7 @@ RESOURCE_ACTIONS: dict[str, frozenset[str]] = {
     "deployment": frozenset({action.value for action in DeploymentAction}) | {"*"},
     "project": frozenset({action.value for action in ProjectAction}) | {"*"},
     "knowledge_base": frozenset({action.value for action in KnowledgeBaseAction}) | {"*"},
+    "dataset": frozenset({action.value for action in DatasetAction}) | {"*"},
     "variable": frozenset({action.value for action in VariableAction}) | {"*"},
     "file": frozenset({action.value for action in FileAction}) | {"*"},
     "share": frozenset({action.value for action in ShareAction}) | {"*"},

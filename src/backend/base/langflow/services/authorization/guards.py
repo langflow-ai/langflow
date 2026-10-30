@@ -23,6 +23,7 @@ from langflow.services.authorization.access_ceiling import (
 )
 from langflow.services.authorization.actions import (
     ConnectionAction,
+    DatasetAction,
     DeploymentAction,
     FileAction,
     FlowAction,
@@ -50,6 +51,7 @@ _ACTION_ENUMS = (
     DeploymentAction,
     ProjectAction,
     KnowledgeBaseAction,
+    DatasetAction,
     VariableAction,
     FileAction,
     ShareAction,
@@ -221,6 +223,7 @@ def _coerce_action(
     | FlowAction
     | ProjectAction
     | KnowledgeBaseAction
+    | DatasetAction
     | VariableAction
     | FileAction
     | ShareAction
@@ -461,6 +464,13 @@ _RESOURCE_SPECS: dict[str, _ResourceSpec] = {
         workspace_kw="workspace_id",
         scope_kw="project_id",
         extra_context_kws=("kb_name",),
+    ),
+    "dataset": _ResourceSpec(
+        resource_type="dataset",
+        owner_kw="dataset_user_id",
+        id_kw="dataset_id",
+        workspace_kw="workspace_id",
+        scope_kw=None,
     ),
     "variable": _ResourceSpec(
         resource_type="variable",
@@ -986,6 +996,29 @@ async def ensure_knowledge_base_permission(
             "kb_name": kb_name,
             "workspace_id": workspace_id,
             "project_id": project_id,
+        },
+        domain_override=domain,
+    )
+
+
+async def ensure_dataset_permission(
+    user: User | UserRead,
+    act: DatasetAction | str,
+    *,
+    dataset_id: UUID | None = None,
+    dataset_user_id: UUID | None = None,
+    workspace_id: UUID | None = None,
+    domain: str | None = None,
+) -> None:
+    """Check Evals dataset permission (owner override, then plugin enforce)."""
+    await _ensure_typed(
+        user,
+        spec_key="dataset",
+        act_str=_coerce_action(act),
+        kwargs={
+            "dataset_id": dataset_id,
+            "dataset_user_id": dataset_user_id,
+            "workspace_id": workspace_id,
         },
         domain_override=domain,
     )

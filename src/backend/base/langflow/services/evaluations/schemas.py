@@ -1,0 +1,423 @@
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone
+from typing import Annotated, Any, Literal
+from uuid import UUID
+
+from pydantic import AfterValidator, BaseModel, Field, field_validator, model_validator
+
+from langflow.services.database.models.evaluation.dataset import DATASET_NAME_MAX_LENGTH
+from langflow.services.evaluations.scorers.llm_judge import MAX_OUTPUT_TOKENS_CEILING, MAX_RUN_OUTPUT_TOKENS_CEILING
+from langflow.services.evaluations.scorers.safety import SAFETY_CHECKS
+
+
+def _as_utc(value: datetime) -> datetime:
+    return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+
+
+# SQLite hands timestamps back without an offset; without one, clients read UTC as their local time.
+UtcDatetime = Annotated[datetime, AfterValidator(_as_utc)]
+
+ScorerType = Literal["exact_match", "contains", "similarity", "llm_judge"]
+TEXT_MAX_CHARS = 100_000
+RUBRIC_MAX_CHARS = 4000
+# Room for a judge model selection plus the longest rubric.
+SCORER_CONFIG_MAX_CHARS = 16000
+TEXT_SCORER_CONFIG_KEYS = frozenset({"case_sensitive"})
+MAX_SCORERS = 10
+MAX_ITEMS_PER_REQUEST = 500
+MAX_MODEL_OVERRIDES = 50
+MAX_MODEL_VARIANTS = 8
+MODEL_SELECTION_MAX_CHARS = 8000
+
+
+class DatasetCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=DATASET_NAME_MAX_LENGTH)
+    description: str | None = Field(default=None, max_length=2000)
+
+    @field_validator("name")
+    @classmethod
+    def strip_name(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            msg = "Name must not be blank"
+            raise ValueError(msg)
+        return stripped
+
+
+class DatasetUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=DATASET_NAME_MAX_LENGTH)
+    description: str | None = Field(default=None, max_length=2000)
+
+    @field_validator("name")
+    @classmethod
+    def strip_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        if not stripped:
+            msg = "Name must not be blank"
+            raise ValueError(msg)
+        return stripped
+
+
+class DatasetRead(BaseModel):
+    id: UUID
+    name: str
+    description: str | None
+    revision: int
+    item_count: int
+    created_at: UtcDatetime
+    updated_at: UtcDatetime
+
+
+class DatasetExampleRead(BaseModel):
+    key: str
+    name: str
+    description: str
+    item_count: int
+
+
+class DatasetItemWrite(BaseModel):
+    input: str = Field(min_length=1, max_length=TEXT_MAX_CHARS)
+    expected_output: str | None = Field(default=None, max_length=TEXT_MAX_CHARS)
+
+
+class DatasetItemsCreate(BaseModel):
+    items: list[DatasetItemWrite] = Field(min_length=1, max_length=MAX_ITEMS_PER_REQUEST)
+
+
+class DatasetItemUpdate(BaseModel):
+    input: str | None = Field(default=None, min_length=1, max_length=TEXT_MAX_CHARS)
+    expected_output: str | None = Field(default=None, max_length=TEXT_MAX_CHARS)
+    clear_expected_output: bool = False
+
+
+class DatasetItemRead(BaseModel):
+    id: UUID
+    position: int
+    input: str
+    expected_output: str | None
+    source: str
+    created_at: UtcDatetime
+    updated_at: UtcDatetime
+
+
+class DatasetItemsDelete(BaseModel):
+    ids: list[UUID] = Field(min_length=1, max_length=MAX_ITEMS_PER_REQUEST)
+
+
+class CsvPreview(BaseModel):
+    headers: list[str]
+    rows: list[list[str]]
+    total_rows: int
+
+
+class SkippedRow(BaseModel):
+    row: int
+    reason: str
+
+
+class CsvImportResult(BaseModel):
+    imported: int
+    skipped: list[SkippedRow]
+
+
+class Page(BaseModel):
+    total: int
+    page: int
+    size: int
+
+
+class DatasetPage(Page):
+    items: list[DatasetRead]
+
+
+class DatasetItemPage(Page):
+    items: list[DatasetItemRead]
+
+
+class ScorerSpec(BaseModel):
+    type: ScorerType
+    name: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9 _.-]+$")
+    weight: float = Field(default=1.0, gt=0, le=100)
+    config: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_config(self) -> ScorerSpec:
+        if len(json.dumps(self.config, default=str)) > SCORER_CONFIG_MAX_CHARS:
+            msg = f"Scorer config must be at most {SCORER_CONFIG_MAX_CHARS} characters"
+            raise ValueError(msg)
+        if self.type != "llm_judge":
+            unknown = set(self.config) - TEXT_SCORER_CONFIG_KEYS
+            if unknown:
+                msg = f"Unknown config for {self.type}: {', '.join(sorted(unknown))}"
+                raise ValueError(msg)
+            return self
+        model = self.config.get("model")
+        if not isinstance(model, list) or not model or not isinstance(model[0], dict):
+            msg = "llm_judge requires config.model: a model selection"
+            raise ValueError(msg)
+        rubric = self.config.get("rubric")
+        if rubric is not None and (not isinstance(rubric, str) or len(rubric) > RUBRIC_MAX_CHARS):
+            msg = f"llm_judge config.rubric must be text of at most {RUBRIC_MAX_CHARS} characters"
+            raise ValueError(msg)
+        row_budget = _whole_number_in(self.config, "max_output_tokens", MAX_OUTPUT_TOKENS_CEILING)
+        run_budget = _whole_number_in(self.config, "max_run_output_tokens", MAX_RUN_OUTPUT_TOKENS_CEILING)
+        if row_budget is not None and run_budget is not None and run_budget < row_budget:
+            msg = "llm_judge config.max_run_output_tokens must be at least max_output_tokens"
+            raise ValueError(msg)
+        checks = self.config.get("safety_checks")
+        if checks is not None and (
+            not isinstance(checks, list) or len(set(checks)) != len(checks) or not set(checks) <= set(SAFETY_CHECKS)
+        ):
+            msg = f"llm_judge config.safety_checks must be distinct values of: {', '.join(SAFETY_CHECKS)}"
+            raise ValueError(msg)
+        stop = self.config.get("stop_on_output_limit")
+        if stop is not None and not isinstance(stop, bool):
+            msg = "llm_judge config.stop_on_output_limit must be true or false"
+            raise ValueError(msg)
+        return self
+
+
+class ModelOverride(BaseModel):
+    """Run one model field of the flow with another model, for this run only; the flow is not changed."""
+
+    node_id: str = Field(min_length=1, max_length=255)
+    field: str = Field(min_length=1, max_length=255)
+    value: list[dict[str, Any]] = Field(min_length=1, max_length=1)
+
+    @model_validator(mode="after")
+    def validate_selection(self) -> ModelOverride:
+        model = self.value[0]
+        if not isinstance(model.get("name"), str) or not isinstance(model.get("provider"), str):
+            msg = "A model override needs a model name and provider"
+            raise ValueError(msg)  # noqa: TRY004 - pydantic turns a ValueError into a 422
+        if len(json.dumps(self.value, default=str)) > MODEL_SELECTION_MAX_CHARS:
+            msg = f"A model override must be at most {MODEL_SELECTION_MAX_CHARS} characters"
+            raise ValueError(msg)
+        return self
+
+
+def _unique_overrides(value: list[ModelOverride]) -> list[ModelOverride]:
+    keys = [(override.node_id, override.field) for override in value]
+    if len(keys) != len(set(keys)):
+        msg = "Each model field can be overridden once"
+        raise ValueError(msg)
+    return value
+
+
+class ModelVariant(BaseModel):
+    """One version of the flow's models in a comparison: the whole dataset runs once per variant."""
+
+    model_overrides: list[ModelOverride] = Field(default_factory=list, max_length=MAX_MODEL_OVERRIDES)
+
+    @field_validator("model_overrides")
+    @classmethod
+    def unique_model_overrides(cls, value: list[ModelOverride]) -> list[ModelOverride]:
+        return _unique_overrides(value)
+
+
+class ModelChoices(BaseModel):
+    """Models for a run: one set of overrides, or several variants to run one after another and compare."""
+
+    model_overrides: list[ModelOverride] = Field(default_factory=list, max_length=MAX_MODEL_OVERRIDES)
+    variants: list[ModelVariant] = Field(default_factory=list, max_length=MAX_MODEL_VARIANTS)
+    """Two or more: a comparison. Each variant runs the same dataset on the same flow version."""
+
+    @field_validator("model_overrides")
+    @classmethod
+    def unique_model_overrides(cls, value: list[ModelOverride]) -> list[ModelOverride]:
+        return _unique_overrides(value)
+
+    @model_validator(mode="after")
+    def one_way_to_choose(self) -> ModelChoices:
+        if self.variants and self.model_overrides:
+            msg = "Send model_overrides or variants, not both"
+            raise ValueError(msg)
+        return self
+
+    def variant_overrides(self) -> list[list[ModelOverride]]:
+        """The overrides of each run to start; a single entry when nothing is compared."""
+        if self.variants:
+            return [variant.model_overrides for variant in self.variants]
+        return [self.model_overrides]
+
+
+def _whole_number_in(config: dict[str, Any], key: str, ceiling: int) -> int | None:
+    value = config.get(key)
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= ceiling:
+        msg = f"llm_judge config.{key} must be a whole number from 1 to {ceiling}"
+        raise ValueError(msg)
+    return value
+
+
+def _validate_scorer_names(scorers: list[ScorerSpec]) -> list[ScorerSpec]:
+    names = [scorer.name for scorer in scorers]
+    if len(names) != len(set(names)):
+        msg = "Scorer names must be unique"
+        raise ValueError(msg)
+    return scorers
+
+
+class EvaluationCreate(ModelChoices):
+    """With ``?run=true``, ``model_overrides`` or ``variants`` set the models of the run(s); stored on each run."""
+
+    flow_id: UUID
+    dataset_id: UUID
+    name: str | None = Field(default=None, max_length=255)
+    output_vertex_id: str | None = Field(default=None, max_length=255)
+    scorers: list[ScorerSpec] = Field(min_length=1, max_length=MAX_SCORERS)
+    pass_threshold: float = Field(default=0.5, ge=0, le=1)
+    flow_version_id: UUID | None = None
+    """With ``?run=true``: the history version to run (default: the latest draft). Not stored."""
+
+    @field_validator("scorers")
+    @classmethod
+    def unique_names(cls, value: list[ScorerSpec]) -> list[ScorerSpec]:
+        return _validate_scorer_names(value)
+
+
+class EvaluationUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    dataset_id: UUID | None = None
+    output_vertex_id: str | None = Field(default=None, max_length=255)
+    scorers: list[ScorerSpec] | None = Field(default=None, min_length=1, max_length=MAX_SCORERS)
+    pass_threshold: float | None = Field(default=None, ge=0, le=1)
+
+    @field_validator("scorers")
+    @classmethod
+    def unique_names(cls, value: list[ScorerSpec] | None) -> list[ScorerSpec] | None:
+        return None if value is None else _validate_scorer_names(value)
+
+
+class EvaluationRead(BaseModel):
+    id: UUID
+    name: str
+    project_id: UUID | None
+    flow_id: UUID | None
+    flow_name: str | None
+    dataset_id: UUID | None
+    dataset_name: str | None
+    output_vertex_id: str | None
+    scorers: list[dict[str, Any]]
+    pass_threshold: float
+    last_run: EvaluationRunRead | None = None
+    created_at: UtcDatetime
+    updated_at: UtcDatetime
+
+
+class EvaluationPage(Page):
+    items: list[EvaluationRead]
+
+
+class RunStart(ModelChoices):
+    flow_version_id: UUID | None = None
+
+
+class EvaluationRunRead(BaseModel):
+    id: UUID
+    evaluation_id: UUID
+    status: str
+    flow_id: UUID | None
+    flow_name: str
+    flow_version_id: UUID | None
+    flow_version_number: int | None
+    flow_version_source: str
+    dataset_id: UUID | None
+    dataset_name: str
+    dataset_revision: int
+    config: dict[str, Any]
+    total_items: int
+    completed_items: int
+    failed_items: int
+    passed_items: int
+    summary: dict[str, Any] | None
+    estimate: dict[str, Any] | None
+    error: str | None
+    started_at: UtcDatetime | None
+    finished_at: UtcDatetime | None
+    created_at: UtcDatetime
+
+
+class EvaluationRunPage(Page):
+    items: list[EvaluationRunRead]
+
+
+class EvaluationResultRead(BaseModel):
+    id: UUID
+    position: int
+    input: str
+    expected_output: str | None
+    actual_output: str | None
+    output_truncated: bool
+    error: str | None
+    scores: dict[str, Any]
+    passed: bool | None
+    duration_ms: int
+    tokens_flow: int | None
+    tokens_judge: int | None
+    cost_flow: float | None
+    cost_judge: float | None
+    trace_id: str | None
+    preview: bool = False
+    """True when the texts are clipped previews (the results list); the single-result read has them in full."""
+
+
+class EvaluationResultPage(Page):
+    items: list[EvaluationResultRead]
+
+
+class FlowCheckIssue(BaseModel):
+    code: str
+    message: str
+    components: list[str] = Field(default_factory=list)
+
+
+class FlowModelField(BaseModel):
+    """A model picker of one component, which a run can swap with ``ModelOverride``."""
+
+    node_id: str
+    component: str
+    field: str
+    display_name: str
+    model_type: str
+    value: list[dict[str, Any]]
+
+
+class FlowCheckReport(BaseModel):
+    blocking: list[FlowCheckIssue]
+    warnings: list[FlowCheckIssue]
+    output_vertices: list[dict[str, str]]
+    model_pickers: list[FlowModelField] = Field(default_factory=list)
+
+
+class EstimateRequest(ModelChoices):
+    flow_id: UUID
+    dataset_id: UUID
+    scorers: list[ScorerSpec] = Field(default_factory=list, max_length=MAX_SCORERS)
+
+
+class EstimateRead(BaseModel):
+    items: int
+    basis: Literal["history", "model"]
+    llm_calls: int
+    judge_calls: int
+    flow_tokens_low: int
+    flow_tokens_high: int
+    judge_tokens_low: int
+    judge_tokens_high: int
+    tokens_low: int
+    tokens_high: int
+    cost_low: float | None
+    cost_high: float | None
+    unpriced_models: list[str] = Field(default_factory=list)
+    has_agent: bool = False
+    variants: int = 1
+    """How many runs the figures cover: a comparison runs the dataset once per variant."""
+
+
+EvaluationRead.model_rebuild()

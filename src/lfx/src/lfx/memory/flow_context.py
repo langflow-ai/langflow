@@ -121,6 +121,28 @@ def reset_messages_persist(token: contextvars.Token[bool]) -> None:
     _messages_persist.reset(token)
 
 
+# Checked at the storage read, not in components, so frozen saved component code is covered.
+_evals_memory_isolated: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "lfx_evals_memory_isolated",
+    default=False,
+)
+
+
+def is_evals_memory_isolated() -> bool:
+    """Return whether stored chat-history reads are disabled for the current Evals row."""
+    return _evals_memory_isolated.get()
+
+
+def set_evals_memory_isolated(isolated: bool) -> contextvars.Token[bool]:  # noqa: FBT001
+    """Bind the Evals memory-isolation flag for the current async task."""
+    return _evals_memory_isolated.set(isolated)
+
+
+def reset_evals_memory_isolated(token: contextvars.Token[bool]) -> None:
+    """Restore the previous Evals memory-isolation flag."""
+    _evals_memory_isolated.reset(token)
+
+
 def _clean_identity(value: Any) -> str | UUID | None:
     """Return *value* unless it is missing or a placeholder ("None"/"null"/empty).
 
