@@ -486,11 +486,14 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
   tried, and the score note says which check failed the row. The Evaluate modal
   offers the checks under the LLM judge.
 - Comparison: a run of a comparison shows **Model comparison** above its
-  results: cards for the most accurate (with how many are within its margin of
-  error), the cheapest and the fastest (median) version and the comparison's
-  cost, then a leaderboard ranked by pass rate, then cost, then median duration
-  (rows, errors, pass rate with its 95% Wilson interval and "≈ #1" when it
-  overlaps the top one, cost, cost per row, median and p90). Versions still
+  results: cards for the most accurate (every version on an equal top pass
+  rate is named as a tie; otherwise how many are within its margin of error),
+  the cheapest and the fastest (median) version and the comparison's cost, then
+  a leaderboard ranked by pass rate, then cost, then median duration (rows,
+  errors, pass rate with its 95% Wilson interval, "Tie" for the same rate as #1
+  and "≈ #1" for a lower one within its interval, cost and median marking their
+  leader and how many times the leader's the others are, cost per row, p90).
+  Comparison costs keep four decimals under a dollar. Versions still
   running, waiting or not run are listed unranked. With safety checks, a
   **Safety by version** table compares the safe rate, each check's rate and the
   attacks resisted, bolding a column's best when one version alone has it. A
