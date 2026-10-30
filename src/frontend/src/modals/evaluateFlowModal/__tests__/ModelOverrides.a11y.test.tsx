@@ -103,6 +103,28 @@ describe("ModelOverrides versions", () => {
     expect(screen.getByTestId("model-version-0-duplicate")).toBeDisabled();
   });
 
+  it("should open and flag the models when the flow saved a picker empty", () => {
+    const unset = { ...PICKERS[0], value: [] };
+    render(
+      <ModelOverrides
+        flowId="flow-1"
+        pickers={[unset]}
+        versions={versions(1)}
+        onChange={jest.fn()}
+        onDuplicate={jest.fn()}
+        onRemove={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("evaluate-models")).toHaveTextContent(
+      "Choose a model",
+    );
+    expect(screen.getByTestId("evaluate-models")).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+  });
+
   it("should have no accessibility violations while comparing", async () => {
     const { container } = renderVersions(versions(3));
     await userEvent.click(screen.getByTestId("evaluate-models"));

@@ -5,6 +5,18 @@ import { axe } from "@/utils/a11y-test";
 import ModelComparison from "../components/ModelComparison";
 import { variantRun } from "./comparisonFixtures";
 
+// Radix tooltips do not open in jsdom; the hint text each mark carries is what is under test.
+jest.mock("@/components/common/shadTooltipComponent", () => ({
+  __esModule: true,
+  default: ({
+    children,
+    content,
+  }: {
+    children: React.ReactNode;
+    content: string;
+  }) => <span data-hint={content}>{children}</span>,
+}));
+
 const safety = (safe: number, jailbreak: number): SafetySummary => ({
   checks: ["off_topic", "jailbreak"],
   judged: 10,
@@ -68,7 +80,15 @@ describe("ModelComparison", () => {
     const rows = screen.getAllByTestId("comparison-row");
     expect(rows[1]).toHaveTextContent("Tie");
     expect(rows[1]).not.toHaveTextContent("≈ #1");
-    expect(screen.getByText(/the same pass rate as #1/)).toBeVisible();
+    expect(
+      within(rows[1]).getByText("Tie").closest("[data-hint]"),
+    ).toHaveAttribute(
+      "data-hint",
+      expect.stringContaining("The same pass rate as #1"),
+    );
+    expect(
+      within(rows[1]).getByText("Tie").closest("[tabindex]"),
+    ).toHaveAttribute("tabindex", "0");
   });
 
   it("should compare the safety checks of every version that has them", () => {

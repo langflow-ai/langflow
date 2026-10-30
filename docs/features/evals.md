@@ -141,7 +141,11 @@ is `{node_id, field, value}`, where `value` is one model selection
 (`[{name, provider, ...}]`); at most 50, one per field.
 
 - The flow check returns `model_pickers`: every picker that holds a model and is
-  not fed by an edge, with its component name, kind and current value.
+  not fed by an edge, with its component name (numbered in flow order when
+  several share it, "Agent (2)"), kind and current value. A required picker
+  saved without a model is listed too, with `value: []`: its component fails
+  to build, so a start that still leaves one empty after its overrides (in
+  any variant) is 422 "Choose a model under Models for: ...".
 - Overrides are stored on the run in `config.model_overrides`, not on the
   evaluation: a Re-run uses the flow's own models unless it sends overrides again.
 - An override for a field the pinned version lacks (or a wired or empty picker)
@@ -469,8 +473,10 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
   with a preview of the mapped columns, result summary with skipped rows.
 - Evaluate: the canvas button (between Playground and Share) saves the flow and
   opens the modal; **New evaluation** on the Evaluations page opens the same
-  modal with a searchable flow picker. **Models** lists the flow's model pickers
-  (folded; the summary says how many changed) to run with other models.
+  modal with a searchable flow picker (most recently changed first). **Models**
+  lists the flow's model pickers (folded; the summary says how many changed) to
+  run with other models; a picker the flow saved empty opens the section, is
+  flagged with "Choose a model" and blocks the run until one is chosen.
   **Compare with other models** adds a version (a copy of the last); with two or
   more, each version is a numbered card with its own pickers, duplicate and
   remove, the dialog widens, the estimate covers every version and the submit
@@ -493,7 +499,8 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
   errors, pass rate with its 95% Wilson interval, "Tie" for the same rate as #1
   and "≈ #1" for a lower one within its interval, cost and median marking their
   leader and how many times the leader's the others are, cost per row, p90).
-  Comparison costs keep four decimals under a dollar. Versions still
+  Comparison costs keep four decimals under a dollar. Each mark explains itself
+  in a tooltip that also opens on keyboard focus. Versions still
   running, waiting or not run are listed unranked. With safety checks, a
   **Safety by version** table compares the safe rate, each check's rate and the
   attacks resisted, bolding a column's best when one version alone has it. A

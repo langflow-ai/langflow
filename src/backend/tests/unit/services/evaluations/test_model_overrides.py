@@ -3,7 +3,7 @@ import copy
 import pytest
 from langflow.services.evaluations.errors import EvalsValidationError
 from langflow.services.evaluations.flow_checks import check_flow
-from langflow.services.evaluations.model_overrides import apply_model_overrides, model_fields
+from langflow.services.evaluations.model_overrides import apply_model_overrides, model_fields, require_models
 from langflow.services.evaluations.schemas import ModelOverride
 from pydantic import ValidationError
 
@@ -61,6 +61,47 @@ class TestModelFields:
         report = check_flow(_flow())
 
         assert [picker.node_id for picker in report.model_pickers] == ["Agent-1", "Embed-1"]
+
+
+def _two_agents_one_unset() -> dict:
+    return {
+        "nodes": [
+            _node("Agent-1", {"model": {"type": "model", "display_name": "Language Model", "value": GPT}}),
+            _node(
+                "Agent-2", {"model": {"type": "model", "display_name": "Language Model", "value": [], "required": True}}
+            ),
+            _node(
+                "Model-1",
+                {"model": {"type": "model", "display_name": "Language Model", "value": GPT}},
+                "Language Model",
+            ),
+        ],
+        "edges": [],
+    }
+
+
+class TestUnsetModelFields:
+    def test_should_list_a_required_picker_saved_without_a_model(self):
+        fields = model_fields(_two_agents_one_unset())
+
+        assert [(f.node_id, f.value) for f in fields] == [("Agent-1", GPT), ("Agent-2", []), ("Model-1", GPT)]
+
+    def test_should_number_components_that_share_a_name(self):
+        fields = model_fields(_two_agents_one_unset())
+
+        assert [f.component for f in fields] == ["Agent (1)", "Agent (2)", "Language Model"]
+
+    def test_should_refuse_a_run_that_leaves_a_required_picker_empty(self):
+        with pytest.raises(EvalsValidationError, match=r"Agent \(2\) \(Language Model\)"):
+            require_models(_two_agents_one_unset())
+
+    def test_should_run_once_an_override_fills_the_empty_picker(self):
+        filled = apply_model_overrides(
+            _two_agents_one_unset(), [ModelOverride(node_id="Agent-2", field="model", value=MINI)]
+        )
+
+        require_models(filled)
+        assert filled["nodes"][1]["data"]["node"]["template"]["model"]["value"] == MINI
 
 
 class TestApplyModelOverrides:

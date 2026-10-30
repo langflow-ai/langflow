@@ -148,10 +148,6 @@ export default function ModelComparison({
         selectedRunId={selectedRunId}
         onSelect={onSelect}
       />
-      <p className="text-xs text-muted-foreground">
-        {matching.length > 0 && `${t("evals.compare.tieLegend")} `}
-        {t("evals.compare.legend")}
-      </p>
       <ComparisonSafety entries={[...ranked, ...unranked]} />
     </section>
   );

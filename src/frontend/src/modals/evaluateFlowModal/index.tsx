@@ -31,6 +31,10 @@ import ScorerFields from "./ScorerFields";
 import { submitDecision } from "./submitDecision";
 import { LATEST_VERSION, useEvaluateFlowForm } from "./useEvaluateFlowForm";
 
+function flowTime(flow: { updated_at?: string; date_created?: string }) {
+  return Date.parse(flow.updated_at ?? flow.date_created ?? "") || 0;
+}
+
 interface EvaluateFlowModalProps {
   open: boolean;
   setOpen: (open: boolean) => void;
@@ -51,7 +55,10 @@ export default function EvaluateFlowModal({
   const [pickedFlowId, setPickedFlowId] = useState("");
   const flowId = fixedFlowId ?? pickedFlowId;
   const allFlows = useFlowsManagerStore((store) => store.flows);
-  const flowOptions = (allFlows ?? []).filter((flow) => !flow.is_component);
+  // Most recently changed first: the flow being worked on is usually the one to evaluate.
+  const flowOptions = (allFlows ?? [])
+    .filter((flow) => !flow.is_component)
+    .sort((a, b) => flowTime(b) - flowTime(a));
   const form = useEvaluateFlowForm(flowId);
   const { state, set } = form;
   const pickFlow = (id: string) => {

@@ -25,6 +25,7 @@ import {
   buildModelVariants,
   MAX_MODEL_VARIANTS,
   type ModelVersion,
+  versionsMissModels,
 } from "./modelOverrideUtils";
 
 export const LATEST_VERSION = "latest";
@@ -115,6 +116,10 @@ export function useEvaluateFlowForm(flowId: string) {
     [check.data?.model_pickers, modelVersions],
   );
   const comparing = variantOverrides.length > 1;
+  const modelsMissing = versionsMissModels(
+    check.data?.model_pickers ?? [],
+    modelVersions,
+  );
   const modelOverrides = comparing ? [] : (variantOverrides[0] ?? []);
   const variants = comparing
     ? variantOverrides.map((overrides) => ({ model_overrides: overrides }))
@@ -182,6 +187,7 @@ export function useEvaluateFlowForm(flowId: string) {
     scorers.length > 0 &&
     !judgeMissingModel &&
     !judgeLimitsInvalid &&
+    !modelsMissing &&
     (check.data?.blocking.length ?? 1) === 0;
 
   /** Create the evaluation and start its first run (a comparison's first variant), in one atomic request. */
@@ -239,6 +245,7 @@ export function useEvaluateFlowForm(flowId: string) {
     check,
     estimate,
     comparing,
+    modelsMissing,
     canSubmit,
     judgeMissingModel,
     judgeRowBudgetInvalid,

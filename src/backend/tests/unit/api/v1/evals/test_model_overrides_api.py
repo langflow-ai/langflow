@@ -131,3 +131,40 @@ class TestModelOverrides:
 
         assert plain.status_code == swapped.status_code == 200
         assert swapped.json()["llm_calls"] == plain.json()["llm_calls"] == 1
+
+
+class TestUnsetModelPicker:
+    async def test_should_refuse_a_run_until_a_model_is_chosen_for_an_empty_picker(
+        self, client, logged_in_headers, monkeypatch
+    ):
+        captured: list[dict] = []
+        monkeypatch.setattr(runner, "execute_row", _capture_graphs(captured))
+        data, node_id = _flow_with_model_picker()
+        picker = next(n for n in data["nodes"] if n["data"]["id"] == node_id)["data"]["node"]["template"]["model"]
+        picker.update(value=[], required=True)
+        flow = await client.post("api/v1/flows/", json={"name": "Unset", "data": data}, headers=logged_in_headers)
+        dataset = await create_dataset(client, logged_in_headers, "unset", [("a", "a")])
+        body = {
+            "flow_id": flow.json()["id"],
+            "dataset_id": dataset["id"],
+            "scorers": [{"type": "exact_match", "name": "exact"}],
+        }
+
+        check = await client.get(
+            "api/v1/evaluations/check", params={"flow_id": flow.json()["id"]}, headers=logged_in_headers
+        )
+        refused = await client.post("api/v1/evaluations", params={"run": True}, json=body, headers=logged_in_headers)
+        started = await client.post(
+            "api/v1/evaluations",
+            params={"run": True},
+            json={**body, "model_overrides": [{"node_id": node_id, "field": "model", "value": MINI}]},
+            headers=logged_in_headers,
+        )
+
+        assert [p["value"] for p in check.json()["model_pickers"]] == [[]]
+        assert refused.status_code == 422
+        assert "Choose a model" in refused.text
+        assert started.status_code == 201, started.text
+        run = await wait_for_run(client, logged_in_headers, started.json()["id"])
+        assert run["status"] == "completed"
+        assert _picker_value(captured[0], node_id) == MINI

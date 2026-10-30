@@ -52,3 +52,14 @@ export function buildModelVariants(
 ): ModelOverride[][] {
   return versions.map(({ chosen }) => buildModelOverrides(pickers, chosen));
 }
+
+/** Whether some version leaves a picker the flow saved without a model still empty. */
+export function versionsMissModels(
+  pickers: readonly FlowModelPicker[],
+  versions: readonly ModelVersion[],
+): boolean {
+  const unset = pickers.filter((picker) => picker.value.length === 0);
+  return versions.some(({ chosen }) =>
+    unset.some((picker) => !chosen[pickerKey(picker)]?.[0]),
+  );
+}

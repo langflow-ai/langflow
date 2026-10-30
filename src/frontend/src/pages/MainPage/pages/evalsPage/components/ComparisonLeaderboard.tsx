@@ -18,6 +18,7 @@ import {
   formatTokenCount,
   formatUsd,
 } from "../utils/format";
+import HintTooltip from "./HintTooltip";
 import RunStatusBadge from "./RunStatusBadge";
 import VariantLabel, { variantName } from "./VariantLabel";
 
@@ -37,19 +38,19 @@ function PassRateCell({ entry }: { entry: ComparisonEntry }) {
     <div className="ml-auto flex w-28 flex-col items-end gap-1">
       <span className="flex items-center gap-1.5 font-medium">
         {(entry.matchesTop || entry.tiedWithTop) && (
-          <Badge
-            variant="secondaryStatic"
-            size="tag"
-            title={
+          <HintTooltip
+            hint={
               entry.matchesTop
-                ? t("evals.compare.tieLegend")
+                ? t("evals.compare.tieHint")
                 : t("evals.compare.tiedHint")
             }
           >
-            {entry.matchesTop
-              ? t("evals.compare.tie")
-              : t("evals.compare.tied")}
-          </Badge>
+            <Badge variant="secondaryStatic" size="tag">
+              {entry.matchesTop
+                ? t("evals.compare.tie")
+                : t("evals.compare.tied")}
+            </Badge>
+          </HintTooltip>
         )}
         {formatPercent(entry.passRate)}
       </span>
@@ -64,10 +65,12 @@ function PassRateCell({ entry }: { entry: ComparisonEntry }) {
       </span>
       {entry.interval && (
         <span className="text-xs text-muted-foreground">
-          {formatRange(
-            formatPercent(entry.interval[0]),
-            formatPercent(entry.interval[1]),
-          )}
+          <HintTooltip hint={t("evals.compare.intervalHint")} underline>
+            {formatRange(
+              formatPercent(entry.interval[0]),
+              formatPercent(entry.interval[1]),
+            )}
+          </HintTooltip>
         </span>
       )}
     </div>
@@ -121,7 +124,11 @@ export default function ComparisonLeaderboard({
             <TableHead className="text-right">
               {t("evals.compare.errors")}
             </TableHead>
-            <TableHead className="text-right">{t("evals.passRate")}</TableHead>
+            <TableHead className="text-right">
+              <HintTooltip hint={t("evals.compare.passRateHint")} underline>
+                {t("evals.passRate")}
+              </HintTooltip>
+            </TableHead>
             <TableHead className="text-right">{t("evals.cost")}</TableHead>
             <TableHead className="text-right">
               {t("evals.compare.costPerRow")}

@@ -1,5 +1,9 @@
 import type { FlowModelPicker } from "@/controllers/API/queries/evals/types";
-import { buildModelOverrides, pickerKey } from "../modelOverrideUtils";
+import {
+  buildModelOverrides,
+  pickerKey,
+  versionsMissModels,
+} from "../modelOverrideUtils";
 
 const GPT = [{ name: "gpt-4o", provider: "OpenAI", metadata: {} }];
 const MINI = [
@@ -36,5 +40,19 @@ describe("buildModelOverrides", () => {
     expect(
       buildModelOverrides([picker("Agent-1")], { "Gone-1::model": MINI }),
     ).toEqual([]);
+  });
+});
+
+describe("versionsMissModels", () => {
+  const unset = { ...picker("Agent-2"), value: [] };
+
+  it("should flag a version that leaves a picker saved empty without a model", () => {
+    const pickers = [picker("Agent-1"), unset];
+    const filled = { key: 0, chosen: { [pickerKey(unset)]: MINI } };
+    const empty = { key: 1, chosen: {} };
+
+    expect(versionsMissModels(pickers, [filled])).toBe(false);
+    expect(versionsMissModels(pickers, [filled, empty])).toBe(true);
+    expect(versionsMissModels([picker("Agent-1")], [empty])).toBe(false);
   });
 });

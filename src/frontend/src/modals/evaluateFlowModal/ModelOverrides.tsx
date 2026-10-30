@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import {
   type ModelVersion,
   pickerKey,
   sameModel,
+  versionsMissModels,
 } from "./modelOverrideUtils";
 
 interface ModelOverridesProps {
@@ -46,6 +47,11 @@ export default function ModelOverrides({
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const panelId = useId();
+  const missing = versionsMissModels(pickers, versions);
+  // A picker the flow saved empty blocks the run; show it rather than leave the reason folded away.
+  useEffect(() => {
+    if (missing) setOpen(true);
+  }, [missing]);
   const rows = pickers.flatMap((picker) => {
     const kind = modelKindOfField({ model_type: picker.model_type });
     return kind ? [{ picker, kind }] : [];
@@ -58,14 +64,19 @@ export default function ModelOverrides({
       return value !== undefined && !sameModel(value, picker.value);
     }).length;
   const describe = (chosen: ChosenModels) => {
+    if (versionsMissModels(pickers, [{ key: 0, chosen }])) {
+      return t("evals.evaluate.modelsMissing");
+    }
     const changed = changedIn(chosen);
     return changed > 0
       ? t("evals.evaluate.modelsChanged", { count: changed })
       : t("evals.evaluate.modelsAsInFlow");
   };
-  const summary = comparing
-    ? t("evals.compare.comparing", { count: versions.length })
-    : describe(versions[0]?.chosen ?? {});
+  const summary = missing
+    ? t("evals.evaluate.modelsMissing")
+    : comparing
+      ? t("evals.compare.comparing", { count: versions.length })
+      : describe(versions[0]?.chosen ?? {});
   const atLimit = versions.length >= MAX_MODEL_VARIANTS;
 
   return (
@@ -87,7 +98,11 @@ export default function ModelOverrides({
           )}
         />
         <span className="font-medium">{t("evals.evaluate.models")}</span>
-        <span className="text-muted-foreground">{summary}</span>
+        <span
+          className={missing ? "text-destructive" : "text-muted-foreground"}
+        >
+          {summary}
+        </span>
       </button>
       {/* A display utility outranks the `hidden` attribute, so the closed panel needs the class too. */}
       <div

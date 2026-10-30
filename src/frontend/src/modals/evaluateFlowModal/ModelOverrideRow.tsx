@@ -7,6 +7,7 @@ import type {
   ModelSelection,
 } from "@/controllers/API/queries/evals/types";
 import type { ModelType } from "@/types/models";
+import { cn } from "@/utils/utils";
 import { sameModel } from "./modelOverrideUtils";
 import { useModelOptions } from "./useModelOptions";
 
@@ -32,7 +33,11 @@ export default function ModelOverrideRow({
   const { options, ready } = useModelOptions(flowId, true, kind);
   const id = `model-override-${version}-${picker.node_id}-${picker.field}`;
   const value = chosen ?? picker.value;
-  const changed = !sameModel(value, picker.value);
+  // A required picker saved empty in the flow: the run needs a model chosen here.
+  const unset = picker.value.length === 0;
+  const missing = unset && !chosen?.[0];
+  const changed = !unset && !sameModel(value, picker.value);
+  const hintId = `${id}-hint`;
   const label =
     picker.display_name === picker.component
       ? picker.component
@@ -59,7 +64,12 @@ export default function ModelOverrideRow({
           </Button>
         )}
       </div>
-      <div className="[&_button]:h-9">
+      <div
+        className={cn(
+          "[&_button]:h-9",
+          missing && "rounded-md ring-1 ring-destructive",
+        )}
+      >
         <ModelInputComponent
           id={id}
           value={value.map((model) => ({
@@ -76,6 +86,18 @@ export default function ModelOverrideRow({
           aria-label={label}
         />
       </div>
+      {unset && (
+        <p
+          id={hintId}
+          className={cn(
+            "text-xs",
+            missing ? "text-destructive" : "text-muted-foreground",
+          )}
+          data-testid={`${id}-unset`}
+        >
+          {t("evals.evaluate.modelUnset")}
+        </p>
+      )}
     </div>
   );
 }
