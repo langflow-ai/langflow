@@ -46,7 +46,7 @@ export default function ModelOverrideRow({
   return (
     <div className="flex flex-col gap-2" data-testid={id}>
       <div className="flex items-center justify-between gap-2">
-        <Label htmlFor={id} className="truncate">
+        <Label htmlFor={id} className="truncate leading-5">
           {label}
         </Label>
         {changed && (
