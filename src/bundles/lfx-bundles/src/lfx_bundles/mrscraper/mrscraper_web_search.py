@@ -1,4 +1,4 @@
-"""MrScraper component: Google search results from query text or a URL."""
+"""MrScraper component: real-time web search results from a query."""
 
 import math
 
@@ -10,10 +10,13 @@ from lfx_bundles.mrscraper.mrscraper_common import call_sdk, optional_integer, p
 
 
 class MrscraperWebSearch(Component):
-    """Search Google through the MrScraper v2 synchronous SERP API."""
+    """Search the web through MrScraper."""
 
     display_name: str = "MrScraper Web Search"
-    description: str = "Search Google using query text or a Google search URL; return JSON results or HTML."
+    description: str = (
+        "Search the web to retrieve real-time search results, including relevant website URLs, titles, "
+        "descriptions, and related questions based on a given query."
+    )
     name = "MrscraperWebSearch"
     icon: str = "MrScraper"
     documentation: str = "https://docs.mrscraper.com"
@@ -28,10 +31,10 @@ class MrscraperWebSearch(Component):
         ),
         MultilineInput(
             name="url",
-            display_name="Query or Google URL",
+            display_name="Search Query",
             required=True,
             tool_mode=True,
-            info="Search text or a Google URL containing q, gl, hl, and start parameters.",
+            info="The search query.",
         ),
         BoolInput(
             name="raw",
@@ -40,14 +43,16 @@ class MrscraperWebSearch(Component):
             info="Return HTML regardless of Format. Disable this to request JSON results.",
         ),
         DropdownInput(name="format", display_name="Format", options=["json", "html"], value="json"),
-        StrInput(name="region", display_name="Region", advanced=True, info="Overrides gl from the Google URL."),
-        StrInput(name="language", display_name="Language", advanced=True, info="Overrides hl from the Google URL."),
+        StrInput(name="region", display_name="Region", advanced=True, info="Optional country code for search results."),
+        StrInput(
+            name="language", display_name="Language", advanced=True, info="Optional language code for search results."
+        ),
         StrInput(
             name="page",
             display_name="Page",
             value="",
             advanced=True,
-            info="Optional one-based page. Leave empty to use start from a Google URL or the API default.",
+            info="Optional results page number, starting at 1.",
         ),
         BoolInput(name="render_js", display_name="Render JavaScript", value=False, advanced=True),
         FloatInput(name="timeout", display_name="Timeout (seconds)", value=600.0, advanced=True),
