@@ -107,6 +107,10 @@ class ListenerContext:
     #: accept (Slack's ``hello``): that resets the failure count, and a socket
     #: dropped straight after it would then never back off.
     mark_connected: Callable[[], Awaitable[None]] | None = None
+    #: Polling health belongs to one source. Status updates are fenced against
+    #: its current settings and the listener lease.
+    source_failed: Callable[..., Awaitable[None]] | None = None
+    source_succeeded: Callable[..., Awaitable[None]] | None = None
 
 
 @runtime_checkable
@@ -224,6 +228,7 @@ class ProviderSourcePollAdapter(PollingListenerAdapter):
         from langflow.services.database.models.trigger.model import Trigger
         from langflow.services.deps import session_scope
         from langflow.services.triggers.source_clients import source_lease
+        from langflow.services.triggers.source_errors import SourceConfigurationError
         from langflow.services.triggers.source_poll import collect_source, commit_source
 
         appended = 0
@@ -243,11 +248,29 @@ class ProviderSourcePollAdapter(PollingListenerAdapter):
                     continue
                 lease = await source_lease(session, row, family=FAMILY_TRIGGER_LISTENER)
                 detached = Trigger(**row.model_dump())
-            source_round = await collect_source(detached, lease)
+            try:
+                source_round = await collect_source(detached, lease)
+            except SourceConfigurationError as exc:
+                if ctx.source_failed is None:
+                    raise
+                await ctx.source_failed(
+                    trigger_id=snapshot.id,
+                    message=str(exc),
+                    expected_config=detached.config,
+                    expected_kind=detached.kind,
+                )
+                continue
             if ctx.stopping.is_set():
                 break
             async with session_scope() as session:
                 appended += await commit_source(session, trigger_id=snapshot.id, source_round=source_round)
+            if ctx.source_succeeded is not None:
+                await ctx.source_succeeded(
+                    trigger_id=snapshot.id,
+                    expected_config=detached.config,
+                    expected_kind=detached.kind,
+                    observed_error=detached.last_error,
+                )
         return appended
 
 

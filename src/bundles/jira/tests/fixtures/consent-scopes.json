@@ -1,0 +1,28 @@
+[
+  {
+    "policy": "all",
+    "scopes": [
+      "offline_access",
+      "read:jira-user",
+      "read:jira-work",
+      "write:jira-work"
+    ]
+  },
+  {
+    "policy": "read",
+    "scopes": [
+      "offline_access",
+      "read:jira-user",
+      "read:jira-work"
+    ]
+  },
+  {
+    "policy": "write",
+    "scopes": [
+      "offline_access",
+      "read:jira-user",
+      "read:jira-work",
+      "write:jira-work"
+    ]
+  }
+]
