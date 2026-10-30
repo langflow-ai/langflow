@@ -16,12 +16,14 @@
 //! rules: each function calls `lfx::ops::api`.
 
 use std::collections::HashMap;
+use std::sync::RwLock;
 
 use lfx::ops::api::{self, ApiError, ApiResult, Input};
 use lfx::ops::{ApplyOptions, Entry, Error};
 use pyo3::create_exception;
-use pyo3::exceptions::{PyException, PyTypeError, PyValueError};
+use pyo3::exceptions::{PyException, PyRuntimeError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
+use pyo3::sync::RwLockExt;
 use pyo3::types::{PyBool, PyBytes, PyDict, PyFloat, PyInt, PyList, PyString, PyTuple};
 use serde_json::{Map, Number, Value};
 
@@ -248,9 +250,13 @@ fn run<T: Send>(py: Python<'_>, work: impl FnOnce() -> ApiResult<T> + Send) -> P
 }
 
 /// Run engine work without the GIL, and return its result as Python objects.
-/// The result is dropped without the GIL too: freeing a large graph takes time.
 fn call(py: Python<'_>, work: impl FnOnce() -> ApiResult + Send) -> PyResult<Bound<'_, PyAny>> {
-    let value = run(py, work)?;
+    finish(py, run(py, work)?)
+}
+
+/// A result as Python objects. The result is dropped without the GIL: freeing
+/// a large graph takes time.
+fn finish(py: Python<'_>, value: Value) -> PyResult<Bound<'_, PyAny>> {
     let result = to_python(py, &value);
     py.detach(move || drop(value));
     result
@@ -279,10 +285,23 @@ fn apply_options(
 ///
 /// Replay, history playback and rebase apply many batches to one graph and
 /// read it once. A refused batch changes nothing.
-#[pyclass(module = "lfx_native")]
+///
+/// Threads can share one state. A batch waits for the calls that read the
+/// graph, and they wait for it, as with any lock. A call releases the GIL
+/// while it waits for the lock, and never waits for the GIL while it holds the
+/// lock, so two threads cannot deadlock.
+#[pyclass(module = "lfx_native", frozen)]
 #[derive(Debug)]
 struct GraphState {
-    state: lfx::ops::GraphState,
+    state: RwLock<lfx::ops::GraphState>,
+}
+
+/// A call on the state panicked while it held the lock, so the graph may be
+/// half changed.
+struct Poisoned;
+
+fn poisoned(_: Poisoned) -> PyErr {
+    PyRuntimeError::new_err("this GraphState cannot be used: a call on it panicked")
 }
 
 #[pymethods]
@@ -291,14 +310,14 @@ impl GraphState {
     fn new(py: Python<'_>, flow: &Bound<'_, PyAny>) -> PyResult<Self> {
         let flow = input(flow)?;
         Ok(Self {
-            state: run(py, || api::graph_state(flow))?,
+            state: RwLock::new(run(py, || api::graph_state(flow))?),
         })
     }
 
     /// Apply a batch; returns what it did.
     #[pyo3(signature = (operations, *, forward = false, backward = false, mode = "strict"))]
     fn apply<'py>(
-        &mut self,
+        &self,
         py: Python<'py>,
         operations: &Bound<'_, PyAny>,
         forward: bool,
@@ -307,21 +326,36 @@ impl GraphState {
     ) -> PyResult<Bound<'py, PyAny>> {
         let operations = input(operations)?;
         let options = apply_options(py, forward, backward, mode)?;
-        let state = &mut self.state;
-        call(py, || api::apply_to(state, operations, options))
+        // The lock is taken and released without the GIL.
+        let applied = py
+            .detach(|| {
+                let mut state = self.state.write().map_err(|_| Poisoned)?;
+                Ok(api::apply_to(&mut state, operations, options))
+            })
+            .map_err(poisoned)?;
+        finish(py, applied.map_err(|error| engine_error(py, &error))?)
     }
 
     /// The graph as JSON text.
-    fn to_json(&self, py: Python<'_>) -> String {
-        let state = &self.state;
-        py.detach(|| api::graph_json(state))
+    fn to_json(&self, py: Python<'_>) -> PyResult<String> {
+        py.detach(|| {
+            let state = self.state.read().map_err(|_| Poisoned)?;
+            Ok(api::graph_json(&state))
+        })
+        .map_err(poisoned)
     }
 
     /// The graph as a dict, built from the loaded graph without a copy.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        // Building Python objects needs the GIL and the lock together:
+        // read_py_attached waits for the lock without the GIL.
+        let state = self
+            .state
+            .read_py_attached(py)
+            .map_err(|_| poisoned(Poisoned))?;
         let mut builder = Builder::new(py);
         let graph = PyDict::new(py);
-        for (key, entry) in self.state.entries() {
+        for (key, entry) in state.entries() {
             let value = match entry {
                 Entry::Value(value) => builder.value(value)?,
                 Entry::Nodes(nodes) => builder.list(nodes.iter())?.into_any(),

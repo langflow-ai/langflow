@@ -9,9 +9,14 @@ from __future__ import annotations
 
 import json
 import math
+import threading
+from typing import TYPE_CHECKING
 
 import pytest
 from lfx_native import ops
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def nested(depth: int, leaf: object, *, as_dict: bool = False) -> object:
@@ -145,3 +150,54 @@ def test_a_result_shares_each_key_as_json_loads_does():
     assert data_key(first) is data_key(second)
     parsed = json.loads(json.dumps(flow))["nodes"]
     assert data_key(parsed[0]) is data_key(parsed[1])
+
+
+def test_threads_share_one_state():
+    """A batch and the reads of the graph wait for each other: none fails, and none sees half a batch."""
+    template = {"t": {"value": "", "type": "str"}, "u": {"value": "", "type": "str"}}
+    flow = {"nodes": [{"id": "a", "data": {"node": {"template": template}}}], "edges": []}
+    state = ops.GraphState(flow)
+
+    def both(marker: str) -> list[dict]:
+        updates = [
+            {"id": "a", "op": "set_field", "path": ["data", "node", "template", field, "value"], "value": marker}
+            for field in ("t", "u")
+        ]
+        return [{"type": "update_nodes", "updates": updates}]
+
+    def fields(graph: dict) -> tuple[str, str]:
+        template = graph["nodes"][0]["data"]["node"]["template"]
+        return template["t"]["value"], template["u"]["value"]
+
+    done = threading.Event()
+    problems: list[str] = []
+
+    def write() -> None:
+        try:
+            for index in range(300):
+                state.apply(both(f"v{index}"))
+        finally:
+            done.set()
+
+    def read(graph: Callable[[], dict]) -> None:
+        while not done.is_set():
+            try:
+                first, second = fields(graph())
+            except Exception as error:  # noqa: BLE001 -- the test records any failure
+                problems.append(f"{type(error).__name__}: {error}")
+                return
+            if first != second:
+                problems.append(f"half a batch: {first} and {second}")
+                return
+
+    threads = [
+        threading.Thread(target=write),
+        threading.Thread(target=read, args=(state.to_dict,)),
+        threading.Thread(target=read, args=(lambda: json.loads(state.to_json()),)),
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert problems == []
+    assert fields(state.to_dict()) == ("v299", "v299")
