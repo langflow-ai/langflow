@@ -10,13 +10,18 @@ import platform
 import traceback
 import uuid
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, get_args
 
 import httpx
 
 from lfx.log.logger import logger
 from lfx.services.telemetry.base import BaseTelemetryService
-from lfx.services.telemetry.constants import DEFAULT_SEGMENT_WRITE_KEY, IBM_PRODUCT_PROPERTIES, get_ibm_common_event
+from lfx.services.telemetry.constants import (
+    DEFAULT_SEGMENT_WRITE_KEY,
+    IBM_PRODUCT_PROPERTIES,
+    Edition,
+    get_ibm_common_event,
+)
 from lfx.services.telemetry.identity import get_hashed_user_id, get_or_create_anonymous_id
 from lfx.services.telemetry.privacy import get_safe_payload_properties
 from lfx.services.telemetry.schema import (
@@ -41,10 +46,13 @@ class TelemetryService(BaseTelemetryService):
         base_url: str | None = None,
         write_key: str | None = None,
         do_not_track: bool | None = None,
+        edition: str | None = None,
     ):
         super().__init__()
         self.base_url = base_url or os.environ.get("LANGFLOW_SEGMENT_API_URL", _DEFAULT_BASE_URL)
         self.write_key = write_key or os.environ.get("LANGFLOW_SEGMENT_WRITE_KEY") or DEFAULT_SEGMENT_WRITE_KEY
+        edition = edition or os.environ.get("LANGFLOW_EDITION", "")
+        self.edition = edition if edition in get_args(Edition) else "opensource"
 
         if do_not_track is None:
             do_not_track = os.environ.get("DO_NOT_TRACK", "false").lower() in {"1", "true"}
@@ -117,6 +125,7 @@ class TelemetryService(BaseTelemetryService):
             if not isinstance(payload, VersionPayload):
                 properties.update(self._common_fields)
             properties.update(IBM_PRODUCT_PROPERTIES)
+            properties["productPlanName"] = self.edition
             properties["instanceId"] = self.anonymous_id
             properties["subscriptionId"] = self.anonymous_id
             event, process_type, legacy_event = get_ibm_common_event(path)

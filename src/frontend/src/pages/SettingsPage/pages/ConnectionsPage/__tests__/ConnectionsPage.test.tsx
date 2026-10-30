@@ -282,6 +282,69 @@ describe("ConnectionsPage tabs", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows the GitHub installation account and App-managed permissions without changing OAuth scope labels", () => {
+    mockUser = { id: SUPERUSER_ID, is_superuser: true };
+    mockConnections = [
+      connection({
+        id: "github-work",
+        provider_key: "github",
+        owner_id: SUPERUSER_ID,
+        executing_identity: {
+          identity: "service",
+          account: { id: "80", display: "installation-owner" },
+        },
+      }),
+      connection({ id: "google-empty", owner_id: SUPERUSER_ID }),
+      connection({
+        id: "google-scoped",
+        owner_id: SUPERUSER_ID,
+        granted_scopes: ["https://www.googleapis.com/auth/drive.readonly"],
+      }),
+    ];
+    mockIntegrations = {
+      data: {
+        providers: [
+          {
+            provider_id: "github",
+            display_name: "GitHub",
+            approved: true,
+            enabled: true,
+            connection_count: 1,
+            capabilities: [],
+            manual_token_profiles: [
+              {
+                id: "github-installation",
+                identity: "service",
+                required_scopes: [],
+              },
+            ],
+          },
+        ],
+      },
+    };
+    try {
+      render(<ConnectionsPage />);
+
+      const github = within(screen.getByTestId("connection-row-github_work"));
+      expect(github.getByText("installation-owner")).toBeInTheDocument();
+      expect(github.getByText("Ready")).toBeInTheDocument();
+      expect(github.getByText("Managed by the GitHub App")).toBeInTheDocument();
+      expect(github.queryByText("No scopes granted")).not.toBeInTheDocument();
+      expect(
+        within(screen.getByTestId("connection-row-google_empty")).getByText(
+          "No scopes granted",
+        ),
+      ).toBeInTheDocument();
+      expect(
+        within(screen.getByTestId("connection-row-google_scoped")).getByText(
+          "1 scope",
+        ),
+      ).toBeInTheDocument();
+    } finally {
+      mockIntegrations = { data: { providers: [] } };
+    }
+  });
+
   it("shows a denied reauthorization without hiding a still-ready credential", () => {
     mockUser = { id: SUPERUSER_ID, is_superuser: true };
     mockConnections = [
@@ -316,6 +379,44 @@ describe("ConnectionsPage tabs", () => {
     await userEvent.click(screen.getByTestId("connection-menu-slack_failed"));
     expect(screen.getByRole("menuitem", { name: "Delete" })).toBeEnabled();
   });
+
+  it("explains missing Jira refresh access while preserving a ready connection", () => {
+    mockUser = { id: SUPERUSER_ID, is_superuser: true };
+    mockConnections = [
+      connection({
+        id: "jira-ready",
+        owner_id: SUPERUSER_ID,
+        provider_key: "jira",
+        status_reason: "oauth-refresh-token-missing",
+      }),
+    ];
+    render(<ConnectionsPage />);
+    const row = within(screen.getByTestId("connection-row-jira_ready"));
+    expect(row.getByText("Ready")).toBeVisible();
+    expect(
+      row.getByText(/Every Jira connection requires offline_access/),
+    ).toBeVisible();
+  });
+
+  it.each(["confluence", "salesforce", "servicenow"])(
+    "explains a missing refresh token for %s without Jira-specific advice",
+    (provider) => {
+      mockUser = { id: SUPERUSER_ID, is_superuser: true };
+      mockConnections = [
+        connection({
+          id: "provider-ready",
+          owner_id: SUPERUSER_ID,
+          provider_key: provider,
+          status_reason: "oauth-refresh-token-missing",
+        }),
+      ];
+      render(<ConnectionsPage />);
+      const row = within(screen.getByTestId("connection-row-provider_ready"));
+      expect(row.getByText("Ready")).toBeVisible();
+      expect(row.getByText(/did not return a refresh token/)).toBeVisible();
+      expect(row.queryByText(/Jira|offline_access/)).not.toBeInTheDocument();
+    },
+  );
 
   it("gives a regular user no Other users tab and keeps shared rows under Mine", async () => {
     mockUser = { id: REGULAR_ID, is_superuser: false };

@@ -366,6 +366,11 @@ module.exports = {
           id: "Deployment/security",
           label: "Security",
         },
+        {
+          type: "doc",
+          id: "administration/secret-key-rotation",
+          label: "Offline secret-key audit and rotation",
+        },
       ],
     },
     {
@@ -568,6 +573,7 @@ module.exports = {
             "Components/bundles-huggingface",
             "Components/bundles-ibm",
             "Components/bundles-icosacomputing",
+            "Components/bundles-jira",
             "Components/bundles-keenable",
             "Components/bundles-langchain",
             "Components/bundles-lite-llm",
