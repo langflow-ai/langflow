@@ -124,7 +124,7 @@ def test_numbers_come_back_as_json_loads_reads_their_text():
 def test_text_and_objects_give_the_same_results():
     text = json.dumps(FLOW).encode()
     assert ops.graph_hash(text) == ops.graph_hash(FLOW)
-    assert ops.diff(text, json.dumps(FLOW).encode()) == ops.diff(FLOW, FLOW) == []
+    assert ops.ops_diff(text, json.dumps(FLOW).encode()) == ops.ops_diff(FLOW, FLOW) == []
     state = ops.GraphState(text)
     assert state.to_dict() == json.loads(state.to_json()) == FLOW
 

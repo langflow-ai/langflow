@@ -17,7 +17,7 @@ use serde_json::{Map, Value, json};
 
 use crate::ops::apply::{Applied, ApplyOptions, apply_flow_operations};
 use crate::ops::canonical;
-use crate::ops::diff::{derive_flow_operations, diff_flow_data};
+use crate::ops::diff::derive_flow_operations;
 use crate::ops::error::{Error, invalid};
 use crate::ops::from_value::FromValue;
 use crate::ops::keyed::{self, Renumber};
@@ -282,30 +282,16 @@ pub fn normalize_operations(operations_in: Input<'_>) -> ApiResult<Value> {
 
 // --- Diff, validation and repair ------------------------------------------------------------
 
-/// The operations that turn `base` into `target`.
-///
-/// # Errors
-///
-/// A graph does not parse or breaks the rules.
-pub fn diff(base: Input<'_>, target: Input<'_>) -> ApiResult<Value> {
-    Ok(operations_json(diff_flow_data(
-        &data(base)?,
-        &data(target)?,
-    )?))
-}
-
-/// The operations that turn `base` into `target`, verified by replay: `{"operations"}`.
-///
-/// The replayed graph is the target, which the caller has, so it is not returned.
+/// The operations that turn `base` into `target`, checked by replay: applied
+/// to `base`, they must give `target`, or the diff is refused. So a defect in
+/// the diff can never record history that replays to another graph.
 ///
 /// # Errors
 ///
 /// A graph does not parse or breaks the rules, or the operations do not replay.
-pub fn derive(base: Input<'_>, target: Input<'_>) -> ApiResult<Value> {
+pub fn ops_diff(base: Input<'_>, target: Input<'_>) -> ApiResult<Value> {
     let derived = derive_flow_operations(data(base)?, &data(target)?)?;
-    let mut out = Map::new();
-    out.insert("operations".into(), operations_json(derived.operations));
-    Ok(Value::Object(out))
+    Ok(operations_json(derived.operations))
 }
 
 /// Every rule a graph breaks, against the stored graph a write replaces when given.
@@ -630,7 +616,7 @@ mod tests {
             graph_hash(text.into()).unwrap(),
             graph_hash(value.into()).unwrap()
         );
-        let error = refused(diff("{".into(), "{}".into()));
+        let error = refused(ops_diff("{".into(), "{}".into()));
         assert_eq!(error.code(), "FLOW_GRAPH_INVALID");
         let error = refused(normalize_operations("[".into()));
         assert_eq!(error.code(), "FLOW_OPERATION_INVALID");

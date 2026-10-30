@@ -143,11 +143,10 @@ cases("property_cases.json", "sequences", (sequence) => {
 
 cases("diff_cases.json", "cases", (c) => {
   const [base, target] = [dump(c.base), dump(c.target)];
-  check(strict, "operations", parse(ops.diff(base, target)), c.operations);
-  const derived = parse(ops.derive(base, target));
-  assert.deepEqual(Object.keys(derived), ["operations"]);
+  const operations = parse(ops.opsDiff(base, target));
+  check(strict, "operations", operations, c.operations);
   const replayed = new ops.GraphState(base);
-  replayed.apply(dump(derived.operations), {});
+  replayed.apply(dump(operations), {});
   assert.ok(ops.graphsEqual(replayed.toJson(), target));
   const state = new ops.GraphState(base);
   for (const operation of c.operations) state.apply(dump([operation]), {});
