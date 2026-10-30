@@ -1,7 +1,6 @@
 """Event loop selection for ``lfx serve``.
 
-uvicorn resolves its loop through a registry in ``uvicorn.config``, and its
-default (``auto``) picks uvloop whenever uvloop is importable. uvloop ships with
+uvicorn's default (``auto``) picks uvloop whenever uvloop is importable. uvloop ships with
 ``uvicorn[standard]``, so that is what ``lfx serve`` runs on today and what it
 keeps running on unless asked otherwise.
 
@@ -18,13 +17,8 @@ missing one degrades the server's throughput, never its ability to boot.
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
-
-if TYPE_CHECKING:
-    import asyncio
-    from collections.abc import Callable
 
 EVENT_LOOP_ENV = "LFX_EVENT_LOOP"
 
@@ -32,22 +26,10 @@ AUTO_LOOP = "auto"
 ZUVLOOP = "zuvloop"
 
 
-def zuvloop_loop_factory(*, use_subprocess: bool = False) -> Callable[[], asyncio.AbstractEventLoop]:  # noqa: ARG001
-    """Return zuvloop's loop constructor.
-
-    Mirrors ``uvicorn.loops.uvloop.uvloop_loop_factory``, including the unused
-    ``use_subprocess`` argument that uvicorn passes - by keyword - to every loop
-    factory.
-    """
-    import zuvloop
-
-    return zuvloop.new_event_loop
-
-
 def resolve_loop() -> str:
-    """Return the uvicorn ``loop`` name to serve with, registering zuvloop if requested.
+    """Return the uvicorn loop name or import path to serve with.
 
-    Always returns a loop name uvicorn can resolve, falling back to ``auto``
+    Always returns a loop choice uvicorn can resolve, falling back to ``auto``
     whenever the requested loop cannot be used.
     """
     requested = os.environ.get(EVENT_LOOP_ENV, "").strip().lower()
@@ -62,7 +44,7 @@ def resolve_loop() -> str:
         return AUTO_LOOP
 
     try:
-        from uvicorn.config import LOOP_FACTORIES
+        from uvicorn.config import LOOP_FACTORIES  # noqa: F401
     except ImportError:
         logger.warning(
             f"{EVENT_LOOP_ENV}={ZUVLOOP} needs uvicorn>=0.36, whose loop registry takes a loop "
@@ -80,6 +62,6 @@ def resolve_loop() -> str:
         )
         return AUTO_LOOP
 
-    LOOP_FACTORIES[ZUVLOOP] = "lfx.cli.serve_loop:zuvloop_loop_factory"
     logger.info(f"Serving on the zuvloop event loop ({EVENT_LOOP_ENV}={ZUVLOOP}).")
-    return ZUVLOOP
+    # Spawned workers start with a fresh registry, so pass an importable constructor.
+    return "zuvloop:new_event_loop"

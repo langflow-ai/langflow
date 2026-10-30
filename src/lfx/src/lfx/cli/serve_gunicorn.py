@@ -29,8 +29,8 @@ class LFXUvicornWorker(UvicornWorker):
     """
 
     def __init__(self, *args, **kwargs) -> None:
-        # Resolved per worker rather than at import time: workers are built after the
-        # fork, so the loop is registered in the process that actually serves on it.
+        # Resolve when each worker is constructed so the configuration reflects
+        # the current environment before Gunicorn forks.
         self.CONFIG_KWARGS = {**UvicornWorker.CONFIG_KWARGS, "loop": resolve_loop()}
         super().__init__(*args, **kwargs)
 
