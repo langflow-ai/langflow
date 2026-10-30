@@ -264,7 +264,7 @@ and stored executable metadata.
 The existing release-tier inventory gate also checks every installed distribution
 for the retired SDKs, including transitive packages outside Langflow's own tiers.
 
-The native runtime workflow covers Python 3.10–3.14 on Linux x64/ARM64, macOS
+The native runtime workflow covers Python 3.11–3.14 on Linux x64/ARM64, macOS
 Intel/ARM64 and Windows x64. This wheel matrix does not qualify the separate
 POSIX upgrade controller on every platform. musl Linux and Windows ARM64 require a
 qualified native runtime build before support can be claimed.
