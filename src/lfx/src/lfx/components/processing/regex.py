@@ -1,3 +1,4 @@
+import json
 import re
 
 from lfx.custom.custom_component.component import Component
@@ -77,7 +78,14 @@ class RegexExtractorComponent(Component):
             self.status = message
             return message
 
-        result = "\n".join(match.data["match"] for match in matches)
+        if isinstance(matches[0].data["match"], tuple):
+            # Preserve grouped JSON values; represent zero-width matches by their captures.
+            result = "\n".join(
+                match.group(0) or json.dumps(match.groups(default=""), ensure_ascii=False)
+                for match in re.finditer(self.pattern, self.input_text)
+            )
+        else:
+            result = "\n".join(match.data["match"] for match in matches)
         message = Message(text=result)
         self.status = message
         return message
