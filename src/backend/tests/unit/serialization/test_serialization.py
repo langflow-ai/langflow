@@ -1,16 +1,19 @@
 from __future__ import annotations
 
+import json
 import math
 from datetime import datetime, timezone
 from typing import Any
 
 import numpy as np
 import pandas as pd
+import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 from langchain_core.documents import Document
 from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from langflow.serialization.serialization import serialize, serialize_or_str
+from lfx.serialization.serialization import serialize as lfx_serialize
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic.v1 import BaseModel as PydanticV1BaseModel
 
@@ -385,3 +388,47 @@ class TestSerializationHypothesis:
         assert result["score"] is None
         assert result["name"] == "test"
         assert result["value"] == 1.5
+
+
+# The serializer is mirrored in lfx and both copies feed persisted output, so the
+# non-finite guard has to hold for each of them.
+@pytest.mark.parametrize("serialize_fn", [serialize, lfx_serialize], ids=["langflow", "lfx"])
+class TestNonFiniteNumpySerialization:
+    """numpy NaN/Inf must become None, as plain Python floats already do."""
+
+    def test_nan_scalar_serialized_to_none(self, serialize_fn: Any) -> None:
+        assert serialize_fn(np.float32(float("nan"))) is None
+        assert serialize_fn(np.float16(float("nan"))) is None
+        assert serialize_fn(np.array(float("nan"), dtype=np.float32)) is None
+
+    def test_inf_scalar_serialized_to_none(self, serialize_fn: Any) -> None:
+        assert serialize_fn(np.float32(float("inf"))) is None
+        assert serialize_fn(np.float16(float("-inf"))) is None
+
+    def test_nan_inside_array_serialized_to_none(self, serialize_fn: Any) -> None:
+        assert serialize_fn(np.array([1.0, np.nan, 2.0], dtype=np.float32)) == [1.0, None, 2.0]
+
+    def test_non_finite_inside_2d_array_serialized_to_none(self, serialize_fn: Any) -> None:
+        array = np.array([[1.0, np.nan], [np.inf, 2.0]], dtype=np.float32)
+        assert serialize_fn(array) == [[1.0, None], [None, 2.0]]
+
+    def test_nan_inside_dict_serialized_to_none(self, serialize_fn: Any) -> None:
+        assert serialize_fn({"score": np.float32(float("nan"))})["score"] is None
+
+    def test_nan_inside_series_serialized_to_none(self, serialize_fn: Any) -> None:
+        assert serialize_fn(pd.Series([1.0, np.nan])) == {0: 1.0, 1: None}
+
+    def test_non_finite_in_float32_dataframe_serialized_to_none(self, serialize_fn: Any) -> None:
+        frame = pd.DataFrame({"a": np.array([1.0, np.nan], dtype=np.float32)})
+        assert serialize_fn(frame) == [{"a": 1.0}, {"a": None}]
+
+    def test_nan_in_float64_dataframe_serialized_to_none(self, serialize_fn: Any) -> None:
+        assert serialize_fn(pd.DataFrame({"a": [1.0, np.nan]})) == [{"a": 1.0}, {"a": None}]
+
+    def test_finite_values_are_preserved(self, serialize_fn: Any) -> None:
+        assert serialize_fn(np.float32(1.5)) == 1.5
+        assert serialize_fn(np.array([1.0, 2.0], dtype=np.float32)) == [1.0, 2.0]
+
+    def test_result_is_json_compliant(self, serialize_fn: Any) -> None:
+        payload = {"score": np.float32(float("nan")), "vec": np.array([1.0, np.inf], dtype=np.float32)}
+        json.dumps(serialize_fn(payload), allow_nan=False)
