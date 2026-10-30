@@ -9,6 +9,7 @@ import struct
 from functools import wraps
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 from docstring_parser import parse
 
@@ -151,14 +152,17 @@ def transform_localhost_url(url: str | None) -> str | None:
     if not container_host:
         return url
 
-    # Replace localhost and 127.0.0.1 with the container host
-    localhost_patterns = ["localhost", "127.0.0.1"]
+    try:
+        parsed = urlsplit(url)
+    except ValueError:
+        return url
 
-    for pattern in localhost_patterns:
-        if pattern in url:
-            return url.replace(pattern, container_host)
+    if parsed.hostname not in {"localhost", "127.0.0.1"}:
+        return url
 
-    return url
+    userinfo, separator, host_port = parsed.netloc.rpartition("@")
+    netloc = f"{userinfo}{separator}{container_host}{host_port[len(parsed.hostname) :]}"
+    return urlunsplit(parsed._replace(netloc=netloc))
 
 
 def unescape_string(s: str):
