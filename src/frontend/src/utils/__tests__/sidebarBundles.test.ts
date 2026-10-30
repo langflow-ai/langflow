@@ -25,6 +25,18 @@ describe("SIDEBAR_BUNDLES", () => {
     );
   });
 
+  it("classifies Geekflare as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Geekflare",
+          icon: "Geekflare",
+          name: "geekflare",
+        }),
+      ]),
+    );
+  });
+
   it("classifies Serping API as a sidebar bundle", () => {
     expect(SIDEBAR_BUNDLES).toEqual(
       expect.arrayContaining([
