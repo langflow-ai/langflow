@@ -14,13 +14,13 @@ Everything runs against the real database the ``client`` fixture stands up.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 import pytest
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.trigger.model import Trigger
+from langflow.services.database.models.trigger.model import Trigger, TriggerEvent
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_auth_service, session_scope
 from langflow.services.triggers.reconciliation import NODE_REMOVED_ERROR, reconcile_flow_triggers
@@ -80,6 +80,18 @@ async def _trigger(flow_id: UUID, owner_id: UUID, *, state: str = "active", **fi
         session.add(row)
         await session.flush()
         return row.id
+
+
+async def _username(user_id: UUID) -> str:
+    async with session_scope() as session:
+        user = await session.get(User, user_id)
+        assert user is not None
+        return user.username
+
+
+async def _trigger_ids(flow_id: UUID) -> list[UUID]:
+    async with session_scope() as session:
+        return [row.id for row in (await session.exec(select(Trigger).where(Trigger.flow_id == flow_id))).all()]
 
 
 async def _stored(trigger_id: UUID) -> Trigger:
@@ -532,6 +544,67 @@ async def test_removing_the_node_hands_an_operator_pause_to_the_owner(client: As
     assert (await _stored(trigger_id)).state == "paused"
 
 
+async def _save_canvas(flow_id: UUID, owner_id: UUID, nodes: list[dict]) -> None:
+    """Save the flow's canvas and reconcile its triggers, as a save from the editor does."""
+    data = {"nodes": nodes, "edges": []}
+    async with session_scope() as session:
+        flow = await session.get(Flow, flow_id)
+        flow.data = data
+        session.add(flow)
+        await reconcile_flow_triggers(session, flow_id=flow_id, owner_id=owner_id, flow_data=data)
+
+
+async def test_a_trigger_whose_node_was_removed_cannot_be_resumed_until_the_node_is_back(
+    client: AsyncClient, trigger_owner_flow
+) -> None:
+    """Resuming would arm a trigger with nothing on the canvas to run, so every event would fail."""
+    owner_id, flow_id, node = trigger_owner_flow
+    headers = await _login(client, await _username(owner_id))
+    await _save_canvas(flow_id, owner_id, [node])
+    trigger_id = (await _trigger_ids(flow_id))[0]
+    enabled = await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=headers)
+    assert enabled.status_code == 200, enabled.text
+
+    await _save_canvas(flow_id, owner_id, [])
+
+    shown = (await client.get(f"api/v1/triggers/{trigger_id}", headers=headers)).json()
+    assert shown["reason"] == "node_removed"
+    assert "resume" not in shown["allowed_actions"]
+    assert shown["blocked_actions"]["resume"] == "node_removed"
+    refused = await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=headers)
+    assert refused.status_code == 409, refused.text
+    assert "removed from the flow" in refused.json()["detail"]
+    assert (await _stored(trigger_id)).state == "paused"
+
+    await _save_canvas(flow_id, owner_id, [node])
+
+    shown = (await client.get(f"api/v1/triggers/{trigger_id}", headers=headers)).json()
+    assert (shown["state"], shown["reason"], shown["last_error"]) == ("paused", "paused", None)
+    assert "resume" in shown["allowed_actions"]
+    resumed = await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=headers)
+    assert resumed.status_code == 200, resumed.text
+    assert resumed.json()["state"] == "active"
+
+
+async def test_removing_the_node_of_a_trigger_the_owner_paused_still_blocks_resume(
+    client: AsyncClient, trigger_owner_flow
+) -> None:
+    """Pausing first must not be a way around the block: the node is gone either way."""
+    owner_id, flow_id, node = trigger_owner_flow
+    headers = await _login(client, await _username(owner_id))
+    await _save_canvas(flow_id, owner_id, [node])
+    trigger_id = (await _trigger_ids(flow_id))[0]
+    assert (await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=headers)).status_code == 200
+    assert (await client.post(f"api/v1/triggers/{trigger_id}/disable", headers=headers)).status_code == 200
+
+    await _save_canvas(flow_id, owner_id, [])
+
+    shown = (await client.get(f"api/v1/triggers/{trigger_id}", headers=headers)).json()
+    assert (shown["state"], shown["reason"]) == ("paused", "node_removed")
+    assert shown["blocked_actions"]["resume"] == "node_removed"
+    assert (await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=headers)).status_code == 409
+
+
 async def test_one_failure_does_not_undo_or_stop_the_rest_of_a_bulk_pause(client: AsyncClient, monkeypatch) -> None:
     """Every change commits with its audit on its own; a failing trigger is reported, not fatal."""
     from langflow.services.triggers.service import TriggerService
@@ -606,3 +679,186 @@ async def test_public_config_does_not_carry_the_trigger_polling_interval(client:
     response = await client.get("api/v1/config")
     assert response.status_code == 200, response.text
     assert "trigger_polling_interval" not in response.json()
+
+
+async def test_pausing_a_trigger_whose_node_was_removed_does_not_let_it_resume(
+    client: AsyncClient, trigger_owner_flow
+) -> None:
+    """The removal reason is reconciliation's; a pause must not clear it."""
+    owner_id, flow_id, node = trigger_owner_flow
+    headers = await _login(client, await _username(owner_id))
+    await _save_canvas(flow_id, owner_id, [node])
+    trigger_id = (await _trigger_ids(flow_id))[0]
+    assert (await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=headers)).status_code == 200
+    await _save_canvas(flow_id, owner_id, [])
+
+    paused = await client.post(f"api/v1/triggers/{trigger_id}/disable", headers=headers)
+
+    assert paused.status_code == 200, paused.text
+    assert (paused.json()["reason"], paused.json()["last_error"]) == ("node_removed", NODE_REMOVED_ERROR)
+    assert (await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=headers)).status_code == 409
+    assert (await _stored(trigger_id)).state == "paused"
+
+
+async def test_a_trigger_paused_before_its_node_was_removed_cannot_resume_without_the_node(
+    client: AsyncClient, trigger_owner_flow
+) -> None:
+    """A row without the removal reason, as older versions left it, is refused by the saved canvas."""
+    owner_id, flow_id, node = trigger_owner_flow
+    headers = await _login(client, await _username(owner_id))
+    trigger_id = await _trigger(flow_id, owner_id, state="paused", node_id=node["id"])
+
+    refused = await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=headers)
+
+    assert refused.status_code == 409, refused.text
+    assert "removed from the flow" in refused.json()["detail"]
+    await _save_canvas(flow_id, owner_id, [node])
+    assert (await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=headers)).status_code == 200
+
+
+async def test_removing_the_node_wins_over_an_enable_that_commits_during_the_save(trigger_owner_flow) -> None:
+    """Reconciliation decides from the locked row, not the copy it read before an enable committed."""
+    owner_id, flow_id, node = trigger_owner_flow
+    await _save_canvas(flow_id, owner_id, [node])
+    trigger_id = (await _trigger_ids(flow_id))[0]
+    async with session_scope() as session:
+        stored = await session.get(Trigger, trigger_id)
+        stored.state = "paused"
+        session.add(stored)
+
+    class _Rows:
+        def __init__(self, rows):
+            self._rows = rows
+
+        def all(self):
+            return self._rows
+
+    async with session_scope() as saving:
+        read = saving.exec
+
+        async def read_then_enable(statement, *args, **kwargs):
+            result = await read(statement, *args, **kwargs)
+            if "node_id IS NOT NULL" not in str(statement):
+                return result
+            rows = result.all()
+            # An enable commits after the save read the paused row, before it decides.
+            async with session_scope() as enabling:
+                row = await enabling.get(Trigger, trigger_id)
+                row.state = "active"
+                enabling.add(row)
+            return _Rows(rows)
+
+        saving.exec = read_then_enable
+        await reconcile_flow_triggers(saving, flow_id=flow_id, owner_id=owner_id, flow_data={"nodes": [], "edges": []})
+
+    row = await _stored(trigger_id)
+    assert (row.state, row.last_error) == ("paused", NODE_REMOVED_ERROR)
+
+
+async def test_a_schedule_edited_through_the_api_is_renamed_unless_the_edit_names_it(
+    client: AsyncClient, logged_in_headers: dict[str, str], active_user
+) -> None:
+    trigger_id = await _trigger(await _flow(active_user.id), active_user.id, name="Schedule 0 8 * * 1-5")
+    url = f"api/v1/triggers/{trigger_id}"
+
+    renamed = await client.patch(
+        url, json={"config": {"cron": "*/5 * * * *", "timezone": "UTC"}}, headers=logged_in_headers
+    )
+    named = await client.patch(
+        url, json={"config": {"cron": "0 9 * * *", "timezone": "UTC"}, "name": "Daily"}, headers=logged_in_headers
+    )
+
+    assert renamed.status_code == 200, renamed.text
+    assert renamed.json()["name"] == "Schedule */5 * * * *"
+    assert named.json()["name"] == "Daily"
+
+
+# --------------------------------------------------------------------------- #
+# Events drawer filters
+# --------------------------------------------------------------------------- #
+
+
+async def _events(trigger_id: UUID, *rows: tuple[str, str, str | None]) -> dict[str, UUID]:
+    """Add ``(name, state, dedupe_key)`` events, oldest first; returns their ids by name.
+
+    A ``dedupe_key`` of ``"replay"`` makes a replay of the previous event.
+    """
+    start = datetime.now(timezone.utc) - timedelta(hours=1)
+    ids: dict[str, UUID] = {}
+    async with session_scope() as session:
+        previous = None
+        for minute, (name, state, key) in enumerate(rows):
+            replay_of = previous if key == "replay" else None
+            event = TriggerEvent(
+                trigger_id=trigger_id,
+                dedupe_key=f"replay:{replay_of}:{uuid4()}" if replay_of else (key or f"tick:{uuid4()}"),
+                state=state,
+                payload={},
+                replay_of_event_id=replay_of,
+                created_at=start + timedelta(minutes=minute),
+            )
+            session.add(event)
+            await session.flush()
+            ids[name] = event.id
+            previous = event.id
+    return ids
+
+
+@pytest.mark.parametrize(
+    ("event_filter", "expected"),
+    [
+        pytest.param(None, ["replay_of_test", "test", "recent", "replay", "dead", "old_failed"], id="all"),
+        pytest.param("failed", ["dead", "old_failed"], id="failed"),
+        pytest.param("replays", ["replay_of_test", "replay"], id="replays"),
+        pytest.param("tests", ["test"], id="tests"),
+    ],
+)
+async def test_the_events_filter_searches_every_event_not_one_page(
+    client: AsyncClient, logged_in_headers: dict[str, str], active_user, event_filter, expected
+) -> None:
+    """The drawer asks the server, so an older match is found without loading every page first."""
+    trigger_id = await _trigger(await _flow(active_user.id), active_user.id)
+    ids = await _events(
+        trigger_id,
+        ("old_failed", "failed", None),
+        ("dead", "dead", None),
+        ("replay", "completed", "replay"),
+        ("recent", "completed", None),
+        ("test", "completed", f"test:{uuid4()}"),
+        ("replay_of_test", "completed", "replay"),
+    )
+    names = {str(event_id): name for name, event_id in ids.items()}
+    query = "" if event_filter is None else f"?filter={event_filter}"
+
+    response = await client.get(f"api/v1/triggers/{trigger_id}/events{query}", headers=logged_in_headers)
+
+    assert response.status_code == 200, response.text
+    assert [names[row["id"]] for row in response.json()] == expected
+
+
+async def test_a_filtered_page_is_a_page_of_matches(
+    client: AsyncClient, logged_in_headers: dict[str, str], active_user
+) -> None:
+    trigger_id = await _trigger(await _flow(active_user.id), active_user.id)
+    ids = await _events(
+        trigger_id,
+        ("oldest", "failed", None),
+        *((f"ok-{index}", "completed", None) for index in range(3)),
+        ("newest", "dead", None),
+    )
+    url = f"api/v1/triggers/{trigger_id}/events?filter=failed&limit=1"
+
+    first = (await client.get(url, headers=logged_in_headers)).json()
+    second = (await client.get(f"{url}&offset=1", headers=logged_in_headers)).json()
+
+    assert [row["id"] for row in first + second] == [str(ids["newest"]), str(ids["oldest"])]
+
+
+async def test_an_unknown_events_filter_is_rejected(
+    client: AsyncClient, logged_in_headers: dict[str, str], active_user
+) -> None:
+    trigger_id = await _trigger(await _flow(active_user.id), active_user.id)
+
+    response = await client.get(f"api/v1/triggers/{trigger_id}/events?filter=everything", headers=logged_in_headers)
+
+    assert response.status_code == 422

@@ -16,13 +16,18 @@ from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from lfx.log.logger import logger
+from sqlalchemy import and_, not_, or_
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, select
 
 from langflow.services.database.models.trigger.model import TriggerEvent
-from langflow.services.database.models.trigger.schemas import TERMINAL_EVENT_STATES, TriggerEventState
-from langflow.services.triggers.constants import REPLAY_DEDUPE_PREFIX
+from langflow.services.database.models.trigger.schemas import (
+    TERMINAL_EVENT_STATES,
+    TriggerEventFilter,
+    TriggerEventState,
+)
+from langflow.services.triggers.constants import REPLAY_DEDUPE_PREFIX, TEST_DEDUPE_PREFIX
 from langflow.services.triggers.errors import ReplayWindowExpiredError, TriggerEventNotFoundError
 
 if TYPE_CHECKING:
@@ -169,19 +174,33 @@ async def get_event(session: AsyncSession, *, trigger_id: UUID, event_id: UUID) 
     return row
 
 
+def _matches(event_filter: TriggerEventFilter):
+    """The ledger condition for ``event_filter``; the events drawer labels rows by the same rules."""
+    if event_filter is TriggerEventFilter.FAILED:
+        return col(TriggerEvent.state).in_((TriggerEventState.FAILED.value, TriggerEventState.DEAD.value))
+    is_replay = or_(
+        col(TriggerEvent.replay_of_event_id).is_not(None),
+        col(TriggerEvent.dedupe_key).startswith(f"{REPLAY_DEDUPE_PREFIX}:"),
+    )
+    if event_filter is TriggerEventFilter.REPLAYS:
+        return is_replay
+    return and_(col(TriggerEvent.dedupe_key).startswith(f"{TEST_DEDUPE_PREFIX}:"), not_(is_replay))
+
+
 async def list_events(
     session: AsyncSession,
     *,
     trigger_id: UUID,
     limit: int = 50,
     offset: int = 0,
+    event_filter: TriggerEventFilter | None = None,
 ) -> list[TriggerEvent]:
+    """A page of ``trigger_id``'s events, newest first, optionally only those ``event_filter`` matches."""
+    statement = select(TriggerEvent).where(TriggerEvent.trigger_id == trigger_id)
+    if event_filter is not None:
+        statement = statement.where(_matches(event_filter))
     statement = (
-        select(TriggerEvent)
-        .where(TriggerEvent.trigger_id == trigger_id)
-        .order_by(col(TriggerEvent.created_at).desc(), col(TriggerEvent.id).desc())
-        .offset(offset)
-        .limit(limit)
+        statement.order_by(col(TriggerEvent.created_at).desc(), col(TriggerEvent.id).desc()).offset(offset).limit(limit)
     )
     return list((await session.exec(statement)).all())
 

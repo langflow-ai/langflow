@@ -113,6 +113,9 @@ export const TRIGGER_EVENT_STATES = [
 ] as const;
 export type TriggerEventState = (typeof TRIGGER_EVENT_STATES)[number];
 
+/** The events drawer's filters the server applies; "all" sends none. */
+export type TriggerEventFilterParam = "failed" | "replays" | "tests";
+
 export interface TriggerEventRead {
   id: string;
   trigger_id: string;

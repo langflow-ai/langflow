@@ -37,6 +37,7 @@ from langflow.services.database.models.trigger.schemas import (
     TriggerBulkRequest,
     TriggerBulkResult,
     TriggerCreate,
+    TriggerEventFilter,
     TriggerEventRead,
     TriggerIngressRead,
     TriggerListScope,
@@ -403,11 +404,14 @@ async def list_trigger_events(
     service: TriggerServiceDep,
     limit: Annotated[int, Query(ge=1, le=_MAX_PAGE_SIZE)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
+    event_filter: Annotated[TriggerEventFilter | None, Query(alias="filter")] = None,
 ) -> list[TriggerEventRead]:
     await _authorized_trigger(
         service=service, session=session, user=current_user, trigger_id=trigger_id, action=FlowAction.READ
     )
-    rows = await ledger.list_events(session, trigger_id=trigger_id, limit=limit, offset=offset)
+    rows = await ledger.list_events(
+        session, trigger_id=trigger_id, limit=limit, offset=offset, event_filter=event_filter
+    )
     return [TriggerEventRead.model_validate(row) for row in rows]
 
 

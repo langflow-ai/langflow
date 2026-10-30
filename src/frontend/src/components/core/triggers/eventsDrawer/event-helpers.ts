@@ -1,5 +1,7 @@
-import type { TriggerEventRead } from "@/controllers/API/queries/triggers";
-import { eventOriginOf } from "../helpers/trigger-presentation";
+import type {
+  TriggerEventFilterParam,
+  TriggerEventRead,
+} from "@/controllers/API/queries/triggers";
 
 const SUMMARY_KEYS = ["text", "summary", "subject", "title", "name"] as const;
 const MAX_SUMMARY = 80;
@@ -24,7 +26,27 @@ export const eventSummaryOf = (
   return null;
 };
 
-export type TriggerEventFilter = "all" | "failed" | "replays" | "tests";
+/**
+ * The event's run is under way: its trace is written only when the run ends,
+ * so until then there is nothing to load.
+ */
+export const isEventRunning = (event: Pick<TriggerEventRead, "state">) =>
+  event.state === "claimed" || event.state === "dispatched";
+
+/**
+ * Why "Open flow" is unavailable for ``event``, as a catalog key, or null when
+ * its run can be opened. A run exists only once the event is dispatched.
+ */
+export const openRunBlockedKeyOf = (
+  event: Pick<TriggerEventRead, "state" | "job_id">,
+): string | null => {
+  if (event.job_id) return null;
+  return event.state === "pending" || event.state === "claimed"
+    ? "triggers.events.runNotStarted"
+    : "triggers.events.noRunStarted";
+};
+
+export type TriggerEventFilter = "all" | TriggerEventFilterParam;
 
 export const TRIGGER_EVENT_FILTERS: readonly TriggerEventFilter[] = [
   "all",
@@ -32,22 +54,6 @@ export const TRIGGER_EVENT_FILTERS: readonly TriggerEventFilter[] = [
   "replays",
   "tests",
 ];
-
-export const matchesEventFilter = (
-  event: Pick<TriggerEventRead, "state" | "dedupe_key" | "replay_of_event_id">,
-  filter: TriggerEventFilter,
-): boolean => {
-  switch (filter) {
-    case "all":
-      return true;
-    case "failed":
-      return event.state === "failed" || event.state === "dead";
-    case "replays":
-      return eventOriginOf(event) === "replay";
-    case "tests":
-      return eventOriginOf(event) === "test";
-  }
-};
 
 /** The replay's parent, if loaded, and every loaded replay of this event. */
 export const lineageOf = (

@@ -85,6 +85,16 @@ describe("triggers api", () => {
     );
   });
 
+  it("asks the server to filter events", async () => {
+    jest.mocked(api.get).mockResolvedValue({ data: [] });
+
+    await listTriggerEvents("t1", { limit: 51, offset: 50, filter: "failed" });
+
+    expect(api.get).toHaveBeenCalledWith(
+      "/api/v1/triggers/t1/events?limit=51&offset=50&filter=failed",
+    );
+  });
+
   it("posts the replayed event id", async () => {
     jest.mocked(api.post).mockResolvedValue({ data: {} });
 

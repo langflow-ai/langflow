@@ -113,6 +113,14 @@ class TriggerEventState(str, Enum):
     DEAD = "dead"
 
 
+class TriggerEventFilter(str, Enum):
+    """The events drawer's filters, applied by the server so they search every event, not one page."""
+
+    FAILED = "failed"  # failed or dead
+    REPLAYS = "replays"  # a replay of another event
+    TESTS = "tests"  # a test event, not a replay of one
+
+
 #: Rows that no dispatcher will ever pick up again.
 TERMINAL_EVENT_STATES = frozenset(
     {TriggerEventState.COMPLETED.value, TriggerEventState.FAILED.value, TriggerEventState.DEAD.value}

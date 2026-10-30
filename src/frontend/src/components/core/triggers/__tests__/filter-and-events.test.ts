@@ -1,7 +1,8 @@
 import {
   eventSummaryOf,
+  isEventRunning,
   lineageOf,
-  matchesEventFilter,
+  openRunBlockedKeyOf,
 } from "../eventsDrawer/event-helpers";
 import { filterTriggers, providersOf } from "../helpers/filter-triggers";
 import { formatRelativeTime } from "../helpers/format-relative-time";
@@ -80,25 +81,6 @@ describe("filterTriggers", () => {
   });
 });
 
-describe("matchesEventFilter", () => {
-  it("counts dead-lettered events as failed", () => {
-    expect(matchesEventFilter(makeEvent({ state: "dead" }), "failed")).toBe(
-      true,
-    );
-    expect(
-      matchesEventFilter(makeEvent({ state: "completed" }), "failed"),
-    ).toBe(false);
-  });
-
-  it("separates replays from tests", () => {
-    const replay = makeEvent({ replay_of_event_id: "evt-0" });
-    const test = makeEvent({ dedupe_key: "test:1" });
-    expect(matchesEventFilter(replay, "replays")).toBe(true);
-    expect(matchesEventFilter(replay, "tests")).toBe(false);
-    expect(matchesEventFilter(test, "tests")).toBe(true);
-  });
-});
-
 describe("lineageOf", () => {
   const original = makeEvent({ id: "o", state: "failed" });
   const replay = makeEvent({ id: "r", replay_of_event_id: "o" });
@@ -168,5 +150,34 @@ describe("formatRelativeTime", () => {
     expect(formatRelativeTime(now - 24 * 3600 * 1000, "de", now)).toBe(
       "gestern",
     );
+  });
+});
+
+describe("isEventRunning", () => {
+  it.each([
+    ["claimed", true],
+    ["dispatched", true],
+    ["pending", false],
+    ["completed", false],
+    ["failed", false],
+    ["dead", false],
+  ] as const)("%s → %s", (state, running) => {
+    expect(isEventRunning(makeEvent({ state }))).toBe(running);
+  });
+});
+
+describe("openRunBlockedKeyOf", () => {
+  it("offers the run once the event has a job", () => {
+    expect(openRunBlockedKeyOf(makeEvent({ state: "failed" }))).toBeNull();
+  });
+
+  it.each([
+    ["pending", "triggers.events.runNotStarted"],
+    ["claimed", "triggers.events.runNotStarted"],
+    ["failed", "triggers.events.noRunStarted"],
+    ["dead", "triggers.events.noRunStarted"],
+    ["completed", "triggers.events.noRunStarted"],
+  ] as const)("explains a %s event without a run", (state, key) => {
+    expect(openRunBlockedKeyOf(makeEvent({ state, job_id: null }))).toBe(key);
   });
 });

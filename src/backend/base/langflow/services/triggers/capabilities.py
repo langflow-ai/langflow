@@ -18,6 +18,10 @@ Three outcomes per action:
 A state reason outranks a caller reason: a reader looking at a dead trigger is
 told it is dead, which stays true whatever access they are later granted.
 
+A trigger paused because its node left the canvas cannot be resumed: with no
+trigger on the canvas, every event it fired would fail. Reconciliation clears
+that reason when the node is added back.
+
 The answer is conservative, never more permissive than the routes: an action
 listed as allowed is one the route accepts. The converse need not hold - a
 test event on a paused trigger is accepted by the route but is retired without
@@ -127,6 +131,8 @@ def _decide(
         decisions[TriggerAction.RESUME] = TriggerReason.DEAD if dead else write
         if state == TriggerState.NEEDS_RECONNECT.value and reason is not TriggerReason.READY_TO_RESUME:
             decisions[TriggerAction.RESUME] = write or reason
+        if reason is TriggerReason.NODE_REMOVED:
+            decisions[TriggerAction.RESUME] = reason
     decisions[TriggerAction.TEST] = run_block
     if _uses_connection(row):
         if state != TriggerState.NEEDS_RECONNECT.value or reason is TriggerReason.READY_TO_RESUME:

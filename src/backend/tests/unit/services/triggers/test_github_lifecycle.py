@@ -22,6 +22,7 @@ from langflow.services.connection.service import (
 )
 from langflow.services.database.models.connection.model import Connection, ConnectionSecret
 from langflow.services.database.models.connection.schemas import ConnectionCreate, ConnectionTokenRenewal
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.trigger.model import (
     Trigger,
     TriggerCleanup,
@@ -179,6 +180,10 @@ async def save_trigger(flow_id, owner_id, *, connection="github/work", repositor
         "edges": [],
     }
     async with session_scope() as session:
+        # As a save does: the canvas is stored, then its triggers reconciled.
+        flow = await session.get(Flow, flow_id)
+        flow.data = data
+        session.add(flow)
         await reconcile_flow_triggers(session, flow_id=flow_id, owner_id=owner_id, flow_data=data)
     async with session_scope() as session:
         return (await session.exec(select(Trigger).where(Trigger.flow_id == flow_id))).one()
