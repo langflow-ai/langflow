@@ -24,6 +24,12 @@ describe("badgeStateOf", () => {
     expect(badgeStateOf("dead")).toBe("error");
   });
 
+  it("shows a reconnected trigger as ready to resume", () => {
+    expect(badgeStateOf("needs_reconnect", "ready_to_resume")).toBe(
+      "ready_to_resume",
+    );
+  });
+
   it.each([
     "pending",
     "active",
@@ -161,7 +167,7 @@ describe("sourceKeyOf", () => {
     ["telegram", "Send"],
     ["salesforce", "Cloud"],
     ["servicenow", "Server"],
-    ["jira", "Ticket"],
+    ["jira", "Jira"],
     ["confluence", "BookOpen"],
   ])("shows the %s provider icon", (provider, icon) => {
     expect(sourceIconOf(makeTrigger({ provider }))).toBe(icon);

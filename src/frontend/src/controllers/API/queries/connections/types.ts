@@ -25,6 +25,7 @@ export type ConnectionStatusReason =
   | "credential-undecryptable"
   | "oauth-denied"
   | "oauth-expired"
+  | "oauth-refresh-token-missing"
   | "oauth-failed";
 
 export type ConnectionHealth = "unknown" | "healthy" | "unhealthy";
@@ -121,6 +122,7 @@ export interface OAuthRegistrationRead {
   context: "self_managed" | "hosted" | "desktop";
   client_type: "confidential" | "public";
   scopes: string[];
+  required_scopes?: string[];
   allowed_tenants: string[];
 }
 
