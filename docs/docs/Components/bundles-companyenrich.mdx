@@ -1,0 +1,33 @@
+---
+title: CompanyEnrich
+slug: /bundles-companyenrich
+---
+
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+The CompanyEnrich bundle enriches company profiles, searches companies, and finds lookalikes through the [CompanyEnrich API](https://docs.companyenrich.com/reference).
+Create an account at [app.companyenrich.com](https://app.companyenrich.com/) and enter your dashboard API key in the secret **CompanyEnrich API Key** field.
+
+Each component returns a `Data` object containing the complete API response. Search outputs preserve the result items and pagination metadata. Queries and domains can be supplied by an agent in tool mode.
+
+## Components
+
+| Component | Input | API endpoint |
+|-----------|-------|--------------|
+| Enrich Company | One bare domain, such as `stripe.com` | [`GET /companies/enrich`](https://docs.companyenrich.com/reference/get_companies-enrich) |
+| Search Companies | Natural-language query, API filter fields, or both | [`POST /companies/search`](https://docs.companyenrich.com/reference/post_companies-search) |
+| Find Similar Companies | A list of one to ten seed domains and optional filter fields | [`POST /companies/similar`](https://docs.companyenrich.com/reference/post_companies-similar) |
+
+**Search Query** maps to `semanticQuery` and accepts up to 500 characters. For filter-only searches, leave it empty and supply at least one filter.
+
+The advanced **Filters** input accepts an object containing the fields documented by the corresponding API, for example `{"countries": ["US"], "technologies": ["React"]}`. Use the dedicated query, domain and pagination inputs for those values; they cannot be overridden through Filters.
+
+## Pagination and credits
+
+Search and lookalike components request one page at a time. **Page** starts at `1`; **Results Per Page** defaults to `10` and accepts `1` to `100`. Increase Page explicitly to retrieve another page. Company search supports at most 10,000 results, so Page multiplied by Results Per Page must not exceed 10,000. The components do not automatically retrieve or retry additional results.
+
+These operations consume CompanyEnrich credits. Search and lookalike usage depends on the number of returned results; review the [current pricing](https://companyenrich.com/pricing) before increasing result limits or enabling agent tool calls.
+
+All components use the fixed CompanyEnrich HTTPS endpoint. **Timeout** defaults to 30 seconds and accepts 1 to 300. HTTP and connectivity failures stop the component with an error; the API key is not included in error messages.
