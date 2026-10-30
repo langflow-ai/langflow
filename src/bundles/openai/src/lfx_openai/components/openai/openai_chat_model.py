@@ -2,7 +2,12 @@ from typing import Any
 
 from langchain_openai import ChatOpenAI
 from lfx.base.models.model import LCModelComponent
-from lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES
+from lfx.base.models.openai_constants import (
+    OPENAI_CHAT_MODEL_NAMES,
+    OPENAI_CHAT_MODEL_OPTIONS,
+    OPENAI_REASONING_MODEL_NAMES,
+    OPENAI_REASONING_MODEL_OPTIONS,
+)
 from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed, openai_compatible_client_kwargs
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
@@ -44,8 +49,8 @@ class OpenAIModelComponent(LCModelComponent):
             name="model_name",
             display_name="Model Name",
             advanced=False,
-            options=OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES,
-            value=OPENAI_CHAT_MODEL_NAMES[0],
+            options=OPENAI_CHAT_MODEL_OPTIONS + OPENAI_REASONING_MODEL_OPTIONS,
+            value=OPENAI_CHAT_MODEL_OPTIONS[0],
             combobox=True,
             real_time_refresh=True,
         ),
