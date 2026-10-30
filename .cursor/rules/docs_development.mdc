@@ -15,6 +15,16 @@ alwaysApply: false
 ## Purpose
 Guidelines for developing and maintaining Langflow documentation using Docusaurus, including content structure, style, and deployment processes.
 
+## Where notes go
+
+Developer and agent notes for a change go in `docs/features/`. One markdown file per topic, named for the change. That folder is not part of the published site. Follow the [Google Developer Documentation Style Guide](https://developers.google.com/style) for feature notes and user-facing docs.
+
+Published user docs are the pages in `docs/docs/` and `docs/versioned_docs/`, plus `sidebars.js`. Edit those only when the task is a user-facing documentation change that the docs writer should review. The style guide below applies to that published work.
+
+`docs/static/llms.txt`, `docs/static/llms-full.txt`, and `docs/static/llms/` are generated when a docs version is cut. Leave them unchanged.
+
+A pull request that touches `docs/` flags the docs team. That notice is optional and does not block merge.
+
 ---
 
 ## 1. Documentation Environment Setup
@@ -198,6 +208,8 @@ make api_examples_local_syntax   # Syntax-check API sample files without executi
 
 ## 6. Style Guide
 
+Reviews reference the [Google Developer Documentation Style Guide](https://developers.google.com/style). The notes below are Langflow-specific additions.
+
 ### Writing Style
 - **Tone:** Professional but approachable
 - **Voice:** Second person ("you") for instructions
@@ -212,7 +224,7 @@ make api_examples_local_syntax   # Syntax-check API sample files without executi
 
 ### Terminology
 - **Langflow:** Always capitalize
-- **Component:** Capitalize when referring to Langflow components
+- **Component:** Capitalize when referring to Langflow components. Link to the page whenever possible.
 - **Flow:** Capitalize when referring to Langflow flows
 - **API:** Always uppercase
 - **JSON:** Always uppercase
