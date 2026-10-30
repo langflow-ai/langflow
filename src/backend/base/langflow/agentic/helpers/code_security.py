@@ -1195,10 +1195,6 @@ class _SecurityChecker(ast.NodeVisitor):
                     module_name, separator, method_name = function_name.rpartition(".")
                     if separator and method_name == "__getattribute__" and module_name in _RESTRICTED_MODULE_REFERENCES:
                         resolved.update(self._resolved_member_names(frozenset({module_name}), member_name))
-                    elif separator and method_name in {"get", "__getitem__"} and module_name.endswith(".__dict__"):
-                        resolved.update(
-                            self._resolved_member_names(frozenset({module_name.removesuffix(".__dict__")}), member_name)
-                        )
 
             if (
                 {"object.__getattribute__", "builtins.object.__getattribute__", "__builtins__.object.__getattribute__"}
@@ -1208,17 +1204,11 @@ class _SecurityChecker(ast.NodeVisitor):
             ):
                 resolved.update(self._resolved_member_names(self._resolved_assignment_value(node.args[0]), member_name))
 
-            if (
-                {"dict.get", "dict.__getitem__", "builtins.dict.get", "builtins.dict.__getitem__"} & function_names
-                and node.args[1:]
-                and (member_name := self._static_name(node.args[1])) is not None
-            ):
-                module_names = frozenset(
-                    mapping_name.removesuffix(".__dict__")
-                    for mapping_name in self._resolved_assignment_value(node.args[0])
-                    if mapping_name.endswith(".__dict__")
-                )
-                resolved.update(self._resolved_member_names(module_names, member_name))
+            if selection := self._namespace_selection(node, function_names):
+                # A modeled field selection returns the member, not the mapping.
+                # Defaults still contribute their own identities and markers.
+                resolved.update(selection[0])
+                return frozenset(resolved)
 
             if not any(name.endswith(".__dict__") for name in resolved) and self._call_reaches_namespace_mapping(node):
                 # A namespace laundered through a call - ``dict(ns)``,
@@ -1239,6 +1229,33 @@ class _SecurityChecker(ast.NodeVisitor):
                 markers.add(_UNRESOLVED_REFLECTIVE_NAMESPACE)
             return frozenset(markers)
         return frozenset()
+
+    def _namespace_selection(self, node: ast.Call, function_names: frozenset[str]) -> tuple[frozenset[str], int] | None:
+        """Resolve fixed-key mapping reads and their modeled positional arguments."""
+        if not function_names or node.keywords or any(isinstance(arg, ast.Starred) for arg in node.args):
+            return None
+        unbound_names = {"dict.get", "dict.__getitem__", "builtins.dict.get", "builtins.dict.__getitem__"}
+        selector_index = 1 if function_names <= unbound_names else 0
+        if len(node.args) <= selector_index:
+            return None
+        if selector_index:
+            mappings = self._resolved_assignment_value(node.args[0])
+        else:
+            owners = [name.rpartition(".") for name in function_names]
+            if any(method not in {"get", "__getitem__"} for _, _, method in owners):
+                return None
+            mappings = frozenset(owner for owner, _, _ in owners)
+        if not mappings or not all(name.endswith(".__dict__") for name in mappings):
+            return None
+        max_arguments = selector_index + (2 if all(name.endswith(".get") for name in function_names) else 1)
+        if len(node.args) > max_arguments or (member := self._static_name(node.args[selector_index])) is None:
+            return None
+        selected = set(
+            self._resolved_member_names(frozenset(name.removesuffix(".__dict__") for name in mappings), member)
+        )
+        for default in node.args[selector_index + 1 :]:
+            selected.update(self._resolved_assignment_value(default))
+        return frozenset(selected), selector_index + 1
 
     def _call_reaches_namespace_mapping(self, node: ast.Call) -> bool:
         """True if a namespace mapping is this call's receiver or one of its arguments."""
@@ -2262,6 +2279,8 @@ class _SecurityChecker(ast.NodeVisitor):
         getattr_names = {"getattr", "builtins.getattr", "__builtins__.getattr"}
         exempt_getattr_arguments = 2 if getattr_names & resolved_call_names and getattr_arguments_validated else 0
         exempt_arguments = max(exempt_getattr_arguments, reflective_arguments_validated)
+        if selection := self._namespace_selection(node, resolved_call_names):
+            exempt_arguments = max(exempt_arguments, selection[1])
         for argument in (*node.args[exempt_arguments:], *(keyword.value for keyword in node.keywords)):
             self._check_opaque_reference(argument)
         self.generic_visit(node)

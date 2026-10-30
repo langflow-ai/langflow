@@ -3534,6 +3534,55 @@ class TestScanCodeSecurityExpressionEvaluation:
     def test_preserves_data_operations(self, code):
         assert scan_code_security(code).is_safe is True
 
+    @pytest.mark.parametrize(
+        "selection",
+        [
+            pytest.param("namespace['name']", id="subscript"),
+            pytest.param("namespace.get('name')", id="bound-get"),
+            pytest.param("namespace.get('name', 'unknown')", id="get-with-default"),
+            pytest.param("dict.get(namespace, 'name')", id="unbound-get"),
+            pytest.param("lookup('name')", id="aliased-get"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "use",
+        [
+            pytest.param("return SELECTED", id="returned-value"),
+            pytest.param("return {'name': SELECTED}", id="dictionary-value"),
+            pytest.param("return str(SELECTED)", id="argument-value"),
+        ],
+    )
+    def test_preserves_selected_namespace_data(self, selection, use):
+        code = """
+import argparse
+
+def read_name():
+    parsed = argparse.Namespace(name="Alice")
+    namespace = vars(parsed)
+    lookup = namespace.get
+    USE
+""".replace("USE", use.replace("SELECTED", selection))
+        result = scan_code_security(code)
+        assert result.is_safe is True, result.violations
+
+    @pytest.mark.parametrize(
+        "selection",
+        ["namespace.get('name', fallback)", "dict.get(namespace, 'name', fallback)"],
+    )
+    def test_rejects_namespace_valued_lookup_defaults(self, selection):
+        code = f"""
+import argparse
+
+def read_name():
+    parsed = argparse.Namespace(name="Alice")
+    namespace = vars(parsed)
+    fallback = vars(argparse.Namespace(name="unknown"))
+    return {selection}
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("namespace mapping" in violation for violation in result.violations)
+
     @pytest.mark.parametrize("method", ["eval", "query"])
     def test_pandas_expression_can_invoke_a_callback(self, method):
         """Prove the expression reaches Python with an in-memory marker only."""
