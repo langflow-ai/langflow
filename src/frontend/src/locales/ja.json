@@ -3297,6 +3297,8 @@
   "triggers.events.session": "セッション",
   "triggers.events.dedupeKey": "重複排除キー",
   "triggers.events.openRun": "フローを開く",
+  "triggers.events.runInProgress": "この実行はまだ進行中です。",
+  "triggers.events.runInProgressHint": "実行が終わると、ここにトレースが表示されます。",
   "triggers.events.payload": "ペイロード",
   "triggers.events.payloadNote": "正規化されたフィールドのみです。プロバイダーの元のリクエストがブラウザーに送信されることはありません。",
   "triggers.events.lineage": "系統",

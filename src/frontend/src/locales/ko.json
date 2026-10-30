@@ -3296,6 +3296,8 @@
   "triggers.events.session": "세션",
   "triggers.events.dedupeKey": "중복 제거 키",
   "triggers.events.openRun": "Flow 열기",
+  "triggers.events.runInProgress": "이 실행은 아직 진행 중입니다.",
+  "triggers.events.runInProgressHint": "실행이 끝나면 여기에 트레이스가 표시됩니다.",
   "triggers.events.payload": "Payload",
   "triggers.events.payloadNote": "정규화된 필드만 표시합니다. Provider의 원본 요청은 브라우저로 보내지 않습니다.",
   "triggers.events.lineage": "계보",

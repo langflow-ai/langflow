@@ -82,6 +82,10 @@ export function TriggerEventsDrawer({
   );
   const selected =
     visible.find((event) => event.id === selectedId) ?? visible[0] ?? null;
+  // The open run follows the polled ledger, so the dialog sees the run end.
+  const liveRunFor = runFor
+    ? (events.find((event) => event.id === runFor.id) ?? runFor)
+    : null;
 
   const confirmReplay = async () => {
     if (!trigger || !replayTarget) return;
@@ -234,9 +238,9 @@ export function TriggerEventsDrawer({
           onConfirm={() => void confirmReplay()}
           busy={replay.isPending}
         />
-        {trigger && runFor?.job_id && (
+        {trigger && liveRunFor?.job_id && (
           <TriggerRunDialog
-            event={runFor}
+            event={liveRunFor}
             flowName={trigger.flow_name ?? trigger.name}
             onOpenChange={(open) => {
               if (!open) setRunFor(null);

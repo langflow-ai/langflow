@@ -24,6 +24,13 @@ export const eventSummaryOf = (
   return null;
 };
 
+/**
+ * The event's run is under way: its trace is written only when the run ends,
+ * so until then there is nothing to load.
+ */
+export const isEventRunning = (event: Pick<TriggerEventRead, "state">) =>
+  event.state === "claimed" || event.state === "dispatched";
+
 export type TriggerEventFilter = "all" | "failed" | "replays" | "tests";
 
 export const TRIGGER_EVENT_FILTERS: readonly TriggerEventFilter[] = [

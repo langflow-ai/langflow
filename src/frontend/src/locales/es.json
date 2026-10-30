@@ -3297,6 +3297,8 @@
   "triggers.events.session": "Sesión",
   "triggers.events.dedupeKey": "Clave de deduplicación",
   "triggers.events.openRun": "Abrir flujo",
+  "triggers.events.runInProgress": "Esta ejecución sigue en curso.",
+  "triggers.events.runInProgressHint": "Su traza aparecerá aquí cuando termine la ejecución.",
   "triggers.events.payload": "Carga útil",
   "triggers.events.payloadNote": "Solo campos normalizados. La solicitud original del proveedor nunca se envía al navegador.",
   "triggers.events.lineage": "Linaje",

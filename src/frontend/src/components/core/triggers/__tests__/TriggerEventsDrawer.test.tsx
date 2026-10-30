@@ -164,4 +164,36 @@ describe("TriggerEventsDrawer", () => {
     expect(mockNavigate).not.toHaveBeenCalled();
     expect(await axe(document.body)).toHaveNoViolations();
   });
+
+  it("says a running event's run is in progress instead of loading a trace that does not exist yet", async () => {
+    mockEvents = [makeEvent({ id: "running", state: "dispatched" })];
+    open();
+
+    await userEvent.click(screen.getByTestId("trigger-event-open-run"));
+
+    expect(screen.getByTestId("trigger-run-in-progress")).toHaveTextContent(
+      "This run is still in progress.",
+    );
+    expect(screen.queryByTestId("opened-trace")).not.toBeInTheDocument();
+    expect(await axe(document.body)).toHaveNoViolations();
+  });
+
+  it("shows the finished trace once the polled event leaves the running state", async () => {
+    mockEvents = [makeEvent({ id: "running", state: "dispatched" })];
+    const { rerender } = open();
+    await userEvent.click(screen.getByTestId("trigger-event-open-run"));
+    expect(screen.getByTestId("trigger-run-in-progress")).toBeInTheDocument();
+
+    mockEvents = [makeEvent({ id: "running", state: "completed" })];
+    rerender(
+      <TriggerEventsDrawer trigger={makeTrigger()} onOpenChange={jest.fn()} />,
+    );
+
+    expect(await screen.findByTestId("opened-trace")).toHaveTextContent(
+      "job-1",
+    );
+    expect(
+      screen.queryByTestId("trigger-run-in-progress"),
+    ).not.toBeInTheDocument();
+  });
 });

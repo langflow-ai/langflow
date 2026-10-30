@@ -1,5 +1,6 @@
 import {
   eventSummaryOf,
+  isEventRunning,
   lineageOf,
   matchesEventFilter,
 } from "../eventsDrawer/event-helpers";
@@ -168,5 +169,18 @@ describe("formatRelativeTime", () => {
     expect(formatRelativeTime(now - 24 * 3600 * 1000, "de", now)).toBe(
       "gestern",
     );
+  });
+});
+
+describe("isEventRunning", () => {
+  it.each([
+    ["claimed", true],
+    ["dispatched", true],
+    ["pending", false],
+    ["completed", false],
+    ["failed", false],
+    ["dead", false],
+  ] as const)("%s → %s", (state, running) => {
+    expect(isEventRunning(makeEvent({ state }))).toBe(running);
   });
 });

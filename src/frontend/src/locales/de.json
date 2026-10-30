@@ -3297,6 +3297,8 @@
   "triggers.events.session": "Sitzung",
   "triggers.events.dedupeKey": "Deduplizierungsschlüssel",
   "triggers.events.openRun": "Flow öffnen",
+  "triggers.events.runInProgress": "Dieser Lauf ist noch nicht abgeschlossen.",
+  "triggers.events.runInProgressHint": "Sein Trace erscheint hier, sobald der Lauf beendet ist.",
   "triggers.events.payload": "Payload",
   "triggers.events.payloadNote": "Nur normalisierte Felder. Die rohe Anfrage des Anbieters wird nie an den Browser gesendet.",
   "triggers.events.lineage": "Herkunft",
