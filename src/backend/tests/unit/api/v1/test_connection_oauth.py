@@ -266,6 +266,39 @@ async def callback(client, query, **kwargs):
 
 
 @pytest.mark.usefixtures("active_user", "oauth_config")
+@pytest.mark.parametrize("code", [None, "oauth-refresh-token-missing"])
+@pytest.mark.parametrize(
+    "required_scopes", [(), ("offline_access",), ("api", "id", "refresh_token"), ("langflow_table_read",)]
+)
+async def test_callback_uses_fixed_error_text_instead_of_provider_message(
+    client, logged_in_headers, monkeypatch, code, required_scopes
+):
+    _row, query = await begin(client, logged_in_headers)
+
+    async def reject(*_args, **_kwargs):
+        msg = "private-provider-response"
+        raise OAuthError(msg, code=code)
+
+    monkeypatch.setattr(providers, "exchange", reject)
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(
+        "langflow.api.v1.connections.provider_adapter",
+        lambda _provider: SimpleNamespace(required_scopes=required_scopes),
+    )
+    failed = await callback(client, query)
+
+    assert failed.status_code == 400
+    assert "private-provider-response" not in failed.text
+    assert ("refresh token" in failed.text) is (code == "oauth-refresh-token-missing")
+    for scope in required_scopes:
+        assert (scope in failed.text) is (code == "oauth-refresh-token-missing")
+    assert ("offline_access" in failed.text) is (
+        code == "oauth-refresh-token-missing" and "offline_access" in required_scopes
+    )
+
+
+@pytest.mark.usefixtures("active_user", "oauth_config")
 async def test_callback_pkce_storage_replay_and_revoke(client, logged_in_headers, monkeypatch):
     row, query = await begin(client, logged_in_headers)
     calls = provider_double(monkeypatch, query)
