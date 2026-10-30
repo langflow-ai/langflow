@@ -63,6 +63,29 @@ def test_fingerprint_preserves_literals_but_ignores_layout():
     assert source_fingerprint("value = 'one'\n") != source_fingerprint("value = 'two'\n")
 
 
+@pytest.mark.parametrize(
+    ("source", "fingerprint"),
+    [
+        (
+            "import provider\n",
+            "96e2bd2d9ec955dac63088a46a944cafba4cd89f2a0f6b769d78a068f89330b7",  # pragma: allowlist secret
+        ),
+        (
+            "from provider import Component\n",
+            "548e2e93e4b12c6d6eaeb1e4e919e114f51979dd5760487833b39dc073bea0c8",  # pragma: allowlist secret
+        ),
+    ],
+)
+def test_eager_import_fingerprint_matches_pre_315_inventory(source, fingerprint):
+    assert source_fingerprint(source) == fingerprint
+
+
+@pytest.mark.skipif(sys.version_info < (3, 15), reason="Lazy imports require Python 3.15")
+@pytest.mark.parametrize("source", ["import provider", "from provider import Component"])
+def test_lazy_import_changes_fingerprint(source):
+    assert source_fingerprint(source) != source_fingerprint(f"lazy {source}")
+
+
 @pytest.mark.usefixtures("no_retired_sdks")
 @pytest.mark.parametrize("name", SOURCES)
 def test_saved_source_dependency_export_does_not_reinstall_retired_sdks(name):
