@@ -1,6 +1,8 @@
-from typing import Final
+from typing import Final, Literal
 
 DEFAULT_SEGMENT_WRITE_KEY: Final = ""
+
+Edition = Literal["opensource", "enterprise"]
 
 IBM_PRODUCT_PROPERTIES: Final = {
     "UT30": "30AS5",

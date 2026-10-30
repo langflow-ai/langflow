@@ -101,6 +101,7 @@ async def _request(
     headers: dict[str, str] | None = None,
     allow_empty: bool = False,
     json_body: bool = False,
+    rejections: frozenset[str] = _CREDENTIAL_REJECTION_ERRORS,
 ) -> dict:
     """Send an OAuth request without mistaking provider failures for rejected credentials."""
     # No redirects or response text in errors: provider responses may echo codes/tokens.
@@ -126,7 +127,7 @@ async def _request(
         raise OAuthError(unavailable, reason="provider-unavailable")
     if response.status_code != httpx.codes.OK or body.get("error") or body.get("ok") is False:
         error = body.get("error")
-        if isinstance(error, str) and error in _CREDENTIAL_REJECTION_ERRORS:
+        if isinstance(error, str) and error in rejections:
             msg = "OAuth provider rejected the request. Reconnect the connection."
             raise OAuthError(msg)
         raise OAuthError(unavailable, reason="provider-unavailable")
@@ -158,11 +159,12 @@ async def exchange(
         if uses_pkce:
             data["code_verifier"] = verifier
     json_body = bool(adapter and adapter.token_encoding == "json")  # noqa: S105 - serialization format
-    body = (
-        await _request(endpoints(registration)[1], data, json_body=True)
-        if json_body
-        else await _request(endpoints(registration)[1], data)
-    )
+    rejections = _CREDENTIAL_REJECTION_ERRORS
+    if refresh_token and adapter is not None:
+        # Provider-specific codes apply only to a stored grant. During consent the
+        # same code can describe the app registration, which reconnecting cannot fix.
+        rejections |= adapter.refresh_rejection_errors
+    body = await _request(endpoints(registration)[1], data, json_body=json_body, rejections=rejections)
     token = body
     account = None
     if adapter is not None:

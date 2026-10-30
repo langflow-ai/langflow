@@ -25,6 +25,8 @@ class OAuthAdapter:
     token_encoding: Literal["form", "json"] = "form"  # noqa: S105 - serialization format
     supports_pkce: bool = True
     required_scopes: tuple[str, ...] = ()
+    # Error codes this provider uses, besides the shared ones, to reject a stored refresh token.
+    refresh_rejection_errors: frozenset[str] = frozenset()
 
     def checked_endpoints(self, registration: OAuthRegistration) -> tuple[str, str]:
         """Reject a provider endpoint outside its declared credential hosts."""

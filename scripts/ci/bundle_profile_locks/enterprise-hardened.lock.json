@@ -103,6 +103,16 @@
       "resolved_version": "0.3.1"
     },
     {
+      "distribution": "lfx-jira",
+      "extras": [],
+      "providers": [
+        "lfx-jira"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-jira==0.1.0",
+      "resolved_version": "0.1.0"
+    },
+    {
       "distribution": "lfx-microsoft",
       "extras": [],
       "providers": [
@@ -148,9 +158,9 @@
       "providers": [
         "lfx-oracle"
       ],
-      "requested": ">=0.2.1,<1.0.0",
-      "requirement": "lfx-oracle==0.2.1",
-      "resolved_version": "0.2.1"
+      "requested": ">=0.4.0,<1.0.0",
+      "requirement": "lfx-oracle==0.4.0",
+      "resolved_version": "0.4.0"
     },
     {
       "distribution": "lfx-servicenow",
@@ -200,7 +210,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:501341fd7ec593ea",
+  "profile_digest": "sha256:ebb99368587e8c76",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
@@ -211,6 +221,7 @@
     "lfx-github",
     "lfx-google",
     "lfx-ibm",
+    "lfx-jira",
     "lfx-microsoft",
     "lfx-ollama",
     "lfx-openai",
@@ -221,6 +232,6 @@
     "lfx-toolguard",
     "lfx-vllm"
   ],
-  "python": ">=3.10,<3.16",
+  "python": ">=3.11,<3.16",
   "schema_version": 1
 }

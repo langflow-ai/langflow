@@ -209,7 +209,7 @@ export const sourceIconOf = (
     case "servicenow":
       return "ServiceNow";
     case "jira":
-      return "Ticket";
+      return "Jira";
     case "confluence":
       return "BookOpen";
     default:
