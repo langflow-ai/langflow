@@ -16,7 +16,7 @@ All three components return the API payload as [`Data`](/data-types#json). The S
 
 ## MrScraper Account
 
-Check account identity, subscription status, token quota, and rate limits. This component calls `GET https://api.app.mrscraper.com/api/v1/subscription-accounts`.
+Check account identity, subscription status, token quota, and rate limits.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
@@ -29,7 +29,7 @@ For example, connect **Account** to a **Parser** to read `token_remaining` befor
 
 ## MrScraper Scraper API
 
-Fetch a public web page as rendered HTML, Markdown, screenshot, or a combination. This component sends `POST https://api.mrscraper.com`. The request body contains `url`, `maxRetries`, and optional `tokenCap`; page options and the API token are query parameters.
+Fetch a public web page as rendered HTML, Markdown, screenshot, or a combination.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
@@ -42,13 +42,13 @@ Fetch a public web page as rendered HTML, Markdown, screenshot, or a combination
 | Super (`super`) | `false` | Enable real device routing independently of browser rendering. |
 | Timeout (seconds) (`timeout`) | `120` | Page timeout from 1 to 300 seconds. The SDK adds 30 seconds for the HTTP deadline. |
 | Geo Code (`geo_code`) | `US` | Geolocation country code. |
-| Proxy Country (`proxy_country`) | Empty | Optional `proxyCountry` value. |
+| Proxy Country (`proxy_country`) | Empty | Optional country code for proxy routing. |
 | Use Proxy (`use_proxy`) | `true` | Allow the API to use a proxy. |
 | Custom Proxy (`proxy`) | Empty | Optional secret proxy in `username:password@host:port` form. |
 | Block Resources (`block_resources`) | `false` | Block images, CSS, and fonts. |
 | Bypass Proxy (`bypass_proxy`) | `false` | Enable the API's proxy bypass behavior. |
 | Wait for Selector (`wait_for_selector`) | Empty | Wait for a CSS selector. |
-| Visit Home Page First (`home_page`) | `false` | Visit the site's root first; sent as `warmStart=true`. |
+| Visit Home Page First (`home_page`) | `false` | Visit the site's root before the target page. |
 | Cookie Jar (`cookie_jar`) | Empty | Optional configuration such as `domain=example.com&country=us&max_used=100&max_age=50m`. |
 | Target Headers (`headers`) | Empty | Target request headers as a JSON object string. |
 | Max Retries (`max_retries`) | `3` | Nonnegative maximum retries; `0` is preserved. |
@@ -62,21 +62,21 @@ JSON object responses pass through unchanged, including combined HTML, Markdown,
 
 ## MrScraper Web Search
 
-Search the web to retrieve real-time search results, including relevant website URLs, titles, descriptions, and related questions based on a given query or a full Google search URL. This component sends `POST https://sync.scraper.mrscraper.com/api/google/serp/v2/sync`.
+Search the web to retrieve real-time search results, including relevant website URLs, titles, descriptions, and related questions based on a given query.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | MrScraper API Token (`api_token`) | Required | Your API token. |
-| Query or Google URL (`url`) | Required | Query text or Google search URL. Available in Tool Mode. |
+| Search Query (`url`) | Required | The search query. Available in Tool Mode. |
 | Raw HTML (`raw`) | `true` | Return HTML regardless of Format. Disable this to request structured JSON. |
 | Format (`format`) | `json` | `json` or `html`, used when Raw HTML is disabled. |
-| Region (`region`) | Empty | Optional country code; overrides `gl` from a URL. |
-| Language (`language`) | Empty | Optional language code; overrides `hl` from a URL. |
-| Page (`page`) | Empty | Optional positive integer page; overrides `start` from a URL. |
+| Region (`region`) | Empty | Optional country code for search results. |
+| Language (`language`) | Empty | Optional language code for search results. |
+| Page (`page`) | Empty | Optional results page number, starting at `1`. |
 | Render JavaScript (`render_js`) | `false` | Render JavaScript-dependent search features. |
 | Timeout (seconds) (`timeout`) | `600` | Positive HTTP request timeout. |
 
-The SDK extracts `q`, `gl`, `hl`, and `start` from Google URLs. For example, `https://www.google.com/search?q=running+shoes&gl=us&hl=en&start=20` searches for `running shoes` in region `us`, language `en`, on page `3`. Explicit component settings override URL values.
+Each call retrieves one results page. Set **Region**, **Language**, and **Page** to customize the search; page numbers start at `1`.
 
 For structured results, enter `python web scraping`, disable **Raw HTML**, and select **Format: json**. JSON objects pass through unchanged; HTML, list, and other scalar responses are wrapped as `{"result": ...}`.
 
