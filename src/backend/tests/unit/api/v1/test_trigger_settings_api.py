@@ -681,6 +681,80 @@ async def test_public_config_does_not_carry_the_trigger_polling_interval(client:
     assert "trigger_polling_interval" not in response.json()
 
 
+async def test_pausing_a_trigger_whose_node_was_removed_does_not_let_it_resume(
+    client: AsyncClient, trigger_owner_flow
+) -> None:
+    """The removal reason is reconciliation's; a pause must not clear it."""
+    owner_id, flow_id, node = trigger_owner_flow
+    headers = await _login(client, await _username(owner_id))
+    await _save_canvas(flow_id, owner_id, [node])
+    trigger_id = (await _trigger_ids(flow_id))[0]
+    assert (await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=headers)).status_code == 200
+    await _save_canvas(flow_id, owner_id, [])
+
+    paused = await client.post(f"api/v1/triggers/{trigger_id}/disable", headers=headers)
+
+    assert paused.status_code == 200, paused.text
+    assert (paused.json()["reason"], paused.json()["last_error"]) == ("node_removed", NODE_REMOVED_ERROR)
+    assert (await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=headers)).status_code == 409
+    assert (await _stored(trigger_id)).state == "paused"
+
+
+async def test_a_trigger_paused_before_its_node_was_removed_cannot_resume_without_the_node(
+    client: AsyncClient, trigger_owner_flow
+) -> None:
+    """A row without the removal reason, as older versions left it, is refused by the saved canvas."""
+    owner_id, flow_id, node = trigger_owner_flow
+    headers = await _login(client, await _username(owner_id))
+    trigger_id = await _trigger(flow_id, owner_id, state="paused", node_id=node["id"])
+
+    refused = await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=headers)
+
+    assert refused.status_code == 409, refused.text
+    assert "removed from the flow" in refused.json()["detail"]
+    await _save_canvas(flow_id, owner_id, [node])
+    assert (await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=headers)).status_code == 200
+
+
+async def test_removing_the_node_wins_over_an_enable_that_commits_during_the_save(trigger_owner_flow) -> None:
+    """Reconciliation decides from the locked row, not the copy it read before an enable committed."""
+    owner_id, flow_id, node = trigger_owner_flow
+    await _save_canvas(flow_id, owner_id, [node])
+    trigger_id = (await _trigger_ids(flow_id))[0]
+    async with session_scope() as session:
+        stored = await session.get(Trigger, trigger_id)
+        stored.state = "paused"
+        session.add(stored)
+
+    class _Rows:
+        def __init__(self, rows):
+            self._rows = rows
+
+        def all(self):
+            return self._rows
+
+    async with session_scope() as saving:
+        read = saving.exec
+
+        async def read_then_enable(statement, *args, **kwargs):
+            result = await read(statement, *args, **kwargs)
+            if "node_id IS NOT NULL" not in str(statement):
+                return result
+            rows = result.all()
+            # An enable commits after the save read the paused row, before it decides.
+            async with session_scope() as enabling:
+                row = await enabling.get(Trigger, trigger_id)
+                row.state = "active"
+                enabling.add(row)
+            return _Rows(rows)
+
+        saving.exec = read_then_enable
+        await reconcile_flow_triggers(saving, flow_id=flow_id, owner_id=owner_id, flow_data={"nodes": [], "edges": []})
+
+    row = await _stored(trigger_id)
+    assert (row.state, row.last_error) == ("paused", NODE_REMOVED_ERROR)
+
+
 # --------------------------------------------------------------------------- #
 # Events drawer filters
 # --------------------------------------------------------------------------- #

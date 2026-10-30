@@ -48,6 +48,7 @@ from langflow.services.triggers.constants import (
     PROVIDER_SLACK,
     SLACK_TRIGGER_KINDS,
 )
+from langflow.services.triggers.locking import lock_trigger
 from langflow.services.triggers.providers.registry import component_kind, get_kind, source_kinds
 from langflow.services.triggers.schedule_config import (
     InvalidScheduleError,
@@ -200,6 +201,13 @@ _VERDICT_STATES = frozenset(
         TriggerState.ERROR.value,
     }
 )
+
+
+def trigger_node_on_canvas(row: Trigger, flow_data: dict[str, Any] | None) -> bool:
+    """Whether ``row``'s node is on ``flow_data``'s canvas; a trigger made without a node always is."""
+    if row.node_id is None:
+        return True
+    return any(node.get("id") == row.node_id for node in (flow_data or {}).get("nodes", []) or [])
 
 
 def apply_config_verdict(row: Trigger, error: str | None) -> bool:
@@ -512,13 +520,19 @@ async def reconcile_flow_triggers(
     # registry, which imports this module back.
     from langflow.services.triggers.subscriptions import revoke_for_trigger
 
-    for node_id, row in existing.items():
-        if node_id in nodes or row.state == TriggerState.DEAD.value:
+    for node_id, stale in existing.items():
+        if node_id in nodes:
             continue
-        if node_id in unclassified_bundle_nodes and "." in row.kind and row.kind not in known_sources:
+        if node_id in unclassified_bundle_nodes and "." in stale.kind and stale.kind not in known_sources:
             # Missing runtime metadata cannot prove that an existing bundle
             # node was deleted. Preserve its last known binding and remote
             # subscription until it can be classified again.
+            continue
+        # Decide from the locked, current row, under the lock ``enable`` takes:
+        # an enable that committed after the read above must not be overwritten
+        # with a stale paused state, leaving the row active with no node.
+        row = await lock_trigger(session, stale.id)
+        if row is None or row.state == TriggerState.DEAD.value:
             continue
         # A pause the owner chose stays theirs. An operator's pause does not:
         # removing the node is the owner's own off switch, and the operator's
