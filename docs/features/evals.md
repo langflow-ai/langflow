@@ -359,9 +359,9 @@ unknown, so a partial total never looks complete.
 - Prices come only from catalog metadata or the models.dev snapshot.
   `unpriced_models` lists models without a price; their cost is `null`.
 
-The UI shows the range, the flow/judge breakdown and the basis, and asks for
-confirmation before any run that makes model calls (`llm_calls > 0`), including
-a Re-run.
+The UI shows the range, the flow/judge breakdown and the basis on the Evaluate
+review step, which a run with model calls (`llm_calls > 0`) passes through, and
+in the confirmation a Re-run asks for.
 
 ## API
 
@@ -476,16 +476,23 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
   with a preview of the mapped columns, result summary with skipped rows.
 - Evaluate: the canvas button (between Playground and Share) saves the flow and
   opens the modal; **New evaluation** on the Evaluations page opens the same
-  modal with a searchable flow picker (most recently changed first). **Models**
-  lists the flow's model pickers (folded; the summary says how many changed) to
-  run with other models; a picker the flow saved empty opens the section, is
-  flagged with "Choose a model" and blocks the run until one is chosen.
-  **Compare with other models** adds a version (a copy of the last); with two or
-  more, each version is a numbered card with its own pickers, duplicate and
-  remove, the dialog widens, the estimate covers every version and the submit
-  reads "Create & compare N". Name,
-  flow version and pass threshold sit under **More options**. The modal shows flow checks, the estimate once a
-  dataset is chosen and, for runs with model calls, a confirmation.
+  modal with a searchable flow picker (most recently changed first). The modal
+  is a stepper; Next (or Enter) moves on once the step is valid, Back and the
+  finished steps in the stepper go back:
+  1. **Setup**: flow, dataset and, with several outputs, the one to score; the
+     flow check (ready, the scored output and how many models can be swapped,
+     or its blocking issues and warnings) and the dataset's first rows.
+  2. **Scoring**: the scoring methods, the LLM judge's model, rubric, limits and
+     safety checks, and the pass threshold.
+  3. **Models**, only when the flow has model pickers: each picker for this run
+     only; a picker the flow saved empty is flagged and blocks Next until one is
+     chosen. **Compare with other models** adds a version (a copy of the last);
+     with two or more, each version is a numbered card with its own pickers,
+     duplicate and remove, and the dialog widens.
+  4. **Review**: what will run (flow, dataset, scoring, the models each version
+     really runs), the name and flow version, and the estimate. This step is the
+     confirmation: Create and run (or "Create & compare N") starts it without a
+     second dialog; Re-run still asks in one.
 - Evaluation page: runs table (version, pass rate, tokens and change against
   the previous run, cost), metric cards, Passed/Failed/Errored filter, and a row
   detail dialog with the full texts and each score's reason. Active runs poll

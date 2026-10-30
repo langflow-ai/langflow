@@ -47,6 +47,17 @@ async function waitForGridReady(page: Page) {
   });
 }
 
+// The Evaluate dialog is a stepper: Next until the review step, which holds the estimate and Run.
+async function nextUntilReview(page: Page, scanAs?: string) {
+  for (let step = 0; step < 4; step++) {
+    if (await page.getByTestId("evaluate-step-panel-review").isVisible()) break;
+    if (scanAs) await page.runA11yScan(`${scanAs}-step-${step + 1}`);
+    await expect(page.getByTestId("evaluate-next")).toBeEnabled();
+    await page.getByTestId("evaluate-next").click();
+  }
+  await expect(page.getByTestId("evaluate-step-panel-review")).toBeVisible();
+}
+
 async function addItem(page: Page, input: string, expected: string) {
   await page.getByTestId("add-item-button").click();
   await page.getByTestId("item-input").fill(input);
@@ -104,8 +115,9 @@ test(
     await page.getByTestId("evaluate-btn-flow").click();
     await page.getByTestId("evaluate-dataset").click();
     await page.getByRole("option", { name: new RegExp(datasetName) }).click();
+    await nextUntilReview(page, "evals-evaluate-modal");
     await expect(page.getByTestId("evaluate-estimate")).toBeVisible();
-    await page.runA11yScan("evals-evaluate-modal");
+    await page.runA11yScan("evals-evaluate-modal-review");
     await page.getByTestId("evaluate-submit").click();
 
     await expect(page.getByTestId("evaluation-detail-title")).toBeVisible({
@@ -156,6 +168,7 @@ test(
     await page.getByRole("option", { name: `Evals echo ${suffix}` }).click();
     await page.getByTestId("evaluate-dataset").click();
     await page.getByRole("option", { name: new RegExp(datasetName) }).click();
+    await nextUntilReview(page);
     await expect(page.getByTestId("evaluate-estimate")).toBeVisible();
     await page.runA11yScan("evals-new-evaluation-modal");
     await page.getByTestId("evaluate-submit").click();
@@ -245,18 +258,21 @@ test(
     await page.getByTestId("evaluate-btn-flow").click();
     await page.getByTestId("evaluate-dataset").click();
     await page.getByRole("option", { name: new RegExp(datasetName) }).click();
-    await page.getByTestId("evaluate-models").click();
+    await page.getByTestId("evaluate-next").click();
+    await page.getByTestId("evaluate-next").click();
+    await expect(page.getByTestId("evaluate-step-panel-models")).toBeVisible();
     await page.getByTestId("model-version-add").click();
     await expect(page.getByTestId("model-version-1")).toBeVisible();
-    await expect(page.getByTestId("evaluate-submit")).toContainText("2");
-    await expect(page.getByTestId("evaluate-estimate")).toBeVisible();
     await page.runA11yScan("evals-evaluate-compare");
-    await page.getByTestId("evaluate-submit").click();
-    // The estimate counts the picker as a model call, so the run asks once more.
-    await expect(page.getByTestId("confirm-run-submit")).toContainText(
-      /confirm/i,
+    await page.getByTestId("evaluate-next").click();
+    await expect(page.getByTestId("evaluate-review")).toContainText(
+      "gpt-4o-mini",
     );
-    await page.getByTestId("confirm-run-submit").click();
+    await expect(page.getByTestId("evaluate-submit")).toContainText("2");
+    // The review step is the confirmation: it shows the cost, so no second dialog asks again.
+    await expect(page.getByTestId("evaluate-spend-notice")).toBeVisible();
+    await page.runA11yScan("evals-evaluate-review");
+    await page.getByTestId("evaluate-submit").click();
 
     await expect(page.getByTestId("model-comparison")).toBeVisible({
       timeout: 30000,

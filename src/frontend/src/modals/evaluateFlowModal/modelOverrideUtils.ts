@@ -63,3 +63,17 @@ export function versionsMissModels(
     unset.some((picker) => !chosen[pickerKey(picker)]?.[0]),
   );
 }
+
+/** The models a version really runs: its override where it has one, the flow's model elsewhere. */
+export function effectiveModelNames(
+  pickers: readonly FlowModelPicker[],
+  overrides: readonly ModelOverride[],
+): string[] {
+  const names = pickers.map((picker) => {
+    const override = overrides.find(
+      (item) => pickerKey(item) === pickerKey(picker),
+    );
+    return (override?.value ?? picker.value)[0]?.name ?? "";
+  });
+  return [...new Set(names.filter(Boolean))];
+}

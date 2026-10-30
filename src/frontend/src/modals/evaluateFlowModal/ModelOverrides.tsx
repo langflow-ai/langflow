@@ -1,4 +1,3 @@
-import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
@@ -45,13 +44,7 @@ export default function ModelOverrides({
   onRemove,
 }: ModelOverridesProps) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const panelId = useId();
   const missing = versionsMissModels(pickers, versions);
-  // A picker the flow saved empty blocks the run; show it rather than leave the reason folded away.
-  useEffect(() => {
-    if (missing) setOpen(true);
-  }, [missing]);
   const rows = pickers.flatMap((picker) => {
     const kind = modelKindOfField({ model_type: picker.model_type });
     return kind ? [{ picker, kind }] : [];
@@ -81,35 +74,16 @@ export default function ModelOverrides({
 
   return (
     <div className="flex flex-col gap-4">
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls={panelId}
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 self-start rounded-sm text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      <p
+        className={cn(
+          "text-sm",
+          missing ? "text-destructive" : "text-muted-foreground",
+        )}
         data-testid="evaluate-models"
       >
-        <ForwardedIconComponent
-          name="ChevronRight"
-          aria-hidden="true"
-          className={cn(
-            "h-4 w-4 transition-transform motion-reduce:transition-none",
-            open && "rotate-90",
-          )}
-        />
-        <span className="font-medium">{t("evals.evaluate.models")}</span>
-        <span
-          className={missing ? "text-destructive" : "text-muted-foreground"}
-        >
-          {summary}
-        </span>
-      </button>
-      {/* A display utility outranks the `hidden` attribute, so the closed panel needs the class too. */}
-      <div
-        id={panelId}
-        hidden={!open}
-        className={cn("flex flex-col gap-4 border-l pl-4", !open && "hidden")}
-      >
+        {summary}
+      </p>
+      <div className="flex flex-col gap-4">
         <p className="text-xs text-muted-foreground">
           {comparing ? t("evals.compare.hint") : t("evals.evaluate.modelsHint")}
         </p>

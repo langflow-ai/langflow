@@ -1,6 +1,7 @@
 import type { FlowModelPicker } from "@/controllers/API/queries/evals/types";
 import {
   buildModelOverrides,
+  effectiveModelNames,
   pickerKey,
   versionsMissModels,
 } from "../modelOverrideUtils";
@@ -54,5 +55,20 @@ describe("versionsMissModels", () => {
     expect(versionsMissModels(pickers, [filled])).toBe(false);
     expect(versionsMissModels(pickers, [filled, empty])).toBe(true);
     expect(versionsMissModels([picker("Agent-1")], [empty])).toBe(false);
+  });
+});
+
+describe("effectiveModelNames", () => {
+  it("should name the override where there is one and the flow's model elsewhere", () => {
+    const pickers = [picker("Agent-1"), picker("Agent-2")];
+    const overrides = buildModelOverrides(pickers, {
+      [pickerKey(pickers[1])]: MINI,
+    });
+
+    expect(effectiveModelNames(pickers, [])).toEqual(["gpt-4o"]);
+    expect(effectiveModelNames(pickers, overrides)).toEqual([
+      "gpt-4o",
+      "gpt-4o-mini",
+    ]);
   });
 });

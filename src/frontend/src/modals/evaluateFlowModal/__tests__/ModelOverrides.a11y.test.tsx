@@ -67,7 +67,6 @@ const versions = (count: number): ModelVersion[] =>
 describe("ModelOverrides versions", () => {
   it("should offer to compare from a single run", async () => {
     const { onDuplicate } = renderVersions(versions(1));
-    await userEvent.click(screen.getByTestId("evaluate-models"));
 
     expect(screen.queryByTestId("model-version-0")).not.toBeInTheDocument();
     await userEvent.click(screen.getByTestId("model-version-add"));
@@ -80,7 +79,6 @@ describe("ModelOverrides versions", () => {
     expect(screen.getByTestId("evaluate-models")).toHaveTextContent(
       "Comparing 2 versions",
     );
-    await userEvent.click(screen.getByTestId("evaluate-models"));
 
     expect(screen.getByTestId("model-version-0")).toHaveTextContent(
       "As in the flow",
@@ -97,13 +95,12 @@ describe("ModelOverrides versions", () => {
 
   it("should stop adding versions at the limit", async () => {
     renderVersions(versions(MAX_MODEL_VARIANTS));
-    await userEvent.click(screen.getByTestId("evaluate-models"));
 
     expect(screen.getByTestId("model-version-add")).toBeDisabled();
     expect(screen.getByTestId("model-version-0-duplicate")).toBeDisabled();
   });
 
-  it("should open and flag the models when the flow saved a picker empty", () => {
+  it("should flag the models when the flow saved a picker empty", () => {
     const unset = { ...PICKERS[0], value: [] };
     render(
       <ModelOverrides
@@ -119,15 +116,10 @@ describe("ModelOverrides versions", () => {
     expect(screen.getByTestId("evaluate-models")).toHaveTextContent(
       "Choose a model",
     );
-    expect(screen.getByTestId("evaluate-models")).toHaveAttribute(
-      "aria-expanded",
-      "true",
-    );
   });
 
   it("should have no accessibility violations while comparing", async () => {
     const { container } = renderVersions(versions(3));
-    await userEvent.click(screen.getByTestId("evaluate-models"));
 
     expect(await axe(container)).toHaveNoViolations();
   });

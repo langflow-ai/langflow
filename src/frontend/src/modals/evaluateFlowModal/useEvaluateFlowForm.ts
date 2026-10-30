@@ -244,6 +244,8 @@ export function useEvaluateFlowForm(flowId: string) {
     },
     check,
     estimate,
+    scorers,
+    variantOverrides,
     comparing,
     modelsMissing,
     canSubmit,
