@@ -1301,17 +1301,25 @@ class TestStorageFailureHandling:
         assert is_permanent_storage_failure(CustomTimeoutError("Request timed out")) is False
         assert is_permanent_storage_failure(CustomPermissionError("Access denied")) is False
 
-    def test_is_permanent_storage_failure_fallback_string_matching(self):
-        """Test fallback string matching for edge cases."""
+    def test_is_permanent_storage_failure_requires_type_or_structured_code(self):
+        """Message-only errors are transient because they do not prove the object is gone."""
 
-        # Test with error messages that match permanent patterns
         class CustomError(Exception):
             pass
 
-        assert is_permanent_storage_failure(CustomError("NoSuchBucket error")) is True
-        assert is_permanent_storage_failure(CustomError("NoSuchKey error")) is True
-        assert is_permanent_storage_failure(CustomError("File not found")) is True
-        assert is_permanent_storage_failure(CustomError("FileNotFoundError occurred")) is True
+        assert is_permanent_storage_failure(CustomError("NoSuchBucket error")) is False
+        assert is_permanent_storage_failure(CustomError("NoSuchKey error")) is False
+        assert is_permanent_storage_failure(CustomError("Credential file not found")) is False
+        assert is_permanent_storage_failure(CustomError("FileNotFoundError occurred")) is False
+
+    def test_is_permanent_storage_failure_s3_not_found_code(self):
+        """A structured S3 404 response confirms the object is gone."""
+
+        class MockS3Error(Exception):
+            def __init__(self):
+                self.response = {"Error": {"Code": "404", "Message": "Not Found"}}
+
+        assert is_permanent_storage_failure(MockS3Error()) is True
 
     async def test_delete_file_with_permanent_failure_deletes_from_db(self):
         """Test that permanent storage failures still delete from database."""

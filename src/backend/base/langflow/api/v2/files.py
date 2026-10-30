@@ -113,12 +113,10 @@ def is_permanent_storage_failure(error: Exception) -> bool:
             if error_code in ("NoSuchBucket", "NoSuchKey", "404"):
                 return True
 
-    # Fallback: Check error message for known permanent failure patterns
-    # This is less ideal but provides a safety net for edge cases
-    error_str = str(error)
-    permanent_patterns = ("NoSuchBucket", "NoSuchKey", "not found", "FileNotFoundError")
-
-    return any(pattern in error_str for pattern in permanent_patterns)
+    # Do not infer permanence from exception text: unrelated failures (for
+    # example, a missing credentials file) can contain "not found" while the
+    # object still exists. Keep its database record so the user can retry.
+    return False
 
 
 async def get_mcp_file(current_user: CurrentActiveUser, *, extension: bool = False) -> str:
