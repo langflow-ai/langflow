@@ -18,6 +18,8 @@ from __future__ import annotations
 from gunicorn.app.base import BaseApplication
 from uvicorn.workers import UvicornWorker
 
+from lfx.cli.serve_loop import resolve_loop
+
 
 class LFXUvicornWorker(UvicornWorker):
     """Async worker class for ``lfx serve --workers N`` (the default, non-sync path).
@@ -25,6 +27,12 @@ class LFXUvicornWorker(UvicornWorker):
     A thin named subclass of gunicorn's ``UvicornWorker`` so the worker class is owned
     here and can host per-worker customization if needed later.
     """
+
+    def __init__(self, *args, **kwargs) -> None:
+        # Resolved per worker rather than at import time: workers are built after the
+        # fork, so the loop is registered in the process that actually serves on it.
+        self.CONFIG_KWARGS = {**UvicornWorker.CONFIG_KWARGS, "loop": resolve_loop()}
+        super().__init__(*args, **kwargs)
 
 
 class LFXGunicornApp(BaseApplication):

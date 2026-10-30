@@ -33,6 +33,7 @@ from lfx.cli.serve_app import (
     FlowRegistry,
     create_multi_serve_app,
 )
+from lfx.cli.serve_loop import resolve_loop
 from lfx.load import load_flow_from_json
 from lfx.utils.flow_envelope import merge_flow_envelope, split_flow_envelope
 
@@ -584,7 +585,7 @@ def serve_command(
                 os.environ[_SERVE_RESET_ENVIRON_ENV] = "1" if reset_environ else "0"
                 try:
                     serve_app = create_multi_serve_app(registry=registry, identity_config=identity_config)
-                    uvicorn.run(serve_app, host=host, port=port, workers=1, log_level=log_level)
+                    uvicorn.run(serve_app, host=host, port=port, workers=1, log_level=log_level, loop=resolve_loop())
                 finally:
                     # Symmetry with _launch_workers: don't leave our key in the parent env.
                     os.environ.pop(_SERVE_RESET_ENVIRON_ENV, None)
@@ -740,6 +741,7 @@ def _launch_workers(
                 workers=workers,
                 log_level=log_level,
                 factory=True,
+                loop=resolve_loop(),
             )
         else:
             # gunicorn ships with lfx on Linux/macOS; a missing import means a trimmed/broken
