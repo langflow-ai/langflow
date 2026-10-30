@@ -7,7 +7,7 @@ use libtest_mimic::{Failed, Trial};
 use serde_json::{Map, Value};
 
 /// The fixture files every runtime runs.
-pub const FIXTURE_FILES: [&str; 13] = [
+pub const FIXTURE_FILES: [&str; 12] = [
     "apply_cases.json",
     "canonical_cases.json",
     "diff_cases.json",
@@ -20,7 +20,6 @@ pub const FIXTURE_FILES: [&str; 13] = [
     "restore_cases.json",
     "table_cases.json",
     "validation_cases.json",
-    "write_cases.json",
 ];
 
 /// The placeholder for an edge id the engine draws at random.

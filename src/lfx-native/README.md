@@ -45,7 +45,6 @@ The modules of `lfx::ops`:
 | `schema` | the node schema (`node_schema.json`, embedded) |
 | `canonical` | canonical form, number printing, `graph_hash` |
 | `restore` | restore fixes, from both sides |
-| `write` | the engine's part of a save, in one call |
 | `ids` | random ids in the editor's formats |
 | `error` | errors, with a kind and a stable code |
 
@@ -67,7 +66,7 @@ This table maps each part of the engine to its callers today, in the Python engi
 
 | Part | Python (`lfx_native.ops`) | Backend callers |
 | --- | --- | --- |
-| The save: validate, repair, derive | `prepare_write`, or `validate`, `repair`, `derive` | `flow_history/recorder.py` (every graph write: PATCH, PUT, import, version activation, the assistant, file sync). The recorder numbers the operations and packs them into rows itself. |
+| The save: validate, repair, derive | `validate`, `repair`, `derive` | `flow_history/recorder.py` (every graph write: PATCH, PUT, import, version activation, the assistant, file sync). The recorder calls them in turn, and numbers the operations and packs them into rows itself. |
 | Diff | `diff` | through `derive` in the recorder |
 | Graph hash | `graph_hash` | checkpoints and the check that the stored graph matches its latest revision (`recorder.py`), replay (`flow_history/replay.py`) |
 | Restore fix check | `apply_restore_fixes` | revision restore (`api/v1/flow_revisions.py`), version restore (`api/v1/flow_version.py`) |

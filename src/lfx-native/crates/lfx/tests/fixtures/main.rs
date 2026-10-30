@@ -9,10 +9,10 @@ mod canonical;
 mod diff;
 mod editor;
 mod repair;
+mod restore;
 mod support;
 mod tables;
 mod validate;
-mod write;
 
 use libtest_mimic::{Arguments, Trial};
 
@@ -27,7 +27,7 @@ fn main() {
         repair::trials(),
         tables::trials(),
         validate::trials(),
-        write::trials(),
+        restore::trials(),
     ]
     .into_iter()
     .flatten()
