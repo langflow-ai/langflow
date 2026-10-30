@@ -61,6 +61,7 @@ members = [
     "lfx-serply",
     "lfx-jira",
     "lfx-slack",
+    "lfx-textkit",
     "lfx-toolguard",
     "lfx-valkey",
     "lfx-vllm",
@@ -8636,6 +8637,7 @@ bundles = [
     { name = "lfx-paddle" },
     { name = "lfx-serpingapi" },
     { name = "lfx-serply" },
+    { name = "lfx-textkit" },
     { name = "lfx-valkey" },
 ]
 cassio = [
@@ -8763,6 +8765,7 @@ requires-dist = [
     { name = "lfx-serply", marker = "extra == 'bundles'", editable = "src/bundles/serply" },
     { name = "lfx-jira", editable = "src/bundles/jira" },
     { name = "lfx-slack", editable = "src/bundles/slack" },
+    { name = "lfx-textkit", marker = "extra == 'bundles'", editable = "src/bundles/textkit" },
     { name = "lfx-toolguard", editable = "src/bundles/toolguard" },
     { name = "lfx-valkey", marker = "extra == 'bundles'", editable = "src/bundles/valkey" },
     { name = "lfx-vllm", editable = "src/bundles/vllm" },
@@ -11249,6 +11252,21 @@ requires-dist = [
     { name = "aiohttp", specifier = ">=3.10.0,<4.0.0" },
     { name = "lfx", editable = "src/lfx" },
     { name = "slack-sdk", specifier = ">=3.33.0,<4.0.0" },
+]
+
+[[package]]
+name = "lfx-textkit"
+version = "0.1.0"
+source = { editable = "src/bundles/textkit" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
 ]
 
 [[package]]

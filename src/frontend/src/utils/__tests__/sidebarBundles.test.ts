@@ -37,6 +37,18 @@ describe("SIDEBAR_BUNDLES", () => {
     );
   });
 
+  it("classifies TextKit as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "TextKit",
+          icon: "MessagesSquare",
+          name: "textkit",
+        }),
+      ]),
+    );
+  });
+
   it("classifies Serply as a sidebar bundle", () => {
     expect(SIDEBAR_BUNDLES).toEqual(
       expect.arrayContaining([
