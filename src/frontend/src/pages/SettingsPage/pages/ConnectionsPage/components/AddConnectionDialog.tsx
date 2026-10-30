@@ -12,6 +12,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getAxiosErrorDetail } from "@/controllers/API/helpers/get-axios-error-message";
 import {
   CONNECTION_NAME_MAX_LENGTH,
@@ -660,23 +667,42 @@ export function AddConnectionDialog({
                     <Label htmlFor="connection-provider">
                       {t("connections.add.provider")}
                     </Label>
-                    <select
-                      id="connection-provider"
-                      className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+                    <Select
                       value={providerId}
-                      onChange={(event) => {
-                        setProviderId(event.target.value);
+                      onValueChange={(value) => {
+                        setProviderId(value);
                         // A pasted token belongs to the provider it was pasted for.
                         slackToken.reset();
                       }}
-                      data-testid="connection-provider"
                     >
-                      {providers.map((item) => (
-                        <option key={item.provider_id} value={item.provider_id}>
-                          {item.display_name}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger
+                        id="connection-provider"
+                        className="h-9 w-full"
+                        data-testid="connection-provider"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {providers.map((item) => (
+                          <SelectItem
+                            key={item.provider_id}
+                            value={item.provider_id}
+                            textValue={item.display_name}
+                          >
+                            <span className="flex items-center gap-2">
+                              {item.icon && (
+                                <ForwardedIconComponent
+                                  name={item.icon}
+                                  className="h-4 w-4 shrink-0"
+                                  ariaHidden
+                                />
+                              )}
+                              {item.display_name}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {slackToken.offersToken && !tokenOnly && (

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AxiosError } from "axios";
 import { I18nextProvider } from "react-i18next";
@@ -79,7 +79,9 @@ jest.mock("@/customization/components/custom-connection-authorization", () => ({
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
-  default: () => null,
+  default: ({ name, ariaHidden }: { name: string; ariaHidden?: boolean }) => (
+    <span data-testid={`icon-${name}`} aria-hidden={ariaHidden} />
+  ),
 }));
 
 const google: IntegrationProviderRead = {
@@ -119,6 +121,11 @@ const fillDetails = async (user: ReturnType<typeof userEvent.setup>) => {
 };
 
 describe("AddConnectionDialog ownership", () => {
+  beforeAll(() => {
+    Element.prototype.hasPointerCapture ??= jest.fn(() => false);
+    Element.prototype.releasePointerCapture ??= jest.fn();
+    Element.prototype.scrollIntoView ??= jest.fn();
+  });
   beforeEach(() => {
     mockCreate.mockReset();
     mockRegistrations.isSuccess = true;
@@ -156,6 +163,45 @@ describe("AddConnectionDialog ownership", () => {
     expect(
       screen.queryByText(/No OAuth registration is configured/i),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows catalog icons beside provider names in the picker and selected value", async () => {
+    const user = userEvent.setup();
+    render(
+      <AddConnectionDialog
+        open
+        onOpenChange={jest.fn()}
+        providers={[
+          { ...google, icon: "Google" },
+          {
+            ...google,
+            provider_id: "confluence",
+            display_name: "Confluence Cloud",
+            icon: "Confluence",
+          },
+        ]}
+        canCreateInstance={false}
+      />,
+    );
+    const picker = screen.getByRole("combobox", { name: "Provider" });
+    expect(within(picker).getByTestId("icon-Google")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    await user.click(picker);
+    const confluence = screen.getByRole("option", { name: "Confluence Cloud" });
+    expect(within(confluence).getByTestId("icon-Confluence")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(
+      within(screen.getByRole("option", { name: "Google" })).getByTestId(
+        "icon-Google",
+      ),
+    ).toBeInTheDocument();
+    await user.click(confluence);
+    expect(picker).toHaveTextContent("Confluence Cloud");
+    expect(within(picker).getByTestId("icon-Confluence")).toBeInTheDocument();
   });
 
   it("reports a missing registration up front when re-authorizing a provider policy removed", () => {
@@ -204,10 +250,8 @@ describe("AddConnectionDialog ownership", () => {
         canCreateInstance={false}
       />,
     );
-    await user.selectOptions(
-      screen.getByTestId("connection-provider"),
-      "microsoft",
-    );
+    await user.click(screen.getByTestId("connection-provider"));
+    await user.click(screen.getByRole("option", { name: "Microsoft 365" }));
     expect(screen.getByRole("link", { name: "Setup guide" })).toHaveAttribute(
       "href",
       "https://docs.langflow.org/entra-app-registration",
