@@ -113,12 +113,10 @@ def is_permanent_storage_failure(error: Exception) -> bool:
             if error_code in ("NoSuchBucket", "NoSuchKey", "404"):
                 return True
 
-    # Fallback: Check error message for known permanent failure patterns
-    # This is less ideal but provides a safety net for edge cases
-    error_str = str(error)
-    permanent_patterns = ("NoSuchBucket", "NoSuchKey", "not found", "FileNotFoundError")
-
-    return any(pattern in error_str for pattern in permanent_patterns)
+    # Do not infer permanence from exception text: unrelated failures (for
+    # example, a missing credentials file) can contain "not found" while the
+    # object still exists. Keep its database record so the user can retry.
+    return False
 
 
 async def get_mcp_file(current_user: CurrentActiveUser, *, extension: bool = False) -> str:
@@ -972,7 +970,7 @@ async def delete_all_files(
             try:
                 await storage_service.delete_file(flow_id=str(current_user.id), file_name=file_name)
                 storage_deleted = True
-            except OSError as err:
+            except Exception as err:  # noqa: BLE001 - classify backend-specific storage errors per file
                 # Check if this is a "permanent" failure where file/storage is gone
                 # These are safe to delete from DB even if storage deletion failed
                 if is_permanent_storage_failure(err):
@@ -996,7 +994,7 @@ async def delete_all_files(
             if storage_deleted:
                 try:
                     await session.delete(file)
-                except OSError as db_error:
+                except Exception as db_error:  # noqa: BLE001 - continue after a per-file database failure
                     # Log database deletion failure but continue processing remaining files
                     db_failures.append(f"{file_name}: {db_error}")
                     await logger.aerror(

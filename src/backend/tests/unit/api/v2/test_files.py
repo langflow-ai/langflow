@@ -1301,17 +1301,25 @@ class TestStorageFailureHandling:
         assert is_permanent_storage_failure(CustomTimeoutError("Request timed out")) is False
         assert is_permanent_storage_failure(CustomPermissionError("Access denied")) is False
 
-    def test_is_permanent_storage_failure_fallback_string_matching(self):
-        """Test fallback string matching for edge cases."""
+    def test_is_permanent_storage_failure_requires_type_or_structured_code(self):
+        """Message-only errors are transient because they do not prove the object is gone."""
 
-        # Test with error messages that match permanent patterns
         class CustomError(Exception):
             pass
 
-        assert is_permanent_storage_failure(CustomError("NoSuchBucket error")) is True
-        assert is_permanent_storage_failure(CustomError("NoSuchKey error")) is True
-        assert is_permanent_storage_failure(CustomError("File not found")) is True
-        assert is_permanent_storage_failure(CustomError("FileNotFoundError occurred")) is True
+        assert is_permanent_storage_failure(CustomError("NoSuchBucket error")) is False
+        assert is_permanent_storage_failure(CustomError("NoSuchKey error")) is False
+        assert is_permanent_storage_failure(CustomError("Credential file not found")) is False
+        assert is_permanent_storage_failure(CustomError("FileNotFoundError occurred")) is False
+
+    def test_is_permanent_storage_failure_s3_not_found_code(self):
+        """A structured S3 404 response confirms the object is gone."""
+
+        class MockS3Error(Exception):
+            def __init__(self):
+                self.response = {"Error": {"Code": "404", "Message": "Not Found"}}
+
+        assert is_permanent_storage_failure(MockS3Error()) is True
 
     async def test_delete_file_with_permanent_failure_deletes_from_db(self):
         """Test that permanent storage failures still delete from database."""
@@ -1547,6 +1555,60 @@ class TestStorageFailureHandling:
         )
 
         assert result["message"] == "2 files deleted successfully, 1 files failed to delete. See logs for details."
+
+    @pytest.mark.parametrize(
+        ("error_code", "expected_message", "expected_delete_count"),
+        [
+            ("NoSuchBucket", "All 2 files deleted successfully", 2),
+            ("AccessDenied", "1 files deleted successfully, 1 files failed to delete. See logs for details.", 1),
+        ],
+    )
+    async def test_delete_all_files_handles_s3_errors(
+        self, monkeypatch, error_code, expected_message, expected_delete_count
+    ):
+        """Test that non-OSError S3 errors are classified and do not stop the batch."""
+        from langflow.services.database.models.file.model import File as UserFile
+
+        user_id = uuid.uuid4()
+        mock_files = [
+            UserFile(
+                id=uuid.uuid4(),
+                user_id=user_id,
+                name=f"s3_permanent_failure_{index}.txt",
+                path=f"{uuid.uuid4()}.txt",
+                size=100,
+            )
+            for index in range(2)
+        ]
+        mock_current_user = MagicMock()
+        mock_current_user.id = user_id
+        mock_exec_result = MagicMock()
+        mock_exec_result.all = MagicMock(return_value=mock_files)
+        mock_session = AsyncMock()
+        mock_session.exec = AsyncMock(return_value=mock_exec_result)
+        mock_session.delete = AsyncMock()
+
+        class MockS3Error(Exception):
+            def __init__(self, code: str) -> None:
+                self.response = {"Error": {"Code": code, "Message": "Mock S3 failure"}}
+
+        async def delete_file(*, flow_id: str, file_name: str) -> None:  # noqa: ARG001
+            if file_name == Path(mock_files[0].path).name:
+                raise MockS3Error(error_code)
+
+        mock_storage_service = AsyncMock()
+        mock_storage_service.delete_file = AsyncMock(side_effect=delete_file)
+        monkeypatch.setattr("langflow.api.v2.files.ensure_file_permission", AsyncMock())
+
+        result = await delete_all_files(
+            current_user=mock_current_user,
+            session=mock_session,
+            storage_service=mock_storage_service,
+        )
+
+        assert result["message"] == expected_message
+        assert mock_storage_service.delete_file.await_count == 2
+        assert mock_session.delete.await_count == expected_delete_count
 
     async def test_batch_delete_message_all_successful(self):
         """Test batch delete returns correct message when all files deleted successfully."""
