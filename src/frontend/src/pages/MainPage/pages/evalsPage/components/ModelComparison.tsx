@@ -95,7 +95,8 @@ export default function ModelComparison({
       data-testid="model-comparison"
     >
       <div className="flex flex-col gap-1">
-        <h2 id="comparison-heading" className="text-base font-semibold">
+        {/* The Comparison tab already names this view; the heading labels the section for screen readers. */}
+        <h2 id="comparison-heading" className="sr-only">
           {t("evals.compare.title")}
         </h2>
         <p className="text-sm text-muted-foreground">

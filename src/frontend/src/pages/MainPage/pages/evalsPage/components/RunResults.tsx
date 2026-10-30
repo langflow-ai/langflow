@@ -83,7 +83,8 @@ export default function RunResults({ run }: { run: EvaluationRun }) {
         />
       )}
       <ResultFilter value={filter} counts={counts} onChange={setFilter} />
-      <div className="flex min-h-[420px] flex-col">
+      {/* The grid sizes its pages to this box, so it needs a definite height, not a minimum. */}
+      <div className="flex h-[30rem] flex-col">
         <DataTableTab<EvaluationResult>
           columnDefs={resultColumns(t, scorerNames)}
           rowData={rows}

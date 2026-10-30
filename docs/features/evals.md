@@ -493,34 +493,40 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
      really runs), the name and flow version, and the estimate. This step is the
      confirmation: Create and run (or "Create & compare N") starts it without a
      second dialog; Re-run still asks in one.
-- Evaluation page: runs table (version, pass rate, tokens and change against
-  the previous run, cost), metric cards, Passed/Failed/Errored filter, and a row
-  detail dialog with the full texts and each score's reason. Active runs poll
-  every 5 s. With safety checks, a **Safety checks** panel shows the safe rate,
-  each check's rate (a toggle that filters the table to the rows it flagged) and
-  the attacks resisted; the row detail lists each check and what the input
-  tried, and the score note says which check failed the row. The Evaluate modal
-  offers the checks under the LLM judge.
-- Comparison: a run of a comparison shows **Model comparison** above its
-  results: cards for the most accurate (every version on an equal top pass
-  rate is named as a tie; otherwise how many are within its margin of error),
-  the cheapest and the fastest (median) version and the comparison's cost, then
-  a leaderboard ranked by pass rate, then cost, then median duration (rows,
-  errors, pass rate with its 95% Wilson interval, "Tie" for the same rate as #1
-  and "≈ #1" for a lower one within its interval, cost and median marking their
-  leader and how many times the leader's the others are, cost per row, p90).
-  Comparison costs keep four decimals under a dollar; a ratio within 5% of the
-  leader is not shown, and the Cheapest card says the cost is unknown once
-  every version finished without a price. The page reads the comparison's
-  runs by `comparison_id`, so they stay complete however many runs follow. Each mark explains itself
-  in a tooltip that also opens on keyboard focus. Versions still
-  running, waiting or not run are listed unranked. With safety checks, a
-  **Safety by version** table compares the safe rate, each check's rate and the
-  attacks resisted, bolding a column's best when one version alone has it. A
-  row opens that version's results. The runs table names each run's models;
-  Re-run offers re-running the whole comparison on the same flow version. The
-  runs list polls every 5 s during a comparison, and briefly after a variant
-  ends so the next one shows up.
+- Evaluation page: three views in tabs, one at a time, the chosen one and the
+  run in the URL (`?run=&view=runs|results|comparison`). A run opens on
+  Comparison when it is part of one, on Results otherwise; a started run opens
+  on its own default view.
+  - **Runs**: every run (version, models, pass rate, tokens and change against
+    the previous run, cost); a row opens its results.
+  - **Results**: the selected run's metric cards, Passed/Failed/Errored filter
+    and table, and a row detail dialog with the full texts and each score's
+    reason. Export CSV shows on this view only. With safety checks, a **Safety
+    checks** panel shows the safe rate, each check's rate (a toggle that filters
+    the table to the rows it flagged) and the attacks resisted; the row detail
+    lists each check and what the input tried. In a comparison, a version
+    switcher above swaps between its versions' results.
+  - **Comparison**, only for a run of one: cards for the most accurate (every
+    version on an equal top pass rate is named as a tie; otherwise how many are
+    within its margin of error), the cheapest and the fastest (median) version
+    and the comparison's cost; then a leaderboard ranked by pass rate, then
+    cost, then median duration, with five columns: rank, models (with progress
+    and errors only when there are any), pass rate with its 95% Wilson interval
+    ("Tie" for the same rate as #1, "≈ #1" for a lower one within its interval),
+    cost (its leader marked, others as a multiple of it, and the cost per row),
+    and median duration (the same marks, p90 in a tooltip). Comparison costs
+    keep four decimals under a dollar; a ratio within 5% of the leader is not
+    shown, and the Cheapest card says the cost is unknown once every version
+    finished without a price. Each mark explains itself in a tooltip that also
+    opens on keyboard focus. Versions still running, waiting or not run are
+    listed unranked. With safety checks, a **Safety by version** table compares
+    the safe rate, each check's rate and the attacks resisted, bolding a
+    column's best when one version alone has it. A row opens that version's
+    results. The page reads the comparison's runs by `comparison_id`, so they
+    stay complete however many runs follow.
+  Active runs poll every 5 s; during a comparison the runs list does too, and
+  briefly after a variant ends so the next one shows up. Re-run offers
+  re-running the whole comparison on the same flow version.
 - All strings are in the eight locale files; every screen passes the Jest axe
   and Playwright `runA11yScan` checks.
 

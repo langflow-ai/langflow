@@ -84,17 +84,27 @@ function LeadCell({
   ratio,
   tag,
   extra,
+  hint,
 }: {
   value: string;
   leads: boolean;
   ratio: string | null;
   tag: string;
   extra?: string;
+  /** A detail kept out of the cell, on hover or focus of the value. */
+  hint?: string;
 }) {
   const { t } = useTranslation();
+  const shown = <span className={cn(leads && "font-semibold")}>{value}</span>;
   return (
     <span className="flex flex-col items-end">
-      <span className={cn(leads && "font-semibold")}>{value}</span>
+      {hint ? (
+        <HintTooltip hint={hint} underline>
+          {shown}
+        </HintTooltip>
+      ) : (
+        shown
+      )}
       {(leads || ratio) && (
         <span className="text-xs text-muted-foreground">
           {leads ? tag : t("evals.compare.timesMin", { ratio })}
@@ -120,19 +130,12 @@ export default function ComparisonLeaderboard({
           <TableRow>
             <TableHead className="w-10">{t("evals.compare.rank")}</TableHead>
             <TableHead>{t("evals.compare.models")}</TableHead>
-            <TableHead className="text-right">{t("evals.runs.rows")}</TableHead>
-            <TableHead className="text-right">
-              {t("evals.compare.errors")}
-            </TableHead>
             <TableHead className="text-right">
               <HintTooltip hint={t("evals.compare.passRateHint")} underline>
                 {t("evals.passRate")}
               </HintTooltip>
             </TableHead>
             <TableHead className="text-right">{t("evals.cost")}</TableHead>
-            <TableHead className="text-right">
-              {t("evals.compare.costPerRow")}
-            </TableHead>
             <TableHead className="text-right">
               {t("evals.results.p50")}
             </TableHead>
@@ -181,17 +184,26 @@ export default function ComparisonLeaderboard({
                         </Badge>
                       ))}
                   </div>
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {run
-                    ? t("evals.compare.ratio", {
-                        part: formatTokenCount(entry.completed),
-                        total: formatTokenCount(entry.total),
-                      })
-                    : "—"}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {run ? formatTokenCount(entry.errored) : "—"}
+                  {run &&
+                    (entry.completed < entry.total || entry.errored > 0) && (
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        {entry.completed < entry.total &&
+                          t("evals.compare.rowsDone", {
+                            done: formatTokenCount(entry.completed),
+                            total: formatTokenCount(entry.total),
+                          })}
+                        {entry.completed < entry.total &&
+                          entry.errored > 0 &&
+                          " · "}
+                        {entry.errored > 0 && (
+                          <span className="text-destructive">
+                            {t("evals.compare.errorCount", {
+                              count: entry.errored,
+                            })}
+                          </span>
+                        )}
+                      </span>
+                    )}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
                   <PassRateCell entry={entry} />
@@ -206,10 +218,16 @@ export default function ComparisonLeaderboard({
                         : null
                     }
                     tag={t("evals.compare.cheapestTag")}
+                    extra={
+                      entry.costPerRow !== null
+                        ? t("evals.compare.perRow", {
+                            value: formatUsd(entry.costPerRow, {
+                              precise: true,
+                            }),
+                          })
+                        : undefined
+                    }
                   />
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {formatUsd(entry.costPerRow, { precise: true })}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
                   <LeadCell
@@ -221,7 +239,7 @@ export default function ComparisonLeaderboard({
                         : null
                     }
                     tag={t("evals.compare.fastestTag")}
-                    extra={
+                    hint={
                       entry.p90 !== null
                         ? t("evals.compare.p90", {
                             value: formatDuration(entry.p90),

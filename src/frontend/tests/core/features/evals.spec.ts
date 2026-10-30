@@ -123,12 +123,16 @@ test(
     await expect(page.getByTestId("evaluation-detail-title")).toBeVisible({
       timeout: 30000,
     });
-    await expect(page.getByTestId("run-status-completed")).toBeVisible({
-      timeout: 60000,
-    });
+    // A plain run opens on its results; the runs list has its own view.
+    await expect(page.getByTestId("detail-tab-results")).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
     await expect(page.locator(".ag-center-cols-container .ag-row")).toHaveCount(
       3,
+      { timeout: 60000 },
     );
+    await expect(page.getByTestId("export-run-button")).toBeVisible();
     await expect(page.getByTestId("results-filter-passed")).toContainText("2");
     await waitForGridReady(page);
     await page.runA11yScan("evals-run-results");
@@ -137,8 +141,17 @@ test(
     await page.runA11yScan("evals-result-detail");
     await page.keyboard.press("Escape");
 
+    const firstRun = new URL(page.url()).searchParams.get("run");
     await page.getByTestId("rerun-button").click();
     await page.getByTestId("rerun-latest").click();
+    // The started run opens on its own; switch views only once it has.
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("run"))
+      .not.toBe(firstRun);
+    await page.getByTestId("detail-tab-runs").click();
+    // The export is the selected run's rows: only the Results view offers it.
+    await expect(page.getByTestId("export-run-button")).toBeHidden();
+    await page.runA11yScan("evals-runs-view");
     await expect(page.getByTestId("run-row")).toHaveCount(2, {
       timeout: 30000,
     });
@@ -175,9 +188,10 @@ test(
     await expect(page.getByTestId("evaluation-detail-title")).toBeVisible({
       timeout: 30000,
     });
-    await expect(page.getByTestId("run-status-completed")).toBeVisible({
-      timeout: 60000,
-    });
+    await expect(page.locator(".ag-center-cols-container .ag-row")).toHaveCount(
+      3,
+      { timeout: 60000 },
+    );
   },
 );
 
@@ -277,9 +291,15 @@ test(
     await expect(page.getByTestId("model-comparison")).toBeVisible({
       timeout: 30000,
     });
-    await expect(page.getByTestId("run-status-completed")).toHaveCount(2, {
-      timeout: 60000,
-    });
+    // A comparison opens on its leaderboard.
+    await expect(page.getByTestId("detail-tab-comparison")).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(page.getByTestId("comparison-total-cost")).toContainText(
+      "2 of 2",
+      { timeout: 60000 },
+    );
     const rows = page.getByTestId("comparison-row");
     await expect(rows).toHaveCount(2);
     await expect(page.getByTestId("comparison-most-accurate")).toContainText(
@@ -293,12 +313,27 @@ test(
     );
     await page.runA11yScan("evals-comparison-tooltip");
     await page.keyboard.press("Escape");
+    // A version's row opens its results, where the other versions are one click away.
     await rows.nth(1).getByRole("button").click();
-    await expect(rows.nth(1)).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByTestId("detail-tab-results")).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    const versions = page.getByTestId("version-switcher").getByRole("button");
+    await expect(versions).toHaveCount(2);
+    await expect(
+      page.getByTestId("version-switcher").locator("[aria-pressed=true]"),
+    ).toHaveCount(1);
+    await page.runA11yScan("evals-results-view-compare");
 
     await page.getByTestId("rerun-button").click();
+    const comparedRun = new URL(page.url()).searchParams.get("run");
     await page.getByTestId("rerun-comparison").click();
     await page.getByTestId("confirm-run-submit").click();
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("run"))
+      .not.toBe(comparedRun);
+    await page.getByTestId("detail-tab-runs").click();
     await expect(page.getByTestId("run-row")).toHaveCount(4, {
       timeout: 60000,
     });

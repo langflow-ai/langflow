@@ -24,10 +24,8 @@ import { extractApiErrorMessages } from "@/utils/apiError";
 import BackLink from "./components/BackLink";
 import EvalsPageShell from "./components/EvalsPageShell";
 import { EvalsEmptyState } from "./components/EvalsStates";
-import ModelComparison from "./components/ModelComparison";
-import RunResults from "./components/RunResults";
-import RunsTable, { versionTag } from "./components/RunsTable";
-import VariantLabel from "./components/VariantLabel";
+import { versionTag } from "./components/RunsTable";
+import RunViews, { isRunView, type RunView } from "./components/RunViews";
 import { useRerun } from "./hooks/use-rerun";
 import { downloadCsv } from "./utils/download-csv";
 
@@ -75,8 +73,20 @@ export default function EvaluationDetailPage() {
     }
   }, [progress?.id, progress?.step, refetchRuns]);
 
-  const selectRun = (runId: string) => setSearchParams({ run: runId });
-  const rerun = useRerun(evaluation, selectRun);
+  // The view and the run live in the URL, so a shared link or a reload opens the same screen.
+  const updateParams = (next: { run?: string; view?: RunView }) =>
+    setSearchParams((current) => {
+      const params = new URLSearchParams(current);
+      if (next.run) params.set("run", next.run);
+      if (next.view) params.set("view", next.view);
+      return params;
+    });
+  const openRun = (runId: string) =>
+    updateParams({ run: runId, view: "results" });
+  // A started run opens on its default view: a new comparison on its leaderboard.
+  const rerun = useRerun(evaluation, (runId) =>
+    setSearchParams({ run: runId }),
+  );
   const cancelRun = useCancelEvaluationRun(
     { runId: selectedRun?.id ?? "", evaluationId },
     { onError: onError(t("evals.runs.cancelError")) },
@@ -86,6 +96,13 @@ export default function EvaluationDetailPage() {
   );
   const rerunBusy = rerun.estimating || rerun.starting;
   const comparison = selectedRun?.config.comparison;
+  const requestedView = searchParams.get("view");
+  const view: RunView =
+    isRunView(requestedView) && (requestedView !== "comparison" || comparison)
+      ? requestedView
+      : comparison
+        ? "comparison"
+        : "results";
   // Polls on its own while a variant runs, and briefly after one ends so the next shows up.
   const { data: comparisonPage } = useGetEvaluationRuns(
     { evaluationId, comparisonId: comparison?.id, poll: true },
@@ -126,8 +143,13 @@ export default function EvaluationDetailPage() {
       back={back}
       actions={
         <>
-          {selectedRun && (
-            <Button variant="outline" onClick={handleExport}>
+          {/* The CSV holds the selected run's rows, which only the Results view shows. */}
+          {selectedRun && view === "results" && (
+            <Button
+              variant="outline"
+              onClick={handleExport}
+              data-testid="export-run-button"
+            >
               <ForwardedIconComponent name="Download" className="h-4 w-4" />
               {t("evals.export")}
             </Button>
@@ -208,52 +230,19 @@ export default function EvaluationDetailPage() {
       }
     >
       <div className="flex flex-col gap-8 pb-10">
-        <section aria-labelledby="runs-heading" className="flex flex-col gap-3">
-          <h2 id="runs-heading" className="text-base font-semibold">
-            {t("evals.runs.title")}
-          </h2>
-          {runs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {t("evals.runs.empty")}
-            </p>
-          ) : (
-            <RunsTable
-              runs={runs}
-              selectedRunId={selectedRunId}
-              onSelect={selectRun}
-            />
-          )}
-        </section>
-        {comparison && (
-          <ModelComparison
-            runs={comparisonPage?.items ?? []}
-            comparisonId={comparison.id}
-            selectedRunId={selectedRun?.id ?? null}
-            onSelect={selectRun}
+        {runs.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {t("evals.runs.empty")}
+          </p>
+        ) : (
+          <RunViews
+            runs={runs}
+            selectedRun={selectedRun}
+            comparisonRuns={comparison ? (comparisonPage?.items ?? []) : []}
+            view={view}
+            onView={(next) => updateParams({ view: next })}
+            onOpenRun={openRun}
           />
-        )}
-        {selectedRun && (
-          <section
-            aria-labelledby="results-heading"
-            className="flex flex-col gap-3"
-          >
-            <h2
-              id="results-heading"
-              className="flex flex-wrap items-center gap-x-3 gap-y-1 text-base font-semibold"
-            >
-              {t("evals.results.title")}
-              {comparison && (
-                <span className="text-sm font-normal">
-                  <VariantLabel
-                    index={comparison.index}
-                    overrides={comparison.variants[comparison.index] ?? []}
-                    detail={false}
-                  />
-                </span>
-              )}
-            </h2>
-            <RunResults key={selectedRun.id} run={selectedRun} />
-          </section>
         )}
       </div>
       {rerun.confirmEstimate && (
