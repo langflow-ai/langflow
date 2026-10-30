@@ -6,6 +6,7 @@ import pytest
 from langflow.api.v1 import endpoints
 from langflow.services.auth import utils as auth_utils
 from langflow.services.auth.service import AuthService
+from langflow.services.deps import get_settings_service
 from langflow.services.telemetry.context import (
     get_current_telemetry_user_id,
     reset_current_telemetry_user,
@@ -97,11 +98,7 @@ async def test_webhook_auth_sets_telemetry_identity(monkeypatch) -> None:
     user = SimpleNamespace(id=uuid4(), username="alice")
     auth_service = SimpleNamespace(get_webhook_user=AsyncMock(return_value=user))
     monkeypatch.setattr(auth_utils, "_auth_service", lambda: auth_service)
-    monkeypatch.setattr(
-        auth_utils,
-        "get_settings_service",
-        lambda: SimpleNamespace(auth_settings=SimpleNamespace(WEBHOOK_AUTH_ENABLE=True)),
-    )
+    monkeypatch.setattr(get_settings_service().auth_settings, "WEBHOOK_AUTH_ENABLE", True)
     flow = SimpleNamespace(data={"nodes": [{"id": "Webhook-1", "data": {"type": "Webhook"}}]})
     monkeypatch.setattr(endpoints, "get_flow_by_id_or_endpoint_name", AsyncMock(return_value=flow))
 

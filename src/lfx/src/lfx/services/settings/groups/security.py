@@ -383,7 +383,7 @@ class SecuritySettings(BaseModel):
 
     # Rate Limiting
     rate_limit_enabled: bool = True
-    """Enable rate limiting for login and public-flow endpoints. Set to False to disable."""
+    """Enable rate limiting for login, public-flow and unauthenticated webhook endpoints. Set to False to disable."""
     rate_limit_per_minute: int = 5
     """Number of login attempts allowed per minute per IP."""
     rate_limit_storage_uri: str = "memory://"
@@ -391,7 +391,8 @@ class SecuritySettings(BaseModel):
     rate_limit_trust_proxy: bool = False
     """Trust X-Forwarded-For header when behind a reverse proxy. Only enable when behind a trusted proxy."""
     public_flow_rate_limit_per_minute: int = 20
-    """Public-flow runs allowed per minute per IP on the unauthenticated v1 build and v2 workflow endpoints.
+    """Public-flow runs allowed per minute per IP on the unauthenticated v1 build and v2 workflow endpoints,
+    and on the v1 webhook endpoint when LANGFLOW_WEBHOOK_AUTH_ENABLE is false.
     V1 uses one bucket per flow; v2 uses its public-workflow bucket. Each run executes as the flow owner, so
     anonymous callers are throttled separately from and more generously than login. Gated by rate_limit_enabled."""
     connection_metadata_rate_limit_per_minute: int = 60
