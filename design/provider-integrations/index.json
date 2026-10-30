@@ -4,6 +4,10 @@
     {
       "provider_id": "github",
       "contract": "contracts/github.v1.json"
+    },
+    {
+      "provider_id": "jira",
+      "contract": "contracts/jira.v1.json"
     }
   ]
 }

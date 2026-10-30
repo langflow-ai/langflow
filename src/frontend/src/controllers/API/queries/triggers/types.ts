@@ -43,6 +43,7 @@ export const TRIGGER_STATE_REASONS = [
   "source_settings_changed",
   "error",
   "needs_reconnect",
+  "ready_to_resume",
   "consent_required",
   "expired",
   "dead",
