@@ -131,13 +131,20 @@ jobs:
     needs: [build-bundles]
     if: needs.build-bundles.outputs.bundles-found == '1'
     runs-on: ${{ matrix.runner }}
+    continue-on-error: ${{ matrix.python-version == '3.15' }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: linux
             runner: ubuntu-latest
-            python-version: "3.10"
+            python-version: "3.11"
+          - os: linux
+            runner: ubuntu-latest
+            python-version: "3.14"
+          - os: linux
+            runner: ubuntu-latest
+            python-version: "3.15"
           - os: linux
             runner: ubuntu-latest
             python-version: "3.12"
@@ -148,6 +155,12 @@ jobs:
             runner: windows-latest
             python-version: "3.12"
     steps:
+      - name: Check out Python preview build setup
+        if: matrix.python-version == '3.15'
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: .github/actions/setup-python-preview
+          persist-credentials: false
       - name: Setup Python
         uses: actions/setup-python@v7
         with:
@@ -158,6 +171,10 @@ jobs:
           version: latest-known
           enable-cache: false
           ignore-empty-workdir: true
+      - name: Set up Python preview builds
+        if: matrix.python-version == '3.15'
+        uses: ./.github/actions/setup-python-preview
+
       - name: Download bundles artifact
         uses: actions/download-artifact@v8
         with:

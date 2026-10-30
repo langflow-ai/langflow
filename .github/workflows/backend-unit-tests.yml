@@ -4,7 +4,7 @@ on:
     inputs:
       python-versions:
         type: string
-        default: '["3.10", "3.14"]'
+        default: '["3.11", "3.14", "3.15"]'
       ref:
         type: string
         default: ''
@@ -74,9 +74,9 @@ jobs:
       - uses: actions/cache/restore@v6
         with:
           path: ci-durations/durations.json
-          key: backend-timings-v1-${{ needs.plan.outputs.namespace }}-py${{ matrix.python-version }}-${{ matrix.python-version == '3.10' && 'cov' || 'no-cov' }}-w${{ inputs.workers }}-${{ inputs.distribution }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: backend-timings-v1-${{ needs.plan.outputs.namespace }}-py${{ matrix.python-version }}-${{ matrix.python-version == '3.11' && 'cov' || 'no-cov' }}-w${{ inputs.workers }}-${{ inputs.distribution }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
-            backend-timings-v1-${{ needs.plan.outputs.namespace }}-py${{ matrix.python-version }}-${{ matrix.python-version == '3.10' && 'cov' || 'no-cov' }}-w${{ inputs.workers }}-${{ inputs.distribution }}-
+            backend-timings-v1-${{ needs.plan.outputs.namespace }}-py${{ matrix.python-version }}-${{ matrix.python-version == '3.11' && 'cov' || 'no-cov' }}-w${{ inputs.workers }}-${{ inputs.distribution }}-
       - name: Fall back to checked-in durations on a cold cache
         run: |
           mkdir -p ci-durations
@@ -94,6 +94,8 @@ jobs:
     needs: [plan, baseline]
     runs-on: ${{ startsWith(inputs.runs-on, '[') && fromJSON(inputs.runs-on) || inputs.runs-on }}
     timeout-minutes: 60
+    # Python 3.15 is a preview lane: it reports ecosystem readiness without failing the run.
+    continue-on-error: ${{ matrix.python-version == '3.15' }}
     strategy:
       fail-fast: false
       matrix:
@@ -111,11 +113,16 @@ jobs:
           node-version: '22'
       - uses: astral-sh/setup-uv@v10.0.0
         with:
-          version: latest-known
+          # The uv bundled with this setup-uv only knows CPython 3.15 release candidates;
+          # uv 0.13.0 is the first release that installs 3.15.0 final.
+          version: ${{ matrix.python-version == '3.15' && '0.13.0' || 'latest-known' }}
           enable-cache: true
           cache-dependency-glob: uv.lock
           python-version: ${{ matrix.python-version }}
           prune-cache: false
+      - name: Set up Python preview builds
+        if: matrix.python-version == '3.15'
+        uses: ./.github/actions/setup-python-preview
       - name: Install the project
         run: uv sync --frozen
       - uses: actions/download-artifact@v8
@@ -134,7 +141,7 @@ jobs:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
           coverage=(--no-cov)
-          if [ "$PYTHON_VERSION" == '3.10' ]; then
+          if [ "$PYTHON_VERSION" == '3.11' ]; then
             coverage=(--cov --cov-config=pyproject.toml --cov-report=xml)
           fi
           mkdir -p test-results
@@ -161,7 +168,7 @@ jobs:
           if-no-files-found: warn
       # Preserve the existing public repository's success-only Codecov upload.
       - name: Upload coverage to Codecov
-        if: inputs.publish-coverage && matrix.python-version == '3.10'
+        if: inputs.publish-coverage && matrix.python-version == '3.11'
         uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -175,6 +182,8 @@ jobs:
     needs: [plan, test]
     if: always() && needs.plan.result == 'success'
     runs-on: ubuntu-latest
+    # A failed Python 3.15 preview group leaves incomplete timings; do not fail the run on it.
+    continue-on-error: ${{ matrix.python-version == '3.15' }}
     strategy:
       fail-fast: false
       matrix:
@@ -200,7 +209,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: ci-durations/durations.json
-          key: backend-timings-v1-${{ needs.plan.outputs.namespace }}-py${{ matrix.python-version }}-${{ matrix.python-version == '3.10' && 'cov' || 'no-cov' }}-w${{ inputs.workers }}-${{ inputs.distribution }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: backend-timings-v1-${{ needs.plan.outputs.namespace }}-py${{ matrix.python-version }}-${{ matrix.python-version == '3.11' && 'cov' || 'no-cov' }}-w${{ inputs.workers }}-${{ inputs.distribution }}-${{ github.run_id }}-${{ github.run_attempt }}
       - uses: actions/upload-artifact@v7
         with:
           name: backend-timings-${{ needs.plan.outputs.namespace }}-py${{ matrix.python-version }}-s${{ inputs.shards }}-w${{ inputs.workers }}-${{ inputs.distribution }}
