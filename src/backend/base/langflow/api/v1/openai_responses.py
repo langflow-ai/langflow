@@ -892,6 +892,7 @@ async def create_response(
             detail=end_user_required_detail(exc),
         ) from exc
 
+    # Run failures return error responses instead of raising, so FastAPI retains their background tasks.
     try:
         # Process the request
         result = await run_flow_for_openai_responses(

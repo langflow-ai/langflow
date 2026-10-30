@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
 import pytest
@@ -10,11 +10,13 @@ from httpx import ASGITransport, AsyncClient
 from langflow.api.v1 import endpoints, openai_responses
 from langflow.schema import OpenAIResponsesRequest
 from langflow.services.telemetry import run_event_store
+from langflow.services.telemetry import service as telemetry_module
 from langflow.services.telemetry.service import TelemetryService
 
 
 @pytest.fixture(params=["enabled", "opted_out", "keyless"])
 def telemetry_service(request, monkeypatch, tmp_path):
+    """Exercise local metering with each outbound telemetry configuration."""
     monkeypatch.delenv("DO_NOT_TRACK", raising=False)
     settings = SimpleNamespace(
         segment_api_url="https://api.segment.test/v1/track",
@@ -31,6 +33,7 @@ def telemetry_service(request, monkeypatch, tmp_path):
 
 
 def _assert_recorded_run(telemetry_service, *, success, completed_at):
+    """Verify one local completion and consent-gated outbound delivery."""
     events = run_event_store.pop_all()
     assert len(events) == 1
     event = events[0]
@@ -48,21 +51,12 @@ def _assert_recorded_run(telemetry_service, *, success, completed_at):
     assert "run_completed_at" not in event.model_dump()
 
 
-@pytest.mark.parametrize("failure_type", [None, ValueError, RuntimeError])
-async def test_served_v1_run_records_success_and_failure(monkeypatch, telemetry_service, failure_type):
-    completed_at = datetime(2026, 10, 28, 23, 59, 59, tzinfo=timezone.utc)
-
-    class CompletionClock(datetime):
-        @classmethod
-        def now(cls, tz=None):
-            return completed_at if tz is None else completed_at.astimezone(tz)
-
+@pytest.fixture
+def v1_run_app(monkeypatch, telemetry_service):
+    """Serve the real v1 router while controlling the flow execution outcome."""
     flow = SimpleNamespace(id=uuid4(), user_id=uuid4(), workspace_id=None, folder_id=None, data=None)
     user = SimpleNamespace(id=flow.user_id)
     run = AsyncMock(return_value=object())
-    if failure_type:
-        run.side_effect = failure_type("flow run failed")
-    monkeypatch.setattr(run_event_store, "datetime", CompletionClock)
     monkeypatch.setattr(endpoints, "get_telemetry_service", lambda: telemetry_service)
     monkeypatch.setattr(endpoints, "resolve_serving_scope", lambda **_: None)
     monkeypatch.setattr(endpoints, "simple_run_flow", run)
@@ -72,6 +66,24 @@ async def test_served_v1_run_records_success_and_failure(monkeypatch, telemetry_
     app.include_router(endpoints.router, prefix="/api/v1")
     app.dependency_overrides[endpoints.get_flow_for_api_key_user] = lambda: flow
     app.dependency_overrides[endpoints.api_key_security] = lambda: user
+    return app, flow, run
+
+
+@pytest.mark.parametrize("failure_type", [None, ValueError, RuntimeError])
+async def test_served_v1_run_records_success_and_failure(monkeypatch, telemetry_service, v1_run_app, failure_type):
+    """Record completions even when FastAPI returns an exception response."""
+    completed_at = datetime(2026, 10, 28, 23, 59, 59, tzinfo=timezone.utc)
+
+    class CompletionClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            """Freeze completion time while preserving timezone conversion."""
+            return completed_at if tz is None else completed_at.astimezone(tz)
+
+    app, flow, run = v1_run_app
+    if failure_type:
+        run.side_effect = failure_type("flow run failed")
+    monkeypatch.setattr(run_event_store, "datetime", CompletionClock)
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.post(f"/api/v1/run/{flow.id}", json={})
@@ -85,19 +97,67 @@ async def test_served_v1_run_records_success_and_failure(monkeypatch, telemetry_
     _assert_recorded_run(telemetry_service, success=failure_type is None, completed_at=completed_at)
 
 
+@pytest.mark.parametrize("telemetry_service", ["enabled"], indirect=True)
+@pytest.mark.parametrize("failure_stage", ["append", "queue"])
+@pytest.mark.parametrize(
+    ("run_error", "status_code"),
+    [(None, 200), (ValueError("flow not found"), 404), (RuntimeError("flow run failed"), 500)],
+)
+async def test_telemetry_failure_preserves_http_result(
+    monkeypatch, telemetry_service, v1_run_app, failure_stage, run_error, status_code
+):
+    """A recording failure must not retry, reclassify a run, or mask its error."""
+    app, flow, run = v1_run_app
+    run.side_effect = run_error
+    recording_error = RuntimeError("private telemetry failure detail")
+    if failure_stage == "append":
+        failing_step = Mock(side_effect=recording_error)
+        monkeypatch.setattr(telemetry_module, "append_run_event", failing_step)
+    else:
+        failing_step = AsyncMock(side_effect=recording_error)
+        monkeypatch.setattr(telemetry_service.telemetry_queue, "put", failing_step)
+    warning = AsyncMock()
+    monkeypatch.setattr(endpoints.logger, "awarning", warning)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(f"/api/v1/run/{flow.id}", json={})
+
+    assert response.status_code == status_code
+    if run_error:
+        assert str(run_error) in response.text
+    else:
+        assert response.json() == {"status": "ok"}
+    assert str(recording_error) not in response.text
+    run.assert_awaited_once()
+    failing_step.assert_called_once()
+    warning.assert_awaited_once()
+    assert str(recording_error) not in str(warning.call_args)
+    assert telemetry_service.telemetry_queue.empty()
+    events = run_event_store.pop_all()
+    if failure_stage == "append":
+        assert events == []
+    else:
+        [event] = events
+        assert event.run_success is (run_error is None)
+        assert event.run_id == run.await_args.kwargs["run_id"]
+
+
 @pytest.mark.parametrize("failure_type", [None, RuntimeError])
 async def test_openai_completion_keeps_run_day_when_recording_is_deferred(monkeypatch, telemetry_service, failure_type):
+    """Attribute deferred completions to the run day, across a UTC midnight."""
     completed_at = datetime(2026, 10, 28, 23, 59, 59, tzinfo=timezone.utc)
     recorded_at = datetime(2026, 10, 29, 0, 0, 1, tzinfo=timezone.utc)
 
     class CompletionClock(datetime):
         @classmethod
         def now(cls, tz=None):
+            """Freeze the route clock before midnight."""
             return completed_at if tz is None else completed_at.astimezone(tz)
 
     class RecordingClock(datetime):
         @classmethod
         def now(cls, tz=None):
+            """Freeze the store clock after midnight."""
             return recorded_at if tz is None else recorded_at.astimezone(tz)
 
     flow = SimpleNamespace(id=uuid4(), user_id=uuid4(), workspace_id=None, folder_id=None, data=None)

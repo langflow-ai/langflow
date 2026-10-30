@@ -32,6 +32,7 @@ pytestmark = pytest.mark.no_blockbuster
     ],
 )
 async def test_simple_run_keeps_typed_errors_through_the_http_boundary(monkeypatch, owner, error, status_code):
+    """Preserve integration error codes and status without exposing delegated-call details."""
     user = SimpleNamespace(id=uuid4(), is_superuser=False)
     flow = SimpleNamespace(
         id=uuid4(),

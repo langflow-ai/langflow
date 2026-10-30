@@ -135,6 +135,7 @@ from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
     from langflow.events.event_manager import EventManager
+    from langflow.services.telemetry.service import TelemetryService
 
 router = APIRouter(tags=["Base"])
 
@@ -986,6 +987,17 @@ async def get_webhook_auth(
     return WebhookAuth(user=webhook_user, flow=flow)
 
 
+async def _record_run_telemetry(telemetry_service: TelemetryService, payload: RunPayload) -> None:
+    """Record completion without allowing telemetry failures to change the run result."""
+    # Error responses discard response background tasks, so record before returning or raising.
+    # This appends locally and queues Segment delivery without waiting for network I/O.
+    try:
+        await telemetry_service.log_package_run(payload)
+    except Exception as exc:  # noqa: BLE001
+        # Exception messages can contain private payload data; log only the type and run ID.
+        await logger.awarning("Failed to record run telemetry for run_id={} ({})", payload.run_id, type(exc).__name__)
+
+
 async def _run_flow_internal(
     *,
     flow: FlowRead | None,
@@ -1102,21 +1114,9 @@ async def _run_flow_internal(
             expose_error_details=expose_error_details,
             http_request=http_request,
         )
-        end_time = time.perf_counter()
-        # Record before returning or raising: error responses discard response background tasks.
-        # This appends locally and queues Segment delivery without waiting for network I/O.
-        await telemetry_service.log_package_run(
-            RunPayload(
-                run_is_webhook=False,
-                run_seconds=int(end_time - start_time),
-                run_success=True,
-                run_error_message="",
-                run_id=run_id,
-            ),
-        )
-
     except ValueError as exc:
-        await telemetry_service.log_package_run(
+        await _record_run_telemetry(
+            telemetry_service,
             RunPayload(
                 run_is_webhook=False,
                 run_seconds=int(time.perf_counter() - start_time),
@@ -1169,7 +1169,8 @@ async def _run_flow_internal(
         # one is the failure this whole path is here to prevent.
         raise
     except Exception as exc:
-        await telemetry_service.log_package_run(
+        await _record_run_telemetry(
+            telemetry_service,
             RunPayload(
                 run_is_webhook=False,
                 run_seconds=int(time.perf_counter() - start_time),
@@ -1189,6 +1190,17 @@ async def _run_flow_internal(
             exception=client_error,
             flow=flow if expose_error_details else None,
         ) from exc
+    else:
+        await _record_run_telemetry(
+            telemetry_service,
+            RunPayload(
+                run_is_webhook=False,
+                run_seconds=int(time.perf_counter() - start_time),
+                run_success=True,
+                run_error_message="",
+                run_id=run_id,
+            ),
+        )
 
     return _v1_run_response(result)
 

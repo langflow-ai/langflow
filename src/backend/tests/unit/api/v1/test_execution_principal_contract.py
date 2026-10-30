@@ -33,6 +33,7 @@ async def test_v1_run_non_owner_tweaks_are_hidden_as_not_found(
     monkeypatch: pytest.MonkeyPatch,
     stream: bool,  # noqa: FBT001
 ) -> None:
+    """Reject delegated tweaks before either execution path can reveal the flow."""
     from langflow.api.v1 import endpoints
 
     owner_id = uuid4()
@@ -117,6 +118,7 @@ async def test_v1_run_stream_route_derives_error_policy_from_flow_ownership(
     monkeypatch: pytest.MonkeyPatch,
     caller_kind: str,
 ) -> None:
+    """Pass ownership-derived error visibility to streaming execution."""
     from langflow.api.v1 import endpoints
 
     owner_id = uuid4()
@@ -154,6 +156,7 @@ async def test_v1_run_sync_error_depends_on_flow_ownership(
     monkeypatch: pytest.MonkeyPatch,
     caller_kind: str,
 ) -> None:
+    """Expose execution details only to the flow owner in non-streaming errors."""
     from langflow.api.v1 import endpoints
 
     sensitive_detail = "owner-sync-provider-secret"
