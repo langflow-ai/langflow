@@ -26,13 +26,13 @@ class LFXUvicornWorker(UvicornWorker):
 
     A thin named subclass of gunicorn's ``UvicornWorker`` so the worker class is owned
     here and can host per-worker customization if needed later.
+
+    ``loop`` is resolved once, when gunicorn imports this class in the master, the same
+    shape as ``LangflowUvicornWorker``. The arbiter builds a worker instance per spawn,
+    so resolving per instance would redo the selection and re-log it on every recycle.
     """
 
-    def __init__(self, *args, **kwargs) -> None:
-        # Resolve when each worker is constructed so the configuration reflects
-        # the current environment before Gunicorn forks.
-        self.CONFIG_KWARGS = {**UvicornWorker.CONFIG_KWARGS, "loop": resolve_loop()}
-        super().__init__(*args, **kwargs)
+    CONFIG_KWARGS = {**UvicornWorker.CONFIG_KWARGS, "loop": resolve_loop()}
 
 
 class LFXGunicornApp(BaseApplication):

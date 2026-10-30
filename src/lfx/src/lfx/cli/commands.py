@@ -33,7 +33,7 @@ from lfx.cli.serve_app import (
     FlowRegistry,
     create_multi_serve_app,
 )
-from lfx.cli.serve_loop import resolve_loop
+from lfx.cli.serve_loop import EVENT_LOOP_ENV, resolve_loop
 from lfx.load import load_flow_from_json
 from lfx.utils.flow_envelope import merge_flow_envelope, split_flow_envelope
 
@@ -775,6 +775,16 @@ def _launch_workers(
                 # ASGI app through the a2wsgi WSGI bridge (built lazily, post-fork).
                 app_import_string = "lfx.cli.serve_preloaded_app:wsgi_application"
                 worker_class = "sync"
+                # The WSGI bridge builds its own stdlib loop, so no uvicorn Config is
+                # involved here and the loop selection cannot apply. Warn rather than
+                # appear to honor it.
+                if os.environ.get(EVENT_LOOP_ENV):
+                    typer.echo(
+                        f"Warning: {EVENT_LOOP_ENV} applies only to the async worker; "
+                        "--use-sync-workers serves through the WSGI bridge, which builds its own "
+                        "event loop, so the setting is ignored.",
+                        err=True,
+                    )
             else:
                 app_import_string = "lfx.cli.serve_preloaded_app:app"
                 worker_class = "lfx.cli.serve_gunicorn.LFXUvicornWorker"

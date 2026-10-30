@@ -70,6 +70,21 @@ Both `lfx serve` and `lfx run` accept a `.json` flow file or a `.py` Python scri
     API key:     x-api-key header or ?x-api-key= query parameter
    ```
 
+## Choose the event loop
+
+`lfx serve` runs on uvloop, which ships with the server and is selected automatically. No configuration is needed.
+
+To serve on [zuvloop](https://github.com/Kludex/zuvloop) instead, a libuv event loop written in Zig, install it alongside LFX and set `LFX_EVENT_LOOP`:
+
+```bash
+pip install zuvloop   # requires Python 3.14 or later
+LFX_EVENT_LOOP=zuvloop uv run lfx serve simple-agent-flow.json
+```
+
+zuvloop is not an LFX dependency. If it is unavailable, or if `LFX_EVENT_LOOP` names a loop LFX does not recognize, the server logs a warning and starts on the default loop.
+
+`--use-sync-workers` serves through a WSGI bridge that builds its own event loop, so `LFX_EVENT_LOOP` does not apply to that mode.
+
 ## Call the server
 
 In a new terminal, set your API key and flow ID, then send a test request:
