@@ -57,6 +57,10 @@ on:
     # opened as a draft and later marked ready has no run where that gate was ever true.
     types: [opened, synchronize, labeled, ready_for_review]
   merge_group:
+
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
