@@ -983,6 +983,10 @@ async def get_webhook_auth(
     # Webhook route also calls ``ensure_flow_permission`` after, so widening
     # for shared resources is acceptable here.
     flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, user_id=webhook_user.id, widen_for_shares=True)
+    # Only flows with a Webhook component run here. Any other flow answers like a missing one.
+    # Trigger nodes, such as the Inbound Webhook trigger, have their own route and don't count.
+    if not get_all_webhook_components_in_flow(flow.data):
+        raise HTTPException(status_code=404, detail=f"Flow identifier {flow_id_or_name} not found")
     return WebhookAuth(user=webhook_user, flow=flow)
 
 

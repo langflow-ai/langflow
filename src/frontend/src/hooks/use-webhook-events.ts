@@ -11,6 +11,7 @@ import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { VertexBuildTypeAPI } from "@/types/api";
 import type { VertexLayerElementType } from "@/types/zustand/flow";
+import { WEBHOOK_COMPONENT } from "@/utils/componentConstraints";
 
 const SSE_EVENTS = {
   CONNECTED: "connected",
@@ -119,12 +120,12 @@ function handleError(eventOrError: Event): void {
 }
 
 function hasWebhookComponent(
-  flow: { data?: { nodes?: Array<{ id: string }> } } | null,
+  flow: { data?: { nodes?: Array<{ data?: { type?: string } }> } } | null,
 ): boolean {
   if (!flow?.data?.nodes) {
     return false;
   }
-  return flow.data.nodes.some((node) => node.id.includes("Webhook"));
+  return flow.data.nodes.some((node) => node.data?.type === WEBHOOK_COMPONENT);
 }
 
 export function useWebhookEvents() {

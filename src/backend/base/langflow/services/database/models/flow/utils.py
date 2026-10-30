@@ -5,18 +5,17 @@ from .model import Flow
 
 def get_webhook_component_in_flow(flow_data: dict):
     """Get webhook component in flow data."""
-    if "nodes" in flow_data:
-        for node in flow_data.get("nodes", []):
-            if "Webhook" in node.get("id"):
-                return node
-    return None
+    return next(iter(get_all_webhook_components_in_flow(flow_data)), None)
 
 
 def get_all_webhook_components_in_flow(flow_data: dict | None):
-    """Get all webhook components in flow data."""
+    """Get all webhook components in flow data.
+
+    Matches the node type, not the id: trigger node ids, such as InboundWebhookTrigger-..., contain "Webhook" too.
+    """
     if not flow_data:
         return []
-    return [node for node in flow_data.get("nodes", []) if "Webhook" in node.get("id")]
+    return [node for node in flow_data.get("nodes", []) if (node.get("data") or {}).get("type") == "Webhook"]
 
 
 def get_components_versions(flow: Flow):
