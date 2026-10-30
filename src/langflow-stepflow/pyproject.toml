@@ -7,7 +7,7 @@ license = {text = "Apache-2.0"}
 authors = [
     {name = "Langflow Contributors"}
 ]
-requires-python = ">=3.10,<3.16"
+requires-python = ">=3.11,<3.16"
 keywords = [
     "workflow",
     "langflow",
@@ -21,7 +21,6 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import sys
 import uuid
 from typing import TYPE_CHECKING
 
@@ -489,9 +490,9 @@ class TestTargetKey:
             assert "not usable" in check.summary
         assert _check(report, "embedding models")
 
-    async def test_a_default_key_file_ending_in_a_newline_is_refused(self, safe_superuser):
-        # A Secret created from the file with --from-file carries the newline to the target. With
-        # Langflow's default key shape, the key with it no longer makes a Fernet key at all.
+    async def test_a_default_key_file_newline_follows_runtime_base64_rules(self, safe_superuser):
+        # Python 3.15 accepts this unpadded key with its newline. Earlier runtimes
+        # reject it. The preflight must match whether the target can decrypt values.
         await _add(
             Variable(
                 name=f"KEY_{uuid.uuid4().hex[:6]}",
@@ -503,6 +504,10 @@ class TestTargetKey:
 
         check = _check(await run_preflight(target_secret_key=_current_key_as_token_urlsafe() + "\n"), "target key")
 
+        if sys.version_info >= (3, 15):
+            assert check.status == "ok"
+            assert not check.problems
+            return
         assert check.status == "fail"
         assert "trailing newline" in check.summary
         assert "--from-literal" in check.summary
