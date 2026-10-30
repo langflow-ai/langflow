@@ -116,7 +116,7 @@ Slack delivers events in two ways. Langflow picks one from the connection you ch
 | Connection on the trigger | Transport | Where it works |
 | --- | --- | --- |
 | A Slack app installation (**Sign in with Slack**, bot) | [Events API](https://docs.slack.dev/apis/events-api/): Slack posts each event to your Langflow over HTTPS | Hosted, and self-managed instances Slack can reach |
-| An app-level token (**Paste a token**, `xapp-`) | [Socket Mode](https://docs.slack.dev/apis/socket-mode/): Langflow opens a WebSocket to Slack and holds it | Self-managed instances Slack cannot reach, and Desktop |
+| An app-level token (**Paste a token**, `xapp-`) | [Socket Mode](https://docs.slack.dev/apis/events-api/using-socket-mode): Langflow opens a WebSocket to Slack and holds it | Self-managed instances Slack cannot reach, and Desktop |
 
 Hosted Langflow uses the Events API only: its Slack app is listed in the Slack Marketplace, and Marketplace apps cannot use Socket Mode. Desktop uses Socket Mode only, because Slack has no way to reach a computer. If you choose a connection the deployment cannot use, the trigger says why and stays unarmed.
 
