@@ -1034,7 +1034,6 @@ export const normalizeTriggerPollingInterval = (value: unknown): number =>
     ? Math.max(MIN_TRIGGER_POLLING_INTERVAL, Math.round(value))
     : DEFAULT_TRIGGER_POLLING_INTERVAL;
 export const DEFAULT_TIMEOUT = 30000;
-export const DEFAULT_FILE_PICKER_TIMEOUT = 60000;
 export const DISCORD_URL = "https://discord.com/invite/EqksyE2EX9";
 export const GITHUB_URL = "https://github.com/langflow-ai/langflow";
 export const TWITTER_URL = "https://x.com/langflow_ai";
