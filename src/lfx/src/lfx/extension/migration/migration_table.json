@@ -5057,6 +5057,21 @@
       "added_in": "1.13.0"
     },
     {
+      "bare_class_name": "AsyntaiAskComponent",
+      "target": "ext:asyntai:AsyntaiAskComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "AsyntaiAddKnowledgeComponent",
+      "target": "ext:asyntai:AsyntaiAddKnowledgeComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "AsyntaiLeadsComponent",
+      "target": "ext:asyntai:AsyntaiLeadsComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
       "bare_class_name": "GmailSendComponent",
       "target": "ext:google:GmailSendComponent@official",
       "added_in": "1.13.0"

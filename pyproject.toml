@@ -105,6 +105,7 @@ langflow-sdk = { workspace = true }
 # langflow-extensions:bundle-sources-start
 lfx-duckduckgo = { workspace = true }
 lfx-arxiv = { workspace = true }
+lfx-asyntai = { workspace = true }
 lfx-ibm = { workspace = true }
 lfx-docling = { workspace = true }
 lfx-bundles = { workspace = true }
@@ -145,6 +146,7 @@ members = [
     # langflow-extensions:bundle-members-start
     "src/bundles/duckduckgo",
     "src/bundles/arxiv",
+    "src/bundles/asyntai",
     "src/bundles/ibm",
     "src/bundles/docling",
     "src/bundles/lfx-bundles",
@@ -185,6 +187,7 @@ Documentation = "https://docs.langflow.org"
 bundles = [
     "lfx-bundles[all-no-torch]>=1.2.4,<2.0",
     "lfx-arxiv>=0.2.0,<1.0.0",
+    "lfx-asyntai>=0.1.0,<1.0.0",
     "lfx-confluent>=0.2.0,<1.0.0",
     "lfx-duckduckgo>=0.2.0,<1.0.0",
     "lfx-empiriolabs>=0.2.0,<1.0.0",

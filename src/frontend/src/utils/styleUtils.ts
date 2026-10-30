@@ -443,6 +443,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Apify", name: "apify", icon: "Apify" },
   { display_name: "arXiv", name: "arxiv", icon: "arXiv" },
   { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
+  { display_name: "Asyntai", name: "asyntai", icon: "MessagesSquare" },
   { display_name: "Azure", name: "azure", icon: "Azure" },
   { display_name: "Baidu", name: "baidu", icon: "BaiduQianfan" },
   { display_name: "Bing", name: "bing", icon: "Bing" },
