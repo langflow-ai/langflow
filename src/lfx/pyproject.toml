@@ -19,7 +19,8 @@ dependencies = [
     "pillow>=12.3.0,<13.0.0",
     "fastapi>=0.135.0,<1.0.0",
     # [standard] adds uvloop + httptools (fast loop + HTTP parser) for the `lfx serve` worker path.
-    "uvicorn[standard]>=0.34.3,<1.0.0",
+    # >=0.36 for the loop-factory contract serve_loop.py resolves zuvloop through.
+    "uvicorn[standard]>=0.36,<1.0.0",
     # gunicorn powers `lfx serve --workers N` on Unix; Windows falls back to uvicorn and rejects gunicorn-only flags.
     "gunicorn>=22.0; sys_platform != 'win32'",
     # a2wsgi bridges the ASGI app onto gunicorn's sync worker for `lfx serve --use-sync-workers` (Unix).
@@ -163,6 +164,10 @@ dev = [
     "pytest-asyncio>=0.26.0",
     "pytest-cov>=7.0.0",
     "ruff>=0.9.10",
+    # Only installable on 3.14+, which is all zuvloop supports. Present so the serve_loop
+    # tests exercise the real loop wherever the interpreter allows it instead of skipping.
+    # lfx itself never depends on it: LFX_EVENT_LOOP=zuvloop is opt-in and falls back.
+    "zuvloop>=0.0.17; python_version >= '3.14'",
 ]
 integration = [
     # Dependencies for running Simple Agent and other integration tests
