@@ -261,7 +261,7 @@ cases("backward_cases.json", "undo", (c) => {
   assert.ok(ops.graphsEqual(state.toJson(), dump(c.base)));
 });
 
-// --- restore_cases.json, write_cases.json ----------------------------------------------------------
+// --- restore_cases.json ----------------------------------------------------------
 
 cases("restore_cases.json", "cases", (c) => {
   const result = outcome(() => parse(ops.applyRestoreFixes(dump(c.revision), dump(c.stored), dump(c.fixes))));
@@ -269,26 +269,10 @@ cases("restore_cases.json", "cases", (c) => {
   check(strict, "restored revision", actual, c.error ? { error: c.error } : { expected: c.expected });
 });
 
-cases("write_cases.json", "cases", (c) => {
-  const result = outcome(() => parse(ops.prepareWrite(dump(c.stored), dump(c.target), dump(c.options))));
-  let actual;
-  if (result.error) {
-    const details = parse(result.error.details);
-    actual = { error: { graph: details.graph, violations: details.violations } };
-  } else {
-    // A graph comes back only when the save changed it; the caller has the others.
-    for (const [key, given] of [["base", c.stored], ["target", c.target]]) {
-      assert.ok(!(key in result.value) || !isDeepStrictEqual(result.value[key], given), `${key} comes back unchanged`);
-    }
-    actual = { expected: { base: c.stored, target: c.target, ...result.value } };
-  }
-  check(matches, "prepared write", actual, c.error ? { error: c.error } : { expected: c.expected });
-});
-
 const FIXTURE_FILES = [
   "apply_cases.json", "backward_cases.json", "canonical_cases.json", "diff_cases.json", "editor_cases.json",
   "limit_cases.json", "merge_cases.json", "property_cases.json", "repair_cases.json", "restore_cases.json",
-  "table_cases.json", "validation_cases.json", "write_cases.json",
+  "table_cases.json", "validation_cases.json",
 ];
 
 test("every fixture file is run", () => {

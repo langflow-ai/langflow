@@ -482,18 +482,6 @@ fn canonical_json(py: Python<'_>, value: &Bound<'_, PyAny>) -> PyResult<String> 
     run(py, || api::canonical_json(value))
 }
 
-/// The engine's part of a save.
-#[pyfunction]
-fn prepare_write<'py>(
-    py: Python<'py>,
-    stored: &Bound<'_, PyAny>,
-    target: &Bound<'_, PyAny>,
-    options: &Bound<'_, PyAny>,
-) -> PyResult<Bound<'py, PyAny>> {
-    let (stored, target, options) = (input(stored)?, input(target)?, input(options)?);
-    call(py, || api::prepare_write(stored, target, options))
-}
-
 /// A revision with a restore's fixes applied, after checking each one.
 #[pyfunction]
 fn apply_restore_fixes<'py>(
@@ -652,7 +640,7 @@ mod _native {
         assign_changed_node_table_row_ids, assign_changed_table_row_ids, assign_row_ids,
         assign_table_row_ids, canonical_json, derive, diff, edge_fixes, fixes_for_edges,
         graph_hash, graphs_equal, new_edge_id, new_table_row_id, node_schema, normalize_operations,
-        ordered_rows, prepare_write, repair, strip_flow_table_row_keys, strip_row_keys,
-        table_fields, validate, values_equal,
+        ordered_rows, repair, strip_flow_table_row_keys, strip_row_keys, table_fields, validate,
+        values_equal,
     };
 }

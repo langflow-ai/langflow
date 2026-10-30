@@ -26,7 +26,6 @@ use crate::ops::repair::{Fix, repair_flow_data};
 use crate::ops::restore;
 use crate::ops::state::{GraphState, parse_json};
 use crate::ops::validate::{Numbers, Violation, find_graph_violations};
-use crate::ops::write::{WriteError, WriteOptions};
 
 /// An error as the bindings receive it: a JSON object with the error's
 /// `kind` (the matching Python exception class), `code` and `message`, and
@@ -76,25 +75,6 @@ impl From<Error> for ApiError {
             out["violations"] = violations(&error.violations);
         }
         Self(out)
-    }
-}
-
-impl From<WriteError> for ApiError {
-    fn from(error: WriteError) -> Self {
-        let message = error.to_string();
-        match error {
-            WriteError::InvalidGraph {
-                role,
-                violations: found,
-            } => Self(json!({
-                "kind": "FlowGraphInvalidError",
-                "code": "FLOW_GRAPH_INVALID",
-                "message": message,
-                "graph": role.as_str(),
-                "violations": violations(&found),
-            })),
-            WriteError::Engine(error) => error.into(),
-        }
     }
 }
 
@@ -398,65 +378,6 @@ pub fn values_equal(left: Input<'_>, right: Input<'_>) -> ApiResult<bool> {
 /// The value does not parse, or holds a number that is not finite.
 pub fn canonical_json(value: Input<'_>) -> ApiResult<String> {
     Ok(canonical::canonical_json(&data(value)?)?)
-}
-
-// --- Saves ---------------------------------------------------------------------------------
-
-/// A JSON object of named inputs, read strictly: a required key must be
-/// present with the right type.
-#[derive(Debug)]
-struct Fields<'v> {
-    object: &'v Value,
-    /// What the object is, for messages: `options`.
-    name: &'static str,
-}
-
-impl<'v> Fields<'v> {
-    fn new(object: &'v Value, name: &'static str) -> Self {
-        Self { object, name }
-    }
-
-    fn boolean(&self, key: &str) -> ApiResult<bool> {
-        let name = self.name;
-        self.object
-            .get(key)
-            .and_then(Value::as_bool)
-            .ok_or_else(|| invalid!("{name}.{key} must be a boolean").into())
-    }
-}
-
-/// The engine's part of a save: `{"base"?, "stored_repaired", "target"?, "repairs", "operations"}`.
-///
-/// `base` and `target` are there only when the save changed the stored or
-/// the submitted graph: filled in or repaired. Without them, the base is
-/// `stored` and the graph to store is `target`, as given.
-///
-/// `options` is `{"started", "repair_invalid_graph"}`.
-///
-/// # Errors
-///
-/// The inputs do not parse, an option is missing or has the wrong type, a
-/// graph breaks the rules, or the engine fails.
-pub fn prepare_write(stored: Input<'_>, target: Input<'_>, options: Input<'_>) -> ApiResult<Value> {
-    let options = data(options)?;
-    let options = Fields::new(&options, "options");
-    let write_options = WriteOptions {
-        started: options.boolean("started")?,
-        repair_invalid_graph: options.boolean("repair_invalid_graph")?,
-    };
-    let prepared = crate::ops::write::prepare_write(data(stored)?, data(target)?, &write_options)?;
-    let repairs = prepared.repairs_json();
-    let mut out = Map::new();
-    if let Some(base) = prepared.base {
-        out.insert("base".into(), base);
-    }
-    out.insert("stored_repaired".into(), prepared.stored_repaired.into());
-    if let Some(target) = prepared.target {
-        out.insert("target".into(), target);
-    }
-    out.insert("repairs".into(), repairs);
-    out.insert("operations".into(), operations_json(prepared.operations));
-    Ok(Value::Object(out))
 }
 
 // --- Restore fixes --------------------------------------------------------------------------

@@ -61,8 +61,6 @@ The doc names refer to the notes in `plans/multiplayer/` of the design vault.
 | `legacy-tables` | A table without row ids stays as stored until a write changes it. Its array order is its order. Its first change writes it whole, with ids. | operation-protocol-multiplayer-proposal, "Lists: ids and positions" |
 | `row-keys-stripped` | Readers strip `__id__` and `__pos__` and hand out rows in order. A group's embedded flow is not touched. | operation-protocol-multiplayer-proposal, "Lists: ids and positions" |
 | `repair-direct-only` | Repair fixes only the violations that have one fix. The others go back to the client, and repair changes nothing for them. | ops-history, "Repair" |
-| `repair-on-request` | A save repairs only when the request asks for it. Without the request, a violation refuses the save. | ops-history, "Repair" |
-| `save-path` | A save checks the submitted graph against the stored graph and records the diff. A flow without data starts from an empty graph. | ops-history, "Accepted-write algorithm" |
 | `restore-fixes` | A restore takes only the edge fixes that address its violations: a delete, or a handle rewrite. The editor's fixes are what its preview changed. | ops-history, "Repair"; oplog-engine-cleanup, "Restore with client fixes" |
 | `last-writer-wins` | Of two writes to one path, the later wins. Writes to different paths both land. | operation-protocol-multiplayer-proposal, "Concurrency semantics" |
 | `backward-operations` | Applying the backward operations of a batch, last first, gives back the flow before the batch. | ops-history, "API and UI progression" (playback) |

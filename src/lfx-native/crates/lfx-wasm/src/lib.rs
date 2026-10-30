@@ -231,20 +231,6 @@ pub fn canonical_json(value: &str) -> Result<String, JsValue> {
     run(api::canonical_json(value.into()))
 }
 
-/// The engine's part of a save.
-///
-/// # Errors
-///
-/// The inputs do not parse, a graph breaks the rules, or the engine fails.
-#[wasm_bindgen(js_name = prepareWrite)]
-pub fn prepare_write(stored: &str, target: &str, options: &str) -> Result<String, JsValue> {
-    text(api::prepare_write(
-        stored.into(),
-        target.into(),
-        options.into(),
-    ))
-}
-
 /// A revision with a restore's fixes applied, after checking each one.
 ///
 /// # Errors

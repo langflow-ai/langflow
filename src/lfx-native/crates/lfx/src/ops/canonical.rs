@@ -890,7 +890,7 @@ mod tests {
 
     #[test]
     fn graphs_equal_answers_as_the_eager_comparison() {
-        const FIXTURES: [&str; 13] = [
+        const FIXTURES: [&str; 12] = [
             include_str!("../../../../fixtures/apply_cases.json"),
             include_str!("../../../../fixtures/backward_cases.json"),
             include_str!("../../../../fixtures/canonical_cases.json"),
@@ -903,7 +903,6 @@ mod tests {
             include_str!("../../../../fixtures/restore_cases.json"),
             include_str!("../../../../fixtures/table_cases.json"),
             include_str!("../../../../fixtures/validation_cases.json"),
-            include_str!("../../../../fixtures/write_cases.json"),
         ];
         let hidden = NODE_SCHEMA
             .node_view_state

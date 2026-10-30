@@ -402,7 +402,7 @@ def test_undo_case(case):
     assert ops.graphs_equal(state.to_json().encode(), arg(case["base"]))
 
 
-# --- restore_cases.json, write_cases.json ------------------------------------------------------------
+# --- restore_cases.json ------------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("case", section("restore_cases.json", "cases"))
@@ -413,21 +413,6 @@ def test_restore(case):
         actual = {"error": failure(error)}
     expected = {"error": case["error"]} if "error" in case else {"expected": case["expected"]}
     check(strict, "restored revision", actual, expected)
-
-
-@pytest.mark.parametrize("case", section("write_cases.json", "cases"))
-def test_write(case):
-    try:
-        prepared = ops.prepare_write(arg(case["stored"]), arg(case["target"]), arg(case["options"]))
-        # A graph comes back only when the save changed it; the caller has the others.
-        for key, given in (("base", case["stored"]), ("target", case["target"])):
-            assert key not in prepared or prepared[key] != plain(given), f"{key} comes back unchanged"
-        actual = {"expected": {"base": case["stored"], "target": case["target"], **prepared}}
-    except ops.EngineError as error:
-        details = error.details
-        actual = {"error": {"graph": details.get("graph"), "violations": details.get("violations")}}
-    expected = {"error": case["error"]} if "error" in case else {"expected": case["expected"]}
-    check(matches, "prepared write", actual, expected)
 
 
 RULE = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
@@ -459,7 +444,6 @@ def test_every_fixture_file_is_run():
         "editor_cases.json",
         "backward_cases.json",
         "restore_cases.json",
-        "write_cases.json",
         "limit_cases.json",
     }
     assert {path.name for path in FIXTURES.glob("*.json")} == run
