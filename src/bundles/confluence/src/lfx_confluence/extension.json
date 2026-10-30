@@ -1,0 +1,25 @@
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-confluence",
+  "version": "0.1.0",
+  "name": "Confluence Integrations",
+  "description": "Confluence Cloud page actions and latest-state polling triggers.",
+  "lfx": {
+    "compat": [
+      "1"
+    ]
+  },
+  "bundles": [
+    {
+      "name": "confluence_integrations",
+      "path": "components/confluence_integrations"
+    }
+  ],
+  "integrations": [
+    {
+      "provider_id": "confluence",
+      "bundle": "confluence_integrations",
+      "path": "capabilities.v1.json"
+    }
+  ]
+}

@@ -173,7 +173,8 @@ async def test_success_clears_own_persisted_errors_without_erasing_other_workers
         assert (await session.get(Trigger, good_id)).last_error == expected
 
 
-async def test_stale_source_error_cannot_overwrite_changed_configuration(polling_sources, monkeypatch):
+@pytest.mark.parametrize("terminal", [False, True])
+async def test_stale_source_error_cannot_overwrite_changed_configuration(polling_sources, monkeypatch, terminal):
     supervisor, worker, (bad_id, _good_id) = polling_sources
     worker.triggers[:] = [snapshot for snapshot in worker.triggers if snapshot.id == bad_id]
 
@@ -183,13 +184,14 @@ async def test_stale_source_error_cannot_overwrite_changed_configuration(polling
             row.config = {"source": "fixed"}
             session.add(row)
         msg = "Old settings failed."
-        raise SourceConfigurationError(msg)
+        raise SourceConfigurationError(msg, terminal=terminal)
 
     monkeypatch.setattr("langflow.services.triggers.source_poll.collect_source", collect)
     with pytest.raises(adapters.ListenerDeliveryRejectedError):
         await worker.adapter.poll(supervisor._context(worker))
     async with session_scope() as session:
         assert (await session.get(Trigger, bad_id)).last_error is None
+        assert (await session.get(Trigger, bad_id)).state == "active"
 
 
 async def test_success_does_not_clear_a_concurrent_source_error(polling_sources, monkeypatch):

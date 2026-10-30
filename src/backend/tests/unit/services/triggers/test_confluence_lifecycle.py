@@ -1,0 +1,517 @@
+"""Installed Confluence adapter ownership, durable delivery and cleanup contracts."""
+
+import asyncio
+from dataclasses import replace
+from pathlib import Path
+from types import SimpleNamespace
+from uuid import uuid4
+
+import httpx
+import pytest
+from langflow.services.connection.oauth.broker import store_tokens
+from langflow.services.database.models.connection.model import Connection
+from langflow.services.database.models.trigger.model import Trigger, TriggerCleanup, TriggerEvent, TriggerSubscription
+from langflow.services.database.models.user.model import User
+from langflow.services.deps import session_scope
+from langflow.services.triggers import dispatcher, source_runtime
+from langflow.services.triggers.providers import registry
+from langflow.services.triggers.reconciliation import reconcile_flow_triggers
+from langflow.services.triggers.service import TriggerService
+from langflow.services.triggers.source_cleanup import run_cleanup_pass
+from langflow.services.triggers.source_poll import collect_source, commit_source
+from lfx.extension import load_extension
+from lfx.extension.bundle_registry import BundleRecord
+from lfx.integrations.errors import IntegrationPolicyBlockedError, ProviderUnavailableError
+from lfx.services.deps import get_integration_policy_service, get_policy_bundle_service
+from lfx_confluence.client import ConfluenceClient
+from sqlmodel import select
+
+from tests.unit.services.triggers.confluence_testkit import SITE, page
+
+pytestmark = pytest.mark.no_blockbuster
+
+
+@pytest.fixture
+def confluence(monkeypatch, client):  # noqa: ARG001 - initialize application services
+    import lfx_confluence
+    from langflow.services.triggers.providers.confluence import PROVIDER, collector
+    from lfx.extension import bundle_registry
+
+    monkeypatch.setenv("LANGFLOW_CONFLUENCE_CLOUD_ID", SITE)
+    monkeypatch.setenv("LANGFLOW_CONFLUENCE_SPACE_IDS", "10,20")
+    monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_CONTEXT", "self_managed")
+    loaded = load_extension(Path(lfx_confluence.__file__).parent, distribution="lfx-confluence")
+    assert loaded.ok, loaded.errors
+    record = BundleRecord(
+        bundle="confluence_integrations",
+        extension_id="lfx-confluence",
+        extension_version="0.1.0",
+        slot="official",
+        components=tuple(loaded.components),
+        integrations=tuple(loaded.integrations),
+    )
+    monkeypatch.setattr(
+        bundle_registry,
+        "get_default_registry",
+        lambda: SimpleNamespace(
+            snapshot=lambda: {"confluence_integrations": record}, list_integrations=lambda: loaded.integrations
+        ),
+    )
+    monkeypatch.setattr(registry, "_cache_key", None)
+    monkeypatch.setattr(registry, "_providers", {})
+    original = registry.metadata.entry_points
+    monkeypatch.setattr(
+        registry.metadata,
+        "entry_points",
+        lambda **kwargs: [
+            SimpleNamespace(
+                name="confluence", dist=SimpleNamespace(metadata={"Name": "lfx-confluence"}), load=lambda: PROVIDER
+            )
+        ]
+        if kwargs.get("group") == registry.ENTRY_POINT_GROUP
+        else original(**kwargs),
+    )
+    state = SimpleNamespace(version=1, fail=False, calls=[])
+
+    def handler(request):
+        state.calls.append(request)
+        assert request.url.host == "api.atlassian.com"
+        assert request.url.path == f"/ex/confluence/{SITE}/wiki/api/v2/pages"
+        return (
+            httpx.Response(503) if state.fail else httpx.Response(200, json={"results": [page(version=state.version)]})
+        )
+
+    monkeypatch.setattr(
+        collector, "ConfluenceClient", lambda lease: ConfluenceClient(lease, transport=httpx.MockTransport(handler))
+    )
+    return state
+
+
+async def connection(owner_id, *, allow=True, identity="user_delegated"):
+    async with session_scope() as session:
+        row = Connection(
+            provider_key="confluence",
+            name="work",
+            display_name="Confluence work",
+            owner_id=owner_id,
+            status="ready",
+            ownership_mode="user",
+            allow_non_interactive=allow,
+            executing_identity={"identity": identity, "account": {"id": "user-1", "tenant_id": SITE}},
+        )
+        session.add(row)
+        await session.flush()
+        await store_tokens(
+            session,
+            row,
+            {"version": 1, "access_token": "synthetic-confluence-access", "token_type": "Bearer"},
+            ["read:page:confluence", "write:page:confluence", "read:confluence-user", "offline_access"],
+        )
+        return row.id
+
+
+@pytest.mark.parametrize("narrowed_scopes", [False, True])
+@pytest.mark.usefixtures("confluence")
+async def test_refresh_persists_rotated_grant_without_product_api_availability(
+    trigger_owner, monkeypatch, narrowed_scopes
+):
+    import json
+    from datetime import datetime, timedelta, timezone
+
+    from langflow.services.connection.oauth import broker, providers
+    from langflow.services.connection.oauth.config import OAuthRegistration
+    from langflow.services.connection.service import _decrypt_credential_payload
+    from langflow.services.database.models.connection.model import ConnectionSecret
+    from langflow.services.database.models.connection.oauth import ConnectionOAuth
+    from langflow.services.triggers.providers.confluence import oauth
+    from lfx_confluence.schema import READ, SCOPES, USER
+
+    registration = OAuthRegistration(
+        provider="confluence",
+        client_id="operator-app",
+        client_secret="synthetic-client-secret",  # noqa: S106  # pragma: allowlist secret
+        redirect_uri="https://langflow.example/api/v1/connections/oauth/confluence/callback",
+        tenant=SITE,
+        allowed_tenants=[SITE],
+        scopes=list(SCOPES),
+    )
+    monkeypatch.setenv(
+        "LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS",
+        json.dumps(
+            {
+                "confluence-work": registration.model_dump(mode="json", exclude={"client_secret"})
+                | {"client_secret": "synthetic-client-secret"}  # pragma: allowlist secret
+            }
+        ),  # pragma: allowlist secret
+    )
+    connection_id = await connection(trigger_owner)
+    previous_scopes = {READ, USER, "offline_access"}
+    refreshed_scopes = {USER} if narrowed_scopes else SCOPES
+
+    async def refresh_response(_url, data, **_kwargs):
+        assert data["grant_type"] == "refresh_token"
+        assert data["refresh_token"] == "synthetic-old-refresh"  # noqa: S105 - test fixture
+        return {
+            "access_token": "synthetic-new-access",
+            "refresh_token": "synthetic-new-refresh",
+            "expires_in": 3600,
+            "scope": " ".join(refreshed_scopes),
+        }
+
+    product_requests = []
+
+    def unavailable_product_api(request):
+        product_requests.append(request)
+        return httpx.Response(503)
+
+    monkeypatch.setattr(providers, "_request", refresh_response)
+    monkeypatch.setattr(
+        oauth, "http_client", lambda: httpx.AsyncClient(transport=httpx.MockTransport(unavailable_product_api))
+    )
+    async with session_scope() as session:
+        row = await session.get(Connection, connection_id)
+        identity = row.executing_identity.copy()
+        binding = ConnectionOAuth(
+            connection_id=connection_id,
+            user_id=trigger_owner,
+            registration_id="confluence-work",
+            config_digest=registration.fingerprint(),
+            expires_at=datetime.now(timezone.utc),
+        )
+        session.add(binding)
+        await session.flush()
+        payload = {
+            "access_token": "synthetic-old-access",
+            "refresh_token": "synthetic-old-refresh",
+            "expires_at": (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat(),
+            "oauth": {
+                "registration_id": "confluence-work",
+                "config_digest": registration.fingerprint(),
+                "generation": str(binding.generation),
+            },
+        }
+        await broker.store_tokens(session, row, payload, list(previous_scopes))
+        await broker.refresh_if_needed(session, row, payload)
+
+    async with session_scope() as session:
+        row = await session.get(Connection, connection_id)
+        secret = await session.get(ConnectionSecret, connection_id)
+        saved = _decrypt_credential_payload(secret.encrypted_payload)
+        assert saved["refresh_token"] == "synthetic-new-refresh"  # noqa: S105 - test fixture
+        assert set(row.granted_scopes) == (refreshed_scopes | {"offline_access"}) & previous_scopes
+        assert row.executing_identity == identity
+    assert not product_requests
+
+
+async def reconcile(flow_id, owner_id):
+    data = {
+        "nodes": [
+            {
+                "id": "confluence-source",
+                "data": {
+                    "type": "ext:confluence_integrations:ConfluenceOnPageUpdatedTriggerComponent@official",
+                    "node": {
+                        "template": {
+                            name: {"value": value}
+                            for name, value in {
+                                "connection": "confluence/work",
+                                "space_id": "10",
+                            }.items()
+                        }
+                    },
+                },
+            }
+        ],
+        "edges": [],
+    }
+    async with session_scope() as session:
+        await reconcile_flow_triggers(session, flow_id=flow_id, owner_id=owner_id, flow_data=data)
+    async with session_scope() as session:
+        return (await session.exec(select(Trigger).where(Trigger.flow_id == flow_id))).one()
+
+
+async def activate(trigger_id):
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger_id)
+        await TriggerService().enable_and_activate(session, row=row)
+        assert row.state == "active"
+        assert row.config["mechanism_id"] == "confluence.page.poll"
+
+
+async def test_registered_listener_adapter_baselines_delivers_dedupes_and_pauses(
+    confluence, trigger_owner, owned_flow, fake_background_service, monkeypatch
+):
+    from langflow.services.triggers.listeners import adapters
+    from langflow.services.triggers.listeners.supervisor import ListenerSupervisor
+
+    connection_id = await connection(trigger_owner)
+    row = await reconcile(owned_flow, trigger_owner)
+    assert row.last_error is None
+    await activate(row.id)
+    assert await source_runtime.sync_source(row.id) == 0
+    confluence.version = 2
+    monkeypatch.setattr(adapters, "_REGISTRY", {})
+    adapters.register_builtin_adapters()
+    supervisor = ListenerSupervisor(holder="confluence-listener-contract")
+
+    async def wait_for_delivery():
+        while True:
+            async with session_scope() as session:
+                events = (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == row.id))).all()
+                if events:
+                    assert len(events) == 1
+                    assert events[0].payload["data"]["id"] == "1"
+                    assert "synthetic-confluence-access" not in repr(events[0].payload)
+                    return
+            await asyncio.sleep(0.01)
+
+    try:
+        await supervisor.reconcile()
+        assert isinstance(supervisor.workers[connection_id].adapter, adapters.ProviderSourcePollAdapter)
+        await asyncio.wait_for(wait_for_delivery(), timeout=10)
+    finally:
+        await supervisor.stop()
+    assert await source_runtime.sync_source(row.id) == 0
+    assert await dispatcher.run_once(owner="confluence-dispatch") == 1
+    assert len(fake_background_service.submits) == 1
+    async with session_scope() as session:
+        current = await session.get(Trigger, row.id)
+        await TriggerService().disable(session, row=current)
+        assert not (
+            await session.exec(select(TriggerSubscription).where(TriggerSubscription.trigger_id == row.id))
+        ).all()
+        assert not (await session.exec(select(TriggerCleanup).where(TriggerCleanup.trigger_id == row.id))).all()
+    assert await run_cleanup_pass() == 0
+    calls = len(confluence.calls)
+    assert await source_runtime.sync_source(row.id) == 0
+    assert len(confluence.calls) == calls
+
+
+async def test_failed_fetch_and_stale_replica_cannot_advance_cursor(confluence, trigger_owner, owned_flow):
+    from langflow.services.triggers.source_clients import source_lease
+
+    await connection(trigger_owner)
+    row = await reconcile(owned_flow, trigger_owner)
+    await activate(row.id)
+    assert await source_runtime.sync_source(row.id) == 0
+    async with session_scope() as session:
+        original = dict((await session.get(Trigger, row.id)).provider_state)
+    confluence.fail = True
+    with pytest.raises(ProviderUnavailableError):
+        await source_runtime.sync_source(row.id)
+    async with session_scope() as session:
+        assert (await session.get(Trigger, row.id)).provider_state == original
+    confluence.fail = False
+    confluence.version = 2
+    async with session_scope() as session:
+        current = await session.get(Trigger, row.id)
+        lease = await source_lease(session, current, family="trigger_listener")
+        snapshot = Trigger(**current.model_dump())
+    first = await collect_source(snapshot, lease)
+    second = await collect_source(snapshot, lease)
+    async with session_scope() as session:
+        assert await commit_source(session, trigger_id=row.id, source_round=first) == 1
+    with pytest.raises(RuntimeError, match="cursor changed"):
+        async with session_scope() as session:
+            await commit_source(session, trigger_id=row.id, source_round=second)
+
+
+@pytest.mark.parametrize("kind", ["confluence.page_created", "confluence.page_updated"])
+@pytest.mark.parametrize(
+    ("bound", "message"),
+    [
+        ("requests", "50-page request limit"),
+        ("snapshot", "5000-page snapshot limit"),
+        ("retained", "5000 observed page IDs"),
+    ],
+)
+async def test_scan_limit_stops_only_affected_trigger_until_reenabled(
+    confluence, trigger_owner, make_trigger, monkeypatch, kind, bound, message
+):
+    from langflow.services.triggers.listeners import adapters
+    from langflow.services.triggers.listeners.supervisor import ListenerSupervisor
+    from langflow.services.triggers.providers.confluence import collector
+
+    monkeypatch.setattr(collector, "MAX_PAGES", 2)
+    monkeypatch.setattr(collector, "MAX_ITEMS", 3)
+    connection_id = await connection(trigger_owner)
+    identifiers = []
+    for space in ("10", "20"):
+        identifier = await make_trigger(
+            kind=kind,
+            provider="confluence",
+            connection_id=connection_id,
+            state="paused",
+            config={"connection": "confluence/work", "space_id": space},
+        )
+        await activate(identifier)
+        identifiers.append(identifier)
+    bad_id, good_id = identifiers
+    original = {
+        "baseline_complete": True,
+        "started_at": "2026-10-22T10:00:00Z",
+        "pages": {"1": 1, "8": 1, "9": 1} if bound == "retained" else {"1": 1},
+    }
+    async with session_scope() as session:
+        row = await session.get(Trigger, bad_id)
+        row.provider_state = original
+        session.add(row)
+    calls = []
+
+    def handler(request):
+        space = request.url.params["space-id"]
+        calls.append(space)
+        if space == "20":
+            pages = [page(version=confluence.version, space=space)]
+            if kind == "confluence.page_created":
+                pages.extend(
+                    page(str(number), space=space, created="2099-01-01T00:00:00Z")
+                    for number in range(2, confluence.version + 1)
+                )
+            return httpx.Response(200, json={"results": pages})
+        if bound == "requests":
+            number = int(request.url.params.get("cursor", "0")) + 1
+            return httpx.Response(
+                200,
+                json={
+                    "results": [page(str(number), version=2, created="2099-01-01T00:00:00Z")],
+                    "_links": {"next": f"/wiki/api/v2/pages?cursor={number}"},
+                },
+            )
+        count = 4 if bound == "snapshot" else 2
+        return httpx.Response(
+            200,
+            json={
+                "results": [
+                    page(str(number), version=2, created="2099-01-01T00:00:00Z") for number in range(1, count + 1)
+                ]
+            },
+        )
+
+    monkeypatch.setattr(
+        collector, "ConfluenceClient", lambda lease: ConfluenceClient(lease, transport=httpx.MockTransport(handler))
+    )
+    monkeypatch.setattr(adapters, "_REGISTRY", {})
+    adapters.register_builtin_adapters()
+    supervisor = ListenerSupervisor(holder="confluence-scan-limit")
+
+    def prepare_worker(worker):
+        worker.stopping = asyncio.Event()
+
+    monkeypatch.setattr(supervisor, "_spawn", prepare_worker)
+    try:
+        await supervisor.reconcile()
+        worker = supervisor.workers[connection_id]
+        ctx = supervisor._context(worker)
+        assert await worker.adapter.poll(ctx) == 0
+        failed_calls = calls.count("10")
+        async with session_scope() as session:
+            bad = await session.get(Trigger, bad_id)
+            good = await session.get(Trigger, good_id)
+            assert bad.state == "error"
+            assert message in bad.last_error
+            assert "re-enable" in bad.last_error.lower()
+            assert bad.provider_state == original
+            assert good.state == "active"
+            assert good.last_error is None
+            assert (await session.get(Connection, connection_id)).status == "ready"
+            assert not (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == bad_id))).all()
+        confluence.version = 2
+        assert await worker.adapter.poll(ctx) == 1
+        assert calls.count("10") == failed_calls
+        await supervisor.reconcile()
+        worker = supervisor.workers[connection_id]
+        ctx = supervisor._context(worker)
+        assert await worker.adapter.poll(ctx) == 0
+        assert calls.count("10") == failed_calls
+        async with session_scope() as session:
+            bad = await session.get(Trigger, bad_id)
+            assert bad.state == "error"
+            assert bad.provider_state == original
+            assert not (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == bad_id))).all()
+            assert len((await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == good_id))).all()) == 1
+            bad.config = {**bad.config, "space_id": "20"}
+            session.add(bad)
+        await activate(bad_id)
+        async with session_scope() as session:
+            bad = await session.get(Trigger, bad_id)
+            assert bad.provider_state == {}
+            assert bad.last_error is None
+        await supervisor.reconcile()
+        worker = supervisor.workers[connection_id]
+        ctx = supervisor._context(worker)
+        assert await worker.adapter.poll(ctx) == 0
+        confluence.version = 3
+        assert await worker.adapter.poll(ctx) == 2
+        async with session_scope() as session:
+            assert len((await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == bad_id))).all()) == 1
+            assert (await session.get(Connection, connection_id)).status == "ready"
+    finally:
+        await supervisor.stop()
+
+
+async def test_unchanged_canvas_save_preserves_scan_limit_error(confluence, trigger_owner, owned_flow):
+    await connection(trigger_owner)
+    row = await reconcile(owned_flow, trigger_owner)
+    await activate(row.id)
+    message = (
+        "Source polling failed. The Confluence space exceeds the 50-page request limit. "
+        "Choose a smaller approved space and re-enable this trigger."
+    )
+    async with session_scope() as session:
+        current = await session.get(Trigger, row.id)
+        current.state = "error"
+        current.last_error = message
+        session.add(current)
+
+    saved = await reconcile(owned_flow, trigger_owner)
+
+    assert saved.id == row.id
+    assert saved.state == "error"
+    assert saved.last_error == message
+    assert not confluence.calls
+
+
+@pytest.mark.parametrize("failure", ["owner", "consent", "identity", "scope", "policy"])
+async def test_activation_enforces_owner_consent_identity_scopes_policy(confluence, trigger_owner, owned_flow, failure):
+    owner = trigger_owner
+    if failure == "owner":
+        async with session_scope() as session:
+            other = User(
+                username=f"confluence-{uuid4().hex}",
+                password="not-a-login",  # noqa: S106  # pragma: allowlist secret
+                is_active=True,
+            )
+            session.add(other)
+            await session.flush()
+            owner = other.id
+    identifier = await connection(
+        owner, allow=failure != "consent", identity="bot" if failure == "identity" else "user_delegated"
+    )
+    if failure == "scope":
+        async with session_scope() as session:
+            row = await session.get(Connection, identifier)
+            row.granted_scopes = []
+            session.add(row)
+    row = await reconcile(owned_flow, trigger_owner)
+    bundle = get_policy_bundle_service()
+    original = bundle.snapshot
+    if failure == "policy":
+        bundle.publish(
+            replace(
+                original,
+                revision=original.revision + 1,
+                initialized=True,
+                blocked_integration_action_keys=frozenset({"integrations.confluence.trigger.updated"}),
+            )
+        )
+        get_integration_policy_service().invalidate()
+    try:
+        async with session_scope() as session:
+            current = await session.get(Trigger, row.id)
+            with pytest.raises((ValueError, IntegrationPolicyBlockedError)):
+                await TriggerService().enable_and_activate(session, row=current)
+        assert not confluence.calls
+    finally:
+        bundle.publish(replace(original, revision=bundle.snapshot.revision + 1))
+        get_integration_policy_service().invalidate()

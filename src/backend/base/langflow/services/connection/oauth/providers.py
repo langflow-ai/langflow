@@ -233,6 +233,8 @@ async def exchange(
         msg = "OAuth provider returned invalid scopes."
         raise OAuthError(msg, reason="provider-unavailable")
     scopes = sorted(set(raw_scopes.replace(",", " ").split())) if raw_scopes is not None else previous_scopes
+    if refresh_token and adapter is not None and adapter.limit_refresh_scopes_to_previous:
+        scopes = sorted(set(scopes) & set(previous_scopes))
     expiry = None
     if "expires_in" in token:
         try:

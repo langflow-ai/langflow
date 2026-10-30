@@ -14,16 +14,18 @@ by hand-edit:
     3. ``all-no-torch`` is exactly ``all`` minus the torch-pulling providers
        (``TORCH_EXTRAS``), giving a torch-free full-provider install,
     4. normalized extra keys are collision-free,
-    5. the metapackage provider set stays disjoint from the graduated
-       partner distributions (no double-ship; manifest would shadow),
+    5. metapackage bundle categories stay disjoint from categories declared
+       by partner manifests, preventing one distribution from shadowing another,
     6. retired ALTK extras cannot reinstall the removed toolkit dependency.
 """
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
+import pytest
 from packaging.requirements import Requirement
 
 try:
@@ -118,20 +120,73 @@ def test_normalized_extra_keys_are_collision_free() -> None:
     assert not dupes, f"provider names collide after PEP 685 normalization: {sorted(dupes)}"
 
 
-def test_metapackage_providers_disjoint_from_graduated_partners() -> None:
-    """A provider must ship from exactly one distribution.
+def _partner_bundle_names(bundles_dir: Path) -> set[str]:
+    """Read registry categories from shipped manifests rather than workspace labels."""
+    names = set()
+    for child in sorted(bundles_dir.iterdir()):
+        project_path = child / "pyproject.toml"
+        if not child.is_dir() or child.name == "lfx-bundles" or not project_path.is_file():
+            continue
+        with project_path.open("rb") as file:
+            project = tomllib.load(file)
+        manifests = [
+            json.loads(path.read_text(encoding="utf-8")) for path in sorted(child.glob("src/*/extension.json"))
+        ]
+        embedded = project.get("tool", {}).get("langflow", {}).get("extension")
+        if embedded is not None:
+            manifests.append(embedded)
+        assert manifests, f"partner distribution {child.name} has no extension manifest"
+        for manifest in manifests:
+            names.update(bundle["name"] for bundle in manifest.get("bundles", []))
+    return names
 
-    Graduated ``lfx-<provider>`` packages are the manifest-shipping
-    ``src/bundles/<provider>/`` workspace members (manifest shadows
-    manifest-less, but double-shipping is still a packaging bug).
+
+def test_metapackage_providers_disjoint_from_graduated_partners() -> None:
+    """A registry category must ship from exactly one distribution.
+
+    Distribution and workspace names can differ from declared bundle names.
+    The loader shadows only identical categories in the official slot.
     """
-    partners = {
-        child.name
-        for child in BUNDLES_DIR.iterdir()
-        if child.is_dir() and child.name != "lfx-bundles" and (child / "pyproject.toml").is_file()
-    }
-    overlap = {_normalize(p) for p in _provider_dirs()} & {_normalize(p) for p in partners}
-    assert not overlap, f"providers shipped from both lfx-bundles and a graduated package: {sorted(overlap)}"
+    overlap = set(_provider_dirs()) & _partner_bundle_names(BUNDLES_DIR)
+    assert not overlap, f"bundle categories shipped from both lfx-bundles and a partner package: {sorted(overlap)}"
+
+
+def test_confluence_integration_category_preserves_the_legacy_provider() -> None:
+    manifest_path = BUNDLES_DIR / "confluence" / "src" / "lfx_confluence" / "extension.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert {bundle["name"] for bundle in manifest["bundles"]} == {"confluence_integrations"}
+    assert manifest["integrations"][0]["provider_id"] == "confluence"
+    assert manifest["integrations"][0]["bundle"] == "confluence_integrations"
+    assert "confluence" in _provider_dirs()
+    assert "confluence" not in _partner_bundle_names(BUNDLES_DIR)
+
+
+@pytest.mark.parametrize("manifest_kind", ["json", "toml"])
+def test_manifest_category_detects_double_shipping_despite_a_different_workspace_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, manifest_kind: str
+) -> None:
+    partner = tmp_path / "renamed-distribution"
+    package = partner / "src" / "lfx_renamed"
+    package.mkdir(parents=True)
+    project = '[project]\nname = "lfx-renamed"\nversion = "0.1.0"\n'
+    if manifest_kind == "json":
+        manifest = {
+            "id": "lfx-renamed",
+            "version": "0.1.0",
+            "lfx": {"compat": ["1"]},
+            "bundles": [{"name": "confluence", "path": "components/confluence"}],
+        }
+        (package / "extension.json").write_text(json.dumps(manifest), encoding="utf-8")
+    else:
+        project += (
+            '\n[tool.langflow.extension]\nid = "lfx-renamed"\nversion = "0.1.0"\n'
+            '[tool.langflow.extension.lfx]\ncompat = ["1"]\n'
+            '[[tool.langflow.extension.bundles]]\nname = "confluence"\npath = "components/confluence"\n'
+        )
+    (partner / "pyproject.toml").write_text(project, encoding="utf-8")
+    monkeypatch.setitem(globals(), "BUNDLES_DIR", tmp_path)
+    with pytest.raises(AssertionError, match=r"both.*confluence"):
+        test_metapackage_providers_disjoint_from_graduated_partners()
 
 
 def test_retired_altk_extra_cannot_reinstall_toolkit() -> None:

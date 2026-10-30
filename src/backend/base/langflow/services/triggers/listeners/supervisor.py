@@ -870,13 +870,20 @@ class ListenerSupervisor:
                 await self._succeeded(worker)
 
         async def source_failed(
-            *, trigger_id: UUID, message: str, expected_config: dict[str, Any], expected_kind: str
+            *,
+            trigger_id: UUID,
+            message: str,
+            expected_config: dict[str, Any],
+            expected_kind: str,
+            terminal: bool = False,
         ) -> None:
             async with session_scope() as session:
                 row = await lock_target(
                     session, trigger_id=trigger_id, expected_config=expected_config, expected_kind=expected_kind
                 )
                 row.last_error = f"{_SOURCE_POLLING_ERROR_PREFIX}{message}"
+                if terminal:
+                    row.state = TriggerState.ERROR.value
                 row.updated_at = _now()
                 session.add(row)
 

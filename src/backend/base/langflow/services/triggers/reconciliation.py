@@ -495,7 +495,11 @@ async def reconcile_flow_triggers(
                 row.last_error = error or SOURCE_SETTINGS_CHANGED_ERROR
                 row.provider_state = {}
                 changed = True
-            elif row.last_error != error and row.state != TriggerState.ACTIVE.value:
+            elif (
+                row.last_error != error
+                and row.state != TriggerState.ACTIVE.value
+                and (row.state != TriggerState.ERROR.value or error is not None or config_changed or moved)
+            ):
                 row.last_error = error
                 changed = True
         if changed:

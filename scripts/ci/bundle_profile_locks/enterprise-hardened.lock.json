@@ -53,6 +53,16 @@
       "resolved_version": "0.2.1"
     },
     {
+      "distribution": "lfx-confluence",
+      "extras": [],
+      "providers": [
+        "lfx-confluence"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-confluence==0.1.0",
+      "resolved_version": "0.1.0"
+    },
+    {
       "distribution": "lfx-datastax",
       "extras": [],
       "providers": [
@@ -200,12 +210,13 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:b67db1b200c34c1f",
+  "profile_digest": "sha256:6759c73f6727c8b0",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
     "lfx-azure",
     "lfx-cohere",
+    "lfx-confluence",
     "lfx-datastax",
     "lfx-docling",
     "lfx-github",

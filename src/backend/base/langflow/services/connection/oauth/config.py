@@ -169,7 +169,7 @@ class OAuthSettings(BaseSettings):
     hosted_enabled: bool = False
     context: Literal["self_managed", "hosted", "desktop"] = "self_managed"
 
-    def registration_ids(self) -> list[str]:
+    def registration_ids(self, *, provider: str | None = None) -> list[str]:
         """Return the configured registration names, without validating them.
 
         A caller that needs a registration still goes through
@@ -181,7 +181,11 @@ class OAuthSettings(BaseSettings):
             return []
         if not isinstance(configs, dict):
             return []
-        return sorted(str(registration_id) for registration_id in configs)
+        return sorted(
+            str(registration_id)
+            for registration_id, config in configs.items()
+            if provider is None or (isinstance(config, dict) and config.get("provider") == provider)
+        )
 
     def registration(self, registration_id: str) -> OAuthRegistration:
         try:
