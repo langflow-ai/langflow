@@ -24,8 +24,10 @@ import { extractApiErrorMessages } from "@/utils/apiError";
 import BackLink from "./components/BackLink";
 import EvalsPageShell from "./components/EvalsPageShell";
 import { EvalsEmptyState } from "./components/EvalsStates";
+import ModelComparison from "./components/ModelComparison";
 import RunResults from "./components/RunResults";
 import RunsTable, { versionTag } from "./components/RunsTable";
+import VariantLabel from "./components/VariantLabel";
 import { useRerun } from "./hooks/use-rerun";
 import { downloadCsv } from "./utils/download-csv";
 
@@ -83,6 +85,7 @@ export default function EvaluationDetailPage() {
     selectedRun && !TERMINAL_RUN_STATUSES.has(selectedRun.status),
   );
   const rerunBusy = rerun.estimating || rerun.starting;
+  const comparison = selectedRun?.config.comparison;
 
   const handleExport = () => {
     if (!selectedRun) return;
@@ -163,6 +166,24 @@ export default function EvaluationDetailPage() {
                     })}
                   </DropdownMenuItem>
                 )}
+                {selectedRun?.flow_version_id && comparison && (
+                  <DropdownMenuItem
+                    onClick={() =>
+                      rerun.request(
+                        selectedRun.flow_version_id,
+                        comparison.variants.map((overrides) => ({
+                          model_overrides: overrides,
+                        })),
+                      )
+                    }
+                    data-testid="rerun-comparison"
+                  >
+                    {t("evals.compare.rerun", {
+                      count: comparison.variants.length,
+                      version: versionTag(selectedRun.flow_version_number, t),
+                    })}
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           )}
@@ -198,13 +219,33 @@ export default function EvaluationDetailPage() {
             />
           )}
         </section>
+        {comparison && (
+          <ModelComparison
+            runs={runs}
+            comparisonId={comparison.id}
+            selectedRunId={selectedRun?.id ?? null}
+            onSelect={selectRun}
+          />
+        )}
         {selectedRun && (
           <section
             aria-labelledby="results-heading"
             className="flex flex-col gap-3"
           >
-            <h2 id="results-heading" className="text-base font-semibold">
+            <h2
+              id="results-heading"
+              className="flex flex-wrap items-center gap-x-3 gap-y-1 text-base font-semibold"
+            >
               {t("evals.results.title")}
+              {comparison && (
+                <span className="text-sm font-normal">
+                  <VariantLabel
+                    index={comparison.index}
+                    overrides={comparison.variants[comparison.index] ?? []}
+                    detail={false}
+                  />
+                </span>
+              )}
             </h2>
             <RunResults key={selectedRun.id} run={selectedRun} />
           </section>

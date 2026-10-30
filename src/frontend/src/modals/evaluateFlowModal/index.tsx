@@ -108,7 +108,8 @@ export default function EvaluateFlowModal({
         open={open}
         setOpen={setOpen}
         size="medium-h-full"
-        width="min(680px, 96vw)"
+        // Compared versions sit side by side; a single run keeps the narrower form.
+        width={form.comparing ? "min(920px, 96vw)" : "min(680px, 96vw)"}
         className={DIALOG_CONTAINER}
         onSubmit={handleSubmit}
       >
@@ -226,8 +227,10 @@ export default function EvaluateFlowModal({
             <ModelOverrides
               flowId={flowId}
               pickers={form.check.data?.model_pickers ?? []}
-              chosen={state.chosenModels}
+              versions={state.modelVersions}
               onChange={set.chooseModel}
+              onDuplicate={set.duplicateModelVersion}
+              onRemove={set.removeModelVersion}
             />
 
             <MoreOptions
@@ -261,7 +264,11 @@ export default function EvaluateFlowModal({
         </BaseModal.Content>
         <BaseModal.Footer
           submit={{
-            label: t("evals.evaluate.createAndRun"),
+            label: form.comparing
+              ? t("evals.compare.submit", {
+                  count: state.modelVersions.length,
+                })
+              : t("evals.evaluate.createAndRun"),
             loading: submitting && !confirmOpen,
             disabled: !form.canSubmit || submitting || decision === "wait",
             dataTestId: "evaluate-submit",

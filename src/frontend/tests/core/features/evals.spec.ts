@@ -192,3 +192,95 @@ test(
     await expect(page.getByText(/^12 items · /)).toBeVisible();
   },
 );
+
+test(
+  "user compares two model versions of a flow and re-runs the comparison",
+  { tag: ["@release", "@workspace"] },
+  async ({ page }) => {
+    const suffix = Date.now().toString(36);
+    await awaitBootstrapTest(page, { skipModal: true });
+    // The echo flow with a model picker the run never calls: versions are free and deterministic.
+    const withPicker = structuredClone(ECHO_FLOW);
+    const input = withPicker.data.nodes.find(
+      (node: { data: { type: string } }) => node.data.type === "ChatInput",
+    );
+    input.data.node.template.model = {
+      type: "model",
+      display_name: "Language Model",
+      model_type: "language",
+      value: [{ name: "gpt-4o-mini", provider: "OpenAI", metadata: {} }],
+      show: true,
+      advanced: false,
+    };
+    const { flowId, datasetName } = await page.evaluate(
+      async ({ flow, suffix }) => {
+        const post = async (url: string, body: unknown) => {
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (!res.ok) throw new Error(`${url} failed: ${res.status}`);
+          return res.json();
+        };
+        const created = await post("/api/v1/flows/", {
+          ...flow,
+          name: `Evals compare ${suffix}`,
+        });
+        const dataset = await post("/api/v1/datasets/", {
+          name: `compare-${suffix}`,
+        });
+        await post(`/api/v1/datasets/${dataset.id}/items`, {
+          items: [
+            { input: "hello", expected_output: "hello" },
+            { input: "world", expected_output: "other" },
+          ],
+        });
+        return { flowId: created.id as string, datasetName: dataset.name };
+      },
+      { flow: withPicker, suffix },
+    );
+
+    await page.goto(`/flow/${flowId}`);
+    await page.getByTestId("evaluate-btn-flow").click();
+    await page.getByTestId("evaluate-dataset").click();
+    await page.getByRole("option", { name: new RegExp(datasetName) }).click();
+    await page.getByTestId("evaluate-models").click();
+    await page.getByTestId("model-version-add").click();
+    await expect(page.getByTestId("model-version-1")).toBeVisible();
+    await expect(page.getByTestId("evaluate-submit")).toContainText("2");
+    await expect(page.getByTestId("evaluate-estimate")).toBeVisible();
+    await page.runA11yScan("evals-evaluate-compare");
+    await page.getByTestId("evaluate-submit").click();
+    // The estimate counts the picker as a model call, so the run asks once more.
+    await expect(page.getByTestId("confirm-run-submit")).toContainText(
+      /confirm/i,
+    );
+    await page.getByTestId("confirm-run-submit").click();
+
+    await expect(page.getByTestId("model-comparison")).toBeVisible({
+      timeout: 30000,
+    });
+    await expect(page.getByTestId("run-status-completed")).toHaveCount(2, {
+      timeout: 60000,
+    });
+    const rows = page.getByTestId("comparison-row");
+    await expect(rows).toHaveCount(2);
+    await expect(page.getByTestId("comparison-most-accurate")).toContainText(
+      "50%",
+    );
+    await page.runA11yScan("evals-model-comparison");
+    await rows.nth(1).getByRole("button").click();
+    await expect(rows.nth(1)).toHaveAttribute("aria-selected", "true");
+
+    await page.getByTestId("rerun-button").click();
+    await page.getByTestId("rerun-comparison").click();
+    await page.getByTestId("confirm-run-submit").click();
+    await expect(page.getByTestId("run-row")).toHaveCount(4, {
+      timeout: 60000,
+    });
+    await expect(page.getByTestId("run-status-completed")).toHaveCount(4, {
+      timeout: 60000,
+    });
+  },
+);

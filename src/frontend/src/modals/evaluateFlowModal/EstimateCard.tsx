@@ -125,6 +125,11 @@ export default function EstimateCard({
           />
         )}
       </div>
+      {(estimate.variants ?? 1) > 1 && (
+        <p className="text-xs text-muted-foreground">
+          {t("evals.compare.estimateNote", { count: estimate.variants })}
+        </p>
+      )}
       {estimate.has_agent && (
         <p className="text-xs text-muted-foreground">
           {t("evals.estimate.agentNote")}

@@ -16,6 +16,7 @@ from langflow.services.database.models.evaluation.evaluation import TERMINAL_RUN
 from langflow.services.database.models.jobs.model import JobType
 from langflow.services.deps import get_job_service, get_settings_service, get_task_service
 from langflow.services.evaluations.access import load_eval_dataset, load_eval_flow, load_evaluation
+from langflow.services.evaluations.comparison import COMPARISON_KEY, new_comparison
 from langflow.services.evaluations.dataset_service import count_items
 from langflow.services.evaluations.errors import EvalsConflictError, EvalsNotFoundError, EvalsValidationError
 from langflow.services.evaluations.estimate import estimate_run
@@ -64,6 +65,8 @@ async def start_evaluation_run(
     evaluation: Evaluation,
     flow_version_id: UUID | None,
     model_overrides: Sequence[ModelOverride] = (),
+    *,
+    comparison: dict[str, Any] | None = None,
 ) -> EvaluationRun:
     if evaluation.flow_id is None:
         msg = "The flow of this evaluation was deleted."
@@ -103,6 +106,10 @@ async def start_evaluation_run(
     if report.blocking:
         raise FlowCheckFailedError([issue.model_dump() for issue in report.blocking])
     run_data = apply_model_overrides(version.data or {}, model_overrides)
+    if comparison is not None and comparison["index"] == 0:
+        # Refuse a variant the version cannot run now, before the first variant spends anything.
+        for variant in comparison["variants"]:
+            apply_model_overrides(version.data or {}, variant)
     estimate = await estimate_run(
         session,
         flow_id=flow.id,
@@ -119,12 +126,27 @@ async def start_evaluation_run(
         "output_vertex_id": resolve_output_vertex(version.data or {}, evaluation.output_vertex_id),
         "model_overrides": [override.model_dump() for override in model_overrides],
     }
+    if comparison is not None:
+        run.config[COMPARISON_KEY] = comparison
     run.estimate = estimate.model_dump()
     session.add(run)
     # The coordinator reads the run in its own session, so it must be committed before launch.
     await session.commit()
     await _launch_coordinator(run.job_id, run.id, flow.id, user.id)
     return run
+
+
+async def start_runs(
+    session: AsyncSession,
+    user: User,
+    evaluation: Evaluation,
+    flow_version_id: UUID | None,
+    variants: Sequence[Sequence[ModelOverride]],
+) -> EvaluationRun:
+    """Start the evaluation once, or the first variant of a comparison; the rest follow as each run ends."""
+    comparison = new_comparison(variants)
+    first = variants[0] if variants else ()
+    return await start_evaluation_run(session, user, evaluation, flow_version_id, first, comparison=comparison)
 
 
 async def _claim_active_slot(session: AsyncSession, run: EvaluationRun) -> None:

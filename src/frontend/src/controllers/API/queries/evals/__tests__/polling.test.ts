@@ -67,4 +67,51 @@ describe("runsListRefetchInterval", () => {
       }),
     ).toBe(false);
   });
+
+  const comparisonRun = (
+    status: string,
+    index: number,
+    finishedAt: string | null,
+  ) => ({
+    status,
+    finished_at: finishedAt,
+    config: { comparison: { id: "c", index, variants: [[], [], []] } },
+  });
+  const now = Date.parse("2026-10-30T12:00:00Z");
+
+  it("should follow an active comparison as fast as a run", () => {
+    expect(
+      runsListRefetchInterval({
+        status: "success",
+        data: { items: [comparisonRun("running", 1, null)] },
+      }),
+    ).toBe(RUN_POLL_MS);
+  });
+
+  it("should keep polling briefly while a comparison starts its next variant", () => {
+    const justEnded = comparisonRun("completed", 0, "2026-10-30T11:59:50Z");
+    expect(
+      runsListRefetchInterval(
+        { status: "success", data: { items: [justEnded] } },
+        now,
+      ),
+    ).toBe(RUN_POLL_MS);
+  });
+
+  it("should stop once the last variant ended, a variant was cancelled, or the next never came", () => {
+    const cases = [
+      comparisonRun("completed", 2, "2026-10-30T11:59:50Z"),
+      comparisonRun("cancelled", 0, "2026-10-30T11:59:50Z"),
+      comparisonRun("completed", 0, "2026-10-30T11:50:00Z"),
+      comparisonRun("failed", 0, null),
+    ];
+    for (const run of cases) {
+      expect(
+        runsListRefetchInterval(
+          { status: "success", data: { items: [run] } },
+          now,
+        ),
+      ).toBe(false);
+    }
+  });
 });

@@ -119,6 +119,20 @@ export interface RunEstimate {
   cost_high: number | null;
   unpriced_models: string[];
   has_agent: boolean;
+  /** How many runs the figures cover: a comparison runs the dataset once per variant. */
+  variants?: number;
+}
+
+/** The models of one run in a comparison: the dataset runs once per variant, one after another. */
+export interface ModelVariant {
+  model_overrides: ModelOverride[];
+}
+
+/** Stored on each run of a comparison; `variants` is the whole plan, `index` this run's place in it. */
+export interface RunComparison {
+  id: string;
+  index: number;
+  variants: ModelOverride[][];
 }
 
 export interface EvaluationRun {
@@ -137,6 +151,8 @@ export interface EvaluationRun {
     scorers: ScorerSpec[];
     pass_threshold: number;
     output_vertex_id: string;
+    model_overrides?: ModelOverride[];
+    comparison?: RunComparison;
   };
   total_items: number;
   completed_items: number;

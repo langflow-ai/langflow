@@ -17,6 +17,7 @@ import {
   formatUsd,
 } from "../utils/format";
 import RunStatusBadge from "./RunStatusBadge";
+import VariantLabel, { variantName } from "./VariantLabel";
 
 interface RunsTableProps {
   runs: EvaluationRun[];
@@ -50,6 +51,7 @@ export default function RunsTable({
           <TableHead>{t("evals.runs.started")}</TableHead>
           <TableHead>{t("evals.runs.status")}</TableHead>
           <TableHead>{t("evals.runs.version")}</TableHead>
+          <TableHead>{t("evals.compare.models")}</TableHead>
           <TableHead className="text-right">{t("evals.passRate")}</TableHead>
           <TableHead className="text-right">{t("evals.tokens")}</TableHead>
           <TableHead className="text-right">{t("evals.cost")}</TableHead>
@@ -87,6 +89,23 @@ export default function RunsTable({
                 <RunStatusBadge status={run.status} />
               </TableCell>
               <TableCell>{versionLabel(run, t)}</TableCell>
+              <TableCell className="max-w-56">
+                {run.config.comparison ? (
+                  <VariantLabel
+                    index={run.config.comparison.index}
+                    overrides={
+                      run.config.comparison.variants[
+                        run.config.comparison.index
+                      ] ?? []
+                    }
+                    detail={false}
+                  />
+                ) : (
+                  <span className="block truncate">
+                    {variantName(run.config.model_overrides ?? [], t)}
+                  </span>
+                )}
+              </TableCell>
               <TableCell className="text-right">
                 {formatPercent(run.summary?.pass_rate)}
               </TableCell>

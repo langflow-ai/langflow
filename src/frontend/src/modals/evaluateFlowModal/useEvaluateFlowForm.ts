@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { ModelOption } from "@/components/core/parameterRenderComponent/components/modelInputComponent/types";
 import type {
   Evaluation,
@@ -21,7 +21,11 @@ import {
   parseJudgeMaxTokens,
   parseJudgeRunMaxTokens,
 } from "./judgeLimits";
-import { buildModelOverrides, type ChosenModels } from "./modelOverrideUtils";
+import {
+  buildModelVariants,
+  MAX_MODEL_VARIANTS,
+  type ModelVersion,
+} from "./modelOverrideUtils";
 
 export const LATEST_VERSION = "latest";
 export const TEXT_SCORERS: ScorerType[] = [
@@ -92,7 +96,11 @@ export function useEvaluateFlowForm(flowId: string) {
     useState<JudgeLimits>(DEFAULT_JUDGE_LIMITS);
   const [threshold, setThreshold] = useState(DEFAULT_THRESHOLD);
   const [safetyChecks, setSafetyChecks] = useState<SafetyCheck[]>([]);
-  const [chosenModels, setChosenModels] = useState<ChosenModels>({});
+  // One entry per model version; two or more run the dataset once each and compare them.
+  const nextVersionKey = useRef(1);
+  const [modelVersions, setModelVersions] = useState<ModelVersion[]>([
+    { key: 0, chosen: {} },
+  ]);
 
   const scorers = useMemo(
     () => buildScorers(selected, judgeModel, rubric, judgeLimits, safetyChecks),
@@ -102,15 +110,21 @@ export function useEvaluateFlowForm(flowId: string) {
     flowId,
     outputVertexId: outputVertexId || null,
   });
-  const modelOverrides = useMemo(
-    () => buildModelOverrides(check.data?.model_pickers ?? [], chosenModels),
-    [check.data?.model_pickers, chosenModels],
+  const variantOverrides = useMemo(
+    () => buildModelVariants(check.data?.model_pickers ?? [], modelVersions),
+    [check.data?.model_pickers, modelVersions],
   );
+  const comparing = variantOverrides.length > 1;
+  const modelOverrides = comparing ? [] : (variantOverrides[0] ?? []);
+  const variants = comparing
+    ? variantOverrides.map((overrides) => ({ model_overrides: overrides }))
+    : [];
   const estimate = useEstimateEvaluation({
     flowId,
     datasetId,
     scorers,
     modelOverrides,
+    variants,
   });
   const createEvaluation = useCreateEvaluation();
   const judgeMissingModel = selected.has("llm_judge") && !judgeModel[0];
@@ -122,11 +136,37 @@ export function useEvaluateFlowForm(flowId: string) {
     parseJudgeRunMaxTokens(judgeLimits.maxRunOutputTokens, rowBudget) === null;
   const judgeLimitsInvalid = judgeRowBudgetInvalid || judgeRunBudgetInvalid;
 
-  const chooseModel = (key: string, value: ModelSelection | null) =>
-    setChosenModels((current) => {
-      const { [key]: _dropped, ...rest } = current;
-      return value ? { ...rest, [key]: value } : rest;
-    });
+  const chooseModel = (
+    version: number,
+    key: string,
+    value: ModelSelection | null,
+  ) =>
+    setModelVersions((current) =>
+      current.map((entry, index) => {
+        if (index !== version) return entry;
+        const { [key]: _dropped, ...rest } = entry.chosen;
+        return { ...entry, chosen: value ? { ...rest, [key]: value } : rest };
+      }),
+    );
+
+  // A new version starts as a copy of another, so trying one other model is a single pick.
+  const duplicateModelVersion = (version: number) =>
+    setModelVersions((current) =>
+      current.length >= MAX_MODEL_VARIANTS || !current[version]
+        ? current
+        : [
+            ...current.slice(0, version + 1),
+            { key: nextVersionKey.current++, chosen: current[version].chosen },
+            ...current.slice(version + 1),
+          ],
+    );
+
+  const removeModelVersion = (version: number) =>
+    setModelVersions((current) =>
+      current.length <= 1
+        ? current
+        : current.filter((_, index) => index !== version),
+    );
 
   const toggleScorer = (type: ScorerType, on: boolean) =>
     setSelected((current) => {
@@ -144,7 +184,7 @@ export function useEvaluateFlowForm(flowId: string) {
     !judgeLimitsInvalid &&
     (check.data?.blocking.length ?? 1) === 0;
 
-  /** Create the evaluation and start its first run on the chosen version, in one atomic request. */
+  /** Create the evaluation and start its first run (a comparison's first variant), in one atomic request. */
   const createAndRun = async (): Promise<EvaluationRun> => {
     const payload: EvaluationCreatePayload = {
       flow_id: flowId,
@@ -158,7 +198,7 @@ export function useEvaluateFlowForm(flowId: string) {
       payload: {
         ...payload,
         flow_version_id: versionId === LATEST_VERSION ? null : versionId,
-        model_overrides: modelOverrides,
+        ...(comparing ? { variants } : { model_overrides: modelOverrides }),
       },
       run: true,
     });
@@ -177,7 +217,7 @@ export function useEvaluateFlowForm(flowId: string) {
       rubric,
       judgeLimits,
       threshold,
-      chosenModels,
+      modelVersions,
       safetyChecks,
     },
     set: {
@@ -191,11 +231,14 @@ export function useEvaluateFlowForm(flowId: string) {
       setJudgeLimits,
       setThreshold,
       chooseModel,
+      duplicateModelVersion,
+      removeModelVersion,
       setSafetyChecks,
-      resetModels: () => setChosenModels({}),
+      resetModels: () => setModelVersions([{ key: 0, chosen: {} }]),
     },
     check,
     estimate,
+    comparing,
     canSubmit,
     judgeMissingModel,
     judgeRowBudgetInvalid,

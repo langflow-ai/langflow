@@ -12,6 +12,8 @@ import { useModelOptions } from "./useModelOptions";
 
 interface ModelOverrideRowProps {
   flowId: string;
+  /** The model version the row belongs to; keeps ids unique when versions are compared. */
+  version: number;
   picker: FlowModelPicker;
   kind: ModelType;
   chosen: ModelSelection | undefined;
@@ -20,6 +22,7 @@ interface ModelOverrideRowProps {
 
 export default function ModelOverrideRow({
   flowId,
+  version,
   picker,
   kind,
   chosen,
@@ -27,7 +30,7 @@ export default function ModelOverrideRow({
 }: ModelOverrideRowProps) {
   const { t } = useTranslation();
   const { options, ready } = useModelOptions(flowId, true, kind);
-  const id = `model-override-${picker.node_id}-${picker.field}`;
+  const id = `model-override-${version}-${picker.node_id}-${picker.field}`;
   const value = chosen ?? picker.value;
   const changed = !sameModel(value, picker.value);
   const label =
@@ -47,6 +50,7 @@ export default function ModelOverrideRow({
             size="sm"
             className="h-6 px-2 text-xs normal-case text-muted-foreground"
             onClick={() => onChange(null)}
+            ignoreTitleCase
             data-testid={`${id}-reset`}
           >
             {t("evals.evaluate.modelReset", {

@@ -13,6 +13,7 @@ import type {
   EvaluationRun,
   FlowCheckReport,
   ModelOverride,
+  ModelVariant,
   Page,
   RunEstimate,
   ScorerSpec,
@@ -35,6 +36,8 @@ export interface EvaluationCreatePayload {
   flow_version_id?: string | null;
   /** With run=true: models to swap in for that run; the flow itself is not changed. */
   model_overrides?: ModelOverride[];
+  /** With run=true, instead of model_overrides: two or more model sets to run in turn and compare. */
+  variants?: ModelVariant[];
 }
 
 export const useGetEvaluations: useQueryFunctionType<
@@ -187,20 +190,33 @@ export const useEstimateEvaluation: useQueryFunctionType<
     datasetId: string;
     scorers: ScorerSpec[];
     modelOverrides?: ModelOverride[];
+    variants?: ModelVariant[];
   },
   RunEstimate
-> = ({ flowId, datasetId, scorers, modelOverrides = [] }, options) => {
+> = (
+  { flowId, datasetId, scorers, modelOverrides = [], variants = [] },
+  options,
+) => {
   const { query } = UseRequestProcessor();
   return query(
     // The whole spec: the judge model and rubric change the price, not only the scorer types.
-    ["useEstimateEvaluation", flowId, datasetId, scorers, modelOverrides],
+    [
+      "useEstimateEvaluation",
+      flowId,
+      datasetId,
+      scorers,
+      modelOverrides,
+      variants,
+    ],
     async () =>
       (
         await api.post<RunEstimate>(`${getURL("EVALUATIONS")}/estimate`, {
           flow_id: flowId,
           dataset_id: datasetId,
           scorers,
-          model_overrides: modelOverrides,
+          ...(variants.length > 0
+            ? { variants }
+            : { model_overrides: modelOverrides }),
         })
       ).data,
     {
@@ -262,18 +278,21 @@ export const useDeleteEvaluation: useMutationFunctionType<
 
 export const useStartEvaluationRun: useMutationFunctionType<
   { evaluationId: string },
-  { flowVersionId: string | null },
+  { flowVersionId: string | null; variants?: ModelVariant[] },
   EvaluationRun
 > = ({ evaluationId }, options) => {
   const { mutate } = UseRequestProcessor();
   const invalidate = useInvalidateEvaluations();
   return mutate(
     ["useStartEvaluationRun", evaluationId],
-    async ({ flowVersionId }) =>
+    async ({ flowVersionId, variants = [] }) =>
       (
         await api.post<EvaluationRun>(
           `${getURL("EVALUATIONS")}/${evaluationId}/runs`,
-          { flow_version_id: flowVersionId },
+          {
+            flow_version_id: flowVersionId,
+            ...(variants.length > 0 && { variants }),
+          },
         )
       ).data,
     { retry: false, ...options, onSettled: () => invalidate(evaluationId) },

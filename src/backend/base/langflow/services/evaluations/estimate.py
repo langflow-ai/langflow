@@ -120,3 +120,44 @@ async def estimate_run(
         unpriced_models=sorted({*unpriced, *judge.unpriced}),
         has_agent=any(node.agent for node in nodes),
     )
+
+
+def _sum_optional(values: list[float | None]) -> float | None:
+    """A comparison's cost is known only when every variant's is."""
+    if any(value is None for value in values):
+        return None
+    return round(sum(value for value in values if value is not None), 6)
+
+
+async def estimate_variants(
+    session: AsyncSession,
+    *,
+    flow_id: UUID,
+    variants: list[dict[str, Any]],
+    dataset_id: UUID,
+    scorers: list[Any],
+) -> EstimateRead:
+    """One estimate per variant's flow, added up: a comparison runs the whole dataset once per variant."""
+    parts = [
+        await estimate_run(session, flow_id=flow_id, flow_data=data, dataset_id=dataset_id, scorers=scorers)
+        for data in variants
+    ]
+    if len(parts) == 1:
+        return parts[0]
+    return EstimateRead(
+        items=parts[0].items,
+        basis="history" if all(part.basis == "history" for part in parts) else "model",
+        llm_calls=sum(part.llm_calls for part in parts),
+        judge_calls=sum(part.judge_calls for part in parts),
+        flow_tokens_low=sum(part.flow_tokens_low for part in parts),
+        flow_tokens_high=sum(part.flow_tokens_high for part in parts),
+        judge_tokens_low=sum(part.judge_tokens_low for part in parts),
+        judge_tokens_high=sum(part.judge_tokens_high for part in parts),
+        tokens_low=sum(part.tokens_low for part in parts),
+        tokens_high=sum(part.tokens_high for part in parts),
+        cost_low=_sum_optional([part.cost_low for part in parts]),
+        cost_high=_sum_optional([part.cost_high for part in parts]),
+        unpriced_models=sorted({model for part in parts for model in part.unpriced_models}),
+        has_agent=any(part.has_agent for part in parts),
+        variants=len(parts),
+    )

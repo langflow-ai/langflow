@@ -21,6 +21,7 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
+from langflow.services.evaluations.comparison import continue_comparison
 from langflow.services.evaluations.dataset_service import all_items, item_text
 from langflow.services.evaluations.errors import EvalsValidationError
 from langflow.services.evaluations.failure_breaker import FailureBreaker, RunAbortedError, failure_detail
@@ -332,6 +333,7 @@ async def run_evaluation(run_id: UUID) -> None:
         if isinstance(exc, RunAbortedError):
             await _finalize_run(run_id, scorer_names, "failed", error=str(exc))
             await logger.awarning(f"evals_run_aborted run_id={run_id} reason=repeated_failure")
+            await _continue_comparison(run_id)
             return
         await _finalize_run(run_id, scorer_names, "failed", error=f"Run failed: {type(exc).__name__}")
         raise
@@ -342,3 +344,11 @@ async def run_evaluation(run_id: UUID) -> None:
             await watcher
     await _finalize_run(run_id, scorer_names, "completed")
     await logger.ainfo(f"evals_run_completed run_id={run_id} rows={len(ctx.rows)}")
+    await _continue_comparison(run_id)
+
+
+async def _continue_comparison(run_id: UUID) -> None:
+    try:
+        await continue_comparison(run_id)
+    except Exception as exc:  # noqa: BLE001 - the finished run stays finished; only the next variant is lost
+        await logger.aexception(f"evals_comparison_next_failed run_id={run_id} error={type(exc).__name__}")

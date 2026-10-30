@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   type EvaluationRun,
@@ -12,28 +12,7 @@ import {
   formatTokenCount,
   formatUsd,
 } from "../utils/format";
-
-function Kpi({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: ReactNode;
-  hint?: ReactNode;
-}) {
-  return (
-    <div className="flex min-w-0 flex-col gap-1 rounded-lg border px-4 py-3">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="truncate text-xl font-semibold tabular-nums">
-        {value}
-      </span>
-      {hint && (
-        <span className="truncate text-xs text-muted-foreground">{hint}</span>
-      )}
-    </div>
-  );
-}
+import Kpi from "./Kpi";
 
 export default function RunKpis({ run }: { run: EvaluationRun }) {
   const { t } = useTranslation();

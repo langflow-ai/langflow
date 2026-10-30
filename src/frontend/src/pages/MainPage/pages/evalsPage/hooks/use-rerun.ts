@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type {
   Evaluation,
+  ModelVariant,
   RunEstimate,
 } from "@/controllers/API/queries/evals/types";
 import {
@@ -11,8 +12,11 @@ import {
 import useAlertStore from "@/stores/alertStore";
 import { extractApiErrorMessages } from "@/utils/apiError";
 
-/** `undefined` means no re-run is pending; `null` is the latest draft, a string a pinned version. */
-type PendingVersion = string | null | undefined;
+/** A requested re-run: `null` runs the latest draft, a string a pinned version; variants re-run a comparison. */
+interface PendingRerun {
+  flowVersionId: string | null;
+  variants: ModelVariant[];
+}
 
 /**
  * Re-runs an evaluation, asking first when the run spends tokens. While the
@@ -25,9 +29,8 @@ export function useRerun(
 ) {
   const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const [pendingVersion, setPendingVersion] =
-    useState<PendingVersion>(undefined);
-  const pending = pendingVersion !== undefined;
+  const [pendingRerun, setPendingRerun] = useState<PendingRerun | null>(null);
+  const pending = pendingRerun !== null;
   const canRerun = Boolean(evaluation?.flow_id && evaluation?.dataset_id);
 
   const startRun = useStartEvaluationRun(
@@ -46,6 +49,7 @@ export function useRerun(
       flowId: evaluation?.flow_id ?? "",
       datasetId: evaluation?.dataset_id ?? "",
       scorers: evaluation?.scorers ?? [],
+      variants: pendingRerun?.variants ?? [],
     },
     { enabled: pending && canRerun },
   );
@@ -60,19 +64,19 @@ export function useRerun(
         title: t("evals.estimate.error"),
         list: extractApiErrorMessages(estimate.error),
       });
-      setPendingVersion(undefined);
+      setPendingRerun(null);
       return;
     }
-    if (estimate.data && estimate.data.llm_calls === 0) {
-      mutate({ flowVersionId: pendingVersion ?? null });
-      setPendingVersion(undefined);
+    if (estimate.data && estimate.data.llm_calls === 0 && pendingRerun) {
+      mutate(pendingRerun);
+      setPendingRerun(null);
     }
   }, [
     settled,
     estimate.isError,
     estimate.error,
     estimate.data,
-    pendingVersion,
+    pendingRerun,
     mutate,
     setErrorData,
     t,
@@ -85,13 +89,13 @@ export function useRerun(
 
   return {
     canRerun,
-    request: (flowVersionId: string | null) => setPendingVersion(flowVersionId),
-    cancel: () => setPendingVersion(undefined),
-    confirm: () =>
-      mutate(
-        { flowVersionId: pendingVersion ?? null },
-        { onSettled: () => setPendingVersion(undefined) },
-      ),
+    request: (flowVersionId: string | null, variants: ModelVariant[] = []) =>
+      setPendingRerun({ flowVersionId, variants }),
+    cancel: () => setPendingRerun(null),
+    confirm: () => {
+      if (!pendingRerun) return;
+      mutate(pendingRerun, { onSettled: () => setPendingRerun(null) });
+    },
     confirmEstimate,
     estimating: pending && !settled,
     starting: startRun.isPending,

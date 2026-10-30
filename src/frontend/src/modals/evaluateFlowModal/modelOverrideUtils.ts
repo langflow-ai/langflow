@@ -35,3 +35,20 @@ export function buildModelOverrides(
     ];
   });
 }
+
+/** The server's limit on model versions in one comparison. */
+export const MAX_MODEL_VARIANTS = 8;
+
+/** One model version in the form; `key` stays put when versions before it are removed. */
+export interface ModelVersion {
+  key: number;
+  chosen: ChosenModels;
+}
+
+/** Each version's overrides; a version that keeps every model runs the flow as saved. */
+export function buildModelVariants(
+  pickers: readonly FlowModelPicker[],
+  versions: readonly ModelVersion[],
+): ModelOverride[][] {
+  return versions.map(({ chosen }) => buildModelOverrides(pickers, chosen));
+}

@@ -20,6 +20,7 @@ TEXT_SCORER_CONFIG_KEYS = frozenset({"case_sensitive"})
 MAX_SCORERS = 10
 MAX_ITEMS_PER_REQUEST = 500
 MAX_MODEL_OVERRIDES = 50
+MAX_MODEL_VARIANTS = 8
 MODEL_SELECTION_MAX_CHARS = 8000
 
 
@@ -199,6 +200,43 @@ def _unique_overrides(value: list[ModelOverride]) -> list[ModelOverride]:
     return value
 
 
+class ModelVariant(BaseModel):
+    """One version of the flow's models in a comparison: the whole dataset runs once per variant."""
+
+    model_overrides: list[ModelOverride] = Field(default_factory=list, max_length=MAX_MODEL_OVERRIDES)
+
+    @field_validator("model_overrides")
+    @classmethod
+    def unique_model_overrides(cls, value: list[ModelOverride]) -> list[ModelOverride]:
+        return _unique_overrides(value)
+
+
+class ModelChoices(BaseModel):
+    """Models for a run: one set of overrides, or several variants to run one after another and compare."""
+
+    model_overrides: list[ModelOverride] = Field(default_factory=list, max_length=MAX_MODEL_OVERRIDES)
+    variants: list[ModelVariant] = Field(default_factory=list, max_length=MAX_MODEL_VARIANTS)
+    """Two or more: a comparison. Each variant runs the same dataset on the same flow version."""
+
+    @field_validator("model_overrides")
+    @classmethod
+    def unique_model_overrides(cls, value: list[ModelOverride]) -> list[ModelOverride]:
+        return _unique_overrides(value)
+
+    @model_validator(mode="after")
+    def one_way_to_choose(self) -> ModelChoices:
+        if self.variants and self.model_overrides:
+            msg = "Send model_overrides or variants, not both"
+            raise ValueError(msg)
+        return self
+
+    def variant_overrides(self) -> list[list[ModelOverride]]:
+        """The overrides of each run to start; a single entry when nothing is compared."""
+        if self.variants:
+            return [variant.model_overrides for variant in self.variants]
+        return [self.model_overrides]
+
+
 def _whole_number_in(config: dict[str, Any], key: str, ceiling: int) -> int | None:
     value = config.get(key)
     if value is None:
@@ -217,7 +255,9 @@ def _validate_scorer_names(scorers: list[ScorerSpec]) -> list[ScorerSpec]:
     return scorers
 
 
-class EvaluationCreate(BaseModel):
+class EvaluationCreate(ModelChoices):
+    """With ``?run=true``, ``model_overrides`` or ``variants`` set the models of the run(s); stored on each run."""
+
     flow_id: UUID
     dataset_id: UUID
     name: str | None = Field(default=None, max_length=255)
@@ -226,13 +266,6 @@ class EvaluationCreate(BaseModel):
     pass_threshold: float = Field(default=0.5, ge=0, le=1)
     flow_version_id: UUID | None = None
     """With ``?run=true``: the history version to run (default: the latest draft). Not stored."""
-    model_overrides: list[ModelOverride] = Field(default_factory=list, max_length=MAX_MODEL_OVERRIDES)
-    """With ``?run=true``: models to swap in for that run only. Stored on the run, not the evaluation."""
-
-    @field_validator("model_overrides")
-    @classmethod
-    def unique_model_overrides(cls, value: list[ModelOverride]) -> list[ModelOverride]:
-        return _unique_overrides(value)
 
     @field_validator("scorers")
     @classmethod
@@ -273,14 +306,8 @@ class EvaluationPage(Page):
     items: list[EvaluationRead]
 
 
-class RunStart(BaseModel):
+class RunStart(ModelChoices):
     flow_version_id: UUID | None = None
-    model_overrides: list[ModelOverride] = Field(default_factory=list, max_length=MAX_MODEL_OVERRIDES)
-
-    @field_validator("model_overrides")
-    @classmethod
-    def unique_model_overrides(cls, value: list[ModelOverride]) -> list[ModelOverride]:
-        return _unique_overrides(value)
 
 
 class EvaluationRunRead(BaseModel):
@@ -360,16 +387,10 @@ class FlowCheckReport(BaseModel):
     model_pickers: list[FlowModelField] = Field(default_factory=list)
 
 
-class EstimateRequest(BaseModel):
+class EstimateRequest(ModelChoices):
     flow_id: UUID
     dataset_id: UUID
     scorers: list[ScorerSpec] = Field(default_factory=list, max_length=MAX_SCORERS)
-    model_overrides: list[ModelOverride] = Field(default_factory=list, max_length=MAX_MODEL_OVERRIDES)
-
-    @field_validator("model_overrides")
-    @classmethod
-    def unique_model_overrides(cls, value: list[ModelOverride]) -> list[ModelOverride]:
-        return _unique_overrides(value)
 
 
 class EstimateRead(BaseModel):
@@ -387,6 +408,8 @@ class EstimateRead(BaseModel):
     cost_high: float | None
     unpriced_models: list[str] = Field(default_factory=list)
     has_agent: bool = False
+    variants: int = 1
+    """How many runs the figures cover: a comparison runs the dataset once per variant."""
 
 
 EvaluationRead.model_rebuild()

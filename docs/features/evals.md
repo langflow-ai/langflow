@@ -104,7 +104,8 @@ and `expected_output`, `actual_output` (capped at
 ## Starting a run
 
 `POST /api/v1/evaluations/{id}/runs` with an optional
-`{"flow_version_id": ..., "model_overrides": [...]}`.
+`{"flow_version_id": ..., "model_overrides": [...]}`, or `variants` instead of
+`model_overrides` to compare models (see Model comparison).
 
 1. Loads the flow (execute permission) and the dataset (read permission).
 2. Refuses a second active run of the same evaluation (409). A partial unique
@@ -150,6 +151,30 @@ is `{node_id, field, value}`, where `value` is one model selection
   the last run's content, so it falls back to the model estimate.
 - The model-provider policy still applies: a model the user may not run fails
   the rows, as it would in the flow.
+
+### Model comparison (`comparison.py`)
+
+`variants: [{model_overrides: [...]}, ...]` (2 to 8, instead of
+`model_overrides`) runs the whole dataset once per variant and compares them.
+A single variant is a plain run.
+
+- Variants run **one after another**, not side by side: an evaluation allows
+  one active run, and variants sharing providers and row slots would skew each
+  other's latency, which is one of the compared metrics.
+- Every run of a comparison stores `config.comparison = {id, index, variants}`
+  (the whole plan). When a run ends `completed` or `failed`, the coordinator
+  starts the next variant on the **same pinned flow version**, so editing the
+  flow mid-comparison changes nothing. A failed variant (a retired model,
+  stopped early) is still a result, so the chain goes on; a cancel stops it.
+- Every variant's overrides are applied to the pinned version at the first
+  start, so a variant the flow cannot run is 422 before anything is spent.
+- The chain stops without starting a run (logged as
+  `evals_comparison_stopped`) when the flow, evaluation or user is gone, another
+  run holds the slot, or the dataset (revision) or the scoring (scorers, pass
+  threshold) changed since the previous variant, since its rows would not be
+  comparable. A server restart mid-comparison stops it too.
+- The estimate with `variants` adds up one estimate per variant and returns
+  `variants: n`.
 
 Each row is saved in one short write-first transaction. On SQLite, very fast
 rows (a flow without model calls finishes in milliseconds) commit so often,
@@ -315,7 +340,7 @@ unknown, so a partial total never looks complete.
 
 ## Estimate
 
-`POST /api/v1/evaluations/estimate` with `{flow_id, dataset_id, scorers, model_overrides?}`.
+`POST /api/v1/evaluations/estimate` with `{flow_id, dataset_id, scorers, model_overrides? | variants?}`.
 
 - **Flow part:** from this flow's last completed run (per-row tokens and cost,
   ×0.8 to ×1.25) when there is one; otherwise from the flow's LLM components,
@@ -364,7 +389,7 @@ Evaluations
   GET    /api/v1/evaluations/{id}
   PATCH  /api/v1/evaluations/{id}
   DELETE /api/v1/evaluations/{id}                   refused while a run is active; releases retained versions
-  POST   /api/v1/evaluations/{id}/runs              {flow_version_id?, model_overrides?} → 202 run
+  POST   /api/v1/evaluations/{id}/runs              {flow_version_id?, model_overrides? | variants?} → 202 run (a comparison's first)
   GET    /api/v1/evaluations/{id}/runs
 
 Runs
@@ -445,7 +470,11 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
 - Evaluate: the canvas button (between Playground and Share) saves the flow and
   opens the modal; **New evaluation** on the Evaluations page opens the same
   modal with a searchable flow picker. **Models** lists the flow's model pickers
-  (folded; the summary says how many changed) to run with other models. Name,
+  (folded; the summary says how many changed) to run with other models.
+  **Compare with other models** adds a version (a copy of the last); with two or
+  more, each version is a numbered card with its own pickers, duplicate and
+  remove, the dialog widens, the estimate covers every version and the submit
+  reads "Create & compare N". Name,
   flow version and pass threshold sit under **More options**. The modal shows flow checks, the estimate once a
   dataset is chosen and, for runs with model calls, a confirmation.
 - Evaluation page: runs table (version, pass rate, tokens and change against
@@ -456,6 +485,19 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
   the attacks resisted; the row detail lists each check and what the input
   tried, and the score note says which check failed the row. The Evaluate modal
   offers the checks under the LLM judge.
+- Comparison: a run of a comparison shows **Model comparison** above its
+  results: cards for the most accurate (with how many are within its margin of
+  error), the cheapest and the fastest (median) version and the comparison's
+  cost, then a leaderboard ranked by pass rate, then cost, then median duration
+  (rows, errors, pass rate with its 95% Wilson interval and "≈ #1" when it
+  overlaps the top one, cost, cost per row, median and p90). Versions still
+  running, waiting or not run are listed unranked. With safety checks, a
+  **Safety by version** table compares the safe rate, each check's rate and the
+  attacks resisted, bolding a column's best when one version alone has it. A
+  row opens that version's results. The runs table names each run's models;
+  Re-run offers re-running the whole comparison on the same flow version. The
+  runs list polls every 5 s during a comparison, and briefly after a variant
+  ends so the next one shows up.
 - All strings are in the eight locale files; every screen passes the Jest axe
   and Playwright `runA11yScan` checks.
 
@@ -467,7 +509,9 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
 - An evaluation row never persists chat messages and never reads stored chat
   history.
 - Cost is never guessed: unknown prices make costs `null`.
-- One active run per evaluation.
+- One active run per evaluation; a comparison's variants run one at a time.
+- Every variant of a comparison runs the same flow version, dataset revision
+  and scoring.
 - Nothing in `lfx` changes behavior; `lfx serve` has no database, so the
   feature is not offered there.
 
@@ -500,7 +544,7 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
   rule, CSV, summary, flow checks, estimate model, early stop).
 - Backend integration: `src/backend/tests/unit/api/v1/evals/` (datasets, runs,
   memory isolation, versions, guards, cancel, timeout, restart, deletions, early
-  stop, estimate, GDPR erase, a 300-row stress run). `test_llm_judge_live.py`
+  stop, estimate, GDPR erase, model comparison, a 300-row stress run). `test_llm_judge_live.py`
   needs `OPENAI_API_KEY`.
 - Frontend: Jest under `evalsPage/__tests__` and `evaluateFlowModal/__tests__`;
   Playwright `tests/core/features/evals.spec.ts` (requires
