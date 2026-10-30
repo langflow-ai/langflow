@@ -3526,6 +3526,7 @@
   "evals.checks.output_not_found": "選択した出力コンポーネントはフローにもうありません。",
   "evals.checks.multiple_outputs": "フローに出力が複数あります。採点する出力を選択してください。",
   "evals.checks.external_actions": "これらのコンポーネントは Langflow の外部で動作する可能性があり、行ごとに 1 回実際に実行されます。",
+  "evals.checks.data_writes": "これらのコンポーネントはデータを保存するため、各行の回答が追加されます。",
   "evals.checks.external_memory": "このフローは外部メモリを使用します。各行がそこに読み書きするため、分離できません。",
   "evals.checks.frozen_components": "フリーズしたコンポーネントは、すべての行に同じキャッシュ済みの結果を返します。",
   "evals.evaluate.button": "評価",

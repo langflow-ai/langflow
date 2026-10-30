@@ -3525,6 +3525,7 @@
   "evals.checks.output_not_found": "선택한 출력 Component가 더 이상 Flow에 없습니다.",
   "evals.checks.multiple_outputs": "Flow에 출력이 둘 이상 있습니다. 채점할 출력을 고르세요.",
   "evals.checks.external_actions": "이 Component는 Langflow 밖에서 동작할 수 있으며, 행마다 한 번씩 실제로 실행됩니다.",
+  "evals.checks.data_writes": "이 컴포넌트는 데이터를 저장하므로 각 행의 답변이 추가됩니다.",
   "evals.checks.external_memory": "이 Flow는 외부 메모리를 씁니다. 각 행이 이 메모리를 읽고 쓰므로 분리할 수 없습니다.",
   "evals.checks.frozen_components": "Freeze한 Component는 모든 행에 캐시된 같은 결과를 돌려줍니다.",
   "evals.evaluate.button": "평가",

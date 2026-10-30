@@ -270,6 +270,13 @@ test(
       "50%",
     );
     await page.runA11yScan("evals-model-comparison");
+    // Both versions echo the same answers, so the second ties with the first; its mark explains itself.
+    await rows.nth(1).getByText("Tie", { exact: true }).locator("..").focus();
+    await expect(page.getByRole("tooltip").first()).toContainText(
+      "same pass rate",
+    );
+    await page.runA11yScan("evals-comparison-tooltip");
+    await page.keyboard.press("Escape");
     await rows.nth(1).getByRole("button").click();
     await expect(rows.nth(1)).toHaveAttribute("aria-selected", "true");
 

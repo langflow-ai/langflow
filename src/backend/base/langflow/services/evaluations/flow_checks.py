@@ -67,6 +67,32 @@ def _has_memory_output(node: dict[str, Any]) -> bool:
     return any(MEMORY_OUTPUT_TYPE in (output.get("types") or []) for output in outputs if isinstance(output, dict))
 
 
+# Components that store each row's data inside Langflow: a knowledge base being filled, a message store.
+DATA_WRITE_TYPES = frozenset({"StoreMessage", "MessageStoreComponent"})
+INGEST_MODE = "Ingest"
+INGEST_FIELDS = frozenset({"ingest_data"})
+
+
+def _ingest_targets(flow_data: dict[str, Any]) -> set[str]:
+    """Nodes with data wired into an ingest input: a vector store that adds documents on every build."""
+    targets: set[str] = set()
+    for edge in flow_data.get("edges") or []:
+        handle = ((edge or {}).get("data") or {}).get("targetHandle") or {}
+        if handle.get("fieldName") in INGEST_FIELDS:
+            targets.add(str(handle.get("id") or (edge or {}).get("target")))
+    return targets
+
+
+def _writes_data(node: dict[str, Any], ingest_targets: set[str]) -> bool:
+    template = (_node_data(node).get("node") or {}).get("template") or {}
+    mode = template.get("mode")
+    return (
+        _node_type(node) in DATA_WRITE_TYPES
+        or (isinstance(mode, dict) and mode.get("value") == INGEST_MODE)
+        or _node_id(node) in ingest_targets
+    )
+
+
 def _looks_side_effecting(node: dict[str, Any]) -> bool:
     haystack = f"{_node_type(node)} {_display_name(node)}".replace(" ", "").lower()
     return any(marker in haystack for marker in SIDE_EFFECT_MARKERS)
@@ -118,6 +144,16 @@ def _warnings(flow_data: dict[str, Any]) -> list[FlowCheckIssue]:
                 code="external_actions",
                 message="These components may act outside Langflow and will really run once per row.",
                 components=side_effects,
+            )
+        )
+    ingest_targets = _ingest_targets(flow_data)
+    writers = [_display_name(node) for node in nodes if _writes_data(node, ingest_targets)]
+    if writers:
+        warnings.append(
+            FlowCheckIssue(
+                code="data_writes",
+                message="These components save data, so every row's answer is added to them.",
+                components=writers,
             )
         )
     memories = [_display_name(node) for node in nodes if _has_memory_output(node)]

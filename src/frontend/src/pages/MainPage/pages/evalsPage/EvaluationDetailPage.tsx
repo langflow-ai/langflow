@@ -86,6 +86,11 @@ export default function EvaluationDetailPage() {
   );
   const rerunBusy = rerun.estimating || rerun.starting;
   const comparison = selectedRun?.config.comparison;
+  // Polls on its own while a variant runs, and briefly after one ends so the next shows up.
+  const { data: comparisonPage } = useGetEvaluationRuns(
+    { evaluationId, comparisonId: comparison?.id, poll: true },
+    { enabled: Boolean(comparison) },
+  );
 
   const handleExport = () => {
     if (!selectedRun) return;
@@ -221,7 +226,7 @@ export default function EvaluationDetailPage() {
         </section>
         {comparison && (
           <ModelComparison
-            runs={runs}
+            runs={comparisonPage?.items ?? []}
             comparisonId={comparison.id}
             selectedRunId={selectedRun?.id ?? null}
             onSelect={selectRun}

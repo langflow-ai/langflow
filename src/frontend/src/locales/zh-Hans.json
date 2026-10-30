@@ -3525,6 +3525,7 @@
   "evals.checks.output_not_found": "所选的输出组件已不在流程中。",
   "evals.checks.multiple_outputs": "该流程有多个输出。请选择要评分的输出。",
   "evals.checks.external_actions": "这些组件可能会在 Langflow 之外执行操作，并且每一行都会真实运行一次。",
+  "evals.checks.data_writes": "这些组件会保存数据，因此每一行的回答都会被添加进去。",
   "evals.checks.external_memory": "该流程使用外部记忆。各行会读取和写入其中，无法隔离。",
   "evals.checks.frozen_components": "冻结的组件会为每一行返回相同的缓存结果。",
   "evals.evaluate.button": "评估",

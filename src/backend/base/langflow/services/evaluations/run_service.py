@@ -209,6 +209,29 @@ async def get_run(session: AsyncSession, user: User, run_id: UUID) -> Evaluation
     return run
 
 
+async def comparison_runs(session: AsyncSession, evaluation_id: UUID, comparison_id: str) -> list[EvaluationRun]:
+    """Every run of one comparison, oldest first; matched in Python because JSON queries differ per database."""
+    configs = (
+        await session.exec(
+            select(EvaluationRun.id, EvaluationRun.config).where(EvaluationRun.evaluation_id == evaluation_id)
+        )
+    ).all()
+    ids = [
+        run_id for run_id, config in configs if ((config or {}).get(COMPARISON_KEY) or {}).get("id") == comparison_id
+    ]
+    if not ids:
+        return []
+    matched = list(
+        (
+            await session.exec(
+                select(EvaluationRun).where(col(EvaluationRun.id).in_(ids)).order_by(col(EvaluationRun.created_at))
+            )
+        ).all()
+    )
+    await reconcile_runs(session, matched)
+    return matched
+
+
 async def list_runs(
     session: AsyncSession, evaluation_id: UUID, *, page: int, size: int
 ) -> tuple[list[EvaluationRun], int]:
@@ -261,8 +284,9 @@ async def get_result(session: AsyncSession, run_id: UUID, result_id: UUID) -> Ev
 
 
 async def live_summary(session: AsyncSession, run: EvaluationRun) -> dict[str, Any] | None:
-    """Aggregates over the rows finished so far, for a run still in progress; never persisted."""
-    if run.status not in ACTIVE_STATUSES or run.summary is not None:
+    """Aggregates over the rows finished so far, for a run in progress or one whose server stopped; never persisted."""
+    # A run lost with its server never wrote a summary, but its finished rows are kept and still count.
+    if run.summary is not None:
         return run.summary
     results = await summary_rows(session, run.id)
     if not results:

@@ -51,6 +51,7 @@ describe("comparison formats", () => {
   it("should say how many times the smallest a value is", () => {
     expect(formatRatio(0.034, 0.02)).toBe("1.7×");
     expect(formatRatio(0.02, 0.02)).toBeNull();
+    expect(formatRatio(248, 246)).toBeNull();
     expect(formatRatio(null, 0.02)).toBeNull();
     expect(formatRatio(0.02, null)).toBeNull();
   });

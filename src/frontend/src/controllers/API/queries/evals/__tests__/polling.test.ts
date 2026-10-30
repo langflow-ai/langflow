@@ -114,4 +114,31 @@ describe("runsListRefetchInterval", () => {
       ).toBe(false);
     }
   });
+
+  it("should read the latest run of an oldest-first comparison list", () => {
+    const first = {
+      ...comparisonRun("completed", 0, "2026-10-30T11:59:40Z"),
+      created_at: "2026-10-30T11:58:00Z",
+    };
+    const second = {
+      ...comparisonRun("completed", 1, "2026-10-30T11:59:50Z"),
+      created_at: "2026-10-30T11:59:00Z",
+    };
+    expect(
+      runsListRefetchInterval(
+        { status: "success", data: { items: [first, second] } },
+        now,
+      ),
+    ).toBe(RUN_POLL_MS);
+    const last = {
+      ...comparisonRun("completed", 2, "2026-10-30T11:59:55Z"),
+      created_at: "2026-10-30T11:59:30Z",
+    };
+    expect(
+      runsListRefetchInterval(
+        { status: "success", data: { items: [first, second, last] } },
+        now,
+      ),
+    ).toBe(false);
+  });
 });

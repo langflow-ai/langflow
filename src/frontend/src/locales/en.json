@@ -3525,6 +3525,7 @@
   "evals.checks.output_not_found": "The selected output component is no longer in the flow.",
   "evals.checks.multiple_outputs": "The flow has more than one output. Choose the one to score.",
   "evals.checks.external_actions": "These components may act outside Langflow and will really run once per row.",
+  "evals.checks.data_writes": "These components save data, so every row's answer is added to them.",
   "evals.checks.external_memory": "This flow uses external memory. Rows will read and write it; it cannot be isolated.",
   "evals.checks.frozen_components": "Frozen components return the same cached result for every row.",
   "evals.evaluate.button": "Evaluate",

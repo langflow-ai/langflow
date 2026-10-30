@@ -176,7 +176,8 @@ A single variant is a plain run.
   `evals_comparison_stopped`) when the flow, evaluation or user is gone, another
   run holds the slot, or the dataset (revision) or the scoring (scorers, pass
   threshold) changed since the previous variant, since its rows would not be
-  comparable. A server restart mid-comparison stops it too.
+  comparable. A server restart mid-comparison stops it too: the lost run
+  fails once its job lease expires and the rest show as not run.
 - The estimate with `variants` adds up one estimate per variant and returns
   `variants: n`.
 
@@ -208,6 +209,7 @@ debounced, and "Latest" means the saved draft.
 | Warning code | Reason |
 |---|---|
 | `external_actions` | Components that usually act outside Langflow (email, Slack, webhooks, API request, MCP, SQL, ...) really run once per row |
+| `data_writes` | Components that save each row inside Langflow: a Knowledge component in Ingest mode, a vector store with data wired into `ingest_data`, a Message Store |
 | `external_memory` | A component exposing a `Memory` output; it is read and written for real and cannot be isolated |
 | `frozen_components` | Frozen components return the same cached result for every row |
 
@@ -321,7 +323,8 @@ scores that judged it reaches `pass_threshold`; when no scorer could judge it,
 ## Summary
 
 Written at the end of a run; computed on read (never stored) while a run is
-active, so the UI shows live aggregates.
+active, so the UI shows live aggregates, and for a run whose server stopped
+before it could write one, so its kept rows still count.
 
 ```json
 {
@@ -394,7 +397,7 @@ Evaluations
   PATCH  /api/v1/evaluations/{id}
   DELETE /api/v1/evaluations/{id}                   refused while a run is active; releases retained versions
   POST   /api/v1/evaluations/{id}/runs              {flow_version_id?, model_overrides? | variants?} → 202 run (a comparison's first)
-  GET    /api/v1/evaluations/{id}/runs
+  GET    /api/v1/evaluations/{id}/runs?comparison_id=   with comparison_id: every run of that comparison, oldest first
 
 Runs
   GET    /api/v1/evaluation-runs/{run_id}
@@ -499,7 +502,10 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
   errors, pass rate with its 95% Wilson interval, "Tie" for the same rate as #1
   and "≈ #1" for a lower one within its interval, cost and median marking their
   leader and how many times the leader's the others are, cost per row, p90).
-  Comparison costs keep four decimals under a dollar. Each mark explains itself
+  Comparison costs keep four decimals under a dollar; a ratio within 5% of the
+  leader is not shown, and the Cheapest card says the cost is unknown once
+  every version finished without a price. The page reads the comparison's
+  runs by `comparison_id`, so they stay complete however many runs follow. Each mark explains itself
   in a tooltip that also opens on keyboard focus. Versions still
   running, waiting or not run are listed unranked. With safety checks, a
   **Safety by version** table compares the safe rate, each check's rate and the
@@ -512,6 +518,8 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
   and Playwright `runA11yScan` checks.
 
 ## Invariants
+
+- API timestamps carry their UTC offset; SQLite's naive values are read as UTC.
 
 - A run executes exactly one pinned flow version, and editing the flow or the
   evaluation never changes a finished or running run.

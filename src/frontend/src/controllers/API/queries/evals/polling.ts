@@ -44,6 +44,15 @@ export function runRefetchInterval(state: PollQueryState): number | false {
 // The server starts a comparison's next variant right after a run ends; past this, the chain stopped.
 export const NEXT_VARIANT_GRACE_MS = 60000;
 
+function createdAt(value: unknown): number {
+  if (typeof value !== "object" || value === null || !("created_at" in value)) {
+    return 0;
+  }
+  return typeof value.created_at === "string"
+    ? Date.parse(value.created_at) || 0
+    : 0;
+}
+
 function inComparison(value: unknown): boolean {
   return (
     typeof value === "object" &&
@@ -94,6 +103,11 @@ export function runsListRefetchInterval(
   // A comparison's leaderboard reads the list, so it follows its active variant as fast as a run.
   if (active.some(inComparison)) return RUN_POLL_MS;
   if (active.length > 0) return RUNS_LIST_POLL_MS;
-  // Newest first: only the latest run can be waiting for its comparison's next variant.
-  return comparisonContinues(items[0], now) ? RUN_POLL_MS : false;
+  // The latest run is the one that can be waiting for its comparison's next variant: the first of
+  // a newest-first list, the last of a comparison's oldest-first list.
+  const latest = items.reduce<unknown>(
+    (newest, item) => (createdAt(item) > createdAt(newest) ? item : newest),
+    items[0],
+  );
+  return comparisonContinues(latest, now) ? RUN_POLL_MS : false;
 }

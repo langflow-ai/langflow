@@ -3526,6 +3526,7 @@
   "evals.checks.output_not_found": "Die ausgewählte Ausgabekomponente ist nicht mehr im Flow vorhanden.",
   "evals.checks.multiple_outputs": "Der Flow hat mehr als eine Ausgabe. Wählen Sie die zu bewertende aus.",
   "evals.checks.external_actions": "Diese Komponenten können außerhalb von Langflow handeln und werden für jede Zeile tatsächlich ausgeführt.",
+  "evals.checks.data_writes": "Diese Komponenten speichern Daten, daher wird die Antwort jeder Zeile hinzugefügt.",
   "evals.checks.external_memory": "Dieser Flow nutzt einen externen Speicher. Zeilen lesen und schreiben darin; er lässt sich nicht isolieren.",
   "evals.checks.frozen_components": "Eingefrorene Komponenten liefern für jede Zeile dasselbe zwischengespeicherte Ergebnis.",
   "evals.evaluate.button": "Evaluieren",

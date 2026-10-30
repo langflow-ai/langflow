@@ -118,6 +118,33 @@ class TestFlowChecks:
         assert warnings["external_memory"] == ["RedisChatMemory"]
         assert warnings["frozen_components"] == ["Prompt"]
 
+    def test_should_warn_about_components_that_save_every_row(self):
+        knowledge = _node("Knowledge-a", "Knowledge", template={"mode": {"value": "Ingest"}})
+        retrieval = _node("Knowledge-b", "Knowledge", template={"mode": {"value": "Retrieve"}})
+        store = _node("Store-c", "StoreMessage")
+        chroma = _node("Chroma-d", "Chroma")
+        searched = _node("Chroma-e", "Chroma")
+        edges = [
+            {
+                "source": "File-1",
+                "target": "Chroma-d",
+                "data": {"targetHandle": {"id": "Chroma-d", "fieldName": "ingest_data"}},
+            }
+        ]
+        nodes = [
+            _node("ChatInput-x", "ChatInput"),
+            _node("ChatOutput-y", "ChatOutput"),
+            knowledge,
+            retrieval,
+            store,
+            chroma,
+            searched,
+        ]
+
+        warnings = {issue.code: issue.components for issue in check_flow({"nodes": nodes, "edges": edges}).warnings}
+
+        assert warnings["data_writes"] == ["Knowledge", "StoreMessage", "Chroma"]
+
     def test_should_ignore_sticky_notes(self):
         note = {"id": "note-1", "type": "noteNode", "data": {"id": "note-1", "type": "note", "node": {}}}
         flow = {"nodes": [note, _node("ChatInput-a", "ChatInput"), _node("ChatOutput-b", "ChatOutput")], "edges": []}

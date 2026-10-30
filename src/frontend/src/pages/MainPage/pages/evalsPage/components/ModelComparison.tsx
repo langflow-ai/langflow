@@ -20,12 +20,15 @@ interface ModelComparisonProps {
 function Winner({
   entry,
   tied = 0,
+  empty,
 }: {
   entry: ComparisonEntry | null;
   tied?: number;
+  /** What to say when no version qualifies; "not decided yet" by default. */
+  empty?: string;
 }) {
   const { t } = useTranslation();
-  if (!entry) return <>{t("evals.compare.noWinner")}</>;
+  if (!entry) return <>{empty ?? t("evals.compare.noWinner")}</>;
   return (
     <>
       <VariantLabel
@@ -121,7 +124,17 @@ export default function ModelComparison({
           icon={<KpiIcon name="DollarSign" />}
           label={t("evals.compare.cheapest")}
           value={formatUsd(cheapest?.cost, { precise: true })}
-          hint={<Winner entry={cheapest} />}
+          hint={
+            <Winner
+              entry={cheapest}
+              // Every version finished and none has a price: waiting will not decide it.
+              empty={
+                comparison.finished === total
+                  ? t("evals.estimate.costUnknown")
+                  : undefined
+              }
+            />
+          }
         />
         <Kpi
           testId="comparison-fastest"

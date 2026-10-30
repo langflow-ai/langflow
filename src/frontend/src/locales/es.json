@@ -3526,6 +3526,7 @@
   "evals.checks.output_not_found": "El componente de salida seleccionado ya no está en el flujo.",
   "evals.checks.multiple_outputs": "El flujo tiene más de una salida. Elige la que quieres puntuar.",
   "evals.checks.external_actions": "Estos componentes pueden actuar fuera de Langflow y se ejecutarán de verdad una vez por fila.",
+  "evals.checks.data_writes": "Estos componentes guardan datos, así que la respuesta de cada fila se agrega a ellos.",
   "evals.checks.external_memory": "Este flujo usa memoria externa. Las filas la leerán y escribirán; no se puede aislar.",
   "evals.checks.frozen_components": "Los componentes congelados devuelven el mismo resultado en caché para cada fila.",
   "evals.evaluate.button": "Evaluar",

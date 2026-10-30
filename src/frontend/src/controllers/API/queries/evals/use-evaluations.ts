@@ -72,17 +72,25 @@ export const useGetEvaluation: useQueryFunctionType<
 };
 
 export const useGetEvaluationRuns: useQueryFunctionType<
-  { evaluationId: string; poll?: boolean },
+  {
+    evaluationId: string;
+    poll?: boolean;
+    /** Only that comparison's runs, however many other runs came after them. */
+    comparisonId?: string;
+  },
   Page<EvaluationRun>
-> = ({ evaluationId, poll = false }, options) => {
+> = ({ evaluationId, poll = false, comparisonId }, options) => {
   const { query } = UseRequestProcessor();
+  // The comparison key nests under the evaluation's, so invalidating the runs refreshes both.
   return query(
-    [RUNS_KEY, evaluationId],
+    comparisonId
+      ? [RUNS_KEY, evaluationId, comparisonId]
+      : [RUNS_KEY, evaluationId],
     async () =>
       (
         await api.get<Page<EvaluationRun>>(
           `${getURL("EVALUATIONS")}/${evaluationId}/runs`,
-          { params: { size: 100 } },
+          { params: { size: 100, comparison_id: comparisonId } },
         )
       ).data,
     {

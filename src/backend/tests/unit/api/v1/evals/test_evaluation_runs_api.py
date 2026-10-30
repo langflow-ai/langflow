@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 import pytest
 from langflow.memory import aadd_messages
 from langflow.schema.message import Message
-from langflow.services.database.models.evaluation import EvaluationRun
+from langflow.services.database.models.evaluation import EvaluationResult, EvaluationRun
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.deps import get_job_service, get_settings_service, session_scope
@@ -395,6 +395,49 @@ class TestStoppingRuns:
         assert "server stopped" in run["error"]
         allowed = await client.post(f"api/v1/evaluations/{evaluation['id']}/runs", headers=logged_in_headers)
         assert allowed.status_code == 202
+
+    async def test_should_summarize_the_kept_rows_of_a_run_lost_with_its_server(self, client, logged_in_headers):
+        flow = await create_flow(client, logged_in_headers)
+        dataset = await create_dataset(client, logged_in_headers, "lost-rows", [("a", "a"), ("b", "b")])
+        evaluation = await create_evaluation(client, logged_in_headers, flow["id"], dataset["id"])
+        async with session_scope() as session:
+            orphan = EvaluationRun(
+                evaluation_id=UUID(evaluation["id"]),
+                user_id=UUID(flow["user_id"]),
+                job_id=uuid4(),
+                flow_id=UUID(flow["id"]),
+                flow_name="Echo",
+                dataset_name="lost-rows",
+                dataset_revision=1,
+                status="running",
+                total_items=2,
+                completed_items=1,
+                passed_items=1,
+                config={"scorers": [{"type": "exact_match", "name": "exact"}]},
+                created_at=datetime.now(timezone.utc) - timedelta(minutes=5),
+            )
+            session.add(orphan)
+            await session.flush()
+            session.add(
+                EvaluationResult(
+                    run_id=orphan.id,
+                    position=0,
+                    input={"text": "a"},
+                    scores={"exact": {"value": 1.0}},
+                    passed=True,
+                    duration_ms=120,
+                )
+            )
+            orphan_id = str(orphan.id)
+
+        run = (await client.get(f"api/v1/evaluation-runs/{orphan_id}", headers=logged_in_headers)).json()
+
+        assert run["status"] == "failed"
+        assert run["summary"]["pass_rate"] == 1.0
+        assert run["summary"]["rows"]["total"] == 1
+        # SQLite returns naive timestamps; the API must still say they are UTC.
+        assert run["created_at"].endswith(("Z", "+00:00"))
+        assert run["finished_at"].endswith(("Z", "+00:00"))
 
 
 class TestDeletions:

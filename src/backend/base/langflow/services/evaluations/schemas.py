@@ -1,15 +1,23 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
-from typing import Any, Literal
+from datetime import datetime, timezone
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, Field, field_validator, model_validator
 
 from langflow.services.database.models.evaluation.dataset import DATASET_NAME_MAX_LENGTH
 from langflow.services.evaluations.scorers.llm_judge import MAX_OUTPUT_TOKENS_CEILING, MAX_RUN_OUTPUT_TOKENS_CEILING
 from langflow.services.evaluations.scorers.safety import SAFETY_CHECKS
+
+
+def _as_utc(value: datetime) -> datetime:
+    return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+
+
+# SQLite hands timestamps back without an offset; without one, clients read UTC as their local time.
+UtcDatetime = Annotated[datetime, AfterValidator(_as_utc)]
 
 ScorerType = Literal["exact_match", "contains", "similarity", "llm_judge"]
 TEXT_MAX_CHARS = 100_000
@@ -60,8 +68,8 @@ class DatasetRead(BaseModel):
     description: str | None
     revision: int
     item_count: int
-    created_at: datetime
-    updated_at: datetime
+    created_at: UtcDatetime
+    updated_at: UtcDatetime
 
 
 class DatasetExampleRead(BaseModel):
@@ -92,8 +100,8 @@ class DatasetItemRead(BaseModel):
     input: str
     expected_output: str | None
     source: str
-    created_at: datetime
-    updated_at: datetime
+    created_at: UtcDatetime
+    updated_at: UtcDatetime
 
 
 class DatasetItemsDelete(BaseModel):
@@ -298,8 +306,8 @@ class EvaluationRead(BaseModel):
     scorers: list[dict[str, Any]]
     pass_threshold: float
     last_run: EvaluationRunRead | None = None
-    created_at: datetime
-    updated_at: datetime
+    created_at: UtcDatetime
+    updated_at: UtcDatetime
 
 
 class EvaluationPage(Page):
@@ -330,9 +338,9 @@ class EvaluationRunRead(BaseModel):
     summary: dict[str, Any] | None
     estimate: dict[str, Any] | None
     error: str | None
-    started_at: datetime | None
-    finished_at: datetime | None
-    created_at: datetime
+    started_at: UtcDatetime | None
+    finished_at: UtcDatetime | None
+    created_at: UtcDatetime
 
 
 class EvaluationRunPage(Page):

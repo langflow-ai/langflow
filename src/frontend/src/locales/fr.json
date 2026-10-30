@@ -3526,6 +3526,7 @@
   "evals.checks.output_not_found": "Le composant de sortie sélectionné ne fait plus partie du flux.",
   "evals.checks.multiple_outputs": "Le flux comporte plusieurs sorties. Choisissez celle à noter.",
   "evals.checks.external_actions": "Ces composants peuvent agir en dehors de Langflow et s'exécuteront réellement une fois par ligne.",
+  "evals.checks.data_writes": "Ces composants enregistrent des données : la réponse de chaque ligne y est ajoutée.",
   "evals.checks.external_memory": "Ce flux utilise une mémoire externe. Les lignes la liront et y écriront ; elle ne peut pas être isolée.",
   "evals.checks.frozen_components": "Les composants gelés renvoient le même résultat mis en cache pour chaque ligne.",
   "evals.evaluate.button": "Évaluer",

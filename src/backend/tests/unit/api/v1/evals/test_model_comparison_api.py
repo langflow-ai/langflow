@@ -330,3 +330,42 @@ class TestModelComparison:
         assert triple.json()["items"] == single.json()["items"] == 2
         assert triple.json()["llm_calls"] == 3 * single.json()["llm_calls"]
         assert triple.json()["tokens_high"] >= 3 * single.json()["tokens_low"]
+
+
+class TestComparisonRuns:
+    async def test_should_list_every_run_of_a_comparison_however_many_runs_came_after(
+        self, client, logged_in_headers, monkeypatch
+    ):
+        flow, node_id = await _create_flow(client, logged_in_headers)
+        monkeypatch.setattr(runner, "execute_row", _recording_execute_row([], node_id))
+        dataset = await create_dataset(client, logged_in_headers, "later", [("a", "a")])
+        started = await _start_comparison(
+            client, logged_in_headers, flow["id"], dataset["id"], _variants(node_id, None, MINI)
+        )
+        evaluation_id = started.json()["evaluation_id"]
+        await _wait_for_comparison(client, logged_in_headers, evaluation_id, 2)
+        for _ in range(3):
+            run = await client.post(f"api/v1/evaluations/{evaluation_id}/runs", json={}, headers=logged_in_headers)
+            assert run.status_code == 202, run.text
+            await _wait_for_comparison(client, logged_in_headers, evaluation_id, 1)
+        comparison_id = started.json()["config"]["comparison"]["id"]
+
+        newest = await client.get(
+            f"api/v1/evaluations/{evaluation_id}/runs", params={"size": 2}, headers=logged_in_headers
+        )
+        compared = await client.get(
+            f"api/v1/evaluations/{evaluation_id}/runs",
+            params={"comparison_id": comparison_id, "size": 50},
+            headers=logged_in_headers,
+        )
+        other = await client.get(
+            f"api/v1/evaluations/{evaluation_id}/runs",
+            params={"comparison_id": "not-a-comparison"},
+            headers=logged_in_headers,
+        )
+
+        assert all("comparison" not in run["config"] for run in newest.json()["items"])
+        assert compared.status_code == 200
+        assert [run["config"]["comparison"]["index"] for run in compared.json()["items"]] == [0, 1]
+        assert compared.json()["total"] == 2
+        assert other.json() == {"items": [], "total": 0, "page": 1, "size": 50}

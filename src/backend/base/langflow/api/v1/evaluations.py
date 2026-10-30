@@ -169,10 +169,17 @@ async def list_evaluation_runs(
     session: DbSession,
     page: PageParam = 1,
     size: SizeParam = 50,
+    comparison_id: Annotated[str | None, Query(max_length=64)] = None,
 ) -> EvaluationRunPage:
     async with evals_http_errors():
         evaluation = await load_evaluation(session, current_user, evaluation_id)
-    runs, total = await run_service.list_runs(session, evaluation.id, page=page, size=size)
+    if comparison_id is not None:
+        # A comparison has at most a few runs; all of them, however many other runs came after.
+        matched = await run_service.comparison_runs(session, evaluation.id, comparison_id)
+        total = len(matched)
+        runs = matched[(page - 1) * size : page * size]
+    else:
+        runs, total = await run_service.list_runs(session, evaluation.id, page=page, size=size)
     items = [
         evaluation_service.to_run_read(run).model_copy(update={"summary": await run_service.live_summary(session, run)})
         for run in runs

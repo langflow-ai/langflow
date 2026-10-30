@@ -80,11 +80,16 @@ export function formatRange(low: string, high: string): string {
   return low === high ? low : `${low} – ${high}`;
 }
 
+const NOTABLE_RATIO = 1.05;
+
 /** How many times the smallest value this one is, e.g. "1.7×"; null for the smallest itself or unknowns. */
 export function formatRatio(
   value: number | null | undefined,
   smallest: number | null | undefined,
 ): string | null {
   if (value == null || !smallest || value <= smallest) return null;
-  return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(value / smallest)}×`;
+  const ratio = value / smallest;
+  // Within 5% of the leader is noise ("1×"), not a difference worth a label.
+  if (ratio < NOTABLE_RATIO) return null;
+  return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(ratio)}×`;
 }
