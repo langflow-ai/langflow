@@ -2,6 +2,7 @@ import {
   formatDelta,
   formatDuration,
   formatPercent,
+  formatRatio,
   formatScore,
   formatTokenCount,
   formatUsd,
@@ -37,5 +38,20 @@ describe("evals formatting", () => {
     expect(formatDelta(100, 100)).toBe("0%");
     expect(formatDelta(100, null)).toBeNull();
     expect(formatDelta(0, 100)).toBeNull();
+  });
+});
+
+describe("comparison formats", () => {
+  it("should keep four decimals under a dollar when precise", () => {
+    expect(formatUsd(0.0117)).toBe("$0.01");
+    expect(formatUsd(0.0117, { precise: true })).toBe("$0.0117");
+    expect(formatUsd(2.5, { precise: true })).toBe("$2.50");
+  });
+
+  it("should say how many times the smallest a value is", () => {
+    expect(formatRatio(0.034, 0.02)).toBe("1.7×");
+    expect(formatRatio(0.02, 0.02)).toBeNull();
+    expect(formatRatio(null, 0.02)).toBeNull();
+    expect(formatRatio(0.02, null)).toBeNull();
   });
 });

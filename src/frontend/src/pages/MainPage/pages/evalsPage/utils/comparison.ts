@@ -30,7 +30,9 @@ export interface ComparisonEntry {
   /** The judge's safety rates for this variant, when the evaluation asked for safety checks. */
   safety: SafetySummary | null;
   rank: number | null;
-  /** Within the top variant's margin of error: the data cannot tell the two apart. */
+  /** The same pass rate as the top variant: only cost, then speed, put it below. */
+  matchesTop: boolean;
+  /** A lower pass rate, but within the top variant's margin of error: the data cannot tell the two apart. */
   tiedWithTop: boolean;
 }
 
@@ -113,6 +115,7 @@ function entryOf(
     // One judge carries the safety checks, as on a single run's results.
     safety: Object.values(summary?.safety ?? {})[0] ?? null,
     rank: null,
+    matchesTop: false,
     tiedWithTop: false,
   };
 }
@@ -184,8 +187,10 @@ export function buildComparison(
   const top = ranked[0];
   ranked.forEach((entry, position) => {
     entry.rank = position + 1;
+    entry.matchesTop = position > 0 && entry.passRate === top?.passRate;
     entry.tiedWithTop = Boolean(
       position > 0 &&
+        !entry.matchesTop &&
         top?.interval &&
         entry.interval &&
         entry.interval[1] >= top.interval[0],

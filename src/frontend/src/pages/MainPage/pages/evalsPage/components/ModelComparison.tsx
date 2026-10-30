@@ -8,6 +8,7 @@ import ComparisonLeaderboard from "./ComparisonLeaderboard";
 import ComparisonSafety from "./ComparisonSafety";
 import Kpi from "./Kpi";
 import VariantLabel from "./VariantLabel";
+import VariantMarker from "./VariantMarker";
 
 interface ModelComparisonProps {
   runs: readonly EvaluationRun[];
@@ -41,6 +42,21 @@ function Winner({
   );
 }
 
+/** Every version sharing the top pass rate: naming one would crown a tie-break, not accuracy. */
+function TiedWinners({ entries }: { entries: ComparisonEntry[] }) {
+  const { t } = useTranslation();
+  return (
+    <>
+      <span className="flex -space-x-1">
+        {entries.map((entry) => (
+          <VariantMarker key={entry.index} index={entry.index} />
+        ))}
+      </span>
+      {t("evals.compare.tiedCount", { count: entries.length })}
+    </>
+  );
+}
+
 function KpiIcon({ name }: { name: string }) {
   return (
     <ForwardedIconComponent
@@ -66,6 +82,7 @@ export default function ModelComparison({
   if (!comparison) return null;
   const { entries, ranked, mostAccurate, cheapest, fastest } = comparison;
   const unranked = entries.filter((entry) => entry.rank === null);
+  const matching = ranked.filter((entry) => entry.matchesTop);
   const total = entries.length;
 
   return (
@@ -89,17 +106,21 @@ export default function ModelComparison({
           label={t("evals.compare.mostAccurate")}
           value={formatPercent(mostAccurate?.passRate)}
           hint={
-            <Winner
-              entry={mostAccurate}
-              tied={ranked.filter((entry) => entry.tiedWithTop).length}
-            />
+            matching.length > 0 && mostAccurate ? (
+              <TiedWinners entries={[mostAccurate, ...matching]} />
+            ) : (
+              <Winner
+                entry={mostAccurate}
+                tied={ranked.filter((entry) => entry.tiedWithTop).length}
+              />
+            )
           }
         />
         <Kpi
           testId="comparison-cheapest"
           icon={<KpiIcon name="DollarSign" />}
           label={t("evals.compare.cheapest")}
-          value={formatUsd(cheapest?.cost)}
+          value={formatUsd(cheapest?.cost, { precise: true })}
           hint={<Winner entry={cheapest} />}
         />
         <Kpi
@@ -113,7 +134,7 @@ export default function ModelComparison({
           testId="comparison-total-cost"
           icon={<KpiIcon name="Coins" />}
           label={t("evals.compare.totalCost")}
-          value={formatUsd(comparison.totalCost)}
+          value={formatUsd(comparison.totalCost, { precise: true })}
           hint={t("evals.compare.finished", {
             done: comparison.finished,
             total,
@@ -122,10 +143,13 @@ export default function ModelComparison({
       </div>
       <ComparisonLeaderboard
         entries={[...ranked, ...unranked]}
+        cheapest={cheapest}
+        fastest={fastest}
         selectedRunId={selectedRunId}
         onSelect={onSelect}
       />
       <p className="text-xs text-muted-foreground">
+        {matching.length > 0 && `${t("evals.compare.tieLegend")} `}
         {t("evals.compare.legend")}
       </p>
       <ComparisonSafety entries={[...ranked, ...unranked]} />

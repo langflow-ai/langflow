@@ -53,6 +53,24 @@ describe("buildComparison", () => {
     ]);
   });
 
+  it("should call an equal pass rate a tie, not a margin-of-error match", () => {
+    const runs = [
+      variantRun({ index: 0, passed: 10, decided: 10, cost: 0.03 }),
+      variantRun({ index: 1, passed: 10, decided: 10, cost: 0.01 }),
+      variantRun({ index: 2, passed: 9, decided: 10, cost: 0.02 }),
+    ];
+
+    const ranked = buildComparison(runs, "cmp-1", NOW)?.ranked ?? [];
+
+    expect(
+      ranked.map((entry) => [entry.index, entry.matchesTop, entry.tiedWithTop]),
+    ).toEqual([
+      [1, false, false],
+      [0, true, false],
+      [2, false, true],
+    ]);
+  });
+
   it("should leave running and missing versions unranked and say why", () => {
     const runs = [
       variantRun({ index: 0 }),

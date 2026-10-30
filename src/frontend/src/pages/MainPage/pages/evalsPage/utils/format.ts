@@ -8,12 +8,17 @@ export function formatTokenCount(value: number | null | undefined): string {
 
 const SMALLEST_SHOWN_USD = 0.0001;
 
-export function formatUsd(value: number | null | undefined): string {
+/** `precise` keeps four decimals under a dollar, so amounts cents apart still differ on screen. */
+export function formatUsd(
+  value: number | null | undefined,
+  { precise = false }: { precise?: boolean } = {},
+): string {
   if (value === null || value === undefined) return UNKNOWN;
   if (value > 0 && value < SMALLEST_SHOWN_USD) {
     return `< ${formatUsd(SMALLEST_SHOWN_USD)}`;
   }
-  const digits = value !== 0 && value < 0.01 ? 4 : 2;
+  const smallAmount = precise ? 1 : 0.01;
+  const digits = value !== 0 && value < smallAmount ? 4 : 2;
   return new Intl.NumberFormat(undefined, {
     style: "currency",
     currency: "USD",
@@ -73,4 +78,13 @@ export function formatDelta(
 /** "a – b", or just "a" when both ends render the same. */
 export function formatRange(low: string, high: string): string {
   return low === high ? low : `${low} – ${high}`;
+}
+
+/** How many times the smallest value this one is, e.g. "1.7×"; null for the smallest itself or unknowns. */
+export function formatRatio(
+  value: number | null | undefined,
+  smallest: number | null | undefined,
+): string | null {
+  if (value == null || !smallest || value <= smallest) return null;
+  return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(value / smallest)}×`;
 }

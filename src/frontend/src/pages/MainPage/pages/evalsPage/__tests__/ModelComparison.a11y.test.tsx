@@ -44,7 +44,31 @@ describe("ModelComparison", () => {
       expect.stringContaining("claude-haiku-5-5"),
     ]);
     expect(rows[0]).toHaveAttribute("aria-selected", "true");
+    expect(rows[0]).toHaveTextContent("Cheapest");
+    expect(rows[1]).toHaveTextContent("$0.0400");
+    expect(rows[1]).toHaveTextContent("4× min");
     expect(within(rows[2]).getByTestId("run-status-running")).toBeVisible();
+  });
+
+  it("should name every version in a tie instead of crowning the tie-break winner", () => {
+    render(
+      <ModelComparison
+        runs={[0, 1, 2].map((index) =>
+          variantRun({ index, passed: 10, cost: 0.01 * (index + 1) }),
+        )}
+        comparisonId="cmp-1"
+        selectedRunId={null}
+        onSelect={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("comparison-most-accurate")).toHaveTextContent(
+      "3 versions tied",
+    );
+    const rows = screen.getAllByTestId("comparison-row");
+    expect(rows[1]).toHaveTextContent("Tie");
+    expect(rows[1]).not.toHaveTextContent("≈ #1");
+    expect(screen.getByText(/the same pass rate as #1/)).toBeVisible();
   });
 
   it("should compare the safety checks of every version that has them", () => {
