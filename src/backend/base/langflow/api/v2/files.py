@@ -972,7 +972,7 @@ async def delete_all_files(
             try:
                 await storage_service.delete_file(flow_id=str(current_user.id), file_name=file_name)
                 storage_deleted = True
-            except OSError as err:
+            except Exception as err:  # noqa: BLE001 - classify backend-specific storage errors per file
                 # Check if this is a "permanent" failure where file/storage is gone
                 # These are safe to delete from DB even if storage deletion failed
                 if is_permanent_storage_failure(err):
@@ -996,7 +996,7 @@ async def delete_all_files(
             if storage_deleted:
                 try:
                     await session.delete(file)
-                except OSError as db_error:
+                except Exception as db_error:  # noqa: BLE001 - continue after a per-file database failure
                     # Log database deletion failure but continue processing remaining files
                     db_failures.append(f"{file_name}: {db_error}")
                     await logger.aerror(
