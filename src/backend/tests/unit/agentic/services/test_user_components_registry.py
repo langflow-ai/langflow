@@ -147,13 +147,23 @@ class TestRegisterUserComponentHappyPath:
 
 
 class TestRegisterUserComponentRefusesUntrustedInputs:
-    def test_should_refuse_code_that_fails_security_scan(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import os\nos.spawnv()\n",
+            "import pandas as pd\npd.DataFrame({'a': [1]}).eval('a + 1')\n",
+            "import pandas as pd\npd.DataFrame({'a': [1]}).query('a > 0')\n",
+        ],
+        ids=["spawn", "dataframe-eval", "dataframe-query"],
+    )
+    def test_should_refuse_code_that_fails_security_scan(self, isolated_sandbox: Path, code: str) -> None:
         with pytest.raises(UserComponentError, match="security validation"):
             register_user_component(
                 user_id="user-alice",
                 class_name="UnsafeComponent",
-                code="import os\nos.spawnv()\n",
+                code=code,
             )
+        assert not list(isolated_sandbox.rglob("UnsafeComponent.py"))
 
     def test_should_refuse_when_user_id_missing_and_auto_login_false(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         with pytest.raises(UserComponentError, match="authenticated user"):

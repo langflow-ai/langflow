@@ -140,11 +140,19 @@ async def test_validate_component_runtime_attempts_build_when_allowed():
     assert result is None  # build path reached; no error
 
 
-async def test_validate_component_runtime_refuses_unsafe_code_before_build():
+@pytest.mark.parametrize(
+    "code",
+    [
+        "import os\nos.spawnv()\n",
+        "import pandas as pd\npd.DataFrame({'a': [1]}).eval('a + 1')\n",
+        "import pandas as pd\npd.DataFrame({'a': [1]}).query('a > 0')\n",
+    ],
+    ids=["spawn", "dataframe-eval", "dataframe-query"],
+)
+async def test_validate_component_runtime_refuses_unsafe_code_before_build(code: str):
     """The execution helper enforces the scanner even when called directly."""
     from langflow.agentic.helpers import validation
 
-    code = "import os\nos.spawnv()\n"
     with (
         patch("lfx.services.deps.get_settings_service", return_value=_settings(allow_custom=True)),
         patch("lfx.custom.utils.build_custom_component_template") as mock_build,
