@@ -28,6 +28,7 @@
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
+use std::io;
 
 use crate::value::{Map, Number, Value};
 use sha2::{Digest, Sha256};
@@ -111,7 +112,7 @@ fn finite_double(number: &Number) -> Result<f64> {
 }
 
 /// Print a number as RFC 8785 does, which is JavaScript's `Number::toString`.
-fn format_number(number: &Number, out: &mut String) -> Result<()> {
+fn format_number(number: &Number, out: &mut impl Out) -> Result<()> {
     let double = finite_double(number)?;
     if is_integer_text(number) {
         // An integer prints exactly while JavaScript holds it exactly.
@@ -126,13 +127,13 @@ fn format_number(number: &Number, out: &mut String) -> Result<()> {
     Ok(())
 }
 
-fn format_double(value: f64, out: &mut String) {
+fn format_double(value: f64, out: &mut impl Out) {
     if value == 0.0 {
-        out.push('0');
+        out.put("0");
         return;
     }
     if value < 0.0 {
-        out.push('-');
+        out.put("-");
     }
     // `{:e}` prints the shortest digits that round-trip, which is also what
     // ECMAScript's Number::toString chooses; only the layout differs.
@@ -143,22 +144,23 @@ fn format_double(value: f64, out: &mut String) {
     // value == 0.<digits> * 10^n
     let n = exponent.parse::<i32>().unwrap_or(0) + 1;
     if k <= n && n <= MAX_PLAIN_EXPONENT {
-        out.push_str(&digits);
-        out.extend(std::iter::repeat_n(
-            '0',
-            usize::try_from(n - k).unwrap_or(0),
-        ));
+        out.put(&digits);
+        for _ in 0..usize::try_from(n - k).unwrap_or(0) {
+            out.put("0");
+        }
     } else if 0 < n && n <= MAX_PLAIN_EXPONENT {
         let (whole, fraction) = digits.split_at(usize::try_from(n).unwrap_or(0));
         write!(out, "{whole}.{fraction}").ok();
     } else if MIN_PLAIN_EXPONENT < n && n <= 0 {
-        out.push_str("0.");
-        out.extend(std::iter::repeat_n('0', usize::try_from(-n).unwrap_or(0)));
-        out.push_str(&digits);
+        out.put("0.");
+        for _ in 0..usize::try_from(-n).unwrap_or(0) {
+            out.put("0");
+        }
+        out.put(&digits);
     } else {
         let e = n - 1;
         let (first, rest) = digits.split_at(1);
-        out.push_str(first);
+        out.put(first);
         if !rest.is_empty() {
             write!(out, ".{rest}").ok();
         }
@@ -174,28 +176,41 @@ pub fn utf16_cmp(left: &str, right: &str) -> Ordering {
     left.encode_utf16().cmp(right.encode_utf16())
 }
 
-fn write_string(value: &str, out: &mut String) {
-    // serde_json escapes exactly what RFC 8785 requires: `"`, `\` and the
-    // control characters, with the short forms where JSON has them.
-    out.push_str(&Value::from(value).to_string());
+/// Where canonical text goes: a byte buffer, or the hash directly.
+trait Out: io::Write {
+    /// Write text. Canonical text goes to memory, which cannot fail.
+    fn put(&mut self, text: &str) {
+        self.write_all(text.as_bytes())
+            .expect("canonical text goes to memory");
+    }
 }
 
-fn write_canonical(value: &Value, out: &mut String) -> Result<()> {
+impl<W: io::Write> Out for W {}
+
+/// Write a string as RFC 8785 does: `"` and `\` escaped, and the control
+/// characters, with the short forms where JSON has them. That is exactly
+/// what `serde_json` writes, so its writer writes it, and the hash cannot
+/// change.
+fn write_string(value: &str, out: &mut impl Out) {
+    serde_json::to_writer(&mut *out, value).expect("canonical text goes to memory");
+}
+
+fn write_canonical<W: Out>(value: &Value, out: &mut W) -> Result<()> {
     match value {
-        Value::Null => out.push_str("null"),
-        Value::Bool(true) => out.push_str("true"),
-        Value::Bool(false) => out.push_str("false"),
+        Value::Null => out.put("null"),
+        Value::Bool(true) => out.put("true"),
+        Value::Bool(false) => out.put("false"),
         Value::Number(number) => format_number(number, out)?,
         Value::String(string) => write_string(string, out),
         Value::Array(items) => {
-            write_list(out, ('[', ']'), items, write_canonical)?;
+            write_list(out, ("[", "]"), items, write_canonical)?;
         }
         Value::Object(map) => {
             let mut keys: Vec<&String> = map.keys().collect();
             keys.sort_by(|a, b| utf16_cmp(a, b));
-            write_list(out, ('{', '}'), keys, |key, out| {
+            write_list(out, ("{", "}"), keys, |key, out| {
                 write_string(key, out);
-                out.push(':');
+                out.put(":");
                 write_canonical(&map[key], out)
             })?;
         }
@@ -208,10 +223,14 @@ fn write_canonical(value: &Value, out: &mut String) -> Result<()> {
 /// # Errors
 ///
 /// A number that is not finite as JavaScript reads it.
+///
+/// # Panics
+///
+/// Never in practice: the text goes to memory, and it is UTF-8.
 pub fn canonical_json(value: &Value) -> Result<String> {
-    let mut out = String::new();
+    let mut out = Vec::new();
     write_canonical(value, &mut out)?;
-    Ok(out)
+    Ok(String::from_utf8(out).expect("canonical text is UTF-8"))
 }
 
 // --- Value equality ---------------------------------------------------------------------
@@ -612,19 +631,19 @@ fn nodes_equal(left: &Value, right: &Value) -> Result<bool> {
     canon_equal(View::of(&left), View::of(&right))
 }
 
-fn write_canon(view: View<'_, '_>, out: &mut String) -> Result<()> {
+fn write_canon<W: Out>(view: View<'_, '_>, out: &mut W) -> Result<()> {
     match view {
         View::Value(value) => write_canonical(value, out),
         View::Object(map) => {
             let mut keys: Vec<&&str> = map.keys().collect();
             keys.sort_by(|a, b| utf16_cmp(a, b));
-            write_list(out, ('{', '}'), keys, |key, out| {
+            write_list(out, ("{", "}"), keys, |key, out| {
                 write_string(key, out);
-                out.push(':');
+                out.put(":");
                 write_canon(View::of(&map[key]), out)
             })
         }
-        View::Array(items) => write_list(out, ('[', ']'), items, |item, out| {
+        View::Array(items) => write_list(out, ("[", "]"), items, |item, out| {
             write_canon(View::of(item), out)
         }),
         View::Node(node) => write_canon(View::of(&canonical_node(node, Mode::Ordered)), out),
@@ -632,20 +651,20 @@ fn write_canon(view: View<'_, '_>, out: &mut String) -> Result<()> {
 }
 
 /// Write `items` between `open` and `close`, separated by commas.
-fn write_list<T>(
-    out: &mut String,
-    (open, close): (char, char),
+fn write_list<T, W: Out>(
+    out: &mut W,
+    (open, close): (&str, &str),
     items: impl IntoIterator<Item = T>,
-    mut write_item: impl FnMut(T, &mut String) -> Result<()>,
+    mut write_item: impl FnMut(T, &mut W) -> Result<()>,
 ) -> Result<()> {
-    out.push(open);
+    out.put(open);
     for (index, item) in items.into_iter().enumerate() {
         if index > 0 {
-            out.push(',');
+            out.put(",");
         }
         write_item(item, out)?;
     }
-    out.push(close);
+    out.put(close);
     Ok(())
 }
 
@@ -654,11 +673,15 @@ fn write_list<T>(
 /// # Errors
 ///
 /// A number that is not finite as JavaScript reads it.
+///
+/// # Panics
+///
+/// Never in practice: the text goes to memory, and it is UTF-8.
 pub fn canonical_graph_json(flow: &Value) -> Result<String> {
     let canon = canonical_graph(flow, Mode::Ordered);
-    let mut out = String::new();
+    let mut out = Vec::new();
     write_canon(View::of(&canon), &mut out)?;
-    Ok(out)
+    Ok(String::from_utf8(out).expect("canonical text is UTF-8"))
 }
 
 /// The SHA-256 hex digest of flow data's canonical graph form.
@@ -666,8 +689,21 @@ pub fn canonical_graph_json(flow: &Value) -> Result<String> {
 /// # Errors
 ///
 /// A number that is not finite as JavaScript reads it.
+///
+/// # Panics
+///
+/// Never in practice: the text goes to memory, and it is UTF-8.
 pub fn graph_hash(flow: &Value) -> Result<String> {
-    let digest = Sha256::digest(canonical_graph_json(flow)?.as_bytes());
+    // The text goes straight into the hash, through a buffer that keeps the
+    // many short writes (braces, commas) from reaching the hash one by one.
+    let canon = canonical_graph(flow, Mode::Ordered);
+    let mut out = io::BufWriter::with_capacity(1 << 16, Sha256::new());
+    write_canon(View::of(&canon), &mut out)?;
+    let digest = out
+        .into_inner()
+        .map_err(|_| ())
+        .expect("canonical text goes to memory")
+        .finalize();
     let mut hex = String::with_capacity(64);
     for byte in digest {
         write!(hex, "{byte:02x}").ok();
@@ -841,6 +877,52 @@ mod tests {
         assert_ne!(graph_hash(&left).unwrap(), graph_hash(&changed).unwrap());
     }
 
+    #[rustfmt::skip]
+        const FIXTURES: [&str; 12] = [
+            include_str!("../../../../fixtures/apply_cases.json"),
+            include_str!("../../../../fixtures/backward_cases.json"),
+            include_str!("../../../../fixtures/canonical_cases.json"),
+            include_str!("../../../../fixtures/diff_cases.json"),
+            include_str!("../../../../fixtures/editor_cases.json"),
+            include_str!("../../../../fixtures/limit_cases.json"),
+            include_str!("../../../../fixtures/merge_cases.json"),
+            include_str!("../../../../fixtures/property_cases.json"),
+            include_str!("../../../../fixtures/repair_cases.json"),
+            include_str!("../../../../fixtures/restore_cases.json"),
+            include_str!("../../../../fixtures/table_cases.json"),
+            include_str!("../../../../fixtures/validation_cases.json"),
+        ];
+
+    /// Every graph in every fixture case.
+    fn fixture_graphs() -> Vec<Value> {
+        let mut out = Vec::new();
+        for text in FIXTURES {
+            let file: Value = serde_json::from_str(text).unwrap();
+            let mut found = Vec::new();
+            graphs(&file, &mut found);
+            out.extend(found.into_iter().cloned());
+        }
+        out
+    }
+
+    #[test]
+    fn graph_hash_streams_the_canonical_text() {
+        let all = fixture_graphs();
+        assert!(all.len() > 500, "only {} graphs", all.len());
+        for graph in &all {
+            let Ok(text) = canonical_graph_json(graph) else {
+                assert!(graph_hash(graph).is_err());
+                continue;
+            };
+            let digest = Sha256::digest(text.as_bytes());
+            let hex = digest.iter().fold(String::new(), |mut hex, byte| {
+                write!(hex, "{byte:02x}").ok();
+                hex
+            });
+            assert_eq!(graph_hash(graph).unwrap(), hex, "{graph}");
+        }
+    }
+
     /// The comparison that makes every node canonical before it compares
     /// anything: what `graphs_equal` did before it compared nodes as they are.
     fn graphs_equal_eager(left: &Value, right: &Value) -> Result<bool> {
@@ -890,20 +972,6 @@ mod tests {
 
     #[test]
     fn graphs_equal_answers_as_the_eager_comparison() {
-        const FIXTURES: [&str; 12] = [
-            include_str!("../../../../fixtures/apply_cases.json"),
-            include_str!("../../../../fixtures/backward_cases.json"),
-            include_str!("../../../../fixtures/canonical_cases.json"),
-            include_str!("../../../../fixtures/diff_cases.json"),
-            include_str!("../../../../fixtures/editor_cases.json"),
-            include_str!("../../../../fixtures/limit_cases.json"),
-            include_str!("../../../../fixtures/merge_cases.json"),
-            include_str!("../../../../fixtures/property_cases.json"),
-            include_str!("../../../../fixtures/repair_cases.json"),
-            include_str!("../../../../fixtures/restore_cases.json"),
-            include_str!("../../../../fixtures/table_cases.json"),
-            include_str!("../../../../fixtures/validation_cases.json"),
-        ];
         let hidden = NODE_SCHEMA
             .node_view_state
             .iter()
