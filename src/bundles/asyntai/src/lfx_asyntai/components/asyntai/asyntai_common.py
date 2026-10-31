@@ -1,7 +1,7 @@
 """Shared HTTP helper for the Asyntai components.
 
 All three components call the Asyntai public REST API
-(https://asyntai.com/documentation/api-reference/) with one API key, so the
+(https://asyntai.com/documentation/api/) with one API key, so the
 request, the authentication header and the error messages live here once.
 """
 

@@ -57,6 +57,8 @@ In tool mode, the component exposes a single tool named `asyntai_add_knowledge`.
 This component lists the leads, which are the email addresses and phone numbers that visitors left in the Asyntai AI chatbot, newest first.
 
 It outputs a [`Table`](/data-types#table) with `email`, `phone`, `page_url`, `started_at`, and `session_id` columns.
+If there are no leads, the table is empty and has no columns.
+If the request fails, the table has one row with a single `error` column that contains the error message.
 In tool mode, the component exposes a single tool named `asyntai_get_leads`.
 
 ### Asyntai Leads parameters

@@ -287,6 +287,14 @@ def test_leads_error_row(leads):
     assert "rejected the API key" in rows[0].data["error"]
 
 
+@pytest.mark.parametrize("value", [1, True, "x", {"email": "a@example.com"}])
+def test_leads_non_list_value_is_error_row(leads, value):
+    with patch(REQUEST_PATCH_TARGET, _mock({"success": True, "leads": value}, method="GET")):
+        rows = leads.fetch_leads()
+    assert len(rows) == 1
+    assert "unexpected leads value" in rows[0].data["error"]
+
+
 def test_leads_dataframe_shape(leads):
     with patch(REQUEST_PATCH_TARGET, _mock(LEADS_PAYLOAD, method="GET")):
         frame = leads.asyntai_get_leads()

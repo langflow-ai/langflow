@@ -16,7 +16,7 @@ collects leads. The bundle ships three components:
 The components call the Asyntai REST API directly with `httpx` and need only a
 user-supplied API key, so the bundle carries no vendor SDK dependency. See the
 [Asyntai Langflow guide](https://asyntai.com/documentation/integrations/langflow/)
-and the [API reference](https://asyntai.com/documentation/api-reference/).
+and the [API reference](https://asyntai.com/documentation/api/).
 
 ## Install
 
@@ -34,7 +34,8 @@ Set the **Asyntai API Key** input to a key from the Asyntai dashboard
 (Settings -> API). The API is available on paid Asyntai plans. The components
 do nothing until a key is supplied. The optional **Website** input takes a
 website ID or a domain such as `example.com`; when it is empty, the primary
-website of the account is used.
+website of the account is used, except in **Asyntai Leads**, which then lists
+the leads of all websites of the account.
 
 In tool mode, the components expose the tools `asyntai_ask_website`,
 `asyntai_add_knowledge` and `asyntai_get_leads`.

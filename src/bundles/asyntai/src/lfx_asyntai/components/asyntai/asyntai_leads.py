@@ -75,15 +75,20 @@ class AsyntaiLeadsComponent(Component):
         text = f"{contact} on {row['page_url']}" if row["page_url"] else contact
         return Data(text=text, data=row)
 
+    def _error_rows(self, message: str) -> list[Data]:
+        error_rows = [Data(text=message, data={"error": message})]
+        self.status = error_rows
+        return error_rows
+
     def fetch_leads(self) -> list[Data]:
         """Return the leads as Data rows, or one error row."""
         try:
             payload = asyntai_request("GET", "/leads/", self.asyntai_api_key, params=self._params())
         except AsyntaiAPIError as exc:
-            error_rows = [Data(text=str(exc), data={"error": str(exc)})]
-            self.status = error_rows
-            return error_rows
+            return self._error_rows(str(exc))
         leads = payload.get("leads") or []
+        if not isinstance(leads, list):
+            return self._error_rows("Asyntai returned an unexpected leads value.")
         rows = [self._lead_to_data(lead) for lead in leads if isinstance(lead, dict)]
         self.status = rows
         return rows
