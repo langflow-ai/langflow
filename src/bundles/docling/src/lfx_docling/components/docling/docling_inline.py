@@ -70,7 +70,10 @@ class DoclingInlineComponent(BaseFileComponent):
         BoolInput(
             name="force_ocr",
             display_name="Force full-page OCR",
-            info="Run OCR over each full page, replacing any existing text layer.",
+            info=(
+                "Run OCR over each full page, replacing any existing text layer. "
+                "Only supported by the standard pipeline."
+            ),
             value=False,
         ),
         BoolInput(
@@ -124,6 +127,16 @@ class DoclingInlineComponent(BaseFileComponent):
             do_picture_cls  = cfg["do_picture_classification"]
             pic_desc_config = cfg.get("pic_desc_config")
             pic_desc_prompt = cfg.get("pic_desc_prompt", "")
+
+            if force_ocr and pipeline == "vlm":
+                print(json.dumps({
+                    "ok": False,
+                    "error": (
+                        "Force full-page OCR is not supported by the VLM pipeline, "
+                        "which has no separate OCR stage."
+                    ),
+                }))
+                return
 
             try:
                 from docling.datamodel.base_models import ConversionStatus, InputFormat
@@ -249,6 +262,11 @@ class DoclingInlineComponent(BaseFileComponent):
     """)
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:
+        """Process files in an isolated Docling subprocess."""
+        if self.force_ocr and self.pipeline == "vlm":
+            msg = "Force full-page OCR is not supported by the VLM pipeline, which has no separate OCR stage."
+            raise ValueError(msg)
+
         # Check that docling is installed without actually importing it.
         # The real import (PyTorch, transformers, etc.) happens in the child
         # subprocess.  Importing it here would spike memory and get the
