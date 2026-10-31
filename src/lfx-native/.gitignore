@@ -1,0 +1,17 @@
+# Cargo build output. The root .gitignore also ignores target/ anywhere.
+/target/
+
+# Rust tooling: rustfmt backups, MSVC debug symbols, cargo-mutants output,
+# and the stack trace rustc writes on an internal compiler error.
+**/*.rs.bk
+*.pdb
+**/mutants.out*/
+rustc-ice-*.txt
+
+# The Python extension that `maturin develop` copies into the package
+# (.so on Linux and macOS, which the root .gitignore covers; .pyd on Windows).
+*.pyd
+
+# The browser binding's wasm-bindgen output and npm installs.
+/crates/lfx-wasm/pkg/
+/crates/lfx-wasm/node_modules/

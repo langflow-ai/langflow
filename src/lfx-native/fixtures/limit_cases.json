@@ -1,0 +1,50 @@
+{
+  "description": "JSON text the engine refuses or accepts, whichever runtime calls it. These rules are decided by the docs: a lone surrogate cannot be held in a Rust string and cannot be stored through the flows API (rust-flow-engine-investigation, \"Lone surrogates\"), and one depth limit, 127 levels of nesting, holds in every runtime (rust-flow-engine-plan, \"Deep flows\"). A case gives JSON text; reading it as a value (canonical_json) must fail with the error, or succeed with the canonical text. Each case names the rule it checks in `rule`; README.md lists the rules. The expected outputs are reviewed data that every engine must meet.",
+  "refused": [
+    {
+      "name": "a lone high surrogate",
+      "rule": "lone-surrogates",
+      "json": "{\"name\": \"\\ud800\"}",
+      "error": {"error": "FlowDataValidationError", "code": "FLOW_GRAPH_INVALID"}
+    },
+    {
+      "name": "a lone low surrogate",
+      "rule": "lone-surrogates",
+      "json": "[\"\\udc00\"]",
+      "error": {"error": "FlowDataValidationError", "code": "FLOW_GRAPH_INVALID"}
+    },
+    {
+      "name": "a high surrogate followed by a character that is not a low surrogate",
+      "rule": "lone-surrogates",
+      "json": "\"\\ud800\\u0041\"",
+      "error": {"error": "FlowDataValidationError", "code": "FLOW_GRAPH_INVALID"}
+    },
+    {
+      "name": "nesting 128 levels deep",
+      "rule": "depth-limit",
+      "json": "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]",
+      "error": {"error": "FlowDataValidationError", "code": "FLOW_GRAPH_INVALID"}
+    },
+    {
+      "name": "a flow nested 128 levels deep",
+      "rule": "depth-limit",
+      "json": "{\"nodes\": [{\"id\": \"a\", \"data\": {\"node\": {\"template\": {\"x\": {\"value\": [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}}}}}], \"edges\": []}",
+      "error": {"error": "FlowDataValidationError", "code": "FLOW_GRAPH_INVALID"}
+    }
+  ],
+  "accepted": [
+    {"name": "a surrogate pair is one character", "rule": "lone-surrogates", "json": "\"\\ud83d\\ude00\"", "canonical": "\"😀\""},
+    {
+      "name": "nesting 127 levels deep",
+      "rule": "depth-limit",
+      "json": "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]",
+      "canonical": "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]"
+    },
+    {
+      "name": "a flow nested 127 levels deep",
+      "rule": "depth-limit",
+      "json": "{\"nodes\": [{\"id\": \"a\", \"data\": {\"node\": {\"template\": {\"x\": {\"value\": [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}}}}}], \"edges\": []}",
+      "canonical": "{\"edges\":[],\"nodes\":[{\"data\":{\"node\":{\"template\":{\"x\":{\"value\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}}}},\"id\":\"a\"}]}"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+[package]
+name = "lfx-wasm"
+description = "The browser binding of lfx: the lfx-native npm package."
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+# The fixture runner in tests/ runs through Node; the crate has no Rust tests.
+test = false
+doctest = false
+
+[dependencies]
+lfx = { path = "../lfx" }
+wasm-bindgen = "0.2.129"
+js-sys = "0.3"
+# The engine draws random ids; in the browser they come from crypto.getRandomValues.
+getrandom = { version = "0.3", features = ["wasm_js"] }
+
+[lints]
+workspace = true
