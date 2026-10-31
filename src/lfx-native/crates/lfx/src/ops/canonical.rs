@@ -715,11 +715,47 @@ pub fn graph_hash(flow: &Value) -> Result<String> {
 ///
 /// # Errors
 ///
-/// A compared number that is not finite as JavaScript reads it.
+/// A number that is not finite as JavaScript reads it, in either graph's
+/// canonical form: the graphs that [`graph_hash`] refuses.
 pub fn graphs_equal(left: &Value, right: &Value) -> Result<bool> {
     let left = canonical_graph(left, Mode::Keyed);
     let right = canonical_graph(right, Mode::Keyed);
-    canon_equal(View::of(&left), View::of(&right))
+    let equal = canon_equal(View::of(&left), View::of(&right))?;
+    // Equal graphs had every number read. Graphs that differ stopped at the
+    // first difference, so they are checked to the end, or which answer a
+    // number that is not finite gets would depend on where the difference is.
+    if !equal {
+        check_finite(View::of(&left))?;
+        check_finite(View::of(&right))?;
+    }
+    Ok(equal)
+}
+
+/// Refuse a number in a canonical form that is not finite.
+fn check_finite(view: View<'_, '_>) -> Result<()> {
+    match view {
+        View::Value(value) => check_finite_value(value),
+        View::Object(map) => map
+            .values()
+            .try_for_each(|value| check_finite(View::of(value))),
+        View::Array(items) => items
+            .iter()
+            .try_for_each(|item| check_finite(View::of(item))),
+        // A node whose numbers are all finite as it is has a canonical form
+        // with finite numbers. Only another node needs its canonical form,
+        // which leaves out display-only keys and what they hold.
+        View::Node(node) => check_finite_value(node)
+            .or_else(|_| check_finite(View::of(&canonical_node(node, Mode::Keyed)))),
+    }
+}
+
+fn check_finite_value(value: &Value) -> Result<()> {
+    match value {
+        Value::Number(number) => finite_double(number).map(drop),
+        Value::Array(items) => items.iter().try_for_each(check_finite_value),
+        Value::Object(map) => map.values().try_for_each(check_finite_value),
+        Value::Null | Value::Bool(_) | Value::String(_) => Ok(()),
+    }
 }
 
 #[cfg(test)]
@@ -1004,21 +1040,24 @@ mod tests {
                         ]
                     })
                     .collect();
-                let all: Vec<&Value> = found.into_iter().chain(&shuffled).collect();
-                for left in &all {
-                    for right in &all {
-                        // Two graphs that differ and hold a number that is not
-                        // finite are refused, or not equal, by whichever the
-                        // comparison meets first, which hash order decides. So
-                        // the answers must agree whenever either one is equal,
-                        // and two errors must be the same error.
+                let all: Vec<(&Value, bool)> = found
+                    .into_iter()
+                    .chain(&shuffled)
+                    .map(|graph| (graph, graph_hash(graph).is_err()))
+                    .collect();
+                for &(left, left_refused) in &all {
+                    for &(right, right_refused) in &all {
+                        // A graph whose hash is refused is refused, whatever
+                        // the other graph is. The eager comparison stops at
+                        // the first difference, so it may answer not equal.
                         let (new, old) =
                             (graphs_equal(left, right), graphs_equal_eager(left, right));
-                        let agree = match (&new, &old) {
-                            (Ok(true), _) | (_, Ok(true)) | (Err(_), Err(_)) => new == old,
-                            _ => true,
-                        };
-                        assert!(agree, "{new:?} against {old:?}\n{left}\n{right}");
+                        if left_refused || right_refused {
+                            assert_eq!(new, Err(Error::non_finite()), "{left}\n{right}");
+                            assert!(!matches!(old, Ok(true)), "{left}\n{right}");
+                        } else {
+                            assert_eq!(new, old, "{left}\n{right}");
+                        }
                         pairs += 1;
                     }
                 }
