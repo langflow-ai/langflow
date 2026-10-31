@@ -8,12 +8,16 @@
 //!   them: `1` and `1.0` are the same value, `true` and `1` are not, and key
 //!   order is never a change. JavaScript cannot tell integers from floats, so
 //!   a `0.0` that comes back from the editor as `0` must not count as an edit.
-//! - `nodes`, `edges` and table rows are collections keyed by id. Their array
-//!   order is not state; a table's order is its rows' `(__pos__, __id__)`.
+//! - `nodes` and `edges` are collections keyed by id, and the items of every
+//!   keyed list (outputs, tool actions, table rows) are collections keyed by
+//!   item key. Their array order is not state; a keyed list's order is its
+//!   items' `(__pos__, key)`.
 //! - View state is everything `node_schema.json` declares display only. It is
 //!   stored but never recorded and never compared.
 //! - An edge's `sourceHandle` and `targetHandle` strings are JSON with `œ`
 //!   standing for `"`. They compare by the object they encode.
+//! - A handle's `inputTypes` and `output_types` compare as sets. The hash
+//!   keeps their order, so that no stored hash changes.
 //!
 //! Equality compares the form structurally and stops at the first
 //! difference; only [`graph_hash`] serializes it, with collections ordered, as
@@ -34,12 +38,14 @@ use crate::value::{Map, Number, Value};
 use sha2::{Digest, Sha256};
 
 use crate::ops::error::{Error, Result};
-use crate::ops::schema::{NODE_SCHEMA, TableKeys, field_value_path};
+use crate::ops::schema::{KeyedList, NODE_SCHEMA, OUTPUTS_PATH, field_value_path};
 
 /// The quote character of an edge handle's string form.
 pub const HANDLE_QUOTE: char = 'œ';
 /// The keys of an edge's two handles.
 pub const HANDLE_KEYS: [&str; 2] = ["sourceHandle", "targetHandle"];
+/// The keys of a handle that hold a list of types. Their order is not state.
+pub const TYPE_LIST_KEYS: [&str; 2] = ["inputTypes", "output_types"];
 
 /// Largest integer a JavaScript number holds exactly.
 const MAX_SAFE_INTEGER: i128 = 1 << 53;
@@ -301,32 +307,42 @@ pub fn parse_handle(handle: &Value) -> Option<Map> {
 /// units, as the editor sorts them.
 #[must_use]
 pub fn ordered_rows(rows: &[Value]) -> Vec<&Value> {
-    let TableKeys {
-        id: id_key,
-        position: position_key,
-    } = &NODE_SCHEMA.table_keys;
-    let keys: Option<Vec<(f64, &str)>> = rows
+    row_order(rows)
+        .into_iter()
+        .map(|slot| &rows[slot])
+        .collect()
+}
+
+/// The array indexes of a table's rows, in the order [`ordered_rows`] gives.
+pub(crate) fn row_order(rows: &[Value]) -> Vec<usize> {
+    item_order(&NODE_SCHEMA.table, rows)
+}
+
+/// The array indexes of a keyed list's items in its order: by
+/// `(__pos__, key)`, or as stored when an item has no numeric position or no
+/// string key. Positions compare as the doubles JavaScript holds, and keys by
+/// UTF-16 code units.
+pub(crate) fn item_order(keyed: &KeyedList, items: &[Value]) -> Vec<usize> {
+    let keys: Option<Vec<(f64, &str)>> = items
         .iter()
-        .map(|row| {
-            let row = row.as_object()?;
-            let position = match row.get(position_key)? {
+        .map(|item| {
+            let position = match item.as_object()?.get(&keyed.position)? {
                 Value::Number(number) if is_finite_number(number) => as_double(number),
                 _ => return None,
             };
-            Some((position, row.get(id_key)?.as_str()?))
+            Some((position, keyed.key_of(item)?))
         })
         .collect();
-    let Some(keys) = keys else {
-        return rows.iter().collect();
-    };
-    let mut order: Vec<usize> = (0..rows.len()).collect();
-    order.sort_by(|&a, &b| {
-        keys[a]
-            .0
-            .total_cmp(&keys[b].0)
-            .then_with(|| utf16_cmp(keys[a].1, keys[b].1))
-    });
-    order.into_iter().map(|index| &rows[index]).collect()
+    let mut order: Vec<usize> = (0..items.len()).collect();
+    if let Some(keys) = keys {
+        order.sort_by(|&a, &b| {
+            keys[a]
+                .0
+                .total_cmp(&keys[b].0)
+                .then_with(|| utf16_cmp(keys[a].1, keys[b].1))
+        });
+    }
+    order
 }
 
 // --- The canonical form of a graph --------------------------------------------------------
@@ -336,8 +352,9 @@ pub fn ordered_rows(rows: &[Value]) -> Vec<&Value> {
 enum Canon<'a> {
     /// A value taken as it is.
     Raw(&'a Value),
-    /// The object a handle string encodes.
-    Handle(Value),
+    /// A value the canonical form built: the object a handle string
+    /// encodes, or an edge's `data` with its type lists as sets.
+    Owned(Value),
     /// An object with some members changed, or a collection keyed by id.
     Object(HashMap<&'a str, Canon<'a>>),
     /// A collection ordered for serialization.
@@ -362,9 +379,9 @@ fn without(map: &Map, hidden: impl Fn(&str) -> bool) -> HashMap<&str, Canon<'_>>
         .collect()
 }
 
-fn canonical_graph(flow: &Value, mode: Mode) -> Canon<'_> {
+fn canonical_graph(flow: &Value, mode: Mode) -> Result<Canon<'_>> {
     let Value::Object(flow) = flow else {
-        return Canon::Raw(flow);
+        return Ok(Canon::Raw(flow));
     };
     let mut graph = without(flow, |key| NODE_SCHEMA.is_flow_view_state(key));
     for key in ["nodes", "edges"] {
@@ -374,11 +391,11 @@ fn canonical_graph(flow: &Value, mode: Mode) -> Canon<'_> {
         let entries: Vec<Canon<'_>> = entries
             .iter()
             .map(|entry| match (key, mode) {
-                ("nodes", Mode::Keyed) => Canon::Node(entry),
-                ("nodes", Mode::Ordered) => canonical_node(entry, mode),
-                _ => canonical_edge(entry),
+                ("nodes", Mode::Keyed) => Ok(Canon::Node(entry)),
+                ("nodes", Mode::Ordered) => Ok(canonical_node(entry, mode)),
+                _ => canonical_edge(entry, mode),
             })
-            .collect();
+            .collect::<Result<_>>()?;
         let collection = match mode {
             Mode::Keyed => by_id(entries, "id"),
             Mode::Ordered => {
@@ -394,7 +411,7 @@ fn canonical_graph(flow: &Value, mode: Mode) -> Canon<'_> {
         };
         graph.insert(key, collection);
     }
-    Canon::Object(graph)
+    Ok(Canon::Object(graph))
 }
 
 /// The string member `key` of a canonical entry, borrowed from the graph.
@@ -406,6 +423,36 @@ fn entry_id<'a>(entry: &Canon<'a>, key: &str) -> Option<&'a str> {
             _ => None,
         },
         _ => None,
+    }
+}
+
+/// A keyed list's items, whose array order is not state. For comparison they
+/// are a collection keyed by item key; for the hash they are a list in the
+/// list's order ([`item_order`]). A list with an item that has no string key,
+/// or two items with one key, keeps its array, which is then its order.
+fn keyed_items<'a>(keyed: &KeyedList, list: &'a Value, mode: Mode) -> Canon<'a> {
+    let Value::Array(items) = list else {
+        return Canon::Raw(list);
+    };
+    match mode {
+        Mode::Keyed => {
+            let mut by_key = HashMap::with_capacity(items.len());
+            for item in items {
+                match keyed.key_of(item) {
+                    Some(key) if !by_key.contains_key(key) => {
+                        by_key.insert(key, Canon::Raw(item));
+                    }
+                    _ => return Canon::Raw(list),
+                }
+            }
+            Canon::Object(by_key)
+        }
+        Mode::Ordered => Canon::Array(
+            item_order(keyed, items)
+                .into_iter()
+                .map(|slot| Canon::Raw(&items[slot]))
+                .collect(),
+        ),
     }
 }
 
@@ -437,6 +484,12 @@ fn canonical_node(node: &Value, mode: Mode) -> Canon<'_> {
         return Canon::Object(canon);
     };
     let mut canon_body = without(body, |key| NODE_SCHEMA.node_data_view_state.contains(key));
+    if let (Some(outputs), Some(keyed)) = (
+        body.get("outputs"),
+        NODE_SCHEMA.natural_list_at(&OUTPUTS_PATH),
+    ) {
+        canon_body.insert("outputs", keyed_items(keyed, outputs, mode));
+    }
     if let Some(Value::Object(template)) = body.get("template") {
         let fields = template
             .iter()
@@ -451,45 +504,84 @@ fn canonical_node(node: &Value, mode: Mode) -> Canon<'_> {
     Canon::Object(canon)
 }
 
-/// A template field without its display-only keys, its table rows as a collection.
+/// A template field without its display-only keys. A keyed list as its
+/// value (table rows, tool actions) is a collection keyed by item key.
 fn canonical_field<'a>(node: &'a Value, key: &str, field: &'a Value, mode: Mode) -> Canon<'a> {
     let Value::Object(field_map) = field else {
         return Canon::Raw(field);
     };
     let mut canon = without(field_map, |key| NODE_SCHEMA.field_view_state.contains(key));
-    if let Some(Value::Array(rows)) = field_map.get("value")
-        && NODE_SCHEMA.is_table_at(node, &field_value_path(key))
+    if let Some(value) = field_map.get("value")
+        && let Some(keyed) = NODE_SCHEMA.keyed_list_at(node, &field_value_path(key))
     {
-        match mode {
-            Mode::Keyed => {
-                let id_key = NODE_SCHEMA.table_keys.id.as_str();
-                // A legacy table without unique row ids keeps its array, which is its order.
-                if let keyed @ Canon::Object(_) =
-                    by_id(rows.iter().map(Canon::Raw).collect(), id_key)
-                {
-                    canon.insert("value", keyed);
-                }
-            }
-            Mode::Ordered => {
-                let rows = ordered_rows(rows).into_iter().map(Canon::Raw).collect();
-                canon.insert("value", Canon::Array(rows));
-            }
-        }
+        canon.insert("value", keyed_items(keyed, value, mode));
     }
     Canon::Object(canon)
 }
 
-fn canonical_edge(edge: &Value) -> Canon<'_> {
+/// An edge without its view state, its handle strings as the objects they
+/// encode. For comparison, each handle's type lists are sets. The hash
+/// keeps their order, so that no stored hash changes.
+fn canonical_edge(edge: &Value, mode: Mode) -> Result<Canon<'_>> {
     let Value::Object(edge_map) = edge else {
-        return Canon::Raw(edge);
+        return Ok(Canon::Raw(edge));
     };
     let mut canon = without(edge_map, |key| NODE_SCHEMA.edge_view_state.contains(key));
     for key in HANDLE_KEYS {
         if let Some(parsed) = edge_map.get(key).and_then(parse_handle) {
-            canon.insert(key, Canon::Handle(Value::Object(parsed)));
+            let handle = Value::Object(parsed);
+            let handle = match mode {
+                Mode::Keyed => handle_with_type_sets(handle)?,
+                Mode::Ordered => handle,
+            };
+            canon.insert(key, Canon::Owned(handle));
         }
     }
-    Canon::Object(canon)
+    if let (Mode::Keyed, Some(data)) = (mode, edge_map.get("data")) {
+        canon.insert("data", Canon::Owned(edge_data_with_type_sets(data)?));
+    }
+    Ok(Canon::Object(canon))
+}
+
+/// A handle object with each type list sorted and without repeats. Two
+/// handles that differ only in the order of their types are then equal.
+/// A value that is not an object is returned as it is.
+///
+/// # Errors
+///
+/// A type holds a number that is not finite.
+pub(crate) fn handle_with_type_sets(mut handle: Value) -> Result<Value> {
+    if let Value::Object(map) = &mut handle {
+        for key in TYPE_LIST_KEYS {
+            if let Some(Value::Array(types)) = map.get_mut(key) {
+                let mut by_text = std::mem::take(types)
+                    .into_iter()
+                    .map(|item| Ok((canonical_json(&item)?, item)))
+                    .collect::<Result<Vec<_>>>()?;
+                by_text.sort_by(|a, b| a.0.cmp(&b.0));
+                by_text.dedup_by(|a, b| a.0 == b.0);
+                *types = by_text.into_iter().map(|(_, item)| item).collect();
+            }
+        }
+    }
+    Ok(handle)
+}
+
+/// An edge's `data`, with [`handle_with_type_sets`] on each handle object in it.
+///
+/// # Errors
+///
+/// A type holds a number that is not finite.
+pub(crate) fn edge_data_with_type_sets(data: &Value) -> Result<Value> {
+    let mut data = data.clone();
+    if let Value::Object(map) = &mut data {
+        for key in HANDLE_KEYS {
+            if let Some(handle) = map.get_mut(key) {
+                *handle = handle_with_type_sets(std::mem::take(handle))?;
+            }
+        }
+    }
+    Ok(data)
 }
 
 /// A read-only view of one position in a canonical form.
@@ -512,7 +604,7 @@ impl<'c, 'a> View<'c, 'a> {
     fn of(canon: &'c Canon<'a>) -> Self {
         match canon {
             Canon::Raw(value) => Self::Value(value),
-            Canon::Handle(value) => Self::Value(value),
+            Canon::Owned(value) => Self::Value(value),
             Canon::Object(map) => Self::Object(map),
             Canon::Array(items) => Self::Array(items),
             Canon::Node(node) => Self::Node(node),
@@ -678,7 +770,7 @@ fn write_list<T, W: Out>(
 ///
 /// Never in practice: the text goes to memory, and it is UTF-8.
 pub fn canonical_graph_json(flow: &Value) -> Result<String> {
-    let canon = canonical_graph(flow, Mode::Ordered);
+    let canon = canonical_graph(flow, Mode::Ordered)?;
     let mut out = Vec::new();
     write_canon(View::of(&canon), &mut out)?;
     Ok(String::from_utf8(out).expect("canonical text is UTF-8"))
@@ -696,7 +788,7 @@ pub fn canonical_graph_json(flow: &Value) -> Result<String> {
 pub fn graph_hash(flow: &Value) -> Result<String> {
     // The text goes straight into the hash, through a buffer that keeps the
     // many short writes (braces, commas) from reaching the hash one by one.
-    let canon = canonical_graph(flow, Mode::Ordered);
+    let canon = canonical_graph(flow, Mode::Ordered)?;
     let mut out = io::BufWriter::with_capacity(1 << 16, Sha256::new());
     write_canon(View::of(&canon), &mut out)?;
     let digest = out
@@ -718,8 +810,8 @@ pub fn graph_hash(flow: &Value) -> Result<String> {
 /// A number that is not finite as JavaScript reads it, in either graph's
 /// canonical form: the graphs that [`graph_hash`] refuses.
 pub fn graphs_equal(left: &Value, right: &Value) -> Result<bool> {
-    let left = canonical_graph(left, Mode::Keyed);
-    let right = canonical_graph(right, Mode::Keyed);
+    let left = canonical_graph(left, Mode::Keyed)?;
+    let right = canonical_graph(right, Mode::Keyed)?;
     let equal = canon_equal(View::of(&left), View::of(&right))?;
     // Equal graphs had every number read. Graphs that differ stopped at the
     // first difference, so they are checked to the end, or which answer a
@@ -974,8 +1066,8 @@ mod tests {
                 other => other,
             }
         }
-        let left = eager(canonical_graph(left, Mode::Keyed));
-        let right = eager(canonical_graph(right, Mode::Keyed));
+        let left = eager(canonical_graph(left, Mode::Keyed)?);
+        let right = eager(canonical_graph(right, Mode::Keyed)?);
         canon_equal(View::of(&left), View::of(&right))
     }
 

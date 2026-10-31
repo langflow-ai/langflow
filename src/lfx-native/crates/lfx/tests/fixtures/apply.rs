@@ -3,7 +3,7 @@
 use lfx::json;
 use lfx::ops::canonical::{graph_hash, graphs_equal};
 use lfx::ops::schema::NODE_SCHEMA;
-use lfx::ops::{ApplyOptions, GraphState, Mode, Operation};
+use lfx::ops::{ApplyOptions, GraphState, Operation, ReplayOptions};
 use lfx::value::{Map, Value};
 use libtest_mimic::{Failed, Trial};
 
@@ -100,7 +100,7 @@ fn apply_case(case: &Value) -> Result<(), Failed> {
     )
 }
 
-/// Applying a case's backward operations, last first and in preview mode, gives back its base.
+/// Replaying a case's backward operations, last first, each list in a call of its own, gives back its base.
 fn backward_round_trip(case: &Value) -> Result<(), Failed> {
     let base = &case["base"];
     let mut state =
@@ -115,16 +115,12 @@ fn backward_round_trip(case: &Value) -> Result<(), Failed> {
             options,
         )
         .map_err(|error| format!("refused: {error}"))?;
-    let restore = ApplyOptions {
-        mode: Mode::Preview,
-        ..ApplyOptions::default()
-    };
     for backward in applied.backward.into_iter().rev() {
         let shown = compact(&Value::Array(
             backward.iter().map(Operation::to_value).collect(),
         ));
         state
-            .apply(backward, restore)
+            .replay(backward, ReplayOptions::default())
             .map_err(|error| format!("backward operations {shown} refused: {error}"))?;
     }
     let restored = state.to_value();
@@ -217,7 +213,7 @@ fn ignoring_id_order(operations: &Value) -> Value {
 
 /// Compare nodes, edges and table rows as collections keyed by id: their array
 /// order is not state, and a table's order is its rows' positions.
-fn ignoring_order(flow: &Value) -> Value {
+pub fn ignoring_order(flow: &Value) -> Value {
     let mut flow = flow.clone();
     for key in ["nodes", "edges"] {
         if let Some(items) = flow.get_mut(key).and_then(Value::as_array_mut) {

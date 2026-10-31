@@ -24,6 +24,7 @@ use crate::ops::keyed::{self, Renumber};
 use crate::ops::ops::Operation;
 use crate::ops::plain::GraphPlain;
 use crate::ops::repair::{Fix, repair_flow_data};
+use crate::ops::replay::{ReplayOptions, Replayed, replay_flow_operations};
 use crate::ops::restore;
 use crate::ops::state::{GraphState, parse_json};
 use crate::ops::validate::{Numbers, Violation, find_graph_violations};
@@ -260,11 +261,11 @@ pub fn apply(flow: Input<'_>, operations_in: Input<'_>, options: ApplyOptions) -
     Ok(Value::Object(out))
 }
 
-/// Load a graph into a [`GraphState`], to apply many batches to it.
+/// Load a graph into a [`GraphState`], to apply or replay many batches on it.
 ///
 /// # Errors
 ///
-/// The graph does not parse or breaks a structural rule.
+/// The graph does not parse, or breaks a rule that the indexes need.
 pub fn graph_state(flow: Input<'_>) -> ApiResult<GraphState> {
     Ok(GraphState::new(data(flow)?)?)
 }
@@ -282,6 +283,56 @@ pub fn apply_to(
 ) -> ApiResult<Value> {
     let applied = state.apply(operations(operations_in)?, options)?;
     Ok(Value::Object(applied_json(applied, options)))
+}
+
+// --- Replay --------------------------------------------------------------------------------
+
+/// What a replay did, as JSON: the backward operations with `backward`.
+#[must_use]
+pub fn replayed_json(replayed: Replayed, options: ReplayOptions) -> Map {
+    let mut out = Map::new();
+    if options.backward {
+        out.insert(
+            "backward_operations".into(),
+            Value::Array(replayed.backward.into_iter().map(operations_json).collect()),
+        );
+    }
+    out
+}
+
+/// Replay stored operations on a graph, with no rule: `{"flow_data", ...}`
+/// and what [`replayed_json`] lists.
+///
+/// # Errors
+///
+/// The graph or the operations do not parse, the graph cannot be indexed,
+/// or an operation cannot be carried out.
+pub fn replay(
+    flow: Input<'_>,
+    operations_in: Input<'_>,
+    options: ReplayOptions,
+) -> ApiResult<Value> {
+    let (flow_data, replayed) =
+        replay_flow_operations(data(flow)?, operations(operations_in)?, options)?;
+    let mut out = replayed_json(replayed, options);
+    out.insert("flow_data".into(), flow_data);
+    Ok(Value::Object(out))
+}
+
+/// Replay stored operations on a [`GraphState`], with no rule; the result
+/// is what [`replayed_json`] lists.
+///
+/// # Errors
+///
+/// The operations do not parse, or an operation cannot be carried out,
+/// which then changes nothing.
+pub fn replay_to(
+    state: &mut GraphState,
+    operations_in: Input<'_>,
+    options: ReplayOptions,
+) -> ApiResult<Value> {
+    let replayed = state.replay(operations(operations_in)?, options)?;
+    Ok(Value::Object(replayed_json(replayed, options)))
 }
 
 // --- Diff, validation and repair ------------------------------------------------------------

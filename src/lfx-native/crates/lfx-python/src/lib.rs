@@ -19,7 +19,7 @@ use std::collections::HashMap;
 use std::sync::RwLock;
 
 use lfx::ops::api::{self, ApiError, ApiResult, Input};
-use lfx::ops::{ApplyOptions, Entry, Error};
+use lfx::ops::{ApplyOptions, Entry, Error, ReplayOptions};
 use lfx::value::{Map, Number, Value};
 use pyo3::create_exception;
 use pyo3::exceptions::{PyException, PyRuntimeError, PyTypeError, PyValueError};
@@ -265,29 +265,13 @@ fn finish(py: Python<'_>, value: Value) -> PyResult<Bound<'_, PyAny>> {
     result
 }
 
-/// The apply options; `mode` is `strict` or `preview`.
-fn apply_options(
-    py: Python<'_>,
-    forward: bool,
-    backward: bool,
-    mode: &str,
-) -> PyResult<ApplyOptions> {
-    let mode = mode
-        .parse()
-        .map_err(|error: Error| engine_error(py, &error.into()))?;
-    Ok(ApplyOptions {
-        forward,
-        backward,
-        mode,
-    })
-}
-
 // --- The engine -----------------------------------------------------------------------------
 
-/// A flow graph that the engine keeps loaded, to apply many batches to it.
+/// A flow graph that the engine keeps loaded, to apply or replay many
+/// batches on it.
 ///
-/// Replay, history playback and rebase apply many batches to one graph and
-/// read it once. A refused batch changes nothing.
+/// Replay, history playback and rebase carry out many batches on one graph
+/// and read it once. A refused batch changes nothing.
 ///
 /// Threads can share one state. A batch waits for the calls that read the
 /// graph, and they wait for it, as with any lock. A call releases the GIL
@@ -317,18 +301,17 @@ impl GraphState {
         })
     }
 
-    /// Apply a batch; returns what it did.
-    #[pyo3(signature = (operations, *, forward = false, backward = false, mode = "strict"))]
+    /// Apply a batch, with every rule; returns what it did.
+    #[pyo3(signature = (operations, *, forward = false, backward = false))]
     fn apply<'py>(
         &self,
         py: Python<'py>,
         operations: &Bound<'_, PyAny>,
         forward: bool,
         backward: bool,
-        mode: &str,
     ) -> PyResult<Bound<'py, PyAny>> {
         let operations = input(operations)?;
-        let options = apply_options(py, forward, backward, mode)?;
+        let options = ApplyOptions { forward, backward };
         // The lock is taken and released without the GIL.
         let applied = py
             .detach(|| {
@@ -337,6 +320,26 @@ impl GraphState {
             })
             .map_err(poisoned)?;
         finish(py, applied.map_err(|error| engine_error(py, &error))?)
+    }
+
+    /// Replay stored operations, with no rule; returns what it did.
+    #[pyo3(signature = (operations, *, backward = false))]
+    fn replay<'py>(
+        &self,
+        py: Python<'py>,
+        operations: &Bound<'_, PyAny>,
+        backward: bool,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let operations = input(operations)?;
+        let options = ReplayOptions { backward };
+        // The lock is taken and released without the GIL.
+        let replayed = py
+            .detach(|| {
+                let mut state = self.state.write().map_err(|_| Poisoned)?;
+                Ok(api::replay_to(&mut state, operations, options))
+            })
+            .map_err(poisoned)?;
+        finish(py, replayed.map_err(|error| engine_error(py, &error))?)
     }
 
     /// The graph as JSON text.
@@ -460,20 +463,33 @@ impl GraphPlain {
     }
 }
 
-/// Apply operations to a graph; returns `{"flow_data", ...}`.
+/// Apply operations to a graph, with every rule; returns `{"flow_data", ...}`.
 #[pyfunction]
-#[pyo3(signature = (flow, operations, *, forward = true, backward = false, mode = "strict"))]
+#[pyo3(signature = (flow, operations, *, forward = true, backward = false))]
 fn apply<'py>(
     py: Python<'py>,
     flow: &Bound<'_, PyAny>,
     operations: &Bound<'_, PyAny>,
     forward: bool,
     backward: bool,
-    mode: &str,
 ) -> PyResult<Bound<'py, PyAny>> {
     let (flow, operations) = (input(flow)?, input(operations)?);
-    let options = apply_options(py, forward, backward, mode)?;
+    let options = ApplyOptions { forward, backward };
     call(py, || api::apply(flow, operations, options))
+}
+
+/// Replay stored operations on a graph, with no rule; returns `{"flow_data", ...}`.
+#[pyfunction]
+#[pyo3(signature = (flow, operations, *, backward = false))]
+fn replay<'py>(
+    py: Python<'py>,
+    flow: &Bound<'_, PyAny>,
+    operations: &Bound<'_, PyAny>,
+    backward: bool,
+) -> PyResult<Bound<'py, PyAny>> {
+    let (flow, operations) = (input(flow)?, input(operations)?);
+    let options = ReplayOptions { backward };
+    call(py, || api::replay(flow, operations, options))
 }
 
 /// The operations that turn `base` into `target`, checked by replay.
@@ -706,6 +722,6 @@ mod _native {
         assign_changed_node_table_row_ids, assign_changed_table_row_ids, assign_row_ids,
         assign_table_row_ids, canonical_json, edge_fixes, fixes_for_edges, graph_hash,
         graphs_equal, new_edge_id, new_table_row_id, node_schema, ops_diff, ordered_rows, repair,
-        strip_flow_table_row_keys, strip_row_keys, table_fields, validate, values_equal,
+        replay, strip_flow_table_row_keys, strip_row_keys, table_fields, validate, values_equal,
     };
 }

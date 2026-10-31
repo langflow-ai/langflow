@@ -2,7 +2,8 @@
 //!
 //! Operations describe granular edits to a flow's `data`: nodes and edges
 //! added, updated field by field, or deleted. Every other top-level key is
-//! view state, which no operation writes.
+//! view state, which no operation writes. Apply carries out a new batch
+//! with every rule. Replay carries out stored operations with no rule.
 //! Paths name object keys, and the items of the lists that `node_schema.json`
 //! declares keyed by their key, never by their index. The engine has no transport or
 //! database dependencies, so the same rules apply wherever an operation comes
@@ -26,12 +27,13 @@ pub mod keyed;
 pub mod ops;
 pub mod plain;
 pub mod repair;
+pub mod replay;
 pub mod restore;
 pub mod schema;
 pub mod state;
 pub mod validate;
 
-pub use apply::{Applied, ApplyOptions, Mode, apply_flow_operations};
+pub use apply::{Applied, ApplyOptions, apply_flow_operations};
 pub use diff::{Derived, derive_flow_operations, diff_flow_data};
 pub use error::{Error, ErrorCode, ErrorKind, Result};
 pub use ops::{
@@ -39,4 +41,5 @@ pub use ops::{
 };
 pub use plain::GraphPlain;
 pub use repair::{Fix, Repaired, repair_flow_data};
+pub use replay::{ReplayOptions, Replayed, replay_flow_operations};
 pub use state::{Edges, Entry, GraphState, Nodes};

@@ -2,118 +2,195 @@
 //!
 //! Outputs, tool actions and table rows are lists whose items carry a key: an
 //! output's `name`, a tool action's first tag, a row's `__id__`. A write finds
-//! its item through an index instead of scanning the list, and building the
-//! index checks the list once: every item has a key, no key repeats, and
-//! every table row carries a numeric `__pos__`.
+//! its item through an index instead of scanning the list. Building the
+//! index reads the list once, and counts what breaks the keyed list rules:
+//! an item without a key, a key that repeats, a table row without a numeric
+//! `__pos__`. Apply refuses a write into such a list; replay does not.
 //!
-//! Natural lists keep the order writes leave them in. A table's order is its
-//! rows' `(__pos__, __id__)`, not their places in the array: readers sort rows when
-//! they strip the row keys, so the engine never sorts a table. A new row is
-//! appended, and the last row moves into a deleted row's place.
+//! Every keyed list is ordered by its items' `(__pos__, key)`, not by their
+//! places in the array: readers sort items when they strip `__pos__`, so the
+//! engine never sorts a list. A new item is appended, and the last item moves
+//! into a deleted item's place. A list whose items carry no `__pos__` keeps
+//! its array order.
 
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
+use indexmap::IndexSet;
+
 use crate::value::Value;
 
 use crate::ops::canonical::{
-    as_double, is_finite_number, is_integer_text, is_row_position, ordered_rows, values_equal,
+    as_double, is_finite_number, is_integer_text, is_row_position, ordered_rows, row_order,
+    values_equal,
 };
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Result, bail, invalid, quoted};
 use crate::ops::ids::{new_table_row_id, unused_id};
-use crate::ops::schema::{KeyedList, ListKind, NODE_SCHEMA, field_value_path};
+use crate::ops::schema::{KeyedList, NODE_SCHEMA, field_value_path};
 
-/// The array index of every item of one keyed list, by key.
+/// The array index of every item of one keyed list, by key, and what the
+/// list breaks of the keyed list rules.
+///
+/// Building the index never fails. Apply refuses a write into a list that
+/// breaks the rules ([`ListIndex::problem`]); replay writes into it, and fails
+/// only when a key it looks up names two items.
 #[derive(Debug, Clone)]
 pub struct ListIndex {
     /// The list's kind and keys.
     pub keyed: &'static KeyedList,
+    /// The array index of each item whose key no other item has, by key.
     slots: HashMap<String, usize>,
+    /// The keys that two items or more have, in the order the list repeats them.
+    repeated: IndexSet<String>,
+    /// How many items have no non-empty string key.
+    keyless: usize,
+    /// How many table rows have no finite numeric position.
+    unpositioned: usize,
+}
+
+/// What a keyed list breaks of the keyed list rules.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ListProblem {
+    /// An item has no non-empty string key.
+    Keyless,
+    /// Two items have this key.
+    RepeatedKey(String),
+    /// A table row has no finite numeric position, which this key holds.
+    Unpositioned(&'static str),
+}
+
+impl fmt::Display for ListProblem {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Keyless => f.write_str("every item of this list needs a non-empty string key"),
+            Self::RepeatedKey(key) => write!(f, "two items have the key {}", quoted(key)),
+            Self::Unpositioned(position) => {
+                write!(f, "a list item's {position} must be a finite number")
+            }
+        }
+    }
 }
 
 impl ListIndex {
-    /// Index `items`, checking every item's key, and every table row's position.
-    ///
-    /// # Errors
-    ///
-    /// An item without a non-empty string key, two items with one key, or a
-    /// table row without a finite numeric position.
-    pub fn build(
-        keyed: &'static KeyedList,
-        items: &[Value],
-        context: &dyn fmt::Display,
-    ) -> Result<Self> {
+    /// Index `items`, and count the items that break the keyed list rules.
+    #[must_use]
+    pub fn build(keyed: &'static KeyedList, items: &[Value]) -> Self {
         let mut index = Self {
             keyed,
             slots: HashMap::with_capacity(items.len()),
+            repeated: IndexSet::new(),
+            keyless: 0,
+            unpositioned: 0,
         };
         for (slot, item) in items.iter().enumerate() {
-            let key = index.require_key(item, context)?;
-            if index.slots.contains_key(key) {
-                bail!("{context}: two items have the key {}", quoted(key));
+            if !keyed.has_position(item) {
+                index.unpositioned += 1;
             }
-            index.require_position(item, context)?;
-            index.slots.insert(key.to_owned(), slot);
+            match keyed.key_of(item).filter(|key| !key.is_empty()) {
+                None => index.keyless += 1,
+                Some(key) if index.repeated.contains(key) => {}
+                Some(key) => {
+                    if index.slots.remove(key).is_some() {
+                        index.repeated.insert(key.to_owned());
+                    } else {
+                        index.slots.insert(key.to_owned(), slot);
+                    }
+                }
+            }
         }
-        Ok(index)
+        index
     }
 
-    /// The array index of the item with `key`.
+    /// The first rule the list breaks, if any: an item without a key, then
+    /// a repeated key, then an item without a position.
+    #[must_use]
+    pub fn problem(&self) -> Option<ListProblem> {
+        self.key_problem().or_else(|| {
+            (self.unpositioned > 0).then_some(ListProblem::Unpositioned(&self.keyed.position))
+        })
+    }
+
+    /// The first rule about keys the list breaks, if any: an item without a
+    /// key, then a repeated key.
+    #[must_use]
+    pub fn key_problem(&self) -> Option<ListProblem> {
+        if self.keyless > 0 {
+            return Some(ListProblem::Keyless);
+        }
+        self.repeated
+            .first()
+            .map(|key| ListProblem::RepeatedKey(key.clone()))
+    }
+
+    /// Check that every item has a key that no other item has. A reader that
+    /// finds items by key needs this, and not their positions.
+    ///
+    /// # Errors
+    ///
+    /// The first rule about keys the list breaks ([`Self::key_problem`]).
+    pub fn check_keys(&self, context: &dyn fmt::Display) -> Result<()> {
+        match self.key_problem() {
+            Some(problem) => bail!("{context}: {problem}"),
+            None => Ok(()),
+        }
+    }
+
+    /// The array index of the item with `key`, or `None` when no item has it.
+    ///
+    /// # Errors
+    ///
+    /// Two items have `key`.
+    pub fn find(&self, key: &str, context: &dyn fmt::Display) -> Result<Option<usize>> {
+        if self.repeated.contains(key) {
+            bail!("{context}: two items have the key {}", quoted(key));
+        }
+        Ok(self.slot(key))
+    }
+
+    /// The array index of the item with `key`, when only one item has it.
     #[must_use]
     pub fn slot(&self, key: &str) -> Option<usize> {
         self.slots.get(key).copied()
     }
 
-    /// Whether an item has `key`.
-    #[must_use]
-    pub fn contains(&self, key: &str) -> bool {
-        self.slots.contains_key(key)
-    }
-
-    /// The keys of the list, in no particular order.
+    /// The keys that only one item has, in no particular order.
     pub fn keys(&self) -> impl Iterator<Item = &str> {
         self.slots.keys().map(String::as_str)
     }
 
-    /// An item's key, which must be a non-empty string.
-    ///
-    /// # Errors
-    ///
-    /// The item has no non-empty string key.
-    pub fn require_key<'v>(&self, item: &'v Value, context: &dyn fmt::Display) -> Result<&'v str> {
-        item_key(self.keyed, item, context)
-    }
-
-    /// Check that an item of a table carries a finite numeric position. An
-    /// item of a natural list has no position, so it always passes.
-    ///
-    /// # Errors
-    ///
-    /// The row's position is missing, not a number, or not finite.
-    pub fn require_position(&self, row: &Value, context: &dyn fmt::Display) -> Result<()> {
-        check_position(self.keyed, row, context)
-    }
-
-    /// Append an item whose key is not in the list yet.
-    pub(crate) fn add(
-        &mut self,
-        items: &mut Vec<Value>,
-        item: Value,
-        context: &dyn fmt::Display,
-    ) -> Result<()> {
-        let key = self.require_key(&item, context)?.to_owned();
-        self.require_position(&item, context)?;
-        self.slots.insert(key, items.len());
+    /// Append `item`, whose key `key` is not in the list yet.
+    pub(crate) fn add(&mut self, items: &mut Vec<Value>, key: &str, item: Value) {
+        if !self.keyed.has_position(&item) {
+            self.unpositioned += 1;
+        }
+        self.slots.insert(key.to_owned(), items.len());
         items.push(item);
-        Ok(())
+    }
+
+    /// Replace the item at `slot` by `item`, which carries the same key.
+    pub(crate) fn replace(&mut self, items: &mut [Value], slot: usize, item: Value) {
+        let now = self.keyed.has_position(&item);
+        let old = std::mem::replace(&mut items[slot], item);
+        self.position_changed(self.keyed.has_position(&old), now);
+    }
+
+    /// Count a write inside an item that gave it, or took away, its position.
+    pub(crate) fn position_changed(&mut self, before: bool, after: bool) {
+        match (before, after) {
+            (true, false) => self.unpositioned += 1,
+            (false, true) => self.unpositioned -= 1,
+            _ => {}
+        }
     }
 
     /// Remove the item with `key` and return it, or `None` when no item has it.
     pub(crate) fn remove(&mut self, items: &mut Vec<Value>, key: &str) -> Option<Value> {
         let slot = self.slots.remove(key)?;
         let item = remove_item(self.keyed, items, slot);
-        if self.keyed.kind == ListKind::Natural {
+        if !self.keyed.has_position(&item) {
+            // The items after it moved up one place.
+            self.unpositioned -= 1;
             for later in self.slots.values_mut() {
                 if *later > slot {
                     *later -= 1;
@@ -123,60 +200,31 @@ impl ListIndex {
         }
         if let Some(moved) = items.get(slot)
             && let Some(moved_key) = self.keyed.key_of(moved)
+            && let Some(moved_slot) = self.slots.get_mut(moved_key)
         {
-            self.slots.insert(moved_key.to_owned(), slot);
+            *moved_slot = slot;
         }
         Some(item)
     }
-
-    /// Replace the item at `slot` by `item`, which carries the same key, and return the old item.
-    pub(crate) fn replace(
-        &self,
-        items: &mut [Value],
-        slot: usize,
-        item: Value,
-        context: &dyn fmt::Display,
-    ) -> Result<Value> {
-        self.require_position(&item, context)?;
-        Ok(std::mem::replace(&mut items[slot], item))
-    }
 }
 
-/// An item's key, which must be a non-empty string.
-///
-/// # Errors
-///
-/// The item has no non-empty string key.
-pub(crate) fn item_key<'v>(
-    keyed: &KeyedList,
-    item: &'v Value,
-    context: &dyn fmt::Display,
-) -> Result<&'v str> {
-    match keyed.key_of(item) {
-        Some(key) if !key.is_empty() => Ok(key),
-        _ => Err(invalid!(
-            "{context}: every item of this list needs a non-empty string key"
-        )),
-    }
-}
-
-/// Check that an item of a table carries a finite numeric position. An item
-/// of a natural list has no position, so it always passes.
+/// Check that a list item carries a finite numeric position.
 ///
 /// # Errors
 ///
 /// The row's position is missing, not a number, or not finite.
 pub(crate) fn check_position(
-    keyed: &KeyedList,
+    keyed: &'static KeyedList,
     row: &Value,
     context: &dyn fmt::Display,
 ) -> Result<()> {
-    match keyed.position.as_deref() {
-        Some(key) if !row.get(key).is_some_and(is_row_position) => Err(invalid!(
-            "{context}: a table row's {key} must be a finite number"
-        )),
-        _ => Ok(()),
+    if keyed.has_position(row) {
+        return Ok(());
     }
+    Err(invalid!(
+        "{context}: {}",
+        ListProblem::Unpositioned(&keyed.position)
+    ))
 }
 
 /// The array index of the item with `key`, found by reading every item. For
@@ -187,13 +235,14 @@ pub(crate) fn find_item(keyed: &KeyedList, items: &[Value], key: &str) -> Option
         .position(|item| keyed.key_of(item) == Some(key))
 }
 
-/// Remove the item at `slot`. A natural list keeps its order; a table moves
-/// its last row into the gap.
+/// Remove the item at `slot`. The order of a list is its items' positions,
+/// so the last item moves into the gap. An item without a position belongs
+/// to a list that keeps its array order, so the items after it move up.
 pub(crate) fn remove_item(keyed: &KeyedList, items: &mut Vec<Value>, slot: usize) -> Value {
-    match keyed.kind {
-        // Natural lists are short (a component's outputs or tool actions), and their order is kept.
-        ListKind::Natural => items.remove(slot),
-        ListKind::Table => items.swap_remove(slot),
+    if keyed.has_position(&items[slot]) {
+        items.swap_remove(slot)
+    } else {
+        items.remove(slot)
     }
 }
 
@@ -212,7 +261,7 @@ pub(crate) fn remove_item(keyed: &KeyedList, items: &mut Vec<Value>, slot: usize
 /// Only the editor renumbers: the server never changes a position.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Renumber {
-    /// Renumber the table `1..n` in its stored order when a gap has no room left.
+    /// Renumber the table `1..n`, in the same order, when a gap has no room left.
     WhenNoRoom,
     /// Never renumber.
     Never,
@@ -458,9 +507,12 @@ impl Position {
 /// evenly between the positioned rows stored before and after it, or placed
 /// one apart before the first or after the last; when those neighbours are
 /// out of order, the run follows the one before it. A table with no
-/// positions at all gets `1..n`. With [`Renumber::WhenNoRoom`], a gap that
-/// has no room left for its run renumbers the whole table `1..n` in stored
-/// order instead. Returns the indexes of the rows it gave a position.
+/// positions at all gets `1..n`.
+///
+/// With [`Renumber::WhenNoRoom`], a gap that has no room left for its run
+/// renumbers the whole table `1..n`. The new numbers follow the order that
+/// [`ordered_rows`] gives after the runs are filled, so the order does not
+/// change. Returns the indexes of the rows it gave a position.
 pub fn fill_missing_positions(rows: &mut [Value], renumber: Renumber) -> Vec<usize> {
     let key = row_position_key();
     let position_at = |rows: &[Value], index: usize| {
@@ -469,6 +521,7 @@ pub fn fill_missing_positions(rows: &mut [Value], renumber: Renumber) -> Vec<usi
             .and_then(|value| Position::try_from(value).ok())
     };
     let mut filled = Vec::new();
+    let mut no_room = false;
     let mut index = 0;
     while index < rows.len() {
         if position_at(rows, index).is_some() {
@@ -485,21 +538,19 @@ pub fn fill_missing_positions(rows: &mut [Value], renumber: Renumber) -> Vec<usi
             .and_then(|before| position_at(rows, before));
         let after = (end < rows.len()).then(|| position_at(rows, end)).flatten();
         let positions = spread(before, after, count);
-        if renumber == Renumber::WhenNoRoom && !fits_between(&positions, before, after) {
-            for (slot, row) in rows.iter_mut().enumerate() {
-                set_position(
-                    row,
-                    key,
-                    Position::integer(f64::from(u32::try_from(slot + 1).unwrap_or(u32::MAX))),
-                );
-            }
-            return (0..rows.len()).collect();
-        }
+        no_room |= !fits_between(&positions, before, after);
         for (offset, position) in positions.into_iter().enumerate() {
             set_position(&mut rows[index + offset], key, position);
             filled.push(index + offset);
         }
         index = end;
+    }
+    if no_room && renumber == Renumber::WhenNoRoom {
+        for (rank, slot) in row_order(rows).into_iter().enumerate() {
+            let number = f64::from(u32::try_from(rank + 1).unwrap_or(u32::MAX));
+            set_position(&mut rows[slot], key, Position::integer(number));
+        }
+        return (0..rows.len()).collect();
     }
     filled
 }
