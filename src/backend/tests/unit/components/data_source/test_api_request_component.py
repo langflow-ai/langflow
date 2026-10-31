@@ -46,6 +46,12 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
         return []
 
     @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "data": "sends the request to the live URL in default_kwargs",
+        }
+
+    @pytest.fixture
     async def component(self, component_class, default_kwargs):
         """Return a component instance."""
         return component_class(**default_kwargs)

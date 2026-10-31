@@ -432,8 +432,9 @@ def test_validator_uses_hashes_from_the_same_snapshot_as_substitution(monkeypatc
     validate_flow_for_current_settings({"nodes": [_node("a", "ChatInput", STORED_CHAT_INPUT)]})
 
 
-def test_from_payload_substitutes_before_validating(monkeypatch):
-    """Graph.from_payload owns the payload it builds, so the real swap happens there — first."""
+@pytest.mark.parametrize("wrapped", [False, True])
+def test_from_payload_substitutes_before_validating(monkeypatch, wrapped):
+    """Substitution and validation must inspect the same normalized graph copy."""
     from lfx.graph.graph.base import Graph
 
     calls: list[tuple[str, dict, dict]] = []
@@ -448,11 +449,14 @@ def test_from_payload_substitutes_before_validating(monkeypatch):
         lambda payload, **kwargs: calls.append(("validate", payload, kwargs)),
     )
 
-    payload = {"nodes": [], "edges": []}
+    graph_payload = {"nodes": [], "edges": []}
+    payload = {"data": graph_payload} if wrapped else graph_payload
     Graph.from_payload(payload)
 
     assert [name for name, *_ in calls] == ["substitute", "validate"]
-    assert calls[0][1] is payload
+    assert calls[0][1] is calls[1][1]
+    assert calls[0][1] is not graph_payload
+    assert calls[0][1] == graph_payload
     assert calls[0][2] == {"validate_public_execution": False}
 
 

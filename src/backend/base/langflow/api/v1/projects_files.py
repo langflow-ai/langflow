@@ -20,7 +20,6 @@ from langflow.api.utils import (
     CurrentActiveUser,
     DbSession,
     build_content_disposition,
-    normalize_code_for_import,
     normalize_flow_for_export,
     strip_flow_secrets,
 )
@@ -30,11 +29,18 @@ from langflow.api.v1.flows_helpers import _export_variable_names, _sanitize_flow
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
+from langflow.services.audit import vocabulary as audit_vocab
+from langflow.services.audit.operations import stage_project_succeeded
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.authorization import FlowAction, filter_visible_resources
 from langflow.services.authorization.utils import _resolve_authz_domain
+from langflow.services.creation_hooks import (
+    RESOURCE_PROJECT,
+    PreCreationContext,
+    enforce_pre_creation,
+)
 from langflow.services.database.models.base import orjson_dumps
-from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
+from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.folder.model import (
     Folder,
     FolderCreate,
@@ -171,6 +177,11 @@ async def upload_project_flows(
             status_code=400,
             detail=f"Missing required field(s): {', '.join(missing_keys)}",
         )
+    try:
+        flow_list = FlowListCreate.model_validate({"flows": data["flows"]})
+    except ValidationError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+
     project_name = await generate_unique_folder_name(data["folder_name"], current_user.id, session)
 
     data["folder_name"] = project_name
@@ -180,6 +191,18 @@ async def upload_project_flows(
     except ValidationError as e:
         # The imported name is validated like a typed one; report why rather than 500
         raise HTTPException(status_code=422, detail=e.errors()[0]["msg"]) from e
+
+    # The one project-creation route that does not go through ``projects._new_project``: it
+    # builds the Folder itself, so it runs the same hooks through the same helper. Without
+    # this call a project limit would be bypassable by uploading a project export.
+    await enforce_pre_creation(
+        PreCreationContext(
+            resource=RESOURCE_PROJECT,
+            session=session,
+            actor_user_id=current_user.id,
+            requested_name=project.name,
+        )
+    )
 
     new_project = Folder.model_validate(project, from_attributes=True)
     new_project.id = None
@@ -203,12 +226,6 @@ async def upload_project_flows(
     del data["folder_name"]
     data.pop("folder_description", None)
 
-    if "flows" in data:
-        # Normalise code fields: if exported with code-as-lines format, rejoin to
-        # strings before creating Pydantic models so the DB always stores strings.
-        flow_list = FlowListCreate(flows=[FlowCreate(**normalize_code_for_import(flow)) for flow in data["flows"]])
-    else:
-        raise HTTPException(status_code=400, detail="No flows found in the data")
     # Generate unique names, tracking names already assigned within this batch
     # to avoid collisions when multiple flows would get the same generated name
     used_names_in_batch: set[str] = set()
@@ -228,4 +245,15 @@ async def upload_project_flows(
         flow.folder_id = new_project.id
         flow.workspace_id = new_project.workspace_id
 
-    return await create_flows(session=session, flow_list=flow_list, current_user=current_user)
+    created = await create_flows(session=session, flow_list=flow_list, current_user=current_user)
+    await stage_project_succeeded(
+        session,
+        action=audit_vocab.PROJECT_CREATE,
+        operation=audit_vocab.AuditOperation.CREATE,
+        project_id=new_project.id,
+        project_name=new_project.name,
+        description=new_project.description,
+        flows_before={},
+        flows_after={flow.id: flow.name for flow in created},
+    )
+    return created

@@ -211,6 +211,7 @@ Langflow maps JWT claims to local user attributes when creating or updating the 
 | `LANGFLOW_EXTERNAL_AUTH_USERNAME_CLAIM` | JWT claim preferred for the local Langflow username. Falls back to email, name, or a deterministic hash. | `preferred_username` |
 | `LANGFLOW_EXTERNAL_AUTH_EMAIL_CLAIM` | JWT claim containing the user's email address. | `email` |
 | `LANGFLOW_EXTERNAL_AUTH_NAME_CLAIM` | JWT claim containing the user's display name. | `name` |
+| `LANGFLOW_EXTERNAL_AUTH_GROUP_RECONCILE_INTERVAL_SECONDS` | Minimum seconds between group reconciliations for an unchanged directory state. A changed group set always reconciles immediately. Set to `0` to reconcile on every request. | `60` |
 
 ## Configure an access ceiling from JWT claims
 
@@ -304,7 +305,7 @@ LANGFLOW_EXTERNAL_AUTH_TOKEN_HEADER=X-Forwarded-User-Token
 
 ## SSO provider integrations
 
-Full provider-specific SSO (OIDC, SAML, LDAP) is available as a plugin (`SSO_ENABLED`, `SSO_PROVIDER`, `SSO_CONFIG_FILE`).
+Full provider-specific SSO (OIDC, SAML, LDAP) is available as a plugin (`LANGFLOW_SSO_ENABLED`, `LANGFLOW_SSO_PROVIDER`, `LANGFLOW_SSO_CONFIG_FILE`, `LANGFLOW_SSO_REDIRECT_URL`).
 The external authentication settings above work independently of the SSO plugin and are the recommended starting point for deployments behind an OIDC proxy.
 Contact your Langflow account team for information about the SSO plugin.
 

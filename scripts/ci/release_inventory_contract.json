@@ -24,6 +24,9 @@
         "lfx"
       ],
       "forbidden_distributions": [
+        "agent-lifecycle-toolkit",
+        "chromadb",
+        "langchain-chroma",
         "langflow",
         "lfx-bundles",
         "torch",
@@ -68,10 +71,12 @@
         "lfx-docling",
         "lfx-google",
         "lfx-ibm",
+        "lfx-microsoft",
         "lfx-ollama",
         "lfx-openai",
         "lfx-openai-compatible",
         "lfx-oracle",
+        "lfx-slack",
         "lfx-toolguard",
         "lfx-vllm"
       ],
@@ -84,6 +89,8 @@
         "lfx-firecrawl",
         "lfx-nextplaid",
         "lfx-paddle",
+        "lfx-serpingapi",
+        "lfx-serply",
         "lfx-valkey"
       ],
       "forbidden_distributions_remove": [
@@ -100,10 +107,12 @@
           "lfx-docling",
           "lfx-google",
           "lfx-ibm",
+          "lfx-microsoft",
           "lfx-ollama",
           "lfx-openai",
           "lfx-openai-compatible",
           "lfx-oracle",
+          "lfx-slack",
           "lfx-toolguard",
           "lfx-vllm"
         ],
@@ -119,7 +128,18 @@
         ],
         "lfx-google": [
           "lfx_google/extension.json",
+          "lfx_google/components/google/capabilities.v1.json",
           "lfx_google/components/google/google_generative_ai.py"
+        ],
+        "lfx-microsoft": [
+          "lfx_microsoft/extension.json",
+          "lfx_microsoft/components/microsoft/capabilities.v1.json",
+          "lfx_microsoft/components/microsoft/outlook_send.py"
+        ],
+        "lfx-slack": [
+          "lfx_slack/extension.json",
+          "lfx_slack/components/slack/capabilities.v1.json",
+          "lfx_slack/components/slack/slack_search.py"
         ],
         "lfx-azure": [
           "lfx_azure/extension.json",
@@ -190,6 +210,8 @@
         "lfx-firecrawl",
         "lfx-nextplaid",
         "lfx-paddle",
+        "lfx-serpingapi",
+        "lfx-serply",
         "lfx-valkey"
       ],
       "forbidden_distributions_remove": [
@@ -202,6 +224,8 @@
         "lfx-firecrawl",
         "lfx-nextplaid",
         "lfx-paddle",
+        "lfx-serpingapi",
+        "lfx-serply",
         "lfx-valkey"
       ],
       "entry_points": {
@@ -220,12 +244,16 @@
           "lfx-firecrawl",
           "lfx-google",
           "lfx-ibm",
+          "lfx-microsoft",
           "lfx-nextplaid",
           "lfx-ollama",
           "lfx-openai",
           "lfx-openai-compatible",
           "lfx-oracle",
           "lfx-paddle",
+          "lfx-serpingapi",
+          "lfx-serply",
+          "lfx-slack",
           "lfx-toolguard",
           "lfx-valkey",
           "lfx-vllm"
@@ -255,6 +283,8 @@
         "deepseek",
         "elastic",
         "faiss",
+        "figranium",
+        "funasr",
         "git",
         "glean",
         "groq",
@@ -282,6 +312,7 @@
         "perplexity",
         "pgvector",
         "pinecone",
+        "plivo",
         "qdrant",
         "redis",
         "sambanova",
@@ -315,7 +346,18 @@
         ],
         "lfx-google": [
           "lfx_google/extension.json",
+          "lfx_google/components/google/capabilities.v1.json",
           "lfx_google/components/google/google_generative_ai.py"
+        ],
+        "lfx-microsoft": [
+          "lfx_microsoft/extension.json",
+          "lfx_microsoft/components/microsoft/capabilities.v1.json",
+          "lfx_microsoft/components/microsoft/outlook_send.py"
+        ],
+        "lfx-slack": [
+          "lfx_slack/extension.json",
+          "lfx_slack/components/slack/capabilities.v1.json",
+          "lfx_slack/components/slack/slack_search.py"
         ],
         "lfx-azure": [
           "lfx_azure/extension.json",
@@ -329,7 +371,6 @@
         ],
         "lfx-bundles": [
           "lfx_bundles/mongodb/mongodb_atlas.py",
-          "lfx_bundles/codeagents/starter_projects/Structured Data Analysis Agent.json",
           "lfx_bundles/youtube/starter_projects/Youtube Analysis.json"
         ]
       },

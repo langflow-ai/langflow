@@ -25,6 +25,7 @@ definition. The handler also enforces the public-access mitigations:
 
 from __future__ import annotations
 
+import contextlib
 from collections.abc import AsyncIterator
 from typing import Annotated
 from uuid import UUID, uuid4
@@ -123,8 +124,9 @@ async def execute_public_workflow(
     # Lazy-import to avoid the circular ``v2.workflow`` -> ``api.build`` ->
     # ``v1.chat`` -> ``api.build`` cycle that fires when ``v2.__init__`` is
     # collected at import time.
+    from langflow.api.utils.execution_principal import FAMILY_WORKFLOW_PUBLIC_V2
     from langflow.api.v2.workflow import _unknown_protocol_http_exception
-    from langflow.api.v2.workflow_execution import _stream_event_frames
+    from langflow.api.v2.workflow_execution import _stream_event_frames, _with_transport_keepalive
 
     # Throttle before any DB lookup or flow execution so an anonymous flood is
     # rejected cheaply, not after spending the flow owner's resources.
@@ -269,25 +271,32 @@ async def execute_public_workflow(
     )
 
     async def _frames_only() -> AsyncIterator[bytes]:
-        async for frame, _event_type in _stream_event_frames(
-            adapter=adapter,
-            flow_id=virtual_flow_id,
-            flow_name=flow_name,
-            background_tasks=background_tasks,
-            parsed=parsed,
-            current_user=public_user,
-            provider_policy_flow=flow,
-            source_flow_id=real_flow_id,
-            source_flow_owner_id=source_flow_owner_id,
-            run_id=run_id,
-            # Anonymous shared-link traffic, kept apart from signed-in v2 runs the same way
-            # playground.public is kept apart from playground.
-            protocol="v2.public",
-            expose_error_details=False,
-        ):
-            yield frame
+        """Strip internal event types and close the public run on disconnect."""
+        async with contextlib.aclosing(
+            _stream_event_frames(
+                adapter=adapter,
+                flow_id=virtual_flow_id,
+                flow_name=flow_name,
+                background_tasks=background_tasks,
+                parsed=parsed,
+                current_user=public_user,
+                provider_policy_flow=flow,
+                source_flow_id=real_flow_id,
+                source_flow_owner_id=source_flow_owner_id,
+                run_id=run_id,
+                # Anonymous shared-link traffic, kept apart from signed-in v2 runs the same way
+                # playground.public is kept apart from playground.
+                protocol="v2.public",
+                # The anonymous visitor principal: no user connection is ever resolved
+                # for a public run, whichever connection the flow references.
+                execution_family=FAMILY_WORKFLOW_PUBLIC_V2,
+                expose_error_details=False,
+            )
+        ) as frames:
+            async for frame, _event_type in frames:
+                yield frame
 
     return EventSourceResponse(
-        _frames_only(),
+        _with_transport_keepalive(_frames_only()),
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

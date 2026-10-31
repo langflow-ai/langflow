@@ -167,14 +167,18 @@ jobs:
           uv run --no-sync ./scripts/ci/update_lfx_version.py $LFX_TAG $SDK_TAG
           echo "Updating base/main project versions to the shared nightly tag"
           uv run --no-sync ./scripts/ci/update_pyproject_combined.py main $RELEASE_TAG $BASE_TAG $LFX_TAG
+          # Only the nightly tag receives this commit; the development branch stays unchanged.
+          uv run --no-sync python scripts/ci/release_auth_defaults.py prepare
 
           uv lock
           cd src/lfx && uv lock && cd ../..
 
           git add pyproject.toml src/backend/base/pyproject.toml src/lfx/pyproject.toml \
-            src/lfx/src/lfx/_assets/component_index.json src/sdk/pyproject.toml uv.lock
-          # The nightly keeps canonical package names and the stable `lfx-*` bundles
-          # are not modified (see src/bundles/NIGHTLY.md), so no bundle pyprojects ride this commit.
+            src/lfx/src/lfx/_assets/component_index.json src/sdk/pyproject.toml uv.lock \
+            src/lfx/src/lfx/services/settings/auth.py
+          # Bundles requiring the matching final LFX release get a .devN version
+          # and exact runtime pin only on this tag (see src/bundles/NIGHTLY.md).
+          git add src/bundles/*/pyproject.toml src/bundles/*/src/*/extension.json
           git commit -m "Update version for nightly"
 
           echo "Tagging main with $RELEASE_TAG"

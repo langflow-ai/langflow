@@ -162,3 +162,41 @@ async def test_should_reshape_outermost_on_chain_end_to_agent_finish() -> None:
     output = end["data"]["output"]
     assert isinstance(output, AgentFinish)
     assert output.return_values == {"output": final_text}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("callback_mode", ["missing", "present"])
+async def test_should_emit_model_update_and_limit_notice_once(callback_mode: str) -> None:
+    """The graph model update covers chat models that omit model-end callbacks."""
+    model_message = AIMessage(content=[{"type": "text", "text": "Checking now."}], id="model-1")
+    limit_notice = AIMessage(content="Model call limits exceeded", id="limit-1")
+    start = {
+        "event": "on_chain_start",
+        "name": "LangGraph",
+        "run_id": "outer-1",
+        "data": {"input": {"messages": [HumanMessage(content="Check")]}},
+    }
+    callback = {
+        "event": "on_chat_model_end",
+        "name": "FakeChat",
+        "run_id": "model-1",
+        "data": {"output": model_message},
+    }
+    update = {
+        "event": "on_chain_stream",
+        "name": "LangGraph",
+        "run_id": "outer-1",
+        "data": {"chunk": {"model": {"messages": [model_message]}}},
+    }
+    end = {
+        "event": "on_chain_end",
+        "name": "LangGraph",
+        "run_id": "outer-1",
+        "data": {"output": {"messages": [HumanMessage(content="Check"), model_message, limit_notice]}},
+    }
+
+    events = [start, *([callback] if callback_mode == "present" else []), update, end]
+    result = await _collect(adapt_graph_events_to_executor_shape(_stream(events)))
+
+    model_ends = [event["data"]["output"] for event in result if event["event"] == "on_chat_model_end"]
+    assert model_ends == [model_message, limit_notice]

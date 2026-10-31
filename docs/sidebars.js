@@ -53,6 +53,11 @@ module.exports = {
           label: "Build flows"
         },
         {
+          type: "doc",
+          id: "Flows/concurrent-editing",
+          label: "Concurrent editing"
+        },
+        {
           type: "category",
           label: "Run flows",
           items: [
@@ -129,6 +134,11 @@ module.exports = {
             "Develop/api-keys-and-authentication",
             "Develop/external-authentication",
             "Develop/authorization",
+            "Develop/audit-logging",
+            "Develop/admin-api-cli",
+            "Develop/connections",
+            "Develop/connection-oauth",
+            "Develop/entra-app-registration",
           ],
         },
         "Develop/install-custom-dependencies",
@@ -165,6 +175,7 @@ module.exports = {
               label: "Database guide for enterprise administrators"
             },
             "Develop/knowledge",
+            "Develop/knowledge-storage-upgrade",
             "Develop/memory-bases",
           ],
         },
@@ -202,7 +213,7 @@ module.exports = {
         {
           type: "doc",
           id: "Develop/concepts-voice-mode",
-          label: "Use voice mode"
+          label: "Use speech input"
         },
         {
           type: "doc",
@@ -220,6 +231,11 @@ module.exports = {
           type:"doc",
           id: "Deployment/deployment-overview",
           label: "Langflow deployment overview"
+        },
+        {
+          type: "doc",
+          id: "Deployment/instance-migration",
+          label: "Migrate to a new instance"
         },
         {
           type: "doc",
@@ -322,6 +338,16 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/deployment-trigger-listeners",
+          label: "Deploy Langflow trigger listeners",
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-trigger-webhooks",
+          label: "Receive provider events with trigger webhooks",
+        },
+        {
+          type: "doc",
           id: "Deployment/deployment-block-custom-components",
           label: "Block custom components",
         },
@@ -366,6 +392,11 @@ module.exports = {
           type: "doc",
           id: "Lfx/lfx-serve",
           label: "Serve flows with LFX"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-connections",
+          label: "Resolve connections in headless LFX"
         },
         {
           type: "doc",
@@ -501,7 +532,6 @@ module.exports = {
             "Components/components-bundles",
             "Components/bundles-agentics",
             "Components/bundles-aiml",
-            "Components/bundles-altk",
             "Components/bundles-amazon",
             "Components/bundles-anthropic",
             "Components/bundles-apify",
@@ -511,7 +541,6 @@ module.exports = {
             "Components/bundles-baidu",
             "Components/bundles-bing",
             "Components/bundles-cassandra",
-            "Components/bundles-chroma",
             "Components/bundles-cleanlab",
             "Components/bundles-codeagents",
             "Components/bundles-clickhouse",
@@ -530,6 +559,7 @@ module.exports = {
             "Components/bundles-empiriolabs",
             "Components/bundles-exa",
             "Components/bundles-faiss",
+            "Components/bundles-figranium",
             "Components/bundles-files-ingestion",
             "Components/bundles-firecrawl",
             "Components/bundles-glean",
@@ -543,6 +573,7 @@ module.exports = {
             "Components/bundles-lmstudio",
             "Components/bundles-maritalk",
             "Components/bundles-mem0",
+            "Components/bundles-microsoft",
             "Components/bundles-milvus",
             "Components/bundles-mistralai",
             "Components/bundles-mongodb",
@@ -561,11 +592,15 @@ module.exports = {
             "Components/bundles-perplexity",
             "Components/bundles-pgvector",
             "Components/bundles-pinecone",
+            "Components/bundles-plivo",
             "Components/bundles-qdrant",
             "Components/bundles-redis",
             "Components/bundles-sambanova",
             "Components/bundles-searchapi",
             "Components/bundles-serper",
+            "Components/bundles-serpingapi",
+            "Components/bundles-serply",
+            "Components/bundles-slack",
             "Components/bundles-supabase",
             "Components/bundles-upstash",
             "Components/bundles-valkey",
@@ -617,11 +652,6 @@ module.exports = {
           items: [
             "API-Reference/workflow-api-quickstart",
             "API-Reference/workflows-api",
-            {
-              type: "link",
-              label: "Workflow API specification (Beta)",
-              href: "/api/workflow",
-            },
           ],
         },
         "API-Reference/api-openai-responses",

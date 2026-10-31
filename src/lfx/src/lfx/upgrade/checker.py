@@ -6,6 +6,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from lfx.utils.flow_code import normalize_code_for_import
+
 COMPONENTS_TO_IGNORE_UPDATE: frozenset[str] = frozenset({"CustomComponent"})
 TRANSIENT_TEMPLATE_KEYS: frozenset[str] = frozenset({"is_refresh", "tools_metadata"})
 
@@ -278,6 +280,7 @@ def check_flow_compatibility(
             rebuilding the lookup when the caller also runs ``apply_safe_upgrades`` on the same
             registry.
     """
+    flow_data = normalize_code_for_import(flow_data)
     if registry is None:
         registry = build_registry_lookup(all_types_dict)
     statuses: list[NodeStatus] = []

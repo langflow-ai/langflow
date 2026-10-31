@@ -1,8 +1,12 @@
+import { Fragment } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
-import { useGetReplacementComponents } from "../../hooks/use-get-replacement-components";
+import {
+  type ReplacementComponent,
+  useGetReplacementComponents,
+} from "../../hooks/use-get-replacement-components";
 
 export default function NodeLegacyComponent({
   legacy,
@@ -26,7 +30,11 @@ export default function NodeLegacyComponent({
     setFilterEdge([]);
   };
 
-  const foundComponents = useGetReplacementComponents(replacement);
+  // Separators follow position among the resolved entries, so an unresolved
+  // first reference does not leave a leading ", ".
+  const foundComponents = useGetReplacementComponents(replacement).filter(
+    (component): component is ReplacementComponent => Boolean(component),
+  );
 
   return (
     <div
@@ -54,28 +62,21 @@ export default function NodeLegacyComponent({
         </Button>
       </div>
       <div className="text-mmd text-muted-foreground w-full">
-        {replacement &&
-        Array.isArray(replacement) &&
-        replacement.length > 0 &&
-        foundComponents.some((component) => component) ? (
+        {foundComponents.length > 0 ? (
           <span className="block items-center">
             Use{" "}
             {foundComponents.map((component, index) => (
-              <>
-                {component && (
-                  <>
-                    {index > 0 && ", "}
-                    <Button
-                      variant="link"
-                      className=" !text-accent-pink-foreground !text-mmd !inline-block"
-                      size={null}
-                      onClick={() => handleFilterComponent(replacement[index])}
-                    >
-                      <span>{component}</span>
-                    </Button>
-                  </>
-                )}
-              </>
+              <Fragment key={component.filterKey}>
+                {index > 0 && ", "}
+                <Button
+                  variant="link"
+                  className=" !text-accent-pink-foreground !text-mmd !inline-block"
+                  size={null}
+                  onClick={() => handleFilterComponent(component.filterKey)}
+                >
+                  <span>{component.displayName}</span>
+                </Button>
+              </Fragment>
             ))}
             .
           </span>

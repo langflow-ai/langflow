@@ -42,6 +42,12 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
         return []
 
     @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "evaluation_result": "runs the evaluator on the LangWatch API",
+        }
+
+    @pytest.fixture
     def mock_evaluators(self):
         """Mock evaluators data."""
         return {

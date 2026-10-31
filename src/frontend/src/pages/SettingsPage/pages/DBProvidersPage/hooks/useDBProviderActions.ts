@@ -26,13 +26,14 @@ const getErrorDetail = (error: unknown) =>
   "An unexpected error occurred. Please try again.";
 
 /**
- * Save / Test Connection / Use Chroma flows for the DB Providers page.
+ * Save / Test Connection / Use SQLite flows for the DB Providers page.
  * Pure orchestration over the variable primitives and field resolution
  * owned by the page — no rendering concerns.
  */
 export function useDBProviderActions({
   selectedProvider,
   canSave,
+  serverBackendConfig,
   getFieldValue,
   variableValues,
   setVariable,
@@ -44,6 +45,7 @@ export function useDBProviderActions({
 }: {
   selectedProvider: DBProviderOption;
   canSave: boolean;
+  serverBackendConfig?: Record<string, unknown>;
   getFieldValue: (field: DBProviderConfigField) => string;
   variableValues: Record<string, string>;
   setVariable: (params: {
@@ -133,6 +135,9 @@ export function useDBProviderActions({
 
     try {
       const fieldsToSave = selectedProvider.configFields.filter((field) => {
+        // Environment credentials and defaults stay on the server. Activating
+        // this configuration only persists the selected provider.
+        if (serverBackendConfig) return false;
         if (field.kind === "boolean") {
           // Persist booleans only when the user actually flipped them
           // this session — otherwise we'd write the default to a
@@ -173,8 +178,8 @@ export function useDBProviderActions({
       if (!options?.silent) {
         setSuccessData({
           title:
-            selectedProvider.id === "chroma"
-              ? t("settings.dbProviders.chromaSelected")
+            selectedProvider.id === "sqlite"
+              ? t("settings.dbProviders.sqliteSelected")
               : t("settings.dbProviders.configSaved", {
                   provider: selectedProvider.label,
                 }),
@@ -231,18 +236,22 @@ export function useDBProviderActions({
     // Persist the variables first; the server-side test reads
     // OPENSEARCH_URL etc. through ``variable_service``. Skip the
     // activation step — testing must not switch the active provider.
-    const saved = await handleSave({ silent: true, skipActivation: true });
+    const saved =
+      serverBackendConfig ||
+      (await handleSave({ silent: true, skipActivation: true }));
     if (!saved) {
       // ``handleSave`` already surfaced an error toast.
       return;
     }
 
     try {
-      const backendConfig = buildBackendConfigPayload(
-        selectedProvider.id as AvailableDBProviderId,
-        literalFields,
-        booleanFields,
-      );
+      const backendConfig =
+        serverBackendConfig ??
+        buildBackendConfigPayload(
+          selectedProvider.id as AvailableDBProviderId,
+          literalFields,
+          booleanFields,
+        );
       const response = await testProviderConnection({
         backend_type: toAPIBackendType(
           selectedProvider.id as AvailableDBProviderId,
@@ -281,23 +290,23 @@ export function useDBProviderActions({
     }
   };
 
-  const handleUseChroma = async () => {
-    const chromaProvider = DB_PROVIDER_OPTIONS[0];
+  const handleUseSQLite = async () => {
+    const sqliteProvider = DB_PROVIDER_OPTIONS[0];
     try {
-      await activateProvider(chromaProvider);
-      setSelectedProviderId("chroma");
+      await activateProvider(sqliteProvider);
+      setSelectedProviderId("sqlite");
       setHasManuallySelectedProvider(false);
-      setSuccessData({ title: t("settings.dbProviders.chromaSelected") });
+      setSuccessData({ title: t("settings.dbProviders.sqliteSelected") });
     } catch (error: unknown) {
       setErrorData({
-        title: t("settings.dbProviders.errorSelectingChroma"),
+        title: t("settings.dbProviders.errorSelectingSQLite"),
         list: [getErrorDetail(error)],
       });
     }
   };
 
   // pgVector has no UI fields. It becomes explicitly selectable only after the
-  // panel has successfully tested and activated it, exactly like Chroma Local.
+  // panel has successfully tested and activated it, exactly like SQLite Local.
   const handleUsePostgres = async () => {
     const postgresProvider = DB_PROVIDER_OPTIONS.find(
       (provider) => provider.id === "postgres",
@@ -319,7 +328,7 @@ export function useDBProviderActions({
   return {
     handleSave,
     handleTestConnection,
-    handleUseChroma,
+    handleUseSQLite,
     handleUsePostgres,
     isTesting,
     postgresStatus,

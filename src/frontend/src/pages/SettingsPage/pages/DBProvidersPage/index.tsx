@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   type AvailableDBProviderId,
   DB_PROVIDER_OPTIONS,
   type DBProviderId,
   getActiveDBProvider,
+  getDBProviderConfig,
+  getGlobalVariableValue,
   isDBProviderConfigured,
+  OPENSEARCH_VARIABLES,
 } from "@/constants/dbProviderConstants";
+import SettingsPageHeader from "@/pages/SettingsPage/components/SettingsPageHeader";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
 import { ProviderConfigurationPanel } from "./components/ProviderConfigurationPanel";
@@ -23,19 +26,30 @@ export default function DBProvidersPage() {
   const localVectorStoreAvailable = useUtilityStore(
     (state) => state.localVectorStoreAvailable,
   );
-  // Local Chroma writes to the serving box's disk, which the production profile
+  const defaultVectorStoreBackend = useUtilityStore(
+    (state) => state.defaultVectorStoreBackend,
+  );
+  const configuredVectorStoreBackends = useUtilityStore(
+    (state) => state.configuredVectorStoreBackends,
+  );
+  // Local SQLite writes to the serving box's disk, which the production profile
   // refuses. Hide it here too — this page sets the global default, so leaving it
   // selectable would let an operator re-enable the exact backend the create
   // endpoint rejects.
   const visibleProviders = useMemo(
     () =>
       DB_PROVIDER_OPTIONS.filter(
-        (provider) => localVectorStoreAvailable || provider.id !== "chroma",
+        (provider) => localVectorStoreAvailable || provider.id !== "sqlite",
       ),
     [localVectorStoreAvailable],
   );
   const [selectedProviderId, setSelectedProviderId] = useState<DBProviderId>(
-    getActiveDBProvider(globalVariables, localVectorStoreAvailable),
+    getActiveDBProvider(
+      globalVariables,
+      localVectorStoreAvailable,
+      defaultVectorStoreBackend,
+      configuredVectorStoreBackends,
+    ),
   );
   const [hasManuallySelectedProvider, setHasManuallySelectedProvider] =
     useState(false);
@@ -47,8 +61,19 @@ export default function DBProvidersPage() {
   );
 
   const activeProviderId = useMemo(
-    () => getActiveDBProvider(globalVariables, localVectorStoreAvailable),
-    [globalVariables, localVectorStoreAvailable],
+    () =>
+      getActiveDBProvider(
+        globalVariables,
+        localVectorStoreAvailable,
+        defaultVectorStoreBackend,
+        configuredVectorStoreBackends,
+      ),
+    [
+      globalVariables,
+      localVectorStoreAvailable,
+      defaultVectorStoreBackend,
+      configuredVectorStoreBackends,
+    ],
   );
 
   useEffect(() => {
@@ -61,6 +86,17 @@ export default function DBProvidersPage() {
     visibleProviders.find((provider) => provider.id === selectedProviderId) ??
     visibleProviders[0];
 
+  const hasServerConfiguration =
+    selectedProvider.id === "opensearch" &&
+    (configuredVectorStoreBackends.includes("opensearch") ||
+      defaultVectorStoreBackend === "opensearch") &&
+    !getGlobalVariableValue(globalVariables, OPENSEARCH_VARIABLES.URL);
+  const useServerConfiguration =
+    hasServerConfiguration &&
+    !selectedProvider.configFields.some(
+      (field) => field.variableKey in variableValues,
+    );
+
   const { getFieldValue, isHydrated, canSave } = useDBProviderFields({
     selectedProvider,
     globalVariables,
@@ -70,14 +106,17 @@ export default function DBProvidersPage() {
   const {
     handleSave,
     handleTestConnection,
-    handleUseChroma,
+    handleUseSQLite,
     handleUsePostgres,
     isTesting,
     postgresStatus,
     isCheckingPostgres,
   } = useDBProviderActions({
     selectedProvider,
-    canSave,
+    canSave: canSave || useServerConfiguration,
+    serverBackendConfig: useServerConfiguration
+      ? getDBProviderConfig("opensearch", globalVariables)
+      : undefined,
     getFieldValue,
     variableValues,
     setVariable,
@@ -90,23 +129,10 @@ export default function DBProvidersPage() {
 
   return (
     <div className="flex w-full flex-col gap-6">
-      <div className="flex w-full items-start justify-between gap-6">
-        <div className="flex flex-col">
-          <h2
-            className="flex items-center text-lg font-semibold tracking-tight"
-            data-testid="settings_menu_header"
-          >
-            {t("settings.dbProviders.title")}
-            <ForwardedIconComponent
-              name="Database"
-              className="ml-2 h-5 w-5 text-primary"
-            />
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {t("settings.dbProviders.description")}
-          </p>
-        </div>
-      </div>
+      <SettingsPageHeader
+        title={t("settings.dbProviders.title")}
+        description={t("settings.dbProviders.description")}
+      />
 
       <div className="flex h-[calc(100vh-305px)] w-full overflow-hidden rounded-lg border">
         <div
@@ -127,6 +153,8 @@ export default function DBProvidersPage() {
                   provider.id as AvailableDBProviderId,
                   globalVariables,
                   localVectorStoreAvailable,
+                  defaultVectorStoreBackend,
+                  configuredVectorStoreBackends,
                 )
               }
               onSelect={() => {
@@ -146,8 +174,9 @@ export default function DBProvidersPage() {
               variableValues={variableValues}
               editingSecret={editingSecret}
               isPending={isPending}
-              canSave={canSave}
-              isHydrated={isHydrated}
+              canSave={canSave || useServerConfiguration}
+              isHydrated={isHydrated || useServerConfiguration}
+              hasServerConfiguration={hasServerConfiguration}
               getFieldValue={getFieldValue}
               onVariableChange={(key, value) =>
                 setVariableValues((prev) => ({ ...prev, [key]: value }))
@@ -156,8 +185,8 @@ export default function DBProvidersPage() {
                 setEditingSecret((prev) => ({ ...prev, [key]: editing }))
               }
               onSave={
-                selectedProvider.id === "chroma"
-                  ? handleUseChroma
+                selectedProvider.id === "sqlite"
+                  ? handleUseSQLite
                   : selectedProvider.id === "postgres"
                     ? handleUsePostgres
                     : () => {
@@ -165,7 +194,7 @@ export default function DBProvidersPage() {
                       }
               }
               onTestConnection={
-                selectedProvider.id === "chroma"
+                selectedProvider.id === "sqlite"
                   ? undefined
                   : handleTestConnection
               }

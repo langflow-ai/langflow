@@ -42,6 +42,8 @@ from functools import lru_cache
 from pathlib import Path
 from types import MappingProxyType
 
+from lfx.utils.flow_code import normalize_code_for_import
+
 # ---------------------------------------------------------------------------
 # Standard-library module names (3.10+)
 # ---------------------------------------------------------------------------
@@ -257,6 +259,16 @@ def _extract_imports(source: str) -> set[str]:
     that lazy imports inside ``build_model()`` etc. are captured.  Returns only
     the first segment of each dotted import (e.g. ``foo`` from ``import foo.bar``).
     """
+    # Saved built-in code can predate a retired provider. Match exactly the
+    # same shipped-source inventory used by evaluation so exported deployment
+    # requirements cannot reinstall an SDK the current implementation removed.
+    from lfx.custom.legacy_storage_compat import resolve_shipped_storage_component
+
+    replacement = resolve_shipped_storage_component(source)
+    if replacement is not None:
+        module = inspect.getmodule(replacement)
+        if module is not None:
+            source = inspect.getsource(module)
     try:
         tree = ast.parse(source)
     except SyntaxError as exc:
@@ -538,7 +550,7 @@ def generate_requirements_from_flow(
     all_packages: set[str] = set()
     all_providers: set[str] = set()
 
-    data = flow.get("data", {})
+    data = normalize_code_for_import(flow).get("data", {})
     nodes = data.get("nodes", [])
 
     for node in nodes:

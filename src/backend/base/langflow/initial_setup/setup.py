@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import copy
 import io
 import json
@@ -30,12 +31,14 @@ from lfx.extension.bundle_registry import get_default_registry
 from lfx.log.logger import logger
 from lfx.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
 from lfx.utils.component_aliases import flatten_components_with_aliases
+from lfx.utils.flow_code import normalize_code_for_import
 from lfx.utils.util import escape_json_dump
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import selectinload
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from langflow.api.utils.migration_pause import writing
 from langflow.initial_setup.constants import (
     ASSISTANT_FOLDER_DESCRIPTION,
     ASSISTANT_FOLDER_NAME,
@@ -1251,7 +1254,7 @@ def _merge_variable_bindings(existing_data, incoming_data):
 
 
 async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: AsyncSession, user_id: UUID) -> None:
-    flow = orjson.loads(file_content)
+    flow = normalize_code_for_import(orjson.loads(file_content))
     flow_endpoint_name = flow.get("endpoint_name")
     if _is_valid_uuid(filename):
         flow["id"] = filename
@@ -1543,6 +1546,10 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
     result = await session.exec(stmt)
     folder = result.first()
     if folder:
+        if not folder.is_personal:
+            folder.is_personal = True
+            session.add(folder)
+            await session.flush()
         return FolderRead.model_validate(folder, from_attributes=True)
 
     # Check if a legacy folder exists and migrate it if the name is different from default
@@ -1562,6 +1569,7 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
                 )
                 legacy_folder.name = DEFAULT_FOLDER_NAME
                 legacy_folder.description = DEFAULT_FOLDER_DESCRIPTION
+                legacy_folder.is_personal = True
                 session.add(legacy_folder)
                 try:
                     await session.flush()
@@ -1585,7 +1593,12 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
     # No existing folder found for this user — this is the first-time setup path.
     # Create the default folder.
     try:
-        folder_obj = Folder(user_id=user_id, name=DEFAULT_FOLDER_NAME, description=DEFAULT_FOLDER_DESCRIPTION)
+        folder_obj = Folder(
+            user_id=user_id,
+            name=DEFAULT_FOLDER_NAME,
+            description=DEFAULT_FOLDER_DESCRIPTION,
+            is_personal=True,
+        )
         session.add(folder_obj)
         await session.flush()
         await session.refresh(folder_obj)
@@ -1607,7 +1620,15 @@ async def sync_flows_from_fs():
     storage_service = get_storage_service()
     try:
         while True:
+            # A paused instance takes no change from disk. A file that changed is read once the pause ends.
+            # A pass holds a place among the changes a pause waits for, so one that began just before
+            # a pause is waited for and does not write after it.
+            place = contextlib.ExitStack()
             try:
+                if not place.enter_context(writing(name="flow_sync")):
+                    place.close()
+                    await asyncio.sleep(fs_flows_polling_interval)
+                    continue
                 async with session_scope() as session:
                     stmt = select(Flow).where(col(Flow.fs_path).is_not(None))
                     flows = (await session.exec(stmt)).all()
@@ -1664,6 +1685,8 @@ async def sync_flows_from_fs():
             except Exception:  # noqa: BLE001
                 await logger.aexception("Error while syncing flows from database")
                 break
+            finally:
+                place.close()
 
             await asyncio.sleep(fs_flows_polling_interval)
     except asyncio.CancelledError:

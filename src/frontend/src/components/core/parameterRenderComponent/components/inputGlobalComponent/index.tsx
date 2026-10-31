@@ -39,7 +39,7 @@ export default function InputGlobalComponent({
   hasRefreshButton = false,
   showParameter = true,
   ariaLabelledBy,
-}: InputProps<string, InputGlobalComponentType> & {
+}: InputProps<string | null, InputGlobalComponentType> & {
   _input_type?: string;
 }): JSX.Element | null {
   const { t } = useTranslation();
@@ -86,15 +86,19 @@ export default function InputGlobalComponent({
   );
   // Clearing a saved reference is destructive, so require this observer's own
   // post-mount validation even when settled scoped data is safe to display.
+  // A shared-flow read hides the owner's variable name as null. Keep that
+  // redacted binding in the canvas instead of treating it as a missing name.
   const canValidateMissingVariable =
-    canUseScopedGlobalVariables && isGlobalVariablesFetchedAfterMount;
+    canUseScopedGlobalVariables &&
+    isGlobalVariablesFetchedAfterMount &&
+    value !== null;
 
   useInitialLoad(
     isDisabled,
     loadFromDb,
     canValidateMissingVariable,
     valueExists,
-    unavailableField,
+    value === null ? null : unavailableField,
     handleOnNewValue,
   );
 

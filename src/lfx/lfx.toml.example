@@ -24,6 +24,10 @@ session_service = "langflow.services.session.service:SessionService"
 # Model Provider Policy (optional; the built-in implementation allows every registered provider)
 # model_provider_policy_service = "acme_langflow.policy:AcmeModelProviderPolicyService"
 
+# Connection Resolver (optional; the built-in EnvConnectionResolver reads
+# LF_CONNECTION__<PROVIDER>__<NAME> from the request scope, then the environment)
+# connection_resolver_service = "acme_langflow.connections:AcmeConnectionResolver"
+
 # Chat & Communication
 chat_service = "langflow.services.chat.service:ChatService"
 

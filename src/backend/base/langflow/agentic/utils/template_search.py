@@ -8,6 +8,7 @@ import orjson
 from lfx.log.logger import logger
 
 from langflow.services.deps import get_catalog_policy_service
+from langflow.services.integration_policy_discovery import template_integration_filter
 from langflow.utils.i18n_keys import safe_flow_key
 
 
@@ -69,6 +70,7 @@ def list_templates(
 
     blocked_template_keys = get_catalog_policy_service().snapshot.blocked_template_keys
     results = []
+    result_nodes: list[list] = []
 
     # Iterate through all JSON files in the directory
     for template_file in starter_projects_dir.glob("*.json"):
@@ -106,12 +108,20 @@ def list_templates(
                 filtered_data = template_data
 
             results.append(filtered_data)
+            result_nodes.append(template_data.get("data", {}).get("nodes", []))
 
         except (json.JSONDecodeError, orjson.JSONDecodeError) as e:
             # Log and skip invalid JSON files
             logger.warning(f"Failed to parse {template_file}: {e}")
             continue
 
+    # Integration governance (INT-7) mirrors the catalog filter above: a
+    # template whose integration node could never run is not offered.
+    blocked_positions = template_integration_filter(
+        [(index, nodes) for index, nodes in enumerate(result_nodes)],
+    )
+    if blocked_positions:
+        return [result for position, result in enumerate(results) if position not in blocked_positions]
     return results
 
 

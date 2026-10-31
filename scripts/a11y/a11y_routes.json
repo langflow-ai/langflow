@@ -4,7 +4,8 @@
     "BASENAME is empty, so route paths start at /.",
     "ENABLE_CUSTOM_PARAM is false, so tenant/custom-prefix variants are not active.",
     "ENABLE_FILE_MANAGEMENT is true, so /assets routes are active.",
-    "ENABLE_KNOWLEDGE_BASES is true, so knowledge-base routes are active."
+    "ENABLE_KNOWLEDGE_BASES is true, so knowledge-base routes are active.",
+    "ENABLE_INTEGRATIONS is true, so the Connections surface is not kill-switched."
   ],
   "static": [
     {
@@ -112,6 +113,12 @@
           ]
         }
       ]
+    },
+    {
+      "id": "settings-connections",
+      "path": "/settings/connections",
+      "surface": "Connections settings page",
+      "ready": [{ "testId": "add-connection" }, { "testId": "connections-search" }]
     }
   ],
   "dynamic": [
@@ -147,6 +154,11 @@
       "path": "/login/admin",
       "surface": "Admin login page",
       "currentBehavior": "Redirects to /flows while authenticated. Scan in logged-out/no-auto-login mode."
+    },
+    {
+      "path": "/settings/migration",
+      "surface": "Migration settings page",
+      "currentBehavior": "Redirects to /settings unless the backend runs with LANGFLOW_FEATURE_INSTANCE_MIGRATION=true. Scan as a superuser with that flag on."
     }
   ],
   "excluded": [

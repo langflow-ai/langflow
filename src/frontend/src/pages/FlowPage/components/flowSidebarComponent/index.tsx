@@ -1,4 +1,3 @@
-import { cloneDeep } from "lodash";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
@@ -14,8 +13,10 @@ import {
 import SkeletonGroup from "@/components/ui/skeletonGroup";
 import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-servers";
 import {
+  ENABLE_INTEGRATIONS,
   ENABLE_KNOWLEDGE_BASES,
   ENABLE_NEW_SIDEBAR,
+  ENABLE_TRIGGERS,
 } from "@/customization/feature-flags";
 import { useAddComponent } from "@/hooks/use-add-component";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -38,7 +39,9 @@ import SidebarMenuButtons from "./components/sidebarFooterButtons";
 import { SidebarHeaderComponent } from "./components/sidebarHeader";
 import SidebarSegmentedNav from "./components/sidebarSegmentedNav";
 import { useSearchContext } from "./context/SearchContext";
+import { applyFeatureFlagFilters } from "./helpers/apply-feature-flag-filters";
 import { computeSectionVisibility } from "./helpers/compute-section-visibility";
+import { getSidebarContentFlags } from "./helpers/get-sidebar-content-flags";
 import sensitiveSort from "./helpers/sensitive-sort";
 import { useDebouncedSearch } from "./hooks/useDebouncedSearch";
 import { useSegmentedSidebarPanel } from "./hooks/useSegmentedSidebarPanel";
@@ -76,30 +79,18 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     (state) => state.catalogGovernanceEnabled,
   );
 
-  // Filter out knowledge components from files_and_knowledge category when ENABLE_KNOWLEDGE_BASES is OFF
-  const data = useMemo(() => {
-    if (ENABLE_KNOWLEDGE_BASES) {
-      return rawData;
-    }
-
-    const knowledgeComponentNames = ["KnowledgeBase"];
-
-    // Create a deep copy to avoid mutating the original
-    const filteredData = cloneDeep(rawData);
-
-    if (filteredData.files_and_knowledge) {
-      // Filter out knowledge components by creating a new object without them
-      const filteredCategory = Object.fromEntries(
-        Object.entries(filteredData.files_and_knowledge).filter(
-          ([componentName]) => !knowledgeComponentNames.includes(componentName),
-        ),
-      );
-
-      filteredData.files_and_knowledge = filteredCategory;
-    }
-
-    return filteredData;
-  }, [rawData]);
+  // Filter out knowledge components when ENABLE_KNOWLEDGE_BASES is OFF,
+  // connection-backed components when ENABLE_INTEGRATIONS is OFF, and trigger
+  // components when ENABLE_TRIGGERS is OFF
+  const data = useMemo(
+    () =>
+      applyFeatureFlagFilters(rawData, {
+        enableKnowledgeBases: ENABLE_KNOWLEDGE_BASES,
+        enableIntegrations: ENABLE_INTEGRATIONS,
+        enableTriggers: ENABLE_TRIGGERS,
+      }),
+    [rawData],
+  );
 
   const {
     getFilterEdge,
@@ -258,16 +249,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     showLegacy,
   });
 
-  const hasResults = useMemo(() => {
-    return Object.entries(dataFilter).some(
-      ([category, items]) =>
-        (Object.keys(items).length > 0 &&
-          (CATEGORIES.find((c) => c.name === category) ||
-            BUNDLES.find((b) => b.name === category))) ||
-        (dataFilter["MCP"] && Object.keys(dataFilter["MCP"]).length > 0),
-    );
-  }, [dataFilter]);
-
   const isCatalogPolicyEmpty = useMemo(
     () =>
       catalogGovernanceEnabled &&
@@ -365,27 +346,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     [],
   );
 
-  const hasCoreComponents = useMemo(() => {
-    const categoriesWithItems = CATEGORIES.filter(
-      (item) =>
-        dataFilter[item.name] && Object.keys(dataFilter[item.name]).length > 0,
-    );
-    const result = categoriesWithItems.length > 0;
-    return result;
-  }, [dataFilter]);
-
-  const hasBundleItems = useMemo(() => {
-    const bundlesWithItems = BUNDLES.filter(
-      (item) =>
-        dataFilter[item.name] && Object.keys(dataFilter[item.name]).length > 0,
-    );
-    const result = bundlesWithItems.length > 0;
-    return result;
-  }, [dataFilter]);
-
-  const hasMcpComponents = useMemo(() => {
-    return dataFilter["MCP"] && Object.keys(dataFilter["MCP"]).length > 0;
-  }, [dataFilter]);
+  const { hasResults, hasCoreComponents, hasBundleItems, hasMcpComponents } =
+    useMemo(() => getSidebarContentFlags(dataFilter), [dataFilter]);
 
   const hasMcpServers = Boolean(mcpServers && mcpServers.length > 0);
 

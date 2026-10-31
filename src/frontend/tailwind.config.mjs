@@ -86,6 +86,18 @@ const config = {
             boxShadow: "0 4px 8px -2px rgba(0, 0, 0, 0.1)",
           },
         },
+        // Referenced by ui/accordion.tsx since it was written, but never defined
+        // here — so every accordion in the app snapped open. Radix publishes the
+        // measured height on the content element, which is what makes a height
+        // transition possible at all without hard-coding one.
+        "accordion-down": {
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
         wiggle: {
           "0%, 100%": { transform: "scale(100%)" },
           "50%": { transform: "scale(120%)" },
@@ -110,6 +122,8 @@ const config = {
         overlayHide: "overlayHide 500ms cubic-bezier(0.16, 1, 0.3, 1)",
         contentShow: "contentShow 400ms cubic-bezier(0.16, 1, 0.3, 1)",
         contentHide: "contentHide 500ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "accordion-down": "accordion-down 200ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "accordion-up": "accordion-up 180ms cubic-bezier(0.16, 1, 0.3, 1)",
         wiggle: "wiggle 150ms ease-in-out 1",
         "pulse-pink": "pulse-pink 2s linear infinite",
         "slow-wiggle": "wiggle 500ms ease-in-out 1",
@@ -123,6 +137,7 @@ const config = {
         "flow-icon": "var(--flow-icon)",
         "low-indigo": "var(--low-indigo)",
         "chat-send": "var(--chat-send)",
+        "conflict-outline": "hsl(var(--accent-amber-foreground) / 0.15)",
         connection: "var(--connection)",
         "almost-dark-gray": "var(--almost-dark-gray)",
         "almost-light-blue": "var(--almost-light-blue)",
