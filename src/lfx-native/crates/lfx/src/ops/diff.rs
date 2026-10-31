@@ -117,6 +117,13 @@ pub fn diff_flow_data(base: &Value, target: &Value) -> Result<Vec<Operation>> {
     let mut node_updates = Vec::new();
     for (id, node) in &target_nodes {
         if let Some(before) = base_nodes.get(id) {
+            // A node equal as it stands writes nothing, so its walk is skipped:
+            // most nodes of a save are unchanged. The walk could not fail
+            // either: it fails only on a number that is not finite, which the
+            // target's validation above refuses, or on a write.
+            if before == node {
+                continue;
+            }
             NodeDiff {
                 id,
                 updates: &mut node_updates,
