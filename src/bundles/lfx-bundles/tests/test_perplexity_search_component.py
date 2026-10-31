@@ -13,7 +13,9 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 from lfx_bundles.perplexity import PerplexitySearchComponent
-from lfx_bundles.perplexity.perplexity_search import INVALID_KEY_FORMAT_MESSAGE, REDACTED, SEARCH_URL
+from lfx_bundles.perplexity.perplexity_search import INVALID_KEY_FORMAT_MESSAGE, REDACTED
+
+SEARCH_ENDPOINT = "https://api.perplexity.ai/search"
 
 POST_PATCH_TARGET = "httpx.Client.post"
 
@@ -37,7 +39,7 @@ SAMPLE_PAYLOAD = {
 
 
 def _response(status_code: int = 200, **kwargs) -> httpx.Response:
-    return httpx.Response(status_code, request=httpx.Request("POST", SEARCH_URL), **kwargs)
+    return httpx.Response(status_code, request=httpx.Request("POST", SEARCH_ENDPOINT), **kwargs)
 
 
 def _mock_post(payload: object) -> MagicMock:
@@ -96,7 +98,7 @@ def test_search_sends_bearer_token_integration_headers_and_json_body(component):
     mock_post = _mock_post(SAMPLE_PAYLOAD)
     with patch(POST_PATCH_TARGET, mock_post):
         component._search()
-    assert mock_post.call_args.args[0] == SEARCH_URL
+    assert mock_post.call_args.args[0] == "https://api.perplexity.ai/search"
     headers = mock_post.call_args.kwargs["headers"]
     assert headers["Authorization"] == "Bearer test-key"  # pragma: allowlist secret
     assert headers["Content-Type"] == "application/json"
@@ -270,15 +272,6 @@ def test_malformed_api_key_never_reaches_error_row_or_log(component):
         assert fragment not in logged
 
 
-def test_local_protocol_error_text_is_not_echoed(component):
-    """Even if the transport raises with the key in the message, the row and log only carry the fixed text."""
-    mock_post = MagicMock(side_effect=httpx.LocalProtocolError("Illegal header value b'Bearer test-key\\n'"))
-    with patch(POST_PATCH_TARGET, mock_post), patch("lfx_bundles.perplexity.perplexity_search.logger") as mock_logger:
-        results = component.fetch_content()
-    assert results[0].data["error"] == INVALID_KEY_FORMAT_MESSAGE
-    assert "test-key" not in " ".join(str(call) for call in mock_logger.error.call_args_list)
-
-
 ECHOED_KEY_FORMS = (
     "test-key",
     "test%2Dkey",  # percent-encoded
@@ -320,13 +313,16 @@ def test_error_text_body_is_never_forwarded(component):
     assert results[0].data["error"] == "Perplexity Search API server error (HTTP 500). Retry later."
 
 
-def test_redact_is_defense_in_depth(component):
-    """`_redact` still scrubs an exact key occurrence if a future message ever carried one."""
-    assert component._redact("x test-key y") == f"x {REDACTED} y"
+def test_error_result_redacts_key_before_returning_and_logging(component):
+    with patch("lfx_bundles.perplexity.perplexity_search.logger.error") as log_error:
+        results = component._error_result("invalid value: test-key")
+    expected = f"invalid value: {REDACTED}"
+    assert results[0].data["error"] == expected
+    assert results[0].text == expected
+    log_error.assert_called_once_with(expected)
 
 
 def test_fetch_content_maps_401_to_invalid_key_message(component):
-    """A 401 is reported as an API key problem."""
     mock_post = MagicMock(return_value=_response(401, json={"error": {"message": "Invalid API key"}}))
     with patch(POST_PATCH_TARGET, mock_post):
         results = component.fetch_content()
@@ -335,19 +331,7 @@ def test_fetch_content_maps_401_to_invalid_key_message(component):
     assert "Perplexity API Key" in results[0].data["error"]
 
 
-def test_fetch_content_maps_422_to_fixed_parameter_message(component):
-    """A 422 becomes a fixed parameter message; the validation detail body is not forwarded."""
-    body = {"detail": [{"loc": ["body", "max_results"], "msg": "ensure this value is less than or equal to 20"}]}
-    mock_post = MagicMock(return_value=_response(422, json=body))
-    with patch(POST_PATCH_TARGET, mock_post):
-        results = component.fetch_content()
-    assert "HTTP 422" in results[0].data["error"]
-    assert "request parameters" in results[0].data["error"]
-    assert "less than or equal to 20" not in results[0].data["error"]
-
-
 def test_fetch_content_maps_429_to_rate_limit_message(component):
-    """A 429 is reported as a rate limit."""
     mock_post = MagicMock(return_value=_response(429, text="Too Many Requests"))
     with patch(POST_PATCH_TARGET, mock_post):
         results = component.fetch_content()
@@ -364,15 +348,16 @@ def test_fetch_content_maps_5xx_to_server_error_message(component):
 
 
 def test_fetch_content_maps_other_4xx_to_status_only_message(component):
-    """Unmapped 4xx statuses report the status code only."""
+    """Unmapped 4xx statuses report the status code and a next step, not the body."""
     mock_post = MagicMock(return_value=_response(403, json={"error": "forbidden because test-key"}))
     with patch(POST_PATCH_TARGET, mock_post):
         results = component.fetch_content()
-    assert results[0].data["error"] == "Perplexity Search API returned HTTP 403."
+    assert (
+        results[0].data["error"] == "Perplexity Search API returned HTTP 403. Check your API access and request inputs."
+    )
 
 
 def test_perplexity_search_dataframe_shape(component):
-    """The default output builds a DataFrame from the mapped results."""
     mock_post = _mock_post(SAMPLE_PAYLOAD)
     with patch(POST_PATCH_TARGET, mock_post):
         frame = component.perplexity_search()

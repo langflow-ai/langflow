@@ -29,8 +29,6 @@ INVALID_KEY_FORMAT_MESSAGE = (
 
 
 class PerplexitySearchComponent(Component):
-    """Search the web with the Perplexity Search API and return ranked results."""
-
     display_name = "Perplexity Search"
     description = "Search the web with the Perplexity Search API and return ranked results with snippets."
     documentation = "https://docs.perplexity.ai/docs/search/quickstart"
@@ -62,7 +60,7 @@ class PerplexitySearchComponent(Component):
         DropdownInput(
             name="search_type",
             display_name="Search Type",
-            info="'web' returns the most relevant results. 'fast' trades some depth for lower latency.",
+            info="'web' runs standard web search. Choose 'fast' for lower latency.",
             options=SEARCH_TYPES,
             value="web",
             advanced=True,
@@ -82,7 +80,7 @@ class PerplexitySearchComponent(Component):
             display_name="Recency Filter",
             info="Only return results published within this window. Leave empty for no restriction.",
             options=RECENCY_FILTERS,
-            value=None,  # Default to None to make it optional
+            value=None,
             advanced=True,
         ),
     ]
@@ -123,10 +121,7 @@ class PerplexitySearchComponent(Component):
         return str(self.api_key or "").strip()
 
     def _redact(self, message: str) -> str:
-        """Defense in depth: remove the key from any message before it reaches an error row or the log.
-
-        Error messages are fixed strings that never include the response body, so this is a last resort.
-        """
+        """Replace exact raw and whitespace-trimmed key values before logging or returning an error."""
         raw = str(self.api_key or "")
         for secret in (raw, raw.strip()):
             if secret:
@@ -148,7 +143,7 @@ class PerplexitySearchComponent(Component):
             return "Perplexity Search API rate limit reached (HTTP 429). Retry later."
         if httpx.codes.is_server_error(status):
             return f"Perplexity Search API server error (HTTP {status}). Retry later."
-        return f"Perplexity Search API returned HTTP {status}."
+        return f"Perplexity Search API returned HTTP {status}. Check your API access and request inputs."
 
     def _error_result(self, error_message: str) -> list[Data]:
         error_message = self._redact(error_message)
@@ -175,7 +170,10 @@ class PerplexitySearchComponent(Component):
         response.raise_for_status()
         body = response.json()
         if not isinstance(body, dict):
-            msg = f"Perplexity Search API returned an unexpected response: {type(body).__name__}"
+            msg = (
+                "Perplexity Search API returned an unexpected response. "
+                "Retry the request; contact Perplexity API support if it persists."
+            )
             raise TypeError(msg)
         return body
 
@@ -184,14 +182,19 @@ class PerplexitySearchComponent(Component):
         try:
             body = self._search()
         except httpx.TimeoutException:
-            return self._error_result(f"Perplexity Search API request timed out ({REQUEST_TIMEOUT_SECONDS:.0f}s).")
+            return self._error_result(
+                f"Perplexity Search API request timed out after {REQUEST_TIMEOUT_SECONDS:.0f} seconds. "
+                "Retry the request."
+            )
         except httpx.HTTPStatusError as exc:
             return self._error_result(self._format_http_error(exc))
         except httpx.LocalProtocolError:
             # h11 echoes the offending header value (the key) in the exception text, so do not surface it.
             return self._error_result(INVALID_KEY_FORMAT_MESSAGE)
         except httpx.RequestError as exc:
-            return self._error_result(f"Perplexity Search API request failed: {type(exc).__name__}")
+            return self._error_result(
+                f"Perplexity Search API request failed ({type(exc).__name__}). Check your network connection and retry."
+            )
         except (ValueError, TypeError) as exc:
             return self._error_result(str(exc))
 
@@ -214,5 +217,4 @@ class PerplexitySearchComponent(Component):
         return data_results
 
     def perplexity_search(self) -> DataFrame:
-        """Return the search results as a DataFrame."""
         return DataFrame(self.fetch_content())
