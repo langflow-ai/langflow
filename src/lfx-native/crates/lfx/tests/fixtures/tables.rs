@@ -1,12 +1,13 @@
 //! `table_cases.json`: ordering, stripping and assigning table row ids and positions.
 
+use lfx::json;
 use lfx::ops::canonical::ordered_rows;
 use lfx::ops::keyed::{
     Renumber, assign_changed_table_row_ids, assign_row_ids, assign_table_row_ids,
     fill_missing_positions, strip_flow_table_row_keys, strip_row_keys,
 };
+use lfx::value::Value;
 use libtest_mimic::{Failed, Trial};
-use serde_json::{Value, json};
 
 use crate::support::{assert_json_matches, load, section_cases};
 

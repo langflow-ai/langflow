@@ -18,6 +18,7 @@ src/lfx-native/
   crates/
     lfx/                 the `lfx` crate
       src/ops/           lfx::ops, the flow operation engine
+      src/value.rs       lfx::value, the JSON value the engine holds
       tests/fixtures/    runs every shared fixture file, one test per case
     lfx-python/          the Python binding (PyO3, maturin)
       python/lfx_native/ the Python package around the native module

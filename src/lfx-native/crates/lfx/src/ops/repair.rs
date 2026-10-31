@@ -24,7 +24,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use serde_json::{Map, Value};
+use crate::value::{Map, Value};
 use sha2::{Digest, Sha256};
 
 use crate::ops::canonical::{canonical_json, is_finite_number, is_row_position};
@@ -111,7 +111,7 @@ pub fn repair_flow_data(flow: &Value, base: Option<&Value>) -> Result<Repaired> 
     let mut fixes = Fixes::default();
     let Value::Object(flow) = flow else {
         fixes.add(ViolationCode::FlowDataNotObject, Vec::new());
-        let empty = serde_json::json!({"nodes": [], "edges": []});
+        let empty = crate::json!({"nodes": [], "edges": []});
         return Ok(Repaired {
             flow_data: empty,
             fixes: fixes.0,
@@ -154,7 +154,7 @@ pub fn repair_flow_data(flow: &Value, base: Option<&Value>) -> Result<Repaired> 
     })
 }
 
-fn take_array(graph: &mut Map<String, Value>, key: &str) -> Vec<Value> {
+fn take_array(graph: &mut Map, key: &str) -> Vec<Value> {
     match graph.get_mut(key).map(std::mem::take) {
         Some(Value::Array(items)) => items,
         _ => Vec::new(),
@@ -201,7 +201,7 @@ fn replace_non_finite(value: &mut Value, fixes: &mut Fixes) {
 }
 
 fn repair_nodes(nodes: Vec<Value>, fixes: &mut Fixes) -> Result<Vec<Value>> {
-    let mut kept: Vec<(usize, Map<String, Value>)> = Vec::new();
+    let mut kept: Vec<(usize, Map)> = Vec::new();
     for (index, node) in nodes.into_iter().enumerate() {
         let Value::Object(mut node) = node else {
             fixes.add(
@@ -253,7 +253,7 @@ fn repair_nodes(nodes: Vec<Value>, fixes: &mut Fixes) -> Result<Vec<Value>> {
         .collect())
 }
 
-fn repair_node_objects(node: &mut Map<String, Value>, index: usize, fixes: &mut Fixes) {
+fn repair_node_objects(node: &mut Map, index: usize, fixes: &mut Fixes) {
     let mut parent = node;
     for object_path in NODE_OBJECT_PATHS {
         let key = object_path[object_path.len() - 1];
@@ -272,7 +272,7 @@ fn repair_node_objects(node: &mut Map<String, Value>, index: usize, fixes: &mut 
 }
 
 fn repair_edges(edges: Vec<Value>, node_ids: &HashSet<String>, fixes: &mut Fixes) -> Vec<Value> {
-    let mut kept: Vec<(usize, Map<String, Value>)> = Vec::new();
+    let mut kept: Vec<(usize, Map)> = Vec::new();
     for (index, edge) in edges.into_iter().enumerate() {
         let Value::Object(edge) = edge else {
             fixes.add(
@@ -284,7 +284,7 @@ fn repair_edges(edges: Vec<Value>, node_ids: &HashSet<String>, fixes: &mut Fixes
         // The editor drops these on every load (cleanEdges); nothing can draw them.
         let invalid = ["source", "target"].into_iter().find(|end| {
             !edge
-                .get(*end)
+                .get(end)
                 .and_then(Value::as_str)
                 .is_some_and(|id| node_ids.contains(id))
         });
@@ -463,11 +463,7 @@ fn repair_table(
 
 /// A node id in the editor's shape, `<component type>-<5 characters>`, derived
 /// from the node's content and position.
-fn generate_node_id(
-    node: &Map<String, Value>,
-    index: usize,
-    used: &HashSet<String>,
-) -> Result<String> {
+fn generate_node_id(node: &Map, index: usize, used: &HashSet<String>) -> Result<String> {
     let prefix = node
         .get("data")
         .and_then(|data| data.get("type"))

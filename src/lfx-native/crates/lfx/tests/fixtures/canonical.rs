@@ -1,8 +1,9 @@
 //! `canonical_cases.json`: canonical text, value equality, graph equality and handles.
 
+use lfx::json;
 use lfx::ops::canonical::{canonical_json, graph_hash, graphs_equal, parse_handle, values_equal};
+use lfx::value::Value;
 use libtest_mimic::{Failed, Trial};
-use serde_json::{Value, json};
 
 use crate::support::{assert_json_eq, error_json, load, section_cases};
 

@@ -36,8 +36,8 @@
 
 use std::collections::HashSet;
 
+use crate::value::{Map, Value};
 use indexmap::IndexMap;
-use serde_json::{Map, Value};
 
 use crate::ops::apply::{ApplyOptions, apply_flow_operations};
 use crate::ops::canonical::{graphs_equal, is_row_position, values_equal};
@@ -171,7 +171,7 @@ pub fn derive_flow_operations(base: Value, target: &Value) -> Result<Derived> {
 }
 
 /// A validated graph's nodes or edges, by id, in the graph's order.
-fn by_id<'g>(graph: &'g Value, key: &str) -> IndexMap<&'g str, &'g Map<String, Value>> {
+fn by_id<'g>(graph: &'g Value, key: &str) -> IndexMap<&'g str, &'g Map> {
     graph
         .get(key)
         .and_then(Value::as_array)
@@ -182,7 +182,7 @@ fn by_id<'g>(graph: &'g Value, key: &str) -> IndexMap<&'g str, &'g Map<String, V
         .collect()
 }
 
-fn without(map: &Map<String, Value>, hidden: impl Fn(&str) -> bool) -> Map<String, Value> {
+fn without(map: &Map, hidden: impl Fn(&str) -> bool) -> Map {
     map.iter()
         .filter(|(key, _)| !hidden(key))
         .map(|(key, value)| (key.clone(), value.clone()))
@@ -232,12 +232,7 @@ impl NodeDiff<'_> {
     ///
     /// The walk shares one `path`: each step pushes its segment and pops it
     /// when done. An error ends the whole diff, so it leaves the path as it is.
-    fn object(
-        &mut self,
-        base: &Map<String, Value>,
-        target: &Map<String, Value>,
-        path: &mut Path,
-    ) -> Result<()> {
+    fn object(&mut self, base: &Map, target: &Map, path: &mut Path) -> Result<()> {
         for (key, value) in target {
             if Self::skipped(path, key) {
                 continue;
@@ -382,7 +377,7 @@ impl NodeDiff<'_> {
 }
 
 /// A template field's keys and values, without its display-only keys.
-fn visible_field_keys(field: &Map<String, Value>) -> IndexMap<&str, &Value> {
+fn visible_field_keys(field: &Map) -> IndexMap<&str, &Value> {
     field
         .iter()
         .filter(|(key, _)| !NODE_SCHEMA.field_view_state.contains(key.as_str()))
@@ -480,8 +475,8 @@ fn keyed_list<'v>(
 /// The writes that turn one keyed-list item into another, key by key.
 /// `path` names the item.
 fn item_writes<'v>(
-    target: &'v Map<String, Value>,
-    base: &'v Map<String, Value>,
+    target: &'v Map,
+    base: &'v Map,
     path: &mut Path,
     writes: &mut Vec<Write<'v>>,
 ) -> Result<()> {

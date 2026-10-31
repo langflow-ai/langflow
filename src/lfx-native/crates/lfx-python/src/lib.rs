@@ -20,12 +20,12 @@ use std::sync::RwLock;
 
 use lfx::ops::api::{self, ApiError, ApiResult, Input};
 use lfx::ops::{ApplyOptions, Entry, Error};
+use lfx::value::{Map, Number, Value};
 use pyo3::create_exception;
 use pyo3::exceptions::{PyException, PyRuntimeError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::sync::RwLockExt;
 use pyo3::types::{PyBool, PyBytes, PyDict, PyFloat, PyInt, PyList, PyString, PyTuple};
-use serde_json::{Map, Number, Value};
 
 create_exception!(
     lfx_native,
@@ -95,7 +95,8 @@ fn read(object: &Bound<'_, PyAny>, depth: usize) -> PyResult<Value> {
             let key = key
                 .cast::<PyString>()
                 .map_err(|_| PyTypeError::new_err("a JSON object's keys must be str"))?;
-            map.insert(text_of(key)?.to_owned(), read(&item, depth + 1)?);
+            // A dict's keys are unique, so the pair goes last without a search.
+            map.push(text_of(key)?.to_owned(), read(&item, depth + 1)?);
         }
         return Ok(Value::Object(map));
     }
@@ -120,7 +121,9 @@ fn read(object: &Bound<'_, PyAny>, depth: usize) -> PyResult<Value> {
         }
         // An int too large for 64 bits keeps its digits, as JSON text does.
         let digits = object.str()?;
-        return serde_json::from_str::<Number>(digits.to_str()?)
+        return digits
+            .to_str()?
+            .parse::<Number>()
             .map(Value::Number)
             .map_err(|error| PyValueError::new_err(error.to_string()));
     }
@@ -207,7 +210,7 @@ impl<'py, 'v> Builder<'py, 'v> {
         Ok(list)
     }
 
-    fn dict(&mut self, map: &'v Map<String, Value>) -> PyResult<Bound<'py, PyDict>> {
+    fn dict(&mut self, map: &'v Map) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(self.py);
         for (key, item) in map {
             let key = self.key(key);
@@ -233,15 +236,15 @@ fn number_to_python<'py>(py: Python<'py>, number: &Number) -> PyResult<Bound<'py
     if let Some(int) = number.as_u64() {
         return Ok(int.into_pyobject(py)?.into_any());
     }
-    let text = number.to_string();
-    if text.contains(['.', 'e', 'E']) {
-        let float = number
-            .as_f64()
-            .ok_or_else(|| PyValueError::new_err("a number is not finite"))?;
-        Ok(PyFloat::new(py, float).into_any())
-    } else {
-        py.get_type::<PyInt>().call1((text,))
+    if number.is_integer() {
+        // An integer too large for 64 bits keeps its digits.
+        return py.get_type::<PyInt>().call1((number.to_string(),));
     }
+    let float = number
+        .as_f64()
+        .filter(|float| float.is_finite())
+        .ok_or_else(|| PyValueError::new_err("a number is not finite"))?;
+    Ok(PyFloat::new(py, float).into_any())
 }
 
 /// Run engine work without the GIL.

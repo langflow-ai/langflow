@@ -1,8 +1,9 @@
 //! `validation_cases.json`: every rule a graph breaks.
 
+use lfx::json;
 use lfx::ops::validate::{Numbers, Violation, find_graph_violations};
+use lfx::value::Value;
 use libtest_mimic::Trial;
-use serde_json::{Value, json};
 
 use crate::support::{assert_json_eq, cases, error_json, graph_of, load};
 

@@ -1,9 +1,9 @@
 //! `repair_cases.json`: repairing what has one fix, and refusing what the client must fix.
 
+use lfx::json;
 use lfx::ops::repair::{Fix, repair_flow_data};
 use lfx::ops::validate::Violation;
 use libtest_mimic::Trial;
-use serde_json::json;
 
 use crate::support::{assert_json_matches, cases, error_json, graph_of, load};
 
