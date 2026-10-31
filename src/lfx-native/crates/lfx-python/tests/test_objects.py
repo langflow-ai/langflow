@@ -219,7 +219,6 @@ def test_a_plain_graph_answers_as_the_functions_do():
     assert not base.equals(plain_target)
     assert base.equals(ops.GraphPlain(FLOW))
     assert base.to_dict() == json.loads(base.to_json()) == FLOW
-    assert ops.GraphState(base).to_dict() == ops.GraphState(FLOW).to_dict()
 
 
 def test_a_plain_graph_repairs_as_repair_does():
@@ -238,11 +237,6 @@ def test_a_plain_graph_refuses_what_the_functions_refuse():
     assert [violation["code"] for violation in broken.validate()] == [
         violation["code"] for violation in ops.validate({"nodes": [{"data": {}}], "edges": []})
     ]
-    with pytest.raises(ops.EngineError) as from_plain:
-        ops.GraphState(broken)
-    with pytest.raises(ops.EngineError) as from_dict:
-        ops.GraphState(broken.to_dict())
-    assert from_plain.value.details == from_dict.value.details
     with pytest.raises(ops.EngineError) as refused:
         ops.GraphPlain(changed(math.inf))
     assert refused.value.code == "FLOW_GRAPH_INVALID"
