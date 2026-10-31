@@ -39,7 +39,7 @@ use std::collections::HashSet;
 use crate::value::{Map, Value};
 use indexmap::IndexMap;
 
-use crate::ops::apply::{ApplyOptions, apply_flow_operations};
+use crate::ops::apply::ApplyOptions;
 use crate::ops::canonical::{graphs_equal, is_row_position, values_equal};
 use crate::ops::edges::edge_changed;
 use crate::ops::error::{Error, Result};
@@ -47,6 +47,7 @@ use crate::ops::ops::{
     AsKey, Edge, FieldUpdate, Node, NodePath, Operation, Path, PathExt, Segment,
 };
 use crate::ops::schema::{KeyedList, ListKind, NODE_SCHEMA, OUTPUTS_PATH, TEMPLATE_PATH};
+use crate::ops::state::GraphState;
 use crate::ops::validate::{Numbers, validate_flow_data};
 
 /// Operations that turn one graph into another, verified by replay.
@@ -71,7 +72,11 @@ pub struct Derived {
 pub fn diff_flow_data(base: &Value, target: &Value) -> Result<Vec<Operation>> {
     validate_flow_data(base, Numbers::Skip, "flow.data", None)?;
     validate_flow_data(target, Numbers::Check, "target flow.data", None)?;
+    diff_checked(base, target)
+}
 
+/// [`diff_flow_data`] for graphs that have passed its checks.
+fn diff_checked(base: &Value, target: &Value) -> Result<Vec<Operation>> {
     let base_nodes = by_id(base, "nodes");
     let target_nodes = by_id(target, "nodes");
     let base_edges = by_id(base, "edges");
@@ -160,12 +165,22 @@ pub fn diff_flow_data(base: &Value, target: &Value) -> Result<Vec<Operation>> {
 /// A graph breaks the rules, or the operations do not replay to `target`,
 /// which is a bug in the diff or the engine.
 pub fn derive_flow_operations(base: Value, target: &Value) -> Result<Derived> {
-    let operations = diff_flow_data(&base, target)?;
+    validate_flow_data(&base, Numbers::Skip, "flow.data", None)?;
+    validate_flow_data(target, Numbers::Check, "target flow.data", None)?;
+    derive_checked(base, target)
+}
+
+/// [`derive_flow_operations`] for graphs that have passed its checks: `base`
+/// structurally, and `target` fully.
+pub(crate) fn derive_checked(base: Value, target: &Value) -> Result<Derived> {
+    let operations = diff_checked(&base, target)?;
     let options = ApplyOptions {
         forward: true,
         ..ApplyOptions::default()
     };
-    let (flow_data, applied) = apply_flow_operations(base, operations, options)?;
+    let mut state = GraphState::from_checked(base)?;
+    let applied = state.apply(operations, options)?;
+    let flow_data = state.into_value();
     if !graphs_equal(&flow_data, target)? {
         return Err(Error::replay(
             "derived operations do not replay to the target graph",

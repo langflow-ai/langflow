@@ -22,6 +22,7 @@ use crate::ops::error::{Error, invalid};
 use crate::ops::from_value::FromValue;
 use crate::ops::keyed::{self, Renumber};
 use crate::ops::ops::Operation;
+use crate::ops::plain::GraphPlain;
 use crate::ops::repair::{Fix, repair_flow_data};
 use crate::ops::restore;
 use crate::ops::state::{GraphState, parse_json};
@@ -329,6 +330,89 @@ pub fn repair(flow: Input<'_>, base: Option<Input<'_>>) -> ApiResult<Value> {
     out.insert("flow_data".into(), repaired.flow_data);
     out.insert("fixes".into(), Value::Array(fixes));
     Ok(Value::Object(out))
+}
+
+// --- Plain graphs ---------------------------------------------------------------------------
+
+/// Read a graph into a [`GraphPlain`], to run many checks on it. Nothing is
+/// checked.
+///
+/// # Errors
+///
+/// JSON text that does not parse.
+pub fn graph_plain(flow: Input<'_>) -> ApiResult<GraphPlain> {
+    Ok(GraphPlain::new(data(flow)?))
+}
+
+/// [`validate`] on plain graphs.
+///
+/// # Errors
+///
+/// A check fails in a way that is not a violation.
+pub fn plain_validate(
+    flow: &GraphPlain,
+    base: Option<&GraphPlain>,
+    check_values: bool,
+) -> ApiResult<Value> {
+    let numbers = if check_values {
+        Numbers::Check
+    } else {
+        Numbers::Skip
+    };
+    Ok(violations(&flow.violations(base, numbers)?))
+}
+
+/// [`repair`] on plain graphs: the repaired graph, and the fixes as JSON.
+///
+/// # Errors
+///
+/// A rule only the client can fix is broken.
+pub fn plain_repair(
+    flow: &GraphPlain,
+    base: Option<&GraphPlain>,
+) -> ApiResult<(GraphPlain, Value)> {
+    let (repaired, fixes) = flow.repair(base)?;
+    Ok((
+        repaired,
+        Value::Array(fixes.iter().map(Fix::to_value).collect()),
+    ))
+}
+
+/// [`graph_hash`] of a plain graph.
+///
+/// # Errors
+///
+/// The graph holds a number that is not finite.
+pub fn plain_graph_hash(flow: &GraphPlain) -> ApiResult<String> {
+    Ok(flow.graph_hash()?)
+}
+
+/// [`graphs_equal`] on plain graphs.
+///
+/// # Errors
+///
+/// A graph holds a number that is not finite.
+pub fn plain_equals(left: &GraphPlain, right: &GraphPlain) -> ApiResult<bool> {
+    Ok(left.equals(right)?)
+}
+
+/// [`ops_diff`] on plain graphs.
+///
+/// # Errors
+///
+/// A graph breaks the rules, or the operations do not replay.
+pub fn plain_ops_diff(base: &GraphPlain, target: &GraphPlain) -> ApiResult<Value> {
+    Ok(operations_json(base.ops_diff(target)?.operations))
+}
+
+/// A [`GraphState`] of a copy of a plain graph, without checking its
+/// structure again when a check passed.
+///
+/// # Errors
+///
+/// The graph breaks a structural rule.
+pub fn plain_graph_state(flow: &GraphPlain) -> ApiResult<GraphState> {
+    Ok(flow.to_state()?)
 }
 
 // --- Canonical form -------------------------------------------------------------------------

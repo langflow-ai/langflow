@@ -24,6 +24,7 @@ pub mod keyed;
     reason = "the layout names the operation types ops::ops"
 )]
 pub mod ops;
+pub mod plain;
 pub mod repair;
 pub mod restore;
 pub mod schema;
@@ -36,5 +37,6 @@ pub use error::{Error, ErrorCode, ErrorKind, Result};
 pub use ops::{
     AsKey, Change, Edge, FieldUpdate, Node, NodePath, Operation, OperationKind, Segment,
 };
+pub use plain::GraphPlain;
 pub use repair::{Fix, Repaired, repair_flow_data};
 pub use state::{Edges, Entry, GraphState, Nodes};

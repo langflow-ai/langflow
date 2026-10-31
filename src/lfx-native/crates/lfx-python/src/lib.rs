@@ -309,11 +309,19 @@ fn poisoned(_: Poisoned) -> PyErr {
 
 #[pymethods]
 impl GraphState {
+    /// Load a graph: a Python value, JSON text as `bytes`, or a
+    /// [`GraphPlain`], which is copied without reading or checking it again.
     #[new]
     fn new(py: Python<'_>, flow: &Bound<'_, PyAny>) -> PyResult<Self> {
-        let flow = input(flow)?;
+        let state = if let Ok(plain) = flow.cast::<GraphPlain>() {
+            let plain = &plain.get().plain;
+            run(py, || api::plain_graph_state(plain))?
+        } else {
+            let flow = input(flow)?;
+            run(py, || api::graph_state(flow))?
+        };
         Ok(Self {
-            state: RwLock::new(run(py, || api::graph_state(flow))?),
+            state: RwLock::new(state),
         })
     }
 
@@ -373,6 +381,90 @@ impl GraphState {
             graph.set_item(builder.key(key), value)?;
         }
         Ok(graph)
+    }
+}
+
+/// A flow graph read once, to run many checks on it: validate, repair, hash,
+/// compare and diff, without reading the graph again for each call.
+///
+/// Nothing is checked when it is made, and a check that passes is not run
+/// again. The graph cannot change, so threads can share it.
+#[pyclass(module = "lfx_native", frozen)]
+#[derive(Debug)]
+struct GraphPlain {
+    plain: lfx::ops::GraphPlain,
+}
+
+fn plain<'a>(object: Option<&'a Bound<'_, GraphPlain>>) -> Option<&'a lfx::ops::GraphPlain> {
+    object.map(|object| &object.get().plain)
+}
+
+#[pymethods]
+impl GraphPlain {
+    #[new]
+    fn new(py: Python<'_>, flow: &Bound<'_, PyAny>) -> PyResult<Self> {
+        let flow = input(flow)?;
+        Ok(Self {
+            plain: run(py, || api::graph_plain(flow))?,
+        })
+    }
+
+    /// Every rule the graph breaks, as a list of violations.
+    #[pyo3(signature = (base = None, *, check_values = true))]
+    fn validate<'py>(
+        &self,
+        py: Python<'py>,
+        base: Option<&Bound<'_, GraphPlain>>,
+        check_values: bool,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let base = plain(base);
+        call(py, || api::plain_validate(&self.plain, base, check_values))
+    }
+
+    /// Repair what has one fix; returns the repaired graph and the fixes.
+    #[pyo3(signature = (base = None))]
+    fn repair<'py>(
+        &self,
+        py: Python<'py>,
+        base: Option<&Bound<'_, GraphPlain>>,
+    ) -> PyResult<(Bound<'py, GraphPlain>, Bound<'py, PyAny>)> {
+        let base = plain(base);
+        let (repaired, fixes) = run(py, || api::plain_repair(&self.plain, base))?;
+        Ok((
+            Bound::new(py, Self { plain: repaired })?,
+            to_python(py, &fixes)?,
+        ))
+    }
+
+    /// The SHA-256 hex digest of the graph's canonical form.
+    fn graph_hash(&self, py: Python<'_>) -> PyResult<String> {
+        run(py, || api::plain_graph_hash(&self.plain))
+    }
+
+    /// Whether the two graphs are the same graph.
+    fn equals(&self, py: Python<'_>, other: &Bound<'_, GraphPlain>) -> PyResult<bool> {
+        let other = &other.get().plain;
+        run(py, || api::plain_equals(&self.plain, other))
+    }
+
+    /// The operations that turn this graph into `target`, checked by replay.
+    fn ops_diff<'py>(
+        &self,
+        py: Python<'py>,
+        target: &Bound<'_, GraphPlain>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let target = &target.get().plain;
+        call(py, || api::plain_ops_diff(&self.plain, target))
+    }
+
+    /// The graph as JSON text.
+    fn to_json(&self, py: Python<'_>) -> String {
+        py.detach(|| api::json_text(self.plain.as_value()))
+    }
+
+    /// The graph as a dict.
+    fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        to_python(py, self.plain.as_value())
     }
 }
 
@@ -618,7 +710,7 @@ fn node_schema() -> &'static str {
 mod _native {
     #[pymodule_export]
     use super::{
-        EngineError, GraphState, append_table_rows, apply, apply_restore_fixes,
+        EngineError, GraphPlain, GraphState, append_table_rows, apply, apply_restore_fixes,
         assign_changed_node_table_row_ids, assign_changed_table_row_ids, assign_row_ids,
         assign_table_row_ids, canonical_json, edge_fixes, fixes_for_edges, graph_hash,
         graphs_equal, new_edge_id, new_table_row_id, node_schema, ops_diff, ordered_rows, repair,
