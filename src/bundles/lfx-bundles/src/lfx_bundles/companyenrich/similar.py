@@ -34,7 +34,6 @@ class CompanyEnrichSimilarComponent(Component):
         DictInput(
             name="search_filters",
             display_name="Filters",
-            is_list=True,
             advanced=True,
             info="Similar Companies API fields, such as countries and technologies. See the API reference.",
         ),

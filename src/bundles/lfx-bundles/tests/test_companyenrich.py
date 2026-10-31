@@ -40,6 +40,15 @@ def test_components_have_secret_credentials_and_no_shadowed_inputs(component_cla
     assert instance.to_frontend_node()["data"]["node"]["template"]["api_key"]["password"] is True
 
 
+@pytest.mark.parametrize("component_class", [CompanyEnrichSearchComponent, CompanyEnrichSimilarComponent])
+def test_filters_use_a_single_dictionary_in_the_frontend(component_class):
+    instance = component_class()
+    field = instance.to_frontend_node()["data"]["node"]["template"]["search_filters"]
+    assert field["list"] is False
+    instance.set(search_filters={"countries": ["US"], "technologies": ["Python"]})
+    assert instance.search_filters == {"countries": ["US"], "technologies": ["Python"]}
+
+
 @pytest.mark.parametrize(
     ("component_class", "method_name", "inputs", "http_method", "path", "query", "body"),
     [
