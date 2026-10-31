@@ -178,7 +178,7 @@ pub(crate) fn derive_checked(base: Value, target: &Value) -> Result<Derived> {
         forward: true,
         ..ApplyOptions::default()
     };
-    let mut state = GraphState::from_checked(base)?;
+    let mut state = GraphState::new(base)?;
     let applied = state.apply(operations, options)?;
     let flow_data = state.into_value();
     if !graphs_equal(&flow_data, target)? {

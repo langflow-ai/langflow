@@ -309,19 +309,11 @@ fn poisoned(_: Poisoned) -> PyErr {
 
 #[pymethods]
 impl GraphState {
-    /// Load a graph: a Python value, JSON text as `bytes`, or a
-    /// [`GraphPlain`], which is copied without reading or checking it again.
     #[new]
     fn new(py: Python<'_>, flow: &Bound<'_, PyAny>) -> PyResult<Self> {
-        let state = if let Ok(plain) = flow.cast::<GraphPlain>() {
-            let plain = &plain.get().plain;
-            run(py, || api::plain_graph_state(plain))?
-        } else {
-            let flow = input(flow)?;
-            run(py, || api::graph_state(flow))?
-        };
+        let flow = input(flow)?;
         Ok(Self {
-            state: RwLock::new(state),
+            state: RwLock::new(run(py, || api::graph_state(flow))?),
         })
     }
 

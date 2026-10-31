@@ -405,16 +405,6 @@ pub fn plain_ops_diff(base: &GraphPlain, target: &GraphPlain) -> ApiResult<Value
     Ok(operations_json(base.ops_diff(target)?.operations))
 }
 
-/// A [`GraphState`] of a copy of a plain graph, without checking its
-/// structure again when a check passed.
-///
-/// # Errors
-///
-/// The graph breaks a structural rule.
-pub fn plain_graph_state(flow: &GraphPlain) -> ApiResult<GraphState> {
-    Ok(flow.to_state()?)
-}
-
 // --- Canonical form -------------------------------------------------------------------------
 
 /// The SHA-256 hex digest of a graph's canonical form.

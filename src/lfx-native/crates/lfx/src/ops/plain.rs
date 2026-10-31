@@ -18,7 +18,6 @@ use crate::ops::canonical;
 use crate::ops::diff::{Derived, derive_checked};
 use crate::ops::error::Result;
 use crate::ops::repair::{Fix, repair_flow_data};
-use crate::ops::state::GraphState;
 use crate::ops::validate::{Numbers, Violation, find_graph_violations, validate_flow_data};
 
 /// A parsed flow graph that no rule has been checked on yet.
@@ -145,27 +144,6 @@ impl GraphPlain {
         target.require(Numbers::Check, "target flow.data")?;
         derive_checked(self.flow.clone(), &target.flow)
     }
-
-    /// A [`GraphState`] of a copy of the graph, as [`GraphState::new`] loads
-    /// it, without checking the structure again when a check passed.
-    ///
-    /// # Errors
-    ///
-    /// The graph breaks a structural rule.
-    pub fn to_state(&self) -> Result<GraphState> {
-        self.require(Numbers::Skip, "flow.data")?;
-        GraphState::from_checked(self.flow.clone())
-    }
-
-    /// A [`GraphState`] of the graph, without copying it.
-    ///
-    /// # Errors
-    ///
-    /// The graph breaks a structural rule.
-    pub fn into_state(self) -> Result<GraphState> {
-        self.require(Numbers::Skip, "flow.data")?;
-        GraphState::from_checked(self.flow)
-    }
 }
 
 #[cfg(test)]
@@ -198,10 +176,6 @@ mod tests {
             plain_target.graph_hash().unwrap(),
             canonical::graph_hash(&target).unwrap()
         );
-        assert_eq!(
-            plain_base.to_state().unwrap().to_value(),
-            GraphState::new(base).unwrap().to_value()
-        );
     }
 
     #[test]
@@ -212,7 +186,6 @@ mod tests {
         assert!(plain.passed(Numbers::Skip) && !plain.passed(Numbers::Check));
         assert_eq!(plain.violations(None, Numbers::Check).unwrap(), []);
         assert!(plain.passed(Numbers::Check));
-        plain.to_state().unwrap();
     }
 
     #[test]
@@ -220,14 +193,9 @@ mod tests {
         let broken = GraphPlain::new(json!({"nodes": [{"data": {}}], "edges": []}));
         assert_ne!(broken.violations(None, Numbers::Skip).unwrap(), []);
         assert!(!broken.passed(Numbers::Skip));
-        assert_eq!(
-            broken.to_state().unwrap_err(),
-            GraphState::new(broken.as_value().clone()).unwrap_err()
-        );
         let (repaired, fixes) = broken.repair(None).unwrap();
         assert_ne!(fixes, []);
         assert!(repaired.passed(Numbers::Check));
-        repaired.into_state().unwrap();
     }
 
     #[test]
