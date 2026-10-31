@@ -125,16 +125,6 @@ pub fn apply(flow: &str, operations: &str, options: &JsValue) -> Result<String, 
     ))
 }
 
-/// Parse operations and print them as the engine records them.
-///
-/// # Errors
-///
-/// The operations do not parse.
-#[wasm_bindgen(js_name = normalizeOperations)]
-pub fn normalize_operations(operations: &str) -> Result<String, JsValue> {
-    text(api::normalize_operations(operations.into()))
-}
-
 /// The operations that turn `base` into `target`, checked by replay.
 ///
 /// # Errors
