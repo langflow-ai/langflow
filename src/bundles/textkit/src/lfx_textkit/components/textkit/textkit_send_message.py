@@ -19,7 +19,7 @@ class TextKitSendMessageComponent(Component):
             name="textkit_api_key",
             display_name="TextKit API Key",
             required=True,
-            info="Your TextKit API key (ssms_sk_...). A test key simulates sends.",
+            info="Your TextKit API key (tk_sk_...). A test key simulates sends.",
         ),
         MessageTextInput(
             name="to_number",

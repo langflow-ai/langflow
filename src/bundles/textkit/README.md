@@ -28,7 +28,7 @@ appear in the palette's **Bundles** section under **TextKit**.
 
 Set the **TextKit API Key** input to a key from the
 [TextKit console](https://jointextkit.com/console). A test key
-(`ssms_sk_test_...`) simulates sends, and a live key texts real numbers. The
+(`tk_sk_test_...`) simulates sends, and a live key texts real numbers. The
 components do nothing until a key is supplied.
 
 ## Develop

@@ -19,7 +19,7 @@ class TextKitSendVerificationComponent(Component):
             name="textkit_api_key",
             display_name="TextKit API Key",
             required=True,
-            info="Your TextKit API key (ssms_sk_...).",
+            info="Your TextKit API key (tk_sk_...).",
         ),
         MessageTextInput(
             name="phone_number",
