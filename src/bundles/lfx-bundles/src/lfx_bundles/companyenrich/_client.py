@@ -4,11 +4,16 @@ from typing import Any
 
 import httpx
 from lfx.inputs.inputs import IntInput, SecretStrInput
+from lfx.schema.data import Data
 from pydantic import SecretStr
+
+from lfx_bundles.companyenrich._core import core_arguments
+from lfx_bundles.companyenrich._validation import prepare_request
 
 API_URL = "https://api.companyenrich.com"
 MAX_PAGE_SIZE = 100
 MAX_TIMEOUT = 300
+MAX_SEED_DOMAINS = 10
 
 
 def connection_inputs() -> list:
@@ -17,7 +22,7 @@ def connection_inputs() -> list:
             name="api_key",
             display_name="CompanyEnrich API Key",
             required=True,
-            info="API key from app.companyenrich.com. These operations consume CompanyEnrich credits.",
+            info="API key from app.companyenrich.com. Some operations consume CompanyEnrich credits.",
         ),
         IntInput(name="timeout", display_name="Timeout (seconds)", value=30, advanced=True),
     ]
@@ -69,7 +74,7 @@ async def request(
     timeout: int,
     params: dict | None = None,
     payload: dict | None = None,
-) -> dict[str, Any]:
+) -> Any:
     key = api_key.get_secret_value() if isinstance(api_key, SecretStr) else api_key
     if not isinstance(key, str) or not key.strip():
         msg = "A CompanyEnrich API key is required."
@@ -98,7 +103,34 @@ async def request(
     except ValueError:
         msg = "CompanyEnrich returned invalid JSON."
         raise ValueError(msg) from None
-    if not isinstance(result, dict):
-        msg = "CompanyEnrich returned an unexpected response; expected an object."
-        raise TypeError(msg)
     return result
+
+
+async def execute(component, operation: str, values: dict | None = None, **advanced) -> Data:
+    """Execute one validated operation and preserve any JSON response shape."""
+    if values is not None:
+        values = dict(values)
+        for field in ("semantic_query", "query"):
+            if isinstance(values.get(field), str):
+                values[field] = values[field].strip() or None
+        if operation == "get_companies_enrich":
+            values["domain"] = company_domain(values["domain"])
+        if operation.startswith("post_companies_similar"):
+            domains = values.get("domains")
+            if not isinstance(domains, list) or not 1 <= len(domains) <= MAX_SEED_DOMAINS:
+                msg = "Provide between one and ten seed domains."
+                raise ValueError(msg)
+            values["domains"] = [company_domain(domain) for domain in domains]
+        if operation == "post_companies_search" and not any(
+            values.get(k) for k in ("semantic_query", "query", "filters")
+        ):
+            msg = "Provide Search Query or at least one filter."
+            raise ValueError(msg)
+        body, query = core_arguments(operation, values)
+        advanced = {"body": body, "query": query}
+    method, path, query, body = prepare_request(operation, **advanced)
+    result = await request(
+        component.api_key, method, path, timeout=component.timeout, params=query or None, payload=body
+    )
+    component.status = result
+    return Data(data=result if isinstance(result, dict) else {"data": result})

@@ -7,10 +7,10 @@ import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-ins
 
 <PartialLfxBundlesInstall />
 
-The CompanyEnrich bundle enriches company profiles, searches companies, and finds lookalikes through the [CompanyEnrich API](https://docs.companyenrich.com/reference).
+The CompanyEnrich bundle provides twelve core company and people operations plus a fixed advanced operation selector through the [CompanyEnrich API](https://docs.companyenrich.com/reference).
 Create an account at [app.companyenrich.com](https://app.companyenrich.com/) and enter your dashboard API key in the secret **CompanyEnrich API Key** field.
 
-Each component returns a `Data` object containing the complete API response. Search outputs preserve the result items and pagination metadata. Queries and domains can be supplied by an agent in tool mode.
+Each component returns a `Data` object containing the complete API response. Arrays and scalar counts, including zero, are preserved under `data`. Search outputs preserve the result items and pagination metadata. Queries and domains can be supplied by an agent in tool mode.
 
 ## Components
 
@@ -20,14 +20,27 @@ Each component returns a `Data` object containing the complete API response. Sea
 | Search Companies | Natural-language query, API filter fields, or both | [`POST /companies/search`](https://docs.companyenrich.com/reference/post_companies-search) |
 | Find Similar Companies | A list of one to ten seed domains and optional filter fields | [`POST /companies/similar`](https://docs.companyenrich.com/reference/post_companies-similar) |
 
+| Search People | Full people search filters | `POST /people/search` |
+| Look Up Person | Email address | `POST /people/lookup` |
+| Company Workforce | Exactly one company UUID or domain | `GET /companies/workforce` |
+| Match Company Properties | At least one documented name/social property | `POST /companies/enrich` |
+| Enrich Company Batch | 1–50 domains | `POST /companies/enrich/batch` |
+| Get Company by ID | Company UUID | `GET /companies` |
+| Get Person by ID | Positive int64 ID as a decimal string | `GET /people` |
+| Count Company Search | Semantic/literal query and full filters | `POST /companies/search/count` |
+| Count Similar Companies | 1–10 seed domains and full filters | `POST /companies/similar/count` |
+| Advanced CompanyEnrich Request | One of 42 fixed operations, body/query/path objects | Fixed catalog |
+
 **Search Query** maps to `semanticQuery` and accepts up to 500 characters. For filter-only searches, leave it empty and supply at least one filter.
 
-The advanced **Filters** input accepts an object containing the fields documented by the corresponding API, for example `{"countries": ["US"], "technologies": ["React"]}`. Use the dedicated query, domain and pagination inputs for those values; they cannot be overridden through Filters.
+The advanced **Filters** input accepts an object containing the fields documented by the corresponding API, for example `{"countries": ["US"], "technologies": ["React"]}`. Nonempty dedicated query/domain inputs and pagination take precedence over matching filter fields; all other fields are retained. **Literal Query** maps to `query` and accepts up to 250 characters. **Expand** supports documented expansions (`workforce` for companies and `education` for people). **Wait for Enrichment** can leave the API default or explicitly wait/return immediately where supported.
 
 ## Pagination and credits
 
-Search and lookalike components request one page at a time. **Page** starts at `1`; **Results Per Page** defaults to `10` and accepts `1` to `100`. Increase Page explicitly to retrieve another page. Company search supports at most 10,000 results, so Page multiplied by Results Per Page must not exceed 10,000. The components do not automatically retrieve or retry additional results.
+Search and lookalike components request one page at a time. **Page** starts at `1`; **Results Per Page** defaults to `10` and accepts `1` to `100`. Increase Page explicitly to retrieve another page. Page requests are limited to a 10,000-result window, so Page multiplied by Results Per Page must not exceed 10,000. The components do not automatically retrieve or retry additional results.
 
-These operations consume CompanyEnrich credits. Search and lookalike usage depends on the number of returned results; review the [current pricing](https://companyenrich.com/pricing) before increasing result limits or enabling agent tool calls.
+**Advanced CompanyEnrich Request** exposes 42 data, lookup and job operations, including preview/count/scroll, education, geography/taxonomy, async exports, bulk enrichment, and job lifecycle. It excludes saved-list administration and `/me`. **Allow Beta Email Operations** must be enabled explicitly for the three beta email operations. Body, query and path parameters must be objects; unknown query/path fields and invalid required inputs are rejected before HTTP. Advanced page requests default to page 1 and page size 10. Async exports require an explicit count from 1 to 50,000. Every invocation makes one request: no automatic retries, pagination, polling or result-URL downloads.
+
+Some operations consume CompanyEnrich credits. Search and lookalike usage depends on the number of returned results; review the [current pricing](https://companyenrich.com/pricing) before increasing result limits or enabling agent tool calls.
 
 All components use the fixed CompanyEnrich HTTPS endpoint. **Timeout** defaults to 30 seconds and accepts 1 to 300. HTTP and connectivity failures stop the component with an error; the API key is not included in error messages.

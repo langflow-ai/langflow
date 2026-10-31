@@ -111,8 +111,8 @@ async def test_filter_only_search_omits_semantic_query():
     [
         (CompanyEnrichEnrichComponent, "enrich_company", {"domain": "https://stripe.com/path"}, "bare company domain"),
         (CompanyEnrichSearchComponent, "search_companies", {}, "Search Query or at least one filter"),
-        (CompanyEnrichSearchComponent, "search_companies", {"query": "AI", "page": 101, "page_size": 100}, "10,000"),
-        (CompanyEnrichSearchComponent, "search_companies", {"query": "x" * 501}, "at most 500"),
+        (CompanyEnrichSearchComponent, "search_companies", {"query": "AI", "page": 101, "page_size": 100}, "10000"),
+        (CompanyEnrichSearchComponent, "search_companies", {"query": "x" * 501}, "maximum length"),
         (CompanyEnrichSimilarComponent, "find_similar_companies", {"domains": []}, "one and ten"),
         (CompanyEnrichSimilarComponent, "find_similar_companies", {"domains": ["stripe.com"] * 11}, "one and ten"),
     ],
@@ -169,7 +169,7 @@ async def test_transport_error_is_sanitized_and_not_retried():
     assert send.await_count == 1
 
 
-@pytest.mark.parametrize("body", ["not JSON", "[]"])
+@pytest.mark.parametrize("body", ["not JSON"])
 async def test_invalid_response_shape(body):
     with (
         patch("httpx.AsyncClient.request", new_callable=AsyncMock, return_value=response(text=body)),
@@ -188,7 +188,7 @@ async def test_invalid_credentials_or_timeout_do_not_call_api(api_key, timeout):
     send.assert_not_called()
 
 
-def test_bundle_discovery_registers_three_components():
+def test_bundle_discovery_registers_all_components():
     bundle_root = Path(__file__).parents[1] / "src" / "lfx_bundles" / "companyenrich"
     result = LoadResult(slot="official", source_path=bundle_root, distribution=None)
     _load_bundle_directory(
@@ -201,6 +201,9 @@ def test_bundle_discovery_registers_three_components():
         result=result,
     )
     assert not result.errors
+    import lfx_bundles.companyenrich as bundle
+
+    assert len(bundle.__all__) == 13
     assert {item.namespaced_id for item in result.components} == {
-        f"ext:companyenrich:{component_class.__name__}@official" for component_class in COMPONENTS
+        f"ext:companyenrich:{name}@official" for name in bundle.__all__
     }
