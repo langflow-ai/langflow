@@ -405,6 +405,17 @@ impl GraphState {
     /// The graph breaks a structural rule.
     pub fn new(flow: Value) -> Result<Self> {
         validate_flow_data(&flow, Numbers::Skip, "flow.data", None)?;
+        Self::from_checked(flow)
+    }
+
+    /// Load a flow graph whose structure a check has already passed, and
+    /// build its indexes.
+    ///
+    /// # Errors
+    ///
+    /// The graph is not an object, or a node or an edge does not have its
+    /// shape: only for a graph that no check passed.
+    pub(crate) fn from_checked(flow: Value) -> Result<Self> {
         let Value::Object(mut root) = flow else {
             return Err(Error::graph_message("flow data must be an object"));
         };

@@ -36,6 +36,7 @@ The modules of `lfx::ops`:
 | `api` | the functions the bindings call: JSON text or values in, values out |
 | `ops` | operation types, the strict parser, and the dump |
 | `state` | `GraphState`, the indexed graph that apply works on, kept between batches |
+| `plain` | `GraphPlain`, a graph read once and kept unindexed, to validate, repair, hash, compare and diff it without reading it again |
 | `apply` | apply, with backward operations |
 | `diff` | diff, and the check that its operations replay to the target |
 | `validate` | graph rules and violations, with codes and resolutions |
@@ -67,7 +68,7 @@ This table maps each part of the engine to its callers today, in the Python engi
 
 | Part | Python (`lfx_native.ops`) | Backend callers |
 | --- | --- | --- |
-| The save: validate, repair, diff | `validate`, `repair`, `ops_diff` | `flow_history/recorder.py` (every graph write: PATCH, PUT, import, version activation, the assistant, file sync). The recorder calls them in turn, and numbers the operations and packs them into rows itself. |
+| The save: validate, repair, diff | `validate`, `repair`, `ops_diff`, or the same methods on `GraphPlain`, which reads each graph once | `flow_history/recorder.py` (every graph write: PATCH, PUT, import, version activation, the assistant, file sync). The recorder calls them in turn, and numbers the operations and packs them into rows itself. |
 | Graph hash | `graph_hash` | checkpoints and the check that the stored graph matches its latest revision (`recorder.py`), replay (`flow_history/replay.py`) |
 | Restore fix check | `apply_restore_fixes` | revision restore (`api/v1/flow_revisions.py`), version restore (`api/v1/flow_version.py`) |
 | New edge ids | `new_edge_id` | flow expansion (`processing/expand_flow.py`), the flow builder (`lfx/graph/flow_builder/connect.py`) |

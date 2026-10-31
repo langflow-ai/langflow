@@ -201,3 +201,67 @@ def test_threads_share_one_state():
         thread.join()
     assert problems == []
     assert fields(state.to_dict()) == ("v299", "v299")
+
+
+def changed(value: object) -> dict:
+    flow = json.loads(json.dumps(FLOW))
+    flow["nodes"][0]["data"]["node"]["template"]["t"]["value"] = value
+    return flow
+
+
+def test_a_plain_graph_answers_as_the_functions_do():
+    target = changed("y")
+    base, plain_target = ops.GraphPlain(FLOW), ops.GraphPlain(json.dumps(target).encode())
+    assert base.validate() == ops.validate(FLOW) == []
+    assert plain_target.validate(base) == ops.validate(target, FLOW)
+    assert base.ops_diff(plain_target) == ops.ops_diff(FLOW, target)
+    assert base.graph_hash() == ops.graph_hash(FLOW)
+    assert not base.equals(plain_target)
+    assert base.equals(ops.GraphPlain(FLOW))
+    assert base.to_dict() == json.loads(base.to_json()) == FLOW
+    assert ops.GraphState(base).to_dict() == ops.GraphState(FLOW).to_dict()
+
+
+def test_a_plain_graph_repairs_as_repair_does():
+    broken = {"nodes": [{"data": {"node": {"template": {}}}}], "edges": "none"}
+    repaired, fixes = ops.GraphPlain(broken).repair()
+    expected = ops.repair(broken)
+    assert isinstance(repaired, ops.GraphPlain)
+    assert fixes == expected["fixes"]
+    # Generated node ids are derived from the node, so both repairs agree.
+    assert repaired.to_dict() == expected["flow_data"]
+    assert repaired.validate() == []
+
+
+def test_a_plain_graph_refuses_what_the_functions_refuse():
+    broken = ops.GraphPlain({"nodes": [{"data": {}}], "edges": []})
+    assert [violation["code"] for violation in broken.validate()] == [
+        violation["code"] for violation in ops.validate({"nodes": [{"data": {}}], "edges": []})
+    ]
+    with pytest.raises(ops.EngineError) as from_plain:
+        ops.GraphState(broken)
+    with pytest.raises(ops.EngineError) as from_dict:
+        ops.GraphState(broken.to_dict())
+    assert from_plain.value.details == from_dict.value.details
+    with pytest.raises(ops.EngineError) as refused:
+        ops.GraphPlain(changed(math.inf))
+    assert refused.value.code == "FLOW_GRAPH_INVALID"
+    with pytest.raises(TypeError):
+        ops.GraphPlain(FLOW).equals(FLOW)
+
+
+def test_threads_share_one_plain_graph():
+    plain = ops.GraphPlain(FLOW)
+    target = ops.GraphPlain(changed("y"))
+    expected = ops.ops_diff(FLOW, changed("y"))
+    results: list[object] = []
+
+    def diff() -> None:
+        results.extend(plain.ops_diff(target) for _ in range(200))
+
+    threads = [threading.Thread(target=diff) for _ in range(4)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert results == [expected] * 800
