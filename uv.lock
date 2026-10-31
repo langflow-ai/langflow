@@ -33,6 +33,7 @@ members = [
     "lfx-amazon",
     "lfx-anthropic",
     "lfx-arxiv",
+    "lfx-asyntai",
     "lfx-azure",
     "lfx-bundles",
     "lfx-cohere",
@@ -7695,6 +7696,7 @@ audio = [
 ]
 bundles = [
     { name = "lfx-arxiv" },
+    { name = "lfx-asyntai" },
     { name = "lfx-bundles", extra = ["all-no-torch"] },
     { name = "lfx-confluent" },
     { name = "lfx-duckduckgo" },
@@ -7805,6 +7807,7 @@ requires-dist = [
     { name = "lfx-amazon", editable = "src/bundles/amazon" },
     { name = "lfx-anthropic", editable = "src/bundles/anthropic" },
     { name = "lfx-arxiv", marker = "extra == 'bundles'", editable = "src/bundles/arxiv" },
+    { name = "lfx-asyntai", marker = "extra == 'bundles'", editable = "src/bundles/asyntai" },
     { name = "lfx-azure", editable = "src/bundles/azure" },
     { name = "lfx-bundles", extras = ["all-no-torch"], marker = "extra == 'bundles'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-cohere", editable = "src/bundles/cohere" },
@@ -9171,6 +9174,21 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "defusedxml", specifier = ">=0.7.1,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-asyntai"
+version = "0.1.0"
+source = { editable = "src/bundles/asyntai" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
 ]
 

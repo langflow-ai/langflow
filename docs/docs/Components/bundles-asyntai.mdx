@@ -1,0 +1,71 @@
+---
+title: Asyntai
+slug: /bundles-asyntai
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="asyntai" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Asyntai** bundle.
+
+[Asyntai](https://asyntai.com) is an AI chatbot for websites. It answers visitor questions from the website's own pages and knowledge base, and it collects leads.
+For a step-by-step setup guide, see the [Asyntai Langflow guide](https://asyntai.com/documentation/integrations/langflow/).
+
+All three components need an Asyntai API key. Create one in the Asyntai dashboard under **Settings > API**. The API is available on paid Asyntai plans.
+If a request fails, for example because the API key is invalid, the component returns a single result that describes the problem.
+
+## Asyntai AI Chatbot
+
+This component asks the Asyntai AI chatbot a question and returns the answer that the chatbot gives from its website and knowledge base.
+
+It outputs the answer as a [`Message`](/data-types#message).
+In [tool mode](/agents-tools), the component exposes a single tool named `asyntai_ask_website` that an [**Agent** component](/agents) can call with a question.
+
+### Asyntai AI Chatbot parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Question (`input_value`) | String | Input parameter. The question to ask, in plain language. |
+| Asyntai API Key (`asyntai_api_key`) | SecretString | Input parameter. Your Asyntai API key. |
+| Website (`website`) | String | Input parameter. The website ID or domain of the chatbot to ask, for example `example.com`. Optional. If empty, the primary website of the account is used. |
+| Session ID (`session_id`) | String | Input parameter. An ID that keeps several questions in one conversation. Optional. |
+
+## Asyntai Add Knowledge
+
+This component adds a web page or a text to the knowledge base of an Asyntai AI chatbot, so the chatbot can answer questions about it.
+If **Page URL** is set, the page is read into the knowledge base. Otherwise, **Text** is stored, with **Text Title** as its title.
+
+It outputs a [`Data`](/data-types#data) object with the stored `title`, the `source`, and `chunks_created`.
+In tool mode, the component exposes a single tool named `asyntai_add_knowledge`.
+
+### Asyntai Add Knowledge parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Page URL (`url`) | String | Input parameter. The address of a web page to read into the knowledge base. Optional. |
+| Text Title (`title`) | String | Input parameter. The title of the text. Used only when **Page URL** is empty. Optional. |
+| Text (`content`) | String | Input parameter. The text to add. Used only when **Page URL** is empty. |
+| Asyntai API Key (`asyntai_api_key`) | SecretString | Input parameter. Your Asyntai API key. |
+| Website (`website`) | String | Input parameter. The website ID or domain of the chatbot. Optional. |
+
+## Asyntai Leads
+
+This component lists the leads, which are the email addresses and phone numbers that visitors left in the Asyntai AI chatbot, newest first.
+
+It outputs a [`Table`](/data-types#table) with `email`, `phone`, `page_url`, `started_at`, and `session_id` columns.
+If there are no leads, the table is empty and has no columns.
+If the request fails, the table has one row with a single `error` column that contains the error message.
+In tool mode, the component exposes a single tool named `asyntai_get_leads`.
+
+### Asyntai Leads parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Asyntai API Key (`asyntai_api_key`) | SecretString | Input parameter. Your Asyntai API key. |
+| Since (`since`) | String | Input parameter. Only leads from this date or later, for example `2026-01-31`. Optional. |
+| Website (`website`) | String | Input parameter. The website ID or domain. Optional. If empty, leads from all websites of the account are listed. |
+| Max Leads (`limit`) | Integer | Input parameter. The maximum number of leads to return, from `1` to `100`. Default: `50`. |
