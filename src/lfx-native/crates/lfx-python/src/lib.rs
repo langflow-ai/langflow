@@ -392,16 +392,6 @@ fn apply<'py>(
     call(py, || api::apply(flow, operations, options))
 }
 
-/// Parse operations and return them as the engine records them.
-#[pyfunction]
-fn normalize_operations<'py>(
-    py: Python<'py>,
-    operations: &Bound<'_, PyAny>,
-) -> PyResult<Bound<'py, PyAny>> {
-    let operations = input(operations)?;
-    call(py, || api::normalize_operations(operations))
-}
-
 /// The operations that turn `base` into `target`, checked by replay.
 #[pyfunction]
 fn ops_diff<'py>(
@@ -631,8 +621,7 @@ mod _native {
         EngineError, GraphState, append_table_rows, apply, apply_restore_fixes,
         assign_changed_node_table_row_ids, assign_changed_table_row_ids, assign_row_ids,
         assign_table_row_ids, canonical_json, edge_fixes, fixes_for_edges, graph_hash,
-        graphs_equal, new_edge_id, new_table_row_id, node_schema, normalize_operations, ops_diff,
-        ordered_rows, repair, strip_flow_table_row_keys, strip_row_keys, table_fields, validate,
-        values_equal,
+        graphs_equal, new_edge_id, new_table_row_id, node_schema, ops_diff, ordered_rows, repair,
+        strip_flow_table_row_keys, strip_row_keys, table_fields, validate, values_equal,
     };
 }

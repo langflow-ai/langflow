@@ -283,15 +283,6 @@ pub fn apply_to(
     Ok(Value::Object(applied_json(applied, options)))
 }
 
-/// Parse operations and print them as the engine records them.
-///
-/// # Errors
-///
-/// The operations do not parse.
-pub fn normalize_operations(operations_in: Input<'_>) -> ApiResult<Value> {
-    Ok(operations_json(operations(operations_in)?))
-}
-
 // --- Diff, validation and repair ------------------------------------------------------------
 
 /// The operations that turn `base` into `target`, checked by replay: applied
@@ -630,8 +621,9 @@ mod tests {
         );
         let error = refused(ops_diff("{".into(), "{}".into()));
         assert_eq!(error.code(), "FLOW_GRAPH_INVALID");
-        let error = refused(normalize_operations("[".into()));
-        assert_eq!(error.code(), "FLOW_OPERATION_INVALID");
+        let state = graph_state(r#"{"nodes": [], "edges": []}"#.into());
+        let error = apply_to(&mut state.unwrap(), "[".into(), ApplyOptions::default());
+        assert_eq!(refused(error).code(), "FLOW_OPERATION_INVALID");
     }
 
     #[test]
