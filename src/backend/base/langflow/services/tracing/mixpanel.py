@@ -11,6 +11,7 @@ from langchain_core.callbacks.base import BaseCallbackHandler
 from lfx.base.models.llm_callback_utils import detect_provider_from_model, extract_llm_model_name
 from lfx.log.logger import logger
 from opentelemetry import trace
+from opentelemetry.context import Context
 from opentelemetry.trace import Status, StatusCode
 from typing_extensions import override
 
@@ -64,11 +65,17 @@ def _get_or_create_provider(endpoint: str, project_token: str) -> TracerProvider
             credentials = base64.b64encode(f"{project_token}:".encode()).decode()
             exporter = OTLPSpanExporter(
                 endpoint=endpoint,
+                certificate_file=True,
                 headers={"Authorization": f"Basic {credentials}"},
                 timeout=_EXPORT_TIMEOUT_SECONDS,
                 compression=Compression.NoCompression,
                 session=requests.Session(),
             )
+            # The constructor falls back to OTEL_EXPORTER_OTLP_*CLIENT_* variables when these
+            # arguments are falsy, so an operator's mTLS client certificate has to be cleared here.
+            exporter._client_key_file = None
+            exporter._client_certificate_file = None
+            exporter._client_cert = None
             provider = TracerProvider(resource=Resource(attributes={"service.name": "langflow"}))
             provider.add_span_processor(BatchSpanProcessor(exporter))
             _SharedProvider.provider = provider
@@ -140,8 +147,10 @@ class MixpanelTracer(BaseTracer):
 
         try:
             self._tracer = _get_or_create_provider(endpoint, project_token).get_tracer("langflow")
+            # An empty context keeps the run out of any span the application has active.
             self.root_span = self._tracer.start_span(
                 name=trace_name,
+                context=Context(),
                 attributes={
                     **self.common_attributes,
                     "langflow.trace_id": str(trace_id),
@@ -184,11 +193,15 @@ class MixpanelTracer(BaseTracer):
             attributes={**self.common_attributes, **attributes},
         )
 
-    @staticmethod
-    def _end_span(span: Span, error: BaseException | None = None) -> None:
+    def _end_span(self, span: Span, error: BaseException | None = None) -> None:
         if error is not None:
-            span.record_exception(error)
-            span.set_status(Status(StatusCode.ERROR, str(error)))
+            # Provider error messages can quote the prompt, so they follow the content setting.
+            if self.capture_content:
+                span.record_exception(error)
+                span.set_status(Status(StatusCode.ERROR, str(error)))
+            else:
+                span.set_attribute("exception.type", type(error).__name__)
+                span.set_status(Status(StatusCode.ERROR))
         span.end()
 
     def start_run(
@@ -266,12 +279,14 @@ class MixpanelTracer(BaseTracer):
             return
         self._end_open_runs(trace_id)
         span = self.spans.pop(trace_id)
-        if self.capture_content:
-            if outputs:
-                span.set_attribute("langflow.outputs", _to_json(outputs))
-            if logs:
-                span.set_attribute("langflow.logs", _to_json(list(logs)))
-        self._end_span(span, error)
+        try:
+            if self.capture_content:
+                if outputs:
+                    span.set_attribute("langflow.outputs", _to_json(outputs))
+                if logs:
+                    span.set_attribute("langflow.logs", _to_json(list(logs)))
+        finally:
+            self._end_span(span, error)
 
     @override
     def end(
@@ -286,10 +301,12 @@ class MixpanelTracer(BaseTracer):
         self._end_open_runs()
         for trace_id in list(self.spans):
             self._end_span(self.spans.pop(trace_id))
-        if self.capture_content:
-            self.root_span.set_attribute("langflow.inputs", _to_json(inputs))
-            self.root_span.set_attribute("langflow.outputs", _to_json(outputs))
-        self._end_span(self.root_span, error)
+        try:
+            if self.capture_content:
+                self.root_span.set_attribute("langflow.inputs", _to_json(inputs))
+                self.root_span.set_attribute("langflow.outputs", _to_json(outputs))
+        finally:
+            self._end_span(self.root_span, error)
 
     @override
     def get_langchain_callback(self) -> BaseCallbackHandler | None:

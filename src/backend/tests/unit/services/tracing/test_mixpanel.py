@@ -47,7 +47,9 @@ class _Receiver:
                             "span_id": span.span_id,
                             "parent_span_id": span.parent_span_id,
                             "status": span.status.code,
+                            "status_message": span.status.message,
                             "attributes": attributes,
+                            "events": [e.name for e in span.events],
                         }
         return spans
 
@@ -192,6 +194,9 @@ def test_failed_llm_call_and_unfinished_runs_still_end_their_spans(receiver):
     spans = receiver.spans()
 
     assert spans["chat m1"]["status"] == 2
+    assert spans["chat m1"]["attributes"]["exception.type"] == "RuntimeError"
+    assert spans["chat m1"]["events"] == []
+    assert "rate limited" not in spans["chat m1"]["status_message"]
     assert "chat m2" in spans
     assert spans["chat m2"]["parent_span_id"] == spans["Agent"]["span_id"]
 
@@ -219,6 +224,8 @@ def test_completion_models_tool_errors_and_open_components_are_recorded(receiver
     assert completion_span["gen_ai.provider.name"] == "anthropic"
     assert "gen_ai.usage.input_tokens" not in completion_span
     assert spans["execute_tool tool"]["status"] == 2
+    assert spans["execute_tool tool"]["status_message"] == "bad args"
+    assert spans["execute_tool tool"]["events"] == ["exception"]
     assert "message prompt" in spans["Legacy LLM"]["attributes"]["langflow.inputs"]
     assert "step" in spans["Legacy LLM"]["attributes"]["langflow.logs"]
     assert "Chat Output" in spans
@@ -251,10 +258,45 @@ def test_disabled_tracer_ignores_lifecycle_calls(monkeypatch):
 def test_operator_otlp_settings_do_not_reach_mixpanel(receiver, monkeypatch):
     monkeypatch.setenv("OTEL_EXPORTER_OTLP_HEADERS", "x-apm-key=apm-secret")
     monkeypatch.setenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://127.0.0.1:9/v1/traces")
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_CERTIFICATE", "/apm/ca.pem")
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE", "/apm/client.pem")
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_CLIENT_KEY", "/apm/client.key")
     _run_flow(_make_tracer(tracing_user_id="end-user-42"))
 
     assert receiver.spans()
     assert all("x-apm-key" not in request["headers"] for request in receiver.requests)
+    exporter = mixpanel_module._SharedProvider.provider._active_span_processor._span_processors[0].span_exporter
+    assert exporter._certificate_file is True
+    assert exporter._client_cert is None
+
+
+def test_root_span_ignores_an_active_application_span(receiver):
+    from opentelemetry import trace as otel_trace
+    from opentelemetry.sdk.trace import TracerProvider
+
+    app_span = TracerProvider().get_tracer("app").start_span("request")
+    with otel_trace.use_span(app_span):
+        _run_flow(_make_tracer(tracing_user_id="end-user-42"))
+    app_span.end()
+
+    assert receiver.spans()["Support flow - 1234"]["parent_span_id"] == b""
+
+
+def test_spans_end_when_content_cannot_be_serialized(receiver, monkeypatch):
+    monkeypatch.setenv("MIXPANEL_CAPTURE_CONTENT", "1")
+    circular: list = []
+    circular.append(circular)
+    tracer = _make_tracer(tracing_user_id="end-user-42")
+    tracer.add_trace("Agent-1", "Agent", "agent", {})
+
+    with pytest.raises(ValueError, match="Circular"):
+        tracer.end_trace("Agent-1", "Agent", outputs={"loop": circular})
+    with pytest.raises(ValueError, match="Circular"):
+        tracer.end({}, {"loop": circular})
+
+    spans = receiver.spans()
+    assert "Agent" in spans
+    assert "Support flow - 1234" in spans
 
 
 @pytest.mark.parametrize(
