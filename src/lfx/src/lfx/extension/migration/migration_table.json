@@ -5315,6 +5315,156 @@
       "import_path": "lfx_bundles.companyenrich.CompanyEnrichSimilarComponent",
       "target": "ext:companyenrich:CompanyEnrichSimilarComponent@official",
       "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "CompanyEnrichPeopleSearchComponent",
+      "target": "ext:companyenrich:CompanyEnrichPeopleSearchComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.people_search.CompanyEnrichPeopleSearchComponent",
+      "target": "ext:companyenrich:CompanyEnrichPeopleSearchComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.CompanyEnrichPeopleSearchComponent",
+      "target": "ext:companyenrich:CompanyEnrichPeopleSearchComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "CompanyEnrichPersonLookupComponent",
+      "target": "ext:companyenrich:CompanyEnrichPersonLookupComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.person_lookup.CompanyEnrichPersonLookupComponent",
+      "target": "ext:companyenrich:CompanyEnrichPersonLookupComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.CompanyEnrichPersonLookupComponent",
+      "target": "ext:companyenrich:CompanyEnrichPersonLookupComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "CompanyEnrichWorkforceComponent",
+      "target": "ext:companyenrich:CompanyEnrichWorkforceComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.workforce.CompanyEnrichWorkforceComponent",
+      "target": "ext:companyenrich:CompanyEnrichWorkforceComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.CompanyEnrichWorkforceComponent",
+      "target": "ext:companyenrich:CompanyEnrichWorkforceComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "CompanyEnrichPropertiesComponent",
+      "target": "ext:companyenrich:CompanyEnrichPropertiesComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.properties.CompanyEnrichPropertiesComponent",
+      "target": "ext:companyenrich:CompanyEnrichPropertiesComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.CompanyEnrichPropertiesComponent",
+      "target": "ext:companyenrich:CompanyEnrichPropertiesComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "CompanyEnrichBatchComponent",
+      "target": "ext:companyenrich:CompanyEnrichBatchComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.batch.CompanyEnrichBatchComponent",
+      "target": "ext:companyenrich:CompanyEnrichBatchComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.CompanyEnrichBatchComponent",
+      "target": "ext:companyenrich:CompanyEnrichBatchComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "CompanyEnrichCompanyByIdComponent",
+      "target": "ext:companyenrich:CompanyEnrichCompanyByIdComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.company_id.CompanyEnrichCompanyByIdComponent",
+      "target": "ext:companyenrich:CompanyEnrichCompanyByIdComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.CompanyEnrichCompanyByIdComponent",
+      "target": "ext:companyenrich:CompanyEnrichCompanyByIdComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "CompanyEnrichPersonByIdComponent",
+      "target": "ext:companyenrich:CompanyEnrichPersonByIdComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.person_id.CompanyEnrichPersonByIdComponent",
+      "target": "ext:companyenrich:CompanyEnrichPersonByIdComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.CompanyEnrichPersonByIdComponent",
+      "target": "ext:companyenrich:CompanyEnrichPersonByIdComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "CompanyEnrichSearchCountComponent",
+      "target": "ext:companyenrich:CompanyEnrichSearchCountComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.search_count.CompanyEnrichSearchCountComponent",
+      "target": "ext:companyenrich:CompanyEnrichSearchCountComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.CompanyEnrichSearchCountComponent",
+      "target": "ext:companyenrich:CompanyEnrichSearchCountComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "CompanyEnrichSimilarCountComponent",
+      "target": "ext:companyenrich:CompanyEnrichSimilarCountComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.similar_count.CompanyEnrichSimilarCountComponent",
+      "target": "ext:companyenrich:CompanyEnrichSimilarCountComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.CompanyEnrichSimilarCountComponent",
+      "target": "ext:companyenrich:CompanyEnrichSimilarCountComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "CompanyEnrichAdvancedComponent",
+      "target": "ext:companyenrich:CompanyEnrichAdvancedComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.advanced.CompanyEnrichAdvancedComponent",
+      "target": "ext:companyenrich:CompanyEnrichAdvancedComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.CompanyEnrichAdvancedComponent",
+      "target": "ext:companyenrich:CompanyEnrichAdvancedComponent@official",
+      "added_in": "1.14.0"
     }
   ],
   "ambiguous_bare_names": [
