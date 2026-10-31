@@ -25,8 +25,8 @@ use std::collections::HashSet;
 use std::fmt;
 use std::str::FromStr;
 
+use crate::value::Value;
 use indexmap::IndexSet;
-use serde_json::Value;
 
 use crate::ops::canonical::is_row_position;
 use crate::ops::edges::{GraphRead, check_edge, reads_before, removed_endpoints};
@@ -866,7 +866,8 @@ pub fn apply_flow_operations(
 
 #[cfg(test)]
 mod tests {
-    use serde_json::{Value, json};
+    use crate::json;
+    use crate::value::Value;
 
     use super::*;
     use crate::ops::edges::escape_handle;

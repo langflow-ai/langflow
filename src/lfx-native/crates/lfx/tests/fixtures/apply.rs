@@ -1,10 +1,11 @@
 //! `apply_cases.json`, `merge_cases.json` and `property_cases.json`: applying operations.
 
+use lfx::json;
 use lfx::ops::canonical::{graph_hash, graphs_equal};
 use lfx::ops::schema::NODE_SCHEMA;
 use lfx::ops::{ApplyOptions, GraphState, Mode, Operation};
+use lfx::value::{Map, Value};
 use libtest_mimic::{Failed, Trial};
-use serde_json::{Map, Value, json};
 
 use crate::support::{assert_json_eq, cases, compact, load};
 

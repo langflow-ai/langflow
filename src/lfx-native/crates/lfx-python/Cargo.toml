@@ -19,7 +19,6 @@ doctest = false
 [dependencies]
 lfx = { path = "../lfx" }
 pyo3 = { version = "0.30", features = ["abi3-py310"] }
-serde_json = { version = "1", features = ["preserve_order", "arbitrary_precision"] }
 
 [lints]
 workspace = true

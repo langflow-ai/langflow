@@ -1,11 +1,12 @@
 //! `backward_cases.json` and `editor_cases.json`: what only the editor's engine had.
 
+use lfx::json;
 use lfx::ops::canonical::graphs_equal;
 use lfx::ops::keyed::{Renumber, append_table_rows, assign_changed_table_row_ids, assign_row_ids};
 use lfx::ops::restore::{edge_fixes, fixes_for_edges};
 use lfx::ops::{ApplyOptions, GraphState, Mode, Operation};
+use lfx::value::Value;
 use libtest_mimic::{Failed, Trial};
-use serde_json::{Value, json};
 
 use crate::support::{assert_json_matches, cases, compact, load, section_cases};
 

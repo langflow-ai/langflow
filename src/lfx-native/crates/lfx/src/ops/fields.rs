@@ -29,8 +29,8 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 
+use crate::value::Value;
 use indexmap::IndexMap;
-use serde_json::Value;
 
 use crate::ops::error::Result;
 use crate::ops::keyed::{ListIndex, find_item, remove_item};
@@ -426,7 +426,7 @@ pub(crate) fn make_write(
 
 #[cfg(test)]
 mod tests {
-    use serde_json::json;
+    use crate::json;
 
     use super::*;
 

@@ -22,13 +22,14 @@
 //!
 //! Numbers compare as the doubles JavaScript holds. So an integer above 2^53
 //! compares, prints and hashes as the double it rounds to, on purpose: the
-//! editor cannot hold it either. Stored values keep their original text.
+//! editor cannot hold it either. Stored values keep what [`crate::value::Number`]
+//! keeps: an integer or a double, and the text of a number neither holds.
 
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
 
-use serde_json::{Map, Number, Value};
+use crate::value::{Map, Number, Value};
 use sha2::{Digest, Sha256};
 
 use crate::ops::error::{Error, Result};
@@ -77,8 +78,7 @@ impl From<&Value> for JsonType {
 /// infinite when it is too large for a double.
 #[must_use]
 pub fn as_double(number: &Number) -> f64 {
-    // The text is a valid JSON number, which always parses.
-    number.as_str().parse().unwrap_or(f64::NAN)
+    number.as_f64().unwrap_or(f64::NAN)
 }
 
 /// Whether a number is finite as the double JavaScript reads it. An integer
@@ -92,7 +92,7 @@ pub fn is_finite_number(number: &Number) -> bool {
 /// exponent, which is how Python tells an `int` from a `float`.
 #[must_use]
 pub fn is_integer_text(number: &Number) -> bool {
-    !number.as_str().contains(['.', 'e', 'E'])
+    number.is_integer()
 }
 
 /// Whether a value is a valid table row position: a finite number.
@@ -115,7 +115,7 @@ fn format_number(number: &Number, out: &mut String) -> Result<()> {
     let double = finite_double(number)?;
     if is_integer_text(number) {
         // An integer prints exactly while JavaScript holds it exactly.
-        if let Ok(integer) = number.as_str().parse::<i128>()
+        if let Some(integer) = number.as_i128()
             && integer.abs() <= MAX_SAFE_INTEGER
         {
             write!(out, "{integer}").ok();
@@ -266,7 +266,7 @@ pub fn values_equal(left: &Value, right: &Value) -> Result<bool> {
 /// The string is parsed as strict JSON, as JavaScript's `JSON.parse` reads
 /// it: `NaN` and `Infinity` do not parse.
 #[must_use]
-pub fn parse_handle(handle: &Value) -> Option<Map<String, Value>> {
+pub fn parse_handle(handle: &Value) -> Option<Map> {
     let text = handle.as_str()?.replace(HANDLE_QUOTE, "\"");
     match serde_json::from_str(&text) {
         Ok(Value::Object(object)) => Some(object),
@@ -336,7 +336,7 @@ enum Mode {
     Ordered,
 }
 
-fn without(map: &Map<String, Value>, hidden: impl Fn(&str) -> bool) -> HashMap<&str, Canon<'_>> {
+fn without(map: &Map, hidden: impl Fn(&str) -> bool) -> HashMap<&str, Canon<'_>> {
     map.iter()
         .filter(|(key, _)| !hidden(key))
         .map(|(key, value)| (key.as_str(), Canon::Raw(value)))
@@ -688,7 +688,7 @@ pub fn graphs_equal(left: &Value, right: &Value) -> Result<bool> {
 
 #[cfg(test)]
 mod tests {
-    use serde_json::json;
+    use crate::json;
 
     use super::*;
 
@@ -916,7 +916,7 @@ mod tests {
             let cases = file
                 .as_object()
                 .into_iter()
-                .flat_map(|sections| sections.values())
+                .flat_map(crate::value::Map::values)
                 .filter_map(Value::as_array)
                 .flatten();
             for case in cases {

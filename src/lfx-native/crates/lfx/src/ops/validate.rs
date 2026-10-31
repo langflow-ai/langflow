@@ -27,8 +27,8 @@ use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
+use crate::value::{Map, Value};
 use indexmap::IndexMap;
-use serde_json::{Map, Value};
 
 use crate::ops::canonical::{is_finite_number, is_row_position, values_equal};
 use crate::ops::edges::{
@@ -436,7 +436,7 @@ fn node_violations<'a>(
 }
 
 /// The first of `data`, `data.node` and `data.node.template` that is not an object.
-fn missing_node_object(node: &Map<String, Value>) -> Option<&'static [&'static str]> {
+fn missing_node_object(node: &Map) -> Option<&'static [&'static str]> {
     let mut value = node;
     for object_path in NODE_OBJECT_PATHS {
         let key = object_path[object_path.len() - 1];
@@ -523,7 +523,7 @@ fn non_finite_violations(value: &Value, path: &mut GraphPath, violations: &mut V
 #[derive(Debug)]
 pub(crate) struct GraphView<'a> {
     nodes: HashMap<&'a str, &'a Value>,
-    edges: HashMap<&'a str, &'a Map<String, Value>>,
+    edges: HashMap<&'a str, &'a Map>,
     edges_at: HashMap<&'a str, Vec<&'a str>>,
 }
 
@@ -571,7 +571,7 @@ impl GraphRead for GraphView<'_> {
             .map(Cow::Borrowed)
     }
 
-    fn edge(&self, id: &str) -> Option<&Map<String, Value>> {
+    fn edge(&self, id: &str) -> Option<&Map> {
         self.edges.get(id).copied()
     }
 
@@ -601,7 +601,7 @@ fn list<'a>(graph: &'a Value, key: &str) -> &'a [Value] {
 /// A compared value holds a number that is not finite, or an outputs list
 /// that a write changes is not a valid keyed list.
 pub fn changed_edges(base: &Value, target: &Value) -> Result<Vec<usize>> {
-    let stored: HashMap<&str, &Map<String, Value>> = list(base, "edges")
+    let stored: HashMap<&str, &Map> = list(base, "edges")
         .iter()
         .filter_map(Value::as_object)
         .filter_map(|edge| Some((edge.get("id")?.as_str()?, edge)))
@@ -632,7 +632,7 @@ struct RemovedEnds {
 
 /// The template fields and outputs `target` removes from the nodes it keeps, by node id.
 fn removed_ends(base: &Value, target: &Value) -> Result<HashMap<String, RemovedEnds>> {
-    let stored: HashMap<&str, &Map<String, Value>> = list(base, "nodes")
+    let stored: HashMap<&str, &Map> = list(base, "nodes")
         .iter()
         .filter_map(Value::as_object)
         .map(|node| (node.id(), node))
@@ -653,21 +653,17 @@ fn removed_ends(base: &Value, target: &Value) -> Result<HashMap<String, RemovedE
 }
 
 /// The template keys `before` has and `after` does not.
-fn removed_fields(before: &Map<String, Value>, after: &Map<String, Value>) -> HashSet<String> {
+fn removed_fields(before: &Map, after: &Map) -> HashSet<String> {
     before
         .keys()
-        .filter(|key| !after.contains_key(*key))
+        .filter(|key| !after.contains_key(key))
         .cloned()
         .collect()
 }
 
 /// The output names `before` has and `after` does not. Outputs that compare
 /// equal are not indexed, so a write that leaves them alone reads nothing.
-fn removed_outputs(
-    before: &Map<String, Value>,
-    after: &Map<String, Value>,
-    node_id: &str,
-) -> Result<HashSet<String>> {
+fn removed_outputs(before: &Map, after: &Map, node_id: &str) -> Result<HashSet<String>> {
     let Some(outputs_before) = before.get("outputs") else {
         return Ok(HashSet::new());
     };
@@ -696,7 +692,7 @@ fn removed_outputs(
 /// Applying the removal reads the handles of every edge at that node
 /// strictly, so an edge there whose handles cannot be read counts too, and
 /// the edge rules report it.
-fn is_cut(edge: &Map<String, Value>, removed: &HashMap<String, RemovedEnds>) -> bool {
+fn is_cut(edge: &Map, removed: &HashMap<String, RemovedEnds>) -> bool {
     let source = removed.get(endpoint(edge, "source"));
     let target = removed.get(endpoint(edge, "target"));
     if source.is_none() && target.is_none() {
@@ -795,7 +791,7 @@ pub struct ChangedTable<'a> {
 ///
 /// A compared table holds a number that is not finite.
 pub fn changed_tables<'a>(base: &Value, target: &'a Value) -> Result<Vec<ChangedTable<'a>>> {
-    let mut stored: HashMap<&str, &Map<String, Value>> = HashMap::new();
+    let mut stored: HashMap<&str, &Map> = HashMap::new();
     for node in list(base, "nodes") {
         if let (Some(template), Some(id)) =
             (node.template(), node.get("id").and_then(Value::as_str))

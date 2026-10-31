@@ -7,7 +7,7 @@ use std::borrow::Cow;
 use std::collections::HashSet;
 use std::sync::LazyLock;
 
-use serde_json::{Map, Value};
+use crate::value::{Map, Value};
 
 use crate::ops::ops::{AsKey, PathExt};
 use crate::ops::state::resolve;
@@ -98,7 +98,7 @@ pub struct NodeSchema {
     pub recursed_paths: Vec<Vec<String>>,
     natural_lists: Vec<(Vec<String>, KeyedList)>,
     table_path: Vec<String>,
-    table_when_field: Vec<Map<String, Value>>,
+    table_when_field: Vec<Map>,
     /// The table list, which every table field's value is.
     pub table: KeyedList,
     /// The keys of a table row, the same ones `table` reads.
@@ -226,7 +226,7 @@ impl NodeSchema {
 
     /// The keyed list a template field's `value` is, given the field itself.
     #[must_use]
-    pub fn field_value_list(&self, name: &str, field: &Map<String, Value>) -> Option<&KeyedList> {
+    pub fn field_value_list(&self, name: &str, field: &Map) -> Option<&KeyedList> {
         self.keyed_list_by(&field_value_path(name), |_, key| {
             field.get(key).map(Cow::Borrowed)
         })
@@ -370,7 +370,7 @@ fn natural_list(entry: &Value, path: &str) -> Result<(Vec<String>, KeyedList), S
 
 #[cfg(test)]
 mod tests {
-    use serde_json::json;
+    use crate::json;
 
     use super::*;
 

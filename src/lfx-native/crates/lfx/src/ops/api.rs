@@ -3,7 +3,8 @@
 //! Each argument is an [`Input`]: JSON text, or a value that the binding has
 //! already read, such as a Python dict. Each result is a value; the browser
 //! binding writes it as text with [`json_text`], and the Python binding builds
-//! Python objects from it. Text keeps every number's original text.
+//! Python objects from it. A number keeps what [`crate::value::Number`] keeps:
+//! `1` and `1.0` apart, and the digits of an integer too large for 64 bits.
 //! Each function here does no more than read its inputs, call the engine and
 //! return its result; the bindings only call these and turn an [`ApiError`]
 //! into their language's exception.
@@ -11,9 +12,10 @@
 use std::fmt;
 use std::io;
 
+use crate::json;
+use crate::value::{Map, Value};
 use serde::Serialize;
 use serde_json::ser::Formatter;
-use serde_json::{Map, Value, json};
 
 use crate::ops::apply::{Applied, ApplyOptions, apply_flow_operations};
 use crate::ops::canonical;
@@ -217,7 +219,7 @@ fn renumber(editor: bool) -> Renumber {
 /// What a batch did, as JSON: the forward operations with `forward`, and the
 /// backward operations with `backward`.
 #[must_use]
-pub fn applied_json(applied: Applied, options: ApplyOptions) -> Map<String, Value> {
+pub fn applied_json(applied: Applied, options: ApplyOptions) -> Map {
     let mut out = Map::new();
     if options.forward {
         out.insert(

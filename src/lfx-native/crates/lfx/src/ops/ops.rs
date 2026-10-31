@@ -10,7 +10,8 @@ use std::collections::HashSet;
 use std::ops::Deref;
 use std::str::FromStr;
 
-use serde_json::{Map, Value, json};
+use crate::json;
+use crate::value::{Map, Value};
 
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result, quoted};
@@ -270,7 +271,7 @@ impl Node {
 
     /// The node as a JSON object.
     #[must_use]
-    pub fn as_map(&self) -> &Map<String, Value> {
+    pub fn as_map(&self) -> &Map {
         match &self.0 {
             Value::Object(node) => node,
             _ => unreachable!("a node is a JSON object"),
@@ -279,7 +280,7 @@ impl Node {
 
     /// The node as a JSON object, moved out.
     #[must_use]
-    pub fn into_map(self) -> Map<String, Value> {
+    pub fn into_map(self) -> Map {
         match self.0 {
             Value::Object(node) => node,
             _ => unreachable!("a node is a JSON object"),
@@ -303,7 +304,7 @@ impl Node {
     }
 
     /// Check that `node` has the shape of a node.
-    fn check(node: &Map<String, Value>) -> Result<(), FromValueError> {
+    fn check(node: &Map) -> Result<(), FromValueError> {
         NodeRef::read(node).map(|_| ())
     }
 }
@@ -315,20 +316,20 @@ impl Node {
 /// compares through it, so neither checks a node's shape twice.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct NodeRef<'a> {
-    node: &'a Map<String, Value>,
-    body: &'a Map<String, Value>,
-    template: &'a Map<String, Value>,
+    node: &'a Map,
+    body: &'a Map,
+    template: &'a Map,
 }
 
 impl<'a> NodeRef<'a> {
     /// Check that `node` has the shape of a node, and borrow it.
-    pub(crate) fn new(node: &'a Map<String, Value>) -> Result<Self> {
+    pub(crate) fn new(node: &'a Map) -> Result<Self> {
         Self::read(node).map_err(|error| error.into_error("node"))
     }
 
     /// Borrow `node` and find its objects. For example, a node without
     /// `data.node` fails with `data.node: must be an object (node 'a')`.
-    fn read(node: &'a Map<String, Value>) -> Result<Self, FromValueError> {
+    fn read(node: &'a Map) -> Result<Self, FromValueError> {
         let Some(id) = node.non_empty_str("id") else {
             return Err(FromValueError::new("must be a non-empty string").at_key("id"));
         };
@@ -362,21 +363,21 @@ impl<'a> NodeRef<'a> {
     }
 
     /// The node's `data.node`.
-    pub(crate) fn body(self) -> &'a Map<String, Value> {
+    pub(crate) fn body(self) -> &'a Map {
         self.body
     }
 
     /// The node's `data.node.template`.
-    pub(crate) fn template(self) -> &'a Map<String, Value> {
+    pub(crate) fn template(self) -> &'a Map {
         self.template
     }
 }
 
-impl TryFrom<Map<String, Value>> for Node {
+impl TryFrom<Map> for Node {
     type Error = Error;
 
     /// Check `node`, and keep it as a node.
-    fn try_from(node: Map<String, Value>) -> Result<Self> {
+    fn try_from(node: Map) -> Result<Self> {
         Self::check(&node).map_err(|error| error.into_error("node"))?;
         Ok(Self(Value::Object(node)))
     }
@@ -397,7 +398,7 @@ impl FromValue for Node {
 /// reader checks them again. Whether the nodes and handles it names exist
 /// depends on the flow, so apply checks that.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Edge(Map<String, Value>);
+pub struct Edge(Map);
 
 impl Edge {
     /// The edge's id.
@@ -420,18 +421,18 @@ impl Edge {
 
     /// The edge as a JSON object.
     #[must_use]
-    pub fn as_map(&self) -> &Map<String, Value> {
+    pub fn as_map(&self) -> &Map {
         &self.0
     }
 
     /// The edge as a JSON object, moved out.
     #[must_use]
-    pub fn into_map(self) -> Map<String, Value> {
+    pub fn into_map(self) -> Map {
         self.0
     }
 
     /// Check that `edge` has the shape of an edge.
-    fn check(edge: &Map<String, Value>) -> Result<(), FromValueError> {
+    fn check(edge: &Map) -> Result<(), FromValueError> {
         for key in ["id", "source", "target"] {
             if edge.non_empty_str(key).is_none() {
                 return Err(FromValueError::new("must be a non-empty string").at_key(key));
@@ -441,11 +442,11 @@ impl Edge {
     }
 }
 
-impl TryFrom<Map<String, Value>> for Edge {
+impl TryFrom<Map> for Edge {
     type Error = Error;
 
     /// Check `edge`, and keep it as an edge.
-    fn try_from(edge: Map<String, Value>) -> Result<Self> {
+    fn try_from(edge: Map) -> Result<Self> {
         Self::check(&edge).map_err(|error| error.into_error("edge"))?;
         Ok(Self(edge))
     }
@@ -504,7 +505,7 @@ impl OperationKind {
 
     /// The kind an operation object names in its `type`. It only borrows the
     /// object and reads its `type`, so the caller can consume the object after.
-    fn from_map(object: &Map<String, Value>) -> Result<Self, FromValueError> {
+    fn from_map(object: &Map) -> Result<Self, FromValueError> {
         match object.get("type") {
             None => Err(FromValueError::new("type is missing")),
             Some(Value::String(name)) => name.parse(),
@@ -598,7 +599,7 @@ impl Operation {
     }
 }
 
-fn objects<T>(objects: Vec<T>, into_map: fn(T) -> Map<String, Value>) -> Value {
+fn objects<T>(objects: Vec<T>, into_map: fn(T) -> Map) -> Value {
     Value::Array(
         objects
             .into_iter()
@@ -680,10 +681,7 @@ fn no_repeated_paths(updates: &[FieldUpdate]) -> Result<(), FromValueError> {
 
 /// The value of an operation's one payload key, read as `T`. The operation
 /// may hold only `type` and `key`.
-fn payload<T: FromValue>(
-    object: Map<String, Value>,
-    key: &'static str,
-) -> Result<T, FromValueError> {
+fn payload<T: FromValue>(object: Map, key: &'static str) -> Result<T, FromValueError> {
     let mut payload = None;
     for (name, value) in object {
         match name.as_str() {
@@ -795,7 +793,7 @@ impl FromValue for Segment {
 
 #[cfg(test)]
 mod tests {
-    use serde_json::json;
+    use crate::json;
 
     use super::*;
 

@@ -11,7 +11,7 @@
 
 use std::fmt::Write as _;
 
-use serde_json::{Map, Value};
+use crate::value::{Map, Value};
 
 use crate::ops::error::{Error, quoted};
 
@@ -111,7 +111,7 @@ impl FromValue for String {
     }
 }
 
-impl FromValue for Map<String, Value> {
+impl FromValue for Map {
     fn from_value(value: Value) -> Result<Self, FromValueError> {
         match value {
             Value::Object(object) => Ok(object),
@@ -151,7 +151,7 @@ pub(crate) fn unexpected(key: &str) -> FromValueError {
 
 #[cfg(test)]
 mod tests {
-    use serde_json::json;
+    use crate::json;
 
     use super::*;
 

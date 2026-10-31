@@ -14,7 +14,7 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
-use serde_json::Value;
+use crate::value::Value;
 
 use crate::ops::canonical::{
     as_double, is_finite_number, is_integer_text, is_row_position, ordered_rows, values_equal,
@@ -447,7 +447,7 @@ impl Position {
         if self.integer && whole as f64 == self.value {
             Value::from(whole)
         } else {
-            serde_json::Number::from_f64(self.value).map_or(Value::Null, Value::Number)
+            crate::value::Number::from_f64(self.value).map_or(Value::Null, Value::Number)
         }
     }
 }

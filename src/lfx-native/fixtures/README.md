@@ -15,6 +15,7 @@ A rule change is a reviewed edit to the cases of that rule. The edit and the doc
 ## Conventions
 
 - A graph whose number text matters (a number that JavaScript reads as Infinity, or `1.0` against `1`) is stored as JSON text in a `*_json` field. A runner gives the engine that exact text.
+- A double keeps its value, not its spelling: `1e2` and `100.0` are the same number. An integer keeps its digits, and `1` and `1.0` stay apart.
 - An id that the engine draws at random is stored as `<generated edge id>` or `<generated row id>`. A runner accepts any id of that shape there.
 - The property sequences in `property_cases.json` are fixed cases too. Their invariants are data: every transaction applies, and the final graph has the hash `graph_hash`. No runner or tool draws random sequences.
 

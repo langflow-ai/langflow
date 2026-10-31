@@ -20,9 +20,9 @@ use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
 
+use crate::value::{Map, Value};
 use indexmap::{IndexMap, IndexSet};
 use serde::ser::{Serialize, SerializeMap, Serializer};
-use serde_json::{Map, Value};
 
 use crate::ops::edges::{EdgeIndex, GraphRead};
 use crate::ops::entry::EntryExt;
@@ -276,7 +276,7 @@ impl GraphRead for Graph {
             .expect("a read of object keys cannot fail")
     }
 
-    fn edge(&self, id: &str) -> Option<&Map<String, Value>> {
+    fn edge(&self, id: &str) -> Option<&Map> {
         self.edges.get(id).map(Edge::as_map)
     }
 
@@ -387,7 +387,7 @@ impl Lists {
 pub struct GraphState {
     /// The flow's top-level object; `nodes` and `edges` hold placeholders.
     /// No operation writes its other keys, which are view state.
-    root: Map<String, Value>,
+    root: Map,
     pub(crate) graph: Graph,
     pub(crate) edge_index: EdgeIndex,
     pub(crate) lists: Lists,
@@ -605,10 +605,7 @@ impl GraphState {
 }
 
 /// Nodes or edges by id, in their order, each made by `make`.
-fn by_id<T>(
-    items: Vec<Value>,
-    make: fn(Map<String, Value>) -> Result<T>,
-) -> Result<IndexMap<String, T>> {
+fn by_id<T>(items: Vec<Value>, make: fn(Map) -> Result<T>) -> Result<IndexMap<String, T>> {
     items
         .into_iter()
         .map(|item| {
@@ -698,12 +695,12 @@ pub struct Edges<'s>(&'s Layered<Edge>);
 
 impl<'s> Edges<'s> {
     /// Each edge's JSON object.
-    pub fn iter(self) -> impl Iterator<Item = &'s Map<String, Value>> {
+    pub fn iter(self) -> impl Iterator<Item = &'s Map> {
         self.0.values().map(Edge::as_map)
     }
 }
 
-fn take_list(root: &mut Map<String, Value>, key: &str) -> Vec<Value> {
+fn take_list(root: &mut Map, key: &str) -> Vec<Value> {
     match root.get_mut(key) {
         Some(value) => match std::mem::take(value) {
             Value::Array(items) => items,

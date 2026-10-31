@@ -1,9 +1,10 @@
 //! `restore_cases.json`: restore fixes.
 
+use lfx::json;
 use lfx::ops::Operation;
 use lfx::ops::restore::apply_restore_fixes;
+use lfx::value::Value;
 use libtest_mimic::{Failed, Trial};
-use serde_json::{Value, json};
 
 use crate::support::{assert_json_eq, cases, error_json, load};
 

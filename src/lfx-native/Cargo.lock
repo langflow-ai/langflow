@@ -277,7 +277,6 @@ version = "0.1.0"
 dependencies = [
  "lfx",
  "pyo3",
- "serde_json",
 ]
 
 [[package]]
