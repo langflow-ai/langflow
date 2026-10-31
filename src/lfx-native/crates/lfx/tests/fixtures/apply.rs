@@ -1,10 +1,11 @@
 //! `apply_cases.json`, `merge_cases.json` and `property_cases.json`: applying operations.
 
+use lfx::json;
 use lfx::ops::canonical::{graph_hash, graphs_equal};
 use lfx::ops::schema::NODE_SCHEMA;
 use lfx::ops::{ApplyOptions, GraphState, Mode, Operation};
+use lfx::value::{Map, Value};
 use libtest_mimic::{Failed, Trial};
-use serde_json::{Map, Value, json};
 
 use crate::support::{assert_json_eq, cases, compact, load};
 
@@ -83,6 +84,11 @@ fn apply_case(case: &Value) -> Result<(), Failed> {
         &ignoring_order(&state.to_value()),
         &ignoring_order(&case["expected"]),
     )?;
+    // The bindings print the graph with to_json, which must write the text of to_value.
+    let printed = state.to_value().to_string();
+    if state.to_json() != printed {
+        return Err("to_json does not write the text of to_value".into());
+    }
     let forward = Value::Array(applied.forward.iter().map(Operation::to_value).collect());
     let expected_forward = case
         .get("forward_operations")

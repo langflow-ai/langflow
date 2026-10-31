@@ -28,7 +28,6 @@ from pathlib import Path
 from typing import Any
 
 from langflow.services.flow_history.errors import RestoreFixNotAllowedError
-from langflow.services.flow_history.recorder import normalize_absent_graph
 from langflow.services.flow_history.restore_fixes import apply_restore_fixes
 from lfx.services.flow_operations import (
     FlowDataValidationError,
@@ -293,7 +292,7 @@ def fill_positions(case: dict[str, Any], _document: dict[str, Any]) -> None:
     check(matches, "positions", {"expected": rows, "filled": filled}, expected)
 
 
-# --- restore_cases.json, write_cases.json -----------------------------------------------------------
+# --- restore_cases.json ----------------------------------------------------------------------------
 
 
 def restore_case(case: dict[str, Any], _document: dict[str, Any]) -> None:
@@ -305,51 +304,6 @@ def restore_case(case: dict[str, Any], _document: dict[str, Any]) -> None:
         actual = {"error": _error(exc)}
     expected = {"error": case["error"]} if "error" in case else {"expected": case["expected"]}
     check(strict, "restored revision", actual, expected)
-
-
-def _prepare_write(stored: Any, target: Any, options: dict[str, Any]) -> dict[str, Any]:
-    """The engine's part of the recorder's write path, composed from the Python engine as write_flow_graph runs it."""
-    repairs: list[dict[str, Any]] = []
-    stored_repaired = False
-    if options["started"]:
-        base = stored
-    else:
-        base = normalize_absent_graph(stored)
-        violations = find_graph_violations(base)
-        if violations:
-            if not options["repair_invalid_graph"]:
-                return {"error": {"graph": "stored", "violations": [v.to_dict() for v in violations]}}
-            repaired = repair_flow_data(base)
-            base = repaired.flow_data
-            stored_repaired = True
-            repairs += [{"graph": "stored", **fix.to_dict()} for fix in repaired.fixes]
-    target = normalize_absent_graph(target)
-    violations = find_graph_violations(target, base=base)
-    if violations:
-        if not options["repair_invalid_graph"]:
-            return {"error": {"graph": "submitted", "violations": [v.to_dict() for v in violations]}}
-        try:
-            repaired = repair_flow_data(target, base=base)
-        except FlowDataValidationError as exc:
-            return {"error": {"graph": "submitted", "violations": [v.to_dict() for v in exc.violations]}}
-        target = repaired.flow_data
-        repairs += [{"graph": "submitted", **fix.to_dict()} for fix in repaired.fixes]
-    derived = derive_flow_operations(base, target)
-    return {
-        "expected": {
-            "base": base,
-            "stored_repaired": stored_repaired,
-            "target": target,
-            "repairs": repairs,
-            "operations": [dump_flow_operation(operation) for operation in derived.operations],
-        }
-    }
-
-
-def write_case(case: dict[str, Any], _document: dict[str, Any]) -> None:
-    actual = _prepare_write(_fresh(case["stored"]), _fresh(case["target"]), case["options"])
-    expected = {"error": case["error"]} if "error" in case else {"expected": case["expected"]}
-    check(matches, "prepared write", actual, expected)
 
 
 # --- Running every case ------------------------------------------------------------------------------
@@ -373,7 +327,6 @@ CHECKS: list[tuple[str, str, Run]] = [
     *[("table_cases.json", section, table_case(section)) for section in TABLE_RUNS],
     ("table_cases.json", "fill_positions", fill_positions),
     ("restore_cases.json", "cases", restore_case),
-    ("write_cases.json", "cases", write_case),
 ]
 
 

@@ -266,6 +266,7 @@ dependencies = [
  "getrandom",
  "indexmap",
  "libtest-mimic",
+ "serde",
  "serde_json",
  "sha2",
 ]

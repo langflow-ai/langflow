@@ -36,10 +36,10 @@
 
 use std::collections::HashSet;
 
+use crate::value::{Map, Value};
 use indexmap::IndexMap;
-use serde_json::{Map, Value};
 
-use crate::ops::apply::{ApplyOptions, apply_flow_operations};
+use crate::ops::apply::ApplyOptions;
 use crate::ops::canonical::{graphs_equal, is_row_position, values_equal};
 use crate::ops::edges::edge_changed;
 use crate::ops::error::{Error, Result};
@@ -47,6 +47,7 @@ use crate::ops::ops::{
     AsKey, Edge, FieldUpdate, Node, NodePath, Operation, Path, PathExt, Segment,
 };
 use crate::ops::schema::{KeyedList, ListKind, NODE_SCHEMA, OUTPUTS_PATH, TEMPLATE_PATH};
+use crate::ops::state::GraphState;
 use crate::ops::validate::{Numbers, validate_flow_data};
 
 /// Operations that turn one graph into another, verified by replay.
@@ -71,7 +72,11 @@ pub struct Derived {
 pub fn diff_flow_data(base: &Value, target: &Value) -> Result<Vec<Operation>> {
     validate_flow_data(base, Numbers::Skip, "flow.data", None)?;
     validate_flow_data(target, Numbers::Check, "target flow.data", None)?;
+    diff_checked(base, target)
+}
 
+/// [`diff_flow_data`] for graphs that have passed its checks.
+fn diff_checked(base: &Value, target: &Value) -> Result<Vec<Operation>> {
     let base_nodes = by_id(base, "nodes");
     let target_nodes = by_id(target, "nodes");
     let base_edges = by_id(base, "edges");
@@ -117,6 +122,13 @@ pub fn diff_flow_data(base: &Value, target: &Value) -> Result<Vec<Operation>> {
     let mut node_updates = Vec::new();
     for (id, node) in &target_nodes {
         if let Some(before) = base_nodes.get(id) {
+            // A node equal as it stands writes nothing, so its walk is skipped:
+            // most nodes of a save are unchanged. The walk could not fail
+            // either: it fails only on a number that is not finite, which the
+            // target's validation above refuses, or on a write.
+            if before == node {
+                continue;
+            }
             NodeDiff {
                 id,
                 updates: &mut node_updates,
@@ -153,12 +165,22 @@ pub fn diff_flow_data(base: &Value, target: &Value) -> Result<Vec<Operation>> {
 /// A graph breaks the rules, or the operations do not replay to `target`,
 /// which is a bug in the diff or the engine.
 pub fn derive_flow_operations(base: Value, target: &Value) -> Result<Derived> {
-    let operations = diff_flow_data(&base, target)?;
+    validate_flow_data(&base, Numbers::Skip, "flow.data", None)?;
+    validate_flow_data(target, Numbers::Check, "target flow.data", None)?;
+    derive_checked(base, target)
+}
+
+/// [`derive_flow_operations`] for graphs that have passed its checks: `base`
+/// structurally, and `target` fully.
+pub(crate) fn derive_checked(base: Value, target: &Value) -> Result<Derived> {
+    let operations = diff_checked(&base, target)?;
     let options = ApplyOptions {
         forward: true,
         ..ApplyOptions::default()
     };
-    let (flow_data, applied) = apply_flow_operations(base, operations, options)?;
+    let mut state = GraphState::from_checked(base)?;
+    let applied = state.apply(operations, options)?;
+    let flow_data = state.into_value();
     if !graphs_equal(&flow_data, target)? {
         return Err(Error::replay(
             "derived operations do not replay to the target graph",
@@ -171,7 +193,7 @@ pub fn derive_flow_operations(base: Value, target: &Value) -> Result<Derived> {
 }
 
 /// A validated graph's nodes or edges, by id, in the graph's order.
-fn by_id<'g>(graph: &'g Value, key: &str) -> IndexMap<&'g str, &'g Map<String, Value>> {
+fn by_id<'g>(graph: &'g Value, key: &str) -> IndexMap<&'g str, &'g Map> {
     graph
         .get(key)
         .and_then(Value::as_array)
@@ -182,7 +204,7 @@ fn by_id<'g>(graph: &'g Value, key: &str) -> IndexMap<&'g str, &'g Map<String, V
         .collect()
 }
 
-fn without(map: &Map<String, Value>, hidden: impl Fn(&str) -> bool) -> Map<String, Value> {
+fn without(map: &Map, hidden: impl Fn(&str) -> bool) -> Map {
     map.iter()
         .filter(|(key, _)| !hidden(key))
         .map(|(key, value)| (key.clone(), value.clone()))
@@ -232,12 +254,7 @@ impl NodeDiff<'_> {
     ///
     /// The walk shares one `path`: each step pushes its segment and pops it
     /// when done. An error ends the whole diff, so it leaves the path as it is.
-    fn object(
-        &mut self,
-        base: &Map<String, Value>,
-        target: &Map<String, Value>,
-        path: &mut Path,
-    ) -> Result<()> {
+    fn object(&mut self, base: &Map, target: &Map, path: &mut Path) -> Result<()> {
         for (key, value) in target {
             if Self::skipped(path, key) {
                 continue;
@@ -382,7 +399,7 @@ impl NodeDiff<'_> {
 }
 
 /// A template field's keys and values, without its display-only keys.
-fn visible_field_keys(field: &Map<String, Value>) -> IndexMap<&str, &Value> {
+fn visible_field_keys(field: &Map) -> IndexMap<&str, &Value> {
     field
         .iter()
         .filter(|(key, _)| !NODE_SCHEMA.field_view_state.contains(key.as_str()))
@@ -480,8 +497,8 @@ fn keyed_list<'v>(
 /// The writes that turn one keyed-list item into another, key by key.
 /// `path` names the item.
 fn item_writes<'v>(
-    target: &'v Map<String, Value>,
-    base: &'v Map<String, Value>,
+    target: &'v Map,
+    base: &'v Map,
     path: &mut Path,
     writes: &mut Vec<Write<'v>>,
 ) -> Result<()> {

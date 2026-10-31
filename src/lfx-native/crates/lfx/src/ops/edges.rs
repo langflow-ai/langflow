@@ -29,8 +29,8 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::LazyLock;
 
+use crate::value::{Map, Value};
 use indexmap::IndexSet;
-use serde_json::{Map, Value};
 
 use crate::ops::canonical::{HANDLE_KEYS, HANDLE_QUOTE, parse_handle, values_equal};
 use crate::ops::entry::EntryExt;
@@ -241,13 +241,13 @@ pub(crate) trait GraphRead {
     /// copies a value only when the batch wrote inside it.
     fn node_value(&self, id: &str, path: &[&str]) -> Option<Cow<'_, Value>>;
     /// The edge with `id`.
-    fn edge(&self, id: &str) -> Option<&Map<String, Value>>;
+    fn edge(&self, id: &str) -> Option<&Map>;
     /// The ids of the edges at a node.
     fn edge_ids_at(&self, node_id: &str) -> impl Iterator<Item = &str>;
 }
 
 /// The source or target of an edge that passed structural validation.
-pub(crate) fn endpoint<'e>(edge: &'e Map<String, Value>, end: &str) -> &'e str {
+pub(crate) fn endpoint<'e>(edge: &'e Map, end: &str) -> &'e str {
     edge.get(end).and_then(Value::as_str).unwrap_or_default()
 }
 
@@ -271,7 +271,7 @@ impl Default for EdgeIndex {
 
 impl EdgeIndex {
     /// An edge's handles, read strictly the first time.
-    pub fn handles(&mut self, edge: &Map<String, Value>) -> Result<Handles> {
+    pub fn handles(&mut self, edge: &Map) -> Result<Handles> {
         let id = edge.id();
         if let Some(handles) = self.handles.get(id) {
             return Ok(handles.clone());
@@ -304,7 +304,7 @@ impl EdgeIndex {
     ///
     /// An edge whose handles do not read (which only a backward operation puts back)
     /// leaves those nodes to be indexed again when something asks.
-    pub fn insert(&mut self, edge: &Map<String, Value>) {
+    pub fn insert(&mut self, edge: &Map) {
         let ends = [endpoint(edge, "source"), endpoint(edge, "target")];
         if !ends.iter().any(|end| self.connections.contains(end)) {
             return;
@@ -326,7 +326,7 @@ impl EdgeIndex {
     }
 
     /// Drop what is indexed about an edge, before it is removed or its handles are rewritten.
-    pub fn forget(&mut self, edge: &Map<String, Value>) {
+    pub fn forget(&mut self, edge: &Map) {
         let id = edge.id();
         let Some(handles) = self.handles.get(id).cloned() else {
             return;
@@ -363,12 +363,7 @@ impl EdgeIndex {
     }
 }
 
-fn connect(
-    connections: &mut Connections,
-    node_id: &str,
-    edge: &Map<String, Value>,
-    handles: &Handles,
-) {
+fn connect(connections: &mut Connections, node_id: &str, edge: &Map, handles: &Handles) {
     let id = edge.id().to_owned();
     if endpoint(edge, "target") == node_id {
         connections
@@ -386,12 +381,7 @@ fn connect(
     }
 }
 
-fn disconnect(
-    connections: &mut Connections,
-    node_id: &str,
-    edge: &Map<String, Value>,
-    handles: &Handles,
-) {
+fn disconnect(connections: &mut Connections, node_id: &str, edge: &Map, handles: &Handles) {
     let id = edge.id();
     if endpoint(edge, "target") == node_id
         && let Some(ids) = connections.inputs.get_mut(&handles.input)
@@ -405,7 +395,7 @@ fn disconnect(
     }
 }
 
-fn error(edge: &Map<String, Value>, code: ViolationCode, reason: impl std::fmt::Display) -> Error {
+fn error(edge: &Map, code: ViolationCode, reason: impl std::fmt::Display) -> Error {
     Error::edge(edge.id(), code, reason)
 }
 
@@ -414,7 +404,7 @@ fn error(edge: &Map<String, Value>, code: ViolationCode, reason: impl std::fmt::
 /// # Errors
 ///
 /// An edge rule the handles break, naming this edge.
-pub fn read_handles(edge: &Map<String, Value>) -> Result<Handles> {
+pub fn read_handles(edge: &Map) -> Result<Handles> {
     let source = handle(edge, "sourceHandle")?;
     let target = handle(edge, "targetHandle")?;
     let output = match source.get("name") {
@@ -457,7 +447,7 @@ pub fn read_handles(edge: &Map<String, Value>) -> Result<Handles> {
     }
 }
 
-fn handle<'e>(edge: &'e Map<String, Value>, key: &str) -> Result<&'e Map<String, Value>> {
+fn handle<'e>(edge: &'e Map, key: &str) -> Result<&'e Map> {
     // A key that is present counts, whatever its value: "data": null is not an object.
     let data = match edge.get("data") {
         None => None,
@@ -525,7 +515,7 @@ fn handle<'e>(edge: &'e Map<String, Value>, key: &str) -> Result<&'e Map<String,
 /// # Errors
 ///
 /// A compared value holds a number that is not finite.
-pub fn edge_changed(before: &Map<String, Value>, after: &Map<String, Value>) -> Result<bool> {
+pub fn edge_changed(before: &Map, after: &Map) -> Result<bool> {
     let keys: IndexSet<&String> = before
         .keys()
         .chain(after.keys())
@@ -558,7 +548,7 @@ pub fn escape_handle(handle: &Value) -> String {
 }
 
 /// Write each handle's missing form from the one present, in place, as the editor spells them.
-pub fn derive_missing_handle_forms(edge: &mut Map<String, Value>) {
+pub fn derive_missing_handle_forms(edge: &mut Map) {
     if !edge.contains_key("data") {
         edge.insert("data".into(), Value::Object(Map::new()));
     }
@@ -646,7 +636,7 @@ pub(crate) fn node_outputs<'g>(
 pub(crate) fn check_edge(
     graph: &impl GraphRead,
     index: &mut EdgeIndex,
-    edge: &Map<String, Value>,
+    edge: &Map,
 ) -> Result<Handles> {
     check_no_note(graph, edge)?;
     let handles = index.handles(edge)?;
@@ -665,7 +655,7 @@ enum Takes {
 }
 
 /// No edge has a note at either end: a note has no handles.
-fn check_no_note(graph: &impl GraphRead, edge: &Map<String, Value>) -> Result<()> {
+fn check_no_note(graph: &impl GraphRead, edge: &Map) -> Result<()> {
     for end in ["source", "target"] {
         let node_id = endpoint(edge, end);
         if !graph.has_node(node_id) {
@@ -687,11 +677,7 @@ fn check_no_note(graph: &impl GraphRead, edge: &Map<String, Value>) -> Result<()
 }
 
 /// The source node has the output the edge leaves from.
-fn check_source_output(
-    graph: &impl GraphRead,
-    edge: &Map<String, Value>,
-    handles: &Handles,
-) -> Result<()> {
+fn check_source_output(graph: &impl GraphRead, edge: &Map, handles: &Handles) -> Result<()> {
     let source = endpoint(edge, "source");
     let found =
         node_outputs(graph, source)?.is_some_and(|outputs| outputs.get(&handles.output).is_some());
@@ -711,11 +697,7 @@ fn check_source_output(
 
 /// The target node has the input the edge enters: a template field, or an
 /// output that declares `allows_loop`. Returns how many edges it takes.
-fn check_target_input(
-    graph: &impl GraphRead,
-    edge: &Map<String, Value>,
-    handles: &Handles,
-) -> Result<Takes> {
+fn check_target_input(graph: &impl GraphRead, edge: &Map, handles: &Handles) -> Result<Takes> {
     let target = endpoint(edge, "target");
     let name = &handles.input.name;
     match handles.input.kind {
@@ -765,7 +747,7 @@ fn check_target_input(
 fn check_input_free(
     graph: &impl GraphRead,
     index: &mut EdgeIndex,
-    edge: &Map<String, Value>,
+    edge: &Map,
     handles: &Handles,
 ) -> Result<()> {
     let id = edge.id();

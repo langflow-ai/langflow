@@ -22,13 +22,15 @@
 //!
 //! Numbers compare as the doubles JavaScript holds. So an integer above 2^53
 //! compares, prints and hashes as the double it rounds to, on purpose: the
-//! editor cannot hold it either. Stored values keep their original text.
+//! editor cannot hold it either. Stored values keep what [`crate::value::Number`]
+//! keeps: an integer or a double, and the text of a number neither holds.
 
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
+use std::io;
 
-use serde_json::{Map, Number, Value};
+use crate::value::{Map, Number, Value};
 use sha2::{Digest, Sha256};
 
 use crate::ops::error::{Error, Result};
@@ -77,8 +79,7 @@ impl From<&Value> for JsonType {
 /// infinite when it is too large for a double.
 #[must_use]
 pub fn as_double(number: &Number) -> f64 {
-    // The text is a valid JSON number, which always parses.
-    number.as_str().parse().unwrap_or(f64::NAN)
+    number.as_f64().unwrap_or(f64::NAN)
 }
 
 /// Whether a number is finite as the double JavaScript reads it. An integer
@@ -92,7 +93,7 @@ pub fn is_finite_number(number: &Number) -> bool {
 /// exponent, which is how Python tells an `int` from a `float`.
 #[must_use]
 pub fn is_integer_text(number: &Number) -> bool {
-    !number.as_str().contains(['.', 'e', 'E'])
+    number.is_integer()
 }
 
 /// Whether a value is a valid table row position: a finite number.
@@ -111,11 +112,11 @@ fn finite_double(number: &Number) -> Result<f64> {
 }
 
 /// Print a number as RFC 8785 does, which is JavaScript's `Number::toString`.
-fn format_number(number: &Number, out: &mut String) -> Result<()> {
+fn format_number(number: &Number, out: &mut impl Out) -> Result<()> {
     let double = finite_double(number)?;
     if is_integer_text(number) {
         // An integer prints exactly while JavaScript holds it exactly.
-        if let Ok(integer) = number.as_str().parse::<i128>()
+        if let Some(integer) = number.as_i128()
             && integer.abs() <= MAX_SAFE_INTEGER
         {
             write!(out, "{integer}").ok();
@@ -126,13 +127,13 @@ fn format_number(number: &Number, out: &mut String) -> Result<()> {
     Ok(())
 }
 
-fn format_double(value: f64, out: &mut String) {
+fn format_double(value: f64, out: &mut impl Out) {
     if value == 0.0 {
-        out.push('0');
+        out.put("0");
         return;
     }
     if value < 0.0 {
-        out.push('-');
+        out.put("-");
     }
     // `{:e}` prints the shortest digits that round-trip, which is also what
     // ECMAScript's Number::toString chooses; only the layout differs.
@@ -143,22 +144,23 @@ fn format_double(value: f64, out: &mut String) {
     // value == 0.<digits> * 10^n
     let n = exponent.parse::<i32>().unwrap_or(0) + 1;
     if k <= n && n <= MAX_PLAIN_EXPONENT {
-        out.push_str(&digits);
-        out.extend(std::iter::repeat_n(
-            '0',
-            usize::try_from(n - k).unwrap_or(0),
-        ));
+        out.put(&digits);
+        for _ in 0..usize::try_from(n - k).unwrap_or(0) {
+            out.put("0");
+        }
     } else if 0 < n && n <= MAX_PLAIN_EXPONENT {
         let (whole, fraction) = digits.split_at(usize::try_from(n).unwrap_or(0));
         write!(out, "{whole}.{fraction}").ok();
     } else if MIN_PLAIN_EXPONENT < n && n <= 0 {
-        out.push_str("0.");
-        out.extend(std::iter::repeat_n('0', usize::try_from(-n).unwrap_or(0)));
-        out.push_str(&digits);
+        out.put("0.");
+        for _ in 0..usize::try_from(-n).unwrap_or(0) {
+            out.put("0");
+        }
+        out.put(&digits);
     } else {
         let e = n - 1;
         let (first, rest) = digits.split_at(1);
-        out.push_str(first);
+        out.put(first);
         if !rest.is_empty() {
             write!(out, ".{rest}").ok();
         }
@@ -174,28 +176,41 @@ pub fn utf16_cmp(left: &str, right: &str) -> Ordering {
     left.encode_utf16().cmp(right.encode_utf16())
 }
 
-fn write_string(value: &str, out: &mut String) {
-    // serde_json escapes exactly what RFC 8785 requires: `"`, `\` and the
-    // control characters, with the short forms where JSON has them.
-    out.push_str(&Value::from(value).to_string());
+/// Where canonical text goes: a byte buffer, or the hash directly.
+trait Out: io::Write {
+    /// Write text. Canonical text goes to memory, which cannot fail.
+    fn put(&mut self, text: &str) {
+        self.write_all(text.as_bytes())
+            .expect("canonical text goes to memory");
+    }
 }
 
-fn write_canonical(value: &Value, out: &mut String) -> Result<()> {
+impl<W: io::Write> Out for W {}
+
+/// Write a string as RFC 8785 does: `"` and `\` escaped, and the control
+/// characters, with the short forms where JSON has them. That is exactly
+/// what `serde_json` writes, so its writer writes it, and the hash cannot
+/// change.
+fn write_string(value: &str, out: &mut impl Out) {
+    serde_json::to_writer(&mut *out, value).expect("canonical text goes to memory");
+}
+
+fn write_canonical<W: Out>(value: &Value, out: &mut W) -> Result<()> {
     match value {
-        Value::Null => out.push_str("null"),
-        Value::Bool(true) => out.push_str("true"),
-        Value::Bool(false) => out.push_str("false"),
+        Value::Null => out.put("null"),
+        Value::Bool(true) => out.put("true"),
+        Value::Bool(false) => out.put("false"),
         Value::Number(number) => format_number(number, out)?,
         Value::String(string) => write_string(string, out),
         Value::Array(items) => {
-            write_list(out, ('[', ']'), items, write_canonical)?;
+            write_list(out, ("[", "]"), items, write_canonical)?;
         }
         Value::Object(map) => {
             let mut keys: Vec<&String> = map.keys().collect();
             keys.sort_by(|a, b| utf16_cmp(a, b));
-            write_list(out, ('{', '}'), keys, |key, out| {
+            write_list(out, ("{", "}"), keys, |key, out| {
                 write_string(key, out);
-                out.push(':');
+                out.put(":");
                 write_canonical(&map[key], out)
             })?;
         }
@@ -208,10 +223,14 @@ fn write_canonical(value: &Value, out: &mut String) -> Result<()> {
 /// # Errors
 ///
 /// A number that is not finite as JavaScript reads it.
+///
+/// # Panics
+///
+/// Never in practice: the text goes to memory, and it is UTF-8.
 pub fn canonical_json(value: &Value) -> Result<String> {
-    let mut out = String::new();
+    let mut out = Vec::new();
     write_canonical(value, &mut out)?;
-    Ok(out)
+    Ok(String::from_utf8(out).expect("canonical text is UTF-8"))
 }
 
 // --- Value equality ---------------------------------------------------------------------
@@ -266,7 +285,7 @@ pub fn values_equal(left: &Value, right: &Value) -> Result<bool> {
 /// The string is parsed as strict JSON, as JavaScript's `JSON.parse` reads
 /// it: `NaN` and `Infinity` do not parse.
 #[must_use]
-pub fn parse_handle(handle: &Value) -> Option<Map<String, Value>> {
+pub fn parse_handle(handle: &Value) -> Option<Map> {
     let text = handle.as_str()?.replace(HANDLE_QUOTE, "\"");
     match serde_json::from_str(&text) {
         Ok(Value::Object(object)) => Some(object),
@@ -323,6 +342,9 @@ enum Canon<'a> {
     Object(HashMap<&'a str, Canon<'a>>),
     /// A collection ordered for serialization.
     Array(Vec<Canon<'a>>),
+    /// A node of a graph keyed for comparison, taken as it is. The comparison
+    /// makes it canonical only when it differs from the other node as it is.
+    Node(&'a Value),
 }
 
 /// Whether the canonical form keys collections by id, for comparison, or
@@ -333,7 +355,7 @@ enum Mode {
     Ordered,
 }
 
-fn without(map: &Map<String, Value>, hidden: impl Fn(&str) -> bool) -> HashMap<&str, Canon<'_>> {
+fn without(map: &Map, hidden: impl Fn(&str) -> bool) -> HashMap<&str, Canon<'_>> {
     map.iter()
         .filter(|(key, _)| !hidden(key))
         .map(|(key, value)| (key.as_str(), Canon::Raw(value)))
@@ -351,12 +373,10 @@ fn canonical_graph(flow: &Value, mode: Mode) -> Canon<'_> {
         };
         let entries: Vec<Canon<'_>> = entries
             .iter()
-            .map(|entry| {
-                if key == "nodes" {
-                    canonical_node(entry, mode)
-                } else {
-                    canonical_edge(entry)
-                }
+            .map(|entry| match (key, mode) {
+                ("nodes", Mode::Keyed) => Canon::Node(entry),
+                ("nodes", Mode::Ordered) => canonical_node(entry, mode),
+                _ => canonical_edge(entry),
             })
             .collect();
         let collection = match mode {
@@ -380,7 +400,7 @@ fn canonical_graph(flow: &Value, mode: Mode) -> Canon<'_> {
 /// The string member `key` of a canonical entry, borrowed from the graph.
 fn entry_id<'a>(entry: &Canon<'a>, key: &str) -> Option<&'a str> {
     match entry {
-        Canon::Raw(value) => value.as_object()?.get(key)?.as_str(),
+        Canon::Raw(value) | Canon::Node(value) => value.as_object()?.get(key)?.as_str(),
         Canon::Object(map) => match map.get(key)? {
             Canon::Raw(value) => value.as_str(),
             _ => None,
@@ -483,6 +503,9 @@ enum View<'c, 'a> {
     Array(&'c [Canon<'a>]),
     /// A value the canonical form shares with the graph, or a handle's object.
     Value(&'c Value),
+    /// A node taken as it is ([`Canon::Node`]). Only [`canon_equal`] reads it,
+    /// and it makes the node canonical first when it needs to.
+    Node(&'a Value),
 }
 
 impl<'c, 'a> View<'c, 'a> {
@@ -492,6 +515,7 @@ impl<'c, 'a> View<'c, 'a> {
             Canon::Handle(value) => Self::Value(value),
             Canon::Object(map) => Self::Object(map),
             Canon::Array(items) => Self::Array(items),
+            Canon::Node(node) => Self::Node(node),
         }
     }
 
@@ -500,6 +524,7 @@ impl<'c, 'a> View<'c, 'a> {
             Self::Object(_) => JsonType::Object,
             Self::Array(_) => JsonType::Array,
             Self::Value(value) => JsonType::from(value),
+            Self::Node(_) => unreachable!("{NODE_READ}"),
         }
     }
 
@@ -510,6 +535,7 @@ impl<'c, 'a> View<'c, 'a> {
             Self::Value(Value::Object(map)) => map.len(),
             Self::Value(Value::Array(items)) => items.len(),
             Self::Value(_) => 0,
+            Self::Node(_) => unreachable!("{NODE_READ}"),
         }
     }
 
@@ -518,6 +544,7 @@ impl<'c, 'a> View<'c, 'a> {
             Self::Object(map) => map.get(key).map(Self::of),
             Self::Value(Value::Object(map)) => map.get(key).map(Self::Value),
             Self::Array(_) | Self::Value(_) => None,
+            Self::Node(_) => unreachable!("{NODE_READ}"),
         }
     }
 
@@ -526,6 +553,7 @@ impl<'c, 'a> View<'c, 'a> {
             Self::Array(items) => items.get(index).map(Self::of),
             Self::Value(Value::Array(items)) => items.get(index).map(Self::Value),
             Self::Object(_) | Self::Value(_) => None,
+            Self::Node(_) => unreachable!("{NODE_READ}"),
         }
     }
 
@@ -548,14 +576,23 @@ impl<'c, 'a> View<'c, 'a> {
                 }
             }
             Self::Array(_) | Self::Value(_) => {}
+            Self::Node(_) => unreachable!("{NODE_READ}"),
         }
         Ok(true)
     }
 }
 
+const NODE_READ: &str = "canon_equal makes a node canonical before it reads it";
+
 fn canon_equal(left: View<'_, '_>, right: View<'_, '_>) -> Result<bool> {
-    if let (View::Value(left), View::Value(right)) = (left, right) {
-        return values_equal(left, right);
+    match (left, right) {
+        (View::Value(left), View::Value(right)) => return values_equal(left, right),
+        (View::Node(left), View::Node(right)) => return nodes_equal(left, right),
+        (View::Node(node), other) | (other, View::Node(node)) => {
+            let node = canonical_node(node, Mode::Keyed);
+            return canon_equal(View::of(&node), other);
+        }
+        _ => {}
     }
     let kind = left.json_type();
     if kind != right.json_type() || left.len() != right.len() {
@@ -576,39 +613,58 @@ fn canon_equal(left: View<'_, '_>, right: View<'_, '_>) -> Result<bool> {
     Ok(true)
 }
 
-fn write_canon(view: View<'_, '_>, out: &mut String) -> Result<()> {
+/// Whether two nodes have the same canonical form.
+///
+/// Two nodes that are equal as they are have the same canonical form, and
+/// the comparison skips building it. The canonical form only leaves out
+/// display-only keys and keys table rows by id: it parses nothing, and it
+/// reads only numbers that [`values_equal`] has checked. Any other answer,
+/// including an error, comes from the canonical forms.
+fn nodes_equal(left: &Value, right: &Value) -> Result<bool> {
+    if matches!(values_equal(left, right), Ok(true)) {
+        return Ok(true);
+    }
+    let (left, right) = (
+        canonical_node(left, Mode::Keyed),
+        canonical_node(right, Mode::Keyed),
+    );
+    canon_equal(View::of(&left), View::of(&right))
+}
+
+fn write_canon<W: Out>(view: View<'_, '_>, out: &mut W) -> Result<()> {
     match view {
         View::Value(value) => write_canonical(value, out),
         View::Object(map) => {
             let mut keys: Vec<&&str> = map.keys().collect();
             keys.sort_by(|a, b| utf16_cmp(a, b));
-            write_list(out, ('{', '}'), keys, |key, out| {
+            write_list(out, ("{", "}"), keys, |key, out| {
                 write_string(key, out);
-                out.push(':');
+                out.put(":");
                 write_canon(View::of(&map[key]), out)
             })
         }
-        View::Array(items) => write_list(out, ('[', ']'), items, |item, out| {
+        View::Array(items) => write_list(out, ("[", "]"), items, |item, out| {
             write_canon(View::of(item), out)
         }),
+        View::Node(node) => write_canon(View::of(&canonical_node(node, Mode::Ordered)), out),
     }
 }
 
 /// Write `items` between `open` and `close`, separated by commas.
-fn write_list<T>(
-    out: &mut String,
-    (open, close): (char, char),
+fn write_list<T, W: Out>(
+    out: &mut W,
+    (open, close): (&str, &str),
     items: impl IntoIterator<Item = T>,
-    mut write_item: impl FnMut(T, &mut String) -> Result<()>,
+    mut write_item: impl FnMut(T, &mut W) -> Result<()>,
 ) -> Result<()> {
-    out.push(open);
+    out.put(open);
     for (index, item) in items.into_iter().enumerate() {
         if index > 0 {
-            out.push(',');
+            out.put(",");
         }
         write_item(item, out)?;
     }
-    out.push(close);
+    out.put(close);
     Ok(())
 }
 
@@ -617,11 +673,15 @@ fn write_list<T>(
 /// # Errors
 ///
 /// A number that is not finite as JavaScript reads it.
+///
+/// # Panics
+///
+/// Never in practice: the text goes to memory, and it is UTF-8.
 pub fn canonical_graph_json(flow: &Value) -> Result<String> {
     let canon = canonical_graph(flow, Mode::Ordered);
-    let mut out = String::new();
+    let mut out = Vec::new();
     write_canon(View::of(&canon), &mut out)?;
-    Ok(out)
+    Ok(String::from_utf8(out).expect("canonical text is UTF-8"))
 }
 
 /// The SHA-256 hex digest of flow data's canonical graph form.
@@ -629,8 +689,21 @@ pub fn canonical_graph_json(flow: &Value) -> Result<String> {
 /// # Errors
 ///
 /// A number that is not finite as JavaScript reads it.
+///
+/// # Panics
+///
+/// Never in practice: the text goes to memory, and it is UTF-8.
 pub fn graph_hash(flow: &Value) -> Result<String> {
-    let digest = Sha256::digest(canonical_graph_json(flow)?.as_bytes());
+    // The text goes straight into the hash, through a buffer that keeps the
+    // many short writes (braces, commas) from reaching the hash one by one.
+    let canon = canonical_graph(flow, Mode::Ordered);
+    let mut out = io::BufWriter::with_capacity(1 << 16, Sha256::new());
+    write_canon(View::of(&canon), &mut out)?;
+    let digest = out
+        .into_inner()
+        .map_err(|_| ())
+        .expect("canonical text goes to memory")
+        .finalize();
     let mut hex = String::with_capacity(64);
     for byte in digest {
         write!(hex, "{byte:02x}").ok();
@@ -642,16 +715,52 @@ pub fn graph_hash(flow: &Value) -> Result<String> {
 ///
 /// # Errors
 ///
-/// A compared number that is not finite as JavaScript reads it.
+/// A number that is not finite as JavaScript reads it, in either graph's
+/// canonical form: the graphs that [`graph_hash`] refuses.
 pub fn graphs_equal(left: &Value, right: &Value) -> Result<bool> {
     let left = canonical_graph(left, Mode::Keyed);
     let right = canonical_graph(right, Mode::Keyed);
-    canon_equal(View::of(&left), View::of(&right))
+    let equal = canon_equal(View::of(&left), View::of(&right))?;
+    // Equal graphs had every number read. Graphs that differ stopped at the
+    // first difference, so they are checked to the end, or which answer a
+    // number that is not finite gets would depend on where the difference is.
+    if !equal {
+        check_finite(View::of(&left))?;
+        check_finite(View::of(&right))?;
+    }
+    Ok(equal)
+}
+
+/// Refuse a number in a canonical form that is not finite.
+fn check_finite(view: View<'_, '_>) -> Result<()> {
+    match view {
+        View::Value(value) => check_finite_value(value),
+        View::Object(map) => map
+            .values()
+            .try_for_each(|value| check_finite(View::of(value))),
+        View::Array(items) => items
+            .iter()
+            .try_for_each(|item| check_finite(View::of(item))),
+        // A node whose numbers are all finite as it is has a canonical form
+        // with finite numbers. Only another node needs its canonical form,
+        // which leaves out display-only keys and what they hold.
+        View::Node(node) => check_finite_value(node)
+            .or_else(|_| check_finite(View::of(&canonical_node(node, Mode::Keyed)))),
+    }
+}
+
+fn check_finite_value(value: &Value) -> Result<()> {
+    match value {
+        Value::Number(number) => finite_double(number).map(drop),
+        Value::Array(items) => items.iter().try_for_each(check_finite_value),
+        Value::Object(map) => map.values().try_for_each(check_finite_value),
+        Value::Null | Value::Bool(_) | Value::String(_) => Ok(()),
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use serde_json::json;
+    use crate::json;
 
     use super::*;
 
@@ -802,5 +911,158 @@ mod tests {
         changed["nodes"][1]["data"]["node"]["template"]["x"] = json!(1);
         assert!(!graphs_equal(&left, &changed).unwrap());
         assert_ne!(graph_hash(&left).unwrap(), graph_hash(&changed).unwrap());
+    }
+
+    #[rustfmt::skip]
+        const FIXTURES: [&str; 12] = [
+            include_str!("../../../../fixtures/apply_cases.json"),
+            include_str!("../../../../fixtures/backward_cases.json"),
+            include_str!("../../../../fixtures/canonical_cases.json"),
+            include_str!("../../../../fixtures/diff_cases.json"),
+            include_str!("../../../../fixtures/editor_cases.json"),
+            include_str!("../../../../fixtures/limit_cases.json"),
+            include_str!("../../../../fixtures/merge_cases.json"),
+            include_str!("../../../../fixtures/property_cases.json"),
+            include_str!("../../../../fixtures/repair_cases.json"),
+            include_str!("../../../../fixtures/restore_cases.json"),
+            include_str!("../../../../fixtures/table_cases.json"),
+            include_str!("../../../../fixtures/validation_cases.json"),
+        ];
+
+    /// Every graph in every fixture case.
+    fn fixture_graphs() -> Vec<Value> {
+        let mut out = Vec::new();
+        for text in FIXTURES {
+            let file: Value = serde_json::from_str(text).unwrap();
+            let mut found = Vec::new();
+            graphs(&file, &mut found);
+            out.extend(found.into_iter().cloned());
+        }
+        out
+    }
+
+    #[test]
+    fn graph_hash_streams_the_canonical_text() {
+        let all = fixture_graphs();
+        assert!(all.len() > 500, "only {} graphs", all.len());
+        for graph in &all {
+            let Ok(text) = canonical_graph_json(graph) else {
+                assert!(graph_hash(graph).is_err());
+                continue;
+            };
+            let digest = Sha256::digest(text.as_bytes());
+            let hex = digest.iter().fold(String::new(), |mut hex, byte| {
+                write!(hex, "{byte:02x}").ok();
+                hex
+            });
+            assert_eq!(graph_hash(graph).unwrap(), hex, "{graph}");
+        }
+    }
+
+    /// The comparison that makes every node canonical before it compares
+    /// anything: what `graphs_equal` did before it compared nodes as they are.
+    fn graphs_equal_eager(left: &Value, right: &Value) -> Result<bool> {
+        fn eager(canon: Canon<'_>) -> Canon<'_> {
+            match canon {
+                Canon::Node(node) => canonical_node(node, Mode::Keyed),
+                Canon::Object(map) => Canon::Object(
+                    map.into_iter()
+                        .map(|(key, value)| (key, eager(value)))
+                        .collect(),
+                ),
+                Canon::Array(items) => Canon::Array(items.into_iter().map(eager).collect()),
+                other => other,
+            }
+        }
+        let left = eager(canonical_graph(left, Mode::Keyed));
+        let right = eager(canonical_graph(right, Mode::Keyed));
+        canon_equal(View::of(&left), View::of(&right))
+    }
+
+    /// Every graph in a fixture case, nested ones included.
+    fn graphs<'v>(value: &'v Value, out: &mut Vec<&'v Value>) {
+        match value {
+            Value::Object(map) => {
+                if map.get("nodes").is_some_and(Value::is_array) {
+                    out.push(value);
+                }
+                map.values().for_each(|value| graphs(value, out));
+            }
+            Value::Array(items) => items.iter().for_each(|value| graphs(value, out)),
+            _ => {}
+        }
+    }
+
+    /// The graph with its nodes in reverse order, and `number` under `key`
+    /// on each node.
+    fn reshuffled(graph: &Value, key: &str, number: &str) -> Value {
+        let mut graph = graph.clone();
+        if let Some(Value::Array(nodes)) = graph.get_mut("nodes") {
+            nodes.reverse();
+            for node in nodes.iter_mut().filter_map(Value::as_object_mut) {
+                node.insert(key.to_owned(), serde_json::from_str(number).unwrap());
+            }
+        }
+        graph
+    }
+
+    #[test]
+    fn graphs_equal_answers_as_the_eager_comparison() {
+        let hidden = NODE_SCHEMA
+            .node_view_state
+            .iter()
+            .min()
+            .expect("a node view-state key");
+        assert!(!NODE_SCHEMA.node_view_state.contains("compared"));
+        let mut pairs = 0;
+        for text in FIXTURES {
+            let file: Value = serde_json::from_str(text).unwrap();
+            let cases = file
+                .as_object()
+                .into_iter()
+                .flat_map(crate::value::Map::values)
+                .filter_map(Value::as_array)
+                .flatten();
+            for case in cases {
+                let mut found = Vec::new();
+                graphs(case, &mut found);
+                // Equal in canonical form but not as they are: a display-only
+                // key, with a finite number and with one that is not. And a
+                // number that is not finite where the comparison reads it,
+                // which it refuses.
+                let shuffled: Vec<Value> = found
+                    .iter()
+                    .flat_map(|graph| {
+                        [
+                            reshuffled(graph, hidden, "1"),
+                            reshuffled(graph, hidden, "1e400"),
+                            reshuffled(graph, "compared", "1e400"),
+                        ]
+                    })
+                    .collect();
+                let all: Vec<(&Value, bool)> = found
+                    .into_iter()
+                    .chain(&shuffled)
+                    .map(|graph| (graph, graph_hash(graph).is_err()))
+                    .collect();
+                for &(left, left_refused) in &all {
+                    for &(right, right_refused) in &all {
+                        // A graph whose hash is refused is refused, whatever
+                        // the other graph is. The eager comparison stops at
+                        // the first difference, so it may answer not equal.
+                        let (new, old) =
+                            (graphs_equal(left, right), graphs_equal_eager(left, right));
+                        if left_refused || right_refused {
+                            assert_eq!(new, Err(Error::non_finite()), "{left}\n{right}");
+                            assert!(!matches!(old, Ok(true)), "{left}\n{right}");
+                        } else {
+                            assert_eq!(new, old, "{left}\n{right}");
+                        }
+                        pairs += 1;
+                    }
+                }
+            }
+        }
+        assert!(pairs > 10_000, "only {pairs} pairs");
     }
 }

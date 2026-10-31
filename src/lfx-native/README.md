@@ -7,7 +7,7 @@ The server and the editor use the same engine, through two thin bindings:
 - `lfx-python`: the Python package `lfx-native` (`import lfx_native`).
 - `lfx-wasm`: the npm package `lfx-native`, a WebAssembly build for the editor and for Node.
 
-The bindings hold no rules. Each binding function calls one function of `lfx::ops::api`, which takes JSON text and returns JSON text.
+The bindings hold no rules. Each binding function calls one function of `lfx::ops::api`, which takes JSON text or an already read value and returns a value. The browser binding takes and returns JSON text. The Python binding takes Python values, with `bytes` as JSON text, and returns Python values: reading and building Python objects costs a quarter to a third of writing and parsing the same graph as JSON.
 
 ## Layout
 
@@ -18,6 +18,7 @@ src/lfx-native/
   crates/
     lfx/                 the `lfx` crate
       src/ops/           lfx::ops, the flow operation engine
+      src/value.rs       lfx::value, the JSON value the engine holds
       tests/fixtures/    runs every shared fixture file, one test per case
     lfx-python/          the Python binding (PyO3, maturin)
       python/lfx_native/ the Python package around the native module
@@ -32,9 +33,10 @@ The modules of `lfx::ops`:
 
 | Module | What it holds |
 | --- | --- |
-| `api` | JSON in, JSON out: the functions the bindings call |
+| `api` | the functions the bindings call: JSON text or values in, values out |
 | `ops` | operation types, the strict parser, and the dump |
 | `state` | `GraphState`, the indexed graph that apply works on, kept between batches |
+| `plain` | `GraphPlain`, a graph read once and kept unindexed, to validate, repair, hash, compare and diff it without reading it again |
 | `apply` | apply, with backward operations |
 | `diff` | diff, and the check that its operations replay to the target |
 | `validate` | graph rules and violations, with codes and resolutions |
@@ -45,7 +47,6 @@ The modules of `lfx::ops`:
 | `schema` | the node schema (`node_schema.json`, embedded) |
 | `canonical` | canonical form, number printing, `graph_hash` |
 | `restore` | restore fixes, from both sides |
-| `write` | the engine's part of a save, in one call |
 | `ids` | random ids in the editor's formats |
 | `error` | errors, with a kind and a stable code |
 
@@ -67,8 +68,7 @@ This table maps each part of the engine to its callers today, in the Python engi
 
 | Part | Python (`lfx_native.ops`) | Backend callers |
 | --- | --- | --- |
-| The save: validate, repair, derive | `prepare_write`, or `validate`, `repair`, `derive` | `flow_history/recorder.py` (every graph write: PATCH, PUT, import, version activation, the assistant, file sync). The recorder numbers the operations and packs them into rows itself. |
-| Diff | `diff` | through `derive` in the recorder |
+| The save: validate, repair, diff | `validate`, `repair`, `ops_diff`, or the same methods on `GraphPlain`, which reads each graph once | `flow_history/recorder.py` (every graph write: PATCH, PUT, import, version activation, the assistant, file sync). The recorder calls them in turn, and numbers the operations and packs them into rows itself. |
 | Graph hash | `graph_hash` | checkpoints and the check that the stored graph matches its latest revision (`recorder.py`), replay (`flow_history/replay.py`) |
 | Restore fix check | `apply_restore_fixes` | revision restore (`api/v1/flow_revisions.py`), version restore (`api/v1/flow_version.py`) |
 | New edge ids | `new_edge_id` | flow expansion (`processing/expand_flow.py`), the flow builder (`lfx/graph/flow_builder/connect.py`) |

@@ -20,8 +20,9 @@ use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
 
+use crate::value::{Map, Value};
 use indexmap::{IndexMap, IndexSet};
-use serde_json::{Map, Value};
+use serde::ser::{Serialize, SerializeMap, Serializer};
 
 use crate::ops::edges::{EdgeIndex, GraphRead};
 use crate::ops::entry::EntryExt;
@@ -275,7 +276,7 @@ impl GraphRead for Graph {
             .expect("a read of object keys cannot fail")
     }
 
-    fn edge(&self, id: &str) -> Option<&Map<String, Value>> {
+    fn edge(&self, id: &str) -> Option<&Map> {
         self.edges.get(id).map(Edge::as_map)
     }
 
@@ -386,7 +387,7 @@ impl Lists {
 pub struct GraphState {
     /// The flow's top-level object; `nodes` and `edges` hold placeholders.
     /// No operation writes its other keys, which are view state.
-    root: Map<String, Value>,
+    root: Map,
     pub(crate) graph: Graph,
     pub(crate) edge_index: EdgeIndex,
     pub(crate) lists: Lists,
@@ -404,6 +405,17 @@ impl GraphState {
     /// The graph breaks a structural rule.
     pub fn new(flow: Value) -> Result<Self> {
         validate_flow_data(&flow, Numbers::Skip, "flow.data", None)?;
+        Self::from_checked(flow)
+    }
+
+    /// Load a flow graph whose structure a check has already passed, and
+    /// build its indexes.
+    ///
+    /// # Errors
+    ///
+    /// The graph is not an object, or a node or an edge does not have its
+    /// shape: only for a graph that no check passed.
+    pub(crate) fn from_checked(flow: Value) -> Result<Self> {
         let Value::Object(mut root) = flow else {
             return Err(Error::graph_message("flow data must be an object"));
         };
@@ -453,6 +465,39 @@ impl GraphState {
             out.insert(key.clone(), value);
         }
         Value::Object(out)
+    }
+
+    /// The graph as JSON text: the text of [`GraphState::to_value`], written
+    /// from the graph without copying it.
+    ///
+    /// # Panics
+    ///
+    /// A JSON value that `serde_json` cannot write, which a graph never holds:
+    /// every key is a string.
+    #[must_use]
+    pub fn to_json(&self) -> String {
+        serde_json::to_string(&self.json()).expect("a graph's keys are strings")
+    }
+
+    /// The graph, to serialize as JSON: it writes what [`GraphState::to_json`]
+    /// writes, with any `serde_json` formatter.
+    #[must_use]
+    pub fn json(&self) -> impl Serialize + '_ {
+        GraphJson(self)
+    }
+
+    /// The graph's top-level keys in order, each with what [`GraphState::to_value`]
+    /// puts there, borrowed from the graph: for a binding that builds the graph
+    /// in its own language without a copy.
+    pub fn entries(&self) -> impl Iterator<Item = (&str, Entry<'_>)> {
+        self.root.iter().map(|(key, value)| {
+            let entry = match key.as_str() {
+                "nodes" => Entry::Nodes(Nodes(&self.graph.nodes)),
+                "edges" => Entry::Edges(Edges(&self.graph.edges)),
+                _ => Entry::Value(value),
+            };
+            (key.as_str(), entry)
+        })
     }
 
     /// The graph as a JSON value, without copying it.
@@ -571,10 +616,7 @@ impl GraphState {
 }
 
 /// Nodes or edges by id, in their order, each made by `make`.
-fn by_id<T>(
-    items: Vec<Value>,
-    make: fn(Map<String, Value>) -> Result<T>,
-) -> Result<IndexMap<String, T>> {
+fn by_id<T>(items: Vec<Value>, make: fn(Map) -> Result<T>) -> Result<IndexMap<String, T>> {
     items
         .into_iter()
         .map(|item| {
@@ -598,11 +640,78 @@ impl FromStr for GraphState {
 /// The graph as JSON text.
 impl fmt::Display for GraphState {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_value())
+        f.write_str(&self.to_json())
     }
 }
 
-fn take_list(root: &mut Map<String, Value>, key: &str) -> Vec<Value> {
+/// Writes a [`GraphState`] as [`GraphState::to_value`] builds it: the root's
+/// keys in order, with the nodes and edges in place of their placeholders.
+struct GraphJson<'s>(&'s GraphState);
+
+impl Serialize for GraphJson<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+        let mut map = serializer.serialize_map(Some(self.0.root.len()))?;
+        for (key, entry) in self.0.entries() {
+            match entry {
+                Entry::Value(value) => map.serialize_entry(key, value)?,
+                Entry::Nodes(nodes) => map.serialize_entry(key, &NodesJson(nodes))?,
+                Entry::Edges(edges) => map.serialize_entry(key, &EdgesJson(edges))?,
+            }
+        }
+        map.end()
+    }
+}
+
+struct NodesJson<'s>(Nodes<'s>);
+
+impl Serialize for NodesJson<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+        serializer.collect_seq(self.0.iter())
+    }
+}
+
+struct EdgesJson<'s>(Edges<'s>);
+
+impl Serialize for EdgesJson<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+        serializer.collect_seq(self.0.iter())
+    }
+}
+
+/// A top-level entry of a [`GraphState`], borrowed from it ([`GraphState::entries`]).
+#[derive(Debug, Clone, Copy)]
+pub enum Entry<'s> {
+    /// A key that no operation writes, as stored.
+    Value(&'s Value),
+    /// The nodes, in the graph's order.
+    Nodes(Nodes<'s>),
+    /// The edges, in the graph's order.
+    Edges(Edges<'s>),
+}
+
+/// The nodes of a [`GraphState`], borrowed from it.
+#[derive(Debug, Clone, Copy)]
+pub struct Nodes<'s>(&'s Layered<Node>);
+
+impl<'s> Nodes<'s> {
+    /// Each node's JSON object.
+    pub fn iter(self) -> impl Iterator<Item = &'s Value> {
+        self.0.values().map(Node::as_value)
+    }
+}
+
+/// The edges of a [`GraphState`], borrowed from it.
+#[derive(Debug, Clone, Copy)]
+pub struct Edges<'s>(&'s Layered<Edge>);
+
+impl<'s> Edges<'s> {
+    /// Each edge's JSON object.
+    pub fn iter(self) -> impl Iterator<Item = &'s Map> {
+        self.0.values().map(Edge::as_map)
+    }
+}
+
+fn take_list(root: &mut Map, key: &str) -> Vec<Value> {
     match root.get_mut(key) {
         Some(value) => match std::mem::take(value) {
             Value::Array(items) => items,
