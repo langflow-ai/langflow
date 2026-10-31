@@ -5,6 +5,9 @@ type FaxForAgentsIconProps = SVGProps<SVGSVGElement> & {
   isDark?: boolean;
 };
 
-export const FaxForAgentsIcon = forwardRef<SVGSVGElement, FaxForAgentsIconProps>(
-  ({ isDark: _isDark, ...props }, ref) => <FaxForAgents ref={ref} {...props} />,
-);
+export const FaxForAgentsIcon = forwardRef<
+  SVGSVGElement,
+  FaxForAgentsIconProps
+>(({ isDark: _isDark, ...props }, ref) => (
+  <FaxForAgents ref={ref} {...props} />
+));
