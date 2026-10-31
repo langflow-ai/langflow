@@ -12,12 +12,13 @@ negative budget so its ``input_deadline_at`` is already in the past.
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
 from langflow.services.background_execution.live_bus import InMemoryLiveBus
 from langflow.services.background_execution.runner import HUMAN_INPUT_REQUIRED_EVENT, JobRunner
-from langflow.services.database.models.jobs.model import JobStatus
+from langflow.services.database.models.jobs.model import Job, JobStatus
 from lfx.workflow.adapters import StreamAdapterContext, get_stream_adapter
 
 
@@ -160,24 +161,32 @@ async def _wait_for_status(job_service, job_id, target, *, attempts=100):
 async def test_paused_time_does_not_count_against_compute_timeout(real_services_job_service) -> None:
     """A run resumed after sitting suspended still completes.
 
-    The compute timeout never accrues across the suspend window (resume re-enqueues a
-    fresh pass), so a small ``background_job_timeout`` does not kill a resumed run.
+    Backdate the suspended job beyond its compute budget without sleeping. Resume
+    gets a fresh budget with enough headroom for real database work on CI runners.
     """
     from langflow.services.background_execution.service import BackgroundExecutionService
-    from langflow.services.deps import get_settings_service
+    from langflow.services.deps import get_settings_service, session_scope
 
     job_service = real_services_job_service
     user_id, job_id = await _suspend_a_job(job_service, request_id="req-pause", input_deadline_s=None)
 
+    async with session_scope() as session:
+        job = await session.get(Job, job_id)
+        assert job is not None
+        assert job.status == JobStatus.SUSPENDED
+        job.created_timestamp = datetime.now(timezone.utc) - timedelta(hours=1)
+        session.add(job)
+        await session.flush()
+
     settings = get_settings_service().settings
     original = settings.background_job_timeout
-    settings.background_job_timeout = 1.0
+    settings.background_job_timeout = 30.0
     svc = BackgroundExecutionService(settings_service=get_settings_service(), frame_source_factory=_completing_factory)
     await svc.start()
     try:
         accepted = await svc.resume_job(job_id, _StubUser(user_id), request_id="req-pause", decision={"choice": "go"})
         assert accepted
-        job = await _wait_for_status(job_service, job_id, JobStatus.COMPLETED)
+        job = await _wait_for_status(job_service, job_id, JobStatus.COMPLETED, attempts=700)
     finally:
         settings.background_job_timeout = original
         await svc.stop()

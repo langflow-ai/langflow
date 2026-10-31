@@ -64,3 +64,32 @@ it("lists each action for a shared scope and distinguishes conditional use", () 
     true,
   );
 });
+
+it("keeps connection scopes checked and explains that they are required", () => {
+  const toggle = jest.fn();
+  render(
+    <ScopeChecklist
+      providerId="jira"
+      scopes={["offline_access"]}
+      selected={new Set()}
+      requiredScopes={["offline_access"]}
+      onToggle={toggle}
+      requirements={[
+        {
+          capabilityId: "jira.issue.created",
+          displayName: "On Issue Created",
+          risk: "read",
+          requiredScopes: ["offline_access"],
+          conditionalScopes: [],
+        },
+      ]}
+    />,
+  );
+  const scope = screen.getByTestId("connection-scope-offline_access");
+  expect(scope).toBeChecked();
+  expect(scope).toBeDisabled();
+  expect(screen.getByText("Required for this connection")).toBeVisible();
+  expect(screen.queryByText("On Issue Created")).not.toBeInTheDocument();
+  fireEvent.click(scope);
+  expect(toggle).not.toHaveBeenCalled();
+});
