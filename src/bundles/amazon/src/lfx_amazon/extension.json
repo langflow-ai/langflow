@@ -12,5 +12,74 @@
       "name": "amazon",
       "path": "components/amazon"
     }
+  ],
+  "providers": [
+    {
+      "name": "Amazon Bedrock",
+      "provider_id": "amazon-bedrock",
+      "display_name": "Amazon Bedrock",
+      "metadata": {
+        "icon": "Amazon",
+        "max_tokens_field_name": "max_tokens",
+        "variables": [
+          {
+            "variable_name": "AWS Bearer Token Bedrock",
+            "variable_key": "AWS_BEARER_TOKEN_BEDROCK",
+            "description": "Bedrock API key (bearer token) for authentication. Falls back to AWS_BEARER_TOKEN_BEDROCK environment variable.",
+            "required": true,
+            "is_secret": true,
+            "is_list": false,
+            "options": [],
+            "langchain_param": "api_key",
+            "component_metadata": {
+              "mapping_field": "api_key",
+              "required": false,
+              "advanced": false,
+              "info": "Falls back to AWS_BEARER_TOKEN_BEDROCK environment variable"
+            }
+          },
+          {
+            "variable_name": "AWS Region",
+            "variable_key": "AWS_REGION",
+            "description": "AWS region for Bedrock (e.g. us-east-1, eu-central-1). Falls back to AWS_REGION environment variable.",
+            "required": false,
+            "is_secret": false,
+            "is_list": false,
+            "combobox": true,
+            "options": [
+              "us-east-1",
+              "us-east-2",
+              "us-west-1",
+              "us-west-2",
+              "eu-central-1",
+              "eu-west-1",
+              "eu-west-2",
+              "eu-west-3",
+              "eu-north-1",
+              "ap-northeast-1",
+              "ap-southeast-1",
+              "ap-southeast-2"
+            ],
+            "langchain_param": "region_name",
+            "component_metadata": {
+              "mapping_field": "region_name",
+              "required": false,
+              "advanced": false,
+              "info": "Falls back to AWS_REGION environment variable"
+            }
+          }
+        ],
+        "api_docs_url": "https://docs.aws.amazon.com/bedrock/latest/userguide/getting-started.html",
+        "mapping": {
+          "model_class": "ChatBedrockConverse",
+          "model_param": "model"
+        }
+      },
+      "model_class": {
+        "module": "langchain_aws.chat_models.bedrock_converse",
+        "attr": "ChatBedrockConverse"
+      },
+      "catalog_loader": "lfx_amazon.catalog:load_bedrock_catalog"
+    }
   ]
 }
