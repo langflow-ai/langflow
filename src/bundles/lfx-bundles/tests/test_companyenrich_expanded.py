@@ -235,3 +235,21 @@ async def test_dedicated_values_take_precedence_and_default_page_size_is_explici
     with patch("httpx.AsyncClient.request", new_callable=AsyncMock, return_value=response({})) as send:
         await instance.call_operation()
     assert send.call_args.kwargs["json"] == {"page": 1, "pageSize": 10}
+
+
+@pytest.mark.parametrize(
+    ("cls", "inputs", "method"),
+    [
+        (
+            bundle.CompanyEnrichAdvancedComponent,
+            {"operation": "get_people_email", "query_parameters": {"id": "1"}, "allow_beta": "true"},
+            "call_operation",
+        ),
+        (bundle.CompanyEnrichSearchComponent, {"query": "software", "page": True}, "search_companies"),
+    ],
+)
+async def test_host_input_values_remain_strict_before_http(cls, inputs, method):
+    instance = component(cls, **inputs)
+    with patch("httpx.AsyncClient.request", new_callable=AsyncMock) as send, pytest.raises(ValueError, match="boolean"):
+        await getattr(instance, method)()
+    send.assert_not_called()
