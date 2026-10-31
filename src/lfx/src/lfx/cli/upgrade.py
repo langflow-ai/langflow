@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -88,7 +90,18 @@ def upgrade_command(
         )
         # Preserve the on-disk shape: keep the envelope (with metadata) when present, else stay flat.
         output = merge_flow_envelope(outer_envelope, updated_inner, wrap_bare=False)
-        flow_path.write_text(json.dumps(output, indent=2, ensure_ascii=False), encoding="utf-8")
+        payload = json.dumps(output, indent=2, ensure_ascii=False)
+        # Publish atomically: a crash, a full disk or an interrupt mid-write must
+        # not leave the user's flow file truncated.  mkstemp() gives us a sibling
+        # file with 0600 permissions, and Path.replace() swaps it in one step.
+        fd, tmp = tempfile.mkstemp(dir=flow_path.parent, prefix=f".{flow_path.name}.", suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                handle.write(payload)
+            Path(tmp).replace(flow_path)
+        except BaseException:
+            Path(tmp).unlink(missing_ok=True)
+            raise
         typer.echo(f"Wrote {count} safe upgrade(s) to {flow_path}")
         wrote_safe = True
 

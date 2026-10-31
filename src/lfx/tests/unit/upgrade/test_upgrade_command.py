@@ -1,6 +1,7 @@
 """CLI tests for `lfx upgrade`."""
 
 import json
+from pathlib import Path
 
 import pytest
 import typer
@@ -265,3 +266,25 @@ def test_strict_clean_exits_zero(clean_flow_file):
 def test_non_strict_pending_safe_exits_zero(flow_file):
     # Default (no --strict): pending safe upgrades do not fail the command.
     upgrade_command(flow_file, write=False, strict=False, registry=_registry())
+
+
+def test_upgrade_write_failure_leaves_the_flow_intact(flow_file, monkeypatch):
+    """A failed publish must not destroy the user's flow file.
+
+    The upgrade rewrites the flow in place, so a crash, a full disk or an
+    interrupt in the middle of the write used to leave the file truncated
+    (and the upgrade unrecoverable).  Publishing through a sibling file that
+    is swapped in with ``Path.replace`` means the original is untouched
+    unless the swap itself succeeds.
+    """
+    original = flow_file.read_text(encoding="utf-8")
+
+    def boom(_self, _target):
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(Path, "replace", boom)
+
+    with pytest.raises(OSError, match="No space left on device"):
+        upgrade_command(flow_file, write=True, registry=_registry())
+
+    assert flow_file.read_text(encoding="utf-8") == original
