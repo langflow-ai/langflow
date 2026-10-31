@@ -592,13 +592,13 @@ async def read_project_deployment_snapshot(
         ) from exc
     except EmptyProjectArtifactError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=str(exc),
             headers={ERROR_CODE_HEADER: "snapshot_empty"},
         ) from exc
     except ProjectArtifactError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Project snapshot could not be captured safely",
             headers={ERROR_CODE_HEADER: "snapshot_unsafe"},
         ) from exc
@@ -866,7 +866,7 @@ def _replacement_request_digest(request_body: ProjectReplacementRequest) -> str:
         # validation failure uses instead of letting it surface as an
         # unhandled 500.
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Request contains invalid Unicode content",
             headers={ERROR_CODE_HEADER: "replacement_invalid_unicode"},
         ) from exc
@@ -1143,7 +1143,7 @@ async def _replace_project_operation_once(
         requested_ids = [flow.id for flow in request_body.flows]
         if len(set(requested_ids)) != len(requested_ids):
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Flow ids must be unique",
                 headers={ERROR_CODE_HEADER: "replacement_duplicate_flow_ids"},
             )
@@ -1174,7 +1174,7 @@ async def _replace_project_operation_once(
                 )
             if not _is_deployment_project_slug(request_body.project_name):
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail="project_name must be a lowercase deployment slug of at most 63 characters",
                     headers={ERROR_CODE_HEADER: "replacement_invalid_project_name"},
                 )
@@ -1273,7 +1273,7 @@ async def _replace_project_operation_once(
             if request_body.project_name is not None:
                 if not _is_deployment_project_slug(request_body.project_name):
                     raise HTTPException(
-                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                         detail="project_name must be a lowercase deployment slug of at most 63 characters",
                         headers={ERROR_CODE_HEADER: "replacement_invalid_project_name"},
                     )

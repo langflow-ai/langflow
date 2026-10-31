@@ -377,7 +377,7 @@ async def test_a_failed_archive_does_not_take_the_writers_turn(client: AsyncClie
         headers={**logged_in_headers, "If-Match": reviewed},
     )
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     state = await client.get(f"api/v1/flows/{flow['id']}/version-state", headers=logged_in_headers)
     assert state.json()["version_token"] == reviewed, "a write that never happened must not consume the token"
 

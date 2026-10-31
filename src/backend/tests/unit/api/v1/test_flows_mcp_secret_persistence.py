@@ -371,7 +371,7 @@ async def test_should_reject_unresolved_flow_credential_masks(
     """An imported management mask cannot become a new server or global-variable credential."""
     server_name = f"unresolved-{uuid.uuid4().hex[:6]}"
     response = await client.post("api/v1/flows/", json=_flow_payload(server_name, config), headers=logged_in_headers)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT, response.text
     async with session_scope() as session:
         assert await get_server(server_name, active_user, session, None, None) is None
         names = await get_variable_service().list_variables(active_user.id, session)
@@ -391,7 +391,7 @@ async def test_should_not_resolve_flow_masks_from_another_users_server(
     response = await client.post(
         "api/v1/flows/", json=_flow_payload(server_name, masked_config), headers=logged_in_headers
     )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT, response.text
     assert SECRET not in response.text
     async with session_scope() as session:
         assert await get_server(server_name, active_user, session, None, None) is None
