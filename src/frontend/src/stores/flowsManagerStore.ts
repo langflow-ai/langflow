@@ -91,19 +91,19 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   setIsLoading: (isLoading: boolean) => set({ isLoading }),
   takeSnapshot: () => {
     const currentFlowId = get().currentFlowId;
-    // push the current graph to the past state
     const flowStore = useFlowStore.getState();
+    const pastLength = past[currentFlowId]?.length ?? 0;
+    // Compare content before cloning so nested edits still create snapshots.
+    if (
+      pastLength > 0 &&
+      JSON.stringify(past[currentFlowId][pastLength - 1]) ===
+        JSON.stringify({ nodes: flowStore.nodes, edges: flowStore.edges })
+    )
+      return;
     const newState = {
       nodes: cloneDeep(flowStore.nodes),
       edges: cloneDeep(flowStore.edges),
     };
-    const pastLength = past[currentFlowId]?.length ?? 0;
-    if (
-      pastLength > 0 &&
-      JSON.stringify(past[currentFlowId][pastLength - 1]) ===
-        JSON.stringify(newState)
-    )
-      return;
     if (pastLength > 0) {
       past[currentFlowId] = past[currentFlowId].slice(
         pastLength - defaultOptions.maxHistorySize + 1,
