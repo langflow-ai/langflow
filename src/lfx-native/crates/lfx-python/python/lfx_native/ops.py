@@ -1,4 +1,4 @@
-"""The flow operation engine: apply, diff, validate, repair and hash flow graphs.
+"""The flow operation engine: apply, replay, diff, validate, repair and hash flow graphs.
 
 Every function takes Python values and returns Python values. An argument
 that is ``bytes`` is UTF-8 JSON text; any other argument is the JSON value
@@ -37,6 +37,7 @@ from lfx_native._native import (
     ops_diff,
     ordered_rows,
     repair,
+    replay,
     strip_flow_table_row_keys,
     strip_row_keys,
     table_fields,
@@ -66,6 +67,7 @@ __all__ = [
     "ops_diff",
     "ordered_rows",
     "repair",
+    "replay",
     "strip_flow_table_row_keys",
     "strip_row_keys",
     "table_fields",

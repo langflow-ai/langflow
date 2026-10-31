@@ -217,7 +217,7 @@
       "rule": "edge-handle-endpoint",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -248,7 +248,7 @@
       "rule": "edge-target-occupied",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -273,7 +273,7 @@
       },
       "base": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -303,7 +303,7 @@
       "rule": "edge-target-occupied",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -334,7 +334,7 @@
       "rule": "edge-rules-scope",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -351,7 +351,7 @@
       },
       "base": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -373,7 +373,7 @@
       "rule": "edge-rules-scope",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -390,7 +390,7 @@
       },
       "base": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -420,7 +420,7 @@
       "rule": "edge-rules-scope",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -437,7 +437,7 @@
       },
       "base": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -461,7 +461,7 @@
       "rule": "edge-rules-scope",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -469,7 +469,7 @@
       },
       "base": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -491,7 +491,7 @@
       "rule": "edge-rules-scope",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "loop", "allows_loop": true, "__pos__": 1}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -508,7 +508,7 @@
       },
       "base": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -538,7 +538,7 @@
       "rule": "edge-rules-scope",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -555,7 +555,7 @@
       },
       "base": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -585,7 +585,7 @@
       "rule": "edge-rules-scope",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -593,7 +593,7 @@
       },
       "base": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -614,7 +614,7 @@
       "rule": "violations-reported",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -646,7 +646,7 @@
       "rule": "edge-rules-scope",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -664,7 +664,7 @@
       },
       "base": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -685,7 +685,7 @@
       "rule": "violations-reported",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}},
           {"id": "a", "data": {"node": {"template": {}}}}
@@ -709,7 +709,7 @@
       "rule": "edge-touches-note",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -740,7 +740,7 @@
       "rule": "edge-handle-endpoint",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -771,7 +771,7 @@
       "rule": "edge-handle-endpoint",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -794,7 +794,7 @@
       "rule": "edge-handle-endpoint",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -825,7 +825,7 @@
       "rule": "base-graph-checked",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -842,7 +842,7 @@
       },
       "base": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b"},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -864,7 +864,7 @@
       "rule": "base-graph-checked",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -881,7 +881,7 @@
       },
       "base": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": null},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -903,7 +903,7 @@
       "rule": "base-graph-checked",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -920,7 +920,7 @@
       },
       "base": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": []}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -942,7 +942,7 @@
       "rule": "base-graph-checked",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -959,7 +959,7 @@
       },
       "base": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -981,7 +981,7 @@
       "rule": "base-graph-checked",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -998,7 +998,7 @@
       },
       "base": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": "x"}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -1020,7 +1020,7 @@
       "rule": "edge-handle-forms",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -1044,7 +1044,7 @@
       "rule": "edge-handle-forms",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -1069,7 +1069,7 @@
       "rule": "edge-handle-forms",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -1100,7 +1100,7 @@
       "rule": "edge-handle-forms",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -1116,7 +1116,7 @@
       "rule": "edge-handle-forms",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -1132,7 +1132,7 @@
       "rule": "edge-handle-endpoint",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -1163,7 +1163,7 @@
       "rule": "edge-handle-forms",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -1194,7 +1194,7 @@
       "rule": "edge-handle-forms",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -1225,7 +1225,7 @@
       "rule": "edge-handle-endpoint",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -1256,7 +1256,7 @@
       "rule": "edge-handle-endpoint",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -1767,7 +1767,7 @@
                     "value": [{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}, {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}]
                   },
                   "url": {"type": "str", "value": "http://x"},
-                  "tools_metadata": {"type": "table", "value": [{"name": "tool", "tags": ["tool"]}, {"name": "other", "tags": ["other"]}]}
+                  "tools_metadata": {"type": "table", "value": [{"name": "tool", "tags": ["tool"], "__pos__": 1}, {"name": "other", "tags": ["other"], "__pos__": 2}]}
                 }
               }
             }
@@ -2193,6 +2193,20 @@
         "edges": []
       },
       "base": {"nodes": [], "edges": []},
+      "violations": []
+    },
+    {
+      "name": "an added output without __pos__ is refused",
+      "rule": "list-item-missing-pos",
+      "flow": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}], "edges": []},
+      "base": {"nodes": [], "edges": []},
+      "violations": [{"code": "LIST_ITEM_MISSING_POS", "path": ["nodes", 0, "data", "node", "outputs", 0, "__pos__"], "message": "list item must have a finite numeric __pos__", "resolution": "auto"}]
+    },
+    {
+      "name": "an unchanged outputs list without __pos__ stays valid",
+      "rule": "legacy-keyed-lists",
+      "flow": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}], "edges": []},
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}], "edges": []},
       "violations": []
     }
   ]

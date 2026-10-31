@@ -32,7 +32,10 @@ use std::sync::LazyLock;
 use crate::value::{Map, Value};
 use indexmap::IndexSet;
 
-use crate::ops::canonical::{HANDLE_KEYS, HANDLE_QUOTE, parse_handle, values_equal};
+use crate::ops::canonical::{
+    HANDLE_KEYS, HANDLE_QUOTE, edge_data_with_type_sets, handle_with_type_sets, parse_handle,
+    values_equal,
+};
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result, bail, invalid, quoted};
 use crate::ops::keyed::ListIndex;
@@ -509,8 +512,9 @@ fn handle<'e>(edge: &'e Map, key: &str) -> Result<&'e Map> {
 }
 
 /// Whether an edge changed between two graphs. View state is not a change,
-/// and neither is another spelling of the same handle. A changed edge is
-/// deleted and added again, so the edge rules check it like a new one.
+/// and neither is another spelling of the same handle, or another order of
+/// a handle's type list. A changed edge is deleted and added again, so the
+/// edge rules check it like a new one.
 ///
 /// # Errors
 ///
@@ -524,7 +528,16 @@ pub fn edge_changed(before: &Map, after: &Map) -> Result<bool> {
     for key in keys {
         let same = match (before.get(key), after.get(key)) {
             (Some(old), Some(new)) if HANDLE_KEYS.contains(&key.as_str()) => {
-                values_equal(&handle_value(old), &handle_value(new))?
+                let (old, new) = (handle_value(old), handle_value(new));
+                values_equal(&old, &new)?
+                    || values_equal(&handle_with_type_sets(old)?, &handle_with_type_sets(new)?)?
+            }
+            (Some(old), Some(new)) if key == "data" => {
+                values_equal(old, new)?
+                    || values_equal(
+                        &edge_data_with_type_sets(old)?,
+                        &edge_data_with_type_sets(new)?,
+                    )?
             }
             (Some(old), Some(new)) => values_equal(old, new)?,
             _ => false,
@@ -591,16 +604,16 @@ impl Outputs<'_> {
     }
 }
 
-/// Index an outputs list, which follows the keyed-list rules.
+/// Index an outputs list. Every output must have a name that no other output
+/// has; the edge rules do not read positions.
 pub(crate) fn index_outputs<'g>(items: Cow<'g, Value>, node_id: &str) -> Result<Outputs<'g>> {
     let Value::Array(list) = items.as_ref() else {
         bail!("node {}: data.node.outputs must be a list", quoted(node_id));
     };
-    let index = ListIndex::build(
-        outputs_list(),
-        list,
-        &fmt::from_fn(|f| write!(f, "node {}: data.node.outputs", quoted(node_id))),
-    )?;
+    let index = ListIndex::build(outputs_list(), list);
+    index.check_keys(&fmt::from_fn(|f| {
+        write!(f, "node {}: data.node.outputs", quoted(node_id))
+    }))?;
     Ok(Outputs { items, index })
 }
 

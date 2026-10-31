@@ -14,7 +14,7 @@ file. Run it from the repository root of a checkout of the stack's top branch
 It exits with 1 when a case differs. It does not check what the Python engine
 does not have: backward operations and the editor's table rules and edge fixes
 (``backward_cases.json`` and ``editor_cases.json``, which ``check_editor.mjs``
-checks).
+checks), and replay with no rule (``replay_cases.json``).
 """
 
 from __future__ import annotations

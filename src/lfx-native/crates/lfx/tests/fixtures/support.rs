@@ -8,7 +8,7 @@ use lfx::value::{Map, Value};
 use libtest_mimic::{Failed, Trial};
 
 /// The fixture files every runtime runs.
-pub const FIXTURE_FILES: [&str; 12] = [
+pub const FIXTURE_FILES: [&str; 13] = [
     "apply_cases.json",
     "canonical_cases.json",
     "diff_cases.json",
@@ -18,6 +18,7 @@ pub const FIXTURE_FILES: [&str; 12] = [
     "merge_cases.json",
     "property_cases.json",
     "repair_cases.json",
+    "replay_cases.json",
     "restore_cases.json",
     "table_cases.json",
     "validation_cases.json",

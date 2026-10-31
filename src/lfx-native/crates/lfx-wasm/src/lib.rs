@@ -9,7 +9,7 @@
 
 use js_sys::{Error, Reflect};
 use lfx::ops::api::{self, ApiError, ApiResult, Input};
-use lfx::ops::{ApplyOptions, Mode};
+use lfx::ops::{ApplyOptions, ReplayOptions};
 use wasm_bindgen::prelude::*;
 
 fn thrown(error: &ApiError) -> JsValue {
@@ -43,31 +43,33 @@ fn optional(text: Option<&str>) -> Option<Input<'_>> {
     text.map(Input::from)
 }
 
-/// Read the apply options from an options object: `{forward, backward, mode}`.
-/// `mode` is `"strict"` or `"preview"`, and `"strict"` when absent.
-fn apply_options(options: &JsValue, forward_by_default: bool) -> Result<ApplyOptions, JsValue> {
-    let get = |name: &str| Reflect::get(options, &JsValue::from_str(name)).ok();
-    let flag = |name: &str| get(name).and_then(|value| value.as_bool());
-    let mode = match get("mode").filter(|value| !value.is_undefined()) {
-        None => Mode::Strict,
-        Some(value) => {
-            let name = value
-                .as_string()
-                .ok_or_else(|| lfx::ops::Error::invalid("apply mode must be a string"));
-            run(name.and_then(|name| name.parse()).map_err(ApiError::from))?
-        }
-    };
-    Ok(ApplyOptions {
-        forward: flag("forward").unwrap_or(forward_by_default),
-        backward: flag("backward").unwrap_or(false),
-        mode,
-    })
+/// A boolean option of an options object, or `None` when it is not a boolean.
+fn flag(options: &JsValue, name: &str) -> Option<bool> {
+    Reflect::get(options, &JsValue::from_str(name))
+        .ok()
+        .and_then(|value| value.as_bool())
 }
 
-/// A flow graph that the engine keeps loaded, to apply many batches to it.
+/// Read the apply options from an options object: `{forward, backward}`.
+fn apply_options(options: &JsValue, forward_by_default: bool) -> ApplyOptions {
+    ApplyOptions {
+        forward: flag(options, "forward").unwrap_or(forward_by_default),
+        backward: flag(options, "backward").unwrap_or(false),
+    }
+}
+
+/// Read the replay options from an options object: `{backward}`.
+fn replay_options(options: &JsValue) -> ReplayOptions {
+    ReplayOptions {
+        backward: flag(options, "backward").unwrap_or(false),
+    }
+}
+
+/// A flow graph that the engine keeps loaded, to apply or replay many
+/// batches on it.
 ///
-/// History playback and rebase apply many batches to one graph and read it
-/// once. A refused batch changes nothing.
+/// History playback and rebase carry out many batches on one graph and read
+/// it once. A refused batch changes nothing.
 #[wasm_bindgen]
 #[derive(Debug)]
 pub struct GraphState {
@@ -80,7 +82,7 @@ impl GraphState {
     ///
     /// # Errors
     ///
-    /// The graph does not parse or breaks a structural rule.
+    /// The graph does not parse, or breaks a rule that the indexes need.
     #[wasm_bindgen(constructor)]
     pub fn new(flow: &str) -> Result<GraphState, JsValue> {
         Ok(Self {
@@ -88,8 +90,8 @@ impl GraphState {
         })
     }
 
-    /// Apply a batch; returns what it did as JSON. `options` is
-    /// `{forward, backward, mode}`: the flags false and `mode` `"strict"` by default.
+    /// Apply a batch, with every rule; returns what it did as JSON.
+    /// `options` is `{forward, backward}`, both false by default.
     ///
     /// # Errors
     ///
@@ -98,7 +100,21 @@ impl GraphState {
         text(api::apply_to(
             &mut self.state,
             operations.into(),
-            apply_options(options, false)?,
+            apply_options(options, false),
+        ))
+    }
+
+    /// Replay stored operations, with no rule; returns what it did as JSON.
+    /// `options` is `{backward}`, false by default.
+    ///
+    /// # Errors
+    ///
+    /// The operations do not parse, or an operation cannot be carried out.
+    pub fn replay(&mut self, operations: &str, options: &JsValue) -> Result<String, JsValue> {
+        text(api::replay_to(
+            &mut self.state,
+            operations.into(),
+            replay_options(options),
         ))
     }
 
@@ -110,8 +126,8 @@ impl GraphState {
     }
 }
 
-/// Apply operations to a graph; returns `{"flow_data", ...}` as JSON.
-/// `options` is `{forward, backward, mode}`; `forward` is true by default.
+/// Apply operations to a graph, with every rule; returns `{"flow_data", ...}`
+/// as JSON. `options` is `{forward, backward}`; `forward` is true by default.
 ///
 /// # Errors
 ///
@@ -121,7 +137,23 @@ pub fn apply(flow: &str, operations: &str, options: &JsValue) -> Result<String, 
     text(api::apply(
         flow.into(),
         operations.into(),
-        apply_options(options, true)?,
+        apply_options(options, true),
+    ))
+}
+
+/// Replay stored operations on a graph, with no rule; returns
+/// `{"flow_data", ...}` as JSON. `options` is `{backward}`, false by default.
+///
+/// # Errors
+///
+/// The graph or the operations do not parse, the graph cannot be indexed,
+/// or an operation cannot be carried out.
+#[wasm_bindgen]
+pub fn replay(flow: &str, operations: &str, options: &JsValue) -> Result<String, JsValue> {
+    text(api::replay(
+        flow.into(),
+        operations.into(),
+        replay_options(options),
     ))
 }
 

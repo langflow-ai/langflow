@@ -20,11 +20,10 @@
 //! only what it wrote. A read of a value with writes below it copies the
 //! value and makes those writes in the copy.
 //!
-//! Only a natural list (outputs, tool actions) has an order that is state.
-//! A write to one of its items, or inside one, is made in a copy of the
-//! whole list, which is short, so the list keeps its order. Table rows and
-//! object keys have no order that is state. The tree keeps its children in
-//! the order they were first written, so one batch always gives one result.
+//! No keyed list has an order that is state: its order is its items'
+//! positions. Object keys have no order that is state either. The tree keeps
+//! its children in the order they were first written, so one batch always
+//! gives one result.
 
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -351,9 +350,24 @@ pub(crate) fn make_writes(
         let index = lists.as_deref_mut().and_then(|lists| lists.index(path));
         let next =
             child_mut(value, path, &segment, index).expect("the value under a written path exists");
+        let keyed = NODE_SCHEMA.listed_at(path);
+        let had_position = keyed.has_position(next);
         path.push(segment);
         make_writes(next, child, path, lists.as_deref_mut());
-        path.pop();
+        let segment = path.pop().expect("the segment was pushed above");
+        // A write inside an item keeps its key: the parser refuses a write
+        // that changes it. The write can change a row's position.
+        if let (Segment::Item(key), Some(index)) = (
+            &segment,
+            lists.as_deref_mut().and_then(|lists| lists.index(path)),
+        ) {
+            debug_assert_eq!(
+                keyed.key_of(next),
+                Some(key.as_str()),
+                "the item keeps its key"
+            );
+            index.position_changed(had_position, keyed.has_position(next));
+        }
     }
 }
 
@@ -367,7 +381,6 @@ pub(crate) fn make_write(
     write: FieldWrite,
     mut lists: Option<&mut NodeLists<'_>>,
 ) {
-    let context = "a field write";
     match segment {
         Segment::Key(key) => {
             if let Some(lists) = lists.as_deref_mut()
@@ -395,18 +408,17 @@ pub(crate) fn make_write(
                 .as_array_mut()
                 .expect("a list item's parent is a list");
             if let Some(index) = lists.and_then(|lists| lists.index(parent_path)) {
-                match (write, index.slot(key)) {
-                    (FieldWrite::Set(value), Some(slot)) => {
-                        index
-                            .replace(items, slot, value, &context)
-                            .expect("the write checked the item");
+                match write {
+                    FieldWrite::Set(value) => {
+                        // The parser refuses an item written at its key with
+                        // another key.
+                        debug_assert_eq!(keyed.key_of(&value), Some(key.as_str()));
+                        match index.slot(key) {
+                            Some(slot) => index.replace(items, slot, value),
+                            None => index.add(items, key, value),
+                        }
                     }
-                    (FieldWrite::Set(value), None) => {
-                        index
-                            .add(items, value, &context)
-                            .expect("the write checked the item");
-                    }
-                    (FieldWrite::Remove, _) => {
+                    FieldWrite::Remove => {
                         index.remove(items, key);
                     }
                 }

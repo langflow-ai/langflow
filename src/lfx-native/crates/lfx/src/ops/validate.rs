@@ -59,6 +59,9 @@ pub enum ViolationCode {
     TableRowIdMissing,
     TableRowIdDuplicate,
     TableRowPosInvalid,
+    /// An item of an outputs or tool action list that a write adds or
+    /// changes has no finite numeric `__pos__`.
+    ListItemMissingPos,
     /// A table's column definition names a column after a row key the engine owns.
     TableColumnReserved,
     /// A handle has one of its two forms, and the other is valid.
@@ -93,6 +96,7 @@ impl ViolationCode {
             Self::TableRowIdMissing => "TABLE_ROW_ID_MISSING",
             Self::TableRowIdDuplicate => "TABLE_ROW_ID_DUPLICATE",
             Self::TableRowPosInvalid => "TABLE_ROW_POS_INVALID",
+            Self::ListItemMissingPos => "LIST_ITEM_MISSING_POS",
             Self::TableColumnReserved => "TABLE_COLUMN_RESERVED",
             Self::EdgeHandleFormMissing => "EDGE_HANDLE_FORM_MISSING",
             Self::EdgeHandleInvalid => "EDGE_HANDLE_INVALID",
@@ -127,6 +131,7 @@ impl ViolationCode {
             Code::TableRowIdMissing => "assigned a generated row id",
             Code::TableRowIdDuplicate => "assigned a generated row id; the first row keeps the id",
             Code::TableRowPosInvalid => "assigned a position that keeps the row where it is stored",
+            Code::ListItemMissingPos => "assigned the midpoint of its array neighbours' positions",
             Code::EdgeHandleFormMissing => {
                 "derived the missing form of the handle from the one present"
             }
@@ -304,12 +309,55 @@ pub fn find_graph_violations(
     base: Option<&Value>,
 ) -> Result<Vec<Violation>> {
     let Value::Object(graph) = flow else {
-        return Ok(vec![Violation::new(
-            ViolationCode::FlowDataNotObject,
-            Vec::new(),
-            "flow data must be an object",
-        )]);
+        return Ok(vec![not_an_object()]);
     };
+    let mut violations = structure_violations(graph, EdgeNodes::MustExist);
+    if let Some(base) = base
+        && graph.get("nodes").is_some_and(Value::is_array)
+    {
+        let structural = violations.is_empty();
+        violations.extend(find_table_violations(base, flow)?);
+        violations.extend(find_list_position_violations(base, flow)?);
+        if structural {
+            violations.extend(find_edge_violations(base, flow)?);
+        }
+    }
+    if numbers == Numbers::Check {
+        non_finite_violations(flow, &mut Vec::new(), &mut violations);
+    }
+    Ok(violations)
+}
+
+/// Every rule `flow` breaks that stops it from loading into a
+/// [`GraphState`](crate::ops::state::GraphState): the rules its indexes need.
+///
+/// Flow data is an object, `nodes` and `edges` are lists of objects, and ids
+/// are present and unique. Each node has the shape of a node, and each edge
+/// names its two nodes. Whether those nodes exist is not checked here.
+pub(crate) fn find_load_violations(flow: &Value) -> Vec<Violation> {
+    let Value::Object(graph) = flow else {
+        return vec![not_an_object()];
+    };
+    structure_violations(graph, EdgeNodes::MayBeMissing)
+}
+
+fn not_an_object() -> Violation {
+    Violation::new(
+        ViolationCode::FlowDataNotObject,
+        Vec::new(),
+        "flow data must be an object",
+    )
+}
+
+/// Whether an edge's source and target nodes must exist.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum EdgeNodes {
+    MustExist,
+    MayBeMissing,
+}
+
+/// The structural rules `graph` breaks, in the order the graph lists them.
+fn structure_violations(graph: &Map, edge_nodes: EdgeNodes) -> Vec<Violation> {
     let mut violations = Vec::new();
     let nodes = graph.get("nodes").and_then(Value::as_array);
     let edges = graph.get("edges").and_then(Value::as_array);
@@ -336,30 +384,18 @@ pub fn find_graph_violations(
     }
     if let Some(edges) = edges {
         let mut edge_ids = HashSet::new();
+        let node_ids = (edge_nodes == EdgeNodes::MustExist).then_some(&node_ids);
         for (index, edge) in edges.iter().enumerate() {
             edge_violations(
                 edge,
                 &["edges".into(), index.into()],
                 &mut edge_ids,
-                &node_ids,
+                node_ids,
                 &mut violations,
             );
         }
     }
-
-    if let Some(base) = base
-        && nodes.is_some()
-    {
-        let structural = violations.is_empty();
-        violations.extend(find_table_violations(base, flow)?);
-        if structural {
-            violations.extend(find_edge_violations(base, flow)?);
-        }
-    }
-    if numbers == Numbers::Check {
-        non_finite_violations(flow, &mut Vec::new(), &mut violations);
-    }
-    Ok(violations)
+    violations
 }
 
 /// Fail with every violation `flow` has, if it has any.
@@ -374,7 +410,16 @@ pub fn validate_flow_data(
     context: &str,
     base: Option<&Value>,
 ) -> Result<()> {
-    let violations = find_graph_violations(flow, numbers, base)?;
+    violations_error(find_graph_violations(flow, numbers, base)?, context)
+}
+
+/// Fail with `violations`, if there are any. The message names the first one
+/// and counts the others; `context` names the graph.
+///
+/// # Errors
+///
+/// An invalid graph error listing the violations.
+pub(crate) fn violations_error(violations: Vec<Violation>, context: &str) -> Result<()> {
     let Some(first) = violations.first() else {
         return Ok(());
     };
@@ -452,7 +497,7 @@ fn edge_violations<'a>(
     edge: &'a Value,
     path: &[PathPart],
     edge_ids: &mut HashSet<&'a str>,
-    node_ids: &HashSet<&str>,
+    node_ids: Option<&HashSet<&str>>,
     violations: &mut Vec<Violation>,
 ) {
     let Value::Object(edge) = edge else {
@@ -479,7 +524,7 @@ fn edge_violations<'a>(
     for end in ["source", "target"] {
         let message = match edge.non_empty_str(end) {
             None => format!("edge must have a non-empty string {end}"),
-            Some(node_id) if !node_ids.contains(node_id) => {
+            Some(node_id) if node_ids.is_some_and(|ids| !ids.contains(node_id)) => {
                 format!("edge {end} node does not exist")
             }
             Some(_) => continue,
@@ -783,6 +828,85 @@ pub struct ChangedTable<'a> {
     pub rows: &'a [Value],
     /// The field's `table_schema`, which declares its columns; `None` when it has none.
     pub table_schema: Option<&'a Value>,
+}
+
+/// An outputs or tool action list a write adds or changes, and where it is.
+#[derive(Debug)]
+pub struct ChangedList<'a> {
+    /// Where the list is, for example `nodes.<index>.data.node.outputs`.
+    pub path: GraphPath,
+    #[expect(missing_docs, reason = "the name says what it is")]
+    pub items: &'a [Value],
+}
+
+/// The outputs and tool action lists that `target` adds or changes relative
+/// to `base`, in the order the graph lists them.
+///
+/// # Errors
+///
+/// A compared list holds a number that is not finite.
+pub fn changed_keyed_lists<'a>(base: &Value, target: &'a Value) -> Result<Vec<ChangedList<'a>>> {
+    let stored: HashMap<&str, &Value> = list(base, "nodes")
+        .iter()
+        .filter_map(|node| Some((node.get("id")?.as_str()?, node)))
+        .collect();
+    let mut lists = Vec::new();
+    for (index, node) in list(target, "nodes").iter().enumerate() {
+        let stored_node = node
+            .get("id")
+            .and_then(Value::as_str)
+            .and_then(|id| stored.get(id));
+        for (list_path, _) in NODE_SCHEMA.natural_lists() {
+            let Some(value) = list_path.iter().try_fold(node, |value, key| value.get(key)) else {
+                continue;
+            };
+            let Value::Array(items) = value else {
+                continue;
+            };
+            let stored_list = stored_node.and_then(|stored| {
+                list_path
+                    .iter()
+                    .try_fold(*stored, |value, key| value.get(key))
+            });
+            if let Some(stored_list) = stored_list
+                && values_equal(stored_list, value)?
+            {
+                continue;
+            }
+            let path = ["nodes".into(), index.into()]
+                .into_iter()
+                .chain(list_path.iter().map(|key| PathPart::from(key.as_str())))
+                .collect();
+            lists.push(ChangedList { path, items });
+        }
+    }
+    Ok(lists)
+}
+
+/// A violation for every item without a finite numeric `__pos__` in the
+/// outputs and tool action lists that `target` adds or changes relative to
+/// `base`. Table rows have rules of their own ([`find_table_violations`]).
+///
+/// # Errors
+///
+/// A compared list holds a number that is not finite.
+pub fn find_list_position_violations(base: &Value, target: &Value) -> Result<Vec<Violation>> {
+    let position_key = &NODE_SCHEMA.table_keys.position;
+    let mut violations = Vec::new();
+    for changed in changed_keyed_lists(base, target)? {
+        for (index, item) in changed.items.iter().enumerate() {
+            if !item.get(position_key).is_some_and(is_row_position) {
+                let mut item_path = changed.path.clone();
+                item_path.extend([index.into(), position_key.as_str().into()]);
+                violations.push(Violation::new(
+                    ViolationCode::ListItemMissingPos,
+                    item_path,
+                    format!("list item must have a finite numeric {position_key}"),
+                ));
+            }
+        }
+    }
+    Ok(violations)
 }
 
 /// The table values `target` adds or changes relative to `base`, in the order the graph lists them.

@@ -1,7 +1,10 @@
 //! Applying an operation batch to a flow.
 //!
-//! A batch applies in order, and all of it or none of it: on an error the
-//! flow is as it was before the batch.
+//! Apply is the write path, so it runs every rule. A batch applies in order,
+//! and all of it or none of it: on an error the flow is as it was before the
+//! batch. Stored operations go through replay instead (see
+//! [`replay`](crate::ops::replay)), which carries them out with the same
+//! steps and calls no rule.
 //!
 //! Each operation of the batch can give apply two results:
 //!
@@ -23,57 +26,25 @@
 use std::borrow::Cow;
 use std::collections::HashSet;
 use std::fmt;
-use std::str::FromStr;
 
 use crate::value::Value;
 use indexmap::IndexSet;
 
-use crate::ops::canonical::is_row_position;
 use crate::ops::edges::{GraphRead, check_edge, reads_before, removed_endpoints};
 use crate::ops::error::{Error, Result, bail, invalid, quoted};
 use crate::ops::fields::{self, FieldWrite};
-use crate::ops::keyed::{ListIndex, check_position};
+use crate::ops::keyed::{ListIndex, ListProblem, check_position};
 use crate::ops::ops::{Change, Edge, FieldUpdate, Node, NodePath, Operation, PathExt, Segment};
-use crate::ops::schema::{KeyedList, ListKind, NODE_SCHEMA};
+use crate::ops::schema::{KeyedList, NODE_SCHEMA};
 use crate::ops::state::{Graph, GraphState, field_value};
 
-/// How a batch is applied.
+/// What a batch returns besides the flow.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ApplyOptions {
     /// Return the forward operations.
     pub forward: bool,
     /// Return, for each operation, its backward operations.
     pub backward: bool,
-    /// Which rules the batch must pass.
-    pub mode: Mode,
-}
-
-/// Which rules a batch must pass.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub enum Mode {
-    /// Every rule. A batch that will be saved is always strict.
-    #[default]
-    Strict,
-    /// Apply backward operations to show an earlier revision of the flow, as
-    /// the editor's history preview does. They put back a state the flow
-    /// already had, whatever rules it broke, and they add and delete every
-    /// edge they touch explicitly. So the edge rules, and the cascade delete
-    /// of a removed field or output, are both skipped. Never use this for a
-    /// batch that will be saved.
-    Preview,
-}
-
-impl FromStr for Mode {
-    type Err = Error;
-
-    /// The mode that `name` names: `strict` or `preview`.
-    fn from_str(name: &str) -> Result<Self> {
-        match name {
-            "strict" => Ok(Self::Strict),
-            "preview" => Ok(Self::Preview),
-            _ => bail!("unknown apply mode: {}", quoted(name)),
-        }
-    }
 }
 
 /// What a batch did.
@@ -91,11 +62,11 @@ pub struct Applied {
     /// There are two ways to apply them:
     ///
     /// - To show an earlier version of the flow, as the editor's history does,
-    ///   apply them in [`Mode::Preview`]. The flow goes back to a state it already
-    ///   had, so the engine skips its edge rules.
+    ///   replay each list in a call of its own ([`GraphState::replay`]). The
+    ///   flow goes back to a state it already had, so no rule runs.
     /// - To undo an edit with a new edit, put the lists into one batch, in that
-    ///   order, and apply it in [`Mode::Strict`]. The new edit is saved like any
-    ///   other edit, so it must pass the same rules.
+    ///   order, and apply it. The new edit is saved like any other edit, so it
+    ///   must pass the same rules.
     pub backward: Vec<Vec<Operation>>,
 }
 
@@ -105,17 +76,27 @@ pub struct Applied {
 /// and only when the options ask for them. A batch that fails needs neither:
 /// its changes stay in the batch's layer in `state`, which is dropped.
 #[derive(Debug)]
-struct Report {
+pub(crate) struct Report {
     options: ApplyOptions,
     applied: Applied,
 }
 
 impl Report {
-    fn new(options: ApplyOptions) -> Self {
+    pub(crate) fn new(options: ApplyOptions) -> Self {
         Self {
             options,
             applied: Applied::default(),
         }
+    }
+
+    /// What the batch did, for the caller.
+    pub(crate) fn into_applied(self) -> Applied {
+        self.applied
+    }
+
+    /// Whether the caller asked for the backward operations.
+    pub(crate) fn keeps_backward(&self) -> bool {
+        self.options.backward
     }
 
     /// Start an operation: its backward operations go into a list of their own.
@@ -145,29 +126,50 @@ impl Report {
     }
 }
 
+/// One operation of a batch, carried out on the state.
+pub(crate) type OperationStep = fn(&mut GraphState, Operation, &mut Report) -> Result<()>;
+
 impl GraphState {
-    /// Apply a batch of operations in order. On an error nothing is applied.
+    /// Apply a batch of operations in order, with every rule. On an error
+    /// nothing is applied.
+    ///
+    /// Before its first batch, apply checks the flow against the structural
+    /// rules. It checks again after a replay.
     ///
     /// # Errors
     ///
-    /// An operation is invalid for the graph.
+    /// The flow breaks a structural rule, or an operation is invalid for it.
     pub fn apply(&mut self, operations: Vec<Operation>, options: ApplyOptions) -> Result<Applied> {
         // A batch that panicked, which a binding turns into an exception,
         // left its layers behind. The graph itself is as it was before it.
         self.discard();
+        self.check_base()?;
         let mut report = Report::new(options);
+        self.run_batch(operations, &mut report, Self::apply_operation)?;
+        Ok(report.into_applied())
+    }
+
+    /// Carry out each operation with `step`, in order. On an error, drop the
+    /// batch's layers, so the flow is as it was before the batch.
+    pub(crate) fn run_batch(
+        &mut self,
+        operations: Vec<Operation>,
+        report: &mut Report,
+        step: OperationStep,
+    ) -> Result<()> {
+        self.discard();
         for operation in operations {
-            if let Err(error) = self.apply_operation(operation, &mut report) {
+            report.begin_operation();
+            if let Err(error) = step(self, operation, report) {
                 self.discard();
                 return Err(error);
             }
         }
         self.commit();
-        Ok(report.applied)
+        Ok(())
     }
 
     fn apply_operation(&mut self, operation: Operation, report: &mut Report) -> Result<()> {
-        report.begin_operation();
         match operation {
             Operation::AddNodes(nodes) => self.add_nodes(nodes, report)?,
             Operation::UpdateNodes(updates) => self.update_nodes(updates, report)?,
@@ -182,7 +184,8 @@ impl GraphState {
 
     /// Add nodes. The parser checked each node's shape, and that no id
     /// repeats in the operation; an id the flow already has is refused here.
-    fn add_nodes(&mut self, nodes: Vec<Node>, report: &mut Report) -> Result<()> {
+    /// Apply and replay both add nodes this way.
+    pub(crate) fn add_nodes(&mut self, nodes: Vec<Node>, report: &mut Report) -> Result<()> {
         if nodes.is_empty() {
             return Ok(());
         }
@@ -214,9 +217,7 @@ impl GraphState {
         let mut cascaded = IndexSet::new();
         for (index, mut update) in updates.into_iter().enumerate() {
             let context = UpdatePlace::new(index);
-            if !self.graph.has_node(&update.id) {
-                bail!("update_nodes: node does not exist: {}", quoted(&update.id));
-            }
+            self.require_node(&update.id)?;
             if !self.is_base_node(&update.id) {
                 bail!(
                     "update_nodes: cannot update node that does not exist in the original flow: {}",
@@ -225,9 +226,7 @@ impl GraphState {
             }
             let before =
                 self.apply_field_update(&mut update, context, report.options, backward.as_mut())?;
-            if report.options.mode == Mode::Strict
-                && let Before::Value(value) = &before
-            {
+            if let Before::Value(value) = &before {
                 cascaded.extend(self.edges_at_removed(&update, value.as_ref())?);
             }
             // A delete that found nothing is not recorded.
@@ -240,11 +239,17 @@ impl GraphState {
             report.record(Operation::UpdateNodes(applied));
         }
         if let Some(backward) = backward {
-            for operation in backward.operations(Operation::UpdateNodes) {
-                report.record_backward(operation);
-            }
+            backward.record(report);
         }
         self.remove_edges(cascaded.iter().map(String::as_str), report);
+        Ok(())
+    }
+
+    /// Check that the node an update writes exists.
+    pub(crate) fn require_node(&self, id: &str) -> Result<()> {
+        if !self.graph.has_node(id) {
+            bail!("update_nodes: node does not exist: {}", quoted(id));
+        }
         Ok(())
     }
 
@@ -278,9 +283,6 @@ impl GraphState {
 
     fn delete_nodes(&mut self, ids: &[String], report: &mut Report) -> Result<()> {
         let ids: IndexSet<&str> = ids.iter().map(String::as_str).collect();
-        if ids.is_empty() {
-            return Ok(());
-        }
         for id in &ids {
             if !self.is_base_node(id) {
                 bail!(
@@ -289,10 +291,24 @@ impl GraphState {
                 );
             }
         }
+        let incident = self.remove_nodes(&ids, report);
+        self.remove_edges(incident.iter().map(String::as_str), report);
+        Ok(())
+    }
+
+    /// Remove the nodes among `ids` that exist, and record them as a
+    /// `delete_nodes`. Returns the ids of the edges at them. The edges stay:
+    /// apply removes them as a cascade delete, and replay leaves them to
+    /// the stored operations.
+    pub(crate) fn remove_nodes(
+        &mut self,
+        ids: &IndexSet<&str>,
+        report: &mut Report,
+    ) -> IndexSet<String> {
         let mut removed = Vec::new();
         let mut removed_nodes = Vec::new();
         let mut incident = IndexSet::new();
-        for id in ids {
+        for &id in ids {
             if !self.graph.has_node(id) {
                 continue;
             }
@@ -303,59 +319,71 @@ impl GraphState {
             self.remove_node(id);
             removed.push(id.to_owned());
         }
-        if removed.is_empty() {
-            return Ok(());
+        if !removed.is_empty() {
+            report.record(Operation::DeleteNodes(removed));
+            report.record_backward(Operation::AddNodes(removed_nodes));
         }
-        report.record(Operation::DeleteNodes(removed));
-        report.record_backward(Operation::AddNodes(removed_nodes));
-        self.remove_edges(incident.iter().map(String::as_str), report);
-        Ok(())
+        incident
     }
 
     // --- Edges -------------------------------------------------------------------------
 
     /// Add edges. The parser checked each edge's shape, and that no id
-    /// repeats in the operation; what the edge needs from the flow is checked
-    /// here.
+    /// repeats in the operation. Each edge must pass the edge rules against
+    /// the flow, with the edges before it added.
     fn add_edges(&mut self, edges: Vec<Edge>, report: &mut Report) -> Result<()> {
-        if edges.is_empty() {
-            return Ok(());
-        }
-        let mut added = Vec::new();
-        let mut payloads = Vec::new();
+        let mut added = AddedEdges::default();
         for edge in edges {
-            if self.graph.has_edge(edge.id()) {
-                bail!("add_edges: edge id already exists: {}", quoted(edge.id()));
-            }
-            if !self.graph.has_node(edge.source()) {
-                bail!(
-                    "add_edges: source node does not exist: {}",
-                    quoted(edge.source())
-                );
-            }
-            if !self.graph.has_node(edge.target()) {
-                bail!(
-                    "add_edges: target node does not exist: {}",
-                    quoted(edge.target())
-                );
-            }
-            if report.options.mode == Mode::Strict {
-                check_edge(&self.graph, &mut self.edge_index, edge.as_map())?;
-            }
-            if report.options.forward {
-                payloads.push(edge.clone());
-            }
-            if report.options.backward {
-                added.push(edge.id().to_owned());
-            }
-            self.insert_edge(edge);
+            self.require_new_edge(&edge)?;
+            check_edge(&self.graph, &mut self.edge_index, edge.as_map())?;
+            self.insert_added_edge(edge, report, &mut added);
         }
-        report.record(Operation::AddEdges(payloads));
-        report.record_backward(Operation::DeleteEdges(added));
+        added.record(report);
         Ok(())
     }
 
-    fn delete_edges(&mut self, ids: &[String], report: &mut Report) {
+    /// Check that `edge` can be added: the flow does not have its id yet,
+    /// and has both of its nodes.
+    pub(crate) fn require_new_edge(&self, edge: &Edge) -> Result<()> {
+        if self.graph.has_edge(edge.id()) {
+            bail!("add_edges: edge id already exists: {}", quoted(edge.id()));
+        }
+        if !self.graph.has_node(edge.source()) {
+            bail!(
+                "add_edges: source node does not exist: {}",
+                quoted(edge.source())
+            );
+        }
+        if !self.graph.has_node(edge.target()) {
+            bail!(
+                "add_edges: target node does not exist: {}",
+                quoted(edge.target())
+            );
+        }
+        Ok(())
+    }
+
+    /// Add `edge`, which [`Self::require_new_edge`] checked, and keep in
+    /// `added` what the report needs.
+    pub(crate) fn insert_added_edge(
+        &mut self,
+        edge: Edge,
+        report: &Report,
+        added: &mut AddedEdges,
+    ) {
+        if report.options.forward {
+            added.edges.push(edge.clone());
+        }
+        if report.options.backward {
+            added.ids.push(edge.id().to_owned());
+        }
+        added.count += 1;
+        self.insert_edge(edge);
+    }
+
+    /// Delete the edges among `ids` that exist. An id that matches no edge
+    /// is skipped. Apply and replay both delete edges this way.
+    pub(crate) fn delete_edges(&mut self, ids: &[String], report: &mut Report) {
         self.remove_edges(ids.iter().map(String::as_str), report);
     }
 
@@ -386,7 +414,7 @@ impl GraphState {
     // --- Field writes ----------------------------------------------------------------------
 
     /// Apply one `set_field` or `delete_field` to a node, through the batch's
-    /// field layer.
+    /// field layer, with the rules for list items.
     ///
     /// Returns what the path held before the write. Without `forward`, a
     /// set's value moves into the layer instead of being copied.
@@ -398,42 +426,23 @@ impl GraphState {
         backward: Option<&mut FieldBackward>,
     ) -> Result<Before> {
         let placed = PlacedUpdate { update, context };
-        self.copy_natural_list(&placed)?;
-        let walk = self.walk(&placed)?;
-        if let Some(missing) = walk.missing_at {
-            return Err(missing_segment(&placed, missing));
+        let walk = self.walk_update(&placed)?;
+        check_lists_on_path(&placed, &walk)?;
+        require_path(&placed, &walk)?;
+        if let Some(backward) = backward {
+            self.record_backward(&placed, backward)?;
         }
         let (id, path) = (placed.update.id.as_str(), &placed.update.path);
-        if let Some(backward) = backward {
-            let current = field_value(&self.graph, &mut self.lists, id, path, &context)?;
-            let natural = match walk.last_list {
-                Some(keyed) if placed.update.is_delete() && keyed.kind == ListKind::Natural => {
-                    field_value(
-                        &self.graph,
-                        &mut self.lists,
-                        id,
-                        &path[..path.len() - 1],
-                        &context,
-                    )?
-                }
-                _ => None,
-            };
-            let items = natural.as_deref().and_then(Value::as_array);
-            backward.record(placed.update, current.as_deref(), items.map(Vec::as_slice));
-        }
-        let before = if walk.exists && options.mode == Mode::Strict && reads_before(path) {
+        let before = if walk.exists && reads_before(path) {
             field_value(&self.graph, &mut self.lists, id, path, &context)?.map(Cow::into_owned)
         } else {
             None
         };
-        let value = match &mut update.change {
-            Change::Set(value) if !options.forward => std::mem::take(value),
-            Change::Set(value) => value.clone(),
-            Change::Delete => Value::Null,
-        };
+        check_written_item(&placed, &walk)?;
+        let value = written_value(update, options.forward);
         let placed = PlacedUpdate { update, context };
-        self.write_last(&placed, &walk, value)?;
-        self.check_list_keys_kept(&placed, &walk)?;
+        self.write_update(&placed, &walk, value);
+        self.check_positions_kept(&placed, &walk)?;
         Ok(if walk.exists {
             Before::Value(before)
         } else {
@@ -441,9 +450,40 @@ impl GraphState {
         })
     }
 
-    /// Check that a write inside a keyed list item left the item's key alone,
-    /// and a table row its position.
-    fn check_list_keys_kept(&mut self, placed: &PlacedUpdate<'_>, walk: &Walk) -> Result<()> {
+    /// The first step of a field write, which apply and replay share:
+    /// follow the path.
+    ///
+    /// # Errors
+    ///
+    /// A segment does not fit the value it reads, or a key it looks up names
+    /// two items.
+    pub(crate) fn walk_update(&mut self, placed: &PlacedUpdate<'_>) -> Result<Walk> {
+        self.walk(placed)
+    }
+
+    /// Record what undoes a field write, before the write is made: a write
+    /// that puts back what the path held. A list item comes back with its
+    /// position, so its list's order comes back too. Apply and replay both
+    /// record this way.
+    ///
+    /// # Errors
+    ///
+    /// A key that a read looks up names two items.
+    pub(crate) fn record_backward(
+        &mut self,
+        placed: &PlacedUpdate<'_>,
+        backward: &mut FieldBackward,
+    ) -> Result<()> {
+        let (update, context) = (placed.update, placed.context);
+        let (id, path) = (update.id.as_str(), &update.path);
+        let current = field_value(&self.graph, &mut self.lists, id, path, &context)?;
+        backward.add(update, current.as_deref());
+        Ok(())
+    }
+
+    /// Check that a write inside a list item left the item a position. The
+    /// parser already refused a write that changes an item's key.
+    fn check_positions_kept(&mut self, placed: &PlacedUpdate<'_>, walk: &Walk) -> Result<()> {
         let (id, path, context) = (
             placed.update.id.as_str(),
             &placed.update.path,
@@ -452,16 +492,11 @@ impl GraphState {
         for item in walk.list_items.iter().rev() {
             let item_path = &path[..=item.segment];
             let value = field_value(&self.graph, &mut self.lists, id, item_path, &context)?;
-            let value = value.as_deref();
-            if value.and_then(|value| item.keyed.key_of(value)) != Some(item.key.as_str()) {
-                bail!("{context}: cannot change a list item's key");
-            }
-            if let Some(position) = item.keyed.position.as_deref()
-                && !value
-                    .and_then(|value| value.get(position))
-                    .is_some_and(is_row_position)
-            {
-                bail!("{context}: a table row's {position} must be a finite number");
+            if !value.is_some_and(|value| item.keyed.has_position(&value)) {
+                bail!(
+                    "{context}: {}",
+                    ListProblem::Unpositioned(&item.keyed.position)
+                );
             }
         }
         Ok(())
@@ -486,6 +521,7 @@ impl GraphState {
         let stored = graph.is_stored_node(id);
         let mut list_items = Vec::new();
         let mut last_list = None;
+        let mut list_problem = None;
         let mut step = fields::step_fn(|value, index, in_entry| match &path[index] {
             Segment::Key(key) => {
                 let Value::Object(map) = value else {
@@ -500,22 +536,24 @@ impl GraphState {
                 let (keyed, list_path) = keyed_list(graph, placed, index, value)?;
                 let items = value.as_array().map(Vec::as_slice).unwrap_or_default();
                 // A stored node's lists keep their index between reads. A list
-                // inside an entry, or in a node the batch added, is checked again
-                // at each read, as building an index checks it.
-                let list_context = context.segment(index);
-                let slot = if stored && !in_entry {
-                    lists
-                        .index(id, &list_path, keyed, items, &list_context)?
-                        .slot(key)
+                // inside an entry, or in a node the batch added, is indexed
+                // again at each read.
+                let built;
+                let list_index = if stored && !in_entry {
+                    &*lists.index(id, &list_path, keyed, items)
                 } else {
-                    ListIndex::build(keyed, items, &list_context)?.slot(key)
+                    built = ListIndex::build(keyed, items);
+                    &built
                 };
+                if list_problem.is_none() {
+                    list_problem = list_index.problem().map(|problem| (index, problem));
+                }
+                let slot = list_index.find(key, &context.segment(index))?;
                 if index == last {
                     last_list = Some(keyed);
                 } else {
                     list_items.push(ListItemOnPath {
                         keyed,
-                        key: key.clone(),
                         segment: index,
                     });
                 }
@@ -530,6 +568,7 @@ impl GraphState {
                 write_len: walked.write_len,
                 list_items,
                 last_list,
+                list_problem,
                 found: false,
                 exists: false,
                 missing_at: walked.found.err(),
@@ -538,11 +577,10 @@ impl GraphState {
         let found = step(parent, last, walked.write_len.is_some())?.is_some();
         // The item that a write on the way sits at was checked when it was written.
         if let Some(len) = walked.write_len
-            && let Segment::Item(key) = &path[len - 1]
+            && let Segment::Item(_) = &path[len - 1]
         {
             list_items.push(ListItemOnPath {
                 keyed: NODE_SCHEMA.listed_at(&path[..len - 1]),
-                key: key.clone(),
                 segment: len - 1,
             });
             list_items.sort_by_key(|item| item.segment);
@@ -558,6 +596,7 @@ impl GraphState {
             write_len: walked.write_len,
             list_items,
             last_list,
+            list_problem,
             found,
             exists,
             missing_at: None,
@@ -565,24 +604,15 @@ impl GraphState {
     }
 
     /// Write or delete the last segment of the path: in the value of the
-    /// write on the way, or as the write at the path itself.
-    fn write_last(&mut self, placed: &PlacedUpdate<'_>, walk: &Walk, value: Value) -> Result<()> {
-        let (update, context) = (placed.update, placed.context);
+    /// write on the way, or as the write at the path itself. Apply and
+    /// replay both write this way, after [`Self::walk_update`].
+    pub(crate) fn write_update(&mut self, placed: &PlacedUpdate<'_>, walk: &Walk, value: Value) {
+        let update = placed.update;
         let (id, path) = (update.id.as_str(), &update.path);
         let last = path.len() - 1;
-        if let (Segment::Item(key), false) = (&path[last], update.is_delete()) {
-            let keyed = walk.last_list.expect("the walk read the last item's list");
-            if keyed.key_of(&value) != Some(key) {
-                bail!(
-                    "{context}: a list item written at its key must carry the same key: {}",
-                    quoted(key)
-                );
-            }
-            check_position(keyed, &value, &context.segment(last))?;
-        }
         if update.is_delete() && !walk.exists {
             // A delete that finds nothing writes nothing.
-            return Ok(());
+            return;
         }
         let write = if update.is_delete() {
             FieldWrite::Remove
@@ -606,37 +636,67 @@ impl GraphState {
         } else {
             writes.set(path, write);
         }
-        Ok(())
     }
+}
 
-    /// A write to an item of a natural list, or inside one, is made in a copy
-    /// of the whole list, so the list keeps its order. Put that copy as the
-    /// write at the list, unless a write on the way already holds the list.
-    fn copy_natural_list(&mut self, placed: &PlacedUpdate<'_>) -> Result<()> {
-        let (id, path) = (placed.update.id.as_str(), &placed.update.path);
-        let Some(item) = (0..path.len()).find(|&index| {
-            matches!(path[index], Segment::Item(_))
-                && NODE_SCHEMA.natural_list_at(&path[..index]).is_some()
-        }) else {
-            return Ok(());
-        };
-        let list_path = &path[..item];
-        let step = |value, index: usize, _| {
-            Ok(fields::child(value, &list_path[..index], &list_path[index]))
-        };
-        let walked = self
-            .graph
-            .walk_field(id, list_path, step)?
-            .expect("update_nodes checks that the node exists");
-        // A missing list or one that is not a list is the write's own error.
-        let (None, Ok(list @ Value::Array(_))) = (walked.write_len, walked.found) else {
-            return Ok(());
-        };
-        let list = list.clone();
-        self.graph
-            .writes_mut(id)
-            .set(list_path, FieldWrite::Set(list));
-        Ok(())
+/// Check that each keyed list the path reads follows the keyed list rules.
+fn check_lists_on_path(placed: &PlacedUpdate<'_>, walk: &Walk) -> Result<()> {
+    match &walk.list_problem {
+        Some((segment, problem)) => bail!("{}: {problem}", placed.context.segment(*segment)),
+        None => Ok(()),
+    }
+}
+
+/// Check that the path exists up to its last segment.
+pub(crate) fn require_path(placed: &PlacedUpdate<'_>, walk: &Walk) -> Result<()> {
+    match walk.missing_at {
+        Some(missing) => Err(missing_segment(placed, missing)),
+        None => Ok(()),
+    }
+}
+
+/// Check that a table row written at its key carries a position. The parser
+/// already checked that it carries the key.
+fn check_written_item(placed: &PlacedUpdate<'_>, walk: &Walk) -> Result<()> {
+    let (update, context) = (placed.update, placed.context);
+    let last = update.path.len() - 1;
+    let (Segment::Item(_), Change::Set(value)) = (&update.path[last], &update.change) else {
+        return Ok(());
+    };
+    let keyed = walk.last_list.expect("the walk read the last item's list");
+    check_position(keyed, value, &context.segment(last))
+}
+
+/// The value an update writes, or `Null` for a delete. It moves out of the
+/// update, unless `keep_update` keeps the update whole for the forward
+/// operations.
+pub(crate) fn written_value(update: &mut FieldUpdate, keep_update: bool) -> Value {
+    match &mut update.change {
+        Change::Set(value) if keep_update => value.clone(),
+        Change::Set(value) => std::mem::take(value),
+        Change::Delete => Value::Null,
+    }
+}
+
+/// The edges an `add_edges` adds, kept for its forward and backward operations.
+#[derive(Debug, Default)]
+pub(crate) struct AddedEdges {
+    /// With `forward`: the added edges.
+    edges: Vec<Edge>,
+    /// With `backward`: their ids.
+    ids: Vec<String>,
+    /// How many edges were added.
+    count: usize,
+}
+
+impl AddedEdges {
+    /// Record the `add_edges` and what undoes it, if it added an edge.
+    pub(crate) fn record(self, report: &mut Report) {
+        if self.count == 0 {
+            return;
+        }
+        report.record(Operation::AddEdges(self.edges));
+        report.record_backward(Operation::DeleteEdges(self.ids));
     }
 }
 
@@ -652,10 +712,10 @@ enum Before {
 
 /// A field update, with its place in its `update_nodes` for error messages.
 #[derive(Debug)]
-struct PlacedUpdate<'w> {
-    update: &'w FieldUpdate,
+pub(crate) struct PlacedUpdate<'w> {
+    pub(crate) update: &'w FieldUpdate,
     /// Where the update is in its operation, for messages.
-    context: UpdatePlace,
+    pub(crate) context: UpdatePlace,
 }
 
 /// Where a field update is in its `update_nodes`, for error messages:
@@ -663,13 +723,13 @@ struct PlacedUpdate<'w> {
 /// It is formatted only when an error is, so an update that applies builds
 /// no message.
 #[derive(Debug, Clone, Copy)]
-struct UpdatePlace {
+pub(crate) struct UpdatePlace {
     update: usize,
     segment: Option<usize>,
 }
 
 impl UpdatePlace {
-    fn new(update: usize) -> Self {
+    pub(crate) fn new(update: usize) -> Self {
         Self {
             update,
             segment: None,
@@ -697,7 +757,7 @@ impl fmt::Display for UpdatePlace {
 
 /// Where a field update's path leads through the batch's field layer, and what it holds.
 #[derive(Debug, Default)]
-struct Walk {
+pub(crate) struct Walk {
     /// The length of the path of the write on the way that holds the value
     /// with the last segment: a write at an ancestor path of the write's
     /// path. `None` when the node itself holds that value.
@@ -706,6 +766,9 @@ struct Walk {
     list_items: Vec<ListItemOnPath>,
     /// The keyed list whose item the last segment names, if it names one.
     last_list: Option<&'static KeyedList>,
+    /// The first rule that a keyed list on the path breaks, with the index
+    /// of the segment that reads the list.
+    list_problem: Option<(usize, ListProblem)>,
     /// Whether the value that holds the last segment has it: inside the
     /// entry, or in the node itself when no entry holds that value.
     found: bool,
@@ -720,7 +783,6 @@ struct Walk {
 #[derive(Debug)]
 struct ListItemOnPath {
     keyed: &'static KeyedList,
-    key: String,
     /// The index of the path segment that names the item.
     segment: usize,
 }
@@ -776,80 +838,52 @@ fn keyed_list<'p>(
 
 // --- Backward operations of field writes ---------------------------------------------------
 
-/// The writes that undo an update batch, read from the state each write
+/// The writes that undo an `update_nodes`, read from the state each write
 /// replaces. They are undone last first; a path written twice is split into
 /// separate operations, since one operation may write a path once.
 #[derive(Debug, Default)]
-struct FieldBackward {
+pub(crate) struct FieldBackward {
     entries: Vec<FieldUpdate>,
 }
 
 impl FieldBackward {
-    /// Record what undoes `update`; called before it is applied.
-    ///
-    /// `current` is what the path holds. `natural_items` is the natural list
-    /// that a delete of one of its items removes it from.
-    fn record(
-        &mut self,
-        update: &FieldUpdate,
-        current: Option<&Value>,
-        natural_items: Option<&[Value]>,
-    ) {
-        let path = &update.path;
-        let last = path.len() - 1;
-        if let (Segment::Item(key), Some(items), Some(_)) = (&path[last], natural_items, current) {
-            // Removing a natural-list item that is not last cannot be undone by
-            // a write at the item's key, which appends; the whole list is written back.
-            // A table's order is its rows' positions, so its rows need no such care.
-            let keyed = NODE_SCHEMA.listed_at(&path[..last]);
-            let is_last = items
-                .last()
-                .is_some_and(|item| keyed.key_of(item) == Some(key.as_str()));
-            if !is_last {
-                // The prefix is the path of a keyed list the schema declares,
-                // such as `data.node.outputs`, which a field update may write.
-                let list_path = NodePath::try_from(path[..last].to_vec())
-                    .expect("a keyed list's path may be written");
-                self.entries.push(FieldUpdate::set(
-                    &update.id,
-                    list_path,
-                    Value::Array(items.to_vec()),
-                ));
-                return;
-            }
+    /// Add what undoes `update`, called before it is applied: a write that
+    /// puts back `current`, what the path holds, or deletes the path when it
+    /// holds nothing.
+    fn add(&mut self, update: &FieldUpdate, current: Option<&Value>) {
+        let path = update.path.clone();
+        match current {
+            Some(current) => self
+                .entries
+                .push(FieldUpdate::set(&update.id, path, current.clone())),
+            None if !update.is_delete() => self.entries.push(FieldUpdate::delete(&update.id, path)),
+            // A delete that finds nothing writes nothing to undo.
+            None => {}
         }
-        let Some(current) = current else {
-            if !update.is_delete() {
-                self.entries
-                    .push(FieldUpdate::delete(&update.id, path.clone()));
-            }
-            return;
-        };
-        self.entries
-            .push(FieldUpdate::set(&update.id, path.clone(), current.clone()));
     }
 
-    fn operations(self, build: fn(Vec<FieldUpdate>) -> Operation) -> Vec<Operation> {
-        let mut operations = Vec::new();
+    /// Record the `update_nodes` operations that undo the operation, last
+    /// write first.
+    pub(crate) fn record(self, report: &mut Report) {
         let mut batch: Vec<FieldUpdate> = Vec::new();
         let mut written: HashSet<(String, NodePath)> = HashSet::new();
         for entry in self.entries.into_iter().rev() {
             let key = (entry.id.clone(), entry.path.clone());
             if written.contains(&key) {
-                operations.push(build(std::mem::take(&mut batch)));
+                report.record_backward(Operation::UpdateNodes(std::mem::take(&mut batch)));
                 written.clear();
             }
             written.insert(key);
             batch.push(entry);
         }
         if !batch.is_empty() {
-            operations.push(build(batch));
+            report.record_backward(Operation::UpdateNodes(batch));
         }
-        operations
     }
 }
 
-/// Apply operations to a flow graph and return the result with what the batch did.
+/// Apply operations to a flow graph, with every rule, and return the result
+/// with what the batch did.
 ///
 /// # Errors
 ///
@@ -859,7 +893,7 @@ pub fn apply_flow_operations(
     operations: Vec<Operation>,
     options: ApplyOptions,
 ) -> Result<(Value, Applied)> {
-    let mut state = GraphState::new(base)?;
+    let mut state = GraphState::checked(base)?;
     let applied = state.apply(operations, options)?;
     Ok((state.into_value(), applied))
 }
@@ -871,6 +905,7 @@ mod tests {
 
     use super::*;
     use crate::ops::edges::escape_handle;
+    use crate::ops::replay::ReplayOptions;
     use crate::ops::schema::OUTPUTS_PATH;
 
     fn target_handle(field: &str) -> Value {
@@ -901,7 +936,7 @@ mod tests {
         let mut state = GraphState::new(graph).unwrap();
         let write = json!([{"type": "update_nodes", "updates": [
             {"id": "a", "op": "set_field", "path": ["position"], "value": {}},
-            {"id": "a", "op": "set_field", "path": ["data", "node", "template", "f", "value", {"key": "r"}], "value": 1},
+            {"id": "a", "op": "set_field", "path": ["data", "node", "template", "f", "value", {"key": "r"}], "value": {"__id__": "r", "__pos__": 1}},
         ]}]);
         let error = state
             .apply(operations(write), ApplyOptions::default())
@@ -1132,26 +1167,33 @@ mod tests {
     }
 
     #[test]
-    fn an_output_removed_and_added_again_in_one_batch_goes_last() {
-        let output = |name: &str| json!({"name": name});
+    fn an_output_deleted_and_added_again_in_one_batch_takes_its_new_position() {
+        let output = |name: &str, position: u32| json!({"name": name, "__pos__": position});
         let node = json!({"id": "n", "data": {"node": {"template": {},
-            "outputs": [output("a"), output("b"), output("c")]}}});
+            "outputs": [output("a", 1), output("b", 2), output("c", 3)]}}});
         let outputs = |key: &str| json!(["data", "node", "outputs", {"key": key}]);
         let update = |update: Value| json!({"type": "update_nodes", "updates": [update]});
         let batch = operations(json!([
             update(delete("n", outputs("a"))),
-            update(set("n", outputs("d"), output("d"))),
-            update(set("n", outputs("a"), output("a"))),
+            update(set("n", outputs("d"), output("d", 4))),
+            update(set("n", outputs("a"), output("a", 5))),
         ]));
         let mut state = GraphState::new(json!({"nodes": [node], "edges": []})).unwrap();
         state.apply(batch, ApplyOptions::default()).unwrap();
         let outputs = state.graph.node_value("n", &OUTPUTS_PATH).unwrap();
-        let names: Vec<&str> = outputs
+        let mut order: Vec<(u64, &str)> = outputs
             .as_array()
             .unwrap()
             .iter()
-            .map(|output| output["name"].as_str().unwrap())
+            .map(|output| {
+                (
+                    output["__pos__"].as_u64().unwrap(),
+                    output["name"].as_str().unwrap(),
+                )
+            })
             .collect();
+        order.sort_unstable();
+        let names: Vec<&str> = order.into_iter().map(|(_, name)| name).collect();
         assert_eq!(names, ["b", "c", "d", "a"]);
     }
 
@@ -1223,12 +1265,8 @@ mod tests {
             ..ApplyOptions::default()
         };
         let applied = state.apply(batch, options).unwrap();
-        let preview = ApplyOptions {
-            mode: Mode::Preview,
-            ..ApplyOptions::default()
-        };
         for list in applied.backward.into_iter().rev() {
-            state.apply(list, preview).unwrap();
+            state.replay(list, ReplayOptions::default()).unwrap();
         }
         assert!(crate::ops::canonical::graphs_equal(&state.to_value(), &graph).unwrap());
     }

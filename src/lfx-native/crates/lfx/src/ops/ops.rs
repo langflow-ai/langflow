@@ -16,7 +16,7 @@ use crate::value::{Map, Value};
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result, quoted};
 use crate::ops::from_value::{FromValue, FromValueError, missing, read, unexpected};
-use crate::ops::schema::NODE_OBJECT_PATHS;
+use crate::ops::schema::{KeyWrite, NODE_OBJECT_PATHS, NODE_SCHEMA};
 
 /// One step of a field path.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -767,7 +767,41 @@ impl FromValue for FieldUpdate {
         } else {
             Change::Delete
         };
-        Ok(Self { id, path, change })
+        let update = Self { id, path, change };
+        update.check_keys_kept()?;
+        Ok(update)
+    }
+}
+
+impl FieldUpdate {
+    /// Check that the update keeps the key of every list item on its path. An
+    /// item's key is its id, so no write may change it, as no write may change
+    /// a node's `id`. To give an item another key, delete it and add it again.
+    fn check_keys_kept(&self) -> Result<(), FromValueError> {
+        for (index, segment) in self.path.iter().enumerate() {
+            let Segment::Item(key) = segment else {
+                continue;
+            };
+            let inner = &self.path[index + 1..];
+            let keyed = NODE_SCHEMA.listed_at(&self.path[..index]);
+            match keyed.key_after_write(inner, &self.change) {
+                KeyWrite::Untouched => {}
+                KeyWrite::Key(after) if after == key => {}
+                _ if inner.is_empty() => {
+                    let message = format!(
+                        "a list item written at its key must carry the same key: {}",
+                        quoted(key)
+                    );
+                    return Err(FromValueError::new(message).at_key("value"));
+                }
+                _ => {
+                    return Err(
+                        FromValueError::new("cannot change a list item's key").at_key("path")
+                    );
+                }
+            }
+        }
+        Ok(())
     }
 }
 

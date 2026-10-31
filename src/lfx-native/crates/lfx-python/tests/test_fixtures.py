@@ -146,7 +146,8 @@ def ignoring_order(flow: Any) -> Any:
     for node in flow.get("nodes", []):
         for name in ops.table_fields(node):
             field = node["data"]["node"]["template"][name]
-            field["value"] = sorted(field["value"], key=lambda row: row["__id__"])
+            # A row without an id sorts first, as in the Rust and Node runners.
+            field["value"] = sorted(field["value"], key=lambda row: ("__id__" in row, row.get("__id__", "")))
     return flow
 
 
@@ -387,7 +388,7 @@ def test_backward_case(case):
     applied = state.apply(arg(case["operations"]), backward=True)
     check(matches, "backward operations", unordered(applied["backward_operations"]), unordered(case["backward"]))
     for backward in reversed(applied["backward_operations"]):
-        state.apply(backward, mode="preview")
+        state.replay(backward)
     assert ops.graphs_equal(state.to_json().encode(), arg(case["base"]))
 
 
@@ -399,6 +400,83 @@ def test_undo_case(case):
     check(matches, "undo", unordered([undo]), unordered([case["undo"]]))
     state.apply(undo)
     assert ops.graphs_equal(state.to_json().encode(), arg(case["base"]))
+
+
+# --- replay_cases.json ----------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("case", section("replay_cases.json", "cases"))
+def test_replay_case(case):
+    try:
+        state = ops.GraphState(arg(case["base"]))
+    except ops.EngineError as error:
+        check(strict, "error", failure(error), {"error": case.get("error"), "code": case.get("code")})
+        return
+    try:
+        replayed = state.replay(arg(case["operations"]), backward="backward" in case)
+    except ops.EngineError as error:
+        check(strict, "error", failure(error), {"error": case.get("error"), "code": case.get("code")})
+        check(strict, "state after the failed replay", state.to_dict(), case["base"])
+        return
+    assert "error" not in case, "expected the replay to fail"
+    check(strict, "flow data", ignoring_order(state.to_dict()), ignoring_order(case["expected"]))
+    if "backward" not in case:
+        return
+    check(matches, "backward operations", unordered(replayed["backward_operations"]), unordered(case["backward"]))
+    for backward in reversed(replayed["backward_operations"]):
+        state.replay(backward)
+    assert ops.graphs_equal(state.to_json().encode(), arg(case["base"]))
+
+
+def one_call_per_operation(base: Any, operations: list[Any]) -> Any:
+    """Replay in one call and in one call per operation; both give the same graph, which is returned."""
+    batch = ops.GraphState(arg(base))
+    batch.replay(arg(operations))
+    single = ops.GraphState(arg(base))
+    for operation in operations:
+        single.replay(arg([operation]))
+    assert ops.graphs_equal(batch.to_dict(), single.to_dict()), "one call and one call per operation differ"
+    return batch.to_dict()
+
+
+@pytest.mark.parametrize("case", [c for c in section("replay_cases.json", "cases") if "error" not in c.values[0]])
+def test_replay_one_call_per_operation(case):
+    one_call_per_operation(case["base"], case["operations"])
+
+
+@pytest.mark.parametrize("case", [c for c in section("apply_cases.json", "cases") if "error" not in c.values[0]])
+def test_forward_replay_one_call_per_operation(case):
+    state = ops.GraphState(arg(case["base"]))
+    forward = state.apply(arg(case["operations"]), forward=True)["forward_operations"]
+    assert ops.graphs_equal(one_call_per_operation(case["base"], forward), state.to_dict())
+
+
+def log_replay(base: Any, batches: list[Any]) -> None:
+    """Apply each batch and keep the forward operations of each one that applies; replaying them gives apply's graph."""
+    applied, replayed = ops.GraphState(arg(base)), ops.GraphState(arg(base))
+    for batch in batches:
+        try:
+            forward = applied.apply(arg(batch), forward=True)["forward_operations"]
+        except ops.EngineError:
+            continue
+        replayed.replay(forward)
+    assert ops.graphs_equal(applied.to_dict(), replayed.to_dict()), "the replayed log differs from apply"
+
+
+@pytest.mark.parametrize("case", section("merge_cases.json", "cases"))
+def test_merge_forward_replay(case):
+    log_replay(DOCUMENT["base"], [case["transactions"][name] for name in case["order"]])
+
+
+@pytest.mark.parametrize("sequence", section("property_cases.json", "sequences"))
+def test_property_forward_replay(sequence):
+    log_replay(PROPERTY["base"], sequence["transactions"])
+
+
+@pytest.mark.parametrize("case", section("diff_cases.json", "cases"))
+def test_derived_replay(case):
+    derived = ops.ops_diff(arg(case["base"]), arg(case["target"]))
+    assert ops.graphs_equal(one_call_per_operation(case["base"], derived), arg(case["target"]))
 
 
 # --- restore_cases.json ------------------------------------------------------------------------------
@@ -439,6 +517,7 @@ def test_every_fixture_file_is_run():
         "canonical_cases.json",
         "validation_cases.json",
         "repair_cases.json",
+        "replay_cases.json",
         "table_cases.json",
         "editor_cases.json",
         "backward_cases.json",

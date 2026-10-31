@@ -1,4 +1,4 @@
-//! [`GraphState`]: the indexed graph that apply works on, kept between batches.
+//! [`GraphState`]: the indexed graph that apply and replay work on, kept between batches.
 //!
 //! Nodes and edges are indexed by id, and edges by the nodes they touch.
 //! Indexes that only some writes need are built the first time a write asks
@@ -31,7 +31,9 @@ use crate::ops::fields::{self, FieldLayer};
 use crate::ops::keyed::ListIndex;
 use crate::ops::ops::{Edge, Node, PathExt, Segment};
 use crate::ops::schema::{KeyedList, NODE_SCHEMA};
-use crate::ops::validate::{Numbers, PathPart, validate_flow_data};
+use crate::ops::validate::{
+    Numbers, PathPart, find_load_violations, validate_flow_data, violations_error,
+};
 
 // --- Layers --------------------------------------------------------------------------------
 
@@ -288,11 +290,11 @@ impl GraphRead for Graph {
 /// The value at `path` of node `id` as the batch sees it, with the batch's
 /// field writes. A list item of a stored node is found through the list's
 /// index, built the first time a read reaches it. `context` names the read
-/// in an index's error.
+/// in an error.
 ///
 /// # Errors
 ///
-/// A list that the read indexes breaks the keyed-list rules.
+/// A key that the read looks up names two items of its list.
 pub(crate) fn field_value<'g>(
     graph: &'g Graph,
     lists: &mut Lists,
@@ -316,8 +318,8 @@ pub(crate) fn field_value<'g>(
         };
         let keyed = NODE_SCHEMA.listed_at(parent);
         let slot = lists
-            .index(id, &list_path, keyed, items, context)?
-            .slot(key);
+            .index(id, &list_path, keyed, items)
+            .find(key, context)?;
         Ok(slot.map(|slot| &items[slot]))
     };
     fields::read(node.as_value(), graph.fields.node(id), path, step)
@@ -341,8 +343,7 @@ impl Lists {
         path: &[&str],
         keyed: &'static KeyedList,
         items: &[Value],
-        context: &dyn fmt::Display,
-    ) -> Result<&mut ListIndex> {
+    ) -> &mut ListIndex {
         let lists = self.by_node.entry(node_id.to_owned()).or_default();
         let position = if let Some(position) = lists
             .iter()
@@ -351,10 +352,10 @@ impl Lists {
             position
         } else {
             let owned = path.iter().map(|key| (*key).to_owned()).collect();
-            lists.push((owned, ListIndex::build(keyed, items, context)?));
+            lists.push((owned, ListIndex::build(keyed, items)));
             lists.len() - 1
         };
-        Ok(&mut lists[position].1)
+        &mut lists[position].1
     }
 
     /// The index of the list at `path` of a node, if one is built.
@@ -391,24 +392,27 @@ pub struct GraphState {
     pub(crate) graph: Graph,
     pub(crate) edge_index: EdgeIndex,
     pub(crate) lists: Lists,
+    /// Whether the flow passed the structural rules since it was loaded or
+    /// last replayed. Apply checks them once, before its first batch.
+    base_checked: bool,
 }
 
 impl GraphState {
-    /// Load a flow graph and build its indexes, after checking its structure.
+    /// Load a flow graph and build its indexes.
     ///
-    /// Values are not walked for numbers that are not finite: that check
-    /// belongs to whoever accepts a graph from outside, and skipping it keeps
-    /// indexing proportional to the number of nodes and edges.
+    /// Loading checks only what the indexes need: flow data is an object,
+    /// `nodes` and `edges` are lists of objects, ids are unique, and each node
+    /// and edge has its shape. Apply checks the other structural rules before
+    /// its first batch; replay does not check them.
     ///
     /// # Errors
     ///
-    /// The graph breaks a structural rule.
+    /// The graph breaks a rule that the indexes need.
     pub fn new(flow: Value) -> Result<Self> {
-        validate_flow_data(&flow, Numbers::Skip, "flow.data", None)?;
+        violations_error(find_load_violations(&flow), "flow.data")?;
         let Value::Object(mut root) = flow else {
-            return Err(Error::graph_message("flow data must be an object"));
+            unreachable!("the load check refuses flow data that is not an object")
         };
-        // Validation passed, so every node and edge has its shape.
         let nodes = by_id(take_list(&mut root, "nodes"), Node::try_from)?;
         let edges = by_id(take_list(&mut root, "edges"), Edge::try_from)?;
         let mut edges_at = EdgesAt(Layered::new());
@@ -426,7 +430,46 @@ impl GraphState {
             },
             edge_index: EdgeIndex::default(),
             lists: Lists::default(),
+            base_checked: false,
         })
+    }
+
+    /// Load a flow graph that apply changes next, after checking it against
+    /// the structural rules. It does what the first batch would do, without
+    /// a copy of the flow.
+    ///
+    /// Values are not walked for numbers that are not finite: that check
+    /// belongs to whoever accepts a graph from outside, and skipping it keeps
+    /// the check proportional to the number of nodes and edges.
+    ///
+    /// # Errors
+    ///
+    /// The graph breaks a structural rule.
+    pub(crate) fn checked(flow: Value) -> Result<Self> {
+        validate_flow_data(&flow, Numbers::Skip, "flow.data", None)?;
+        Ok(Self {
+            base_checked: true,
+            ..Self::new(flow)?
+        })
+    }
+
+    /// Check the flow against the structural rules, unless it passed them
+    /// since it was loaded or last replayed. Apply calls this before a batch.
+    ///
+    /// # Errors
+    ///
+    /// The graph breaks a structural rule.
+    pub(crate) fn check_base(&mut self) -> Result<()> {
+        if !self.base_checked {
+            validate_flow_data(&self.to_value(), Numbers::Skip, "flow.data", None)?;
+            self.base_checked = true;
+        }
+        Ok(())
+    }
+
+    /// Note that a replay changed the flow, so apply checks it again.
+    pub(crate) fn uncheck_base(&mut self) {
+        self.base_checked = false;
     }
 
     /// The graph as a JSON value.
@@ -604,13 +647,14 @@ impl GraphState {
     }
 }
 
-/// Nodes or edges by id, in their order, each made by `make`.
+/// Nodes or edges by id, in their order, each made by `make`. The load check
+/// passed, so each one is an object with its shape and a unique id.
 fn by_id<T>(items: Vec<Value>, make: fn(Map) -> Result<T>) -> Result<IndexMap<String, T>> {
     items
         .into_iter()
         .map(|item| {
             let Value::Object(item) = item else {
-                return Err(Error::graph_message("nodes and edges must be objects"));
+                unreachable!("the load check refuses nodes and edges that are not objects")
             };
             Ok((item.id().to_owned(), make(item)?))
         })
@@ -700,13 +744,11 @@ impl<'s> Edges<'s> {
     }
 }
 
+/// The list at `key`, moved out. The load check passed, so it is a list.
 fn take_list(root: &mut Map, key: &str) -> Vec<Value> {
-    match root.get_mut(key) {
-        Some(value) => match std::mem::take(value) {
-            Value::Array(items) => items,
-            _ => Vec::new(),
-        },
-        None => Vec::new(),
+    match root.get_mut(key).map(std::mem::take) {
+        Some(Value::Array(items)) => items,
+        _ => unreachable!("the load check refuses nodes and edges that are not lists"),
     }
 }
 

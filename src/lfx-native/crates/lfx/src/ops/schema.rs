@@ -9,7 +9,8 @@ use std::sync::LazyLock;
 
 use crate::value::{Map, Value};
 
-use crate::ops::ops::{AsKey, PathExt};
+use crate::ops::canonical::is_row_position;
+use crate::ops::ops::{AsKey, Change, PathExt, Segment};
 use crate::ops::state::resolve;
 use crate::ops::validate::PathPart;
 
@@ -33,14 +34,13 @@ pub fn field_value_path(field: &str) -> [&str; 5] {
     ["data", "node", "template", field, "value"]
 }
 
-/// How the items of a keyed list are addressed and ordered.
+/// How the items of a keyed list are addressed. Every keyed list is ordered
+/// by its items' numeric position, then key. Its array order is not state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ListKind {
-    /// Outputs and tool actions: keyed by a field of their own, in the order
-    /// writes leave them.
+    /// Outputs and tool actions: keyed by a field of their own.
     Natural,
-    /// Table rows: keyed by their `__id__`, ordered by their numeric position,
-    /// then id. Their place in the array is not state.
+    /// The rows of a table field: keyed by their `__id__`.
     Table,
 }
 
@@ -51,8 +51,8 @@ pub struct KeyedList {
     pub kind: ListKind,
     /// The path from an item to its key.
     key: Vec<PathPart>,
-    /// The key of a table row's position; `None` for a natural list.
-    pub position: Option<String>,
+    /// The key of an item's position, `__pos__`.
+    pub position: String,
 }
 
 /// The two keys every table row carries.
@@ -70,6 +70,52 @@ impl KeyedList {
     pub fn key_of<'a>(&self, item: &'a Value) -> Option<&'a str> {
         resolve(item, &self.key)?.as_str()
     }
+
+    /// Whether an item carries a finite number as its position.
+    #[must_use]
+    pub fn has_position(&self, item: &Value) -> bool {
+        item.get(&self.position).is_some_and(is_row_position)
+    }
+
+    /// What `change` at `inner`, a path inside an item, does to the item's
+    /// key. For example, a set of `"r9"` at `["__id__"]` gives a row the key
+    /// `r9`, and a delete there leaves it without a key.
+    pub(crate) fn key_after_write<'c>(
+        &self,
+        inner: &[Segment],
+        change: &'c Change,
+    ) -> KeyWrite<'c> {
+        if inner.len() > self.key.len() {
+            return KeyWrite::Untouched;
+        }
+        let reaches = inner.iter().zip(&self.key).all(|pair| match pair {
+            (Segment::Key(segment), PathPart::Key(part)) => segment == part,
+            _ => false,
+        });
+        match change {
+            _ if !reaches => KeyWrite::Untouched,
+            Change::Set(value) => {
+                match resolve(value, &self.key[inner.len()..]).and_then(Value::as_str) {
+                    Some(key) => KeyWrite::Key(key),
+                    None => KeyWrite::Keyless,
+                }
+            }
+            // A delete of the whole item leaves no item to key.
+            Change::Delete if inner.is_empty() => KeyWrite::Untouched,
+            Change::Delete => KeyWrite::Keyless,
+        }
+    }
+}
+
+/// What a write does to the key of the list item it writes in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum KeyWrite<'c> {
+    /// The write does not reach the key, or deletes the whole item.
+    Untouched,
+    /// After the write, the item has this key. It can be the key it had.
+    Key(&'c str),
+    /// After the write, the item has no key.
+    Keyless,
 }
 
 /// The parsed `node_schema.json`.
@@ -197,7 +243,7 @@ impl NodeSchema {
             table: KeyedList {
                 kind: ListKind::Table,
                 key: vec![PathPart::Key(table_keys.id.clone())],
-                position: Some(table_keys.position.clone()),
+                position: table_keys.position.clone(),
             },
             table_keys,
         })
@@ -282,6 +328,13 @@ impl NodeSchema {
         self.natural_list_at(path).unwrap_or(&self.table)
     }
 
+    /// The natural lists the schema declares, each with its path.
+    pub fn natural_lists(&self) -> impl Iterator<Item = (&[String], &KeyedList)> {
+        self.natural_lists
+            .iter()
+            .map(|(list_path, keyed)| (list_path.as_slice(), keyed))
+    }
+
     /// The natural list the schema declares at `path`, if any.
     #[must_use]
     pub fn natural_list_at<T: AsKey>(&self, path: &[T]) -> Option<&KeyedList> {
@@ -342,7 +395,8 @@ fn paths(value: &Value, path: &str) -> Result<Vec<Vec<String>>, String> {
 /// A natural list's path and its key: object keys and list indexes.
 fn natural_list(entry: &Value, path: &str) -> Result<(Vec<String>, KeyedList), String> {
     let list_path = strings(key(entry, path, "path")?, &format!("{path}.path"))?;
-    let key = key(entry, path, "key")?
+    let position = string(key(entry, path, "position")?, &format!("{path}.position"))?;
+    let item_key = key(entry, path, "key")?
         .as_array()
         .and_then(|parts| {
             parts
@@ -362,8 +416,8 @@ fn natural_list(entry: &Value, path: &str) -> Result<(Vec<String>, KeyedList), S
         list_path,
         KeyedList {
             kind: ListKind::Natural,
-            key,
-            position: None,
+            key: item_key,
+            position,
         },
     ))
 }
