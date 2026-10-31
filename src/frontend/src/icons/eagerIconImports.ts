@@ -84,6 +84,7 @@ import { OracleIcon } from "@/icons/Oracle";
 import { PerplexityIcon } from "@/icons/Perplexity";
 import { PineconeIcon } from "@/icons/Pinecone";
 import { PlivoIcon } from "@/icons/Plivo";
+import { FaxForAgentsIcon } from "@/icons/FaxForAgents";
 import { PostgresIcon } from "@/icons/Postgres";
 import { PythonIcon } from "@/icons/Python";
 import { QDrantIcon } from "@/icons/QDrant";
@@ -210,6 +211,7 @@ export const eagerIconsMapping = {
   Perplexity: PerplexityIcon,
   Pinecone: PineconeIcon,
   Plivo: PlivoIcon,
+  FaxForAgents: FaxForAgentsIcon,
   Postgres: PostgresIcon,
   Python: PythonIcon,
   QDrant: QDrantIcon,

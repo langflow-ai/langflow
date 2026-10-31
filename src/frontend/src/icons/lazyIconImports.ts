@@ -421,6 +421,10 @@ export const lazyIconsMapping = {
     import("@/icons/Pinecone").then((mod) => ({ default: mod.PineconeIcon })),
   Plivo: () =>
     import("@/icons/Plivo").then((mod) => ({ default: mod.PlivoIcon })),
+  FaxForAgents: () =>
+    import("@/icons/FaxForAgents").then((mod) => ({
+      default: mod.FaxForAgentsIcon,
+    })),
   Postgres: () =>
     import("@/icons/Postgres").then((mod) => ({ default: mod.PostgresIcon })),
   Python: () =>
