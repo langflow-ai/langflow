@@ -1,8 +1,11 @@
+import asyncio
+import codecs
 import contextlib
 import logging
+import re
 import tempfile
 import unicodedata
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from concurrent import futures
 from contextvars import copy_context
 from io import BytesIO
@@ -164,62 +167,94 @@ def _detect_encoding_with_fallbacks(raw_data: bytes) -> list[str]:
     detected_encoding = result.get("encoding") if result else None
 
     if detected_encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:
-        detected_encoding = "utf-8"
+        # chardet reports one of these for many files that are utf-8 in reality, so
+        # try utf-8 first. Its guesses also miss GB18030 four-byte characters,
+        # which cp1252 would silently mangle. Include three trailing bytes so
+        # a four-byte pattern can straddle the detection sample boundary.
+        encodings: list[str] = ["utf-8"]
+        if re.search(rb"[\x81-\xfe][0-9][\x81-\xfe][0-9]", raw_data[: _CHARDET_SAMPLE_BYTES + 3]):
+            encodings.append("gb18030")
+        # Otherwise cp1252 must precede gb18030, which accepts some Windows
+        # punctuation as CJK characters. Both readers validate each candidate.
+        encodings.append("cp1252")
+    else:
+        encodings = [detected_encoding] if detected_encoding else []
 
-    encodings: list[str] = []
-    if detected_encoding:
-        encodings.append(detected_encoding)
-    for fallback in ("utf-8", "gb18030"):
+    for fallback in ("utf-8", "gb18030", "cp1252"):
         if fallback not in encodings:
             encodings.append(fallback)
     encodings.append("latin-1")
     return encodings
 
 
-def read_text_file(file_path: str) -> str:
-    """Read a text file with automatic encoding detection.
+def read_text_file(file_path: str, *, encoding: str | None = None) -> str:
+    """Read a text file, detecting its encoding unless one is explicitly supplied.
 
     Args:
         file_path: Path to the file (local path only, not storage service path)
+        encoding: Explicit text encoding. Invalid choices raise without falling back.
 
     Returns:
         str: The file content as text
     """
-    file_path_ = Path(file_path)
-    raw_data = file_path_.read_bytes()
-
-    for enc in _detect_encoding_with_fallbacks(raw_data):
-        try:
-            return file_path_.read_text(encoding=enc)
-        except (UnicodeDecodeError, LookupError):
-            logger.debug("Encoding '%s' failed for %s, trying next fallback", enc, file_path)
-
-    # Unreachable: latin-1 in the fallback chain always succeeds
-    return raw_data.decode("latin-1")
+    return _read_text_file_with_encoding(file_path, encoding=encoding)[0]
 
 
-async def read_text_file_async(file_path: str) -> str:
+def _read_text_file_with_encoding(file_path: str, *, encoding: str | None = None) -> tuple[str, str]:
+    text, selected = _decode_text_bytes_with_encoding(Path(file_path).read_bytes(), file_path, encoding=encoding)
+    # Preserve the universal newline handling of Path.read_text in the sync reader.
+    return text.replace("\r\n", "\n").replace("\r", "\n"), selected
+
+
+async def read_text_file_async(file_path: str, *, encoding: str | None = None) -> str:
     """Read a text file with automatic encoding detection (async, storage-aware).
 
     Args:
         file_path: Path to the file (S3 key format "flow_id/filename" or local path)
+        encoding: Explicit text encoding. Invalid choices raise without falling back.
 
     Returns:
         str: The file content as text
     """
-    from .storage_utils import read_file_bytes
+    return (await _read_text_file_with_encoding_async(file_path, encoding=encoding))[0]
 
-    # Use storage-aware read to get bytes
+
+async def _read_text_file_with_encoding_async(file_path: str, *, encoding: str | None = None) -> tuple[str, str]:
+    # Use storage-aware read to get bytes; encoding detection is CPU-bound, so keep it off the loop.
     raw_data = await read_file_bytes(file_path)
+    return await asyncio.to_thread(_decode_text_bytes_with_encoding, raw_data, file_path, encoding=encoding)
+
+
+def _decode_text_bytes(raw_data: bytes, file_path: str, *, encoding: str | None = None) -> str:
+    return _decode_text_bytes_with_encoding(raw_data, file_path, encoding=encoding)[0]
+
+
+def _decode_text_bytes_with_encoding(
+    raw_data: bytes, file_path: str, *, encoding: str | None = None
+) -> tuple[str, str]:
+    if encoding is not None:
+        # A user-selected encoding is authoritative: never silently retry another codec.
+        return raw_data.decode(encoding), codecs.lookup(encoding).name
 
     for enc in _detect_encoding_with_fallbacks(raw_data):
         try:
-            return raw_data.decode(enc)
+            text = raw_data.decode(enc)
         except (UnicodeDecodeError, LookupError):
             logger.debug("Encoding '%s' failed for %s, trying next fallback", enc, file_path)
+            continue
+
+        selected = codecs.lookup(enc).name
+        if selected != "ascii" and not selected.startswith("utf-"):
+            logger.warning(
+                "Auto-selected text encoding '%s' for %s. Detection can be ambiguous. "
+                "Verify the text or specify an encoding explicitly.",
+                selected,
+                file_path,
+            )
+        return text, selected
 
     # Unreachable: latin-1 in the fallback chain always succeeds
-    return raw_data.decode("latin-1")
+    return raw_data.decode("latin-1"), "iso8859-1"
 
 
 def read_docx_file(file_path: str) -> str:
@@ -252,20 +287,20 @@ async def read_docx_file_async(file_path: str) -> str:
     Returns:
         str: Extracted text from the document
     """
-    from docx import Document
-
     from .storage_utils import read_file_bytes
 
     settings = get_settings_service().settings
 
     if settings.storage_type == "local":
         # Local storage - read directly
-        doc = Document(file_path)
-        return "\n\n".join([p.text for p in doc.paragraphs])
+        return await asyncio.to_thread(read_docx_file, file_path)
 
     # S3 storage - need temp file for python-docx (doesn't support BytesIO)
     content = await read_file_bytes(file_path)
+    return await asyncio.to_thread(_read_docx_bytes_via_temp_file, content, file_path)
 
+
+def _read_docx_bytes_via_temp_file(content: bytes, file_path: str) -> str:
     # Create temp file with .docx extension
     # Extract filename from path for suffix
     suffix = Path(file_path.split("/")[-1]).suffix
@@ -274,8 +309,7 @@ async def read_docx_file_async(file_path: str) -> str:
         temp_path = tmp_file.name
 
     try:
-        doc = Document(temp_path)
-        return "\n\n".join([p.text for p in doc.paragraphs])
+        return read_docx_file(temp_path)
     finally:
         with contextlib.suppress(Exception):
             Path(temp_path).unlink()
@@ -326,11 +360,15 @@ async def parse_pdf_to_text_async(file_path: str) -> str:
         str: Extracted text from all pages
     """
     content = await read_file_bytes(file_path)
+    return await asyncio.to_thread(_parse_pdf_bytes_to_text, content)
+
+
+def _parse_pdf_bytes_to_text(content: bytes) -> str:
     with BytesIO(content) as f, PdfReader(f) as reader:
         return "\n\n".join([page.extract_text() for page in reader.pages])
 
 
-def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
+def parse_text_file_to_data(file_path: str, *, silent_errors: bool, encoding: str | None = None) -> Data | None:
     """Parse a text file to Data (sync version).
 
     For S3 storage, this will use async operations to fetch the file.
@@ -341,15 +379,19 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | No
     # If using S3 storage, we need to use async operations
     if settings.storage_type == "s3":
         # Run the async version safely (handles existing event loops)
-        return run_until_complete(parse_text_file_to_data_async(file_path, silent_errors=silent_errors))
+        return run_until_complete(
+            parse_text_file_to_data_async(file_path, silent_errors=silent_errors, encoding=encoding)
+        )
 
+    metadata = {}
     try:
         if file_path.endswith(".pdf"):
             text = parse_pdf_to_text(file_path)
         elif file_path.endswith(".docx"):
             text = read_docx_file(file_path)
         else:
-            text = read_text_file(file_path)
+            text, selected = _read_text_file_with_encoding(file_path, encoding=encoding)
+            metadata["encoding"] = selected
 
         text = parse_structured_text(text, file_path)
     except Exception as e:
@@ -358,10 +400,12 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | No
             raise ValueError(msg) from e
         return None
 
-    return Data(data={"file_path": file_path, "text": text})
+    return Data(data={"file_path": file_path, "text": text, **metadata})
 
 
-async def parse_text_file_to_data_async(file_path: str, *, silent_errors: bool) -> Data | None:
+async def parse_text_file_to_data_async(
+    file_path: str, *, silent_errors: bool, encoding: str | None = None
+) -> Data | None:
     """Parse a text file to Data (async version, supports storage service).
 
     This version properly handles storage service files:
@@ -369,6 +413,7 @@ async def parse_text_file_to_data_async(file_path: str, *, silent_errors: bool) 
     - For PDF: reads bytes directly via BytesIO (no temp file)
     - For DOCX: downloads to temp file (python-docx requires file path)
     """
+    metadata = {}
     try:
         if file_path.endswith(".pdf"):
             text = await parse_pdf_to_text_async(file_path)
@@ -376,18 +421,32 @@ async def parse_text_file_to_data_async(file_path: str, *, silent_errors: bool) 
             text = await read_docx_file_async(file_path)
         else:
             # Text files - read directly, no temp file needed
-            text = await read_text_file_async(file_path)
+            text, selected = await _read_text_file_with_encoding_async(file_path, encoding=encoding)
+            metadata["encoding"] = selected
 
         # Parse structured formats (JSON, YAML, XML)
-        text = parse_structured_text(text, file_path)
+        text = await asyncio.to_thread(parse_structured_text, text, file_path)
 
-        return Data(data={"file_path": file_path, "text": text})
+        return Data(data={"file_path": file_path, "text": text, **metadata})
 
     except Exception as e:
         if not silent_errors:
             msg = f"Error loading file {file_path}: {e}"
             raise ValueError(msg) from e
         return None
+
+
+async def aparse_text_file_to_data(file_path: str, *, silent_errors: bool, encoding: str | None = None) -> Data | None:
+    """Parse a text file to Data from a coroutine without blocking its event loop.
+
+    Unlike ``parse_text_file_to_data``, this never goes through ``run_until_complete``: under
+    S3 the object read is awaited on the caller's loop, while local reads and all parsing run
+    in a worker thread.
+    """
+    settings = get_settings_service().settings
+    if settings.storage_type == "s3":
+        return await parse_text_file_to_data_async(file_path, silent_errors=silent_errors, encoding=encoding)
+    return await asyncio.to_thread(parse_text_file_to_data, file_path, silent_errors=silent_errors, encoding=encoding)
 
 
 # ! Removing unstructured dependency until
@@ -423,3 +482,29 @@ def parallel_load_data(
         loaded_files = executor.map(_run_in_context, file_paths)
     # loaded_files is an iterator, so we need to convert it to a list
     return list(loaded_files)
+
+
+async def aparallel_load_data(
+    file_paths: list[str],
+    *,
+    silent_errors: bool,
+    max_concurrency: int,
+    load_function: Callable[..., Awaitable[Data | None]] = aparse_text_file_to_data,
+) -> list[Data | None]:
+    """Async counterpart of ``parallel_load_data`` with at most ``max_concurrency`` loads in flight.
+
+    Results keep the order of ``file_paths``. Like the executor-backed sync version, every load
+    finishes before the first error (in input order) is raised, so no worker thread started by a
+    load outlives this call.
+    """
+    semaphore = asyncio.Semaphore(max(1, max_concurrency))
+
+    async def _load(file_path: str) -> Data | None:
+        async with semaphore:
+            return await load_function(file_path, silent_errors=silent_errors)
+
+    results = await asyncio.gather(*(_load(file_path) for file_path in file_paths), return_exceptions=True)
+    for result in results:
+        if isinstance(result, BaseException):
+            raise result
+    return list(results)

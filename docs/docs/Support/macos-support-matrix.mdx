@@ -1,104 +1,96 @@
 ---
-title: macOS Support
+title: macOS support
 slug: /macos-support
 ---
 
-Langflow supports both Apple Silicon (ARM64) and Intel (x86_64) Macs, but ML and AI features are only available on Apple Silicon due to hardware and dependency constraints.
-
-Intel Macs lack the Neural Engine, Metal 3 GPU acceleration, and unified memory architecture that Apple Silicon uses to run ML workloads efficiently.
-
-PyTorch, a popular AI/ML library, dropped support for macOS Intel (x86_64) starting with version 2.3.0 in April 2024. The last compatible release was PyTorch 2.2.2, which only supports Python versions 3.10–3.12. Many Langflow components depend on PyTorch, and are automatically excluded on Intel Macs to prevent installation failures.
+Langflow runs on Apple Silicon and Intel Macs.
+Local features that depend on PyTorch are available on Apple Silicon only.
+PyTorch publishes no wheels for Intel Macs, so Langflow skips those extras there.
 
 ## Quick reference
 
-Core Langflow features and OCR work on both architectures.
-ML/AI components and GPU acceleration are Apple Silicon only.
+| Feature | Apple Silicon | Intel Mac |
+|---|---|---|
+| Core Langflow | Supported | Supported |
+| PyTorch-based components | Supported | Not available |
+| Metal GPU acceleration | Supported | Not available |
+| Native OCR | Supported | Supported |
 
-| Feature category | Apple Silicon (M1/M2/M3) | Intel (x86_64) |
-|-----------------|--------------------------|----------------|
-| **Core Langflow** | Full support | Full support |
-| **ML/AI Components** | Full support | Limited/Unavailable |
-| **GPU acceleration** | Metal support | Not available |
-| **Native OCR** | Full support | Full support |
+## Python versions
 
-## Python version support
+Langflow supports Python 3.10 through 3.14 on both Apple Silicon and Intel Macs.
 
-All supported Python versions work on Apple Silicon.
-On Intel Macs, Python 3.13 and later lose PyTorch-dependent features like ALTK, HuggingFace, EasyOCR, and Docling.
+On every Intel Mac, including Python 3.10 through 3.12, Langflow skips extras that depend on PyTorch.
+PyTorch 2.2.2 was the last release with Intel Mac wheels, and Langflow does not install that release.
 
-| Python version | Apple Silicon | Intel Mac |
-|---------------|---------------|-----------|
-| 3.10 | Supported | Supported |
-| 3.11 | Supported | Supported |
-| 3.12 | Supported | Supported |
-| 3.13 | Supported | Limited (no PyTorch) |
-| 3.14 | Supported | Limited (no PyTorch) |
+## What works on both
 
-## Langflow feature support
-
-Feature support varies by Mac architecture. The following sections describe what works on each.
-
-### Core functionality (both architectures)
-
-The following features work on **both Apple Silicon and Intel Macs**:
+These features work on Apple Silicon and Intel Macs:
 
 - Flow builder and visual editor
 - API server and endpoints
-- Database operations (SQLite, PostgreSQL)
+- Database operations with SQLite and PostgreSQL
 - Authentication and user management
-- All non-ML components (text processing, API calls, data transformations)
-- Native OCR via `ocrmac` (uses macOS Vision framework)
-- Vector stores and embeddings (when using API-based providers)
-- LangChain integrations (non-ML components)
+- Components that do not run a local model, including text processing, API calls, and data transformations
+- Native OCR through `ocrmac`, which uses the macOS Vision framework
+- Vector stores and embeddings when the provider is an API
+- LangChain components that do not run a local model
 
-### ML/AI features (Apple Silicon only)
+## Apple Silicon only
 
-The following features require **Apple Silicon (ARM64)** and are **not available on Intel Macs**:
+Langflow skips these extras on Intel Macs:
 
+- **HuggingFace Transformers**, for local models. The HuggingFace Inference API still works from an Intel Mac.
+- **EasyOCR**
+- **Docling** local document conversion. `docling-core`, which handles metadata only, still installs on Intel Macs.
 
-- **ALTK (Agent Lifecycle Toolkit)** - Requires PyTorch
-- **HuggingFace Transformers** - Requires PyTorch
-- **Sentence Transformers** - Requires PyTorch
-- **EasyOCR** - Requires PyTorch
-- **Docling (binary processing)** - Requires PyTorch
-  - Note: `docling-core` (metadata-only) works on Intel
-- **MLX and MLX-VLM** - Apple Silicon exclusive framework
-- **Metal GPU acceleration** - Requires Apple Silicon hardware
-- **CUGA** - Apple Silicon only
+Two more extras install only on some Apple Silicon setups:
 
-If you need ML features on an Intel Mac, consider using API-based providers such as HuggingFace, or a remove inference server with GPU support.
+- **MLX** and **MLX-VLM** install on Apple Silicon with Python 3.12 or newer.
+- **CUGA** installs on Apple Silicon with Python below 3.14. CUGA is also available on Linux and Windows with Python below 3.14.
 
-For some workloads, you can use Docker with ARM64 images with Rosetta 2:
+The `sentence-transformers` extra has no Intel skip marker.
+Installing it on an Intel Mac fails when the installer tries to download PyTorch.
 
-```bash
-docker run --platform linux/arm64 langflowai/langflow:latest
-```
+## Workarounds for Intel Mac users {#workarounds-for-intel-mac-users}
 
-## Installation recommendations {#workarounds-for-intel-mac-users}
+To use models from an Intel Mac:
 
-Installation instructions vary depending on your Mac architecture.
+1. Call an API provider, such as OpenAI, Cohere, Anthropic, or the HuggingFace Inference API.
+2. Run Langflow on a machine where PyTorch installs, and call that instance from the Intel Mac.
+3. For some workloads, run the Apple Silicon container image under Rosetta 2:
 
-For Apple Silicon users, install Langflow normally with all features:
+    ```bash
+    docker run --platform linux/arm64 langflowai/langflow:latest
+    ```
 
-```bash
-pip install langflow
-```
+    This is slower than a native Apple Silicon install, and not every feature works.
 
-Or with specific ML extras:
+## Installation
 
-```bash
-pip install langflow[altk,langchain-huggingface,easyocr]
-```
-
-For Intel Mac users, install the base package for core functionality.
-Attempting to install ML-dependent extras on Intel Macs will be automatically skipped due to platform markers in the package configuration.
+On Apple Silicon, install Langflow with the usual command:
 
 ```bash
-pip install langflow
+uv pip install langflow
 ```
+
+To add local ML extras:
+
+```bash
+uv pip install "langflow[langchain-huggingface,easyocr]"
+```
+
+On an Intel Mac, install the base package:
+
+```bash
+uv pip install langflow
+```
+
+The HuggingFace, EasyOCR, and Docling local-conversion extras are skipped.
+The `sentence-transformers` extra is not skipped, and that install fails because PyTorch is unavailable.
 
 ## See also
 
-For troubleshooting, see [Troubleshoot Intel Mac issues](./troubleshooting.mdx#intel-mac-issues).
+For install errors, see [Troubleshoot Intel Mac issues](./troubleshooting.mdx#intel-mac-issues).
 
-For more information, ask the Langflow community in [GitHub Discussions](https://github.com/langflow-ai/langflow/discussions) or the [Discord server](https://discord.gg/EqksyE2EX9).
+For more help, ask in [GitHub Discussions](https://github.com/langflow-ai/langflow/discussions) or on the [Discord server](https://discord.gg/EqksyE2EX9).

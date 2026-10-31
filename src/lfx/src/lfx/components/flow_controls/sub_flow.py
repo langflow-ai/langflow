@@ -15,7 +15,7 @@ class SubFlowComponent(Component):
     description = "Generates a Component from a Flow, with all of its inputs, and "
     name = "SubFlow"
     legacy: bool = True
-    replacement = ["logic.RunFlow"]
+    replacement = ["flow_controls.RunFlow"]
     icon = "Workflow"
 
     async def get_flow_names(self) -> list[str]:

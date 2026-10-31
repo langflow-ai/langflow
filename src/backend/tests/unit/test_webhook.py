@@ -248,24 +248,12 @@ async def test_webhook_not_found_invalid_endpoint(client, created_api_key):
 
 async def test_webhook_invalid_api_key(client, added_webhook_test):
     """Test that webhook returns 403 for invalid API key when auth is enabled."""
-    from unittest.mock import AsyncMock, MagicMock
-
     from fastapi import HTTPException
-    from langflow.services.auth.service import AuthService
 
-    # Create a mock settings service with WEBHOOK_AUTH_ENABLE=True
-    mock_auth_settings = MagicMock()
-    mock_auth_settings.WEBHOOK_AUTH_ENABLE = True
-
-    mock_settings_service = MagicMock()
-    mock_settings_service.auth_settings = mock_auth_settings
-
-    # Create a mock auth service
-    mock_auth_service = MagicMock(spec=AuthService)
-    mock_auth_service.settings_service = mock_settings_service
-    mock_auth_service.get_webhook_user = AsyncMock(side_effect=HTTPException(status_code=403, detail="Invalid API key"))
-
-    with patch("langflow.api.v1.endpoints.get_auth_service", return_value=mock_auth_service):
+    with patch(
+        "langflow.api.v1.endpoints.get_webhook_user",
+        side_effect=HTTPException(status_code=403, detail="Invalid API key"),
+    ):
         endpoint_name = added_webhook_test["endpoint_name"]
         endpoint = f"api/v1/webhook/{endpoint_name}"
         payload = {"test": "data"}
@@ -277,26 +265,12 @@ async def test_webhook_invalid_api_key(client, added_webhook_test):
 
 async def test_webhook_missing_api_key_when_required(client, added_webhook_test):
     """Test that webhook returns 403 when API key is missing and auth is enabled."""
-    from unittest.mock import AsyncMock, MagicMock
-
     from fastapi import HTTPException
-    from langflow.services.auth.service import AuthService
 
-    # Create a mock settings service with WEBHOOK_AUTH_ENABLE=True
-    mock_auth_settings = MagicMock()
-    mock_auth_settings.WEBHOOK_AUTH_ENABLE = True
-
-    mock_settings_service = MagicMock()
-    mock_settings_service.auth_settings = mock_auth_settings
-
-    # Create a mock auth service
-    mock_auth_service = MagicMock(spec=AuthService)
-    mock_auth_service.settings_service = mock_settings_service
-    mock_auth_service.get_webhook_user = AsyncMock(
-        side_effect=HTTPException(status_code=403, detail="API key required when webhook authentication is enabled")
-    )
-
-    with patch("langflow.api.v1.endpoints.get_auth_service", return_value=mock_auth_service):
+    with patch(
+        "langflow.api.v1.endpoints.get_webhook_user",
+        side_effect=HTTPException(status_code=403, detail="API key required when webhook authentication is enabled"),
+    ):
         endpoint_name = added_webhook_test["endpoint_name"]
         endpoint = f"api/v1/webhook/{endpoint_name}"
         payload = {"test": "data"}
@@ -1016,3 +990,38 @@ async def test_webhook_required_identity_present_is_accepted(client, added_webho
         json={"k": "v"},
     )
     assert resp.status_code == 202, resp.text
+
+
+async def test_webhook_route_names_the_webhook_execution_family(
+    client, added_webhook_test, created_api_key, monkeypatch
+):
+    """INT-6: the route, not the task's default, chooses the privileged family.
+
+    ``simple_run_flow_task`` defaults to the actor family (``v1_run``) so an
+    unconverted caller cannot silently inherit the flow owner's credentials;
+    ``webhook`` -- the one genuinely unattended caller -- is named at the route.
+    """
+    import inspect
+
+    from langflow.api.utils.execution_principal import FAMILY_V1_RUN, FAMILY_WEBHOOK
+    from langflow.api.v1 import endpoints
+
+    default_family = inspect.signature(endpoints.simple_run_flow_task).parameters["execution_family"].default
+    assert default_family == FAMILY_V1_RUN
+
+    captured: dict = {}
+    started = asyncio.Event()
+
+    async def _record_task(**kwargs):
+        captured.update(kwargs)
+        started.set()
+
+    monkeypatch.setattr(endpoints, "simple_run_flow_task", _record_task)
+
+    endpoint = f"api/v1/webhook/{added_webhook_test['endpoint_name']}"
+    response = await client.post(endpoint, headers={"x-api-key": created_api_key.api_key}, json={"k": "v"})
+
+    assert response.status_code == 202, response.text
+    # asyncio.timeout() is 3.11+; this suite still runs on 3.10, so use wait_for.
+    await asyncio.wait_for(started.wait(), timeout=10)
+    assert captured["execution_family"] == FAMILY_WEBHOOK

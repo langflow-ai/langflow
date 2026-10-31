@@ -1,6 +1,8 @@
 import importlib.util
 import io
+import os
 import re
+import zlib
 from urllib.parse import urljoin, urlparse
 
 import httpx
@@ -14,6 +16,7 @@ from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output,
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
+from lfx.services.deps import get_settings_service
 from lfx.utils.request_utils import get_user_agent
 from lfx.utils.ssrf_protection import SSRFProtectionError, is_ssrf_protection_enabled, validate_and_resolve_url
 from lfx.utils.ssrf_transport import create_ssrf_protected_client, pin_host_for_url
@@ -32,6 +35,20 @@ MAX_REDIRECTS = 20
 
 # Default ports per scheme, used to compare redirect origins.
 DEFAULT_SCHEME_PORTS = {"http": 80, "https": 443}
+
+# Memory bounds for untrusted responses. Bodies are streamed and abandoned once the
+# per-response cap or the budget shared by every page of one fetch (all URLs and crawled
+# links) is exceeded, so a hostile server cannot exhaust memory with a huge or endless body.
+# Configurable via LANGFLOW_URL_COMPONENT_MAX_RESPONSE_BYTES / LANGFLOW_URL_COMPONENT_MAX_TOTAL_BYTES
+# (see RuntimeSettings); these are only the fallback used when the settings service isn't available.
+FALLBACK_MAX_RESPONSE_BYTES = 10 * 1024 * 1024
+FALLBACK_MAX_TOTAL_BYTES = 100 * 1024 * 1024
+
+# Only advertise codings we can decode with a strict output limit. Raw response bytes
+# are also capped before decoding, including compressed headers and trailing data.
+ACCEPT_ENCODING = "gzip, deflate"
+ALLOWED_CONTENT_ENCODINGS = frozenset({"gzip", "deflate"})
+ZLIB_HEADER_BYTES = 2
 
 
 URL_REGEX = re.compile(
@@ -65,6 +82,12 @@ class URLComponent(Component):
     documentation: str = "https://docs.langflow.org/url"
     icon = "layout-template"
     name = "URLComponent"
+    # Body bytes the current fetch may still read; reset by ``fetch_url_contents``.
+    _bytes_remaining = FALLBACK_MAX_TOTAL_BYTES
+    # Per-response and total byte caps for the current fetch; resolved from settings by
+    # ``fetch_url_contents``. Kept as fallbacks here so the class works if that never runs.
+    _max_response_bytes = FALLBACK_MAX_RESPONSE_BYTES
+    _max_total_bytes = FALLBACK_MAX_TOTAL_BYTES
 
     inputs = [
         MessageTextInput(
@@ -305,11 +328,14 @@ class URLComponent(Component):
         Returns:
             httpx.AsyncClient: A client with DNS pinning when SSRF protection is enabled
         """
-        if is_ssrf_protection_enabled() and validated_ips:
-            hostname = pin_host_for_url(url)
-            if hostname:
-                return create_ssrf_protected_client(hostname=hostname, validated_ips=validated_ips)
-        return httpx.AsyncClient()
+        hostname = pin_host_for_url(url) if is_ssrf_protection_enabled() and validated_ips else None
+        if hostname:
+            client = create_ssrf_protected_client(hostname=hostname, validated_ips=validated_ips)
+        else:
+            client = httpx.AsyncClient()
+        # A client default, so a user-supplied Accept-Encoding header still takes precedence.
+        client.headers["Accept-Encoding"] = ACCEPT_ENCODING
+        return client
 
     @staticmethod
     def _headers_for_redirect(headers: dict | None, current_url: str, next_url: str) -> dict | None:
@@ -339,11 +365,144 @@ class URLComponent(Component):
         sensitive = {"authorization", "proxy-authorization", "cookie"}
         return {k: v for k, v in headers.items() if k.lower() not in sensitive}
 
-    def _process_response(self, response: httpx.Response) -> tuple[str, dict]:
-        """Turn a final (non-redirect) response into its HTML content and metadata.
+    @staticmethod
+    def _resolve_byte_limit(env_var: str, setting_name: str, fallback: int) -> int:
+        """Resolve one byte cap from settings, or the environment when no service is available.
+
+        The settings service applies Langflow's normal configuration precedence. Reading the
+        process environment directly is only a fallback for standalone ``lfx`` execution.
+        """
+        try:
+            settings_service = get_settings_service()
+        except Exception:  # noqa: BLE001 - service registry may not be ready
+            settings_service = None
+        if settings_service is not None:
+            return getattr(settings_service.settings, setting_name, fallback)
+
+        env_value = os.getenv(env_var)
+        if env_value is not None:
+            try:
+                value = int(env_value)
+            except ValueError:
+                logger.warning(f"Ignoring invalid {env_var}={env_value!r}; using {fallback}")
+                return fallback
+            if value > 0:
+                return value
+            logger.warning(f"Ignoring non-positive {env_var}={env_value!r}; using {fallback}")
+            return fallback
+
+        return fallback
+
+    @classmethod
+    def _resolve_byte_limits(cls) -> tuple[int, int]:
+        """Read the configurable per-response and total byte caps for the current fetch."""
+        return (
+            cls._resolve_byte_limit(
+                "LANGFLOW_URL_COMPONENT_MAX_RESPONSE_BYTES",
+                "url_component_max_response_bytes",
+                FALLBACK_MAX_RESPONSE_BYTES,
+            ),
+            cls._resolve_byte_limit(
+                "LANGFLOW_URL_COMPONENT_MAX_TOTAL_BYTES",
+                "url_component_max_total_bytes",
+                FALLBACK_MAX_TOTAL_BYTES,
+            ),
+        )
+
+    async def _read_bounded_text(self, response: httpx.Response) -> str:
+        """Read a streamed response body without exceeding the per-response or total byte budget.
+
+        Encoded and decoded bytes are each bounded. The larger count is charged against the
+        total budget even when the body is rejected, so a server that keeps answering with
+        oversized bodies cannot make a crawl download without bound. Decoder errors charge
+        the reserved output bound because zlib may discard output before raising.
+
+        Raises:
+            httpx.HTTPError: If the body is (or declares to be) larger than the remaining budget,
+                or uses a content coding whose decompression cannot be bounded.
+        """
+        codings = [c.strip().lower() for c in response.headers.get("content-encoding", "").split(",")]
+        codings = [c for c in codings if c not in {"", "identity"}]
+        if len(codings) > 1 or (codings and codings[0] not in ALLOWED_CONTENT_ENCODINGS):
+            msg = f"Unsupported content encoding from {response.url}: {', '.join(codings)}"
+            raise httpx.HTTPError(msg)
+
+        limit = min(self._max_response_bytes, self._bytes_remaining)
+        too_large = f"Response from {response.url} exceeds the {limit} byte limit"
+        declared = response.headers.get("content-length", "")
+        if declared.isdigit() and int(declared) > limit:
+            raise httpx.HTTPError(too_large)
+
+        body = bytearray()
+        raw_bytes = decoded_bytes = 0
+        coding = codings[0] if codings else None
+        decompressor = (
+            zlib.decompressobj(zlib.MAX_WBITS | 16 if coding == "gzip" else zlib.MAX_WBITS) if coding else None
+        )
+        first_decode = True
+        deflate_prefix = b""
+        try:
+            # HTTPX's automatic decoder can allocate unbounded output or retain an
+            # endless tail in zlib.unused_data without yielding any decoded bytes.
+            async for raw_chunk in response.aiter_raw():
+                raw_bytes += len(raw_chunk)
+                if raw_bytes > limit:
+                    raise httpx.HTTPError(too_large)
+                chunk = raw_chunk
+                if decompressor is not None:
+                    if decompressor.eof:
+                        msg = f"Trailing data after compressed response from {response.url}"
+                        raise httpx.DecodingError(msg)
+                    if coding == "deflate" and first_decode:
+                        # HTTP deflate may omit the zlib wrapper. Wait for enough
+                        # header bytes before trying the same fallback as HTTPX.
+                        chunk = deflate_prefix + chunk
+                        if len(chunk) < ZLIB_HEADER_BYTES:
+                            deflate_prefix = chunk
+                            continue
+                    max_output = limit - decoded_bytes + 1
+                    try:
+                        try:
+                            decoded = decompressor.decompress(chunk, max_output)
+                        except zlib.error:
+                            if coding != "deflate" or not first_decode:
+                                raise
+                            decompressor = zlib.decompressobj(-zlib.MAX_WBITS)
+                            decoded = decompressor.decompress(chunk, max_output)
+                    except zlib.error as exc:
+                        # zlib can produce output before detecting a bad checksum,
+                        # then raise without returning it. Charge the reserved bound.
+                        decoded_bytes = limit + 1
+                        msg = f"Invalid compressed response from {response.url}"
+                        raise httpx.DecodingError(msg) from exc
+                    first_decode = False
+                    decoded_bytes += len(decoded)
+                    if decoded_bytes > limit:
+                        raise httpx.HTTPError(too_large)
+                    if decompressor.unused_data:
+                        msg = f"Trailing data after compressed response from {response.url}"
+                        raise httpx.DecodingError(msg)
+                    chunk = decoded
+                else:
+                    decoded_bytes += len(chunk)
+                # Check decoded output before retaining it in the response body.
+                body.extend(chunk)
+            if decompressor is not None and not decompressor.eof:
+                msg = f"Incomplete compressed response from {response.url}"
+                raise httpx.DecodingError(msg)
+        finally:
+            # Charge encoded overhead as well as expanded output, including rejected
+            # responses. Neither representation may bypass the shared fetch budget.
+            self._bytes_remaining -= max(raw_bytes, decoded_bytes)
+        # Same character decoding as ``response.text``. A complete zlib stream has
+        # already emitted all its output, so no unbounded decoder flush is needed.
+        return body.decode(response.encoding or "utf-8", errors="replace")
+
+    async def _process_response(self, response: httpx.Response) -> tuple[str, dict]:
+        """Turn a final (non-redirect) streamed response into its HTML content and metadata.
 
         Args:
-            response: The HTTP response to process
+            response: The HTTP response to process, opened with ``stream=True``
 
         Returns:
             tuple[str, dict]: The HTML content and metadata
@@ -359,7 +518,7 @@ class URLComponent(Component):
             return "", {}
 
         # Get the HTML content
-        html_content = response.text
+        html_content = await self._read_bounded_text(response)
 
         # Extract metadata
         metadata = {
@@ -419,30 +578,33 @@ class URLComponent(Component):
         current_ips = validated_ips
 
         for _ in range(MAX_REDIRECTS + 1):
-            async with self._build_http_client(current_url, current_ips) as client:
-                response = await client.get(current_url, headers=headers, timeout=self.timeout, follow_redirects=False)
+            # Stream so redirect bodies are never read and the final body is read bounded.
+            async with (
+                self._build_http_client(current_url, current_ips) as client,
+                client.stream(
+                    "GET", current_url, headers=headers, timeout=self.timeout, follow_redirects=False
+                ) as response,
+            ):
+                location = response.headers.get("location")
+                if response.status_code not in REDIRECT_STATUS_CODES or not location:
+                    # Not a redirect (or no Location header) - this is the final response.
+                    return await self._process_response(response)
 
-            location = response.headers.get("location")
-            if response.status_code in REDIRECT_STATUS_CODES and location:
-                # Resolve relative redirects against the current URL.
-                next_url = urljoin(current_url, location)
+            # Resolve relative redirects against the current URL.
+            next_url = urljoin(current_url, location)
 
-                # Re-validate the redirect target with the same SSRF denylist + DNS pinning.
-                try:
-                    validated_next_url, current_ips = self.ensure_url(next_url)
-                except (ValueError, SSRFProtectionError) as e:
-                    if self.continue_on_failure:
-                        logger.warning(f"Skipping blocked or invalid redirect to {next_url}: {e}")
-                        return "", {}
-                    msg = f"SSRF Protection: blocked redirect to {next_url}: {e}"
-                    raise ValueError(msg) from e
+            # Re-validate the redirect target with the same SSRF denylist + DNS pinning.
+            try:
+                validated_next_url, current_ips = self.ensure_url(next_url)
+            except (ValueError, SSRFProtectionError) as e:
+                if self.continue_on_failure:
+                    logger.warning(f"Skipping blocked or invalid redirect to {next_url}: {e}")
+                    return "", {}
+                msg = f"SSRF Protection: blocked redirect to {next_url}: {e}"
+                raise ValueError(msg) from e
 
-                headers = self._headers_for_redirect(headers, current_url, next_url)
-                current_url = validated_next_url
-                continue
-
-            # Not a redirect (or no Location header) - this is the final response.
-            return self._process_response(response)
+            headers = self._headers_for_redirect(headers, current_url, next_url)
+            current_url = validated_next_url
 
         # Exhausted the redirect budget.
         if self.continue_on_failure:
@@ -467,15 +629,24 @@ class URLComponent(Component):
             # is re-validated and DNS-pinned; letting httpx auto-follow would connect to the
             # redirect target without pinning (different host, not in the pin map) and re-open
             # the SSRF hole that DNS pinning closes. With protection disabled there is no pin
-            # to bypass, so httpx can follow redirects natively.
+            # to bypass, so redirects follow the requests httpx itself builds for each hop.
             if self.follow_redirects and is_ssrf_protection_enabled():
                 return await self._fetch_with_revalidated_redirects(url, validated_ips, headers)
 
             async with self._build_http_client(url, validated_ips) as client:
-                response = await client.get(
-                    url, headers=headers, timeout=self.timeout, follow_redirects=self.follow_redirects
-                )
-            return self._process_response(response)
+                request = client.build_request("GET", url, headers=headers, timeout=self.timeout)
+                # httpx auto-follow reads every redirect body into memory without a limit, so hop
+                # manually via ``next_request`` (same cookies, headers and redirect cap as httpx).
+                for _ in range(MAX_REDIRECTS + 1):
+                    response = await client.send(request, stream=True, follow_redirects=False)
+                    try:
+                        if not (self.follow_redirects and response.next_request):
+                            return await self._process_response(response)
+                        request = response.next_request
+                    finally:
+                        await response.aclose()
+            msg = "Exceeded maximum allowed redirects."
+            raise httpx.TooManyRedirects(msg, request=request)
 
         except httpx.HTTPError as e:
             if self.continue_on_failure:
@@ -499,6 +670,9 @@ class URLComponent(Component):
             list[dict]: List of documents with content and metadata
         """
         if depth >= self.max_depth or start_url in visited:
+            return []
+        if self._bytes_remaining <= 0:
+            logger.warning(f"Skipping {start_url}: reached the {self._max_total_bytes} byte limit for this fetch")
             return []
 
         visited.add(start_url)
@@ -541,6 +715,8 @@ class URLComponent(Component):
                 links = soup.find_all("a", href=True)
 
                 for link in links:
+                    if self._bytes_remaining <= 0:
+                        break
                     href = link["href"]
                     # Resolve relative URLs
                     absolute_url = urljoin(base_url, href)
@@ -589,6 +765,8 @@ class URLComponent(Component):
         Raises:
             ValueError: If no valid URLs are provided or if there's an error loading documents
         """
+        self._max_response_bytes, self._max_total_bytes = self._resolve_byte_limits()
+        self._bytes_remaining = self._max_total_bytes
         try:
             # Validate all URLs and get their validated IPs for DNS pinning
             validated_urls = []

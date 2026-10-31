@@ -3,6 +3,7 @@
 import sys
 from pathlib import Path
 
+from bundle_release_plan import PlanError, PyPIClient, ensure_unpublished_bundles_fit_lfx_line, restamp_nightly_bundles
 from update_lf_base_dependency import update_lfx_dep_in_base
 from update_pyproject_version import update_pyproject_version
 from update_uv_dependency import update_uv_dep as update_version_uv_dep
@@ -10,6 +11,7 @@ from update_uv_dependency import update_uv_dep as update_version_uv_dep
 # Add the current directory to the path so we can import the other scripts
 current_dir = Path(__file__).resolve().parent
 sys.path.append(str(current_dir))
+BASE_DIR = current_dir.parents[1]
 
 
 def update_projects_for_nightly(main_tag: str, base_tag: str, lfx_tag: str) -> None:
@@ -31,6 +33,7 @@ def update_projects_for_nightly(main_tag: str, base_tag: str, lfx_tag: str) -> N
     update_pyproject_version("pyproject.toml", main_version)
     # Main delegates directly to the product-aligned base distribution.
     update_version_uv_dep(base_version)
+    restamp_nightly_bundles(lfx_version, base_dir=BASE_DIR)
 
 
 def main():
@@ -55,6 +58,12 @@ def main():
         print("Usage: update_pyproject_combined.py main <main_tag> <base_tag> <lfx_tag>")
         sys.exit(1)
 
+    # The nightly publishes every unpublished bundle version, so it must not claim another lfx line's minor.
+    try:
+        ensure_unpublished_bundles_fit_lfx_line(sys.argv[4].removeprefix("v"), PyPIClient(), base_dir=BASE_DIR)
+    except PlanError as exc:
+        print(exc)
+        sys.exit(1)
     update_projects_for_nightly(sys.argv[2], sys.argv[3], sys.argv[4])
 
 

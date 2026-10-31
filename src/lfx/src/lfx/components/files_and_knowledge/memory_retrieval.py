@@ -15,17 +15,7 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
-from langflow.api.utils.kb_helpers import (
-    resolve_backend_selection,
-    resolve_embedding_selection,
-    resolve_local_store_path,
-)
-from langflow.services.database.models.memory_base.model import MemoryBase
-from langflow.services.database.models.user.crud import get_user_by_id
-from langflow.services.memory_base.kb_path_helpers import hash_session_id
-from sqlmodel import select
 
-from lfx.base.knowledge_bases.backends import create_backend
 from lfx.custom import Component
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output
 from lfx.log.logger import logger
@@ -35,6 +25,7 @@ from lfx.services.deps import session_scope
 from lfx.workflow.end_user_identity import end_user_id_from_scoped_session, serving_end_user_enabled
 
 if TYPE_CHECKING:
+    from langflow.services.database.models.memory_base.model import MemoryBase
     from langflow.services.database.models.user.model import User
     from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -150,6 +141,10 @@ class MemoryBaseComponent(Component):
             msg = "user_id is not available on the graph context; Memory Base retrieval is unavailable."
             raise ValueError(msg)
 
+        from langflow.api.utils.kb_helpers import resolve_embedding_selection
+        from langflow.services.database.models.memory_base.model import MemoryBase
+        from sqlmodel import select
+
         async with session_scope() as db:
             memory_base = (
                 await db.exec(
@@ -226,6 +221,7 @@ class MemoryBaseComponent(Component):
         return predicates or None
 
     async def update_build_config(self, build_config, field_value, field_name=None):  # noqa: ARG002
+        """Populate Memory selections from the current developer's stored Memory Bases."""
         if field_name != "memory_base":
             return build_config
 
@@ -235,6 +231,9 @@ class MemoryBaseComponent(Component):
             build_config["memory_base"]["options"] = []
             build_config["memory_base"]["value"] = None
             return build_config
+
+        from langflow.services.database.models.memory_base.model import MemoryBase
+        from sqlmodel import select
 
         # At design time self.user_id == the flow developer == MB owner, so this
         # filters to the same set a Flow-lookup would return but without relying
@@ -260,6 +259,10 @@ class MemoryBaseComponent(Component):
         execution_user_id: uuid.UUID,
     ) -> tuple[MemoryBase, User]:
         """Look up the MB row scoped to the exact flow execution principal."""
+        from langflow.services.database.models.memory_base.model import MemoryBase
+        from langflow.services.database.models.user.crud import get_user_by_id
+        from sqlmodel import select
+
         mb = (
             await db.exec(
                 select(MemoryBase).where(
@@ -282,7 +285,7 @@ class MemoryBaseComponent(Component):
     async def _build_backend(
         self,
         owner: User,
-        owner_username: str,
+        owner_username: str,  # noqa: ARG002 - compatibility signature
         kb_name: str,
     ) -> BaseVectorStoreBackend:
         """Construct the KB's configured backend, wired to its embedding function.
@@ -299,23 +302,10 @@ class MemoryBaseComponent(Component):
         # owner credential access. The graph-level preflight runs before input
         # hydration; this repeat also closes a metadata-change race between that
         # boundary and backend construction.
+        from langflow.api.utils.kb_helpers import resolve_embedding_selection
+
         provider, model = await resolve_embedding_selection(user_id=owner.id, kb_name=kb_name)
         provider_policy = await self._resolve_runtime_embedding_policy(provider, owner.id)
-
-        # Resolve where this Memory Base lives before constructing a provider
-        # client. Path containment and backend metadata do not read embedding
-        # credentials.
-        backend_type, backend_config = await resolve_backend_selection(user_id=owner.id, kb_name=kb_name)
-        try:
-            kb_path = resolve_local_store_path(
-                kb_name,
-                owner_username,
-                backend_type=backend_type,
-                backend_config=backend_config,
-            )
-        except ValueError as exc:
-            msg = "Memory Base path is not accessible."
-            raise ValueError(msg) from exc
 
         embedding_function = self._build_embeddings_with_policy(
             provider,
@@ -324,14 +314,9 @@ class MemoryBaseComponent(Component):
             provider_policy=provider_policy,
         )
 
-        backend = create_backend(
-            backend_type,
-            kb_name=kb_name,
-            kb_path=kb_path,
-            backend_config=backend_config,
-            embedding_function=embedding_function,
-            user_id=owner.id,
-        )
+        from langflow.api.utils.kb_helpers import backend_for_name
+
+        backend = await backend_for_name(owner.id, kb_name, embedding_function=embedding_function)
         await backend.ensure_ready()
         return backend
 
@@ -462,6 +447,8 @@ class MemoryBaseComponent(Component):
             kb_name = mb.kb_name
 
         where = self._build_where_clause(session_id=session_id, end_user_id=end_user_id)
+
+        from langflow.services.memory_base.kb_path_helpers import hash_session_id
 
         logger.debug(
             "MemoryBase retrieval mb=%s session_hash=%s session_filter=%s top_k=%s",

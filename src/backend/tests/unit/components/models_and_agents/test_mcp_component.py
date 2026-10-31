@@ -45,6 +45,13 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
         """Return the file names mapping for different versions."""
         return []
 
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "component_as_tool": "needs a database user and starts the MCP server in default_kwargs",
+            "response": "calls a tool on the MCP server in default_kwargs",
+        }
+
     @pytest.mark.asyncio
     @pytest.mark.skipif(not shutil.which("npx"), reason="Node.js not available")
     async def test_component_initialization(self, component_class, default_kwargs):
@@ -123,12 +130,16 @@ class TestMCPToolsComponentSchemaHandling:
 
     def test_build_tool_kwargs_omits_blank_optional_values(self, component):
         args_schema = create_input_schema_from_json_schema(self._browser_use_schema())
-        component.task = "Open docs homepage"
-        component.model = ""
-        component.profile_id = ""
-        component.keep_alive = False
-        component.output_schema = {}
-        component.proxy_country = ""
+        component.set_attributes(
+            {
+                "task": "Open docs homepage",
+                "model": "",
+                "profile_id": "",
+                "keep_alive": False,
+                "output_schema": {},
+                "proxy_country": "",
+            }
+        )
 
         kwargs = component._build_tool_kwargs(args_schema)
 

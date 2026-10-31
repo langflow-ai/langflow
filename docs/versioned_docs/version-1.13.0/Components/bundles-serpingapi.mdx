@@ -1,0 +1,42 @@
+---
+title: Serping API
+slug: /bundles-serpingapi
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="serpingapi" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Serping API** bundle.
+
+## Serping API Search
+
+This component runs a web search through the [Serping API](https://serpingapi.com) and returns the organic Google results.
+
+Get an API key from [serpingapi.com](https://serpingapi.com). For details on the underlying API, see the [Serping API documentation](https://serpingapi.com/docs).
+
+It outputs the results as a [`Table`](/data-types#table) with `title`, `link`, `snippet`, and `position` columns. The `text` of each row is the result snippet.
+If the request fails, for example because the API key is missing or invalid or the monthly quota is used up, the table contains a single row with an `error` column that describes the problem.
+
+In [tool mode](/agents-tools), the component exposes a single tool named `serpingapi_search` that an [**Agent** component](/agents) can call with a search query.
+
+### Serping API Search parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Search Query (`input_value`) | String | Input parameter. The search query to execute with the Serping API. |
+| Serping API Key (`serpingapi_api_key`) | SecretString | Input parameter. Your Serping API key. |
+| Country (`gl`) | String | Input parameter. Country code for the results, for example `us`, `de`, or `jp`. Optional. |
+| Language (`hl`) | String | Input parameter. Interface language, for example `en` or `es`. Optional. |
+| Location (`location`) | String | Input parameter. Locality for the search, for example `Seattle, Washington, United States`. Optional. |
+| Max Results (`max_results`) | Integer | Input parameter. The maximum number of organic results to return, from `1` to `100`. Default: `10`. |
+| Page (`page`) | Integer | Input parameter. The result page to fetch, starting at `1`. Default: `1`. |
+
+## See also
+
+* [**Web Search** component](/web-search)
+* [**Serper** bundle](/bundles-serper)
+* [**Serply** bundle](./bundles-serply)

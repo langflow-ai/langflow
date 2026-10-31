@@ -97,3 +97,71 @@ def test_authz_endpoint_matrix_rejects_a_new_unclassified_route(tmp_path: Path, 
     assert any(
         "new_protected_route" in error and "unclassified route" in error for error in validate_matrix(matrix_path)
     )
+
+
+def _provider_signed_matrix(tmp_path: Path, *, action: str, preset: str) -> Path:
+    """A one-route matrix over a stub module, classified ``provider_signed``."""
+    source = tmp_path / "api" / "v1" / "trigger_ingress.py"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(
+        "from fastapi import APIRouter\n"
+        "router = APIRouter()\n"
+        "@router.post('/{provider}/{public_id}')\n"
+        "async def receive_provider_delivery(): pass\n",
+        encoding="utf-8",
+    )
+    matrix_path = tmp_path / "matrix.json"
+    matrix_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "persona_presets": {
+                    "canonical_v1": dict.fromkeys(REQUIRED_PERSONAS, "defined"),
+                    "public_or_conditional": dict.fromkeys(REQUIRED_PERSONAS, "defined"),
+                },
+                "contracts": [
+                    {
+                        "family": "trigger_ingress",
+                        "source": "api/v1/trigger_ingress.py",
+                        "resource": "trigger",
+                        "domain": "none",
+                        "privacy": "404 for every outcome",
+                        "side_effects": "appends one ledger row",
+                        "frontend": "none",
+                        "personas": preset,
+                        "test_references": [
+                            "scripts/ci/test_authz_endpoint_matrix.py::test_provider_signed_requires_the_ingest_action"
+                        ],
+                        "routes": [
+                            f"POST|/{{provider}}/{{public_id}}|receive_provider_delivery|{action}|provider_signed"
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return matrix_path
+
+
+def test_provider_signed_requires_the_ingest_action(tmp_path: Path, monkeypatch) -> None:
+    """``provider_signed`` routes append to a ledger; they never execute anything.
+
+    Without this pairing the word would be a way to wave an ordinary route past
+    review by calling its caller a provider.
+    """
+    monkeypatch.setattr("check_authz_endpoint_matrix.API_ROOT", tmp_path)
+
+    good = _provider_signed_matrix(tmp_path, action="ingest", preset="public_or_conditional")
+    assert validate_matrix(good) == []
+
+    bad = _provider_signed_matrix(tmp_path, action="execute", preset="public_or_conditional")
+    assert any("must use the 'ingest' action" in error for error in validate_matrix(bad))
+
+
+def test_provider_signed_cannot_claim_a_role_gated_persona(tmp_path: Path, monkeypatch) -> None:
+    """No role grants access to an unauthenticated route, so no canonical personas."""
+    monkeypatch.setattr("check_authz_endpoint_matrix.API_ROOT", tmp_path)
+
+    bad = _provider_signed_matrix(tmp_path, action="ingest", preset="canonical_v1")
+    assert any("belong to a 'public_or_conditional' contract" in error for error in validate_matrix(bad))

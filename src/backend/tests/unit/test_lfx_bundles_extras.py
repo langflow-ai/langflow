@@ -16,8 +16,7 @@ by hand-edit:
     4. normalized extra keys are collision-free,
     5. the metapackage provider set stays disjoint from the graduated
        partner distributions (no double-ship; manifest would shadow),
-    6. ALTK remains available on Python 3.14 while preserving its Intel macOS
-       exclusion.
+    6. retired ALTK extras cannot reinstall the removed toolkit dependency.
 """
 
 from __future__ import annotations
@@ -25,7 +24,6 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from packaging.markers import default_environment
 from packaging.requirements import Requirement
 
 try:
@@ -42,9 +40,10 @@ BUNDLES_DIR = REPO_ROOT / "src" / "bundles"
 # scripts/migrate/consolidate_bundles.py. ``all`` pulls every provider;
 # ``all-no-torch`` is ``all`` minus the torch-pulling providers (TORCH_EXTRAS).
 AGGREGATE_EXTRAS = frozenset({"all", "all-no-torch"})
+RETIRED_EXTRAS = frozenset({"chroma"})
 COMPATIBILITY_EXTRAS = {
     "azure": ["lfx-azure>=0.1.0,<1.0.0"],
-    "google": ["lfx-google>=0.1.0,<1.0.0"],
+    "google": ["lfx-google>=0.2.5,<1.0.0"],
     "ollama": ["lfx-ollama>=0.1.0,<1.0.0"],
 }
 TORCH_EXTRAS = frozenset({"cuga", "codeagents"})
@@ -79,7 +78,9 @@ def test_every_provider_has_an_extra_and_vice_versa() -> None:
 def test_all_extra_is_exactly_the_per_provider_self_refs() -> None:
     extras = _load_extras()
     expected = {
-        f"lfx-bundles[{key}]" for key in extras if key not in AGGREGATE_EXTRAS and key not in COMPATIBILITY_EXTRAS
+        f"lfx-bundles[{key}]"
+        for key in extras
+        if key not in AGGREGATE_EXTRAS and key not in COMPATIBILITY_EXTRAS and key not in RETIRED_EXTRAS
     }
     actual = set(extras["all"])
     assert actual == expected, (
@@ -92,7 +93,10 @@ def test_all_no_torch_extra_is_all_minus_torch_providers() -> None:
     expected = {
         f"lfx-bundles[{key}]"
         for key in extras
-        if key not in AGGREGATE_EXTRAS and key not in TORCH_EXTRAS and key not in COMPATIBILITY_EXTRAS
+        if key not in AGGREGATE_EXTRAS
+        and key not in TORCH_EXTRAS
+        and key not in COMPATIBILITY_EXTRAS
+        and key not in RETIRED_EXTRAS
     }
     actual = set(extras["all-no-torch"])
     assert actual == expected, (
@@ -130,33 +134,15 @@ def test_metapackage_providers_disjoint_from_graduated_partners() -> None:
     assert not overlap, f"providers shipped from both lfx-bundles and a graduated package: {sorted(overlap)}"
 
 
-def test_altk_dependency_supports_python_314() -> None:
-    """ALTK supports Python 3.14 everywhere except unsupported Intel macOS."""
-    requirements = (Requirement(dependency) for dependency in _load_extras()["altk"])
-    altk = next(requirement for requirement in requirements if requirement.name == "agent-lifecycle-toolkit")
-    assert altk.marker is not None
-
-    environment = default_environment()
-    for sys_platform, platform_machine in (("linux", "x86_64"), ("darwin", "arm64"), ("win32", "AMD64")):
-        environment.update(
-            {
-                "python_full_version": "3.14.0",
-                "python_version": "3.14",
-                "sys_platform": sys_platform,
-                "platform_machine": platform_machine,
-            }
-        )
-        assert altk.marker.evaluate(environment)
-
-    environment.update(
-        {
-            "python_full_version": "3.14.0",
-            "python_version": "3.14",
-            "sys_platform": "darwin",
-            "platform_machine": "x86_64",
-        }
-    )
-    assert not altk.marker.evaluate(environment)
+def test_retired_altk_extra_cannot_reinstall_toolkit() -> None:
+    assert _load_extras()["altk"] == []
+    with (REPO_ROOT / "src" / "backend" / "base" / "pyproject.toml").open("rb") as file:
+        project = tomllib.load(file)["project"]
+    assert project["optional-dependencies"]["altk"] == []
+    manifests = [_load_extras(), project["optional-dependencies"]]
+    for extras in manifests:
+        for dependencies in extras.values():
+            assert not any(Requirement(dependency).name == "agent-lifecycle-toolkit" for dependency in dependencies)
 
 
 def test_huggingface_dependency_does_not_request_removed_inference_extra() -> None:

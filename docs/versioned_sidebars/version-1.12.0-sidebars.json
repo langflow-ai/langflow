@@ -615,7 +615,7 @@
             {
               "type": "link",
               "label": "Workflow API specification (Beta)",
-              "href": "/api/workflow"
+              "href": "/api#tag/Workflow"
             }
           ]
         },
