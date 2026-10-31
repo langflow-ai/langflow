@@ -1,3 +1,5 @@
+import { BASENAME } from "@/customization/config-constants";
+
 const SETUP_GUIDES = new Map([
   [
     "google",
@@ -27,7 +29,7 @@ export function suggestedCallbackUrl(provider: string, origin: string) {
     if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) {
       return undefined;
     }
-    return `${url.origin}/api/v1/connections/oauth/${provider}/callback`;
+    return `${url.origin}${BASENAME}/api/v1/connections/oauth/${provider}/callback`;
   } catch {
     return undefined;
   }

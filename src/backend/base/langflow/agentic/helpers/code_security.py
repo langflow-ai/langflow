@@ -74,6 +74,10 @@ _BLOCKED_INTROSPECTION_ATTRS: frozenset[str] = frozenset(
     }
 )
 
+# Event-loop objects can arrive as arguments or factory results, so module
+# alias tracking cannot reliably identify their process-spawning methods.
+_BLOCKED_EXECUTION_ATTRS: frozenset[str] = frozenset({"subprocess_exec", "subprocess_shell"})
+
 # Matches a dunder reached inside a str.format()/Formatter replacement field,
 # e.g. "{0.__globals__}" or "{0[__builtins__]}". Such traversals live inside a
 # literal template string and are invisible to the AST attribute check, so a
@@ -88,6 +92,7 @@ _FORMAT_FIELD_DUNDER_RE = re.compile(r"\{[^{}]*__")
 # ``type(x).__name__`` and ``err.__class__.__name__``, which ordinary component
 # code uses constantly for logging and error messages.
 _INERT_DUNDER_ATTRS: frozenset[str] = frozenset({"__name__", "__qualname__", "__module__", "__doc__"})
+_RUNTIME_LOADER_NAMES: frozenset[str] = frozenset({"__loader__", "__spec__"})
 
 
 def _is_blocked_attribute(attr: str | None) -> bool:
@@ -99,7 +104,7 @@ def _is_blocked_attribute(attr: str | None) -> bool:
     """
     if attr is None or attr in _INERT_DUNDER_ATTRS:
         return False
-    return attr.startswith("__") or attr in _BLOCKED_INTROSPECTION_ATTRS
+    return attr.startswith("__") or attr in _BLOCKED_INTROSPECTION_ATTRS or attr in _BLOCKED_EXECUTION_ATTRS
 
 
 # Non-call attribute *reads* that are forbidden: (module, attr, message).
@@ -107,8 +112,16 @@ def _is_blocked_attribute(attr: str | None) -> bool:
 # Langflow's variable/secret service, never raw process env.
 DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
     ("os", "environ", "os.environ is forbidden — use Langflow's variable/secret service"),
+    ("os", "environb", "os.environb is forbidden. Use Langflow's variable/secret service"),
+    ("gc", "garbage", "gc.garbage is forbidden in components (server object recovery)"),
     ("os.path", "os", "os.path.os is forbidden in components"),
     ("sys", "modules", "sys.modules is forbidden in components"),
+    ("torch.package", "PackageImporter", "torch.package.PackageImporter is forbidden — external code loading"),
+    (
+        "torch.package.package_importer",
+        "PackageImporter",
+        "torch.package.package_importer.PackageImporter is forbidden — external code loading",
+    ),
     # PyYAML loaders that resolve ``!!python/object*`` tags — arbitrary
     # constructor invocation (deserialization RCE) on untrusted text. Blocking
     # the Loader attribute also blocks ``yaml.load(..., Loader=...)`` variants;
@@ -157,6 +170,9 @@ DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
 
 # Dangerous attribute calls: (module, method, violation_message)
 DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
+    ("gc", "get_objects", "gc.get_objects() is forbidden in components (server object recovery)"),
+    ("gc", "get_referrers", "gc.get_referrers() is forbidden in components (server object recovery)"),
+    ("gc", "get_referents", "gc.get_referents() is forbidden in components (server object recovery)"),
     ("asyncio", "create_subprocess_exec", "asyncio.create_subprocess_exec() is forbidden"),
     ("asyncio", "create_subprocess_shell", "asyncio.create_subprocess_shell() is forbidden"),
     ("asyncio.subprocess", "create_subprocess_exec", "asyncio.subprocess.create_subprocess_exec() is forbidden"),
@@ -184,6 +200,8 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     ("os", "posix_spawnp", "os.posix_spawnp() is forbidden"),
     ("os", "fork", "os.fork() is forbidden"),
     ("os", "forkpty", "os.forkpty() is forbidden"),
+    ("os", "kill", "os.kill() is forbidden — process signaling"),
+    ("os", "killpg", "os.killpg() is forbidden — process group signaling"),
     ("os", "startfile", "os.startfile() is forbidden"),
     ("os", "open", "os.open() is forbidden in components — use Langflow's File components"),
     ("os", "write", "os.write() is forbidden in components — use Langflow's File components"),
@@ -199,10 +217,23 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     ("os", "dup2", "os.dup2() is forbidden in components"),
     ("os", "dup", "os.dup() is forbidden in components"),
     ("os", "getenv", "os.getenv() is forbidden — use Langflow's variable/secret service"),
+    ("os", "getenvb", "os.getenvb() is forbidden. Use Langflow's variable/secret service"),
+    ("os", "get_exec_path", "os.get_exec_path() is forbidden. Use Langflow's variable/secret service"),
     ("os", "putenv", "os.putenv() is forbidden in components"),
     ("shutil", "rmtree", "shutil.rmtree() is forbidden"),
     ("shutil", "move", "shutil.move() is forbidden in components"),
     ("sys", "exit", "sys.exit() is forbidden in components"),
+    ("sys", "setprofile", "sys.setprofile() is forbidden — runtime frame access"),
+    ("sys", "settrace", "sys.settrace() is forbidden — runtime frame access"),
+    ("signal", "raise_signal", "signal.raise_signal() is forbidden in components"),
+    ("concurrent.futures", "ProcessPoolExecutor", "ProcessPoolExecutor is forbidden — process spawning"),
+    ("site", "addsitedir", "site.addsitedir() is forbidden — executes package startup code"),
+    ("site", "addpackage", "site.addpackage() is forbidden — executes package startup code"),
+    ("site", "main", "site.main() is forbidden — executes package startup code"),
+    ("site", "execsitecustomize", "site.execsitecustomize() is forbidden — executes package startup code"),
+    ("site", "execusercustomize", "site.execusercustomize() is forbidden — executes package startup code"),
+    ("torch", "load", "torch.load() is forbidden — unsafe object deserialization"),
+    ("torch.serialization", "load", "torch.serialization.load() is forbidden — unsafe object deserialization"),
     # Raw file access through stdlib equivalents of the blocked bare open().
     # io.StringIO/BytesIO and codecs.encode/decode stay allowed; only the
     # filesystem entry points are forbidden.
@@ -297,6 +328,19 @@ DANGEROUS_IMPORTS: set[str] = {
     # its subprocess entry points are blocked in DANGEROUS_ATTR_CALLS above.
     "multiprocessing",
     "posix",
+    "nt",
+    "_posixsubprocess",
+    # Source runners and package tooling can execute code or start processes
+    # without referencing a subprocess API in the generated source itself.
+    "runpy",
+    "pip",
+    "ensurepip",
+    "venv",
+    "setuptools",
+    "pkg_resources",
+    "build",
+    "installer",
+    "webbrowser",
     # Network / IPC primitives — same attack class as subprocess (reverse
     # shells, raw exfil, SSRF, non-HTTP protocol egress). High-level HTTP via
     # ``requests``/``httpx`` stays allowed by design (legit API components need
@@ -327,6 +371,7 @@ DANGEROUS_IMPORTS: set[str] = {
 # ``urllib.request`` additionally supports ``file://`` / ``ftp://`` schemes, so
 # it is a local-file-read and SSRF bypass beyond what plain HTTP allows.
 DANGEROUS_SUBMODULES: tuple[str, ...] = (
+    "concurrent.futures.process",
     "urllib.request",
     "urllib.error",
     "http.client",
@@ -367,6 +412,8 @@ RESTRICTED_IMPORT_NAMES: dict[str, set[str]] = {
         "posix_spawnp",
         "fork",
         "forkpty",
+        "kill",
+        "killpg",
         "startfile",
         "open",
         "write",
@@ -889,6 +936,14 @@ class _SecurityChecker(ast.NodeVisitor):
         self.module_aliases: dict[str, frozenset[str]] = {
             name: frozenset({module}) for name, module in (module_aliases or {}).items()
         }
+        # Import bindings preserved before any scope shadowing. After ``del``
+        # in a class body, reads fall through to module globals, so these
+        # candidates must survive enclosing function scopes.
+        self._module_import_aliases: dict[str, frozenset[str]] = dict(self.module_aliases)
+        # Alias state at entry to the outermost enclosing function: the
+        # module-global state class-body reads resolve against after ``del``.
+        self._module_global_state: _AliasState | None = None
+        self._function_scope_depth = 0
         # Names explicitly rebound to non-module values must not fall back to
         # their spelling (e.g. ``os = object(); os.system()`` is not os.system).
         self.shadowed_aliases: set[str] = set()
@@ -901,6 +956,8 @@ class _SecurityChecker(ast.NodeVisitor):
         # Depth of enclosing class bodies. A name bound directly in a class body
         # also becomes a class attribute, read later as ``self.x`` / ``Cls.x``.
         self._class_body_depth = 0
+        # Class attributes do not bind names in methods or nested class bodies.
+        self._class_scope_fallbacks: list[_AliasState] = []
         # Names declared ``global`` / ``nonlocal`` in the current function scope:
         # their bindings outlive the alias state restored at scope exit.
         self._escaping_names: set[str] = set()
@@ -915,6 +972,29 @@ class _SecurityChecker(ast.NodeVisitor):
         if name in self.shadowed_aliases:
             return frozenset()
         return self.module_aliases.get(name, frozenset({name}))
+
+    def _module_global_values(self, name: str) -> frozenset[str]:
+        """Return possible values of ``name`` in module globals (fail-closed union)."""
+        values = set(self._module_import_aliases.get(name, frozenset()))
+        if self._module_global_state is not None:
+            aliases, shadowed = self._module_global_state
+            if name in aliases:
+                values.update(aliases[name])
+            elif name not in shadowed:
+                values.add(name)
+        return frozenset(values)
+
+    def _capture_module_global_state(self, enclosing_state: _AliasState, *, in_class_body: bool) -> None:
+        """Record module-global aliases when entering the outermost function."""
+        if self._function_scope_depth == 0:
+            aliases, shadowed = self._class_scope_fallbacks[-1] if in_class_body else enclosing_state
+            self._module_global_state = (dict(aliases), set(shadowed))
+        self._function_scope_depth += 1
+
+    def _release_module_global_state(self) -> None:
+        self._function_scope_depth -= 1
+        if self._function_scope_depth == 0:
+            self._module_global_state = None
 
     def _resolved_member_names(self, base_names: frozenset[str], member_name: str) -> frozenset[str]:
         """Resolve a member while canonicalizing imported modules that re-export ``os``."""
@@ -1380,6 +1460,9 @@ class _SecurityChecker(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_ImportFrom(self, node: ast.ImportFrom):
+        for alias in node.names:
+            if alias.name in _RUNTIME_LOADER_NAMES:
+                self.violations.append(f"Import of '{alias.name}' is forbidden in components (runtime loader)")
         if not node.module:
             return self.generic_visit(node)
 
@@ -1441,6 +1524,21 @@ class _SecurityChecker(ast.NodeVisitor):
             self.visit(node.target)
             self._check_assignment_value(node.target, node.value)
             self._bind_assignment_target(node.target, node.value)
+
+    def visit_Delete(self, node: ast.Delete):
+        """Restore enclosing aliases after deleting class attributes.
+
+        After ``del`` in a class body, reads resolve against module globals
+        (``LOAD_NAME``), never an enclosing function scope, so merge the
+        module-global candidates with the class fallback state.
+        """
+        for target in node.targets:
+            self.visit(target)
+            if self._class_body_depth:
+                aliases, shadowed = self._class_scope_fallbacks[-1]
+                for name in self._assignment_target_names(target):
+                    values = aliases.get(name, frozenset() if name in shadowed else frozenset({name}))
+                    self._bind_name(name, values | self._module_global_values(name))
 
     def visit_NamedExpr(self, node: ast.NamedExpr):
         self.visit(node.value)
@@ -1524,6 +1622,8 @@ class _SecurityChecker(ast.NodeVisitor):
     def visit_Match(self, node: ast.Match):
         """Merge successful cases and stateful guard fallthrough paths."""
         self.visit(node.subject)
+        # Capture patterns cannot retain restricted module or callable identities.
+        self._check_opaque_reference(node.subject)
         before_cases = self._snapshot_alias_state()
         fallthrough_states = [before_cases]
         completed_states: list[_AliasState] = []
@@ -1675,17 +1775,28 @@ class _SecurityChecker(ast.NodeVisitor):
     ) -> None:
         """Visit comprehensions in evaluation order with isolated target bindings."""
         enclosing_state = self._snapshot_alias_state()
+        enclosing_class_body_depth = self._class_body_depth
         target_names: set[str] = set()
-        for generator in generators:
-            self.visit(generator.iter)
-            self.visit(generator.target)
-            self._bind_iterated_target(generator.target, generator.iter)
-            target_names.update(self._assignment_target_names(generator.target))
-            for condition in generator.ifs:
-                self.visit(condition)
-        for expression in expressions:
-            self.visit(expression)
-        self._restore_target_names(target_names, enclosing_state)
+        try:
+            for index, generator in enumerate(generators):
+                self.visit(generator.iter)
+                if index == 0 and enclosing_class_body_depth:
+                    # Only the first iterable is evaluated in the class namespace.
+                    self._restore_alias_state(self._class_scope_fallbacks[-1])
+                    self._class_body_depth = 0
+                self.visit(generator.target)
+                self._bind_iterated_target(generator.target, generator.iter)
+                target_names.update(self._assignment_target_names(generator.target))
+                for condition in generator.ifs:
+                    self.visit(condition)
+            for expression in expressions:
+                self.visit(expression)
+        finally:
+            self._class_body_depth = enclosing_class_body_depth
+            if enclosing_class_body_depth:
+                self._restore_alias_state(enclosing_state)
+            else:
+                self._restore_target_names(target_names, enclosing_state)
 
     def visit_ListComp(self, node: ast.ListComp):
         self._visit_comprehension_expression(node.generators, (node.elt,))
@@ -1724,17 +1835,22 @@ class _SecurityChecker(ast.NodeVisitor):
         enclosing_state = self._snapshot_alias_state()
         enclosing_class_body_depth = self._class_body_depth
         enclosing_escaping_names = self._escaping_names
+        self._capture_module_global_state(enclosing_state, in_class_body=bool(enclosing_class_body_depth))
         self._alias_scope_depth += 1
         # A function body is its own scope: names bound here are locals, not class
         # attributes, and ``global`` / ``nonlocal`` declarations do not carry in.
         self._class_body_depth = 0
         self._escaping_names = set()
         try:
-            self._bind_name(node.name, frozenset())
+            if enclosing_class_body_depth:
+                self._restore_alias_state(self._class_scope_fallbacks[-1])
+            else:
+                self._bind_name(node.name, frozenset())
             self._shadow_arguments(node.args)
             for statement in node.body:
                 self.visit(statement)
         finally:
+            self._release_module_global_state()
             self._alias_scope_depth -= 1
             self._class_body_depth = enclosing_class_body_depth
             self._escaping_names = enclosing_escaping_names
@@ -1754,14 +1870,18 @@ class _SecurityChecker(ast.NodeVisitor):
         enclosing_state = self._snapshot_alias_state()
         enclosing_class_body_depth = self._class_body_depth
         enclosing_escaping_names = self._escaping_names
+        self._capture_module_global_state(enclosing_state, in_class_body=bool(enclosing_class_body_depth))
         self._alias_scope_depth += 1
         self._class_body_depth = 0
         self._escaping_names = set()
         try:
+            if enclosing_class_body_depth:
+                self._restore_alias_state(self._class_scope_fallbacks[-1])
             self._shadow_arguments(node.args)
             self._check_opaque_reference(node.body)
             self.visit(node.body)
         finally:
+            self._release_module_global_state()
             self._alias_scope_depth -= 1
             self._class_body_depth = enclosing_class_body_depth
             self._escaping_names = enclosing_escaping_names
@@ -1784,6 +1904,9 @@ class _SecurityChecker(ast.NodeVisitor):
 
         enclosing_state = self._snapshot_alias_state()
         enclosing_escaping_names = self._escaping_names
+        fallback_state = self._class_scope_fallbacks[-1] if self._class_body_depth else enclosing_state
+        self._restore_alias_state(fallback_state)
+        self._class_scope_fallbacks.append(fallback_state)
         self._alias_scope_depth += 1
         # Names bound in a class body escape as class attributes; see _binding_escapes.
         self._class_body_depth += 1
@@ -1794,6 +1917,7 @@ class _SecurityChecker(ast.NodeVisitor):
         finally:
             self._alias_scope_depth -= 1
             self._class_body_depth -= 1
+            self._class_scope_fallbacks.pop()
             self._escaping_names = enclosing_escaping_names
             self._restore_alias_state(enclosing_state)
         self._bind_name(node.name, frozenset())
@@ -1926,7 +2050,13 @@ class _SecurityChecker(ast.NodeVisitor):
     def visit_Name(self, node: ast.Name):
         """Catch wildcard-imported reads (``from os import *``; ``environ[...]``)."""
         if isinstance(node.ctx, ast.Load):
+            if node.id in _RUNTIME_LOADER_NAMES:
+                self.violations.append(f"Access to '{node.id}' is forbidden in components (runtime loader)")
+                return self.generic_visit(node)
             for resolved_name in self._resolved_names(node.id):
+                if resolved_name.rsplit(".", 1)[-1] in _RUNTIME_LOADER_NAMES:
+                    self.violations.append(f"Access to '{resolved_name}' is forbidden in components (runtime loader)")
+                    break
                 if resolved_name in DANGEROUS_SUBMODULES:
                     self.violations.append(f"Access to '{resolved_name}' is forbidden in components")
                     break
