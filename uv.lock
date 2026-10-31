@@ -11154,7 +11154,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-docling"
-version = "0.2.3"
+version = "0.3.0"
 source = { editable = "src/bundles/docling" }
 dependencies = [
     { name = "docling-core" },
