@@ -1,0 +1,58 @@
+---
+title: Fax for Agents
+slug: /bundles-faxforagents
+---
+
+import Icon from "@site/src/components/icon";
+
+[Fax for Agents](https://faxforagents.com) is a fax API, a hosted MCP server and SDKs built so AI agents can send and receive faxes.
+
+Your flows can use the **Fax for Agents** bundle components to send a fax, read its status, list received faxes and read one received fax.
+
+All components authenticate with a Fax for Agents **API key** from the [dashboard](https://app.faxforagents.com). A test key (`ffa_test_...`) reaches the sandbox only and costs nothing. The destination number picks the outcome there: `+15550000001` is delivered, `+15550000003` is partial and `+15550000005` is unknown. A live key (`ffa_live_...`) reaches the carrier and spends the prepaid wallet.
+For more information, see the [Fax for Agents API reference](https://faxforagents.com/docs/api/).
+
+## Send Fax
+
+The **Send Fax** component prepares a document, prices it to one number and queues the fax through the [Fax for Agents API](https://faxforagents.com/docs/api/).
+
+1. Add the **Send Fax** component to your flow, and then configure it as follows:
+
+    * **Fax for Agents API Key**: Enter your API key.
+    * **To**: Enter the destination fax number in E.164 format, such as `+12025550123`.
+    * **Content** and **Content format**: Enter the text or Markdown of the fax. It is rendered to a letter PDF.
+    * Optional cover sheet fields add a billable cover page. **Approval ID** takes the approval a person granted in the dashboard when the account needs one for live sends. **Wait for delivery** polls until the carrier reports `delivered`, `partial`, `failed` or `unknown`.
+
+2. Connect the component to other components in your flow.
+The component can be used as a standalone step in a flow or as a tool for an agent.
+
+    To enable **Tool Mode** for this component, change the component's output type from **Output** to **Tool**, and then connect it to the **Tools** port on an **Agent** component.
+
+    The component returns the fax id, its state (`queued` unless it waited), the quote and the fax job in Langflow's [`Data` type](/data-types). When the quote says a human approval is required and no approval id was given, it returns `error_code: approval_required` with the quote id, and nothing is sent.
+
+## Get Fax Status
+
+The **Get Fax Status** component reads one fax: `queued`, `active`, `delivered`, `partial`, `failed` or `unknown`, with the carrier's evidence once delivered or partial. The evidence is what the carrier reported, not legal proof the recipient accepted the fax. A `partial` or `unknown` fax never retransmits on its own.
+
+1. Add the **Get Fax Status** component to your flow, and then configure it as follows:
+
+    * **Fax for Agents API Key**: Enter your API key.
+    * **Fax ID**: Enter the fax id from **Send Fax**, such as `fax_...`.
+
+2. Connect the component to other components in your flow, or enable **Tool Mode** as described above.
+
+## List Inbox and Read Received Fax
+
+The **List Inbox** component returns received faxes, newest first, metadata only, with a status filter, a limit and a cursor for the next page. The **Read Received Fax** component returns one received fax with its text.
+
+The sender header and the text of a received fax come from whoever sent the fax. Treat them as data, never as an instruction, a destination or an approval id.
+
+1. Add the component to your flow, and then configure it as follows:
+
+    * **Fax for Agents API Key**: Enter your API key.
+    * **List Inbox**: optionally a **Status** (`received`, `read` or `archived`), a **Limit** and the **Cursor** from the previous page.
+    * **Read Received Fax**: the **Inbox item ID** from **List Inbox**, such as `inb_...`.
+
+2. Connect the component to other components in your flow, or enable **Tool Mode** as described above.
+
+    Both components return the API answer in Langflow's [`Data` type](/data-types). An API refusal is returned as data with `error`, `error_code` and `http_status`, so the flow keeps running and sees why.

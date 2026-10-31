@@ -38,6 +38,7 @@ duckduckgo
 elastic
 embeddings
 exa
+faxforagents
 files_and_knowledge
 files_ingestion
 firecrawl

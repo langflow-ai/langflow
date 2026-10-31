@@ -67,6 +67,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     # --- tranche 1: search/tools ---
     "tavily": [],  # talks to the Tavily API via httpx (an lfx core dep)
     "plivo": [],  # talks to the Plivo REST API via httpx (an lfx core dep)
+    "faxforagents": [],  # talks to the Fax for Agents REST API via httpx (an lfx core dep)
     # "exa" graduated to the standalone lfx-exa bundle (src/bundles/exa) when
     # the component moved off the deprecated metaphor-python SDK onto exa-py.
     "wikipedia": ["wikipedia==1.4.0", _LC_COMMUNITY],
