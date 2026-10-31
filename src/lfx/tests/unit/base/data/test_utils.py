@@ -52,6 +52,35 @@ class TestReadTextFile:
         chain = _detect_encoding_with_fallbacks("中文测试文件内容\n".encode("gb18030"))
         assert chain.index("gb18030") < chain.index("cp1252")
 
+    def test_cp1254_guess_precedes_cp1252(self, tmp_path):
+        """A Windows-1254 guess must be tried before cp1252.
+
+        cp1252 decodes every cp1254 byte string without error, so a Turkish
+        file read through cp1252 silently comes back with wrong letters
+        (dotless i and s-cedilla among them). Only the detector's own guess
+        decodes them right.
+        """
+        content = "Pijamalı hasta yağız şoföre çabucak güvendi.\n"  # noqa: RUF001
+        f = tmp_path / "turkish.txt"
+        f.write_bytes(content.encode("cp1254"))
+        assert read_text_file(str(f)) == content
+
+    def test_cp1254_chain_order(self):
+        """The detector's guess precedes cp1252; cp1252 still follows it."""
+        from lfx.base.data.utils import _detect_encoding_with_fallbacks
+
+        chain = _detect_encoding_with_fallbacks("Pijamalı hasta\n".encode("cp1254"))  # noqa: RUF001
+        assert chain.index("cp1254") < chain.index("cp1252")
+        assert "utf-8" in chain
+
+    def test_cp1252_fallback_still_reached_after_cp1254(self, tmp_path):
+        """Bytes undefined in cp1254 (0x8E, 0x9E) fall through to cp1252."""
+        content = "Žlužne informace\n"
+        f = tmp_path / "czech.txt"
+        f.write_bytes(content.encode("cp1252"))
+        with patch("lfx.base.data.utils.chardet.detect", return_value={"encoding": "Windows-1254", "confidence": 0.1}):
+            assert read_text_file(str(f)) == content
+
     @pytest.mark.parametrize("reader", ["sync", "async"])
     @pytest.mark.parametrize(
         ("content", "encoding"),
