@@ -27,7 +27,6 @@ class CompanyEnrichSearchComponent(Component):
         DictInput(
             name="search_filters",
             display_name="Filters",
-            is_list=True,
             advanced=True,
             info="Company Search API fields, such as countries and technologies. See the API reference.",
         ),

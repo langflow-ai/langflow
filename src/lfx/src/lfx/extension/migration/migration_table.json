@@ -5270,6 +5270,51 @@
       "bare_class_name": "MrscraperWebSearch",
       "target": "ext:mrscraper:MrscraperWebSearch@official",
       "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "CompanyEnrichEnrichComponent",
+      "target": "ext:companyenrich:CompanyEnrichEnrichComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.enrich.CompanyEnrichEnrichComponent",
+      "target": "ext:companyenrich:CompanyEnrichEnrichComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.CompanyEnrichEnrichComponent",
+      "target": "ext:companyenrich:CompanyEnrichEnrichComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "CompanyEnrichSearchComponent",
+      "target": "ext:companyenrich:CompanyEnrichSearchComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.search.CompanyEnrichSearchComponent",
+      "target": "ext:companyenrich:CompanyEnrichSearchComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.CompanyEnrichSearchComponent",
+      "target": "ext:companyenrich:CompanyEnrichSearchComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "CompanyEnrichSimilarComponent",
+      "target": "ext:companyenrich:CompanyEnrichSimilarComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.similar.CompanyEnrichSimilarComponent",
+      "target": "ext:companyenrich:CompanyEnrichSimilarComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.companyenrich.CompanyEnrichSimilarComponent",
+      "target": "ext:companyenrich:CompanyEnrichSimilarComponent@official",
+      "added_in": "1.14.0"
     }
   ],
   "ambiguous_bare_names": [
