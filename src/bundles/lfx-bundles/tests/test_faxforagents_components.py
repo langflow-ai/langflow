@@ -1,6 +1,7 @@
 """Contract tests for the Fax for Agents REST API components. No request leaves the machine."""
 
 import json
+import re
 from unittest.mock import AsyncMock, patch
 
 import httpx
@@ -16,6 +17,7 @@ from lfx_bundles.faxforagents import (
     FaxForAgentsSendFaxComponent,
 )
 from lfx_bundles.faxforagents import send_fax as send_fax_module
+from lfx_bundles.faxforagents._common import FaxForAgentsError, call_api
 
 BASE = "https://api.faxforagents.com"
 KEY = "ffa_test_" + "a" * 43  # pragma: allowlist secret
@@ -87,7 +89,8 @@ async def test_send_fax_prepares_quotes_and_queues_without_logging_content() -> 
         "to": "+15550000001",
         "cover": {"subject": "Invoice"},
     }
-    assert faxes.calls[0].request.headers["Idempotency-Key"] == f"langflow:{QUOTE}"
+    assert faxes.calls[0].request.headers["Idempotency-Key"] == component.derived_idempotency_key()
+    assert re.fullmatch(r"langflow:[0-9a-f]{64}", result.data["idempotency_key"])
     assert json.loads(faxes.calls[0].request.content) == {"quote_id": QUOTE, "client_reference": "order 7"}
     assert result.data["fax_id"] == FAX
     assert result.data["state"] == "queued"
@@ -95,6 +98,105 @@ async def test_send_fax_prepares_quotes_and_queues_without_logging_content() -> 
     assert component.status == result.data
     assert "private letter body" not in _logged_values(mock_log)
     assert "+15550000001" not in _logged_values(mock_log)
+
+
+def test_derived_idempotency_key_is_stable_for_the_same_inputs_and_changes_with_the_destination() -> None:
+    inputs = {
+        "api_key": KEY,
+        "to": "+15550000001",
+        "content": "same letter",
+        "content_format": "markdown",
+        "cover_subject": "Invoice",
+        "client_reference": "order 7",
+    }
+
+    first = FaxForAgentsSendFaxComponent(**inputs).derived_idempotency_key()
+    second = FaxForAgentsSendFaxComponent(**inputs).derived_idempotency_key()
+    other_number = FaxForAgentsSendFaxComponent(**{**inputs, "to": "+15550000003"}).derived_idempotency_key()
+    other_content = FaxForAgentsSendFaxComponent(**{**inputs, "content": "another letter"}).derived_idempotency_key()
+
+    assert first == second
+    assert re.fullmatch(r"langflow:[0-9a-f]{64}", first)
+    assert first != other_number
+    assert first != other_content
+
+
+@respx.mock
+async def test_send_fax_explains_an_idempotency_conflict_without_a_second_quote_or_a_retry() -> None:
+    respx.post(f"{BASE}/v1/documents").mock(return_value=httpx.Response(201, json={"id": DOC, "page_count": 1}))
+    quote = respx.post(f"{BASE}/v1/fax-quotes").mock(return_value=httpx.Response(201, json=_quote()))
+    faxes = respx.post(f"{BASE}/v1/faxes").mock(
+        return_value=httpx.Response(
+            409,
+            json={
+                "error": {
+                    "code": "idempotency_key_conflict",
+                    "message": "this Idempotency-Key was already used with a different request",
+                    "retryable": False,
+                }
+            },
+        )
+    )
+    component = FaxForAgentsSendFaxComponent(api_key=KEY, to="+15550000001", content="same letter")
+
+    result = await component.send()
+
+    assert result.data["error_code"] == "idempotency_key_conflict"
+    assert result.data["http_status"] == 409
+    assert "already sent in the last 24 hours" in result.data["error"]
+    assert "different idempotency key sends it again" in result.data["error"]
+    assert result.data["idempotency_key"] == component.derived_idempotency_key()
+    assert "fax_id" not in result.data
+    assert quote.call_count == 1
+    assert faxes.call_count == 1
+
+
+@respx.mock
+async def test_send_fax_keeps_the_queued_fax_when_polling_fails() -> None:
+    respx.post(f"{BASE}/v1/documents").mock(return_value=httpx.Response(201, json={"id": DOC, "page_count": 1}))
+    respx.post(f"{BASE}/v1/fax-quotes").mock(return_value=httpx.Response(201, json=_quote()))
+    respx.post(f"{BASE}/v1/faxes").mock(return_value=httpx.Response(201, json=_job("queued")))
+    status = respx.get(f"{BASE}/v1/faxes/{FAX}").mock(return_value=httpx.Response(500, json=[]))
+    component = FaxForAgentsSendFaxComponent(api_key=KEY, to="+15550000001", content="x", wait_for_delivery=True)
+    component.poll_interval = 0
+
+    with patch.object(send_fax_module.logger, "aexception", new_callable=AsyncMock) as mock_log:
+        result = await component.send()
+
+    assert status.called
+    assert result.data["fax_id"] == FAX
+    assert result.data["quote_id"] == QUOTE
+    assert result.data["state"] == "queued"
+    assert result.data["poll_error"]["http_status"] == 500
+    assert result.data["poll_error"]["error_code"] == "http_error"
+    assert "error" not in result.data
+    assert "polling" in _logged_values(mock_log)
+
+
+@pytest.mark.parametrize(
+    ("status", "body", "fragment"),
+    [
+        (500, [1, 2], "HTTP 500"),
+        (502, {"error": "bad gateway"}, "bad gateway"),
+        (503, "<html>down</html>", "HTTP 503"),
+    ],
+)
+@respx.mock
+async def test_call_api_raises_with_the_status_when_the_error_body_is_not_an_envelope(
+    status: int, body: object, fragment: str
+) -> None:
+    route = respx.get(f"{BASE}/v1/faxes/{FAX}")
+    if isinstance(body, str):
+        route.mock(return_value=httpx.Response(status, text=body))
+    else:
+        route.mock(return_value=httpx.Response(status, json=body))
+
+    with pytest.raises(FaxForAgentsError) as raised:
+        await call_api(KEY, "GET", f"/v1/faxes/{FAX}")
+
+    assert raised.value.status == status
+    assert raised.value.code == "http_error"
+    assert fragment in str(raised.value)
 
 
 @respx.mock

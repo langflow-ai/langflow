@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
+from typing import Any
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput
@@ -13,6 +16,7 @@ from lfx_bundles.faxforagents._common import (
     DEFAULT_BASE_URL,
     E164_RE,
     TERMINAL_STATES,
+    FaxForAgentsError,
     agent_evidence,
     call_api,
     error_data,
@@ -91,7 +95,12 @@ class FaxForAgentsSendFaxComponent(Component):
         MessageTextInput(
             name="idempotency_key",
             display_name="Idempotency key",
-            info="Repeating a send with the same key returns the same fax. Empty means langflow: plus the quote id.",
+            info=(
+                "Sent as the Idempotency-Key header. Empty derives it from the send inputs (destination, content, "
+                "format, cover fields, approval id, client reference and base URL), so a re-run with identical "
+                "inputs within 24 hours is refused instead of sending and billing a second fax. "
+                "A different key sends it again."
+            ),
             advanced=True,
         ),
         BoolInput(
@@ -120,6 +129,36 @@ class FaxForAgentsSendFaxComponent(Component):
 
     poll_interval: float = 3.0
 
+    def _cover(self) -> dict[str, str]:
+        return {
+            k: v.strip()
+            for k, v in (
+                ("subject", self.cover_subject),
+                ("message", self.cover_message),
+                ("to_name", self.cover_to_name),
+                ("from_name", self.cover_from_name),
+            )
+            if v and v.strip()
+        }
+
+    def derived_idempotency_key(self) -> str:
+        """``langflow:`` plus the SHA-256 of every input that shapes the document, the quote and the send.
+
+        Computed before any call, so a re-run with identical inputs presents the same key with a new quote id
+        in the body, which the API refuses with 409 ``idempotency_key_conflict`` instead of billing twice.
+        """
+        inputs: dict[str, Any] = {
+            "base_url": (self.base_url or DEFAULT_BASE_URL).rstrip("/"),
+            "to": (self.to or "").strip(),
+            "content_format": self.content_format or "text",
+            "content": self.content or "",
+            "cover": self._cover(),
+            "approval_id": (self.approval_id or "").strip(),
+            "client_reference": (self.client_reference or "").strip()[:200],
+        }
+        canonical = json.dumps(inputs, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        return "langflow:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
     async def send(self) -> Data:
         try:
             to = (self.to or "").strip()
@@ -130,20 +169,13 @@ class FaxForAgentsSendFaxComponent(Component):
                 msg = "Content is empty."
                 raise ValueError(msg)
             base = self.base_url or DEFAULT_BASE_URL
+            own_key = (self.idempotency_key or "").strip()
+            key = own_key or self.derived_idempotency_key()
             await logger.ainfo("Fax for Agents: preparing the document")
             document = await call_api(
                 self.api_key, "POST", "/v1/documents", base_url=base, json={self.content_format or "text": self.content}
             )
-            cover = {
-                k: v.strip()
-                for k, v in (
-                    ("subject", self.cover_subject),
-                    ("message", self.cover_message),
-                    ("to_name", self.cover_to_name),
-                    ("from_name", self.cover_from_name),
-                )
-                if v and v.strip()
-            }
+            cover = self._cover()
             quote = await call_api(
                 self.api_key,
                 "POST",
@@ -165,25 +197,54 @@ class FaxForAgentsSendFaxComponent(Component):
                 }
                 self.status = result
                 return Data(data=result)
-            key = (self.idempotency_key or "").strip() or f"langflow:{quote['id']}"
-            job = await call_api(
-                self.api_key,
-                "POST",
-                "/v1/faxes",
-                base_url=base,
-                json={
+            try:
+                job = await call_api(
+                    self.api_key,
+                    "POST",
+                    "/v1/faxes",
+                    base_url=base,
+                    json={
+                        "quote_id": quote["id"],
+                        "approval_id": approval,
+                        "client_reference": (self.client_reference or "").strip()[:200] or None,
+                    },
+                    headers={"Idempotency-Key": key},
+                )
+            except FaxForAgentsError as exc:
+                if exc.code != "idempotency_key_conflict":
+                    raise
+                await logger.awarning("Fax for Agents: the idempotency key was already used, nothing was sent")
+                if own_key:
+                    explanation = (
+                        "This idempotency key was already used for a different send in the last 24 hours, "
+                        "so this run sent nothing. A different idempotency key sends it again."
+                    )
+                else:
+                    explanation = (
+                        "A fax with the same inputs was already sent in the last 24 hours, so this run sent nothing. "
+                        "A different idempotency key sends it again."
+                    )
+                result = {
+                    "error": explanation,
+                    "error_code": exc.code,
+                    "http_status": exc.status,
+                    "idempotency_key": key,
                     "quote_id": quote["id"],
-                    "approval_id": approval,
-                    "client_reference": (self.client_reference or "").strip()[:200] or None,
-                },
-                headers={"Idempotency-Key": key},
-            )
+                    "document_id": document["id"],
+                }
+                self.status = result
+                return Data(data=result)
             await logger.ainfo("Fax for Agents: fax queued")
+            poll_error: dict[str, Any] | None = None
             if self.wait_for_delivery:
-                deadline = asyncio.get_running_loop().time() + float(self.wait_timeout or 600)
-                while job.get("state") not in TERMINAL_STATES and asyncio.get_running_loop().time() < deadline:
-                    await asyncio.sleep(self.poll_interval)
-                    job = await call_api(self.api_key, "GET", f"/v1/faxes/{job['id']}", base_url=base)
+                try:
+                    deadline = asyncio.get_running_loop().time() + float(self.wait_timeout or 600)
+                    while job.get("state") not in TERMINAL_STATES and asyncio.get_running_loop().time() < deadline:
+                        await asyncio.sleep(self.poll_interval)
+                        job = await call_api(self.api_key, "GET", f"/v1/faxes/{job['id']}", base_url=base)
+                except Exception as exc:  # noqa: BLE001
+                    await logger.aexception("Fax for Agents: the fax is queued but polling its status failed")
+                    poll_error = error_data(exc)
             result = {
                 "fax_id": job["id"],
                 "state": job.get("state"),
@@ -194,6 +255,8 @@ class FaxForAgentsSendFaxComponent(Component):
                 "idempotency_key": key,
                 "fax": agent_evidence(job),
             }
+            if poll_error is not None:
+                result["poll_error"] = poll_error
         except Exception as exc:  # noqa: BLE001
             await logger.aexception("Fax for Agents: send failed")
             result = error_data(exc)

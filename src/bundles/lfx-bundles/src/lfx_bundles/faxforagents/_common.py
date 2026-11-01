@@ -31,6 +31,10 @@ REMEDIES = {
     "insufficient_balance": "The wallet does not cover this fax. A person tops it up in the dashboard.",
     "quote_expired": "The quote expired (10 minutes). Run the component again.",
     "rate_limited": "Rate limit reached. Run again in a few seconds; the idempotency key makes it safe.",
+    "idempotency_key_conflict": (
+        "This idempotency key was already used for a different request in the last 24 hours. "
+        "A different key sends a new request."
+    ),
 }
 
 
@@ -74,11 +78,15 @@ async def call_api(
     if response.status_code >= HTTP_ERROR_FLOOR:
         code, message = "http_error", f"HTTP {response.status_code}"
         try:
-            error = (response.json() or {}).get("error") or {}
-            code = error.get("code") or code
-            message = error.get("message") or message
+            payload = response.json()
         except ValueError:
-            pass
+            payload = None
+        error = payload.get("error") if isinstance(payload, dict) else None
+        if isinstance(error, dict):
+            code = str(error.get("code") or code)
+            message = str(error.get("message") or message)
+        elif isinstance(error, str) and error.strip():
+            message = error.strip()
         raise FaxForAgentsError(response.status_code, code, message)
     return response.json() if response.content else {}
 

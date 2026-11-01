@@ -28,7 +28,13 @@ The component can be used as a standalone step in a flow or as a tool for an age
 
     To enable **Tool Mode** for this component, change the component's output type from **Output** to **Tool**, and then connect it to the **Tools** port on an **Agent** component.
 
-    The component returns the fax id, its state (`queued` unless it waited), the quote and the fax job in Langflow's [`Data` type](/data-types). When the quote says a human approval is required and no approval id was given, it returns `error_code: approval_required` with the quote id, and nothing is sent.
+    The component returns the fax id, its state (`queued` unless it waited), the quote and the fax job in Langflow's [`Data` type](/data-types). When the quote says a human approval is required and no approval id was given, it returns `error_code: approval_required` with the quote id, and nothing is sent. When **Wait for delivery** is on and a status poll fails, the queued fax is still returned with a `poll_error` field, since the fax was already accepted and billed.
+
+### Idempotency
+
+Every send carries an `Idempotency-Key` header. The API replays the same key with the same body for 24 hours and refuses the same key with a different body with `409 idempotency_key_conflict`. Keys are scoped to the organization and the environment of the API key.
+
+When **Idempotency key** is empty, the component derives it before any request as `langflow:` followed by the SHA-256 of the send inputs: the destination number, the content and its format, the cover sheet fields, the approval id, the client reference and the API base URL. A re-run with identical inputs within 24 hours presents the same key with a new quote id, so the API refuses it and the component returns `error_code: idempotency_key_conflict` with a message saying the fax was already sent. Nothing is sent or billed a second time. To send the same content to the same number again within 24 hours, set a different **Idempotency key**.
 
 ## Get Fax Status
 
