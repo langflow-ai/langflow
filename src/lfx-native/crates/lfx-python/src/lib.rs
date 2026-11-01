@@ -1,10 +1,10 @@
 //! The Python binding of lfx: the `lfx_native` package.
 //!
 //! Every function takes Python values and returns Python values. An argument
-//! that is `bytes` is UTF-8 JSON text, which the engine parses without the
-//! GIL; any other argument is read as the JSON value it is: `dict`, `list`,
-//! `tuple`, `str`, `int`, `float`, `bool` or `None`. A `str` is a JSON string,
-//! never text to parse, so a string value cannot be mistaken for a graph.
+//! that is `bytes` is UTF-8 JSON text, which the engine parses; any other
+//! argument is read as the JSON value it is: `dict`, `list`, `tuple`, `str`,
+//! `int`, `float`, `bool` or `None`. A `str` is a JSON string, never text to
+//! parse, so a string value cannot be mistaken for a graph.
 //! Reading Python objects is about four times cheaper than `json.dumps` and a
 //! parse, and building them about three times cheaper than writing JSON and
 //! `json.loads`.
@@ -14,9 +14,14 @@
 //! `lfx.services.flow_operations` or `langflow.services.flow_history`), its
 //! `code`, and `details`: the whole error as a dict. The binding holds no
 //! rules: each function calls `lfx::ops::api`.
+//!
+//! Engine work runs without the GIL only when it is large ([`Work`]): a
+//! thread that gives the GIL back must wait for it again, and while another
+//! thread runs Python code, that wait is one switch interval (5 ms by
+//! default). A field write takes 2 µs, so small calls keep the GIL.
 
 use std::collections::HashMap;
-use std::sync::RwLock;
+use std::sync::{RwLock, RwLockWriteGuard, TryLockError};
 
 use lfx::ops::api::{self, ApiError, ApiResult, Input};
 use lfx::ops::{ApplyOptions, Entry, Error, ReplayOptions};
@@ -247,21 +252,121 @@ fn number_to_python<'py>(py: Python<'py>, number: &Number) -> PyResult<Bound<'py
     Ok(PyFloat::new(py, float).into_any())
 }
 
-/// Run engine work without the GIL.
-fn run<T: Send>(py: Python<'_>, work: impl FnOnce() -> ApiResult<T> + Send) -> PyResult<T> {
-    py.detach(work).map_err(|error| engine_error(py, &error))
+// --- Work and the GIL -----------------------------------------------------------------------
+
+/// How much engine work a call holds the GIL for, in JSON values.
+///
+/// A call gives the GIL back only for work larger than this: while it runs
+/// without the GIL, other Python threads run, but it must then wait for the
+/// GIL again, and while another thread runs Python code that wait is one
+/// switch interval (5 ms by default). Work below this takes about a
+/// millisecond or less, so a call that keeps the GIL never stops other threads
+/// for longer than a Python thread does.
+///
+/// Measured on the starter-project nodes of the 14.4 MB benchmark flow
+/// (168,217 values, 501 nodes and 350 edges), on one thread: writing JSON
+/// text takes 0.08 µs per value, a diff 0.18 µs, a replay of stored
+/// revisions 0.1 µs per value of its operations, and parsing text 1.2 µs per
+/// KB. At 8,192 values, the largest of these takes about 1.5 ms, and a field
+/// write's 30 values take 2 µs.
+const HELD_VALUES: usize = 8192;
+
+/// JSON text counts as one value per this many bytes: the 1,000 stored
+/// revisions of the benchmark take 14.5 bytes per value, and a flow 86. So
+/// text counts as larger than its values, never smaller: text of 128 KB or
+/// more is parsed without the GIL.
+const TEXT_BYTES_PER_VALUE: usize = 16;
+
+/// A node or an edge of a loaded graph counts as this many values: the mean
+/// of the benchmark flow is 198. Counting nodes and edges costs nothing,
+/// where counting values would walk the graph.
+const VALUES_PER_GRAPH_ITEM: usize = 200;
+
+/// How large a piece of engine work is, in JSON values, up to [`HELD_VALUES`].
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+struct Work(usize);
+
+impl Work {
+    /// The work on a value: its number of values, counted up to the limit.
+    fn of_value(value: &Value) -> Self {
+        let mut count = 0;
+        let mut stack = vec![value];
+        while let Some(value) = stack.pop() {
+            count += 1;
+            if count >= HELD_VALUES {
+                break;
+            }
+            match value {
+                Value::Array(items) => stack.extend(items),
+                Value::Object(map) => stack.extend(map.values()),
+                _ => {}
+            }
+        }
+        Self(count)
+    }
+
+    /// The work on an argument: text by its length, a value by its values.
+    fn of_input(input: &Input<'_>) -> Self {
+        match input {
+            Input::Text(text) => Self(text.len() / TEXT_BYTES_PER_VALUE),
+            Input::Value(value) => Self::of_value(value),
+        }
+    }
+
+    fn of_inputs<'a, 't: 'a>(inputs: impl IntoIterator<Item = &'a Input<'t>>) -> Self {
+        inputs
+            .into_iter()
+            .fold(Self::default(), |work, input| work + Self::of_input(input))
+    }
+
+    /// The work on every node and edge of a graph.
+    fn of_items(items: usize) -> Self {
+        Self(items.saturating_mul(VALUES_PER_GRAPH_ITEM))
+    }
+
+    /// Whether the work runs without the GIL.
+    fn is_large(self) -> bool {
+        self.0 >= HELD_VALUES
+    }
 }
 
-/// Run engine work without the GIL, and return its result as Python objects.
-fn call(py: Python<'_>, work: impl FnOnce() -> ApiResult + Send) -> PyResult<Bound<'_, PyAny>> {
-    finish(py, run(py, work)?)
+impl std::ops::Add for Work {
+    type Output = Self;
+    fn add(self, other: Self) -> Self {
+        Self(self.0.saturating_add(other.0))
+    }
 }
 
-/// A result as Python objects. The result is dropped without the GIL: freeing
-/// a large graph takes time.
+/// Run engine work: with the GIL when it is small, without it when it is large.
+fn run<T: Send>(
+    py: Python<'_>,
+    work: Work,
+    job: impl FnOnce() -> ApiResult<T> + Send,
+) -> PyResult<T> {
+    let result = if work.is_large() {
+        py.detach(job)
+    } else {
+        job()
+    };
+    result.map_err(|error| engine_error(py, &error))
+}
+
+/// Run engine work as [`run`] does, and return its result as Python objects.
+fn call(
+    py: Python<'_>,
+    work: Work,
+    job: impl FnOnce() -> ApiResult + Send,
+) -> PyResult<Bound<'_, PyAny>> {
+    finish(py, run(py, work, job)?)
+}
+
+/// A result as Python objects. A large result is dropped without the GIL:
+/// freeing a large graph takes time.
 fn finish(py: Python<'_>, value: Value) -> PyResult<Bound<'_, PyAny>> {
     let result = to_python(py, &value);
-    py.detach(move || drop(value));
+    if Work::of_value(&value).is_large() {
+        py.detach(move || drop(value));
+    }
     result
 }
 
@@ -280,9 +385,12 @@ fn finish(py: Python<'_>, value: Value) -> PyResult<Bound<'_, PyAny>> {
 /// staged, `apply`, `replay` and `stage` raise `RuntimeError`.
 ///
 /// Threads can share one state. A batch waits for the calls that read the
-/// graph, and they wait for it, as with any lock. A call releases the GIL
-/// while it waits for the lock, and never waits for the GIL while it holds the
-/// lock, so two threads cannot deadlock.
+/// graph, and they wait for it, as with any lock. A call never waits for the
+/// lock while it holds the GIL: it takes a free lock at once, and releases
+/// the GIL to wait for a lock that another thread holds. It never waits for
+/// the GIL while it holds the lock either. So two threads cannot deadlock.
+/// Small work runs with the GIL ([`Work`]); large work, such as the first
+/// batch's check of a large graph or a long replay, runs without it.
 #[pyclass(module = "lfx_native", frozen)]
 #[derive(Debug)]
 struct GraphState {
@@ -325,13 +433,58 @@ fn refused(refused: Refused) -> PyErr {
 
 /// The state, locked for a batch, unless a batch is staged.
 fn unstaged(
-    state: &RwLock<lfx::ops::GraphState>,
-) -> Result<std::sync::RwLockWriteGuard<'_, lfx::ops::GraphState>, Refused> {
-    let state = state.write().map_err(|_| Poisoned)?;
+    state: RwLockWriteGuard<'_, lfx::ops::GraphState>,
+) -> Result<RwLockWriteGuard<'_, lfx::ops::GraphState>, Refused> {
     if state.is_staged() {
         return Err(Refused::Staged);
     }
     Ok(state)
+}
+
+impl GraphState {
+    /// Run `job` on the state locked for writing: with the GIL when the lock
+    /// is free and `work` on the locked state is small, else without the GIL.
+    fn write<T: Send>(
+        &self,
+        py: Python<'_>,
+        work: impl FnOnce(&lfx::ops::GraphState) -> Work,
+        job: impl FnOnce(RwLockWriteGuard<'_, lfx::ops::GraphState>) -> Result<T, Refused> + Send,
+    ) -> Result<T, Refused> {
+        match self.state.try_write() {
+            Ok(state) if !work(&state).is_large() => return job(state),
+            // The lock is released before the GIL.
+            Ok(_) | Err(TryLockError::WouldBlock) => {}
+            Err(TryLockError::Poisoned(_)) => return Err(Refused::Poisoned),
+        }
+        py.detach(|| job(self.state.write().map_err(|_| Poisoned)?))
+    }
+
+    /// Run `job` on the state locked for reading, as [`Self::write`] does.
+    fn read<T: Send>(
+        &self,
+        py: Python<'_>,
+        work: impl FnOnce(&lfx::ops::GraphState) -> Work,
+        job: impl FnOnce(&lfx::ops::GraphState) -> T + Send,
+    ) -> Result<T, Poisoned> {
+        match self.state.try_read() {
+            Ok(state) if !work(&state).is_large() => return Ok(job(&state)),
+            Ok(_) | Err(TryLockError::WouldBlock) => {}
+            Err(TryLockError::Poisoned(_)) => return Err(Poisoned),
+        }
+        py.detach(|| Ok(job(&*self.state.read().map_err(|_| Poisoned)?)))
+    }
+}
+
+/// The work of a batch: its operations, and the check of the whole graph
+/// that apply and stage make before the first batch.
+fn batch_work(operations: Work, checks: bool) -> impl FnOnce(&lfx::ops::GraphState) -> Work {
+    move |state| {
+        if checks && state.needs_check() {
+            operations + Work::of_items(state.item_count())
+        } else {
+            operations
+        }
+    }
 }
 
 #[pymethods]
@@ -339,8 +492,9 @@ impl GraphState {
     #[new]
     fn new(py: Python<'_>, flow: &Bound<'_, PyAny>) -> PyResult<Self> {
         let flow = input(flow)?;
+        let work = Work::of_input(&flow);
         Ok(Self {
-            state: RwLock::new(run(py, || api::graph_state(flow))?),
+            state: RwLock::new(run(py, work, || api::graph_state(flow))?),
         })
     }
 
@@ -354,12 +508,11 @@ impl GraphState {
         backward: bool,
     ) -> PyResult<Bound<'py, PyAny>> {
         let operations = input(operations)?;
+        let work = batch_work(Work::of_input(&operations), true);
         let options = ApplyOptions { forward, backward };
-        // The lock is taken and released without the GIL.
-        let applied = py
-            .detach(|| {
-                let mut state = unstaged(&self.state)?;
-                Ok(api::apply_to(&mut state, operations, options))
+        let applied = self
+            .write(py, work, |state| {
+                Ok(api::apply_to(&mut *unstaged(state)?, operations, options))
             })
             .map_err(refused)?;
         finish(py, applied.map_err(|error| engine_error(py, &error))?)
@@ -377,12 +530,11 @@ impl GraphState {
         backward: bool,
     ) -> PyResult<Bound<'py, PyAny>> {
         let operations = input(operations)?;
+        let work = batch_work(Work::of_input(&operations), true);
         let options = ApplyOptions { forward, backward };
-        // The lock is taken and released without the GIL.
-        let staged = py
-            .detach(|| {
-                let mut state = unstaged(&self.state)?;
-                Ok(api::stage_to(&mut state, operations, options))
+        let staged = self
+            .write(py, work, |state| {
+                Ok(api::stage_to(&mut *unstaged(state)?, operations, options))
             })
             .map_err(refused)?;
         finish(py, staged.map_err(|error| engine_error(py, &error))?)
@@ -390,35 +542,32 @@ impl GraphState {
 
     /// Commit the staged batch. Raises `RuntimeError` when no batch is staged.
     fn keep(&self, py: Python<'_>) -> PyResult<()> {
-        py.detach(|| {
-            let mut state = self.state.write().map_err(|_| Poisoned)?;
-            if state.keep() {
-                Ok(())
-            } else {
-                Err(Refused::NotStaged)
-            }
-        })
+        self.write(
+            py,
+            |_| Work::default(),
+            |mut state| {
+                if state.keep() {
+                    Ok(())
+                } else {
+                    Err(Refused::NotStaged)
+                }
+            },
+        )
         .map_err(refused)
     }
 
     /// Drop the staged batch, so the graph stays as it was before it.
     /// Returns whether a batch was staged.
     fn drop(&self, py: Python<'_>) -> PyResult<bool> {
-        py.detach(|| {
-            let mut state = self.state.write().map_err(|_| Poisoned)?;
-            Ok(state.drop_staged())
-        })
-        .map_err(poisoned)
+        self.write(py, |_| Work::default(), |mut state| Ok(state.drop_staged()))
+            .map_err(refused)
     }
 
     /// Whether a batch is staged.
     #[getter]
     fn staged(&self, py: Python<'_>) -> PyResult<bool> {
-        py.detach(|| {
-            let state = self.state.read().map_err(|_| Poisoned)?;
-            Ok(state.is_staged())
-        })
-        .map_err(poisoned)
+        self.read(py, |_| Work::default(), lfx::ops::GraphState::is_staged)
+            .map_err(poisoned)
     }
 
     /// Replay stored operations, with no rule; returns what it did.
@@ -430,12 +579,11 @@ impl GraphState {
         backward: bool,
     ) -> PyResult<Bound<'py, PyAny>> {
         let operations = input(operations)?;
+        let work = batch_work(Work::of_input(&operations), false);
         let options = ReplayOptions { backward };
-        // The lock is taken and released without the GIL.
-        let replayed = py
-            .detach(|| {
-                let mut state = unstaged(&self.state)?;
-                Ok(api::replay_to(&mut state, operations, options))
+        let replayed = self
+            .write(py, work, |state| {
+                Ok(api::replay_to(&mut *unstaged(state)?, operations, options))
             })
             .map_err(refused)?;
         finish(py, replayed.map_err(|error| engine_error(py, &error))?)
@@ -443,11 +591,8 @@ impl GraphState {
 
     /// The graph as JSON text: the committed graph, without a staged batch.
     fn to_json(&self, py: Python<'_>) -> PyResult<String> {
-        py.detach(|| {
-            let state = self.state.read().map_err(|_| Poisoned)?;
-            Ok(api::graph_json(&state))
-        })
-        .map_err(poisoned)
+        let work = |state: &lfx::ops::GraphState| Work::of_items(state.item_count());
+        self.read(py, work, api::graph_json).map_err(poisoned)
     }
 
     /// The graph as a dict, built from the loaded graph without a copy: the
@@ -488,10 +633,24 @@ impl GraphState {
 #[derive(Debug)]
 struct GraphPlain {
     plain: lfx::ops::GraphPlain,
+    /// The work on the whole graph, counted once.
+    work: Work,
 }
 
-fn plain<'a>(object: Option<&'a Bound<'_, GraphPlain>>) -> Option<&'a lfx::ops::GraphPlain> {
-    object.map(|object| &object.get().plain)
+impl GraphPlain {
+    fn wrap(plain: lfx::ops::GraphPlain) -> Self {
+        let work = Work::of_value(plain.as_value());
+        Self { plain, work }
+    }
+}
+
+fn plain<'a>(
+    object: Option<&'a Bound<'_, GraphPlain>>,
+) -> (Option<&'a lfx::ops::GraphPlain>, Work) {
+    object.map_or((None, Work::default()), |object| {
+        let object = object.get();
+        (Some(&object.plain), object.work)
+    })
 }
 
 #[pymethods]
@@ -499,9 +658,8 @@ impl GraphPlain {
     #[new]
     fn new(py: Python<'_>, flow: &Bound<'_, PyAny>) -> PyResult<Self> {
         let flow = input(flow)?;
-        Ok(Self {
-            plain: run(py, || api::graph_plain(flow))?,
-        })
+        let work = Work::of_input(&flow);
+        Ok(Self::wrap(run(py, work, || api::graph_plain(flow))?))
     }
 
     /// Every rule the graph breaks, as a list of violations.
@@ -512,8 +670,10 @@ impl GraphPlain {
         base: Option<&Bound<'_, GraphPlain>>,
         check_values: bool,
     ) -> PyResult<Bound<'py, PyAny>> {
-        let base = plain(base);
-        call(py, || api::plain_validate(&self.plain, base, check_values))
+        let (base, base_work) = plain(base);
+        call(py, self.work + base_work, || {
+            api::plain_validate(&self.plain, base, check_values)
+        })
     }
 
     /// Repair what has one fix; returns the repaired graph and the fixes.
@@ -523,23 +683,27 @@ impl GraphPlain {
         py: Python<'py>,
         base: Option<&Bound<'_, GraphPlain>>,
     ) -> PyResult<(Bound<'py, GraphPlain>, Bound<'py, PyAny>)> {
-        let base = plain(base);
-        let (repaired, fixes) = run(py, || api::plain_repair(&self.plain, base))?;
+        let (base, base_work) = plain(base);
+        let (repaired, fixes) = run(py, self.work + base_work, || {
+            api::plain_repair(&self.plain, base)
+        })?;
         Ok((
-            Bound::new(py, Self { plain: repaired })?,
+            Bound::new(py, Self::wrap(repaired))?,
             to_python(py, &fixes)?,
         ))
     }
 
     /// The SHA-256 hex digest of the graph's canonical form.
     fn graph_hash(&self, py: Python<'_>) -> PyResult<String> {
-        run(py, || api::plain_graph_hash(&self.plain))
+        run(py, self.work, || api::plain_graph_hash(&self.plain))
     }
 
     /// Whether the two graphs are the same graph.
     fn equals(&self, py: Python<'_>, other: &Bound<'_, GraphPlain>) -> PyResult<bool> {
-        let other = &other.get().plain;
-        run(py, || api::plain_equals(&self.plain, other))
+        let other = other.get();
+        run(py, self.work + other.work, || {
+            api::plain_equals(&self.plain, &other.plain)
+        })
     }
 
     /// The operations that turn this graph into `target`, checked by replay.
@@ -548,13 +712,20 @@ impl GraphPlain {
         py: Python<'py>,
         target: &Bound<'_, GraphPlain>,
     ) -> PyResult<Bound<'py, PyAny>> {
-        let target = &target.get().plain;
-        call(py, || api::plain_ops_diff(&self.plain, target))
+        let target = target.get();
+        call(py, self.work + target.work, || {
+            api::plain_ops_diff(&self.plain, &target.plain)
+        })
     }
 
     /// The graph as JSON text.
     fn to_json(&self, py: Python<'_>) -> String {
-        py.detach(|| api::json_text(self.plain.as_value()))
+        let write = || api::json_text(self.plain.as_value());
+        if self.work.is_large() {
+            py.detach(write)
+        } else {
+            write()
+        }
     }
 
     /// The graph as a dict.
@@ -575,7 +746,8 @@ fn apply<'py>(
 ) -> PyResult<Bound<'py, PyAny>> {
     let (flow, operations) = (input(flow)?, input(operations)?);
     let options = ApplyOptions { forward, backward };
-    call(py, || api::apply(flow, operations, options))
+    let work = Work::of_inputs([&flow, &operations]);
+    call(py, work, || api::apply(flow, operations, options))
 }
 
 /// Replay stored operations on a graph, with no rule; returns `{"flow_data", ...}`.
@@ -589,7 +761,8 @@ fn replay<'py>(
 ) -> PyResult<Bound<'py, PyAny>> {
     let (flow, operations) = (input(flow)?, input(operations)?);
     let options = ReplayOptions { backward };
-    call(py, || api::replay(flow, operations, options))
+    let work = Work::of_inputs([&flow, &operations]);
+    call(py, work, || api::replay(flow, operations, options))
 }
 
 /// The operations that turn `base` into `target`, checked by replay.
@@ -600,7 +773,8 @@ fn ops_diff<'py>(
     target: &Bound<'_, PyAny>,
 ) -> PyResult<Bound<'py, PyAny>> {
     let (base, target) = (input(base)?, input(target)?);
-    call(py, || api::ops_diff(base, target))
+    let work = Work::of_inputs([&base, &target]);
+    call(py, work, || api::ops_diff(base, target))
 }
 
 /// Every rule a graph breaks, as a list of violations.
@@ -613,7 +787,8 @@ fn validate<'py>(
     check_values: bool,
 ) -> PyResult<Bound<'py, PyAny>> {
     let (flow, base) = (input(flow)?, optional_input(base)?);
-    call(py, || api::validate(flow, base, check_values))
+    let work = Work::of_inputs([&flow].into_iter().chain(base.as_ref()));
+    call(py, work, || api::validate(flow, base, check_values))
 }
 
 /// Repair what has one fix; returns `{"flow_data", "fixes"}`.
@@ -625,14 +800,16 @@ fn repair<'py>(
     base: Option<&Bound<'_, PyAny>>,
 ) -> PyResult<Bound<'py, PyAny>> {
     let (flow, base) = (input(flow)?, optional_input(base)?);
-    call(py, || api::repair(flow, base))
+    let work = Work::of_inputs([&flow].into_iter().chain(base.as_ref()));
+    call(py, work, || api::repair(flow, base))
 }
 
 /// The SHA-256 hex digest of a graph's canonical form.
 #[pyfunction]
 fn graph_hash(py: Python<'_>, flow: &Bound<'_, PyAny>) -> PyResult<String> {
     let flow = input(flow)?;
-    run(py, || api::graph_hash(flow))
+    let work = Work::of_inputs([&flow]);
+    run(py, work, || api::graph_hash(flow))
 }
 
 /// Whether two graphs are the same graph.
@@ -643,7 +820,8 @@ fn graphs_equal(
     right: &Bound<'_, PyAny>,
 ) -> PyResult<bool> {
     let (left, right) = (input(left)?, input(right)?);
-    run(py, || api::graphs_equal(left, right))
+    let work = Work::of_inputs([&left, &right]);
+    run(py, work, || api::graphs_equal(left, right))
 }
 
 /// Whether two JSON values are the same value.
@@ -654,14 +832,16 @@ fn values_equal(
     right: &Bound<'_, PyAny>,
 ) -> PyResult<bool> {
     let (left, right) = (input(left)?, input(right)?);
-    run(py, || api::values_equal(left, right))
+    let work = Work::of_inputs([&left, &right]);
+    run(py, work, || api::values_equal(left, right))
 }
 
 /// A JSON value in RFC 8785 canonical form, as text.
 #[pyfunction]
 fn canonical_json(py: Python<'_>, value: &Bound<'_, PyAny>) -> PyResult<String> {
     let value = input(value)?;
-    run(py, || api::canonical_json(value))
+    let work = Work::of_inputs([&value]);
+    run(py, work, || api::canonical_json(value))
 }
 
 /// A revision with a restore's fixes applied, after checking each one.
@@ -673,7 +853,10 @@ fn apply_restore_fixes<'py>(
     fixes: &Bound<'_, PyAny>,
 ) -> PyResult<Bound<'py, PyAny>> {
     let (revision, stored, fixes) = (input(revision)?, input(stored)?, input(fixes)?);
-    call(py, || api::apply_restore_fixes(revision, stored, fixes))
+    let work = Work::of_inputs([&revision, &stored, &fixes]);
+    call(py, work, || {
+        api::apply_restore_fixes(revision, stored, fixes)
+    })
 }
 
 /// The fixes that turn a revision's edges as read into the edges its preview shows.
@@ -684,7 +867,8 @@ fn edge_fixes<'py>(
     shown: &Bound<'_, PyAny>,
 ) -> PyResult<Bound<'py, PyAny>> {
     let (read, shown) = (input(read)?, input(shown)?);
-    call(py, || api::edge_fixes(read, shown))
+    let work = Work::of_inputs([&read, &shown]);
+    call(py, work, || api::edge_fixes(read, shown))
 }
 
 /// The part of the fixes that touches the given edges.
@@ -695,21 +879,24 @@ fn fixes_for_edges<'py>(
     edge_ids: &Bound<'_, PyAny>,
 ) -> PyResult<Bound<'py, PyAny>> {
     let (fixes, edge_ids) = (input(fixes)?, input(edge_ids)?);
-    call(py, || api::fixes_for_edges(fixes, edge_ids))
+    let work = Work::of_inputs([&fixes, &edge_ids]);
+    call(py, work, || api::fixes_for_edges(fixes, edge_ids))
 }
 
 /// Rows in order and without `__id__` and `__pos__`.
 #[pyfunction]
 fn strip_row_keys<'py>(py: Python<'py>, rows: &Bound<'_, PyAny>) -> PyResult<Bound<'py, PyAny>> {
     let rows = input(rows)?;
-    call(py, || api::strip_row_keys(rows))
+    let work = Work::of_inputs([&rows]);
+    call(py, work, || api::strip_row_keys(rows))
 }
 
 /// Rows in order, by `(__pos__, __id__)`, or as stored for a legacy table.
 #[pyfunction]
 fn ordered_rows<'py>(py: Python<'py>, rows: &Bound<'_, PyAny>) -> PyResult<Bound<'py, PyAny>> {
     let rows = input(rows)?;
-    call(py, || api::ordered_rows(rows))
+    let work = Work::of_inputs([&rows]);
+    call(py, work, || api::ordered_rows(rows))
 }
 
 /// A flow whose top-level tables have their rows in order and without `__id__` and `__pos__`.
@@ -719,7 +906,8 @@ fn strip_flow_table_row_keys<'py>(
     flow: &Bound<'_, PyAny>,
 ) -> PyResult<Bound<'py, PyAny>> {
     let flow = input(flow)?;
-    call(py, || api::strip_flow_table_row_keys(flow))
+    let work = Work::of_inputs([&flow]);
+    call(py, work, || api::strip_flow_table_row_keys(flow))
 }
 
 /// Rows with the ids and positions a write needs.
@@ -732,7 +920,8 @@ fn assign_row_ids<'py>(
     editor: bool,
 ) -> PyResult<Bound<'py, PyAny>> {
     let (rows, previous) = (input(rows)?, optional_input(previous)?);
-    call(py, || api::assign_row_ids(rows, previous, editor))
+    let work = Work::of_inputs([&rows].into_iter().chain(previous.as_ref()));
+    call(py, work, || api::assign_row_ids(rows, previous, editor))
 }
 
 /// A node being added, with ids on every table.
@@ -744,7 +933,8 @@ fn assign_table_row_ids<'py>(
     editor: bool,
 ) -> PyResult<Bound<'py, PyAny>> {
     let node = input(node)?;
-    call(py, || api::assign_table_row_ids(node, editor))
+    let work = Work::of_inputs([&node]);
+    call(py, work, || api::assign_table_row_ids(node, editor))
 }
 
 /// `target` with ids on the tables it adds or changes relative to `base`.
@@ -757,7 +947,8 @@ fn assign_changed_table_row_ids<'py>(
     editor: bool,
 ) -> PyResult<Bound<'py, PyAny>> {
     let (base, target) = (input(base)?, input(target)?);
-    call(py, || {
+    let work = Work::of_inputs([&base, &target]);
+    call(py, work, || {
         api::assign_changed_table_row_ids(base, target, editor)
     })
 }
@@ -772,7 +963,8 @@ fn assign_changed_node_table_row_ids<'py>(
     editor: bool,
 ) -> PyResult<Bound<'py, PyAny>> {
     let (node, previous) = (input(node)?, optional_input(previous)?);
-    call(py, || {
+    let work = Work::of_inputs([&node].into_iter().chain(previous.as_ref()));
+    call(py, work, || {
         api::assign_changed_node_table_row_ids(node, previous, editor)
     })
 }
@@ -785,14 +977,16 @@ fn append_table_rows<'py>(
     new_rows: &Bound<'_, PyAny>,
 ) -> PyResult<Bound<'py, PyAny>> {
     let (rows, new_rows) = (input(rows)?, input(new_rows)?);
-    call(py, || api::append_table_rows(rows, new_rows))
+    let work = Work::of_inputs([&rows, &new_rows]);
+    call(py, work, || api::append_table_rows(rows, new_rows))
 }
 
 /// The names of a node's template fields whose value is a table.
 #[pyfunction]
 fn table_fields<'py>(py: Python<'py>, node: &Bound<'_, PyAny>) -> PyResult<Bound<'py, PyAny>> {
     let node = input(node)?;
-    call(py, || api::table_fields(node))
+    let work = Work::of_inputs([&node]);
+    call(py, work, || api::table_fields(node))
 }
 
 /// A new random edge id in the editor's format.

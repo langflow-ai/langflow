@@ -483,6 +483,20 @@ impl GraphState {
         self.base_checked = false;
     }
 
+    /// Whether the next batch that apply or stage carries out checks the
+    /// whole graph against the structural rules first ([`Self::check_base`]).
+    #[must_use]
+    pub fn needs_check(&self) -> bool {
+        !self.base_checked
+    }
+
+    /// The number of nodes and edges of the committed graph: a measure of
+    /// what work on the whole graph costs, such as [`Self::to_json`].
+    #[must_use]
+    pub fn item_count(&self) -> usize {
+        self.graph.nodes.stored.len() + self.graph.edges.stored.len()
+    }
+
     /// The graph as a JSON value.
     #[must_use]
     pub fn to_value(&self) -> Value {

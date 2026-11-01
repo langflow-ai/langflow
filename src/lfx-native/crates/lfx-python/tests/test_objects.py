@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import math
 import threading
+import time
 from typing import TYPE_CHECKING
 
 import pytest
@@ -201,6 +202,74 @@ def test_threads_share_one_state():
         thread.join()
     assert problems == []
     assert fields(state.to_dict()) == ("v299", "v299")
+
+
+def test_batches_wait_for_a_large_read_without_the_gil():
+    """A read of a large graph runs without the GIL and holds the lock.
+
+    A batch then waits for the lock without the GIL, and no thread deadlocks or sees half a batch.
+    """
+    template = {"t": {"value": "", "type": "str"}, "u": {"value": "", "type": "str"}}
+    nodes = [{"id": f"n{index}", "data": {"node": {"template": template}}} for index in range(400)]
+    state = ops.GraphState({"nodes": nodes, "edges": []})
+    done = threading.Event()
+    problems: list[str] = []
+
+    def write() -> None:
+        try:
+            for index in range(200):
+                path = ["data", "node", "template"]
+                updates = [
+                    {"id": "n0", "op": "set_field", "path": [*path, field, "value"], "value": f"v{index}"}
+                    for field in ("t", "u")
+                ]
+                state.apply([{"type": "update_nodes", "updates": updates}])
+        finally:
+            done.set()
+
+    def read() -> None:
+        while not done.is_set():
+            template = json.loads(state.to_json())["nodes"][0]["data"]["node"]["template"]
+            first, second = template["t"]["value"], template["u"]["value"]
+            if first != second:
+                problems.append(f"half a batch: {first} and {second}")
+                return
+
+    threads = [threading.Thread(target=write), threading.Thread(target=read), threading.Thread(target=read)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert problems == []
+
+
+SMALL_CALLS_SECONDS = 0.25
+
+
+def test_a_small_call_keeps_the_gil():
+    """A small batch keeps the GIL.
+
+    So a busy Python thread does not make each call wait a switch interval (5 ms by default) for the GIL.
+    """
+    state = ops.GraphState(FLOW)
+    stop = threading.Event()
+
+    def spin() -> None:
+        while not stop.is_set():
+            pass
+
+    spinner = threading.Thread(target=spin)
+    spinner.start()
+    try:
+        start = time.perf_counter()
+        for index in range(100):
+            state.apply(set_value(f"v{index}"))
+        elapsed = time.perf_counter() - start
+    finally:
+        stop.set()
+        spinner.join()
+    # A wait for the GIL after each call takes 100 switch intervals: 0.5 s.
+    assert elapsed < SMALL_CALLS_SECONDS
 
 
 def value_of(graph: dict) -> object:
