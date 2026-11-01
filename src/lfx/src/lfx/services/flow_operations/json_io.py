@@ -25,8 +25,10 @@ from lfx.services.flow_operations.exceptions import FlowDataValidationError, Flo
 
 MAX_DEPTH = 127
 _SURROGATE = re.compile("[\ud800-\udfff]")
-# orjson reads an integer of more than 64 bits as a float, which loses its digits.
-_LONG_INTEGER = re.compile(rb"[0-9]{19,}")
+# orjson reads an integer outside the 64-bit range as a float, which loses its digits. Such a
+# float is at least this large, so text that gives one is read again by ``json``.
+_U64_LIMIT = 2.0**64
+_I64_LIMIT = -(2.0**63)
 
 
 def _not_json(why: str) -> FlowDataValidationError:
@@ -75,22 +77,60 @@ def _check_text_value(value: Any) -> str | None:
 
 def parse_text(text: bytes) -> Any:
     """Parse JSON text strictly: no ``NaN`` or ``Infinity`` token, within the limits. Raises ``ValueError``."""
-    if _LONG_INTEGER.search(text) is None:
-        try:
-            value = orjson.loads(text)
-        except orjson.JSONDecodeError:
-            value = _SLOW
+    try:
+        value = orjson.loads(text)
+    except orjson.JSONDecodeError:
+        pass
     else:
-        value = _SLOW
-    if value is _SLOW:
-        value = json.loads(text.decode("utf-8"), parse_constant=_reject_constant)
+        # orjson refuses a lone surrogate and NaN; the depth, and a lost integer, are left to check.
+        found = _depth_and_large_floats(value)
+        if found is _TOO_DEEP:
+            msg = f"nested more than {MAX_DEPTH} levels deep"
+            raise ValueError(msg)
+        if found is None:
+            return value
+    value = json.loads(text.decode("utf-8"), parse_constant=_reject_constant)
     broken = _check_text_value(value)
     if broken is not None:
         raise ValueError(broken)
     return value
 
 
-_SLOW = object()
+_TOO_DEEP = object()
+_LARGE_FLOAT = object()
+
+
+def _depth_and_large_floats(value: Any) -> object | None:
+    """``_TOO_DEEP`` for a value nested more than ``MAX_DEPTH`` levels deep, ``_LARGE_FLOAT`` for one that holds
+    a float outside the 64-bit integer range, which may have been an integer, or None.
+    """  # noqa: D205
+    if value.__class__ is not dict and value.__class__ is not list:
+        return _LARGE_FLOAT if value.__class__ is float and not _I64_LIMIT <= value < _U64_LIMIT else None
+    large = False
+    stack = [(value, 0)]
+    pop, push = stack.pop, stack.append
+    while stack:
+        item, depth = pop()
+        if depth >= MAX_DEPTH:
+            return _TOO_DEEP
+        for child in item.values() if item.__class__ is dict else item:
+            cls = child.__class__
+            if cls is dict or cls is list:
+                push((child, depth + 1))
+            elif cls is float and not _I64_LIMIT <= child < _U64_LIMIT:
+                large = True
+    return _LARGE_FLOAT if large else None
+    stack = [(value, 0)]
+    pop, push = stack.pop, stack.append
+    while stack:
+        item, depth = pop()
+        if depth >= MAX_DEPTH:
+            return True
+        for child in item.values() if item.__class__ is dict else item:
+            cls = child.__class__
+            if cls is dict or cls is list:
+                push((child, depth + 1))
+    return False
 
 
 def read_data(value: Any) -> Any:
@@ -203,27 +243,11 @@ def copy_json(value: Any) -> Any:
     return value
 
 
-# Every edge handle string holds "œ" many times (``edge_rules.HANDLE_QUOTE``).
-_HANDLE_QUOTE_UTF8 = "œ".encode()
-_HANDLE_QUOTE_ESCAPE = b"\\u0153"
-
-
 def dumps(value: Any) -> str:
-    r"""JSON text of a value the engine holds.
-
-    Python reads ASCII text into a ``str`` fastest, and a ``str`` with one
-    character above U+00FF takes two bytes per character. In JSON text such a
-    character is only inside a string, where ``\u0153`` means the same
-    character, so the handle quote is written escaped; text with other such
-    characters is decoded as it is.
-    """
+    """JSON text of a value the engine holds, written by ``orjson``."""
     try:
         data = orjson.dumps(value)
     except TypeError:
         # An integer of more than 64 bits keeps its digits.
         return json.dumps(value, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
-    if not data.isascii():
-        data = data.replace(_HANDLE_QUOTE_UTF8, _HANDLE_QUOTE_ESCAPE)
-        if not data.isascii():
-            return data.decode("utf-8")
-    return data.decode("ascii")
+    return data.decode("ascii") if data.isascii() else data.decode("utf-8")
