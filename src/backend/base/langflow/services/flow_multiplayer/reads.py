@@ -51,7 +51,7 @@ async def revisions_body(session: AsyncSession, flow_id: UUID, after: int, fallb
         return b'{"latest_revision":%d,"retention_gap":true,"revisions":[]}' % head
     with bench.timed("encode_part"):
         parts = [b'{"revision":%d,"operations":[%s]}' % (revision, orjson.dumps(op)) for revision, op in revisions]
-    bench.put("n", len(parts))
+    bench.put("revisions_n", len(parts))
     return b'{"latest_revision":%d,"retention_gap":false,"revisions":[%s]}' % (head, b",".join(parts))
 
 
