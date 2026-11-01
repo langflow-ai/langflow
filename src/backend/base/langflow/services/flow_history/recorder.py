@@ -382,9 +382,6 @@ async def write_flow_graph(
     if wal:
         # The log is the record; the checkpoint task moves Flow.data and its revision.
         set_committed_value(flow, "latest_revision", recorded[-1].revision)
-        from langflow.services.flow_multiplayer.checkpoint import request_after_commit
-
-        request_after_commit(session, flow.id, recorded[-1].revision)
     else:
         flow.latest_revision = recorded[-1].revision
         flow.current_revision = recorded[-1].revision
@@ -392,6 +389,15 @@ async def write_flow_graph(
     result.end_revision = recorded[-1].revision
     result.latest_revision = recorded[-1].revision
     result.current_revision = flow.current_revision
+
+    if from_cache:
+        # Modes cache and wal: the multiplayer checkpoint task checkpoints and compacts after the
+        # commit, as for a multiplayer write, with the lock held only for its deletes. Legacy
+        # maintenance would read and hash the 14 MB graphs under the lock.
+        from langflow.services.flow_multiplayer.checkpoint import request_after_commit
+
+        request_after_commit(session, flow.id, recorded[-1].revision)
+        return result
 
     # Imported here: maintenance builds on this module.
     from langflow.services.flow_history.maintenance import needs_maintenance, request_maintenance

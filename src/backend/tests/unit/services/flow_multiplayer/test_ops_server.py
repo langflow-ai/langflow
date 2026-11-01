@@ -721,6 +721,34 @@ async def test_compaction_keeps_the_window_and_the_cut(servers):
     assert_rows_contiguous(flow_id, total)
 
 
+async def test_legacy_saves_compact_through_the_checkpoint_task(servers):
+    """In cache and wal the checkpoint task checkpoints and compacts after legacy saves, not legacy maintenance."""
+    mode, urls = servers["mode"], servers["urls"]
+    total = WINDOW + STEP + CADENCE * 2
+    async with httpx.AsyncClient(timeout=60, headers=servers["headers"]) as client:
+        flow_id = await create_flow(client, urls[0])
+        assert (await post_ops(client, urls[0], flow_id, set_field("n0", "start"))).status_code == 200
+        data = (await v1_flow(client, urls[0], flow_id))["data"]
+        target = next(n for n in data["nodes"] if n["id"] == "n0")
+        for i in range(total - 1):
+            if mode != "nocache" and i == WINDOW + STEP - CADENCE:
+                # Past the window: legacy maintenance would compact now; the checkpoint task waits for the step.
+                await asyncio.sleep(0.5)
+                assert db_rows(flow_id)[0][0] == 1
+            target["data"]["node"]["template"]["t"]["value"] = f"l{i}"
+            saved = await client.patch(f"{urls[i % 2]}/api/v1/flows/{flow_id}", json={"data": data})
+            assert saved.status_code == 200, saved.text
+        await wait_compacted(flow_id)
+        await asyncio.sleep(0.5)  # let a checkpoint task finish
+        first_start = db_rows(flow_id)[0][0]
+        assert first_start > 1, "history was not compacted"
+        assert total - first_start + 1 >= WINDOW
+        if mode != "nocache":
+            events = await bench_records(client, urls, "compaction", flow_id)
+            assert [e for e in events if e.get("rows_deleted")], "not compacted by the checkpoint task"
+    assert_rows_contiguous(flow_id, total)
+
+
 async def test_compaction_deletes_nothing_after_a_concurrent_purge_or_compaction(servers):
     """The locked deletes check that the cut's row and checkpoint are still there; otherwise they are no-ops."""
     from langflow.services.flow_multiplayer.compaction import Cut, delete_checkpoints, delete_rows
