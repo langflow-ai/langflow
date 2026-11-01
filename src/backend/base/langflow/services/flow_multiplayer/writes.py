@@ -10,9 +10,10 @@ Every mode runs the same steps in one transaction:
 3. The graph at the head: built from ``Flow.data`` (``nocache``), or the
    cached graph caught up from the log rows after its revision.
 4. The batch applied with every rule (``stage`` on a cached graph).
-5. The log rows appended. ``nocache`` and ``cache`` also serialize the graph
-   and write ``Flow.data`` and its revision; ``wal`` does not touch the flow.
-6. Commit; then ``keep`` (``drop`` on failure).
+5. ``cache``: the staged graph serialized (``to_json(staged=True)``).
+6. The log rows appended. ``nocache`` and ``cache`` also write ``Flow.data``
+   and its revision; ``wal`` does not touch the flow row.
+7. Commit; then ``keep``. Any failure before that drops the staged batch.
 
 After the commit, a checkpoint task runs when the cadence is reached.
 """
@@ -262,7 +263,6 @@ async def _write_cached(
     if entry is None:
         raise OpsRefusedError(404, {"code": "FLOW_NOT_FOUND", "message": "Flow not found"})
     async with entry.write:
-        await entry.wait_settled()
         if entry.revision > head:
             # Only after a database reset or a lost commit outcome: the cache is not the log.
             CACHE.evict(flow_id, entry)
@@ -270,20 +270,23 @@ async def _write_cached(
         await catch_up(session, entry, head)
         try:
             with bench.timed("stage"):
-                # The first batch after a build or a catch-up checks the whole graph: a large call.
+                # Inline, except the first batch on a newly built graph: the engine checks the whole graph then.
                 async with entry.use:
-                    result = await call(
-                        entry.state.stage, request.operations_json, forward=True, large=not entry.checked
-                    )
+                    result = await call(entry.state.stage, request.operations_json, forward=True, large=entry.new)
         except config.engine().EngineError as error:
             raise _refusal(error, head) from None
-        entry.checked = True
+        entry.new = False
+        text: str | None = None
         try:
             forward = result.get("forward_operations") or []
             if not forward:
                 await _commit(session)
                 await _keep(entry)
                 return _answer("applied", head, head + 1, head), None
+            if mode == "cache":
+                with bench.timed("ser"):
+                    async with entry.use:
+                        text = await call(entry.state.to_json, staged=True, large=True)
             end = await _append(
                 session,
                 flow_id,
@@ -293,54 +296,28 @@ async def _write_cached(
                 actor_id=actor_id,
                 operations_sha256=operations_sha256,
             )
+            if text is not None:
+                with bench.timed("flow_write"):
+                    await oplog.write_flow(session, flow_id, text, revision=end, actor_id=actor_id, token=uuid.uuid4())
+            await _commit(session)
         except BaseException:
             await _drop(entry)
             raise
-        if mode == "wal":
-            try:
-                await _commit(session)
-            except BaseException:
-                await _drop(entry)
-                raise
-            await _keep(entry, end)
-        else:
-            await _write_flow_cached(session, entry, flow_id, actor_id, end)
+        await _keep(entry, end, text)
     bench.put("result", "applied")
     return _answer("applied", end, head + 1, end), end
 
 
-async def _keep(entry: FlowEntry, end: int | None = None) -> None:
+async def _keep(entry: FlowEntry, end: int | None = None, text: str | None = None) -> None:
     with bench.timed("keep"):
         async with entry.use:
             entry.state.keep()
-        if end is not None:
-            entry.revision = end
-            entry.json = None
+            if end is not None:
+                entry.revision = end
+                # Mode cache serialized this revision for Flow.data: readers share it.
+                entry.json = (end, text) if text is not None else None
 
 
 async def _drop(entry: FlowEntry) -> None:
     async with entry.use:
         entry.state.drop()
-
-
-async def _write_flow_cached(session: AsyncSession, entry: FlowEntry, flow_id: UUID, actor_id: UUID, end: int) -> None:
-    """Mode ``cache``: keep before the commit (to serialize the new graph), evict if the commit fails."""
-    with bench.timed("keep"):
-        async with entry.use:
-            entry.state.keep()
-            entry.pending = True
-            entry.settled.clear()
-    try:
-        with bench.timed("ser"):
-            async with entry.use:
-                text = await call(entry.state.to_json, large=True)
-        with bench.timed("flow_write"):
-            await oplog.write_flow(session, flow_id, text, revision=end, actor_id=actor_id, token=uuid.uuid4())
-        await _commit(session)
-    except BaseException:
-        CACHE.evict(flow_id, entry)
-        raise
-    entry.revision = end
-    entry.json = (end, text)
-    entry.pending = False
-    entry.settled.set()

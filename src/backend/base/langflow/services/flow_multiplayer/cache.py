@@ -10,16 +10,19 @@ is always a committed revision. Two asyncio locks guard it:
   while another runs in a worker thread (the Rust object refuses a
   concurrent borrow; the Python object would race).
 
-While a batch is staged, the engine reads (``to_json``) return the committed
-graph, so a reader can serialize the entry's revision while a writer waits
-for its commit. Serialization is coalesced: one ``to_json`` per revision,
-shared by concurrent readers.
+While a batch is staged, ``to_json()`` returns the committed graph, so a
+reader serializes the entry's revision while a writer waits for its commit,
+and never sees a revision that is not committed. Mode ``cache`` writes the
+staged graph to ``Flow.data`` with ``to_json(staged=True)`` before its commit.
+Serialization for readers is coalesced: one ``to_json`` per revision, shared
+by concurrent readers.
 
-Mode ``cache`` must write the post-batch graph to ``Flow.data`` before it
-commits, but a staged batch is invisible to ``to_json``. So that mode keeps
-the batch before the commit and marks the entry ``pending``: readers wait
-until the commit settles, and a failed commit evicts the entry (the next
-request rebuilds it from the database), which stands in for ``drop``.
+Which engine calls run in a worker thread (both engines alike): building a
+graph from ``Flow.data``, ``to_json``, a catch-up replay of at least
+``LARGE_OPS_COUNT`` operations or ``LARGE_OPS_BYTES`` bytes, whole-flow calls
+(validate, repair, diff, hash), and the first batch on a newly built graph
+(the engine checks the whole graph before its first batch). A batch's
+``stage``, ``keep`` and ``drop`` and a small catch-up run inline.
 """
 
 from __future__ import annotations
@@ -41,7 +44,7 @@ if TYPE_CHECKING:
 
 
 class EntryGoneError(Exception):
-    """The entry was evicted after a failed commit; look it up again."""
+    """The cached graph is ahead of the log (only after a database reset): rebuild it."""
 
 
 def is_large(payload: bytes, count: int) -> bool:
@@ -56,19 +59,7 @@ async def call(function: Any, *args: Any, large: bool, **kwargs: Any) -> Any:
 
 
 class FlowEntry:
-    __slots__ = (
-        "checked",
-        "dead",
-        "flow_id",
-        "json",
-        "json_task",
-        "pending",
-        "revision",
-        "settled",
-        "state",
-        "use",
-        "write",
-    )
+    __slots__ = ("flow_id", "json", "json_task", "new", "revision", "state", "use", "write")
 
     def __init__(self, flow_id: UUID, state: Any, revision: int) -> None:
         self.flow_id = flow_id
@@ -78,31 +69,18 @@ class FlowEntry:
         self.use = asyncio.Lock()
         self.json: tuple[int, str] | None = None
         self.json_task: tuple[int, asyncio.Task] | None = None
-        self.pending = False
-        self.settled = asyncio.Event()
-        self.settled.set()
-        self.dead = False
-        # Whether the engine has checked the whole graph since it was built or replayed into
-        # (the first batch after that checks it, which is a large call).
-        self.checked = False
+        # Built and not yet given a batch: the engine checks the whole graph before the first one.
+        self.new = True
 
     async def replay(self, operations: list[Any]) -> None:
         payload = orjson.dumps(operations)
         large = is_large(payload, len(operations))
         async with self.use:
             await call(self.state.replay, payload, large=large)
-        self.checked = False
-
-    async def wait_settled(self) -> None:
-        while self.pending:
-            await self.settled.wait()
-        if self.dead:
-            raise EntryGoneError
 
     async def serialized(self) -> tuple[int, str]:
         """The JSON text of the entry's committed revision, one serialization per revision."""
         while True:
-            await self.wait_settled()
             revision = self.revision
             if self.json is not None and self.json[0] == revision:
                 return self.json
@@ -117,11 +95,11 @@ class FlowEntry:
 
     async def _serialize(self, revision: int) -> tuple[int, str] | None:
         async with self.use:
-            if self.pending or self.dead or self.revision != revision:
+            if self.revision != revision:
                 return None
             with bench.timed("ser"):
                 text = await call(self.state.to_json, large=True)
-        if self.revision == revision and not self.pending:
+        if self.revision == revision:
             self.json = (revision, text)
         return revision, text
 
@@ -147,10 +125,6 @@ class FlowCache:
         current = self._entries.get(flow_id)
         if current is not None and (entry is None or current is entry):
             del self._entries[flow_id]
-        if entry is not None:
-            entry.dead = True
-            entry.pending = False
-            entry.settled.set()
 
     def clear(self) -> None:
         self._entries.clear()
@@ -217,12 +191,11 @@ async def entry_at_head(session: AsyncSession, flow_id: UUID, head: int) -> Flow
         entry = await CACHE.load(session, flow_id)
         if entry is None:
             return None
-        if entry.revision >= head and not entry.pending and not entry.dead:
+        if entry.revision >= head:
             # Already there: no need to wait for a writer's commit.
             return entry
         try:
             async with entry.write:
-                await entry.wait_settled()
                 # A revision newer than this reader's head is committed too: serve it.
                 await catch_up(session, entry, head)
         except (oplog.LogGapError, EntryGoneError):
