@@ -236,6 +236,15 @@ class Writer:
             # A write that changes an item's key: refused by the parser.
             key = self.rng.choice(keys)
             return [self.update(node_id, [*path, {"key": key}, key_name], "renamed")]
+        if keys and roll < 0.88:
+            # Delete an item and write it again, in two operations of one batch.
+            key = self.rng.choice(keys)
+            item = copy.deepcopy(next(entry for entry in items if key_of(entry) == key))
+            item["note"] = self.value()
+            return [
+                {"type": "update_nodes", "updates": [self.update(node_id, [*path, {"key": key}], delete=True)]},
+                {"type": "update_nodes", "updates": [self.update(node_id, [*path, {"key": key}], item)]},
+            ]
         if roll < 0.92:
             # The whole list, with positions and keys.
             whole = copy.deepcopy(items)
@@ -277,7 +286,7 @@ class Writer:
         if roll < 0.45 or not nodes:
             if not nodes:
                 return [{"type": "add_nodes", "nodes": [self.pooled_node()]}]
-            return [{"type": "update_nodes", "updates": self.field_updates(graph)}]
+            return self.field_operations(graph)
         if roll < 0.52:
             node = self.pooled_node()
             if self.rng.random() < 0.15:
@@ -315,10 +324,17 @@ class Writer:
         if roll < 0.94:
             # Delete an edge and add it back: a rewire.
             if not edges:
-                return [{"type": "update_nodes", "updates": self.field_updates(graph)}]
+                return self.field_operations(graph)
             edge = copy.deepcopy(self.rng.choice(edges))
             return [{"type": "delete_edges", "ids": [edge["id"]]}, {"type": "add_edges", "edges": [edge]}]
         return self.malformed(graph)
+
+    def field_operations(self, graph: dict[str, Any]) -> list[dict[str, Any]]:
+        """Field writes as operations: one ``update_nodes``, or the operations a write needs in a batch."""
+        updates = self.field_updates(graph)
+        if updates and "type" in updates[0]:
+            return updates
+        return [{"type": "update_nodes", "updates": updates}]
 
     def pooled_node(self) -> dict[str, Any]:
         node = copy.deepcopy(self.rng.choice(self.pool))

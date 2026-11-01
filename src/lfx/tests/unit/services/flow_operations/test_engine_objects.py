@@ -198,3 +198,17 @@ def test_the_environment_variable_picks_the_engine(monkeypatch):
     if _has_rust():
         monkeypatch.setenv(ENGINE_ENV, "rust")
         assert get_engine() is RustEngine
+
+
+def test_an_item_deleted_and_written_again_in_one_batch_keeps_its_place(engine):
+    """A list without positions keeps its array order: the item stays where it was, as one write."""
+    node = {"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "a"}, {"name": "b"}, {"name": "c"}]}}}
+    path = ["data", "node", "outputs", {"key": "a"}]
+    batch = [
+        {"type": "update_nodes", "updates": [{"id": "n", "op": "delete_field", "path": path}]},
+        {"type": "update_nodes", "updates": [{"id": "n", "op": "set_field", "path": path, "value": {"name": "a"}}]},
+    ]
+    state = engine.GraphState({"nodes": [node], "edges": []})
+    state.replay(batch)
+    outputs = state.to_dict()["nodes"][0]["data"]["node"]["outputs"]
+    assert [output["name"] for output in outputs] == ["a", "b", "c"]

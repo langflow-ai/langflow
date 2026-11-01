@@ -455,6 +455,8 @@ def write_update(state: GraphState, update: FieldUpdate, walked: Walk) -> list[t
 
     Every container on the path is replaced by one the batch owns
     (``GraphState.own``), so the write changes only containers the batch made.
+    An item write in a node's keyed list goes into the list's layer
+    (``ListLayer``), and the node then holds the list as the batch sees it.
     Returns the list items on the path, after the write, with their lists.
     """
     if update.delete and not walked.found:
@@ -463,12 +465,24 @@ def write_update(state: GraphState, update: FieldUpdate, walked: Walk) -> list[t
     node_id, path = update.id, update.path
     last = len(path) - 1
     container: Any = state.writable_node(node_id)
-    items: list[tuple[ListIndex, KeyedList, Any, bool]] = []
+    items: list[tuple[ListIndex | None, KeyedList, Any, bool]] = []
+    # The layered list on the path, if any: (layer, the container that holds the list, its key).
+    layered = None
     for index in range(last):
         segment = path[index]
         if segment.__class__ is str:
             child = container[segment]
             child_cls = child.__class__
+            if (
+                child_cls is list
+                and path[index + 1].__class__ is tuple
+                and state.list_is_layered(node_id, path[: index + 1])
+            ):
+                keyed = _SCHEMA.listed_at(path[: index + 1])
+                layer = state.list_layer(node_id, path[: index + 1], keyed, child)
+                layered = (layer, container, segment)
+                container = child
+                continue
             if child_cls is dict or child_cls is list:
                 owned = state.own(child)
                 if owned is not child:
@@ -477,6 +491,10 @@ def write_update(state: GraphState, update: FieldUpdate, walked: Walk) -> list[t
                         state.transfer_index(node_id, path[: index + 1], child, owned)
                 child = owned
             container = child
+        elif layered is not None and layered[0].list_path == path[:index]:
+            owned = layered[0].writable_item(state, segment[0])
+            items.append((None, layered[0].keyed, owned, False))
+            container = owned
         else:
             keyed = _SCHEMA.listed_at(path[:index])
             list_index = state.writable_list_index(node_id, path[:index], keyed, container)
@@ -493,6 +511,9 @@ def write_update(state: GraphState, update: FieldUpdate, walked: Walk) -> list[t
             del container[segment]
         else:
             container[segment] = update.value
+        state.wrote_key(node_id, path, delete=update.delete)
+    elif layered is not None and layered[0].list_path == path[:last]:
+        layered[0].write(segment[0], update.value, delete=update.delete)
     else:
         keyed = _SCHEMA.listed_at(path[:last])
         list_index = state.writable_list_index(node_id, path[:last], keyed, container)
@@ -505,9 +526,13 @@ def write_update(state: GraphState, update: FieldUpdate, walked: Walk) -> list[t
                 list_index.add(key, update.value)
             else:
                 list_index.replace(slot, update.value)
+    if layered is not None:
+        layer, holder, key = layered
+        holder[key] = layer.materialize(state)
     after = []
     for list_index, keyed, item, had_position in items:
-        list_index.position_changed(had_position, keyed.has_position(item))
+        if list_index is not None:
+            list_index.position_changed(had_position, keyed.has_position(item))
         after.append((keyed, item))
     return after
 

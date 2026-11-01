@@ -48,7 +48,7 @@ GONE = object()
 class _Batch:
     """What one batch changed: the layer over the stored graph."""
 
-    __slots__ = ("edges", "edges_at", "lists", "nodes", "owned", "replaced")
+    __slots__ = ("edges", "edges_at", "layers", "lists", "nodes", "owned", "replaced", "set_paths")
 
     def __init__(self) -> None:
         # The node as the batch sees it, by id, or GONE: added, removed, or a copy the batch writes.
@@ -63,6 +63,80 @@ class _Batch:
         # The indexes of the keyed lists this batch reads or writes, by the
         # list's identity: (index, node id, list path).
         self.lists: dict[int, tuple[ListIndex, str, tuple[str, ...]]] = {}
+        # The item writes of the keyed lists of a node, by (node id, list path) (``ListLayer``).
+        self.layers: dict[tuple[str, tuple[str, ...]], ListLayer] = {}
+        # The paths this batch set a value at, by node id: a list at or under
+        # one is part of that value, and takes writes at once.
+        self.set_paths: dict[str, list[tuple[Any, ...]]] = {}
+
+
+# The kinds of item write a list layer keeps.
+SET = "set"
+CHANGED = "changed"
+REMOVE = "remove"
+
+
+class ListLayer:
+    """The item writes a batch makes in one keyed list of a node, kept apart from the list.
+
+    A batch writes items into a node's keyed list as the Rust engine's field
+    layer does: each item key keeps the batch's last write to it, in the
+    order the keys were first written, and the list as the batch sees it is
+    the list the batch started from with those writes made in that order. So
+    an item deleted and written again in one batch stays in its place, and
+    one batch gives one order whichever engine applies it. The node holds the
+    list as the batch sees it, so every reader sees the writes.
+    """
+
+    __slots__ = ("base", "base_index", "keyed", "list_path", "node_id", "writes")
+
+    def __init__(
+        self, node_id: str, list_path: tuple[str, ...], keyed: KeyedList, base: list[Any], base_index: ListIndex
+    ):
+        self.node_id = node_id
+        self.list_path = list_path
+        self.keyed = keyed
+        self.base = base
+        self.base_index = base_index
+        # Item key -> (kind, value), in the order the keys were first written.
+        self.writes: dict[str, tuple[str, Any]] = {}
+
+    def writable_item(self, state: GraphState, key: str) -> Any:
+        """The item with ``key``, as a container the batch owns, to write inside it."""
+        entry = self.writes.get(key)
+        if entry is None:
+            owned = state.own(self.base[self.base_index.slot(key)])
+            self.writes[key] = (CHANGED, owned)
+            return owned
+        kind, value = entry
+        owned = state.own(value)
+        self.writes[key] = (kind, owned)
+        return owned
+
+    def write(self, key: str, value: Any, *, delete: bool) -> None:
+        """Set the item with ``key``, or delete it. A deleted item the batch added leaves no trace."""
+        if not delete:
+            self.writes[key] = (SET, value)
+        elif self.base_index.slot(key) is not None:
+            self.writes[key] = (REMOVE, None)
+        else:
+            self.writes.pop(key, None)
+
+    def materialize(self, state: GraphState) -> list[Any]:
+        """The list as the batch sees it: the base list with the writes made in order, and its index."""
+        items = list(self.base)
+        index = self.base_index.copy(items)
+        for key, (kind, value) in self.writes.items():
+            if kind == REMOVE:
+                index.remove(key)
+                continue
+            slot = index.slot(key)
+            if slot is None:
+                index.add(key, value)
+            else:
+                index.replace(slot, value)
+        state.batch.lists[id(items)] = (index, self.node_id, self.list_path)
+        return items
 
 
 class GraphState:
@@ -283,6 +357,40 @@ class GraphState:
         node_id = node["id"]
         batch.nodes[node_id] = node
         batch.replaced.add(node_id)
+        self._forget_writes(node_id)
+
+    def _forget_writes(self, node_id: str) -> None:
+        """Drop the batch's record of writes to a node it adds or removes."""
+        batch = self.batch
+        batch.set_paths.pop(node_id, None)
+        for key in [key for key in batch.layers if key[0] == node_id]:
+            del batch.layers[key]
+
+    def list_is_layered(self, node_id: str, list_path: tuple[Any, ...]) -> bool:
+        """Whether item writes to the node's keyed list at ``list_path`` go through a ``ListLayer``.
+
+        They do unless the batch set a value at the list's path or at an
+        ancestor of it: the list is then part of that value, and takes writes
+        at once.
+        """
+        return all(list_path[: len(set_path)] != set_path for set_path in self.batch.set_paths.get(node_id, ()))
+
+    def list_layer(self, node_id: str, list_path: tuple[str, ...], keyed: KeyedList, items: list[Any]) -> ListLayer:
+        """The layer of the node's keyed list at ``list_path``, whose list is ``items`` when it is new."""
+        key = (node_id, list_path)
+        layer = self.batch.layers.get(key)
+        if layer is None:
+            layer = ListLayer(node_id, list_path, keyed, items, self.list_index(node_id, list_path, keyed, items))
+            self.batch.layers[key] = layer
+        return layer
+
+    def wrote_key(self, node_id: str, path: tuple[Any, ...], *, delete: bool) -> None:
+        """Note a write at ``path``, which ends at an object key: the lists at or under it are replaced or gone."""
+        batch = self.batch
+        for key in [key for key in batch.layers if key[0] == node_id and key[1][: len(path)] == path]:
+            del batch.layers[key]
+        if not delete:
+            batch.set_paths.setdefault(node_id, []).append(path)
 
     def remove_node(self, node_id: str) -> None:
         """Remove the node, if it exists. Its edges stay; the caller removes them."""
@@ -292,6 +400,7 @@ class GraphState:
         else:
             batch.nodes.pop(node_id, None)
         batch.replaced.add(node_id)
+        self._forget_writes(node_id)
         self.edge_index.forget_node(node_id)
         # The list indexes are a cache: a failed batch rebuilds what it needs.
         self.lists.pop(node_id, None)
