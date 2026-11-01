@@ -25,7 +25,6 @@ the write adds or changes:
 
 from __future__ import annotations
 
-import copy
 import hashlib
 from dataclasses import dataclass
 from typing import Any
@@ -34,12 +33,13 @@ from lfx.services.flow_operations.canonical import canonical_json, is_finite_num
 from lfx.services.flow_operations.codes import MANUAL_CODES, GraphViolationCode
 from lfx.services.flow_operations.edge_rules import derive_missing_handle_forms
 from lfx.services.flow_operations.ids import new_edge_id
+from lfx.services.flow_operations.json_io import copy_json
 from lfx.services.flow_operations.limits import check_graph_limits
-from lfx.services.flow_operations.schema import load_node_schema
-from lfx.services.flow_operations.state import NODE_OBJECT_PATHS
+from lfx.services.flow_operations.schema import NODE_OBJECT_PATHS, load_node_schema
 from lfx.services.flow_operations.table_rows import fill_missing_positions, match_row_ids
 from lfx.services.flow_operations.validation import (
     GraphPath,
+    changed_keyed_lists,
     changed_tables,
     find_edge_violations,
     validate_flow_data,
@@ -64,6 +64,7 @@ REPAIRS: dict[GraphViolationCode, str] = {
     GraphViolationCode.TABLE_ROW_ID_MISSING: "assigned a generated row id",
     GraphViolationCode.TABLE_ROW_ID_DUPLICATE: "assigned a generated row id; the first row keeps the id",
     GraphViolationCode.TABLE_ROW_POS_INVALID: "assigned a position that keeps the row where it is stored",
+    GraphViolationCode.LIST_ITEM_MISSING_POS: "assigned the midpoint of its array neighbours' positions",
     GraphViolationCode.EDGE_HANDLE_FORM_MISSING: "derived the missing form of the handle from the one present",
     GraphViolationCode.EDGE_TOUCHES_NOTE: "dropped the edge",
 }
@@ -106,6 +107,11 @@ def repair_flow_data(flow_data: Any, *, base: Any = None) -> RepairResult:
     rows it already held, and only new rows get new random IDs.
     """
     check_graph_limits(flow_data)
+    return repair_checked(flow_data, base=base)
+
+
+def repair_checked(flow_data: Any, *, base: Any = None) -> RepairResult:
+    """``repair_flow_data`` for a graph that is known to meet the JSON limits. It never changes ``flow_data``."""
     fixes: list[GraphFix] = []
 
     def fix(code: GraphViolationCode, path: GraphPath) -> None:
@@ -116,7 +122,7 @@ def repair_flow_data(flow_data: Any, *, base: Any = None) -> RepairResult:
         repaired: dict[str, Any] = {"nodes": [], "edges": []}
         return RepairResult(repaired, fixes)
 
-    repaired = copy.deepcopy(flow_data)
+    repaired = copy_json(flow_data)
     _replace_non_finite(repaired, (), fix)
     for key in ("nodes", "edges"):
         if not isinstance(repaired.get(key), list):
@@ -131,6 +137,7 @@ def repair_flow_data(flow_data: Any, *, base: Any = None) -> RepairResult:
         for table in changed_tables(base, repaired):
             node_id = repaired["nodes"][table.path[1]]["id"]
             _repair_table(table.rows, table.path, fix, stored.get((node_id, table.path[-2])))
+        _repair_list_positions(repaired, base, fix)
         _repair_changed_edges(repaired, base, fix)
 
     # Repair must never return a graph the strict path would refuse.
@@ -223,6 +230,17 @@ def _repair_changed_edges(graph: dict[str, Any], base: Any, fix) -> None:
             derive_missing_handle_forms(graph["edges"][index])
     if dropped:
         graph["edges"] = [edge for index, edge in enumerate(graph["edges"]) if index not in dropped]
+
+
+def _repair_list_positions(graph: dict[str, Any], base: Any, fix) -> None:
+    """Give a position to every item without one in the outputs and tool action lists ``graph`` adds or changes.
+
+    The position is the midpoint of the item's array neighbours' positions, as for an insert.
+    """
+    position_key = load_node_schema().table.position
+    for changed in changed_keyed_lists(base, graph):
+        for index in fill_missing_positions(changed.items):
+            fix(GraphViolationCode.LIST_ITEM_MISSING_POS, (*changed.path, index, position_key))
 
 
 def _stored_tables(base: Any) -> dict[tuple[str, str], Any]:

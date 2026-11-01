@@ -168,9 +168,9 @@ def test_arrays_outside_keyed_lists_are_replaced_whole():
 
 def test_outputs_are_written_per_item():
     base = _graph()
-    base["nodes"][0]["data"]["node"]["outputs"] = [{"name": "a"}, {"name": "b"}]
+    base["nodes"][0]["data"]["node"]["outputs"] = [{"name": "a", "__pos__": 1}, {"name": "b", "__pos__": 2}]
     target = copy.deepcopy(base)
-    target["nodes"][0]["data"]["node"]["outputs"][1] = {"name": "c"}
+    target["nodes"][0]["data"]["node"]["outputs"][1] = {"name": "c", "__pos__": 2}
 
     (operation,) = _replays(base, target)
 

@@ -29,7 +29,13 @@ from typing import Any
 
 from lfx.services.flow_operations.canonical import is_finite_number, is_row_position, values_equal
 from lfx.services.flow_operations.codes import GraphViolationCode, resolution_of
-from lfx.services.flow_operations.edge_rules import check_edge, edge_changed, outputs_by_name, read_handles
+from lfx.services.flow_operations.edge_rules import (
+    EdgeIndex,
+    check_edge,
+    edge_changed,
+    index_outputs,
+    read_handles,
+)
 from lfx.services.flow_operations.exceptions import FlowDataValidationError, FlowOperationValidationError
 from lfx.services.flow_operations.limits import (
     LONE_SURROGATE,
@@ -39,8 +45,7 @@ from lfx.services.flow_operations.limits import (
     graph_limit_error,
     has_lone_surrogate,
 )
-from lfx.services.flow_operations.schema import load_node_schema
-from lfx.services.flow_operations.state import NODE_OBJECT_PATHS, index_graph, require_node_objects
+from lfx.services.flow_operations.schema import NODE_OBJECT_PATHS, load_node_schema
 
 GraphPath = tuple[str | int, ...]
 
@@ -99,8 +104,36 @@ def find_graph_violations(
     """
     value_violations = _value_violations(flow_data) if check_values else []
     if not isinstance(flow_data, dict):
-        return [GraphViolation(GraphViolationCode.FLOW_DATA_NOT_OBJECT, (), "flow data must be an object")]
+        return [_not_an_object()]
+    violations = structure_violations(flow_data, edge_nodes_must_exist=True)
+    if base is not None and isinstance(flow_data.get("nodes"), list):
+        structural = not violations
+        violations.extend(find_table_violations(base, flow_data))
+        violations.extend(find_list_position_violations(base, flow_data))
+        if structural:
+            violations.extend(find_edge_violations(base, flow_data))
+    violations.extend(value_violations)
+    return violations
 
+
+def find_load_violations(flow_data: Any) -> list[GraphViolation]:
+    """Every rule ``flow_data`` breaks that stops it from loading into a graph state: the rules its indexes need.
+
+    Flow data is an object, ``nodes`` and ``edges`` are lists of objects, and
+    ids are present and unique. Each node has the shape of a node, and each
+    edge names its two nodes. Whether those nodes exist is not checked here.
+    """
+    if not isinstance(flow_data, dict):
+        return [_not_an_object()]
+    return structure_violations(flow_data, edge_nodes_must_exist=False)
+
+
+def _not_an_object() -> GraphViolation:
+    return GraphViolation(GraphViolationCode.FLOW_DATA_NOT_OBJECT, (), "flow data must be an object")
+
+
+def structure_violations(flow_data: dict[str, Any], *, edge_nodes_must_exist: bool) -> list[GraphViolation]:
+    """The structural rules a graph breaks, in the order the graph lists them."""
     violations: list[GraphViolation] = []
     nodes = flow_data.get("nodes")
     edges = flow_data.get("edges")
@@ -113,19 +146,39 @@ def find_graph_violations(
     node_ids: set[str] = set()
     if isinstance(nodes, list):
         for index, node in enumerate(nodes):
+            if node.__class__ is dict:
+                node_id = node.get("id")
+                if node_id.__class__ is str and node_id and node_id not in node_ids:
+                    data = node.get("data")
+                    if data.__class__ is dict:
+                        body = data.get("node")
+                        if body.__class__ is dict and body.get("template").__class__ is dict:
+                            # The common case: a sound node, checked without building anything.
+                            node_ids.add(node_id)
+                            continue
             violations.extend(_node_violations(node, ("nodes", index), node_ids))
 
     if isinstance(edges, list):
         edge_ids: set[str] = set()
+        known = node_ids if edge_nodes_must_exist else None
         for index, edge in enumerate(edges):
-            violations.extend(_edge_violations(edge, ("edges", index), edge_ids, node_ids))
-
-    if base is not None and isinstance(nodes, list):
-        structural = not violations
-        violations.extend(find_table_violations(base, flow_data))
-        if structural:
-            violations.extend(find_edge_violations(base, flow_data))
-    violations.extend(value_violations)
+            if edge.__class__ is dict:
+                edge_id = edge.get("id")
+                source = edge.get("source")
+                target = edge.get("target")
+                if (
+                    edge_id.__class__ is str
+                    and edge_id
+                    and edge_id not in edge_ids
+                    and source.__class__ is str
+                    and source
+                    and target.__class__ is str
+                    and target
+                    and (known is None or (source in known and target in known))
+                ):
+                    edge_ids.add(edge_id)
+                    continue
+            violations.extend(_edge_violations(edge, ("edges", index), edge_ids, known))
     return violations
 
 
@@ -137,7 +190,11 @@ def validate_flow_data(
     base: Any = None,
 ) -> None:
     """Raise ``FlowDataValidationError`` listing every violation, if there are any."""
-    violations = find_graph_violations(flow_data, check_values=check_values, base=base)
+    violations_error(find_graph_violations(flow_data, check_values=check_values, base=base), context)
+
+
+def violations_error(violations: list[GraphViolation], context: str) -> None:
+    """Raise ``FlowDataValidationError`` with ``violations``, if there are any; the message names the first."""
     if violations:
         first = violations[0]
         location = ".".join(str(part) for part in first.path) or "<root>"
@@ -175,7 +232,7 @@ def _node_violations(node: Any, path: GraphPath, node_ids: set[str]) -> list[Gra
     return violations
 
 
-def _edge_violations(edge: Any, path: GraphPath, edge_ids: set[str], node_ids: set[str]) -> list[GraphViolation]:
+def _edge_violations(edge: Any, path: GraphPath, edge_ids: set[str], node_ids: set[str] | None) -> list[GraphViolation]:
     if not isinstance(edge, dict):
         return [GraphViolation(GraphViolationCode.EDGE_NOT_OBJECT, path, "edge must be an object")]
 
@@ -194,7 +251,7 @@ def _edge_violations(edge: Any, path: GraphPath, edge_ids: set[str], node_ids: s
         node_id = edge.get(endpoint)
         if not isinstance(node_id, str) or not node_id:
             message = f"edge must have a non-empty string {endpoint}"
-        elif node_id not in node_ids:
+        elif node_ids is not None and node_id not in node_ids:
             message = f"edge {endpoint} node does not exist"
         else:
             continue
@@ -247,10 +304,14 @@ def changed_edges(base: Any, target: dict[str, Any]) -> list[int]:
     node of ``base`` it keeps must carry its node objects
     (``FlowOperationValidationError`` otherwise).
     """
-    stored = {edge["id"]: edge for edge in _list(base, "edges") if isinstance(edge, dict) and "id" in edge}
+    stored = {
+        edge["id"]: edge for edge in _list(base, "edges") if isinstance(edge, dict) and isinstance(edge.get("id"), str)
+    }
     removed = _removed_ends(base, target)
     changed: list[int] = []
     for index, edge in enumerate(target["edges"]):
+        if not isinstance(edge, dict):
+            continue
         before = stored.get(edge["id"])
         if before is None or edge_changed(before, edge) or _is_cut(edge, removed):
             changed.append(index)
@@ -294,20 +355,24 @@ class _RemovedEnds:
 
 def _removed_ends(base: Any, target: dict[str, Any]) -> dict[str, _RemovedEnds]:
     """Return, by node id, the template fields and outputs ``target`` removes from nodes it keeps."""
-    base_nodes = {node["id"]: node for node in _list(base, "nodes") if isinstance(node, dict) and "id" in node}
+    base_nodes = {
+        node["id"]: node for node in _list(base, "nodes") if isinstance(node, dict) and isinstance(node.get("id"), str)
+    }
     removed: dict[str, _RemovedEnds] = {}
     for node in target["nodes"]:
-        stored = base_nodes.get(node["id"])
+        if not isinstance(node, dict):
+            continue
+        stored = base_nodes.get(node.get("id")) if isinstance(node.get("id"), str) else None
         if stored is None:
             continue
-        require_node_objects(stored, context=f"stored node {node['id']!r}")
+        require_node_objects(stored, context="node")
+        require_node_objects(node, context="node")
         before, after = stored["data"]["node"], node["data"]["node"]
         fields = before["template"].keys() - after["template"].keys()
         outputs: set[str] = set()
-        if "outputs" in before and not values_equal(before["outputs"], after.get("outputs")):
-            outputs = set(outputs_by_name(before["outputs"], node_id=node["id"]))
-            if "outputs" in after:
-                outputs -= set(outputs_by_name(after["outputs"], node_id=node["id"]))
+        if "outputs" in before and not ("outputs" in after and values_equal(before["outputs"], after["outputs"])):
+            kept = set(index_outputs(after["outputs"], node["id"]).names()) if "outputs" in after else set()
+            outputs = set(index_outputs(before["outputs"], node["id"]).names()) - kept
         if fields or outputs:
             removed[node["id"]] = _RemovedEnds(fields=set(fields), outputs=outputs)
     return removed
@@ -344,23 +409,140 @@ def find_edge_violations(base: Any, target: dict[str, Any]) -> list[GraphViolati
     indexes = changed_edges(base, target)
     if not indexes:
         return []
-    state = index_graph(target)
+    view = GraphView(target)
+    edge_index = EdgeIndex()
     edges = target["edges"]
-    index_of = {edge["id"]: index for index, edge in enumerate(edges)}
+    index_of = {edge["id"]: index for index, edge in enumerate(edges) if isinstance(edge, dict)}
     # Checking one edge reads the other edges into its input, so it can fail on
     # one of them: each violation is reported once, at the edge that broke the rule.
     violations: dict[str, GraphViolation] = {}
     for index in indexes:
         try:
-            check_edge(state, edges[index])
+            check_edge(view, edge_index, edges[index])
         except FlowOperationValidationError as error:
-            if error.edge_id is None:
+            if error.edge_id is None or error.code == FlowOperationValidationError.code:
                 raise
             if error.edge_id not in violations:
                 violations[error.edge_id] = GraphViolation(
-                    GraphViolationCode(error.code), ("edges", index_of[error.edge_id]), str(error), error.edge_id
+                    GraphViolationCode(error.code),
+                    ("edges", index_of.get(error.edge_id, index)),
+                    str(error),
+                    error.edge_id,
                 )
     return sorted(violations.values(), key=lambda violation: violation.path[1])
+
+
+class GraphView:
+    """A structurally valid graph, indexed for the edge rules without copying it."""
+
+    __slots__ = ("_edges", "_edges_at", "_nodes")
+
+    def __init__(self, graph: dict[str, Any]) -> None:
+        self._nodes: dict[str, dict[str, Any]] = {}
+        self._edges: dict[str, dict[str, Any]] = {}
+        self._edges_at: dict[str, list[str]] = {}
+        for node in _list(graph, "nodes"):
+            if isinstance(node, dict):
+                require_node_objects(node, context="node")
+                self._nodes[node["id"]] = node
+        for edge in _list(graph, "edges"):
+            if not isinstance(edge, dict):
+                continue
+            edge_id = edge.get("id") if isinstance(edge.get("id"), str) else ""
+            self._edges[edge_id] = edge
+            source = edge.get("source") if isinstance(edge.get("source"), str) else ""
+            target = edge.get("target") if isinstance(edge.get("target"), str) else ""
+            self._edges_at.setdefault(source, []).append(edge_id)
+            if target != source:
+                self._edges_at.setdefault(target, []).append(edge_id)
+
+    def has_node(self, node_id: str) -> bool:
+        return node_id in self._nodes
+
+    def node(self, node_id: str) -> dict[str, Any] | None:
+        return self._nodes.get(node_id)
+
+    def edge(self, edge_id: str) -> dict[str, Any] | None:
+        return self._edges.get(edge_id)
+
+    def edge_ids_at(self, node_id: str) -> list[str]:
+        return self._edges_at.get(node_id, [])
+
+
+def require_node_objects(node: dict[str, Any], *, context: str) -> None:
+    """Raise unless a node has the shape of a node: a non-empty string id, and its node objects."""
+    node_id = node.get("id")
+    if not isinstance(node_id, str) or not node_id:
+        msg = f"{context}.id: must be a non-empty string"
+        raise FlowOperationValidationError(msg)
+    value: Any = node
+    for object_path in NODE_OBJECT_PATHS:
+        value = value.get(object_path[-1]) if isinstance(value, dict) else None
+        if not isinstance(value, dict):
+            msg = f"{context}.{'.'.join(object_path)}: must be an object (node {node_id!r})"
+            raise FlowOperationValidationError(msg)
+
+
+# --- Outputs and tool actions ----------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ChangedList:
+    """An outputs or tool action list a write adds or changes, and where it is."""
+
+    path: GraphPath
+    items: list[Any]
+
+
+def changed_keyed_lists(base: Any, target: Any) -> list[ChangedList]:
+    """The outputs and tool action lists that ``target`` adds or changes relative to ``base``, in graph order."""
+    schema = load_node_schema()
+    stored: dict[str, Any] = {}
+    for node in _list(base, "nodes"):
+        node_id = node.get("id") if isinstance(node, dict) else None
+        if isinstance(node_id, str):
+            stored.setdefault(node_id, node)
+    lists: list[ChangedList] = []
+    for index, node in enumerate(_list(target, "nodes")):
+        node_id = node.get("id") if isinstance(node, dict) else None
+        stored_node = stored.get(node_id) if isinstance(node_id, str) else None
+        for list_path, _keyed in schema.natural_lists:
+            value = _at_keys(node, list_path)
+            if not isinstance(value, list):
+                continue
+            stored_list = _at_keys(stored_node, list_path) if stored_node is not None else _ABSENT
+            if stored_list is not _ABSENT and values_equal(stored_list, value):
+                continue
+            lists.append(ChangedList(path=("nodes", index, *list_path), items=value))
+    return lists
+
+
+def find_list_position_violations(base: Any, target: Any) -> list[GraphViolation]:
+    """A violation for every item without a finite numeric ``__pos__`` in the lists ``target`` adds or changes."""
+    position_key = load_node_schema().table.position
+    violations: list[GraphViolation] = []
+    for changed in changed_keyed_lists(base, target):
+        for index, item in enumerate(changed.items):
+            if not (isinstance(item, dict) and position_key in item and is_row_position(item[position_key])):
+                violations.append(
+                    GraphViolation(
+                        GraphViolationCode.LIST_ITEM_MISSING_POS,
+                        (*changed.path, index, position_key),
+                        f"list item must have a finite numeric {position_key}",
+                    )
+                )
+    return violations
+
+
+_ABSENT = object()
+
+
+def _at_keys(value: Any, keys: tuple[str, ...]) -> Any:
+    for key in keys:
+        if not isinstance(value, dict) or key not in value:
+            return _ABSENT
+        value = value[key]
+    return value
 
 
 # --- Table rows ------------------------------------------------------------------------

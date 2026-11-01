@@ -124,16 +124,21 @@ def fill_missing_positions(rows: list[dict[str, Any]]) -> list[int]:
     """
     filled: list[int] = []
     index = 0
+
+    def position(row: Any) -> Any:
+        value = row.get(ROW_POSITION_KEY) if isinstance(row, dict) else None
+        return value if is_row_position(value) else None
+
     while index < len(rows):
-        if is_row_position(rows[index].get(ROW_POSITION_KEY)):
+        if position(rows[index]) is not None:
             index += 1
             continue
         end = index
-        while end < len(rows) and not is_row_position(rows[end].get(ROW_POSITION_KEY)):
+        while end < len(rows) and position(rows[end]) is None:
             end += 1
         count = end - index
-        before = rows[index - 1][ROW_POSITION_KEY] if index > 0 else None
-        after = rows[end][ROW_POSITION_KEY] if end < len(rows) else None
+        before = position(rows[index - 1]) if index > 0 else None
+        after = position(rows[end]) if end < len(rows) else None
         if before is not None and after is not None and before < after:
             positions = [before + (after - before) * step / (count + 1) for step in range(1, count + 1)]
         elif before is not None:
@@ -142,8 +147,9 @@ def fill_missing_positions(rows: list[dict[str, Any]]) -> list[int]:
             positions = [after - count + step for step in range(count)]
         else:
             positions = list(range(1, count + 1))
-        for offset, position in enumerate(positions):
-            rows[index + offset][ROW_POSITION_KEY] = position
+        for offset, value in enumerate(positions):
+            if isinstance(rows[index + offset], dict):
+                rows[index + offset][ROW_POSITION_KEY] = value
             filled.append(index + offset)
         index = end
     return filled

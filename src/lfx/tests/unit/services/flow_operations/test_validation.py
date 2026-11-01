@@ -146,7 +146,7 @@ def test_validate_raises_with_every_violation():
 def _connectable() -> dict:
     return {
         "nodes": [
-            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
             {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}}, "outputs": []}}},
         ],
         "edges": [],
@@ -255,9 +255,9 @@ def test_edge_rules_wait_for_a_sound_structure():
 @pytest.mark.parametrize(
     ("data", "message"),
     [
-        (None, "stored node 'b': node data must be an object"),
-        ({"node": []}, "stored node 'b': node data.node must be an object"),
-        ({"node": {"template": "x"}}, "stored node 'b': node data.node.template must be an object"),
+        (None, "node.data: must be an object (node 'b')"),
+        ({"node": []}, "node.data.node: must be an object (node 'b')"),
+        ({"node": {"template": "x"}}, "node.data.node.template: must be an object (node 'b')"),
     ],
 )
 def test_a_stored_node_the_write_keeps_must_carry_its_node_objects(data, message):
@@ -277,7 +277,7 @@ def test_a_stored_node_without_data_is_an_engine_error():
     base = copy.deepcopy(graph)
     del base["nodes"][1]["data"]
 
-    with pytest.raises(FlowOperationValidationError, match="stored node 'b': node data must be an object"):
+    with pytest.raises(FlowOperationValidationError, match=r"node.data: must be an object \(node 'b'\)"):
         find_graph_violations(graph, base=base)
 
 
@@ -293,7 +293,7 @@ def _cut_graphs() -> tuple[dict, dict]:
     }
     base = {
         "nodes": [
-            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
             {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "g": {"type": "str"}}}}},
         ],
         "edges": [edge],

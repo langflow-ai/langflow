@@ -47,7 +47,7 @@ TARGET_HANDLE = {"fieldName": "f", "id": "b"}
 def _connectable() -> dict:
     return {
         "nodes": [
-            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
             {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}}, "outputs": []}}},
             {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}},
         ],
