@@ -27,7 +27,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from lfx.services.flow_operations.canonical import is_finite_number, is_row_position, values_equal
+from lfx.services.flow_operations.canonical import (
+    equal_values,
+    is_finite_number,
+    is_row_position,
+    values_trusted,
+)
 from lfx.services.flow_operations.codes import GraphViolationCode, resolution_of
 from lfx.services.flow_operations.edge_rules import (
     EdgeIndex,
@@ -261,6 +266,9 @@ def _edge_violations(edge: Any, path: GraphPath, edge_ids: set[str], node_ids: s
 
 def _value_violations(flow_data: Any) -> list[GraphViolation]:
     """Report every non-finite number, and raise for a value that breaks the JSON limits."""
+    if values_trusted() and not _has_non_finite(flow_data):
+        # The engine read the value with the JSON limits; it has no number to report.
+        return []
     violations: list[GraphViolation] = []
     stack: list[tuple[Any, GraphPath]] = [(flow_data, ())]
     while stack:
@@ -288,6 +296,30 @@ def _value_violations(flow_data: Any) -> list[GraphViolation]:
             else:
                 stack.extend((item, (*path, index)) for index, item in reversed(list(enumerate(value))))
     return violations
+
+
+def _has_non_finite(value: Any) -> bool:
+    """Whether a value holds a number that is not finite, without tracking where."""
+    if value.__class__ is not dict and value.__class__ is not list:
+        return True
+    stack = [value]
+    pop, push = stack.pop, stack.append
+    while stack:
+        item = pop()
+        items = item.values() if item.__class__ is dict else item
+        for child in items:
+            cls = child.__class__
+            if cls is dict or cls is list:
+                push(child)
+            elif cls is float:
+                if child - child != 0.0:
+                    return True
+            elif cls is int:
+                if not is_finite_number(child):
+                    return True
+            elif cls is not str and child is not None and cls is not bool:
+                return True
+    return False
 
 
 # --- Edges a write adds or rewires ----------------------------------------------------
@@ -370,7 +402,7 @@ def _removed_ends(base: Any, target: dict[str, Any]) -> dict[str, _RemovedEnds]:
         before, after = stored["data"]["node"], node["data"]["node"]
         fields = before["template"].keys() - after["template"].keys()
         outputs: set[str] = set()
-        if "outputs" in before and not ("outputs" in after and values_equal(before["outputs"], after["outputs"])):
+        if "outputs" in before and not ("outputs" in after and equal_values(before["outputs"], after["outputs"])):
             kept = set(index_outputs(after["outputs"], node["id"]).names()) if "outputs" in after else set()
             outputs = set(index_outputs(before["outputs"], node["id"]).names()) - kept
         if fields or outputs:
@@ -511,7 +543,7 @@ def changed_keyed_lists(base: Any, target: Any) -> list[ChangedList]:
             if not isinstance(value, list):
                 continue
             stored_list = _at_keys(stored_node, list_path) if stored_node is not None else _ABSENT
-            if stored_list is not _ABSENT and values_equal(stored_list, value):
+            if stored_list is not _ABSENT and equal_values(stored_list, value):
                 continue
             lists.append(ChangedList(path=("nodes", index, *list_path), items=value))
     return lists
@@ -581,7 +613,7 @@ def changed_tables(base: Any, target: dict[str, Any]) -> list[ChangedTable]:
             if (
                 isinstance(stored_field, dict)
                 and "value" in stored_field
-                and values_equal(stored_field["value"], field["value"])
+                and equal_values(stored_field["value"], field["value"])
             ):
                 continue
             tables.append(

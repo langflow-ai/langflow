@@ -41,14 +41,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-import orjson
-
 from lfx.services.flow_operations.canonical import (
     EDGE_VIEW_STATE_KEYS,
     NODE_VIEW_STATE_KEYS,
     graphs_equal,
     is_row_position,
+    same_json,
     values_equal,
+    values_trusted,
 )
 from lfx.services.flow_operations.edge_rules import edge_changed
 from lfx.services.flow_operations.exceptions import FlowOperationReplayError
@@ -129,16 +129,6 @@ def derive_checked(base: dict[str, Any], target: dict[str, Any]) -> tuple[list[d
     return applied["forward_operations"], flow_data
 
 
-def _same_json(left: Any, right: Any) -> bool:
-    """Whether two values are the same JSON as they are, keys in the same order; False when that is not cheap."""
-    if left is right:
-        return True
-    try:
-        return orjson.dumps(left) == orjson.dumps(right)
-    except TypeError:
-        return False
-
-
 def diff_checked(base: dict[str, Any], target: dict[str, Any]) -> list[Operation]:
     """``diff_flow_data`` for graphs that passed its checks, as the engine's operations."""
     base_nodes = _by_id(base, "nodes")
@@ -168,8 +158,9 @@ def diff_checked(base: dict[str, Any], target: dict[str, Any]) -> list[Operation
         if before is None:
             continue
         # A node equal as it stands writes nothing, so its walk is skipped:
-        # most nodes of a save are unchanged.
-        if _same_json(before, node):
+        # most nodes of a save are unchanged. Equal JSON text tells it when
+        # the values hold only finite numbers.
+        if values_trusted() and same_json(before, node):
             continue
         _NodeDiff(node_id, updates).object(before, node, ())
 

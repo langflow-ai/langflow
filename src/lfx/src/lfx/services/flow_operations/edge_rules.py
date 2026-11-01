@@ -37,6 +37,7 @@ from lfx.services.flow_operations.canonical import (
     edge_data_with_type_sets,
     handle_with_type_sets,
     parse_handle,
+    read_handle,
     values_equal,
 )
 from lfx.services.flow_operations.codes import GraphViolationCode
@@ -317,7 +318,7 @@ def _handle(edge: dict[str, Any], key: str) -> dict[str, Any]:
         raise _error(edge, GraphViolationCode.EDGE_HANDLE_INVALID, f"data.{key} must be an object")
     has_string = key in edge
     if has_string:
-        parsed = parse_handle(edge[key])
+        parsed = read_handle(edge[key])
         if parsed is None:
             raise _error(edge, GraphViolationCode.EDGE_HANDLE_INVALID, f"{key} must be an escaped JSON object")
         if has_object and not values_equal(parsed, data[key]):
@@ -360,7 +361,7 @@ def edge_changed(before: dict[str, Any], after: dict[str, Any]) -> bool:
 
 def _handle_value(handle: Any) -> Any:
     """Compare a handle string by the object it encodes."""
-    parsed = parse_handle(handle)
+    parsed = read_handle(handle)
     return parsed if parsed is not None else handle
 
 

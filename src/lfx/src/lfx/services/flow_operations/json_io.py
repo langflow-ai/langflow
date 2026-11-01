@@ -203,10 +203,27 @@ def copy_json(value: Any) -> Any:
     return value
 
 
+# Every edge handle string holds "œ" many times (``edge_rules.HANDLE_QUOTE``).
+_HANDLE_QUOTE_UTF8 = "œ".encode()
+_HANDLE_QUOTE_ESCAPE = b"\\u0153"
+
+
 def dumps(value: Any) -> str:
-    """JSON text of a value the engine holds."""
+    r"""JSON text of a value the engine holds.
+
+    Python reads ASCII text into a ``str`` fastest, and a ``str`` with one
+    character above U+00FF takes two bytes per character. In JSON text such a
+    character is only inside a string, where ``\u0153`` means the same
+    character, so the handle quote is written escaped; text with other such
+    characters is decoded as it is.
+    """
     try:
-        return orjson.dumps(value).decode("utf-8")
+        data = orjson.dumps(value)
     except TypeError:
         # An integer of more than 64 bits keeps its digits.
         return json.dumps(value, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+    if not data.isascii():
+        data = data.replace(_HANDLE_QUOTE_UTF8, _HANDLE_QUOTE_ESCAPE)
+        if not data.isascii():
+            return data.decode("utf-8")
+    return data.decode("ascii")

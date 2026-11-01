@@ -40,6 +40,7 @@ from lfx.services.flow_operations.canonical import (
     canonical_text,
     graph_hash_checked,
     ordered_rows,
+    trusted_values,
 )
 from lfx.services.flow_operations.canonical import graphs_equal as _graphs_equal
 from lfx.services.flow_operations.canonical import values_equal as _values_equal
@@ -130,20 +131,24 @@ class PythonGraphPlain:
 
     def validate(self, base: PythonGraphPlain | None = None, *, check_values: bool = True) -> list[dict[str, Any]]:
         core_base = None if base is None else base.core
-        return _violations(self.core.violations(core_base, check_values=check_values))
+        with trusted_values():
+            return _violations(self.core.violations(core_base, check_values=check_values))
 
     def repair(self, base: PythonGraphPlain | None = None) -> tuple[PythonGraphPlain, list[dict[str, Any]]]:
-        repaired, fixes = self.core.repair(None if base is None else base.core)
+        with trusted_values():
+            repaired, fixes = self.core.repair(None if base is None else base.core)
         return PythonGraphPlain(None, core=repaired), [fix.to_dict() for fix in fixes]
 
     def graph_hash(self) -> str:
         return self.core.graph_hash()
 
     def equals(self, other: PythonGraphPlain) -> bool:
-        return self.core.equals(other.core)
+        with trusted_values():
+            return self.core.equals(other.core)
 
     def ops_diff(self, target: PythonGraphPlain) -> list[dict[str, Any]]:
-        return copy_json(self.core.ops_diff(target.core))
+        with trusted_values():
+            return copy_json(self.core.ops_diff(target.core))
 
     def to_json(self) -> str:
         return dumps(self.core.value)
@@ -192,16 +197,18 @@ class PythonEngine:
         from lfx.services.flow_operations.diff import derive_checked
 
         base, target = read_data(base), read_data(target)
-        validate_flow_data(base, check_values=False)
-        validate_flow_data(target, context="target flow.data")
-        operations, _flow_data = derive_checked(base, target)
+        with trusted_values():
+            validate_flow_data(base, check_values=False)
+            validate_flow_data(target, context="target flow.data")
+            operations, _flow_data = derive_checked(base, target)
         return operations
 
     @staticmethod
     def validate(flow: Any, base: Any = None, *, check_values: bool = True) -> list[dict[str, Any]]:
         flow = read_data(flow)
         base = None if base is None else read_data(base)
-        return _violations(find_graph_violations(flow, check_values=check_values, base=base))
+        with trusted_values():
+            return _violations(find_graph_violations(flow, check_values=check_values, base=base))
 
     @staticmethod
     def repair(flow: Any, base: Any = None) -> dict[str, Any]:
@@ -209,7 +216,8 @@ class PythonEngine:
 
         flow = read_data(flow)
         base = None if base is None else read_data(base)
-        repaired = repair_checked(flow, base=base)
+        with trusted_values():
+            repaired = repair_checked(flow, base=base)
         return {"flow_data": repaired.flow_data, "fixes": [fix.to_dict() for fix in repaired.fixes]}
 
     @staticmethod
@@ -218,7 +226,9 @@ class PythonEngine:
 
     @staticmethod
     def graphs_equal(left: Any, right: Any) -> bool:
-        return _graphs_equal(read_data(left), read_data(right))
+        left, right = read_data(left), read_data(right)
+        with trusted_values():
+            return _graphs_equal(left, right)
 
     @staticmethod
     def values_equal(left: Any, right: Any) -> bool:

@@ -31,11 +31,17 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+from contextlib import contextmanager
+from contextvars import ContextVar
 from decimal import Decimal
+from functools import lru_cache
 from json.encoder import encode_basestring
-from typing import Any, NoReturn
+from typing import TYPE_CHECKING, Any, NoReturn
+
+import orjson
 
 from lfx.services.flow_operations.exceptions import FlowDataValidationError
+from lfx.services.flow_operations.json_io import copy_json
 from lfx.services.flow_operations.limits import broken_limit, check_graph_limits
 from lfx.services.flow_operations.schema import (
     DOUBLE_OVERFLOW,
@@ -71,7 +77,53 @@ __all__ = [
     "values_equal",
 ]
 
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
 _SCHEMA = load_node_schema()
+
+# Whether the values the engine reads are known to hold only finite numbers
+# and to meet the JSON limits: the engine objects read every argument with
+# those checks (``json_io``), so their calls skip checking again.
+_TRUSTED: ContextVar[bool] = ContextVar("lfx_flow_values_trusted", default=False)
+
+
+@contextmanager
+def trusted_values() -> Iterator[None]:
+    """Within this block, values are known to hold only finite numbers and to meet the JSON limits."""
+    token = _TRUSTED.set(True)
+    try:
+        yield
+    finally:
+        _TRUSTED.reset(token)
+
+
+def values_trusted() -> bool:
+    """Whether the current call runs within ``trusted_values``."""
+    return _TRUSTED.get()
+
+
+def same_json(left: Any, right: Any) -> bool:
+    """Whether two values are the same JSON, with their keys in the same order. False when that is not cheap to tell.
+
+    Two values with the same JSON text have the same canonical form, when
+    neither holds a number that is not finite: ``orjson`` writes NaN as null.
+    """
+    if left is right:
+        return True
+    try:
+        return orjson.dumps(left) == orjson.dumps(right)
+    except TypeError:
+        return False
+
+
+def equal_values(left: Any, right: Any) -> bool:
+    """``values_equal``, comparing JSON text first within ``trusted_values``, where it gives the same answer faster."""
+    if _TRUSTED.get() and same_json(left, right):
+        return True
+    return values_equal(left, right)
+
+
 NODE_VIEW_STATE_KEYS = _SCHEMA.node_view_state
 EDGE_VIEW_STATE_KEYS = _SCHEMA.edge_view_state
 EDGE_HANDLE_KEYS = ("sourceHandle", "targetHandle")
@@ -303,13 +355,26 @@ def parse_handle(handle: Any) -> dict[str, Any] | None:
     it: the ``NaN``, ``Infinity`` and ``-Infinity`` tokens do not parse. A
     handle that breaks the JSON limits (``limits.py``) encodes none either.
     """
-    if not isinstance(handle, str):
-        return None
+    parsed = read_handle(handle)
+    return None if parsed is None else copy_json(parsed)
+
+
+@lru_cache(maxsize=65536)
+def _parsed_handle(handle: str) -> dict[str, Any] | None:
     try:
         parsed = json.loads(handle.replace(_HANDLE_QUOTE, '"'), parse_constant=_reject_constant)
     except (ValueError, RecursionError):
         return None
     return parsed if isinstance(parsed, dict) and broken_limit(parsed) is None else None
+
+
+def read_handle(handle: Any) -> dict[str, Any] | None:
+    """``parse_handle``, for a reader that never changes the object: it is shared by every read of the same string."""
+    if handle.__class__ is not str:
+        if not isinstance(handle, str):
+            return None
+        handle = str(handle)
+    return _parsed_handle(handle)
 
 
 def handle_with_type_sets(handle: Any) -> Any:
@@ -444,7 +509,7 @@ def canonical_edge(edge: Any, *, keyed: bool = True) -> Any:
     canon = _without(edge, EDGE_VIEW_STATE_KEYS)
     for key in EDGE_HANDLE_KEYS:
         if key in edge:
-            parsed = parse_handle(edge[key])
+            parsed = read_handle(edge[key])
             if parsed is not None:
                 canon[key] = handle_with_type_sets(parsed) if keyed else parsed
     if keyed and "data" in edge:
@@ -611,6 +676,8 @@ def _values_equal_slow(left: Any, right: Any) -> bool:
 
 def _nodes_equal(left: Any, right: Any) -> bool:
     """Whether two nodes have the same canonical form; nodes equal as they are skip building it."""
+    if _TRUSTED.get() and same_json(left, right):
+        return True
     try:
         if values_equal(left, right):
             return True

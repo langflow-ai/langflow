@@ -29,7 +29,7 @@ import hashlib
 from dataclasses import dataclass
 from typing import Any
 
-from lfx.services.flow_operations.canonical import canonical_json, is_finite_number, is_row_position
+from lfx.services.flow_operations.canonical import canonical_json, is_finite_number, is_row_position, values_trusted
 from lfx.services.flow_operations.codes import MANUAL_CODES, GraphViolationCode
 from lfx.services.flow_operations.edge_rules import derive_missing_handle_forms
 from lfx.services.flow_operations.ids import new_edge_id
@@ -42,6 +42,7 @@ from lfx.services.flow_operations.validation import (
     changed_keyed_lists,
     changed_tables,
     find_edge_violations,
+    find_graph_violations,
     validate_flow_data,
 )
 
@@ -111,7 +112,13 @@ def repair_flow_data(flow_data: Any, *, base: Any = None) -> RepairResult:
 
 
 def repair_checked(flow_data: Any, *, base: Any = None) -> RepairResult:
-    """``repair_flow_data`` for a graph that is known to meet the JSON limits. It never changes ``flow_data``."""
+    """``repair_flow_data`` for a graph that is known to meet the JSON limits. It never changes ``flow_data``.
+
+    Within ``trusted_values``, a graph that breaks no rule comes back as it
+    is, shared rather than copied: repair would change nothing in it.
+    """
+    if values_trusted() and not find_graph_violations(flow_data, base=base):
+        return RepairResult(flow_data, [])
     fixes: list[GraphFix] = []
 
     def fix(code: GraphViolationCode, path: GraphPath) -> None:
