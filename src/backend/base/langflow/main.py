@@ -1337,6 +1337,14 @@ def create_app():
     limiter = get_rate_limiter()
     app.state.limiter = limiter
 
+    # Multiplayer flow-ops measurement (LANGFLOW_OPS_BENCH=1): outermost, so it times the whole server side.
+    from langflow.services.flow_multiplayer import config as flow_multiplayer_config
+
+    if flow_multiplayer_config.bench_enabled():
+        from langflow.services.flow_multiplayer.bench import BenchMiddleware
+
+        app.add_middleware(BenchMiddleware)
+
     return app
 
 
