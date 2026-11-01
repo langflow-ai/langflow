@@ -168,6 +168,7 @@ class Server:
             "LANGFLOW_AUTO_LOGIN": "false",
             "LANGFLOW_SUPERUSER": SUPERUSER,
             "LANGFLOW_SUPERUSER_PASSWORD": SUPERUSER_PASSWORD,
+            "LANGFLOW_DISABLE_TRACK_APIKEY_USAGE": "true",  # pragma: allowlist secret (a flag, not a key)
             "LANGFLOW_CREATE_STARTER_PROJECTS": "false",
             "LANGFLOW_UPDATE_STARTER_PROJECTS": "false",
             "LANGFLOW_LOG_LEVEL": "warning",

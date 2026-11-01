@@ -35,7 +35,7 @@ async def revisions_body(session: AsyncSession, flow_id: UUID, after: int, fallb
     the client then joins again. ``fallback_head`` is the flow's latest revision,
     used only when the log has no rows at all (after a purge).
     """
-    with bench.timed("rows"):
+    with bench.timed("rows_db"):
         rows = await oplog.rows_after(session, flow_id, after)
     if not rows:
         _first, last = await oplog.retained_range(session, flow_id)
@@ -49,7 +49,7 @@ async def revisions_body(session: AsyncSession, flow_id: UUID, after: int, fallb
         revisions = oplog.revisions_of(rows, after)
     except oplog.LogGapError:
         return b'{"latest_revision":%d,"retention_gap":true,"revisions":[]}' % head
-    with bench.timed("encode"):
+    with bench.timed("encode_part"):
         parts = [b'{"revision":%d,"operations":[%s]}' % (revision, orjson.dumps(op)) for revision, op in revisions]
     bench.put("n", len(parts))
     return b'{"latest_revision":%d,"retention_gap":false,"revisions":[%s]}' % (head, b",".join(parts))

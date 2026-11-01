@@ -15,6 +15,7 @@ Permissions are those of the v1 flow read and write paths.
 from __future__ import annotations
 
 import re
+import time
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -132,8 +133,9 @@ def parse_ops_body(raw: bytes) -> OpsRequest:
 async def post_flow_ops(flow_id: UUID, request: Request, current_user: CurrentActiveUser) -> Response:
     """Apply one operation batch to the flow's latest revision."""
     bench.mark_handler()
-    raw = await request.body()
-    ops_request = parse_ops_body(raw)
+    with bench.timed("parse"):
+        raw = await request.body()
+        ops_request = parse_ops_body(raw)
 
     async def authorize(session: Any) -> None:
         """The write path's permission check, in the write's own transaction (before its lock)."""
@@ -155,7 +157,8 @@ async def post_flow_ops(flow_id: UUID, request: Request, current_user: CurrentAc
     except Exception as exc:  # noqa: BLE001 -- answered as a 500 the client retries with the same request_id
         await logger.awarning("Flow ops write failed", flow_id=str(flow_id), error_type=type(exc).__name__)
         return Response(_WRITE_FAILED, status_code=500, media_type=_JSON)
-    return Response(orjson.dumps(answer), media_type=_JSON)
+    with bench.timed("respond"):
+        return Response(orjson.dumps(answer), media_type=_JSON)
 
 
 @router.get("/{flow_id}/revisions")
@@ -169,8 +172,12 @@ async def get_flow_revisions(
             raise _unavailable()
         with bench.timed("auth"):
             flow = await load_flow_header(session, flow_id, current_user, FlowAction.READ)
-        body = await reads.revisions_body(session, flow_id, after, flow.latest_revision)
-    return Response(body, media_type=_JSON)
+        with bench.timed("body"):
+            body = await reads.revisions_body(session, flow_id, after, flow.latest_revision)
+        closing = time.perf_counter()
+    bench.add("close", (time.perf_counter() - closing) * 1000)
+    with bench.timed("respond"):
+        return Response(body, media_type=_JSON)
 
 
 @router.get("/{flow_id}")
@@ -183,11 +190,14 @@ async def join_flow(flow_id: UUID, current_user: CurrentActiveUser) -> Response:
         with bench.timed("auth"):
             flow = await load_flow_header(session, flow_id, current_user, FlowAction.READ)
         graph = await reads.join_graph(session, flow_id)
+        closing = time.perf_counter()
+    bench.add("close", (time.perf_counter() - closing) * 1000)
     if graph is None:
         raise HTTPException(status_code=404, detail="Flow not found")
-    if flow.user_id != current_user.id:
-        graph = reads.CurrentGraph(graph.revision, _strip_secrets(graph.text))
-    return Response(reads.join_body(graph), media_type=_JSON)
+    with bench.timed("respond"):
+        if flow.user_id != current_user.id:
+            graph = reads.CurrentGraph(graph.revision, _strip_secrets(graph.text))
+        return Response(reads.join_body(graph), media_type=_JSON)
 
 
 def _strip_secrets(text: str) -> str:
@@ -201,22 +211,25 @@ async def v1_current_flow_response(session: Any, flow_id: UUID, current_user: An
     from langflow.services.database.models.flow.model import FlowRead
     from langflow.services.flow_multiplayer.oplog import wal_version_token
 
-    flow = await load_flow_header(session, flow_id, current_user, FlowAction.READ)
+    bench.mark_handler()
+    with bench.timed("auth"):
+        flow = await load_flow_header(session, flow_id, current_user, FlowAction.READ)
     graph = await reads.current_graph(session, flow_id)
     if graph is None:
         raise HTTPException(status_code=404, detail="Flow not found")
-    fields = {name: getattr(flow, name, None) for name in FlowRead.model_fields if name != "data"}
-    fields["data"] = None
-    fields["latest_revision"] = max(graph.revision, flow.latest_revision)
-    fields["current_revision"] = graph.revision
-    if config.write_mode() == "wal":
-        fields["version_token"] = wal_version_token(flow.version_token, flow.id, graph.revision)
-    header = FlowRead.model_validate(fields).model_dump_json().encode()
-    text = graph.text if flow.user_id == current_user.id else _strip_secrets(graph.text)
-    marker = b'"data":null'
-    position = header.find(marker)
-    body = header[:position] + b'"data":' + text.encode() + header[position + len(marker) :]
-    return Response(body, media_type=_JSON)
+    with bench.timed("respond"):
+        fields = {name: getattr(flow, name, None) for name in FlowRead.model_fields if name != "data"}
+        fields["data"] = None
+        fields["latest_revision"] = max(graph.revision, flow.latest_revision)
+        fields["current_revision"] = graph.revision
+        if config.write_mode() == "wal":
+            fields["version_token"] = wal_version_token(flow.version_token, flow.id, graph.revision)
+        header = FlowRead.model_validate(fields).model_dump_json().encode()
+        text = graph.text if flow.user_id == current_user.id else _strip_secrets(graph.text)
+        marker = b'"data":null'
+        position = header.find(marker)
+        body = header[:position] + b'"data":' + text.encode() + header[position + len(marker) :]
+        return Response(body, media_type=_JSON)
 
 
 def _bench_only() -> None:

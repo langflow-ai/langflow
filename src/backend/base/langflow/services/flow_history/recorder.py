@@ -97,8 +97,13 @@ REPAIRED_ORIGINAL_DESCRIPTION = "Original before automatic repair"
 
 
 def _engine():
-    """The process's flow engine object (``LANGFLOW_FLOW_ENGINE``); every graph computation goes through it."""
-    return multiplayer.engine()
+    """The process's flow engine object (``LANGFLOW_FLOW_ENGINE``); every graph computation goes through it.
+
+    Each call is measured (``eng_<function>`` wall and CPU) when the request is measured.
+    """
+    from langflow.services.flow_multiplayer.bench import MeasuredEngine
+
+    return MeasuredEngine(multiplayer.engine())
 
 
 @dataclass(frozen=True)

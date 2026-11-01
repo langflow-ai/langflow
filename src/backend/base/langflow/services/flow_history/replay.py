@@ -104,7 +104,9 @@ async def _reconstruct(
 def verify_checkpoint(checkpoint: FlowVersion) -> None:
     """Raise when a checkpoint's graph no longer hashes to its stored hash."""
     try:
-        matches = multiplayer.engine().graph_hash(checkpoint.data) == checkpoint.graph_hash
+        from langflow.services.flow_multiplayer.bench import MeasuredEngine
+
+        matches = MeasuredEngine(multiplayer.engine()).graph_hash(checkpoint.data) == checkpoint.graph_hash
     except FlowOperationError:
         matches = False
     if not matches:
@@ -116,7 +118,9 @@ def verify_checkpoint(checkpoint: FlowVersion) -> None:
 async def replay_from(session: AsyncSession, flow_id: UUID, anchor: FlowVersion, revision: int) -> dict[str, Any]:
     """Apply the recorded operations after ``anchor`` up to and including ``revision``."""
     anchor_revision = anchor.operation_revision or 0
-    engine = multiplayer.engine()
+    from langflow.services.flow_multiplayer.bench import MeasuredEngine
+
+    engine = MeasuredEngine(multiplayer.engine())
     graph: dict[str, Any] = anchor.data
     expected = anchor_revision + 1
     for row in await rows_covering(session, flow_id, after=anchor_revision, through=revision):
