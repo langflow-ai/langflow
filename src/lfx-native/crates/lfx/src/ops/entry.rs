@@ -3,7 +3,7 @@
 //! The engine keeps every key of a node or an edge, so it never turns them
 //! into typed structs. These methods name the few things it reads from them.
 
-use serde_json::{Map, Value};
+use crate::value::{Map, Value};
 
 /// What the engine reads from a node, an edge or a table row.
 pub(crate) trait EntryExt {
@@ -15,7 +15,7 @@ pub(crate) trait EntryExt {
     fn id(&self) -> &str;
 
     /// A node's template: `data.node.template`.
-    fn template(&self) -> Option<&Map<String, Value>>;
+    fn template(&self) -> Option<&Map>;
 
     /// The value of a node's template field: `data.node.template.<field>.value`.
     fn field_value(&self, field: &str) -> Option<&Value> {
@@ -23,7 +23,7 @@ pub(crate) trait EntryExt {
     }
 }
 
-impl EntryExt for Map<String, Value> {
+impl EntryExt for Map {
     fn non_empty_str(&self, key: &str) -> Option<&str> {
         self.get(key)?.as_str().filter(|text| !text.is_empty())
     }
@@ -32,7 +32,7 @@ impl EntryExt for Map<String, Value> {
         self.get("id").and_then(Value::as_str).unwrap_or_default()
     }
 
-    fn template(&self) -> Option<&Map<String, Value>> {
+    fn template(&self) -> Option<&Map> {
         self.get("data")?.get("node")?.get("template")?.as_object()
     }
 }
@@ -46,7 +46,7 @@ impl EntryExt for Value {
         self.as_object().map_or("", EntryExt::id)
     }
 
-    fn template(&self) -> Option<&Map<String, Value>> {
+    fn template(&self) -> Option<&Map> {
         self.as_object()?.template()
     }
 }

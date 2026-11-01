@@ -2,8 +2,8 @@
 
 use lfx::ops::canonical::graphs_equal;
 use lfx::ops::{ApplyOptions, GraphState, Operation, derive_flow_operations, diff_flow_data};
+use lfx::value::Value;
 use libtest_mimic::{Failed, Trial};
-use serde_json::Value;
 
 use crate::support::{assert_json_eq, cases, compact, load};
 

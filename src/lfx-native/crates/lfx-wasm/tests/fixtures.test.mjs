@@ -12,6 +12,7 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { describe, test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ops = createRequire(import.meta.url)(join(here, "../pkg/node/lfx_native.js"));
@@ -87,8 +88,11 @@ function cases(name, section, run) {
 const ignoringIdOrder = (operations) =>
   operations.map((op) => (op.type === "delete_nodes" || op.type === "delete_edges" ? { ...op, ids: [...op.ids].sort() } : op));
 
-function ignoringRowOrder(flow) {
+// Nodes, edges and table rows as collections keyed by id: their array order is not state.
+function ignoringOrder(flow) {
   const copy = parse(dump(flow));
+  const byId = (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  for (const key of ["nodes", "edges"]) if (copy[key]) copy[key] = [...copy[key]].sort(byId);
   for (const node of copy.nodes ?? []) {
     for (const name of JSON.parse(ops.tableFields(dump(node)))) {
       const field = node.data.node.template[name];
@@ -108,7 +112,7 @@ cases("apply_cases.json", "cases", (c) => {
     return check(strict, "state after the refused batch", parse(state.toJson()), c.base);
   }
   assert.ok(!c.error, "expected the operations to be refused");
-  check(strict, "flow data", ignoringRowOrder(parse(state.toJson())), ignoringRowOrder(c.expected));
+  check(strict, "flow data", ignoringOrder(parse(state.toJson())), ignoringOrder(c.expected));
   check(strict, "forward operations", ignoringIdOrder(applied.value.forward_operations), ignoringIdOrder(c.forward_operations ?? c.operations));
 });
 
@@ -139,8 +143,11 @@ cases("property_cases.json", "sequences", (sequence) => {
 
 cases("diff_cases.json", "cases", (c) => {
   const [base, target] = [dump(c.base), dump(c.target)];
-  check(strict, "operations", parse(ops.diff(base, target)), c.operations);
-  assert.ok(ops.graphsEqual(dump(parse(ops.derive(base, target)).flow_data), target));
+  const operations = parse(ops.opsDiff(base, target));
+  check(strict, "operations", operations, c.operations);
+  const replayed = new ops.GraphState(base);
+  replayed.apply(dump(operations), {});
+  assert.ok(ops.graphsEqual(replayed.toJson(), target));
   const state = new ops.GraphState(base);
   for (const operation of c.operations) state.apply(dump([operation]), {});
   assert.ok(ops.graphsEqual(state.toJson(), target));
@@ -226,7 +233,7 @@ cases("editor_cases.json", "fixes_for_edges", (c) =>
   check(matches, "fixes", parse(ops.fixesForEdges(dump(c.fixes), dump(c.edge_ids))), c.expected),
 );
 
-// --- inverse_cases.json ------------------------------------------------------------------------
+// --- backward_cases.json -----------------------------------------------------------------------
 
 function unordered(lists) {
   const keys = { delete_nodes: "ids", delete_edges: "ids", add_nodes: "nodes", add_edges: "edges" };
@@ -236,15 +243,83 @@ function unordered(lists) {
   );
 }
 
-cases("inverse_cases.json", "cases", (c) => {
+cases("backward_cases.json", "cases", (c) => {
   const state = new ops.GraphState(dump(c.base));
-  const applied = parse(state.apply(dump(c.operations), { inverse: true }));
-  check(matches, "inverse operations", unordered(applied.inverse_operations), unordered(c.inverse));
-  for (const inverse of [...applied.inverse_operations].reverse()) state.apply(dump(inverse), { restoring: true });
+  const applied = parse(state.apply(dump(c.operations), { backward: true }));
+  check(matches, "backward operations", unordered(applied.backward_operations), unordered(c.backward));
+  for (const backward of [...applied.backward_operations].reverse()) state.replay(dump(backward), {});
   assert.ok(ops.graphsEqual(state.toJson(), dump(c.base)));
 });
 
-// --- restore_cases.json, write_cases.json ----------------------------------------------------------
+cases("backward_cases.json", "undo", (c) => {
+  const state = new ops.GraphState(dump(c.base));
+  const applied = parse(state.apply(dump(c.operations), { backward: true }));
+  const undo = [...applied.backward_operations].reverse().flat();
+  check(matches, "undo", unordered([undo]), unordered([c.undo]));
+  state.apply(dump(undo), {});
+  assert.ok(ops.graphsEqual(state.toJson(), dump(c.base)));
+});
+
+// --- replay_cases.json -------------------------------------------------------------------------
+
+cases("replay_cases.json", "cases", (c) => {
+  const created = outcome(() => new ops.GraphState(dump(c.base)));
+  if (created.error) return check(strict, "error", failure(created.error), { error: c.error, code: c.code });
+  const state = created.value;
+  const replayed = outcome(() => parse(state.replay(dump(c.operations), { backward: "backward" in c })));
+  if (replayed.error) {
+    check(strict, "error", failure(replayed.error), { error: c.error, code: c.code });
+    return check(strict, "state after the failed replay", parse(state.toJson()), c.base);
+  }
+  assert.ok(!c.error, "expected the replay to fail");
+  check(strict, "flow data", ignoringOrder(parse(state.toJson())), ignoringOrder(c.expected));
+  if (!("backward" in c)) return;
+  check(matches, "backward operations", unordered(replayed.value.backward_operations), unordered(c.backward));
+  for (const backward of [...replayed.value.backward_operations].reverse()) state.replay(dump(backward), {});
+  assert.ok(ops.graphsEqual(state.toJson(), dump(c.base)));
+});
+
+/** Replay in one call and in one call per operation; both give the same graph. */
+function oneCallPerOperation(base, operations) {
+  const batch = new ops.GraphState(dump(base));
+  batch.replay(dump(operations), {});
+  const single = new ops.GraphState(dump(base));
+  for (const operation of operations) single.replay(dump([operation]), {});
+  assert.ok(ops.graphsEqual(batch.toJson(), single.toJson()), "one call and one call per operation differ");
+  return batch.toJson();
+}
+
+cases("replay_cases.json", "cases", (c) => {
+  if (!c.error) oneCallPerOperation(c.base, c.operations);
+});
+
+cases("apply_cases.json", "cases", (c) => {
+  if (c.error) return;
+  const state = new ops.GraphState(dump(c.base));
+  const forward = parse(state.apply(dump(c.operations), { forward: true })).forward_operations;
+  assert.ok(ops.graphsEqual(oneCallPerOperation(c.base, forward), state.toJson()));
+});
+
+/** Apply each batch and keep the forward operations of each one that applies; replaying them gives apply's graph. */
+function logReplay(base, batches) {
+  const applied = new ops.GraphState(dump(base));
+  const replayed = new ops.GraphState(dump(base));
+  for (const batch of batches) {
+    const result = outcome(() => parse(applied.apply(dump(batch), { forward: true })));
+    if (result.error) continue;
+    replayed.replay(dump(result.value.forward_operations), {});
+  }
+  assert.ok(ops.graphsEqual(applied.toJson(), replayed.toJson()), "the replayed log differs from apply");
+}
+
+cases("merge_cases.json", "cases", (c) => logReplay(merge.base, c.order.map((name) => c.transactions[name])));
+cases("property_cases.json", "sequences", (s) => logReplay(property.base, s.transactions));
+cases("diff_cases.json", "cases", (c) => {
+  const derived = parse(ops.opsDiff(dump(c.base), dump(c.target)));
+  assert.ok(ops.graphsEqual(oneCallPerOperation(c.base, derived), dump(c.target)));
+});
+
+// --- restore_cases.json ----------------------------------------------------------
 
 cases("restore_cases.json", "cases", (c) => {
   const result = outcome(() => parse(ops.applyRestoreFixes(dump(c.revision), dump(c.stored), dump(c.fixes))));
@@ -252,20 +327,10 @@ cases("restore_cases.json", "cases", (c) => {
   check(strict, "restored revision", actual, c.error ? { error: c.error } : { expected: c.expected });
 });
 
-cases("write_cases.json", "cases", (c) => {
-  const result = outcome(() => parse(ops.prepareWrite(dump(c.stored), dump(c.target), dump(c.options))));
-  let actual;
-  if (result.error) {
-    const details = parse(result.error.details);
-    actual = { error: { graph: details.graph, violations: details.violations } };
-  } else actual = { expected: result.value };
-  check(matches, "prepared write", actual, c.error ? { error: c.error } : { expected: c.expected });
-});
-
 const FIXTURE_FILES = [
-  "apply_cases.json", "canonical_cases.json", "diff_cases.json", "editor_cases.json", "inverse_cases.json",
-  "limit_cases.json", "merge_cases.json", "property_cases.json", "repair_cases.json", "restore_cases.json",
-  "table_cases.json", "validation_cases.json", "write_cases.json",
+  "apply_cases.json", "backward_cases.json", "canonical_cases.json", "diff_cases.json", "editor_cases.json",
+  "limit_cases.json", "merge_cases.json", "property_cases.json", "repair_cases.json", "replay_cases.json",
+  "restore_cases.json", "table_cases.json", "validation_cases.json",
 ];
 
 test("every fixture file is run", () => {

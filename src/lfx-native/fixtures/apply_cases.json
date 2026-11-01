@@ -6,8 +6,8 @@
       "rule": "operation-types",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -24,8 +24,8 @@
       "operations": [],
       "expected": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -45,8 +45,8 @@
       "rule": "operation-types",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -64,15 +64,15 @@
         {
           "type": "add_nodes",
           "nodes": [
-            {"id": "c", "position": {"x": 200, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+            {"id": "c", "position": {"x": 200, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
           ]
         }
       ],
       "expected": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "c", "position": {"x": 200, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "c", "position": {"x": 200, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -92,8 +92,8 @@
       "rule": "operation-types",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -111,7 +111,7 @@
         {
           "type": "add_nodes",
           "nodes": [
-            {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+            {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
           ]
         }
       ],
@@ -123,8 +123,8 @@
       "rule": "operation-types",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -142,8 +142,8 @@
         {
           "type": "add_nodes",
           "nodes": [
-            {"id": "c", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-            {"id": "c", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+            {"id": "c", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+            {"id": "c", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
           ]
         }
       ],
@@ -155,8 +155,8 @@
       "rule": "operation-types",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -179,8 +179,8 @@
       "rule": "operation-paths",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -199,8 +199,8 @@
       ],
       "expected": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hello", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hello", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -220,8 +220,8 @@
       "rule": "operation-paths",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -241,9 +241,9 @@
           {
             "id": "a",
             "position": {"x": 0, "y": 0},
-            "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}, "customColor": "#fff"}
+            "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}, "customColor": "#fff"}
           },
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -263,8 +263,8 @@
       "rule": "keyed-list-items-by-key",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -286,9 +286,9 @@
           {
             "id": "a",
             "position": {"x": 0, "y": 0},
-            "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "selected": "Data"}]}}
+            "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "selected": "Data", "__pos__": 1}]}}
           },
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -308,8 +308,8 @@
       "rule": "operation-paths",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -326,8 +326,8 @@
       "operations": [{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["position"], "value": {"x": 5, "y": 6}}]}],
       "expected": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 5, "y": 6}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 5, "y": 6}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -347,8 +347,8 @@
       "rule": "operation-paths",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -371,8 +371,8 @@
       "rule": "operation-paths",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -395,8 +395,8 @@
       "rule": "operation-paths",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -419,8 +419,8 @@
       "rule": "node-objects",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -443,8 +443,8 @@
       "rule": "existence-preconditions",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -467,8 +467,8 @@
       "rule": "operation-paths",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -502,9 +502,9 @@
           {
             "id": "a",
             "position": {"x": 0, "y": 0},
-            "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}, "customColor": "#000"}
+            "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}, "customColor": "#000"}
           },
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -521,8 +521,8 @@
       "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["data", "customColor"]}]}],
       "expected": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -542,8 +542,8 @@
       "rule": "records-only-changes",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -560,8 +560,8 @@
       "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["data", "customColor"]}]}],
       "expected": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -582,8 +582,8 @@
       "rule": "operation-paths",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -606,8 +606,8 @@
       "rule": "edge-cascade",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -624,7 +624,7 @@
       "operations": [{"type": "delete_nodes", "ids": ["a"]}],
       "expected": {
         "nodes": [
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
@@ -636,8 +636,8 @@
       "rule": "existence-preconditions",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -660,8 +660,8 @@
       "rule": "operation-types",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -692,8 +692,8 @@
       ],
       "expected": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -721,8 +721,8 @@
       "rule": "existence-preconditions",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -759,8 +759,8 @@
       "rule": "operation-types",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -797,8 +797,8 @@
       "rule": "operation-types",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -816,7 +816,7 @@
         {
           "type": "add_nodes",
           "nodes": [
-            {"id": "c", "position": {"x": 200, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+            {"id": "c", "position": {"x": 200, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
           ]
         },
         {
@@ -835,9 +835,9 @@
       ],
       "expected": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "c", "position": {"x": 200, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "c", "position": {"x": 200, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -865,8 +865,8 @@
       "rule": "records-only-changes",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -883,8 +883,8 @@
       "operations": [{"type": "delete_edges", "ids": ["zz", "e-ab", "e-ab"]}],
       "expected": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
@@ -896,8 +896,8 @@
       "rule": "base-graph-checked",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -920,8 +920,8 @@
       "rule": "base-graph-checked",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [{"id": "e", "target": "b"}],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
@@ -935,8 +935,8 @@
       "rule": "type-change-is-a-write",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
@@ -944,8 +944,8 @@
       "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": 3}]}],
       "expected": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": 3, "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": 3, "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
@@ -956,8 +956,8 @@
       "rule": "secrets-not-in-operations",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
@@ -976,8 +976,8 @@
       "rule": "node-objects",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
@@ -1003,8 +1003,8 @@
       "rule": "base-graph-checked",
       "base": {
         "nodes": [
-          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
-          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "__pos__": 1}]}}}
         ],
         "edges": [{"id": "e-az", "source": "a", "target": "zz", "sourceHandle": "a-out", "targetHandle": "zz-in", "data": {}}],
         "viewport": {"x": 0, "y": 0, "zoom": 1}
@@ -1435,8 +1435,8 @@
             "id": "k",
             "data": {
               "node": {
-                "template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true}, {"tags": ["fetch"]}]}},
-                "outputs": [{"name": "a"}, {"name": "b"}]
+                "template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true, "__pos__": 1}, {"tags": ["fetch"], "__pos__": 2}]}},
+                "outputs": [{"name": "a", "__pos__": 1}, {"name": "b", "__pos__": 2}]
               }
             }
           }
@@ -1452,8 +1452,8 @@
             "id": "k",
             "data": {
               "node": {
-                "template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true}, {"tags": ["fetch"]}]}},
-                "outputs": [{"name": "a"}, {"name": "b", "hidden": true}]
+                "template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true, "__pos__": 1}, {"tags": ["fetch"], "__pos__": 2}]}},
+                "outputs": [{"name": "a", "__pos__": 1}, {"name": "b", "hidden": true, "__pos__": 2}]
               }
             }
           }
@@ -1470,8 +1470,8 @@
             "id": "k",
             "data": {
               "node": {
-                "template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true}, {"tags": ["fetch"]}]}},
-                "outputs": [{"name": "a"}, {"name": "b"}]
+                "template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true, "__pos__": 1}, {"tags": ["fetch"], "__pos__": 2}]}},
+                "outputs": [{"name": "a", "__pos__": 1}, {"name": "b", "__pos__": 2}]
               }
             }
           }
@@ -1479,7 +1479,7 @@
         "edges": []
       },
       "operations": [
-        {"type": "update_nodes", "updates": [{"id": "k", "op": "set_field", "path": ["data", "node", "outputs", {"key": "c"}], "value": {"name": "c"}}]}
+        {"type": "update_nodes", "updates": [{"id": "k", "op": "set_field", "path": ["data", "node", "outputs", {"key": "c"}], "value": {"name": "c", "__pos__": 3}}]}
       ],
       "expected": {
         "nodes": [
@@ -1487,8 +1487,8 @@
             "id": "k",
             "data": {
               "node": {
-                "template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true}, {"tags": ["fetch"]}]}},
-                "outputs": [{"name": "a"}, {"name": "b"}, {"name": "c"}]
+                "template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true, "__pos__": 1}, {"tags": ["fetch"], "__pos__": 2}]}},
+                "outputs": [{"name": "a", "__pos__": 1}, {"name": "b", "__pos__": 2}, {"name": "c", "__pos__": 3}]
               }
             }
           }
@@ -1505,8 +1505,8 @@
             "id": "k",
             "data": {
               "node": {
-                "template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true}, {"tags": ["fetch"]}]}},
-                "outputs": [{"name": "a"}, {"name": "b"}]
+                "template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true, "__pos__": 1}, {"tags": ["fetch"], "__pos__": 2}]}},
+                "outputs": [{"name": "a", "__pos__": 1}, {"name": "b", "__pos__": 2}]
               }
             }
           }
@@ -1528,8 +1528,8 @@
             "id": "k",
             "data": {
               "node": {
-                "template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true}, {"tags": ["fetch"]}]}},
-                "outputs": [{"name": "a"}, {"name": "b"}]
+                "template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true, "__pos__": 1}, {"tags": ["fetch"], "__pos__": 2}]}},
+                "outputs": [{"name": "a", "__pos__": 1}, {"name": "b", "__pos__": 2}]
               }
             }
           }
@@ -1551,8 +1551,8 @@
             "id": "k",
             "data": {
               "node": {
-                "template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true}, {"tags": ["fetch"]}]}},
-                "outputs": [{"name": "a"}, {"name": "b"}]
+                "template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true, "__pos__": 1}, {"tags": ["fetch"], "__pos__": 2}]}},
+                "outputs": [{"name": "a", "__pos__": 1}, {"name": "b", "__pos__": 2}]
               }
             }
           }
@@ -1573,8 +1573,8 @@
             "id": "k",
             "data": {
               "node": {
-                "template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true}, {"tags": ["fetch"], "status": false}]}},
-                "outputs": [{"name": "a"}, {"name": "b"}]
+                "template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true, "__pos__": 1}, {"tags": ["fetch"], "status": false, "__pos__": 2}]}},
+                "outputs": [{"name": "a", "__pos__": 1}, {"name": "b", "__pos__": 2}]
               }
             }
           }
@@ -1623,6 +1623,52 @@
             "id": "t",
             "data": {
               "node": {"template": {"rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r1", "__pos__": 2, "v": "y"}]}}}
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "z"}]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "list item: a write into a table where another row has no numeric __pos__ is rejected",
+      "rule": "table-row-keys",
+      "base": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {"template": {"rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "v": "y"}]}}}
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "z"}]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "list item: a write into a table where two other rows share an id is rejected",
+      "rule": "table-row-keys",
+      "base": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {"template": {"rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}, {"__id__": "r2", "__pos__": 3, "v": "w"}]}}}
             }
           }
         ],
@@ -1727,7 +1773,7 @@
     {
       "name": "list item: when one output has no name, no output can be written by key",
       "rule": "keyed-list-items-by-key",
-      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"display_name": "unnamed"}]}}}], "edges": []},
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"display_name": "unnamed", "__pos__": 2}]}}}], "edges": []},
       "operations": [
         {"type": "update_nodes", "updates": [{"id": "n", "op": "set_field", "path": ["data", "node", "outputs", {"key": "out"}, "hidden"], "value": true}]}
       ],
@@ -1759,8 +1805,8 @@
       "rule": "edge-change-delete-add",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -1791,8 +1837,8 @@
       ],
       "expected": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -1811,8 +1857,8 @@
       "rule": "edge-change-delete-add",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -1834,8 +1880,8 @@
       "rule": "edge-change-delete-add",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -1872,8 +1918,8 @@
       "rule": "edge-change-delete-add",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -1904,8 +1950,8 @@
       ],
       "expected": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -1924,8 +1970,8 @@
       "rule": "edge-change-delete-add",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -1970,8 +2016,8 @@
       "rule": "edge-change-delete-add",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -2016,8 +2062,8 @@
       "rule": "edge-handle-forms",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -2062,8 +2108,8 @@
       "rule": "edge-handle-endpoint",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -2099,8 +2145,8 @@
       "rule": "edge-handle-endpoint",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -2136,8 +2182,8 @@
       "rule": "edge-target-occupied",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -2173,8 +2219,8 @@
       "rule": "edge-target-occupied",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -2212,8 +2258,8 @@
       ],
       "expected": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -2248,8 +2294,8 @@
       "rule": "edge-handle-forms",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -2273,8 +2319,8 @@
       "rule": "edge-handle-forms",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -2301,8 +2347,8 @@
       "rule": "edge-handle-forms",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -2338,8 +2384,8 @@
       "rule": "edge-handle-forms",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -2375,8 +2421,8 @@
       "rule": "edge-handle-forms",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -2412,8 +2458,8 @@
       "rule": "edge-handle-forms",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -2435,8 +2481,8 @@
       "rule": "edge-handle-forms",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -2463,8 +2509,8 @@
       "rule": "edge-handle-forms",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -2491,8 +2537,8 @@
       "rule": "edge-handle-endpoint",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -2528,10 +2574,10 @@
       "rule": "edge-handle-endpoint",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
           {
             "id": "d",
-            "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "allows_loop": true}]}}
+            "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "allows_loop": true, "__pos__": 1}]}}
           }
         ],
         "edges": [
@@ -2568,10 +2614,10 @@
       "rule": "edge-handle-endpoint",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
           {
             "id": "d",
-            "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "allows_loop": true}]}}
+            "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "allows_loop": true, "__pos__": 1}]}}
           }
         ],
         "edges": [
@@ -2608,8 +2654,8 @@
       "rule": "edge-target-occupied",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -2640,8 +2686,8 @@
       ],
       "expected": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -2660,11 +2706,11 @@
       "rule": "edge-handle-endpoint",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
-          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true, "__pos__": 1}, {"name": "done", "__pos__": 2}]}}},
           {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
-          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y", "__pos__": 1}], "flow": {}}}}
         ],
         "edges": [
           {
@@ -2708,11 +2754,11 @@
       "rule": "edge-handle-endpoint",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
-          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true, "__pos__": 1}, {"name": "done", "__pos__": 2}]}}},
           {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
-          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y", "__pos__": 1}], "flow": {}}}}
         ],
         "edges": [
           {
@@ -2750,11 +2796,11 @@
       ],
       "expected": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
-          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true, "__pos__": 1}, {"name": "done", "__pos__": 2}]}}},
           {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
-          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y", "__pos__": 1}], "flow": {}}}}
         ],
         "edges": [
           {
@@ -2789,11 +2835,11 @@
       "rule": "edge-touches-note",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
-          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true, "__pos__": 1}, {"name": "done", "__pos__": 2}]}}},
           {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
-          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y", "__pos__": 1}], "flow": {}}}}
         ],
         "edges": [
           {
@@ -2837,11 +2883,11 @@
       "rule": "edge-handle-endpoint",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
-          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true, "__pos__": 1}, {"name": "done", "__pos__": 2}]}}},
           {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
-          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y", "__pos__": 1}], "flow": {}}}}
         ],
         "edges": [
           {
@@ -2885,11 +2931,11 @@
       "rule": "edge-target-occupied",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
-          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true, "__pos__": 1}, {"name": "done", "__pos__": 2}]}}},
           {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
-          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y", "__pos__": 1}], "flow": {}}}}
         ],
         "edges": [
           {
@@ -2933,11 +2979,11 @@
       "rule": "edge-handle-endpoint",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
-          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true, "__pos__": 1}, {"name": "done", "__pos__": 2}]}}},
           {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
-          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}},
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y", "__pos__": 1}], "flow": {}}}},
           {"id": "bare", "data": {"node": {"template": {}}}}
         ],
         "edges": [
@@ -2982,11 +3028,11 @@
       "rule": "edge-handle-endpoint",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
-          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true, "__pos__": 1}, {"name": "done", "__pos__": 2}]}}},
           {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
-          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y", "__pos__": 1}], "flow": {}}}}
         ],
         "edges": [
           {
@@ -3030,8 +3076,8 @@
       "rule": "edge-cascade",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -3047,8 +3093,8 @@
       "operations": [{"type": "update_nodes", "updates": [{"id": "d", "op": "delete_field", "path": ["data", "node", "template", "one"]}]}],
       "expected": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": []
       },
@@ -3062,8 +3108,8 @@
       "rule": "edge-cascade",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -3076,17 +3122,89 @@
           }
         ]
       },
-      "operations": [{"type": "update_nodes", "updates": [{"id": "s", "op": "set_field", "path": ["data", "node", "outputs"], "value": [{"name": "other"}]}]}],
+      "operations": [{"type": "update_nodes", "updates": [{"id": "s", "op": "set_field", "path": ["data", "node", "outputs"], "value": [{"name": "other", "__pos__": 1}]}]}],
       "expected": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "other"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "other", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": []
       },
       "forward_operations": [
-        {"type": "update_nodes", "updates": [{"id": "s", "op": "set_field", "path": ["data", "node", "outputs"], "value": [{"name": "other"}]}]},
+        {"type": "update_nodes", "updates": [{"id": "s", "op": "set_field", "path": ["data", "node", "outputs"], "value": [{"name": "other", "__pos__": 1}]}]},
         {"type": "delete_edges", "ids": ["e1"]}
+      ]
+    },
+    {
+      "name": "cascade: deleting the outputs list deletes the edges of every output",
+      "rule": "edge-cascade",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [{"type": "update_nodes", "updates": [{"id": "s", "op": "delete_field", "path": ["data", "node", "outputs"]}]}],
+      "expected": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
+        ],
+        "edges": []
+      },
+      "forward_operations": [
+        {"type": "update_nodes", "updates": [{"id": "s", "op": "delete_field", "path": ["data", "node", "outputs"]}]},
+        {"type": "delete_edges", "ids": ["e1"]}
+      ]
+    },
+    {
+      "name": "cascade: replacing a template field's definition keeps the edges into it",
+      "rule": "edge-cascade",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [{"type": "update_nodes", "updates": [{"id": "d", "op": "set_field", "path": ["data", "node", "template", "one"], "value": {"type": "str", "info": "x"}}]}],
+      "expected": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "info": "x"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "forward_operations": [
+        {"type": "update_nodes", "updates": [{"id": "d", "op": "set_field", "path": ["data", "node", "template", "one"], "value": {"type": "str", "info": "x"}}]}
       ]
     },
     {
@@ -3094,8 +3212,8 @@
       "rule": "edge-cascade",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -3109,12 +3227,12 @@
         ]
       },
       "operations": [
-        {"type": "update_nodes", "updates": [{"id": "s", "op": "set_field", "path": ["data", "node", "outputs"], "value": [{"name": "out", "hidden": true}]}]}
+        {"type": "update_nodes", "updates": [{"id": "s", "op": "set_field", "path": ["data", "node", "outputs"], "value": [{"name": "out", "hidden": true, "__pos__": 1}]}]}
       ],
       "expected": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "hidden": true}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "hidden": true, "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -3133,11 +3251,11 @@
       "rule": "edge-cascade",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
-          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true, "__pos__": 1}, {"name": "done", "__pos__": 2}]}}},
           {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
-          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y", "__pos__": 1}], "flow": {}}}}
         ],
         "edges": [
           {
@@ -3165,10 +3283,10 @@
       "expected": {
         "nodes": [
           {"id": "s", "data": {"node": {"template": {}, "outputs": []}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
-          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "done"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "done", "__pos__": 2}]}}},
           {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
-          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y", "__pos__": 1}], "flow": {}}}}
         ],
         "edges": []
       },
@@ -3184,11 +3302,11 @@
       "rule": "edge-cascade",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
-          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true, "__pos__": 1}, {"name": "done", "__pos__": 2}]}}},
           {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
-          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y", "__pos__": 1}], "flow": {}}}}
         ],
         "edges": [
           {
@@ -3212,10 +3330,10 @@
       "operations": [{"type": "delete_nodes", "ids": ["d"]}],
       "expected": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true, "__pos__": 1}, {"name": "done", "__pos__": 2}]}}},
           {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
-          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y", "__pos__": 1}], "flow": {}}}}
         ],
         "edges": []
       },
@@ -3226,8 +3344,8 @@
       "rule": "edge-cascade",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -3259,8 +3377,8 @@
       ],
       "expected": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": []
       },
@@ -3288,8 +3406,8 @@
       "rule": "edge-target-occupied",
       "base": {
         "nodes": [
-          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -3328,6 +3446,21 @@
       ],
       "error": "FlowOperationValidationError",
       "code": "EDGE_TARGET_OCCUPIED"
+    },
+    {
+      "name": "list item: a write into outputs without __pos__ is refused",
+      "rule": "legacy-keyed-lists",
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}], "edges": []},
+      "operations": [{"type": "update_nodes", "updates": [{"id": "n", "op": "set_field", "path": ["data", "node", "outputs", {"key": "out"}, "hidden"], "value": true}]}],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "list item: deleting an output moves the last output into its place",
+      "rule": "keyed-list-order",
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "a", "__pos__": 1}, {"name": "b", "__pos__": 2}, {"name": "c", "__pos__": 3}]}}}], "edges": []},
+      "operations": [{"type": "update_nodes", "updates": [{"id": "n", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "a"}]}]}],
+      "expected": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "c", "__pos__": 3}, {"name": "b", "__pos__": 2}]}}}], "edges": []}
     }
   ]
 }

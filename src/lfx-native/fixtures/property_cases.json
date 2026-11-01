@@ -2,7 +2,7 @@
   "description": "Fixed property sequences: reviewed transactions over a small graph, with their invariants as data. For each sequence, apply each transaction in order to `base`, one apply call per transaction; every one is accepted, and the hash of the final graph is `graph_hash`: the SHA-256 of the final graph's canonical form (view state removed, handles canonical, nodes and edges ordered by id, table rows ordered by (__pos__, __id__), RFC 8785). Each case names the rule it checks in `rule`; README.md lists the rules. The expected outputs are reviewed data that every engine must meet.",
   "base": {
     "nodes": [
-      {"id": "src", "data": {"node": {"template": {"text": {"type": "str", "value": "hi"}}, "outputs": [{"name": "out"}, {"name": "alt", "hidden": null}]}}},
+      {"id": "src", "data": {"node": {"template": {"text": {"type": "str", "value": "hi"}}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "alt", "hidden": null, "__pos__": 2}]}}},
       {
         "id": "dst",
         "data": {
@@ -14,9 +14,9 @@
               "flag": {"type": "bool", "value": false, "advanced": false},
               "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
               "legacy": {"type": "table", "value": [{"v": "1"}, {"v": "2"}]},
-              "tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true}, {"tags": ["fetch"], "status": false}]}
+              "tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true, "__pos__": 1}, {"tags": ["fetch"], "status": false, "__pos__": 2}]}
             },
-            "outputs": [{"name": "res"}]
+            "outputs": [{"name": "res", "__pos__": 1}]
           }
         }
       },
@@ -68,7 +68,7 @@
         ],
         [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "many", "value"], "value": "cmfR u"}]}]
       ],
-      "graph_hash": "2fa5c49f82700311dfe0b739945e175a579aa379e561ea996ac3aa660ed11fd8"
+      "graph_hash": "969e6f917f1bc1f033673b1159148c4b28b6175b85bfc32d728690e82973c10e"
     },
     {
       "name": "sequence 2",
@@ -81,7 +81,7 @@
               {
                 "id": "node-p1",
                 "data": {
-                  "node": {"template": {"text": {"type": "str", "value": "hi"}}, "outputs": [{"name": "out"}, {"name": "alt", "hidden": null}]},
+                  "node": {"template": {"text": {"type": "str", "value": "hi"}}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "alt", "hidden": null, "__pos__": 2}]},
                   "id": "node-p1"
                 },
                 "position": {"x": 775, "y": 128}
@@ -128,7 +128,7 @@
           }
         ]
       ],
-      "graph_hash": "7d85f8499c0e29301598602b6896145497b28b0167d2322bc8ea88c74dab8d4e"
+      "graph_hash": "f86c51509489de4f09a85237693e655d6c9ac03bef9d6cd6ee9fcfc794829f2a"
     },
     {
       "name": "sequence 3",
@@ -162,7 +162,7 @@
           }
         ]
       ],
-      "graph_hash": "d08d5361e54e28e89d91a09c44d17e3881360c9b6d9a080f079b937c0b936198"
+      "graph_hash": "c05d2a4f0d47ccf5b700de277e0b799d48d1ce86e3ec4ac21a5ca7a1a2a4b869"
     },
     {
       "name": "sequence 4",
@@ -192,9 +192,9 @@
                       "flag": {"type": "bool", "value": false, "advanced": false},
                       "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                       "legacy": {"type": "table", "value": [{"v": "1"}, {"v": "2"}]},
-                      "tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": false}, {"tags": ["fetch"], "status": false}]}
+                      "tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": false, "__pos__": 1}, {"tags": ["fetch"], "status": false, "__pos__": 2}]}
                     },
-                    "outputs": [{"name": "res"}]
+                    "outputs": [{"name": "res", "__pos__": 1}]
                   },
                   "id": "node-p1"
                 },
@@ -212,7 +212,7 @@
           }
         ]
       ],
-      "graph_hash": "7abd3ebd1f6a86fcf066d540d92ffd83d6591896d19fcd81b81896f8d71fbc42"
+      "graph_hash": "b229b0859c56319feead1b4a21f3ea4be0b609b03ceb67fe0776ef814ee92f92"
     },
     {
       "name": "sequence 5",
@@ -232,7 +232,7 @@
           }
         ]
       ],
-      "graph_hash": "93c474af20721333011b3e316506726988c763e7633ad962e4eb1f7f4712e1d6"
+      "graph_hash": "17652b4dd619eeaed11afac3c71f722da96b1736250de9e4a798679b35f5e4f1"
     },
     {
       "name": "sequence 6",
@@ -257,7 +257,7 @@
         [{"type": "update_nodes", "updates": [{"id": "src", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "alt"}]}]}],
         [{"type": "delete_edges", "ids": ["e1"]}]
       ],
-      "graph_hash": "6723c5a17c9307bbc735598aebdc2977697b1b986e6bee1b7df7d0de19d04797"
+      "graph_hash": "f0177d8e944be1a85e59a3dc98b2ce87c9333faecfd75091a00550e9130a058a"
     },
     {
       "name": "sequence 7",
@@ -278,9 +278,9 @@
                       "flag": {"type": "bool", "value": false, "advanced": false},
                       "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                       "legacy": {"type": "table", "value": [{"v": "1"}, {"v": "2"}]},
-                      "tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true}, {"tags": ["fetch"], "status": false}]}
+                      "tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true, "__pos__": 1}, {"tags": ["fetch"], "status": false, "__pos__": 2}]}
                     },
-                    "outputs": [{"name": "res"}]
+                    "outputs": [{"name": "res", "__pos__": 1}]
                   },
                   "id": "node-p1"
                 },
@@ -295,7 +295,7 @@
         [{"type": "update_nodes", "updates": [{"id": "node-p1", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "res"}]}]}],
         [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "NInvUgM"}]}]
       ],
-      "graph_hash": "68add90b675629e9a9e595469e9bbc01572f048636383e387ad584e2e0a409a7"
+      "graph_hash": "c830b2442fb5305dd232845f7094753d726ecba8e7e112c5467d9a0ddf08fa5b"
     },
     {
       "name": "sequence 8",
@@ -341,7 +341,7 @@
           }
         ]
       ],
-      "graph_hash": "d327b4a8502fdeee7b1e3e216877a25c2bfa6f74ca939d1f2b564f55e9c23221"
+      "graph_hash": "50892b2f554a5d150f6b6b1f1c5374eb4c353b93ba95c4d70c26e0f9b2cc3b45"
     },
     {
       "name": "sequence 9",
@@ -355,7 +355,7 @@
             "nodes": [
               {
                 "id": "node-p1",
-                "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "alt", "hidden": null}]}, "id": "node-p1"},
+                "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "alt", "hidden": null, "__pos__": 2}]}, "id": "node-p1"},
                 "position": {"x": 593, "y": 131}
               }
             ]
@@ -382,7 +382,7 @@
           }
         ]
       ],
-      "graph_hash": "f9e0bebe7670ef75a3dd7f693f579fa91d6855289a32cb35b708df65621ea8dc"
+      "graph_hash": "9ae5bb985a4db6f972cce6e5b008b9338e0a16715d01aeb6a5cf7ea9111888fb"
     },
     {
       "name": "sequence 10",
@@ -427,7 +427,7 @@
         [{"type": "delete_edges", "ids": ["e1"]}],
         [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "many", "value"], "value": "P"}]}]
       ],
-      "graph_hash": "fa1194abe0e09ab09d5235e054062ec383bda8c3f4cdde5603bf2ab53bbba999"
+      "graph_hash": "433fc98bcb1c7a1ee8e8f73e788863c30324b1056dd04db3d4bb5b53f55e8c8c"
     },
     {
       "name": "sequence 11",
@@ -445,7 +445,7 @@
         [{"type": "update_nodes", "updates": [{"id": "note", "op": "set_field", "path": ["position"], "value": {"x": 1117, "y": -74}}]}],
         [{"type": "delete_nodes", "ids": ["note"]}]
       ],
-      "graph_hash": "9658681d7bd7ba2d7a51dd43ff94ebee0a9f0ff63b8987a64fb9c47184c92637"
+      "graph_hash": "7e7c70ecfc30ac73517076bb9a23014b3155e48a5b67367fe5c0d8d6ac2f2034"
     },
     {
       "name": "sequence 12",
@@ -475,7 +475,7 @@
         ],
         [{"type": "update_nodes", "updates": [{"id": "src", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "out"}]}]}]
       ],
-      "graph_hash": "3a7db2b7de3067e1c73bb0c873d1106275886d9d01ecd722343cdddfa2cd5102"
+      "graph_hash": "2c801565c2342dfa813c72980350a639eea944524a5b69db4646f70cd1ccd100"
     },
     {
       "name": "sequence 13",
@@ -527,13 +527,9 @@
                       "flag": {"type": "bool", "value": false, "advanced": false},
                       "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                       "legacy": {"type": "table", "value": [{"v": "1"}, {"v": "2"}]},
-                      "tools_metadata": {
-                        "type": "tools",
-                        "value": [{"tags": ["search"], "status": false}, {"tags": ["fetch"], "status": false}],
-                        "advanced": true
-                      }
+                      "tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": false, "__pos__": 1}, {"tags": ["fetch"], "status": false, "__pos__": 2}], "advanced": true}
                     },
-                    "outputs": [{"name": "res"}]
+                    "outputs": [{"name": "res", "__pos__": 1}]
                   },
                   "id": "node-p1"
                 },
@@ -559,7 +555,7 @@
           }
         ]
       ],
-      "graph_hash": "916f2a097cc87ad138c7c07f4bbf78099fbc4eb2e151029626933a7ba8733dd0"
+      "graph_hash": "6a0c302c63fd2f0d929ce68cbfac23f0487425ff77c95c8a510f5d3416183e27"
     },
     {
       "name": "sequence 14",
@@ -608,7 +604,7 @@
         ],
         [{"type": "delete_nodes", "ids": ["note"]}]
       ],
-      "graph_hash": "488b497906c717041fd96e0f07ee8ffcbccce99fd3e7c26b3a64304e3dbee929"
+      "graph_hash": "e1ddcaa8c6e3dd9edc5d9c3e3aab165458ef30868cf2e5bf5c7fe8cf005b9f8a"
     },
     {
       "name": "sequence 15",
@@ -642,7 +638,7 @@
         ],
         [{"type": "update_nodes", "updates": [{"id": "src", "op": "delete_field", "path": ["data", "node", "template", "text"]}]}]
       ],
-      "graph_hash": "d577b9049fda461ea998f8aee010aa352fab178487f55783044f60afbbea7899"
+      "graph_hash": "e96f9fba7fcf1f03ca6111749e8475a3c92fb85e96112db0200595320a3e43eb"
     },
     {
       "name": "sequence 16",
@@ -681,7 +677,7 @@
         ],
         [{"type": "update_nodes", "updates": [{"id": "dst", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "res"}]}]}]
       ],
-      "graph_hash": "e1714c4397ea2b2d3d62046824621f188f81025e2d47bd35403fd09584ac4808"
+      "graph_hash": "86e7819e294cc80d8a5cf028fd920f0fa9316bd8a0bb30332b39d02d40f1f6fb"
     },
     {
       "name": "sequence 17",
@@ -694,7 +690,7 @@
         [{"type": "update_nodes", "updates": [{"id": "src", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "out"}]}]}],
         [{"type": "delete_nodes", "ids": ["dst"]}]
       ],
-      "graph_hash": "119549bf95a9fd4b8c2e3af2b128d6f6bbd4cd3cd803d15553402838eb2f59fa"
+      "graph_hash": "bf85eff82486bf1dadfb9f96ef7723c8df77e4289a684899bfcef9dea8c29471"
     },
     {
       "name": "sequence 18",
@@ -739,7 +735,7 @@
           }
         ]
       ],
-      "graph_hash": "6aef0e1333707e196ad001a094c41276e2367f14bfbeb620767ca1571f5e7be7"
+      "graph_hash": "c66aa87d86c4b06907cdf417749a5edef03aad07e189f8edac7b4466d427724c"
     },
     {
       "name": "sequence 19",
@@ -792,7 +788,7 @@
           }
         ]
       ],
-      "graph_hash": "954d9d64580221aed8600345800b07b837f18c48b6affa699f79a319580988dc"
+      "graph_hash": "25615a03f48d9f9f1fdba75d9c6bffb6fcdac9a145a7789d5efc5e32f51103b6"
     },
     {
       "name": "sequence 20",
@@ -831,7 +827,7 @@
         [{"type": "update_nodes", "updates": [{"id": "dst", "op": "delete_field", "path": ["data", "node", "template", "legacy"]}]}],
         [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "template", "text", "advanced"], "value": true}]}]
       ],
-      "graph_hash": "703ac46dbfa4d24394431625a2cff43b15d4d83c001e9046f147c0f8d4bf1ea3"
+      "graph_hash": "a68ee3eee45a2cdeefbda5a99d4c883ce0f006dc382ed24361c91d7250341c7f"
     },
     {
       "name": "sequence 21",
@@ -868,7 +864,7 @@
         ],
         [{"type": "update_nodes", "updates": [{"id": "dst", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}]}]}]
       ],
-      "graph_hash": "89036b02d298ee0f7dc8d318cca41a88d38721907c3aeb66c99cab831bd9589a"
+      "graph_hash": "82d54e35c1d45201633c87bcc1623ec20706f24ca469c0e61bb2e100908e09e0"
     },
     {
       "name": "sequence 22",
@@ -900,7 +896,7 @@
         [{"type": "update_nodes", "updates": [{"id": "src", "op": "delete_field", "path": ["data", "node", "template", "text"]}]}],
         [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "outputs", {"key": "res"}, "hidden"], "value": true}]}]
       ],
-      "graph_hash": "d6dfb5982ccae95873c74e6dfcef79ec7f76273627f85750785c4a436989df6e"
+      "graph_hash": "d661e3838a495e659aea06e1a819c4fb75a0a056b0e2804edcdc1beeea20b21c"
     },
     {
       "name": "sequence 23",
@@ -927,7 +923,7 @@
         [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "outputs", {"key": "res"}, "hidden"], "value": true}]}],
         [{"type": "update_nodes", "updates": [{"id": "dst", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}]}]}]
       ],
-      "graph_hash": "470f5fbe7ea7d1f5e3179838dcd5f8c7476cfb1e562d20c6e94b10438f6f9188"
+      "graph_hash": "fb668bd5df6a7a3fe9090b9b21a8b5bc20b150093e41cd50ed32cc23995110fc"
     },
     {
       "name": "sequence 24",
@@ -948,9 +944,9 @@
                       "flag": {"type": "bool", "value": false, "advanced": false},
                       "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
                       "legacy": {"type": "table", "value": [{"v": "1"}, {"v": "2"}]},
-                      "tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true}, {"tags": ["fetch"], "status": false}]}
+                      "tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true, "__pos__": 1}, {"tags": ["fetch"], "status": false, "__pos__": 2}]}
                     },
-                    "outputs": [{"name": "res"}]
+                    "outputs": [{"name": "res", "__pos__": 1}]
                   },
                   "id": "node-p1"
                 },
@@ -970,7 +966,7 @@
           }
         ]
       ],
-      "graph_hash": "d0bcf77a483ca2ff186ee2f70b569c50ac6ca29fdb261b03b0f4bc23006b2e29"
+      "graph_hash": "5a737e64e9c7ac87263b0668286faac73980226c6d7ba08cc9136e5b25d6dbe4"
     },
     {
       "name": "sequence 25",
@@ -983,7 +979,7 @@
         [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "outputs", {"key": "alt"}, "hidden"], "value": true}]}],
         [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "outputs", {"key": "alt"}, "hidden"], "value": false}]}]
       ],
-      "graph_hash": "a0ab4842b8a50dd05d749f8a4a2440c7c9b848d3a3958435eae94bb9dac01ad7"
+      "graph_hash": "e347872109932e88e6b9b70ff3129bbed747abe1b9b6ac92f4f03a374b2fb09e"
     },
     {
       "name": "sequence 26",
@@ -1013,7 +1009,7 @@
         ],
         [{"type": "delete_nodes", "ids": ["src"]}]
       ],
-      "graph_hash": "48832c0aa4eb44655a8d26867aa57ff6018e97f2bc26e3d536334ee290330e26"
+      "graph_hash": "58f34010a47e75e64c42f9e21743039849a48c0068207b67395523e7ee23f921"
     },
     {
       "name": "sequence 27",
@@ -1054,7 +1050,7 @@
           }
         ]
       ],
-      "graph_hash": "fd4646fc9024af98640d2e4a8c85292a3514bf7debf8ce707b77935637acd0f9"
+      "graph_hash": "121f3b3920dab1f3dd5ad88b98c4338a2e9d636537512436d61a85b330cf615a"
     },
     {
       "name": "sequence 28",
@@ -1086,7 +1082,7 @@
         [{"type": "update_nodes", "updates": [{"id": "src", "op": "delete_field", "path": ["data", "node", "template", "text"]}]}],
         [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "many", "value"], "value": " o"}]}]
       ],
-      "graph_hash": "f9fe336cccf4cfe2f42f8ebb37ee939640ccb4506be56d742570bb8f7bad179d"
+      "graph_hash": "e7d8b01499d89f4a8051f1eb20b20bfaf61d6caaa27125999806aa7efbd03966"
     },
     {
       "name": "sequence 29",
@@ -1103,14 +1099,14 @@
             "nodes": [
               {
                 "id": "node-p1",
-                "data": {"node": {"template": {}, "outputs": [{"name": "out", "hidden": true}, {"name": "alt", "hidden": true}]}, "id": "node-p1"},
+                "data": {"node": {"template": {}, "outputs": [{"name": "out", "hidden": true, "__pos__": 1}, {"name": "alt", "hidden": true, "__pos__": 2}]}, "id": "node-p1"},
                 "position": {"x": 169, "y": 732}
               }
             ]
           }
         ]
       ],
-      "graph_hash": "4b224e072e7b1e807d85b5591e51fb70c14dcd9806f4e73b1c50349718041794"
+      "graph_hash": "62af213c5e878fc0be869da45b8a8d7e11ca8bf2327c9ae5b7868e821da12629"
     },
     {
       "name": "sequence 30",
@@ -1128,7 +1124,7 @@
         [{"type": "update_nodes", "updates": [{"id": "dst", "op": "delete_field", "path": ["data", "node", "template", "rows"]}]}],
         [{"type": "delete_edges", "ids": ["e1"]}]
       ],
-      "graph_hash": "f216ce7510083979c4dad8d374afaff20efef170cb3323b8b22314a14c745ba7"
+      "graph_hash": "3159da13734b0b4f602bbfc88caf0bdfe41aae51c1ff49795f2f51f3e07862d4"
     }
   ]
 }

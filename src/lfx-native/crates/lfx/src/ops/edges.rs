@@ -16,18 +16,32 @@
 //! stays until something touches it; but an edge whose handles a rule must
 //! read, to see whether a field is taken or which edges a removed output
 //! carries, is read strictly too.
+//!
+//! An edge needs both of its ends. A node's endpoints are the keys of its
+//! template, which edges enter, and the items of its outputs list, which
+//! edges leave and loop feedback edges enter. When an endpoint goes, its
+//! edges go with it (a cascade delete): a deleted node takes every edge at
+//! it, and a write that removes an endpoint, directly or by replacing what
+//! holds it, takes the endpoint's edges (`removed_endpoints`).
 
+use std::borrow::Cow;
 use std::collections::HashMap;
+use std::fmt;
 use std::sync::LazyLock;
 
+use crate::value::{Map, Value};
 use indexmap::IndexSet;
-use serde_json::{Map, Value};
 
-use crate::ops::canonical::{HANDLE_KEYS, HANDLE_QUOTE, parse_handle, values_equal};
+use crate::ops::canonical::{
+    HANDLE_KEYS, HANDLE_QUOTE, edge_data_with_type_sets, handle_with_type_sets, parse_handle,
+    values_equal,
+};
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result, bail, invalid, quoted};
 use crate::ops::keyed::ListIndex;
-use crate::ops::schema::{KeyedList, NODE_SCHEMA, OUTPUTS_PATH};
+use crate::ops::ops::{PathExt, Segment};
+use crate::ops::schema::{KeyedList, NODE_SCHEMA, OUTPUTS_PATH, TEMPLATE_PATH};
+use crate::ops::state::Layered;
 use crate::ops::validate::ViolationCode;
 
 /// The type of a note node.
@@ -62,6 +76,22 @@ pub struct Input {
     pub name: String,
 }
 
+impl Input {
+    fn field(name: &str) -> Self {
+        Self {
+            kind: InputKind::Field,
+            name: name.to_owned(),
+        }
+    }
+
+    fn loop_output(name: &str) -> Self {
+        Self {
+            kind: InputKind::LoopOutput,
+            name: name.to_owned(),
+        }
+    }
+}
+
 /// The output an edge leaves from and the input it enters.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Handles {
@@ -72,7 +102,7 @@ pub struct Handles {
 }
 
 /// A node's edges, by the input they enter and the output they leave from.
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Connections {
     /// Edges into each input of the node.
     pub inputs: HashMap<Input, IndexSet<String>>,
@@ -80,32 +110,171 @@ pub struct Connections {
     pub outputs: HashMap<String, IndexSet<String>>,
 }
 
+impl Connections {
+    /// The ids of the edges at `endpoint`: into a field, or out of an output
+    /// and, for a loop output, into it.
+    pub(crate) fn at(&self, endpoint: &Endpoint) -> impl Iterator<Item = &String> {
+        let (input, output) = match endpoint {
+            Endpoint::Field(name) => (Input::field(name), None),
+            Endpoint::Output(name) => (Input::loop_output(name), self.outputs.get(name)),
+        };
+        self.inputs.get(&input).into_iter().chain(output).flatten()
+    }
+}
+
+/// A place on a node that edges attach to.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum Endpoint {
+    /// A template field, which edges enter.
+    Field(String),
+    /// An output, which edges leave and loop feedback edges enter.
+    Output(String),
+}
+
+/// Where a node keeps one kind of endpoint.
+#[derive(Debug)]
+struct Holder {
+    /// The path of the holder in a node.
+    path: &'static [&'static str],
+    /// Whether the holder is a keyed list, whose items a path names with
+    /// `{"key": ...}`, rather than an object, whose keys a path names.
+    keyed: bool,
+    /// The endpoint an entry of the holder is.
+    endpoint: fn(String) -> Endpoint,
+}
+
+/// The template holds a node's fields, and the outputs list its outputs.
+const HOLDERS: [Holder; 2] = [
+    Holder {
+        path: &TEMPLATE_PATH,
+        keyed: false,
+        endpoint: Endpoint::Field,
+    },
+    Holder {
+        path: &OUTPUTS_PATH,
+        keyed: true,
+        endpoint: Endpoint::Output,
+    },
+];
+
+/// Whether [`removed_endpoints`] reads what a write at `path` replaced: the
+/// write is at a holder's path or at an ancestor (anc.) path of it.
+pub(crate) fn reads_before(path: &[Segment]) -> bool {
+    HOLDERS
+        .iter()
+        .any(|holder| path.len() <= holder.path.len() && path.shares_start(holder.path))
+}
+
+/// The endpoints that a write at `path` of node `node_id` removed.
+///
+/// `before` is what the path held before the write, which only a write that
+/// [`reads_before`] needs, and `after(keys)` is the value at the object keys
+/// `keys` of the node after it. A delete of one template key or one output removes that
+/// endpoint. A write that replaces or deletes the outputs list, or anything
+/// holding a template or an outputs list, removes the endpoints it held that
+/// the node no longer has. Any other write removes none.
+///
+/// # Errors
+///
+/// An outputs list, before or after the write, breaks the keyed-list rules.
+pub(crate) fn removed_endpoints<'a>(
+    path: &[Segment],
+    is_delete: bool,
+    before: Option<&Value>,
+    after: impl Fn(&[&str]) -> Option<Cow<'a, Value>>,
+    node_id: &str,
+) -> Result<Vec<Endpoint>> {
+    let mut removed = Vec::new();
+    for holder in &HOLDERS {
+        if path.len() == holder.path.len() + 1 && path.has_start(holder.path) {
+            if !is_delete {
+                continue;
+            }
+            let name = match &path[holder.path.len()] {
+                Segment::Item(key) if holder.keyed => key,
+                Segment::Key(key) if !holder.keyed => key,
+                _ => continue,
+            };
+            removed.push((holder.endpoint)(name.clone()));
+        } else if path.len() <= holder.path.len() && path.shares_start(holder.path) {
+            let before = before.expect("a write that reads before passes what it replaced");
+            let held = holder.names(at_keys(before, &holder.path[path.len()..]), node_id)?;
+            let kept = holder.names(after(holder.path).as_deref(), node_id)?;
+            removed.extend(
+                held.into_iter()
+                    .filter(|name| !kept.contains(name))
+                    .map(holder.endpoint),
+            );
+        }
+    }
+    Ok(removed)
+}
+
+impl Holder {
+    /// The names of the endpoints in `held`, a value of this holder: the
+    /// names of an outputs list, or the keys of a template.
+    fn names(&self, held: Option<&Value>, node_id: &str) -> Result<Vec<String>> {
+        let Some(held) = held else {
+            return Ok(Vec::new());
+        };
+        if self.keyed {
+            return Ok(index_outputs(Cow::Borrowed(held), node_id)?
+                .names()
+                .map(str::to_owned)
+                .collect());
+        }
+        Ok(held
+            .as_object()
+            .map(|object| object.keys().cloned().collect())
+            .unwrap_or_default())
+    }
+}
+
+/// The value at the object keys `keys` under `value`.
+fn at_keys<'v>(value: &'v Value, keys: &[&str]) -> Option<&'v Value> {
+    keys.iter().try_fold(value, |value, key| value.get(key))
+}
+
 /// Read access to an indexed graph, enough to check edges.
 pub(crate) trait GraphRead {
-    /// The node with `id`.
-    fn node(&self, id: &str) -> Option<&Map<String, Value>>;
+    /// Whether the graph has a node with `id`.
+    fn has_node(&self, id: &str) -> bool;
+    /// The value at the object keys `path` of the node `id`, as the reader
+    /// sees it. The graph state reads through its batch's field writes, and
+    /// copies a value only when the batch wrote inside it.
+    fn node_value(&self, id: &str, path: &[&str]) -> Option<Cow<'_, Value>>;
     /// The edge with `id`.
-    fn edge(&self, id: &str) -> Option<&Map<String, Value>>;
+    fn edge(&self, id: &str) -> Option<&Map>;
     /// The ids of the edges at a node.
     fn edge_ids_at(&self, node_id: &str) -> impl Iterator<Item = &str>;
 }
 
 /// The source or target of an edge that passed structural validation.
-pub(crate) fn endpoint<'e>(edge: &'e Map<String, Value>, end: &str) -> &'e str {
+pub(crate) fn endpoint<'e>(edge: &'e Map, end: &str) -> &'e str {
     edge.get(end).and_then(Value::as_str).unwrap_or_default()
 }
 
 /// What is indexed so far about edges: each edge's handles, and each node's
-/// connections. Both are built the first time something asks for them.
-#[derive(Debug, Default)]
+/// connections. Both are built the first time something asks for them, and
+/// a batch changes them through its layer, as it changes the graph.
+#[derive(Debug)]
 pub(crate) struct EdgeIndex {
-    handles: HashMap<String, Handles>,
-    connections: HashMap<String, Connections>,
+    handles: Layered<Handles>,
+    connections: Layered<Connections>,
+}
+
+impl Default for EdgeIndex {
+    fn default() -> Self {
+        Self {
+            handles: Layered::new(),
+            connections: Layered::new(),
+        }
+    }
 }
 
 impl EdgeIndex {
     /// An edge's handles, read strictly the first time.
-    pub fn handles(&mut self, edge: &Map<String, Value>) -> Result<Handles> {
+    pub fn handles(&mut self, edge: &Map) -> Result<Handles> {
         let id = edge.id();
         if let Some(handles) = self.handles.get(id) {
             return Ok(handles.clone());
@@ -117,7 +286,7 @@ impl EdgeIndex {
 
     /// A node's connections, reading the handles of its edges the first time.
     pub fn connections(&mut self, graph: &impl GraphRead, node_id: &str) -> Result<&Connections> {
-        if !self.connections.contains_key(node_id) {
+        if !self.connections.contains(node_id) {
             let mut connections = Connections::default();
             for id in graph.edge_ids_at(node_id) {
                 let edge = graph
@@ -128,16 +297,19 @@ impl EdgeIndex {
             }
             self.connections.insert(node_id.to_owned(), connections);
         }
-        Ok(&self.connections[node_id])
+        Ok(self
+            .connections
+            .get(node_id)
+            .expect("the connections were just built"))
     }
 
     /// Index a new edge at the nodes whose connections are built.
     ///
-    /// An edge whose handles do not read (which only an inverse puts back)
+    /// An edge whose handles do not read (which only a backward operation puts back)
     /// leaves those nodes to be indexed again when something asks.
-    pub fn insert(&mut self, edge: &Map<String, Value>) {
+    pub fn insert(&mut self, edge: &Map) {
         let ends = [endpoint(edge, "source"), endpoint(edge, "target")];
-        if !ends.iter().any(|end| self.connections.contains_key(*end)) {
+        if !ends.iter().any(|end| self.connections.contains(end)) {
             return;
         }
         match self.handles(edge) {
@@ -157,10 +329,12 @@ impl EdgeIndex {
     }
 
     /// Drop what is indexed about an edge, before it is removed or its handles are rewritten.
-    pub fn forget(&mut self, edge: &Map<String, Value>) {
-        let Some(handles) = self.handles.remove(edge.id()) else {
+    pub fn forget(&mut self, edge: &Map) {
+        let id = edge.id();
+        let Some(handles) = self.handles.get(id).cloned() else {
             return;
         };
+        self.handles.remove(id);
         for end in [endpoint(edge, "source"), endpoint(edge, "target")] {
             if let Some(connections) = self.connections.get_mut(end) {
                 disconnect(connections, end, edge, &handles);
@@ -168,24 +342,31 @@ impl EdgeIndex {
         }
     }
 
+    /// Whether a node's connections are built.
+    #[cfg(test)]
+    pub fn has_connections(&self, node_id: &str) -> bool {
+        self.connections.contains(node_id)
+    }
+
     /// Drop a node's connections.
     pub fn forget_node(&mut self, node_id: &str) {
         self.connections.remove(node_id);
     }
 
-    /// Drop everything indexed.
-    pub fn clear(&mut self) {
-        self.handles.clear();
-        self.connections.clear();
+    /// Make a batch's changes part of the index.
+    pub fn fold(&mut self) {
+        self.handles.fold();
+        self.connections.fold();
+    }
+
+    /// Drop a batch's changes.
+    pub fn discard(&mut self) {
+        self.handles.discard();
+        self.connections.discard();
     }
 }
 
-fn connect(
-    connections: &mut Connections,
-    node_id: &str,
-    edge: &Map<String, Value>,
-    handles: &Handles,
-) {
+fn connect(connections: &mut Connections, node_id: &str, edge: &Map, handles: &Handles) {
     let id = edge.id().to_owned();
     if endpoint(edge, "target") == node_id {
         connections
@@ -203,12 +384,7 @@ fn connect(
     }
 }
 
-fn disconnect(
-    connections: &mut Connections,
-    node_id: &str,
-    edge: &Map<String, Value>,
-    handles: &Handles,
-) {
+fn disconnect(connections: &mut Connections, node_id: &str, edge: &Map, handles: &Handles) {
     let id = edge.id();
     if endpoint(edge, "target") == node_id
         && let Some(ids) = connections.inputs.get_mut(&handles.input)
@@ -222,7 +398,7 @@ fn disconnect(
     }
 }
 
-fn error(edge: &Map<String, Value>, code: ViolationCode, reason: impl std::fmt::Display) -> Error {
+fn error(edge: &Map, code: ViolationCode, reason: impl std::fmt::Display) -> Error {
     Error::edge(edge.id(), code, reason)
 }
 
@@ -231,7 +407,7 @@ fn error(edge: &Map<String, Value>, code: ViolationCode, reason: impl std::fmt::
 /// # Errors
 ///
 /// An edge rule the handles break, naming this edge.
-pub fn read_handles(edge: &Map<String, Value>) -> Result<Handles> {
+pub fn read_handles(edge: &Map) -> Result<Handles> {
     let source = handle(edge, "sourceHandle")?;
     let target = handle(edge, "targetHandle")?;
     let output = match source.get("name") {
@@ -274,7 +450,7 @@ pub fn read_handles(edge: &Map<String, Value>) -> Result<Handles> {
     }
 }
 
-fn handle<'e>(edge: &'e Map<String, Value>, key: &str) -> Result<&'e Map<String, Value>> {
+fn handle<'e>(edge: &'e Map, key: &str) -> Result<&'e Map> {
     // A key that is present counts, whatever its value: "data": null is not an object.
     let data = match edge.get("data") {
         None => None,
@@ -336,13 +512,14 @@ fn handle<'e>(edge: &'e Map<String, Value>, key: &str) -> Result<&'e Map<String,
 }
 
 /// Whether an edge changed between two graphs. View state is not a change,
-/// and neither is another spelling of the same handle. A changed edge is
-/// deleted and added again, so the edge rules check it like a new one.
+/// and neither is another spelling of the same handle, or another order of
+/// a handle's type list. A changed edge is deleted and added again, so the
+/// edge rules check it like a new one.
 ///
 /// # Errors
 ///
 /// A compared value holds a number that is not finite.
-pub fn edge_changed(before: &Map<String, Value>, after: &Map<String, Value>) -> Result<bool> {
+pub fn edge_changed(before: &Map, after: &Map) -> Result<bool> {
     let keys: IndexSet<&String> = before
         .keys()
         .chain(after.keys())
@@ -351,7 +528,16 @@ pub fn edge_changed(before: &Map<String, Value>, after: &Map<String, Value>) -> 
     for key in keys {
         let same = match (before.get(key), after.get(key)) {
             (Some(old), Some(new)) if HANDLE_KEYS.contains(&key.as_str()) => {
-                values_equal(&handle_value(old), &handle_value(new))?
+                let (old, new) = (handle_value(old), handle_value(new));
+                values_equal(&old, &new)?
+                    || values_equal(&handle_with_type_sets(old)?, &handle_with_type_sets(new)?)?
+            }
+            (Some(old), Some(new)) if key == "data" => {
+                values_equal(old, new)?
+                    || values_equal(
+                        &edge_data_with_type_sets(old)?,
+                        &edge_data_with_type_sets(new)?,
+                    )?
             }
             (Some(old), Some(new)) => values_equal(old, new)?,
             _ => false,
@@ -375,7 +561,7 @@ pub fn escape_handle(handle: &Value) -> String {
 }
 
 /// Write each handle's missing form from the one present, in place, as the editor spells them.
-pub fn derive_missing_handle_forms(edge: &mut Map<String, Value>) {
+pub fn derive_missing_handle_forms(edge: &mut Map) {
     if !edge.contains_key("data") {
         edge.insert("data".into(), Value::Object(Map::new()));
     }
@@ -397,25 +583,19 @@ pub fn derive_missing_handle_forms(edge: &mut Map<String, Value>) {
     }
 }
 
-/// A node's `data.node`. Validation and `add_nodes` keep it, and its template, an object.
-pub(crate) fn node_body(node: &Map<String, Value>) -> Result<&Map<String, Value>> {
-    node.get("data")
-        .and_then(|data| data.get("node"))
-        .and_then(Value::as_object)
-        .ok_or_else(|| Error::invalid("node data.node must be an object"))
-}
-
 /// A node's outputs, indexed by name.
 #[derive(Debug)]
 pub(crate) struct Outputs<'g> {
-    items: &'g [Value],
+    /// The outputs list, which is an array.
+    items: Cow<'g, Value>,
     index: ListIndex,
 }
 
 impl Outputs<'_> {
     /// The output named `name`.
     pub fn get(&self, name: &str) -> Option<&Value> {
-        self.index.slot(name).map(|slot| &self.items[slot])
+        let slot = self.index.slot(name)?;
+        self.items.as_array().map(|items| &items[slot])
     }
 
     /// The names of all outputs.
@@ -424,16 +604,16 @@ impl Outputs<'_> {
     }
 }
 
-/// Index an outputs list, which follows the keyed-list rules.
-pub(crate) fn index_outputs<'g>(items: &'g Value, node_id: &str) -> Result<Outputs<'g>> {
-    let Value::Array(items) = items else {
+/// Index an outputs list. Every output must have a name that no other output
+/// has; the edge rules do not read positions.
+pub(crate) fn index_outputs<'g>(items: Cow<'g, Value>, node_id: &str) -> Result<Outputs<'g>> {
+    let Value::Array(list) = items.as_ref() else {
         bail!("node {}: data.node.outputs must be a list", quoted(node_id));
     };
-    let index = ListIndex::build(
-        outputs_list(),
-        items,
-        &format!("node {}: data.node.outputs", quoted(node_id)),
-    )?;
+    let index = ListIndex::build(outputs_list(), list);
+    index.check_keys(&fmt::from_fn(|f| {
+        write!(f, "node {}: data.node.outputs", quoted(node_id))
+    }))?;
     Ok(Outputs { items, index })
 }
 
@@ -442,10 +622,10 @@ pub(crate) fn node_outputs<'g>(
     graph: &'g impl GraphRead,
     node_id: &str,
 ) -> Result<Option<Outputs<'g>>> {
-    let node = graph
-        .node(node_id)
-        .ok_or_else(|| invalid!("node {} does not exist", quoted(node_id)))?;
-    let Some(outputs) = node_body(node)?.get("outputs") else {
+    if !graph.has_node(node_id) {
+        bail!("node {} does not exist", quoted(node_id));
+    }
+    let Some(outputs) = graph.node_value(node_id, &OUTPUTS_PATH) else {
         return Ok(None);
     };
     if !outputs.is_array() {
@@ -469,7 +649,7 @@ pub(crate) fn node_outputs<'g>(
 pub(crate) fn check_edge(
     graph: &impl GraphRead,
     index: &mut EdgeIndex,
-    edge: &Map<String, Value>,
+    edge: &Map,
 ) -> Result<Handles> {
     check_no_note(graph, edge)?;
     let handles = index.handles(edge)?;
@@ -488,13 +668,14 @@ enum Takes {
 }
 
 /// No edge has a note at either end: a note has no handles.
-fn check_no_note(graph: &impl GraphRead, edge: &Map<String, Value>) -> Result<()> {
+fn check_no_note(graph: &impl GraphRead, edge: &Map) -> Result<()> {
     for end in ["source", "target"] {
         let node_id = endpoint(edge, end);
-        let node = graph
-            .node(node_id)
-            .ok_or_else(|| invalid!("edge {}: {end} node does not exist", quoted(edge.id())))?;
-        if node.get("type").and_then(Value::as_str) == Some(NOTE_NODE_TYPE) {
+        if !graph.has_node(node_id) {
+            bail!("edge {}: {end} node does not exist", quoted(edge.id()));
+        }
+        let node_type = graph.node_value(node_id, &["type"]);
+        if node_type.as_deref().and_then(Value::as_str) == Some(NOTE_NODE_TYPE) {
             return Err(error(
                 edge,
                 ViolationCode::EdgeTouchesNote,
@@ -509,11 +690,7 @@ fn check_no_note(graph: &impl GraphRead, edge: &Map<String, Value>) -> Result<()
 }
 
 /// The source node has the output the edge leaves from.
-fn check_source_output(
-    graph: &impl GraphRead,
-    edge: &Map<String, Value>,
-    handles: &Handles,
-) -> Result<()> {
+fn check_source_output(graph: &impl GraphRead, edge: &Map, handles: &Handles) -> Result<()> {
     let source = endpoint(edge, "source");
     let found =
         node_outputs(graph, source)?.is_some_and(|outputs| outputs.get(&handles.output).is_some());
@@ -533,21 +710,14 @@ fn check_source_output(
 
 /// The target node has the input the edge enters: a template field, or an
 /// output that declares `allows_loop`. Returns how many edges it takes.
-fn check_target_input(
-    graph: &impl GraphRead,
-    edge: &Map<String, Value>,
-    handles: &Handles,
-) -> Result<Takes> {
+fn check_target_input(graph: &impl GraphRead, edge: &Map, handles: &Handles) -> Result<Takes> {
     let target = endpoint(edge, "target");
     let name = &handles.input.name;
     match handles.input.kind {
         InputKind::Field => {
-            let body = graph.node(target).map(node_body).transpose()?;
-            let field = body
-                .and_then(|body| body.get("template"))
-                .and_then(|template| template.get(name))
-                .and_then(Value::as_object);
-            let Some(field) = field else {
+            let [data, body, template] = TEMPLATE_PATH;
+            let field = graph.node_value(target, &[data, body, template, name]);
+            let Some(field) = field.as_deref().and_then(Value::as_object) else {
                 return Err(error(
                     edge,
                     ViolationCode::EdgeHandleNotFound,
@@ -590,7 +760,7 @@ fn check_target_input(
 fn check_input_free(
     graph: &impl GraphRead,
     index: &mut EdgeIndex,
-    edge: &Map<String, Value>,
+    edge: &Map,
     handles: &Handles,
 ) -> Result<()> {
     let id = edge.id();
