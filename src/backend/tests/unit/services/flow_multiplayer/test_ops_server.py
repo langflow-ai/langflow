@@ -47,6 +47,7 @@ MODES = ("nocache", "cache", "wal")
 ENGINES = ("python", "rust")
 CADENCE = 5
 WINDOW = 40
+STEP = CADENCE * 2  # compaction runs once more than WINDOW + STEP revisions are retained
 BASE_NODES = 6
 FIELD_PATH = ["data", "node", "template", "t", "value"]
 NS = uuid.UUID("6d3f5d0e-6a52-4b1e-9d3b-2f0a0c1e7a11")
@@ -163,6 +164,7 @@ class Server:
             "LANGFLOW_FLOW_ENGINE": engine,
             "LANGFLOW_FLOW_REVISION_CHECKPOINT_CADENCE": str(CADENCE),
             "LANGFLOW_FLOW_REVISION_RETENTION_WINDOW": str(WINDOW),
+            "LANGFLOW_FLOW_REVISION_COMPACTION_STEP": str(STEP),
             "LANGFLOW_WORKERS": "1",
             # Editor-mode auth: no auto login; the test creates an API key and sends it as x-api-key.
             "LANGFLOW_AUTO_LOGIN": "false",
@@ -318,6 +320,32 @@ def db_flow(flow_id: str) -> tuple[str, int, int]:
         return conn.execute(
             "SELECT data::text, current_revision, latest_revision FROM flow WHERE id = %s", (flow_id,)
         ).fetchone()
+
+
+def system_checkpoints(flow_id: str) -> list[tuple[uuid.UUID, int, bool]]:
+    """``(id, revision, retained)`` of the flow's system checkpoints, oldest first."""
+    with psycopg.connect(ADMIN_URL) as conn:
+        return conn.execute(
+            "SELECT id, operation_revision, retained FROM flow_version "
+            "WHERE flow_id = %s AND version_number IS NULL AND graph_hash IS NOT NULL ORDER BY operation_revision",
+            (flow_id,),
+        ).fetchall()
+
+
+async def bench_records(client: httpx.AsyncClient, urls: list[str], kind: str, flow_id: str) -> list[dict]:
+    records = []
+    for url in urls:
+        response = await client.get(f"{url}/api/v2/bench/flow-ops/export")
+        assert response.status_code == 200, response.text
+        lines = [orjson.loads(line) for line in response.content.splitlines() if line]
+        records += [r for r in lines if r.get("kind") == kind and r.get("flow") == flow_id]
+    return records
+
+
+async def wait_compacted(flow_id: str, timeout: float = 15) -> None:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline and db_rows(flow_id)[0][0] == 1:  # noqa: ASYNC110 -- polls the database
+        await asyncio.sleep(0.2)
 
 
 def assert_rows_contiguous(flow_id: str, head: int) -> None:
@@ -638,9 +666,7 @@ async def test_retention_gap(servers):
         flow_id = await create_flow(client, urls[0])
         for i in range(total):
             assert (await post_ops(client, urls[i % 2], flow_id, set_field("n0", f"r{i}"))).status_code == 200
-        deadline = time.monotonic() + 15
-        while time.monotonic() < deadline and db_rows(flow_id)[0][0] == 1:  # noqa: ASYNC110 -- polls the database
-            await asyncio.sleep(0.2)
+        await wait_compacted(flow_id)
         first = db_rows(flow_id)[0][0]
         assert first > 1, "history was not compacted"
         gap = await revisions(client, urls[0], flow_id, 0)
@@ -651,6 +677,94 @@ async def test_retention_gap(servers):
         latest, joined = await joined_graph(client, urls[0], flow_id, engine)
         assert latest == total
         assert values(joined)["n0"] == f"r{total - 1}"
+    assert_rows_contiguous(flow_id, total)
+
+
+async def test_compaction_keeps_the_window_and_the_cut(servers):
+    """Compaction keeps at least the window, the cut's checkpoint and its row; the lock covers the deletes only."""
+    urls = servers["urls"]
+    total = WINDOW + STEP + CADENCE * 2
+    async with httpx.AsyncClient(timeout=60, headers=servers["headers"]) as client:
+        flow_id = await create_flow(client, urls[0])
+        for i in range(total):
+            if i == WINDOW + STEP - CADENCE:
+                # Not past the window plus the step yet: nothing compacted.
+                await asyncio.sleep(0.5)
+                assert db_rows(flow_id)[0][0] == 1
+            assert (await post_ops(client, urls[i % 2], flow_id, set_field("n0", f"c{i}"))).status_code == 200
+        await wait_compacted(flow_id)
+        await asyncio.sleep(0.5)  # let a checkpoint task finish
+        rows = db_rows(flow_id)
+        first_start, cut = rows[0][0], rows[0][1]
+        assert first_start > 1, "history was not compacted"
+        assert total - first_start + 1 >= WINDOW
+        checkpoints = system_checkpoints(flow_id)
+        # The cut is a system checkpoint that ends the first retained row, and none older is left.
+        assert cut in [revision for _id, revision, _retained in checkpoints]
+        assert all(revision >= cut or retained for _id, revision, retained in checkpoints)
+        events = [e for e in await bench_records(client, urls, "compaction", flow_id) if e.get("rows_deleted")]
+    assert events, "no compaction event"
+    for event in events:
+        assert event["cutoff"] is not None
+        assert event["start"] <= event["end"]
+        # The lock is held from its grant to the commit: the deletes and the commit, nothing before them.
+        assert event["lock_held"] == pytest.approx(event["delete"] + event["commit"], abs=0.01)
+        phases = event["plan"] + event["verify"] + event["lock"] + event["delete"] + event["commit"]
+        assert phases == pytest.approx(event["dur"], abs=0.01)
+    assert_rows_contiguous(flow_id, total)
+
+
+async def test_compaction_deletes_nothing_after_a_concurrent_purge_or_compaction(servers):
+    """The locked deletes check that the cut's row and checkpoint are still there; otherwise they are no-ops."""
+    from langflow.services.flow_multiplayer.compaction import Cut, delete_before
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    urls = servers["urls"]
+    total = CADENCE * 6  # under the window: the servers compact nothing
+    async with httpx.AsyncClient(timeout=60, headers=servers["headers"]) as client:
+        flow_id = await create_flow(client, urls[0])
+        for i in range(total):
+            assert (await post_ops(client, urls[i % 2], flow_id, set_field("n0", f"p{i}"))).status_code == 200
+
+    def cuts() -> list[tuple[uuid.UUID, int, bool]]:
+        return [c for c in system_checkpoints(flow_id) if c[1] > 0]  # not the anchor at 0: no row ends there
+
+    deadline = time.monotonic() + 15
+    while time.monotonic() < deadline and len(cuts()) < 2:  # noqa: ASYNC110 -- polls the database
+        await asyncio.sleep(0.2)
+    (older_id, older, _), (newer_id, newer, _) = cuts()[-2:]
+    starts = {end: start for start, end, _envelope in db_rows(flow_id)}
+
+    def cut(checkpoint_id: uuid.UUID, revision: int) -> Cut:
+        return Cut(checkpoint_id=checkpoint_id, revision=revision, graph_hash="", first_kept=starts[revision])
+
+    scheme, rest = ADMIN_URL.split("://", 1)
+    assert scheme in ("postgresql", "postgres"), scheme
+    engine = create_async_engine(f"postgresql+psycopg://{rest}")
+    flow = uuid.UUID(flow_id)
+
+    async def delete(target: Cut) -> tuple[int, int]:
+        async with AsyncSession(engine) as session:
+            deleted = await delete_before(session, flow, target)
+            await session.commit()
+        return deleted
+
+    try:
+        # The checkpoint is gone (a purge deleted it): nothing is deleted.
+        assert await delete(cut(uuid.uuid4(), newer)) == (0, 0)
+        assert db_rows(flow_id)[0][0] == 1
+        # The real cut: the rows before its row go, and the system checkpoints before it.
+        rows_deleted, _checkpoints = await delete(cut(newer_id, newer))
+        assert rows_deleted > 0
+        assert db_rows(flow_id)[0][0] == starts[newer]
+        assert all(revision >= newer or retained for _id, revision, retained in system_checkpoints(flow_id))
+        # A second compaction to the same cut, or a late one to an older cut: nothing is deleted.
+        assert await delete(cut(newer_id, newer)) == (0, 0)
+        assert await delete(cut(older_id, older)) == (0, 0)
+        assert db_rows(flow_id)[0][0] == starts[newer]
+    finally:
+        await engine.dispose()
     assert_rows_contiguous(flow_id, total)
 
 
