@@ -743,6 +743,63 @@ async def test_legacy_save_then_checkpoint_keeps_flow_data_monotonic(servers):
     assert_rows_contiguous(flow_id, head)
 
 
+async def test_one_checkpoint_per_crossing_across_three_processes(servers, tmp_path):
+    """Three processes write one flow past several cadences: each crossing is checkpointed once.
+
+    A checkpoint task claims the flow's checkpoint before it serializes; a task that finds the
+    claim held, or the crossing already checkpointed, skips. Flow.data only moves forward.
+    """
+    mode, engine = servers["mode"], servers["engine"]
+    third = Server(mode, engine, tmp_path, 2)
+    try:
+        await asyncio.to_thread(third.wait_ready)
+        urls = [*servers["urls"], third.url]
+        per_writer = CADENCE * 2 + 2
+        head = per_writer * len(urls)
+        async with httpx.AsyncClient(timeout=60, headers=servers["headers"]) as client:
+            flow_id = await create_flow(client, urls[0])
+            seen: list[int] = []
+            done = asyncio.Event()
+
+            async def sample() -> None:
+                while not done.is_set():
+                    seen.append((await asyncio.to_thread(db_flow, flow_id))[1])
+                    await asyncio.sleep(0.02)
+
+            async def writer(index: int) -> None:
+                for i in range(per_writer):
+                    response = await post_ops(client, urls[index], flow_id, set_field(f"n{index}", f"p{index}-{i}"))
+                    assert response.status_code == 200, response.text
+
+            sampler = asyncio.create_task(sample())
+            await asyncio.gather(*(writer(index) for index in range(len(urls))))
+            await asyncio.sleep(1.0)  # checkpoint tasks
+            done.set()
+            await sampler
+            seen.append(db_flow(flow_id)[1])
+            checkpoints = await bench_records(client, urls, "checkpoint", flow_id)
+            skips = await bench_records(client, urls, "checkpoint_skip", flow_id)
+            graphs = [(await v1_flow(client, url, flow_id))["data"] for url in urls]
+    finally:
+        third.stop()
+
+    assert seen == sorted(seen), seen
+    revisions = sorted(c["revision"] for c in checkpoints)
+    # Once per crossing: no revision twice, a cadence or more apart, at most one per cadence written.
+    assert len(revisions) == len(set(revisions)), checkpoints
+    assert all(b - a >= CADENCE for a, b in pairwise(revisions)), revisions
+    assert 1 <= len(revisions) <= head // CADENCE
+    assert {s["reason"] for s in skips} <= {"claimed", "checkpointed", "not_newer", "not_cached"}, skips
+    stored = [r for _id, r, _retained in system_checkpoints(flow_id) if r > 0]
+    assert sorted(stored) == revisions
+    for graph in graphs[1:]:
+        assert same_graph(engine, graph, graphs[0])
+    assert {values(graphs[0])[f"n{index}"] for index in range(3)} == {
+        f"p{index}-{per_writer - 1}" for index in range(3)
+    }
+    assert_rows_contiguous(flow_id, head)
+
+
 async def test_retention_gap(servers):
     engine, urls = servers["engine"], servers["urls"]
     total = WINDOW + CADENCE * 4

@@ -20,6 +20,8 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 LOCK_NAMESPACE = "flow_oplog:"
+# The checkpoint claim: one checkpoint task per flow across processes. Not the flow's write lock.
+CHECKPOINT_NAMESPACE = "flow_checkpoint:"
 ENVELOPE_VERSION = 1
 
 _LOCK = text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))")
@@ -98,6 +100,13 @@ _LAST_CHECKPOINT = text(
     "SELECT max(operation_revision) FROM flow_version "
     "WHERE flow_id = :flow_id AND version_number IS NULL AND graph_hash IS NOT NULL"
 )
+_CLAIM_CHECKPOINT = text("SELECT pg_try_advisory_xact_lock(hashtextextended(:key, 0))")
+# Flow.current_revision and the newest system checkpoint, without the graph.
+_CHECKPOINT_STATE = text(
+    "SELECT f.current_revision, (SELECT max(v.operation_revision) FROM flow_version v "
+    "WHERE v.flow_id = f.id AND v.version_number IS NULL AND v.graph_hash IS NOT NULL) "
+    "FROM flow f WHERE f.id = :flow_id"
+)
 _FIRST_RETAINED = text("SELECT min(start_revision), max(end_revision) FROM flow_operation WHERE flow_id = :flow_id")
 
 
@@ -108,6 +117,19 @@ def lock_key(flow_id: UUID) -> str:
 async def lock_flow(session: AsyncSession, flow_id: UUID) -> None:
     """Take the flow's operation-log advisory lock until the transaction ends (PostgreSQL)."""
     await session.execute(_LOCK, {"key": lock_key(flow_id)})
+
+
+async def claim_checkpoint(session: AsyncSession, flow_id: UUID) -> bool:
+    """Try to claim the flow's checkpoint until the transaction ends; False when another task holds it."""
+    return bool((await session.execute(_CLAIM_CHECKPOINT, {"key": f"{CHECKPOINT_NAMESPACE}{flow_id}"})).scalar_one())
+
+
+async def checkpoint_state(session: AsyncSession, flow_id: UUID) -> tuple[int, int | None] | None:
+    """``(Flow.current_revision, newest system checkpoint revision)``, or None when the flow is gone."""
+    row = (await session.execute(_CHECKPOINT_STATE, {"flow_id": flow_id})).first()
+    if row is None:
+        return None
+    return int(row[0]), (None if row[1] is None else int(row[1]))
 
 
 async def read_head(session: AsyncSession, flow_id: UUID) -> int:

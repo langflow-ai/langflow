@@ -1,7 +1,13 @@
 """The checkpoint task: ``Flow.data`` and a system checkpoint row every N revisions, off the write path.
 
-Single-flight per flow per process. It takes no advisory lock:
+Single-flight per flow across processes. It does not take the flow's write lock:
 
+0. The task claims the flow's checkpoint with ``pg_try_advisory_xact_lock`` on its
+   own key (``flow_checkpoint:`` and the flow id) in a short transaction it holds
+   until its checkpoint is committed. When another process holds the claim, or the
+   newest system checkpoint is already within a cadence of the revision that started
+   the task, the task skips before it serializes anything (bench ``checkpoint_skip``).
+   The conditional update in step 3 stays the correctness guard.
 1. The graph text at revision R: the cached graph's coalesced serialization
    (``cache``, ``wal``), or ``Flow.data`` at its revision (``nocache``).
 2. The graph hash (engine, worker thread).
@@ -94,48 +100,88 @@ def after_write(flow_id: UUID, end: int) -> None:
 
 async def _run(flow_id: UUID, end: int) -> None:
     try:
-        if flow_id not in _last:
-            async with session_scope() as session:
-                stored = await oplog.last_checkpoint_revision(session, flow_id)
-            note_checkpoint(flow_id, stored or 0)
-        if end - _last[flow_id] < config.checkpoint_cadence():
-            return
-        await checkpoint_now(flow_id)
+        await checkpoint_now(flow_id, end)
     except Exception as exc:  # noqa: BLE001 -- the next write past the cadence retries
         logger.warning("Flow checkpoint failed", flow_id=str(flow_id), error_type=type(exc).__name__)
     finally:
         _running.discard(flow_id)
 
 
-async def checkpoint_now(flow_id: UUID) -> int | None:
-    """Checkpoint the newest graph this process can serialize; return its revision, or None when skipped."""
+def _skip(flow_id: UUID, end: int, reason: str, t0: float, **fields: object) -> None:
+    bench.event(
+        "checkpoint_skip",
+        flow=str(flow_id),
+        target=end,
+        reason=reason,
+        dur=(time.perf_counter() - t0) * 1000,
+        **fields,
+    )
+
+
+async def checkpoint_now(flow_id: UUID, end: int) -> int | None:
+    """Checkpoint the flow for the write that ended at ``end``, unless another process does or did.
+
+    Returns the checkpoint's revision, or None when skipped.
+    """
     started = time.time()
     t0 = time.perf_counter()
+    async with session_scope() as claim:
+        # Held until this block ends, after the checkpoint's own transaction has committed.
+        if not await oplog.claim_checkpoint(claim, flow_id):
+            # The holder checkpoints this crossing; this process tries again a cadence later.
+            note_checkpoint(flow_id, end)
+            _skip(flow_id, end, "claimed", t0)
+            return None
+        state = await oplog.checkpoint_state(claim, flow_id)
+        if state is None:
+            _skip(flow_id, end, "gone", t0)
+            return None
+        current, newest = state
+        note_checkpoint(flow_id, newest or 0)
+        if end - (newest or 0) < config.checkpoint_cadence():
+            # Another process checkpointed this crossing already (a system checkpoint row
+            # implies Flow.current_revision at or past it in WAL).
+            _skip(flow_id, end, "checkpointed", t0, current_revision=current, last_checkpoint=newest)
+            return None
+        revision = await _write_checkpoint(flow_id, end, started, t0)
+    if revision is not None:
+        await _compact_if_due(flow_id)
+    return revision
+
+
+async def _write_checkpoint(flow_id: UUID, end: int, started: float, t0: float) -> int | None:
+    """Serialize, hash and store the newest graph this process can serialize (the caller holds the claim)."""
+    t_claim = time.perf_counter()
     mode = config.write_mode()
     ser_cpu, ser_here = 0.0, False
     if config.uses_cache():
         if CACHE.get(flow_id) is None:
+            _skip(flow_id, end, "not_cached", t0)
             return None
         try:
             # Caught up to the log first: a legacy save appends rows without touching the cache.
             async with session_scope() as session:
                 entry = await entry_at_head(session, flow_id, await oplog.read_head(session, flow_id))
             if entry is None:
+                _skip(flow_id, end, "not_cached", t0)
                 return None
             had = entry.json is not None and entry.json[0] == entry.revision
             revision, text = await entry.serialized()
             # The engine CPU of this revision's serialization, whoever ran it (shared, one per revision).
             ser_cpu, ser_here = entry.json_cpu, not had
         except EntryGoneError:
+            _skip(flow_id, end, "not_cached", t0)
             return None
     else:
         async with session_scope() as session:
             data = await oplog.read_flow_data(session, flow_id)
         if data is None or data.data is None:
+            _skip(flow_id, end, "gone", t0)
             return None
         revision, text = data.current_revision, data.data
     t_ser = time.perf_counter()
     if revision <= _last.get(flow_id, -1):
+        _skip(flow_id, end, "not_newer", t0, revision=revision)
         return None
     engine = config.engine()
     graph_hash, hash_cpu = await call(
@@ -146,7 +192,6 @@ async def checkpoint_now(flow_id: UUID) -> int | None:
         moved = await oplog.checkpoint_flow(session, flow_id, text, revision=revision) if mode == "wal" else False
         inserted = await oplog.insert_checkpoint_row(session, flow_id, text, revision=revision, graph_hash=graph_hash)
         await session.commit()
-        first, last = await oplog.retained_range(session, flow_id)
     t_db = time.perf_counter()
     note_checkpoint(flow_id, revision)
     bench.event(
@@ -156,7 +201,8 @@ async def checkpoint_now(flow_id: UUID) -> int | None:
         start=started,
         end=time.time(),
         dur=(t_db - t0) * 1000,
-        ser=(t_ser - t0) * 1000,
+        claim=(t_claim - t0) * 1000,
+        ser=(t_ser - t_claim) * 1000,
         hash=(t_hash - t_ser) * 1000,
         ser_cpu=ser_cpu,
         ser_by_checkpoint=ser_here,
@@ -166,10 +212,15 @@ async def checkpoint_now(flow_id: UUID) -> int | None:
         row_inserted=inserted,
         bytes=len(text),
     )
+    return revision
+
+
+async def _compact_if_due(flow_id: UUID) -> None:
+    async with session_scope() as session:
+        first, last = await oplog.retained_range(session, flow_id)
     window = get_settings_service().settings.flow_revision_retention_window
     if compaction.due(first, last, window=window, step=config.compaction_step()):
         await compaction.compact(flow_id, last=last, window=window)
-    return revision
 
 
 async def wait_idle() -> None:
