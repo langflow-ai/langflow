@@ -203,6 +203,59 @@ def test_threads_share_one_state():
     assert fields(state.to_dict()) == ("v299", "v299")
 
 
+def value_of(graph: dict) -> object:
+    return graph["nodes"][0]["data"]["node"]["template"]["t"]["value"]
+
+
+def test_a_staged_batch_is_read_only_after_keep():
+    state = ops.GraphState(FLOW)
+    staged = state.stage(set_value("y"), forward=True, backward=True)
+    assert staged == ops.GraphState(FLOW).apply(set_value("y"), forward=True, backward=True)
+    assert state.staged
+    # Readers see the committed graph while the batch waits.
+    assert state.to_dict() == FLOW
+    assert json.loads(state.to_json()) == FLOW
+    state.keep()
+    assert not state.staged
+    assert value_of(state.to_dict()) == "y"
+    assert value_of(json.loads(state.to_json())) == "y"
+
+
+def test_a_dropped_batch_leaves_the_graph_as_it_was():
+    state = ops.GraphState(FLOW)
+    state.stage(set_value("y"))
+    assert state.drop() is True
+    assert not state.staged
+    assert state.to_dict() == FLOW
+    assert state.drop() is False
+    state.apply(set_value("z"))
+    assert value_of(state.to_dict()) == "z"
+
+
+def test_a_staged_batch_refuses_the_next_batch():
+    state = ops.GraphState(FLOW)
+    state.stage(set_value("y"))
+    for call in (
+        lambda: state.apply(set_value("z")),
+        lambda: state.replay(set_value("z")),
+        lambda: state.stage(set_value("z")),
+    ):
+        with pytest.raises(RuntimeError, match="a batch is staged"):
+            call()
+    state.keep()
+    assert value_of(state.to_dict()) == "y"
+
+
+def test_a_refused_batch_is_not_staged():
+    state = ops.GraphState(FLOW)
+    with pytest.raises(ops.EngineError):
+        state.stage([*set_value("y"), {"type": "delete_nodes", "ids": ["missing"]}])
+    assert not state.staged
+    with pytest.raises(RuntimeError, match="no batch is staged"):
+        state.keep()
+    assert state.to_dict() == FLOW
+
+
 def changed(value: object) -> dict:
     flow = json.loads(json.dumps(FLOW))
     flow["nodes"][0]["data"]["node"]["template"]["t"]["value"] = value
