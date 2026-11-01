@@ -1318,6 +1318,7 @@ mod tests {
         };
         let (expected_graph, expected) =
             apply_flow_operations(before.clone(), batch.clone(), options).unwrap();
+        assert!(state.staged_json().is_none(), "nothing is staged yet");
         let staged = state.stage(batch, options).unwrap();
         assert_eq!(staged, expected);
         assert!(state.is_staged());
@@ -1326,10 +1327,24 @@ mod tests {
             serde_json::from_str::<Value>(&state.to_json()).unwrap(),
             before
         );
+        // The staged graph is the graph that keep makes, while the committed graph stays.
+        let staged_text = serde_json::to_string(&state.staged_json().unwrap()).unwrap();
+        assert!(
+            crate::ops::canonical::graphs_equal(
+                &serde_json::from_str(&staged_text).unwrap(),
+                &expected_graph
+            )
+            .unwrap()
+        );
         assert!(state.keep());
         assert!(!state.is_staged());
+        assert_eq!(state.to_json(), staged_text);
         assert!(crate::ops::canonical::graphs_equal(&state.to_value(), &expected_graph).unwrap());
         assert!(!state.keep(), "nothing is staged after keep");
+        assert!(
+            state.staged_json().is_none(),
+            "nothing is staged after keep"
+        );
     }
 
     #[test]

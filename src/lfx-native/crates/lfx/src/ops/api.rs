@@ -113,6 +113,13 @@ pub fn graph_json(state: &GraphState) -> String {
     json_text(&state.json())
 }
 
+/// A graph state with its staged batch as JSON text, as [`json_text`] writes
+/// it ([`GraphState::staged_json`]), or `None` when no batch is staged.
+#[must_use]
+pub fn staged_graph_json(state: &GraphState) -> Option<String> {
+    state.staged_json().map(|json| json_text(&json))
+}
+
 /// JSON text with every character above U+007F written as `\uXXXX`. JSON
 /// text holds such a character only inside a string, where the escape means
 /// the same character.
