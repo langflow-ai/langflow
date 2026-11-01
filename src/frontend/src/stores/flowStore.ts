@@ -660,12 +660,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       }
     });
 
-    const insidePosition = position.paneX
-      ? { x: position.paneX + position.x, y: position.paneY! + position.y }
-      : get().reactFlowInstance!.screenToFlowPosition({
-          x: position.x,
-          y: position.y,
-        });
+    const insidePosition =
+      position.paneX !== undefined
+        ? { x: position.paneX + position.x, y: position.paneY! + position.y }
+        : get().reactFlowInstance!.screenToFlowPosition({
+            x: position.x,
+            y: position.y,
+          });
 
     let internalPostionDictionary = get().positionDictionary;
     if (Object.keys(internalPostionDictionary).length === 0) {
