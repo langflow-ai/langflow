@@ -751,7 +751,7 @@ async def test_legacy_saves_compact_through_the_checkpoint_task(servers):
 
 async def test_compaction_deletes_nothing_after_a_concurrent_purge_or_compaction(servers):
     """The locked deletes check that the cut's row and checkpoint are still there; otherwise they are no-ops."""
-    from langflow.services.flow_multiplayer.compaction import Cut, delete_checkpoints, delete_rows
+    from langflow.services.flow_multiplayer.compaction import CUT, CUT_DATA, Cut, delete_checkpoints, delete_rows
     from sqlalchemy.ext.asyncio import create_async_engine
     from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -792,6 +792,13 @@ async def test_compaction_deletes_nothing_after_a_concurrent_purge_or_compaction
         return rows, checkpoints
 
     try:
+        # The cut is picked without any graph, then only its graph is read, and it hashes to the stored hash.
+        async with AsyncSession(engine) as session:
+            picked = (await session.execute(CUT, {"flow_id": flow, "newest": newer})).one()
+            assert len(picked) == 4
+            assert (picked[0], picked[1], picked[3]) == (newer_id, newer, starts[newer])
+            text = (await session.execute(CUT_DATA, {"checkpoint_id": picked[0]})).scalar_one()
+        assert engine_for(servers["engine"]).GraphPlain(text.encode()).graph_hash() == picked[2]
         # The checkpoint is gone (a purge deleted it): nothing is deleted.
         assert await delete(cut(uuid.uuid4(), newer)) == (0, 0)
         assert db_rows(flow_id)[0][0] == 1

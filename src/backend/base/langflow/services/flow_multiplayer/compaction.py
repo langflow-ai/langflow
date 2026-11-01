@@ -8,8 +8,8 @@ it, as the legacy maintenance does (``maintenance.compact_to``): the row
 ``s..k`` stays, every row ending before ``s`` goes, and so do the system
 checkpoints before ``k`` that are not retained.
 
-1. Without a lock: one statement picks the cut and returns the checkpoint's
-   text, and the engine checks its hash in a worker thread (a large call).
+1. Without a lock: one statement picks the cut, a second reads that one
+   checkpoint's text, and the engine checks its hash in a worker thread (a large call).
    This needs no lock: a checkpoint row never changes, and when it is deleted
    meanwhile the guarded delete of step 2 deletes nothing.
 2. One short transaction, the only work under the lock: the advisory lock,
@@ -42,9 +42,10 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 # The newest system checkpoint that ends a row, is at or before :newest, and is past the first retained row's end.
+# No graph here: PostgreSQL computes the select list before the sort, so it would read every candidate's graph.
 CUT = text(
     """
-    SELECT v.id, v.operation_revision, v.graph_hash, v.data::text, o.start_revision
+    SELECT v.id, v.operation_revision, v.graph_hash, o.start_revision
       FROM flow_version v
       JOIN flow_operation o ON o.flow_id = v.flow_id AND o.end_revision = v.operation_revision
       JOIN flow f ON f.id = v.flow_id
@@ -56,6 +57,8 @@ CUT = text(
      LIMIT 1
     """
 )
+# The cut's graph, for that one row only.
+CUT_DATA = text("SELECT data::text FROM flow_version WHERE id = :checkpoint_id")
 # The rows before the cut's row, only while that row and the checkpoint are still there.
 DELETE_ROWS = text(
     """
@@ -98,13 +101,15 @@ async def compact(flow_id: UUID, *, last: int, window: int) -> int | None:
     t0 = time.perf_counter()
     async with session_scope() as session:
         row = (await session.execute(CUT, {"flow_id": flow_id, "newest": last - window})).first()
+        cut = None if row is None else Cut(row[0], int(row[1]), row[2], int(row[3]))
+        data = None
+        if cut is not None:
+            data = (await session.execute(CUT_DATA, {"checkpoint_id": cut.checkpoint_id})).scalar_one_or_none()
     t_plan = time.perf_counter()
-    if row is None:
+    if cut is None or data is None:
+        # No cut, or its checkpoint was deleted meanwhile (a concurrent compaction or purge).
         bench.event("compaction", flow=str(flow_id), cutoff=None, start=started, dur=(t_plan - t0) * 1000)
         return None
-    cut = Cut(checkpoint_id=row[0], revision=int(row[1]), graph_hash=row[2], first_kept=int(row[4]))
-    data: str = row[3]
-    del row
     verify_cpu = await _verify(flow_id, cut, data)
     del data
     t_verify = time.perf_counter()
