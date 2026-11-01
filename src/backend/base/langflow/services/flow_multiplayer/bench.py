@@ -154,23 +154,6 @@ def spawn(coro: Any) -> asyncio.Task:
     return asyncio.get_running_loop().create_task(coro, context=contextvars.Context())
 
 
-class MeasuredEngine:
-    """The engine object, with every function call measured as ``eng_<function>`` (legacy write path)."""
-
-    def __init__(self, engine: Any) -> None:
-        self._engine = engine
-
-    def __getattr__(self, name: str) -> Any:
-        value = getattr(self._engine, name)
-        if not callable(value) or isinstance(value, type):
-            return value
-
-        def measured(*args: Any, **kwargs: Any) -> Any:
-            return engine_call(name, value, *args, **kwargs)
-
-        return measured
-
-
 def event(kind: str, **fields: Any) -> None:
     if config.bench_enabled():
         _records.append({"kind": kind, "pid": os.getpid(), **fields})

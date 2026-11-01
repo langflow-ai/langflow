@@ -163,7 +163,7 @@ async def write_checkpoint(session: AsyncSession, flow: Flow) -> FlowVersion | N
             revision=flow.current_revision,
         )
         return None
-    checkpoint = checkpoint_system(flow, flow.data, revision=flow.current_revision)
+    checkpoint = await checkpoint_system(flow, flow.data, revision=flow.current_revision)
     session.add(checkpoint)
     await session.flush()
     return checkpoint
@@ -236,7 +236,7 @@ async def compact_to(session: AsyncSession, flow: Flow, checkpoint: FlowVersion,
         # Chosen without its graph (``_cutoff_checkpoint``): read it only to compact.
         await session.refresh(checkpoint, attribute_names=["data"])
     # It becomes the only anchor for everything after it, so it must still be intact.
-    verify_checkpoint(checkpoint)
+    await verify_checkpoint(checkpoint)
     revision = checkpoint.operation_revision
     ending_row = (
         await session.exec(

@@ -61,6 +61,16 @@ async def call(function: Any, *args: Any, large: bool, name: str, **kwargs: Any)
     return bench.engine_call(name, function, *args, **kwargs)
 
 
+async def whole_flow(name: str, *args: Any, **kwargs: Any) -> Any:
+    """Run the engine function ``name`` on whole flows in a worker thread (both engines alike).
+
+    For the legacy save path (``validate``, ``repair``, ``ops_diff``, ``graph_hash``,
+    ``graphs_equal``, ``apply``): each call reads or builds a whole graph, so it is large.
+    Records ``eng_<name>`` on the request.
+    """
+    return await call(getattr(config.engine(), name), *args, large=True, name=name, **kwargs)
+
+
 async def uncancellable(awaitable: Any) -> Any:
     """Await a worker-thread engine call, or a step that must finish once begun, even when the caller is cancelled.
 

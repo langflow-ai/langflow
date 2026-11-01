@@ -23,7 +23,6 @@ from langflow.services.flow_history.errors import (
     FlowRevisionNotRetainedError,
 )
 from langflow.services.flow_history.store import latest_anchor_at_or_before, rows_covering
-from langflow.services.flow_multiplayer import config as multiplayer
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -85,13 +84,13 @@ async def _reconstruct(
     anchor = await latest_anchor_at_or_before(session, flow_id, revision)
     if anchor is not None and anchor.operation_revision == revision:
         if verify_anchor:
-            verify_checkpoint(anchor)
+            await verify_checkpoint(anchor)
         return anchor.data
     try:
         if anchor is None:
             raise FlowHistoryCorruptionError(flow_id, "no checkpoint to replay from", revision=revision)
         if verify_anchor:
-            verify_checkpoint(anchor)
+            await verify_checkpoint(anchor)
         return await replay_from(session, flow_id, anchor, revision)
     except FlowHistoryCorruptionError:
         # Below the cutoff, missing history was compacted away on purpose.
@@ -101,12 +100,12 @@ async def _reconstruct(
         raise
 
 
-def verify_checkpoint(checkpoint: FlowVersion) -> None:
-    """Raise when a checkpoint's graph no longer hashes to its stored hash."""
+async def verify_checkpoint(checkpoint: FlowVersion) -> None:
+    """Raise when a checkpoint's graph no longer hashes to its stored hash (worker thread: a whole graph)."""
     try:
-        from langflow.services.flow_multiplayer.bench import MeasuredEngine
+        from langflow.services.flow_multiplayer.cache import whole_flow
 
-        matches = MeasuredEngine(multiplayer.engine()).graph_hash(checkpoint.data) == checkpoint.graph_hash
+        matches = await whole_flow("graph_hash", checkpoint.data) == checkpoint.graph_hash
     except FlowOperationError:
         matches = False
     if not matches:
@@ -118,9 +117,9 @@ def verify_checkpoint(checkpoint: FlowVersion) -> None:
 async def replay_from(session: AsyncSession, flow_id: UUID, anchor: FlowVersion, revision: int) -> dict[str, Any]:
     """Apply the recorded operations after ``anchor`` up to and including ``revision``."""
     anchor_revision = anchor.operation_revision or 0
-    from langflow.services.flow_multiplayer.bench import MeasuredEngine
+    # Each apply reads and builds the whole graph: a worker thread, as for the multiplayer path.
+    from langflow.services.flow_multiplayer.cache import whole_flow
 
-    engine = MeasuredEngine(multiplayer.engine())
     graph: dict[str, Any] = anchor.data
     expected = anchor_revision + 1
     for row in await rows_covering(session, flow_id, after=anchor_revision, through=revision):
@@ -133,7 +132,9 @@ async def replay_from(session: AsyncSession, flow_id: UUID, anchor: FlowVersion,
             if recorded.revision != expected:
                 raise FlowHistoryCorruptionError(flow_id, "missing revisions", revision=expected)
             try:
-                graph = engine.apply(graph, [dump_flow_operation(recorded.operation)], forward=False)["flow_data"]
+                graph = (await whole_flow("apply", graph, [dump_flow_operation(recorded.operation)], forward=False))[
+                    "flow_data"
+                ]
             except FlowOperationError as exc:
                 raise FlowHistoryCorruptionError(flow_id, "operation does not apply", revision=expected) from exc
             expected += 1

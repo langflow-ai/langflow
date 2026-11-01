@@ -8,6 +8,7 @@ containment over a GIN index and the flow lock is a real row lock.
 from __future__ import annotations
 
 import asyncio
+import threading
 from uuid import uuid4
 
 import pytest
@@ -143,3 +144,63 @@ async def test_compaction_deletes_old_rows_through_the_append_only_trigger(engin
             assert graphs_equal(graph, _graph(str(revision)))
         with pytest.raises(FlowRevisionNotRetainedError):
             await reconstruct_graph(session, flow_uuid, cutoff - 1, latest_revision=flow.latest_revision)
+
+
+# Whole-flow engine calls of a legacy save; each must run in a worker thread, never on the event loop.
+WHOLE_FLOW_CALLS = frozenset({"validate", "repair", "ops_diff", "graph_hash", "graphs_equal", "apply", "GraphState"})
+
+
+class _ThreadSpy:
+    """The engine object, recording for each whole-flow call whether it ran on the event loop's thread."""
+
+    def __init__(self, real, loop_thread: int, calls: list[tuple[str, bool]]) -> None:
+        self._real = real
+        self._loop_thread = loop_thread
+        self._calls = calls
+
+    def __getattr__(self, name: str):
+        value = getattr(self._real, name)
+        if name not in WHOLE_FLOW_CALLS:
+            return value
+
+        def spy(*args, **kwargs):
+            self._calls.append((name, threading.get_ident() == self._loop_thread))
+            return value(*args, **kwargs)
+
+        return spy
+
+
+@pytest.mark.parametrize("mode", ["nocache", "cache", "wal"])
+async def test_legacy_save_runs_whole_flow_engine_calls_off_the_event_loop(engine, flow_id, mode, monkeypatch):
+    """A legacy save (start of history, a later save, a stale token with an unchanged graph) never blocks the loop.
+
+    The multiplayer path runs large engine calls in a worker thread; the legacy path must too,
+    or one 14 MB save stalls every other request of the process for seconds.
+    """
+    if mode != "nocache" and engine.dialect.name != "postgresql":
+        pytest.skip("modes cache and wal need PostgreSQL")
+    from langflow.services.flow_multiplayer import checkpoint, config
+    from langflow.services.flow_multiplayer.cache import CACHE
+
+    calls: list[tuple[str, bool]] = []
+    spy = _ThreadSpy(config.engine(), threading.get_ident(), calls)
+    monkeypatch.setattr(config, "engine", lambda: spy)
+    monkeypatch.setattr(config, "write_mode", lambda: mode)
+    # The checkpoint task runs after the commit, outside this test's database.
+    monkeypatch.setattr(checkpoint, "after_write", lambda *_args: None)
+    CACHE.clear()
+    flow_uuid, actor_id = flow_id
+    try:
+        await _write(engine, flow_uuid, actor_id, _graph("one"))
+        await _write(engine, flow_uuid, actor_id, _graph("two"))
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            flow = await session.get(Flow, flow_uuid)
+            await lock_flow_for_update(session, flow)
+            await write_flow_graph(session, flow, _graph("two"), actor_id=actor_id, expected_version_token=uuid4())
+            await session.commit()
+    finally:
+        CACHE.clear()
+
+    names = {name for name, _on_loop in calls}
+    assert {"validate", "ops_diff", "graph_hash", "graphs_equal"} <= names, calls
+    assert [name for name, on_loop in calls if on_loop] == []
