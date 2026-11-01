@@ -16,12 +16,14 @@
 //!
 //! JSON text goes through `serde_json`'s parser and writer, by the
 //! [`serde::Deserialize`] and [`serde::Serialize`] implementations here.
+//! [`FiniteValue`] parses text as [`Value`] does, but refuses a number that
+//! is infinite as a double, as reading a Python `float` refuses Infinity.
 
 use std::fmt;
 use std::ops::{Index, IndexMut};
 use std::str::FromStr;
 
-use serde::de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
+use serde::de::{self, Deserialize, DeserializeSeed, Deserializer, MapAccess, SeqAccess, Visitor};
 use serde::ser::{Serialize, SerializeMap, Serializer};
 
 /// A JSON value.
@@ -957,13 +959,40 @@ const NUMBER_TOKEN: &str = "$serde_json::private::Number";
 
 impl<'de> Deserialize<'de> for Value {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Value, D::Error> {
-        deserializer.deserialize_any(ValueVisitor)
+        deserializer.deserialize_any(ValueVisitor::<false>)
     }
 }
 
-struct ValueVisitor;
+/// Why [`FiniteValue`] refuses a number.
+pub const NOT_FINITE: &str = "NaN and Infinity are not JSON numbers";
 
-impl<'de> Visitor<'de> for ValueVisitor {
+/// A value parsed from JSON text with every number finite as a double. Text
+/// with a number too large for a double, such as `1e400`, does not parse
+/// ([`NOT_FINITE`]). An integer too large for a double still parses: it keeps
+/// its digits, as a Python `int` does.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FiniteValue(pub Value);
+
+impl<'de> Deserialize<'de> for FiniteValue {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<FiniteValue, D::Error> {
+        deserializer
+            .deserialize_any(ValueVisitor::<true>)
+            .map(FiniteValue)
+    }
+}
+
+/// Builds a [`Value`]; with `FINITE`, refuses a number that is not finite.
+struct ValueVisitor<const FINITE: bool>;
+
+impl<'de, const FINITE: bool> DeserializeSeed<'de> for ValueVisitor<FINITE> {
+    type Value = Value;
+
+    fn deserialize<D: Deserializer<'de>>(self, deserializer: D) -> Result<Value, D::Error> {
+        deserializer.deserialize_any(self)
+    }
+}
+
+impl<'de, const FINITE: bool> Visitor<'de> for ValueVisitor<FINITE> {
     type Value = Value;
 
     fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -1003,12 +1032,12 @@ impl<'de> Visitor<'de> for ValueVisitor {
     }
 
     fn visit_some<D: Deserializer<'de>>(self, deserializer: D) -> Result<Value, D::Error> {
-        Value::deserialize(deserializer)
+        deserializer.deserialize_any(self)
     }
 
     fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Value, A::Error> {
         let mut items = Vec::with_capacity(seq.size_hint().unwrap_or(0));
-        while let Some(item) = seq.next_element()? {
+        while let Some(item) = seq.next_element_seed(ValueVisitor::<FINITE>)? {
             items.push(item);
         }
         Ok(Value::Array(items))
@@ -1019,12 +1048,15 @@ impl<'de> Visitor<'de> for ValueVisitor {
         while let Some(key) = access.next_key::<String>()? {
             if map.is_empty() && key == NUMBER_TOKEN {
                 let text: String = access.next_value()?;
-                return text
+                let number: Number = text
                     .parse()
-                    .map(Value::Number)
-                    .map_err(|_| de::Error::custom("not a JSON number"));
+                    .map_err(|_| de::Error::custom("not a JSON number"))?;
+                if FINITE && !number.is_integer() && number.as_f64().is_none_or(f64::is_infinite) {
+                    return Err(de::Error::custom(NOT_FINITE));
+                }
+                return Ok(Value::Number(number));
             }
-            let value = access.next_value()?;
+            let value = access.next_value_seed(ValueVisitor::<FINITE>)?;
             // A repeated key keeps its first position and its last value, as serde_json.
             map.insert(key, value);
         }
@@ -1057,6 +1089,20 @@ mod tests {
             items[4].as_number().unwrap().as_i128(),
             Some(12_345_678_901_234_567_890_123)
         );
+    }
+
+    #[test]
+    fn a_finite_value_refuses_a_number_too_large_for_a_double() {
+        for text in ["1e400", "[1, -1e400]", r#"{"a": {"b": [1E999]}}"#] {
+            let error = serde_json::from_str::<FiniteValue>(text).unwrap_err();
+            assert!(error.to_string().starts_with(NOT_FINITE), "{text}: {error}");
+            // Value keeps the number's text.
+            serde_json::from_str::<Value>(text).unwrap();
+        }
+        let digits = format!("1{}", "0".repeat(309));
+        let text = format!(r#"[{digits}, 1.5e308, 1e-400, {{"a": 1}}]"#);
+        let FiniteValue(value) = serde_json::from_str(&text).unwrap();
+        assert_eq!(value, parse(&text));
     }
 
     #[test]

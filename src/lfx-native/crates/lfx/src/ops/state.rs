@@ -27,7 +27,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
 
-use crate::value::{Map, Value};
+use crate::value::{FiniteValue, Map, Value};
 use indexmap::{IndexMap, IndexSet};
 use serde::ser::{Serialize, SerializeMap, Serializer};
 
@@ -750,7 +750,7 @@ impl FromStr for GraphState {
     type Err = Error;
 
     fn from_str(text: &str) -> Result<Self> {
-        Self::new(parse_json(text)?)
+        Self::new(parse_finite_json(text)?)
     }
 }
 
@@ -838,8 +838,36 @@ fn take_list(root: &mut Map, key: &str) -> Vec<Value> {
 
 /// Parse JSON text, reporting a parse failure as an invalid graph.
 pub(crate) fn parse_json(text: &str) -> Result<Value> {
+    serde_json::from_str(text).map_err(|error| graph_not_json(&error))
+}
+
+/// Parse JSON text as [`parse_json`] does, refusing a number that is not
+/// finite as a double ([`FiniteValue`]): for a graph that the engine holds
+/// and changes, as a Python `float` that is not finite is refused.
+pub(crate) fn parse_finite_json(text: &str) -> Result<Value> {
     serde_json::from_str(text)
-        .map_err(|error| Error::graph_message(format!("flow data is not valid JSON: {error}")))
+        .map(|FiniteValue(value)| value)
+        .map_err(|error| graph_not_json(&error))
+}
+
+fn graph_not_json(error: &serde_json::Error) -> Error {
+    Error::graph_message(format!(
+        "flow data is not valid JSON: {}",
+        parse_problem(error)
+    ))
+}
+
+/// Why JSON text does not parse. A value the parser read but refused, such
+/// as a number that is not finite, is named without its place in the text,
+/// as a Python value that breaks the same limit is.
+pub(crate) fn parse_problem(error: &serde_json::Error) -> String {
+    let text = error.to_string();
+    if error.is_data()
+        && let Some((problem, _)) = text.rsplit_once(" at line ")
+    {
+        return problem.to_owned();
+    }
+    text
 }
 
 /// The value at a path of object keys and array indexes.
