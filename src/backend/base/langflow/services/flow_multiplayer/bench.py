@@ -29,6 +29,18 @@ with the engine CPU of their serialization and hash. Background tasks
 (checkpoints, maintenance, the sampler) run in an empty context, so they never
 add to a request's record.
 A sampler records process CPU time and RSS every second (``kind: "sample"``).
+Compactions (``kind: "compaction"``) record start, end and the time of every
+phase, with ``lock_held`` from the advisory lock granted to the commit's end.
+
+Two probes look for event-loop stalls, from the first measured request on:
+
+- ``kind: "gc"``: every gen-2 collection and any collection over
+  ``GC_RECORD_MS``, with its start ``t``, ``gen``, ``dur`` and ``collected``;
+  one ``kind: "gc_startup"`` record has the frozen object count and the
+  objects in generation 2 at that moment.
+- ``kind: "lag"``: the loop woke more than ``LAG_RECORD_MS`` late from a
+  ``LAG_INTERVAL`` sleep; ``t`` is when the stall began (about), ``lag`` its length.
+
 Everything stays in memory until the bench export endpoint reads it.
 """
 
@@ -37,6 +49,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import contextvars
+import gc
 import os
 import time
 from contextvars import ContextVar
@@ -49,8 +62,12 @@ from langflow.services.flow_multiplayer import config
 _current: ContextVar[dict[str, Any] | None] = ContextVar("flow_ops_bench_record", default=None)
 _records: list[dict[str, Any]] = []
 _sampler: asyncio.Task | None = None
+_lag_probe: asyncio.Task | None = None
 _PAGE = os.sysconf("SC_PAGE_SIZE") if hasattr(os, "sysconf") else 4096
 SAMPLE_INTERVAL = 1.0
+LAG_INTERVAL = 0.01
+LAG_RECORD_MS = 50.0
+GC_RECORD_MS = 20.0
 PATH_PREFIXES = ("/api/v2/flows", "/api/v1/flows")
 
 
@@ -178,10 +195,78 @@ async def _sample_loop() -> None:
         await asyncio.sleep(SAMPLE_INTERVAL)
 
 
+async def _lag_loop() -> None:
+    while True:
+        t0 = time.perf_counter()
+        await asyncio.sleep(LAG_INTERVAL)
+        lag = (time.perf_counter() - t0 - LAG_INTERVAL) * 1000
+        if lag > LAG_RECORD_MS:
+            now = time.time()
+            _records.append({"kind": "lag", "pid": os.getpid(), "t": now - lag / 1000, "end": now, "lag": lag})
+
+
+class _GcProbe:
+    """A ``gc.callbacks`` entry: two clock reads per collection, a record only for gen 2 or a slow one."""
+
+    __slots__ = ("started", "wall")
+
+    def __init__(self) -> None:
+        self.started: float | None = None
+        self.wall = 0.0
+
+    def __call__(self, phase: str, info: dict[str, Any]) -> None:
+        if phase == "start":
+            self.started = time.perf_counter()
+            self.wall = time.time()
+            return
+        if self.started is None:
+            return
+        dur = (time.perf_counter() - self.started) * 1000
+        self.started = None
+        generation = info.get("generation")
+        if generation == 2 or dur > GC_RECORD_MS:  # noqa: PLR2004
+            _records.append(
+                {
+                    "kind": "gc",
+                    "pid": os.getpid(),
+                    "t": self.wall,
+                    "gen": generation,
+                    "dur": dur,
+                    "collected": info.get("collected"),
+                    "uncollectable": info.get("uncollectable"),
+                }
+            )
+
+
+_gc_probe: _GcProbe | None = None
+
+
+def _install_gc_probe() -> None:
+    global _gc_probe  # noqa: PLW0603
+    if _gc_probe is not None:
+        return
+    _gc_probe = _GcProbe()
+    _records.append(
+        {
+            "kind": "gc_startup",
+            "pid": os.getpid(),
+            "t": time.time(),
+            "freeze_count": gc.get_freeze_count(),
+            "gen2_objects": len(gc.get_objects(generation=2)),
+            "count": list(gc.get_count()),
+            "threshold": list(gc.get_threshold()),
+        }
+    )
+    gc.callbacks.append(_gc_probe)
+
+
 def _ensure_sampler() -> None:
-    global _sampler  # noqa: PLW0603
+    global _sampler, _lag_probe  # noqa: PLW0603
     if _sampler is None or _sampler.done():
+        _install_gc_probe()
         _sampler = spawn(_sample_loop())
+    if _lag_probe is None or _lag_probe.done():
+        _lag_probe = spawn(_lag_loop())
 
 
 def export_jsonl() -> bytes:
