@@ -57,6 +57,7 @@ from langflow.services.deps import get_settings_service, get_variable_service
 from langflow.services.flow_history.errors import FlowHistoryError
 from langflow.services.flow_history.recorder import (
     GraphWriteResult,
+    refresh_after_write,
     refuse_unreadable_graph,
     response_version_token,
     write_flow_graph,
@@ -880,7 +881,7 @@ async def _update_existing_flow(
 
     session.add(existing_flow)
     await session.flush()
-    await session.refresh(existing_flow)
+    await refresh_after_write(session, existing_flow, graph_write)
     await stage_flow_succeeded(
         session,
         action=audit_vocab.FLOW_WRITE,
@@ -1029,7 +1030,7 @@ async def _patch_flow(
 
     session.add(db_flow)
     await session.flush()
-    await session.refresh(db_flow)
+    await refresh_after_write(session, db_flow, graph_write)
     await stage_flow_succeeded(
         session,
         action=audit_vocab.FLOW_WRITE,

@@ -625,6 +625,9 @@ async def test_legacy_save(servers):
         )
         assert saved.status_code == 200, saved.text
         assert saved.json()["history"]["start_revision"] == 3
+        # The answer is the saved graph at the new head in every mode (in WAL, not the checkpoint's Flow.data).
+        assert saved.json()["current_revision"] == 3
+        assert saved.json()["data"]["nodes"][1]["data"]["node"]["template"]["t"]["value"] == "legacy"
         stored_after = db_flow(flow_id)
         with psycopg.connect(ADMIN_URL) as conn:
             stored_name = conn.execute("SELECT name FROM flow WHERE id = %s", (flow_id,)).fetchone()[0]
@@ -650,6 +653,12 @@ async def test_legacy_save(servers):
         blind = await client.patch(f"{urls[0]}/api/v1/flows/{flow_id}", json={"data": data})
         assert blind.status_code == 200, blind.text
         assert blind.json()["history"]["start_revision"] == 5
+        assert same_graph(engine, blind.json()["data"], data)
+        # A save without a graph answers with the graph at the head too.
+        renamed = await client.patch(f"{urls[1]}/api/v1/flows/{flow_id}", json={"name": f"{new_name}-2"})
+        assert renamed.status_code == 200, renamed.text
+        assert renamed.json()["current_revision"] == 5
+        assert same_graph(engine, renamed.json()["data"], data)
         for url in urls:
             graph = (await v1_flow(client, url, flow_id))["data"]
             assert same_graph(engine, graph, data)

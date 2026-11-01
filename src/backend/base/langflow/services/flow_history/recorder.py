@@ -176,6 +176,45 @@ async def graph_at_head(session: AsyncSession, flow_id: UUID, head: int) -> byte
     raise FlowHistoryError(msg)
 
 
+def _wal_reads_log(session: AsyncSession, flow: Flow) -> bool:
+    """Whether the flow's current graph is the log's head and not ``Flow.data`` (WAL, as the v1 read)."""
+    return _wal(session) and flow.user_id is not None and flow_history_enabled()
+
+
+async def refresh_after_write(session: AsyncSession, flow: Flow, written: GraphWriteResult | None) -> None:
+    """Refresh ``flow`` after a v1 write, keeping the current graph on it for the answer and follow-up work.
+
+    In WAL mode ``Flow.data`` and the row's revisions are the checkpoint's, so a plain refresh
+    would put an old graph on the flow. Every column but ``data`` is refreshed; ``data`` is the
+    graph at the log's head and the revisions are the head, as the v1 read answers:
+
+    - after this write recorded a change, the graph it saved (the head is this transaction's own
+      rows, not committed yet, so it is not read from the cache, which holds committed revisions only);
+    - otherwise (no graph in the request, or an unchanged graph) the committed head, from the cached
+      graph's coalesced serialization, parsed in a worker thread.
+
+    Never writes ``Flow.data``.
+    """
+    if not _wal_reads_log(session, flow):
+        await session.refresh(flow)
+        return
+    from sqlalchemy import inspect as sa_inspect
+
+    columns = [attr.key for attr in sa_inspect(type(flow)).column_attrs if attr.key != "data"]
+    await session.refresh(flow, attribute_names=columns)
+    head = await log_head(session, flow.id)
+    graph = written.head_graph if written is not None else None
+    if graph is None:
+        import anyio
+        import orjson
+
+        text = await graph_at_head(session, flow.id, head)
+        graph = await anyio.to_thread.run_sync(orjson.loads, text)
+    set_committed_value(flow, "data", graph)
+    set_committed_value(flow, "latest_revision", max(head, flow.latest_revision))
+    set_committed_value(flow, "current_revision", head)
+
+
 @dataclass
 class GraphWriteResult:
     """What a graph write recorded, for the response."""
@@ -186,6 +225,8 @@ class GraphWriteResult:
     end_revision: int | None = None
     flow_repaired: bool = False
     graph_repairs: list[dict[str, Any]] = field(default_factory=list)
+    # WAL mode: the graph at the log's head after this write (Flow.data stays the checkpoint's).
+    head_graph: Any = field(default=None, repr=False)
 
 
 def normalize_absent_graph(flow_data: Any) -> Any:
@@ -345,6 +386,9 @@ async def write_flow_graph(
         flow.data = base
     else:
         flow.data = target
+    if wal:
+        # The diff is checked by replay: the graph at the head this write makes is ``target``.
+        result.head_graph = target
     if started and from_cache and not wal and flow.current_revision != head:
         # The stored graph becomes the graph at the head.
         flow.latest_revision = flow.current_revision = head
