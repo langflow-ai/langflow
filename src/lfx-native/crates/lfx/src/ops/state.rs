@@ -190,6 +190,25 @@ impl<V: Clone> Layered<V> {
         self.stored.values()
     }
 
+    /// The entries with a staged batch's layer, in the order [`Self::fold`]
+    /// gives them: the stored entries that stay, each as the batch wrote it,
+    /// then the entries the batch added.
+    fn staged_entries(&self) -> impl Iterator<Item = (&String, &V)> {
+        let kept = self
+            .stored
+            .iter()
+            .filter_map(|(key, value)| match self.layer.get(key) {
+                Some(written) => written.as_ref().map(|written| (key, written)),
+                None => Some((key, value)),
+            });
+        let added = self
+            .layer
+            .iter()
+            .filter(|(key, _)| !self.stored.contains_key(*key))
+            .filter_map(|(key, written)| written.as_ref().map(|value| (key, value)));
+        kept.chain(added)
+    }
+
     /// The entries, without copying them. Only between batches.
     fn into_values(self) -> impl Iterator<Item = V> {
         debug_assert!(self.layer.is_empty(), "read between batches only");
@@ -569,6 +588,17 @@ impl GraphState {
         GraphJson(self)
     }
 
+    /// The graph with the staged batch, to serialize as JSON: what
+    /// [`GraphState::json`] writes after [`GraphState::keep`], without
+    /// changing the committed graph. `None` when no batch is staged.
+    ///
+    /// A server writes the new graph in the transaction that records the
+    /// batch, and keeps the batch only after that transaction commits.
+    #[must_use]
+    pub fn staged_json(&self) -> Option<impl Serialize + '_> {
+        self.staged.then_some(StagedJson(self))
+    }
+
     /// The graph's top-level keys in order, each with what [`GraphState::to_value`]
     /// puts there, borrowed from the graph: for a binding that builds the graph
     /// in its own language without a copy.
@@ -776,6 +806,57 @@ impl Serialize for GraphJson<'_> {
             }
         }
         map.end()
+    }
+}
+
+/// Writes a [`GraphState`] with its staged batch ([`GraphState::staged_json`]).
+struct StagedJson<'s>(&'s GraphState);
+
+impl Serialize for StagedJson<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+        let state = self.0;
+        let mut map = serializer.serialize_map(Some(state.root.len()))?;
+        for (key, value) in &state.root {
+            match key.as_str() {
+                "nodes" => map.serialize_entry(key, &StagedNodesJson(state))?,
+                "edges" => map.serialize_entry(key, &StagedEdgesJson(state))?,
+                _ => map.serialize_entry(key, value)?,
+            }
+        }
+        map.end()
+    }
+}
+
+struct StagedNodesJson<'s>(&'s GraphState);
+
+impl Serialize for StagedNodesJson<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+        let graph = &self.0.graph;
+        serializer.collect_seq(graph.nodes.staged_entries().map(|(id, node)| {
+            match graph.fields.node(id) {
+                // A node the batch writes: a copy with the writes, as the fold makes them.
+                Some(writes) => {
+                    let mut value = node.as_value().clone();
+                    fields::make_writes(&mut value, writes.clone(), &mut Vec::new(), None);
+                    Cow::Owned(value)
+                }
+                None => Cow::Borrowed(node.as_value()),
+            }
+        }))
+    }
+}
+
+struct StagedEdgesJson<'s>(&'s GraphState);
+
+impl Serialize for StagedEdgesJson<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+        serializer.collect_seq(
+            self.0
+                .graph
+                .edges
+                .staged_entries()
+                .map(|(_, edge)| edge.as_map()),
+        )
     }
 }
 

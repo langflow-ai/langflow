@@ -290,6 +290,22 @@ def test_a_staged_batch_is_read_only_after_keep():
     assert value_of(json.loads(state.to_json())) == "y"
 
 
+def test_the_staged_graph_is_the_graph_keep_makes():
+    state = ops.GraphState(FLOW)
+    with pytest.raises(RuntimeError, match="no batch is staged"):
+        state.to_json(staged=True)
+    state.stage(set_value("y"))
+    staged = state.to_json(staged=True)
+    assert value_of(json.loads(staged)) == "y"
+    assert value_of(json.loads(state.to_json())) == "x"
+    state.keep()
+    assert state.to_json() == staged
+    state.stage(set_value("z"))
+    state.drop()
+    with pytest.raises(RuntimeError, match="no batch is staged"):
+        state.to_json(staged=True)
+
+
 def test_a_dropped_batch_leaves_the_graph_as_it_was():
     state = ops.GraphState(FLOW)
     state.stage(set_value("y"))

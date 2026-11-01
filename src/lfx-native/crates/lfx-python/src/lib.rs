@@ -590,9 +590,18 @@ impl GraphState {
     }
 
     /// The graph as JSON text: the committed graph, without a staged batch.
-    fn to_json(&self, py: Python<'_>) -> PyResult<String> {
+    /// With `staged`, the graph with the staged batch, as `keep` will make
+    /// it: a server writes it in the transaction that records the batch.
+    /// Raises `RuntimeError` when `staged` is true and no batch is staged.
+    #[pyo3(signature = (*, staged = false))]
+    fn to_json(&self, py: Python<'_>, staged: bool) -> PyResult<String> {
         let work = |state: &lfx::ops::GraphState| Work::of_items(state.item_count());
-        self.read(py, work, api::graph_json).map_err(poisoned)
+        if !staged {
+            return self.read(py, work, api::graph_json).map_err(poisoned);
+        }
+        self.read(py, work, api::staged_graph_json)
+            .map_err(poisoned)?
+            .ok_or_else(|| refused(Refused::NotStaged))
     }
 
     /// The graph as a dict, built from the loaded graph without a copy: the
