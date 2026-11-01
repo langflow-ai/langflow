@@ -2,9 +2,11 @@
 
 Each benchmark gives every engine the same inputs. It runs warm (after a few
 runs that are not counted) and reports the median, the 90th percentile, the
-fastest and the slowest of many runs, in milliseconds. Memory per loaded
-graph state is measured in a fresh process per engine, as the growth of the
-resident set over a few states.
+fastest and the slowest of many runs, in milliseconds. ``to_json`` is timed as
+the ``str`` both engine objects return, and as ``bytes`` (the ``str`` encoded,
+as a server writes it). Memory per loaded graph state is measured in a fresh
+process per engine, as the growth of the resident set over a few states built
+from the graph's JSON text, as a server reads ``flow.data``.
 
     python src/lfx-native/fixtures/tools/bench_engines.py LARGE_FLOW.json STARTER_PROJECTS_DIR [--engines python,rust]
 
@@ -77,6 +79,9 @@ class Adapter:
 
     def to_json(self, state: Any) -> Any:
         return state.to_json()
+
+    def to_json_bytes(self, state: Any) -> bytes:
+        return state.to_json().encode()
 
     def to_dict(self, state: Any) -> Any:
         return state.to_dict()
@@ -281,7 +286,8 @@ def benchmarks(adapter: Adapter, inputs: Inputs, scale: float = 1.0) -> dict[str
         warmup=1,
         setup=lambda: replayed.__setitem__(slice(None), [adapter.build(flow)]),
     )
-    bench("to_json of the graph", lambda: adapter.to_json(state), 30)
+    bench("to_json of the graph (str)", lambda: adapter.to_json(state), 30)
+    bench("to_json of the graph (bytes)", lambda: adapter.to_json_bytes(state), 30)
     bench("to_dict of the graph", lambda: adapter.to_dict(state), 30)
     bench("validate+repair+ops_diff of a whole-flow save", lambda: adapter.save(flow, inputs.save_target), 15)
     bench(
@@ -301,19 +307,17 @@ def rss_bytes() -> int:
     return int(Path("/proc/self/statm").read_text(encoding="ascii").split()[1]) * os.sysconf("SC_PAGE_SIZE")
 
 
-def memory_child(engine: str, flow_path: str, source: str) -> dict[str, Any]:
-    """In this process: the resident set growth per loaded graph state, over a few states.
+def memory_child(engine: str, flow_path: str) -> dict[str, Any]:
+    """In this process: the resident set growth per graph state loaded from JSON text, over a few states.
 
-    From a dict, the Python engine shares the dict's strings, which cannot
-    change, and copies only its containers; the dict stays alive here. From
-    JSON text, each state holds all of its own values.
+    Each state holds all of its own values. (From a dict, the Python engine would share the dict's strings with
+    its caller, so the growth would not be what the state holds.)
     """
     adapter = ADAPTERS[engine]()
     text = Path(flow_path).read_bytes()
-    flow = json.loads(text)
 
     def build() -> Any:
-        return adapter.build(flow) if source == "dict" else adapter.build_text(text)
+        return adapter.build_text(text)
 
     build()  # load the code and warm the allocator
     gc.collect()
@@ -325,9 +329,9 @@ def memory_child(engine: str, flow_path: str, source: str) -> dict[str, Any]:
     return {"bytes_per_state": (after - before) // MEMORY_STATES, "states": MEMORY_STATES}
 
 
-def memory(engine: str, flow_path: Path, script: Path, source: str) -> dict[str, Any]:
+def memory(engine: str, flow_path: Path, script: Path) -> dict[str, Any]:
     output = subprocess.run(  # noqa: S603 - this script, with arguments it chose
-        [sys.executable, str(script), "--memory-child", engine, str(flow_path), source],
+        [sys.executable, str(script), "--memory-child", engine, str(flow_path)],
         check=True,
         capture_output=True,
         text=True,
@@ -344,7 +348,7 @@ def main(argv: list[str] | None = None, script: Path | None = None) -> None:
     parser.add_argument("starter_projects", type=Path, nargs="?")
     parser.add_argument("--engines", default="python,rust")
     parser.add_argument("--scale", type=float, default=1.0, help="multiply the number of runs")
-    parser.add_argument("--memory-child", nargs=3, metavar=("ENGINE", "FLOW", "SOURCE"))
+    parser.add_argument("--memory-child", nargs=2, metavar=("ENGINE", "FLOW"))
     args = parser.parse_args(argv)
     if args.memory_child:
         print(json.dumps(memory_child(*args.memory_child)))
@@ -356,10 +360,9 @@ def main(argv: list[str] | None = None, script: Path | None = None) -> None:
         scale = args.scale * getattr(adapter, "scale", 1.0)
         for name, result in benchmarks(adapter, inputs, scale).items():
             print(json.dumps({"engine": engine, "benchmark": name, **result}), flush=True)
-        for source in ("dict", "text"):
-            result = memory(engine, args.flow, script, source)
-            name = f"memory per loaded GraphState (from {source})"
-            print(json.dumps({"engine": engine, "benchmark": name, **result}), flush=True)
+        result = memory(engine, args.flow, script)
+        name = "memory per GraphState loaded from JSON text"
+        print(json.dumps({"engine": engine, "benchmark": name, **result}), flush=True)
 
 
 if __name__ == "__main__":
