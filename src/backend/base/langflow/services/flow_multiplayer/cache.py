@@ -217,6 +217,9 @@ async def entry_at_head(session: AsyncSession, flow_id: UUID, head: int) -> Flow
         entry = await CACHE.load(session, flow_id)
         if entry is None:
             return None
+        if entry.revision >= head and not entry.pending and not entry.dead:
+            # Already there: no need to wait for a writer's commit.
+            return entry
         try:
             async with entry.write:
                 await entry.wait_settled()

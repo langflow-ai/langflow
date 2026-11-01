@@ -21,6 +21,7 @@ from uuid import UUID
 import orjson
 from fastapi import APIRouter, HTTPException, Query, Request, status
 from fastapi.responses import Response
+from lfx.log.logger import logger
 from sqlalchemy.orm import defer
 from sqlmodel import select
 
@@ -38,6 +39,9 @@ bench_router = APIRouter(prefix="/bench/flow-ops", tags=["Bench"], include_in_sc
 _UUID_RE = re.compile(r"^[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12}$")
 _JSON = "application/json"
 _WRITE_DENIED = "You don't have permission to edit this flow."
+_WRITE_FAILED = (
+    b'{"detail":{"code":"WRITE_FAILED","message":"The write did not commit. Retry with the same request_id."}}'
+)
 
 
 def multiplayer_available(session: Any) -> bool:
@@ -146,6 +150,11 @@ async def post_flow_ops(flow_id: UUID, request: Request, current_user: CurrentAc
         answer = await apply_ops(flow_id, current_user.id, ops_request, authorize=authorize)
     except OpsRefusedError as refusal:
         return Response(orjson.dumps({"detail": refusal.detail}), status_code=refusal.status, media_type=_JSON)
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001 -- answered as a 500 the client retries with the same request_id
+        await logger.awarning("Flow ops write failed", flow_id=str(flow_id), error_type=type(exc).__name__)
+        return Response(_WRITE_FAILED, status_code=500, media_type=_JSON)
     return Response(orjson.dumps(answer), media_type=_JSON)
 
 
