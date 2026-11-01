@@ -605,7 +605,7 @@ async def test_checkpoint_never_moves_flow_data_backwards(servers):
 
 
 async def test_legacy_save(servers):
-    """v1 PATCH takes the same lock and diffs against the graph at the head (in WAL, not Flow.data)."""
+    """v1 PATCH takes the same lock, diffs against the graph at the head and writes Flow.data in every mode."""
     engine, urls = servers["engine"], servers["urls"]
     async with httpx.AsyncClient(timeout=60, headers=servers["headers"]) as client:
         flow_id = await create_flow(client, urls[0])
@@ -616,7 +616,6 @@ async def test_legacy_save(servers):
         assert flow["current_revision"] == 2
         data = flow["data"]
         data["nodes"][1]["data"]["node"]["template"]["t"]["value"] = "legacy"
-        stored_before = db_flow(flow_id)
         new_name = f"renamed-{uuid.uuid4().hex[:8]}"
         saved = await client.patch(
             f"{urls[1]}/api/v1/flows/{flow_id}",
@@ -625,19 +624,16 @@ async def test_legacy_save(servers):
         )
         assert saved.status_code == 200, saved.text
         assert saved.json()["history"]["start_revision"] == 3
-        # The answer is the saved graph at the new head in every mode (in WAL, not the checkpoint's Flow.data).
+        # The answer is the saved graph at the new head in every mode.
         assert saved.json()["current_revision"] == 3
         assert saved.json()["data"]["nodes"][1]["data"]["node"]["template"]["t"]["value"] == "legacy"
         stored_after = db_flow(flow_id)
         with psycopg.connect(ADMIN_URL) as conn:
             stored_name = conn.execute("SELECT name FROM flow WHERE id = %s", (flow_id,)).fetchone()[0]
-        assert stored_name == new_name  # non-graph fields update the row in every mode
-        if servers["mode"] == "wal":
-            # WAL: the legacy save appends log rows only; Flow.data and its revision are the checkpoint's.
-            assert stored_after[:2] == stored_before[:2]
-            assert stored_after[1] < 3
-        else:
-            assert stored_after[1] == 3
+        assert stored_name == new_name
+        # Every mode, WAL included: the legacy save writes Flow.data and its revisions at the new head.
+        assert stored_after[1:] == (3, 3)
+        assert same_graph(engine, orjson.loads(stored_after[0]), saved.json()["data"])
         token = saved.json()["version_token"]
         assert token == (await v1_flow(client, urls[0], flow_id))["version_token"]
 
@@ -654,18 +650,97 @@ async def test_legacy_save(servers):
         assert blind.status_code == 200, blind.text
         assert blind.json()["history"]["start_revision"] == 5
         assert same_graph(engine, blind.json()["data"], data)
-        # A save without a graph answers with the graph at the head too.
+        assert db_flow(flow_id)[1:] == (5, 5)
+
+        # A save without a graph answers with the graph at the head, also when a multiplayer
+        # write left Flow.data behind it (WAL), and does not write Flow.data.
+        await post_ops(client, urls[0], flow_id, set_field("n2", "op6"))
+        head_graph = (await v1_flow(client, urls[0], flow_id))["data"]
+        assert values(head_graph)["n2"] == "op6"
         renamed = await client.patch(f"{urls[1]}/api/v1/flows/{flow_id}", json={"name": f"{new_name}-2"})
         assert renamed.status_code == 200, renamed.text
-        assert renamed.json()["current_revision"] == 5
-        assert same_graph(engine, renamed.json()["data"], data)
+        assert renamed.json()["current_revision"] == 6
+        assert same_graph(engine, renamed.json()["data"], head_graph)
+        assert db_flow(flow_id)[1] == (5 if servers["mode"] == "wal" else 6)
         for url in urls:
             graph = (await v1_flow(client, url, flow_id))["data"]
-            assert same_graph(engine, graph, data)
+            assert same_graph(engine, graph, head_graph)
             latest, joined = await joined_graph(client, url, flow_id, engine)
-            assert latest == 5
-            assert same_graph(engine, joined, data)
-    assert_rows_contiguous(flow_id, 5)
+            assert latest == 6
+            assert same_graph(engine, joined, head_graph)
+    assert_rows_contiguous(flow_id, 6)
+
+
+async def test_legacy_save_then_checkpoint_keeps_flow_data_monotonic(servers):
+    """A legacy save writes Flow.data at the head; later multiplayer writes and checkpoints only move it forward."""
+    from langflow.services.flow_multiplayer import oplog
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    engine, urls, mode = servers["engine"], servers["urls"], servers["mode"]
+    seen: list[int] = []
+
+    def stored() -> tuple[str, int, int]:
+        row = db_flow(flow_id)
+        seen.append(row[1])
+        return row
+
+    async with httpx.AsyncClient(timeout=60, headers=servers["headers"]) as client:
+        flow_id = await create_flow(client, urls[0])
+        for i in range(CADENCE - 1):
+            assert (await post_ops(client, urls[0], flow_id, set_field("n0", f"m{i}"))).status_code == 200
+        data = (await v1_flow(client, urls[0], flow_id))["data"]
+        next(n for n in data["nodes"] if n["id"] == "n1")["data"]["node"]["template"]["t"]["value"] = "legacy"
+        # The legacy save lands on the cadence: a checkpoint task runs at the same revision after it.
+        saved = await client.patch(f"{urls[1]}/api/v1/flows/{flow_id}", json={"data": data})
+        assert saved.status_code == 200, saved.text
+        assert saved.json()["current_revision"] == CADENCE
+        await asyncio.sleep(0.5)  # checkpoint tasks
+        text, current, latest = stored()
+        assert (current, latest) == (CADENCE, CADENCE)
+        assert values(orjson.loads(text))["n1"] == "legacy"
+
+        # An older checkpoint cannot replace the legacy save's graph.
+        db_engine = create_async_engine(ADMIN_URL.replace("postgresql://", "postgresql+psycopg://"))
+        try:
+            async with AsyncSession(db_engine) as session:
+                moved = await oplog.checkpoint_flow(
+                    session, uuid.UUID(flow_id), '{"nodes":[],"edges":[]}', revision=CADENCE - 1
+                )
+                await session.commit()
+        finally:
+            await db_engine.dispose()
+        assert not moved
+        assert stored()[:2] == (text, CADENCE)
+
+        # Multiplayer writes past the next cadence: the checkpoint moves Flow.data forward only.
+        for i in range(CADENCE + 1):
+            assert (await post_ops(client, urls[i % 2], flow_id, set_field("n2", f"w{i}"))).status_code == 200
+            stored()
+        head = CADENCE * 2 + 1
+        await asyncio.sleep(1.0)  # checkpoint tasks
+        text, current, _latest = stored()
+        assert seen == sorted(seen), seen
+        if mode == "wal":
+            assert CADENCE * 2 <= current <= head  # the checkpoint's revision, past the legacy save's
+        else:
+            assert current == head
+        expected = replay(
+            engine,
+            text,
+            [
+                {"operations": [element["operation"]]}
+                for _s, _e, envelope in db_rows(flow_id)
+                for batch in envelope["batches"]
+                for element in batch["operations"]
+                if element["revision"] > current
+            ],
+        )
+        assert values(expected)["n1"] == "legacy"
+        for url in urls:
+            graph = (await v1_flow(client, url, flow_id))["data"]
+            assert same_graph(engine, graph, expected)
+    assert_rows_contiguous(flow_id, head)
 
 
 async def test_retention_gap(servers):

@@ -181,36 +181,26 @@ def _wal_reads_log(session: AsyncSession, flow: Flow) -> bool:
     return _wal(session) and flow.user_id is not None and flow_history_enabled()
 
 
-async def refresh_after_write(session: AsyncSession, flow: Flow, written: GraphWriteResult | None) -> None:
-    """Refresh ``flow`` after a v1 write, keeping the current graph on it for the answer and follow-up work.
+async def refresh_after_write(session: AsyncSession, flow: Flow) -> None:
+    """Refresh ``flow`` after a v1 write, with the current graph on it for the answer and follow-up work.
 
-    In WAL mode ``Flow.data`` and the row's revisions are the checkpoint's, so a plain refresh
-    would put an old graph on the flow. Every column but ``data`` is refreshed; ``data`` is the
-    graph at the log's head and the revisions are the head, as the v1 read answers:
-
-    - after this write recorded a change, the graph it saved (the head is this transaction's own
-      rows, not committed yet, so it is not read from the cache, which holds committed revisions only);
-    - otherwise (no graph in the request, or an unchanged graph) the committed head, from the cached
-      graph's coalesced serialization, parsed in a worker thread.
-
-    Never writes ``Flow.data``.
+    A legacy save that records a change writes ``Flow.data`` at the new head in every mode.
+    In WAL mode a write that records nothing (no graph in the request, or an unchanged graph)
+    can leave ``Flow.data`` at an older revision, since multiplayer writers do not touch the
+    row. Then the flow gets the graph at the log's head, as the v1 read answers, from the
+    cached graph's coalesced serialization, parsed in a worker thread. Never writes ``Flow.data``.
     """
+    await session.refresh(flow)
     if not _wal_reads_log(session, flow):
-        await session.refresh(flow)
         return
-    from sqlalchemy import inspect as sa_inspect
-
-    columns = [attr.key for attr in sa_inspect(type(flow)).column_attrs if attr.key != "data"]
-    await session.refresh(flow, attribute_names=columns)
     head = await log_head(session, flow.id)
-    graph = written.head_graph if written is not None else None
-    if graph is None:
-        import anyio
-        import orjson
+    if flow.current_revision >= head:
+        return
+    import anyio
+    import orjson
 
-        text = await graph_at_head(session, flow.id, head)
-        graph = await anyio.to_thread.run_sync(orjson.loads, text)
-    set_committed_value(flow, "data", graph)
+    text = await graph_at_head(session, flow.id, head)
+    set_committed_value(flow, "data", await anyio.to_thread.run_sync(orjson.loads, text))
     set_committed_value(flow, "latest_revision", max(head, flow.latest_revision))
     set_committed_value(flow, "current_revision", head)
 
@@ -225,8 +215,6 @@ class GraphWriteResult:
     end_revision: int | None = None
     flow_repaired: bool = False
     graph_repairs: list[dict[str, Any]] = field(default_factory=list)
-    # WAL mode: the graph at the log's head after this write (Flow.data stays the checkpoint's).
-    head_graph: Any = field(default=None, repr=False)
 
 
 def normalize_absent_graph(flow_data: Any) -> Any:
@@ -291,14 +279,9 @@ async def write_flow_graph(
     # The head comes from the log: a multiplayer writer in WAL mode records
     # revisions without touching the flow row. The caller holds the flow's write lock.
     head = await log_head(session, flow.id)
-    wal = _wal(session)
     if head > flow.latest_revision:
-        # Only WAL writers leave the row behind the log. In WAL mode the row's revisions stay
-        # as the checkpoint wrote them; elsewhere the row catches up with this write.
-        if wal:
-            set_committed_value(flow, "latest_revision", head)
-        else:
-            flow.latest_revision = head
+        # Only WAL writers leave the row behind the log; the row catches up with this write.
+        flow.latest_revision = head
         result.latest_revision = head
     from_cache = _multiplayer_cached(session)
     head_graph: bytes | None = None
@@ -377,20 +360,12 @@ async def write_flow_graph(
         msg = f"Could not record the change to flow {flow.id} as operations"
         raise FlowHistoryError(msg) from exc
 
-    if wal and not (stored_repaired and not started):
-        # WAL mode: Flow.data stays the checkpoint's graph and only the checkpoint writes it;
-        # the caller still sees the saved graph on the flow object. (A history that starts
-        # from a repaired stored graph stores that graph: it is the new anchor's.)
-        set_committed_value(flow, "data", target)
-    elif wal:
-        flow.data = base
-    else:
-        flow.data = target
-    if wal:
-        # The diff is checked by replay: the graph at the head this write makes is ``target``.
-        result.head_graph = target
-    if started and from_cache and not wal and flow.current_revision != head:
-        # The stored graph becomes the graph at the head.
+    # Every mode, WAL included: the stored graph becomes the graph at the new head, under the
+    # flow's advisory lock. The checkpoint moves Flow.data only to a newer revision, so it
+    # cannot put an older graph back over this one.
+    flow.data = target
+    if started and from_cache and flow.current_revision != head:
+        # The stored graph becomes the graph at the head (WAL mode: a checkpoint for free).
         flow.latest_revision = flow.current_revision = head
         result.current_revision = head
     if derived_operations or result.flow_repaired or stored_repaired:
@@ -426,12 +401,8 @@ async def write_flow_graph(
             )
         )
 
-    if wal:
-        # The log is the record; the checkpoint task moves Flow.data and its revision.
-        set_committed_value(flow, "latest_revision", recorded[-1].revision)
-    else:
-        flow.latest_revision = recorded[-1].revision
-        flow.current_revision = recorded[-1].revision
+    flow.latest_revision = recorded[-1].revision
+    flow.current_revision = recorded[-1].revision
     result.start_revision = recorded[0].revision
     result.end_revision = recorded[-1].revision
     result.latest_revision = recorded[-1].revision

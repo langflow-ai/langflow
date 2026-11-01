@@ -56,7 +56,7 @@ _PENDING_KEY = "flow_multiplayer_checkpoint"
 
 
 def request_after_commit(session: AsyncSession, flow_id: UUID, end: int) -> None:
-    """Run ``after_write`` once ``session``'s transaction commits (legacy saves in WAL mode)."""
+    """Run ``after_write`` once ``session``'s transaction commits (legacy saves in modes cache and wal)."""
     pending = session.info.setdefault(_PENDING_KEY, {})
     pending[flow_id] = max(end, pending.get(flow_id, end))
 

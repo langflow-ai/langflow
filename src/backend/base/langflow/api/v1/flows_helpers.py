@@ -881,7 +881,7 @@ async def _update_existing_flow(
 
     session.add(existing_flow)
     await session.flush()
-    await refresh_after_write(session, existing_flow, graph_write)
+    await refresh_after_write(session, existing_flow)
     await stage_flow_succeeded(
         session,
         action=audit_vocab.FLOW_WRITE,
@@ -1030,7 +1030,7 @@ async def _patch_flow(
 
     session.add(db_flow)
     await session.flush()
-    await refresh_after_write(session, db_flow, graph_write)
+    await refresh_after_write(session, db_flow)
     await stage_flow_succeeded(
         session,
         action=audit_vocab.FLOW_WRITE,
