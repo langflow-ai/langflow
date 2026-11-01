@@ -5,19 +5,24 @@ and a large flow built from them (``src/lfx-native/fixtures/tools/large_flow.py`
 field edits, toggles, new and deleted keys, moves, nodes added, deleted and
 pasted, edges added (valid, into a taken input, with broken handles, to a
 note, with a repeated id) and deleted, writes to outputs, tool actions and
-table rows by key, whole-list writes, and malformed operations. Each batch
-runs on both engine objects in one of five ways: ``apply``, ``stage`` then
-``keep``, ``stage`` then ``drop``, ``undo`` or ``replay``. After every batch the test
-compares whether it was refused, the error kind and code, the forward and
-backward operations, the graph hash, and canonical equality of the graphs.
+table rows by key, whole-list writes, odd values (integers of more than 64
+bits, numbers too large for a double, non-ASCII text, deep nesting), operations
+as JSON text with a number too large for a double, and malformed operations.
+Each batch runs on both engine objects in one of six ways: ``apply``,
+``stage`` then ``keep``, ``stage`` then ``drop``, ``undo``, ``undo_apply`` or
+``replay``. After every batch the test compares whether it was refused, the
+whole error (kind, code, message and details), the forward and backward
+operations, the graph's JSON text byte for byte, and the graph hash from both
+engines. While a batch is staged, both engines' ``to_json`` must give the
+committed text, and ``drop`` must give back the text from before the batch.
 ``undo`` replays the backward operations of the last batch that applied, as
-history playback does, and ``replay`` replays a new batch, with no rule, on a
-separate pair of states. A second pair of states replays the log of forward
-and backward operations, and must reach the same graph.
-
-The ids inside a ``delete_nodes`` or ``delete_edges`` and the entries of an
-``add_nodes`` or ``add_edges`` are compared in id order: their order is not
-state, and the two engines keep sets of edge ids in different orders.
+history playback does; ``undo_apply`` applies them as one new batch, under
+every rule, as a user's undo does, and must give back the graph from before
+that batch. ``replay`` replays a new batch, with no rule, on a separate pair of
+states. A second pair of states replays the log of forward and backward
+operations, and must reach the same graph. Every few batches, both engines'
+plain graphs validate, repair, compare and diff the graph against the last
+one, as it is and with defects added that repair fixes.
 """
 
 from __future__ import annotations
@@ -52,8 +57,8 @@ SMALL_FLOWS = (
 )
 BATCHES_PER_SMALL_FLOW = 300
 BATCHES_ON_THE_LARGE_FLOW = 300
-# On the large flow, the Python engine hashes the graph every this many batches; the Rust engine hashes it every batch.
-LARGE_PYTHON_HASH_EVERY = 25
+# On the large flow, the plain graphs are compared every this many batches.
+LARGE_PLAIN_EVERY = 25
 
 pytestmark = pytest.mark.skipif(not STARTER_PROJECTS.is_dir(), reason="the starter projects are not in this checkout")
 
@@ -69,46 +74,51 @@ def _tools() -> Any:
 
 # --- Comparing results ----------------------------------------------------------------------------
 
-_ORDERLESS = {"delete_nodes": "ids", "delete_edges": "ids", "add_nodes": "nodes", "add_edges": "edges"}
-
-
-def _normalized_operations(operations: list[Any]) -> list[Any]:
-    out = []
-    for operation in operations:
-        key = _ORDERLESS.get(operation.get("type"))
-        if key:
-            items = sorted(operation[key], key=lambda item: item if isinstance(item, str) else item["id"])
-            out.append({**operation, key: items})
-        else:
-            out.append(operation)
-    return out
-
 
 def _normalized(result: dict[str, Any]) -> dict[str, Any]:
     out = {}
     if "forward_operations" in result:
-        out["forward"] = _normalized_operations(result["forward_operations"])
+        out["forward"] = result["forward_operations"]
     if "backward_operations" in result:
-        out["backward"] = [_normalized_operations(operations) for operations in result["backward_operations"]]
+        out["backward"] = result["backward_operations"]
     return out
 
 
-def _run(state: Any, mode: str, batch: list[Any]) -> tuple[Any, ...]:
-    """Run one batch in one way; returns what it gave, or the error kind and code."""
+def _outcome(call: Any) -> tuple[Any, ...]:
+    """What a call gave, or its whole error."""
     try:
-        if mode == "apply":
-            return ("ok", _normalized(state.apply(batch, forward=True, backward=True)))
-        if mode == "stage_keep":
-            result = state.stage(batch, forward=True, backward=True)
-            state.keep()
-            return ("ok", _normalized(result))
-        if mode == "stage_drop":
-            result = state.stage(batch, forward=True, backward=True)
-            assert state.drop()
-            return ("ok", _normalized(result))
-        return ("ok", _normalized(state.replay(batch, backward=True)))
+        return ("ok", call())
     except FlowOperationError as error:
-        return ("error", error.kind, error.code)
+        return ("error", error.kind, error.code, error.details)
+
+
+def _run(state: Any, mode: str, batch: Any, before: str | None = None) -> tuple[Any, ...]:
+    """Run one batch in one way; returns what it gave, or the whole error.
+
+    ``before`` is the graph's JSON text before the batch, when the caller has it. While a staged batch waits,
+    ``to_json`` gives the committed text; after ``drop``, the text from before the batch.
+    """
+    if before is None:
+        before = state.to_json()
+
+    def run() -> dict[str, Any]:
+        if mode == "apply":
+            return _normalized(state.apply(batch, forward=True, backward=True))
+        if mode == "replay":
+            return _normalized(state.replay(batch, backward=True))
+        result = state.stage(batch, forward=True, backward=True)
+        assert state.to_json() == before, "to_json while a batch is staged is not the committed text"
+        if mode == "stage_keep":
+            state.keep()
+        else:
+            assert state.drop()
+            assert state.to_json() == before, "drop did not give back the text from before the batch"
+        return _normalized(result)
+
+    outcome = _outcome(run)
+    if outcome[0] == "error":
+        assert state.to_json() == before, "a refused batch changed the graph"
+    return outcome
 
 
 # --- Writing random batches ---------------------------------------------------------------------------
@@ -133,6 +143,8 @@ class Writer:
 
     def value(self) -> Any:
         roll = self.rng.random()
+        if roll < 0.04:
+            return self.odd_value()
         if roll < 0.3:
             return f"text {self.rng.randrange(1000)}"
         if roll < 0.45:
@@ -146,6 +158,26 @@ class Writer:
         if roll < 0.85:
             return [self.rng.randrange(10), "x"]
         return {"nested": {"k": self.value() if self.rng.random() < 0.3 else 1}}
+
+    def odd_value(self) -> Any:
+        """A value at the edge of what JSON and the engines hold."""
+        deep: Any = "leaf"
+        for _ in range(self.rng.choice([10, 100, 120])):
+            deep = [deep]
+        return self.rng.choice(
+            [
+                2**70,
+                -(2**64),
+                10**400,
+                1e-7,
+                -0.0,
+                1.5e300,
+                5e-324,
+                'é œ 😀 \x7f \u2028 \\x41 \\U0001f600 \x00 "',
+                {"ключ": "значение", "😀": [1, 2**64 - 1]},
+                deep,
+            ]
+        )
 
     def update(self, node_id: str, path: list[Any], value: Any = None, *, delete: bool = False) -> dict[str, Any]:
         if delete:
@@ -365,6 +397,46 @@ class Writer:
             ]
         )
 
+    def not_finite_text(self, graph: dict[str, Any]) -> bytes:
+        """A batch as JSON text that sets a value to a number too large for a double: both engines refuse it."""
+        node_id = self.rng.choice(graph["nodes"])["id"] if graph["nodes"] else "a"
+        update = self.update(node_id, ["position"], {"x": 0})
+        return json.dumps([{"type": "update_nodes", "updates": [update]}]).replace('"x": 0', '"x": -1e400').encode()
+
+    def defects(self, graph: dict[str, Any]) -> dict[str, Any]:
+        """A copy of ``graph`` with defects that repair fixes the same way every time."""
+        broken = copy.deepcopy(graph)
+        nodes, edges = broken["nodes"], broken["edges"]
+        for _ in range(self.rng.randint(1, 3)):
+            roll = self.rng.random()
+            if roll < 0.2:
+                broken[f"odd_{self.rng.randrange(3)}"] = [1, 10**400]
+            elif roll < 0.4 and nodes:
+                # A copy of a node with the same id: repair gives the copy a generated id.
+                nodes.append(copy.deepcopy(self.rng.choice(nodes)))
+            elif roll < 0.55 and nodes:
+                self.rng.choice(nodes)["data"] = "not an object"
+            elif roll < 0.7 and nodes:
+                edges.append({"id": self.fresh("edge"), "source": nodes[0]["id"], "target": "no-such-node"})
+            elif roll < 0.85:
+                outputs = [node["data"]["node"]["outputs"] for node in nodes if _outputs_of(node)]
+                if outputs:
+                    output = self.rng.choice(self.rng.choice(outputs))
+                    if isinstance(output, dict):
+                        output.pop("__pos__", None)
+                        output["note"] = self.fresh("note")
+            elif edges:
+                edge = self.rng.choice(edges)
+                if isinstance(edge.get("data"), dict) and "sourceHandle" in edge["data"]:
+                    edge.pop("sourceHandle", None)
+        return broken
+
+
+def _outputs_of(node: Any) -> bool:
+    data = node.get("data") if isinstance(node, dict) else None
+    body = data.get("node") if isinstance(data, dict) else None
+    return isinstance(body, dict) and isinstance(body.get("outputs"), list) and bool(body["outputs"])
+
 
 def batch_of(writer: Writer, graph: dict[str, Any]) -> list[dict[str, Any]]:
     operations: list[dict[str, Any]] = []
@@ -373,31 +445,82 @@ def batch_of(writer: Writer, graph: dict[str, Any]) -> list[dict[str, Any]]:
     return operations
 
 
-MODES = ("apply", "apply", "apply", "stage_keep", "stage_keep", "stage_drop", "undo", "replay")
+MODES = ("apply", "apply", "apply", "stage_keep", "stage_keep", "stage_drop", "undo", "undo_apply", "replay")
+# One batch in this many is JSON text with a number too large for a double.
+NOT_FINITE_EVERY = 25
 
 
-def _compare_graphs(python: Any, rust: Any, context: str, *, python_hash: bool) -> dict[str, Any]:
-    """Both engines' graphs: the same hash and canonically equal. Returns the Python engine's graph."""
-    graph = python.to_dict()
-    rust_graph = rust.to_dict()
-    rust_hash = RustEngine.graph_hash(rust_graph)
-    assert RustEngine.graph_hash(graph) == rust_hash, context
-    assert RustEngine.graphs_equal(graph, rust_graph), context
-    if python_hash:
-        assert PythonEngine.graph_hash(graph) == rust_hash, context
-        assert PythonEngine.graphs_equal(graph, rust_graph), context
-    return graph
+def _compare_graphs(python: Any, rust: Any, context: str) -> tuple[dict[str, Any], str]:
+    """Both engines' graphs: the same JSON text, byte for byte, and the same hash. Returns the graph and its text."""
+    text = python.to_json()
+    assert text == rust.to_json(), f"{context}: the engines' JSON text differs"
+    assert text.isascii(), context
+    data = text.encode()
+    # A graph that holds an integer too large for a double has no hash: both engines refuse it alike.
+    python_hash = _outcome(lambda: PythonEngine.graph_hash(data))
+    rust_hash = _outcome(lambda: RustEngine.graph_hash(data))
+    assert python_hash == rust_hash, f"{context}\n python: {python_hash}\n rust:   {rust_hash}"
+    return python.to_dict(), text
 
 
-def drive(flow: dict[str, Any], batches: int, seed: int, *, python_hash_every: int = 1) -> dict[str, int]:
+# Repair gives a new row or edge id at random for these.
+_RANDOM_IDS = {"TABLE_ROW_ID_MISSING", "TABLE_ROW_ID_DUPLICATE", "EDGE_ID_MISSING", "EDGE_ID_DUPLICATE"}
+
+
+def _without_random_ids(text: str, fixes: list[dict[str, Any]]) -> str:
+    """A repaired graph's JSON text with each id that repair made at random replaced by the same text."""
+    graph = json.loads(text)
+    for fix in fixes:
+        if fix["code"] in _RANDOM_IDS:
+            *parents, last = fix["path"]
+            container = graph
+            for part in parents:
+                container = container[part]
+            container[last] = "generated"
+    return json.dumps(graph, separators=(",", ":"))
+
+
+def _compare_plain_graphs(writer: Writer, base: dict[str, Any], graph: dict[str, Any], context: str) -> None:
+    """Both engines' plain graphs validate, repair, compare and diff ``graph`` against ``base`` alike."""
+    targets = [graph, writer.defects(graph)]
+    results = []
+    for engine in (PythonEngine, RustEngine):
+        found = []
+        plain_base = engine.GraphPlain(base)
+        for target in targets:
+            plain = engine.GraphPlain(target)
+            found.append(_outcome(lambda plain=plain: plain.validate(None, check_values=False)))
+            found.append(_outcome(lambda plain=plain, base=plain_base: plain.validate(base)))
+            repaired = _outcome(lambda plain=plain, base=plain_base: plain.repair(base))
+            if repaired[0] == "ok":
+                fixed, fixes = repaired[1]
+                text = _without_random_ids(fixed.to_json(), fixes)
+                found.append(("ok", text, fixes))
+                fixed = engine.GraphPlain(text.encode())
+                found.append(_outcome(lambda fixed=fixed, base=plain_base: base.ops_diff(fixed)))
+                found.append(_outcome(lambda fixed=fixed, base=plain_base: base.equals(fixed)))
+            else:
+                found.append(repaired)
+            found.append(_outcome(lambda plain=plain, base=plain_base: base.ops_diff(plain)))
+            found.append(_outcome(lambda plain=plain, base=plain_base: plain.equals(base)))
+            found.append(_outcome(plain.graph_hash))
+        results.append(found)
+    python, rust = results
+    for index, (left, right) in enumerate(zip(python, rust, strict=True)):
+        assert left == right, f"{context}, plain graph check {index}\n python: {left}\n rust:   {right}"
+
+
+def drive(flow: dict[str, Any], batches: int, seed: int, *, plain_every: int = 5) -> dict[str, int]:
     """Run ``batches`` random batches on both engines from ``flow``; returns how many of each outcome.
 
     ``apply``, ``stage_keep`` and ``stage_drop`` run a new batch. ``undo``
     replays the backward operations of the last batch that applied, last
     first, each list in a call of its own, as history playback does.
-    ``replay`` replays a new batch, with no rule, on a second pair of states
-    that only ever replays: replay deletes no edge with its node, so it can
-    leave a graph that apply refuses.
+    ``undo_apply`` applies them, last first, as one new batch. ``replay``
+    replays a new batch, with no rule, on a second pair of states that only
+    ever replays: replay deletes no edge with its node, so it can leave a
+    graph that apply refuses. Every ``plain_every`` batches, the plain graphs
+    are compared too.
     """
     large_flow = _tools()
     rng = random.Random(seed)  # noqa: S311 - a reproducible test, not secrets
@@ -408,55 +531,85 @@ def drive(flow: dict[str, Any], batches: int, seed: int, *, python_hash_every: i
     python, rust = PythonEngine.GraphState(flow), RustEngine.GraphState(flow)
     python_log, rust_log = PythonEngine.GraphState(flow), RustEngine.GraphState(flow)
     python_replay, rust_replay = PythonEngine.GraphState(flow), RustEngine.GraphState(flow)
-    graph = python.to_dict()
-    replay_graph = graph
+    graph, text_now = _compare_graphs(python, rust, f"seed {seed}, the flow as loaded")
+    replay_graph, replay_text = graph, text_now
+    plain_base = graph
     last_backward: list[Any] = []
-    counts = {"applied": 0, "refused": 0, "undone": 0, "replayed": 0}
+    before_last = graph
+    counts = {"applied": 0, "refused": 0, "undone": 0, "undo_applied": 0, "undo_refused": 0, "replayed": 0}
+
+    def same(context: str, python_result: Any, rust_result: Any) -> None:
+        assert python_result == rust_result, f"{context}\n python: {python_result}\n rust:   {rust_result}"
+
     for index in range(batches):
         mode = rng.choice(MODES)
-        python_hash = index % python_hash_every == 0 or index == batches - 1
         if mode == "undo":
             context = f"seed {seed}, batch {index}, undo of {json.dumps(last_backward)[:2000]}"
             for operations in reversed(last_backward):
                 text = json.dumps(operations)
                 python_result = _run(python, "replay", json.loads(text))
-                rust_result = _run(rust, "replay", json.loads(text))
-                assert python_result == rust_result, f"{context}\n python: {python_result}\n rust:   {rust_result}"
+                same(context, python_result, _run(rust, "replay", json.loads(text)))
                 assert python_result[0] == "ok", f"{context}: {python_result}"
                 python_log.replay(json.loads(text))
                 rust_log.replay(json.loads(text))
             counts["undone"] += bool(last_backward)
             last_backward = []
-            graph = _compare_graphs(python, rust, context, python_hash=python_hash)
-            continue
-        if mode == "replay":
+            graph, text_now = _compare_graphs(python, rust, context)
+        elif mode == "undo_apply":
+            batch = [operation for operations in reversed(last_backward) for operation in operations]
+            text = json.dumps(batch)
+            context = f"seed {seed}, batch {index}, undo as a batch: {text[:2000]}"
+            python_result = _run(python, "apply", json.loads(text), text_now)
+            same(context, python_result, _run(rust, "apply", json.loads(text), text_now))
+            if python_result[0] == "ok" and last_backward:
+                counts["undo_applied"] += 1
+                python_log.replay(python_result[1]["forward"])
+                rust_log.replay(python_result[1]["forward"])
+            elif last_backward:
+                # An edge the batch removed may break a rule now: a later write may have changed its ends.
+                counts["undo_refused"] += 1
+            last_backward = []
+            graph, text_now = _compare_graphs(python, rust, context)
+            if python_result[0] == "ok" and batch:
+                # Equal, or both hold an integer too large for a double, which no comparison reads.
+                restored = _outcome(lambda graph=graph, base=before_last: PythonEngine.graphs_equal(graph, base))
+                assert restored[0] == "error" or restored[1], f"{context}: undo did not give back the graph"
+        elif mode == "replay":
             batch = batch_of(writer, replay_graph)
             text = json.dumps(batch)
             context = f"seed {seed}, batch {index}, replay: {text[:2000]}"
-            python_result = _run(python_replay, "replay", json.loads(text))
-            rust_result = _run(rust_replay, "replay", json.loads(text))
-            assert python_result == rust_result, f"{context}\n python: {python_result}\n rust:   {rust_result}"
+            python_result = _run(python_replay, "replay", json.loads(text), replay_text)
+            same(context, python_result, _run(rust_replay, "replay", json.loads(text), replay_text))
             counts["replayed"] += python_result[0] == "ok"
-            replay_graph = _compare_graphs(python_replay, rust_replay, context, python_hash=python_hash)
-            continue
-        batch = batch_of(writer, graph)
-        text = json.dumps(batch)
-        python_result = _run(python, mode, json.loads(text))
-        rust_result = _run(rust, mode, json.loads(text))
-        context = f"seed {seed}, batch {index}, mode {mode}: {text[:2000]}"
-        assert python_result == rust_result, f"{context}\n python: {python_result}\n rust:   {rust_result}"
-        if python_result[0] == "ok":
-            counts["applied"] += 1
-            if mode in ("apply", "stage_keep"):
-                python_log.replay(python_result[1]["forward"])
-                rust_log.replay(python_result[1]["forward"])
-                last_backward = python_result[1]["backward"]
+            replay_graph, replay_text = _compare_graphs(python_replay, rust_replay, context)
         else:
-            counts["refused"] += 1
-        graph = _compare_graphs(python, rust, context, python_hash=python_hash)
-        if python_hash:
-            assert PythonEngine.graphs_equal(python_log.to_dict(), graph), f"{context}: the Python log replay differs"
-            assert RustEngine.graphs_equal(rust_log.to_dict(), graph), f"{context}: the Rust log replay differs"
+            if index % NOT_FINITE_EVERY == NOT_FINITE_EVERY - 1:
+                data = writer.not_finite_text(graph)
+                context = f"seed {seed}, batch {index}, mode {mode}: {data[:2000]!r}"
+                python_result = _run(python, mode, data, text_now)
+                same(context, python_result, _run(rust, mode, data, text_now))
+                assert python_result[0] == "error", context
+            else:
+                text = json.dumps(batch_of(writer, graph))
+                context = f"seed {seed}, batch {index}, mode {mode}: {text[:2000]}"
+                python_result = _run(python, mode, json.loads(text), text_now)
+                same(context, python_result, _run(rust, mode, json.loads(text), text_now))
+            if python_result[0] == "ok":
+                counts["applied"] += 1
+                if mode in ("apply", "stage_keep"):
+                    python_log.replay(python_result[1]["forward"])
+                    rust_log.replay(python_result[1]["forward"])
+                    last_backward = python_result[1]["backward"]
+                    before_last = graph
+            else:
+                counts["refused"] += 1
+            graph, text_now = _compare_graphs(python, rust, context)
+            log_text = python_log.to_json()
+            assert log_text == rust_log.to_json(), f"{context}: the log replays differ"
+            assert log_text == text_now, f"{context}: the log replay differs from the graph"
+        if index % plain_every == 0:
+            _compare_plain_graphs(writer, plain_base, graph, f"seed {seed}, batch {index}")
+            plain_base = graph
     return counts
 
 
@@ -484,11 +637,13 @@ def test_both_engines_agree_on_random_batches_of_a_starter_project(name, with_po
     assert counts["applied"] > 0
     assert counts["refused"] > 0
     assert counts["undone"] > 0
+    assert counts["undo_applied"] > 0
     assert counts["replayed"] > 0
 
 
 def test_both_engines_agree_on_random_batches_of_the_large_flow():
     flow = _tools().build(STARTER_PROJECTS)
-    counts = drive(flow, BATCHES_ON_THE_LARGE_FLOW, SEED - 1, python_hash_every=LARGE_PYTHON_HASH_EVERY)
+    counts = drive(flow, BATCHES_ON_THE_LARGE_FLOW, SEED - 1, plain_every=LARGE_PLAIN_EVERY)
     assert counts["applied"] > 0
     assert counts["refused"] > 0
+    assert counts["undo_applied"] > 0
