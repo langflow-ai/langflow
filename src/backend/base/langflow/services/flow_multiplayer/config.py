@@ -62,6 +62,14 @@ def checkpoint_cadence() -> int:
     return get_settings_service().settings.flow_revision_checkpoint_cadence
 
 
+def compaction_step() -> int:
+    """Operations past the retention window before compaction runs (default 10 checkpoint cadences)."""
+    from langflow.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    return settings.flow_revision_compaction_step or 10 * settings.flow_revision_checkpoint_cadence
+
+
 def reset_for_tests() -> None:
     """Forget the cached configuration, so a test can change the environment."""
     for function in (engine, write_mode, cache_max_flows, bench_enabled):

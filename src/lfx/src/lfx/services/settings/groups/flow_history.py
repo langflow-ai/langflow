@@ -42,3 +42,10 @@ class FlowHistorySettings(BaseModel):
     Older operations are compacted away behind a checkpoint. Counts operations,
     not rows. Saved versions are kept regardless, as snapshots.
     """
+    flow_revision_compaction_step: int | None = Field(default=None, ge=1)
+    """Operations retained past the retention window before a multiplayer compaction runs.
+
+    Compaction then deletes them in one step, instead of a few at every
+    checkpoint. Unset, it is 10 times ``flow_revision_checkpoint_cadence``. A
+    flow keeps between the window and about the window plus this step.
+    """

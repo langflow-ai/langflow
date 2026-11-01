@@ -178,6 +178,7 @@ EXPECTED_FIELDS = {
     "flow_op_log_row_bytes_limit",
     "flow_revision_checkpoint_cadence",
     "flow_revision_retention_window",
+    "flow_revision_compaction_step",
     # SecuritySettings
     "cors_origins",
     "cors_allow_credentials",
