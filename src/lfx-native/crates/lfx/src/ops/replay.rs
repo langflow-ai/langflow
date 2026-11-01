@@ -205,6 +205,31 @@ mod tests {
     }
 
     #[test]
+    fn the_first_batch_refuses_a_loaded_flow_with_an_edge_without_its_node() {
+        let node = |id: &str| json!({"id": id, "data": {"node": {"template": {}}}});
+        let flow = json!({
+            "nodes": [node("a")],
+            "edges": [{"id": "e", "source": "a", "target": "gone"}],
+        });
+        let expected = crate::ops::validate::validate_flow_data(
+            &flow,
+            crate::ops::validate::Numbers::Skip,
+            "flow.data",
+            None,
+        )
+        .unwrap_err();
+        let mut state = GraphState::new(flow).unwrap();
+        let error = state
+            .apply(Vec::new(), ApplyOptions::default())
+            .unwrap_err();
+        assert_eq!(error, expected);
+        assert!(
+            state.needs_check(),
+            "a refused check leaves the flow unchecked"
+        );
+    }
+
+    #[test]
     fn a_replay_that_leaves_every_edge_its_nodes_keeps_the_flow_checked() {
         let node =
             |id: &str| json!({"id": id, "data": {"node": {"template": {"f": {"value": ""}}}}});

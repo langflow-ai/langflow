@@ -516,10 +516,26 @@ impl GraphState {
     ///
     /// The graph breaks a structural rule.
     pub(crate) fn check_base(&mut self) -> Result<()> {
-        if !self.base_checked {
-            validate_flow_data(&self.to_value(), Numbers::Skip, "flow.data", None)?;
-            self.base_checked = true;
+        if self.base_checked {
+            return Ok(());
         }
+        // Loading checked every structural rule but one: that each edge's
+        // nodes exist. Apply and replay keep the others (they refuse a
+        // repeated id, a node or edge without its shape, and a write of a
+        // whole node object). So the graph passes when every edge's nodes
+        // exist, which is checked in place. Else the whole check runs on a
+        // copy, for the error and its violations in document order.
+        let nodes = &self.graph.nodes.stored;
+        let sound = self
+            .graph
+            .edges
+            .stored
+            .values()
+            .all(|edge| nodes.contains_key(edge.source()) && nodes.contains_key(edge.target()));
+        if !sound {
+            validate_flow_data(&self.to_value(), Numbers::Skip, "flow.data", None)?;
+        }
+        self.base_checked = true;
         Ok(())
     }
 
