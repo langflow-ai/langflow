@@ -285,6 +285,22 @@ pub fn apply_to(
     Ok(Value::Object(applied_json(applied, options)))
 }
 
+/// Stage a batch on a [`GraphState`] ([`GraphState::stage`]); the result is
+/// what [`applied_json`] lists, as for [`apply_to`].
+///
+/// # Errors
+///
+/// The operations do not parse, or the engine refuses the batch, which then
+/// is not staged.
+pub fn stage_to(
+    state: &mut GraphState,
+    operations_in: Input<'_>,
+    options: ApplyOptions,
+) -> ApiResult<Value> {
+    let applied = state.stage(operations(operations_in)?, options)?;
+    Ok(Value::Object(applied_json(applied, options)))
+}
+
 // --- Replay --------------------------------------------------------------------------------
 
 /// What a replay did, as JSON: the backward operations with `backward`.

@@ -273,6 +273,12 @@ fn finish(py: Python<'_>, value: Value) -> PyResult<Bound<'_, PyAny>> {
 /// Replay, history playback and rebase carry out many batches on one graph
 /// and read it once. A refused batch changes nothing.
 ///
+/// A batch can be staged instead of applied: `stage` applies it with every
+/// rule and returns what `apply` returns, but the graph as read stays the
+/// graph before the batch until `keep` commits the batch or `drop` drops it,
+/// as after a database commit that succeeds or fails. While a batch is
+/// staged, `apply`, `replay` and `stage` raise `RuntimeError`.
+///
 /// Threads can share one state. A batch waits for the calls that read the
 /// graph, and they wait for it, as with any lock. A call releases the GIL
 /// while it waits for the lock, and never waits for the GIL while it holds the
@@ -289,6 +295,43 @@ struct Poisoned;
 
 fn poisoned(_: Poisoned) -> PyErr {
     PyRuntimeError::new_err("this GraphState cannot be used: a call on it panicked")
+}
+
+/// Why a call on the state could not run.
+#[derive(Debug, Clone, Copy)]
+enum Refused {
+    Poisoned,
+    /// A batch is staged, so no other batch can start.
+    Staged,
+    /// No batch is staged, so there is nothing to keep.
+    NotStaged,
+}
+
+impl From<Poisoned> for Refused {
+    fn from(_: Poisoned) -> Self {
+        Self::Poisoned
+    }
+}
+
+fn refused(refused: Refused) -> PyErr {
+    match refused {
+        Refused::Poisoned => poisoned(Poisoned),
+        Refused::Staged => {
+            PyRuntimeError::new_err("a batch is staged: keep or drop it before the next batch")
+        }
+        Refused::NotStaged => PyRuntimeError::new_err("no batch is staged"),
+    }
+}
+
+/// The state, locked for a batch, unless a batch is staged.
+fn unstaged(
+    state: &RwLock<lfx::ops::GraphState>,
+) -> Result<std::sync::RwLockWriteGuard<'_, lfx::ops::GraphState>, Refused> {
+    let state = state.write().map_err(|_| Poisoned)?;
+    if state.is_staged() {
+        return Err(Refused::Staged);
+    }
+    Ok(state)
 }
 
 #[pymethods]
@@ -315,11 +358,67 @@ impl GraphState {
         // The lock is taken and released without the GIL.
         let applied = py
             .detach(|| {
-                let mut state = self.state.write().map_err(|_| Poisoned)?;
+                let mut state = unstaged(&self.state)?;
                 Ok(api::apply_to(&mut state, operations, options))
             })
-            .map_err(poisoned)?;
+            .map_err(refused)?;
         finish(py, applied.map_err(|error| engine_error(py, &error))?)
+    }
+
+    /// Apply a batch with every rule, as `apply` does, and keep it staged
+    /// until `keep` or `drop`; returns what `apply` returns. A refused batch
+    /// is not staged.
+    #[pyo3(signature = (operations, *, forward = false, backward = false))]
+    fn stage<'py>(
+        &self,
+        py: Python<'py>,
+        operations: &Bound<'_, PyAny>,
+        forward: bool,
+        backward: bool,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let operations = input(operations)?;
+        let options = ApplyOptions { forward, backward };
+        // The lock is taken and released without the GIL.
+        let staged = py
+            .detach(|| {
+                let mut state = unstaged(&self.state)?;
+                Ok(api::stage_to(&mut state, operations, options))
+            })
+            .map_err(refused)?;
+        finish(py, staged.map_err(|error| engine_error(py, &error))?)
+    }
+
+    /// Commit the staged batch. Raises `RuntimeError` when no batch is staged.
+    fn keep(&self, py: Python<'_>) -> PyResult<()> {
+        py.detach(|| {
+            let mut state = self.state.write().map_err(|_| Poisoned)?;
+            if state.keep() {
+                Ok(())
+            } else {
+                Err(Refused::NotStaged)
+            }
+        })
+        .map_err(refused)
+    }
+
+    /// Drop the staged batch, so the graph stays as it was before it.
+    /// Returns whether a batch was staged.
+    fn drop(&self, py: Python<'_>) -> PyResult<bool> {
+        py.detach(|| {
+            let mut state = self.state.write().map_err(|_| Poisoned)?;
+            Ok(state.drop_staged())
+        })
+        .map_err(poisoned)
+    }
+
+    /// Whether a batch is staged.
+    #[getter]
+    fn staged(&self, py: Python<'_>) -> PyResult<bool> {
+        py.detach(|| {
+            let state = self.state.read().map_err(|_| Poisoned)?;
+            Ok(state.is_staged())
+        })
+        .map_err(poisoned)
     }
 
     /// Replay stored operations, with no rule; returns what it did.
@@ -335,14 +434,14 @@ impl GraphState {
         // The lock is taken and released without the GIL.
         let replayed = py
             .detach(|| {
-                let mut state = self.state.write().map_err(|_| Poisoned)?;
+                let mut state = unstaged(&self.state)?;
                 Ok(api::replay_to(&mut state, operations, options))
             })
-            .map_err(poisoned)?;
+            .map_err(refused)?;
         finish(py, replayed.map_err(|error| engine_error(py, &error))?)
     }
 
-    /// The graph as JSON text.
+    /// The graph as JSON text: the committed graph, without a staged batch.
     fn to_json(&self, py: Python<'_>) -> PyResult<String> {
         py.detach(|| {
             let state = self.state.read().map_err(|_| Poisoned)?;
@@ -351,7 +450,8 @@ impl GraphState {
         .map_err(poisoned)
     }
 
-    /// The graph as a dict, built from the loaded graph without a copy.
+    /// The graph as a dict, built from the loaded graph without a copy: the
+    /// committed graph, without a staged batch.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         // Building Python objects needs the GIL and the lock together:
         // read_py_attached waits for the lock without the GIL.

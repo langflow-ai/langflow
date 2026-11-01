@@ -140,8 +140,40 @@ impl GraphState {
     ///
     /// The flow breaks a structural rule, or an operation is invalid for it.
     pub fn apply(&mut self, operations: Vec<Operation>, options: ApplyOptions) -> Result<Applied> {
+        let applied = self.apply_layered(operations, options)?;
+        self.commit();
+        Ok(applied)
+    }
+
+    /// Apply a batch as [`Self::apply`] does, and keep it staged instead of
+    /// committing it: it returns what `apply` returns, and the graph as read
+    /// stays the graph before the batch until [`Self::keep`] commits the
+    /// batch or [`Self::drop_staged`] drops it. A refused batch is not
+    /// staged.
+    ///
+    /// A staged batch must be kept or dropped before the next batch: a new
+    /// batch drops it.
+    ///
+    /// # Errors
+    ///
+    /// The flow breaks a structural rule, or an operation is invalid for it.
+    pub fn stage(&mut self, operations: Vec<Operation>, options: ApplyOptions) -> Result<Applied> {
+        let applied = self.apply_layered(operations, options)?;
+        self.set_staged();
+        Ok(applied)
+    }
+
+    /// Apply a batch with every rule into the batch's layers, without
+    /// committing them.
+    fn apply_layered(
+        &mut self,
+        operations: Vec<Operation>,
+        options: ApplyOptions,
+    ) -> Result<Applied> {
         // A batch that panicked, which a binding turns into an exception,
-        // left its layers behind. The graph itself is as it was before it.
+        // left its layers behind, and so does a staged batch nobody kept.
+        // The graph itself is as it was before it.
+        self.drop_staged();
         self.discard();
         self.check_base()?;
         let mut report = Report::new(options);
@@ -149,14 +181,16 @@ impl GraphState {
         Ok(report.into_applied())
     }
 
-    /// Carry out each operation with `step`, in order. On an error, drop the
-    /// batch's layers, so the flow is as it was before the batch.
+    /// Carry out each operation with `step`, in order, into the batch's
+    /// layers. On an error, drop the layers, so the flow is as it was before
+    /// the batch. The caller commits the layers.
     pub(crate) fn run_batch(
         &mut self,
         operations: Vec<Operation>,
         report: &mut Report,
         step: OperationStep,
     ) -> Result<()> {
+        self.drop_staged();
         self.discard();
         for operation in operations {
             report.begin_operation();
@@ -165,7 +199,6 @@ impl GraphState {
                 return Err(error);
             }
         }
-        self.commit();
         Ok(())
     }
 
@@ -1269,6 +1302,90 @@ mod tests {
             state.replay(list, ReplayOptions::default()).unwrap();
         }
         assert!(crate::ops::canonical::graphs_equal(&state.to_value(), &graph).unwrap());
+    }
+
+    #[test]
+    fn a_staged_batch_is_not_read_until_it_is_kept() {
+        let mut state = GraphState::new(json!({"nodes": [table_node()], "edges": []})).unwrap();
+        let before = state.to_value();
+        let batch = updates(vec![
+            set("t", cell_path("r2"), json!("y")),
+            delete("t", rows_path(Some("r1"))),
+        ]);
+        let options = ApplyOptions {
+            forward: true,
+            backward: true,
+        };
+        let (expected_graph, expected) =
+            apply_flow_operations(before.clone(), batch.clone(), options).unwrap();
+        let staged = state.stage(batch, options).unwrap();
+        assert_eq!(staged, expected);
+        assert!(state.is_staged());
+        assert_eq!(state.to_value(), before);
+        assert_eq!(
+            serde_json::from_str::<Value>(&state.to_json()).unwrap(),
+            before
+        );
+        assert!(state.keep());
+        assert!(!state.is_staged());
+        assert!(crate::ops::canonical::graphs_equal(&state.to_value(), &expected_graph).unwrap());
+        assert!(!state.keep(), "nothing is staged after keep");
+    }
+
+    #[test]
+    fn a_dropped_batch_leaves_the_graph_and_its_indexes() {
+        let field = json!({"type": "str", "value": ""});
+        let graph = json!({
+            "nodes": [
+                {"id": "S", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+                {"id": "T", "data": {"node": {"template": {"A": field, "B": field}}}},
+            ],
+            "edges": [edge("e1", "A")],
+        });
+        let mut state = GraphState::new(graph).unwrap();
+        let add = json!([{"type": "add_edges", "edges": [edge("e2", "B")]}]);
+        state
+            .apply(operations(add), ApplyOptions::default())
+            .unwrap();
+        let before = state.to_value();
+        let batch = json!([
+            {"type": "delete_edges", "ids": ["e1"]},
+            {"type": "update_nodes", "updates": [
+                set("T", json!(["data", "node", "template", "A", "value"]), json!("x")),
+            ]},
+            {"type": "add_edges", "edges": [edge("e3", "A")]},
+        ]);
+        state
+            .stage(operations(batch.clone()), ApplyOptions::default())
+            .unwrap();
+        assert!(state.drop_staged());
+        assert!(!state.is_staged());
+        assert_eq!(state.to_value(), before);
+        assert!(state.edge_index.has_connections("T"));
+        // The indexes still hold e1 in A: a second edge into A is refused.
+        let second = json!([{"type": "add_edges", "edges": [edge("e3", "A")]}]);
+        state
+            .apply(operations(second), ApplyOptions::default())
+            .unwrap_err();
+        // The dropped batch applies as it would have.
+        state
+            .apply(operations(batch), ApplyOptions::default())
+            .unwrap();
+        assert!(!state.drop_staged(), "nothing is staged after apply");
+    }
+
+    #[test]
+    fn a_refused_batch_is_not_staged() {
+        let mut state = GraphState::new(json!({"nodes": [table_node()], "edges": []})).unwrap();
+        let before = state.to_value();
+        let refused = updates(vec![
+            set("t", cell_path("r2"), json!("y")),
+            set("t", cell_path("gone"), json!("z")),
+        ]);
+        state.stage(refused, ApplyOptions::default()).unwrap_err();
+        assert!(!state.is_staged());
+        assert!(!state.keep());
+        assert_eq!(state.to_value(), before);
     }
 
     #[test]
