@@ -59,6 +59,7 @@ from lfx.services.flow_operations import (
     parse_flow_operation,
 )
 from lfx.services.flow_operations.limits import check_graph_limits
+from sqlalchemy.orm.attributes import set_committed_value
 from sqlmodel import func, select
 
 from langflow.services.database.models.flow_operation import FlowOperation as FlowOperationRow
@@ -241,9 +242,14 @@ async def write_flow_graph(
     # The head comes from the log: a multiplayer writer in WAL mode records
     # revisions without touching the flow row. The caller holds the flow's write lock.
     head = await log_head(session, flow.id)
+    wal = _wal(session)
     if head > flow.latest_revision:
-        # Only WAL writers leave the row behind the log; the row catches up with this write.
-        flow.latest_revision = head
+        # Only WAL writers leave the row behind the log. In WAL mode the row's revisions stay
+        # as the checkpoint wrote them; elsewhere the row catches up with this write.
+        if wal:
+            set_committed_value(flow, "latest_revision", head)
+        else:
+            flow.latest_revision = head
         result.latest_revision = head
     from_cache = _multiplayer_cached(session)
     head_graph: bytes | None = None
@@ -322,9 +328,17 @@ async def write_flow_graph(
         msg = f"Could not record the change to flow {flow.id} as operations"
         raise FlowHistoryError(msg) from exc
 
-    flow.data = target
-    if started and from_cache and flow.current_revision != head:
-        # The stored graph becomes the graph at the head (WAL mode: a checkpoint for free).
+    if wal and not (stored_repaired and not started):
+        # WAL mode: Flow.data stays the checkpoint's graph and only the checkpoint writes it;
+        # the caller still sees the saved graph on the flow object. (A history that starts
+        # from a repaired stored graph stores that graph: it is the new anchor's.)
+        set_committed_value(flow, "data", target)
+    elif wal:
+        flow.data = base
+    else:
+        flow.data = target
+    if started and from_cache and not wal and flow.current_revision != head:
+        # The stored graph becomes the graph at the head.
         flow.latest_revision = flow.current_revision = head
         result.current_revision = head
     if derived_operations or result.flow_repaired or stored_repaired:
@@ -360,11 +374,18 @@ async def write_flow_graph(
             )
         )
 
-    flow.latest_revision = recorded[-1].revision
-    flow.current_revision = recorded[-1].revision
+    if wal:
+        # The log is the record; the checkpoint task moves Flow.data and its revision.
+        set_committed_value(flow, "latest_revision", recorded[-1].revision)
+        from langflow.services.flow_multiplayer.checkpoint import request_after_commit
+
+        request_after_commit(session, flow.id, recorded[-1].revision)
+    else:
+        flow.latest_revision = recorded[-1].revision
+        flow.current_revision = recorded[-1].revision
     result.start_revision = recorded[0].revision
     result.end_revision = recorded[-1].revision
-    result.latest_revision = flow.latest_revision
+    result.latest_revision = recorded[-1].revision
     result.current_revision = flow.current_revision
 
     # Imported here: maintenance builds on this module.

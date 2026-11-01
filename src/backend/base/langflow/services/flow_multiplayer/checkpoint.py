@@ -25,13 +25,17 @@ from collections import OrderedDict
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
+from sqlalchemy import event
+from sqlalchemy.orm import Session
 
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.flow_multiplayer import bench, config, oplog
-from langflow.services.flow_multiplayer.cache import CACHE, EntryGoneError, call
+from langflow.services.flow_multiplayer.cache import CACHE, EntryGoneError, call, entry_at_head
 
 if TYPE_CHECKING:
     from uuid import UUID
+
+    from sqlmodel.ext.asyncio.session import AsyncSession
 
 _MAX_TRACKED = 4096
 _last: OrderedDict[UUID, int] = OrderedDict()
@@ -45,6 +49,33 @@ def note_checkpoint(flow_id: UUID, revision: int) -> None:
     _last.move_to_end(flow_id)
     while len(_last) > _MAX_TRACKED:
         _last.popitem(last=False)
+
+
+_PENDING_KEY = "flow_multiplayer_checkpoint"
+
+
+def request_after_commit(session: AsyncSession, flow_id: UUID, end: int) -> None:
+    """Run ``after_write`` once ``session``'s transaction commits (legacy saves in WAL mode)."""
+    pending = session.info.setdefault(_PENDING_KEY, {})
+    pending[flow_id] = max(end, pending.get(flow_id, end))
+
+
+@event.listens_for(Session, "after_commit")
+def _after_commit(session: Session) -> None:
+    pending = session.info.pop(_PENDING_KEY, None)
+    if not pending:
+        return
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return
+    for flow_id, end in pending.items():
+        after_write(flow_id, end)
+
+
+@event.listens_for(Session, "after_rollback")
+def _after_rollback(session: Session) -> None:
+    session.info.pop(_PENDING_KEY, None)
 
 
 def after_write(flow_id: UUID, end: int) -> None:
@@ -81,10 +112,14 @@ async def checkpoint_now(flow_id: UUID) -> int | None:
     t0 = time.perf_counter()
     mode = config.write_mode()
     if config.uses_cache():
-        entry = CACHE.get(flow_id)
-        if entry is None:
+        if CACHE.get(flow_id) is None:
             return None
         try:
+            # Caught up to the log first: a legacy save appends rows without touching the cache.
+            async with session_scope() as session:
+                entry = await entry_at_head(session, flow_id, await oplog.read_head(session, flow_id))
+            if entry is None:
+                return None
             revision, text = await entry.serialized()
         except EntryGoneError:
             return None

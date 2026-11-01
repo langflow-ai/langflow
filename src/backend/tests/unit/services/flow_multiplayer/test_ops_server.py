@@ -564,11 +564,25 @@ async def test_legacy_save(servers):
         assert flow["current_revision"] == 2
         data = flow["data"]
         data["nodes"][1]["data"]["node"]["template"]["t"]["value"] = "legacy"
+        stored_before = db_flow(flow_id)
+        new_name = f"renamed-{uuid.uuid4().hex[:8]}"
         saved = await client.patch(
-            f"{urls[1]}/api/v1/flows/{flow_id}", json={"data": data}, headers={"If-Match": f'"{flow["version_token"]}"'}
+            f"{urls[1]}/api/v1/flows/{flow_id}",
+            json={"data": data, "name": new_name},
+            headers={"If-Match": f'"{flow["version_token"]}"'},
         )
         assert saved.status_code == 200, saved.text
         assert saved.json()["history"]["start_revision"] == 3
+        stored_after = db_flow(flow_id)
+        with psycopg.connect(ADMIN_URL) as conn:
+            stored_name = conn.execute("SELECT name FROM flow WHERE id = %s", (flow_id,)).fetchone()[0]
+        assert stored_name == new_name  # non-graph fields update the row in every mode
+        if servers["mode"] == "wal":
+            # WAL: the legacy save appends log rows only; Flow.data and its revision are the checkpoint's.
+            assert stored_after[:2] == stored_before[:2]
+            assert stored_after[1] < 3
+        else:
+            assert stored_after[1] == 3
         token = saved.json()["version_token"]
         assert token == (await v1_flow(client, urls[0], flow_id))["version_token"]
 
