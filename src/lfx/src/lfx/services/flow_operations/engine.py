@@ -20,8 +20,10 @@ A server picks an engine by constructing a different object, or by the
 
 Arguments and results are the same: an argument that is ``bytes`` is UTF-8
 JSON text, any other argument is the JSON value itself, and results are
-Python values that share nothing with the engine. Both engines raise one
-error type, ``FlowOperationError`` (``EngineError``), as the same subclass for
+Python values that share nothing with the engine. ``to_json`` gives the same
+text from both engines: no spaces, and ASCII only, with a JSON escape for
+every other character, as ``json.dumps`` writes by default. Both engines raise
+one error type, ``FlowOperationError`` (``EngineError``), as the same subclass for
 the same ``kind``, with the same ``code`` and ``details``. A call that cannot
 run, such as a batch while another is staged, raises ``RuntimeError``.
 

@@ -250,3 +250,23 @@ def test_validation_and_repair_read_a_number_too_large_for_a_double(engine):
     digits = "1" + "0" * 309
     state = engine.GraphState(b'{"nodes": [], "edges": [], "zoom": ' + digits.encode() + b"}")
     assert state.to_dict()["zoom"] == int(digits)
+
+
+@pytest.mark.skipif(not _has_rust(), reason="lfx_native is not built")
+def test_both_engines_write_the_same_json_text():
+    """ASCII only, with the same escapes, numbers and order, from a GraphState and from a GraphPlain."""
+    template = {"t": {"value": "é œ 😀 \x7f \\x41 \\U0001f600 \u2028 \x00", "type": "str"}}
+    nodes = [
+        {"id": f"n{index}", "data": {"node": {"template": template}}, "position": {"x": 1e-7, "y": -0.0}}
+        for index in range(4)
+    ]
+    flow = {"nodes": nodes, "edges": [], "big": 2**70, "zoom": 1.5e300, "ключ": "значение"}
+    texts = set()
+    for engine in (PythonEngine, RustEngine):
+        state = engine.GraphState(flow)
+        state.apply([{"type": "delete_nodes", "ids": ["n1"]}])
+        texts.update({state.to_json(), engine.GraphPlain(state.to_dict()).to_json()})
+    [text] = texts
+    assert text.isascii()
+    assert [node["id"] for node in json.loads(text)["nodes"]] == ["n0", "n2", "n3"]
+    assert json.loads(text) == {**flow, "nodes": [nodes[0], nodes[2], nodes[3]]}

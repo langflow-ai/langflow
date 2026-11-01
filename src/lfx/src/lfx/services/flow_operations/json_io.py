@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import re
+from json.encoder import encode_basestring_ascii as _ascii_string
 from typing import Any, NoReturn
 
 import orjson
@@ -263,11 +264,84 @@ def copy_json(value: Any) -> Any:
     return value
 
 
-def dumps(value: Any) -> str:
-    """JSON text of a value the engine holds, written by ``orjson``."""
+# --- Writing JSON text -----------------------------------------------------------------------
+#
+# The engine writes the text the Rust engine writes: no spaces, and ASCII only, every other
+# character escaped as ``\uXXXX`` in lower-case hex (a pair of escapes above U+FFFF), as
+# ``json.dumps`` writes by default and as stored flows hold it. orjson writes everything else as
+# the Rust engine does (numbers, and the escapes of quotes, backslashes and control characters),
+# but writes other characters as UTF-8. So orjson writes each node, edge and other top-level value,
+# and the text of one that is not ASCII is encoded again as ASCII with ``backslashreplace``, which
+# writes ``\uXXXX`` for a character from U+0100 to U+FFFF. Every edge holds such characters (each
+# handle holds ``œ``), and about half of the nodes do. A character below U+0100 or above U+FFFF,
+# which ``backslashreplace`` writes in another form, is escaped first. On the 14.4 MB benchmark
+# flow this takes 24 ms. ``json.dumps`` takes 32 ms and writes some floats in another form
+# (``1e-07`` for ``1e-7``); escaping each string that is not ASCII before orjson writes it takes
+# 55 ms, and escaping with a regular expression 146 ms.
+
+_U64_END = 2**64
+_I64_START = -(2**63)
+_ASCII_BYTES = bytes(range(128))
+# The first bytes of the UTF-8 of a character from U+0080 to U+00FF, and above U+FFFF: no other
+# byte of UTF-8 has these values.
+_OTHER_LEADS = (b"\xc2", b"\xc3", b"\xf0", b"\xf1", b"\xf2", b"\xf3", b"\xf4")
+# Up to this many characters are escaped by one pass each; more by one ``translate``, which reads
+# every character more slowly.
+_REPLACES = 16
+
+
+def _with_big_ints(value: Any) -> Any:
+    """``value`` with each integer of more than 64 bits, which orjson does not write, as a ``Fragment`` of its
+    digits.
+    """  # noqa: D205
+    cls = value.__class__
+    if cls is dict:
+        return {key: _with_big_ints(item) for key, item in value.items()}
+    if cls is list:
+        return [_with_big_ints(item) for item in value]
+    if cls is int and not _I64_START <= value < _U64_END:
+        return orjson.Fragment(str(value).encode("ascii"))
+    return value
+
+
+def _piece(value: Any) -> bytes:
+    """One value as ASCII JSON text."""
     try:
         data = orjson.dumps(value)
     except TypeError:
-        # An integer of more than 64 bits keeps its digits.
-        return json.dumps(value, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
-    return data.decode("ascii") if data.isascii() else data.decode("utf-8")
+        data = orjson.dumps(_with_big_ints(value))
+    if data.isascii():
+        return data
+    text = data.decode("utf-8")
+    if any(lead in data for lead in _OTHER_LEADS):
+        others = {
+            character: _ascii_string(character)[1:-1]
+            for character in set(data.translate(None, _ASCII_BYTES).decode("utf-8"))
+            if character < "\u0100" or character > "\uffff"
+        }
+        if len(others) <= _REPLACES:
+            for character, escape in others.items():
+                text = text.replace(character, escape)
+        else:
+            text = text.translate({ord(character): escape for character, escape in others.items()})
+    return text.encode("ascii", "backslashreplace")
+
+
+def dump_bytes(value: Any) -> bytes:
+    """JSON text of a value the engine holds, as the Rust engine writes it, as ASCII ``bytes``."""
+    if value.__class__ is not dict:
+        return _piece(value)
+    # A graph's nodes and edges are written one by one, so only those that are not ASCII are encoded again.
+    pairs = [
+        _piece(key) + b":" + (_items(item) if item.__class__ is list else _piece(item)) for key, item in value.items()
+    ]
+    return b"{" + b",".join(pairs) + b"}"
+
+
+def _items(items: list[Any]) -> bytes:
+    return b"[" + b",".join([_piece(item) for item in items]) + b"]"
+
+
+def dumps(value: Any) -> str:
+    """JSON text of a value the engine holds, as the Rust engine writes it: the same characters."""
+    return dump_bytes(value).decode("ascii")
