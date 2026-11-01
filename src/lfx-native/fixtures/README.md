@@ -28,7 +28,7 @@ The doc names refer to the notes in `plans/multiplayer/` of the design vault. `o
 | `graph-structure` | Flow data is an object. `nodes` and `edges` are lists of objects. Node and edge ids are present and unique. An edge names existing nodes. Repair fixes each of these one way. | ops-history, "The engine is the validator" and "Repair" |
 | `node-objects` | A node's `data`, `data.node` and `data.node.template` are objects for its whole life. No write replaces them whole. | ops-history, "The engine is the validator" |
 | `base-graph-checked` | Apply and validation check the stored graph before they apply or compare anything, even for an empty batch. | ops-history, "The engine is the validator" |
-| `finite-numbers` | NaN, Infinity and an integer too large for a double are violations. Repair writes `null` in their place. | ops-history, "Types and canonical equality" and "Repair" |
+| `finite-numbers` | NaN, Infinity and an integer too large for a double are violations. Repair writes `null` in their place. A graph state, a plain graph, the graph of apply or replay, and operations refuse JSON text with a number too large for a double (such as `1e400`), as they refuse a Python `float` that is not finite. | ops-history, "Types and canonical equality" and "Repair" |
 | `violations-reported` | Validation reports every violation once, in document order. The edge rules run only on a sound structure. | ops-history, "The engine is the validator" |
 | `canonical-numbers` | The canonical form prints a number as JavaScript prints it (RFC 8785). | ops-history, "Types and canonical equality" |
 | `canonical-form` | The canonical form sorts object keys by UTF-16 code units and escapes only what JSON requires (RFC 8785). | ops-history, "Types and canonical equality" |
