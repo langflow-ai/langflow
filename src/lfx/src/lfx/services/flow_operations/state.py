@@ -35,7 +35,7 @@ from lfx.services.flow_operations.edge_rules import EdgeIndex
 from lfx.services.flow_operations.exceptions import FlowDataValidationError
 from lfx.services.flow_operations.json_io import copy_json, dumps
 from lfx.services.flow_operations.keyed_lists import ListIndex
-from lfx.services.flow_operations.parse import parse_operations
+from lfx.services.flow_operations.parse import DELETE_NODES, parse_operations
 from lfx.services.flow_operations.validation import find_load_violations, validate_flow_data, violations_error
 
 if TYPE_CHECKING:
@@ -563,10 +563,16 @@ class GraphState:
 
         with self._lock:
             self._unstaged()
-            result = replay_batch(self, parse_operations(operations), backward=backward)
+            parsed = parse_operations(operations)
+            deleted = [node_id for kind, payload in parsed if kind == DELETE_NODES for node_id in payload]
+            result = replay_batch(self, parsed, backward=backward)
             self.commit()
-            # Replay checks no rule, so apply checks the flow again before it changes it.
-            self.uncheck_base()
+            # Replay checks no rule. Of the structural rules that apply checks before its first batch, the only one a
+            # replay can break is that an edge's nodes exist: replay deletes no edge with its node. Stored operations
+            # delete those edges in the same batch, so the graph stays checked unless a node the batch deleted still
+            # has edges. Then apply checks the whole graph again, and refuses it.
+            if any(node_id not in self.nodes and self.edges_at.get(node_id) for node_id in deleted):
+                self.uncheck_base()
             return result
 
 

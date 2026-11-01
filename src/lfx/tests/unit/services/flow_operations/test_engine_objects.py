@@ -306,3 +306,34 @@ def test_the_staged_graph_is_the_graph_keep_makes(engine):
     with pytest.raises(RuntimeError, match="no batch is staged"):
         state.to_json(staged=True)
     assert state.to_json() == staged
+
+
+def _two_nodes_and_an_edge() -> dict[str, Any]:
+    def node(node_id: str) -> dict[str, Any]:
+        return {"id": node_id, "data": {"node": {"template": {"t": {"value": "", "type": "str"}}}}}
+
+    return {"nodes": [node("a"), node("b"), node("c")], "edges": [{"id": "e", "source": "a", "target": "b"}]}
+
+
+def test_apply_refuses_a_graph_that_a_replay_left_with_an_edge_without_its_node(engine):
+    """Replay deletes no edge with its node, so apply checks the whole graph after such a replay."""
+    state = engine.GraphState(_two_nodes_and_an_edge())
+    state.apply([])
+    state.replay([{"type": "delete_nodes", "ids": ["a"]}])
+    with pytest.raises(FlowDataValidationError) as refused:
+        state.apply([])
+    assert [violation["code"] for violation in refused.value.details["violations"]] == ["EDGE_ENDPOINT_INVALID"]
+
+
+def test_a_replay_of_stored_operations_keeps_the_graph_checked(engine):
+    """Stored operations delete a node's edges with it: the next batch does not check the whole graph again."""
+    state = engine.GraphState(_two_nodes_and_an_edge())
+    state.apply([])
+    state.replay([{"type": "delete_nodes", "ids": ["a"]}, {"type": "delete_edges", "ids": ["e"]}])
+    state.replay([{"type": "delete_nodes", "ids": ["c"]}])
+    if engine is PythonEngine:
+        # The Rust engine's status is not visible from Python; its own test checks it.
+        assert state._state._base_checked
+    path = ["data", "node", "template", "t", "value"]
+    state.apply([{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": path, "value": "y"}]}])
+    assert [node["id"] for node in state.to_dict()["nodes"]] == ["b"]
