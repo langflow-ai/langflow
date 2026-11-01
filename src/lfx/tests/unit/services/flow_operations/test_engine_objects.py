@@ -212,3 +212,41 @@ def test_an_item_deleted_and_written_again_in_one_batch_keeps_its_place(engine):
     state.replay(batch)
     outputs = state.to_dict()["nodes"][0]["data"]["node"]["outputs"]
     assert [output["name"] for output in outputs] == ["a", "b", "c"]
+
+
+NOT_FINITE_FLOW = b'{"nodes": [], "edges": [], "zoom": 1e400}'
+
+
+@pytest.mark.parametrize(
+    "load",
+    [
+        pytest.param(lambda engine: engine.GraphState(NOT_FINITE_FLOW), id="GraphState"),
+        pytest.param(lambda engine: engine.GraphPlain(NOT_FINITE_FLOW), id="GraphPlain"),
+        pytest.param(lambda engine: engine.apply(NOT_FINITE_FLOW, []), id="apply"),
+        pytest.param(lambda engine: engine.replay(NOT_FINITE_FLOW, []), id="replay"),
+    ],
+)
+def test_a_held_graph_refuses_text_with_a_number_too_large_for_a_double(engine, load):
+    """As a ``float`` that is not finite is refused: the engine never holds a number it cannot write."""
+    with pytest.raises(FlowDataValidationError) as refused:
+        load(engine)
+    assert refused.value.code == "FLOW_GRAPH_INVALID"
+    assert str(refused.value) == "flow data is not valid JSON: NaN and Infinity are not JSON numbers"
+
+
+def test_operations_refuse_text_with_a_number_too_large_for_a_double(engine):
+    operations = json.dumps(set_value(0)).replace("0}", "-1e400}").encode()
+    state = engine.GraphState(FLOW)
+    with pytest.raises(FlowOperationValidationError) as refused:
+        state.apply(operations)
+    assert str(refused.value) == "operations are not valid JSON: NaN and Infinity are not JSON numbers"
+    assert value_of(state.to_dict()) == "x"
+
+
+def test_validation_and_repair_read_a_number_too_large_for_a_double(engine):
+    assert [violation["code"] for violation in engine.validate(NOT_FINITE_FLOW)] == ["NON_FINITE_NUMBER"]
+    assert engine.repair(NOT_FINITE_FLOW)["flow_data"]["zoom"] is None
+    # An integer too large for a double keeps its digits, as a Python int does.
+    digits = "1" + "0" * 309
+    state = engine.GraphState(b'{"nodes": [], "edges": [], "zoom": ' + digits.encode() + b"}")
+    assert state.to_dict()["zoom"] == int(digits)

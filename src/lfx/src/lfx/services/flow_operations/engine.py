@@ -86,7 +86,7 @@ class PythonGraphState:
     __slots__ = ("_state",)
 
     def __init__(self, flow: Any) -> None:
-        self._state = _state.GraphState(read_data(flow))
+        self._state = _state.GraphState(read_data(flow, finite=True))
 
     def apply(self, operations: Any, *, forward: bool = False, backward: bool = False) -> dict[str, Any]:
         """Apply a batch, with every rule; returns what it did."""
@@ -127,7 +127,7 @@ class PythonGraphPlain:
     __slots__ = ("core",)
 
     def __init__(self, flow: Any, *, core: _CorePlain | None = None) -> None:
-        self.core = core if core is not None else _CorePlain(read_data(flow))
+        self.core = core if core is not None else _CorePlain(read_data(flow, finite=True))
 
     def validate(self, base: PythonGraphPlain | None = None, *, check_values: bool = True) -> list[dict[str, Any]]:
         core_base = None if base is None else base.core
@@ -170,7 +170,7 @@ class PythonEngine:
         """Apply operations to a graph, with every rule; returns ``{"flow_data", ...}``."""
         from lfx.services.flow_operations.apply import apply_batch
 
-        flow = read_data(flow)
+        flow = read_data(flow, finite=True)
         parsed = parse_operations(read_operations(operations))
         state = _state.GraphState.checked(flow)
         result = apply_batch(state, parsed, forward=forward, backward=backward)
@@ -183,7 +183,7 @@ class PythonEngine:
         """Replay stored operations on a graph, with no rule; returns ``{"flow_data", ...}``."""
         from lfx.services.flow_operations.replay import replay_batch
 
-        flow = read_data(flow)
+        flow = read_data(flow, finite=True)
         parsed = parse_operations(read_operations(operations))
         state = _state.GraphState(flow)
         result = replay_batch(state, parsed, backward=backward)

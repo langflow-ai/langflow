@@ -8,6 +8,11 @@ parse. A value that breaks a limit is refused as an invalid graph, with the
 same error as text that does not parse; a key that is not a ``str``, or a
 value of another type, is a ``TypeError``.
 
+Text with a number too large for a double, such as ``1e400``, is refused as
+a ``float`` that is not finite is, for a graph the engine holds or changes
+(``finite=True``) and for operations. Validation and repair read it, to
+report it and to write ``null`` in its place.
+
 Reading a value copies it, so the engine never shares a container with its
 caller: a later change to the argument cannot change the engine's graph, and
 a change to a result cannot either. Results are copied out the same way.
@@ -31,6 +36,9 @@ _U64_LIMIT = 2.0**64
 _I64_LIMIT = -(2.0**63)
 
 
+NOT_FINITE = "NaN and Infinity are not JSON numbers"
+
+
 def _not_json(why: str) -> FlowDataValidationError:
     return FlowDataValidationError(f"flow data is not valid JSON: {why}")
 
@@ -44,39 +52,55 @@ def _reject_constant(token: str) -> NoReturn:
     raise ValueError(msg)
 
 
-def _check_text_value(value: Any) -> str | None:
-    """The limit a value parsed from text breaks, or None. Text never holds a non-finite number."""
+def _scalar_problem(value: Any, *, finite: bool) -> str | None:
+    """The limit a string or number parsed from text breaks, or None."""
+    cls = value.__class__
+    if cls is str:
+        if not value.isascii() and _SURROGATE.search(value):
+            return "a string holds a lone surrogate"
+    elif finite and cls is float and value - value != 0.0:
+        return NOT_FINITE
+    return None
+
+
+def _check_text_value(value: Any, *, finite: bool) -> str | None:
+    """The limit a value parsed from text breaks, or None. With ``finite``, a number too large for a double
+    (read as a float that is not finite) breaks one.
+    """  # noqa: D205
     stack: list[tuple[Any, int]] = [(value, 0)]
     while stack:
         item, depth = stack.pop()
         cls = item.__class__
+        if cls is not dict and cls is not list:
+            problem = _scalar_problem(item, finite=finite)
+            if problem is not None:
+                return problem
+            continue
+        if depth >= MAX_DEPTH:
+            return f"nested more than {MAX_DEPTH} levels deep"
         if cls is dict:
-            if depth >= MAX_DEPTH:
-                return f"nested more than {MAX_DEPTH} levels deep"
-            for key, child in item.items():
+            for key in item:
                 if not key.isascii() and _SURROGATE.search(key):
                     return "a string holds a lone surrogate"
-                child_cls = child.__class__
-                if child_cls is dict or child_cls is list:
-                    stack.append((child, depth + 1))
-                elif child_cls is str and not child.isascii() and _SURROGATE.search(child):
-                    return "a string holds a lone surrogate"
-        elif cls is list:
-            if depth >= MAX_DEPTH:
-                return f"nested more than {MAX_DEPTH} levels deep"
-            for child in item:
-                child_cls = child.__class__
-                if child_cls is dict or child_cls is list:
-                    stack.append((child, depth + 1))
-                elif child_cls is str and not child.isascii() and _SURROGATE.search(child):
-                    return "a string holds a lone surrogate"
-        elif cls is str and not item.isascii() and _SURROGATE.search(item):
-            return "a string holds a lone surrogate"
+            children = item.values()
+        else:
+            children = item
+        for child in children:
+            child_cls = child.__class__
+            if child_cls is dict or child_cls is list:
+                stack.append((child, depth + 1))
+            else:
+                problem = _scalar_problem(child, finite=finite)
+                if problem is not None:
+                    return problem
     return None
 
 
-def parse_text(text: bytes) -> Any:
-    """Parse JSON text strictly: no ``NaN`` or ``Infinity`` token, within the limits. Raises ``ValueError``."""
+def parse_text(text: bytes, *, finite: bool = False) -> Any:
+    """Parse JSON text strictly: no ``NaN`` or ``Infinity`` token, within the limits. Raises ``ValueError``.
+
+    With ``finite``, a number too large for a double, such as ``1e400``, is refused too.
+    """
     try:
         value = orjson.loads(text)
     except orjson.JSONDecodeError:
@@ -89,8 +113,9 @@ def parse_text(text: bytes) -> Any:
             raise ValueError(msg)
         if found is None:
             return value
+    # orjson reads a number too large for a double as inf, which goes this way as a large float.
     value = json.loads(text.decode("utf-8"), parse_constant=_reject_constant)
-    broken = _check_text_value(value)
+    broken = _check_text_value(value, finite=finite)
     if broken is not None:
         raise ValueError(broken)
     return value
@@ -120,34 +145,29 @@ def _depth_and_large_floats(value: Any) -> object | None:
             elif cls is float and not _I64_LIMIT <= child < _U64_LIMIT:
                 large = True
     return _LARGE_FLOAT if large else None
-    stack = [(value, 0)]
-    pop, push = stack.pop, stack.append
-    while stack:
-        item, depth = pop()
-        if depth >= MAX_DEPTH:
-            return True
-        for child in item.values() if item.__class__ is dict else item:
-            cls = child.__class__
-            if cls is dict or cls is list:
-                push((child, depth + 1))
-    return False
 
 
-def read_data(value: Any) -> Any:
-    """A graph, or any other value the engine reads as data: an invalid graph error when it is not JSON."""
+def read_data(value: Any, *, finite: bool = False) -> Any:
+    """A graph, or any other value the engine reads as data: an invalid graph error when it is not JSON.
+
+    With ``finite``, for a graph the engine holds or changes, text with a number too large for a double is
+    refused too.
+    """
     if isinstance(value, (bytes, bytearray, memoryview)):
         try:
-            return parse_text(bytes(value))
+            return parse_text(bytes(value), finite=finite)
         except (ValueError, RecursionError, UnicodeDecodeError) as error:
             raise _not_json(str(error)) from None
     return read_value(value)
 
 
 def read_operations(value: Any) -> Any:
-    """A list of operations, before it is parsed: invalid operations when its text is not JSON."""
+    """A list of operations, before it is parsed: invalid operations when its text is not JSON or holds a number
+    too large for a double.
+    """  # noqa: D205
     if isinstance(value, (bytes, bytearray, memoryview)):
         try:
-            return parse_text(bytes(value))
+            return parse_text(bytes(value), finite=True)
         except (ValueError, RecursionError, UnicodeDecodeError) as error:
             msg = f"operations are not valid JSON: {error}"
             raise FlowOperationValidationError(msg) from None
