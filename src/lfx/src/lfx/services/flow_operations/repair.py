@@ -39,6 +39,7 @@ from lfx.services.flow_operations.schema import NODE_OBJECT_PATHS, load_node_sch
 from lfx.services.flow_operations.table_rows import fill_missing_positions, match_row_ids
 from lfx.services.flow_operations.validation import (
     GraphPath,
+    GraphViolation,
     changed_keyed_lists,
     changed_tables,
     find_edge_violations,
@@ -111,13 +112,20 @@ def repair_flow_data(flow_data: Any, *, base: Any = None) -> RepairResult:
     return repair_checked(flow_data, base=base)
 
 
-def repair_checked(flow_data: Any, *, base: Any = None) -> RepairResult:
+def repair_checked(flow_data: Any, *, base: Any = None, violations: list[GraphViolation] | None = None) -> RepairResult:
     """``repair_flow_data`` for a graph that is known to meet the JSON limits. It never changes ``flow_data``.
 
-    Within ``trusted_values``, a graph that breaks no rule comes back as it
-    is, shared rather than copied: repair would change nothing in it.
+    ``violations`` are the graph's violations against ``base``, with every
+    check, when the caller has them already (``GraphPlain``); they are found
+    here otherwise. Within ``trusted_values``, a graph that breaks no rule
+    comes back as it is, shared rather than copied: repair would change
+    nothing in it. The values are walked for numbers that are not finite only
+    when there are some, and the repaired graph is checked without that walk:
+    it has none left.
     """
-    if values_trusted() and not find_graph_violations(flow_data, base=base):
+    if violations is None:
+        violations = find_graph_violations(flow_data, base=base)
+    if not violations and values_trusted():
         return RepairResult(flow_data, [])
     fixes: list[GraphFix] = []
 
@@ -130,7 +138,8 @@ def repair_checked(flow_data: Any, *, base: Any = None) -> RepairResult:
         return RepairResult(repaired, fixes)
 
     repaired = copy_json(flow_data)
-    _replace_non_finite(repaired, (), fix)
+    if any(violation.code is GraphViolationCode.NON_FINITE_NUMBER for violation in violations):
+        _replace_non_finite(repaired, (), fix)
     for key in ("nodes", "edges"):
         if not isinstance(repaired.get(key), list):
             fix(GraphViolationCode.COLLECTION_NOT_LIST, (key,))
@@ -147,8 +156,8 @@ def repair_checked(flow_data: Any, *, base: Any = None) -> RepairResult:
         _repair_list_positions(repaired, base, fix)
         _repair_changed_edges(repaired, base, fix)
 
-    # Repair must never return a graph the strict path would refuse.
-    validate_flow_data(repaired, context="repaired flow.data", base=base)
+    # Repair must never return a graph the strict path would refuse. Every number is finite now.
+    validate_flow_data(repaired, check_values=False, context="repaired flow.data", base=base)
     return RepairResult(repaired, fixes)
 
 

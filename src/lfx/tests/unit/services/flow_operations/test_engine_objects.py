@@ -270,3 +270,19 @@ def test_both_engines_write_the_same_json_text():
     assert text.isascii()
     assert [node["id"] for node in json.loads(text)["nodes"]] == ["n0", "n2", "n3"]
     assert json.loads(text) == {**flow, "nodes": [nodes[0], nodes[2], nodes[3]]}
+
+
+@pytest.mark.parametrize("validate_first", [False, True], ids=["repair", "validate-then-repair"])
+def test_a_plain_graph_repairs_the_same_after_a_validate(engine, validate_first):
+    """Repair reuses the violations of a validate against the same base, and gives what it gives without them."""
+    flow = copy.deepcopy(FLOW)
+    flow["zoom"] = 10**400
+    flow["nodes"].append({"id": "a", "data": {"node": {"template": {}}}})
+    plain, base = engine.GraphPlain(flow), engine.GraphPlain(FLOW)
+    if validate_first:
+        codes = [violation["code"] for violation in plain.validate(base)]
+        assert codes == ["NODE_ID_DUPLICATE", "NON_FINITE_NUMBER"]
+    repaired, fixes = plain.repair(base)
+    assert [fix["code"] for fix in fixes] == ["NON_FINITE_NUMBER", "NODE_ID_DUPLICATE"]
+    assert repaired.to_dict()["zoom"] is None
+    assert repaired.validate(base) == []

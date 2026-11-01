@@ -23,7 +23,7 @@ from lfx.services.flow_operations.validation import GraphViolation, find_graph_v
 class GraphPlain:
     """A flow graph that no rule has been checked on yet. It shares its value, which nothing changes."""
 
-    __slots__ = ("_clean_against", "_flow", "_full", "_structure")
+    __slots__ = ("_clean_against", "_flow", "_full", "_structure", "_violations_against")
 
     def __init__(self, flow: Any, *, checked: bool = False) -> None:
         self._flow = flow
@@ -33,6 +33,8 @@ class GraphPlain:
         self._full = checked
         # A base the graph has no violation against, with every check.
         self._clean_against: GraphPlain | None = None
+        # The last base the graph was checked against with every check, and its violations, for repair.
+        self._violations_against: tuple[GraphPlain | None, list[GraphViolation]] | None = None
 
     @property
     def value(self) -> Any:
@@ -60,6 +62,8 @@ class GraphPlain:
         violations = find_graph_violations(
             self._flow, check_values=check_values, base=None if base is None else base.value
         )
+        if check_values:
+            self._violations_against = (base, violations)
         # The rules against a base include the rules of the graph alone.
         if not violations:
             self._pass(check_values=check_values)
@@ -76,7 +80,9 @@ class GraphPlain:
         clean = self._full if base is None else self._clean_against is base
         if clean:
             return GraphPlain(self._flow, checked=True), []
-        repaired = repair_checked(self._flow, base=None if base is None else base.value)
+        known = self._violations_against
+        violations = known[1] if known is not None and known[0] is base else None
+        repaired = repair_checked(self._flow, base=None if base is None else base.value, violations=violations)
         # Repair checks every rule on what it returns.
         return GraphPlain(repaired.flow_data, checked=True), repaired.fixes
 
