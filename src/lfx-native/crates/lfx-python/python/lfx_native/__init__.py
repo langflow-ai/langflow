@@ -1,8 +1,9 @@
 """Langflow's native core.
 
-``lfx_native.ops`` is the flow operation engine. Graphs, operations and
-results cross into it as JSON text, ``str`` or ``bytes``, and come back as
-JSON text. Every call releases the GIL.
+``lfx_native.ops`` is the flow operation engine. Graphs and operations
+cross into it as Python values, or as JSON text in ``bytes``, and results
+come back as Python values. A call releases the GIL only for large work:
+small calls keep it, so they never wait for it again.
 """
 
 from lfx_native import ops
