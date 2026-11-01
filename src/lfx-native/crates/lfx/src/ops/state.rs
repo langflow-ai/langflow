@@ -50,9 +50,9 @@ use crate::ops::validate::{
 /// a stored entry copies it into the layer. [`Layered::fold`] makes the layer
 /// part of the stored map, and [`Layered::discard`] drops it.
 ///
-/// Entry order is not state, as for the nodes and edges of a flow. So a
-/// removal moves the last entry into the gap, and costs the same whatever the
-/// size of the map.
+/// Entries keep their order, as the nodes and edges of a flow keep theirs in
+/// the Python engine and in the editor: a removal keeps the order of the
+/// others, a replaced entry keeps its place, and a new one goes last.
 #[derive(Debug)]
 pub(crate) struct Layered<V> {
     stored: IndexMap<String, V>,
@@ -134,23 +134,49 @@ impl<V: Clone> Layered<V> {
         if self.stored.contains_key(key) {
             self.layer.insert(key.to_owned(), None);
         } else {
-            self.layer.swap_remove(key);
+            self.layer.shift_remove(key);
         }
         existed
     }
 
-    /// Make the batch's changes part of the stored map, in time proportional to them.
+    /// Make the batch's changes part of the stored map, in time proportional
+    /// to them, and for removals to the entries after the removed ones.
     pub fn fold(&mut self) {
+        let mut removed = Vec::new();
         for (key, written) in std::mem::take(&mut self.layer) {
             match written {
                 Some(value) => {
                     self.stored.insert(key, value);
                 }
-                None => {
-                    self.stored.swap_remove(&key);
-                }
+                None => removed.extend(self.stored.get_index_of(&key)),
             }
         }
+        self.remove_slots(removed);
+    }
+
+    /// Remove the stored entries at `slots`, keeping the order of the others.
+    ///
+    /// Removing one entry moves every entry after it up one place. When that
+    /// moves fewer entries in all than the map holds, as for entries near
+    /// the end, each is removed in turn, from the last; else one pass keeps
+    /// the entries not removed.
+    fn remove_slots(&mut self, mut slots: Vec<usize>) {
+        let len = self.stored.len();
+        slots.sort_unstable();
+        let moved: usize = slots.iter().map(|slot| len - slot).sum();
+        if moved <= len {
+            for slot in slots.into_iter().rev() {
+                self.stored.shift_remove_index(slot);
+            }
+            return;
+        }
+        let mut slots = slots.into_iter().peekable();
+        let mut slot = 0;
+        self.stored.retain(|_, _| {
+            let keep = slots.next_if_eq(&slot).is_none();
+            slot += 1;
+            keep
+        });
     }
 
     /// Drop the batch's changes.
@@ -189,7 +215,7 @@ impl EdgesAt {
     fn detach(&mut self, id: &str, edge: &Edge) {
         for end in ends(edge) {
             if let Some(ids) = self.0.get_mut(end) {
-                ids.swap_remove(id);
+                ids.shift_remove(id);
                 if ids.is_empty() {
                     self.0.remove(end);
                 }
@@ -883,13 +909,37 @@ mod tests {
         map.insert("b".into(), 20);
         map.remove("c");
         map.fold();
-        let mut entries: Vec<_> = map
+        let entries: Vec<_> = map
             .stored
             .iter()
             .map(|(key, value)| (key.as_str(), *value))
             .collect();
-        entries.sort_unstable();
         assert_eq!(entries, [("a", 10), ("b", 20), ("x", 24)]);
+    }
+
+    #[test]
+    fn removals_keep_the_order_of_the_other_entries() {
+        let mut map = stored(&["a", "b", "c", "d"]);
+        map.remove("b");
+        map.fold();
+        assert_eq!(keys(&map), ["a", "c", "d"]);
+
+        let mut map = stored(&["a", "b", "c", "d", "e"]);
+        map.insert("x".into(), 24);
+        map.insert("y".into(), 25);
+        map.insert("z".into(), 26);
+        map.remove("x");
+        map.remove("b");
+        map.remove("d");
+        map.fold();
+        assert_eq!(keys(&map), ["a", "c", "e", "y", "z"]);
+
+        // Entries near the end are removed one by one.
+        let mut map = stored(&["a", "b", "c", "d", "e"]);
+        map.remove("e");
+        map.remove("c");
+        map.fold();
+        assert_eq!(keys(&map), ["a", "b", "d"]);
     }
 
     #[test]

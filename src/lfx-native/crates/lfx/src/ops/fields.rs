@@ -100,7 +100,7 @@ impl PathWrites {
             child.drop_write(rest);
         }
         if child.is_empty() {
-            self.children.swap_remove(segment);
+            self.children.shift_remove(segment);
         }
     }
 

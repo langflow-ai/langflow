@@ -389,12 +389,12 @@ fn disconnect(connections: &mut Connections, node_id: &str, edge: &Map, handles:
     if endpoint(edge, "target") == node_id
         && let Some(ids) = connections.inputs.get_mut(&handles.input)
     {
-        ids.swap_remove(id);
+        ids.shift_remove(id);
     }
     if endpoint(edge, "source") == node_id
         && let Some(ids) = connections.outputs.get_mut(&handles.output)
     {
-        ids.swap_remove(id);
+        ids.shift_remove(id);
     }
 }
 
