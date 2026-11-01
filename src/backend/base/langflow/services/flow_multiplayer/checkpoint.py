@@ -11,8 +11,9 @@ Single-flight per flow per process. It takes no advisory lock:
    So every system checkpoint (a compaction cut point) is at or before
    ``Flow.current_revision``, and a WAL read (``Flow.data`` + the rows after
    it) never meets a compacted gap except in a race, which it retries.
-4. When more than the retention window is retained, compaction runs under the
-   advisory lock (``maintenance.compact_flow``).
+4. When more than the retention window plus the compaction step is retained,
+   compaction runs (``compaction.compact``): the cut is chosen and checked
+   without a lock, and only its deletes run under the advisory lock.
 
 The cadence is ``flow_revision_checkpoint_cadence`` (default 100 revisions).
 """
@@ -29,7 +30,7 @@ from sqlalchemy import event
 from sqlalchemy.orm import Session
 
 from langflow.services.deps import get_settings_service, session_scope
-from langflow.services.flow_multiplayer import bench, config, oplog
+from langflow.services.flow_multiplayer import bench, compaction, config, oplog
 from langflow.services.flow_multiplayer.cache import CACHE, EntryGoneError, call, entry_at_head
 
 if TYPE_CHECKING:
@@ -166,12 +167,8 @@ async def checkpoint_now(flow_id: UUID) -> int | None:
         bytes=len(text),
     )
     window = get_settings_service().settings.flow_revision_retention_window
-    if first is not None and last is not None and last - first + 1 > window:
-        from langflow.services.flow_history.maintenance import compact_flow
-
-        t_c = time.perf_counter()
-        cutoff = await compact_flow(flow_id)
-        bench.event("compaction", flow=str(flow_id), cutoff=cutoff, dur=(time.perf_counter() - t_c) * 1000)
+    if compaction.due(first, last, window=window, step=config.compaction_step()):
+        await compaction.compact(flow_id, last=last, window=window)
     return revision
 
 

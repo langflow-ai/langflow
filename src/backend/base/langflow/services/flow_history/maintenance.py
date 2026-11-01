@@ -141,21 +141,6 @@ async def use_log_head(session: AsyncSession, flow: Flow) -> None:
         set_committed_value(flow, "latest_revision", head)
 
 
-async def compact_flow(flow_id: UUID) -> int | None:
-    """Compact one flow's history under its write lock, when more than the window is retained.
-
-    Called by the multiplayer checkpoint task right after it wrote a checkpoint.
-    Returns the new cutoff revision, or None when nothing was compacted.
-    """
-    async with session_scope() as session:
-        flow = await session.get(Flow, flow_id)
-        if flow is None or flow.user_id is None:
-            return None
-        await lock_flow_for_update(session, flow)
-        await use_log_head(session, flow)
-        return await compact_if_due(session, flow)
-
-
 async def checkpoint_if_due(session: AsyncSession, flow: Flow) -> FlowVersion | None:
     """Write a checkpoint of ``flow.data`` at its current revision when the cadence is reached."""
     # Counted from the newest system checkpoint, not any saved version: only
