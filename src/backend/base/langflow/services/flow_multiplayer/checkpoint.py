@@ -1,0 +1,142 @@
+"""The checkpoint task: ``Flow.data`` and a system checkpoint row every N revisions, off the write path.
+
+Single-flight per flow per process. It takes no advisory lock:
+
+1. The graph text at revision R: the cached graph's coalesced serialization
+   (``cache``, ``wal``), or ``Flow.data`` at its revision (``nocache``).
+2. The graph hash (engine, worker thread).
+3. One transaction: ``wal`` moves ``Flow.data`` to R only if R is newer than
+   the stored revision; then a system checkpoint row at R, only when the log
+   has rows, ``Flow.current_revision >= R`` and no checkpoint is there yet.
+   So every system checkpoint (a compaction cut point) is at or before
+   ``Flow.current_revision``, and a WAL read (``Flow.data`` + the rows after
+   it) never meets a compacted gap except in a race, which it retries.
+4. When more than the retention window is retained, compaction runs under the
+   advisory lock (``maintenance.compact_flow``).
+
+The cadence is ``flow_revision_checkpoint_cadence`` (default 100 revisions).
+"""
+
+from __future__ import annotations
+
+import asyncio
+import time
+from collections import OrderedDict
+from typing import TYPE_CHECKING
+
+from lfx.log.logger import logger
+
+from langflow.services.deps import get_settings_service, session_scope
+from langflow.services.flow_multiplayer import bench, config, oplog
+from langflow.services.flow_multiplayer.cache import CACHE, EntryGoneError, call
+
+if TYPE_CHECKING:
+    from uuid import UUID
+
+_MAX_TRACKED = 4096
+_last: OrderedDict[UUID, int] = OrderedDict()
+_running: set[UUID] = set()
+_tasks: set[asyncio.Task] = set()
+
+
+def note_checkpoint(flow_id: UUID, revision: int) -> None:
+    previous = _last.get(flow_id)
+    _last[flow_id] = revision if previous is None else max(previous, revision)
+    _last.move_to_end(flow_id)
+    while len(_last) > _MAX_TRACKED:
+        _last.popitem(last=False)
+
+
+def after_write(flow_id: UUID, end: int) -> None:
+    """Start the checkpoint task when ``end`` is a cadence past the last checkpoint this process knows."""
+    last = _last.get(flow_id)
+    if last is not None and end - last < config.checkpoint_cadence():
+        return
+    if flow_id in _running:
+        return
+    _running.add(flow_id)
+    task = asyncio.get_running_loop().create_task(_run(flow_id, end))
+    _tasks.add(task)
+    task.add_done_callback(_tasks.discard)
+
+
+async def _run(flow_id: UUID, end: int) -> None:
+    try:
+        if flow_id not in _last:
+            async with session_scope() as session:
+                stored = await oplog.last_checkpoint_revision(session, flow_id)
+            note_checkpoint(flow_id, stored or 0)
+        if end - _last[flow_id] < config.checkpoint_cadence():
+            return
+        await checkpoint_now(flow_id)
+    except Exception as exc:  # noqa: BLE001 -- the next write past the cadence retries
+        logger.warning("Flow checkpoint failed", flow_id=str(flow_id), error_type=type(exc).__name__)
+    finally:
+        _running.discard(flow_id)
+
+
+async def checkpoint_now(flow_id: UUID) -> int | None:
+    """Checkpoint the newest graph this process can serialize; return its revision, or None when skipped."""
+    started = time.time()
+    t0 = time.perf_counter()
+    mode = config.write_mode()
+    if config.uses_cache():
+        entry = CACHE.get(flow_id)
+        if entry is None:
+            return None
+        try:
+            revision, text = await entry.serialized()
+        except EntryGoneError:
+            return None
+    else:
+        async with session_scope() as session:
+            data = await oplog.read_flow_data(session, flow_id)
+        if data is None or data.data is None:
+            return None
+        revision, text = data.current_revision, data.data
+    t_ser = time.perf_counter()
+    if revision <= _last.get(flow_id, -1):
+        return None
+    engine = config.engine()
+    graph_hash = await call(lambda: engine.GraphPlain(text.encode()).graph_hash(), large=True)
+    t_hash = time.perf_counter()
+    async with session_scope() as session:
+        moved = await oplog.checkpoint_flow(session, flow_id, text, revision=revision) if mode == "wal" else False
+        inserted = await oplog.insert_checkpoint_row(session, flow_id, text, revision=revision, graph_hash=graph_hash)
+        await session.commit()
+        first, last = await oplog.retained_range(session, flow_id)
+    t_db = time.perf_counter()
+    note_checkpoint(flow_id, revision)
+    bench.event(
+        "checkpoint",
+        flow=str(flow_id),
+        revision=revision,
+        start=started,
+        end=time.time(),
+        dur=(t_db - t0) * 1000,
+        ser=(t_ser - t0) * 1000,
+        hash=(t_hash - t_ser) * 1000,
+        db=(t_db - t_hash) * 1000,
+        flow_moved=moved,
+        row_inserted=inserted,
+        bytes=len(text),
+    )
+    window = get_settings_service().settings.flow_revision_retention_window
+    if first is not None and last is not None and last - first + 1 > window:
+        from langflow.services.flow_history.maintenance import compact_flow
+
+        t_c = time.perf_counter()
+        cutoff = await compact_flow(flow_id)
+        bench.event("compaction", flow=str(flow_id), cutoff=cutoff, dur=(time.perf_counter() - t_c) * 1000)
+    return revision
+
+
+async def wait_idle() -> None:
+    """Wait for running checkpoint tasks (tests and shutdown)."""
+    while _tasks:
+        await asyncio.gather(*list(_tasks), return_exceptions=True)
+
+
+def reset_for_tests() -> None:
+    _last.clear()
+    _running.clear()

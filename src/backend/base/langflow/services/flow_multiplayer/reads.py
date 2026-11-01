@@ -1,0 +1,100 @@
+"""Multiplayer reads. None takes a lock.
+
+- ``revisions_body``: the revisions after R, straight from the log rows.
+- ``join_body``: the cached graph caught up to the head when the flow is
+  cached; otherwise ``Flow.data`` and its revision in one statement (in
+  ``wal`` that is the last checkpoint, and the client catches up through the
+  revisions).
+- ``current_flow``: the current graph for the v1 read: ``Flow.data``
+  (``nocache``: always the head), or the cached graph caught up to the head,
+  built from ``Flow.data`` plus the rows after it when it is not cached.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+import orjson
+
+from langflow.services.flow_multiplayer import bench, config, oplog
+from langflow.services.flow_multiplayer.cache import CACHE, EntryGoneError, entry_at_head
+
+if TYPE_CHECKING:
+    from uuid import UUID
+
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+EMPTY_GRAPH = '{"nodes":[],"edges":[]}'
+
+
+async def revisions_body(session: AsyncSession, flow_id: UUID, after: int, fallback_head: int) -> bytes:
+    """``{"latest_revision", "retention_gap", "revisions": [{"revision", "operations"}]}``.
+
+    ``retention_gap`` is true when revision ``after + 1`` is no longer in the log;
+    the client then joins again. ``fallback_head`` is the flow's latest revision,
+    used only when the log has no rows at all (after a purge).
+    """
+    with bench.timed("rows"):
+        rows = await oplog.rows_after(session, flow_id, after)
+    if not rows:
+        _first, last = await oplog.retained_range(session, flow_id)
+        head = last if last is not None else fallback_head
+        gap = last is None and after < head
+        return b'{"latest_revision":%d,"retention_gap":%s,"revisions":[]}' % (head, b"true" if gap else b"false")
+    head = rows[-1].end
+    try:
+        if rows[0].start > after + 1:
+            raise oplog.LogGapError(after + 1)
+        revisions = oplog.revisions_of(rows, after)
+    except oplog.LogGapError:
+        return b'{"latest_revision":%d,"retention_gap":true,"revisions":[]}' % head
+    with bench.timed("encode"):
+        parts = [b'{"revision":%d,"operations":[%s]}' % (revision, orjson.dumps(op)) for revision, op in revisions]
+    bench.put("n", len(parts))
+    return b'{"latest_revision":%d,"retention_gap":false,"revisions":[%s]}' % (head, b",".join(parts))
+
+
+@dataclass
+class CurrentGraph:
+    revision: int
+    text: str
+
+
+async def join_graph(session: AsyncSession, flow_id: UUID) -> CurrentGraph | None:
+    if config.uses_cache() and CACHE.get(flow_id) is not None:
+        return await _cached_at_head(session, flow_id)
+    data = await oplog.read_flow_data(session, flow_id)
+    if data is None:
+        return None
+    return CurrentGraph(data.current_revision, data.data or EMPTY_GRAPH)
+
+
+async def current_graph(session: AsyncSession, flow_id: UUID) -> CurrentGraph | None:
+    """The graph at the head, for the v1 read."""
+    if config.uses_cache():
+        return await _cached_at_head(session, flow_id)
+    data = await oplog.read_flow_data(session, flow_id)
+    if data is None:
+        return None
+    return CurrentGraph(data.current_revision, data.data or EMPTY_GRAPH)
+
+
+async def _cached_at_head(session: AsyncSession, flow_id: UUID) -> CurrentGraph | None:
+    for _attempt in range(3):
+        with bench.timed("head"):
+            head = await oplog.read_head(session, flow_id)
+        entry = await entry_at_head(session, flow_id, head)
+        if entry is None:
+            return None
+        try:
+            revision, text = await entry.serialized()
+        except EntryGoneError:
+            continue
+        return CurrentGraph(revision, text)
+    msg = f"could not read flow {flow_id}"
+    raise RuntimeError(msg)
+
+
+def join_body(graph: CurrentGraph) -> bytes:
+    return b'{"revision":%d,"data":%s}' % (graph.revision, graph.text.encode())
