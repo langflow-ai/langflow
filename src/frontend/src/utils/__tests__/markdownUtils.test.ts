@@ -213,3 +213,26 @@ No tables here.`;
     });
   });
 });
+
+describe("chat content around tables", () => {
+  it.each([
+    "Choose red | blue.",
+    "Use `left | right` to combine values.",
+    "```sh\nprintf hello | cat\n```",
+    "| left only",
+    "right only |",
+    "left | | right",
+  ])("preserves non-empty pipe content: %s", (content) => {
+    const table = "| Name | Value |\n| --- | --- |\n| A | B |";
+    const message = `${content}\n\n${table}\n| | |\n\n${content}`;
+    expect(preprocessChatMessage(message)).toBe(
+      `${content}\n\n${table}\n\n${content}`,
+    );
+  });
+
+  it("preserves two-column table rows without outer delimiters", () => {
+    const message =
+      "| Name | Value |\n| --- | --- |\nleft | right\nonly left |\n| only right";
+    expect(preprocessChatMessage(message)).toBe(message);
+  });
+});
