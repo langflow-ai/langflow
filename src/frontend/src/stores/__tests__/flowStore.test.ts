@@ -1,4 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
+import type { ReactFlowInstance } from "@xyflow/react";
 import { v5 as uuidv5 } from "uuid";
 import { queryClient } from "@/contexts";
 import { getGlobalVariablesQueryKey } from "@/controllers/API/queries/variables";
@@ -260,6 +261,88 @@ describe("useFlowStore", () => {
       expect(result.current.inputs).toEqual([]);
       expect(result.current.outputs).toEqual([]);
       expect(result.current.hasIO).toBe(false);
+    });
+  });
+
+  describe("paste coordinates", () => {
+    it.each([
+      ["genericNode", 0],
+      ["noteNode", 0],
+      ["genericNode", 100],
+      ["noteNode", -100],
+    ])(
+      "duplicates %s at flow x=%s without applying the viewport twice",
+      (type, x) => {
+        const source = {
+          ...mockNode,
+          type,
+          position: { x: Number(x), y: 100 },
+        } as AllNodeType;
+        // Only the browser boundary is mocked; paste and the store are real.
+        const screenToFlowPosition = jest.fn(() => ({ x: -175, y: -45 }));
+        useFlowStore.setState({
+          nodes: [source],
+          currentFlow: undefined,
+          reactFlowInstance: {
+            screenToFlowPosition,
+          } as unknown as ReactFlowInstance<AllNodeType, EdgeType>,
+        });
+        act(() => {
+          const paste = useFlowStore.getState().paste;
+          paste(
+            { nodes: [source], edges: [] },
+            {
+              x: 50,
+              y: 10,
+              paneX: source.position.x,
+              paneY: source.position.y,
+            },
+          );
+        });
+        expect(useFlowStore.getState().nodes[1].position).toEqual({
+          x: Number(x) + 50,
+          y: 110,
+        });
+        expect(screenToFlowPosition).not.toHaveBeenCalled();
+        expect(useFlowStore.getState().nodes[0].position).toEqual(
+          source.position,
+        );
+        act(() => {
+          const paste = useFlowStore.getState().paste;
+          paste(
+            { nodes: [source], edges: [] },
+            {
+              x: 50,
+              y: 10,
+              paneX: source.position.x,
+              paneY: source.position.y,
+            },
+          );
+        });
+        expect(useFlowStore.getState().nodes[2].position).toEqual({
+          x: Number(x) + 60,
+          y: 120,
+        });
+        expect(screenToFlowPosition).not.toHaveBeenCalled();
+      },
+    );
+    it("continues converting screen coordinates for ordinary canvas paste", () => {
+      const screenToFlowPosition = jest.fn(() => ({ x: -175, y: -45 }));
+      useFlowStore.setState({
+        currentFlow: undefined,
+        reactFlowInstance: {
+          screenToFlowPosition,
+        } as unknown as ReactFlowInstance<AllNodeType, EdgeType>,
+      });
+      act(() => {
+        const paste = useFlowStore.getState().paste;
+        paste({ nodes: [mockNode], edges: [] }, { x: 50, y: 10 });
+      });
+      expect(screenToFlowPosition).toHaveBeenCalledWith({ x: 50, y: 10 });
+      expect(useFlowStore.getState().nodes[0].position).toEqual({
+        x: -175,
+        y: -45,
+      });
     });
   });
 
