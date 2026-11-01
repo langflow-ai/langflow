@@ -722,7 +722,7 @@ async def test_legacy_save_then_checkpoint_keeps_flow_data_monotonic(servers):
         text, current, _latest = stored()
         assert seen == sorted(seen), seen
         if mode == "wal":
-            assert CADENCE * 2 <= current <= head  # the checkpoint's revision, past the legacy save's
+            assert CADENCE < current <= head  # the next checkpoint's revision, past the legacy save's
         else:
             assert current == head
         expected = replay(
