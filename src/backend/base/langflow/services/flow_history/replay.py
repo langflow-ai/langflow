@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from lfx.services.flow_operations import FlowOperationError, apply_flow_operations, graph_hash
+from lfx.services.flow_operations import FlowOperationError, dump_flow_operation
 from sqlmodel import func, select
 
 from langflow.services.database.models.flow_operation import FlowOperation
@@ -23,6 +23,7 @@ from langflow.services.flow_history.errors import (
     FlowRevisionNotRetainedError,
 )
 from langflow.services.flow_history.store import latest_anchor_at_or_before, rows_covering
+from langflow.services.flow_multiplayer import config as multiplayer
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -102,7 +103,7 @@ async def _reconstruct(
 def verify_checkpoint(checkpoint: FlowVersion) -> None:
     """Raise when a checkpoint's graph no longer hashes to its stored hash."""
     try:
-        matches = graph_hash(checkpoint.data) == checkpoint.graph_hash
+        matches = multiplayer.engine().graph_hash(checkpoint.data) == checkpoint.graph_hash
     except FlowOperationError:
         matches = False
     if not matches:
@@ -114,6 +115,7 @@ def verify_checkpoint(checkpoint: FlowVersion) -> None:
 async def replay_from(session: AsyncSession, flow_id: UUID, anchor: FlowVersion, revision: int) -> dict[str, Any]:
     """Apply the recorded operations after ``anchor`` up to and including ``revision``."""
     anchor_revision = anchor.operation_revision or 0
+    engine = multiplayer.engine()
     graph: dict[str, Any] = anchor.data
     expected = anchor_revision + 1
     for row in await rows_covering(session, flow_id, after=anchor_revision, through=revision):
@@ -126,7 +128,7 @@ async def replay_from(session: AsyncSession, flow_id: UUID, anchor: FlowVersion,
             if recorded.revision != expected:
                 raise FlowHistoryCorruptionError(flow_id, "missing revisions", revision=expected)
             try:
-                graph = apply_flow_operations(graph, [recorded.operation]).flow_data
+                graph = engine.apply(graph, [dump_flow_operation(recorded.operation)], forward=False)["flow_data"]
             except FlowOperationError as exc:
                 raise FlowHistoryCorruptionError(flow_id, "operation does not apply", revision=expected) from exc
             expected += 1

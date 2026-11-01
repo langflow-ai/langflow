@@ -55,7 +55,12 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.folder.utils import get_default_folder_id
 from langflow.services.deps import get_settings_service, get_variable_service
 from langflow.services.flow_history.errors import FlowHistoryError
-from langflow.services.flow_history.recorder import GraphWriteResult, refuse_unreadable_graph, write_flow_graph
+from langflow.services.flow_history.recorder import (
+    GraphWriteResult,
+    refuse_unreadable_graph,
+    response_version_token,
+    write_flow_graph,
+)
 from langflow.services.storage.service import StorageService
 from langflow.utils.flow_secrets import HiddenFieldMetadataError, restore_redacted_flow_values
 
@@ -895,7 +900,10 @@ async def _update_existing_flow(
         await _save_flow_to_fs(existing_flow, owner_user_id, storage_service)
 
     return FlowWriteRead.model_validate(existing_flow, from_attributes=True).model_copy(
-        update={"history": history_write_summary(graph_write)}
+        update={
+            "history": history_write_summary(graph_write),
+            "version_token": await response_version_token(session, existing_flow),
+        }
     )
 
 
@@ -1038,7 +1046,10 @@ async def _patch_flow(
     await _save_flow_to_fs(db_flow, owner_user_id, storage_service)
 
     return FlowWriteRead.model_validate(db_flow, from_attributes=True).model_copy(
-        update={"history": history_write_summary(graph_write)}
+        update={
+            "history": history_write_summary(graph_write),
+            "version_token": await response_version_token(session, db_flow),
+        }
     )
 
 
