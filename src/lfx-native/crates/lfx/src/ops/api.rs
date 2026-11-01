@@ -12,7 +12,7 @@
 use std::fmt;
 
 use crate::json;
-use crate::value::{Map, Value};
+use crate::value::{FiniteValue, Map, Value};
 use serde::Serialize;
 
 use crate::ops::apply::{Applied, ApplyOptions, apply_flow_operations};
@@ -26,7 +26,7 @@ use crate::ops::plain::GraphPlain;
 use crate::ops::repair::{Fix, repair_flow_data};
 use crate::ops::replay::{ReplayOptions, Replayed, replay_flow_operations};
 use crate::ops::restore;
-use crate::ops::state::{GraphState, parse_json};
+use crate::ops::state::{GraphState, parse_finite_json, parse_json, parse_problem};
 use crate::ops::validate::{Numbers, Violation, find_graph_violations};
 
 /// An error as the bindings receive it: a JSON object with the error's
@@ -190,7 +190,9 @@ impl From<Value> for Input<'_> {
     }
 }
 
-/// A graph, or any other value the engine reads as data.
+/// A graph, or any other value the engine reads as data. Validation and
+/// repair read a number that is not finite in text, to report it and to
+/// replace it.
 fn data(input: Input<'_>) -> ApiResult<Value> {
     match input {
         Input::Text(text) => Ok(parse_json(text)?),
@@ -198,11 +200,28 @@ fn data(input: Input<'_>) -> ApiResult<Value> {
     }
 }
 
-/// A list of operations.
+/// A graph that the engine holds or changes: a [`GraphState`], a
+/// [`GraphPlain`], and the graph of [`apply`] and [`replay`]. Text with a
+/// number that is not finite is refused, as a Python `float` that is not
+/// finite is.
+fn held(input: Input<'_>) -> ApiResult<Value> {
+    match input {
+        Input::Text(text) => Ok(parse_finite_json(text)?),
+        Input::Value(value) => Ok(value),
+    }
+}
+
+/// A list of operations. Text with a number that is not finite is refused.
 fn operations(input: Input<'_>) -> ApiResult<Vec<Operation>> {
     let value = match input {
         Input::Text(text) => serde_json::from_str(text)
-            .map_err(|error| ApiError::from(invalid!("operations are not valid JSON: {error}")))?,
+            .map(|FiniteValue(value)| value)
+            .map_err(|error| {
+                ApiError::from(invalid!(
+                    "operations are not valid JSON: {}",
+                    parse_problem(&error)
+                ))
+            })?,
         Input::Value(value) => value,
     };
     Ok(Operation::list_from_value(value)?)
@@ -255,7 +274,7 @@ pub fn applied_json(applied: Applied, options: ApplyOptions) -> Map {
 /// The graph or the operations do not parse, or the engine refuses the batch.
 pub fn apply(flow: Input<'_>, operations_in: Input<'_>, options: ApplyOptions) -> ApiResult<Value> {
     let (flow_data, applied) =
-        apply_flow_operations(data(flow)?, operations(operations_in)?, options)?;
+        apply_flow_operations(held(flow)?, operations(operations_in)?, options)?;
     let mut out = applied_json(applied, options);
     out.insert("flow_data".into(), flow_data);
     Ok(Value::Object(out))
@@ -267,7 +286,7 @@ pub fn apply(flow: Input<'_>, operations_in: Input<'_>, options: ApplyOptions) -
 ///
 /// The graph does not parse, or breaks a rule that the indexes need.
 pub fn graph_state(flow: Input<'_>) -> ApiResult<GraphState> {
-    Ok(GraphState::new(data(flow)?)?)
+    Ok(GraphState::new(held(flow)?)?)
 }
 
 /// Apply a batch to a [`GraphState`]; the result is what [`applied_json`] lists.
@@ -329,7 +348,7 @@ pub fn replay(
     options: ReplayOptions,
 ) -> ApiResult<Value> {
     let (flow_data, replayed) =
-        replay_flow_operations(data(flow)?, operations(operations_in)?, options)?;
+        replay_flow_operations(held(flow)?, operations(operations_in)?, options)?;
     let mut out = replayed_json(replayed, options);
     out.insert("flow_data".into(), flow_data);
     Ok(Value::Object(out))
@@ -406,9 +425,9 @@ pub fn repair(flow: Input<'_>, base: Option<Input<'_>>) -> ApiResult<Value> {
 ///
 /// # Errors
 ///
-/// JSON text that does not parse.
+/// JSON text that does not parse, or holds a number that is not finite.
 pub fn graph_plain(flow: Input<'_>) -> ApiResult<GraphPlain> {
-    Ok(GraphPlain::new(data(flow)?))
+    Ok(GraphPlain::new(held(flow)?))
 }
 
 /// [`validate`] on plain graphs.
@@ -698,6 +717,40 @@ mod tests {
 
     fn refused(result: ApiResult) -> ApiError {
         result.expect_err("a non-list argument must be refused")
+    }
+
+    #[test]
+    fn held_graphs_and_operations_refuse_a_number_that_is_not_finite() {
+        let flow = r#"{"nodes": [], "edges": [], "zoom": 1e400}"#;
+        let not_json = "flow data is not valid JSON: NaN and Infinity are not JSON numbers";
+        let errors = [
+            graph_state(flow.into()).unwrap_err(),
+            graph_plain(flow.into()).unwrap_err(),
+            apply(flow.into(), "[]".into(), ApplyOptions::default()).unwrap_err(),
+            replay(flow.into(), "[]".into(), ReplayOptions::default()).unwrap_err(),
+        ];
+        for error in errors {
+            assert_eq!(
+                (error.kind(), error.code()),
+                ("FlowDataValidationError", "FLOW_GRAPH_INVALID")
+            );
+            assert_eq!(error.message(), not_json);
+        }
+        let empty = r#"{"nodes": [], "edges": []}"#;
+        let operations = r#"[{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["position"], "value": -1e400}]}]"#;
+        let error = apply(empty.into(), operations.into(), ApplyOptions::default()).unwrap_err();
+        assert_eq!(error.kind(), "FlowOperationValidationError");
+        assert_eq!(
+            error.message(),
+            "operations are not valid JSON: NaN and Infinity are not JSON numbers"
+        );
+        // Validation and repair read the number, to report it and to replace it.
+        let violations = validate(flow.into(), None, true).unwrap();
+        assert_eq!(violations[0]["code"], "NON_FINITE_NUMBER");
+        assert_eq!(
+            repair(flow.into(), None).unwrap()["flow_data"]["zoom"],
+            Value::Null
+        );
     }
 
     #[test]
