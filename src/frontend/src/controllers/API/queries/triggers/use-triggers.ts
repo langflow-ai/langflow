@@ -32,7 +32,6 @@ import type {
   TriggerIngressRead,
   TriggerListParams,
   TriggerRead,
-  TriggerSessionRead,
   TriggerSigningSecretRead,
 } from "./types";
 
