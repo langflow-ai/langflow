@@ -30,18 +30,21 @@ with the engine CPU of their serialization and hash. Background tasks
 add to a request's record.
 A sampler records process CPU time and RSS every second (``kind: "sample"``).
 Compactions (``kind: "compaction"``) record start, end and the time of every
-phase, with ``lock_held`` from the advisory lock granted to the commit's end.
+phase, with ``lock_held`` from the advisory lock granted to the commit's end
+and ``checkpoints_delete``, the unlocked transaction after it.
 
-Two probes look for event-loop stalls, from the first measured request on:
+Two probes look for event-loop stalls. They start with the first measured
+request (the first flow request, before the benchmark resets the records):
 
 - ``kind: "gc"``: every gen-2 collection and any collection over
   ``GC_RECORD_MS``, with its start ``t``, ``gen``, ``dur`` and ``collected``;
   one ``kind: "gc_startup"`` record has the frozen object count and the
-  objects in generation 2 at that moment.
+  objects in generation 2 when the probe started. A reset keeps it.
 - ``kind: "lag"``: the loop woke more than ``LAG_RECORD_MS`` late from a
   ``LAG_INTERVAL`` sleep; ``t`` is when the stall began (about), ``lag`` its length.
 
-Everything stays in memory until the bench export endpoint reads it.
+Everything stays in memory until the bench export endpoint reads it; a reset
+deletes every record except ``gc_startup``.
 """
 
 from __future__ import annotations
@@ -239,24 +242,24 @@ class _GcProbe:
 
 
 _gc_probe: _GcProbe | None = None
+_gc_startup: dict[str, Any] | None = None
 
 
 def _install_gc_probe() -> None:
-    global _gc_probe  # noqa: PLW0603
+    global _gc_probe, _gc_startup  # noqa: PLW0603
     if _gc_probe is not None:
         return
     _gc_probe = _GcProbe()
-    _records.append(
-        {
-            "kind": "gc_startup",
-            "pid": os.getpid(),
-            "t": time.time(),
-            "freeze_count": gc.get_freeze_count(),
-            "gen2_objects": len(gc.get_objects(generation=2)),
-            "count": list(gc.get_count()),
-            "threshold": list(gc.get_threshold()),
-        }
-    )
+    _gc_startup = {
+        "kind": "gc_startup",
+        "pid": os.getpid(),
+        "t": time.time(),
+        "freeze_count": gc.get_freeze_count(),
+        "gen2_objects": len(gc.get_objects(generation=2)),
+        "count": list(gc.get_count()),
+        "threshold": list(gc.get_threshold()),
+    }
+    _records.append(_gc_startup)
     gc.callbacks.append(_gc_probe)
 
 
@@ -274,7 +277,10 @@ def export_jsonl() -> bytes:
 
 
 def reset() -> None:
+    """Delete every record but ``gc_startup``, which is taken once per process."""
     _records.clear()
+    if _gc_startup is not None:
+        _records.append(_gc_startup)
 
 
 class BenchMiddleware:
