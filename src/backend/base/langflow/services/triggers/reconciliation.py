@@ -469,6 +469,16 @@ async def reconcile_flow_triggers(
                     row.connection_id = connection_id
                     row.provider_state = {}
             changed = changed or moved
+        if moved and row.state == TriggerState.NEEDS_RECONNECT.value:
+            from langflow.services.triggers.subscriptions import revoke_for_trigger
+
+            await revoke_for_trigger(session, trigger_id=row.id)
+            row.state = TriggerState.PAUSED.value
+            row.last_error = error or SOURCE_SETTINGS_CHANGED_ERROR
+            row.provider_state = {}
+            session.add(row)
+            touched += 1
+            continue
         # Evaluated on every save, not only when the config changed, so a row an
         # earlier save left in ``error`` with an already-valid config heals.
         if kind == "schedule":

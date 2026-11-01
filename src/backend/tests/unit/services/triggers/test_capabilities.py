@@ -123,8 +123,33 @@ def test_missing_consent_routes_to_reconnect_not_an_oauth_loop() -> None:
 
     assert caps.reason is R.CONSENT_REQUIRED
     assert A.RECONNECT in caps.allowed_actions
-    # Resume stays offered: it is the step after consent is granted.
+    assert caps.blocked_actions[A.RESUME] is R.CONSENT_REQUIRED
+
+
+def test_a_restored_connection_offers_resume_instead_of_reconnect() -> None:
+    caps = trigger_capabilities(
+        _slack("needs_reconnect", last_error="token revoked"), caller=FULL, recovery_reason=R.READY_TO_RESUME
+    )
+
+    assert caps.reason is R.READY_TO_RESUME
     assert A.RESUME in caps.allowed_actions
+    assert caps.blocked_actions[A.RECONNECT] is R.RECONNECT_NOT_NEEDED
+
+
+def test_a_restored_connection_does_not_grant_flow_write_permission() -> None:
+    caps = trigger_capabilities(
+        _slack("needs_reconnect", last_error="token revoked"), caller=READER, recovery_reason=R.READY_TO_RESUME
+    )
+
+    assert caps.blocked_actions[A.RESUME] is R.INSUFFICIENT_PERMISSION
+    assert A.RECONNECT not in caps.allowed_actions
+
+
+def test_resume_waits_for_a_usable_connection() -> None:
+    caps = trigger_capabilities(_slack("needs_reconnect", last_error="token revoked"), caller=FULL)
+
+    assert caps.blocked_actions[A.RESUME] is R.NEEDS_RECONNECT
+    assert A.RECONNECT in caps.allowed_actions
 
 
 def test_only_the_connection_owner_may_reconnect() -> None:
