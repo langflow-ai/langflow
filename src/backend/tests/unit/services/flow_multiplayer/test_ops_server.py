@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import secrets
 import socket
 import subprocess
 import sys
@@ -49,6 +50,8 @@ WINDOW = 40
 BASE_NODES = 6
 FIELD_PATH = ["data", "node", "template", "t", "value"]
 NS = uuid.UUID("6d3f5d0e-6a52-4b1e-9d3b-2f0a0c1e7a11")
+SUPERUSER = "mp-test-admin"
+SUPERUSER_PASSWORD = secrets.token_urlsafe(18)  # a fresh local test value per session
 
 _FAIL_TRIGGERS = """
 CREATE OR REPLACE FUNCTION mp_test_fail_insert() RETURNS trigger AS $$
@@ -161,8 +164,10 @@ class Server:
             "LANGFLOW_FLOW_REVISION_CHECKPOINT_CADENCE": str(CADENCE),
             "LANGFLOW_FLOW_REVISION_RETENTION_WINDOW": str(WINDOW),
             "LANGFLOW_WORKERS": "1",
-            "LANGFLOW_AUTO_LOGIN": "true",
-            "LANGFLOW_SKIP_AUTH_AUTO_LOGIN": "true",
+            # Editor-mode auth: no auto login; the test creates an API key and sends it as x-api-key.
+            "LANGFLOW_AUTO_LOGIN": "false",
+            "LANGFLOW_SUPERUSER": SUPERUSER,
+            "LANGFLOW_SUPERUSER_PASSWORD": SUPERUSER_PASSWORD,
             "LANGFLOW_CREATE_STARTER_PROJECTS": "false",
             "LANGFLOW_UPDATE_STARTER_PROJECTS": "false",
             "LANGFLOW_LOG_LEVEL": "warning",
@@ -230,10 +235,22 @@ def servers(request, tmp_path_factory):
         second = Server(mode, engine, workdir, 1)
         started.append(second)
         second.wait_ready()
-        yield {"mode": mode, "engine": engine, "urls": [first.url, second.url]}
+        yield {"mode": mode, "engine": engine, "urls": [first.url, second.url], "headers": _api_key_headers(first.url)}
     finally:
         for server in started:
             server.stop()
+
+
+def _api_key_headers(url: str) -> dict[str, str]:
+    """Log in as the test superuser once and create the API key every request then carries."""
+    login = httpx.post(f"{url}/api/v1/login", data={"username": SUPERUSER, "password": SUPERUSER_PASSWORD}, timeout=30)
+    assert login.status_code == 200, login.text
+    token = login.json()["access_token"]
+    created = httpx.post(
+        f"{url}/api/v1/api_key/", json={"name": "mp-test"}, headers={"Authorization": f"Bearer {token}"}, timeout=30
+    )
+    assert created.status_code == 200, created.text
+    return {"x-api-key": created.json()["api_key"]}
 
 
 @pytest.fixture(scope="session")
@@ -320,7 +337,7 @@ async def test_concurrent_writers_on_two_processes(servers):
     """Writers on two processes: revisions are gap-free, and every reader reaches the same graph."""
     engine, urls = servers["engine"], servers["urls"]
     writers, batches = 6, 20
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=60, headers=servers["headers"]) as client:
         flow_id = await create_flow(client, urls[0])
         current_seen: list[int] = []
         stop = asyncio.Event()
@@ -390,7 +407,7 @@ async def test_concurrent_writers_on_two_processes(servers):
 
 async def test_retry_and_request_id_reuse(servers):
     urls = servers["urls"]
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=60, headers=servers["headers"]) as client:
         flow_id = await create_flow(client, urls[0])
         rid = str(uuid.uuid4())
         first = await post_ops(client, urls[0], flow_id, set_field("n0", "first"), rid=rid)
@@ -418,7 +435,7 @@ async def test_retry_and_request_id_reuse(servers):
 
 async def test_refused_batch_records_nothing(servers):
     urls = servers["urls"]
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=60, headers=servers["headers"]) as client:
         flow_id = await create_flow(client, urls[0])
         await post_ops(client, urls[0], flow_id, set_field("n0", "a"))
         refused = await post_ops(client, urls[0], flow_id, set_field("missing-node", "x"))
@@ -428,6 +445,12 @@ async def test_refused_batch_records_nothing(servers):
         assert detail["latest_revision"] == 1
         ok = await post_ops(client, urls[1], flow_id, set_field("n0", "b"))
         assert ok.json()["start_revision"] == 2
+        anonymous = await httpx.AsyncClient(timeout=60).__aenter__()
+        try:
+            denied = await post_ops(anonymous, urls[0], flow_id, set_field("n0", "no key"))
+        finally:
+            await anonymous.aclose()
+        assert denied.status_code in (401, 403)
         ahead = await post_ops(client, urls[0], flow_id, set_field("n0", "c"), base=99)
         assert ahead.status_code == 409
         assert ahead.json()["detail"]["code"] == "BASE_REVISION_AHEAD"
@@ -437,7 +460,7 @@ async def test_refused_batch_records_nothing(servers):
 async def test_staged_batch_dropped_on_database_failure(servers, failure):
     """A write whose database work fails leaves no trace: not in the log, the cache, or later answers."""
     engine, urls = servers["engine"], servers["urls"]
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=60, headers=servers["headers"]) as client:
         flow_id = await create_flow(client, urls[0])
         assert (await post_ops(client, urls[0], flow_id, set_field("n0", "kept"))).status_code == 200
         failed = await post_ops(client, urls[0], flow_id, set_field("n1", f"mp-inject-fail-{failure}"))
@@ -456,7 +479,7 @@ async def test_staged_batch_dropped_on_database_failure(servers, failure):
 
 async def test_readers_never_see_uncommitted_revisions(servers):
     urls = servers["urls"]
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=60, headers=servers["headers"]) as client:
         flow_id = await create_flow(client, urls[0])
         await post_ops(client, urls[0], flow_id, set_field("n0", "committed"))
         for url in urls:  # warm both caches
@@ -493,7 +516,7 @@ async def test_readers_never_see_uncommitted_revisions(servers):
 async def test_wal_read_is_checkpoint_plus_replay(servers):
     """Flow.data plus the log rows after its revision is the graph a cached process serves."""
     engine, urls = servers["engine"], servers["urls"]
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=60, headers=servers["headers"]) as client:
         flow_id = await create_flow(client, urls[0])
         for i in range(CADENCE * 3 + 2):  # past a few checkpoints, and not on one
             assert (
@@ -530,7 +553,7 @@ async def test_checkpoint_never_moves_flow_data_backwards(servers):
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     urls = servers["urls"]
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=60, headers=servers["headers"]) as client:
         flow_id = await create_flow(client, urls[0])
         for i in range(CADENCE * 2):
             await post_ops(client, urls[0], flow_id, set_field("n0", f"y{i}"))
@@ -555,7 +578,7 @@ async def test_checkpoint_never_moves_flow_data_backwards(servers):
 async def test_legacy_save(servers):
     """v1 PATCH takes the same lock and diffs against the graph at the head (in WAL, not Flow.data)."""
     engine, urls = servers["engine"], servers["urls"]
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=60, headers=servers["headers"]) as client:
         flow_id = await create_flow(client, urls[0])
         await post_ops(client, urls[0], flow_id, set_field("n0", "op1"))
         await post_ops(client, urls[1], flow_id, [{"type": "add_nodes", "nodes": [node("extra", "e")]}])
@@ -610,7 +633,7 @@ async def test_legacy_save(servers):
 async def test_retention_gap(servers):
     engine, urls = servers["engine"], servers["urls"]
     total = WINDOW + CADENCE * 4
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=60, headers=servers["headers"]) as client:
         flow_id = await create_flow(client, urls[0])
         for i in range(total):
             assert (await post_ops(client, urls[i % 2], flow_id, set_field("n0", f"r{i}"))).status_code == 200
@@ -633,7 +656,7 @@ async def test_retention_gap(servers):
 async def test_engines_and_modes_store_the_same(servers, recorded):
     """One deterministic workload: identical answers, log and graph for every engine and mode."""
     urls = servers["urls"]
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=60, headers=servers["headers"]) as client:
         flow_id = await create_flow(client, urls[0])
         answers = []
         for i in range(24):
