@@ -29,7 +29,7 @@ import orjson
 
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.flow_multiplayer import bench, checkpoint, config, oplog
-from langflow.services.flow_multiplayer.cache import CACHE, EntryGoneError, FlowEntry, call, catch_up
+from langflow.services.flow_multiplayer.cache import CACHE, EntryGoneError, FlowEntry, call, catch_up, uncancellable
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -329,7 +329,9 @@ async def _write_cached(
             await _discard(flow_id, entry)
             raise
         try:
-            await _keep(entry, end, text)
+            # Committed: keep the batch and move the revision even when this request is cancelled
+            # meanwhile, so the entry never holds a committed batch staged under its old revision.
+            await uncancellable(_keep(entry, end, text))
         except BaseException:
             CACHE.evict(flow_id, entry)
             raise
@@ -340,9 +342,18 @@ async def _write_cached(
 
 
 async def _keep(entry: FlowEntry, end: int | None = None, text: str | None = None) -> None:
+    """Keep the staged batch and move the entry to ``end`` in one step, under ``entry.use``.
+
+    A keep that fails drops the batch in the same step, so the graph stays at the entry's revision.
+    """
     with bench.timed("keep"):
         async with entry.use:
-            bench.engine_call("keep", entry.state.keep)
+            try:
+                bench.engine_call("keep", entry.state.keep)
+            except BaseException:
+                if entry.state.staged:
+                    entry.state.drop()
+                raise
             if end is not None:
                 entry.revision = end
                 # Mode cache serialized this revision for Flow.data: readers share it.

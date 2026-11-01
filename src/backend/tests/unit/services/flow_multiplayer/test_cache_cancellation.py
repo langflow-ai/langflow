@@ -3,6 +3,8 @@
 - A catch-up cancelled while its replay runs in a worker thread: the replay finishes and the entry's
   revision moves with it, in one step, so the graph and its revision still agree.
 - A write cancelled while its batch is being staged: the batch is dropped and the entry evicted.
+- A write cancelled after its commit, while it waits to keep the batch: the batch is kept and the
+  entry's revision moves with it before the entry is evicted.
 """
 
 from __future__ import annotations
@@ -105,5 +107,39 @@ async def test_cancelled_stage_drops_the_batch_and_evicts_the_entry(engine):
         assert CACHE.get(flow_id) is None
         assert not entry.state.staged
         assert _value(entry.state) == "v0"
+    finally:
+        CACHE.evict(flow_id)
+
+
+async def test_cancelled_keep_after_commit_keeps_the_batch_with_its_revision(engine, monkeypatch):
+    flow_id = uuid.uuid4()
+    entry = FlowEntry(flow_id, engine.GraphState(_graph()), 0)
+    entry.new = False  # a small inline stage
+    CACHE.put(entry)
+
+    async def append_rows(*_args: Any, **_kwargs: Any) -> None:
+        return None
+
+    monkeypatch.setattr(oplog, "append_rows", append_rows)
+    monkeypatch.setattr(writes, "_rows", lambda forward, head: [(head + 1, head + len(forward), [b"{}"])])
+
+    class Session:
+        async def commit(self) -> None:
+            # Another call holds the graph when the commit returns, so keeping waits for it.
+            await entry.use.acquire()
+            asyncio.get_running_loop().call_later(SLOW, entry.use.release)
+
+    request = writes.OpsRequest(
+        request_id=str(uuid.uuid4()), base_revision=0, operations_json=orjson.dumps([_set("x")]), count=1
+    )
+    try:
+        await _cancel_after(
+            writes._write_cached(Session(), flow_id, uuid.uuid4(), request, "sha", 0, mode="wal"), SLOW / 3
+        )
+        # The committed batch was kept and the revision moved in the same step, then the entry evicted.
+        assert not entry.state.staged
+        assert entry.revision == 1
+        assert _value(entry.state) == "x"
+        assert CACHE.get(flow_id) is None
     finally:
         CACHE.evict(flow_id)

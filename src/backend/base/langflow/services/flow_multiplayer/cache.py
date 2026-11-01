@@ -57,14 +57,12 @@ async def call(function: Any, *args: Any, large: bool, name: str, **kwargs: Any)
     Records ``eng_<name>`` (wall) and ``eng_<name>_cpu`` (the running thread's CPU) on the request.
     """
     if large:
-        return await _uncancellable(
-            anyio.to_thread.run_sync(lambda: bench.engine_call(name, function, *args, **kwargs))
-        )
+        return await uncancellable(anyio.to_thread.run_sync(lambda: bench.engine_call(name, function, *args, **kwargs)))
     return bench.engine_call(name, function, *args, **kwargs)
 
 
-async def _uncancellable(awaitable: Any) -> Any:
-    """Await a worker-thread engine call to its end, even when the caller is cancelled.
+async def uncancellable(awaitable: Any) -> Any:
+    """Await a worker-thread engine call, or a step that must finish once begun, even when the caller is cancelled.
 
     A thread cannot be stopped: an asyncio task cancelled while it awaits a thread returns at
     once and the thread runs on. The caller would then release the entry's locks (or record a
