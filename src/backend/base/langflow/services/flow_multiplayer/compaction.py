@@ -1,4 +1,4 @@
-"""Compaction of a multiplayer flow's history, with the flow's advisory lock held only for the deletes.
+"""Compaction of a multiplayer flow's history, with the flow's advisory lock held only for the log rows' delete.
 
 The checkpoint task calls ``compact`` once more than the retention window
 plus the compaction step (``config.compaction_step``) is retained, so it runs
@@ -10,12 +10,16 @@ checkpoints before ``k`` that are not retained.
 
 1. Without a lock: one statement picks the cut and returns the checkpoint's
    text, and the engine checks its hash in a worker thread (a large call).
-   This needs no lock: a checkpoint row never changes, and only a compaction
-   or a purge deletes rows, both under the lock.
-2. One short transaction: the advisory lock, then the deletes, then the
-   commit. The log rows go only while the cut's row and its checkpoint are
-   both still there; after a concurrent purge or compaction nothing is
-   deleted. The older checkpoints go only when log rows went.
+   This needs no lock: a checkpoint row never changes, and when it is deleted
+   meanwhile the guarded delete of step 2 deletes nothing.
+2. One short transaction, the only work under the lock: the advisory lock,
+   the log rows' delete, the commit. The rows go only while the cut's row and
+   its checkpoint are both still there; after a concurrent purge or
+   compaction nothing is deleted.
+3. Only when log rows went: a second transaction, without the lock, deletes
+   the system checkpoints before the cut (large rows, so slow to delete).
+   Nothing reads them any more: a read below the first retained revision is
+   "not retained", and replay starts at the cut or after it.
 
 PostgreSQL only, like every multiplayer statement.
 """
@@ -88,7 +92,7 @@ async def compact(flow_id: UUID, *, last: int, window: int) -> int | None:
     """Compact the history to the newest cut that keeps ``window`` revisions; return the cut, or None.
 
     ``last`` is the head the caller read. Records a ``compaction`` bench event with the time of every
-    phase and ``lock_held``: from the lock granted to the commit's end.
+    phase, ``lock_held`` (from the lock granted to the commit's end) and ``checkpoints_delete``.
     """
     started = time.time()
     t0 = time.perf_counter()
@@ -107,17 +111,23 @@ async def compact(flow_id: UUID, *, last: int, window: int) -> int | None:
     async with session_scope() as session:
         await oplog.lock_flow(session, flow_id)
         t_lock = time.perf_counter()
-        rows_deleted, checkpoints_deleted = await delete_before(session, flow_id, cut)
+        rows_deleted = await delete_rows(session, flow_id, cut)
         t_delete = time.perf_counter()
         await session.commit()
         t_commit = time.perf_counter()
+    checkpoints_deleted = 0
+    if rows_deleted:
+        async with session_scope() as session:
+            checkpoints_deleted = await delete_checkpoints(session, flow_id, cut)
+            await session.commit()
+    t_checkpoints = time.perf_counter()
     bench.event(
         "compaction",
         flow=str(flow_id),
         cutoff=cut.revision if rows_deleted else None,
         start=started,
         end=time.time(),
-        dur=(t_commit - t0) * 1000,
+        dur=(t_checkpoints - t0) * 1000,
         plan=(t_plan - t0) * 1000,
         verify=(t_verify - t_plan) * 1000,
         verify_cpu=verify_cpu,
@@ -125,6 +135,7 @@ async def compact(flow_id: UUID, *, last: int, window: int) -> int | None:
         delete=(t_delete - t_lock) * 1000,
         commit=(t_commit - t_delete) * 1000,
         lock_held=(t_commit - t_lock) * 1000,
+        checkpoints_delete=(t_checkpoints - t_commit) * 1000,
         rows_deleted=rows_deleted,
         checkpoints_deleted=checkpoints_deleted,
     )
@@ -150,11 +161,10 @@ async def _verify(flow_id: UUID, cut: Cut, data: str) -> float:
     return cpu
 
 
-async def delete_before(session: AsyncSession, flow_id: UUID, cut: Cut) -> tuple[int, int]:
-    """The deletes of a compaction to ``cut``; the caller holds the flow's advisory lock.
+async def delete_rows(session: AsyncSession, flow_id: UUID, cut: Cut) -> int:
+    """Delete the log rows before the cut's row; the caller holds the flow's advisory lock. Returns the rows deleted.
 
-    Returns the log rows and the checkpoints deleted. Deletes nothing when the cut's row or its
-    checkpoint is gone: a concurrent purge or compaction came first.
+    Deletes nothing when the cut's row or its checkpoint is gone: a concurrent purge or compaction came first.
     """
     from langflow.services.database.models.flow_operation.append_only import delete_history_rows
 
@@ -164,8 +174,10 @@ async def delete_before(session: AsyncSession, flow_id: UUID, cut: Cut) -> tuple
         "cut": cut.revision,
         "checkpoint_id": cut.checkpoint_id,
     }
-    rows = await delete_history_rows(session, DELETE_ROWS.bindparams(**params))
-    if not rows:
-        return 0, 0
-    checkpoints = await session.exec(DELETE_CHECKPOINTS.bindparams(flow_id=flow_id, cut=cut.revision))
-    return rows, checkpoints.rowcount
+    return await delete_history_rows(session, DELETE_ROWS.bindparams(**params))
+
+
+async def delete_checkpoints(session: AsyncSession, flow_id: UUID, cut: Cut) -> int:
+    """Delete the system checkpoints before the cut that are not retained, once its rows are gone (no lock)."""
+    result = await session.exec(DELETE_CHECKPOINTS.bindparams(flow_id=flow_id, cut=cut.revision))
+    return result.rowcount

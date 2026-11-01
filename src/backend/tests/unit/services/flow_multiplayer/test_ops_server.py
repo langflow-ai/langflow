@@ -707,16 +707,23 @@ async def test_compaction_keeps_the_window_and_the_cut(servers):
     for event in events:
         assert event["cutoff"] is not None
         assert event["start"] <= event["end"]
-        # The lock is held from its grant to the commit: the deletes and the commit, nothing before them.
+        # The lock is held from its grant to the commit: the rows' delete and the commit, nothing else.
         assert event["lock_held"] == pytest.approx(event["delete"] + event["commit"], abs=0.01)
-        phases = event["plan"] + event["verify"] + event["lock"] + event["delete"] + event["commit"]
+        phases = (
+            event["plan"]
+            + event["verify"]
+            + event["lock"]
+            + event["delete"]
+            + event["commit"]
+            + event["checkpoints_delete"]
+        )
         assert phases == pytest.approx(event["dur"], abs=0.01)
     assert_rows_contiguous(flow_id, total)
 
 
 async def test_compaction_deletes_nothing_after_a_concurrent_purge_or_compaction(servers):
     """The locked deletes check that the cut's row and checkpoint are still there; otherwise they are no-ops."""
-    from langflow.services.flow_multiplayer.compaction import Cut, delete_before
+    from langflow.services.flow_multiplayer.compaction import Cut, delete_checkpoints, delete_rows
     from sqlalchemy.ext.asyncio import create_async_engine
     from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -745,10 +752,16 @@ async def test_compaction_deletes_nothing_after_a_concurrent_purge_or_compaction
     flow = uuid.UUID(flow_id)
 
     async def delete(target: Cut) -> tuple[int, int]:
+        """As a compaction does: the guarded rows' delete, then the checkpoints' only when rows went."""
         async with AsyncSession(engine) as session:
-            deleted = await delete_before(session, flow, target)
+            rows = await delete_rows(session, flow, target)
             await session.commit()
-        return deleted
+        if not rows:
+            return 0, 0
+        async with AsyncSession(engine) as session:
+            checkpoints = await delete_checkpoints(session, flow, target)
+            await session.commit()
+        return rows, checkpoints
 
     try:
         # The checkpoint is gone (a purge deleted it): nothing is deleted.
