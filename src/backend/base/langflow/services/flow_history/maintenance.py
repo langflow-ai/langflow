@@ -26,6 +26,13 @@ and a checkpoint sits exactly there; reads below it are "not retained".
 At most one task runs per flow: on PostgreSQL a transaction-scoped advisory
 lock keyed on the flow lets a second worker exit at once; SQLite admits one
 writer anyway, and an in-process guard skips duplicates.
+
+On PostgreSQL the task then takes the flow's operation-log advisory lock
+(the lock every writer takes) and reads the head from the log, since a
+multiplayer writer in WAL mode does not update the flow row. Deleting rows
+also takes the flow's row lock, after the advisory lock, so a history read
+holding ``FOR SHARE`` on the flow (``lock_flow_for_read``) never sees rows
+disappear under it.
 """
 
 from __future__ import annotations
@@ -37,6 +44,7 @@ from typing import TYPE_CHECKING
 from lfx.log.logger import logger
 from sqlalchemy import event, text
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import set_committed_value
 from sqlmodel import col, delete, func, select
 
 from langflow.services.database.models.flow.guards import lock_flow_for_update
@@ -46,7 +54,7 @@ from langflow.services.database.models.flow_operation.append_only import delete_
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.flow_history.errors import FlowHistoryCorruptionError, FlowRevisionMismatchError
-from langflow.services.flow_history.recorder import checkpoint_system, projection_matches
+from langflow.services.flow_history.recorder import checkpoint_system, log_head, projection_matches
 from langflow.services.flow_history.replay import verify_checkpoint
 from langflow.services.flow_history.store import anchors_of, has_anchor
 
@@ -113,6 +121,7 @@ async def perform_maintenance(flow_id: UUID) -> None:
             if flow is None or flow.user_id is None:
                 return
             await lock_flow_for_update(session, flow)
+            await use_log_head(session, flow)
             await checkpoint_if_due(session, flow)
             await compact_if_due(session, flow)
     except Exception as exc:  # noqa: BLE001 -- maintenance is retried by the next write that needs it
@@ -123,6 +132,35 @@ async def perform_maintenance(flow_id: UUID) -> None:
         )
     finally:
         _running.discard(flow_id)
+
+
+async def use_log_head(session: AsyncSession, flow: Flow) -> None:
+    """Read the head from the log into ``flow.latest_revision`` without marking the row changed."""
+    head = await log_head(session, flow.id)
+    if head > flow.latest_revision:
+        set_committed_value(flow, "latest_revision", head)
+
+
+async def compact_flow(flow_id: UUID) -> int | None:
+    """Compact one flow's history under its write lock, when more than the window is retained.
+
+    Called by the multiplayer checkpoint task right after it wrote a checkpoint.
+    Returns the new cutoff revision, or None when nothing was compacted.
+    """
+    async with session_scope() as session:
+        flow = await session.get(Flow, flow_id)
+        if flow is None or flow.user_id is None:
+            return None
+        await lock_flow_for_update(session, flow)
+        await use_log_head(session, flow)
+        return await compact_if_due(session, flow)
+
+
+async def _lock_rows_for_delete(session: AsyncSession, flow_id: UUID) -> None:
+    """Take the flow's row lock (PostgreSQL), after its advisory lock, to wait for history readers."""
+    if session.get_bind().dialect.name != "postgresql":
+        return
+    await session.exec(select(Flow.id).where(Flow.id == flow_id).with_for_update())
 
 
 async def checkpoint_if_due(session: AsyncSession, flow: Flow) -> FlowVersion | None:
@@ -168,11 +206,13 @@ async def purge_history(session: AsyncSession, flow: Flow) -> None:
     matches its history cannot be purged until that is repaired, since the
     checkpoint left behind must be the recorded graph.
     """
+    await use_log_head(session, flow)
     if flow.latest_revision == 0 and not await has_anchor(session, flow.id):
         return
     if flow.history_paused:
         # Nothing recorded matches the stored graph, and the next recorded
         # write starts the history again from it, so all of the history goes.
+        await _lock_rows_for_delete(session, flow.id)
         await delete_history_rows(session, delete(FlowOperation).where(FlowOperation.flow_id == flow.id))
         await session.exec(
             delete(FlowVersion).where(
@@ -216,6 +256,7 @@ async def compact_to(session: AsyncSession, flow: Flow, checkpoint: FlowVersion,
     """
     # It becomes the only anchor for everything after it, so it must still be intact.
     verify_checkpoint(checkpoint)
+    await _lock_rows_for_delete(session, flow.id)
     revision = checkpoint.operation_revision
     ending_row = (
         await session.exec(

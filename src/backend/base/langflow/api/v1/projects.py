@@ -111,6 +111,7 @@ from langflow.services.database.models.deployment.exceptions import (
 )
 from langflow.services.database.models.deployment.guards import check_project_has_deployments
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_moves_allowed
+from langflow.services.database.models.flow.guards import lock_flows_oplog
 from langflow.services.database.models.flow.model import Flow, FlowRead, is_virtual_flow_id
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import (
@@ -1391,6 +1392,10 @@ async def _replace_project_operation_once(
             # UPDATE); this closes the remaining gap — an ordinary edit of a
             # flow already in the project.
             existing_flows_query = existing_flows_query.order_by(Flow.id).with_for_update()
+            # The flows' write locks before their row locks, in the order multiplayer writers take them.
+            await lock_flows_oplog(
+                session, (await session.exec(select(Flow.id).where(Flow.folder_id == project_id))).all()
+            )
         existing_flows = list((await session.exec(existing_flows_query)).all())
         if any(flow.user_id != project.user_id for flow in existing_flows):
             raise HTTPException(

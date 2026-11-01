@@ -39,6 +39,7 @@ from langflow.services.database.models.flow.guards import (
     LockedFlowError,
     ensure_flow_update_allowed,
     lock_flow_for_update,
+    lock_flow_oplog,
 )
 from langflow.services.database.models.flow.model import (
     GRAPH_WRITE_OPTION_FIELDS,
@@ -673,6 +674,9 @@ async def _read_flow(
     """
     from langflow.services.authorization.fetch import authorized_or_owner_scoped
 
+    if for_update:
+        # The flow's write lock before its row lock, in the order multiplayer writers take them.
+        await lock_flow_oplog(session, flow_id)
     return await authorized_or_owner_scoped(
         session,
         Flow,

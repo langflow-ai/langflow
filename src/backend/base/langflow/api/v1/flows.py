@@ -110,6 +110,7 @@ from langflow.services.database.lock_retry import (
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
 )
+from langflow.services.database.models.flow.guards import lock_flows_oplog
 from langflow.services.database.models.flow.model import (
     Flow,
     FlowCreate,
@@ -1366,6 +1367,8 @@ async def upload_file(
     owned_existing_flows_by_id: dict[UUID, Flow] = {}
     foreign_existing_ids: set[UUID] = set()
     if requested_ids:
+        # The flows' write locks before their row locks, in the order multiplayer writers take them.
+        await lock_flows_oplog(session, requested_ids)
         owned_existing_flows = (
             await session.exec(
                 select(Flow).where(col(Flow.id).in_(requested_ids), Flow.user_id == current_user.id).with_for_update()
