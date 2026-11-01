@@ -51,15 +51,42 @@ def is_large(payload: bytes, count: int) -> bool:
     return len(payload) >= config.LARGE_OPS_BYTES or count >= config.LARGE_OPS_COUNT
 
 
-async def call(function: Any, *args: Any, large: bool, **kwargs: Any) -> Any:
-    """Run an engine call in a worker thread when it is large, inline otherwise (both engines alike)."""
+async def call(function: Any, *args: Any, large: bool, name: str, **kwargs: Any) -> Any:
+    """Run an engine call in a worker thread when it is large, inline otherwise (both engines alike).
+
+    Records ``eng_<name>`` (wall) and ``eng_<name>_cpu`` (the running thread's CPU) on the request.
+    """
     if large:
-        return await anyio.to_thread.run_sync(lambda: function(*args, **kwargs))
-    return function(*args, **kwargs)
+        return await _uncancellable(
+            anyio.to_thread.run_sync(lambda: bench.engine_call(name, function, *args, **kwargs))
+        )
+    return bench.engine_call(name, function, *args, **kwargs)
+
+
+async def _uncancellable(awaitable: Any) -> Any:
+    """Await a worker-thread engine call to its end, even when the caller is cancelled.
+
+    A thread cannot be stopped: an asyncio task cancelled while it awaits a thread returns at
+    once and the thread runs on. The caller would then release the entry's locks (or record a
+    revision) while the engine still works on the graph. So a cancelled caller waits for the
+    thread, then raises ``CancelledError``.
+    """
+    future = asyncio.ensure_future(awaitable)
+    try:
+        return await asyncio.shield(future)
+    except asyncio.CancelledError:
+        while not future.done():
+            try:
+                await asyncio.wait([future])
+            except asyncio.CancelledError:
+                continue
+        if not future.cancelled():
+            future.exception()  # retrieved: the caller is cancelled and does not want the result
+        raise
 
 
 class FlowEntry:
-    __slots__ = ("flow_id", "json", "json_task", "new", "revision", "state", "use", "write")
+    __slots__ = ("flow_id", "json", "json_cpu", "json_task", "new", "revision", "state", "use", "write")
 
     def __init__(self, flow_id: UUID, state: Any, revision: int) -> None:
         self.flow_id = flow_id
@@ -68,15 +95,27 @@ class FlowEntry:
         self.write = asyncio.Lock()
         self.use = asyncio.Lock()
         self.json: tuple[int, str] | None = None
+        self.json_cpu = 0.0  # engine CPU (ms) of the serialization in ``json``
         self.json_task: tuple[int, asyncio.Task] | None = None
         # Built and not yet given a batch: the engine checks the whole graph before the first one.
         self.new = True
 
-    async def replay(self, operations: list[Any]) -> None:
+    async def replay(self, operations: list[Any], revision: int) -> None:
+        """Replay ``operations`` and move the entry to ``revision`` in one step.
+
+        The revision changes in the same call as the graph (in the worker thread for a large
+        replay), so a cancelled caller can never leave a replayed graph labelled with its old revision.
+        """
         payload = orjson.dumps(operations)
         large = is_large(payload, len(operations))
+
+        def replay_and_move() -> None:
+            self.state.replay(payload)
+            self.revision = revision
+            self.json = None
+
         async with self.use:
-            await call(self.state.replay, payload, large=large)
+            await call(replay_and_move, large=large, name="replay")
 
     async def serialized(self) -> tuple[int, str]:
         """The JSON text of the entry's committed revision, one serialization per revision."""
@@ -98,9 +137,10 @@ class FlowEntry:
             if self.revision != revision:
                 return None
             with bench.timed("ser"):
-                text = await call(self.state.to_json, large=True)
+                text, cpu = await call(bench.engine_call_cpu, self.state.to_json, large=True, name="to_json")
         if self.revision == revision:
             self.json = (revision, text)
+            self.json_cpu = cpu
         return revision, text
 
 
@@ -157,11 +197,12 @@ class FlowCache:
 async def build_entry(session: AsyncSession, flow_id: UUID) -> FlowEntry | None:
     """A new entry from ``Flow.data`` at ``Flow.current_revision`` (one statement)."""
     with bench.timed("load"):
-        data = await oplog.read_flow_data(session, flow_id)
+        with bench.timed("load_db"):
+            data = await oplog.read_flow_data(session, flow_id)
         if data is None:
             return None
         text = data.data if data.data is not None else '{"nodes":[],"edges":[]}'
-        state = await call(config.engine().GraphState, text.encode(), large=True)
+        state = await call(config.engine().GraphState, text.encode(), large=True, name="build")
     return FlowEntry(flow_id, state, data.current_revision)
 
 
@@ -173,11 +214,10 @@ async def catch_up(session: AsyncSession, entry: FlowEntry, head: int) -> None:
     if entry.revision >= head:
         return
     t0 = time.perf_counter()
-    rows = await oplog.rows_after(session, entry.flow_id, entry.revision, through=head)
+    with bench.timed("catchup_db"):
+        rows = await oplog.rows_after(session, entry.flow_id, entry.revision, through=head)
     revisions = oplog.revisions_of(rows, entry.revision, through=head)
-    await entry.replay([operation for _, operation in revisions])
-    entry.revision = head
-    entry.json = None
+    await entry.replay([operation for _, operation in revisions], head)
     bench.add("catchup", (time.perf_counter() - t0) * 1000)
     bench.add("catchup_n", len(revisions))
 

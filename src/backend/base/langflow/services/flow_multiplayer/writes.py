@@ -101,49 +101,65 @@ async def _write(
 ) -> dict[str, Any]:
     mode = config.write_mode()
     async with session_scope() as session:
-        if authorize is not None:
-            await authorize(session)
-        with bench.timed("lock"):
-            await oplog.lock_flow(session, flow_id)
-        with bench.timed("head"):
-            read = await oplog.read_head_and_retry(session, flow_id, request.request_id)
-        if not read.exists:
-            raise OpsRefusedError(404, {"code": "FLOW_NOT_FOUND", "message": "Flow not found"})
-        head = read.head
-        match = oplog.find_retry(read.retry_rows, request.request_id)
-        if match is not None:
-            if match.body_sha256 != operations_sha256:
-                raise OpsRefusedError(
-                    409,
-                    {
-                        "code": "REQUEST_ID_REUSED",
-                        "message": "This request_id was already used for another batch.",
-                        "latest_revision": head,
-                    },
-                )
-            bench.put("result", "already_applied")
-            return _answer("already_applied", head, match.start_revision, match.end_revision)
-        if request.base_revision is not None and request.base_revision > head:
-            raise OpsRefusedError(
-                409,
-                {
-                    "code": "BASE_REVISION_AHEAD",
-                    "message": "base_revision is newer than the flow's latest revision.",
-                    "latest_revision": head,
-                },
-            )
-
-        started = (head > 0 or read.has_anchor) and not read.paused
-        if not started:
-            head = await _start_history(session, flow_id, read)
-
-        if mode == "nocache":
-            answer, end = await _write_nocache(session, flow_id, actor_id, request, operations_sha256, head)
-        else:
-            answer, end = await _write_cached(session, flow_id, actor_id, request, operations_sha256, head, mode=mode)
+        answer, end = await _in_session(session, flow_id, actor_id, request, operations_sha256, authorize, mode)
+        closing = time.perf_counter()
+    # Leaving the session returns its connection to the pool.
+    bench.add("close", (time.perf_counter() - closing) * 1000)
     if end is not None:
         checkpoint.after_write(flow_id, end)
     return answer
+
+
+async def _in_session(
+    session: AsyncSession,
+    flow_id: UUID,
+    actor_id: UUID,
+    request: OpsRequest,
+    operations_sha256: str,
+    authorize: Callable[[AsyncSession], Awaitable[None]] | None,
+    mode: str,
+) -> tuple[dict[str, Any], int | None]:
+    if authorize is not None:
+        await authorize(session)
+    with bench.timed("lock"):
+        await oplog.lock_flow(session, flow_id)
+    with bench.timed("head"):
+        read = await oplog.read_head_and_retry(session, flow_id, request.request_id)
+    if not read.exists:
+        raise OpsRefusedError(404, {"code": "FLOW_NOT_FOUND", "message": "Flow not found"})
+    head = read.head
+    match = oplog.find_retry(read.retry_rows, request.request_id)
+    if match is not None:
+        if match.body_sha256 != operations_sha256:
+            raise OpsRefusedError(
+                409,
+                {
+                    "code": "REQUEST_ID_REUSED",
+                    "message": "This request_id was already used for another batch.",
+                    "latest_revision": head,
+                },
+            )
+        bench.put("result", "already_applied")
+        return _answer("already_applied", head, match.start_revision, match.end_revision), None
+    if request.base_revision is not None and request.base_revision > head:
+        raise OpsRefusedError(
+            409,
+            {
+                "code": "BASE_REVISION_AHEAD",
+                "message": "base_revision is newer than the flow's latest revision.",
+                "latest_revision": head,
+            },
+        )
+
+    started = (head > 0 or read.has_anchor) and not read.paused
+    if not started:
+        head = await _start_history(session, flow_id, read)
+
+    if mode == "nocache":
+        answer, end = await _write_nocache(session, flow_id, actor_id, request, operations_sha256, head)
+    else:
+        answer, end = await _write_cached(session, flow_id, actor_id, request, operations_sha256, head, mode=mode)
+    return answer, end
 
 
 async def _start_history(session: AsyncSession, flow_id: UUID, read: oplog.HeadRead) -> int:
@@ -152,7 +168,7 @@ async def _start_history(session: AsyncSession, flow_id: UUID, read: oplog.HeadR
     text = (data.data if data is not None else None) or EMPTY_GRAPH
     revision = max(read.head, read.latest) + 1 if read.paused else 0
     engine = config.engine()
-    graph_hash = await call(lambda: engine.GraphPlain(text.encode()).graph_hash(), large=True)
+    graph_hash = await call(lambda: engine.GraphPlain(text.encode()).graph_hash(), large=True, name="hash")
     await oplog.start_history(
         session,
         flow_id,
@@ -216,21 +232,24 @@ async def _write_nocache(
 ) -> tuple[dict[str, Any], int | None]:
     engine = config.engine()
     with bench.timed("load"):
-        data = await oplog.read_flow_data(session, flow_id)
+        with bench.timed("load_db"):
+            data = await oplog.read_flow_data(session, flow_id)
         text = (data.data if data is not None else None) or EMPTY_GRAPH
-        state = await call(engine.GraphState, text.encode(), large=True)
+        state = await call(engine.GraphState, text.encode(), large=True, name="build")
     if data is not None and data.current_revision < head:
         # Flow.data is behind the log (written in another mode): replay the rows after it.
         t0 = time.perf_counter()
-        rows = await oplog.rows_after(session, flow_id, data.current_revision, through=head)
+        with bench.timed("catchup_db"):
+            rows = await oplog.rows_after(session, flow_id, data.current_revision, through=head)
         revisions = oplog.revisions_of(rows, data.current_revision, through=head)
-        await call(state.replay, orjson.dumps([operation for _, operation in revisions]), large=True)
+        payload = orjson.dumps([operation for _, operation in revisions])
+        await call(state.replay, payload, large=True, name="replay")
         bench.add("catchup", (time.perf_counter() - t0) * 1000)
         bench.add("catchup_n", len(revisions))
     try:
         with bench.timed("stage"):
             # A new graph: the first batch checks the whole graph, so it is a large call.
-            result = await call(state.apply, request.operations_json, forward=True, large=True)
+            result = await call(state.apply, request.operations_json, forward=True, large=True, name="stage")
     except engine.EngineError as error:
         raise _refusal(error, head) from None
     forward = result.get("forward_operations") or []
@@ -241,7 +260,7 @@ async def _write_nocache(
         session, flow_id, forward, head, request=request, actor_id=actor_id, operations_sha256=operations_sha256
     )
     with bench.timed("ser"):
-        new_text = await call(state.to_json, large=True)
+        new_text = await call(state.to_json, large=True, name="to_json")
     with bench.timed("flow_write"):
         await oplog.write_flow(session, flow_id, new_text, revision=end, actor_id=actor_id, token=uuid.uuid4())
     await _commit(session)
@@ -267,57 +286,75 @@ async def _write_cached(
             # Only after a database reset or a lost commit outcome: the cache is not the log.
             CACHE.evict(flow_id, entry)
             raise EntryGoneError
-        await catch_up(session, entry, head)
+        try:
+            await catch_up(session, entry, head)
+        except BaseException:
+            CACHE.evict(flow_id, entry)
+            raise
+        text: str | None = None
+        end: int | None = None
         try:
             with bench.timed("stage"):
                 # Inline, except the first batch on a newly built graph: the engine checks the whole graph then.
                 async with entry.use:
-                    result = await call(entry.state.stage, request.operations_json, forward=True, large=entry.new)
-        except config.engine().EngineError as error:
-            raise _refusal(error, head) from None
-        entry.new = False
-        text: str | None = None
-        try:
+                    result = await call(
+                        entry.state.stage, request.operations_json, forward=True, large=entry.new, name="stage"
+                    )
+            entry.new = False
             forward = result.get("forward_operations") or []
-            if not forward:
-                await _commit(session)
-                await _keep(entry)
-                return _answer("applied", head, head + 1, head), None
-            if mode == "cache":
-                with bench.timed("ser"):
-                    async with entry.use:
-                        text = await call(entry.state.to_json, staged=True, large=True)
-            end = await _append(
-                session,
-                flow_id,
-                forward,
-                head,
-                request=request,
-                actor_id=actor_id,
-                operations_sha256=operations_sha256,
-            )
-            if text is not None:
-                with bench.timed("flow_write"):
-                    await oplog.write_flow(session, flow_id, text, revision=end, actor_id=actor_id, token=uuid.uuid4())
+            if forward:
+                if mode == "cache":
+                    with bench.timed("ser"):
+                        async with entry.use:
+                            text = await call(entry.state.to_json, staged=True, large=True, name="to_json_staged")
+                end = await _append(
+                    session,
+                    flow_id,
+                    forward,
+                    head,
+                    request=request,
+                    actor_id=actor_id,
+                    operations_sha256=operations_sha256,
+                )
+                if text is not None:
+                    with bench.timed("flow_write"):
+                        await oplog.write_flow(
+                            session, flow_id, text, revision=end, actor_id=actor_id, token=uuid.uuid4()
+                        )
             await _commit(session)
+        except config.engine().EngineError as error:
+            # Refused by the engine: a refused batch changes nothing and stays unstaged.
+            raise _refusal(error, head) from None
         except BaseException:
-            await _drop(entry)
+            await _discard(flow_id, entry)
             raise
-        await _keep(entry, end, text)
+        try:
+            await _keep(entry, end, text)
+        except BaseException:
+            CACHE.evict(flow_id, entry)
+            raise
     bench.put("result", "applied")
+    if end is None:
+        return _answer("applied", head, head + 1, head), None
     return _answer("applied", end, head + 1, end), end
 
 
 async def _keep(entry: FlowEntry, end: int | None = None, text: str | None = None) -> None:
     with bench.timed("keep"):
         async with entry.use:
-            entry.state.keep()
+            bench.engine_call("keep", entry.state.keep)
             if end is not None:
                 entry.revision = end
                 # Mode cache serialized this revision for Flow.data: readers share it.
                 entry.json = (end, text) if text is not None else None
 
 
-async def _drop(entry: FlowEntry) -> None:
+async def _discard(flow_id: UUID, entry: FlowEntry) -> None:
+    """After any failure but an engine refusal: evict the entry, and drop a batch it still has staged.
+
+    Evicting first means no new request gets the entry; the next one rebuilds it from the database.
+    """
+    CACHE.evict(flow_id, entry)
     async with entry.use:
-        entry.state.drop()
+        if entry.state.staged:
+            bench.engine_call("drop", entry.state.drop)
