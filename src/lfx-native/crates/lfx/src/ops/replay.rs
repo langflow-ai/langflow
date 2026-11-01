@@ -69,6 +69,7 @@ impl GraphState {
             backward: options.backward,
         });
         self.run_batch(operations, &mut report, Self::replay_operation)?;
+        self.commit();
         // Replay checks no rule, so apply checks the flow again before it
         // changes it.
         self.uncheck_base();

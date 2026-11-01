@@ -14,6 +14,13 @@
 //! first. A batch that succeeds folds its layers into the graph; a batch
 //! that fails drops them. So nothing is ever undone, and a failed batch
 //! keeps the indexes that earlier batches built.
+//!
+//! A batch can also stay staged after it succeeds ([`GraphState::stage`]):
+//! its layers wait until the caller keeps them ([`GraphState::keep`]) or
+//! drops them ([`GraphState::drop_staged`]), for example after a database
+//! commit. While a batch is staged, the graph as read
+//! ([`GraphState::to_value`], [`GraphState::to_json`],
+//! [`GraphState::entries`]) is the committed graph, without the batch.
 
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -151,9 +158,9 @@ impl<V: Clone> Layered<V> {
         self.layer.clear();
     }
 
-    /// The entries. Only between batches, when the layer is empty.
+    /// The stored entries, without a staged batch's layer. Never in the
+    /// middle of a batch, whose reads go through [`Self::get`].
     fn values(&self) -> impl Iterator<Item = &V> {
-        debug_assert!(self.layer.is_empty(), "read between batches only");
         self.stored.values()
     }
 
@@ -395,6 +402,9 @@ pub struct GraphState {
     /// Whether the flow passed the structural rules since it was loaded or
     /// last replayed. Apply checks them once, before its first batch.
     base_checked: bool,
+    /// Whether a batch is staged: its layers wait for [`Self::keep`] or
+    /// [`Self::drop_staged`].
+    staged: bool,
 }
 
 impl GraphState {
@@ -431,6 +441,7 @@ impl GraphState {
             edge_index: EdgeIndex::default(),
             lists: Lists::default(),
             base_checked: false,
+            staged: false,
         })
     }
 
@@ -590,6 +601,39 @@ impl GraphState {
     pub(crate) fn discard(&mut self) {
         self.graph.discard();
         self.edge_index.discard();
+    }
+
+    /// Whether a batch is staged ([`Self::stage`]).
+    #[must_use]
+    pub fn is_staged(&self) -> bool {
+        self.staged
+    }
+
+    /// Note that the batch that just succeeded stays staged.
+    pub(crate) fn set_staged(&mut self) {
+        self.staged = true;
+    }
+
+    /// Keep the staged batch: its layers become the graph. Returns whether a
+    /// batch was staged; with none, nothing changes.
+    pub fn keep(&mut self) -> bool {
+        if !self.staged {
+            return false;
+        }
+        self.staged = false;
+        self.commit();
+        true
+    }
+
+    /// Drop the staged batch: the graph stays as it was before it. Returns
+    /// whether a batch was staged; with none, nothing changes.
+    pub fn drop_staged(&mut self) -> bool {
+        if !self.staged {
+            return false;
+        }
+        self.staged = false;
+        self.discard();
+        true
     }
 
     /// Whether the node existed when the batch started.
