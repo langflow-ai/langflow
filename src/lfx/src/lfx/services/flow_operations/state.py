@@ -219,15 +219,26 @@ class GraphState:
 
     def to_value(self) -> dict[str, Any]:
         """The committed graph, without a staged batch. Its nodes and edges are shared, and never change."""
+        return self._value(self.nodes, self.edges)
+
+    def _value(self, nodes: dict[str, Any], edges: dict[str, Any]) -> dict[str, Any]:
         out = {}
         for key, value in self._root.items():
             if key == "nodes":
-                out[key] = list(self.nodes.values())
+                out[key] = list(nodes.values())
             elif key == "edges":
-                out[key] = list(self.edges.values())
+                out[key] = list(edges.values())
             else:
                 out[key] = value
         return out
+
+    def _staged_value(self) -> dict[str, Any]:
+        """The graph with the staged batch, as ``keep`` makes it, without changing the committed graph."""
+        batch = self.batch
+        nodes, edges = dict(self.nodes), dict(self.edges)
+        _fold(nodes, batch.nodes)
+        _fold(edges, batch.edges)
+        return self._value(nodes, edges)
 
     def to_dict(self) -> dict[str, Any]:
         """The committed graph, as a copy that shares no container with the state."""
@@ -235,10 +246,19 @@ class GraphState:
             value = self.to_value()
         return copy_json(value)
 
-    def to_json(self) -> str:
-        """The committed graph, as JSON text."""
+    def to_json(self, *, staged: bool = False) -> str:
+        """The committed graph, as JSON text. With ``staged``, the graph with the staged batch, as ``keep`` makes
+        it: a server writes it in the transaction that records the batch. Raises ``RuntimeError`` when ``staged``
+        is true and no batch is staged.
+        """  # noqa: D205
         with self._lock:
-            value = self.to_value()
+            if not staged:
+                value = self.to_value()
+            elif self._staged:
+                value = self._staged_value()
+            else:
+                msg = "no batch is staged"
+                raise RuntimeError(msg)
         return dumps(value)
 
     @property

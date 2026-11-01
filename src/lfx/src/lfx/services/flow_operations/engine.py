@@ -8,7 +8,7 @@ A server picks an engine by constructing a different object, or by the
 - ``GraphState(flow)``: a graph kept loaded between batches, with
   ``apply(operations, forward=, backward=)``, ``stage(...)``, ``keep()``,
   ``drop()``, ``replay(operations, backward=)``, ``staged``, ``to_dict()``
-  and ``to_json()``;
+  and ``to_json(staged=)``;
 - ``GraphPlain(flow)``: a graph read once, with ``validate(base,
   check_values=)``, ``repair(base)``, ``graph_hash()``, ``equals(other)``,
   ``ops_diff(target)``, ``to_dict()`` and ``to_json()``;
@@ -112,8 +112,9 @@ class PythonGraphState:
         """Replay stored operations, with no rule; returns what it did."""
         return copy_json(self._state.replay(read_operations(operations), backward=backward))
 
-    def to_json(self) -> str:
-        return self._state.to_json()
+    def to_json(self, *, staged: bool = False) -> str:
+        """The committed graph as JSON text; with ``staged``, the graph with the staged batch."""
+        return self._state.to_json(staged=staged)
 
     def to_dict(self) -> dict[str, Any]:
         return self._state.to_dict()
@@ -377,8 +378,8 @@ class RustGraphState:
     def replay(self, operations: Any, *, backward: bool = False) -> dict[str, Any]:
         return _call(self._state.replay, operations, backward=backward)
 
-    def to_json(self) -> str:
-        return self._state.to_json()
+    def to_json(self, *, staged: bool = False) -> str:
+        return self._state.to_json(staged=staged)
 
     def to_dict(self) -> dict[str, Any]:
         return self._state.to_dict()

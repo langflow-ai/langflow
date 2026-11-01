@@ -286,3 +286,23 @@ def test_a_plain_graph_repairs_the_same_after_a_validate(engine, validate_first)
     assert [fix["code"] for fix in fixes] == ["NON_FINITE_NUMBER", "NODE_ID_DUPLICATE"]
     assert repaired.to_dict()["zoom"] is None
     assert repaired.validate(base) == []
+
+
+def test_the_staged_graph_is_the_graph_keep_makes(engine):
+    """A server writes the staged graph before its commit, and keeps the batch after."""
+    state = engine.GraphState(FLOW)
+    with pytest.raises(RuntimeError, match="no batch is staged"):
+        state.to_json(staged=True)
+    state.stage(set_value("y"))
+    staged = state.to_json(staged=True)
+    assert value_of(json.loads(staged)) == "y"
+    assert value_of(json.loads(state.to_json())) == "x"
+    assert value_of(state.to_dict()) == "x"
+    state.keep()
+    assert state.to_json() == staged
+    state.stage([{"type": "delete_nodes", "ids": ["a"]}])
+    assert json.loads(state.to_json(staged=True))["nodes"] == []
+    assert state.drop()
+    with pytest.raises(RuntimeError, match="no batch is staged"):
+        state.to_json(staged=True)
+    assert state.to_json() == staged

@@ -14,7 +14,8 @@ Each batch runs on both engine objects in one of six ways: ``apply``,
 whole error (kind, code, message and details), the forward and backward
 operations, the graph's JSON text byte for byte, and the graph hash from both
 engines. While a batch is staged, both engines' ``to_json`` must give the
-committed text, and ``drop`` must give back the text from before the batch.
+committed text and ``to_json(staged=True)`` the same text as ``to_json``
+after ``keep``, and ``drop`` must give back the text from before the batch.
 ``undo`` replays the backward operations of the last batch that applied, as
 history playback does; ``undo_apply`` applies them as one new batch, under
 every rule, as a user's undo does, and must give back the graph from before
@@ -106,14 +107,19 @@ def _run(state: Any, mode: str, batch: Any, before: str | None = None) -> tuple[
             return _normalized(state.apply(batch, forward=True, backward=True))
         if mode == "replay":
             return _normalized(state.replay(batch, backward=True))
-        result = state.stage(batch, forward=True, backward=True)
+        result = _normalized(state.stage(batch, forward=True, backward=True))
         assert state.to_json() == before, "to_json while a batch is staged is not the committed text"
+        # The graph with the staged batch: compared between the engines with the result.
+        result["staged"] = state.to_json(staged=True)
         if mode == "stage_keep":
             state.keep()
+            assert state.to_json() == result["staged"], "keep did not give the staged text"
         else:
             assert state.drop()
             assert state.to_json() == before, "drop did not give back the text from before the batch"
-        return _normalized(result)
+            with pytest.raises(RuntimeError):
+                state.to_json(staged=True)
+        return result
 
     outcome = _outcome(run)
     if outcome[0] == "error":
