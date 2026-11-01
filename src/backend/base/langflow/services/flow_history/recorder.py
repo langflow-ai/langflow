@@ -59,7 +59,6 @@ from lfx.services.flow_operations import (
     parse_flow_operation,
 )
 from lfx.services.flow_operations.limits import check_graph_limits
-from sqlalchemy.orm.attributes import set_committed_value
 from sqlmodel import func, select
 
 from langflow.services.database.models.flow_operation import FlowOperation as FlowOperationRow
@@ -243,7 +242,8 @@ async def write_flow_graph(
     # revisions without touching the flow row. The caller holds the flow's write lock.
     head = await log_head(session, flow.id)
     if head > flow.latest_revision:
-        set_committed_value(flow, "latest_revision", head)
+        # Only WAL writers leave the row behind the log; the row catches up with this write.
+        flow.latest_revision = head
         result.latest_revision = head
     from_cache = _multiplayer_cached(session)
     head_graph: bytes | None = None
