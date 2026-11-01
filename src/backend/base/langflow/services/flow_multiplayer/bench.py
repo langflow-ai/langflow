@@ -12,9 +12,22 @@ each step in milliseconds:
 - ``stage``: applying the batch (engine);
 - ``append``: inserting the log rows;
 - ``ser``: serializing the graph (engine); ``flow_write``: writing ``Flow.data``;
-- ``commit``; ``keep``: keeping the staged batch (engine).
+- ``commit``; ``keep``: keeping the staged batch (engine);
+- ``close``: leaving the database session (the connection goes back to the pool);
+- ``out``: from the handler's answer to the response start leaving the inner middleware;
+  ``send``: from the response start to its last body byte.
 
-Checkpoints (``kind: "checkpoint"``) record start, end, duration and revision.
+Engine calls add ``eng_<call>`` (wall, measured around the call itself, inside
+any lock) and ``eng_<call>_cpu`` (CPU time of the thread that ran it). Fields
+named ``eng_*``, ``*_db``, ``*_part`` and ``*_n`` are parts of a step, not steps; every other
+numeric field except ``total`` is one step, and steps do not overlap, so
+``total`` minus the steps is the time no step accounts for. ``parse`` is reading
+and parsing the body, ``respond`` building the answer.
+
+Checkpoints (``kind: "checkpoint"``) record start, end, duration and revision,
+with the engine CPU of their serialization and hash. Background tasks
+(checkpoints, maintenance, the sampler) run in an empty context, so they never
+add to a request's record.
 A sampler records process CPU time and RSS every second (``kind: "sample"``).
 Everything stays in memory until the bench export endpoint reads it.
 """
@@ -23,6 +36,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import contextvars
 import os
 import time
 from contextvars import ContextVar
@@ -76,8 +90,10 @@ class _Timer:
         return self
 
     def __exit__(self, *_exc: object) -> None:
-        ms = (time.perf_counter() - self.t0) * 1000
-        self.rec[self.name] = self.rec.get(self.name, 0) + ms
+        now = time.perf_counter()
+        self.rec[self.name] = self.rec.get(self.name, 0) + (now - self.t0) * 1000
+        if self.name == "respond":
+            self.rec["_t_done"] = now
 
 
 _NULL = contextlib.nullcontext()
@@ -89,6 +105,50 @@ def timed(name: str) -> Any:
     if rec is None:
         return _NULL
     return _Timer(rec, name)
+
+
+def engine_call(name: str, function: Any, *args: Any, **kwargs: Any) -> Any:
+    """Run one engine call, adding its wall time and its thread's CPU time to the current record."""
+    rec = _current.get()
+    if rec is None:
+        return function(*args, **kwargs)
+    t0, c0 = time.perf_counter(), time.thread_time()
+    try:
+        return function(*args, **kwargs)
+    finally:
+        c1, t1 = time.thread_time(), time.perf_counter()
+        key = f"eng_{name}"
+        rec[key] = rec.get(key, 0) + (t1 - t0) * 1000
+        rec[key + "_cpu"] = rec.get(key + "_cpu", 0) + (c1 - c0) * 1000
+
+
+def engine_call_cpu(function: Any, *args: Any, **kwargs: Any) -> tuple[Any, float]:
+    """Run one engine call; return its result and its thread's CPU time in milliseconds."""
+    c0 = time.thread_time()
+    result = function(*args, **kwargs)
+    return result, (time.thread_time() - c0) * 1000
+
+
+def spawn(coro: Any) -> asyncio.Task:
+    """A background task in an empty context: it never adds to the request record that started it."""
+    return asyncio.get_running_loop().create_task(coro, context=contextvars.Context())
+
+
+class MeasuredEngine:
+    """The engine object, with every function call measured as ``eng_<function>`` (legacy write path)."""
+
+    def __init__(self, engine: Any) -> None:
+        self._engine = engine
+
+    def __getattr__(self, name: str) -> Any:
+        value = getattr(self._engine, name)
+        if not callable(value) or isinstance(value, type):
+            return value
+
+        def measured(*args: Any, **kwargs: Any) -> Any:
+            return engine_call(name, value, *args, **kwargs)
+
+        return measured
 
 
 def event(kind: str, **fields: Any) -> None:
@@ -121,7 +181,7 @@ async def _sample_loop() -> None:
 def _ensure_sampler() -> None:
     global _sampler  # noqa: PLW0603
     if _sampler is None or _sampler.done():
-        _sampler = asyncio.get_running_loop().create_task(_sample_loop())
+        _sampler = spawn(_sample_loop())
 
 
 def export_jsonl() -> bytes:
@@ -157,16 +217,24 @@ class BenchMiddleware:
         token = _current.set(rec)
 
         async def send_wrapper(message: dict) -> None:
+            now = time.perf_counter()
             if message["type"] == "http.response.start":
                 rec["status"] = message["status"]
+                rec["_t_start"] = now
+                if "_t_done" in rec:
+                    # From the handler's answer to the response leaving the inner middleware.
+                    rec["out"] = (now - rec["_t_done"]) * 1000
             elif message["type"] == "http.response.body" and not message.get("more_body"):
-                rec["total"] = (time.perf_counter() - t0) * 1000
+                rec["total"] = (now - t0) * 1000
+                if "_t_start" in rec:
+                    rec["send"] = (now - rec["_t_start"]) * 1000
             await send(message)
 
         try:
             await self.app(scope, receive, send_wrapper)
         finally:
             rec.setdefault("total", (time.perf_counter() - t0) * 1000)
-            del rec["_t0"]
+            for key in ("_t0", "_t_done", "_t_start"):
+                rec.pop(key, None)
             _current.reset(token)
             _records.append(rec)

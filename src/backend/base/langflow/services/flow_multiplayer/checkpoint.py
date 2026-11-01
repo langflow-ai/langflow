@@ -86,7 +86,7 @@ def after_write(flow_id: UUID, end: int) -> None:
     if flow_id in _running:
         return
     _running.add(flow_id)
-    task = asyncio.get_running_loop().create_task(_run(flow_id, end))
+    task = bench.spawn(_run(flow_id, end))
     _tasks.add(task)
     task.add_done_callback(_tasks.discard)
 
@@ -111,6 +111,7 @@ async def checkpoint_now(flow_id: UUID) -> int | None:
     started = time.time()
     t0 = time.perf_counter()
     mode = config.write_mode()
+    ser_cpu, ser_here = 0.0, False
     if config.uses_cache():
         if CACHE.get(flow_id) is None:
             return None
@@ -120,7 +121,10 @@ async def checkpoint_now(flow_id: UUID) -> int | None:
                 entry = await entry_at_head(session, flow_id, await oplog.read_head(session, flow_id))
             if entry is None:
                 return None
+            had = entry.json is not None and entry.json[0] == entry.revision
             revision, text = await entry.serialized()
+            # The engine CPU of this revision's serialization, whoever ran it (shared, one per revision).
+            ser_cpu, ser_here = entry.json_cpu, not had
         except EntryGoneError:
             return None
     else:
@@ -133,7 +137,9 @@ async def checkpoint_now(flow_id: UUID) -> int | None:
     if revision <= _last.get(flow_id, -1):
         return None
     engine = config.engine()
-    graph_hash = await call(lambda: engine.GraphPlain(text.encode()).graph_hash(), large=True)
+    graph_hash, hash_cpu = await call(
+        bench.engine_call_cpu, lambda: engine.GraphPlain(text.encode()).graph_hash(), large=True, name="hash"
+    )
     t_hash = time.perf_counter()
     async with session_scope() as session:
         moved = await oplog.checkpoint_flow(session, flow_id, text, revision=revision) if mode == "wal" else False
@@ -151,6 +157,9 @@ async def checkpoint_now(flow_id: UUID) -> int | None:
         dur=(t_db - t0) * 1000,
         ser=(t_ser - t0) * 1000,
         hash=(t_hash - t_ser) * 1000,
+        ser_cpu=ser_cpu,
+        ser_by_checkpoint=ser_here,
+        hash_cpu=hash_cpu,
         db=(t_db - t_hash) * 1000,
         flow_moved=moved,
         row_inserted=inserted,

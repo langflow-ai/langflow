@@ -36,6 +36,7 @@ lock: reads take no lock, and a read that races compaction retries.
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import zlib
 from typing import TYPE_CHECKING
 
@@ -82,7 +83,8 @@ def _schedule_after_commit(session: Session) -> None:
     except RuntimeError:
         return
     for flow_id in flow_ids:
-        task = loop.create_task(run_maintenance(flow_id))
+        # An empty context: the task never adds to the measurement record of the request that committed.
+        task = loop.create_task(run_maintenance(flow_id), context=contextvars.Context())
         _tasks.add(task)
         task.add_done_callback(_tasks.discard)
 
