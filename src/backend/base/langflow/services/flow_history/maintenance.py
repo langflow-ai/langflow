@@ -29,10 +29,8 @@ writer anyway, and an in-process guard skips duplicates.
 
 On PostgreSQL the task then takes the flow's operation-log advisory lock
 (the lock every writer takes) and reads the head from the log, since a
-multiplayer writer in WAL mode does not update the flow row. Deleting rows
-also takes the flow's row lock, after the advisory lock, so a history read
-holding ``FOR SHARE`` on the flow (``lock_flow_for_read``) never sees rows
-disappear under it.
+multiplayer writer in WAL mode does not update the flow row. It takes no row
+lock: reads take no lock, and a read that races compaction retries.
 """
 
 from __future__ import annotations
@@ -156,13 +154,6 @@ async def compact_flow(flow_id: UUID) -> int | None:
         return await compact_if_due(session, flow)
 
 
-async def _lock_rows_for_delete(session: AsyncSession, flow_id: UUID) -> None:
-    """Take the flow's row lock (PostgreSQL), after its advisory lock, to wait for history readers."""
-    if session.get_bind().dialect.name != "postgresql":
-        return
-    await session.exec(select(Flow.id).where(Flow.id == flow_id).with_for_update())
-
-
 async def checkpoint_if_due(session: AsyncSession, flow: Flow) -> FlowVersion | None:
     """Write a checkpoint of ``flow.data`` at its current revision when the cadence is reached."""
     # Counted from the newest system checkpoint, not any saved version: only
@@ -212,7 +203,6 @@ async def purge_history(session: AsyncSession, flow: Flow) -> None:
     if flow.history_paused:
         # Nothing recorded matches the stored graph, and the next recorded
         # write starts the history again from it, so all of the history goes.
-        await _lock_rows_for_delete(session, flow.id)
         await delete_history_rows(session, delete(FlowOperation).where(FlowOperation.flow_id == flow.id))
         await session.exec(
             delete(FlowVersion).where(
@@ -256,7 +246,6 @@ async def compact_to(session: AsyncSession, flow: Flow, checkpoint: FlowVersion,
     """
     # It becomes the only anchor for everything after it, so it must still be intact.
     verify_checkpoint(checkpoint)
-    await _lock_rows_for_delete(session, flow.id)
     revision = checkpoint.operation_revision
     ending_row = (
         await session.exec(

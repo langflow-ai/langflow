@@ -52,10 +52,11 @@ async def reconstruct_graph(
         msg = f"Flow {flow_id} has no revision {revision}"
         raise FlowRevisionNotFoundError(msg)
 
-    # SQLite reads are not isolated from compaction the way PostgreSQL's share
-    # lock isolates them, so a read that races it can see a gap. Compaction
-    # only ever leaves a consistent state behind, so one more read settles it.
-    attempts = 2 if session.get_bind().dialect.name == "sqlite" else 1
+    # Reads take no lock, so a read that races compaction can pick a checkpoint
+    # whose rows compaction then deletes, and see a gap. Compaction only ever
+    # leaves a consistent state behind, so another read settles it; real damage
+    # fails every attempt.
+    attempts = 3
     for attempt in range(attempts):
         try:
             return await _reconstruct(session, flow_id, revision, latest_revision, verify_anchor=verify_anchor)
