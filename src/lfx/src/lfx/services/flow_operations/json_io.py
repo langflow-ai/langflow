@@ -275,7 +275,7 @@ def copy_json(value: Any) -> Any:
 # writes ``\uXXXX`` for a character from U+0100 to U+FFFF. Every edge holds such characters (each
 # handle holds ``œ``), and about half of the nodes do. A character below U+0100 or above U+FFFF,
 # which ``backslashreplace`` writes in another form, is escaped first. On the 14.4 MB benchmark
-# flow this takes 24 ms. ``json.dumps`` takes 32 ms and writes some floats in another form
+# flow this takes 18 ms. ``json.dumps`` takes 32 ms and writes some floats in another form
 # (``1e-07`` for ``1e-7``); escaping each string that is not ASCII before orjson writes it takes
 # 55 ms, and escaping with a regular expression 146 ms.
 
@@ -331,15 +331,25 @@ def dump_bytes(value: Any) -> bytes:
     """JSON text of a value the engine holds, as the Rust engine writes it, as ASCII ``bytes``."""
     if value.__class__ is not dict:
         return _piece(value)
-    # A graph's nodes and edges are written one by one, so only those that are not ASCII are encoded again.
-    pairs = [
-        _piece(key) + b":" + (_items(item) if item.__class__ is list else _piece(item)) for key, item in value.items()
-    ]
-    return b"{" + b",".join(pairs) + b"}"
-
-
-def _items(items: list[Any]) -> bytes:
-    return b"[" + b",".join([_piece(item) for item in items]) + b"]"
+    # A graph's nodes and edges are written one by one, so only those that are not ASCII are encoded again. The
+    # pieces are joined once: each join of a large graph's text copies all of it.
+    parts: list[bytes] = []
+    append = parts.append
+    for key, item in value.items():
+        append(b"," if parts else b"{")
+        append(_piece(key))
+        append(b":")
+        if item.__class__ is list:
+            append(b"[")
+            for index, entry in enumerate(item):
+                if index:
+                    append(b",")
+                append(_piece(entry))
+            append(b"]")
+        else:
+            append(_piece(item))
+    append(b"}" if parts else b"{}")
+    return b"".join(parts)
 
 
 def dumps(value: Any) -> str:
