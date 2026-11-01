@@ -3,6 +3,7 @@ import {
   bulkTriggers,
   listAllTriggers,
   listTriggerEvents,
+  listTriggerSessions,
   listTriggers,
   replayTriggerEvent,
   testTrigger,
@@ -92,6 +93,16 @@ describe("triggers api", () => {
 
     expect(api.get).toHaveBeenCalledWith(
       "/api/v1/triggers/t1/events?limit=51&offset=50&filter=failed",
+    );
+  });
+
+  it("asks what started each listed session, repeating the session id", async () => {
+    jest.mocked(api.get).mockResolvedValue({ data: [] });
+
+    await listTriggerSessions("f1", ["trigger:t1:e1", "trigger:t1"]);
+
+    expect(api.get).toHaveBeenCalledWith(
+      "/api/v1/triggers/sessions?flow_id=f1&session_id=trigger%3At1%3Ae1&session_id=trigger%3At1",
     );
   });
 

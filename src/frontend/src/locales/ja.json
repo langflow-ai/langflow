@@ -365,6 +365,7 @@
   "chat.copyCode": "コードのコピー",
   "chat.copyMessage": "メッセージをコピーする",
   "chat.defaultSession": "デフォルトのセッション",
+  "chat.triggerSessionAllRuns": "すべての実行",
   "chat.deleteSessionsCount_one": "{{count}} のセッションを削除する",
   "chat.deleteSessionsCount_other": "{{count}} のセッションを削除する",
   "chat.dropHere": "ここにドロップ",

@@ -365,6 +365,7 @@
   "chat.copyCode": "Code kopieren",
   "chat.copyMessage": "Nachricht kopieren",
   "chat.defaultSession": "Standardsitzung",
+  "chat.triggerSessionAllRuns": "Alle Läufe",
   "chat.deleteSessionsCount_one": "{{count}} -Sitzung löschen",
   "chat.deleteSessionsCount_other": "{{count}} -Sitzungen löschen",
   "chat.dropHere": "Hier ablegen",

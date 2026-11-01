@@ -365,6 +365,7 @@
   "chat.copyCode": "复制代码",
   "chat.copyMessage": "复制消息",
   "chat.defaultSession": "默认会话",
+  "chat.triggerSessionAllRuns": "所有运行",
   "chat.deleteSessionsCount_one": "删除 {{count}} 会话",
   "chat.deleteSessionsCount_other": "删除 {{count}} 会话",
   "chat.dropHere": "请在此处拖放",

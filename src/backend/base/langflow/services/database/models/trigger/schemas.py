@@ -328,6 +328,18 @@ class TriggerBulkResult(BaseModel):
     owners: int = Field(description="Distinct owners of the changed triggers.")
 
 
+class TriggerSessionRead(BaseModel):
+    """What started a trigger-run chat session, so the Playground can label it."""
+
+    session_id: str
+    trigger_id: UUID
+    trigger_name: str
+    kind: str
+    provider: str | None
+    #: When the session's first event arrived. A shared session spans many runs.
+    started_at: datetime
+
+
 class TriggerEventRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

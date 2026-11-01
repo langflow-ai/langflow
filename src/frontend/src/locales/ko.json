@@ -152,6 +152,7 @@
   "chat.sessionsDeletedSuccess_one": "세션 {{count}}개를 삭제했습니다",
   "chat.sessionsDeletedSuccess_other": "세션 {{count}}개를 삭제했습니다",
   "chat.defaultSession": "기본 세션",
+  "chat.triggerSessionAllRuns": "모든 실행",
   "chat.voiceInput": "음성 입력",
   "chat.voiceInputNotSupported": "이 브라우저는 음성 입력을 지원하지 않습니다",
   "chat.stopRecording": "녹음 중지",

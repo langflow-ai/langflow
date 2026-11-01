@@ -9,6 +9,7 @@ import type {
   TriggerIngressRead,
   TriggerListParams,
   TriggerRead,
+  TriggerSessionRead,
   TriggerSigningSecretRead,
 } from "./types";
 
@@ -94,6 +95,19 @@ export async function listTriggerEvents(
     suffix ? `${one(id)}/events?${suffix}` : `${one(id)}/events`,
   );
   return asArray<TriggerEventRead>(data);
+}
+
+/** What started each of `sessionIds` that a trigger on `flowId` ran; other ids are left out. */
+export async function listTriggerSessions(
+  flowId: string,
+  sessionIds: readonly string[],
+): Promise<TriggerSessionRead[]> {
+  const query = new URLSearchParams({ flow_id: flowId });
+  for (const sessionId of sessionIds) query.append("session_id", sessionId);
+  const { data } = await api.get<TriggerSessionRead[]>(
+    `${triggers()}/sessions?${query.toString()}`,
+  );
+  return asArray<TriggerSessionRead>(data);
 }
 
 /** Appends a new event linked to `eventId`; the original is never changed. */

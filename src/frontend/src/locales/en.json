@@ -152,6 +152,7 @@
   "chat.sessionsDeletedSuccess_one": "{{count}} session deleted successfully",
   "chat.sessionsDeletedSuccess_other": "{{count}} sessions deleted successfully",
   "chat.defaultSession": "Default Session",
+  "chat.triggerSessionAllRuns": "All runs",
   "chat.voiceInput": "Voice input",
   "chat.voiceInputNotSupported": "Voice input not supported in this browser",
   "chat.stopRecording": "Stop recording",

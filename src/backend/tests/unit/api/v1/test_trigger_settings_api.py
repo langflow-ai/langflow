@@ -774,6 +774,89 @@ async def test_a_schedule_edited_through_the_api_is_renamed_unless_the_edit_name
 
 
 # --------------------------------------------------------------------------- #
+# Playground session labels
+# --------------------------------------------------------------------------- #
+
+
+async def _event_in_session(trigger_id: UUID, session_id: str, created_at: datetime) -> None:
+    async with session_scope() as session:
+        session.add(
+            TriggerEvent(
+                trigger_id=trigger_id,
+                dedupe_key=f"tick:{uuid4()}",
+                state="completed",
+                payload={},
+                session_id=session_id,
+                created_at=created_at,
+            )
+        )
+
+
+async def test_trigger_sessions_say_which_trigger_started_them_and_when(
+    client: AsyncClient, logged_in_headers: dict[str, str], active_user
+) -> None:
+    """The Playground labels a run's session by its trigger and first event, not its raw id."""
+    flow_id = await _flow(active_user.id)
+    trigger_id = await _trigger(flow_id, active_user.id, name="Schedule */5 * * * *")
+    other_flow_trigger = await _trigger(await _flow(active_user.id), active_user.id)
+    first = datetime(2026, 10, 29, 15, 45, tzinfo=timezone.utc)
+    run = f"trigger:{trigger_id}:{uuid4()}"
+    shared = f"trigger:{trigger_id}"
+    elsewhere = f"trigger:{other_flow_trigger}:{uuid4()}"
+    await _event_in_session(trigger_id, run, first)
+    await _event_in_session(trigger_id, shared, first + timedelta(minutes=5))
+    await _event_in_session(trigger_id, shared, first + timedelta(minutes=10))
+    await _event_in_session(other_flow_trigger, elsewhere, first)
+
+    response = await client.get(
+        "api/v1/triggers/sessions",
+        params={"flow_id": str(flow_id), "session_id": [run, shared, elsewhere, "my chat", str(flow_id)]},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200, response.text
+    rows = {row["session_id"]: row for row in response.json()}
+    assert set(rows) == {run, shared}
+    assert rows[run]["trigger_id"] == str(trigger_id)
+    assert (rows[run]["kind"], rows[run]["trigger_name"]) == ("schedule", "Schedule */5 * * * *")
+    assert rows[run]["started_at"].startswith("2026-10-29T15:45")
+    # A shared session spans many runs; it is labelled by its first.
+    assert rows[shared]["started_at"].startswith("2026-10-29T15:50")
+
+
+async def test_trigger_session_labels_need_read_access_to_the_flow(
+    client: AsyncClient, logged_in_headers: dict[str, str]
+) -> None:
+    stranger_id, _ = await _user()
+    stranger_flow = await _flow(stranger_id)
+    trigger_id = await _trigger(stranger_flow, stranger_id)
+    run = f"trigger:{trigger_id}:{uuid4()}"
+    await _event_in_session(trigger_id, run, datetime.now(timezone.utc))
+
+    response = await client.get(
+        "api/v1/triggers/sessions",
+        params={"flow_id": str(stranger_flow), "session_id": [run]},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 404
+
+
+async def test_trigger_session_labels_cap_the_ids_per_request(
+    client: AsyncClient, logged_in_headers: dict[str, str], active_user
+) -> None:
+    flow_id = await _flow(active_user.id)
+
+    response = await client.get(
+        "api/v1/triggers/sessions",
+        params={"flow_id": str(flow_id), "session_id": [f"trigger:{uuid4()}" for _ in range(101)]},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 422
+
+
+# --------------------------------------------------------------------------- #
 # Events drawer filters
 # --------------------------------------------------------------------------- #
 

@@ -16,18 +16,18 @@ from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from lfx.log.logger import logger
-from sqlalchemy import and_, not_, or_
+from sqlalchemy import and_, func, not_, or_
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, select
 
-from langflow.services.database.models.trigger.model import TriggerEvent
+from langflow.services.database.models.trigger.model import Trigger, TriggerEvent
 from langflow.services.database.models.trigger.schemas import (
     TERMINAL_EVENT_STATES,
     TriggerEventFilter,
     TriggerEventState,
 )
-from langflow.services.triggers.constants import REPLAY_DEDUPE_PREFIX, TEST_DEDUPE_PREFIX
+from langflow.services.triggers.constants import REPLAY_DEDUPE_PREFIX, SESSION_PREFIX, TEST_DEDUPE_PREFIX
 from langflow.services.triggers.errors import ReplayWindowExpiredError, TriggerEventNotFoundError
 
 if TYPE_CHECKING:
@@ -203,6 +203,39 @@ async def list_events(
         statement.order_by(col(TriggerEvent.created_at).desc(), col(TriggerEvent.id).desc()).offset(offset).limit(limit)
     )
     return list((await session.exec(statement)).all())
+
+
+async def session_origins(
+    session: AsyncSession,
+    *,
+    flow_id: UUID,
+    session_ids: list[str],
+) -> list[tuple[str, Trigger, datetime]]:
+    """For each of ``session_ids`` a trigger on ``flow_id`` started: the trigger and its first event's time.
+
+    A run's session id is the correlation key between the run and its event,
+    so the ledger already knows what started each one. Other ids are skipped.
+    """
+    trigger_sessions = [sid for sid in session_ids if sid.startswith(f"{SESSION_PREFIX}:")]
+    if not trigger_sessions:
+        return []
+    started_at = func.min(TriggerEvent.created_at)
+    statement = (
+        select(TriggerEvent.session_id, TriggerEvent.trigger_id, started_at)
+        .join(Trigger, col(Trigger.id) == col(TriggerEvent.trigger_id))
+        .where(Trigger.flow_id == flow_id, col(TriggerEvent.session_id).in_(trigger_sessions))
+        .group_by(TriggerEvent.session_id, TriggerEvent.trigger_id)
+    )
+    starts = (await session.exec(statement)).all()
+    triggers = {
+        row.id: row
+        for row in (
+            await session.exec(select(Trigger).where(col(Trigger.id).in_({trigger_id for _, trigger_id, _ in starts})))
+        ).all()
+    }
+    return [
+        (session_id, triggers[trigger_id], first) for session_id, trigger_id, first in starts if trigger_id in triggers
+    ]
 
 
 async def replay_event(
