@@ -42,7 +42,8 @@ from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
 from sqlalchemy import event, text
-from sqlalchemy.orm import Session
+from sqlalchemy import inspect as sa_inspect
+from sqlalchemy.orm import Session, defer
 from sqlalchemy.orm.attributes import set_committed_value
 from sqlmodel import col, delete, func, select
 
@@ -231,6 +232,9 @@ async def compact_to(session: AsyncSession, flow: Flow, checkpoint: FlowVersion,
     With ``keep_row`` the row that ends at the checkpoint stays, so the
     operations that produced it remain in the timeline. Purge drops it too.
     """
+    if "data" in sa_inspect(checkpoint).unloaded:
+        # Chosen without its graph (``_cutoff_checkpoint``): read it only to compact.
+        await session.refresh(checkpoint, attribute_names=["data"])
     # It becomes the only anchor for everything after it, so it must still be intact.
     verify_checkpoint(checkpoint)
     revision = checkpoint.operation_revision
@@ -262,10 +266,14 @@ async def compact_to(session: AsyncSession, flow: Flow, checkpoint: FlowVersion,
 
 
 async def _cutoff_checkpoint(session: AsyncSession, flow: Flow, *, keep: int) -> FlowVersion | None:
-    """Pick the newest system checkpoint that ends a row and still leaves ``keep`` operations after it."""
+    """Pick the newest system checkpoint that ends a row and still leaves ``keep`` operations after it.
+
+    Its graph is not loaded: a save asks this under the flow's lock, and ``compact_to`` reads it.
+    """
     candidates = (
         await session.exec(
             select(FlowVersion)
+            .options(defer(FlowVersion.data))
             .join(
                 FlowOperation,
                 (FlowOperation.flow_id == FlowVersion.flow_id)
