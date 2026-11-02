@@ -30,7 +30,10 @@ with the engine CPU of their serialization and hash. Background tasks
 add to a request's record.
 A sampler records process CPU time and RSS every second (``kind: "sample"``),
 with ``threads``: the CPU seconds of each thread of the process (``/proc``),
-and ``loop_tid``, the thread that runs the event loop.
+and ``loop_tid``, the thread that runs the event loop; ``gc_collections`` (collections so
+far per generation), ``gc_count`` and ``blocks`` (allocated memory blocks). A gen-2 ``gc``
+record has ``gen2_objects``: the tracked objects the full collection traverses, counted
+just before it starts (outside ``dur``).
 Compactions (``kind: "compaction"``) record start, end and the time of every
 phase, with ``lock_held`` from the advisory lock granted to the commit's end
 and ``checkpoints_delete``, the unlocked transaction after it.
@@ -68,6 +71,7 @@ import contextlib
 import contextvars
 import gc
 import os
+import sys
 import threading
 import time
 from contextvars import ContextVar
@@ -239,6 +243,9 @@ async def _sample_loop() -> None:
                 "rss": _rss_bytes(),
                 "threads": _thread_cpu(),
                 "loop_tid": loop_tid,
+                "gc_collections": [g["collections"] for g in gc.get_stats()],
+                "gc_count": list(gc.get_count()),
+                "blocks": sys.getallocatedblocks(),
             }
         )
         await asyncio.sleep(SAMPLE_INTERVAL)
@@ -267,14 +274,17 @@ def _gil_loop() -> None:
 class _GcProbe:
     """A ``gc.callbacks`` entry: two clock reads per collection, a record only for gen 2 or a slow one."""
 
-    __slots__ = ("started", "wall")
+    __slots__ = ("gen2_objects", "started", "wall")
 
     def __init__(self) -> None:
         self.started: float | None = None
         self.wall = 0.0
+        self.gen2_objects: int | None = None
 
     def __call__(self, phase: str, info: dict[str, Any]) -> None:
         if phase == "start":
+            # What a full collection traverses: the tracked objects of generation 2 (frozen ones are not).
+            self.gen2_objects = len(gc.get_objects(generation=2)) if info.get("generation") == 2 else None  # noqa: PLR2004
             self.started = time.perf_counter()
             self.wall = time.time()
             return
@@ -293,6 +303,7 @@ class _GcProbe:
                     "dur": dur,
                     "collected": info.get("collected"),
                     "uncollectable": info.get("uncollectable"),
+                    "gen2_objects": self.gen2_objects,
                 }
             )
 
