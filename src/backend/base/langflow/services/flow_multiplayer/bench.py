@@ -28,7 +28,8 @@ Checkpoints (``kind: "checkpoint"``) record start, end, duration and revision,
 with the engine CPU of their serialization and hash. Background tasks
 (checkpoints, maintenance, the sampler) run in an empty context, so they never
 add to a request's record.
-A sampler records process CPU time and RSS every second (``kind: "sample"``),
+A sampler records process CPU time, the event loop thread's CPU time
+(``loop_cpu_s``) and RSS every second (``kind: "sample"``),
 with the database pool's use: ``pool_out`` (connections checked out),
 ``pool_overflow``, ``pool_waiting`` (callers waiting for a connection or
 connecting) and ``tasks`` (asyncio tasks).
@@ -365,6 +366,8 @@ async def _sample_loop() -> None:
                 "pid": os.getpid(),
                 "t": time.time(),
                 "cpu_s": time.process_time(),
+                # The event loop thread's own CPU: near 1 s per second when the loop is saturated.
+                "loop_cpu_s": time.thread_time(),
                 "rss": _rss_bytes(),
                 "tasks": len(asyncio.all_tasks()),
                 **_pool_fields(_db_pool()),
