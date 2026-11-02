@@ -21,7 +21,8 @@
 //! default). A field write takes 2 µs, so small calls keep the GIL.
 
 use std::collections::HashMap;
-use std::sync::{RwLock, RwLockWriteGuard, TryLockError};
+use std::sync::mpsc::{SyncSender, TrySendError, sync_channel};
+use std::sync::{LazyLock, PoisonError, RwLock, RwLockWriteGuard, TryLockError};
 
 use lfx::ops::api::{self, ApiError, ApiResult, Input};
 use lfx::ops::{ApplyOptions, Entry, Error, ReplayOptions};
@@ -370,6 +371,37 @@ fn finish(py: Python<'_>, value: Value) -> PyResult<Bound<'_, PyAny>> {
     result
 }
 
+/// How many large graphs can wait for the drop thread. A graph dropped
+/// while that many wait is dropped where it is.
+const DROPS_WAITING: usize = 4;
+
+/// Something that the drop thread frees.
+type Dropped = Box<dyn Send>;
+
+/// Drop a large graph on a thread of its own, so that the thread that lets
+/// go of it, often a server's event loop, does not wait while it is freed:
+/// freeing the 14 MB benchmark graph takes about 8 ms. Without that thread,
+/// or with [`DROPS_WAITING`] graphs waiting already, it is dropped here,
+/// without the GIL.
+fn drop_elsewhere(py: Python<'_>, value: Dropped) {
+    static DROPS: LazyLock<Option<SyncSender<Dropped>>> = LazyLock::new(|| {
+        let (sender, receiver) = sync_channel::<Dropped>(DROPS_WAITING);
+        std::thread::Builder::new()
+            .name("lfx-native-drop".into())
+            .spawn(move || receiver.into_iter().for_each(drop))
+            .ok()
+            .map(|_| sender)
+    });
+    let value = match DROPS.as_ref() {
+        Some(drops) => match drops.try_send(value) {
+            Ok(()) => return,
+            Err(TrySendError::Full(value) | TrySendError::Disconnected(value)) => value,
+        },
+        None => value,
+    };
+    py.detach(move || drop(value));
+}
+
 // --- The engine -----------------------------------------------------------------------------
 
 /// A flow graph that the engine keeps loaded, to apply or replay many
@@ -395,6 +427,22 @@ fn finish(py: Python<'_>, value: Value) -> PyResult<Bound<'_, PyAny>> {
 #[derive(Debug)]
 struct GraphState {
     state: RwLock<lfx::ops::GraphState>,
+}
+
+/// A large graph is dropped on the drop thread ([`drop_elsewhere`]).
+impl Drop for GraphState {
+    fn drop(&mut self) {
+        let state = self.state.get_mut().unwrap_or_else(PoisonError::into_inner);
+        if !Work::of_items(state.item_count()).is_large() {
+            return;
+        }
+        let mut root = Map::new();
+        root.insert("nodes".into(), Value::Array(Vec::new()));
+        root.insert("edges".into(), Value::Array(Vec::new()));
+        let empty = lfx::ops::GraphState::new(Value::Object(root)).expect("an empty graph loads");
+        let state = std::mem::replace(state, empty);
+        Python::attach(|py| drop_elsewhere(py, Box::new(state)));
+    }
 }
 
 /// A call on the state panicked while it held the lock, so the graph may be
@@ -671,6 +719,17 @@ impl GraphPlain {
     fn wrap(plain: lfx::ops::GraphPlain) -> Self {
         let work = Work::of_value(plain.as_value());
         Self { plain, work }
+    }
+}
+
+/// A large graph is dropped on the drop thread ([`drop_elsewhere`]).
+impl Drop for GraphPlain {
+    fn drop(&mut self) {
+        if !self.work.is_large() {
+            return;
+        }
+        let plain = std::mem::replace(&mut self.plain, lfx::ops::GraphPlain::new(Value::Null));
+        Python::attach(|py| drop_elsewhere(py, Box::new(plain)));
     }
 }
 
