@@ -26,7 +26,9 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
+use crate::json_out::{self, Ascii};
 use crate::value::{FiniteValue, Map, Value};
 use indexmap::{IndexMap, IndexSet};
 use serde::ser::{Serialize, SerializeMap, Serializer};
@@ -450,6 +452,9 @@ pub struct GraphState {
     /// Whether a batch is staged: its layers wait for [`Self::keep`] or
     /// [`Self::drop_staged`].
     staged: bool,
+    /// The length of the graph's last JSON text, to size the next one's
+    /// buffer: growing a buffer of megabytes copies it each time.
+    text_len: AtomicUsize,
 }
 
 impl GraphState {
@@ -487,6 +492,7 @@ impl GraphState {
             lists: Lists::default(),
             base_checked: false,
             staged: false,
+            text_len: AtomicUsize::new(0),
         })
     }
 
@@ -613,6 +619,84 @@ impl GraphState {
     #[must_use]
     pub fn staged_json(&self) -> Option<impl Serialize + '_> {
         self.staged.then_some(StagedJson(self))
+    }
+
+    /// An empty buffer with room for the graph's last JSON text and a little more.
+    fn text_buffer(&self) -> Vec<u8> {
+        let last = self.text_len.load(Ordering::Relaxed);
+        Vec::with_capacity(last + last / 16)
+    }
+
+    /// The graph as ASCII JSON text ([`crate::ops::api::json_text`]): what
+    /// [`GraphState::json`] writes, with every character above U+007F
+    /// escaped.
+    pub(crate) fn json_text(&self) -> Vec<u8> {
+        let mut out = self.text_buffer();
+        json_out::write_entries(
+            &mut out,
+            self.entries(),
+            |out, entry| match entry {
+                Entry::Value(value) => json_out::write_value(out, value, Ascii::Escape),
+                Entry::Nodes(nodes) => json_out::write_seq(out, nodes.iter(), |out, node| {
+                    json_out::write_value(out, node, Ascii::Escape);
+                }),
+                Entry::Edges(edges) => json_out::write_seq(out, edges.iter(), |out, edge| {
+                    json_out::write_map(out, edge, Ascii::Escape);
+                }),
+            },
+            Ascii::Escape,
+        );
+        self.text_len.store(out.len(), Ordering::Relaxed);
+        out
+    }
+
+    /// The graph with its staged batch as ASCII JSON text: what
+    /// [`GraphState::staged_json`] writes, with every character above U+007F
+    /// escaped. `None` when no batch is staged.
+    pub(crate) fn staged_json_text(&self) -> Option<Vec<u8>> {
+        if !self.staged {
+            return None;
+        }
+        let graph = &self.graph;
+        let mut out = self.text_buffer();
+        json_out::write_entries(
+            &mut out,
+            self.root
+                .iter()
+                .map(|(key, value)| (key, (key.as_str(), value))),
+            |out, (key, value)| match key {
+                "nodes" => json_out::write_seq(out, self.staged_nodes(), |out, node| {
+                    json_out::write_value(out, &node, Ascii::Escape);
+                }),
+                "edges" => {
+                    json_out::write_seq(out, graph.edges.staged_entries(), |out, (_, edge)| {
+                        json_out::write_map(out, edge.as_map(), Ascii::Escape);
+                    });
+                }
+                _ => json_out::write_value(out, value, Ascii::Escape),
+            },
+            Ascii::Escape,
+        );
+        self.text_len.store(out.len(), Ordering::Relaxed);
+        Some(out)
+    }
+
+    /// The nodes with the staged batch, in the order [`Layered::fold`] gives
+    /// them: a node the batch writes as a copy with the writes, as the fold
+    /// makes them, and any other node as it is.
+    fn staged_nodes(&self) -> impl Iterator<Item = Cow<'_, Value>> {
+        let graph = &self.graph;
+        graph
+            .nodes
+            .staged_entries()
+            .map(|(id, node)| match graph.fields.node(id) {
+                Some(writes) => {
+                    let mut value = node.as_value().clone();
+                    fields::make_writes(&mut value, writes.clone(), &mut Vec::new(), None);
+                    Cow::Owned(value)
+                }
+                None => Cow::Borrowed(node.as_value()),
+            })
     }
 
     /// The graph's top-level keys in order, each with what [`GraphState::to_value`]
@@ -847,18 +931,7 @@ struct StagedNodesJson<'s>(&'s GraphState);
 
 impl Serialize for StagedNodesJson<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
-        let graph = &self.0.graph;
-        serializer.collect_seq(graph.nodes.staged_entries().map(|(id, node)| {
-            match graph.fields.node(id) {
-                // A node the batch writes: a copy with the writes, as the fold makes them.
-                Some(writes) => {
-                    let mut value = node.as_value().clone();
-                    fields::make_writes(&mut value, writes.clone(), &mut Vec::new(), None);
-                    Cow::Owned(value)
-                }
-                None => Cow::Borrowed(node.as_value()),
-            }
-        }))
+        serializer.collect_seq(self.0.staged_nodes())
     }
 }
 
