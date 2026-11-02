@@ -1188,8 +1188,14 @@ class TestBundleSeparationOrchestrate:
         except ImportError:
             pytest.skip("MODEL_PROVIDER_METADATA not available")
 
+        from lfx.base.models.decision_constants import DECISION_ONLY_PROVIDERS
+
         empty: list[str] = []
         for provider in MODEL_PROVIDER_METADATA:
+            # Decision-only providers can't be picked in these components, and their decision models call
+            # the provider over httpx, which lfx already depends on: they need no package of their own.
+            if provider in DECISION_ONLY_PROVIDERS:
+                continue
             node = _make_node(
                 "LanguageModel",
                 "from lfx.base.models.model import LCModelComponent",

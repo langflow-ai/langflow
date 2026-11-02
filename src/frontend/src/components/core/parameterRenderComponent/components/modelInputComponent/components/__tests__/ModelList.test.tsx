@@ -47,7 +47,9 @@ describe("ModelList — empty state", () => {
       onSelect: jest.fn(),
     });
 
-    const placeholder = screen.getByText("No Models Enabled");
+    const placeholder = screen.getByText(
+      "No models enabled. Turn one on in Manage Model Providers.",
+    );
     expect(placeholder).toBeInTheDocument();
     // The one and only option is the disabled placeholder itself — not a
     // real, selectable model.

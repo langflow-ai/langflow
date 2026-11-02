@@ -186,6 +186,32 @@ def held_clause(*, connection_id: UUID, holder: str, generation: datetime | None
     )
 
 
+async def guard_generation(
+    session: AsyncSession, *, connection_id: UUID, holder: str, generation: datetime | None, ttl_s: float
+) -> bool:
+    """Lock a live generation until the caller's delivery transaction commits.
+
+    A predicate read alone does not serialize a PostgreSQL lease takeover with
+    a later ledger insert. This conditional no-op UPDATE holds the lease row's
+    write lock through that insert. On SQLite it also starts the write
+    transaction before any target reads.
+    """
+    if generation is None:
+        return False
+    result = await session.exec(  # type: ignore[call-overload]
+        update(TriggerListenerLease)
+        .where(
+            TriggerListenerLease.connection_id == connection_id,
+            TriggerListenerLease.holder == holder,
+            TriggerListenerLease.acquired_at == generation,
+            TriggerListenerLease.heartbeat_at > _now() - timedelta(seconds=ttl_s),
+        )
+        .values(heartbeat_at=TriggerListenerLease.heartbeat_at)
+        .execution_options(synchronize_session=False)
+    )
+    return result.rowcount == 1
+
+
 async def release(session: AsyncSession, *, connection_id: UUID, holder: str) -> bool:
     """Drop the lease so another replica takes over without waiting the TTL.
 
