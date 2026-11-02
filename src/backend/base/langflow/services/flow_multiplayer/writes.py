@@ -21,7 +21,9 @@ Before step 1, the writer passes the flow's gate in this process
 (``config.writers_per_flow``, default 1): only that many writers of one flow
 open a session at a time, so the writers queued on a flow wait without a
 database connection, and the pool stays free for other flows, reads and the
-readiness probe. The advisory lock still orders writers across processes.
+readiness probe. A writer lets the next one in when it starts its commit, so
+the next writer is already queued on the advisory lock when the lock is
+released. The advisory lock still orders writers across processes.
 """
 
 from __future__ import annotations
@@ -30,6 +32,7 @@ import asyncio
 import contextlib
 import time
 import uuid
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -99,28 +102,65 @@ def _writers_queued(flow_id: UUID) -> bool:
 CACHE.pinned = _writers_queued
 
 
+class _Permit:
+    """A writer's place in its flow's gate; ``release`` lets the next writer in before this one ends."""
+
+    __slots__ = ("held", "semaphore")
+
+    def __init__(self, semaphore: asyncio.Semaphore | None) -> None:
+        self.semaphore = semaphore
+        self.held = False
+
+    async def acquire(self) -> None:
+        if self.semaphore is not None and not self.held:
+            with bench.timed("gate"):
+                await self.semaphore.acquire()
+            self.held = True
+
+    def release(self) -> None:
+        if self.semaphore is not None and self.held:
+            self.held = False
+            self.semaphore.release()
+
+
+_permit: ContextVar[_Permit | None] = ContextVar("flow_ops_gate_permit", default=None)
+
+
+def _let_next_writer_in() -> None:
+    """Give the flow's gate to the next writer; called just before the commit.
+
+    The next writer takes its connection and queues on the advisory lock while this commit runs,
+    so the lock passes to it at the commit with no event-loop turn in between. A waiting writer
+    holds a connection only for the length of this commit.
+    """
+    permit = _permit.get()
+    if permit is not None:
+        permit.release()
+
+
 @contextlib.asynccontextmanager
-async def flow_gate(flow_id: UUID) -> AsyncIterator[None]:
+async def flow_gate(flow_id: UUID) -> AsyncIterator[_Permit]:
     """Admit at most ``config.writers_per_flow()`` writers of the flow at a time; the rest wait here.
 
-    Waiting here holds no database connection. Bench step ``gate``: the wait.
+    Waiting here holds no database connection. Bench step ``gate``: the wait. A writer gives its
+    place to the next one when it starts its commit (``_let_next_writer_in``).
     """
     size = config.writers_per_flow()
     if size == 0:
-        yield
+        yield _Permit(None)
         return
     gate = _gates.get(flow_id)
     if gate is None:
         gate = _gates[flow_id] = _Gate(size)
     gate.users += 1
+    permit = _Permit(gate.semaphore)
+    token = _permit.set(permit)
     try:
-        with bench.timed("gate"):
-            await gate.semaphore.acquire()
-        try:
-            yield
-        finally:
-            gate.semaphore.release()
+        await permit.acquire()
+        yield permit
     finally:
+        permit.release()
+        _permit.reset(token)
         gate.users -= 1
         if gate.users == 0 and _gates.get(flow_id) is gate:
             del _gates[flow_id]
@@ -135,8 +175,9 @@ async def apply_ops(
 ) -> dict[str, Any]:
     """Apply the batch; ``authorize`` runs first in the write's transaction (the permission check)."""
     operations_sha256 = oplog.body_hash(request.operations_json)
-    async with flow_gate(flow_id):
+    async with flow_gate(flow_id) as permit:
         for attempt in range(MAX_ATTEMPTS):
+            await permit.acquire()  # again on a retry after the place was given up
             try:
                 return await _write(flow_id, actor_id, request, operations_sha256, authorize)
             except (oplog.LogGapError, EntryGoneError):
@@ -274,6 +315,7 @@ async def _append(
 
 
 async def _commit(session: AsyncSession) -> None:
+    _let_next_writer_in()
     with bench.timed("commit"):
         await session.commit()
 

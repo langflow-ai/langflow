@@ -144,3 +144,35 @@ async def test_flow_with_queued_writers_is_pinned(writers_per_flow):
     release.set()
     await asyncio.gather(one, two)
     assert not CACHE.pinned(flow)
+
+
+async def test_next_writer_enters_when_the_writer_inside_starts_its_commit(writers_per_flow):
+    """The writer inside gives its place up at its commit; a retry takes a place again."""
+    writers_per_flow("1")
+    flow = uuid.uuid4()
+    order: list[str] = []
+    committing = asyncio.Event()
+    finish = asyncio.Event()
+
+    async def first() -> None:
+        async with writes.flow_gate(flow) as permit:
+            order.append("first in")
+            writes._let_next_writer_in()  # what _commit does before session.commit()
+            writes._let_next_writer_in()  # once only
+            committing.set()
+            await finish.wait()
+            await permit.acquire()  # a retry: waits for the second writer's place
+            order.append("first again")
+
+    async def second() -> None:
+        await committing.wait()
+        async with writes.flow_gate(flow):
+            order.append("second in")
+            finish.set()
+            await asyncio.sleep(0.01)
+            order.append("second out")
+
+    await asyncio.gather(first(), second())
+    assert order == ["first in", "second in", "second out", "first again"]
+    assert writes._gates == {}
+    assert (await _peak_inside([flow] * 4))[flow] == 1
