@@ -1,0 +1,183 @@
+---
+title: Audit logging
+slug: /audit-logging
+---
+
+Audit logging records an append-only history of flow and project changes: who made the change, which resource it was, when it happened, and whether it succeeded.
+
+This log is separate from the [authorization audit log](./authorization#audit-log-api), which records permission decisions and administration changes. You can turn both on.
+
+## Turn on audit logging
+
+Audit logging is off until you set `LANGFLOW_AUDIT_ENABLED=true`.
+
+To turn on audit logging, do the following:
+
+1. Set `LANGFLOW_AUDIT_ENABLED=true` in your `.env` file or environment.
+
+2. Restart Langflow.
+
+Langflow saves a flow or project change and its event in the same database transaction. If the event cannot be saved, the change is rolled back.
+
+To stop recording, set `LANGFLOW_AUDIT_ENABLED=false` and restart Langflow. Events already stored remain, and you can still read them.
+
+## Configure how long to store events
+
+By default, events are stored for 90 days.
+Cleanup deletes according to the event's time.
+Deleting a flow, project, user, or API key does not delete its associated events.
+
+To store events for a different amount of time, set `LANGFLOW_AUDIT_RETENTION_DAYS` and restart Langflow.
+Set it to `0` to store events indefinitely.
+
+Cleanup runs at startup and according to the interval set in [`LANGFLOW_AUTHZ_AUDIT_CLEANUP_INTERVAL`](./authorization#configure-authorization-environment-variables).
+
+## Leave actions out of the log
+
+To leave an action out of future events, set `LANGFLOW_AUDIT_EXCLUDE_EVENTS` to a comma-separated list of actions to leave out, and then restart Langflow. Names match the `action` field, for example:
+
+| Entry | What is left out |
+|---|---|
+| `project:delete` | That action only |
+| `flow:*` | Every action on flows |
+| `*:delete` | Deletes of every resource type |
+
+```bash
+LANGFLOW_AUDIT_EXCLUDE_EVENTS=project:delete,flow:*,*:delete
+```
+
+The setting does not delete events that were already stored.
+To record nothing, set `LANGFLOW_AUDIT_ENABLED=false`.
+
+## Read a flow's history
+
+To read a flow's history, run:
+
+```bash
+curl -sS "$LANGFLOW_URL/api/v1/flows/audits?flow_id=FLOW_UUID&limit=50" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
+```
+
+A superuser can view every flow event.
+Another user can view events for flows they own and events they made themselves.
+After a flow is deleted, and no enforcement plugin is installed, a former owner can read only the events they performed.
+When an [enforcement plugin](./authorization) is enabled, reading a flow's history requires `flow:audit_read`. Owning the flow does not grant access.
+
+Events are newest first. `limit` is 1–200 and defaults to 50. When `next_cursor` is set, request the next page with that value:
+
+```bash
+curl -sS "$LANGFLOW_URL/api/v1/flows/audits?flow_id=FLOW_UUID&limit=50&cursor=CURSOR" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
+```
+
+A response looks like this:
+
+```json
+{
+  "items": [
+    {
+      "id": "…",
+      "timestamp": "2026-09-11T16:42:18.284123Z",
+      "flow_id": "…",
+      "flow_name": "support-router",
+      "action": "flow:write",
+      "operation": "patch",
+      "event_type": "action",
+      "result": "succeeded",
+      "error_code": null,
+      "request_id": "…",
+      "actor": {
+        "type": "user",
+        "id": "…",
+        "user_id": "…"
+      },
+      "details": {
+        "schema_version": 1,
+        "written_fields": ["name"]
+      }
+    }
+  ],
+  "next_cursor": null
+}
+```
+
+## Read a project's history
+
+To read a project's history, run:
+
+```bash
+curl -sS "$LANGFLOW_URL/api/v1/projects/audits?project_id=PROJECT_UUID&limit=50" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
+```
+
+Visibility matches a flow's history. With an enforcement plugin, reading a project's history requires `project:audit_read`.
+
+## What a change records
+
+Each flow or project change records one event.
+
+| Result | When |
+|---|---|
+| No event | The request was refused before it became a change, such as an unknown id or a malformed body |
+| `succeeded` | The change was saved |
+| `failed` | The change was allowed, and then the operation failed |
+
+| Action | What it records |
+|---|---|
+| `flow:create` | Creating, uploading, or replacing a flow that did not exist |
+| `flow:write` | Patching, replacing, or activating a flow version |
+| `flow:delete` | Deleting a flow, including a flow removed with its project |
+| `project:create` | Creating or uploading a project |
+| `project:write` | Patching a project |
+| `project:delete` | Deleting a project |
+
+To narrow a read, add query parameters.
+
+| Parameter | Description |
+|---|---|
+| `flow_id` or `project_id` | One resource. Use `flow_id` on the flow endpoint and `project_id` on the project endpoint |
+| `operation` | `create`, `replace`, `patch`, or `delete` |
+| `result` | `succeeded` or `failed` |
+| `user_id` | The Langflow account the request ran as |
+| `actor_type` | How the request authenticated: `user`, `api_key`, `service`, `system`, or `unknown` |
+| `actor_id` | The account or credential id |
+| `request_id` | The id shared by events from one HTTP request |
+| `since` | Inclusive RFC 3339 timestamp with a timezone offset |
+| `until` | Exclusive RFC 3339 timestamp, later than `since` |
+| `cursor` | The `next_cursor` value from the previous page |
+| `limit` | Page size, from 1 to 200. Default 50 |
+
+For example, to return a list of successful PATCH changes from one flow, run:
+
+```bash
+curl -sS "$LANGFLOW_URL/api/v1/flows/audits?flow_id=FLOW_UUID&operation=patch&result=succeeded&since=2026-09-01T00:00:00Z&limit=50" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
+```
+
+`operation=patch` selects events whose `action` is `flow:write`. A succeeded event lists the written field names:
+
+```json
+{
+  "items": [
+    {
+      "flow_id": "FLOW_UUID",
+      "flow_name": "support-router",
+      "action": "flow:write",
+      "operation": "patch",
+      "result": "succeeded",
+      "details": {
+        "schema_version": 1,
+        "written_fields": ["name"]
+      }
+    }
+  ],
+  "next_cursor": null
+}
+```
+
+## See also
+
+- [Authorization](./authorization)
+- [API keys and authentication](/api-keys-and-authentication)
+- [Logs](/logging)
+- [Environment variables](/environment-variables)

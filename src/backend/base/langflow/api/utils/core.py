@@ -11,6 +11,7 @@ from fastapi import Depends, HTTPException, Path, Query
 from fastapi_pagination import Params
 from lfx.log.logger import logger
 from lfx.services.deps import injectable_session_scope, injectable_session_scope_readonly
+from lfx.utils import flow_code as _flow_code
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -26,6 +27,7 @@ if TYPE_CHECKING:
 
 
 API_WORDS = _flow_secrets.API_WORDS
+normalize_code_for_import = _flow_code.normalize_code_for_import
 has_api_terms = _flow_secrets.has_api_terms
 remove_api_keys = _flow_secrets.remove_api_keys
 strip_flow_secrets = _flow_secrets.strip_flow_secrets
@@ -166,25 +168,6 @@ def _split_code_to_lines(flow: dict) -> None:
                     field_data["value"] = value.split("\n")
 
 
-def _join_code_from_lines(flow: dict) -> None:
-    """In-place: rejoin code template line arrays back to strings.
-
-    Inverse of :func:`_split_code_to_lines`.  Safe to call on flows that
-    already use the string format — ``isinstance`` guard means it's a no-op.
-    """
-    for node in flow.get("data", {}).get("nodes", []):
-        template = node.get("data", {}).get("node", {}).get("template", {})
-        if not isinstance(template, dict):
-            continue
-        for field_data in template.values():
-            if not isinstance(field_data, dict):
-                continue
-            if field_data.get("type") == "code":
-                value = field_data.get("value")
-                if isinstance(value, list):
-                    field_data["value"] = "\n".join(value)
-
-
 def normalize_flow_for_export(flow: dict) -> dict:
     """Return a git-friendly, deterministic copy of a flow dict.
 
@@ -219,20 +202,6 @@ def normalize_flow_for_export(flow: dict) -> dict:
     # Code → line arrays
     _split_code_to_lines(flow)
 
-    return flow
-
-
-def normalize_code_for_import(flow: dict) -> dict:
-    """Rejoin code-as-lines back to strings for backward-compatible import.
-
-    Accepts both the list format produced by :func:`normalize_flow_for_export`
-    and the legacy single-string format, so this function is safe to call
-    unconditionally on every uploaded flow.
-    """
-    import copy
-
-    flow = copy.deepcopy(flow)
-    _join_code_from_lines(flow)
     return flow
 
 

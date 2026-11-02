@@ -472,6 +472,7 @@
         "POST|/{connection_id}/test|test_connection|execute|authenticated",
         "POST|/{connection_id}/health|refresh_connection_health|execute|authenticated",
         "PATCH|/{connection_id}|update_connection|write|authenticated",
+        "POST|/{connection_id}/token|renew_connection_token|write|authenticated",
         "POST|/{connection_id}/revoke|revoke_connection|write|authenticated",
         "DELETE|/{connection_id}|delete_connection|delete|authenticated",
         "POST|/{connection_id}/oauth/start|start_connection_oauth|write|authenticated",
@@ -564,11 +565,12 @@
       "resource": "trigger",
       "domain": "none: the caller is a provider, not a Langflow principal, and no role grants access",
       "privacy": "every outcome - unknown trigger or Slack app, wrong provider, bad signature, stale timestamp, paused trigger, oversized body, rate limited - answers 404 with one body, so the route is not an oracle for which trigger ids or registrations exist; the reason is recorded in the audit row instead. The Microsoft Graph subscription handshake is the one 200 without provider proof, and it is answered before the trigger is resolved so its response cannot depend on whether the public id exists. Slack's url_verification is signed and names no trigger, so it is answered only after the registration's signing secret verifies it",
-      "side_effects": "per-trigger route: appends at most one trigger_event ledger row per verified delivery. Slack app route: appends at most one row per matching armed trigger (active, Events API mechanism, an installation of that registration in the delivering workspace, on a connection its owner owns), all in one commit. Both answer only after the commit, inside the provider's acknowledgement deadline, never execute a flow and never fetch from the provider in the request",
+      "side_effects": "per-trigger POST route: appends at most one trigger_event ledger row per verified delivery. The per-trigger GET route accepts only a provider-verified bounded handshake and never appends a trigger_event. Slack app route: appends at most one row per matching armed trigger (active, Events API mechanism, an installation of that registration in the delivering workspace, on a connection its owner owns), all in one commit. Deliveries answer only after the commit, inside the provider's acknowledgement deadline. No ingress route executes a flow or fetches from the provider in the request",
       "frontend": "no frontend surface: the URL is shown on the trigger, and the secret only when it is minted",
       "personas": "public_or_conditional",
       "test_references": [
         "src/backend/tests/unit/api/v1/test_trigger_ingress.py::test_a_signed_webhook_delivery_becomes_a_ledger_row",
+        "src/backend/tests/unit/services/triggers/test_provider_lifecycle.py::test_get_handshake_requires_provider_proof_and_never_queues_events",
         "src/backend/tests/unit/api/v1/test_trigger_ingress.py::test_every_rejection_looks_identical_to_the_caller",
         "src/backend/tests/unit/api/v1/test_trigger_ingress.py::test_an_unknown_public_id_is_indistinguishable_from_a_bad_signature",
         "src/backend/tests/unit/api/v1/test_trigger_ingress.py::test_the_graph_handshake_does_not_reveal_whether_a_trigger_exists",
@@ -578,6 +580,7 @@
         "src/backend/tests/unit/api/v1/test_trigger_ingress_slack.py::test_every_refusal_looks_identical_to_the_caller"
       ],
       "routes": [
+        "GET|/{provider}/{public_id}|receive_provider_delivery|ingest|provider_signed",
         "POST|/{provider}/{public_id}|receive_provider_delivery|ingest|provider_signed",
         "POST|/slack/apps/{registration_id}|receive_slack_app_delivery|ingest|provider_signed"
       ]

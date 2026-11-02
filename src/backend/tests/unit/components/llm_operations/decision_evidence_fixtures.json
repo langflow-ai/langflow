@@ -1,0 +1,522 @@
+{
+  "accepted": {
+    "activated_branch": "category_1_result",
+    "applied_threshold": 0.7,
+    "error_action": "Route to Else",
+    "kind": "choice",
+    "minimum_probability": 0.7,
+    "options": [
+      {
+        "description": "Payments and invoices",
+        "id": "category_1_result",
+        "label": "Billing"
+      },
+      {
+        "description": "Bugs and outages",
+        "id": "category_2_result",
+        "label": "Technical Support"
+      },
+      {
+        "description": "Pricing and plans",
+        "id": "category_3_result",
+        "label": "Sales"
+      }
+    ],
+    "reason": "accepted",
+    "result": {
+      "confidence": 0.6,
+      "kind": "choice",
+      "model": "jev-1.13.0",
+      "model_source": "response",
+      "probabilities": {
+        "category_1_result": 0.86,
+        "category_2_result": 0.1,
+        "category_3_result": 0.04
+      },
+      "provider": "TypeSafe",
+      "status": "success",
+      "usage": {
+        "input_tokens": 312
+      }
+    },
+    "route_thresholds": {
+      "category_1_result": 0.7,
+      "category_2_result": 0.7,
+      "category_3_result": 0.9
+    },
+    "top_outcome": "category_1_result"
+  },
+  "below_minimum_probability": {
+    "activated_branch": "default_result",
+    "applied_threshold": 0.7,
+    "error_action": "Route to Else",
+    "kind": "choice",
+    "minimum_probability": 0.7,
+    "options": [
+      {
+        "description": "Payments and invoices",
+        "id": "category_1_result",
+        "label": "Billing"
+      },
+      {
+        "description": "Bugs and outages",
+        "id": "category_2_result",
+        "label": "Technical Support"
+      },
+      {
+        "description": "Pricing and plans",
+        "id": "category_3_result",
+        "label": "Sales"
+      }
+    ],
+    "reason": "below_minimum_probability",
+    "result": {
+      "confidence": 0.6,
+      "kind": "choice",
+      "model": "jev-1.13.0",
+      "model_source": "response",
+      "probabilities": {
+        "category_1_result": 0.55,
+        "category_2_result": 0.3,
+        "category_3_result": 0.15
+      },
+      "provider": "TypeSafe",
+      "status": "success",
+      "usage": {
+        "input_tokens": 312
+      }
+    },
+    "route_thresholds": {
+      "category_1_result": 0.7,
+      "category_2_result": 0.7,
+      "category_3_result": 0.9
+    },
+    "top_outcome": "category_1_result"
+  },
+  "boolean_accepted": {
+    "activated_branch": "yes_result",
+    "applied_threshold": 0.7,
+    "error_action": "Route to Else",
+    "kind": "boolean",
+    "minimum_probability": 0.7,
+    "options": [
+      {
+        "description": "Asks for money back",
+        "id": "yes_result",
+        "label": "Yes"
+      },
+      {
+        "description": "Anything else",
+        "id": "no_result",
+        "label": "No"
+      }
+    ],
+    "reason": "accepted",
+    "result": {
+      "kind": "boolean",
+      "model": "jev-1.13.0",
+      "model_source": "response",
+      "probability_true": 0.88,
+      "provider": "TypeSafe",
+      "status": "success",
+      "usage": {
+        "input_tokens": 312
+      }
+    },
+    "route_probabilities": {
+      "no_result": 0.12,
+      "yes_result": 0.88
+    },
+    "route_thresholds": {
+      "no_result": 0.7,
+      "yes_result": 0.7
+    },
+    "top_outcome": "yes_result"
+  },
+  "boolean_unsure": {
+    "activated_branch": "default_result",
+    "applied_threshold": 0.7,
+    "error_action": "Route to Else",
+    "kind": "boolean",
+    "minimum_probability": 0.7,
+    "options": [
+      {
+        "description": "Asks for money back",
+        "id": "yes_result",
+        "label": "Yes"
+      },
+      {
+        "description": "Anything else",
+        "id": "no_result",
+        "label": "No"
+      }
+    ],
+    "reason": "below_minimum_probability",
+    "result": {
+      "kind": "boolean",
+      "model": "jev-1.13.0",
+      "model_source": "response",
+      "probability_true": 0.55,
+      "provider": "TypeSafe",
+      "status": "success",
+      "usage": {
+        "input_tokens": 312
+      }
+    },
+    "route_probabilities": {
+      "no_result": 0.45,
+      "yes_result": 0.55
+    },
+    "route_thresholds": {
+      "no_result": 0.7,
+      "yes_result": 0.7
+    },
+    "top_outcome": "yes_result"
+  },
+  "configuration_error": {
+    "activated_branch": null,
+    "error": {
+      "category": "configuration_error",
+      "message": "The selected Decision Model is no longer offered. Pick another Decision Model."
+    },
+    "error_action": "Route to Else",
+    "kind": "choice",
+    "minimum_probability": 0.7,
+    "options": [
+      {
+        "description": "Payments and invoices",
+        "id": "category_1_result",
+        "label": "Billing"
+      },
+      {
+        "description": "Bugs and outages",
+        "id": "category_2_result",
+        "label": "Technical Support"
+      },
+      {
+        "description": "Pricing and plans",
+        "id": "category_3_result",
+        "label": "Sales"
+      }
+    ],
+    "reason": "configuration_error",
+    "route_thresholds": {
+      "category_1_result": 0.7,
+      "category_2_result": 0.7,
+      "category_3_result": 0.9
+    }
+  },
+  "evaluation_error_routed_to_else": {
+    "activated_branch": "default_result",
+    "error": {
+      "category": "timeout",
+      "message": "TypeSafe didn't answer in time. Try again."
+    },
+    "error_action": "Route to Else",
+    "kind": "choice",
+    "minimum_probability": 0.7,
+    "options": [
+      {
+        "description": "Payments and invoices",
+        "id": "category_1_result",
+        "label": "Billing"
+      },
+      {
+        "description": "Bugs and outages",
+        "id": "category_2_result",
+        "label": "Technical Support"
+      },
+      {
+        "description": "Pricing and plans",
+        "id": "category_3_result",
+        "label": "Sales"
+      }
+    ],
+    "reason": "evaluation_error",
+    "route_thresholds": {
+      "category_1_result": 0.7,
+      "category_2_result": 0.7,
+      "category_3_result": 0.9
+    }
+  },
+  "evaluation_error_stopped": {
+    "activated_branch": null,
+    "error": {
+      "category": "http_error",
+      "message": "TypeSafe had a server problem (HTTP 503). Try again later."
+    },
+    "error_action": "Stop with error",
+    "kind": "choice",
+    "minimum_probability": 0.7,
+    "options": [
+      {
+        "description": "Payments and invoices",
+        "id": "category_1_result",
+        "label": "Billing"
+      },
+      {
+        "description": "Bugs and outages",
+        "id": "category_2_result",
+        "label": "Technical Support"
+      },
+      {
+        "description": "Pricing and plans",
+        "id": "category_3_result",
+        "label": "Sales"
+      }
+    ],
+    "reason": "evaluation_error",
+    "route_thresholds": {
+      "category_1_result": 0.7,
+      "category_2_result": 0.7,
+      "category_3_result": 0.9
+    }
+  },
+  "permission_denied": {
+    "activated_branch": null,
+    "error": {
+      "category": "permission_denied",
+      "message": "TypeSafe didn't accept the API key (HTTP 401). Check the TypeSafe API key in Model Providers."
+    },
+    "error_action": "Route to Else",
+    "kind": "choice",
+    "minimum_probability": 0.7,
+    "options": [
+      {
+        "description": "Payments and invoices",
+        "id": "category_1_result",
+        "label": "Billing"
+      },
+      {
+        "description": "Bugs and outages",
+        "id": "category_2_result",
+        "label": "Technical Support"
+      },
+      {
+        "description": "Pricing and plans",
+        "id": "category_3_result",
+        "label": "Sales"
+      }
+    ],
+    "reason": "permission_denied",
+    "route_thresholds": {
+      "category_1_result": 0.7,
+      "category_2_result": 0.7,
+      "category_3_result": 0.9
+    }
+  },
+  "refusal_routed_to_else": {
+    "activated_branch": "default_result",
+    "error_action": "Route to Else",
+    "kind": "choice",
+    "minimum_probability": 0.7,
+    "options": [
+      {
+        "description": "Payments and invoices",
+        "id": "category_1_result",
+        "label": "Billing"
+      },
+      {
+        "description": "Bugs and outages",
+        "id": "category_2_result",
+        "label": "Technical Support"
+      },
+      {
+        "description": "Pricing and plans",
+        "id": "category_3_result",
+        "label": "Sales"
+      }
+    ],
+    "reason": "refusal",
+    "result": {
+      "kind": "choice",
+      "model": "jev-1.13.0",
+      "model_source": "response",
+      "provider": "TypeSafe",
+      "refusal": "Provider declined this question.",
+      "status": "refusal",
+      "usage": {
+        "input_tokens": 312
+      }
+    },
+    "route_thresholds": {
+      "category_1_result": 0.7,
+      "category_2_result": 0.7,
+      "category_3_result": 0.9
+    }
+  },
+  "route_override_not_met": {
+    "activated_branch": "default_result",
+    "applied_threshold": 0.9,
+    "error_action": "Route to Else",
+    "kind": "choice",
+    "minimum_probability": 0.7,
+    "options": [
+      {
+        "description": "Payments and invoices",
+        "id": "category_1_result",
+        "label": "Billing"
+      },
+      {
+        "description": "Bugs and outages",
+        "id": "category_2_result",
+        "label": "Technical Support"
+      },
+      {
+        "description": "Pricing and plans",
+        "id": "category_3_result",
+        "label": "Sales"
+      }
+    ],
+    "reason": "below_minimum_probability",
+    "result": {
+      "confidence": 0.6,
+      "kind": "choice",
+      "model": "jev-1.13.0",
+      "model_source": "response",
+      "probabilities": {
+        "category_1_result": 0.05,
+        "category_2_result": 0.1,
+        "category_3_result": 0.85
+      },
+      "provider": "TypeSafe",
+      "status": "success",
+      "usage": {
+        "input_tokens": 312
+      }
+    },
+    "route_thresholds": {
+      "category_1_result": 0.7,
+      "category_2_result": 0.7,
+      "category_3_result": 0.9
+    },
+    "top_outcome": "category_3_result"
+  },
+  "score_accepted": {
+    "activated_branch": "level_2_result",
+    "error_action": "Route to Else",
+    "kind": "score",
+    "minimum_probability": null,
+    "options": [
+      {
+        "description": "Can wait",
+        "id": "level_1_result",
+        "label": "Low"
+      },
+      {
+        "description": "Today",
+        "id": "level_2_result",
+        "label": "Medium"
+      },
+      {
+        "description": "Now",
+        "id": "level_3_result",
+        "label": "High"
+      }
+    ],
+    "reason": "accepted",
+    "result": {
+      "kind": "score",
+      "model": "jev-1.13.0",
+      "model_source": "response",
+      "probabilities": {
+        "level_1_result": 0.1,
+        "level_2_result": 0.4,
+        "level_3_result": 0.5
+      },
+      "provider": "TypeSafe",
+      "score": 1.4,
+      "status": "success",
+      "usage": {
+        "input_tokens": 312
+      }
+    },
+    "route_thresholds": {}
+  },
+  "score_rounds_up_at_halfway": {
+    "activated_branch": "level_2_result",
+    "error_action": "Route to Else",
+    "kind": "score",
+    "minimum_probability": null,
+    "options": [
+      {
+        "description": "Can wait",
+        "id": "level_1_result",
+        "label": "Low"
+      },
+      {
+        "description": "Today",
+        "id": "level_2_result",
+        "label": "Medium"
+      },
+      {
+        "description": "Now",
+        "id": "level_3_result",
+        "label": "High"
+      }
+    ],
+    "reason": "accepted",
+    "result": {
+      "kind": "score",
+      "model": "jev-1.13.0",
+      "model_source": "response",
+      "probabilities": {
+        "level_1_result": 0.5,
+        "level_2_result": 0.5,
+        "level_3_result": 0.0
+      },
+      "provider": "TypeSafe",
+      "score": 0.5,
+      "status": "success",
+      "usage": {
+        "input_tokens": 312
+      }
+    },
+    "route_thresholds": {}
+  },
+  "tied_top_probability": {
+    "activated_branch": "default_result",
+    "error_action": "Route to Else",
+    "kind": "choice",
+    "minimum_probability": 0.7,
+    "options": [
+      {
+        "description": "Payments and invoices",
+        "id": "category_1_result",
+        "label": "Billing"
+      },
+      {
+        "description": "Bugs and outages",
+        "id": "category_2_result",
+        "label": "Technical Support"
+      },
+      {
+        "description": "Pricing and plans",
+        "id": "category_3_result",
+        "label": "Sales"
+      }
+    ],
+    "reason": "tied_top_probability",
+    "result": {
+      "confidence": 0.6,
+      "kind": "choice",
+      "model": "jev-1.13.0",
+      "model_source": "response",
+      "probabilities": {
+        "category_1_result": 0.45,
+        "category_2_result": 0.45,
+        "category_3_result": 0.1
+      },
+      "provider": "TypeSafe",
+      "status": "success",
+      "usage": {
+        "input_tokens": 312
+      }
+    },
+    "route_thresholds": {
+      "category_1_result": 0.7,
+      "category_2_result": 0.7,
+      "category_3_result": 0.9
+    }
+  }
+}

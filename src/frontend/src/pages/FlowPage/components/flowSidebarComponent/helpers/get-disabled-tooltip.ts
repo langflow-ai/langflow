@@ -1,6 +1,8 @@
+import i18n from "@/i18n";
 import {
   CHAT_INPUT_COMPONENT,
   evaluatePlacement,
+  TRIGGER_PLACEMENT_KEY,
   WEBHOOK_COMPONENT,
 } from "@/utils/componentConstraints";
 import { TOOLTIP_MESSAGES } from "./constants";
@@ -11,15 +13,18 @@ import { TOOLTIP_MESSAGES } from "./constants";
  * policy is never re-encoded here.
  */
 export const getDisabledTooltip = (
-  SBItemName: string,
+  candidate: string | readonly string[],
   presentTypes: ReadonlySet<string>,
 ): string => {
-  const violation = evaluatePlacement(SBItemName, presentTypes);
+  const violation = evaluatePlacement(candidate, presentTypes);
   if (!violation) {
     return "";
   }
 
   if (violation.reason === "singleton") {
+    if (violation.type === TRIGGER_PLACEMENT_KEY) {
+      return i18n.t("triggers.palette.oneTrigger");
+    }
     if (violation.type === CHAT_INPUT_COMPONENT) {
       return TOOLTIP_MESSAGES.CHAT_INPUT_ALREADY_ADDED;
     }

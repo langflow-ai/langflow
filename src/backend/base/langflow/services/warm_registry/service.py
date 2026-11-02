@@ -192,15 +192,15 @@ class WarmGraphRegistry:
     def _build(flow_id: str, name: str | None, data: dict) -> Graph:
         """Parse ``flow.data`` into a structural ``Graph`` template.
 
-        ``data`` is deepcopied first because ``from_payload`` rewrites the payload
-        in place (legacy component migration), and the caller's dict may be the DB
-        row's own mapping. Components and extension events are deferred; the
-        request-local ``copy_for_run`` binds identity and constructs components.
+        ``from_payload`` builds from its own normalized copy, so ``data`` stays
+        unchanged even when it is the DB row's own mapping. Components and
+        extension events are deferred, and the request-local ``copy_for_run``
+        binds identity and constructs components.
         """
         from lfx.graph.graph.base import Graph
 
         return Graph.from_payload(
-            deepcopy(data),
+            data,
             flow_id=flow_id,
             flow_name=name,
             instantiate_components=False,

@@ -21,9 +21,13 @@ from langflow.services.triggers.source_poll import (
     _gmail_changes,
     _graph_changes,
 )
+from lfx.integrations.models import ConnectionRef
 
 
 class _Lease:
+    def __init__(self, provider="microsoft"):
+        self.ref = ConnectionRef(provider=provider, name="source")
+
     async def get_token(self) -> str:
         return "source-test-token"
 
@@ -111,7 +115,9 @@ async def test_calendar_sync_token_410_rescans_current_items() -> None:
     trigger = _trigger(
         kind="google.calendar", provider="google", state={"sync_token": "old", "baseline_complete": True}
     )
-    async with SourceHTTP(_Lease(), origin=GOOGLE_CALENDAR_ORIGIN, transport=httpx.MockTransport(reply)) as client:
+    async with SourceHTTP(
+        _Lease("google"), origin=GOOGLE_CALENDAR_ORIGIN, transport=httpx.MockTransport(reply)
+    ) as client:
         items, cursor, baseline, resync = await _calendar_changes(client, trigger)
     assert [(item["id"], item["version"]) for item in items] == [("e1", "v2")]
     assert cursor["sync_token"] == "new"  # noqa: S105 - mock provider cursor
@@ -165,7 +171,7 @@ async def test_drive_change_feed_follows_pages_and_keeps_removals() -> None:
         )
 
     trigger = _trigger(kind="google.drive", provider="google", state={"page_token": "old"})
-    async with SourceHTTP(_Lease(), origin=GOOGLE_DRIVE_ORIGIN, transport=httpx.MockTransport(reply)) as client:
+    async with SourceHTTP(_Lease("google"), origin=GOOGLE_DRIVE_ORIGIN, transport=httpx.MockTransport(reply)) as client:
         items, cursor, baseline, resync = await _drive_changes(client, trigger)
 
     assert [(item["id"], item["version"], item["deleted"]) for item in items] == [
@@ -184,7 +190,7 @@ async def test_drive_first_scan_records_watermark_without_replaying_old_files() 
         paths.append(request.url.path)
         return httpx.Response(200, json={"startPageToken": "initial"})
 
-    async with SourceHTTP(_Lease(), origin=GOOGLE_DRIVE_ORIGIN, transport=httpx.MockTransport(reply)) as client:
+    async with SourceHTTP(_Lease("google"), origin=GOOGLE_DRIVE_ORIGIN, transport=httpx.MockTransport(reply)) as client:
         items, cursor, baseline, resync = await _drive_changes(client, _trigger(kind="google.drive", provider="google"))
 
     assert items == []
@@ -207,7 +213,7 @@ async def test_drive_expired_change_token_rescans_app_visible_files() -> None:
         return httpx.Response(200, json={"files": [{"id": "f1", "version": "3"}], "nextPageToken": "second"})
 
     trigger = _trigger(kind="google.drive", provider="google", state={"page_token": "expired"})
-    async with SourceHTTP(_Lease(), origin=GOOGLE_DRIVE_ORIGIN, transport=httpx.MockTransport(reply)) as client:
+    async with SourceHTTP(_Lease("google"), origin=GOOGLE_DRIVE_ORIGIN, transport=httpx.MockTransport(reply)) as client:
         items, cursor, baseline, resync = await _drive_changes(client, trigger)
 
     assert [(item["id"], item["version"]) for item in items] == [("f1", "3"), ("f2", "4")]
@@ -248,7 +254,7 @@ async def test_gmail_history_expansion_includes_inbox_removal_and_thread_key() -
         return httpx.Response(200, json={"id": "m1", "threadId": "t1", "historyId": "104", "labelIds": ["INBOX"]})
 
     trigger = _trigger(kind="google.gmail", provider="google", state={"history_id": "100"})
-    async with SourceHTTP(_Lease(), origin=GOOGLE_GMAIL_ORIGIN, transport=httpx.MockTransport(reply)) as client:
+    async with SourceHTTP(_Lease("google"), origin=GOOGLE_GMAIL_ORIGIN, transport=httpx.MockTransport(reply)) as client:
         items, cursor, baseline, resync = await _gmail_changes(client, trigger)
     assert [(item["id"], item["deleted"], item["session_key"]) for item in items] == [
         ("m1", False, "google:gmail:t1"),
@@ -276,7 +282,7 @@ async def test_gmail_history_ignores_messages_outside_the_inbox() -> None:
         return httpx.Response(200, json={"id": "sent", "threadId": "thread", "labelIds": ["SENT"]})
 
     trigger = _trigger(kind="google.gmail", provider="google", state={"history_id": "100"})
-    async with SourceHTTP(_Lease(), origin=GOOGLE_GMAIL_ORIGIN, transport=httpx.MockTransport(reply)) as client:
+    async with SourceHTTP(_Lease("google"), origin=GOOGLE_GMAIL_ORIGIN, transport=httpx.MockTransport(reply)) as client:
         items, cursor, baseline, resync = await _gmail_changes(client, trigger)
     assert [(item["id"], item["deleted"]) for item in items] == [("archived", True)]
     assert cursor["history_id"] == "103"
@@ -294,7 +300,7 @@ async def test_expired_gmail_history_starts_at_current_watermark_without_old_mes
         return httpx.Response(200, json={"historyId": "200"})
 
     trigger = _trigger(kind="google.gmail", provider="google", state={"history_id": "100"})
-    async with SourceHTTP(_Lease(), origin=GOOGLE_GMAIL_ORIGIN, transport=httpx.MockTransport(reply)) as client:
+    async with SourceHTTP(_Lease("google"), origin=GOOGLE_GMAIL_ORIGIN, transport=httpx.MockTransport(reply)) as client:
         items, cursor, baseline, resync = await _gmail_changes(client, trigger)
     assert items == []
     assert cursor["history_id"] == "200"

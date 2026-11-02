@@ -1,0 +1,270 @@
+---
+title: Administer users and teams with the API and CLI
+slug: /admin-api-cli
+---
+
+Langflow provides a command-line interface for administering user, team, role, and role assignment. The CLI calls the existing `/api/v1` routes with a Langflow API key.
+
+`langflow admin` is documented separately here from the [Langflow CLI](/configuration-cli) because Langflow CLI commands start the server or change the local installation, while `langflow admin` calls a Langflow server that is already running.
+
+A role assignment controls what a user can do, but requires an [authorization plugin](./authorization) to be installed and `LANGFLOW_AUTHZ_ENABLED` to be set to `true`.
+
+A non-superuser can administer a resource only when an installed authorization plugin implements the corresponding permission:
+
+| Permission | Allows | Does not allow |
+|---|---|---|
+| `user:manage` | Cross-user directory reads and user lifecycle changes | Promoting or demoting platform superusers |
+| `team:manage` | Team CRUD and manual membership changes | Role CRUD or role assignments |
+| `role:manage` | Custom role CRUD and user or team role assignments | User or team CRUD |
+
+Check the caller's permissions and optional Enterprise features with `GET /api/v1/authz/capabilities`.
+
+## Authenticate the CLI
+
+The administration CLI sends `X-API-Key` and a unique `X-Langflow-Operation-ID` on every API request.
+
+To authenticate the CLI, do the following:
+
+1. Create a [Langflow API key](/api-keys-and-authentication#langflow-api-keys) for the account that will run the commands. A superuser can administer every resource. A non-superuser can administer a resource only when an authorization plugin grants that resource's permission.
+
+2. Save a profile as JSON. A profile stores the Langflow server URL and the name of the environment variable that contains the API key. It does not store the actual key. The default file is `admin-profiles.json` in the Langflow user configuration directory:
+
+   - **macOS**: `~/Library/Application Support/langflow/admin-profiles.json`
+   - **Linux**: `~/.config/langflow/admin-profiles.json`
+   - **Windows**: `C:\Users\<username>\AppData\Local\langflow\langflow\admin-profiles.json`
+
+   ```json
+   {
+     "profiles": {
+       "production": {
+         "url": "https://langflow.example.com",
+         "api_key_env": "LANGFLOW_PRODUCTION_API_KEY"
+       }
+     }
+   }
+   ```
+
+3. Set the environment variable named in `api_key_env`. In this example profile, the variable is named `LANGFLOW_PRODUCTION_API_KEY`.
+
+   ```bash
+   export LANGFLOW_PRODUCTION_API_KEY="..."
+   ```
+
+4. Run a command with the `--profile`.
+
+   ```bash
+   langflow admin --profile production users list
+   ```
+
+The CLI resolves the URL and API key in this order: `--url` and `--api-key`, then the selected `--profile`, then `LANGFLOW_URL` and `LANGFLOW_API_KEY`.
+
+Use `--profile-file` to select a different profile document. Use `--output json` for stable automation output. Tables are the default for interactive use.
+
+## Add a user
+
+To add a user, run:
+
+```bash
+printf '%s\n' "$NEW_USER_PASSWORD" \
+  | langflow admin --profile production users create alice --password-stdin
+```
+
+The password is read from standard input. A password typed on the command line is rejected.
+
+To change a password later, run:
+
+```bash
+printf '%s\n' "$NEW_USER_PASSWORD" \
+  | langflow admin --profile production users set-password alice --password-stdin
+```
+
+## Disable or delete a user
+
+To disable a user, run:
+
+```bash
+langflow admin --profile production users disable alice
+```
+
+The disabled account remains in the server, but the user can no longer authenticate.
+
+To re-enable a user, run:
+
+```bash
+langflow admin --profile production users update alice --active
+```
+
+To delete a user, run:
+
+```bash
+langflow admin --profile production users delete alice --hard --confirm alice
+```
+
+`--hard` is required to confirm the cascading deletion of the user's rows in the database, and `--confirm` must match the username.
+
+## Add a user to a team
+
+To add a user to a team, do the following:
+
+1. Create the team.
+
+   ```bash
+   langflow admin --profile production teams create operators --display-name Operators
+   ```
+
+2. Add the user.
+
+   ```bash
+   langflow admin --profile production teams members add operators alice
+   ```
+
+In the CLI, `groups` and `teams` are interchangeable. `langflow admin groups members add` is the same command as `langflow admin teams members add`.
+
+## Assign a role
+
+To assign a role, do the following:
+
+1. List the roles. Built-in roles are `viewer`, `developer`, and `admin`. In the list, `is_system` is `true` for built-in roles, which means they can be assigned to users, but they can't be edited or deleted.
+
+   ```bash
+   langflow admin --profile production roles list
+   ```
+
+2. Optionally, create a custom role. Skip this step if you want to grant a built-in role.
+
+   ```bash
+   langflow admin --profile production roles create user-operator --permission user:manage
+   ```
+
+3. To grant the role, run:
+
+   ```bash
+   langflow admin --profile production role-assignments grant --role user-operator --user alice
+   ```
+
+
+## Apply a saved administration file
+
+Use an administration file when you want the same users, teams, roles, and assignments on another Langflow server, or checked into source control.
+
+To apply a saved administration file, do the following:
+
+1. Export the current administration state from the source server.
+The file can be YAML or JSON.
+By default, `export` writes a YAML file unless the command includes `--format json`.
+This example uses `admin-state.yaml` and the `production` profile for the source server.
+
+   ```bash
+   langflow admin --profile production export --file admin-state.yaml
+   ```
+
+2. Edit the file. Name a new user's password with `password_env`. The file is rejected if it contains a `password` field.
+
+   ```yaml
+   apiVersion: langflow.ai/v1
+   kind: AdminState
+   users:
+     - username: alice
+       state: active
+       password_env: ALICE_INITIAL_PASSWORD
+   teams:
+     - adom_name: operators
+       display_name: Operators
+       state: active
+       members:
+         - alice
+   roles:
+     - name: user-operator
+       permissions:
+         - user:manage
+   assignments:
+     - subject:
+         type: user
+         name: alice
+       role: user-operator
+       domain:
+         type: global
+   ```
+
+3. Set the environment variable named in `password_env` to the new user's password. In this file, that variable is `ALICE_INITIAL_PASSWORD`. `diff` and `apply` read it when the file creates a user.
+
+   ```bash
+   export ALICE_INITIAL_PASSWORD="<alice-password>"
+   ```
+
+4. Save a profile for the destination server, as described in [Authenticate the CLI](#authenticate-the-cli). This example names that profile `staging`.
+
+   Optionally, to compare the administration file with the destination server, run:
+
+   ```bash
+   langflow admin --profile staging diff admin-state.yaml
+   ```
+
+5. Apply the administration file to the destination server.
+
+   ```bash
+   langflow admin --profile staging apply admin-state.yaml
+   ```
+
+   `apply` checks the administration file before writing it.
+   If a step fails, the command reports what was applied, skipped, or failed:
+
+   | Exit code | Meaning |
+   |---|---|
+   | `0` | Success. |
+   | `1` | Authorization, connection, server, or partial-apply failure. |
+   | `2` | CLI usage or file validation failure. |
+   | `3` | `diff` found differences. |
+
+   Fix any failures and apply the same administration file again.
+
+## Call the administration API
+
+A script can call the same routes the CLI calls.
+
+To call the administration API, do the following:
+
+1. Create a [Langflow API key](/api-keys-and-authentication#langflow-api-keys) for the account that will call the API. A superuser can administer every resource.
+Include the created key in the request's `x-api-key` header.
+
+2. Call the route for the action.
+
+   | Action | Route |
+   |---|---|
+   | Users | `/api/v1/users/` |
+   | Teams and members | `/api/v1/authz/teams` |
+   | Roles | `/api/v1/authz/roles` |
+   | Role assignments | `/api/v1/authz/role-assignments` |
+   | What this caller can administer | `GET /api/v1/authz/capabilities` |
+
+   For example, to list users, run:
+
+   ```bash
+   curl -sS "$LANGFLOW_URL/api/v1/users/?limit=50" \
+     -H "x-api-key: $LANGFLOW_API_KEY"
+   ```
+
+   A list returns at most 200 rows. To get the next page, repeat the request with `skip` set to the number of rows already returned. For example, to request the second page of 50 rows, run:
+
+   ```bash
+   curl -sS "$LANGFLOW_URL/api/v1/users/?limit=50&skip=50" \
+     -H "x-api-key: $LANGFLOW_API_KEY"
+   ```
+
+   Teams, roles, and role assignments use `offset` instead of `skip`. To request the second page of 50 teams, run:
+
+   ```bash
+   curl -sS "$LANGFLOW_URL/api/v1/authz/teams?limit=50&offset=50" \
+     -H "x-api-key: $LANGFLOW_API_KEY"
+   ```
+
+3. If the request is refused, read the status code and the `X-Langflow-Error-Code` header.
+
+   | Response | Header | When |
+   |---|---|---|
+   | `403` | `X-Langflow-Error-Code: administration_denied` | The caller is not allowed to administer that resource. |
+   | `409` | `X-Langflow-Error-Code: externally_managed` | The change would edit a membership or assignment owned by the identity provider. |
+   | `409` | `X-Langflow-Error-Code: access_ceiling` | The authorization plugin rejected the change as a privilege escalation. |
+
+To record user, team, role, and role-assignment changes in the [authorization audit log](./authorization#audit-log-api), set `LANGFLOW_AUTHZ_AUDIT_ENABLED=true` and restart Langflow to enable audit logging.
+The log stores who made the change and which fields changed. Passwords and API keys are omitted.

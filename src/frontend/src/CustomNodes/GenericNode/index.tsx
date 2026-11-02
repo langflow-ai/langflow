@@ -9,12 +9,15 @@ import {
   isBlockedByCatalogPolicy,
 } from "@/CustomNodes/helpers/check-code-validity";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import TriggerNodeControls from "@/components/core/triggers/TriggerNodeControls";
 import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { CustomNodeStatus } from "@/customization/components/custom-NodeStatus";
+import { ENABLE_TRIGGERS } from "@/customization/feature-flags";
 import UpdateComponentModal from "@/modals/updateComponentModal";
 import { useAlternate } from "@/shared/hooks/use-alternate";
 import type { FlowStoreType } from "@/types/zustand/flow";
+import { isTriggerComponent } from "@/utils/trigger-component";
 import { Button } from "../../components/ui/button";
 import { ICON_STROKE_WIDTH } from "../../constants/constants";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
@@ -762,6 +765,9 @@ function GenericNode({
                 shownOutputs={shownOutputs}
                 showHiddenOutputs={showHiddenOutputs}
               />{" "}
+              {ENABLE_TRIGGERS && isTriggerComponent(data.node) && (
+                <TriggerNodeControls nodeId={data.id} />
+              )}
               <div
                 className={classNames(
                   Object.keys(data.node.template).length < 1 ? "hidden" : "",
