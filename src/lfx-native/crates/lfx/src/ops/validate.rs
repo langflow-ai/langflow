@@ -537,23 +537,47 @@ fn edge_violations<'a>(
     }
 }
 
-fn non_finite_violations(value: &Value, path: &mut GraphPath, violations: &mut Vec<Violation>) {
+/// A step of a path that a walk holds while it reads, borrowed from the graph.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum Step<'a> {
+    Key(&'a str),
+    Index(usize),
+}
+
+/// A walk's path as a graph path, its keys copied: for a violation or a fix.
+pub(crate) fn owned_path(steps: &[Step<'_>]) -> GraphPath {
+    steps
+        .iter()
+        .map(|step| match *step {
+            Step::Key(key) => PathPart::Key(key.to_owned()),
+            Step::Index(index) => PathPart::Index(index),
+        })
+        .collect()
+}
+
+/// Every number in `value` that is not finite, in document order. The walk
+/// borrows each key; a path is copied only for a violation.
+fn non_finite_violations<'a>(
+    value: &'a Value,
+    path: &mut Vec<Step<'a>>,
+    violations: &mut Vec<Violation>,
+) {
     match value {
         Value::Number(number) if !is_finite_number(number) => violations.push(Violation::new(
             ViolationCode::NonFiniteNumber,
-            path.clone(),
+            owned_path(path),
             "NaN, Infinity and integers too large for a double are not valid JSON",
         )),
         Value::Object(map) => {
             for (key, item) in map {
-                path.push(PathPart::Key(key.clone()));
+                path.push(Step::Key(key));
                 non_finite_violations(item, path, violations);
                 path.pop();
             }
         }
         Value::Array(items) => {
             for (index, item) in items.iter().enumerate() {
-                path.push(PathPart::Index(index));
+                path.push(Step::Index(index));
                 non_finite_violations(item, path, violations);
                 path.pop();
             }
