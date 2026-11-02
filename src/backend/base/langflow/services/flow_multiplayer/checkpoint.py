@@ -11,8 +11,8 @@ Single-flight per flow across processes. It does not take the flow's write lock:
 1. The graph text at revision R: the cached graph's coalesced serialization
    (``cache``, ``wal``), or ``Flow.data`` at its revision (``nocache``).
 2. The graph hash (engine, worker thread): of the cached graph in place
-   (``GraphState.graph_hash``), in the same hold of the entry as its text
-   (``FlowEntry.text_and_hash``); of ``Flow.data``'s text in ``nocache``.
+   (a snapshot taken with its text, ``FlowEntry.text_and_hash``, hashed
+   outside the entry's lock); of ``Flow.data``'s text in ``nocache``.
 3. One transaction: ``wal`` moves ``Flow.data`` to R only if R is newer than
    the stored revision; then a system checkpoint row at R, only when the log
    has rows, ``Flow.current_revision >= R`` and no checkpoint is there yet.
