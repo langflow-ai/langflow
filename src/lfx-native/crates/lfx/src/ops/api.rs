@@ -12,8 +12,8 @@
 use std::fmt;
 
 use crate::json;
+use crate::json_out::{self, Ascii};
 use crate::value::{FiniteValue, Map, Value};
-use serde::Serialize;
 
 use crate::ops::apply::{Applied, ApplyOptions, apply_flow_operations};
 use crate::ops::canonical;
@@ -93,70 +93,24 @@ pub type ApiResult<T = Value> = Result<T, ApiError>;
 /// fastest. For a 13.4 MB graph, Python builds the string in 1.4 ms instead
 /// of 17 ms, and `json.loads` reads it in 34 ms instead of 52 ms. Canonical
 /// text ([`canonical_json`]) is not escaped: RFC 8785 writes the characters.
-///
-/// # Panics
-///
-/// A value that `serde_json` cannot write, which the engine never returns:
-/// every key is a string.
 #[must_use]
-pub fn json_text<T: Serialize + ?Sized>(value: &T) -> String {
-    let text = serde_json::to_string(value).expect("the engine's JSON has string keys");
-    if text.is_ascii() {
-        return text;
-    }
-    escape_non_ascii(&text)
+pub fn json_text(value: &Value) -> String {
+    let mut out = Vec::new();
+    json_out::write_value(&mut out, value, Ascii::Escape);
+    json_out::into_string(out)
 }
 
 /// A graph state as JSON text, as [`json_text`] writes it.
 #[must_use]
 pub fn graph_json(state: &GraphState) -> String {
-    json_text(&state.json())
+    json_out::into_string(state.json_text())
 }
 
 /// A graph state with its staged batch as JSON text, as [`json_text`] writes
 /// it ([`GraphState::staged_json`]), or `None` when no batch is staged.
 #[must_use]
 pub fn staged_graph_json(state: &GraphState) -> Option<String> {
-    state.staged_json().map(|json| json_text(&json))
-}
-
-/// JSON text with every character above U+007F written as `\uXXXX`. JSON
-/// text holds such a character only inside a string, where the escape means
-/// the same character.
-///
-/// Escaping the written text in one pass is faster than escaping each piece
-/// of a string as it is written: `serde_json` writes a 14 MB graph in 500,000
-/// pieces, and the graph is written in 12 ms instead of 14 ms.
-fn escape_non_ascii(text: &str) -> String {
-    const CHUNK: usize = 16;
-    let bytes = text.as_bytes();
-    let mut out = Vec::with_capacity(bytes.len() + bytes.len() / 16);
-    let (mut start, mut at) = (0, 0);
-    while at < bytes.len() {
-        if bytes.len() - at >= CHUNK && bytes[at..at + CHUNK].is_ascii() {
-            at += CHUNK;
-        } else if bytes[at].is_ascii() {
-            at += 1;
-        } else {
-            out.extend_from_slice(&bytes[start..at]);
-            let character = text[at..].chars().next().expect("a character starts here");
-            for unit in character.encode_utf16(&mut [0; 2]) {
-                out.extend_from_slice(&escape(*unit));
-            }
-            at += character.len_utf8();
-            start = at;
-        }
-    }
-    out.extend_from_slice(&bytes[start..]);
-    String::from_utf8(out).expect("ASCII is UTF-8")
-}
-
-/// `\uXXXX` for a UTF-16 unit, in lower-case hex. Every edge holds `œ` many
-/// times, and `write!` took 5 ms of the 16 ms to write a 14 MB graph.
-fn escape(unit: u16) -> [u8; 6] {
-    const HEX: &[u8; 16] = b"0123456789abcdef";
-    let digit = |shift: u16| HEX[usize::from((unit >> shift) & 0xf)];
-    [b'\\', b'u', digit(12), digit(8), digit(4), digit(0)]
+    state.staged_json_text().map(json_out::into_string)
 }
 
 fn violations(violations: &[Violation]) -> Value {
