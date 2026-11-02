@@ -420,8 +420,8 @@ fn drop_elsewhere(py: Python<'_>, value: Dropped) {
 /// lock while it holds the GIL: it takes a free lock at once, and releases
 /// the GIL to wait for a lock that another thread holds. It never waits for
 /// the GIL while it holds the lock either. So two threads cannot deadlock.
-/// Small work runs with the GIL ([`Work`]); large work, such as the first
-/// batch's check of a large graph or a long replay, runs without it.
+/// Small work runs with the GIL ([`Work`]); large work, such as a long
+/// replay, runs without it.
 #[pyclass(module = "lfx_native", frozen)]
 #[derive(Debug)]
 struct GraphState {
@@ -527,18 +527,6 @@ impl GraphState {
     }
 }
 
-/// The work of a batch: its operations, and the check of the whole graph
-/// that apply and stage make before the first batch.
-fn batch_work(operations: Work, checks: bool) -> impl FnOnce(&lfx::ops::GraphState) -> Work {
-    move |state| {
-        if checks && state.needs_check() {
-            operations + Work::of_items(state.item_count())
-        } else {
-            operations
-        }
-    }
-}
-
 #[pymethods]
 impl GraphState {
     #[new]
@@ -560,12 +548,14 @@ impl GraphState {
         backward: bool,
     ) -> PyResult<Bound<'py, PyAny>> {
         let operations = input(operations)?;
-        let work = batch_work(Work::of_input(&operations), true);
+        let work = Work::of_input(&operations);
         let options = ApplyOptions { forward, backward };
         let applied = self
-            .write(py, work, |state| {
-                Ok(api::apply_to(&mut *unstaged(state)?, operations, options))
-            })
+            .write(
+                py,
+                |_| work,
+                |state| Ok(api::apply_to(&mut *unstaged(state)?, operations, options)),
+            )
             .map_err(refused)?;
         finish(py, applied.map_err(|error| engine_error(py, &error))?)
     }
@@ -582,12 +572,14 @@ impl GraphState {
         backward: bool,
     ) -> PyResult<Bound<'py, PyAny>> {
         let operations = input(operations)?;
-        let work = batch_work(Work::of_input(&operations), true);
+        let work = Work::of_input(&operations);
         let options = ApplyOptions { forward, backward };
         let staged = self
-            .write(py, work, |state| {
-                Ok(api::stage_to(&mut *unstaged(state)?, operations, options))
-            })
+            .write(
+                py,
+                |_| work,
+                |state| Ok(api::stage_to(&mut *unstaged(state)?, operations, options)),
+            )
             .map_err(refused)?;
         finish(py, staged.map_err(|error| engine_error(py, &error))?)
     }
@@ -631,12 +623,14 @@ impl GraphState {
         backward: bool,
     ) -> PyResult<Bound<'py, PyAny>> {
         let operations = input(operations)?;
-        let work = batch_work(Work::of_input(&operations), false);
+        let work = Work::of_input(&operations);
         let options = ReplayOptions { backward };
         let replayed = self
-            .write(py, work, |state| {
-                Ok(api::replay_to(&mut *unstaged(state)?, operations, options))
-            })
+            .write(
+                py,
+                |_| work,
+                |state| Ok(api::replay_to(&mut *unstaged(state)?, operations, options)),
+            )
             .map_err(refused)?;
         finish(py, replayed.map_err(|error| engine_error(py, &error))?)
     }

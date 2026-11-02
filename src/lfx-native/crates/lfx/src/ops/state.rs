@@ -42,9 +42,7 @@ use crate::ops::fields::{self, FieldLayer};
 use crate::ops::keyed::ListIndex;
 use crate::ops::ops::{Edge, Node, PathExt, Segment};
 use crate::ops::schema::{KeyedList, NODE_SCHEMA};
-use crate::ops::validate::{
-    Numbers, PathPart, find_load_violations, validate_flow_data, violations_error,
-};
+use crate::ops::validate::{Numbers, PathPart, validate_flow_data};
 
 // --- Layers --------------------------------------------------------------------------------
 
@@ -448,9 +446,6 @@ pub struct GraphState {
     pub(crate) graph: Graph,
     pub(crate) edge_index: EdgeIndex,
     pub(crate) lists: Lists,
-    /// Whether the flow passed the structural rules since it was loaded or
-    /// last replayed. Apply checks them once, before its first batch.
-    base_checked: bool,
     /// Whether a batch is staged: its layers wait for [`Self::keep`] or
     /// [`Self::drop_staged`].
     staged: bool,
@@ -463,16 +458,21 @@ pub struct GraphState {
 impl GraphState {
     /// Load a flow graph and build its indexes.
     ///
-    /// Loading checks only what the indexes need: flow data is an object,
-    /// `nodes` and `edges` are lists of objects, ids are unique, and each node
-    /// and edge has its shape. Apply checks the other structural rules before
-    /// its first batch; replay does not check them.
+    /// Loading checks every structural rule: flow data is an object, `nodes`
+    /// and `edges` are lists of objects, ids are present and unique, each
+    /// node and edge has its shape, and each edge's source and target nodes
+    /// exist. Apply then checks only what its batch changes, and replay
+    /// checks nothing.
+    ///
+    /// Values are not walked for numbers that are not finite: that check
+    /// belongs to whoever accepts a graph from outside, and skipping it keeps
+    /// the check proportional to the number of nodes and edges.
     ///
     /// # Errors
     ///
-    /// The graph breaks a rule that the indexes need.
+    /// The graph breaks a structural rule.
     pub fn new(flow: AnyValue) -> Result<Self> {
-        violations_error(find_load_violations(&flow), "flow.data")?;
+        validate_flow_data(&flow, Numbers::Skip, "flow.data", None)?;
         let AnyValue::Object(mut root) = flow else {
             unreachable!("the load check refuses flow data that is not an object")
         };
@@ -493,71 +493,9 @@ impl GraphState {
             },
             edge_index: EdgeIndex::default(),
             lists: Lists::default(),
-            base_checked: false,
             staged: false,
             text_len: Arc::default(),
         })
-    }
-
-    /// Load a flow graph that apply changes next, after checking it against
-    /// the structural rules. It does what the first batch would do, without
-    /// a copy of the flow.
-    ///
-    /// Values are not walked for numbers that are not finite: that check
-    /// belongs to whoever accepts a graph from outside, and skipping it keeps
-    /// the check proportional to the number of nodes and edges.
-    ///
-    /// # Errors
-    ///
-    /// The graph breaks a structural rule.
-    pub(crate) fn checked(flow: AnyValue) -> Result<Self> {
-        validate_flow_data(&flow, Numbers::Skip, "flow.data", None)?;
-        Ok(Self {
-            base_checked: true,
-            ..Self::new(flow)?
-        })
-    }
-
-    /// Check the flow against the structural rules, unless it passed them
-    /// since it was loaded or last replayed. Apply calls this before a batch.
-    ///
-    /// # Errors
-    ///
-    /// The graph breaks a structural rule.
-    pub(crate) fn check_base(&mut self) -> Result<()> {
-        if self.base_checked {
-            return Ok(());
-        }
-        // Loading checked every structural rule but one: that each edge's
-        // nodes exist. Apply and replay keep the others (they refuse a
-        // repeated id, a node or edge without its shape, and a write of a
-        // whole node object). So the graph passes when every edge's nodes
-        // exist, which is checked in place. Else the whole check runs on a
-        // copy, for the error and its violations in document order.
-        let nodes = &self.graph.nodes.stored;
-        let sound = self
-            .graph
-            .edges
-            .stored
-            .values()
-            .all(|edge| nodes.contains_key(edge.source()) && nodes.contains_key(edge.target()));
-        if !sound {
-            validate_flow_data(&self.to_value(), Numbers::Skip, "flow.data", None)?;
-        }
-        self.base_checked = true;
-        Ok(())
-    }
-
-    /// Note that a replay changed the flow, so apply checks it again.
-    pub(crate) fn uncheck_base(&mut self) {
-        self.base_checked = false;
-    }
-
-    /// Whether the next batch that apply or stage carries out checks the
-    /// whole graph against the structural rules first ([`Self::check_base`]).
-    #[must_use]
-    pub fn needs_check(&self) -> bool {
-        !self.base_checked
     }
 
     /// The number of nodes and edges of the committed graph: a measure of
@@ -1319,5 +1257,19 @@ mod tests {
         assert!(!map.remove("x"));
         map.fold();
         assert_eq!(keys(&map), ["a"]);
+    }
+
+    #[test]
+    fn loading_refuses_an_edge_without_its_node() {
+        let node = crate::json!({"id": "a", "data": {"node": {"template": {}}}});
+        let edge = crate::json!({"id": "e", "source": "a", "target": "gone"});
+        let flow = crate::json!({"nodes": [node], "edges": [edge]});
+        let error = GraphState::new(flow).unwrap_err();
+        assert_eq!(error.code.as_str(), "FLOW_GRAPH_INVALID", "{error}");
+        let violation = &error.violations[0];
+        assert_eq!(
+            violation.code,
+            crate::ops::validate::ViolationCode::EdgeEndpointInvalid
+        );
     }
 }

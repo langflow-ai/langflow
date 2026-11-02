@@ -133,12 +133,12 @@ impl GraphState {
     /// Apply a batch of operations in order, with every rule. On an error
     /// nothing is applied.
     ///
-    /// Before its first batch, apply checks the flow against the structural
-    /// rules. It checks again after a replay.
+    /// Apply checks only what its batch changes. It never walks the whole
+    /// graph: loading checked it ([`GraphState::new`]).
     ///
     /// # Errors
     ///
-    /// The flow breaks a structural rule, or an operation is invalid for it.
+    /// An operation is invalid for the flow.
     pub fn apply(&mut self, operations: Vec<Operation>, options: ApplyOptions) -> Result<Applied> {
         let applied = self.apply_layered(operations, options)?;
         self.commit();
@@ -156,7 +156,7 @@ impl GraphState {
     ///
     /// # Errors
     ///
-    /// The flow breaks a structural rule, or an operation is invalid for it.
+    /// An operation is invalid for the flow.
     pub fn stage(&mut self, operations: Vec<Operation>, options: ApplyOptions) -> Result<Applied> {
         let applied = self.apply_layered(operations, options)?;
         self.set_staged();
@@ -170,12 +170,6 @@ impl GraphState {
         operations: Vec<Operation>,
         options: ApplyOptions,
     ) -> Result<Applied> {
-        // A batch that panicked, which a binding turns into an exception,
-        // left its layers behind, and so does a staged batch nobody kept.
-        // The graph itself is as it was before it.
-        self.drop_staged();
-        self.discard();
-        self.check_base()?;
         let mut report = Report::new(options);
         self.run_batch(operations, &mut report, Self::apply_operation)?;
         Ok(report.into_applied())
@@ -190,6 +184,9 @@ impl GraphState {
         report: &mut Report,
         step: OperationStep,
     ) -> Result<()> {
+        // A batch that panicked, which a binding turns into an exception,
+        // left its layers behind, and so does a staged batch nobody kept.
+        // The graph itself is as it was before it.
         self.drop_staged();
         self.discard();
         for operation in operations {
@@ -926,7 +923,7 @@ pub fn apply_flow_operations(
     operations: Vec<Operation>,
     options: ApplyOptions,
 ) -> Result<(AnyValue, Applied)> {
-    let mut state = GraphState::checked(base)?;
+    let mut state = GraphState::new(base)?;
     let applied = state.apply(operations, options)?;
     Ok((state.into_value(), applied))
 }
