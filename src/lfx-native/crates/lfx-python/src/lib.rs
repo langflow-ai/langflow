@@ -101,8 +101,7 @@ fn read(object: &Bound<'_, PyAny>, depth: usize) -> PyResult<AnyValue> {
             let key = key
                 .cast::<PyString>()
                 .map_err(|_| PyTypeError::new_err("a JSON object's keys must be str"))?;
-            // A dict's keys are unique, so the pair goes last without a search.
-            map.push(text_of(key)?.to_owned(), read(&item, depth + 1)?);
+            map.insert(text_of(key)?.to_owned(), read(&item, depth + 1)?);
         }
         return Ok(AnyValue::Object(map));
     }
