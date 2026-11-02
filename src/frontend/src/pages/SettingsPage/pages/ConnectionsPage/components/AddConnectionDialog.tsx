@@ -26,6 +26,7 @@ import {
   useDeleteConnectionMutation,
   useOAuthRegistrationsQuery,
   usePendingConnectionPoll,
+  useRenewConnectionTokenMutation,
   useStartOAuthMutation,
 } from "@/controllers/API/queries/connections";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
@@ -35,7 +36,10 @@ import {
 } from "@/customization/components/custom-connection-authorization";
 import useAlertStore from "@/stores/alertStore";
 import { useTypesStore } from "@/stores/typesStore";
-import { uniqueNormalizedScopes } from "@/utils/connection-scopes";
+import {
+  normalizeScope,
+  uniqueNormalizedScopes,
+} from "@/utils/connection-scopes";
 import { cn } from "@/utils/utils";
 import {
   defaultScopesForNewConnection,
@@ -59,7 +63,7 @@ const CONSENT_TIMEOUT_MS = 10 * 60 * 1000;
 const openBlankConsentWindow = (): Window | null =>
   window.open("about:blank", "langflow-oauth-consent", "width=520,height=700");
 
-/** Re-authorizing starts at `scopes`: the handle and identity already exist. */
+/** Reconnecting keeps the handle and identity fixed. */
 type Step = "details" | "scopes" | "authorize";
 
 export interface AddConnectionDialogProps {
@@ -87,7 +91,6 @@ export function AddConnectionDialog({
   const typesData = useTypesStore((state) => state.data);
   useGetTypes({ enabled: open });
 
-  const [step, setStep] = useState<Step>(reauthorize ? "scopes" : "details");
   const [providerId, setProviderId] = useState(
     reauthorize?.provider_key ?? providers[0]?.provider_id ?? "",
   );
@@ -103,6 +106,15 @@ export function AddConnectionDialog({
   const [authorize, setAuthorize] = useState<AuthorizeState | null>(null);
   const [baseline, setBaseline] = useState<ConnectionPollBaseline | null>(null);
   const [pendingRow, setPendingRow] = useState<ConnectionRead | null>(null);
+  const [isCleaningUp, setIsCleaningUp] = useState(false);
+  const createdConnectionId = useRef<string | null>(null);
+  const cleanupGeneration = useRef(0);
+  useEffect(
+    () => () => {
+      cleanupGeneration.current += 1;
+    },
+    [],
+  );
   const popupRef = useRef<Window | null>(null);
   const startedAt = useRef(0);
   // What the last authorization asked for, so "Try again" repeats it exactly
@@ -110,7 +122,23 @@ export function AddConnectionDialog({
   const requestedScopes = useRef<string[]>([]);
 
   const provider = providers.find((item) => item.provider_id === providerId);
+  const manualTokenProfiles = provider?.manual_token_profiles ?? [];
+  const tokenProfile =
+    manualTokenProfiles.find((profile) => profile.identity === identity) ??
+    manualTokenProfiles[0];
+  // The catalog lists only api_key profiles with a credential validator here.
+  // If they cover every capability, there is no sign-in method to offer.
+  const tokenOnly =
+    manualTokenProfiles.length > 0 &&
+    (provider?.capabilities ?? []).every((capability) =>
+      manualTokenProfiles.some(
+        (profile) => profile.id === capability.auth_profile_id,
+      ),
+    );
+  const initialStep = reauthorize && !tokenOnly ? "scopes" : "details";
+  const [step, setStep] = useState<Step>(initialStep);
   const create = useCreateConnectionMutation();
+  const renewToken = useRenewConnectionTokenMutation();
   const startOAuth = useStartOAuthMutation();
   const remove = useDeleteConnectionMutation();
   const isAwaitingConsent =
@@ -120,7 +148,19 @@ export function AddConnectionDialog({
     providerId,
     deploymentContext,
     reauthorizing: !!reauthorize,
-    create: create.mutateAsync,
+    initialAllowBackgroundRuns: reauthorize?.allow_non_interactive ?? false,
+    create: (payload) =>
+      reauthorize && payload.credentials
+        ? renewToken.mutateAsync({
+            id: reauthorize.id,
+            payload: {
+              credentials: payload.credentials,
+              allow_non_interactive: payload.allow_non_interactive ?? false,
+            },
+          })
+        : create.mutateAsync(payload),
+    tokenProfile,
+    tokenOnly,
   });
   const { usesToken } = slackToken;
 
@@ -156,10 +196,13 @@ export function AddConnectionDialog({
   const identities = useMemo<IntegrationIdentity[]>(
     () => [
       ...new Set(
-        (provider?.capabilities ?? []).map((capability) => capability.identity),
+        (usesToken
+          ? (provider?.manual_token_profiles ?? [])
+          : (provider?.capabilities ?? [])
+        ).map((profile) => profile.identity),
       ),
     ],
-    [provider],
+    [provider, usesToken],
   );
 
   useEffect(() => {
@@ -174,27 +217,54 @@ export function AddConnectionDialog({
     [provider, typesData],
   );
 
-  const ceiling = candidates.find(
+  const selectedRegistration = candidates.find(
     ({ id }) => id === resolvedRegistration,
-  )?.scopes;
-  const { requestable, unavailable } = useMemo(
+  );
+  const ceiling = selectedRegistration?.scopes;
+  const requiredScopes = useMemo(
+    () => selectedRegistration?.required_scopes ?? [],
+    [selectedRegistration],
+  );
+  const componentScopes = useMemo(
     () =>
-      scopesForRegistration(providerId, uniqueScopes(requirements), ceiling),
-    [providerId, requirements, ceiling],
+      uniqueNormalizedScopes(providerId, [
+        ...uniqueScopes(requirements),
+        ...requiredScopes,
+      ]),
+    [providerId, requirements, requiredScopes],
+  );
+  const { requestable, unavailable } = useMemo(
+    () => scopesForRegistration(providerId, componentScopes, ceiling),
+    [providerId, componentScopes, ceiling],
+  );
+  const requiredUnavailable = requiredScopes.filter(
+    (scope) =>
+      !requestable.some(
+        (option) =>
+          normalizeScope(providerId, option) ===
+          normalizeScope(providerId, scope),
+      ),
+  );
+  const requiredOptions = useMemo(
+    () =>
+      requestable.filter((option) =>
+        requiredScopes.some(
+          (scope) =>
+            normalizeScope(providerId, option) ===
+            normalizeScope(providerId, scope),
+        ),
+      ),
+    [providerId, requestable, requiredScopes],
   );
 
   useEffect(() => {
     if (!provider || reauthorize) return;
     setSelectedScopes(
       new Set(
-        defaultScopesForNewConnection(
-          providerId,
-          uniqueScopes(requirements),
-          requestable,
-        ),
+        defaultScopesForNewConnection(providerId, componentScopes, requestable),
       ),
     );
-  }, [provider, providerId, requirements, reauthorize, requestable]);
+  }, [provider, providerId, componentScopes, reauthorize, requestable]);
 
   // Re-authorizing offers the same requestable scopes plus everything the
   // connection already holds, checked, so adding a scope never drops one.
@@ -236,13 +306,47 @@ export function AddConnectionDialog({
       connectionId: reauthorizeId,
       registrationId: resolvedRegistration,
     };
-    setSelectedScopes(new Set(reauthorizeList.defaultSelected));
+    setSelectedScopes(
+      new Set([...reauthorizeList.defaultSelected, ...requiredOptions]),
+    );
   }, [
     reauthorizeId,
     reauthorizeList,
     registrations.isLoading,
     resolvedRegistration,
+    requiredOptions,
   ]);
+
+  const discardFailedNewConnection = useCallback(
+    (row: ConnectionRead) => {
+      if (reauthorize || createdConnectionId.current !== row.id) return;
+      createdConnectionId.current = null;
+      const generation = ++cleanupGeneration.current;
+      setPendingRow(null);
+      setBaseline(null);
+      setIsCleaningUp(true);
+      remove.mutate(row.id, {
+        onSuccess: () => {
+          if (cleanupGeneration.current === generation) setIsCleaningUp(false);
+        },
+        onError: () => {
+          if (cleanupGeneration.current === generation) {
+            createdConnectionId.current = row.id;
+            setPendingRow(row);
+            setIsCleaningUp(false);
+          }
+          setErrorData({
+            title: t("connections.add.cleanupFailed"),
+            list: [t("connections.add.cleanupFailedBody")],
+          });
+        },
+      });
+    },
+    [reauthorize, remove.mutate, setErrorData, t],
+  );
+
+  const requiredRefreshScopes =
+    selectedRegistration?.required_scopes?.join(", ") ?? "";
 
   // Consent lands on the server: only a row that moved on from the state it had
   // when consent started carries this authorization's outcome.
@@ -255,22 +359,40 @@ export function AddConnectionDialog({
       setPendingRow(row);
       if (row.status_reason?.startsWith("oauth-")) {
         const message =
-          row.status_reason === "oauth-denied"
-            ? t("connections.add.denied")
-            : row.status_reason === "oauth-expired"
-              ? t("connections.add.expired")
-              : t("connections.add.failed");
+          row.provider_key === "jira" &&
+          row.status_reason === "oauth-refresh-token-missing"
+            ? t("connections.add.jiraRefreshMissing")
+            : row.status_reason === "oauth-refresh-token-missing"
+              ? requiredRefreshScopes
+                ? t("connections.add.refreshMissingScopes", {
+                    scopes: requiredRefreshScopes,
+                  })
+                : t("connections.add.refreshMissing")
+              : row.status_reason === "oauth-denied"
+                ? t("connections.add.denied")
+                : row.status_reason === "oauth-expired"
+                  ? t("connections.add.expired")
+                  : t("connections.add.failed");
         setAuthorize({ kind: "failed", message });
+        discardFailedNewConnection(row);
       } else if (row.status === "ready" && row.has_credentials) {
         popupRef.current?.close();
         popupRef.current = null;
         setAuthorize({ kind: "connected", connection: row });
       } else {
         setAuthorize({ kind: "failed", message: t("connections.add.failed") });
+        discardFailedNewConnection(row);
       }
       return;
     }
-  }, [isAwaitingConsent, poll.data, baseline, t]);
+  }, [
+    isAwaitingConsent,
+    poll.data,
+    baseline,
+    discardFailedNewConnection,
+    requiredRefreshScopes,
+    t,
+  ]);
 
   // A provider's Cross-Origin-Opener-Policy can make an open popup report
   // `closed`. Keep polling the server and avoid inferring user cancellation.
@@ -310,7 +432,11 @@ export function AddConnectionDialog({
         });
         return;
       }
-      requestedScopes.current = scopes;
+      const requested = uniqueNormalizedScopes(providerId, [
+        ...scopes,
+        ...requiredOptions,
+      ]);
+      requestedScopes.current = requested;
       startedAt.current = Date.now();
       setStep("authorize");
       setAuthorize({ kind: "waiting" });
@@ -321,18 +447,30 @@ export function AddConnectionDialog({
         const { authorization_url } = await startOAuth.mutateAsync({
           id: connection.id,
           registrationId: registration,
-          scopes,
+          scopes: requested,
         });
         popupRef.current = openAuthorizationUrl(
           authorization_url,
           popupRef.current,
         );
-      } catch {
+      } catch (error) {
         popupRef.current?.close();
-        setAuthorize({ kind: "failed", message: t("connections.add.failed") });
+        setAuthorize({
+          kind: "failed",
+          message: getAxiosErrorDetail(error, t("connections.add.failed")),
+        });
+        discardFailedNewConnection(connection);
       }
     },
-    [registrations.data, registrationId, startOAuth, t],
+    [
+      registrations.data,
+      registrationId,
+      startOAuth,
+      providerId,
+      requiredOptions,
+      discardFailedNewConnection,
+      t,
+    ],
   );
 
   const reauthorizeOptions = reauthorizeList?.options ?? [];
@@ -344,7 +482,8 @@ export function AddConnectionDialog({
   const canAuthorize =
     reauthorizeSelection.length > 0 &&
     !noRegistration &&
-    !registrations.isLoading;
+    !registrations.isLoading &&
+    requiredUnavailable.length === 0;
   const notRequestable = uniqueNormalizedScopes(providerId, [
     ...unavailable,
     ...(reauthorizeList?.outsideCeiling ?? []),
@@ -357,15 +496,17 @@ export function AddConnectionDialog({
   };
 
   const onTryAgain = () => {
-    if (!pendingRow) return;
+    if (isCleaningUp || requiredUnavailable.length > 0) return;
     popupRef.current = openBlankConsentWindow();
-    void beginAuthorize(poll.data ?? pendingRow, requestedScopes.current);
+    if (pendingRow)
+      void beginAuthorize(poll.data ?? pendingRow, requestedScopes.current);
+    else if (!reauthorize) void createAndAuthorize(requestedScopes.current);
   };
 
   const toggleScope = (scope: string, checked: boolean) =>
     setSelectedScopes((current) => {
       const next = new Set(current);
-      if (checked) next.add(scope);
+      if (checked || requiredOptions.includes(scope)) next.add(scope);
       else next.delete(scope);
       return next;
     });
@@ -388,9 +529,13 @@ export function AddConnectionDialog({
     name.length <= CONNECTION_NAME_MAX_LENGTH;
   const canContinue =
     !!provider &&
-    handleValid &&
-    displayName.trim().length > 0 &&
-    (usesToken ? slackToken.tokenKind !== null : !noRegistration);
+    (!!reauthorize || (handleValid && displayName.trim().length > 0)) &&
+    (usesToken
+      ? slackToken.expiresAtValid &&
+        (providerId === "slack"
+          ? slackToken.tokenKind !== null
+          : slackToken.token.trim().length > 0)
+      : !noRegistration && requiredUnavailable.length === 0);
 
   /** The server validates pasted tokens before returning the connection. */
   const onCreateWithToken = async () => {
@@ -406,6 +551,26 @@ export function AddConnectionDialog({
     }
   };
 
+  const createAndAuthorize = async (scopes: string[]) => {
+    if (!provider) return;
+    try {
+      const row = await create.mutateAsync({
+        provider_key: provider.provider_id,
+        name,
+        display_name: displayName.trim(),
+        ownership_mode: ownership,
+        executing_identity: { identity },
+      });
+      createdConnectionId.current = row.id;
+      await beginAuthorize(row, scopes);
+    } catch (error) {
+      popupRef.current?.close();
+      const message = getAxiosErrorDetail(error, t("connections.add.failed"));
+      if (step === "authorize") setAuthorize({ kind: "failed", message });
+      else setFieldError(message);
+    }
+  };
+
   const onContinue = async () => {
     if (!provider || !canContinue) return;
     setFieldError(null);
@@ -415,19 +580,7 @@ export function AddConnectionDialog({
     }
     // Open on the click itself so popup blockers treat it as user-initiated.
     popupRef.current = openBlankConsentWindow();
-    try {
-      const row = await create.mutateAsync({
-        provider_key: provider.provider_id,
-        name,
-        display_name: displayName.trim(),
-        ownership_mode: ownership,
-        executing_identity: { identity },
-      });
-      await beginAuthorize(row, [...selectedScopes]);
-    } catch (error) {
-      popupRef.current?.close();
-      setFieldError(getAxiosErrorDetail(error, t("connections.add.failed")));
-    }
+    await createAndAuthorize([...selectedScopes]);
   };
 
   const close = (discardPending: boolean) => {
@@ -449,10 +602,13 @@ export function AddConnectionDialog({
       });
     }
     popupRef.current?.close();
-    setStep(reauthorize ? "scopes" : "details");
+    setStep(initialStep);
     setAuthorize(null);
     setBaseline(null);
     setPendingRow(null);
+    createdConnectionId.current = null;
+    cleanupGeneration.current += 1;
+    setIsCleaningUp(false);
     setName("");
     setDisplayName("");
     setFieldError(null);
@@ -492,136 +648,162 @@ export function AddConnectionDialog({
         {step === "details" && !noProviders && (
           <div className="flex min-h-0 flex-col gap-4">
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="connection-provider">
-                  {t("connections.add.provider")}
-                </Label>
-                <select
-                  id="connection-provider"
-                  className="h-9 rounded-md border border-border bg-background px-2 text-sm"
-                  value={providerId}
-                  onChange={(event) => {
-                    setProviderId(event.target.value);
-                    // A pasted token belongs to the provider it was pasted for.
-                    slackToken.reset();
-                  }}
-                  data-testid="connection-provider"
-                >
-                  {providers.map((item) => (
-                    <option key={item.provider_id} value={item.provider_id}>
-                      {item.display_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {!reauthorize && (
+                <>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="connection-provider">
+                      {t("connections.add.provider")}
+                    </Label>
+                    <select
+                      id="connection-provider"
+                      className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+                      value={providerId}
+                      onChange={(event) => {
+                        setProviderId(event.target.value);
+                        // A pasted token belongs to the provider it was pasted for.
+                        slackToken.reset();
+                      }}
+                      data-testid="connection-provider"
+                    >
+                      {providers.map((item) => (
+                        <option key={item.provider_id} value={item.provider_id}>
+                          {item.display_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              {slackToken.offersToken && (
-                <ConnectionMethodSelect
-                  method={slackToken.method}
-                  onMethodChange={(method) => {
-                    slackToken.setMethod(method);
-                    setFieldError(null);
-                  }}
+                  {slackToken.offersToken && !tokenOnly && (
+                    <ConnectionMethodSelect
+                      providerName={provider?.display_name ?? providerId}
+                      method={slackToken.method}
+                      onMethodChange={(method) => {
+                        slackToken.setMethod(method);
+                        setFieldError(null);
+                      }}
+                    />
+                  )}
+
+                  <ConnectionSetupHelp
+                    key={`${providerId}:${usesToken}`}
+                    providerId={providerId}
+                    noRegistration={noRegistration}
+                    usesToken={usesToken}
+                    docsUrl={provider?.docs_url}
+                  />
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <Label htmlFor="connection-name">
+                          {t("connections.add.handle")}
+                        </Label>
+                        <ShadTooltip
+                          content={t("connections.add.handleTooltip", {
+                            example: `${providerId}/work`,
+                          })}
+                          side="top"
+                          avoidCollisions
+                        >
+                          <button
+                            type="button"
+                            aria-label={t("connections.add.handleHelpLabel")}
+                            className="cursor-help rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            data-testid="connection-handle-help"
+                          >
+                            <ForwardedIconComponent
+                              name="Info"
+                              className="h-3.5 w-3.5 text-muted-foreground"
+                              ariaHidden
+                            />
+                          </button>
+                        </ShadTooltip>
+                      </div>
+                      <Input
+                        id="connection-name"
+                        value={name}
+                        spellCheck={false}
+                        placeholder={t("connections.add.handlePlaceholder")}
+                        onChange={(event) => setName(event.target.value)}
+                        maxLength={CONNECTION_NAME_MAX_LENGTH}
+                        aria-invalid={name.length > 0 && !handleValid}
+                        className="aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive"
+                        aria-describedby="connection-name-help"
+                        data-testid="connection-name"
+                      />
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {providerId}/{name || "…"}
+                      </span>
+                      <p
+                        id="connection-name-help"
+                        className={cn(
+                          "text-xs text-muted-foreground",
+                          name.length > 0 && !handleValid && "text-destructive",
+                        )}
+                      >
+                        {t("connections.add.handleHelp", {
+                          max: CONNECTION_NAME_MAX_LENGTH,
+                        })}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <Label htmlFor="connection-display-name">
+                          {t("connections.add.displayName")}
+                        </Label>
+                        <ShadTooltip
+                          content={t("connections.add.displayNameTooltip")}
+                          side="top"
+                          avoidCollisions
+                        >
+                          <button
+                            type="button"
+                            aria-label={t(
+                              "connections.add.displayNameHelpLabel",
+                            )}
+                            className="cursor-help rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            data-testid="connection-display-name-help"
+                          >
+                            <ForwardedIconComponent
+                              name="Info"
+                              className="h-3.5 w-3.5 text-muted-foreground"
+                              ariaHidden
+                            />
+                          </button>
+                        </ShadTooltip>
+                      </div>
+                      <Input
+                        id="connection-display-name"
+                        value={displayName}
+                        onChange={(event) => setDisplayName(event.target.value)}
+                        data-testid="connection-display-name"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {reauthorize && usesToken && (
+                <ConnectionSetupHelp
+                  key={`${providerId}:${usesToken}`}
+                  providerId={providerId}
+                  noRegistration={noRegistration}
+                  usesToken={usesToken}
+                  docsUrl={provider?.docs_url}
                 />
               )}
 
-              <ConnectionSetupHelp
-                key={`${providerId}:${usesToken}`}
-                providerId={providerId}
-                noRegistration={noRegistration}
-                usesToken={usesToken}
-              />
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <Label htmlFor="connection-name">
-                      {t("connections.add.handle")}
-                    </Label>
-                    <ShadTooltip
-                      content={t("connections.add.handleTooltip", {
-                        example: `${providerId}/work`,
-                      })}
-                      side="top"
-                      avoidCollisions
-                    >
-                      <button
-                        type="button"
-                        aria-label={t("connections.add.handleHelpLabel")}
-                        className="cursor-help rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        data-testid="connection-handle-help"
-                      >
-                        <ForwardedIconComponent
-                          name="Info"
-                          className="h-3.5 w-3.5 text-muted-foreground"
-                          ariaHidden
-                        />
-                      </button>
-                    </ShadTooltip>
-                  </div>
-                  <Input
-                    id="connection-name"
-                    value={name}
-                    spellCheck={false}
-                    placeholder={t("connections.add.handlePlaceholder")}
-                    onChange={(event) => setName(event.target.value)}
-                    maxLength={CONNECTION_NAME_MAX_LENGTH}
-                    aria-invalid={name.length > 0 && !handleValid}
-                    className="aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-destructive"
-                    aria-describedby="connection-name-help"
-                    data-testid="connection-name"
-                  />
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {providerId}/{name || "…"}
-                  </span>
-                  <p
-                    id="connection-name-help"
-                    className={cn(
-                      "text-xs text-muted-foreground",
-                      name.length > 0 && !handleValid && "text-destructive",
-                    )}
-                  >
-                    {t("connections.add.handleHelp", {
-                      max: CONNECTION_NAME_MAX_LENGTH,
-                    })}
-                  </p>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <Label htmlFor="connection-display-name">
-                      {t("connections.add.displayName")}
-                    </Label>
-                    <ShadTooltip
-                      content={t("connections.add.displayNameTooltip")}
-                      side="top"
-                      avoidCollisions
-                    >
-                      <button
-                        type="button"
-                        aria-label={t("connections.add.displayNameHelpLabel")}
-                        className="cursor-help rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        data-testid="connection-display-name-help"
-                      >
-                        <ForwardedIconComponent
-                          name="Info"
-                          className="h-3.5 w-3.5 text-muted-foreground"
-                          ariaHidden
-                        />
-                      </button>
-                    </ShadTooltip>
-                  </div>
-                  <Input
-                    id="connection-display-name"
-                    value={displayName}
-                    onChange={(event) => setDisplayName(event.target.value)}
-                    data-testid="connection-display-name"
-                  />
-                </div>
-              </div>
-
               {usesToken && (
                 <SlackTokenFields
+                  providerId={providerId}
                   token={slackToken.token}
+                  requiresExpiry={slackToken.requiresExpiry}
+                  expiresAt={slackToken.expiresAt}
+                  expiresAtValid={slackToken.expiresAtValid}
+                  onExpiresAtChange={(value) => {
+                    slackToken.setExpiresAt(value);
+                    setFieldError(null);
+                  }}
                   onTokenChange={(value) => {
                     slackToken.setToken(value);
                     // The server refused the token that was there; it no longer is.
@@ -634,28 +816,29 @@ export function AddConnectionDialog({
                 />
               )}
 
-              {!usesToken && identities.length > 1 && (
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="connection-identity">
-                    {t("connections.add.identity")}
-                  </Label>
-                  <select
-                    id="connection-identity"
-                    className="h-9 rounded-md border border-border bg-background px-2 text-sm"
-                    value={identity}
-                    onChange={(event) =>
-                      setIdentity(event.target.value as IntegrationIdentity)
-                    }
-                    data-testid="connection-identity"
-                  >
-                    {identities.map((option) => (
-                      <option key={option} value={option}>
-                        {t(`connections.identity.${option}`)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+              {(!usesToken || tokenProfile !== undefined) &&
+                identities.length > 1 && (
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="connection-identity">
+                      {t("connections.add.identity")}
+                    </Label>
+                    <select
+                      id="connection-identity"
+                      className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+                      value={identity}
+                      onChange={(event) =>
+                        setIdentity(event.target.value as IntegrationIdentity)
+                      }
+                      data-testid="connection-identity"
+                    >
+                      {identities.map((option) => (
+                        <option key={option} value={option}>
+                          {t(`connections.identity.${option}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
               {!usesToken && registrationSelect}
 
@@ -687,6 +870,7 @@ export function AddConnectionDialog({
                     requirements={requirements}
                     scopes={requestable}
                     selected={selectedScopes}
+                    requiredScopes={requiredScopes}
                     onToggle={toggleScope}
                   />
                   {unavailable.length > 0 && (
@@ -695,6 +879,13 @@ export function AddConnectionDialog({
                         scopes: unavailable.map(shortScope).join(", "),
                       })}
                     </span>
+                  )}
+                  {requiredUnavailable.length > 0 && (
+                    <p className="text-xs text-destructive" role="alert">
+                      {t("connections.add.requiredScopesUnavailable", {
+                        scopes: requiredUnavailable.map(shortScope).join(", "),
+                      })}
+                    </p>
                   )}
                 </div>
               )}
@@ -710,7 +901,9 @@ export function AddConnectionDialog({
                 {t("connections.add.cancel")}
               </Button>
               <Button
-                disabled={!canContinue || create.isPending}
+                disabled={
+                  !canContinue || create.isPending || renewToken.isPending
+                }
                 onClick={onContinue}
                 data-testid="connection-continue"
               >
@@ -727,6 +920,7 @@ export function AddConnectionDialog({
                 key={providerId}
                 providerId={providerId}
                 noRegistration={noRegistration}
+                docsUrl={provider?.docs_url}
               />
               {registrationSelect}
 
@@ -744,6 +938,7 @@ export function AddConnectionDialog({
                   requirements={requirements}
                   scopes={reauthorizeOptions}
                   selected={selectedScopes}
+                  requiredScopes={requiredScopes}
                   onToggle={toggleScope}
                   granted={grantedOptions}
                 />
@@ -753,6 +948,13 @@ export function AddConnectionDialog({
                       scopes: notRequestable.map(shortScope).join(", "),
                     })}
                   </span>
+                )}
+                {requiredUnavailable.length > 0 && (
+                  <p className="text-xs text-destructive" role="alert">
+                    {t("connections.add.requiredScopesUnavailable", {
+                      scopes: requiredUnavailable.map(shortScope).join(", "),
+                    })}
+                  </p>
                 )}
               </div>
             </div>
@@ -778,13 +980,19 @@ export function AddConnectionDialog({
               <ConnectionSetupHelp
                 providerId={providerId}
                 noRegistration={false}
+                docsUrl={provider?.docs_url}
               />
             )}
             <div className="flex justify-end gap-2">
               {(authorize?.kind === "failed" ||
                 authorize?.kind === "untracked") &&
-                pendingRow && (
+                (pendingRow || !reauthorize) && (
                   <Button
+                    disabled={
+                      isCleaningUp ||
+                      create.isPending ||
+                      requiredUnavailable.length > 0
+                    }
                     variant="outline"
                     onClick={onTryAgain}
                     data-testid="connection-try-again"

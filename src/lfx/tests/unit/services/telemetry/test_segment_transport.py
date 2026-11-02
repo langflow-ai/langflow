@@ -47,6 +47,33 @@ async def test_sends_segment_track_event() -> None:
     assert "timestamp" in call.kwargs["json"]
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("argument", "environment", "expected"),
+    [
+        (None, None, "opensource"),
+        (None, "enterprise", "enterprise"),
+        ("enterprise", None, "enterprise"),
+        (None, "premium", "opensource"),
+    ],
+)
+async def test_sends_edition_as_product_plan_name(monkeypatch, argument, environment, expected) -> None:
+    if environment is None:
+        monkeypatch.delenv("LANGFLOW_EDITION", raising=False)
+    else:
+        monkeypatch.setenv("LANGFLOW_EDITION", environment)
+    service = TelemetryService(
+        base_url="https://api.segment.test/v1/track", write_key="test-key", do_not_track=False, edition=argument
+    )
+    service.anonymous_id = "test-installation"
+    service._client = AsyncMock()
+    service._client.post.return_value.status_code = 200
+
+    await service.send_telemetry_data(BasePayload(), "mcp_tool")
+
+    assert service._client.post.await_args.kwargs["json"]["properties"]["productPlanName"] == expected
+
+
 @pytest.mark.parametrize(
     ("path", "expected"),
     [

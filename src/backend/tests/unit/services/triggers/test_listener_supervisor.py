@@ -9,6 +9,7 @@ accounting.
 from __future__ import annotations
 
 import asyncio
+from dataclasses import replace
 from uuid import uuid4
 
 import pytest
@@ -19,6 +20,7 @@ from langflow.services.deps import session_scope
 from langflow.services.triggers.listeners import connection_leases
 from langflow.services.triggers.listeners.adapters import (
     ListenerContext,
+    ListenerDeliveryRejectedError,
     ListenerTrigger,
     register_adapter,
     unregister_adapter,
@@ -443,6 +445,97 @@ async def test_editing_the_adapter_configuration_rebuilds_it_without_losing_the_
 # --------------------------------------------------------------------------- #
 # Fencing: lease expiry is a recovery bound, not proof the old holder stopped
 # --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        "handover",
+        "same-holder-new-generation",
+        "expired",
+        "pause",
+        "config",
+        "refreshed-config",
+        "connection",
+        "foreign-target",
+        "ownership",
+        "consent",
+        "kind",
+        "provider",
+        "unregistered",
+    ],
+)
+async def test_old_listener_context_cannot_append_after_its_authority_changes(
+    make_connection, make_trigger, adapter_registry, change
+):
+    adapter_registry(RecordingAdapter())
+    connection_id = await make_connection()
+    trigger_id = await make_trigger(kind=TEST_KIND, connection_id=connection_id)
+    supervisor = ListenerSupervisor(holder="replica-a")
+    try:
+        await supervisor.reconcile()
+        worker = supervisor.workers[connection_id]
+        stale_ctx = supervisor._context(worker)
+        assert await stale_ctx.emit(trigger_id=trigger_id, dedupe_key="before-change", payload={})
+        async with session_scope() as session:
+            if change in {"handover", "same-holder-new-generation"}:
+                await connection_leases.release(session, connection_id=connection_id, holder="replica-a")
+                generation = await connection_leases.claim_generation(
+                    session,
+                    connection_id=connection_id,
+                    holder="replica-b" if change == "handover" else "replica-a",
+                    ttl_s=300,
+                )
+                assert generation is not None
+                # Reusing a mutable worker object must not give an old context
+                # the authority of a newly acquired generation.
+                worker.lease_generation = generation
+            elif change == "expired":
+                from langflow.services.database.models.trigger.model import TriggerListenerLease
+
+                lease = await session.get(TriggerListenerLease, connection_id)
+                lease.heartbeat_at = lease.heartbeat_at.replace(year=2020)
+                session.add(lease)
+            else:
+                row = await session.get(Trigger, trigger_id)
+                if change == "pause":
+                    row.state = "paused"
+                elif change in {"config", "refreshed-config"}:
+                    row.config = {"filter": "changed"}
+                elif change == "connection":
+                    row.connection_id = await make_connection()
+                elif change == "foreign-target":
+                    trigger_id = await make_trigger(kind=TEST_KIND, connection_id=await make_connection())
+                elif change in {"ownership", "consent"}:
+                    connection = await session.get(Connection, connection_id)
+                    if change == "ownership":
+                        connection.ownership_mode = "instance"
+                        connection.owner_id = None
+                    else:
+                        connection.allow_non_interactive = False
+                    session.add(connection)
+                elif change == "kind":
+                    row.kind = "changed_kind"
+                elif change == "provider":
+                    row.provider = "changed_provider"
+                else:
+                    unregister_adapter(kind=TEST_KIND, mechanism=None)
+                session.add(row)
+        expected = {}
+        if change == "refreshed-config":
+            worker.triggers[:] = [replace(worker.triggers[0], config={"filter": "changed"})]
+            # This event matched the original snapshot before the list was
+            # refreshed; the adapter passes that snapshot with its delivery.
+            expected = {"expected_config": {}, "expected_kind": TEST_KIND}
+        with pytest.raises(ListenerDeliveryRejectedError):
+            await stale_ctx.emit(trigger_id=trigger_id, dedupe_key="after-change", payload={}, **expected)
+        assert stale_ctx.stopping.is_set()
+        await stale_ctx.save_cursor(trigger_id=trigger_id, provider_state={"stale": True})
+        async with session_scope() as session:
+            assert not (await session.exec(select(TriggerEvent).where(TriggerEvent.dedupe_key == "after-change"))).all()
+            assert (await session.get(Trigger, trigger_id)).provider_state == {}
+    finally:
+        await supervisor.stop()
 
 
 async def test_a_dispossessed_adapter_cannot_rewind_the_cursor_its_successor_saved(

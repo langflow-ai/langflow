@@ -88,6 +88,8 @@ CHANGES = {
 #   new instance gives them the same at their first request there.
 # - The authorization audit log, when it is turned on: one row for each decision on a read. The row tells
 #   what happened on this instance after the copy.
+# - Provider ingress GET handshakes only verify and echo a challenge. Their incidental ingress audit records
+#   describe this instance; event delivery and subscription lifecycle mutations remain POST-only.
 # - The audit trail of flows and projects is read here and never written: reading a trail adds nothing to it.
 # - A value that is worked out again from what is kept: GET /api/v1/flows/ fills in is_component where a
 #   flow lacks it.
@@ -240,6 +242,7 @@ READS = frozenset(
         "/api/v1/store/users/likes",
         "/api/v1/task/{_task_id}",
         "/api/v1/triggers",
+        "/api/v1/triggers/ingress/{provider}/{public_id}",
         "/api/v1/triggers/{trigger_id}",
         "/api/v1/triggers/{trigger_id}/events",
         "/api/v1/triggers/{trigger_id}/ingress",
