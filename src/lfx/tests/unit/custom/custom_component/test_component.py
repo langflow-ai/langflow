@@ -6,18 +6,25 @@ from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.custom.custom_component.component import Component
 from lfx.custom.custom_component.custom_component import CustomComponent
 from lfx.custom.utils import update_component_build_config
+from lfx.graph import Graph
 from lfx.inputs.inputs import (
     AuthInput,
     ConnectionInput,
     ConnectionRefInput,
+    DataInput,
+    DictInput,
     FileInput,
     McpInput,
     MultilineSecretInput,
     SecretStrInput,
     StrInput,
+    TableInput,
 )
+from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
+from lfx.services.cache.utils import CacheMiss
+from lfx.services.tracing.service import TracingService
 from lfx.template import Output
 
 crewai_available = False
@@ -318,3 +325,255 @@ def test_trace_masks_credential_field_types():
         "path": "/data/metadata.txt",
         "label": "metadata-label",
     }
+
+
+def test_trace_masks_credential_headers():
+    class TraceComponent(Component):
+        inputs = [
+            # MCP Tools holds headers as a dict, API Request as key/value rows (Data when connected).
+            DictInput(name="headers", is_list=True),
+            TableInput(
+                name="api_headers",
+                value=[
+                    {"key": "Proxy-Authorization", "value": "Basic metadata-sentinel"},
+                    {"key": "User-Agent", "value": "Langflow/1.0"},
+                ],
+            ),
+            TableInput(name="connected_headers", value=[]),
+        ]
+
+    component = TraceComponent()
+    component.set_attributes(
+        {
+            "headers": {
+                "Authorization": "Bearer runtime-sentinel",
+                "X-Goog-Api-Key": "runtime-sentinel",
+                "X-RapidAPI-Key": "runtime-sentinel",
+                "X-RapidAPIKey": "runtime-sentinel",  # pragma: allowlist secret
+                "auth": "runtime-sentinel",
+                "X-Tenant": "acme",
+            },
+            "api_headers": [
+                {"key": "x-api-key", "value": "runtime-sentinel"},
+                {"key": "api-key", "value": "runtime-sentinel"},
+                {"key": "Private-Token", "value": "runtime-sentinel"},
+                {"key": "X-Vault-Token", "value": "runtime-sentinel"},
+                {"key": "X-UserToken", "value": "runtime-sentinel"},
+                {"key": "X-PassWord", "value": "runtime-sentinel"},
+                {"key": "X-Credentials", "value": "runtime-sentinel"},
+                {"key": "X-Passwd", "value": "runtime-sentinel"},
+                {"key": "DSN", "value": "runtime-sentinel"},
+                {"key": "Connection-String", "value": "runtime-sentinel"},
+                {"key": "Authorization ", "value": "Bearer runtime-sentinel"},
+                {"key": "Cookie", "value": "session=runtime-sentinel"},
+                {"key": "Accept", "value": "application/json"},
+                {"key": "X-Token-Count", "value": "128"},
+            ],
+            "connected_headers": Data(data={"X-Auth-Token": "runtime-sentinel", "X-Tenant": "acme"}),
+        }
+    )
+
+    assert component.get_trace_as_inputs() == {
+        "headers": {
+            "Authorization": "**********",
+            "X-Goog-Api-Key": "**********",
+            "X-RapidAPI-Key": "**********",
+            "X-RapidAPIKey": "**********",
+            "auth": "**********",
+            "X-Tenant": "acme",
+        },
+        "api_headers": [
+            {"key": "x-api-key", "value": "**********"},
+            {"key": "api-key", "value": "**********"},
+            {"key": "Private-Token", "value": "**********"},
+            {"key": "X-Vault-Token", "value": "**********"},
+            {"key": "X-UserToken", "value": "**********"},
+            {"key": "X-PassWord", "value": "**********"},
+            {"key": "X-Credentials", "value": "**********"},
+            {"key": "X-Passwd", "value": "**********"},
+            {"key": "DSN", "value": "**********"},
+            {"key": "Connection-String", "value": "**********"},
+            {"key": "Authorization ", "value": "**********"},
+            {"key": "Cookie", "value": "**********"},
+            {"key": "Accept", "value": "application/json"},
+            {"key": "X-Token-Count", "value": "128"},
+        ],
+        "connected_headers": [Data(data={"X-Auth-Token": "**********", "X-Tenant": "acme"})],
+    }
+    assert component.get_trace_as_metadata() == {
+        "api_headers": [
+            {"key": "Proxy-Authorization", "value": "**********"},
+            {"key": "User-Agent", "value": "Langflow/1.0"},
+        ],
+        "connected_headers": [],
+    }
+
+
+def test_trace_masks_headers_in_configured_log_redact_keys(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_LOG_REDACT_KEYS", "x-company-credential, X-Company-Signature")
+
+    class TraceComponent(Component):
+        inputs = [TableInput(name="api_headers", value=[])]
+
+    component = TraceComponent()
+    component.set_attributes(
+        {
+            "api_headers": [
+                {"key": "X-Company-Credential", "value": "runtime-sentinel"},
+                {"key": "X-Company-Signature", "value": "runtime-sentinel"},
+                {"key": "X-Company-Region", "value": "eu"},
+            ]
+        }
+    )
+
+    assert component.get_trace_as_inputs()["api_headers"] == [
+        {"key": "X-Company-Credential", "value": "**********"},
+        {"key": "X-Company-Signature", "value": "**********"},
+        {"key": "X-Company-Region", "value": "eu"},
+    ]
+
+
+def test_trace_masks_credential_headers_nested_under_other_keys():
+    class TraceComponent(Component):
+        inputs = [DictInput(name="headers", is_list=True), TableInput(name="api_headers", value=[])]
+
+    nested = {"headers": {"Authorization": "Bearer runtime-sentinel", "X-Tenant": "acme"}}
+    component = TraceComponent()
+    component.set_attributes({"headers": nested, "api_headers": [Data(data=nested)]})
+
+    masked = {"headers": {"Authorization": "**********", "X-Tenant": "acme"}}
+    assert component.get_trace_as_inputs() == {"headers": masked, "api_headers": [Data(data=masked)]}
+    # Trace outputs and logs hide the nested value too.
+    assert component._sanitize_trace_value("sent Bearer runtime-sentinel") == "sent **********"
+
+
+class _RecordingTracingService(TracingService):
+    """The minimal tracing service, keeping the outputs and logs a component sends to it."""
+
+    def __init__(self):
+        super().__init__()
+        self.outputs: list[dict] = []
+        self.logs: list[Any] = []
+
+    def set_outputs(self, trace_name, outputs, output_metadata=None):  # noqa: ARG002
+        self.outputs.append(outputs)
+
+    def add_log(self, trace_name, log):  # noqa: ARG002
+        self.logs.append(log)
+
+
+class _CredentialEchoComponent(Component):
+    inputs = [
+        AuthInput(name="auth"),
+        ConnectionInput(name="connection"),
+        McpInput(name="mcp_server"),
+        TableInput(name="api_headers", value=[]),
+    ]
+    outputs = [Output(name="echo", display_name="Echo", method="build_echo")]
+
+    def build_echo(self) -> Data:
+        headers = {row["key"]: row["value"] for row in self.api_headers}
+        self.log(f"auth={self.auth} authorization={headers['Authorization']}")
+        return Data(
+            data={"auth": self.auth, "connection": self.connection, "mcp_server": self.mcp_server, "headers": headers}
+        )
+
+
+class _ReceiverComponent(Component):
+    inputs = [DataInput(name="data")]
+    outputs = [Output(name="received", display_name="Received", method="build_received")]
+
+    def build_received(self) -> Data:
+        return self.data
+
+
+_MCP_SERVER = {
+    "name": "github",
+    "config": {
+        "command": "uvx",
+        "args": ["mcp-server-github"],
+        "url": "https://mcp.example.com/sse",
+        "env": {"GITHUB_TOKEN": "env-sentinel", "PORT": "8080"},
+        "headers": {"Authorization": "Bearer mcp-sentinel"},
+    },
+}
+# In-tree, AUTH and CONNECTION inputs hold status words and toolkit names, not credentials.
+_ECHO = {
+    "auth": "validated",
+    "connection": "GMAIL",
+    "mcp_server": _MCP_SERVER,
+    "headers": {"Authorization": "Bearer header-sentinel", "X-Tenant": "acme"},
+}
+
+
+def _credential_echo_graph():
+    tracer = _RecordingTracingService()
+    producer = _CredentialEchoComponent(_id="producer", _tracing_service=tracer)
+    producer.set(
+        auth=_ECHO["auth"],
+        connection=_ECHO["connection"],
+        mcp_server=_MCP_SERVER,
+        api_headers=[{"key": name, "value": value} for name, value in _ECHO["headers"].items()],
+    )
+    receiver = _ReceiverComponent(_id="receiver")
+    receiver.set(data=producer.build_echo)
+    return tracer, producer, receiver, Graph(producer, receiver)
+
+
+@pytest.mark.asyncio
+async def test_trace_outputs_and_logs_mask_credential_input_values():
+    tracer, producer, receiver, graph = _credential_echo_graph()
+
+    async for _ in graph.async_start():
+        pass
+
+    # AUTH and CONNECTION values, the server name, command, args, url and ordinary env entries stay
+    # visible, as do ordinary headers.
+    masked = {
+        "auth": "validated",
+        "connection": "GMAIL",
+        "mcp_server": {
+            "name": "github",
+            "config": {
+                **_MCP_SERVER["config"],
+                "env": {"GITHUB_TOKEN": "**********", "PORT": "8080"},
+                "headers": {"Authorization": "**********"},
+            },
+        },
+        "headers": {"Authorization": "**********", "X-Tenant": "acme"},
+    }
+    assert tracer.outputs
+    for outputs in tracer.outputs:
+        assert outputs == {"echo": Data(data=masked)}
+    assert [log.message for log in tracer.logs] == ["auth=validated authorization=**********"]
+
+    # Only the copies sent to the tracer change: the edge value, what the receiver got and the
+    # component's own logs keep the real values.
+    assert producer.get_output("echo").value.data == _ECHO
+    assert receiver.get_output("received").value.data == _ECHO
+    assert [log.message for log in producer.get_output_logs()["echo"]] == [
+        "auth=validated authorization=Bearer header-sentinel"
+    ]
+
+
+@pytest.mark.asyncio
+async def test_trace_output_masking_leaves_frozen_downstream_values_unchanged():
+    store = {}
+
+    async def get_cache(key):
+        return store.get(key, CacheMiss())
+
+    async def set_cache(key, data):
+        store[key] = {"result": data}
+        return True
+
+    # The second run reads the frozen producer's cached result, which is what the receiver gets.
+    received = []
+    for frozen in (False, True):
+        _, _, receiver, graph = _credential_echo_graph()
+        graph.get_vertex("producer").frozen = frozen
+        for vertex_id in ("producer", "receiver"):
+            await graph.build_vertex(vertex_id, get_cache=get_cache, set_cache=set_cache)
+        received.append(receiver.get_output("received").value.data)
+
+    assert received == [_ECHO, _ECHO]

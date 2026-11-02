@@ -15,6 +15,8 @@ from copy import deepcopy
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qsl, urlsplit
 
+from lfx.utils.secrets import is_secret_name
+
 from langflow.utils import mcp_config_secrets as _mcp_config_secrets
 
 if TYPE_CHECKING:
@@ -63,25 +65,6 @@ _CREDENTIAL_VALUE_PATTERN = re.compile(
         | (?:AKIA|ASIA)[0-9A-Z]{16}
     )$""",
     re.VERBOSE,
-)
-
-_SECRET_NAME_PARTS = frozenset({"credential", "credentials", "passwd", "password", "secret"})
-_SECRET_COMPOUND_NAMES = frozenset(
-    {
-        "access_key",
-        "api_key",
-        "apikey",
-        "authorization",
-        "client_secret",
-        "connection_string",
-        "cookie",
-        "database_uri",
-        "database_url",
-        "dsn",
-        "private_key",
-        "proxy_authorization",
-        "set_cookie",
-    }
 )
 
 
@@ -440,21 +423,6 @@ def strip_flow_secrets(flow: dict, *, known_variable_names: Collection[str] = fr
     return scrubbed
 
 
-def _normalized_secret_name(value: object) -> str:
-    """Normalize snake, kebab, and camel-case names for classification."""
-    name = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", str(value or ""))
-    return re.sub(r"[^a-zA-Z0-9]+", "_", name).strip("_").lower()
-
-
-def _is_secret_name(value: object) -> bool:
-    normalized = _normalized_secret_name(value)
-    if normalized in _SECRET_COMPOUND_NAMES:
-        return True
-    parts = set(normalized.split("_"))
-    is_token_value = normalized == "token" or normalized.endswith("_token")
-    return bool(parts & _SECRET_NAME_PARTS) or is_token_value or {"api", "key"}.issubset(parts)
-
-
 def _is_variable_reference(value: object) -> bool:
     """Return whether a ``load_from_db`` value looks like a global-variable name.
 
@@ -513,7 +481,7 @@ def _contains_url_credentials(value: str) -> bool:
     if parsed.username is not None or parsed.password is not None:
         return True
     return any(
-        _is_secret_name(key)
+        is_secret_name(key)
         for component in (parsed.query, parsed.fragment)
         for key, _ in parse_qsl(component, keep_blank_values=True)
     )
@@ -523,7 +491,7 @@ def _structured_container_frame(value: object):
     """Prepare one mutable container for bounded, in-place traversal."""
     if isinstance(value, dict):
         discriminator = next(
-            (value.get(key) for key in ("key", "name", "header") if _is_secret_name(value.get(key))),
+            (value.get(key) for key in ("key", "name", "header") if is_secret_name(value.get(key))),
             None,
         )
         if discriminator is not None and "value" in value:
@@ -551,7 +519,7 @@ def _strip_structured_secret_values_in_place(value: object) -> object:
             frames.pop()
             continue
 
-        if classify_keys and _is_secret_name(key):
+        if classify_keys and is_secret_name(key):
             container[key] = None
             continue
         nested_value = container[key]
@@ -767,7 +735,7 @@ def _strip_template_field_value(
             field["value"] = None
         return
 
-    if field.get("password") or _is_secret_name(field.get("name")):
+    if field.get("password") or is_secret_name(field.get("name")):
         # An already-empty or absent value carries no secret. Nulling it
         # anyway would turn a missing ``value`` key into an explicit ``None``
         # one, or ``""`` into ``None`` - a shape change a strict snapshot
@@ -821,7 +789,7 @@ def is_secret_header_name(header_name: object) -> bool:
     Both halves of the Headers-box handling are held to this, so a header rewritten at
     save time is the same one kept and declared at packaging.
     """
-    return _is_secret_name(header_name)
+    return is_secret_name(header_name)
 
 
 def mcp_header_scope(server_name: str) -> str:
@@ -899,7 +867,7 @@ def _strip_mcp_header_field(
         # well so the two agree. Treating every header outside `NON_SECRET_HEADERS` as a
         # credential swept up ordinary routing headers: `X-Tenant: acme` became a
         # variable an operator then had to provision for a value that is not a secret.
-        if not _is_secret_name(header_name):
+        if not is_secret_name(header_name):
             continue
         if (
             variable_references is not None

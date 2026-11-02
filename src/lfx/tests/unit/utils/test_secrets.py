@@ -1,4 +1,4 @@
-from lfx.utils.secrets import is_secret_value, secret_value_to_str, unwrap_secret_value
+from lfx.utils.secrets import is_secret_name, is_secret_value, secret_value_to_str, unwrap_secret_value
 from pydantic import SecretStr
 from pydantic.v1 import SecretStr as SecretStrV1
 
@@ -29,3 +29,10 @@ def test_secret_value_to_str_handles_none_and_stripping():
 def test_is_secret_value_uses_secret_protocol():
     assert is_secret_value(SecretStr("secret"))
     assert not is_secret_value("secret")
+
+
+def test_is_secret_name_classifies_snake_kebab_and_camel_case_names():
+    secret = ["api_key", "X-RapidAPI-Key", "Connection-String", "DSN", "X-Passwd", "X-Vault-Token", "token"]
+    plain = ["max_tokens", "X-Token-Count", "X-Tenant", "Accept", None]
+    assert [name for name in secret if not is_secret_name(name)] == []
+    assert [name for name in plain if is_secret_name(name)] == []

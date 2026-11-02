@@ -38,7 +38,7 @@ To customize log storage locations and behaviors, set the following [Langflow en
 | `LANGFLOW_LOG_FORMAT` | String | Not set | Set to `key_value` for key-value format or `console` for [`ConsoleRenderer`](https://www.structlog.org/en/stable/console-output.html). Only applies when `LANGFLOW_LOG_ENV=default` and `LANGFLOW_PRETTY_LOGS=true`. |
 | `LANGFLOW_LOG_LEVEL` | String | `ERROR` | Global log level. One of `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`. |
 | `LANGFLOW_LOG_LEVELS` | String | Not set | Per-logger level overrides as `name=LEVEL,name=LEVEL`. Overrides `LANGFLOW_LOG_LEVEL` for specific loggers without changing the global default. Malformed entries raise a `UserWarning` at startup. Example: `sqlalchemy.engine=WARNING,httpx=INFO`. |
-| `LANGFLOW_LOG_REDACT_KEYS` | String | Not set | Comma-separated extra keys to scrub from JSON log records, on top of the defaults (`password`, `api_key`, `token`, `authorization`, `cookie`, etc.). |
+| `LANGFLOW_LOG_REDACT_KEYS` | String | Not set | Comma-separated extra keys to scrub from JSON log records, on top of the defaults (`password`, `api_key`, `token`, `authorization`, `cookie`, etc.). Header values with these names are also masked in data sent to tracing providers. |
 | `LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE` | Integer | `10000` | Buffer size for log retrieval when `LANGFLOW_ENABLE_LOG_RETRIEVAL=True`. Must be greater than `0`. |
 | `LANGFLOW_LOG_ROTATION` | String | `1 day` | Controls log file rotation by time (`1 day`, `12 hours`, `1 week`) or size (`10 MB`, `1 GB`). Set to `None` to disable rotation. |
 | `LANGFLOW_LOG_TRACE_LOCALS` | Boolean | `false` | Include frame locals in structured tracebacks. Off by default because locals can leak secrets; enable only for local debugging. |

@@ -230,6 +230,7 @@ DEFAULT_REDACT_KEYS: frozenset[str] = frozenset(
         "encrypted_verifier",
         "registrations",
         "authorization",
+        "proxy-authorization",
         "auth",
         "cookie",
         "set-cookie",
@@ -239,6 +240,12 @@ DEFAULT_REDACT_KEYS: frozenset[str] = frozenset(
 )
 _REDACTED = "***"
 _REDACT_MAX_DEPTH = 4
+
+
+def redact_keys() -> frozenset[str]:
+    """Return the keys whose values logs redact: DEFAULT_REDACT_KEYS plus LANGFLOW_LOG_REDACT_KEYS."""
+    extra_keys = (key.strip().lower() for key in os.getenv("LANGFLOW_LOG_REDACT_KEYS", "").split(","))
+    return DEFAULT_REDACT_KEYS | {key for key in extra_keys if key}
 
 
 def _build_redact_processor(extra_keys: frozenset[str]) -> Any:
@@ -1067,10 +1074,7 @@ def configure(
             event_dict.setdefault(key, value)
         return event_dict
 
-    extra_redact = frozenset(
-        k.strip().lower() for k in os.getenv("LANGFLOW_LOG_REDACT_KEYS", "").split(",") if k.strip()
-    )
-    redact_processor = _build_redact_processor(extra_redact)
+    redact_processor = _build_redact_processor(redact_keys())
 
     processors: list[Any] = [
         structlog.contextvars.merge_contextvars,
