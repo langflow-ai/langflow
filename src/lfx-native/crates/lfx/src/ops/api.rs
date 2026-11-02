@@ -249,7 +249,7 @@ pub fn apply(
 ///
 /// # Errors
 ///
-/// The graph does not parse, or breaks a rule that the indexes need.
+/// The graph does not parse, or breaks a structural rule.
 pub fn graph_state(flow: Input<'_>) -> ApiResult<GraphState> {
     Ok(GraphState::new(held(flow)?)?)
 }
@@ -342,7 +342,7 @@ pub fn replayed_json(replayed: Replayed, options: ReplayOptions) -> AnyMap {
 ///
 /// # Errors
 ///
-/// The graph or the operations do not parse, the graph cannot be indexed,
+/// The graph or the operations do not parse, the graph breaks a structural rule,
 /// or an operation cannot be carried out.
 pub fn replay(
     flow: Input<'_>,

@@ -82,7 +82,7 @@ impl GraphState {
     ///
     /// # Errors
     ///
-    /// The graph does not parse, or breaks a rule that the indexes need.
+    /// The graph does not parse, or breaks a structural rule.
     #[wasm_bindgen(constructor)]
     pub fn new(flow: &str) -> Result<GraphState, JsValue> {
         Ok(Self {
@@ -146,7 +146,7 @@ pub fn apply(flow: &str, operations: &str, options: &JsValue) -> Result<String, 
 ///
 /// # Errors
 ///
-/// The graph or the operations do not parse, the graph cannot be indexed,
+/// The graph or the operations do not parse, the graph breaks a structural rule,
 /// or an operation cannot be carried out.
 #[wasm_bindgen]
 pub fn replay(flow: &str, operations: &str, options: &JsValue) -> Result<String, JsValue> {

@@ -311,7 +311,7 @@ pub fn find_graph_violations(
     let AnyValue::Object(graph) = flow else {
         return Ok(vec![not_an_object()]);
     };
-    let mut violations = structure_violations(graph, EdgeNodes::MustExist);
+    let mut violations = structure_violations(graph);
     if let Some(base) = base
         && graph.get("nodes").is_some_and(AnyValue::is_array)
     {
@@ -328,19 +328,6 @@ pub fn find_graph_violations(
     Ok(violations)
 }
 
-/// Every rule `flow` breaks that stops it from loading into a
-/// [`GraphState`](crate::ops::state::GraphState): the rules its indexes need.
-///
-/// Flow data is an object, `nodes` and `edges` are lists of objects, and ids
-/// are present and unique. Each node has the shape of a node, and each edge
-/// names its two nodes. Whether those nodes exist is not checked here.
-pub(crate) fn find_load_violations(flow: &AnyValue) -> Vec<Violation> {
-    let AnyValue::Object(graph) = flow else {
-        return vec![not_an_object()];
-    };
-    structure_violations(graph, EdgeNodes::MayBeMissing)
-}
-
 fn not_an_object() -> Violation {
     Violation::new(
         ViolationCode::FlowDataNotObject,
@@ -349,15 +336,8 @@ fn not_an_object() -> Violation {
     )
 }
 
-/// Whether an edge's source and target nodes must exist.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum EdgeNodes {
-    MustExist,
-    MayBeMissing,
-}
-
 /// The structural rules `graph` breaks, in the order the graph lists them.
-fn structure_violations(graph: &AnyMap, edge_nodes: EdgeNodes) -> Vec<Violation> {
+fn structure_violations(graph: &AnyMap) -> Vec<Violation> {
     let mut violations = Vec::new();
     let nodes = graph.get("nodes").and_then(AnyValue::as_array);
     let edges = graph.get("edges").and_then(AnyValue::as_array);
@@ -384,13 +364,12 @@ fn structure_violations(graph: &AnyMap, edge_nodes: EdgeNodes) -> Vec<Violation>
     }
     if let Some(edges) = edges {
         let mut edge_ids = HashSet::new();
-        let node_ids = (edge_nodes == EdgeNodes::MustExist).then_some(&node_ids);
         for (index, edge) in edges.iter().enumerate() {
             edge_violations(
                 edge,
                 &["edges".into(), index.into()],
                 &mut edge_ids,
-                node_ids,
+                &node_ids,
                 &mut violations,
             );
         }
@@ -419,7 +398,7 @@ pub fn validate_flow_data(
 /// # Errors
 ///
 /// An invalid graph error listing the violations.
-pub(crate) fn violations_error(violations: Vec<Violation>, context: &str) -> Result<()> {
+fn violations_error(violations: Vec<Violation>, context: &str) -> Result<()> {
     let Some(first) = violations.first() else {
         return Ok(());
     };
@@ -497,7 +476,7 @@ fn edge_violations<'a>(
     edge: &'a AnyValue,
     path: &[PathPart],
     edge_ids: &mut HashSet<&'a str>,
-    node_ids: Option<&HashSet<&str>>,
+    node_ids: &HashSet<&str>,
     violations: &mut Vec<Violation>,
 ) {
     let AnyValue::Object(edge) = edge else {
@@ -524,7 +503,7 @@ fn edge_violations<'a>(
     for end in ["source", "target"] {
         let message = match edge.non_empty_str(end) {
             None => format!("edge must have a non-empty string {end}"),
-            Some(node_id) if node_ids.is_some_and(|ids| !ids.contains(node_id)) => {
+            Some(node_id) if !node_ids.contains(node_id) => {
                 format!("edge {end} node does not exist")
             }
             Some(_) => continue,

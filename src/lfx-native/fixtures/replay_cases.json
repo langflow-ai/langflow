@@ -51,11 +51,19 @@
       "expected": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}, {"id": "n", "data": {"node": {"template": {"t": {"type": "str", "value": "b"}}}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]}
     },
     {
-      "name": "a stored flow with an edge to a missing node replays",
-      "rule": "replay-no-rules",
+      "name": "a stored flow with an edge to a missing node does not load",
+      "rule": "replay-failures",
       "base": {"nodes": [{"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
       "operations": [{"type": "update_nodes", "updates": [{"id": "d", "op": "set_field", "path": ["data", "node", "template", "one", "value"], "value": "z"}]}],
-      "expected": {"nodes": [{"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": "z"}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]}
+      "error": "FlowDataValidationError",
+      "code": "FLOW_GRAPH_INVALID"
+    },
+    {
+      "name": "a stored delete of a node without its edges replays, and keeps the edges",
+      "rule": "replay-no-rules",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "delete_nodes", "ids": ["s"]}, {"type": "update_nodes", "updates": [{"id": "d", "op": "set_field", "path": ["data", "node", "template", "one", "value"], "value": "z"}]}],
+      "expected": {"nodes": [{"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": "z"}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]}
     },
     {
       "name": "a table with a row without __pos__ replays a write to another row",
