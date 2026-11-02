@@ -397,3 +397,16 @@ def test_threads_share_one_plain_graph():
     for thread in threads:
         thread.join()
     assert results == [expected] * 800
+
+
+def test_a_state_hashes_as_its_text_does():
+    state = ops.GraphState(FLOW)
+    assert state.graph_hash() == ops.GraphPlain(state.to_json().encode()).graph_hash()
+    with pytest.raises(RuntimeError, match="no batch is staged"):
+        state.graph_hash(staged=True)
+    state.stage(set_value("y"))
+    staged = state.graph_hash(staged=True)
+    assert staged == ops.GraphPlain(state.to_json(staged=True).encode()).graph_hash()
+    assert staged != state.graph_hash()
+    state.keep()
+    assert state.graph_hash() == staged
