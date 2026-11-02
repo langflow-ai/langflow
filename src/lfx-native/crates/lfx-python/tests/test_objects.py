@@ -399,6 +399,31 @@ def test_threads_share_one_plain_graph():
     assert results == [expected] * 800
 
 
+def test_large_graphs_dropped_from_many_threads_leave_the_engine_working():
+    """A large graph is dropped on the engine's drop thread, or where it is when that thread is busy."""
+    template = {f"f{index}": {"value": "x" * 100, "type": "str"} for index in range(20)}
+    nodes = [{"id": f"n{index}", "data": {"node": {"template": template}}} for index in range(500)]
+    text = json.dumps({"nodes": nodes, "edges": []}).encode()
+    expected = ops.GraphPlain(text).graph_hash()
+
+    hashes: list[str] = []
+
+    def churn() -> None:
+        for _ in range(10):
+            state = ops.GraphState(text)
+            plain = ops.GraphPlain(text)
+            hashes.extend([state.graph_hash(), plain.graph_hash()])
+            del state, plain
+
+    threads = [threading.Thread(target=churn) for _ in range(4)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert hashes == [expected] * 80
+    assert ops.GraphState(text).graph_hash() == expected
+
+
 def test_a_state_hashes_as_its_text_does():
     state = ops.GraphState(FLOW)
     assert state.graph_hash() == ops.GraphPlain(state.to_json().encode()).graph_hash()
