@@ -18,6 +18,10 @@ Three outcomes per action:
 A state reason outranks a caller reason: a reader looking at a dead trigger is
 told it is dead, which stays true whatever access they are later granted.
 
+A trigger paused because its node left the canvas cannot be resumed: with no
+trigger on the canvas, every event it fired would fail. Reconciliation clears
+that reason when the node is added back.
+
 The answer is conservative, never more permissive than the routes: an action
 listed as allowed is one the route accepts. The converse need not hold - a
 test event on a paused trigger is accepted by the route but is retired without
@@ -82,7 +86,7 @@ def _paused_reason(row: Trigger) -> TriggerReason:
     return TriggerReason.PAUSED
 
 
-def trigger_reason(row: Trigger) -> TriggerReason | None:
+def trigger_reason(row: Trigger, *, recovery_reason: TriggerReason | None = None) -> TriggerReason | None:
     """The one stable code explaining ``row``'s state, or ``None`` when it is running cleanly."""
     state = row.state
     if state == TriggerState.ACTIVE.value:
@@ -92,6 +96,8 @@ def trigger_reason(row: Trigger) -> TriggerReason | None:
     if state == TriggerState.PAUSED.value:
         return _paused_reason(row)
     if state == TriggerState.NEEDS_RECONNECT.value:
+        if recovery_reason is not None:
+            return recovery_reason
         if row.last_error == CONNECTION_NOT_AUTHORIZED_ERROR:
             return TriggerReason.CONSENT_REQUIRED
         return TriggerReason.NEEDS_RECONNECT
@@ -123,9 +129,13 @@ def _decide(
         decisions[TriggerAction.PAUSE] = write
     if state != TriggerState.ACTIVE.value:
         decisions[TriggerAction.RESUME] = TriggerReason.DEAD if dead else write
+        if state == TriggerState.NEEDS_RECONNECT.value and reason is not TriggerReason.READY_TO_RESUME:
+            decisions[TriggerAction.RESUME] = write or reason
+        if reason is TriggerReason.NODE_REMOVED:
+            decisions[TriggerAction.RESUME] = reason
     decisions[TriggerAction.TEST] = run_block
     if _uses_connection(row):
-        if state != TriggerState.NEEDS_RECONNECT.value:
+        if state != TriggerState.NEEDS_RECONNECT.value or reason is TriggerReason.READY_TO_RESUME:
             decisions[TriggerAction.RECONNECT] = TriggerReason.RECONNECT_NOT_NEEDED
         else:
             decisions[TriggerAction.RECONNECT] = None if caller.owns_connection else TriggerReason.NOT_CONNECTION_OWNER
@@ -136,9 +146,11 @@ def _decide(
     return decisions
 
 
-def trigger_capabilities(row: Trigger, *, caller: TriggerCaller) -> TriggerCapabilities:
+def trigger_capabilities(
+    row: Trigger, *, caller: TriggerCaller, recovery_reason: TriggerReason | None = None
+) -> TriggerCapabilities:
     """The server's answer for ``caller`` on ``row``, in ``TriggerAction`` display order."""
-    reason = trigger_reason(row)
+    reason = trigger_reason(row, recovery_reason=recovery_reason)
     decisions = _decide(row, reason, caller)
     allowed: list[TriggerAction] = []
     blocked: dict[TriggerAction, TriggerReason] = {}

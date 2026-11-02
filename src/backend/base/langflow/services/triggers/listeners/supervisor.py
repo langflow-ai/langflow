@@ -61,7 +61,9 @@ from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import TriggerState
 from langflow.services.deps import get_connection_resolver_service, get_settings_service, session_scope
 from langflow.services.triggers import ledger
+from langflow.services.triggers.connection_recovery import record_connection_failure
 from langflow.services.triggers.constants import (
+    CONNECTION_NOT_AUTHORIZED_ERROR,
     FAMILY_TRIGGER_LISTENER,
     MECHANISM_SLACK_SOCKET_MODE,
     SLACK_PROVIDER_STATE_APP_ID,
@@ -109,6 +111,7 @@ _NEEDS_RECONNECT_ERRORS = (
 #: trigger back. These back off and retry like any other failure, and recover on
 #: their own the moment the process is configured correctly.
 _LOCAL_CONFIGURATION_REASONS = frozenset({"credential-undecryptable", "registration-unavailable"})
+_SOURCE_POLLING_ERROR_PREFIX = "Source polling failed. "
 
 
 def is_local_configuration_failure(exc: BaseException) -> bool:
@@ -189,7 +192,9 @@ async def unusable_connection_ids(session: AsyncSession, connection_ids: list[UU
     return unusable | (set(connection_ids) - found)
 
 
-async def mark_needs_reconnect(session: AsyncSession, *, trigger_ids: list[UUID], reason: str) -> None:
+async def mark_needs_reconnect(
+    session: AsyncSession, *, trigger_ids: list[UUID], reason: str, consent_required: bool = False
+) -> None:
     """Move triggers to ``needs_reconnect`` and stop listening for them."""
     if not trigger_ids:
         return
@@ -199,6 +204,7 @@ async def mark_needs_reconnect(session: AsyncSession, *, trigger_ids: list[UUID]
         row.state = TriggerState.NEEDS_RECONNECT.value
         row.last_error = reason
         row.updated_at = _now()
+        record_connection_failure(row, failed_at=row.updated_at, consent_required=consent_required)
         session.add(row)
     await session.flush()
 
@@ -213,6 +219,8 @@ async def record_listener_error(session: AsyncSession, *, trigger_ids: list[UUID
     if not trigger_ids:
         return
     for row in (await session.exec(select(Trigger).where(col(Trigger.id).in_(trigger_ids)))).all():
+        if (row.last_error or "").startswith(_SOURCE_POLLING_ERROR_PREFIX):
+            continue
         row.last_error = message
         row.updated_at = _now()
         session.add(row)
@@ -225,6 +233,10 @@ async def clear_listener_error(session: AsyncSession, *, trigger_ids: list[UUID]
         return
     statement = select(Trigger).where(col(Trigger.id).in_(trigger_ids), col(Trigger.last_error).is_not(None))
     for row in (await session.exec(statement)).all():
+        if not (row.last_error or "").startswith(
+            ("The listener could not hold this connection", "The listener cannot read this connection")
+        ):
+            continue
         row.last_error = None
         row.updated_at = _now()
         session.add(row)
@@ -857,6 +869,39 @@ class ListenerSupervisor:
             if not worker.succeeded_since_failure:
                 await self._succeeded(worker)
 
+        async def source_failed(
+            *, trigger_id: UUID, message: str, expected_config: dict[str, Any], expected_kind: str
+        ) -> None:
+            async with session_scope() as session:
+                row = await lock_target(
+                    session, trigger_id=trigger_id, expected_config=expected_config, expected_kind=expected_kind
+                )
+                row.last_error = f"{_SOURCE_POLLING_ERROR_PREFIX}{message}"
+                row.updated_at = _now()
+                session.add(row)
+
+        async def source_succeeded(
+            *, trigger_id: UUID, expected_config: dict[str, Any], expected_kind: str, observed_error: str | None
+        ) -> None:
+            if observed_error is None and worker.succeeded_since_failure:
+                return
+            async with session_scope() as session:
+                row = await lock_target(
+                    session, trigger_id=trigger_id, expected_config=expected_config, expected_kind=expected_kind
+                )
+                if row.last_error == observed_error and (observed_error or "").startswith(
+                    (
+                        _SOURCE_POLLING_ERROR_PREFIX,
+                        "The listener could not hold this connection",
+                        "The listener cannot read this connection",
+                    )
+                ):
+                    row.last_error = None
+                    row.updated_at = _now()
+                    session.add(row)
+            if not worker.succeeded_since_failure:
+                await self._succeeded(worker)
+
         return ListenerContext(
             connection_id=worker.connection_id,
             triggers=worker.triggers,
@@ -865,6 +910,8 @@ class ListenerSupervisor:
             resolve_credential=resolve_credential,
             stopping=worker.stopping,
             mark_connected=mark_connected,
+            source_failed=source_failed,
+            source_succeeded=source_succeeded,
         )
 
     # ------------------------------------------------------------------ #
@@ -942,10 +989,18 @@ class ListenerSupervisor:
         )
         with contextlib.suppress(Exception):
             async with session_scope() as session:
+                consent_required = (
+                    isinstance(exc, ConnectionNotAuthorizedError) and exc.reason == "non-interactive-opt-in-required"
+                )
                 await mark_needs_reconnect(
                     session,
                     trigger_ids=[t.id for t in worker.triggers],
-                    reason="The connection is no longer authorized. Reconnect it to resume this trigger.",
+                    reason=(
+                        CONNECTION_NOT_AUTHORIZED_ERROR
+                        if consent_required
+                        else "The connection is no longer authorized. Reconnect it to resume this trigger."
+                    ),
+                    consent_required=consent_required,
                 )
         await self._drop(worker.connection_id)
 

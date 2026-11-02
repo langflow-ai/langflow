@@ -43,6 +43,7 @@ export const TRIGGER_STATE_REASONS = [
   "source_settings_changed",
   "error",
   "needs_reconnect",
+  "ready_to_resume",
   "consent_required",
   "expired",
   "dead",
@@ -111,6 +112,20 @@ export const TRIGGER_EVENT_STATES = [
   "dead",
 ] as const;
 export type TriggerEventState = (typeof TRIGGER_EVENT_STATES)[number];
+
+/** What started a trigger-run Playground session. */
+export interface TriggerSessionRead {
+  session_id: string;
+  trigger_id: string;
+  trigger_name: string;
+  kind: string;
+  provider: string | null;
+  /** When the session's first event arrived; a shared session spans many runs. */
+  started_at: string;
+}
+
+/** The events drawer's filters the server applies; "all" sends none. */
+export type TriggerEventFilterParam = "failed" | "replays" | "tests";
 
 export interface TriggerEventRead {
   id: string;
