@@ -28,12 +28,19 @@ Checkpoints (``kind: "checkpoint"``) record start, end, duration and revision,
 with the engine CPU of their serialization and hash. Background tasks
 (checkpoints, maintenance, the sampler) run in an empty context, so they never
 add to a request's record.
-A sampler records process CPU time and RSS every second (``kind: "sample"``).
+A sampler records process CPU time and RSS every second (``kind: "sample"``),
+with ``threads``: the CPU seconds of each thread of the process (``/proc``),
+and ``loop_tid``, the thread that runs the event loop.
 Compactions (``kind: "compaction"``) record start, end and the time of every
 phase, with ``lock_held`` from the advisory lock granted to the commit's end
 and ``checkpoints_delete``, the unlocked transaction after it.
 
-Two probes look for event-loop stalls. They start with the first measured
+Engine calls of at least ``ECALL_RECORD_MS`` (wall) also add one ``kind: "ecall"``
+record with ``name``, ``t`` (start), ``end``, ``dur``, ``cpu`` (the running thread's
+CPU), ``loop`` (ran on the event loop's thread) and ``bg`` (outside a request, such as
+a checkpoint), so a request can be matched with the engine calls it overlapped.
+
+Three probes look for stalls. They start with the first measured
 request (the first flow request, before the benchmark resets the records):
 
 - ``kind: "gc"``: every gen-2 collection and any collection over
@@ -42,6 +49,13 @@ request (the first flow request, before the benchmark resets the records):
   objects in generation 2 when the probe started. A reset keeps it.
 - ``kind: "lag"``: the loop woke more than ``LAG_RECORD_MS`` late from a
   ``LAG_INTERVAL`` sleep; ``t`` is when the stall began (about), ``lag`` its length.
+- ``kind: "gil"``: a plain thread woke more than ``GIL_RECORD_MS`` late from a
+  ``GIL_INTERVAL`` sleep. A thread that runs bytecode gives the GIL up within the
+  switch interval (5 ms), so a late wake-up means one call held the GIL that long
+  (a C call, or a garbage collection); a loop stall without one is the loop's own work.
+
+``LANGFLOW_OPS_BENCH_LAG_MS``, ``LANGFLOW_OPS_BENCH_GIL_MS`` and
+``LANGFLOW_OPS_BENCH_ECALL_MS`` change the three thresholds.
 
 Everything stays in memory until the bench export endpoint reads it; a reset
 deletes every record except ``gc_startup``.
@@ -54,6 +68,7 @@ import contextlib
 import contextvars
 import gc
 import os
+import threading
 import time
 from contextvars import ContextVar
 from typing import Any, Self
@@ -69,8 +84,13 @@ _lag_probe: asyncio.Task | None = None
 _PAGE = os.sysconf("SC_PAGE_SIZE") if hasattr(os, "sysconf") else 4096
 SAMPLE_INTERVAL = 1.0
 LAG_INTERVAL = 0.01
-LAG_RECORD_MS = 50.0
+LAG_RECORD_MS = float(os.environ.get("LANGFLOW_OPS_BENCH_LAG_MS") or 50.0)
+GIL_INTERVAL = 0.005
+GIL_RECORD_MS = float(os.environ.get("LANGFLOW_OPS_BENCH_GIL_MS") or 20.0)
+ECALL_RECORD_MS = float(os.environ.get("LANGFLOW_OPS_BENCH_ECALL_MS") or 5.0)
 GC_RECORD_MS = 20.0
+_loop_thread: int | None = None
+_gil_probe: threading.Thread | None = None
 PATH_PREFIXES = ("/api/v2/flows", "/api/v1/flows")
 
 
@@ -128,18 +148,37 @@ def timed(name: str) -> Any:
 
 
 def engine_call(name: str, function: Any, *args: Any, **kwargs: Any) -> Any:
-    """Run one engine call, adding its wall time and its thread's CPU time to the current record."""
+    """Run one engine call, adding its wall time and its thread's CPU time to the current record.
+
+    A call of at least ``ECALL_RECORD_MS`` also adds an ``ecall`` record, in a request or not.
+    """
     rec = _current.get()
-    if rec is None:
+    if rec is None and not config.bench_enabled():
         return function(*args, **kwargs)
-    t0, c0 = time.perf_counter(), time.thread_time()
+    t0, c0, w0 = time.perf_counter(), time.thread_time(), time.time()
     try:
         return function(*args, **kwargs)
     finally:
         c1, t1 = time.thread_time(), time.perf_counter()
-        key = f"eng_{name}"
-        rec[key] = rec.get(key, 0) + (t1 - t0) * 1000
-        rec[key + "_cpu"] = rec.get(key + "_cpu", 0) + (c1 - c0) * 1000
+        dur, cpu = (t1 - t0) * 1000, (c1 - c0) * 1000
+        if rec is not None:
+            key = f"eng_{name}"
+            rec[key] = rec.get(key, 0) + dur
+            rec[key + "_cpu"] = rec.get(key + "_cpu", 0) + cpu
+        if dur >= ECALL_RECORD_MS:
+            _records.append(
+                {
+                    "kind": "ecall",
+                    "pid": os.getpid(),
+                    "name": name,
+                    "t": w0,
+                    "end": w0 + dur / 1000,
+                    "dur": dur,
+                    "cpu": cpu,
+                    "loop": threading.get_ident() == _loop_thread,
+                    "bg": rec is None,
+                }
+            )
 
 
 def engine_call_cpu(function: Any, *args: Any, **kwargs: Any) -> tuple[Any, float]:
@@ -167,7 +206,29 @@ def _rss_bytes() -> int:
         return 0
 
 
+_TICKS = os.sysconf("SC_CLK_TCK") if hasattr(os, "sysconf") else 100
+
+
+def _thread_cpu() -> dict[str, float]:
+    """CPU seconds (user + system) of each thread of this process, by native thread id."""
+    out: dict[str, float] = {}
+    try:
+        tids = os.listdir("/proc/self/task")  # noqa: PTH208
+    except OSError:
+        return out
+    for tid in tids:
+        try:
+            with open(f"/proc/self/task/{tid}/stat", "rb") as f:  # noqa: PTH123
+                fields = f.read().rsplit(b")", 1)[1].split()
+        except OSError:
+            continue
+        # Fields after the command: state is index 0, utime 11, stime 12.
+        out[tid] = (int(fields[11]) + int(fields[12])) / _TICKS
+    return out
+
+
 async def _sample_loop() -> None:
+    loop_tid = threading.get_native_id()
     while True:
         _records.append(
             {
@@ -176,6 +237,8 @@ async def _sample_loop() -> None:
                 "t": time.time(),
                 "cpu_s": time.process_time(),
                 "rss": _rss_bytes(),
+                "threads": _thread_cpu(),
+                "loop_tid": loop_tid,
             }
         )
         await asyncio.sleep(SAMPLE_INTERVAL)
@@ -189,6 +252,16 @@ async def _lag_loop() -> None:
         if lag > LAG_RECORD_MS:
             now = time.time()
             _records.append({"kind": "lag", "pid": os.getpid(), "t": now - lag / 1000, "end": now, "lag": lag})
+
+
+def _gil_loop() -> None:
+    while True:
+        t0 = time.perf_counter()
+        time.sleep(GIL_INTERVAL)
+        lag = (time.perf_counter() - t0 - GIL_INTERVAL) * 1000
+        if lag > GIL_RECORD_MS:
+            now = time.time()
+            _records.append({"kind": "gil", "pid": os.getpid(), "t": now - lag / 1000, "end": now, "lag": lag})
 
 
 class _GcProbe:
@@ -247,10 +320,14 @@ def _install_gc_probe() -> None:
 
 
 def _ensure_sampler() -> None:
-    global _sampler, _lag_probe  # noqa: PLW0603
+    global _sampler, _lag_probe, _loop_thread, _gil_probe  # noqa: PLW0603
     if _sampler is None or _sampler.done():
+        _loop_thread = threading.get_ident()
         _install_gc_probe()
         _sampler = spawn(_sample_loop())
+    if _gil_probe is None:
+        _gil_probe = threading.Thread(target=_gil_loop, name="ops-bench-gil-probe", daemon=True)
+        _gil_probe.start()
     if _lag_probe is None or _lag_probe.done():
         _lag_probe = spawn(_lag_loop())
 
