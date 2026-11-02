@@ -308,6 +308,20 @@ def test_the_staged_graph_is_the_graph_keep_makes(engine):
     assert state.to_json() == staged
 
 
+def test_a_state_hashes_as_its_text_does(engine):
+    """``GraphState.graph_hash`` is ``GraphPlain.graph_hash`` of the state's JSON text, committed or staged."""
+    state = engine.GraphState(FLOW)
+    assert state.graph_hash() == engine.GraphPlain(state.to_json().encode()).graph_hash()
+    with pytest.raises(RuntimeError, match="no batch is staged"):
+        state.graph_hash(staged=True)
+    state.stage(set_value("y"))
+    staged = state.graph_hash(staged=True)
+    assert staged == engine.GraphPlain(state.to_json(staged=True).encode()).graph_hash()
+    assert staged != state.graph_hash()
+    state.keep()
+    assert state.graph_hash() == staged
+
+
 def _two_nodes_and_an_edge() -> dict[str, Any]:
     def node(node_id: str) -> dict[str, Any]:
         return {"id": node_id, "data": {"node": {"template": {"t": {"value": "", "type": "str"}}}}}

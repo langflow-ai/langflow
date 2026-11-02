@@ -116,6 +116,10 @@ class PythonGraphState:
         """The committed graph as JSON text; with ``staged``, the graph with the staged batch."""
         return self._state.to_json(staged=staged)
 
+    def graph_hash(self, *, staged: bool = False) -> str:
+        """The committed graph's ``graph_hash``; with ``staged``, the graph with the staged batch."""
+        return self._state.graph_hash(staged=staged)
+
     def to_dict(self) -> dict[str, Any]:
         return self._state.to_dict()
 
@@ -380,6 +384,9 @@ class RustGraphState:
 
     def to_json(self, *, staged: bool = False) -> str:
         return self._state.to_json(staged=staged)
+
+    def graph_hash(self, *, staged: bool = False) -> str:
+        return _call(self._state.graph_hash, staged=staged)
 
     def to_dict(self) -> dict[str, Any]:
         return self._state.to_dict()

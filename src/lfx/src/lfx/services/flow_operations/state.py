@@ -31,6 +31,7 @@ from __future__ import annotations
 import threading
 from typing import TYPE_CHECKING, Any
 
+from lfx.services.flow_operations.canonical import graph_hash_checked
 from lfx.services.flow_operations.edge_rules import EdgeIndex
 from lfx.services.flow_operations.exceptions import FlowDataValidationError
 from lfx.services.flow_operations.json_io import copy_json, dumps
@@ -260,6 +261,22 @@ class GraphState:
                 msg = "no batch is staged"
                 raise RuntimeError(msg)
         return dumps(value)
+
+    def graph_hash(self, *, staged: bool = False) -> str:
+        """The SHA-256 hex digest of the committed graph's canonical form, as ``GraphPlain.graph_hash`` gives for
+        its JSON text, without writing or reading the text. With ``staged``, the graph with the staged batch, as
+        ``keep`` makes it. Raises ``RuntimeError`` when ``staged`` is true and no batch is staged.
+        """  # noqa: D205
+        with self._lock:
+            if not staged:
+                value = self.to_value()
+            elif self._staged:
+                value = self._staged_value()
+            else:
+                msg = "no batch is staged"
+                raise RuntimeError(msg)
+        # The graph was read with the JSON limits, and every batch keeps them.
+        return graph_hash_checked(value)
 
     @property
     def staged(self) -> bool:
