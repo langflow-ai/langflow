@@ -141,20 +141,32 @@ class FlowEntry:
             if result is not None:
                 return result
 
-    async def graph_hash_at(self, revision: int) -> tuple[str, float] | None:
-        """The graph hash of committed ``revision`` and its engine CPU (ms), hashed in place.
+    async def text_and_hash(self) -> tuple[int, str, float, bool, str, float]:
+        """One committed revision's JSON text and graph hash, for a checkpoint, in one hold of ``use``.
 
-        None when the entry has moved past ``revision``: the caller then hashes the revision's text.
+        Returns ``(revision, text, text_cpu, serialized_here, graph_hash, hash_cpu)`` (CPU in ms).
+        The text is the revision's shared serialization when there is one; the hash is of the
+        loaded graph in place (``GraphState.graph_hash``), at the same revision, as no write can
+        keep a batch while ``use`` is held. Writers on the flow wait for both calls.
         """
         async with self.use:
-            if self.revision != revision:
-                return None
-            return await call(bench.engine_call_cpu, self.state.graph_hash, large=True, name="hash")
+            revision = self.revision
+            if self.json is not None and self.json[0] == revision:
+                text, text_cpu, here = self.json[1], self.json_cpu, False
+            else:
+                with bench.timed("ser"):
+                    text, text_cpu = await call(bench.engine_call_cpu, self.state.to_json, large=True, name="to_json")
+                self.json, self.json_cpu, here = (revision, text), text_cpu, True
+            graph_hash, hash_cpu = await call(bench.engine_call_cpu, self.state.graph_hash, large=True, name="hash")
+        return revision, text, text_cpu, here, graph_hash, hash_cpu
 
     async def _serialize(self, revision: int) -> tuple[int, str] | None:
         async with self.use:
             if self.revision != revision:
                 return None
+            if self.json is not None and self.json[0] == revision:
+                # A checkpoint serialized this revision while this task waited.
+                return self.json
             with bench.timed("ser"):
                 text, cpu = await call(bench.engine_call_cpu, self.state.to_json, large=True, name="to_json")
         if self.revision == revision:

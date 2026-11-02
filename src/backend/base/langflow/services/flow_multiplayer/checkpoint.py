@@ -11,7 +11,8 @@ Single-flight per flow across processes. It does not take the flow's write lock:
 1. The graph text at revision R: the cached graph's coalesced serialization
    (``cache``, ``wal``), or ``Flow.data`` at its revision (``nocache``).
 2. The graph hash (engine, worker thread): of the cached graph in place
-   (``GraphState.graph_hash``) when it is still at R, else of the text.
+   (``GraphState.graph_hash``), in the same hold of the entry as its text
+   (``FlowEntry.text_and_hash``); of ``Flow.data``'s text in ``nocache``.
 3. One transaction: ``wal`` moves ``Flow.data`` to R only if R is newer than
    the stored revision; then a system checkpoint row at R, only when the log
    has rows, ``Flow.current_revision >= R`` and no checkpoint is there yet.
@@ -157,6 +158,7 @@ async def _write_checkpoint(flow_id: UUID, end: int, started: float, t0: float) 
     ser_cpu, ser_here = 0.0, False
     raw: bytes | None = None
     entry = None
+    state_hash, state_hash_cpu = "", 0.0
     if config.uses_cache():
         if CACHE.get(flow_id) is None:
             _skip(flow_id, end, "not_cached", t0)
@@ -168,10 +170,8 @@ async def _write_checkpoint(flow_id: UUID, end: int, started: float, t0: float) 
             if entry is None:
                 _skip(flow_id, end, "not_cached", t0)
                 return None
-            had = entry.json is not None and entry.json[0] == entry.revision
-            revision, text = await entry.serialized()
-            # The engine CPU of this revision's serialization, whoever ran it (shared, one per revision).
-            ser_cpu, ser_here = entry.json_cpu, not had
+            # The engine CPU of the text is of this revision's serialization, whoever ran it (shared).
+            revision, text, ser_cpu, ser_here, state_hash, state_hash_cpu = await entry.text_and_hash()
         except EntryGoneError:
             _skip(flow_id, end, "not_cached", t0)
             return None
@@ -194,10 +194,11 @@ async def _write_checkpoint(flow_id: UUID, end: int, started: float, t0: float) 
         graph = raw if raw is not None else text.encode()
         return bench.engine_call_cpu(lambda: engine.GraphPlain(graph).graph_hash())
 
-    # The cached graph is hashed in place while it is still at the revision of the text.
-    hashed = await entry.graph_hash_at(revision) if entry is not None else None
-    hash_from = "state" if hashed is not None else "text"
-    graph_hash, hash_cpu = hashed if hashed is not None else await call(hash_text, large=True, name="hash")
+    if entry is not None:
+        hash_from, graph_hash, hash_cpu = "state", state_hash, state_hash_cpu
+    else:
+        hash_from = "text"
+        graph_hash, hash_cpu = await call(hash_text, large=True, name="hash")
     t_hash = time.perf_counter()
     async with session_scope() as session:
         moved = await oplog.checkpoint_flow(session, flow_id, text, revision=revision) if mode == "wal" else False
