@@ -1337,11 +1337,6 @@ def create_app():
     limiter = get_rate_limiter()
     app.state.limiter = limiter
 
-    # Liveness answered before the other middleware, so a busy event loop does not fail it.
-    from langflow.api.health_check_router import LivenessFastPath
-
-    app.add_middleware(LivenessFastPath)
-
     # Multiplayer flow-ops measurement (LANGFLOW_OPS_BENCH=1): outermost, so it times the whole server side.
     from langflow.services.flow_multiplayer import config as flow_multiplayer_config
 

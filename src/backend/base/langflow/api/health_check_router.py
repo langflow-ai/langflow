@@ -1,7 +1,6 @@
 import asyncio
 import uuid
 from collections.abc import Awaitable, Callable
-from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
 from lfx.log.logger import logger
@@ -61,38 +60,12 @@ async def _probe_services(session: DbSession) -> HealthResponse:
     return response
 
 
-_BODY = b'{"status":"ok"}'
-_HEADERS = [(b"content-type", b"application/json"), (b"content-length", str(len(_BODY)).encode())]
-
-
-class LivenessFastPath:
-    """Pure ASGI middleware: answer ``GET /health`` at once, the same answer as the route.
-
-    Liveness asks whether the process still serves requests. Through the full stack (about ten
-    middleware layers, several of them ``BaseHTTPMiddleware`` with their own tasks and streams), a
-    trivial handler waits for many event-loop turns; on a busy loop each turn takes long, so the
-    probe timed out (p50 300-500 ms locally at 256 writers) on a process that was working. Here the
-    answer needs one turn: the probe still fails when the loop stops, not when it is busy.
-    """
-
-    def __init__(self, app: Any) -> None:
-        self.app = app
-
-    async def __call__(self, scope: dict, receive: Any, send: Any) -> None:
-        if scope["type"] == "http" and scope["path"] == "/health" and scope["method"] == "GET":
-            await send({"type": "http.response.start", "status": 200, "headers": _HEADERS})
-            await send({"type": "http.response.body", "body": _BODY})
-            return
-        await self.app(scope, receive, send)
-
-
 # /health is also supported by uvicorn
 # it means uvicorn's /health serves first before the langflow instance is up
 # therefore it's not a reliable health check for a langflow instance
 # we keep this for backward compatibility
 @health_check_router.get("/health")
 async def health():
-    # Served by LivenessFastPath before the middleware stack; this route documents it.
     return {"status": "ok"}
 
 
