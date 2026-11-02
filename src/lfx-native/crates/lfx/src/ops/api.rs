@@ -26,7 +26,7 @@ use crate::ops::plain::GraphPlain;
 use crate::ops::repair::{Fix, repair_flow_data};
 use crate::ops::replay::{ReplayOptions, Replayed, replay_flow_operations};
 use crate::ops::restore;
-use crate::ops::state::{GraphState, parse_finite_json, parse_json, parse_problem};
+use crate::ops::state::{GraphSnapshot, GraphState, parse_finite_json, parse_json, parse_problem};
 use crate::ops::validate::{Numbers, Violation, find_graph_violations};
 
 /// An error as the bindings receive it: a JSON object with the error's
@@ -268,6 +268,23 @@ pub fn state_graph_hash(state: &GraphState) -> ApiResult<String> {
 /// The graph holds a number that is not finite.
 pub fn staged_state_graph_hash(state: &GraphState) -> ApiResult<Option<String>> {
     Ok(state.staged_graph_hash().transpose()?)
+}
+
+/// A [`GraphSnapshot`] as JSON text, as [`json_text`] writes it: what
+/// [`graph_json`] gave when the snapshot was taken.
+#[must_use]
+pub fn snapshot_json(snapshot: &GraphSnapshot) -> String {
+    json_out::into_string(snapshot.json_text())
+}
+
+/// The SHA-256 hex digest of a [`GraphSnapshot`]'s canonical form: what
+/// [`state_graph_hash`] gave when the snapshot was taken.
+///
+/// # Errors
+///
+/// The graph holds a number that is not finite.
+pub fn snapshot_graph_hash(snapshot: &GraphSnapshot) -> ApiResult<String> {
+    Ok(snapshot.graph_hash()?)
 }
 
 /// Apply a batch to a [`GraphState`]; the result is what [`applied_json`] lists.

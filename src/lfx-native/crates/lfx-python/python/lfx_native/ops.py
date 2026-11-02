@@ -18,6 +18,7 @@ violations, edge id or graph it carries.
 from lfx_native._native import (
     EngineError,
     GraphPlain,
+    GraphSnapshot,
     GraphState,
     append_table_rows,
     apply,
@@ -48,6 +49,7 @@ from lfx_native._native import (
 __all__ = [
     "EngineError",
     "GraphPlain",
+    "GraphSnapshot",
     "GraphState",
     "append_table_rows",
     "apply",

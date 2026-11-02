@@ -434,6 +434,14 @@ struct GraphState {
     state: RwLock<lfx::ops::GraphState>,
 }
 
+/// A graph with no node and no edge: what a dropped graph leaves in its place.
+fn empty_graph() -> Value {
+    let mut root = Map::new();
+    root.insert("nodes".into(), Value::Array(Vec::new()));
+    root.insert("edges".into(), Value::Array(Vec::new()));
+    Value::Object(root)
+}
+
 /// A large graph is dropped on the drop thread ([`drop_elsewhere`]).
 impl Drop for GraphState {
     fn drop(&mut self) {
@@ -441,10 +449,7 @@ impl Drop for GraphState {
         if !Work::of_items(state.item_count()).is_large() {
             return;
         }
-        let mut root = Map::new();
-        root.insert("nodes".into(), Value::Array(Vec::new()));
-        root.insert("edges".into(), Value::Array(Vec::new()));
-        let empty = lfx::ops::GraphState::new(Value::Object(root)).expect("an empty graph loads");
+        let empty = lfx::ops::GraphState::new(empty_graph()).expect("an empty graph loads");
         let state = std::mem::replace(state, empty);
         Python::attach(|py| drop_elsewhere(py, Box::new(state)));
     }
@@ -678,6 +683,18 @@ impl GraphState {
         Ok(hashed)
     }
 
+    /// The committed graph as it is now, without a staged batch, as a
+    /// read-only `GraphSnapshot`. It shares every node and edge with the
+    /// state, so it costs a pointer for each; a later batch copies only the
+    /// nodes it changes. Another thread can write and hash the snapshot while
+    /// batches go on.
+    fn snapshot(&self, py: Python<'_>) -> PyResult<GraphSnapshot> {
+        let snapshot = self
+            .read(py, |_| Work::default(), lfx::ops::GraphState::snapshot)
+            .map_err(poisoned)?;
+        Ok(GraphSnapshot::wrap(snapshot))
+    }
+
     /// The graph as a dict, built from the loaded graph without a copy: the
     /// committed graph, without a staged batch.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
@@ -704,6 +721,60 @@ impl GraphState {
             graph.set_item(builder.key(key), value)?;
         }
         Ok(graph)
+    }
+}
+
+/// A graph as a `GraphState` held it when `GraphState.snapshot()` took it:
+/// read only, and unchanged by the state's later batches. Threads can share
+/// it; its large calls run without the GIL.
+#[pyclass(module = "lfx_native", frozen)]
+#[derive(Debug)]
+struct GraphSnapshot {
+    snapshot: lfx::ops::GraphSnapshot,
+    /// The work on the whole graph.
+    work: Work,
+}
+
+impl GraphSnapshot {
+    fn wrap(snapshot: lfx::ops::GraphSnapshot) -> Self {
+        let work = Work::of_items(snapshot.item_count());
+        Self { snapshot, work }
+    }
+}
+
+/// A large snapshot is dropped on the drop thread ([`drop_elsewhere`]): it
+/// may hold the only copy of nodes that the state has changed since.
+impl Drop for GraphSnapshot {
+    fn drop(&mut self) {
+        if !self.work.is_large() {
+            return;
+        }
+        let snapshot = std::mem::replace(
+            &mut self.snapshot,
+            lfx::ops::GraphState::new(empty_graph())
+                .expect("an empty graph loads")
+                .snapshot(),
+        );
+        Python::attach(|py| drop_elsewhere(py, Box::new(snapshot)));
+    }
+}
+
+#[pymethods]
+impl GraphSnapshot {
+    /// The graph as JSON text: what the state's `to_json()` gave when the snapshot was taken.
+    fn to_json(&self, py: Python<'_>) -> String {
+        let write = || api::snapshot_json(&self.snapshot);
+        if self.work.is_large() {
+            py.detach(write)
+        } else {
+            write()
+        }
+    }
+
+    /// The SHA-256 hex digest of the graph's canonical form: what the
+    /// state's `graph_hash()` gave when the snapshot was taken.
+    fn graph_hash(&self, py: Python<'_>) -> PyResult<String> {
+        run(py, self.work, || api::snapshot_graph_hash(&self.snapshot))
     }
 }
 
@@ -1106,10 +1177,11 @@ fn node_schema() -> &'static str {
 mod _native {
     #[pymodule_export]
     use super::{
-        EngineError, GraphPlain, GraphState, append_table_rows, apply, apply_restore_fixes,
-        assign_changed_node_table_row_ids, assign_changed_table_row_ids, assign_row_ids,
-        assign_table_row_ids, canonical_json, edge_fixes, fixes_for_edges, graph_hash,
-        graphs_equal, new_edge_id, new_table_row_id, node_schema, ops_diff, ordered_rows, repair,
-        replay, strip_flow_table_row_keys, strip_row_keys, table_fields, validate, values_equal,
+        EngineError, GraphPlain, GraphSnapshot, GraphState, append_table_rows, apply,
+        apply_restore_fixes, assign_changed_node_table_row_ids, assign_changed_table_row_ids,
+        assign_row_ids, assign_table_row_ids, canonical_json, edge_fixes, fixes_for_edges,
+        graph_hash, graphs_equal, new_edge_id, new_table_row_id, node_schema, ops_diff,
+        ordered_rows, repair, replay, strip_flow_table_row_keys, strip_row_keys, table_fields,
+        validate, values_equal,
     };
 }
