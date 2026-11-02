@@ -217,6 +217,41 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             upload_file = mock_upload.call_args[1]["file"]
             assert upload_file.filename == "test_output.csv"
 
+    def test_append_dataframe_csv_reorders_columns_to_existing_header(self, component_class, tmp_path):
+        component = component_class()
+        component.set_attributes({"append_mode": True})
+        path = tmp_path / "records.csv"
+        path.write_text("name,age\nAda,37\n", encoding="utf-8")
+
+        component._save_dataframe(DataFrame([{"age": 42, "name": "Grace"}]), path, "csv")
+
+        assert pd.read_csv(path).to_dict(orient="records") == [
+            {"name": "Ada", "age": 37},
+            {"name": "Grace", "age": 42},
+        ]
+
+    def test_append_data_csv_rejects_schema_drift_without_writing(self, component_class, tmp_path):
+        component = component_class()
+        component.set_attributes({"append_mode": True})
+        path = tmp_path / "records.csv"
+        original = "name,age\nAda,37\n"
+        path.write_text(original, encoding="utf-8")
+
+        with pytest.raises(ValueError, match="different column schema"):
+            component._save_data(Data(data={"name": ["Grace"], "height": [1.7]}), path, "csv")
+
+        assert path.read_text(encoding="utf-8") == original
+
+    def test_append_dataframe_csv_writes_header_to_existing_empty_file(self, component_class, tmp_path):
+        component = component_class()
+        component.set_attributes({"append_mode": True})
+        path = tmp_path / "records.csv"
+        path.touch()
+
+        component._save_dataframe(DataFrame([{"name": "Ada", "age": 37}]), path, "csv")
+
+        assert pd.read_csv(path).to_dict(orient="records") == [{"name": "Ada", "age": 37}]
+
     @pytest.mark.asyncio
     async def test_save_data_to_json(self, component_class):
         """Test saving Data to JSON format - only mock upload."""
