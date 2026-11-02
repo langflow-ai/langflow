@@ -20,7 +20,7 @@ by concurrent readers.
 Which engine calls run in a worker thread (both engines alike): building a
 graph from ``Flow.data``, ``to_json``, a catch-up replay of at least
 ``LARGE_OPS_COUNT`` operations or ``LARGE_OPS_BYTES`` bytes, whole-flow calls
-(validate, repair, diff, hash), and the first batch on a newly built graph
+(validate, repair, diff, hash, the loaded graph's hash), and the first batch on a newly built graph
 (the engine checks the whole graph before its first batch). A batch's
 ``stage``, ``keep`` and ``drop`` and a small catch-up run inline.
 """
@@ -139,6 +139,16 @@ class FlowEntry:
             result = await asyncio.shield(task)
             if result is not None:
                 return result
+
+    async def graph_hash_at(self, revision: int) -> tuple[str, float] | None:
+        """The graph hash of committed ``revision`` and its engine CPU (ms), hashed in place.
+
+        None when the entry has moved past ``revision``: the caller then hashes the revision's text.
+        """
+        async with self.use:
+            if self.revision != revision:
+                return None
+            return await call(bench.engine_call_cpu, self.state.graph_hash, large=True, name="hash")
 
     async def _serialize(self, revision: int) -> tuple[int, str] | None:
         async with self.use:

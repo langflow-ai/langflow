@@ -10,7 +10,8 @@ Single-flight per flow across processes. It does not take the flow's write lock:
    The conditional update in step 3 stays the correctness guard.
 1. The graph text at revision R: the cached graph's coalesced serialization
    (``cache``, ``wal``), or ``Flow.data`` at its revision (``nocache``).
-2. The graph hash (engine, worker thread).
+2. The graph hash (engine, worker thread): of the cached graph in place
+   (``GraphState.graph_hash``) when it is still at R, else of the text.
 3. One transaction: ``wal`` moves ``Flow.data`` to R only if R is newer than
    the stored revision; then a system checkpoint row at R, only when the log
    has rows, ``Flow.current_revision >= R`` and no checkpoint is there yet.
@@ -155,6 +156,7 @@ async def _write_checkpoint(flow_id: UUID, end: int, started: float, t0: float) 
     mode = config.write_mode()
     ser_cpu, ser_here = 0.0, False
     raw: bytes | None = None
+    entry = None
     if config.uses_cache():
         if CACHE.get(flow_id) is None:
             _skip(flow_id, end, "not_cached", t0)
@@ -187,12 +189,15 @@ async def _write_checkpoint(flow_id: UUID, end: int, started: float, t0: float) 
         return None
     engine = config.engine()
 
-    def hash_graph() -> tuple[str, float]:
+    def hash_text() -> tuple[str, float]:
         # The engines read bytes: the cached graph's text is encoded here, outside the engine's CPU time.
         graph = raw if raw is not None else text.encode()
         return bench.engine_call_cpu(lambda: engine.GraphPlain(graph).graph_hash())
 
-    graph_hash, hash_cpu = await call(hash_graph, large=True, name="hash")
+    # The cached graph is hashed in place while it is still at the revision of the text.
+    hashed = await entry.graph_hash_at(revision) if entry is not None else None
+    hash_from = "state" if hashed is not None else "text"
+    graph_hash, hash_cpu = hashed if hashed is not None else await call(hash_text, large=True, name="hash")
     t_hash = time.perf_counter()
     async with session_scope() as session:
         moved = await oplog.checkpoint_flow(session, flow_id, text, revision=revision) if mode == "wal" else False
@@ -213,6 +218,7 @@ async def _write_checkpoint(flow_id: UUID, end: int, started: float, t0: float) 
         ser_cpu=ser_cpu,
         ser_by_checkpoint=ser_here,
         hash_cpu=hash_cpu,
+        hash_from=hash_from,
         db=(t_db - t_hash) * 1000,
         flow_moved=moved,
         row_inserted=inserted,
