@@ -33,11 +33,6 @@ use pyo3::prelude::*;
 use pyo3::sync::RwLockExt;
 use pyo3::types::{PyBool, PyBytes, PyDict, PyFloat, PyInt, PyList, PyString, PyTuple};
 
-/// The allocator. A graph is hundreds of thousands of small strings, objects
-/// and lists; building, copying and freeing one is mostly allocation.
-#[global_allocator]
-static ALLOCATOR: mimalloc::MiMalloc = mimalloc::MiMalloc;
-
 create_exception!(
     lfx_native,
     EngineError,
