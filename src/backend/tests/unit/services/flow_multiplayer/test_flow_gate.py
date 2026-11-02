@@ -87,3 +87,60 @@ def test_negative_limit_is_refused(writers_per_flow):
     writers_per_flow("-1")
     with pytest.raises(ValueError, match="LANGFLOW_FLOW_WRITERS_PER_FLOW"):
         config.writers_per_flow()
+
+
+def _entry(flow_id: uuid.UUID):
+    from langflow.services.flow_multiplayer.cache import FlowEntry
+
+    return FlowEntry(flow_id, state=object(), revision=0)
+
+
+def test_lru_keeps_pinned_entries_past_the_limit(monkeypatch):
+    from langflow.services.flow_multiplayer.cache import FlowCache
+
+    monkeypatch.setenv(config.CACHE_MAX_FLOWS_ENV, "2")
+    config.reset_for_tests()
+    try:
+        cache = FlowCache()
+        a, b, c, d = (uuid.uuid4() for _ in range(4))
+        pinned = {a}
+        cache.pinned = lambda flow_id: flow_id in pinned
+        for flow_id in (a, b, c):
+            cache.put(_entry(flow_id))
+        assert set(cache._entries) == {a, c}  # b, the oldest unpinned one, went
+        pinned.add(c)
+        cache.put(_entry(d))
+        assert set(cache._entries) == {a, c, d}  # over the limit: every other entry is pinned
+        pinned.clear()
+        cache.put(_entry(b))
+        assert list(cache._entries) == [d, b]
+    finally:
+        config.reset_for_tests()
+
+
+async def test_flow_with_queued_writers_is_pinned(writers_per_flow):
+    from langflow.services.flow_multiplayer.cache import CACHE
+
+    writers_per_flow("1")
+    flow = uuid.uuid4()
+    inside = asyncio.Event()
+    release = asyncio.Event()
+
+    async def first() -> None:
+        async with writes.flow_gate(flow):
+            inside.set()
+            await release.wait()
+
+    async def second() -> None:
+        async with writes.flow_gate(flow):
+            pass
+
+    one = asyncio.create_task(first())
+    await inside.wait()
+    assert not CACHE.pinned(flow)  # one writer, nobody queued
+    two = asyncio.create_task(second())
+    await asyncio.sleep(0)
+    assert CACHE.pinned(flow)
+    release.set()
+    await asyncio.gather(one, two)
+    assert not CACHE.pinned(flow)

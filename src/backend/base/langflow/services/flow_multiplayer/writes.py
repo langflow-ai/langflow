@@ -90,6 +90,15 @@ class _Gate:
 _gates: dict[UUID, _Gate] = {}
 
 
+def _writers_queued(flow_id: UUID) -> bool:
+    """Writers wait at the flow's gate behind the one inside: keep its cached graph."""
+    gate = _gates.get(flow_id)
+    return gate is not None and gate.users > 1
+
+
+CACHE.pinned = _writers_queued
+
+
 @contextlib.asynccontextmanager
 async def flow_gate(flow_id: UUID) -> AsyncIterator[None]:
     """Admit at most ``config.writers_per_flow()`` writers of the flow at a time; the rest wait here.
