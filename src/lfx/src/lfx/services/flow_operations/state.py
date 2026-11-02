@@ -278,6 +278,14 @@ class GraphState:
         # The graph was read with the JSON limits, and every batch keeps them.
         return graph_hash_checked(value)
 
+    def snapshot(self) -> GraphSnapshot:
+        """The committed graph as it is now, without a staged batch, to write and hash while batches go on.
+
+        It shares the graph's nodes and edges, which no batch changes in place: it costs a list of each.
+        """
+        with self._lock:
+            return GraphSnapshot(self.to_value())
+
     @property
     def staged(self) -> bool:
         """Whether a batch is staged."""
@@ -598,6 +606,24 @@ def _ends(edge: dict[str, Any]) -> tuple[str, ...]:
     return (source,) if source == target else (source, target)
 
 
+class GraphSnapshot:
+    """A graph as a ``GraphState`` held it when ``snapshot`` took it: read only, and unchanged by later batches."""
+
+    __slots__ = ("_value",)
+
+    def __init__(self, value: dict[str, Any]) -> None:
+        self._value = value
+
+    def to_json(self) -> str:
+        """The graph as JSON text: what the state's ``to_json`` gave when the snapshot was taken."""
+        return dumps(self._value)
+
+    def graph_hash(self) -> str:
+        """The graph's ``graph_hash``: what the state's ``graph_hash`` gave when the snapshot was taken."""
+        # The graph was read with the JSON limits, and every batch keeps them.
+        return graph_hash_checked(self._value)
+
+
 def _fold(stored: dict[str, Any], layer: dict[str, Any]) -> None:
     for key, value in layer.items():
         if value is GONE:
@@ -614,4 +640,4 @@ def _at_keys(value: Any, keys: tuple[str, ...]) -> Any:
     return value
 
 
-__all__ = ["GONE", "FlowDataValidationError", "GraphState"]
+__all__ = ["GONE", "FlowDataValidationError", "GraphSnapshot", "GraphState"]

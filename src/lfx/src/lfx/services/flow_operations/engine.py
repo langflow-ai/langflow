@@ -120,6 +120,10 @@ class PythonGraphState:
         """The committed graph's ``graph_hash``; with ``staged``, the graph with the staged batch."""
         return self._state.graph_hash(staged=staged)
 
+    def snapshot(self) -> _state.GraphSnapshot:
+        """The committed graph as it is now, to write (``to_json``) and hash (``graph_hash``) while batches go on."""
+        return self._state.snapshot()
+
     def to_dict(self) -> dict[str, Any]:
         return self._state.to_dict()
 
@@ -388,8 +392,26 @@ class RustGraphState:
     def graph_hash(self, *, staged: bool = False) -> str:
         return _call(self._state.graph_hash, staged=staged)
 
+    def snapshot(self) -> RustGraphSnapshot:
+        return RustGraphSnapshot(self._state.snapshot())
+
     def to_dict(self) -> dict[str, Any]:
         return self._state.to_dict()
+
+
+class RustGraphSnapshot:
+    """A graph as a ``RustGraphState`` held it when ``snapshot`` took it (``lfx_native.ops.GraphSnapshot``)."""
+
+    __slots__ = ("_snapshot",)
+
+    def __init__(self, snapshot: Any) -> None:
+        self._snapshot = snapshot
+
+    def to_json(self) -> str:
+        return self._snapshot.to_json()
+
+    def graph_hash(self) -> str:
+        return _call(self._snapshot.graph_hash)
 
 
 class RustGraphPlain:
