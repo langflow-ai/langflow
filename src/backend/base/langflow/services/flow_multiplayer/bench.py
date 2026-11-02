@@ -45,15 +45,34 @@ request (the first flow request, before the benchmark resets the records):
 
 Everything stays in memory until the bench export endpoint reads it; a reset
 deletes every record except ``gc_startup``.
+
+Journal (``LANGFLOW_OPS_BENCH_DIR``): the records also go to a JSONL file in
+that directory, one file per process (``bench-<pid>-<start ns>.jsonl``). A
+flusher thread appends the new records every ``SAMPLE_INTERVAL`` and drops
+them from memory; the process also flushes at exit and before an export. The
+thread runs when the event loop is saturated, so a process killed with SIGKILL
+loses only the records of its last interval, plus the requests still in
+flight (a request record is written when its response ends). A reset writes
+its time to ``reset-at`` in the directory. The export then reads every journal
+file in the directory, also those of processes that are gone (a container
+restarted in the same pod keeps an ``emptyDir``), and returns the records with
+``t`` at or after the reset (``gc_startup`` once per file), each with ``boot``
+(its file's name), because a restarted container can get the same pid.
+``python -m langflow.services.flow_multiplayer.bench DIR`` prints the same
+export without a running server.
 """
 
 from __future__ import annotations
 
 import asyncio
+import atexit
 import contextlib
 import contextvars
 import gc
+import glob
 import os
+import sys
+import threading
 import time
 from contextvars import ContextVar
 from typing import Any, Self
@@ -66,6 +85,13 @@ _current: ContextVar[dict[str, Any] | None] = ContextVar("flow_ops_bench_record"
 _records: list[dict[str, Any]] = []
 _sampler: asyncio.Task | None = None
 _lag_probe: asyncio.Task | None = None
+_journal_fd: int | None = None
+_journal_path: str | None = None
+_journal_pid: int | None = None
+_journal_lock = threading.Lock()  # flush and reset: the flusher thread drops flushed records
+_flusher: threading.Thread | None = None
+_flusher_stop = threading.Event()
+RESET_FILE = "reset-at"
 _PAGE = os.sysconf("SC_PAGE_SIZE") if hasattr(os, "sysconf") else 4096
 SAMPLE_INTERVAL = 1.0
 LAG_INTERVAL = 0.01
@@ -156,7 +182,114 @@ def spawn(coro: Any) -> asyncio.Task:
 
 def event(kind: str, **fields: Any) -> None:
     if config.bench_enabled():
-        _records.append({"kind": kind, "pid": os.getpid(), **fields})
+        _records.append({"kind": kind, "pid": os.getpid(), "t": time.time(), **fields})
+
+
+def _journal() -> int | None:
+    """The journal's file descriptor, opened on first use in each process; None when the journal is off."""
+    global _journal_fd, _journal_path, _journal_pid  # noqa: PLW0603
+    if _journal_fd is not None and _journal_pid == os.getpid():
+        return _journal_fd
+    directory = config.bench_dir()
+    if directory is None:
+        return None
+    os.makedirs(directory, exist_ok=True)  # noqa: PTH103
+    _journal_pid = os.getpid()
+    _journal_path = os.path.join(directory, f"bench-{_journal_pid}-{time.time_ns()}.jsonl")  # noqa: PTH118
+    _journal_fd = os.open(_journal_path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
+    return _journal_fd
+
+
+def flush() -> int:
+    """Append the records in memory to the journal and drop them from memory; returns how many.
+
+    No-op without a journal. On a write error the records stay in memory for the next flush.
+    """
+    with _journal_lock:
+        count = len(_records)
+        if not count:
+            return 0  # no file for a process that never records (the server's parent process)
+        fd = _journal()
+        if fd is None:
+            return 0
+        data = b"".join(orjson.dumps(rec, option=orjson.OPT_APPEND_NEWLINE) for rec in _records[:count])
+        view = memoryview(data)
+        while view:
+            written = os.write(fd, view)
+            view = view[written:]
+        # Other threads only append (the gc probe, the loop), so the first ``count`` are the flushed ones.
+        del _records[:count]
+        return count
+
+
+def _flush_loop(stop: threading.Event) -> None:
+    while not stop.wait(SAMPLE_INTERVAL):
+        # A full or missing journal never stops the flusher; the records stay in memory.
+        with contextlib.suppress(OSError):
+            flush()
+
+
+def _ensure_flusher() -> None:
+    global _flusher  # noqa: PLW0603
+    if config.bench_dir() is None or (_flusher is not None and _flusher.is_alive()):
+        return
+    _flusher_stop.clear()
+    _flusher = threading.Thread(target=_flush_loop, args=(_flusher_stop,), name="flow-ops-bench-journal", daemon=True)
+    _flusher.start()
+
+
+def stop_flusher() -> None:
+    """Stop the flusher thread and wait for it (tests)."""
+    global _flusher  # noqa: PLW0603
+    _flusher_stop.set()
+    if _flusher is not None:
+        _flusher.join()
+    _flusher = None
+
+
+def _reset_at(directory: str) -> float:
+    try:
+        with open(os.path.join(directory, RESET_FILE), "rb") as f:  # noqa: PTH118, PTH123
+            return float(f.read().strip() or 0)
+    except (OSError, ValueError):
+        return 0.0
+
+
+def _write_reset_at(directory: str, when: float) -> None:
+    os.makedirs(directory, exist_ok=True)  # noqa: PTH103
+    path = os.path.join(directory, RESET_FILE)  # noqa: PTH118
+    tmp = f"{path}.{os.getpid()}.tmp"
+    with open(tmp, "w") as f:  # noqa: PTH123
+        f.write(repr(when))
+    os.replace(tmp, path)  # noqa: PTH105
+
+
+def _journal_records(directory: str) -> list[bytes]:
+    """Every journal record at or after the last reset, from every process's file, with ``boot``."""
+    since = _reset_at(directory)
+    lines: list[bytes] = []
+    startups: set[tuple[str, int | None]] = set()
+    for path in sorted(glob.glob(os.path.join(directory, "bench-*.jsonl"))):  # noqa: PTH118, PTH207
+        boot = os.path.basename(path)[: -len(".jsonl")]  # noqa: PTH119
+        with open(path, "rb") as f:  # noqa: PTH123
+            data = f.read()
+        for line in data.split(b"\n"):
+            if not line:
+                continue
+            try:
+                rec = orjson.loads(line)
+            except orjson.JSONDecodeError:
+                continue  # the last line of a process killed while writing it
+            if rec.get("kind") == "gc_startup":
+                key = (boot, rec.get("pid"))
+                if key in startups:
+                    continue
+                startups.add(key)
+            elif (rec.get("t") or 0) < since:
+                continue
+            rec["boot"] = boot
+            lines.append(orjson.dumps(rec, option=orjson.OPT_APPEND_NEWLINE))
+    return lines
 
 
 def _rss_bytes() -> int:
@@ -253,17 +386,38 @@ def _ensure_sampler() -> None:
         _sampler = spawn(_sample_loop())
     if _lag_probe is None or _lag_probe.done():
         _lag_probe = spawn(_lag_loop())
+    _ensure_flusher()
 
 
 def export_jsonl() -> bytes:
+    directory = config.bench_dir()
+    if directory is not None:
+        flush()
+        return b"".join(_journal_records(directory))
     return b"".join(orjson.dumps(rec, option=orjson.OPT_APPEND_NEWLINE) for rec in list(_records))
 
 
 def reset() -> None:
-    """Delete every record but ``gc_startup``, which is taken once per process."""
-    _records.clear()
-    if _gc_startup is not None:
-        _records.append(_gc_startup)
+    """Delete every record but ``gc_startup``, which is taken once per process.
+
+    With a journal, the reset time goes to ``reset-at`` so the export leaves out older records,
+    also those of other processes' files.
+    """
+    with _journal_lock:
+        _records.clear()
+        if _gc_startup is not None:
+            _records.append(_gc_startup)
+        directory = config.bench_dir()
+        if directory is not None:
+            _write_reset_at(directory, time.time())
+
+
+def _flush_at_exit() -> None:
+    with contextlib.suppress(OSError):
+        flush()
+
+
+atexit.register(_flush_at_exit)
 
 
 class BenchMiddleware:
@@ -312,3 +466,8 @@ class BenchMiddleware:
                 rec.pop(key, None)
             _current.reset(token)
             _records.append(rec)
+
+
+if __name__ == "__main__":
+    # The export of a journal directory, without a server: a pod whose server does not answer.
+    sys.stdout.buffer.write(b"".join(_journal_records(sys.argv[1])))

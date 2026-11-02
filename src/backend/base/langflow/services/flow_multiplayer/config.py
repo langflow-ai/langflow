@@ -9,6 +9,7 @@ from typing import Any, Literal
 WRITE_MODE_ENV = "LANGFLOW_FLOW_WRITE_MODE"
 CACHE_MAX_FLOWS_ENV = "LANGFLOW_FLOW_CACHE_MAX_FLOWS"
 BENCH_ENV = "LANGFLOW_OPS_BENCH"
+BENCH_DIR_ENV = "LANGFLOW_OPS_BENCH_DIR"
 
 WriteMode = Literal["nocache", "cache", "wal"]
 WRITE_MODES: tuple[str, ...] = ("nocache", "cache", "wal")
@@ -56,6 +57,13 @@ def bench_enabled() -> bool:
     return os.environ.get(BENCH_ENV, "").strip().lower() in ("1", "true", "yes")
 
 
+@lru_cache(maxsize=1)
+def bench_dir() -> str | None:
+    """Directory for the bench journal (``LANGFLOW_OPS_BENCH_DIR``), or None to keep records in memory only."""
+    raw = (os.environ.get(BENCH_DIR_ENV) or "").strip()
+    return raw or None
+
+
 def checkpoint_cadence() -> int:
     from langflow.services.deps import get_settings_service
 
@@ -72,5 +80,5 @@ def compaction_step() -> int:
 
 def reset_for_tests() -> None:
     """Forget the cached configuration, so a test can change the environment."""
-    for function in (engine, write_mode, cache_max_flows, bench_enabled):
+    for function in (engine, write_mode, cache_max_flows, bench_enabled, bench_dir):
         function.cache_clear()
