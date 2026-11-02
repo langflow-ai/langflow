@@ -453,6 +453,11 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Cloudflare", name: "cloudflare", icon: "Cloudflare" },
   { display_name: "Cohere", name: "cohere", icon: "Cohere" },
   { display_name: "CometAPI", name: "cometapi", icon: "CometAPI" },
+  {
+    display_name: "CompanyEnrich",
+    name: "companyenrich",
+    icon: "CompanyEnrich",
+  },
   { display_name: "Composio", name: "composio", icon: "Composio" },
   { display_name: "Confluence", name: "confluence", icon: "Confluence" },
   { display_name: "Couchbase", name: "couchbase", icon: "Couchbase" },

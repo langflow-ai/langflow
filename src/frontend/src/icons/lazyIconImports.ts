@@ -141,6 +141,10 @@ export const lazyIconsMapping = {
     import("@/icons/Cohere").then((mod) => ({ default: mod.CohereIcon })),
   CometAPI: () =>
     import("@/icons/CometAPI").then((mod) => ({ default: mod.CometAPIIcon })),
+  CompanyEnrich: () =>
+    import("@/icons/CompanyEnrich").then((mod) => ({
+      default: mod.CompanyEnrichIcon,
+    })),
   Composio: () =>
     import("@/icons/Composio").then((mod) => ({ default: mod.ComposioIcon })),
   Confluent: () =>
