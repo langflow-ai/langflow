@@ -604,6 +604,27 @@ impl GraphState {
             .ok_or_else(|| refused(Refused::NotStaged))
     }
 
+    /// The SHA-256 hex digest of the graph's canonical form, as
+    /// `GraphPlain.graph_hash` gives for the graph's JSON text, without
+    /// writing or reading the text. With `staged`, the graph with the staged
+    /// batch, as `keep` will make it; raises `RuntimeError` when no batch is
+    /// staged.
+    #[pyo3(signature = (*, staged = false))]
+    fn graph_hash(&self, py: Python<'_>, staged: bool) -> PyResult<String> {
+        let work = |state: &lfx::ops::GraphState| Work::of_items(state.item_count());
+        let hashed = if staged {
+            self.read(py, work, api::staged_state_graph_hash)
+                .map_err(poisoned)?
+                .map_err(|error| engine_error(py, &error))?
+                .ok_or_else(|| refused(Refused::NotStaged))?
+        } else {
+            self.read(py, work, api::state_graph_hash)
+                .map_err(poisoned)?
+                .map_err(|error| engine_error(py, &error))?
+        };
+        Ok(hashed)
+    }
+
     /// The graph as a dict, built from the loaded graph without a copy: the
     /// committed graph, without a staged batch.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
