@@ -1,12 +1,12 @@
 //! [`AnyValue`]: a JSON value as the engine holds it.
 //!
 //! It has the shape and the method names of `serde_json::Value`, with two
-//! differences that make a flow cheaper to hold and to walk:
+//! differences:
 //!
-//! - An object is a list of key-value pairs in insertion order ([`AnyMap`]), not
-//!   an `IndexMap`. A flow has thousands of small objects, and a hash table for
-//!   each one costs more memory and time than it saves. Finding a key scans the
-//!   list, which is fast for the short objects of a flow.
+//! - An object ([`AnyMap`]) is a hash map that keeps its keys in insertion
+//!   order, held in a box so that every value stays as small as a string.
+//!   Finding a key takes the same time however many keys the object has.
+//!   Removing a key keeps the order of the others.
 //! - A number is an integer or a double ([`Number`]), not its text. `1` and
 //!   `1.0` stay apart, as Python's `int` and `float` do. A number that neither
 //!   holds exactly, an integer too large for 64 bits or a value that is
@@ -22,6 +22,8 @@
 use std::fmt;
 use std::ops::{Index, IndexMut};
 use std::str::FromStr;
+
+use indexmap::IndexMap;
 
 use serde::de::{self, Deserialize, DeserializeSeed, Deserializer, MapAccess, SeqAccess, Visitor};
 use serde::ser::{Serialize, SerializeMap, Serializer};
@@ -363,15 +365,31 @@ impl<I: AnyValueIndex> IndexMut<I> for AnyValue {
 
 // --- Objects ---------------------------------------------------------------------------------
 
-/// A JSON object: its key-value pairs, in insertion order.
+/// The pairs of an object, by key, in insertion order.
+type Entries = IndexMap<String, AnyValue>;
+
+/// A JSON object: a hash map of its key-value pairs, in insertion order.
 ///
 /// The method names follow `serde_json::Map` with its `preserve_order`
-/// feature, so [`AnyMap::remove`] moves the last pair into the gap, as
-/// `swap_remove` does, and [`AnyMap::shift_remove`] keeps the order.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+/// feature, except that [`AnyMap::remove`] keeps the order of the other
+/// pairs, as [`AnyMap::shift_remove`] does. [`AnyMap::swap_remove`] moves
+/// the last pair into the gap.
+///
+/// The map is in a box: an [`AnyValue`] then takes the room of a string, not
+/// of a hash map, in every array item and every pair.
+#[derive(Debug, Clone, Default)]
 pub struct AnyMap {
-    entries: Vec<(String, AnyValue)>,
+    entries: Box<Entries>,
 }
+
+/// Two objects are equal when they hold equal pairs in the same order.
+impl PartialEq for AnyMap {
+    fn eq(&self, other: &Self) -> bool {
+        self.len() == other.len() && self.iter().eq(other.iter())
+    }
+}
+
+impl Eq for AnyMap {}
 
 impl AnyMap {
     /// An empty object.
@@ -384,7 +402,7 @@ impl AnyMap {
     #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
-            entries: Vec::with_capacity(capacity),
+            entries: Box::new(Entries::with_capacity(capacity)),
         }
     }
 
@@ -400,80 +418,55 @@ impl AnyMap {
         self.entries.is_empty()
     }
 
-    fn position(&self, key: &str) -> Option<usize> {
-        self.entries.iter().position(|(k, _)| k == key)
-    }
-
     /// The value at `key`.
     #[must_use]
     pub fn get(&self, key: &str) -> Option<&AnyValue> {
-        self.entries.iter().find(|(k, _)| k == key).map(|(_, v)| v)
+        self.entries.get(key)
     }
 
     /// The value at `key`, to change it.
     pub fn get_mut(&mut self, key: &str) -> Option<&mut AnyValue> {
-        self.entries
-            .iter_mut()
-            .find(|(k, _)| k == key)
-            .map(|(_, v)| v)
+        self.entries.get_mut(key)
     }
 
     /// Whether the object has `key`.
     #[must_use]
     pub fn contains_key(&self, key: &str) -> bool {
-        self.position(key).is_some()
+        self.entries.contains_key(key)
     }
 
     /// Insert or replace. A replaced key keeps its position; a new key goes last.
     pub fn insert(&mut self, key: String, value: AnyValue) -> Option<AnyValue> {
-        if let Some(index) = self.position(&key) {
-            return Some(std::mem::replace(&mut self.entries[index].1, value));
-        }
-        self.entries.push((key, value));
-        None
+        self.entries.insert(key, value)
     }
 
-    /// Add a pair whose key the object does not have, without looking for it:
-    /// for a caller that knows its keys are unique, such as a Python dict.
-    /// A key that is already there would be held twice.
-    pub fn push(&mut self, key: String, value: AnyValue) {
-        debug_assert!(
-            !self.contains_key(&key),
-            "push of a key the object has: {key}"
-        );
-        self.entries.push((key, value));
-    }
-
-    /// Remove a key, moving the last pair into its place, as `serde_json`'s
-    /// `remove` with `preserve_order` does.
+    /// Remove a key, keeping the order of the others.
     pub fn remove(&mut self, key: &str) -> Option<AnyValue> {
-        self.swap_remove(key)
+        self.shift_remove(key)
     }
 
     /// Remove a key, moving the last pair into its place.
     pub fn swap_remove(&mut self, key: &str) -> Option<AnyValue> {
-        let index = self.position(key)?;
-        Some(self.entries.swap_remove(index).1)
+        self.entries.swap_remove(key)
     }
 
     /// Remove a key, keeping the order of the others.
     pub fn shift_remove(&mut self, key: &str) -> Option<AnyValue> {
-        let index = self.position(key)?;
-        Some(self.entries.remove(index).1)
+        self.entries.shift_remove(key)
     }
 
     /// The value at `key`, added as `null` when it is missing.
     fn entry_or_null(&mut self, key: &str) -> &mut AnyValue {
-        let index = self.position(key).unwrap_or_else(|| {
-            self.entries.push((key.to_owned(), AnyValue::Null));
-            self.entries.len() - 1
-        });
-        &mut self.entries[index].1
+        let index = match self.entries.get_index_of(key) {
+            Some(index) => index,
+            None => self.entries.insert_full(key.to_owned(), AnyValue::Null).0,
+        };
+        &mut self.entries[index]
     }
 
     /// Keep the pairs `keep` holds for, in order.
-    pub fn retain(&mut self, mut keep: impl FnMut(&String, &mut AnyValue) -> bool) {
-        self.entries.retain_mut(|(k, v)| keep(k, v));
+    pub fn retain(&mut self, keep: impl FnMut(&String, &mut AnyValue) -> bool) {
+        self.entries.retain(keep);
     }
 
     /// The pairs, in order.
@@ -489,30 +482,30 @@ impl AnyMap {
 
     /// The keys, in order.
     pub fn keys(&self) -> impl DoubleEndedIterator<Item = &String> + ExactSizeIterator {
-        self.entries.iter().map(|(k, _)| k)
+        self.entries.keys()
     }
 
     /// The values, in order.
     pub fn values(&self) -> impl DoubleEndedIterator<Item = &AnyValue> + ExactSizeIterator {
-        self.entries.iter().map(|(_, v)| v)
+        self.entries.values()
     }
 
     /// The values, in order, to change them.
     pub fn values_mut(
         &mut self,
     ) -> impl DoubleEndedIterator<Item = &mut AnyValue> + ExactSizeIterator {
-        self.entries.iter_mut().map(|(_, v)| v)
+        self.entries.values_mut()
     }
 }
 
 /// The pairs of an [`AnyMap`], borrowed.
 #[derive(Debug, Clone)]
-pub struct Iter<'m>(std::slice::Iter<'m, (String, AnyValue)>);
+pub struct Iter<'m>(indexmap::map::Iter<'m, String, AnyValue>);
 
 impl<'m> Iterator for Iter<'m> {
     type Item = (&'m String, &'m AnyValue);
     fn next(&mut self) -> Option<Self::Item> {
-        self.0.next().map(|(k, v)| (k, v))
+        self.0.next()
     }
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.0.size_hint()
@@ -521,7 +514,7 @@ impl<'m> Iterator for Iter<'m> {
 
 impl DoubleEndedIterator for Iter<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.0.next_back().map(|(k, v)| (k, v))
+        self.0.next_back()
     }
 }
 
@@ -529,12 +522,12 @@ impl ExactSizeIterator for Iter<'_> {}
 
 /// The pairs of an [`AnyMap`], borrowed to change the values.
 #[derive(Debug)]
-pub struct IterMut<'m>(std::slice::IterMut<'m, (String, AnyValue)>);
+pub struct IterMut<'m>(indexmap::map::IterMut<'m, String, AnyValue>);
 
 impl<'m> Iterator for IterMut<'m> {
     type Item = (&'m String, &'m mut AnyValue);
     fn next(&mut self) -> Option<Self::Item> {
-        self.0.next().map(|(k, v)| (&*k, v))
+        self.0.next()
     }
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.0.size_hint()
@@ -559,11 +552,33 @@ impl<'m> IntoIterator for &'m mut AnyMap {
     }
 }
 
+/// The pairs of an [`AnyMap`], owned, in order.
+#[derive(Debug)]
+pub struct IntoIter(indexmap::map::IntoIter<String, AnyValue>);
+
+impl Iterator for IntoIter {
+    type Item = (String, AnyValue);
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next()
+    }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.0.size_hint()
+    }
+}
+
+impl DoubleEndedIterator for IntoIter {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.0.next_back()
+    }
+}
+
+impl ExactSizeIterator for IntoIter {}
+
 impl IntoIterator for AnyMap {
     type Item = (String, AnyValue);
-    type IntoIter = std::vec::IntoIter<(String, AnyValue)>;
-    fn into_iter(self) -> Self::IntoIter {
-        self.entries.into_iter()
+    type IntoIter = IntoIter;
+    fn into_iter(self) -> IntoIter {
+        IntoIter(self.entries.into_iter())
     }
 }
 
@@ -984,11 +999,11 @@ impl<'de> Deserialize<'de> for FiniteAnyValue {
 /// What a parse holds while it builds an [`AnyValue`]: the members and items of
 /// the objects and arrays it is inside, one stack for each kind.
 ///
-/// JSON text does not say how many members an object has, so a list that
-/// grows as they come reallocates its buffer several times, and ends with
-/// room to spare. Each member goes on the stack instead, and when the object
-/// ends its members move off the stack into a list of exactly their number:
-/// one allocation for each object and array, with no room to spare.
+/// JSON text does not say how many members an object has, so a map or a list
+/// that grows as they come reallocates several times, and ends with room to
+/// spare. Each member goes on the stack instead, and when the object or the
+/// array ends its members move off the stack into a map or a list made for
+/// exactly their number.
 #[derive(Debug, Default)]
 struct Builder<const FINITE: bool> {
     entries: Vec<(String, AnyValue)>,
@@ -1079,18 +1094,14 @@ impl<'de, const FINITE: bool> Visitor<'de> for AnyValueVisitor<'_, FINITE> {
                 return Ok(AnyValue::Number(number));
             }
             let value = access.next_value_seed(AnyValueVisitor(&mut *builder))?;
-            // A repeated key keeps its first position and its last value, as serde_json.
-            match builder.entries[start..]
-                .iter_mut()
-                .find(|(at, _)| *at == key)
-            {
-                Some(entry) => entry.1 = value,
-                None => builder.entries.push((key, value)),
-            }
+            builder.entries.push((key, value));
         }
-        Ok(AnyValue::Object(AnyMap {
-            entries: builder.entries.drain(start..).collect(),
-        }))
+        // A repeated key keeps its first position and its last value, as serde_json.
+        let mut map = AnyMap::with_capacity(builder.entries.len() - start);
+        for (key, value) in builder.entries.drain(start..) {
+            map.insert(key, value);
+        }
+        Ok(AnyValue::Object(map))
     }
 }
 
@@ -1142,16 +1153,31 @@ mod tests {
     }
 
     #[test]
-    fn remove_moves_the_last_pair_and_shift_remove_keeps_the_order() {
+    fn remove_keeps_the_order_and_swap_remove_moves_the_last_pair() {
         let mut map: AnyMap = parse(r#"{"a": 1, "b": 2, "c": 3}"#)
             .as_object()
             .unwrap()
             .clone();
         let mut shifted = map.clone();
+        let mut swapped = map.clone();
         map.remove("a");
         shifted.shift_remove("a");
-        assert_eq!(AnyValue::Object(map).to_string(), r#"{"c":3,"b":2}"#);
+        swapped.swap_remove("a");
+        assert_eq!(AnyValue::Object(map).to_string(), r#"{"b":2,"c":3}"#);
         assert_eq!(AnyValue::Object(shifted).to_string(), r#"{"b":2,"c":3}"#);
+        assert_eq!(AnyValue::Object(swapped).to_string(), r#"{"c":3,"b":2}"#);
+    }
+
+    #[test]
+    fn objects_are_equal_only_with_their_pairs_in_the_same_order() {
+        assert_eq!(parse(r#"{"a": 1, "b": 2}"#), parse(r#"{"a": 1, "b": 2}"#));
+        assert_ne!(parse(r#"{"a": 1, "b": 2}"#), parse(r#"{"b": 2, "a": 1}"#));
+    }
+
+    #[test]
+    #[cfg(target_pointer_width = "64")]
+    fn a_value_takes_the_room_of_a_string() {
+        assert_eq!(std::mem::size_of::<AnyValue>(), 32);
     }
 
     #[test]
