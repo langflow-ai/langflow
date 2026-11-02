@@ -233,7 +233,9 @@ export function TriggerEventsDrawer({
                     event={selected}
                     events={events}
                     onSelect={(event) => {
-                      setFilter("all");
+                      if (!visible.some((row) => row.id === event.id)) {
+                        setFilter("all");
+                      }
                       setSelectedId(event.id);
                     }}
                     onReplay={setReplayTarget}

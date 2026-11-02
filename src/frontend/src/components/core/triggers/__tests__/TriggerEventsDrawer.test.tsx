@@ -209,6 +209,70 @@ describe("TriggerEventsDrawer", () => {
     );
   });
 
+  it("follows lineage between older filtered events without losing the filter", async () => {
+    const parent = makeEvent({
+      id: "older-parent",
+      state: "failed",
+      payload: { text: "Older original" },
+    });
+    const child = makeEvent({
+      id: "older-child",
+      state: "failed",
+      replay_of_event_id: parent.id,
+      payload: { text: "Older replay" },
+    });
+    mockEvents = [test];
+    mockFiltered = { failed: [parent, child] };
+    open();
+
+    await userEvent.click(screen.getByTestId("trigger-events-filter-failed"));
+    await userEvent.click(
+      within(screen.getByTestId("trigger-event-lineage")).getByRole("button", {
+        name: "View",
+      }),
+    );
+
+    expect(screen.getByTestId("trigger-event-payload")).toHaveTextContent(
+      "Older replay",
+    );
+    expect(screen.getByTestId("trigger-events-filter-failed")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    await userEvent.click(
+      within(screen.getByTestId("trigger-event-lineage")).getByRole("button"),
+    );
+
+    expect(screen.getByTestId("trigger-event-payload")).toHaveTextContent(
+      "Older original",
+    );
+  });
+
+  it("switches to all events when a lineage target is outside the filter", async () => {
+    const child = makeEvent({
+      id: "replay",
+      replay_of_event_id: failed.id,
+      payload: { text: "Replay payload" },
+    });
+    mockEvents = [child, failed];
+    mockFiltered = { replays: [child] };
+    open();
+
+    await userEvent.click(screen.getByTestId("trigger-events-filter-replays"));
+    await userEvent.click(
+      within(screen.getByTestId("trigger-event-lineage")).getByRole("button"),
+    );
+
+    expect(screen.getByTestId("trigger-event-payload")).toHaveTextContent(
+      "Checkout page returns 500",
+    );
+    expect(screen.getByTestId("trigger-events-filter-all")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
   it("says no events match only when the server found none", async () => {
     mockFiltered = { replays: [] };
     open();
