@@ -4,7 +4,6 @@
 //! so no code hard-codes those paths. It is embedded in the crate and read once.
 
 use std::borrow::Cow;
-use std::collections::HashSet;
 use std::sync::LazyLock;
 
 use crate::value::{Map, Value};
@@ -118,6 +117,43 @@ pub(crate) enum KeyWrite<'c> {
     Keyless,
 }
 
+/// A set of a few keys. Each lookup compares the key with each member,
+/// which for the few keys of a view-state set is faster than hashing it:
+/// the hash and the canonical form look up every key of a graph.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct KeySet(Vec<String>);
+
+impl KeySet {
+    /// Whether the set has `key`.
+    #[must_use]
+    pub fn contains(&self, key: &str) -> bool {
+        // The length and the first byte tell most keys apart without a call to compare them.
+        let key = key.as_bytes();
+        self.0.iter().any(|member| {
+            let member = member.as_bytes();
+            member.len() == key.len() && member.first() == key.first() && member == key
+        })
+    }
+
+    /// The keys, in the order the schema lists them.
+    pub fn iter(&self) -> impl Iterator<Item = &String> {
+        self.0.iter()
+    }
+}
+
+/// A key that repeats is kept once.
+impl FromIterator<String> for KeySet {
+    fn from_iter<T: IntoIterator<Item = String>>(keys: T) -> Self {
+        let mut set = Vec::new();
+        for key in keys {
+            if !set.contains(&key) {
+                set.push(key);
+            }
+        }
+        Self(set)
+    }
+}
+
 /// The parsed `node_schema.json`.
 #[derive(Debug)]
 pub struct NodeSchema {
@@ -125,17 +161,17 @@ pub struct NodeSchema {
     pub version: u64,
     /// The top-level flow keys that are not view state. Every other
     /// top-level key is.
-    pub flow_graph_keys: HashSet<String>,
+    pub flow_graph_keys: KeySet,
     /// Node keys that are view state.
-    pub node_view_state: HashSet<String>,
+    pub node_view_state: KeySet,
     /// Keys of `data.node` that are view state.
-    pub node_data_view_state: HashSet<String>,
+    pub node_data_view_state: KeySet,
     /// Template keys that are view state.
-    pub template_view_state: HashSet<String>,
+    pub template_view_state: KeySet,
     /// Template field keys that are display only.
-    pub field_view_state: HashSet<String>,
+    pub field_view_state: KeySet,
     /// Edge keys that are view state.
-    pub edge_view_state: HashSet<String>,
+    pub edge_view_state: KeySet,
     /// The keys of a template field's value unit, written together.
     pub value_unit: Vec<String>,
     /// Template field keys that are each a value of their own.
@@ -163,7 +199,7 @@ impl NodeSchema {
     /// or has the wrong shape.
     fn parse(raw: &Value) -> Result<Self, String> {
         let view_state = key(raw, "", "view_state")?;
-        let view_set = |name: &str| -> Result<HashSet<String>, String> {
+        let view_set = |name: &str| -> Result<KeySet, String> {
             let path = format!("view_state.{name}");
             Ok(strings(key(view_state, "view_state", name)?, &path)?
                 .into_iter()
