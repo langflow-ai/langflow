@@ -464,8 +464,12 @@ class SaveToFileComponent(Component):
         """Save a DataFrame to the specified file format."""
         append_mode = getattr(self, "append_mode", False)
         should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)
+        if fmt == "csv" and should_append and path.stat().st_size == 0:
+            should_append = False
 
         if fmt == "csv":
+            if should_append:
+                dataframe = self._align_csv_append_columns(dataframe, path)
             dataframe.to_csv(path, index=False, mode="a" if should_append else "w", header=not should_append)
         elif fmt == "excel":
             dataframe.to_excel(path, index=False, engine="openpyxl")
@@ -510,9 +514,14 @@ class SaveToFileComponent(Component):
         """Save a Data object to the specified file format."""
         append_mode = getattr(self, "append_mode", False)
         should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)
+        if fmt == "csv" and should_append and path.stat().st_size == 0:
+            should_append = False
 
         if fmt == "csv":
-            pd.DataFrame(data.data).to_csv(
+            dataframe = pd.DataFrame(data.data)
+            if should_append:
+                dataframe = self._align_csv_append_columns(dataframe, path)
+            dataframe.to_csv(
                 path,
                 index=False,
                 mode="a" if should_append else "w",
@@ -560,6 +569,26 @@ class SaveToFileComponent(Component):
             raise ValueError(msg)
         action = "appended to" if should_append else "saved successfully as"
         return f"Data {action} '{path}'"
+
+    @staticmethod
+    def _align_csv_append_columns(dataframe: pd.DataFrame, path: Path) -> pd.DataFrame:
+        """Keep appended CSV values under the existing header, or reject schema drift."""
+        existing_columns = list(pd.read_csv(path, nrows=0).columns)
+        incoming_columns = [str(column) for column in dataframe.columns]
+
+        if len(incoming_columns) != len(set(incoming_columns)):
+            msg = "Cannot append CSV data with duplicate column names."
+            raise ValueError(msg)
+
+        if len(existing_columns) != len(incoming_columns) or set(existing_columns) != set(incoming_columns):
+            missing = sorted(set(existing_columns) - set(incoming_columns))
+            extra = sorted(set(incoming_columns) - set(existing_columns))
+            msg = f"Cannot append CSV data with a different column schema (missing={missing}, extra={extra})."
+            raise ValueError(msg)
+
+        # CSV headers are serialized as strings. Select by their serialized names
+        # so DataFrame inputs with a different column order still match the file.
+        return dataframe.set_axis(incoming_columns, axis="columns").loc[:, existing_columns]
 
     async def _save_message(self, message: Message, path: Path, fmt: str) -> str:
         """Save a Message to the specified file format, handling async iterators."""
