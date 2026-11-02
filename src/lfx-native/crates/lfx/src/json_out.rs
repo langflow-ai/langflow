@@ -13,7 +13,7 @@
 //! Numbers are rare in a graph, and `serde_json` writes them, so their text
 //! cannot change.
 
-use crate::value::{Map, Number, Value};
+use crate::value::{AnyMap, AnyValue, Number};
 
 /// Whether a written string escapes its characters above U+007F.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -138,20 +138,20 @@ pub(crate) fn write_number(out: &mut Vec<u8>, number: &Number) {
 }
 
 /// Write a value as compact JSON text, object keys in their order.
-pub(crate) fn write_value(out: &mut Vec<u8>, value: &Value, ascii: Ascii) {
+pub(crate) fn write_value(out: &mut Vec<u8>, value: &AnyValue, ascii: Ascii) {
     match value {
-        Value::Null => out.extend_from_slice(b"null"),
-        Value::Bool(true) => out.extend_from_slice(b"true"),
-        Value::Bool(false) => out.extend_from_slice(b"false"),
-        Value::Number(number) => write_number(out, number),
-        Value::String(text) => write_str(out, text, ascii),
-        Value::Array(items) => write_seq(out, items, |out, item| write_value(out, item, ascii)),
-        Value::Object(map) => write_map(out, map, ascii),
+        AnyValue::Null => out.extend_from_slice(b"null"),
+        AnyValue::Bool(true) => out.extend_from_slice(b"true"),
+        AnyValue::Bool(false) => out.extend_from_slice(b"false"),
+        AnyValue::Number(number) => write_number(out, number),
+        AnyValue::String(text) => write_str(out, text, ascii),
+        AnyValue::Array(items) => write_seq(out, items, |out, item| write_value(out, item, ascii)),
+        AnyValue::Object(map) => write_map(out, map, ascii),
     }
 }
 
 /// Write an object as compact JSON text, its keys in their order.
-pub(crate) fn write_map(out: &mut Vec<u8>, map: &Map, ascii: Ascii) {
+pub(crate) fn write_map(out: &mut Vec<u8>, map: &AnyMap, ascii: Ascii) {
     write_entries(
         out,
         map.iter(),
@@ -255,7 +255,7 @@ mod tests {
     fn values_are_written_as_serde_json_writes_them() {
         let text =
             r#"{"b":[1,-2,1.0,1e300,12345678901234567890123,null,true,false,{}],"a":"é\n","":[]}"#;
-        let value: Value = serde_json::from_str(text).unwrap();
+        let value: AnyValue = serde_json::from_str(text).unwrap();
         let mut out = Vec::new();
         write_value(&mut out, &value, Ascii::Keep);
         assert_eq!(into_string(out), serde_json::to_string(&value).unwrap());

@@ -18,7 +18,7 @@ use std::fmt;
 
 use indexmap::IndexSet;
 
-use crate::value::Value;
+use crate::value::AnyValue;
 
 use crate::ops::canonical::{
     as_double, is_finite_number, is_integer_text, is_row_position, ordered_rows, row_order,
@@ -75,7 +75,7 @@ impl fmt::Display for ListProblem {
 impl ListIndex {
     /// Index `items`, and count the items that break the keyed list rules.
     #[must_use]
-    pub fn build(keyed: &'static KeyedList, items: &[Value]) -> Self {
+    pub fn build(keyed: &'static KeyedList, items: &[AnyValue]) -> Self {
         let mut index = Self {
             keyed,
             slots: HashMap::with_capacity(items.len()),
@@ -160,7 +160,7 @@ impl ListIndex {
     }
 
     /// Append `item`, whose key `key` is not in the list yet.
-    pub(crate) fn add(&mut self, items: &mut Vec<Value>, key: &str, item: Value) {
+    pub(crate) fn add(&mut self, items: &mut Vec<AnyValue>, key: &str, item: AnyValue) {
         if !self.keyed.has_position(&item) {
             self.unpositioned += 1;
         }
@@ -169,7 +169,7 @@ impl ListIndex {
     }
 
     /// Replace the item at `slot` by `item`, which carries the same key.
-    pub(crate) fn replace(&mut self, items: &mut [Value], slot: usize, item: Value) {
+    pub(crate) fn replace(&mut self, items: &mut [AnyValue], slot: usize, item: AnyValue) {
         let now = self.keyed.has_position(&item);
         let old = std::mem::replace(&mut items[slot], item);
         self.position_changed(self.keyed.has_position(&old), now);
@@ -185,7 +185,7 @@ impl ListIndex {
     }
 
     /// Remove the item with `key` and return it, or `None` when no item has it.
-    pub(crate) fn remove(&mut self, items: &mut Vec<Value>, key: &str) -> Option<Value> {
+    pub(crate) fn remove(&mut self, items: &mut Vec<AnyValue>, key: &str) -> Option<AnyValue> {
         let slot = self.slots.remove(key)?;
         let item = remove_item(self.keyed, items, slot);
         if !self.keyed.has_position(&item) {
@@ -215,7 +215,7 @@ impl ListIndex {
 /// The row's position is missing, not a number, or not finite.
 pub(crate) fn check_position(
     keyed: &'static KeyedList,
-    row: &Value,
+    row: &AnyValue,
     context: &dyn fmt::Display,
 ) -> Result<()> {
     if keyed.has_position(row) {
@@ -229,7 +229,7 @@ pub(crate) fn check_position(
 
 /// The array index of the item with `key`, found by reading every item. For
 /// a list without an index, such as one a batch wrote.
-pub(crate) fn find_item(keyed: &KeyedList, items: &[Value], key: &str) -> Option<usize> {
+pub(crate) fn find_item(keyed: &KeyedList, items: &[AnyValue], key: &str) -> Option<usize> {
     items
         .iter()
         .position(|item| keyed.key_of(item) == Some(key))
@@ -238,7 +238,7 @@ pub(crate) fn find_item(keyed: &KeyedList, items: &[Value], key: &str) -> Option
 /// Remove the item at `slot`. The order of a list is its items' positions,
 /// so the last item moves into the gap. An item without a position belongs
 /// to a list that keeps its array order, so the items after it move up.
-pub(crate) fn remove_item(keyed: &KeyedList, items: &mut Vec<Value>, slot: usize) -> Value {
+pub(crate) fn remove_item(keyed: &KeyedList, items: &mut Vec<AnyValue>, slot: usize) -> AnyValue {
     if keyed.has_position(&items[slot]) {
         items.swap_remove(slot)
     } else {
@@ -280,9 +280,9 @@ fn is_row_key(key: &str) -> bool {
 }
 
 /// A row without `__id__` and `__pos__`; a value that is not an object is returned as is.
-fn without_row_keys(row: &Value) -> Value {
+fn without_row_keys(row: &AnyValue) -> AnyValue {
     match row {
-        Value::Object(map) => Value::Object(
+        AnyValue::Object(map) => AnyValue::Object(
             map.iter()
                 .filter(|(key, _)| !is_row_key(key))
                 .map(|(key, value)| (key.clone(), value.clone()))
@@ -294,9 +294,9 @@ fn without_row_keys(row: &Value) -> Value {
 
 /// Table rows in order and without `__id__` and `__pos__`; a value that is not a list is returned as is.
 #[must_use]
-pub fn strip_row_keys(rows: &Value) -> Value {
+pub fn strip_row_keys(rows: &AnyValue) -> AnyValue {
     match rows {
-        Value::Array(rows) => Value::Array(
+        AnyValue::Array(rows) => AnyValue::Array(
             ordered_rows(rows)
                 .into_iter()
                 .map(without_row_keys)
@@ -308,21 +308,21 @@ pub fn strip_row_keys(rows: &Value) -> Value {
 
 /// The names of a node's template fields whose value is a table list.
 #[must_use]
-pub fn table_fields(node: &Value) -> Vec<String> {
+pub fn table_fields(node: &AnyValue) -> Vec<String> {
     let Some(template) = node.template() else {
         return Vec::new();
     };
     template
         .iter()
         .filter(|(name, field)| {
-            field.get("value").is_some_and(Value::is_array)
+            field.get("value").is_some_and(AnyValue::is_array)
                 && NODE_SCHEMA.is_table_at(node, &field_value_path(name))
         })
         .map(|(name, _)| name.clone())
         .collect()
 }
 
-fn table_value_mut<'n>(node: &'n mut Value, field: &str) -> Option<&'n mut Vec<Value>> {
+fn table_value_mut<'n>(node: &'n mut AnyValue, field: &str) -> Option<&'n mut Vec<AnyValue>> {
     node.get_mut("data")?
         .get_mut("node")?
         .get_mut("template")?
@@ -332,11 +332,11 @@ fn table_value_mut<'n>(node: &'n mut Value, field: &str) -> Option<&'n mut Vec<V
 }
 
 /// Order the rows of every table value of a node and strip `__id__` and `__pos__`, in place.
-pub fn strip_node_table_row_keys(node: &mut Value) {
+pub fn strip_node_table_row_keys(node: &mut AnyValue) {
     for field in table_fields(node) {
         if let Some(rows) = table_value_mut(node, &field) {
-            let stripped = strip_row_keys(&Value::Array(std::mem::take(rows)));
-            if let Value::Array(stripped) = stripped {
+            let stripped = strip_row_keys(&AnyValue::Array(std::mem::take(rows)));
+            if let AnyValue::Array(stripped) = stripped {
                 *rows = stripped;
             }
         }
@@ -344,10 +344,10 @@ pub fn strip_node_table_row_keys(node: &mut Value) {
 }
 
 /// Order and strip the table values of every node of a flow, in place.
-pub fn strip_flow_table_row_keys(flow: &mut Value) {
+pub fn strip_flow_table_row_keys(flow: &mut AnyValue) {
     for node in flow
         .get_mut("nodes")
-        .and_then(Value::as_array_mut)
+        .and_then(AnyValue::as_array_mut)
         .into_iter()
         .flatten()
     {
@@ -358,7 +358,7 @@ pub fn strip_flow_table_row_keys(flow: &mut Value) {
 /// Whether every row is an object with a unique `__id__` and a numeric `__pos__`:
 /// the shape the server accepts.
 #[must_use]
-pub fn has_table_row_ids(rows: &[Value]) -> bool {
+pub fn has_table_row_ids(rows: &[AnyValue]) -> bool {
     let mut seen = HashSet::new();
     rows.iter().all(|row| {
         row.non_empty_str(row_id_key())
@@ -381,11 +381,11 @@ pub fn has_table_row_ids(rows: &[Value]) -> bool {
 ///
 /// A compared row holds a number that is not finite.
 pub fn assign_row_ids(
-    rows: &mut [Value],
-    previous: Option<&Value>,
+    rows: &mut [AnyValue],
+    previous: Option<&AnyValue>,
     renumber: Renumber,
 ) -> Result<()> {
-    if !rows.iter().all(Value::is_object) {
+    if !rows.iter().all(AnyValue::is_object) {
         return Ok(());
     }
     match_row_ids(rows, previous)?;
@@ -404,7 +404,7 @@ pub fn assign_row_ids(
 /// # Errors
 ///
 /// A compared row holds a number that is not finite.
-pub fn match_row_ids(rows: &mut [Value], previous: Option<&Value>) -> Result<()> {
+pub fn match_row_ids(rows: &mut [AnyValue], previous: Option<&AnyValue>) -> Result<()> {
     let (id_key, position_key) = (row_id_key(), row_position_key());
     let mut used: HashSet<String> = HashSet::new();
     let mut need_id = Vec::new();
@@ -416,8 +416,8 @@ pub fn match_row_ids(rows: &mut [Value], previous: Option<&Value>) -> Result<()>
             _ => need_id.push(index),
         }
     }
-    let candidates: Vec<&Value> = previous
-        .and_then(Value::as_array)
+    let candidates: Vec<&AnyValue> = previous
+        .and_then(AnyValue::as_array)
         .into_iter()
         .flatten()
         .filter(|row| row.is_object() && row.non_empty_str(id_key).is_some())
@@ -448,7 +448,7 @@ pub fn match_row_ids(rows: &mut [Value], previous: Option<&Value>) -> Result<()>
         };
         used.insert(new_id.clone());
         if let Some(row) = row.as_object_mut() {
-            row.insert(id_key.to_owned(), Value::String(new_id));
+            row.insert(id_key.to_owned(), AnyValue::String(new_id));
         }
     }
     Ok(())
@@ -462,12 +462,12 @@ struct Position {
 }
 
 /// The position a value holds, when it is a finite number.
-impl TryFrom<&Value> for Position {
+impl TryFrom<&AnyValue> for Position {
     type Error = ();
 
-    fn try_from(value: &Value) -> Result<Self, ()> {
+    fn try_from(value: &AnyValue) -> Result<Self, ()> {
         match value {
-            Value::Number(number) if is_finite_number(number) => Ok(Self {
+            AnyValue::Number(number) if is_finite_number(number) => Ok(Self {
                 value: as_double(number),
                 integer: is_integer_text(number),
             }),
@@ -491,12 +491,12 @@ impl Position {
         clippy::float_cmp,
         reason = "converts an integral double to an integer and checks that it was exact"
     )]
-    fn to_value(self) -> Value {
+    fn to_value(self) -> AnyValue {
         let whole = self.value as i64;
         if self.integer && whole as f64 == self.value {
-            Value::from(whole)
+            AnyValue::from(whole)
         } else {
-            crate::value::Number::from_f64(self.value).map_or(Value::Null, Value::Number)
+            crate::value::Number::from_f64(self.value).map_or(AnyValue::Null, AnyValue::Number)
         }
     }
 }
@@ -513,9 +513,9 @@ impl Position {
 /// renumbers the whole table `1..n`. The new numbers follow the order that
 /// [`ordered_rows`] gives after the runs are filled, so the order does not
 /// change. Returns the indexes of the rows it gave a position.
-pub fn fill_missing_positions(rows: &mut [Value], renumber: Renumber) -> Vec<usize> {
+pub fn fill_missing_positions(rows: &mut [AnyValue], renumber: Renumber) -> Vec<usize> {
     let key = row_position_key();
-    let position_at = |rows: &[Value], index: usize| {
+    let position_at = |rows: &[AnyValue], index: usize| {
         rows[index]
             .get(key)
             .and_then(|value| Position::try_from(value).ok())
@@ -601,7 +601,7 @@ fn fits_between(positions: &[Position], before: Option<Position>, after: Option<
     previous < after.value
 }
 
-fn set_position(row: &mut Value, key: &str, position: Position) {
+fn set_position(row: &mut AnyValue, key: &str, position: Position) {
     if let Some(row) = row.as_object_mut() {
         row.insert(key.to_owned(), position.to_value());
     }
@@ -612,7 +612,7 @@ fn set_position(row: &mut Value, key: &str, position: Position) {
 /// # Errors
 ///
 /// A compared row holds a number that is not finite.
-pub fn assign_table_row_ids(node: &mut Value, renumber: Renumber) -> Result<()> {
+pub fn assign_table_row_ids(node: &mut AnyValue, renumber: Renumber) -> Result<()> {
     for field in table_fields(node) {
         if let Some(rows) = table_value_mut(node, &field) {
             assign_row_ids(rows, None, renumber)?;
@@ -633,11 +633,11 @@ pub fn assign_table_row_ids(node: &mut Value, renumber: Renumber) -> Result<()> 
 ///
 /// A compared row holds a number that is not finite.
 pub fn assign_changed_node_table_row_ids(
-    node: &mut Value,
-    previous: Option<&Value>,
+    node: &mut AnyValue,
+    previous: Option<&AnyValue>,
     renumber: Renumber,
 ) -> Result<()> {
-    let stored: HashMap<String, &Value> = previous
+    let stored: HashMap<String, &AnyValue> = previous
         .map(|previous| {
             table_fields(previous)
                 .into_iter()
@@ -670,24 +670,24 @@ pub fn assign_changed_node_table_row_ids(
 ///
 /// A compared row holds a number that is not finite.
 pub fn assign_changed_table_row_ids(
-    base: &Value,
-    target: &mut Value,
+    base: &AnyValue,
+    target: &mut AnyValue,
     renumber: Renumber,
 ) -> Result<()> {
-    let mut stored: HashMap<&str, &Value> = HashMap::new();
+    let mut stored: HashMap<&str, &AnyValue> = HashMap::new();
     for node in base
         .get("nodes")
-        .and_then(Value::as_array)
+        .and_then(AnyValue::as_array)
         .into_iter()
         .flatten()
     {
-        if let Some(id) = node.get("id").and_then(Value::as_str) {
+        if let Some(id) = node.get("id").and_then(AnyValue::as_str) {
             stored.entry(id).or_insert(node);
         }
     }
     for node in target
         .get_mut("nodes")
-        .and_then(Value::as_array_mut)
+        .and_then(AnyValue::as_array_mut)
         .into_iter()
         .flatten()
     {
@@ -696,7 +696,7 @@ pub fn assign_changed_table_row_ids(
         }
         let previous = node
             .get("id")
-            .and_then(Value::as_str)
+            .and_then(AnyValue::as_str)
             .and_then(|id| stored.get(id))
             .copied();
         assign_changed_node_table_row_ids(node, previous, renumber)?;
@@ -711,7 +711,7 @@ pub fn assign_changed_table_row_ids(
 /// # Errors
 ///
 /// A compared row holds a number that is not finite.
-pub fn append_table_rows(rows: &mut Vec<Value>, new_rows: &[Value]) -> Result<()> {
+pub fn append_table_rows(rows: &mut Vec<AnyValue>, new_rows: &[AnyValue]) -> Result<()> {
     if !has_table_row_ids(rows) {
         assign_row_ids(rows, None, Renumber::WhenNoRoom)?;
     }
@@ -734,7 +734,7 @@ pub fn append_table_rows(rows: &mut Vec<Value>, new_rows: &[Value]) -> Result<()
         used.insert(id.clone());
         last = last.floor() + 1.0;
         if let Some(fresh) = fresh.as_object_mut() {
-            fresh.insert(id_key.to_owned(), Value::String(id));
+            fresh.insert(id_key.to_owned(), AnyValue::String(id));
             fresh.insert(position_key.to_owned(), Position::integer(last).to_value());
         }
         rows.push(fresh);
