@@ -173,3 +173,51 @@ def test_without_journal_export_is_memory_only(monkeypatch, tmp_path):
     assert bench._flusher is None or not bench._flusher.is_alive()
     assert bench.export_jsonl() == b'{"kind":"req","pid":1,"t":1.0}\n'
     assert list(tmp_path.iterdir()) == []
+
+
+async def test_pool_probe_records_the_wait_for_a_connection(tmp_path):
+    """A request that waits for the pool's only connection records the wait in ``pool_wait_part``."""
+    import asyncio
+
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlalchemy.pool import AsyncAdaptedQueuePool
+
+    engine = create_async_engine(
+        f"sqlite+aiosqlite:///{tmp_path / 'pool.db'}",
+        poolclass=AsyncAdaptedQueuePool,
+        pool_size=1,
+        max_overflow=0,
+        pool_timeout=10,
+    )
+    pool = engine.sync_engine.pool
+    bench._wrap_pool_checkout(pool)
+    bench._wrap_pool_checkout(pool)  # once only
+    holding = asyncio.Event()
+
+    async def holder() -> None:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+            holding.set()
+            await asyncio.sleep(0.3)
+
+    async def waiter() -> dict:
+        rec: dict = {}
+        token = bench._current.set(rec)
+        try:
+            await holding.wait()
+            assert bench._pool_fields(pool)["pool_out"] == 1
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+        finally:
+            bench._current.reset(token)
+        return rec
+
+    try:
+        _, rec = await asyncio.gather(holder(), waiter())
+    finally:
+        await engine.dispose()
+    assert rec["pool_get_n"] == 1
+    assert 200 < rec["pool_wait_part"] < 2000
+    assert rec["pool_wait_max_part"] == rec["pool_wait_part"]
+    assert bench._pool_waiting == 0

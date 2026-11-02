@@ -28,7 +28,15 @@ Checkpoints (``kind: "checkpoint"``) record start, end, duration and revision,
 with the engine CPU of their serialization and hash. Background tasks
 (checkpoints, maintenance, the sampler) run in an empty context, so they never
 add to a request's record.
-A sampler records process CPU time and RSS every second (``kind: "sample"``).
+A sampler records process CPU time and RSS every second (``kind: "sample"``),
+with the database pool's use: ``pool_out`` (connections checked out),
+``pool_overflow``, ``pool_waiting`` (callers waiting for a connection or
+connecting) and ``tasks`` (asyncio tasks).
+
+Database pool: every request record gets ``pool_wait_part`` (time spent
+getting connections from the pool, the wait for a free one included),
+``pool_wait_max_part`` (the longest single wait) and ``pool_get_n``. The health
+endpoints (``/health``, ``/healthz``) get request records too.
 Compactions (``kind: "compaction"``) record start, end and the time of every
 phase, with ``lock_held`` from the advisory lock granted to the commit's end
 and ``checkpoints_delete``, the unlocked transaction after it.
@@ -92,12 +100,13 @@ _journal_lock = threading.Lock()  # flush and reset: the flusher thread drops fl
 _flusher: threading.Thread | None = None
 _flusher_stop = threading.Event()
 RESET_FILE = "reset-at"
+_pool_waiting = 0  # callers inside the pool's checkout
 _PAGE = os.sysconf("SC_PAGE_SIZE") if hasattr(os, "sysconf") else 4096
 SAMPLE_INTERVAL = 1.0
 LAG_INTERVAL = 0.01
 LAG_RECORD_MS = 50.0
 GC_RECORD_MS = 20.0
-PATH_PREFIXES = ("/api/v2/flows", "/api/v1/flows")
+PATH_PREFIXES = ("/api/v2/flows", "/api/v1/flows", "/health")
 
 
 def record() -> dict[str, Any] | None:
@@ -300,6 +309,54 @@ def _rss_bytes() -> int:
         return 0
 
 
+def _wrap_pool_checkout(pool: Any) -> None:
+    """Time every checkout of ``pool`` (``_do_get``: a free connection, a new one, or the wait for one)."""
+    if getattr(pool, "_ops_bench_probe", False):
+        return
+    inner = pool._do_get  # noqa: SLF001 -- no public event marks the start of a checkout
+
+    def _do_get() -> Any:
+        global _pool_waiting  # noqa: PLW0603
+        _pool_waiting += 1
+        t0 = time.perf_counter()
+        try:
+            return inner()
+        finally:
+            _pool_waiting -= 1
+            waited = (time.perf_counter() - t0) * 1000
+            # SQLAlchemy's async greenlet runs in the caller's context: this is the request's record.
+            rec = _current.get()
+            if rec is not None:
+                rec["pool_wait_part"] = rec.get("pool_wait_part", 0) + waited
+                rec["pool_get_n"] = rec.get("pool_get_n", 0) + 1
+                rec["pool_wait_max_part"] = max(rec.get("pool_wait_max_part", 0), waited)
+
+    pool._do_get = _do_get  # noqa: SLF001
+    pool._ops_bench_probe = True  # noqa: SLF001
+
+
+def _db_pool() -> Any | None:
+    """The database pool, its checkout timed; None before the database service exists."""
+    try:
+        from langflow.services.deps import get_db_service
+
+        pool = get_db_service().engine.sync_engine.pool
+    except Exception:  # noqa: BLE001 -- measurement never breaks the server
+        return None
+    _wrap_pool_checkout(pool)
+    return pool
+
+
+def _pool_fields(pool: Any | None) -> dict[str, Any]:
+    if pool is None:
+        return {}
+    fields: dict[str, Any] = {"pool_waiting": _pool_waiting}
+    for name, method in (("pool_out", "checkedout"), ("pool_overflow", "overflow")):
+        with contextlib.suppress(Exception):
+            fields[name] = getattr(pool, method)()
+    return fields
+
+
 async def _sample_loop() -> None:
     while True:
         _records.append(
@@ -309,6 +366,8 @@ async def _sample_loop() -> None:
                 "t": time.time(),
                 "cpu_s": time.process_time(),
                 "rss": _rss_bytes(),
+                "tasks": len(asyncio.all_tasks()),
+                **_pool_fields(_db_pool()),
             }
         )
         await asyncio.sleep(SAMPLE_INTERVAL)
@@ -383,6 +442,7 @@ def _ensure_sampler() -> None:
     global _sampler, _lag_probe  # noqa: PLW0603
     if _sampler is None or _sampler.done():
         _install_gc_probe()
+        _db_pool()
         _sampler = spawn(_sample_loop())
     if _lag_probe is None or _lag_probe.done():
         _lag_probe = spawn(_lag_loop())
