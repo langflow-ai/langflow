@@ -765,10 +765,11 @@ enum Part<'a> {
 /// An object's members in canonical form, in no order.
 type Parts<'a> = Vec<(&'a str, Part<'a>)>;
 
-/// An edge as a graph holds it: an item of its list.
+/// An edge as a graph holds it: an item of its list, or a loaded edge's object.
 #[derive(Debug, Clone, Copy)]
 enum EdgeIn<'a> {
     Value(&'a Value),
+    Map(&'a Map),
 }
 
 /// The members of an object without the ones `hidden` names.
@@ -869,7 +870,7 @@ fn field_part<'a>(node: &'a Value, key: &str, field: &'a Value) -> Part<'a> {
 /// handle strings as the objects they encode, their type lists in order.
 fn edge_part(edge: EdgeIn<'_>) -> Part<'_> {
     let edge_map = match edge {
-        EdgeIn::Value(Value::Object(map)) => map,
+        EdgeIn::Map(map) | EdgeIn::Value(Value::Object(map)) => map,
         EdgeIn::Value(other) => return Part::Raw(other),
     };
     let mut parts = visible(edge_map, |key| NODE_SCHEMA.edge_view_state.contains(key));
@@ -931,8 +932,10 @@ fn write_part(part: Part<'_>, out: &mut Sink) -> Result<()> {
             let ids: Vec<Option<&str>> = edges
                 .iter()
                 .map(|edge| {
-                    let EdgeIn::Value(value) = edge;
-                    let map = value.as_object();
+                    let map = match edge {
+                        EdgeIn::Map(map) => Some(*map),
+                        EdgeIn::Value(value) => value.as_object(),
+                    };
                     entry_order_id(map, hidden)
                 })
                 .collect();
@@ -992,6 +995,25 @@ pub fn canonical_graph_json(flow: &Value) -> Result<String> {
 pub fn graph_hash(flow: &Value) -> Result<String> {
     let mut out = Sink::hash();
     write_part(flow_part(flow), &mut out)?;
+    Ok(out.into_hex_digest())
+}
+
+/// [`graph_hash`] of a loaded graph, from its parts: the top-level keys, with
+/// `nodes` and `edges` in their place, as the graph as a value has them.
+pub(crate) fn loaded_graph_hash<'a>(
+    root: &'a Map,
+    nodes: Vec<Cow<'a, Value>>,
+    edges: Vec<&'a Map>,
+) -> Result<String> {
+    let mut parts = visible(root, |key| NODE_SCHEMA.is_flow_view_state(key));
+    set(&mut parts, "nodes", Part::Nodes(nodes));
+    set(
+        &mut parts,
+        "edges",
+        Part::Edges(edges.into_iter().map(EdgeIn::Map).collect()),
+    );
+    let mut out = Sink::hash();
+    write_part(Part::Object(parts), &mut out)?;
     Ok(out.into_hex_digest())
 }
 
@@ -1242,6 +1264,19 @@ mod tests {
             });
             assert_eq!(graph_hash(graph).unwrap(), hex, "{graph}");
         }
+    }
+
+    #[test]
+    fn a_loaded_graph_hashes_as_its_value_does() {
+        let mut loaded = 0;
+        for graph in fixture_graphs() {
+            let Ok(state) = crate::ops::GraphState::new(graph) else {
+                continue;
+            };
+            assert_eq!(state.graph_hash(), graph_hash(&state.to_value()));
+            loaded += 1;
+        }
+        assert!(loaded > 300, "only {loaded} graphs loaded");
     }
 
     /// The comparison that makes every node canonical before it compares

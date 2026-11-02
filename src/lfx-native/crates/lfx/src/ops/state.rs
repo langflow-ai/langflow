@@ -33,6 +33,7 @@ use crate::value::{FiniteValue, Map, Value};
 use indexmap::{IndexMap, IndexSet};
 use serde::ser::{Serialize, SerializeMap, Serializer};
 
+use crate::ops::canonical;
 use crate::ops::edges::{EdgeIndex, GraphRead};
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result};
@@ -697,6 +698,46 @@ impl GraphState {
                 }
                 None => Cow::Borrowed(node.as_value()),
             })
+    }
+
+    /// The SHA-256 hex digest of the graph's canonical form: what
+    /// [`canonical::graph_hash`] gives for [`GraphState::to_value`], from the
+    /// loaded graph without a copy. The committed graph, without a staged batch.
+    ///
+    /// # Errors
+    ///
+    /// A number that is not finite as JavaScript reads it.
+    pub fn graph_hash(&self) -> Result<String> {
+        canonical::loaded_graph_hash(
+            &self.root,
+            self.graph
+                .nodes
+                .values()
+                .map(|node| Cow::Borrowed(node.as_value()))
+                .collect(),
+            self.graph.edges.values().map(Edge::as_map).collect(),
+        )
+    }
+
+    /// [`GraphState::graph_hash`] of the graph with its staged batch, as
+    /// [`GraphState::keep`] will make it, or `None` when no batch is staged.
+    ///
+    /// # Errors
+    ///
+    /// A number that is not finite as JavaScript reads it.
+    #[must_use]
+    pub fn staged_graph_hash(&self) -> Option<Result<String>> {
+        if !self.staged {
+            return None;
+        }
+        let graph = &self.graph;
+        let nodes = self.staged_nodes().collect();
+        let edges = graph
+            .edges
+            .staged_entries()
+            .map(|(_, edge)| edge.as_map())
+            .collect();
+        Some(canonical::loaded_graph_hash(&self.root, nodes, edges))
     }
 
     /// The graph's top-level keys in order, each with what [`GraphState::to_value`]

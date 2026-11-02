@@ -250,6 +250,26 @@ pub fn graph_state(flow: Input<'_>) -> ApiResult<GraphState> {
     Ok(GraphState::new(held(flow)?)?)
 }
 
+/// The SHA-256 hex digest of a [`GraphState`]'s canonical form
+/// ([`GraphState::graph_hash`]): the committed graph, without a staged batch.
+///
+/// # Errors
+///
+/// The graph holds a number that is not finite.
+pub fn state_graph_hash(state: &GraphState) -> ApiResult<String> {
+    Ok(state.graph_hash()?)
+}
+
+/// [`state_graph_hash`] of the graph with its staged batch
+/// ([`GraphState::staged_graph_hash`]), or `None` when no batch is staged.
+///
+/// # Errors
+///
+/// The graph holds a number that is not finite.
+pub fn staged_state_graph_hash(state: &GraphState) -> ApiResult<Option<String>> {
+    Ok(state.staged_graph_hash().transpose()?)
+}
+
 /// Apply a batch to a [`GraphState`]; the result is what [`applied_json`] lists.
 ///
 /// # Errors
