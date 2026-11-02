@@ -19,6 +19,7 @@ doctest = false
 [dependencies]
 lfx = { path = "../lfx" }
 pyo3 = { version = "0.30", features = ["abi3-py310"] }
+mimalloc = { version = "0.1", default-features = false }
 
 [lints]
 workspace = true
