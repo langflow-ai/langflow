@@ -28,7 +28,7 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 
-use crate::value::Value;
+use crate::value::AnyValue;
 use indexmap::IndexMap;
 
 use crate::ops::error::Result;
@@ -41,7 +41,7 @@ use crate::ops::state::Lists;
 #[derive(Debug, Clone)]
 pub(crate) enum FieldWrite {
     /// Set the value at the path: replace the value there, or add it.
-    Set(Value),
+    Set(AnyValue),
     /// Remove the value at the path.
     Remove,
 }
@@ -161,7 +161,7 @@ impl FieldLayer {
 /// calls the step again after the walk.
 pub(crate) fn step_fn<'v, F>(step: F) -> F
 where
-    F: FnMut(&'v Value, usize, bool) -> Result<Option<&'v Value>>,
+    F: FnMut(&'v AnyValue, usize, bool) -> Result<Option<&'v AnyValue>>,
 {
     step
 }
@@ -174,7 +174,7 @@ pub(crate) struct Walked<'v> {
     /// node itself holds it.
     pub write_len: Option<usize>,
     /// The value at the path, or the index of the first segment that does not exist.
-    pub found: std::result::Result<&'v Value, usize>,
+    pub found: std::result::Result<&'v AnyValue, usize>,
     /// The tree node at the path, when the node itself holds the value: it
     /// holds the writes at the path's descendant paths.
     pub writes: Option<&'v PathWrites>,
@@ -198,10 +198,10 @@ pub(crate) struct Walked<'v> {
 ///
 /// `step` fails.
 pub(crate) fn walk<'v>(
-    node: &'v Value,
+    node: &'v AnyValue,
     writes: Option<&'v PathWrites>,
     path: &[Segment],
-    mut step: impl FnMut(&'v Value, usize, bool) -> Result<Option<&'v Value>>,
+    mut step: impl FnMut(&'v AnyValue, usize, bool) -> Result<Option<&'v AnyValue>>,
 ) -> Result<Walked<'v>> {
     let mut value = node;
     let mut tree = writes;
@@ -247,11 +247,11 @@ pub(crate) fn walk<'v>(
 ///
 /// `step` fails.
 pub(crate) fn read<'v>(
-    node: &'v Value,
+    node: &'v AnyValue,
     writes: Option<&'v PathWrites>,
     path: &[Segment],
-    step: impl FnMut(&'v Value, usize, bool) -> Result<Option<&'v Value>>,
-) -> Result<Option<Cow<'v, Value>>> {
+    step: impl FnMut(&'v AnyValue, usize, bool) -> Result<Option<&'v AnyValue>>,
+) -> Result<Option<Cow<'v, AnyValue>>> {
     let walked = walk(node, writes, path, step)?;
     let Ok(value) = walked.found else {
         return Ok(None);
@@ -269,10 +269,10 @@ pub(crate) fn read<'v>(
 /// The value one `segment` under `value`, which is at `parent_path`. An item
 /// is found by reading every item of the list.
 pub(crate) fn child<'v>(
-    value: &'v Value,
+    value: &'v AnyValue,
     parent_path: &[Segment],
     segment: &Segment,
-) -> Option<&'v Value> {
+) -> Option<&'v AnyValue> {
     match segment {
         Segment::Key(key) => value.as_object()?.get(key),
         Segment::Item(key) => {
@@ -285,10 +285,10 @@ pub(crate) fn child<'v>(
 /// The value at `path[start..]` under `value`, the value at `path[..start]`,
 /// to change it. An item is found by reading every item of the list.
 pub(crate) fn descend_mut<'v>(
-    value: &'v mut Value,
+    value: &'v mut AnyValue,
     path: &[Segment],
     start: usize,
-) -> Option<&'v mut Value> {
+) -> Option<&'v mut AnyValue> {
     (start..path.len()).try_fold(value, |value, index| {
         child_mut(value, &path[..index], &path[index], None)
     })
@@ -298,11 +298,11 @@ pub(crate) fn descend_mut<'v>(
 /// change it. An item is found through `index`, the list's index, or else by
 /// reading every item.
 fn child_mut<'v>(
-    value: &'v mut Value,
+    value: &'v mut AnyValue,
     parent_path: &[Segment],
     segment: &Segment,
     index: Option<&mut ListIndex>,
-) -> Option<&'v mut Value> {
+) -> Option<&'v mut AnyValue> {
     match segment {
         Segment::Key(key) => value.as_object_mut()?.get_mut(key),
         Segment::Item(key) => {
@@ -337,7 +337,7 @@ impl NodeLists<'_> {
 /// node at the fold: its list indexes find items and follow the writes, and
 /// a write forgets the indexes under its path.
 pub(crate) fn make_writes(
-    value: &mut Value,
+    value: &mut AnyValue,
     tree: PathWrites,
     path: &mut Path,
     mut lists: Option<&mut NodeLists<'_>>,
@@ -375,7 +375,7 @@ pub(crate) fn make_writes(
 /// write in place would: a set replaces the value there or adds it last, and
 /// a removal of a list item leaves the gap as the list's kind says.
 pub(crate) fn make_write(
-    parent: &mut Value,
+    parent: &mut AnyValue,
     segment: &Segment,
     parent_path: &[Segment],
     write: FieldWrite,
@@ -448,7 +448,9 @@ mod tests {
             .collect()
     }
 
-    fn scan<'v>(at: &[Segment]) -> impl FnMut(&'v Value, usize, bool) -> Result<Option<&'v Value>> {
+    fn scan<'v>(
+        at: &[Segment],
+    ) -> impl FnMut(&'v AnyValue, usize, bool) -> Result<Option<&'v AnyValue>> {
         move |value, index, _| Ok(child(value, &at[..index], &at[index]))
     }
 

@@ -12,7 +12,7 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::value::Value;
+use crate::value::AnyValue;
 
 use crate::ops::canonical;
 use crate::ops::diff::{Derived, derive_checked};
@@ -23,7 +23,7 @@ use crate::ops::validate::{Numbers, Violation, find_graph_violations, validate_f
 /// A parsed flow graph that no rule has been checked on yet.
 #[derive(Debug)]
 pub struct GraphPlain {
-    flow: Value,
+    flow: AnyValue,
     /// The graph has no structural violation.
     structure: AtomicBool,
     /// The graph has no violation at all, numbers that are not finite included.
@@ -33,7 +33,7 @@ pub struct GraphPlain {
 impl GraphPlain {
     /// Keep a graph as it is, without checking it.
     #[must_use]
-    pub fn new(flow: Value) -> Self {
+    pub fn new(flow: AnyValue) -> Self {
         Self {
             flow,
             structure: AtomicBool::new(false),
@@ -42,7 +42,7 @@ impl GraphPlain {
     }
 
     /// A graph that has passed every check.
-    fn checked(flow: Value) -> Self {
+    fn checked(flow: AnyValue) -> Self {
         Self {
             flow,
             structure: AtomicBool::new(true),
@@ -52,13 +52,13 @@ impl GraphPlain {
 
     /// The graph.
     #[must_use]
-    pub fn as_value(&self) -> &Value {
+    pub fn as_value(&self) -> &AnyValue {
         &self.flow
     }
 
     /// The graph, without copying it.
     #[must_use]
-    pub fn into_value(self) -> Value {
+    pub fn into_value(self) -> AnyValue {
         self.flow
     }
 
@@ -154,7 +154,7 @@ mod tests {
     use crate::ops::derive_flow_operations;
 
     /// A graph of one node, with `value` in its one field.
-    fn graph(value: &Value) -> Value {
+    fn graph(value: &AnyValue) -> AnyValue {
         let template = json!({"t": {"value": value, "type": "str"}});
         json!({"nodes": [{"id": "a", "data": {"node": {"template": template}}}], "edges": []})
     }

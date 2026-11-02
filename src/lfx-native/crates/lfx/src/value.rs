@@ -1,9 +1,9 @@
-//! [`Value`]: a JSON value as the engine holds it.
+//! [`AnyValue`]: a JSON value as the engine holds it.
 //!
 //! It has the shape and the method names of `serde_json::Value`, with two
 //! differences that make a flow cheaper to hold and to walk:
 //!
-//! - An object is a list of key-value pairs in insertion order ([`Map`]), not
+//! - An object is a list of key-value pairs in insertion order ([`AnyMap`]), not
 //!   an `IndexMap`. A flow has thousands of small objects, and a hash table for
 //!   each one costs more memory and time than it saves. Finding a key scans the
 //!   list, which is fast for the short objects of a flow.
@@ -16,7 +16,7 @@
 //!
 //! JSON text goes through `serde_json`'s parser and writer, by the
 //! [`serde::Deserialize`] and [`serde::Serialize`] implementations here.
-//! [`FiniteValue`] parses text as [`Value`] does, but refuses a number that
+//! [`FiniteAnyValue`] parses text as [`AnyValue`] does, but refuses a number that
 //! is infinite as a double, as reading a Python `float` refuses Infinity.
 
 use std::fmt;
@@ -28,7 +28,7 @@ use serde::ser::{Serialize, SerializeMap, Serializer};
 
 /// A JSON value.
 #[derive(Debug, Clone, PartialEq, Default)]
-pub enum Value {
+pub enum AnyValue {
     /// `null`.
     #[default]
     Null,
@@ -39,9 +39,9 @@ pub enum Value {
     /// A string.
     String(String),
     /// An array.
-    Array(Vec<Value>),
+    Array(Vec<AnyValue>),
     /// An object, its keys in insertion order.
-    Object(Map),
+    Object(AnyMap),
 }
 
 /// The reference tokens of a JSON Pointer, unescaped: `~1` is `/` and `~0` is `~`.
@@ -66,92 +66,92 @@ fn array_index(step: &str) -> Option<usize> {
 }
 
 /// Equality is reflexive: a number is never NaN.
-impl Eq for Value {}
+impl Eq for AnyValue {}
 
 /// The value at a missing index, as [`Index`] returns it.
-static NULL: Value = Value::Null;
+static NULL: AnyValue = AnyValue::Null;
 
-impl Value {
+impl AnyValue {
     /// The value at a key of an object or an index of an array.
-    pub fn get<I: ValueIndex>(&self, index: I) -> Option<&Value> {
+    pub fn get<I: AnyValueIndex>(&self, index: I) -> Option<&AnyValue> {
         index.index_into(self)
     }
 
     /// The value at a key or an index, to change it.
-    pub fn get_mut<I: ValueIndex>(&mut self, index: I) -> Option<&mut Value> {
+    pub fn get_mut<I: AnyValueIndex>(&mut self, index: I) -> Option<&mut AnyValue> {
         index.index_into_mut(self)
     }
 
     /// The value at a JSON Pointer (RFC 6901), such as `/data/node/template`.
     #[must_use]
-    pub fn pointer(&self, pointer: &str) -> Option<&Value> {
+    pub fn pointer(&self, pointer: &str) -> Option<&AnyValue> {
         pointer_steps(pointer)?
             .into_iter()
             .try_fold(self, |value, step| match value {
-                Value::Object(map) => map.get(&step),
-                Value::Array(items) => items.get(array_index(&step)?),
+                AnyValue::Object(map) => map.get(&step),
+                AnyValue::Array(items) => items.get(array_index(&step)?),
                 _ => None,
             })
     }
 
     /// The value at a JSON Pointer (RFC 6901), to change it.
-    pub fn pointer_mut(&mut self, pointer: &str) -> Option<&mut Value> {
+    pub fn pointer_mut(&mut self, pointer: &str) -> Option<&mut AnyValue> {
         pointer_steps(pointer)?
             .into_iter()
             .try_fold(self, |value, step| match value {
-                Value::Object(map) => map.get_mut(&step),
-                Value::Array(items) => items.get_mut(array_index(&step)?),
+                AnyValue::Object(map) => map.get_mut(&step),
+                AnyValue::Array(items) => items.get_mut(array_index(&step)?),
                 _ => None,
             })
     }
 
     /// The value, leaving `null` in its place.
     #[must_use = "the value is moved out"]
-    pub fn take(&mut self) -> Value {
+    pub fn take(&mut self) -> AnyValue {
         std::mem::take(self)
     }
 
     /// Whether the value is `null`.
     #[must_use]
     pub fn is_null(&self) -> bool {
-        matches!(self, Value::Null)
+        matches!(self, AnyValue::Null)
     }
 
     /// Whether the value is `true` or `false`.
     #[must_use]
     pub fn is_boolean(&self) -> bool {
-        matches!(self, Value::Bool(_))
+        matches!(self, AnyValue::Bool(_))
     }
 
     /// Whether the value is a number.
     #[must_use]
     pub fn is_number(&self) -> bool {
-        matches!(self, Value::Number(_))
+        matches!(self, AnyValue::Number(_))
     }
 
     /// Whether the value is a string.
     #[must_use]
     pub fn is_string(&self) -> bool {
-        matches!(self, Value::String(_))
+        matches!(self, AnyValue::String(_))
     }
 
     /// Whether the value is an array.
     #[must_use]
     pub fn is_array(&self) -> bool {
-        matches!(self, Value::Array(_))
+        matches!(self, AnyValue::Array(_))
     }
 
     /// Whether the value is an object.
     #[must_use]
     pub fn is_object(&self) -> bool {
-        matches!(self, Value::Object(_))
+        matches!(self, AnyValue::Object(_))
     }
 
     /// The boolean, when the value is one.
     #[must_use]
     pub fn as_bool(&self) -> Option<bool> {
         match self {
-            Value::Bool(flag) => Some(*flag),
+            AnyValue::Bool(flag) => Some(*flag),
             _ => None,
         }
     }
@@ -160,7 +160,7 @@ impl Value {
     #[must_use]
     pub fn as_str(&self) -> Option<&str> {
         match self {
-            Value::String(text) => Some(text),
+            AnyValue::String(text) => Some(text),
             _ => None,
         }
     }
@@ -169,7 +169,7 @@ impl Value {
     #[must_use]
     pub fn as_number(&self) -> Option<&Number> {
         match self {
-            Value::Number(number) => Some(number),
+            AnyValue::Number(number) => Some(number),
             _ => None,
         }
     }
@@ -194,41 +194,41 @@ impl Value {
 
     /// The array, when the value is one.
     #[must_use]
-    pub fn as_array(&self) -> Option<&Vec<Value>> {
+    pub fn as_array(&self) -> Option<&Vec<AnyValue>> {
         match self {
-            Value::Array(items) => Some(items),
+            AnyValue::Array(items) => Some(items),
             _ => None,
         }
     }
 
     /// The array, when the value is one, to change it.
-    pub fn as_array_mut(&mut self) -> Option<&mut Vec<Value>> {
+    pub fn as_array_mut(&mut self) -> Option<&mut Vec<AnyValue>> {
         match self {
-            Value::Array(items) => Some(items),
+            AnyValue::Array(items) => Some(items),
             _ => None,
         }
     }
 
     /// The object, when the value is one.
     #[must_use]
-    pub fn as_object(&self) -> Option<&Map> {
+    pub fn as_object(&self) -> Option<&AnyMap> {
         match self {
-            Value::Object(map) => Some(map),
+            AnyValue::Object(map) => Some(map),
             _ => None,
         }
     }
 
     /// The object, when the value is one, to change it.
-    pub fn as_object_mut(&mut self) -> Option<&mut Map> {
+    pub fn as_object_mut(&mut self) -> Option<&mut AnyMap> {
         match self {
-            Value::Object(map) => Some(map),
+            AnyValue::Object(map) => Some(map),
             _ => None,
         }
     }
 }
 
 /// The JSON text of a value, compact.
-impl fmt::Display for Value {
+impl fmt::Display for AnyValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&serde_json::to_string(self).map_err(|_| fmt::Error)?)
     }
@@ -237,13 +237,13 @@ impl fmt::Display for Value {
 /// Comparisons with plain values, as `serde_json` has.
 macro_rules! eq_with {
     ($($type:ty => $value:ident => $body:expr),* $(,)?) => {$(
-        impl PartialEq<$type> for Value {
+        impl PartialEq<$type> for AnyValue {
             fn eq(&self, $value: &$type) -> bool {
                 $body(self)
             }
         }
-        impl PartialEq<Value> for $type {
-            fn eq(&self, value: &Value) -> bool {
+        impl PartialEq<AnyValue> for $type {
+            fn eq(&self, value: &AnyValue) -> bool {
                 value == self
             }
         }
@@ -251,68 +251,68 @@ macro_rules! eq_with {
 }
 
 eq_with! {
-    str => other => |value: &Value| value.as_str() == Some(other),
-    &str => other => |value: &Value| value.as_str() == Some(*other),
-    String => other => |value: &Value| value.as_str() == Some(other.as_str()),
-    bool => other => |value: &Value| value.as_bool() == Some(*other),
-    i64 => other => |value: &Value| value.as_i64() == Some(*other),
-    u64 => other => |value: &Value| value.as_u64() == Some(*other),
-    f64 => other => |value: &Value| value.as_f64() == Some(*other),
+    str => other => |value: &AnyValue| value.as_str() == Some(other),
+    &str => other => |value: &AnyValue| value.as_str() == Some(*other),
+    String => other => |value: &AnyValue| value.as_str() == Some(other.as_str()),
+    bool => other => |value: &AnyValue| value.as_bool() == Some(*other),
+    i64 => other => |value: &AnyValue| value.as_i64() == Some(*other),
+    u64 => other => |value: &AnyValue| value.as_u64() == Some(*other),
+    f64 => other => |value: &AnyValue| value.as_f64() == Some(*other),
 }
 
 // --- Indexing --------------------------------------------------------------------------------
 
 /// What indexes a value: a key of an object, or an index of an array.
-pub trait ValueIndex {
+pub trait AnyValueIndex {
     /// The value at this index of `value`.
-    fn index_into<'v>(&self, value: &'v Value) -> Option<&'v Value>;
+    fn index_into<'v>(&self, value: &'v AnyValue) -> Option<&'v AnyValue>;
     /// The value at this index of `value`, to change it.
-    fn index_into_mut<'v>(&self, value: &'v mut Value) -> Option<&'v mut Value>;
+    fn index_into_mut<'v>(&self, value: &'v mut AnyValue) -> Option<&'v mut AnyValue>;
     /// The value at this index, made when it is missing, as `value[index] = ...` needs.
-    fn index_or_insert<'v>(&self, value: &'v mut Value) -> &'v mut Value;
+    fn index_or_insert<'v>(&self, value: &'v mut AnyValue) -> &'v mut AnyValue;
 }
 
-impl ValueIndex for str {
-    fn index_into<'v>(&self, value: &'v Value) -> Option<&'v Value> {
+impl AnyValueIndex for str {
+    fn index_into<'v>(&self, value: &'v AnyValue) -> Option<&'v AnyValue> {
         value.as_object()?.get(self)
     }
-    fn index_into_mut<'v>(&self, value: &'v mut Value) -> Option<&'v mut Value> {
+    fn index_into_mut<'v>(&self, value: &'v mut AnyValue) -> Option<&'v mut AnyValue> {
         value.as_object_mut()?.get_mut(self)
     }
     /// As `serde_json`: `null` becomes an empty object, and a missing key is added as `null`.
-    fn index_or_insert<'v>(&self, value: &'v mut Value) -> &'v mut Value {
+    fn index_or_insert<'v>(&self, value: &'v mut AnyValue) -> &'v mut AnyValue {
         if value.is_null() {
-            *value = Value::Object(Map::new());
+            *value = AnyValue::Object(AnyMap::new());
         }
         match value {
-            Value::Object(map) => map.entry_or_null(self),
+            AnyValue::Object(map) => map.entry_or_null(self),
             other => panic!("cannot index {} with a string", kind(other)),
         }
     }
 }
 
-impl ValueIndex for String {
-    fn index_into<'v>(&self, value: &'v Value) -> Option<&'v Value> {
+impl AnyValueIndex for String {
+    fn index_into<'v>(&self, value: &'v AnyValue) -> Option<&'v AnyValue> {
         self.as_str().index_into(value)
     }
-    fn index_into_mut<'v>(&self, value: &'v mut Value) -> Option<&'v mut Value> {
+    fn index_into_mut<'v>(&self, value: &'v mut AnyValue) -> Option<&'v mut AnyValue> {
         self.as_str().index_into_mut(value)
     }
-    fn index_or_insert<'v>(&self, value: &'v mut Value) -> &'v mut Value {
+    fn index_or_insert<'v>(&self, value: &'v mut AnyValue) -> &'v mut AnyValue {
         self.as_str().index_or_insert(value)
     }
 }
 
-impl ValueIndex for usize {
-    fn index_into<'v>(&self, value: &'v Value) -> Option<&'v Value> {
+impl AnyValueIndex for usize {
+    fn index_into<'v>(&self, value: &'v AnyValue) -> Option<&'v AnyValue> {
         value.as_array()?.get(*self)
     }
-    fn index_into_mut<'v>(&self, value: &'v mut Value) -> Option<&'v mut Value> {
+    fn index_into_mut<'v>(&self, value: &'v mut AnyValue) -> Option<&'v mut AnyValue> {
         value.as_array_mut()?.get_mut(*self)
     }
-    fn index_or_insert<'v>(&self, value: &'v mut Value) -> &'v mut Value {
+    fn index_or_insert<'v>(&self, value: &'v mut AnyValue) -> &'v mut AnyValue {
         match value {
-            Value::Array(items) => {
+            AnyValue::Array(items) => {
                 let len = items.len();
                 items
                     .get_mut(*self)
@@ -323,40 +323,40 @@ impl ValueIndex for usize {
     }
 }
 
-impl<T: ValueIndex + ?Sized> ValueIndex for &T {
-    fn index_into<'v>(&self, value: &'v Value) -> Option<&'v Value> {
+impl<T: AnyValueIndex + ?Sized> AnyValueIndex for &T {
+    fn index_into<'v>(&self, value: &'v AnyValue) -> Option<&'v AnyValue> {
         (**self).index_into(value)
     }
-    fn index_into_mut<'v>(&self, value: &'v mut Value) -> Option<&'v mut Value> {
+    fn index_into_mut<'v>(&self, value: &'v mut AnyValue) -> Option<&'v mut AnyValue> {
         (**self).index_into_mut(value)
     }
-    fn index_or_insert<'v>(&self, value: &'v mut Value) -> &'v mut Value {
+    fn index_or_insert<'v>(&self, value: &'v mut AnyValue) -> &'v mut AnyValue {
         (**self).index_or_insert(value)
     }
 }
 
-fn kind(value: &Value) -> &'static str {
+fn kind(value: &AnyValue) -> &'static str {
     match value {
-        Value::Null => "null",
-        Value::Bool(_) => "a boolean",
-        Value::Number(_) => "a number",
-        Value::String(_) => "a string",
-        Value::Array(_) => "an array",
-        Value::Object(_) => "an object",
+        AnyValue::Null => "null",
+        AnyValue::Bool(_) => "a boolean",
+        AnyValue::Number(_) => "a number",
+        AnyValue::String(_) => "a string",
+        AnyValue::Array(_) => "an array",
+        AnyValue::Object(_) => "an object",
     }
 }
 
 /// `value[key]`: `null` when the key or the index is missing, as `serde_json`.
-impl<I: ValueIndex> Index<I> for Value {
-    type Output = Value;
-    fn index(&self, index: I) -> &Value {
+impl<I: AnyValueIndex> Index<I> for AnyValue {
+    type Output = AnyValue;
+    fn index(&self, index: I) -> &AnyValue {
         index.index_into(self).unwrap_or(&NULL)
     }
 }
 
 /// `value[key] = ...`: adds a missing key, as `serde_json`.
-impl<I: ValueIndex> IndexMut<I> for Value {
-    fn index_mut(&mut self, index: I) -> &mut Value {
+impl<I: AnyValueIndex> IndexMut<I> for AnyValue {
+    fn index_mut(&mut self, index: I) -> &mut AnyValue {
         index.index_or_insert(self)
     }
 }
@@ -366,14 +366,14 @@ impl<I: ValueIndex> IndexMut<I> for Value {
 /// A JSON object: its key-value pairs, in insertion order.
 ///
 /// The method names follow `serde_json::Map` with its `preserve_order`
-/// feature, so [`Map::remove`] moves the last pair into the gap, as
-/// `swap_remove` does, and [`Map::shift_remove`] keeps the order.
+/// feature, so [`AnyMap::remove`] moves the last pair into the gap, as
+/// `swap_remove` does, and [`AnyMap::shift_remove`] keeps the order.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct Map {
-    entries: Vec<(String, Value)>,
+pub struct AnyMap {
+    entries: Vec<(String, AnyValue)>,
 }
 
-impl Map {
+impl AnyMap {
     /// An empty object.
     #[must_use]
     pub fn new() -> Self {
@@ -406,12 +406,12 @@ impl Map {
 
     /// The value at `key`.
     #[must_use]
-    pub fn get(&self, key: &str) -> Option<&Value> {
+    pub fn get(&self, key: &str) -> Option<&AnyValue> {
         self.entries.iter().find(|(k, _)| k == key).map(|(_, v)| v)
     }
 
     /// The value at `key`, to change it.
-    pub fn get_mut(&mut self, key: &str) -> Option<&mut Value> {
+    pub fn get_mut(&mut self, key: &str) -> Option<&mut AnyValue> {
         self.entries
             .iter_mut()
             .find(|(k, _)| k == key)
@@ -425,7 +425,7 @@ impl Map {
     }
 
     /// Insert or replace. A replaced key keeps its position; a new key goes last.
-    pub fn insert(&mut self, key: String, value: Value) -> Option<Value> {
+    pub fn insert(&mut self, key: String, value: AnyValue) -> Option<AnyValue> {
         if let Some(index) = self.position(&key) {
             return Some(std::mem::replace(&mut self.entries[index].1, value));
         }
@@ -436,7 +436,7 @@ impl Map {
     /// Add a pair whose key the object does not have, without looking for it:
     /// for a caller that knows its keys are unique, such as a Python dict.
     /// A key that is already there would be held twice.
-    pub fn push(&mut self, key: String, value: Value) {
+    pub fn push(&mut self, key: String, value: AnyValue) {
         debug_assert!(
             !self.contains_key(&key),
             "push of a key the object has: {key}"
@@ -446,33 +446,33 @@ impl Map {
 
     /// Remove a key, moving the last pair into its place, as `serde_json`'s
     /// `remove` with `preserve_order` does.
-    pub fn remove(&mut self, key: &str) -> Option<Value> {
+    pub fn remove(&mut self, key: &str) -> Option<AnyValue> {
         self.swap_remove(key)
     }
 
     /// Remove a key, moving the last pair into its place.
-    pub fn swap_remove(&mut self, key: &str) -> Option<Value> {
+    pub fn swap_remove(&mut self, key: &str) -> Option<AnyValue> {
         let index = self.position(key)?;
         Some(self.entries.swap_remove(index).1)
     }
 
     /// Remove a key, keeping the order of the others.
-    pub fn shift_remove(&mut self, key: &str) -> Option<Value> {
+    pub fn shift_remove(&mut self, key: &str) -> Option<AnyValue> {
         let index = self.position(key)?;
         Some(self.entries.remove(index).1)
     }
 
     /// The value at `key`, added as `null` when it is missing.
-    fn entry_or_null(&mut self, key: &str) -> &mut Value {
+    fn entry_or_null(&mut self, key: &str) -> &mut AnyValue {
         let index = self.position(key).unwrap_or_else(|| {
-            self.entries.push((key.to_owned(), Value::Null));
+            self.entries.push((key.to_owned(), AnyValue::Null));
             self.entries.len() - 1
         });
         &mut self.entries[index].1
     }
 
     /// Keep the pairs `keep` holds for, in order.
-    pub fn retain(&mut self, mut keep: impl FnMut(&String, &mut Value) -> bool) {
+    pub fn retain(&mut self, mut keep: impl FnMut(&String, &mut AnyValue) -> bool) {
         self.entries.retain_mut(|(k, v)| keep(k, v));
     }
 
@@ -493,24 +493,24 @@ impl Map {
     }
 
     /// The values, in order.
-    pub fn values(&self) -> impl DoubleEndedIterator<Item = &Value> + ExactSizeIterator {
+    pub fn values(&self) -> impl DoubleEndedIterator<Item = &AnyValue> + ExactSizeIterator {
         self.entries.iter().map(|(_, v)| v)
     }
 
     /// The values, in order, to change them.
     pub fn values_mut(
         &mut self,
-    ) -> impl DoubleEndedIterator<Item = &mut Value> + ExactSizeIterator {
+    ) -> impl DoubleEndedIterator<Item = &mut AnyValue> + ExactSizeIterator {
         self.entries.iter_mut().map(|(_, v)| v)
     }
 }
 
-/// The pairs of a [`Map`], borrowed.
+/// The pairs of an [`AnyMap`], borrowed.
 #[derive(Debug, Clone)]
-pub struct Iter<'m>(std::slice::Iter<'m, (String, Value)>);
+pub struct Iter<'m>(std::slice::Iter<'m, (String, AnyValue)>);
 
 impl<'m> Iterator for Iter<'m> {
-    type Item = (&'m String, &'m Value);
+    type Item = (&'m String, &'m AnyValue);
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next().map(|(k, v)| (k, v))
     }
@@ -527,12 +527,12 @@ impl DoubleEndedIterator for Iter<'_> {
 
 impl ExactSizeIterator for Iter<'_> {}
 
-/// The pairs of a [`Map`], borrowed to change the values.
+/// The pairs of an [`AnyMap`], borrowed to change the values.
 #[derive(Debug)]
-pub struct IterMut<'m>(std::slice::IterMut<'m, (String, Value)>);
+pub struct IterMut<'m>(std::slice::IterMut<'m, (String, AnyValue)>);
 
 impl<'m> Iterator for IterMut<'m> {
-    type Item = (&'m String, &'m mut Value);
+    type Item = (&'m String, &'m mut AnyValue);
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next().map(|(k, v)| (&*k, v))
     }
@@ -543,51 +543,51 @@ impl<'m> Iterator for IterMut<'m> {
 
 impl ExactSizeIterator for IterMut<'_> {}
 
-impl<'m> IntoIterator for &'m Map {
-    type Item = (&'m String, &'m Value);
+impl<'m> IntoIterator for &'m AnyMap {
+    type Item = (&'m String, &'m AnyValue);
     type IntoIter = Iter<'m>;
     fn into_iter(self) -> Iter<'m> {
         self.iter()
     }
 }
 
-impl<'m> IntoIterator for &'m mut Map {
-    type Item = (&'m String, &'m mut Value);
+impl<'m> IntoIterator for &'m mut AnyMap {
+    type Item = (&'m String, &'m mut AnyValue);
     type IntoIter = IterMut<'m>;
     fn into_iter(self) -> IterMut<'m> {
         self.iter_mut()
     }
 }
 
-impl IntoIterator for Map {
-    type Item = (String, Value);
-    type IntoIter = std::vec::IntoIter<(String, Value)>;
+impl IntoIterator for AnyMap {
+    type Item = (String, AnyValue);
+    type IntoIter = std::vec::IntoIter<(String, AnyValue)>;
     fn into_iter(self) -> Self::IntoIter {
         self.entries.into_iter()
     }
 }
 
 /// Insert each pair: a repeated key keeps its first position and its last value.
-impl Extend<(String, Value)> for Map {
-    fn extend<T: IntoIterator<Item = (String, Value)>>(&mut self, pairs: T) {
+impl Extend<(String, AnyValue)> for AnyMap {
+    fn extend<T: IntoIterator<Item = (String, AnyValue)>>(&mut self, pairs: T) {
         for (key, value) in pairs {
             self.insert(key, value);
         }
     }
 }
 
-impl FromIterator<(String, Value)> for Map {
-    fn from_iter<T: IntoIterator<Item = (String, Value)>>(pairs: T) -> Self {
-        let mut map = Map::new();
+impl FromIterator<(String, AnyValue)> for AnyMap {
+    fn from_iter<T: IntoIterator<Item = (String, AnyValue)>>(pairs: T) -> Self {
+        let mut map = AnyMap::new();
         map.extend(pairs);
         map
     }
 }
 
 /// `map[key]`: panics when the key is missing, as `serde_json`.
-impl Index<&str> for Map {
-    type Output = Value;
-    fn index(&self, key: &str) -> &Value {
+impl Index<&str> for AnyMap {
+    type Output = AnyValue;
+    fn index(&self, key: &str) -> &AnyValue {
         self.get(key).expect("no entry found for key")
     }
 }
@@ -794,112 +794,112 @@ impl fmt::Display for Number {
 
 // --- Conversions -----------------------------------------------------------------------------
 
-impl From<bool> for Value {
+impl From<bool> for AnyValue {
     fn from(flag: bool) -> Self {
-        Value::Bool(flag)
+        AnyValue::Bool(flag)
     }
 }
 
-impl From<&str> for Value {
+impl From<&str> for AnyValue {
     fn from(text: &str) -> Self {
-        Value::String(text.to_owned())
+        AnyValue::String(text.to_owned())
     }
 }
 
-impl From<String> for Value {
+impl From<String> for AnyValue {
     fn from(text: String) -> Self {
-        Value::String(text)
+        AnyValue::String(text)
     }
 }
 
-impl From<&String> for Value {
+impl From<&String> for AnyValue {
     fn from(text: &String) -> Self {
-        Value::String(text.clone())
+        AnyValue::String(text.clone())
     }
 }
 
-impl From<Number> for Value {
+impl From<Number> for AnyValue {
     fn from(number: Number) -> Self {
-        Value::Number(number)
+        AnyValue::Number(number)
     }
 }
 
-impl From<i64> for Value {
+impl From<i64> for AnyValue {
     fn from(int: i64) -> Self {
-        Value::Number(int.into())
+        AnyValue::Number(int.into())
     }
 }
 
-impl From<u64> for Value {
+impl From<u64> for AnyValue {
     fn from(int: u64) -> Self {
-        Value::Number(int.into())
+        AnyValue::Number(int.into())
     }
 }
 
-impl From<i32> for Value {
+impl From<i32> for AnyValue {
     fn from(int: i32) -> Self {
-        Value::Number(int.into())
+        AnyValue::Number(int.into())
     }
 }
 
-impl From<u32> for Value {
+impl From<u32> for AnyValue {
     fn from(int: u32) -> Self {
-        Value::Number(int.into())
+        AnyValue::Number(int.into())
     }
 }
 
-impl From<usize> for Value {
+impl From<usize> for AnyValue {
     fn from(int: usize) -> Self {
-        Value::Number(int.into())
+        AnyValue::Number(int.into())
     }
 }
 
 /// A finite double, or `null`, as `serde_json`.
-impl From<f64> for Value {
+impl From<f64> for AnyValue {
     fn from(float: f64) -> Self {
-        Number::from_f64(float).map_or(Value::Null, Value::Number)
+        Number::from_f64(float).map_or(AnyValue::Null, AnyValue::Number)
     }
 }
 
-impl From<Map> for Value {
-    fn from(map: Map) -> Self {
-        Value::Object(map)
+impl From<AnyMap> for AnyValue {
+    fn from(map: AnyMap) -> Self {
+        AnyValue::Object(map)
     }
 }
 
-impl<T: Into<Value>> From<Vec<T>> for Value {
+impl<T: Into<AnyValue>> From<Vec<T>> for AnyValue {
     fn from(items: Vec<T>) -> Self {
-        Value::Array(items.into_iter().map(Into::into).collect())
+        AnyValue::Array(items.into_iter().map(Into::into).collect())
     }
 }
 
-impl<T: Into<Value>> From<Option<T>> for Value {
+impl<T: Into<AnyValue>> From<Option<T>> for AnyValue {
     fn from(value: Option<T>) -> Self {
-        value.map_or(Value::Null, Into::into)
+        value.map_or(AnyValue::Null, Into::into)
     }
 }
 
-impl<T: Into<Value>> FromIterator<T> for Value {
+impl<T: Into<AnyValue>> FromIterator<T> for AnyValue {
     fn from_iter<I: IntoIterator<Item = T>>(items: I) -> Self {
-        Value::Array(items.into_iter().map(Into::into).collect())
+        AnyValue::Array(items.into_iter().map(Into::into).collect())
     }
 }
 
 /// A `serde_json` value, for the `json!` macro and for callers that hold one.
-impl From<serde_json::Value> for Value {
+impl From<serde_json::Value> for AnyValue {
     fn from(value: serde_json::Value) -> Self {
         match value {
-            serde_json::Value::Null => Value::Null,
-            serde_json::Value::Bool(flag) => Value::Bool(flag),
+            serde_json::Value::Null => AnyValue::Null,
+            serde_json::Value::Bool(flag) => AnyValue::Bool(flag),
             serde_json::Value::Number(number) => number
                 .to_string()
                 .parse()
-                .map_or(Value::Null, Value::Number),
-            serde_json::Value::String(text) => Value::String(text),
-            serde_json::Value::Array(items) => items.into_iter().map(Value::from).collect(),
-            serde_json::Value::Object(map) => Value::Object(
+                .map_or(AnyValue::Null, AnyValue::Number),
+            serde_json::Value::String(text) => AnyValue::String(text),
+            serde_json::Value::Array(items) => items.into_iter().map(AnyValue::from).collect(),
+            serde_json::Value::Object(map) => AnyValue::Object(
                 map.into_iter()
-                    .map(|(key, value)| (key, Value::from(value)))
+                    .map(|(key, value)| (key, AnyValue::from(value)))
                     .collect(),
             ),
         }
@@ -910,26 +910,26 @@ impl From<serde_json::Value> for Value {
 #[macro_export]
 macro_rules! json {
     ($($json:tt)+) => {
-        $crate::value::Value::from(::serde_json::json!($($json)+))
+        $crate::value::AnyValue::from(::serde_json::json!($($json)+))
     };
 }
 
 // --- serde ------------------------------------------------------------------------------------
 
-impl Serialize for Value {
+impl Serialize for AnyValue {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match self {
-            Value::Null => serializer.serialize_unit(),
-            Value::Bool(flag) => serializer.serialize_bool(*flag),
-            Value::Number(number) => number.serialize(serializer),
-            Value::String(text) => serializer.serialize_str(text),
-            Value::Array(items) => serializer.collect_seq(items),
-            Value::Object(map) => map.serialize(serializer),
+            AnyValue::Null => serializer.serialize_unit(),
+            AnyValue::Bool(flag) => serializer.serialize_bool(*flag),
+            AnyValue::Number(number) => number.serialize(serializer),
+            AnyValue::String(text) => serializer.serialize_str(text),
+            AnyValue::Array(items) => serializer.collect_seq(items),
+            AnyValue::Object(map) => map.serialize(serializer),
         }
     }
 }
 
-impl Serialize for Map {
+impl Serialize for AnyMap {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut out = serializer.serialize_map(Some(self.len()))?;
         for (key, value) in self {
@@ -957,13 +957,13 @@ impl Serialize for Number {
 /// one-key map that holds its text.
 const NUMBER_TOKEN: &str = "$serde_json::private::Number";
 
-impl<'de> Deserialize<'de> for Value {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Value, D::Error> {
+impl<'de> Deserialize<'de> for AnyValue {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<AnyValue, D::Error> {
         Builder::<false>::default().value(deserializer)
     }
 }
 
-/// Why [`FiniteValue`] refuses a number.
+/// Why [`FiniteAnyValue`] refuses a number.
 pub const NOT_FINITE: &str = "NaN and Infinity are not JSON numbers";
 
 /// A value parsed from JSON text with every number finite as a double. Text
@@ -971,17 +971,17 @@ pub const NOT_FINITE: &str = "NaN and Infinity are not JSON numbers";
 /// ([`NOT_FINITE`]). An integer too large for a double still parses: it keeps
 /// its digits, as a Python `int` does.
 #[derive(Debug, Clone, PartialEq)]
-pub struct FiniteValue(pub Value);
+pub struct FiniteAnyValue(pub AnyValue);
 
-impl<'de> Deserialize<'de> for FiniteValue {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<FiniteValue, D::Error> {
+impl<'de> Deserialize<'de> for FiniteAnyValue {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<FiniteAnyValue, D::Error> {
         Builder::<true>::default()
             .value(deserializer)
-            .map(FiniteValue)
+            .map(FiniteAnyValue)
     }
 }
 
-/// What a parse holds while it builds a [`Value`]: the members and items of
+/// What a parse holds while it builds an [`AnyValue`]: the members and items of
 /// the objects and arrays it is inside, one stack for each kind.
 ///
 /// JSON text does not say how many members an object has, so a list that
@@ -991,80 +991,80 @@ impl<'de> Deserialize<'de> for FiniteValue {
 /// one allocation for each object and array, with no room to spare.
 #[derive(Debug, Default)]
 struct Builder<const FINITE: bool> {
-    entries: Vec<(String, Value)>,
-    items: Vec<Value>,
+    entries: Vec<(String, AnyValue)>,
+    items: Vec<AnyValue>,
 }
 
 impl<const FINITE: bool> Builder<FINITE> {
-    fn value<'de, D: Deserializer<'de>>(mut self, deserializer: D) -> Result<Value, D::Error> {
-        deserializer.deserialize_any(ValueVisitor::<FINITE>(&mut self))
+    fn value<'de, D: Deserializer<'de>>(mut self, deserializer: D) -> Result<AnyValue, D::Error> {
+        deserializer.deserialize_any(AnyValueVisitor::<FINITE>(&mut self))
     }
 }
 
-/// Builds a [`Value`] with a [`Builder`]; with `FINITE`, refuses a number that is not finite.
-struct ValueVisitor<'b, const FINITE: bool>(&'b mut Builder<FINITE>);
+/// Builds an [`AnyValue`] with a [`Builder`]; with `FINITE`, refuses a number that is not finite.
+struct AnyValueVisitor<'b, const FINITE: bool>(&'b mut Builder<FINITE>);
 
-impl<'de, const FINITE: bool> DeserializeSeed<'de> for ValueVisitor<'_, FINITE> {
-    type Value = Value;
+impl<'de, const FINITE: bool> DeserializeSeed<'de> for AnyValueVisitor<'_, FINITE> {
+    type Value = AnyValue;
 
-    fn deserialize<D: Deserializer<'de>>(self, deserializer: D) -> Result<Value, D::Error> {
+    fn deserialize<D: Deserializer<'de>>(self, deserializer: D) -> Result<AnyValue, D::Error> {
         deserializer.deserialize_any(self)
     }
 }
 
-impl<'de, const FINITE: bool> Visitor<'de> for ValueVisitor<'_, FINITE> {
-    type Value = Value;
+impl<'de, const FINITE: bool> Visitor<'de> for AnyValueVisitor<'_, FINITE> {
+    type Value = AnyValue;
 
     fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("a JSON value")
     }
 
-    fn visit_bool<E>(self, flag: bool) -> Result<Value, E> {
-        Ok(Value::Bool(flag))
+    fn visit_bool<E>(self, flag: bool) -> Result<AnyValue, E> {
+        Ok(AnyValue::Bool(flag))
     }
 
-    fn visit_i64<E>(self, int: i64) -> Result<Value, E> {
-        Ok(Value::Number(int.into()))
+    fn visit_i64<E>(self, int: i64) -> Result<AnyValue, E> {
+        Ok(AnyValue::Number(int.into()))
     }
 
-    fn visit_u64<E>(self, int: u64) -> Result<Value, E> {
-        Ok(Value::Number(int.into()))
+    fn visit_u64<E>(self, int: u64) -> Result<AnyValue, E> {
+        Ok(AnyValue::Number(int.into()))
     }
 
-    fn visit_f64<E>(self, float: f64) -> Result<Value, E> {
-        Ok(Value::from(float))
+    fn visit_f64<E>(self, float: f64) -> Result<AnyValue, E> {
+        Ok(AnyValue::from(float))
     }
 
-    fn visit_str<E>(self, text: &str) -> Result<Value, E> {
-        Ok(Value::String(text.to_owned()))
+    fn visit_str<E>(self, text: &str) -> Result<AnyValue, E> {
+        Ok(AnyValue::String(text.to_owned()))
     }
 
-    fn visit_string<E>(self, text: String) -> Result<Value, E> {
-        Ok(Value::String(text))
+    fn visit_string<E>(self, text: String) -> Result<AnyValue, E> {
+        Ok(AnyValue::String(text))
     }
 
-    fn visit_unit<E>(self) -> Result<Value, E> {
-        Ok(Value::Null)
+    fn visit_unit<E>(self) -> Result<AnyValue, E> {
+        Ok(AnyValue::Null)
     }
 
-    fn visit_none<E>(self) -> Result<Value, E> {
-        Ok(Value::Null)
+    fn visit_none<E>(self) -> Result<AnyValue, E> {
+        Ok(AnyValue::Null)
     }
 
-    fn visit_some<D: Deserializer<'de>>(self, deserializer: D) -> Result<Value, D::Error> {
+    fn visit_some<D: Deserializer<'de>>(self, deserializer: D) -> Result<AnyValue, D::Error> {
         deserializer.deserialize_any(self)
     }
 
-    fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Value, A::Error> {
+    fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<AnyValue, A::Error> {
         let builder = self.0;
         let start = builder.items.len();
-        while let Some(item) = seq.next_element_seed(ValueVisitor(&mut *builder))? {
+        while let Some(item) = seq.next_element_seed(AnyValueVisitor(&mut *builder))? {
             builder.items.push(item);
         }
-        Ok(Value::Array(builder.items.drain(start..).collect()))
+        Ok(AnyValue::Array(builder.items.drain(start..).collect()))
     }
 
-    fn visit_map<A: MapAccess<'de>>(self, mut access: A) -> Result<Value, A::Error> {
+    fn visit_map<A: MapAccess<'de>>(self, mut access: A) -> Result<AnyValue, A::Error> {
         let builder = self.0;
         let start = builder.entries.len();
         while let Some(key) = access.next_key::<String>()? {
@@ -1076,9 +1076,9 @@ impl<'de, const FINITE: bool> Visitor<'de> for ValueVisitor<'_, FINITE> {
                 if FINITE && !number.is_integer() && number.as_f64().is_none_or(f64::is_infinite) {
                     return Err(de::Error::custom(NOT_FINITE));
                 }
-                return Ok(Value::Number(number));
+                return Ok(AnyValue::Number(number));
             }
-            let value = access.next_value_seed(ValueVisitor(&mut *builder))?;
+            let value = access.next_value_seed(AnyValueVisitor(&mut *builder))?;
             // A repeated key keeps its first position and its last value, as serde_json.
             match builder.entries[start..]
                 .iter_mut()
@@ -1088,7 +1088,7 @@ impl<'de, const FINITE: bool> Visitor<'de> for ValueVisitor<'_, FINITE> {
                 None => builder.entries.push((key, value)),
             }
         }
-        Ok(Value::Object(Map {
+        Ok(AnyValue::Object(AnyMap {
             entries: builder.entries.drain(start..).collect(),
         }))
     }
@@ -1098,7 +1098,7 @@ impl<'de, const FINITE: bool> Visitor<'de> for ValueVisitor<'_, FINITE> {
 mod tests {
     use super::*;
 
-    fn parse(text: &str) -> Value {
+    fn parse(text: &str) -> AnyValue {
         serde_json::from_str(text).unwrap()
     }
 
@@ -1124,14 +1124,14 @@ mod tests {
     #[test]
     fn a_finite_value_refuses_a_number_too_large_for_a_double() {
         for text in ["1e400", "[1, -1e400]", r#"{"a": {"b": [1E999]}}"#] {
-            let error = serde_json::from_str::<FiniteValue>(text).unwrap_err();
+            let error = serde_json::from_str::<FiniteAnyValue>(text).unwrap_err();
             assert!(error.to_string().starts_with(NOT_FINITE), "{text}: {error}");
-            // Value keeps the number's text.
-            serde_json::from_str::<Value>(text).unwrap();
+            // AnyValue keeps the number's text.
+            serde_json::from_str::<AnyValue>(text).unwrap();
         }
         let digits = format!("1{}", "0".repeat(309));
         let text = format!(r#"[{digits}, 1.5e308, 1e-400, {{"a": 1}}]"#);
-        let FiniteValue(value) = serde_json::from_str(&text).unwrap();
+        let FiniteAnyValue(value) = serde_json::from_str(&text).unwrap();
         assert_eq!(value, parse(&text));
     }
 
@@ -1143,20 +1143,20 @@ mod tests {
 
     #[test]
     fn remove_moves_the_last_pair_and_shift_remove_keeps_the_order() {
-        let mut map: Map = parse(r#"{"a": 1, "b": 2, "c": 3}"#)
+        let mut map: AnyMap = parse(r#"{"a": 1, "b": 2, "c": 3}"#)
             .as_object()
             .unwrap()
             .clone();
         let mut shifted = map.clone();
         map.remove("a");
         shifted.shift_remove("a");
-        assert_eq!(Value::Object(map).to_string(), r#"{"c":3,"b":2}"#);
-        assert_eq!(Value::Object(shifted).to_string(), r#"{"b":2,"c":3}"#);
+        assert_eq!(AnyValue::Object(map).to_string(), r#"{"c":3,"b":2}"#);
+        assert_eq!(AnyValue::Object(shifted).to_string(), r#"{"b":2,"c":3}"#);
     }
 
     #[test]
     fn indexing_reads_null_when_missing_and_adds_when_written() {
-        let mut value = Value::Null;
+        let mut value = AnyValue::Null;
         assert!(value["a"]["b"].is_null());
         value["a"] = json!({"b": [1, 2]});
         value["a"]["c"] = json!(true);

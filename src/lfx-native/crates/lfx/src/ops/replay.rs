@@ -34,7 +34,7 @@ use crate::ops::edges::GraphRead;
 use crate::ops::error::{Result, bail, quoted};
 use crate::ops::ops::{Edge, FieldUpdate, Operation};
 use crate::ops::state::GraphState;
-use crate::value::Value;
+use crate::value::AnyValue;
 
 /// What a replay returns besides the flow.
 #[derive(Debug, Clone, Copy, Default)]
@@ -172,10 +172,10 @@ impl GraphState {
 ///
 /// The flow cannot be indexed, or an operation cannot be carried out on it.
 pub fn replay_flow_operations(
-    base: Value,
+    base: AnyValue,
     operations: Vec<Operation>,
     options: ReplayOptions,
-) -> Result<(Value, Replayed)> {
+) -> Result<(AnyValue, Replayed)> {
     let mut state = GraphState::new(base)?;
     let replayed = state.replay(operations, options)?;
     Ok((state.into_value(), replayed))
