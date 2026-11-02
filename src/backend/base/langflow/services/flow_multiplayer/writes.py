@@ -16,10 +16,18 @@ Every mode runs the same steps in one transaction:
 7. Commit; then ``keep``. Any failure before that drops the staged batch.
 
 After the commit, a checkpoint task runs when the cadence is reached.
+
+Before step 1, the writer passes the flow's gate in this process
+(``config.writers_per_flow``, default 1): only that many writers of one flow
+open a session at a time, so the writers queued on a flow wait without a
+database connection, and the pool stays free for other flows, reads and the
+readiness probe. The advisory lock still orders writers across processes.
 """
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import time
 import uuid
 from dataclasses import dataclass
@@ -32,7 +40,7 @@ from langflow.services.flow_multiplayer import bench, checkpoint, config, oplog
 from langflow.services.flow_multiplayer.cache import CACHE, EntryGoneError, FlowEntry, call, catch_up, uncancellable
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    from collections.abc import AsyncIterator, Awaitable, Callable
     from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -71,6 +79,53 @@ def _refusal(error: Exception, head: int) -> OpsRefusedError:
     return OpsRefusedError(422, details)
 
 
+class _Gate:
+    __slots__ = ("semaphore", "users")
+
+    def __init__(self, size: int) -> None:
+        self.semaphore = asyncio.Semaphore(size)
+        self.users = 0
+
+
+_gates: dict[UUID, _Gate] = {}
+
+
+def _writers_queued(flow_id: UUID) -> bool:
+    """Writers wait at the flow's gate behind the one inside: keep its cached graph."""
+    gate = _gates.get(flow_id)
+    return gate is not None and gate.users > 1
+
+
+CACHE.pinned = _writers_queued
+
+
+@contextlib.asynccontextmanager
+async def flow_gate(flow_id: UUID) -> AsyncIterator[None]:
+    """Admit at most ``config.writers_per_flow()`` writers of the flow at a time; the rest wait here.
+
+    Waiting here holds no database connection. Bench step ``gate``: the wait.
+    """
+    size = config.writers_per_flow()
+    if size == 0:
+        yield
+        return
+    gate = _gates.get(flow_id)
+    if gate is None:
+        gate = _gates[flow_id] = _Gate(size)
+    gate.users += 1
+    try:
+        with bench.timed("gate"):
+            await gate.semaphore.acquire()
+        try:
+            yield
+        finally:
+            gate.semaphore.release()
+    finally:
+        gate.users -= 1
+        if gate.users == 0 and _gates.get(flow_id) is gate:
+            del _gates[flow_id]
+
+
 async def apply_ops(
     flow_id: UUID,
     actor_id: UUID,
@@ -80,14 +135,15 @@ async def apply_ops(
 ) -> dict[str, Any]:
     """Apply the batch; ``authorize`` runs first in the write's transaction (the permission check)."""
     operations_sha256 = oplog.body_hash(request.operations_json)
-    for attempt in range(MAX_ATTEMPTS):
-        try:
-            return await _write(flow_id, actor_id, request, operations_sha256, authorize)
-        except (oplog.LogGapError, EntryGoneError):
-            # The cached graph's rows were compacted, or a failed commit evicted it: rebuild.
-            CACHE.evict(flow_id)
-            if attempt == MAX_ATTEMPTS - 1:
-                raise
+    async with flow_gate(flow_id):
+        for attempt in range(MAX_ATTEMPTS):
+            try:
+                return await _write(flow_id, actor_id, request, operations_sha256, authorize)
+            except (oplog.LogGapError, EntryGoneError):
+                # The cached graph's rows were compacted, or a failed commit evicted it: rebuild.
+                CACHE.evict(flow_id)
+                if attempt == MAX_ATTEMPTS - 1:
+                    raise
     msg = "unreachable"
     raise AssertionError(msg)
 

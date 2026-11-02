@@ -38,6 +38,7 @@ import orjson
 from langflow.services.flow_multiplayer import bench, config, oplog
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -166,6 +167,9 @@ class FlowCache:
     def __init__(self) -> None:
         self._entries: OrderedDict[UUID, FlowEntry] = OrderedDict()
         self._loading: dict[UUID, asyncio.Future] = {}
+        # Flows whose entry the LRU keeps past the size limit: writers are queued on them in this
+        # process (set by ``writes``), so evicting the entry means rebuilding it for the next one.
+        self.pinned: Callable[[UUID], bool] = lambda _flow_id: False
 
     def get(self, flow_id: UUID) -> FlowEntry | None:
         entry = self._entries.get(flow_id)
@@ -174,10 +178,24 @@ class FlowCache:
         return entry
 
     def put(self, entry: FlowEntry) -> None:
+        """Add the entry; evict the least recently used entries over the limit, except pinned ones.
+
+        So the cache can hold more than ``cache_max_flows`` entries while more flows than that
+        have writers queued in this process; those entries are alive anyway (their writers hold
+        them), and evicting them only made each next writer rebuild its graph.
+        """
         self._entries[entry.flow_id] = entry
         self._entries.move_to_end(entry.flow_id)
-        while len(self._entries) > config.cache_max_flows():
-            self._entries.popitem(last=False)
+        excess = len(self._entries) - config.cache_max_flows()
+        if excess <= 0:
+            return
+        for flow_id in list(self._entries):  # oldest first
+            if excess <= 0:
+                break
+            if flow_id == entry.flow_id or self.pinned(flow_id):
+                continue
+            del self._entries[flow_id]
+            excess -= 1
 
     def evict(self, flow_id: UUID, entry: FlowEntry | None = None) -> None:
         current = self._entries.get(flow_id)

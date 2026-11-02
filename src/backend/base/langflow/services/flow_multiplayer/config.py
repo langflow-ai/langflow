@@ -9,10 +9,13 @@ from typing import Any, Literal
 WRITE_MODE_ENV = "LANGFLOW_FLOW_WRITE_MODE"
 CACHE_MAX_FLOWS_ENV = "LANGFLOW_FLOW_CACHE_MAX_FLOWS"
 BENCH_ENV = "LANGFLOW_OPS_BENCH"
+BENCH_DIR_ENV = "LANGFLOW_OPS_BENCH_DIR"
+WRITERS_PER_FLOW_ENV = "LANGFLOW_FLOW_WRITERS_PER_FLOW"
 
 WriteMode = Literal["nocache", "cache", "wal"]
 WRITE_MODES: tuple[str, ...] = ("nocache", "cache", "wal")
 DEFAULT_CACHE_MAX_FLOWS = 16
+DEFAULT_WRITERS_PER_FLOW = 1
 
 # Engine calls on inputs above these sizes run in a worker thread; smaller ones run inline.
 # The same rule applies to both engines.
@@ -47,6 +50,21 @@ def cache_max_flows() -> int:
     return value
 
 
+@lru_cache(maxsize=1)
+def writers_per_flow() -> int:
+    """Writers of one flow that may hold a database connection at a time in this process (0: no limit).
+
+    The others wait in the process, without a connection, so writers queued on one flow's lock
+    cannot take the whole pool.
+    """
+    raw = os.environ.get(WRITERS_PER_FLOW_ENV)
+    value = int(raw) if raw else DEFAULT_WRITERS_PER_FLOW
+    if value < 0:
+        msg = f"{WRITERS_PER_FLOW_ENV} must be 0 (no limit) or more"
+        raise ValueError(msg)
+    return value
+
+
 def uses_cache() -> bool:
     return write_mode() in ("cache", "wal")
 
@@ -54,6 +72,13 @@ def uses_cache() -> bool:
 @lru_cache(maxsize=1)
 def bench_enabled() -> bool:
     return os.environ.get(BENCH_ENV, "").strip().lower() in ("1", "true", "yes")
+
+
+@lru_cache(maxsize=1)
+def bench_dir() -> str | None:
+    """Directory for the bench journal (``LANGFLOW_OPS_BENCH_DIR``), or None to keep records in memory only."""
+    raw = (os.environ.get(BENCH_DIR_ENV) or "").strip()
+    return raw or None
 
 
 def checkpoint_cadence() -> int:
@@ -72,5 +97,5 @@ def compaction_step() -> int:
 
 def reset_for_tests() -> None:
     """Forget the cached configuration, so a test can change the environment."""
-    for function in (engine, write_mode, cache_max_flows, bench_enabled):
+    for function in (engine, write_mode, cache_max_flows, bench_enabled, bench_dir, writers_per_flow):
         function.cache_clear()

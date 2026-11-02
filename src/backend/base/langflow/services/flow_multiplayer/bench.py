@@ -28,12 +28,21 @@ Checkpoints (``kind: "checkpoint"``) record start, end, duration and revision,
 with the engine CPU of their serialization and hash. Background tasks
 (checkpoints, maintenance, the sampler) run in an empty context, so they never
 add to a request's record.
-A sampler records process CPU time and RSS every second (``kind: "sample"``),
-with ``threads``: the CPU seconds of each thread of the process (``/proc``),
-and ``loop_tid``, the thread that runs the event loop; ``gc_collections`` (collections so
-far per generation), ``gc_count`` and ``blocks`` (allocated memory blocks). A gen-2 ``gc``
-record has ``gen2_objects``: the tracked objects the full collection traverses, counted
-just before it starts (outside ``dur``).
+A sampler records process CPU time, the event loop thread's CPU time
+(``loop_cpu_s``) and RSS every second (``kind: "sample"``),
+with the database pool's use: ``pool_out`` (connections checked out),
+``pool_overflow``, ``pool_waiting`` (callers waiting for a connection or
+connecting) and ``tasks`` (asyncio tasks).
+
+Database pool: every request record gets ``pool_wait_part`` (time spent
+getting connections from the pool, the wait for a free one included),
+``pool_wait_max_part`` (the longest single wait) and ``pool_get_n``. The health
+endpoints (``/health``, ``/healthz``) get request records too.
+Each sample also has ``threads``: the CPU seconds of each thread of the process
+(``/proc``), ``loop_tid`` (the thread that runs the event loop), ``gc_collections``
+(collections so far per generation), ``gc_count`` and ``blocks`` (allocated memory
+blocks). A gen-2 ``gc`` record has ``gen2_objects``: the tracked objects the full
+collection traverses, counted just before it starts (outside ``dur``).
 Compactions (``kind: "compaction"``) record start, end and the time of every
 phase, with ``lock_held`` from the advisory lock granted to the commit's end
 and ``checkpoints_delete``, the unlocked transaction after it.
@@ -62,14 +71,31 @@ request (the first flow request, before the benchmark resets the records):
 
 Everything stays in memory until the bench export endpoint reads it; a reset
 deletes every record except ``gc_startup``.
+
+Journal (``LANGFLOW_OPS_BENCH_DIR``): the records also go to a JSONL file in
+that directory, one file per process (``bench-<pid>-<start ns>.jsonl``). A
+flusher thread appends the new records every ``SAMPLE_INTERVAL`` and drops
+them from memory; the process also flushes at exit and before an export. The
+thread runs when the event loop is saturated, so a process killed with SIGKILL
+loses only the records of its last interval, plus the requests still in
+flight (a request record is written when its response ends). A reset writes
+its time to ``reset-at`` in the directory. The export then reads every journal
+file in the directory, also those of processes that are gone (a container
+restarted in the same pod keeps an ``emptyDir``), and returns the records with
+``t`` at or after the reset (``gc_startup`` once per file), each with ``boot``
+(its file's name), because a restarted container can get the same pid.
+``python -m langflow.services.flow_multiplayer.bench DIR`` prints the same
+export without a running server.
 """
 
 from __future__ import annotations
 
 import asyncio
+import atexit
 import contextlib
 import contextvars
 import gc
+import glob
 import os
 import sys
 import threading
@@ -85,6 +111,14 @@ _current: ContextVar[dict[str, Any] | None] = ContextVar("flow_ops_bench_record"
 _records: list[dict[str, Any]] = []
 _sampler: asyncio.Task | None = None
 _lag_probe: asyncio.Task | None = None
+_journal_fd: int | None = None
+_journal_path: str | None = None
+_journal_pid: int | None = None
+_journal_lock = threading.Lock()  # flush and reset: the flusher thread drops flushed records
+_flusher: threading.Thread | None = None
+_flusher_stop = threading.Event()
+RESET_FILE = "reset-at"
+_pool_waiting = 0  # callers inside the pool's checkout
 _PAGE = os.sysconf("SC_PAGE_SIZE") if hasattr(os, "sysconf") else 4096
 SAMPLE_INTERVAL = 1.0
 LAG_INTERVAL = 0.01
@@ -95,7 +129,7 @@ ECALL_RECORD_MS = float(os.environ.get("LANGFLOW_OPS_BENCH_ECALL_MS") or 5.0)
 GC_RECORD_MS = 20.0
 _loop_thread: int | None = None
 _gil_probe: threading.Thread | None = None
-PATH_PREFIXES = ("/api/v2/flows", "/api/v1/flows")
+PATH_PREFIXES = ("/api/v2/flows", "/api/v1/flows", "/health")
 
 
 def record() -> dict[str, Any] | None:
@@ -199,7 +233,114 @@ def spawn(coro: Any) -> asyncio.Task:
 
 def event(kind: str, **fields: Any) -> None:
     if config.bench_enabled():
-        _records.append({"kind": kind, "pid": os.getpid(), **fields})
+        _records.append({"kind": kind, "pid": os.getpid(), "t": time.time(), **fields})
+
+
+def _journal() -> int | None:
+    """The journal's file descriptor, opened on first use in each process; None when the journal is off."""
+    global _journal_fd, _journal_path, _journal_pid  # noqa: PLW0603
+    if _journal_fd is not None and _journal_pid == os.getpid():
+        return _journal_fd
+    directory = config.bench_dir()
+    if directory is None:
+        return None
+    os.makedirs(directory, exist_ok=True)  # noqa: PTH103
+    _journal_pid = os.getpid()
+    _journal_path = os.path.join(directory, f"bench-{_journal_pid}-{time.time_ns()}.jsonl")  # noqa: PTH118
+    _journal_fd = os.open(_journal_path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
+    return _journal_fd
+
+
+def flush() -> int:
+    """Append the records in memory to the journal and drop them from memory; returns how many.
+
+    No-op without a journal. On a write error the records stay in memory for the next flush.
+    """
+    with _journal_lock:
+        count = len(_records)
+        if not count:
+            return 0  # no file for a process that never records (the server's parent process)
+        fd = _journal()
+        if fd is None:
+            return 0
+        data = b"".join(orjson.dumps(rec, option=orjson.OPT_APPEND_NEWLINE) for rec in _records[:count])
+        view = memoryview(data)
+        while view:
+            written = os.write(fd, view)
+            view = view[written:]
+        # Other threads only append (the gc probe, the loop), so the first ``count`` are the flushed ones.
+        del _records[:count]
+        return count
+
+
+def _flush_loop(stop: threading.Event) -> None:
+    while not stop.wait(SAMPLE_INTERVAL):
+        # A full or missing journal never stops the flusher; the records stay in memory.
+        with contextlib.suppress(OSError):
+            flush()
+
+
+def _ensure_flusher() -> None:
+    global _flusher  # noqa: PLW0603
+    if config.bench_dir() is None or (_flusher is not None and _flusher.is_alive()):
+        return
+    _flusher_stop.clear()
+    _flusher = threading.Thread(target=_flush_loop, args=(_flusher_stop,), name="flow-ops-bench-journal", daemon=True)
+    _flusher.start()
+
+
+def stop_flusher() -> None:
+    """Stop the flusher thread and wait for it (tests)."""
+    global _flusher  # noqa: PLW0603
+    _flusher_stop.set()
+    if _flusher is not None:
+        _flusher.join()
+    _flusher = None
+
+
+def _reset_at(directory: str) -> float:
+    try:
+        with open(os.path.join(directory, RESET_FILE), "rb") as f:  # noqa: PTH118, PTH123
+            return float(f.read().strip() or 0)
+    except (OSError, ValueError):
+        return 0.0
+
+
+def _write_reset_at(directory: str, when: float) -> None:
+    os.makedirs(directory, exist_ok=True)  # noqa: PTH103
+    path = os.path.join(directory, RESET_FILE)  # noqa: PTH118
+    tmp = f"{path}.{os.getpid()}.tmp"
+    with open(tmp, "w") as f:  # noqa: PTH123
+        f.write(repr(when))
+    os.replace(tmp, path)  # noqa: PTH105
+
+
+def _journal_records(directory: str) -> list[bytes]:
+    """Every journal record at or after the last reset, from every process's file, with ``boot``."""
+    since = _reset_at(directory)
+    lines: list[bytes] = []
+    startups: set[tuple[str, int | None]] = set()
+    for path in sorted(glob.glob(os.path.join(directory, "bench-*.jsonl"))):  # noqa: PTH118, PTH207
+        boot = os.path.basename(path)[: -len(".jsonl")]  # noqa: PTH119
+        with open(path, "rb") as f:  # noqa: PTH123
+            data = f.read()
+        for line in data.split(b"\n"):
+            if not line:
+                continue
+            try:
+                rec = orjson.loads(line)
+            except orjson.JSONDecodeError:
+                continue  # the last line of a process killed while writing it
+            if rec.get("kind") == "gc_startup":
+                key = (boot, rec.get("pid"))
+                if key in startups:
+                    continue
+                startups.add(key)
+            elif (rec.get("t") or 0) < since:
+                continue
+            rec["boot"] = boot
+            lines.append(orjson.dumps(rec, option=orjson.OPT_APPEND_NEWLINE))
+    return lines
 
 
 def _rss_bytes() -> int:
@@ -231,6 +372,54 @@ def _thread_cpu() -> dict[str, float]:
     return out
 
 
+def _wrap_pool_checkout(pool: Any) -> None:
+    """Time every checkout of ``pool`` (``_do_get``: a free connection, a new one, or the wait for one)."""
+    if getattr(pool, "_ops_bench_probe", False):
+        return
+    inner = pool._do_get  # noqa: SLF001 -- no public event marks the start of a checkout
+
+    def _do_get() -> Any:
+        global _pool_waiting  # noqa: PLW0603
+        _pool_waiting += 1
+        t0 = time.perf_counter()
+        try:
+            return inner()
+        finally:
+            _pool_waiting -= 1
+            waited = (time.perf_counter() - t0) * 1000
+            # SQLAlchemy's async greenlet runs in the caller's context: this is the request's record.
+            rec = _current.get()
+            if rec is not None:
+                rec["pool_wait_part"] = rec.get("pool_wait_part", 0) + waited
+                rec["pool_get_n"] = rec.get("pool_get_n", 0) + 1
+                rec["pool_wait_max_part"] = max(rec.get("pool_wait_max_part", 0), waited)
+
+    pool._do_get = _do_get  # noqa: SLF001
+    pool._ops_bench_probe = True  # noqa: SLF001
+
+
+def _db_pool() -> Any | None:
+    """The database pool, its checkout timed; None before the database service exists."""
+    try:
+        from langflow.services.deps import get_db_service
+
+        pool = get_db_service().engine.sync_engine.pool
+    except Exception:  # noqa: BLE001 -- measurement never breaks the server
+        return None
+    _wrap_pool_checkout(pool)
+    return pool
+
+
+def _pool_fields(pool: Any | None) -> dict[str, Any]:
+    if pool is None:
+        return {}
+    fields: dict[str, Any] = {"pool_waiting": _pool_waiting}
+    for name, method in (("pool_out", "checkedout"), ("pool_overflow", "overflow")):
+        with contextlib.suppress(Exception):
+            fields[name] = getattr(pool, method)()
+    return fields
+
+
 async def _sample_loop() -> None:
     loop_tid = threading.get_native_id()
     while True:
@@ -240,12 +429,16 @@ async def _sample_loop() -> None:
                 "pid": os.getpid(),
                 "t": time.time(),
                 "cpu_s": time.process_time(),
+                # The event loop thread's own CPU: near 1 s per second when the loop is saturated.
+                "loop_cpu_s": time.thread_time(),
                 "rss": _rss_bytes(),
                 "threads": _thread_cpu(),
                 "loop_tid": loop_tid,
                 "gc_collections": [g["collections"] for g in gc.get_stats()],
                 "gc_count": list(gc.get_count()),
                 "blocks": sys.getallocatedblocks(),
+                "tasks": len(asyncio.all_tasks()),
+                **_pool_fields(_db_pool()),
             }
         )
         await asyncio.sleep(SAMPLE_INTERVAL)
@@ -335,23 +528,45 @@ def _ensure_sampler() -> None:
     if _sampler is None or _sampler.done():
         _loop_thread = threading.get_ident()
         _install_gc_probe()
+        _db_pool()
         _sampler = spawn(_sample_loop())
     if _gil_probe is None:
         _gil_probe = threading.Thread(target=_gil_loop, name="ops-bench-gil-probe", daemon=True)
         _gil_probe.start()
     if _lag_probe is None or _lag_probe.done():
         _lag_probe = spawn(_lag_loop())
+    _ensure_flusher()
 
 
 def export_jsonl() -> bytes:
+    directory = config.bench_dir()
+    if directory is not None:
+        flush()
+        return b"".join(_journal_records(directory))
     return b"".join(orjson.dumps(rec, option=orjson.OPT_APPEND_NEWLINE) for rec in list(_records))
 
 
 def reset() -> None:
-    """Delete every record but ``gc_startup``, which is taken once per process."""
-    _records.clear()
-    if _gc_startup is not None:
-        _records.append(_gc_startup)
+    """Delete every record but ``gc_startup``, which is taken once per process.
+
+    With a journal, the reset time goes to ``reset-at`` so the export leaves out older records,
+    also those of other processes' files.
+    """
+    with _journal_lock:
+        _records.clear()
+        if _gc_startup is not None:
+            _records.append(_gc_startup)
+        directory = config.bench_dir()
+        if directory is not None:
+            _write_reset_at(directory, time.time())
+
+
+def _flush_at_exit() -> None:
+    with contextlib.suppress(OSError):
+        flush()
+
+
+atexit.register(_flush_at_exit)
 
 
 class BenchMiddleware:
@@ -400,3 +615,8 @@ class BenchMiddleware:
                 rec.pop(key, None)
             _current.reset(token)
             _records.append(rec)
+
+
+if __name__ == "__main__":
+    # The export of a journal directory, without a server: a pod whose server does not answer.
+    sys.stdout.buffer.write(b"".join(_journal_records(sys.argv[1])))

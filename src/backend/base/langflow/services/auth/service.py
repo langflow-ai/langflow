@@ -112,6 +112,17 @@ def _is_retryable_backend_failure(exc: BaseException) -> bool:
     return False
 
 
+def _api_key_failure(exc: BaseException) -> AuthenticationError:
+    """The error for an API-key check that raised: 503 for a backend failure, else 403.
+
+    A pool timeout or a lost connection never judged the key (the lookup did not run),
+    so it is not reported as an invalid key.
+    """
+    if _is_retryable_backend_failure(exc):
+        return AuthBackendUnavailableError()
+    return InvalidCredentialsError("API key authentication failed")
+
+
 class _DirectoryReconcileCache:
     """Bounded, short-lived record of the last directory state reconciled per user.
 
@@ -454,8 +465,7 @@ class AuthService(BaseAuthService):
                         if _is_retryable_backend_failure(api_key_err):
                             raise AuthBackendUnavailableError from api_key_err
                         logger.error(f"Unexpected error during API key authentication: {api_key_err}")
-                        msg = "API key authentication failed"
-                        raise InvalidCredentialsError(msg) from api_key_err
+                        raise _api_key_failure(api_key_err) from api_key_err
                 logger.error(f"Unexpected error during token authentication: {e}")
                 msg = "Token authentication failed"
                 raise AuthInvalidTokenError(msg) from e
@@ -487,8 +497,7 @@ class AuthService(BaseAuthService):
                 if _is_retryable_backend_failure(e):
                     raise AuthBackendUnavailableError from e
                 logger.error(f"Unexpected error during API key authentication: {e}")
-                msg = "API key authentication failed"
-                raise InvalidCredentialsError(msg) from e
+                raise _api_key_failure(e) from e
 
         # AUTO_LOGIN parity with _api_key_security_impl: when AUTO_LOGIN is
         # enabled and the operator has explicitly opted in via
