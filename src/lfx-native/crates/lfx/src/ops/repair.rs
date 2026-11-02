@@ -164,40 +164,50 @@ fn take_array(graph: &mut Map, key: &str) -> Vec<Value> {
 
 /// Replace every number that is not finite with null, containers last found first.
 fn replace_non_finite(value: &mut Value, fixes: &mut Fixes) {
-    let mut stack: Vec<GraphPath> = vec![Vec::new()];
-    while let Some(container_path) = stack.pop() {
-        let Some(container) = resolve_mut(value, &container_path) else {
-            continue;
-        };
-        let children: Vec<(PathPart, &mut Value)> = match container {
-            Value::Object(map) => map
-                .iter_mut()
-                .map(|(key, item)| (PathPart::Key(key.clone()), item))
-                .collect(),
-            Value::Array(items) => items
-                .iter_mut()
-                .enumerate()
-                .map(|(index, item)| (index.into(), item))
-                .collect(),
-            _ => Vec::new(),
-        };
-        for (part, item) in children {
-            let child_path = || {
-                container_path
-                    .iter()
-                    .cloned()
-                    .chain([part.clone()])
-                    .collect::<GraphPath>()
-            };
-            match item {
-                Value::Number(number) if !is_finite_number(number) => {
-                    fixes.add(ViolationCode::NonFiniteNumber, child_path());
-                    *item = Value::Null;
+    replace_non_finite_at(value, &mut Vec::new(), fixes);
+}
+
+/// [`replace_non_finite`] in the container at `at`. Its own members come
+/// first, in order; then each container among them, the last one first.
+/// The path is built for a fix only, so a graph with nothing to fix copies
+/// no key.
+fn replace_non_finite_at(container: &mut Value, at: &mut Vec<PathPart>, fixes: &mut Fixes) {
+    let mut children: Vec<(PathPart, &mut Value)> = Vec::new();
+    let mut visit = |part: &dyn Fn() -> PathPart, item: &'_ mut Value| -> Option<PathPart> {
+        match item {
+            Value::Number(number) if !is_finite_number(number) => {
+                fixes.add(
+                    ViolationCode::NonFiniteNumber,
+                    at.iter().cloned().chain([part()]).collect(),
+                );
+                *item = Value::Null;
+                None
+            }
+            Value::Object(_) | Value::Array(_) => Some(part()),
+            _ => None,
+        }
+    };
+    match container {
+        Value::Object(map) => {
+            for (key, item) in map.iter_mut() {
+                if let Some(part) = visit(&|| PathPart::Key(key.clone()), &mut *item) {
+                    children.push((part, item));
                 }
-                Value::Object(_) | Value::Array(_) => stack.push(child_path()),
-                _ => {}
             }
         }
+        Value::Array(items) => {
+            for (index, item) in items.iter_mut().enumerate() {
+                if let Some(part) = visit(&|| index.into(), &mut *item) {
+                    children.push((part, item));
+                }
+            }
+        }
+        _ => {}
+    }
+    for (part, child) in children.into_iter().rev() {
+        at.push(part);
+        replace_non_finite_at(child, at, fixes);
+        at.pop();
     }
 }
 
