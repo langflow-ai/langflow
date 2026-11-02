@@ -647,7 +647,7 @@ impl GraphState {
     /// The committed graph as it is now, without a staged batch, to read
     /// while the state goes on changing ([`GraphSnapshot`]). It shares every
     /// node and edge with the state, so it costs a pointer for each: a write
-    /// after it copies only the node it changes.
+    /// after it copies only the objects on the way to the value it writes.
     #[must_use]
     pub fn snapshot(&self) -> GraphSnapshot {
         GraphSnapshot {

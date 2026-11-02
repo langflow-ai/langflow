@@ -9,7 +9,6 @@
 use std::collections::HashSet;
 use std::ops::Deref;
 use std::str::FromStr;
-use std::sync::Arc;
 
 use crate::json;
 use crate::value::{AnyMap, AnyValue};
@@ -263,10 +262,11 @@ impl FieldUpdate {
 ///
 /// A node is shared, not copied: a clone of a node, a snapshot of a graph
 /// ([`crate::ops::GraphSnapshot`]) and the forward operations of a batch all
-/// hold the same value, and a write copies it only while another holder
-/// still has it.
+/// hold the same objects ([`AnyMap`]). A write copies only the objects on
+/// the way to the value it writes, and only while another holder still has
+/// them.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Node(Arc<AnyValue>);
+pub struct Node(AnyValue);
 
 impl Node {
     /// The node's id.
@@ -278,7 +278,7 @@ impl Node {
     /// The node as a JSON object.
     #[must_use]
     pub fn as_map(&self) -> &AnyMap {
-        match &*self.0 {
+        match &self.0 {
             AnyValue::Object(node) => node,
             _ => unreachable!("a node is a JSON object"),
         }
@@ -299,15 +299,15 @@ impl Node {
     }
 
     /// The node as a JSON value, for writing a path in it. A field update's
-    /// [`NodePath`] keeps the node's shape.
-    /// A node that another holder shares is copied first.
+    /// [`NodePath`] keeps the node's shape. Each object on the way to the
+    /// value written is copied first while another holder shares it.
     pub(crate) fn as_value_mut(&mut self) -> &mut AnyValue {
-        Arc::make_mut(&mut self.0)
+        &mut self.0
     }
 
-    /// The node as a JSON value, moved out: a copy while another holder shares it.
+    /// The node as a JSON value, moved out.
     pub(crate) fn into_value(self) -> AnyValue {
-        Arc::unwrap_or_clone(self.0)
+        self.0
     }
 
     /// Check that `node` has the shape of a node.
@@ -386,7 +386,7 @@ impl TryFrom<AnyMap> for Node {
     /// Check `node`, and keep it as a node.
     fn try_from(node: AnyMap) -> Result<Self> {
         Self::check(&node).map_err(|error| error.into_error("node"))?;
-        Ok(Self(Arc::new(AnyValue::Object(node))))
+        Ok(Self(AnyValue::Object(node)))
     }
 }
 
@@ -394,7 +394,7 @@ impl FromAnyValue for Node {
     fn from_value(value: AnyValue) -> Result<Self, FromAnyValueError> {
         let node = AnyMap::from_value(value)?;
         Self::check(&node)?;
-        Ok(Self(Arc::new(AnyValue::Object(node))))
+        Ok(Self(AnyValue::Object(node)))
     }
 }
 
@@ -406,7 +406,7 @@ impl FromAnyValue for Node {
 /// depends on the flow, so apply checks that. Like a [`Node`], an edge is
 /// shared, not copied.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Edge(Arc<AnyMap>);
+pub struct Edge(AnyMap);
 
 impl Edge {
     /// The edge's id.
@@ -436,7 +436,7 @@ impl Edge {
     /// The edge as a JSON object, moved out.
     #[must_use]
     pub fn into_map(self) -> AnyMap {
-        Arc::unwrap_or_clone(self.0)
+        self.0
     }
 
     /// Check that `edge` has the shape of an edge.
@@ -456,7 +456,7 @@ impl TryFrom<AnyMap> for Edge {
     /// Check `edge`, and keep it as an edge.
     fn try_from(edge: AnyMap) -> Result<Self> {
         Self::check(&edge).map_err(|error| error.into_error("edge"))?;
-        Ok(Self(Arc::new(edge)))
+        Ok(Self(edge))
     }
 }
 
@@ -464,7 +464,7 @@ impl FromAnyValue for Edge {
     fn from_value(value: AnyValue) -> Result<Self, FromAnyValueError> {
         let edge = AnyMap::from_value(value)?;
         Self::check(&edge)?;
-        Ok(Self(Arc::new(edge)))
+        Ok(Self(edge))
     }
 }
 
