@@ -1,4 +1,5 @@
 import type { ModelProviderWithStatus } from "@/controllers/API/queries/models/use-get-model-providers";
+import type { ModelType } from "@/types/models";
 import type { ModelOption } from "../types";
 import { canonicalProviderName, providerNamesMatch } from "./provider-identity";
 
@@ -8,7 +9,7 @@ export interface BuildGroupedOptionsParams {
   options: ModelOption[];
   enabledModels: EnabledModels | undefined;
   providers: ModelProviderWithStatus[] | undefined;
-  modelType: string;
+  modelType: ModelType;
   savedValue: ModelOption | undefined;
   modelFilters: Record<string, unknown> | undefined;
   /**
@@ -89,11 +90,16 @@ export function buildGroupedOptions({
     // an imported flow may include models from providers the current user
     // hasn't enabled (e.g. WatsonX). When the provider is tracked in
     // enabled_models, the model must be explicitly enabled (=== true); a
-    // `false` or missing entry means the model should be hidden.
+    // `false` or missing entry means the model should be hidden. A decision
+    // model must be enabled even when its provider is not tracked at all.
     if (enabledModels) {
       const providerModels =
         enabledModels[provider] ?? enabledModels[providerIdentity];
-      if (providerModels && providerModels[option.name] !== true) {
+      const mustBeTracked = modelType === "decision";
+      if (
+        (providerModels || mustBeTracked) &&
+        providerModels?.[option.name] !== true
+      ) {
         continue;
       }
     }
@@ -156,7 +162,9 @@ export function buildGroupedOptions({
   }
 
   // Keeps an Assistant-applied registry model selectable while it is missing
-  // from enabled_models; a disconnected provider must inject nothing.
+  // from enabled_models; a disconnected provider must inject nothing. Never
+  // for a decision field: its saved model is only listed when switched on, and
+  // the trigger names it, marked switched off, without offering it.
   const savedKey = savedValue?.name
     ? `${canonicalProviderName(savedValue.provider || "Unknown")}::${savedValue.name}`
     : null;
@@ -174,10 +182,17 @@ export function buildGroupedOptions({
     (providers?.some(
       (p) =>
         providerNamesMatch(p.provider, savedValue.provider) &&
-        (p.models ?? []).some((m) => m.model_name === savedValue.name),
+        (p.models ?? []).some(
+          // A decision row never stands in for a language model, nor the reverse.
+          (m) =>
+            m.model_name === savedValue.name &&
+            (m.metadata?.model_type === "decision") ===
+              (modelType === "decision"),
+        ),
     ) ??
       false);
   const shouldInjectSaved =
+    modelType !== "decision" &&
     !!savedValue?.name &&
     !!savedKey &&
     !seen.has(savedKey) &&

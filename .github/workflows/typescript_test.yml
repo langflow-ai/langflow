@@ -38,7 +38,7 @@ on:
         description: "Runner to use for the tests"
         required: false
         type: string
-        default: "ubuntu-latest"
+        default: "ubuntu-24.04"
       run_live_provider_smoke:
         description: "Run the isolated live-provider smoke suite."
         required: false
@@ -71,11 +71,12 @@ on:
         required: false
         type: choice
         options:
+          - ubuntu-24.04
           - ubuntu-latest
           - windows-latest
           - self-hosted
           - '["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]'
-        default: ubuntu-latest
+        default: ubuntu-24.04
       run_live_provider_smoke:
         description: "Run the isolated live-provider smoke suite."
         required: false
@@ -106,7 +107,7 @@ env:
 jobs:
   determine-test-suite:
     name: Determine Test Suites and Shard Distribution
-    runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
+    runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-24.04' }}
     outputs:
       matrix: ${{ steps.setup-matrix.outputs.matrix }}
       shard_count: ${{ steps.setup-matrix.outputs.shard_count }}
@@ -284,7 +285,7 @@ jobs:
 
   setup-and-test:
     name: Playwright Tests - Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
-    runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
+    runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-24.04' }}
     if: ${{ needs.determine-test-suite.outputs.test_grep != '' }}
     needs: determine-test-suite
     # Without this the job inherits GitHub's 6-hour ceiling: a hung setup step
@@ -460,7 +461,7 @@ jobs:
   report-gate:
     name: Validate Playwright reports
     needs: [determine-test-suite, setup-and-test]
-    runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
+    runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-24.04' }}
     if: ${{ always() && needs.determine-test-suite.outputs.test_grep != '' }}
     continue-on-error: ${{ inputs.runs-on == 'windows-latest' }}
     outputs:

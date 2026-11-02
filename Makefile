@@ -580,21 +580,19 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0 [sdk_v=0
 	echo "$(GREEN)Updating version to $(v)$(NC)"; \
 	\
 	LANGFLOW_VERSION="$(v)"; \
-	LANGFLOW_COMPAT_VERSION=$$(echo "$$LANGFLOW_VERSION" | sed -E 's/^([0-9]+\.[0-9]+)\..*$$/\1.0/'); \
 	SDK_VERSION="$(sdk_v)"; \
 	if [ -z "$$SDK_VERSION" ]; then SDK_VERSION=$$(grep "^version" src/sdk/pyproject.toml | sed 's/.*"\(.*\)"$$/\1/'); fi; \
 	\
 	echo "$(GREEN)Langflow version: $$LANGFLOW_VERSION$(NC)"; \
 	echo "$(GREEN)Langflow-base version: $$LANGFLOW_VERSION$(NC)"; \
-	echo "$(GREEN)Compatibility floor: $$LANGFLOW_COMPAT_VERSION$(NC)"; \
 	echo "$(GREEN)LFX (synced): $$LANGFLOW_VERSION$(NC)"; \
 	echo "$(GREEN)Langflow SDK version: $$SDK_VERSION$(NC)"; \
 	\
 	echo "$(GREEN)Updating main pyproject.toml...$(NC)"; \
-	python -c "import re; fname='pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"langflow-base(\[[^\]]*\])?(?:==|>=|~=)[^\"]*\"', lambda m: '\"langflow-base' + (m.group(1) or '') + '~=$$LANGFLOW_COMPAT_VERSION\"', txt); open(fname, 'w').write(txt)"; \
+	python -c "import re; fname='pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"langflow-base(\[[^\]]*\])?(?:==|>=|~=)[^\";]*(;[^\"]*)?\"', lambda m: '\"langflow-base' + (m.group(1) or '') + '==$$LANGFLOW_VERSION' + (m.group(2) or '') + '\"', txt); open(fname, 'w').write(txt)"; \
 	\
 	echo "$(GREEN)Updating langflow-base pyproject.toml...$(NC)"; \
-	python -c "import re; fname='src/backend/base/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"lfx(?P<extra>\[[^\]]+\])?(?:~=|>=)[^\"]*\"', lambda m: f'\"lfx{m.group(\"extra\") or \"\"}~=$$LANGFLOW_VERSION\"', txt); open(fname, 'w').write(txt)"; \
+	python -c "import re; fname='src/backend/base/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"lfx(?P<extra>\[[^\]]+\])?(?:==|~=|>=)[^\";]*(?P<marker>;[^\"]*)?\"', lambda m: f'\"lfx{m.group(\"extra\") or \"\"}==$$LANGFLOW_VERSION{m.group(\"marker\") or \"\"}\"', txt); open(fname, 'w').write(txt)"; \
 	\
 	echo "$(GREEN)Updating lfx pyproject.toml...$(NC)"; \
 	python -c "import re; fname='src/lfx/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); open(fname, 'w').write(txt)"; \
@@ -612,11 +610,11 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0 [sdk_v=0
 	\
 	echo "$(GREEN)Validating version changes...$(NC)"; \
 	if ! grep -q "^version = \"$$LANGFLOW_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml version validation failed$(NC)"; exit 1; fi; \
-	if ! grep -qF "\"langflow-base~=$$LANGFLOW_COMPAT_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml langflow-base dependency validation failed$(NC)"; exit 1; fi; \
-	if ! grep -qF "\"langflow-base[audio]~=$$LANGFLOW_COMPAT_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml langflow-base audio dependency validation failed$(NC)"; exit 1; fi; \
-	if ! grep -qF "\"langflow-base[postgresql]~=$$LANGFLOW_COMPAT_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml langflow-base PostgreSQL dependency validation failed$(NC)"; exit 1; fi; \
+	if ! grep -qF "\"langflow-base==$$LANGFLOW_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml langflow-base dependency validation failed$(NC)"; exit 1; fi; \
+	if ! grep -qF "\"langflow-base[audio]==$$LANGFLOW_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml langflow-base audio dependency validation failed$(NC)"; exit 1; fi; \
+	if ! grep -qF "\"langflow-base[postgresql]==$$LANGFLOW_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml langflow-base PostgreSQL dependency validation failed$(NC)"; exit 1; fi; \
 	if ! grep -q "^version = \"$$LANGFLOW_VERSION\"" src/backend/base/pyproject.toml; then echo "$(RED)✗ Langflow-base pyproject.toml version validation failed$(NC)"; exit 1; fi; \
-	if ! grep -q "\"lfx~=$$LANGFLOW_VERSION\"" src/backend/base/pyproject.toml; then echo "$(RED)✗ Langflow-base pyproject.toml lfx pin validation failed$(NC)"; exit 1; fi; \
+	if ! grep -Eq "\"lfx(\[[^]]+\])?==$$LANGFLOW_VERSION\"" src/backend/base/pyproject.toml; then echo "$(RED)✗ Langflow-base pyproject.toml lfx pin validation failed$(NC)"; exit 1; fi; \
 	if ! grep -q "^version = \"$$LANGFLOW_VERSION\"" src/lfx/pyproject.toml; then echo "$(RED)✗ LFX pyproject.toml version validation failed$(NC)"; exit 1; fi; \
 	if ! grep -q "^version = \"$$SDK_VERSION\"" src/sdk/pyproject.toml; then echo "$(RED)✗ SDK pyproject.toml version validation failed$(NC)"; exit 1; fi; \
 	if ! grep -q "\"langflow-sdk>=$$SDK_VERSION\"" src/lfx/pyproject.toml; then echo "$(RED)✗ LFX SDK dependency validation failed$(NC)"; exit 1; fi; \
@@ -649,7 +647,7 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0 [sdk_v=0
 	\
 	echo "$(GREEN)Version update complete!$(NC)"; \
 	echo "$(GREEN)Updated files:$(NC)"; \
-	echo "  - pyproject.toml: $$LANGFLOW_VERSION (langflow-base floor → $$LANGFLOW_COMPAT_VERSION)"; \
+	echo "  - pyproject.toml: $$LANGFLOW_VERSION (langflow-base == $$LANGFLOW_VERSION)"; \
 	echo "  - src/backend/base/pyproject.toml: $$LANGFLOW_VERSION (lfx pin → $$LANGFLOW_VERSION)"; \
 	echo "  - src/lfx/pyproject.toml: $$LANGFLOW_VERSION"; \
 	echo "  - src/lfx/src/lfx/_assets/component_index.json: $$LANGFLOW_VERSION"; \

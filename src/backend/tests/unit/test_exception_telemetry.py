@@ -49,6 +49,7 @@ class TestExceptionTelemetry:
         telemetry_service.do_not_track = False
         telemetry_service._stopping = False
         telemetry_service.client_type = "oss"
+        telemetry_service.edition = "opensource"
 
         # Mock the _queue_event method to capture calls
         captured_events = []
@@ -90,6 +91,7 @@ class TestExceptionTelemetry:
         telemetry_service.anonymous_id = "test-installation"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
+        telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {
             "langflow_version": "1.0.0",
             "platform": "python_package",
@@ -155,6 +157,7 @@ class TestExceptionTelemetry:
         telemetry_service.anonymous_id = "installation-a"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
+        telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {}
         telemetry_service.client = AsyncMock()
         telemetry_service.client.post.return_value.status_code = 200
@@ -237,6 +240,7 @@ class TestExceptionTelemetry:
         telemetry_service.anonymous_id = "test-installation"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
+        telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {}
         telemetry_service.client = AsyncMock()
         telemetry_service.client.post.return_value.status_code = 200
@@ -255,6 +259,7 @@ class TestExceptionTelemetry:
         telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = True
         telemetry_service.client_type = "oss"
+        telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {
             "langflow_version": "1.0.0",
             "platform": "python_package",
@@ -329,6 +334,7 @@ class TestExceptionTelemetry:
         telemetry_service.anonymous_id = "test-installation"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
+        telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {
             "langflow_version": "1.0.0",
             "platform": "python_package",

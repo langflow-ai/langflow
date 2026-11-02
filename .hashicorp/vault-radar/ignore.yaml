@@ -1,0 +1,18 @@
+# Exact UI labels reported as secret assignments during the trigger locale merge.
+# Keep detection enabled for all other values and paths.
+- secret_values:
+    - "^Signaturgeheimnis$"
+    - "^Geheimnis$"
+    - "^Signaturgeheimnis kopieren$"
+    - "^Signing secret$"
+    - "^Secret$"
+    - "^Copy signing secret$"
+    - "^Secreto de firma$"
+    - "^Secreto$"
+    - "^Copiar secreto de firma$"
+    - "^Secret de signature$"
+    - "^Copier le secret de signature$"
+    - "^Segredo de assinatura$"
+    - "^Segredo$"
+    - "^Copiar segredo de assinatura$"
+    - "^Berechtigungsnachweis$"

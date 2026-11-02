@@ -1,9 +1,9 @@
 [project]
 name = "lfx-google"
-version = "0.3.3"
+version = "0.4.0"
 description = "Google and Gemini components as a standalone Langflow Extension Bundle."
 readme = "README.md"
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.10,<3.16"
 license = { text = "MIT" }
 authors = [
     { name = "Langflow", email = "contact@langflow.org" },

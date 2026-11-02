@@ -56,6 +56,14 @@ if TYPE_CHECKING:
     from uuid import UUID
 
 
+class ListenerDeliveryRejectedError(RuntimeError):
+    """This adapter no longer owns the target configuration or listener lease."""
+
+    def __init__(self, *, reason: str) -> None:
+        self.reason = reason
+        super().__init__(f"Listener delivery rejected: {reason}.")
+
+
 @dataclass(frozen=True)
 class ListenerTrigger:
     """An immutable snapshot of one trigger row, as an adapter sees it.
@@ -99,6 +107,10 @@ class ListenerContext:
     #: accept (Slack's ``hello``): that resets the failure count, and a socket
     #: dropped straight after it would then never back off.
     mark_connected: Callable[[], Awaitable[None]] | None = None
+    #: Polling health belongs to one source. Status updates are fenced against
+    #: its current settings and the listener lease.
+    source_failed: Callable[..., Awaitable[None]] | None = None
+    source_succeeded: Callable[..., Awaitable[None]] | None = None
 
 
 @runtime_checkable
@@ -174,6 +186,8 @@ class SelfTestAdapter(PollingListenerAdapter):
             created = await ctx.emit(
                 trigger_id=trigger.id,
                 dedupe_key=f"{LISTENER_FAKE_DEDUPE_PREFIX}:{bucket}",
+                expected_config=trigger.config,
+                expected_kind=trigger.kind,
                 payload={
                     "source": LISTENER_FAKE_MECHANISM,
                     "connection_id": str(ctx.connection_id),
@@ -188,35 +202,82 @@ class SelfTestAdapter(PollingListenerAdapter):
 class ProviderSourcePollAdapter(PollingListenerAdapter):
     """Poll every active source on one connection through its owner credential."""
 
+    @staticmethod
+    def _supports(trigger: ListenerTrigger) -> bool:
+        from langflow.services.triggers.providers.registry import get_provider
+
+        if trigger.kind in MICROSOFT_SOURCE_KINDS:
+            return trigger.provider == "microsoft" and trigger.mechanism_id == MECHANISM_GRAPH_DELTA
+        if trigger.kind in GOOGLE_SOURCE_KINDS:
+            return trigger.provider == "google" and trigger.mechanism_id in GOOGLE_POLL_MECHANISMS
+        provider = get_provider(trigger.provider or "")
+        return (
+            provider is not None
+            and provider.collect is not None
+            and any(
+                spec.kind == trigger.kind
+                and spec.poll_mechanism == trigger.mechanism_id
+                and spec.poll_mechanism is not None
+                for spec in provider.kinds
+            )
+        )
+
     async def poll(self, ctx: ListenerContext) -> int:
         from lfx.services.deps import session_scope_readonly
 
         from langflow.services.database.models.trigger.model import Trigger
         from langflow.services.deps import session_scope
         from langflow.services.triggers.source_clients import source_lease
+        from langflow.services.triggers.source_errors import SourceConfigurationError
         from langflow.services.triggers.source_poll import collect_source, commit_source
 
         appended = 0
         for snapshot in ctx.triggers:
-            if ctx.stopping.is_set() or snapshot.mechanism_id not in ({MECHANISM_GRAPH_DELTA} | GOOGLE_POLL_MECHANISMS):
+            if ctx.stopping.is_set() or not self._supports(snapshot):
                 continue
             async with session_scope_readonly() as session:
                 row = await session.get(Trigger, snapshot.id)
-                if row is None or row.connection_id != ctx.connection_id or row.state != "active":
+                if (
+                    row is None
+                    or row.connection_id != ctx.connection_id
+                    or row.state != "active"
+                    or row.kind != snapshot.kind
+                    or row.provider != snapshot.provider
+                    or (row.config or {}).get("mechanism_id") != snapshot.mechanism_id
+                ):
                     continue
                 lease = await source_lease(session, row, family=FAMILY_TRIGGER_LISTENER)
                 detached = Trigger(**row.model_dump())
-            source_round = await collect_source(detached, lease)
+            try:
+                source_round = await collect_source(detached, lease)
+            except SourceConfigurationError as exc:
+                if ctx.source_failed is None:
+                    raise
+                await ctx.source_failed(
+                    trigger_id=snapshot.id,
+                    message=str(exc),
+                    expected_config=detached.config,
+                    expected_kind=detached.kind,
+                )
+                continue
             if ctx.stopping.is_set():
                 break
             async with session_scope() as session:
                 appended += await commit_source(session, trigger_id=snapshot.id, source_round=source_round)
+            if ctx.source_succeeded is not None:
+                await ctx.source_succeeded(
+                    trigger_id=snapshot.id,
+                    expected_config=detached.config,
+                    expected_kind=detached.kind,
+                    observed_error=detached.last_error,
+                )
         return appended
 
 
 #: What a bundle hands :func:`register_adapter`: given one trigger snapshot,
 #: build the adapter that will hold its connection.
 AdapterFactory: TypeAlias = "Callable[[ListenerTrigger], ListenerAdapter]"
+AdapterSpec: TypeAlias = "tuple[AdapterFactory | str, str | None, str]"
 
 
 @dataclass(frozen=True)
@@ -262,11 +323,34 @@ def unregister_adapter(*, kind: str, mechanism: str | None) -> None:
 
 
 def registered_adapter_keys() -> set[tuple[str, str | None]]:
-    return set(_REGISTRY)
+    from langflow.services.triggers.providers.registry import all_providers
+
+    return set(_REGISTRY) | {
+        (spec.kind, mechanism)
+        for provider in all_providers()
+        for spec in provider.kinds
+        for mechanism in (spec.poll_mechanism, spec.listener_mechanism)
+        if mechanism
+    }
 
 
 def _registration(trigger: ListenerTrigger) -> _Registration | None:
-    return _REGISTRY.get((trigger.kind, trigger.mechanism_id)) or _REGISTRY.get((trigger.kind, None))
+    registration = _REGISTRY.get((trigger.kind, trigger.mechanism_id)) or _REGISTRY.get((trigger.kind, None))
+    if registration is not None:
+        return registration
+    from langflow.services.triggers.providers.registry import get_provider
+
+    provider = get_provider(trigger.provider or "")
+    if provider is None:
+        return None
+    for spec in provider.kinds:
+        if spec.kind != trigger.kind:
+            continue
+        if spec.poll_mechanism and spec.poll_mechanism == trigger.mechanism_id:
+            return _Registration(factory=_provider_source_factory)
+        if spec.listener_mechanism == trigger.mechanism_id and spec.listener_factory:
+            return _Registration(factory=spec.listener_factory)
+    return None
 
 
 def build_adapter(trigger: ListenerTrigger) -> ListenerAdapter | None:
@@ -285,7 +369,7 @@ def is_listener_kind(trigger: ListenerTrigger) -> bool:
     return _registration(trigger) is not None
 
 
-def adapter_spec(trigger: ListenerTrigger) -> tuple[str, str | None, str]:
+def adapter_spec(trigger: ListenerTrigger) -> AdapterSpec:
     """What an adapter built from ``trigger`` depends on, as a comparable value.
 
     The factory rather than the kind, so two kinds served by one adapter (a
@@ -296,12 +380,12 @@ def adapter_spec(trigger: ListenerTrigger) -> tuple[str, str | None, str]:
     registration = _registration(trigger)
     if registration is None:
         return (trigger.kind, trigger.mechanism_id, "")
-    factory = registration.factory
-    identity = f"{getattr(factory, '__module__', '')}.{getattr(factory, '__qualname__', repr(factory))}"
     config = (
         json.dumps(trigger.config or {}, sort_keys=True, default=str) if registration.rebuild_on_config_change else ""
     )
-    return (identity, trigger.mechanism_id, config)
+    # Retain the callable itself: a replacement may have the same qualified
+    # name, and retaining its reference also prevents object-id reuse.
+    return (registration.factory, trigger.mechanism_id, config)
 
 
 def _selftest_factory(trigger: ListenerTrigger) -> ListenerAdapter:
@@ -356,14 +440,18 @@ def register_builtin_adapters() -> None:
         for mechanism in sorted(GOOGLE_POLL_MECHANISMS):
             if (kind, mechanism) not in _REGISTRY:
                 register_adapter(kind=kind, mechanism=mechanism, factory=_provider_source_factory)
+    # Extension factories are resolved from the current validated descriptor
+    # by _registration, so a catalog reload cannot retain obsolete callbacks.
 
 
 __all__ = [
     "TRANSPORT_POLL",
     "TRANSPORT_SOCKET",
     "AdapterFactory",
+    "AdapterSpec",
     "ListenerAdapter",
     "ListenerContext",
+    "ListenerDeliveryRejectedError",
     "ListenerTrigger",
     "PollingListenerAdapter",
     "SelfTestAdapter",

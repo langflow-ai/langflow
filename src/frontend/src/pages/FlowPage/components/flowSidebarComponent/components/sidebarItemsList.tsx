@@ -3,7 +3,11 @@ import { isBlockedByCatalogPolicy } from "@/CustomNodes/helpers/check-code-valid
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import { getPresentComponentTypes } from "@/utils/componentConstraints";
+import {
+  getPresentComponentTypes,
+  placementKeysOf,
+} from "@/utils/componentConstraints";
+import { isTriggerComponent } from "@/utils/trigger-component";
 import { removeCountFromString } from "@/utils/utils";
 import { TOOLTIP_MESSAGES } from "../helpers/constants";
 import { disableItem } from "../helpers/disable-item";
@@ -59,7 +63,12 @@ const SidebarItemsList = ({
             return null;
           }
 
-          if (SBItemName === "ChatInput" || SBItemName === "Webhook") {
+          // Constrained placement: these read the canvas to disable themselves.
+          if (
+            SBItemName === "ChatInput" ||
+            SBItemName === "Webhook" ||
+            isTriggerComponent(currentItem)
+          ) {
             return (
               <UniqueInputsDraggableComponent
                 key={SBItemName}
@@ -69,6 +78,7 @@ const SidebarItemsList = ({
                 onDragStart={onDragStart}
                 nodeColors={nodeColors}
                 blockedComponentTypes={blockedComponentTypes}
+                paletteLabel={paletteLabel}
               />
             );
           }
@@ -122,6 +132,7 @@ const UniqueInputsDraggableComponent = ({
   onDragStart,
   nodeColors,
   blockedComponentTypes,
+  paletteLabel,
 }) => {
   const nodes = useFlowStore((state) => state.nodes);
   const presentComponentTypes = useMemo(
@@ -135,6 +146,7 @@ const UniqueInputsDraggableComponent = ({
     blockedComponentTypes,
     removeCountFromString(SBItemName),
   );
+  const candidate = placementKeysOf(SBItemName, currentItem);
 
   return (
     <ShadTooltip
@@ -156,14 +168,15 @@ const UniqueInputsDraggableComponent = ({
         itemName={SBItemName}
         error={!!currentItem.error}
         display_name={currentItem.display_name}
+        paletteLabel={paletteLabel}
         official={currentItem.official !== false}
         beta={currentItem.beta ?? false}
         legacy={currentItem.legacy ?? false}
-        disabled={isBlocked || disableItem(SBItemName, presentComponentTypes)}
+        disabled={isBlocked || disableItem(candidate, presentComponentTypes)}
         disabledTooltip={
           isBlocked
             ? TOOLTIP_MESSAGES.BLOCKED_BY_CATALOG_POLICY
-            : getDisabledTooltip(SBItemName, presentComponentTypes)
+            : getDisabledTooltip(candidate, presentComponentTypes)
         }
       />
     </ShadTooltip>

@@ -14,6 +14,7 @@ from lfx.log.logger import logger
 from lfx.services.deps import injectable_session_scope, session_scope
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, MINIMUM_SECRET_KEY_LENGTH
 
+from langflow.services.auth.cookies import auth_cookie_name
 from langflow.services.auth.exceptions import (
     AuthBackendUnavailableError,
     AuthenticationError,
@@ -66,7 +67,7 @@ class OAuth2PasswordBearerCookie(OAuth2PasswordBearer):
             return param
 
         # Fall back to cookie (for HttpOnly cookie support in browser-based clients)
-        token = request.cookies.get("access_token_lf")
+        token = request.cookies.get(auth_cookie_name("access_token_lf", request))
         if token:
             return token
 
@@ -258,7 +259,7 @@ async def get_current_user_for_websocket(
     # Keep the native token and the external credential separate so a present but
     # invalid/expired native token cannot shadow a valid external credential; the
     # auth service tries the external token as a fallback when native auth fails.
-    token = websocket.cookies.get("access_token_lf") or websocket.query_params.get("token")
+    token = websocket.cookies.get(auth_cookie_name("access_token_lf", websocket)) or websocket.query_params.get("token")
     external_token = _get_external_token(websocket.headers, websocket.cookies)
     api_key = (
         websocket.query_params.get("x-api-key")
@@ -291,7 +292,7 @@ async def get_current_user_for_sse(
     # Keep the native token and the external credential separate (see
     # get_current_user_for_websocket) so the external credential remains a usable
     # fallback even when a stale native cookie is present.
-    token = request.cookies.get("access_token_lf")
+    token = request.cookies.get(auth_cookie_name("access_token_lf", request))
     external_token = _get_external_token(request.headers, request.cookies)
     api_key = request.query_params.get("x-api-key") or request.headers.get("x-api-key")
 
@@ -401,7 +402,7 @@ async def get_current_user_optional(
     Checks HttpOnly cookie (access_token_lf), Authorization header, and API key.
     Used by endpoints that support both authenticated and unauthenticated access.
     """
-    token = request.cookies.get("access_token_lf")
+    token = request.cookies.get(auth_cookie_name("access_token_lf", request))
     api_key = request.query_params.get("x-api-key") or request.headers.get("x-api-key")
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
