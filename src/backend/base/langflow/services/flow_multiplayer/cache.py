@@ -206,11 +206,11 @@ async def build_entry(session: AsyncSession, flow_id: UUID) -> FlowEntry | None:
     """A new entry from ``Flow.data`` at ``Flow.current_revision`` (one statement)."""
     with bench.timed("load"):
         with bench.timed("load_db"):
-            data = await oplog.read_flow_data(session, flow_id)
+            data = await oplog.read_flow_data(session, flow_id, as_bytes=True)
         if data is None:
             return None
-        text = data.data if data.data is not None else '{"nodes":[],"edges":[]}'
-        state = await call(config.engine().GraphState, text.encode(), large=True, name="build")
+        raw = data.data if data.data is not None else b'{"nodes":[],"edges":[]}'
+        state = await call(config.engine().GraphState, raw, large=True, name="build")
     return FlowEntry(flow_id, state, data.current_revision)
 
 

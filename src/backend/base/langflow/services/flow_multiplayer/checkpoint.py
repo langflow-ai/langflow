@@ -154,6 +154,7 @@ async def _write_checkpoint(flow_id: UUID, end: int, started: float, t0: float) 
     t_claim = time.perf_counter()
     mode = config.write_mode()
     ser_cpu, ser_here = 0.0, False
+    raw: bytes | None = None
     if config.uses_cache():
         if CACHE.get(flow_id) is None:
             _skip(flow_id, end, "not_cached", t0)
@@ -174,19 +175,24 @@ async def _write_checkpoint(flow_id: UUID, end: int, started: float, t0: float) 
             return None
     else:
         async with session_scope() as session:
-            data = await oplog.read_flow_data(session, flow_id)
+            data = await oplog.read_flow_data(session, flow_id, as_bytes=True)
         if data is None or data.data is None:
             _skip(flow_id, end, "gone", t0)
             return None
-        revision, text = data.current_revision, data.data
+        revision, raw = data.current_revision, data.data
+        text = raw.decode()
     t_ser = time.perf_counter()
     if revision <= _last.get(flow_id, -1):
         _skip(flow_id, end, "not_newer", t0, revision=revision)
         return None
     engine = config.engine()
-    graph_hash, hash_cpu = await call(
-        bench.engine_call_cpu, lambda: engine.GraphPlain(text.encode()).graph_hash(), large=True, name="hash"
-    )
+
+    def hash_graph() -> tuple[str, float]:
+        # The engines read bytes: the cached graph's text is encoded here, outside the engine's CPU time.
+        graph = raw if raw is not None else text.encode()
+        return bench.engine_call_cpu(lambda: engine.GraphPlain(graph).graph_hash())
+
+    graph_hash, hash_cpu = await call(hash_graph, large=True, name="hash")
     t_hash = time.perf_counter()
     async with session_scope() as session:
         moved = await oplog.checkpoint_flow(session, flow_id, text, revision=revision) if mode == "wal" else False

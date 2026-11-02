@@ -164,11 +164,12 @@ async def _in_session(
 
 async def _start_history(session: AsyncSession, flow_id: UUID, read: oplog.HeadRead) -> int:
     """Write the checkpoint the flow's history starts from: revision 0, or one past a paused history."""
-    data = await oplog.read_flow_data(session, flow_id)
-    text = (data.data if data is not None else None) or EMPTY_GRAPH
+    data = await oplog.read_flow_data(session, flow_id, as_bytes=True)
+    raw = (data.data if data is not None else None) or EMPTY_GRAPH.encode()
+    text = raw.decode()
     revision = max(read.head, read.latest) + 1 if read.paused else 0
     engine = config.engine()
-    graph_hash = await call(lambda: engine.GraphPlain(text.encode()).graph_hash(), large=True, name="hash")
+    graph_hash = await call(lambda: engine.GraphPlain(raw).graph_hash(), large=True, name="hash")
     await oplog.start_history(
         session,
         flow_id,
@@ -233,9 +234,9 @@ async def _write_nocache(
     engine = config.engine()
     with bench.timed("load"):
         with bench.timed("load_db"):
-            data = await oplog.read_flow_data(session, flow_id)
-        text = (data.data if data is not None else None) or EMPTY_GRAPH
-        state = await call(engine.GraphState, text.encode(), large=True, name="build")
+            data = await oplog.read_flow_data(session, flow_id, as_bytes=True)
+        raw = (data.data if data is not None else None) or EMPTY_GRAPH.encode()
+        state = await call(engine.GraphState, raw, large=True, name="build")
     if data is not None and data.current_revision < head:
         # Flow.data is behind the log (written in another mode): replay the rows after it.
         t0 = time.perf_counter()

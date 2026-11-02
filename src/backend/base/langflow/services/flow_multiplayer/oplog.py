@@ -3,6 +3,9 @@
 Every statement is plain SQL through the caller's session, PostgreSQL only.
 ``Flow.data`` goes in and out as JSON text: reads select ``data::text`` and
 writes pass the engine's ``to_json`` text through ``CAST(:data AS json)``.
+A read for an engine (``read_flow_data(..., as_bytes=True)``) takes the text as
+its UTF-8 bytes straight from the driver: both engines read bytes, so making a
+``str`` and encoding it again would copy the whole graph twice for nothing.
 """
 
 from __future__ import annotations
@@ -14,6 +17,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import orjson
+from psycopg.adapt import Loader
 from sqlalchemy import text
 
 if TYPE_CHECKING:
@@ -43,10 +47,12 @@ _HEAD_AND_RETRY = text(
         WHERE flow_id = :flow_id AND request_ids @> CAST(:request_ids AS jsonb)) AS retry_rows
     """
 )
-_FLOW_DATA = text(
+_FLOW_DATA_SQL = (
     "SELECT data::text, current_revision, latest_revision, history_paused, user_id, version_token "
-    "FROM flow WHERE id = :flow_id"
+    "FROM flow WHERE id = {flow_id}"
 )
+_FLOW_DATA = text(_FLOW_DATA_SQL.format(flow_id=":flow_id"))
+_FLOW_DATA_PG = _FLOW_DATA_SQL.format(flow_id="%(flow_id)s")
 _ROWS_AFTER = text(
     "SELECT start_revision, end_revision, ops::text FROM flow_operation "
     "WHERE flow_id = :flow_id AND end_revision > :after ORDER BY start_revision"
@@ -165,7 +171,7 @@ async def read_head_and_retry(session: AsyncSession, flow_id: UUID, request_id: 
 
 @dataclass
 class FlowData:
-    data: str | None
+    data: str | bytes | None
     current_revision: int
     latest_revision: int
     history_paused: bool
@@ -173,9 +179,31 @@ class FlowData:
     version_token: UUID | None
 
 
-async def read_flow_data(session: AsyncSession, flow_id: UUID) -> FlowData | None:
-    """``Flow.data`` as text and its revision, in one statement."""
-    row = (await session.execute(_FLOW_DATA, {"flow_id": flow_id})).first()
+class _TextAsBytes(Loader):
+    """Load a ``text`` value as its UTF-8 bytes, without making a ``str``."""
+
+    def load(self, data: Any) -> bytes:
+        return bytes(data)
+
+
+async def read_flow_data(session: AsyncSession, flow_id: UUID, *, as_bytes: bool = False) -> FlowData | None:
+    """``Flow.data`` as text and its revision, in one statement.
+
+    With ``as_bytes``, ``data`` is the text's UTF-8 bytes, read without a ``str`` on psycopg.
+    """
+    if as_bytes:
+        driver = await _psycopg_connection(session)
+        if driver is not None:
+            async with driver.cursor() as cursor:
+                cursor.adapters.register_loader("text", _TextAsBytes)
+                await cursor.execute(_FLOW_DATA_PG, {"flow_id": flow_id})
+                row = await cursor.fetchone()
+        else:
+            row = (await session.execute(_FLOW_DATA, {"flow_id": flow_id})).first()
+            if row is not None and row[0] is not None:
+                row = (row[0].encode(), *row[1:])
+    else:
+        row = (await session.execute(_FLOW_DATA, {"flow_id": flow_id})).first()
     if row is None:
         return None
     return FlowData(
@@ -186,6 +214,14 @@ async def read_flow_data(session: AsyncSession, flow_id: UUID) -> FlowData | Non
         user_id=row[4],
         version_token=row[5],
     )
+
+
+async def _psycopg_connection(session: AsyncSession) -> Any:
+    """The session's psycopg connection, in the session's transaction; None on another driver."""
+    connection = await session.connection()
+    raw = await connection.get_raw_connection()
+    driver = raw.driver_connection
+    return driver if type(driver).__module__.startswith("psycopg") else None
 
 
 @dataclass
