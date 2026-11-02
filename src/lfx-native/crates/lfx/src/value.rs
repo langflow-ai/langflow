@@ -1,12 +1,11 @@
 //! [`AnyValue`]: a JSON value as the engine holds it.
 //!
-//! It has the shape and the method names of `serde_json::Value`, with two
-//! differences:
+//! A value is `null`, a boolean, a number, a string, an array or an object.
 //!
 //! - An object ([`AnyMap`]) is a hash map that keeps its keys in insertion
-//!   order, held in a box so that every value stays as small as a string.
-//!   Finding a key takes the same time however many keys the object has.
-//!   Removing a key keeps the order of the others.
+//!   order. Finding a key takes the same time however many keys the object
+//!   has. Removing a key keeps the order of the others. Copies of an object
+//!   share it until one of them is written.
 //! - A number is an integer or a double ([`Number`]), not its text. `1` and
 //!   `1.0` stay apart, as Python's `int` and `float` do. A number that neither
 //!   holds exactly, an integer too large for 64 bits or a value that is
@@ -22,6 +21,7 @@
 use std::fmt;
 use std::ops::{Index, IndexMut};
 use std::str::FromStr;
+use std::sync::Arc;
 
 use indexmap::IndexMap;
 
@@ -236,7 +236,8 @@ impl fmt::Display for AnyValue {
     }
 }
 
-/// Comparisons with plain values, as `serde_json` has.
+/// Comparisons with plain values: a value equals a string, a boolean or a
+/// number when it holds that string, boolean or number.
 macro_rules! eq_with {
     ($($type:ty => $value:ident => $body:expr),* $(,)?) => {$(
         impl PartialEq<$type> for AnyValue {
@@ -281,7 +282,7 @@ impl AnyValueIndex for str {
     fn index_into_mut<'v>(&self, value: &'v mut AnyValue) -> Option<&'v mut AnyValue> {
         value.as_object_mut()?.get_mut(self)
     }
-    /// As `serde_json`: `null` becomes an empty object, and a missing key is added as `null`.
+    /// `null` becomes an empty object, and a missing key is added as `null`.
     fn index_or_insert<'v>(&self, value: &'v mut AnyValue) -> &'v mut AnyValue {
         if value.is_null() {
             *value = AnyValue::Object(AnyMap::new());
@@ -348,7 +349,7 @@ fn kind(value: &AnyValue) -> &'static str {
     }
 }
 
-/// `value[key]`: `null` when the key or the index is missing, as `serde_json`.
+/// `value[key]`: `null` when the key or the index is missing.
 impl<I: AnyValueIndex> Index<I> for AnyValue {
     type Output = AnyValue;
     fn index(&self, index: I) -> &AnyValue {
@@ -356,7 +357,7 @@ impl<I: AnyValueIndex> Index<I> for AnyValue {
     }
 }
 
-/// `value[key] = ...`: adds a missing key, as `serde_json`.
+/// `value[key] = ...`: adds a missing key, and makes `null` an empty object first.
 impl<I: AnyValueIndex> IndexMut<I> for AnyValue {
     fn index_mut(&mut self, index: I) -> &mut AnyValue {
         index.index_or_insert(self)
@@ -365,24 +366,27 @@ impl<I: AnyValueIndex> IndexMut<I> for AnyValue {
 
 // --- Objects ---------------------------------------------------------------------------------
 
-/// The pairs of an object, by key, in insertion order.
+/// The entries of an object (an entry is a key and its value), by key, in
+/// insertion order.
 type Entries = IndexMap<String, AnyValue>;
 
-/// A JSON object: a hash map of its key-value pairs, in insertion order.
+/// An object: a hash map of its entries, in insertion order.
 ///
-/// The method names follow `serde_json::Map` with its `preserve_order`
-/// feature, except that [`AnyMap::remove`] keeps the order of the other
-/// pairs, as [`AnyMap::shift_remove`] does. [`AnyMap::swap_remove`] moves
-/// the last pair into the gap.
+/// A new key goes last, and a replaced key keeps its place. A removal keeps
+/// the order of the other entries ([`AnyMap::remove`], [`AnyMap::shift_remove`]),
+/// except [`AnyMap::swap_remove`], which moves the last entry into the gap.
 ///
-/// The map is in a box: an [`AnyValue`] then takes the room of a string, not
-/// of a hash map, in every array item and every pair.
+/// A clone shares the entries. The first write to a shared object copies
+/// its keys and values, and an object nested in a copied value stays
+/// shared. So a write copies only the objects on the way to the value it
+/// writes. The object takes the room of a pointer, so an [`AnyValue`] takes
+/// the room of a string.
 #[derive(Debug, Clone, Default)]
 pub struct AnyMap {
-    entries: Box<Entries>,
+    entries: Arc<Entries>,
 }
 
-/// Two objects are equal when they hold equal pairs in the same order.
+/// Two objects are equal when they hold equal entries in the same order.
 impl PartialEq for AnyMap {
     fn eq(&self, other: &Self) -> bool {
         self.len() == other.len() && self.iter().eq(other.iter())
@@ -398,21 +402,21 @@ impl AnyMap {
         Self::default()
     }
 
-    /// An empty object with room for `capacity` pairs.
+    /// An empty object with room for `capacity` entries.
     #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
-            entries: Box::new(Entries::with_capacity(capacity)),
+            entries: Arc::new(Entries::with_capacity(capacity)),
         }
     }
 
-    /// The number of pairs.
+    /// The number of entries.
     #[must_use]
     pub fn len(&self) -> usize {
         self.entries.len()
     }
 
-    /// Whether the object has no pairs.
+    /// Whether the object has no entries.
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
@@ -426,7 +430,7 @@ impl AnyMap {
 
     /// The value at `key`, to change it.
     pub fn get_mut(&mut self, key: &str) -> Option<&mut AnyValue> {
-        self.entries.get_mut(key)
+        self.entries_mut().get_mut(key)
     }
 
     /// Whether the object has `key`.
@@ -437,7 +441,7 @@ impl AnyMap {
 
     /// Insert or replace. A replaced key keeps its position; a new key goes last.
     pub fn insert(&mut self, key: String, value: AnyValue) -> Option<AnyValue> {
-        self.entries.insert(key, value)
+        self.entries_mut().insert(key, value)
     }
 
     /// Remove a key, keeping the order of the others.
@@ -445,39 +449,45 @@ impl AnyMap {
         self.shift_remove(key)
     }
 
-    /// Remove a key, moving the last pair into its place.
+    /// Remove a key, moving the last entry into its place.
     pub fn swap_remove(&mut self, key: &str) -> Option<AnyValue> {
-        self.entries.swap_remove(key)
+        self.entries_mut().swap_remove(key)
     }
 
     /// Remove a key, keeping the order of the others.
     pub fn shift_remove(&mut self, key: &str) -> Option<AnyValue> {
-        self.entries.shift_remove(key)
+        self.entries_mut().shift_remove(key)
     }
 
     /// The value at `key`, added as `null` when it is missing.
     fn entry_or_null(&mut self, key: &str) -> &mut AnyValue {
-        let index = match self.entries.get_index_of(key) {
+        let entries = self.entries_mut();
+        let index = match entries.get_index_of(key) {
             Some(index) => index,
-            None => self.entries.insert_full(key.to_owned(), AnyValue::Null).0,
+            None => entries.insert_full(key.to_owned(), AnyValue::Null).0,
         };
-        &mut self.entries[index]
+        &mut entries[index]
     }
 
-    /// Keep the pairs `keep` holds for, in order.
+    /// Keep the entries `keep` holds for, in order.
     pub fn retain(&mut self, keep: impl FnMut(&String, &mut AnyValue) -> bool) {
-        self.entries.retain(keep);
+        self.entries_mut().retain(keep);
     }
 
-    /// The pairs, in order.
+    /// The entries, to change them: copied first while a clone shares them.
+    fn entries_mut(&mut self) -> &mut Entries {
+        Arc::make_mut(&mut self.entries)
+    }
+
+    /// The entries, in order.
     #[must_use]
     pub fn iter(&self) -> Iter<'_> {
         Iter(self.entries.iter())
     }
 
-    /// The pairs, in order, to change the values.
+    /// The entries, in order, to change the values.
     pub fn iter_mut(&mut self) -> IterMut<'_> {
-        IterMut(self.entries.iter_mut())
+        IterMut(self.entries_mut().iter_mut())
     }
 
     /// The keys, in order.
@@ -494,11 +504,11 @@ impl AnyMap {
     pub fn values_mut(
         &mut self,
     ) -> impl DoubleEndedIterator<Item = &mut AnyValue> + ExactSizeIterator {
-        self.entries.values_mut()
+        self.entries_mut().values_mut()
     }
 }
 
-/// The pairs of an [`AnyMap`], borrowed.
+/// The entries of an [`AnyMap`], borrowed.
 #[derive(Debug, Clone)]
 pub struct Iter<'m>(indexmap::map::Iter<'m, String, AnyValue>);
 
@@ -520,7 +530,7 @@ impl DoubleEndedIterator for Iter<'_> {
 
 impl ExactSizeIterator for Iter<'_> {}
 
-/// The pairs of an [`AnyMap`], borrowed to change the values.
+/// The entries of an [`AnyMap`], borrowed to change the values.
 #[derive(Debug)]
 pub struct IterMut<'m>(indexmap::map::IterMut<'m, String, AnyValue>);
 
@@ -552,7 +562,7 @@ impl<'m> IntoIterator for &'m mut AnyMap {
     }
 }
 
-/// The pairs of an [`AnyMap`], owned, in order.
+/// The entries of an [`AnyMap`], owned, in order.
 #[derive(Debug)]
 pub struct IntoIter(indexmap::map::IntoIter<String, AnyValue>);
 
@@ -578,28 +588,28 @@ impl IntoIterator for AnyMap {
     type Item = (String, AnyValue);
     type IntoIter = IntoIter;
     fn into_iter(self) -> IntoIter {
-        IntoIter(self.entries.into_iter())
+        IntoIter(Arc::unwrap_or_clone(self.entries).into_iter())
     }
 }
 
-/// Insert each pair: a repeated key keeps its first position and its last value.
+/// Insert each entry: a repeated key keeps its first position and its last value.
 impl Extend<(String, AnyValue)> for AnyMap {
-    fn extend<T: IntoIterator<Item = (String, AnyValue)>>(&mut self, pairs: T) {
-        for (key, value) in pairs {
+    fn extend<T: IntoIterator<Item = (String, AnyValue)>>(&mut self, entries: T) {
+        for (key, value) in entries {
             self.insert(key, value);
         }
     }
 }
 
 impl FromIterator<(String, AnyValue)> for AnyMap {
-    fn from_iter<T: IntoIterator<Item = (String, AnyValue)>>(pairs: T) -> Self {
+    fn from_iter<T: IntoIterator<Item = (String, AnyValue)>>(entries: T) -> Self {
         let mut map = AnyMap::new();
-        map.extend(pairs);
+        map.extend(entries);
         map
     }
 }
 
-/// `map[key]`: panics when the key is missing, as `serde_json`.
+/// `map[key]`: panics when the key is missing.
 impl Index<&str> for AnyMap {
     type Output = AnyValue;
     fn index(&self, key: &str) -> &AnyValue {
@@ -869,7 +879,7 @@ impl From<usize> for AnyValue {
     }
 }
 
-/// A finite double, or `null`, as `serde_json`.
+/// A finite double, or `null` for a double that is not finite.
 impl From<f64> for AnyValue {
     fn from(float: f64) -> Self {
         Number::from_f64(float).map_or(AnyValue::Null, AnyValue::Number)
@@ -921,7 +931,7 @@ impl From<serde_json::Value> for AnyValue {
     }
 }
 
-/// A JSON value written as JSON, as `serde_json::json!` writes it.
+/// A value written in JSON syntax, such as `json!({"a": [1, true]})`.
 #[macro_export]
 macro_rules! json {
     ($($json:tt)+) => {
@@ -1096,7 +1106,7 @@ impl<'de, const FINITE: bool> Visitor<'de> for AnyValueVisitor<'_, FINITE> {
             let value = access.next_value_seed(AnyValueVisitor(&mut *builder))?;
             builder.entries.push((key, value));
         }
-        // A repeated key keeps its first position and its last value, as serde_json.
+        // A repeated key keeps its first position and its last value.
         let mut map = AnyMap::with_capacity(builder.entries.len() - start);
         for (key, value) in builder.entries.drain(start..) {
             map.insert(key, value);
@@ -1153,7 +1163,7 @@ mod tests {
     }
 
     #[test]
-    fn remove_keeps_the_order_and_swap_remove_moves_the_last_pair() {
+    fn remove_keeps_the_order_and_swap_remove_moves_the_last_entry() {
         let mut map: AnyMap = parse(r#"{"a": 1, "b": 2, "c": 3}"#)
             .as_object()
             .unwrap()
@@ -1169,7 +1179,7 @@ mod tests {
     }
 
     #[test]
-    fn objects_are_equal_only_with_their_pairs_in_the_same_order() {
+    fn objects_are_equal_only_with_their_entries_in_the_same_order() {
         assert_eq!(parse(r#"{"a": 1, "b": 2}"#), parse(r#"{"a": 1, "b": 2}"#));
         assert_ne!(parse(r#"{"a": 1, "b": 2}"#), parse(r#"{"b": 2, "a": 1}"#));
     }

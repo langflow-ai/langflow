@@ -176,7 +176,7 @@ pub(crate) fn write_seq<T>(
     out.push(b']');
 }
 
-/// Write key-value pairs as a JSON object, each value with `write_value`.
+/// Write entries as a JSON object, each value with `write_value`.
 pub(crate) fn write_entries<K: AsRef<str>, V>(
     out: &mut Vec<u8>,
     entries: impl IntoIterator<Item = (K, V)>,
