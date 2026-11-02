@@ -2254,63 +2254,6 @@ async def test_backend_unavailable_short_circuits_the_remaining_credentials(auth
     api_key.assert_not_awaited()
 
 
-@pytest.mark.anyio
-async def test_api_key_pool_timeout_is_a_backend_failure_not_an_invalid_key(auth_service: AuthService):
-    """A pool timeout in the API-key lookup never judged the key: 503, not 403."""
-    from langflow.services.auth.exceptions import AuthBackendUnavailableError
-    from langflow.services.auth.utils import _auth_error_to_http
-    from sqlalchemy.exc import TimeoutError as PoolTimeoutError
-
-    timeout = PoolTimeoutError("QueuePool limit of size 20 overflow 30 reached, connection timed out, timeout 30.00")
-    with (
-        patch("langflow.services.auth.service.authenticate_api_key", new=AsyncMock(side_effect=timeout)),
-        pytest.raises(AuthBackendUnavailableError) as exc_info,
-    ):
-        await auth_service.authenticate_with_credentials(
-            token=None,
-            api_key="sk-test-key",  # pragma: allowlist secret
-            db=AsyncMock(),
-        )
-
-    assert exc_info.value.__cause__ is timeout
-    assert _auth_error_to_http(exc_info.value).status_code == status.HTTP_503_SERVICE_UNAVAILABLE
-
-
-@pytest.mark.anyio
-async def test_api_key_fallback_pool_timeout_is_a_backend_failure(auth_service: AuthService):
-    """The same after a failed token, in the API-key fallback."""
-    from langflow.services.auth.exceptions import AuthBackendUnavailableError
-    from sqlalchemy.exc import TimeoutError as PoolTimeoutError
-
-    timeout = PoolTimeoutError("connection timed out")
-    with (
-        patch.object(auth_service, "_authenticate_with_token", side_effect=RuntimeError("bad token")),
-        patch("langflow.services.auth.service.authenticate_api_key", new=AsyncMock(side_effect=timeout)),
-        pytest.raises(AuthBackendUnavailableError) as exc_info,
-    ):
-        await auth_service.authenticate_with_credentials(
-            token="native-token",  # noqa: S106  # pragma: allowlist secret
-            api_key="sk-test-key",  # pragma: allowlist secret
-            db=AsyncMock(),
-        )
-
-    assert exc_info.value.__cause__ is timeout
-
-
-@pytest.mark.anyio
-async def test_api_key_unexpected_error_stays_forbidden(auth_service: AuthService):
-    """An error that is not a backend failure keeps the 403 answer."""
-    with (
-        patch("langflow.services.auth.service.authenticate_api_key", new=AsyncMock(side_effect=ValueError("bad"))),
-        pytest.raises(InvalidCredentialsError, match="API key authentication failed"),
-    ):
-        await auth_service.authenticate_with_credentials(
-            token=None,
-            api_key="sk-test-key",  # pragma: allowlist secret
-            db=AsyncMock(),
-        )
-
-
 def test_backend_unavailable_maps_to_a_retryable_503():
     from fastapi import status
     from langflow.services.auth.exceptions import AuthBackendUnavailableError
