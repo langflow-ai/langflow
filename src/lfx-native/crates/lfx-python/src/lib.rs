@@ -26,7 +26,7 @@ use std::sync::{LazyLock, PoisonError, RwLock, RwLockWriteGuard, TryLockError};
 
 use lfx::ops::api::{self, ApiError, ApiResult, Input};
 use lfx::ops::{ApplyOptions, Entry, Error, ReplayOptions};
-use lfx::value::{Map, Number, Value};
+use lfx::value::{AnyMap, AnyValue, Number, StringPool};
 use pyo3::create_exception;
 use pyo3::exceptions::{PyException, PyRuntimeError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
@@ -69,7 +69,7 @@ fn input<'a>(object: &'a Bound<'_, PyAny>) -> PyResult<Input<'a>> {
             .map(Input::Text)
             .map_err(|error| PyValueError::new_err(error.to_string()));
     }
-    Ok(Input::Value(read(object, 0)?))
+    Ok(Input::Value(read(object, 0, &mut StringPool::default())?))
 }
 
 fn optional_input<'a>(object: Option<&'a Bound<'_, PyAny>>) -> PyResult<Option<Input<'a>>> {
@@ -90,61 +90,61 @@ fn not_json(object: &Bound<'_, PyAny>, why: &str) -> PyErr {
 /// at most 127 levels deep, no lone surrogate in a string, and finite
 /// numbers. A key that is not a `str`, or a value of another type, is a
 /// `TypeError`.
-fn read(object: &Bound<'_, PyAny>, depth: usize) -> PyResult<Value> {
+fn read(object: &Bound<'_, PyAny>, depth: usize, strings: &mut StringPool) -> PyResult<AnyValue> {
     if let Ok(string) = object.cast::<PyString>() {
-        return Ok(Value::String(text_of(string)?.to_owned()));
+        return Ok(AnyValue::String(strings.intern(text_of(string)?)));
     }
     if let Ok(dict) = object.cast::<PyDict>() {
         nested(object, depth)?;
-        let mut map = Map::with_capacity(dict.len());
+        let mut map = AnyMap::with_capacity(dict.len());
         for (key, item) in dict.iter() {
             let key = key
                 .cast::<PyString>()
                 .map_err(|_| PyTypeError::new_err("a JSON object's keys must be str"))?;
-            // A dict's keys are unique, so the pair goes last without a search.
-            map.push(text_of(key)?.to_owned(), read(&item, depth + 1)?);
+            let key = strings.intern(text_of(key)?);
+            map.insert_shared(key, read(&item, depth + 1, strings)?);
         }
-        return Ok(Value::Object(map));
+        return Ok(AnyValue::Object(map));
     }
     if let Ok(list) = object.cast::<PyList>() {
         nested(object, depth)?;
         return list
             .iter()
-            .map(|item| read(&item, depth + 1))
+            .map(|item| read(&item, depth + 1, strings))
             .collect::<PyResult<_>>()
-            .map(Value::Array);
+            .map(AnyValue::Array);
     }
     if object.is_none() {
-        return Ok(Value::Null);
+        return Ok(AnyValue::Null);
     }
     // `bool` is a subclass of `int`, so it is read first.
     if let Ok(flag) = object.cast::<PyBool>() {
-        return Ok(Value::Bool(flag.is_true()));
+        return Ok(AnyValue::Bool(flag.is_true()));
     }
     if object.cast::<PyInt>().is_ok() {
         if let Ok(int) = object.extract::<i64>() {
-            return Ok(Value::Number(int.into()));
+            return Ok(AnyValue::Number(int.into()));
         }
         // An int too large for 64 bits keeps its digits, as JSON text does.
         let digits = object.str()?;
         return digits
             .to_str()?
             .parse::<Number>()
-            .map(Value::Number)
+            .map(AnyValue::Number)
             .map_err(|error| PyValueError::new_err(error.to_string()));
     }
     if let Ok(float) = object.cast::<PyFloat>() {
         return Number::from_f64(float.value())
-            .map(Value::Number)
+            .map(AnyValue::Number)
             .ok_or_else(|| not_json(object, "NaN and Infinity are not JSON numbers"));
     }
     if let Ok(tuple) = object.cast::<PyTuple>() {
         nested(object, depth)?;
         return tuple
             .iter()
-            .map(|item| read(&item, depth + 1))
+            .map(|item| read(&item, depth + 1, strings))
             .collect::<PyResult<_>>()
-            .map(Value::Array);
+            .map(AnyValue::Array);
     }
     Err(PyTypeError::new_err(format!(
         "{} is not a JSON value",
@@ -171,7 +171,7 @@ fn text_of<'a>(string: &'a Bound<'_, PyString>) -> PyResult<&'a str> {
 
 /// A JSON value as Python objects: numbers as `int` or `float`, as
 /// `json.loads` reads their text.
-fn to_python<'py>(py: Python<'py>, value: &Value) -> PyResult<Bound<'py, PyAny>> {
+fn to_python<'py>(py: Python<'py>, value: &AnyValue) -> PyResult<Bound<'py, PyAny>> {
     Builder::new(py).value(value)
 }
 
@@ -196,19 +196,19 @@ impl<'py, 'v> Builder<'py, 'v> {
         }
     }
 
-    fn value(&mut self, value: &'v Value) -> PyResult<Bound<'py, PyAny>> {
+    fn value(&mut self, value: &'v AnyValue) -> PyResult<Bound<'py, PyAny>> {
         let py = self.py;
         Ok(match value {
-            Value::Null => py.None().into_bound(py),
-            Value::Bool(flag) => PyBool::new(py, *flag).to_owned().into_any(),
-            Value::Number(number) => number_to_python(py, number)?,
-            Value::String(text) => PyString::new(py, text).into_any(),
-            Value::Array(items) => self.list(items.iter())?.into_any(),
-            Value::Object(map) => self.dict(map)?.into_any(),
+            AnyValue::Null => py.None().into_bound(py),
+            AnyValue::Bool(flag) => PyBool::new(py, *flag).to_owned().into_any(),
+            AnyValue::Number(number) => number_to_python(py, number)?,
+            AnyValue::String(text) => PyString::new(py, text).into_any(),
+            AnyValue::Array(items) => self.list(items.iter())?.into_any(),
+            AnyValue::Object(map) => self.dict(map)?.into_any(),
         })
     }
 
-    fn list(&mut self, items: impl Iterator<Item = &'v Value>) -> PyResult<Bound<'py, PyList>> {
+    fn list(&mut self, items: impl Iterator<Item = &'v AnyValue>) -> PyResult<Bound<'py, PyList>> {
         let list = PyList::empty(self.py);
         for item in items {
             list.append(self.value(item)?)?;
@@ -216,7 +216,7 @@ impl<'py, 'v> Builder<'py, 'v> {
         Ok(list)
     }
 
-    fn dict(&mut self, map: &'v Map) -> PyResult<Bound<'py, PyDict>> {
+    fn dict(&mut self, map: &'v AnyMap) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(self.py);
         for (key, item) in map {
             let key = self.key(key);
@@ -289,7 +289,7 @@ struct Work(usize);
 
 impl Work {
     /// The work on a value: its number of values, counted up to the limit.
-    fn of_value(value: &Value) -> Self {
+    fn of_value(value: &AnyValue) -> Self {
         let mut count = 0;
         let mut stack = vec![value];
         while let Some(value) = stack.pop() {
@@ -298,8 +298,8 @@ impl Work {
                 break;
             }
             match value {
-                Value::Array(items) => stack.extend(items),
-                Value::Object(map) => stack.extend(map.values()),
+                AnyValue::Array(items) => stack.extend(items),
+                AnyValue::Object(map) => stack.extend(map.values()),
                 _ => {}
             }
         }
@@ -363,7 +363,7 @@ fn call(
 
 /// A result as Python objects. A large result is dropped without the GIL:
 /// freeing a large graph takes time.
-fn finish(py: Python<'_>, value: Value) -> PyResult<Bound<'_, PyAny>> {
+fn finish(py: Python<'_>, value: AnyValue) -> PyResult<Bound<'_, PyAny>> {
     let result = to_python(py, &value);
     if Work::of_value(&value).is_large() {
         py.detach(move || drop(value));
@@ -421,8 +421,8 @@ fn drop_elsewhere(py: Python<'_>, value: Dropped) {
 /// lock while it holds the GIL: it takes a free lock at once, and releases
 /// the GIL to wait for a lock that another thread holds. It never waits for
 /// the GIL while it holds the lock either. So two threads cannot deadlock.
-/// Small work runs with the GIL ([`Work`]); large work, such as the first
-/// batch's check of a large graph or a long replay, runs without it.
+/// Small work runs with the GIL ([`Work`]); large work, such as a long
+/// replay, runs without it.
 #[pyclass(module = "lfx_native", frozen)]
 #[derive(Debug)]
 struct GraphState {
@@ -430,11 +430,11 @@ struct GraphState {
 }
 
 /// A graph with no node and no edge: what a dropped graph leaves in its place.
-fn empty_graph() -> Value {
-    let mut root = Map::new();
-    root.insert("nodes".into(), Value::Array(Vec::new()));
-    root.insert("edges".into(), Value::Array(Vec::new()));
-    Value::Object(root)
+fn empty_graph() -> AnyValue {
+    let mut root = AnyMap::new();
+    root.insert("nodes".into(), AnyValue::Array(Vec::new()));
+    root.insert("edges".into(), AnyValue::Array(Vec::new()));
+    AnyValue::Object(root)
 }
 
 /// A large graph is dropped on the drop thread ([`drop_elsewhere`]).
@@ -528,18 +528,6 @@ impl GraphState {
     }
 }
 
-/// The work of a batch: its operations, and the check of the whole graph
-/// that apply and stage make before the first batch.
-fn batch_work(operations: Work, checks: bool) -> impl FnOnce(&lfx::ops::GraphState) -> Work {
-    move |state| {
-        if checks && state.needs_check() {
-            operations + Work::of_items(state.item_count())
-        } else {
-            operations
-        }
-    }
-}
-
 #[pymethods]
 impl GraphState {
     #[new]
@@ -561,12 +549,14 @@ impl GraphState {
         backward: bool,
     ) -> PyResult<Bound<'py, PyAny>> {
         let operations = input(operations)?;
-        let work = batch_work(Work::of_input(&operations), true);
+        let work = Work::of_input(&operations);
         let options = ApplyOptions { forward, backward };
         let applied = self
-            .write(py, work, |state| {
-                Ok(api::apply_to(&mut *unstaged(state)?, operations, options))
-            })
+            .write(
+                py,
+                |_| work,
+                |state| Ok(api::apply_to(&mut *unstaged(state)?, operations, options)),
+            )
             .map_err(refused)?;
         finish(py, applied.map_err(|error| engine_error(py, &error))?)
     }
@@ -583,12 +573,14 @@ impl GraphState {
         backward: bool,
     ) -> PyResult<Bound<'py, PyAny>> {
         let operations = input(operations)?;
-        let work = batch_work(Work::of_input(&operations), true);
+        let work = Work::of_input(&operations);
         let options = ApplyOptions { forward, backward };
         let staged = self
-            .write(py, work, |state| {
-                Ok(api::stage_to(&mut *unstaged(state)?, operations, options))
-            })
+            .write(
+                py,
+                |_| work,
+                |state| Ok(api::stage_to(&mut *unstaged(state)?, operations, options)),
+            )
             .map_err(refused)?;
         finish(py, staged.map_err(|error| engine_error(py, &error))?)
     }
@@ -632,12 +624,14 @@ impl GraphState {
         backward: bool,
     ) -> PyResult<Bound<'py, PyAny>> {
         let operations = input(operations)?;
-        let work = batch_work(Work::of_input(&operations), false);
+        let work = Work::of_input(&operations);
         let options = ReplayOptions { backward };
         let replayed = self
-            .write(py, work, |state| {
-                Ok(api::replay_to(&mut *unstaged(state)?, operations, options))
-            })
+            .write(
+                py,
+                |_| work,
+                |state| Ok(api::replay_to(&mut *unstaged(state)?, operations, options)),
+            )
             .map_err(refused)?;
         finish(py, replayed.map_err(|error| engine_error(py, &error))?)
     }
@@ -799,7 +793,7 @@ impl Drop for GraphPlain {
         if !self.work.is_large() {
             return;
         }
-        let plain = std::mem::replace(&mut self.plain, lfx::ops::GraphPlain::new(Value::Null));
+        let plain = std::mem::replace(&mut self.plain, lfx::ops::GraphPlain::new(AnyValue::Null));
         Python::attach(|py| drop_elsewhere(py, Box::new(plain)));
     }
 }

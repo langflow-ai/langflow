@@ -30,7 +30,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::json_out::{self, Ascii};
-use crate::value::{FiniteValue, Map, Value};
+use crate::value::{AnyMap, AnyValue, FiniteAnyValue};
 use indexmap::{IndexMap, IndexSet};
 use serde::ser::{Serialize, SerializeMap, Serializer};
 
@@ -42,9 +42,7 @@ use crate::ops::fields::{self, FieldLayer};
 use crate::ops::keyed::ListIndex;
 use crate::ops::ops::{Edge, Node, PathExt, Segment};
 use crate::ops::schema::{KeyedList, NODE_SCHEMA};
-use crate::ops::validate::{
-    Numbers, PathPart, find_load_violations, validate_flow_data, violations_error,
-};
+use crate::ops::validate::{Numbers, PathPart, validate_flow_data};
 
 // --- Layers --------------------------------------------------------------------------------
 
@@ -297,7 +295,7 @@ impl Graph {
         &'g self,
         id: &str,
         path: &[Segment],
-        step: impl FnMut(&'g Value, usize, bool) -> Result<Option<&'g Value>>,
+        step: impl FnMut(&'g AnyValue, usize, bool) -> Result<Option<&'g AnyValue>>,
     ) -> Result<Option<fields::Walked<'g>>> {
         let Some(node) = self.nodes.get(id) else {
             return Ok(None);
@@ -323,7 +321,7 @@ impl GraphRead for Graph {
         self.nodes.contains(id)
     }
 
-    fn node_value(&self, id: &str, path: &[&str]) -> Option<Cow<'_, Value>> {
+    fn node_value(&self, id: &str, path: &[&str]) -> Option<Cow<'_, AnyValue>> {
         let node = self.nodes.get(id)?;
         let path: Vec<Segment> = path
             .iter()
@@ -334,7 +332,7 @@ impl GraphRead for Graph {
             .expect("a read of object keys cannot fail")
     }
 
-    fn edge(&self, id: &str) -> Option<&Map> {
+    fn edge(&self, id: &str) -> Option<&AnyMap> {
         self.edges.get(id).map(Edge::as_map)
     }
 
@@ -357,12 +355,12 @@ pub(crate) fn field_value<'g>(
     id: &str,
     path: &[Segment],
     context: &dyn fmt::Display,
-) -> Result<Option<Cow<'g, Value>>> {
+) -> Result<Option<Cow<'g, AnyValue>>> {
     let Some(node) = graph.nodes.get(id) else {
         return Ok(None);
     };
     let stored = graph.is_stored_node(id);
-    let step = |value: &'g Value, index: usize, in_entry: bool| {
+    let step = |value: &'g AnyValue, index: usize, in_entry: bool| {
         let (parent, segment) = (&path[..index], &path[index]);
         let (Segment::Item(key), true, Some(list_path)) =
             (segment, stored && !in_entry, parent.to_list())
@@ -398,7 +396,7 @@ impl Lists {
         node_id: &str,
         path: &[&str],
         keyed: &'static KeyedList,
-        items: &[Value],
+        items: &[AnyValue],
     ) -> &mut ListIndex {
         let lists = self.by_node.entry(node_id.to_owned()).or_default();
         let position = if let Some(position) = lists
@@ -444,13 +442,10 @@ impl Lists {
 pub struct GraphState {
     /// The flow's top-level object; `nodes` and `edges` hold placeholders.
     /// No operation writes its other keys, which are view state.
-    root: Map,
+    root: AnyMap,
     pub(crate) graph: Graph,
     pub(crate) edge_index: EdgeIndex,
     pub(crate) lists: Lists,
-    /// Whether the flow passed the structural rules since it was loaded or
-    /// last replayed. Apply checks them once, before its first batch.
-    base_checked: bool,
     /// Whether a batch is staged: its layers wait for [`Self::keep`] or
     /// [`Self::drop_staged`].
     staged: bool,
@@ -463,17 +458,22 @@ pub struct GraphState {
 impl GraphState {
     /// Load a flow graph and build its indexes.
     ///
-    /// Loading checks only what the indexes need: flow data is an object,
-    /// `nodes` and `edges` are lists of objects, ids are unique, and each node
-    /// and edge has its shape. Apply checks the other structural rules before
-    /// its first batch; replay does not check them.
+    /// Loading checks every structural rule: flow data is an object, `nodes`
+    /// and `edges` are lists of objects, ids are present and unique, each
+    /// node and edge has its shape, and each edge's source and target nodes
+    /// exist. Apply then checks only what its batch changes, and replay
+    /// checks nothing.
+    ///
+    /// Values are not walked for numbers that are not finite: that check
+    /// belongs to whoever accepts a graph from outside, and skipping it keeps
+    /// the check proportional to the number of nodes and edges.
     ///
     /// # Errors
     ///
-    /// The graph breaks a rule that the indexes need.
-    pub fn new(flow: Value) -> Result<Self> {
-        violations_error(find_load_violations(&flow), "flow.data")?;
-        let Value::Object(mut root) = flow else {
+    /// The graph breaks a structural rule.
+    pub fn new(flow: AnyValue) -> Result<Self> {
+        validate_flow_data(&flow, Numbers::Skip, "flow.data", None)?;
+        let AnyValue::Object(mut root) = flow else {
             unreachable!("the load check refuses flow data that is not an object")
         };
         let nodes = by_id(take_list(&mut root, "nodes"), Node::try_from)?;
@@ -493,71 +493,9 @@ impl GraphState {
             },
             edge_index: EdgeIndex::default(),
             lists: Lists::default(),
-            base_checked: false,
             staged: false,
             text_len: Arc::default(),
         })
-    }
-
-    /// Load a flow graph that apply changes next, after checking it against
-    /// the structural rules. It does what the first batch would do, without
-    /// a copy of the flow.
-    ///
-    /// Values are not walked for numbers that are not finite: that check
-    /// belongs to whoever accepts a graph from outside, and skipping it keeps
-    /// the check proportional to the number of nodes and edges.
-    ///
-    /// # Errors
-    ///
-    /// The graph breaks a structural rule.
-    pub(crate) fn checked(flow: Value) -> Result<Self> {
-        validate_flow_data(&flow, Numbers::Skip, "flow.data", None)?;
-        Ok(Self {
-            base_checked: true,
-            ..Self::new(flow)?
-        })
-    }
-
-    /// Check the flow against the structural rules, unless it passed them
-    /// since it was loaded or last replayed. Apply calls this before a batch.
-    ///
-    /// # Errors
-    ///
-    /// The graph breaks a structural rule.
-    pub(crate) fn check_base(&mut self) -> Result<()> {
-        if self.base_checked {
-            return Ok(());
-        }
-        // Loading checked every structural rule but one: that each edge's
-        // nodes exist. Apply and replay keep the others (they refuse a
-        // repeated id, a node or edge without its shape, and a write of a
-        // whole node object). So the graph passes when every edge's nodes
-        // exist, which is checked in place. Else the whole check runs on a
-        // copy, for the error and its violations in document order.
-        let nodes = &self.graph.nodes.stored;
-        let sound = self
-            .graph
-            .edges
-            .stored
-            .values()
-            .all(|edge| nodes.contains_key(edge.source()) && nodes.contains_key(edge.target()));
-        if !sound {
-            validate_flow_data(&self.to_value(), Numbers::Skip, "flow.data", None)?;
-        }
-        self.base_checked = true;
-        Ok(())
-    }
-
-    /// Note that a replay changed the flow, so apply checks it again.
-    pub(crate) fn uncheck_base(&mut self) {
-        self.base_checked = false;
-    }
-
-    /// Whether the next batch that apply or stage carries out checks the
-    /// whole graph against the structural rules first ([`Self::check_base`]).
-    #[must_use]
-    pub fn needs_check(&self) -> bool {
-        !self.base_checked
     }
 
     /// The number of nodes and edges of the committed graph: a measure of
@@ -569,29 +507,29 @@ impl GraphState {
 
     /// The graph as a JSON value.
     #[must_use]
-    pub fn to_value(&self) -> Value {
-        let mut out = Map::with_capacity(self.root.len());
+    pub fn to_value(&self) -> AnyValue {
+        let mut out = AnyMap::with_capacity(self.root.len());
         for (key, value) in &self.root {
             let value = match key.as_str() {
-                "nodes" => Value::Array(
+                "nodes" => AnyValue::Array(
                     self.graph
                         .nodes
                         .values()
                         .map(|node| node.as_value().clone())
                         .collect(),
                 ),
-                "edges" => Value::Array(
+                "edges" => AnyValue::Array(
                     self.graph
                         .edges
                         .values()
-                        .map(|edge| Value::Object(edge.as_map().clone()))
+                        .map(|edge| AnyValue::Object(edge.as_map().clone()))
                         .collect(),
                 ),
                 _ => value.clone(),
             };
-            out.insert(key.clone(), value);
+            out.insert_shared(key.clone(), value);
         }
-        Value::Object(out)
+        AnyValue::Object(out)
     }
 
     /// The graph as JSON text: the text of [`GraphState::to_value`], written
@@ -647,7 +585,7 @@ impl GraphState {
     /// The committed graph as it is now, without a staged batch, to read
     /// while the state goes on changing ([`GraphSnapshot`]). It shares every
     /// node and edge with the state, so it costs a pointer for each: a write
-    /// after it copies only the node it changes.
+    /// after it copies only the objects on the way to the value it writes.
     #[must_use]
     pub fn snapshot(&self) -> GraphSnapshot {
         GraphSnapshot {
@@ -692,7 +630,7 @@ impl GraphState {
     /// The nodes with the staged batch, in the order [`Layered::fold`] gives
     /// them: a node the batch writes as a copy with the writes, as the fold
     /// makes them, and any other node as it is.
-    fn staged_nodes(&self) -> impl Iterator<Item = Cow<'_, Value>> {
+    fn staged_nodes(&self) -> impl Iterator<Item = Cow<'_, AnyValue>> {
         let graph = &self.graph;
         graph
             .nodes
@@ -763,25 +701,25 @@ impl GraphState {
 
     /// The graph as a JSON value, without copying it.
     #[must_use]
-    pub fn into_value(self) -> Value {
+    pub fn into_value(self) -> AnyValue {
         let Self {
             mut root, graph, ..
         } = self;
         root.insert(
             "nodes".into(),
-            Value::Array(graph.nodes.into_values().map(Node::into_value).collect()),
+            AnyValue::Array(graph.nodes.into_values().map(Node::into_value).collect()),
         );
         root.insert(
             "edges".into(),
-            Value::Array(
+            AnyValue::Array(
                 graph
                     .edges
                     .into_values()
-                    .map(|edge| Value::Object(edge.into_map()))
+                    .map(|edge| AnyValue::Object(edge.into_map()))
                     .collect(),
             ),
         );
-        Value::Object(root)
+        AnyValue::Object(root)
     }
 
     // --- Batches ---------------------------------------------------------------------
@@ -871,7 +809,7 @@ impl GraphState {
     /// A copy of the node `id` as the batch sees it, for the backward operations.
     pub(crate) fn node_copy(&self, id: &str) -> Option<Node> {
         let node = self.graph.node_value(id, &[])?.into_owned();
-        let Value::Object(node) = node else {
+        let AnyValue::Object(node) = node else {
             unreachable!("a node is a JSON object")
         };
         Some(Node::try_from(node).expect("a field write keeps the shape of a node"))
@@ -911,11 +849,11 @@ impl GraphState {
 
 /// Nodes or edges by id, in their order, each made by `make`. The load check
 /// passed, so each one is an object with its shape and a unique id.
-fn by_id<T>(items: Vec<Value>, make: fn(Map) -> Result<T>) -> Result<IndexMap<String, T>> {
+fn by_id<T>(items: Vec<AnyValue>, make: fn(AnyMap) -> Result<T>) -> Result<IndexMap<String, T>> {
     items
         .into_iter()
         .map(|item| {
-            let Value::Object(item) = item else {
+            let AnyValue::Object(item) = item else {
                 unreachable!("the load check refuses nodes and edges that are not objects")
             };
             Ok((item.id().to_owned(), make(item)?))
@@ -964,7 +902,7 @@ impl Serialize for GraphJson<'_> {
 #[derive(Debug, Clone)]
 pub struct GraphSnapshot {
     /// The flow's top-level object; `nodes` and `edges` hold placeholders.
-    root: Map,
+    root: AnyMap,
     nodes: Vec<Node>,
     edges: Vec<Edge>,
     /// The length of the state's last JSON text, shared with the state.
@@ -1013,9 +951,9 @@ impl GraphSnapshot {
 /// A loaded graph as ASCII JSON text, into `out`: the top-level keys in
 /// order, with `nodes` and `edges` in their place.
 fn graph_text<'g>(
-    root: &'g Map,
-    nodes: impl IntoIterator<Item = &'g Value>,
-    edges: impl IntoIterator<Item = &'g Map>,
+    root: &'g AnyMap,
+    nodes: impl IntoIterator<Item = &'g AnyValue>,
+    edges: impl IntoIterator<Item = &'g AnyMap>,
     mut out: Vec<u8>,
 ) -> Vec<u8> {
     let (mut nodes, mut edges) = (Some(nodes), Some(edges));
@@ -1096,7 +1034,7 @@ impl Serialize for EdgesJson<'_> {
 #[derive(Debug, Clone, Copy)]
 pub enum Entry<'s> {
     /// A key that no operation writes, as stored.
-    Value(&'s Value),
+    Value(&'s AnyValue),
     /// The nodes, in the graph's order.
     Nodes(Nodes<'s>),
     /// The edges, in the graph's order.
@@ -1109,7 +1047,7 @@ pub struct Nodes<'s>(&'s Layered<Node>);
 
 impl<'s> Nodes<'s> {
     /// Each node's JSON object.
-    pub fn iter(self) -> impl Iterator<Item = &'s Value> {
+    pub fn iter(self) -> impl Iterator<Item = &'s AnyValue> {
         self.0.values().map(Node::as_value)
     }
 }
@@ -1120,30 +1058,30 @@ pub struct Edges<'s>(&'s Layered<Edge>);
 
 impl<'s> Edges<'s> {
     /// Each edge's JSON object.
-    pub fn iter(self) -> impl Iterator<Item = &'s Map> {
+    pub fn iter(self) -> impl Iterator<Item = &'s AnyMap> {
         self.0.values().map(Edge::as_map)
     }
 }
 
 /// The list at `key`, moved out. The load check passed, so it is a list.
-fn take_list(root: &mut Map, key: &str) -> Vec<Value> {
+fn take_list(root: &mut AnyMap, key: &str) -> Vec<AnyValue> {
     match root.get_mut(key).map(std::mem::take) {
-        Some(Value::Array(items)) => items,
+        Some(AnyValue::Array(items)) => items,
         _ => unreachable!("the load check refuses nodes and edges that are not lists"),
     }
 }
 
 /// Parse JSON text, reporting a parse failure as an invalid graph.
-pub(crate) fn parse_json(text: &str) -> Result<Value> {
+pub(crate) fn parse_json(text: &str) -> Result<AnyValue> {
     serde_json::from_str(text).map_err(|error| graph_not_json(&error))
 }
 
 /// Parse JSON text as [`parse_json`] does, refusing a number that is not
-/// finite as a double ([`FiniteValue`]): for a graph that the engine holds
+/// finite as a double ([`FiniteAnyValue`]): for a graph that the engine holds
 /// and changes, as a Python `float` that is not finite is refused.
-pub(crate) fn parse_finite_json(text: &str) -> Result<Value> {
+pub(crate) fn parse_finite_json(text: &str) -> Result<AnyValue> {
     serde_json::from_str(text)
-        .map(|FiniteValue(value)| value)
+        .map(|FiniteAnyValue(value)| value)
         .map_err(|error| graph_not_json(&error))
 }
 
@@ -1168,7 +1106,7 @@ pub(crate) fn parse_problem(error: &serde_json::Error) -> String {
 }
 
 /// The value at a path of object keys and array indexes.
-pub(crate) fn resolve<'v>(root: &'v Value, steps: &[PathPart]) -> Option<&'v Value> {
+pub(crate) fn resolve<'v>(root: &'v AnyValue, steps: &[PathPart]) -> Option<&'v AnyValue> {
     steps.iter().try_fold(root, |value, step| match step {
         PathPart::Key(key) => value.as_object()?.get(key),
         PathPart::Index(index) => value.as_array()?.get(*index),
@@ -1176,7 +1114,10 @@ pub(crate) fn resolve<'v>(root: &'v Value, steps: &[PathPart]) -> Option<&'v Val
 }
 
 /// The value at a path of object keys and array indexes, to change it.
-pub(crate) fn resolve_mut<'v>(root: &'v mut Value, steps: &[PathPart]) -> Option<&'v mut Value> {
+pub(crate) fn resolve_mut<'v>(
+    root: &'v mut AnyValue,
+    steps: &[PathPart],
+) -> Option<&'v mut AnyValue> {
     steps.iter().try_fold(root, |value, step| match step {
         PathPart::Key(key) => value.as_object_mut()?.get_mut(key),
         PathPart::Index(index) => value.as_array_mut()?.get_mut(*index),
@@ -1316,5 +1257,19 @@ mod tests {
         assert!(!map.remove("x"));
         map.fold();
         assert_eq!(keys(&map), ["a"]);
+    }
+
+    #[test]
+    fn loading_refuses_an_edge_without_its_node() {
+        let node = crate::json!({"id": "a", "data": {"node": {"template": {}}}});
+        let edge = crate::json!({"id": "e", "source": "a", "target": "gone"});
+        let flow = crate::json!({"nodes": [node], "edges": [edge]});
+        let error = GraphState::new(flow).unwrap_err();
+        assert_eq!(error.code.as_str(), "FLOW_GRAPH_INVALID", "{error}");
+        let violation = &error.violations[0];
+        assert_eq!(
+            violation.code,
+            crate::ops::validate::ViolationCode::EdgeEndpointInvalid
+        );
     }
 }

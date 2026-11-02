@@ -3,12 +3,12 @@
 use lfx::json;
 use lfx::ops::Operation;
 use lfx::ops::restore::apply_restore_fixes;
-use lfx::value::Value;
+use lfx::value::AnyValue;
 use libtest_mimic::{Failed, Trial};
 
 use crate::support::{assert_json_eq, cases, error_json, load};
 
-fn restore(case: &Value) -> Result<(), Failed> {
+fn restore(case: &AnyValue) -> Result<(), Failed> {
     let fixes =
         Operation::list_from_value(case["fixes"].clone()).map_err(|error| error.to_string())?;
     let actual = match apply_restore_fixes(&case["revision"], &case["stored"], fixes) {
