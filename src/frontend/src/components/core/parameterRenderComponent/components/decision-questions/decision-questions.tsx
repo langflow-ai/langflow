@@ -6,12 +6,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { scapeJSONParse } from "@/utils/reactflowUtils";
+import {
+  type QuestionText,
+  questionConnections,
+  scapeJSONParse,
+} from "@/utils/reactflowUtils";
 import type { DecisionQuestionsComponentType, InputProps } from "../../types";
 import DecisionQuestionsModal, {
   type DecisionQuestion,
   KINDS,
   QuestionPreview,
+  questionHandleTitle,
 } from "./decision-questions-modal";
 import QuestionHandle from "./question-handle";
 
@@ -37,19 +42,23 @@ export default function DecisionQuestionsComponent({
   const edges = useFlowStore((state) => state.edges);
   const deleteEdge = useFlowStore((state) => state.deleteEdge);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
+  // A minimized node hides the cards and draws their handles with its others.
+  const minimized = useFlowStore(
+    (state) =>
+      state.nodes.find((node) => node.id === nodeId)?.data.showNode === false,
+  );
   const [open, setOpen] = useState(false);
   const [openAt, setOpenAt] = useState(0);
   if (!showParameter) return null;
 
   const questions = Array.isArray(value) ? value : [];
   const template = nodeClass?.template;
-  // Each question's text can be connected through its own hidden node field: the one it names
-  // (a question migrated from the old Question field), or <prefix><id>.
-  const connectionOf = (question: DecisionQuestion) =>
-    question.input_field ??
-    (connectionPrefix && question.id
-      ? `${connectionPrefix}${question.id}`
-      : undefined);
+  // Each of a question's texts can be connected through its own hidden node field.
+  const connectionsOf = (question: DecisionQuestion) =>
+    questionConnections(question, connectionPrefix);
+  const connectionOf = (question: DecisionQuestion, text: QuestionText) =>
+    connectionsOf(question).find((connection) => connection.text === text)
+      ?.fieldName;
   const firstConnection =
     connectionPrefix && template?.[`${connectionPrefix}1`];
   const edgesInto = (field?: string) =>
@@ -60,10 +69,12 @@ export default function DecisionQuestionsComponent({
         edge.targetHandle &&
         scapeJSONParse(edge.targetHandle).fieldName === field,
     );
-  const isConnected = (question: DecisionQuestion) =>
-    edgesInto(connectionOf(question)).length > 0;
+  const isConnected = (
+    question: DecisionQuestion,
+    text: QuestionText = "question",
+  ) => edgesInto(connectionOf(question, text)).length > 0;
   // The edit dialog and inspection panel have no canvas, so no handles.
-  const drawsHandles = !editNode && !inspectionPanel && !!nodeId;
+  const drawsHandles = !editNode && !inspectionPanel && !!nodeId && !minimized;
   const kindLabel = (kind?: string) =>
     KINDS.includes(kind ?? "") ? t(`decisionQuestions.kind${kind}`) : kind;
   const summary = (question: DecisionQuestion) =>
@@ -77,17 +88,21 @@ export default function DecisionQuestionsComponent({
           })
         : t("decisionQuestions.yesNo");
 
-  // Done applies the modal's questions, adding or removing each question's connection field
-  // (and any edge into a removed one) in the same node update.
+  // Done applies the modal's questions, adding or removing their connection fields (and any
+  // edge into a removed one) in the same node update.
   const applyQuestions = (next: DecisionQuestion[]) => {
-    const kept = new Set(next.map((question) => question.id));
+    const nextFields = new Set(
+      next.flatMap(connectionsOf).map(({ fieldName }) => fieldName),
+    );
     const removed = questions
-      .filter((question) => !kept.has(question.id))
-      .map(connectionOf)
-      .filter((field): field is string => !!field);
-    const added = next
-      .map(connectionOf)
-      .filter((field) => field && !template?.[field]);
+      .flatMap(connectionsOf)
+      .map(({ fieldName }) => fieldName)
+      .filter((field) => !nextFields.has(field));
+    const added = next.flatMap((question, index) =>
+      connectionsOf(question)
+        .filter(({ fieldName }) => !template?.[fieldName])
+        .map((connection) => ({ ...connection, number: index + 1 })),
+    );
     // One snapshot before any change, so Undo restores the questions and their wiring together.
     takeSnapshot();
     const staleEdges = removed.flatMap((field) => edgesInto(field));
@@ -101,13 +116,11 @@ export default function DecisionQuestionsComponent({
     for (const field of removed) {
       if (field !== `${connectionPrefix}1`) delete newNodeClass.template[field];
     }
-    for (const field of added) {
-      newNodeClass.template[field!] = {
+    for (const { text, fieldName: field, number } of added) {
+      newNodeClass.template[field] = {
         ...cloneDeep(firstConnection),
         name: field,
-        display_name: t("decisionQuestions.title", {
-          number: next.findIndex((q) => connectionOf(q) === field) + 1,
-        }),
+        display_name: questionHandleTitle(t, number, text),
         value: "",
       };
     }
@@ -122,44 +135,66 @@ export default function DecisionQuestionsComponent({
   return (
     <div className="flex w-full flex-col gap-2">
       {questions.map((question, index) => {
-        const connection = connectionOf(question);
+        const connections = drawsHandles
+          ? connectionsOf(question).filter(
+              ({ fieldName }) => template?.[fieldName],
+            )
+          : [];
+        const textConnection = connections.find(
+          ({ text }) => text === "question",
+        );
+        const meanings = connections.filter(({ text }) => text !== "question");
+        const handle = (text: QuestionText, fieldName: string) => (
+          <QuestionHandle
+            nodeId={nodeId!}
+            fieldName={fieldName}
+            field={template![fieldName]}
+            title={questionHandleTitle(t, index + 1, text)}
+          />
+        );
         return (
-          // Spans to the node's left border, where the handle sits like any field's.
-          <div key={question.id ?? index} className="relative -ml-5 pl-5">
-            {drawsHandles && connection && template?.[connection] && (
-              <QuestionHandle
-                nodeId={nodeId!}
-                fieldName={connection}
-                field={template[connection]}
-                title={t("decisionQuestions.title", { number: index + 1 })}
-              />
-            )}
-            <button
-              type="button"
-              disabled={disabled}
-              data-testid={`${id}_question_${index}`}
-              aria-label={t("decisionQuestions.editQuestion", {
-                number: index + 1,
-              })}
-              onClick={() => openEditor(index)}
-              className="flex w-full flex-col gap-1 rounded-md border border-border p-2 text-left hover:bg-muted disabled:pointer-events-none"
-            >
-              <span className="flex w-full items-center gap-2">
-                <span className="truncate font-mono text-sm">
-                  {question.name || `q${index + 1}`}
+          <div key={question.id ?? index} className="flex flex-col gap-1">
+            {/* Spans to the node's left border, where the handle sits like any field's. */}
+            <div className="relative -ml-5 pl-5">
+              {textConnection &&
+                handle(textConnection.text, textConnection.fieldName)}
+              <button
+                type="button"
+                disabled={disabled}
+                data-testid={`${id}_question_${index}`}
+                aria-label={t("decisionQuestions.editQuestion", {
+                  number: index + 1,
+                })}
+                onClick={() => openEditor(index)}
+                className="flex w-full flex-col gap-1 rounded-md border border-border p-2 text-left hover:bg-muted disabled:pointer-events-none"
+              >
+                <span className="flex w-full items-center gap-2">
+                  <span className="truncate font-mono text-sm">
+                    {question.name || `q${index + 1}`}
+                  </span>
+                  <Badge variant="secondaryStatic" size="tag">
+                    {kindLabel(question.kind)}
+                  </Badge>
+                  <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                    {summary(question)}
+                  </span>
                 </span>
-                <Badge variant="secondaryStatic" size="tag">
-                  {kindLabel(question.kind)}
-                </Badge>
-                <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-                  {summary(question)}
-                </span>
-              </span>
-              <QuestionPreview
-                question={question}
-                connected={isConnected(question)}
-              />
-            </button>
+                <QuestionPreview
+                  question={question}
+                  connected={isConnected(question)}
+                />
+              </button>
+            </div>
+            {/* A Noul migrated from the old fields keeps What Yes / No Means connectable. */}
+            {meanings.map(({ text, fieldName }) => (
+              <div
+                key={fieldName}
+                className="relative -ml-5 pl-7 text-xs text-muted-foreground"
+              >
+                {handle(text, fieldName)}
+                {t(`decisionQuestions.${text}`)}
+              </div>
+            ))}
           </div>
         );
       })}

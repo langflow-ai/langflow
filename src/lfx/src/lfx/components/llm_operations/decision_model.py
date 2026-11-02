@@ -183,10 +183,9 @@ class DecisionModelComponent(Component):
             msg = f"Check Questions: {validation_summary(exc)}"
             raise DecisionConfigurationError(msg) from None
 
-    def _connected_question(self, item: dict) -> str | None:
-        """The text a component connected to this question's card sends, if any."""
-        field = _connection_field(item)
-        value = self._attributes.get(field) if field else None
+    def _connected_text(self, field: str) -> str | None:
+        """The text a component connected to this hidden field sends, if any."""
+        value = self._attributes.get(field)
         if value in (None, ""):
             return None
         return value.text if isinstance(value, Message) else str(value)
@@ -200,9 +199,8 @@ class DecisionModelComponent(Component):
             raise DecisionConfigurationError(msg)
         kind = kind.lower()
         noul = kind == "noul"
-        connected = self._connected_question(item)
-        if connected is not None:
-            item = {**item, "question": connected}
+        connected = {text: self._connected_text(field) for text, field in _connection_fields(item).items()}
+        item = {**item, **{text: value for text, value in connected.items() if value is not None}}
         # A migrated field still holding the name of the global variable it was bound to; see _legacy_question.
         for field, variable in (item.get("global_variables") or {}).items():
             if (field == "question" or noul) and item.get(field) == variable:
@@ -282,22 +280,23 @@ class DecisionModelComponent(Component):
         if (saved.get("questions") or {}).get("type") != "decision_questions":
             template["questions"]["value"] = [_legacy_question(saved)] if "question" in saved else []
             if "question" in saved:
-                # The old Question keeps its field name as the migrated question's connection, so an
-                # edge wired into it stays connected.
-                template["question"] = {
-                    **deepcopy(template[f"{_CONNECTION_PREFIX}1"]),
-                    "name": "question",
-                    "display_name": "Question 1",
-                }
+                # The old fields keep their names as the migrated question's connections, so an edge
+                # wired into one stays connected.
+                for text, name in _connection_fields(template["questions"]["value"][0]).items():
+                    template[name] = {
+                        **deepcopy(template[f"{_CONNECTION_PREFIX}1"]),
+                        "name": name,
+                        "display_name": "Question 1" if text == "question" else _LEGACY_LABELS[text],
+                    }
         for item in template["questions"]["value"]:
             if isinstance(item, dict) and item.get("kind") == "Boolean":
                 # The yes-or-no type was renamed Noul, the providers' own name for it.
                 item["kind"] = "Noul"
-        # Each question's connection field lives on the node; the class has only the one to copy.
+        # Each question's connection fields live on the node; the class has only the one to copy.
         for item in template["questions"]["value"]:
-            name = _connection_field(item) if isinstance(item, dict) else None
-            if name and name not in template and name in saved:
-                template[name] = deepcopy(saved[name])
+            for name in _connection_fields(item).values() if isinstance(item, dict) else ():
+                if name not in template and name in saved:
+                    template[name] = deepcopy(saved[name])
         if template["question_mode"]["value"] not in {_FORM, _JSON}:
             template["question_mode"]["value"] = _FORM
         self._show_fields(template)
@@ -321,9 +320,18 @@ class DecisionModelComponent(Component):
             config["questions_json"]["advanced"] = form
 
 
-def _connection_field(item: dict) -> str | None:
-    """The hidden node field a question's text can be connected through."""
-    return item.get("input_field") or (f"{_CONNECTION_PREFIX}{item['id']}" if item.get("id") else None)
+def _connection_fields(item: dict) -> dict[str, str]:
+    """The hidden node fields a question's texts can be connected through, keyed by the text each supplies.
+
+    Its question text's is the field it names or <prefix><id>; a Noul migrated from the old fields
+    also names its What Yes Means and What No Means fields.
+    """
+    fields = {
+        "question": item.get("input_field") or (f"{_CONNECTION_PREFIX}{item['id']}" if item.get("id") else None),
+        "yes_description": item.get("yes_input_field"),
+        "no_description": item.get("no_input_field"),
+    }
+    return {text: field for text, field in fields.items() if field}
 
 
 def _legacy_question(saved: dict) -> dict:
@@ -344,6 +352,12 @@ def _legacy_question(saved: dict) -> dict:
 
     kind = value("kind", "Choice")
     kind = "Noul" if kind == "Boolean" else kind
+    connections = {"input_field": "question"}
+    if kind == "Noul":
+        # What Yes Means and What No Means showed, and could be connected, only on a yes-or-no node.
+        for answer in ("yes", "no"):
+            if f"{answer}_description" in saved:
+                connections[f"{answer}_input_field"] = f"{answer}_description"
     options = value("candidates", _NEW_QUESTION["options"])
     levels = value("levels", _NEW_QUESTION["levels"])
     if "levels" not in saved and kind == "Score":
@@ -352,7 +366,7 @@ def _legacy_question(saved: dict) -> dict:
     return {
         **deepcopy(_NEW_QUESTION),
         "id": "1",
-        "input_field": "question",
+        **connections,
         "kind": kind,
         "question": value("question", ""),
         "options": options,

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { getNodeInputColors } from "@/CustomNodes/helpers/get-node-input-colors";
 import { getNodeInputColorsName } from "@/CustomNodes/helpers/get-node-input-colors-name";
 import {
@@ -7,8 +8,13 @@ import {
 } from "@/CustomNodes/helpers/parameter-filtering";
 import { sortToolModeFields } from "@/CustomNodes/helpers/sort-tool-mode-field";
 import getFieldTitle from "@/CustomNodes/utils/get-field-title";
+import { questionHandleTitle } from "@/components/core/parameterRenderComponent/components/decision-questions/decision-questions-modal";
+import QuestionHandle from "@/components/core/parameterRenderComponent/components/decision-questions/question-handle";
 import useFlowStore from "@/stores/flowStore";
-import { scapedJSONStringfy } from "@/utils/reactflowUtils";
+import {
+  questionConnectionFields,
+  scapedJSONStringfy,
+} from "@/utils/reactflowUtils";
 import NodeInputField from "../NodeInputField";
 import { findPrimaryInput } from "./utils";
 
@@ -20,6 +26,7 @@ const RenderInputParameters = ({
   shownOutputs,
   showHiddenOutputs,
 }) => {
+  const { t } = useTranslation();
   const edges = useFlowStore((state) => state.edges);
 
   const templateFields = useMemo(() => {
@@ -99,15 +106,26 @@ const RenderInputParameters = ({
     );
   }, [shownTemplateFields, data.node?.template, isToolMode, data.id, edges]);
 
+  // A question list draws its questions' handles on its cards, which a minimized node hides,
+  // so there they join the node's other handles.
+  const questionHandles = useMemo(
+    () => (showNode ? [] : questionConnectionFields(data.node?.template ?? {})),
+    [showNode, data.node?.template],
+  );
+
   // LE-1810 (T8): a minimized node still shows ALL its input handles —
   // each one gets a distinct vertical offset on the collapsed card.
   const handleFields = useMemo(
-    () =>
-      shownTemplateFields.filter(
+    () => [
+      ...shownTemplateFields.filter(
         (templateField) => displayHandleMap.get(templateField) ?? false,
       ),
-    [shownTemplateFields, displayHandleMap],
+      ...questionHandles.map(({ fieldName }) => fieldName),
+    ],
+    [shownTemplateFields, displayHandleMap, questionHandles],
   );
+  const minimizedHandleTopAt = (handleIdx: number) =>
+    `${(((handleIdx + 1) / (handleFields.length + 1)) * 100).toFixed(2)}%`;
 
   const renderInputParameter = shownTemplateFields.map(
     (templateField: string, idx: number) => {
@@ -146,9 +164,7 @@ const RenderInputParameters = ({
           isPrimaryInput={templateField === primaryInputFieldName}
           displayHandle={displayHandleMap.get(templateField) ?? false}
           minimizedHandleTop={
-            handleIdx === -1
-              ? undefined
-              : `${(((handleIdx + 1) / (handleFields.length + 1)) * 100).toFixed(2)}%`
+            handleIdx === -1 ? undefined : minimizedHandleTopAt(handleIdx)
           }
         />
       );
@@ -171,6 +187,18 @@ const RenderInputParameters = ({
     <>
       {minimizedSpacer}
       {renderInputParameter}
+      {questionHandles.map(({ text, fieldName, number }) => (
+        <QuestionHandle
+          key={fieldName}
+          nodeId={data.id}
+          fieldName={fieldName}
+          field={data.node!.template[fieldName]}
+          title={questionHandleTitle(t, number, text)}
+          minimizedHandleTop={minimizedHandleTopAt(
+            handleFields.indexOf(fieldName),
+          )}
+        />
+      ))}
     </>
   );
 };

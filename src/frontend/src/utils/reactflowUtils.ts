@@ -31,6 +31,7 @@ import { customDownloadNodeJson } from "@/customization/utils/custom-download-js
 import { customDownloadFlow } from "@/customization/utils/custom-reactFlowUtils";
 import useFlowStore from "@/stores/flowStore";
 import getFieldTitle from "../CustomNodes/utils/get-field-title";
+import type { DecisionQuestion } from "../components/core/parameterRenderComponent/components/decision-questions/decision-questions-modal";
 import {
   INPUT_TYPES,
   IS_MAC,
@@ -382,8 +383,32 @@ const isAdvancedField = (data: APIClassType, fieldName: string): boolean => {
   return field && "advanced" in field && field.advanced === true;
 };
 
+export type QuestionText = "question" | "yes_description" | "no_description";
+
+// The hidden node fields a question's texts are connected through: its question text's (the field
+// it names, or <prefix><id>) and, on a Noul migrated from the old fields, What Yes / No Means'.
+export const questionConnections = (
+  question: DecisionQuestion | undefined,
+  prefix?: string,
+): { text: QuestionText; fieldName: string }[] =>
+  (
+    [
+      [
+        "question",
+        question?.input_field ??
+          (prefix && question?.id ? `${prefix}${question.id}` : undefined),
+      ],
+      ...(question?.kind === "Noul"
+        ? [
+            ["yes_description", question.yes_input_field],
+            ["no_description", question.no_input_field],
+          ]
+        : []),
+    ] as [QuestionText, string | undefined][]
+  ).flatMap(([text, fieldName]) => (fieldName ? [{ text, fieldName }] : []));
+
 // A shown question list draws its questions' connection handles on its own rows, so those
-// fields stay hidden as rows but keep their edges: <prefix><id>, or the field a question names.
+// fields stay hidden as rows but keep their edges.
 const isDrawnByQuestionList = (
   template: APITemplateType,
   fieldName: string,
@@ -395,7 +420,27 @@ const isDrawnByQuestionList = (
       ((!!field.connection_prefix &&
         fieldName.startsWith(field.connection_prefix)) ||
         (Array.isArray(field.value) &&
-          field.value.some((question) => question?.input_field === fieldName))),
+          field.value.some((question) =>
+            questionConnections(question, field.connection_prefix).some(
+              (connection) => connection.fieldName === fieldName,
+            ),
+          ))),
+  );
+
+// The connection fields a shown question list draws handles for, with each question's number.
+export const questionConnectionFields = (
+  template: APITemplateType,
+): { text: QuestionText; fieldName: string; number: number }[] =>
+  Object.values(template).flatMap((field) =>
+    field?.type === "decision_questions" &&
+    field.show &&
+    Array.isArray(field.value)
+      ? field.value.flatMap((question, index) =>
+          questionConnections(question, field.connection_prefix)
+            .filter(({ fieldName }) => template[fieldName])
+            .map((connection) => ({ ...connection, number: index + 1 })),
+        )
+      : [],
   );
 
 export function filterHiddenFieldsEdges(

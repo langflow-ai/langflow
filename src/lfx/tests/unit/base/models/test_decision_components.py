@@ -363,6 +363,51 @@ async def test_a_question_wired_before_the_list_stays_wired_after_update():
 
 
 @pytest.mark.asyncio
+async def test_a_boolean_wired_before_the_list_keeps_what_yes_and_no_mean_wired():
+    """Edges into the old What Yes Means and What No Means stay connected and supply the run's meanings."""
+    from copy import deepcopy
+
+    from lfx.schema.message import Message
+
+    component = DecisionModelComponent()
+    saved = component.to_frontend_node()["data"]["node"]
+    del saved["template"]["questions"]
+    saved["template"].update(
+        {
+            "kind": {"value": "Boolean"},
+            "question": {"value": "Refund?"},
+            "yes_description": {"value": ""},
+            "no_description": {"value": "Anything else"},
+        }
+    )
+    updated = await component.update_frontend_node(component.to_frontend_node()["data"]["node"], saved)
+    [question] = updated["template"]["questions"]["value"]
+    assert (question["yes_input_field"], question["no_input_field"]) == ("yes_description", "no_description")
+    fields = {name: updated["template"][name] for name in ("yes_description", "no_description")}
+    assert all((f["type"], f["input_types"], f["show"]) == ("str", ["Message"], False) for f in fields.values())
+
+    again = await component.update_frontend_node(component.to_frontend_node()["data"]["node"], deepcopy(updated))
+    assert {name: again["template"][name] for name in fields} == fields
+
+    component.set(context="text", questions=[question])
+    component._attributes["yes_description"] = Message(text="Asks for money back")
+    request = component._request()
+    assert (request.yes_description, request.no_description) == ("Asks for money back", "Anything else")
+
+
+@pytest.mark.asyncio
+async def test_only_a_migrated_boolean_keeps_what_yes_and_no_mean_as_connections():
+    component = DecisionModelComponent()
+    saved = component.to_frontend_node()["data"]["node"]
+    del saved["template"]["questions"]
+    saved["template"].update({"kind": {"value": "Choice"}, "question": {"value": "Which?"}, "yes_description": {}})
+    updated = await component.update_frontend_node(component.to_frontend_node()["data"]["node"], saved)
+    [question] = updated["template"]["questions"]["value"]
+    assert "yes_input_field" not in question
+    assert "yes_description" not in updated["template"]
+
+
+@pytest.mark.asyncio
 async def test_saved_boolean_questions_become_noul_on_update():
     from copy import deepcopy
 

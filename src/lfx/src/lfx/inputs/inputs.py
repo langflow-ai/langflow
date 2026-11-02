@@ -150,7 +150,8 @@ class DecisionQuestionsInput(BaseInputMixin, MetadataTraceMixin):
     With ``connection_prefix``, each question's text can also be connected: the question whose ``id``
     is X takes its connection through the hidden template field ``<connection_prefix>X``, or through
     the field its ``input_field`` names, and the editor creates one for a new question by copying
-    ``<connection_prefix>1``.
+    ``<connection_prefix>1``. A Noul question's ``yes_input_field`` and ``no_input_field`` name the
+    fields its What Yes Means and What No Means are connected through.
     """
 
     field_type: SerializableFieldTypes = FieldTypes.DECISION_QUESTIONS

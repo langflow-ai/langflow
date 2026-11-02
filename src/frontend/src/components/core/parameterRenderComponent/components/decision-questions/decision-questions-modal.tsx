@@ -7,16 +7,31 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import BaseModal from "@/modals/baseModal";
+import type { QuestionText } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
 import TabComponent from "../tabComponent";
 
 export const KINDS = ["Choice", "Noul", "Score"];
+
+// "Question 2", or "Question 2: What Yes means (optional)" for a meaning's handle.
+export const questionHandleTitle = (
+  t: (key: string, options?: Record<string, unknown>) => string,
+  number: number,
+  text: QuestionText,
+) => {
+  const title = t("decisionQuestions.title", { number });
+  return text === "question"
+    ? title
+    : `${title}: ${t(`decisionQuestions.${text}`)}`;
+};
 
 type Row = { id?: string; label?: string; description?: string };
 
 export type DecisionQuestion = {
   id?: string;
   input_field?: string;
+  yes_input_field?: string;
+  no_input_field?: string;
   name?: string;
   kind?: string;
   question?: string;
@@ -47,7 +62,8 @@ export default function DecisionQuestionsModal({
   questions: DecisionQuestion[];
   initialIndex: number;
   newQuestion?: DecisionQuestion;
-  isConnected: (question: DecisionQuestion) => boolean;
+  // Whether a component supplies one of the question's texts, by default its question text.
+  isConnected: (question: DecisionQuestion, text?: QuestionText) => boolean;
   onDone: (questions: DecisionQuestion[]) => void;
 }) {
   const { t } = useTranslation();
@@ -229,14 +245,24 @@ export default function DecisionQuestionsModal({
                     >
                       {t(`decisionQuestions.${key}`)}
                     </label>
-                    <Input
-                      id={fieldId(key)}
-                      data-testid={`${id}_modal_${key}`}
-                      value={question[key] ?? ""}
-                      onChange={(event) =>
-                        update({ [key]: event.target.value })
-                      }
-                    />
+                    {isConnected(question, key) ? (
+                      <div
+                        id={fieldId(key)}
+                        className="rounded-md border border-dashed border-border p-2 text-sm text-muted-foreground"
+                        data-testid={`${id}_modal_${key}_connected`}
+                      >
+                        {t("decisionQuestions.questionConnected")}
+                      </div>
+                    ) : (
+                      <Input
+                        id={fieldId(key)}
+                        data-testid={`${id}_modal_${key}`}
+                        value={question[key] ?? ""}
+                        onChange={(event) =>
+                          update({ [key]: event.target.value })
+                        }
+                      />
+                    )}
                   </div>
                 ))}
             </div>

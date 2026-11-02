@@ -5,17 +5,20 @@ import useFlowStore from "@/stores/flowStore";
 import { useTypesStore } from "@/stores/typesStore";
 import type { InputFieldType } from "@/types/api";
 
-// A node field's handle, drawn beside one question card instead of on its own row.
+// A node field's handle, drawn beside one question card instead of on its own row, or at
+// minimizedHandleTop on a minimized node, which shows no cards.
 export default function QuestionHandle({
   nodeId,
   fieldName,
   field,
   title,
+  minimizedHandleTop,
 }: {
   nodeId: string;
   fieldName: string;
   field: InputFieldType;
   title: string;
+  minimizedHandleTop?: string;
 }) {
   const myData = useTypesStore((state) => state.data);
   const types = useTypesStore((state) => state.types);
@@ -35,9 +38,10 @@ export default function QuestionHandle({
       colors={getNodeInputColors(field.input_types, field.type, types)}
       colorName={getNodeInputColorsName(field.input_types, field.type, types)}
       setFilterEdge={setFilterEdge}
-      showNode
+      showNode={minimizedHandleTop === undefined}
       testIdComplement={`decision-question-${fieldName}`}
       nodeId={nodeId}
+      minimizedHandleTop={minimizedHandleTop}
     />
   );
 }

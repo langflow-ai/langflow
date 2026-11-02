@@ -271,6 +271,16 @@ describe("the question editor", () => {
     expect(calls).toEqual(["snapshot", "deleteEdge"]);
   });
 
+  it("draws no handles on its cards while the node is minimized", () => {
+    useFlowStore.setState({
+      nodes: [{ id: "DecisionModel-1", data: { showNode: false } }] as never,
+    });
+    renderQuestions([team, urgent]);
+    expect(screen.queryByTestId("handle_question_input_1")).toBeNull();
+    expect(screen.queryByTestId("handle_question_input_x1")).toBeNull();
+    useFlowStore.setState({ nodes: [] });
+  });
+
   it("keeps a migrated question wired through the old Question field", () => {
     useFlowStore.setState({ edges: [edgeInto("question")] as never });
     const migrated = { ...team, input_field: "question" };
@@ -281,5 +291,49 @@ describe("the question editor", () => {
     expect(screen.getByTestId("questions_question_0")).toHaveTextContent(
       "Connected",
     );
+  });
+});
+
+describe("a Noul migrated from the old Yes / No fields", () => {
+  const migrated = {
+    ...urgent,
+    id: "1",
+    input_field: "question",
+    yes_input_field: "yes_description",
+    no_input_field: "no_description",
+  };
+  const fields = {
+    question: { ...connection, name: "question" },
+    yes_description: { ...connection, name: "yes_description" },
+    no_description: { ...connection, name: "no_description" },
+  };
+
+  it("keeps What Yes and What No Means connectable", () => {
+    useFlowStore.setState({ edges: [edgeInto("yes_description")] as never });
+    renderQuestions([migrated], fields);
+    expect(screen.getByTestId("handle_yes_description")).toBeInTheDocument();
+    expect(screen.getByTestId("handle_no_description")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("questions_edit"));
+    expect(
+      screen.getByTestId("questions_modal_yes_description_connected"),
+    ).toHaveTextContent("Connected");
+    expect(screen.getByTestId("questions_modal_no_description")).toBeVisible();
+  });
+
+  it("drops their connections once it is no longer a Noul", async () => {
+    const deleteEdge = jest.fn();
+    useFlowStore.setState({
+      edges: [edgeInto("yes_description")] as never,
+      deleteEdge,
+    });
+    const { handleNodeClass } = renderQuestions([migrated], fields);
+    fireEvent.click(screen.getByTestId("questions_edit"));
+    await userEvent.setup().click(screen.getByRole("tab", { name: "Choice" }));
+    fireEvent.click(screen.getByTestId("questions_modal_done"));
+    expect(deleteEdge).toHaveBeenCalledWith(["edge-yes_description"]);
+    const [[updated]] = handleNodeClass.mock.calls;
+    expect(updated.template.yes_description).toBeUndefined();
+    expect(updated.template.no_description).toBeUndefined();
+    expect(updated.template.question).toEqual(fields.question);
   });
 });
