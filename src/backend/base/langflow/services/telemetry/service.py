@@ -86,6 +86,7 @@ class TelemetryService(Service):
         self.log_package_version_task: asyncio.Task | None = None
         self.log_package_email_task: asyncio.Task | None = None
         self.client_type = self._get_client_type()
+        self.edition = settings_service.settings.edition
 
         # Initialize static telemetry fields
         version_info = get_version_info()
@@ -123,6 +124,7 @@ class TelemetryService(Service):
             if not isinstance(payload, VersionPayload):
                 payload_dict.update(self.common_telemetry_fields)
             payload_dict.update(IBM_PRODUCT_PROPERTIES)
+            payload_dict["productPlanName"] = self.edition
             payload_dict["instanceId"] = event_anonymous_id
             payload_dict["subscriptionId"] = event_anonymous_id
             event, process_type, legacy_event = get_ibm_common_event(path)

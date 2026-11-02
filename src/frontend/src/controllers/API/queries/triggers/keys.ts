@@ -20,4 +20,6 @@ export const triggersKeys = {
   one: (id: string) => [...triggersKeys.all, "one", id] as const,
   events: (id: string) => [...triggersKeys.all, "events", id] as const,
   ingress: (id: string) => [...triggersKeys.all, "ingress", id] as const,
+  sessions: (flowId: string, sessionIds: readonly string[]) =>
+    [...triggersKeys.all, "sessions", flowId, ...sessionIds] as const,
 } as const;
