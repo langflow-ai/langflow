@@ -9,6 +9,7 @@
 use std::collections::HashSet;
 use std::ops::Deref;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use crate::json;
 use crate::value::{Map, Value};
@@ -259,8 +260,13 @@ impl FieldUpdate {
 /// `data.node.template` are objects. A `Node` cannot be made without these
 /// checks, and a field update cannot undo them (see [`NodePath`]), so no
 /// reader checks them again.
+///
+/// A node is shared, not copied: a clone of a node, a snapshot of a graph
+/// ([`crate::ops::GraphSnapshot`]) and the forward operations of a batch all
+/// hold the same value, and a write copies it only while another holder
+/// still has it.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Node(Value);
+pub struct Node(Arc<Value>);
 
 impl Node {
     /// The node's id.
@@ -272,7 +278,7 @@ impl Node {
     /// The node as a JSON object.
     #[must_use]
     pub fn as_map(&self) -> &Map {
-        match &self.0 {
+        match &*self.0 {
             Value::Object(node) => node,
             _ => unreachable!("a node is a JSON object"),
         }
@@ -281,7 +287,7 @@ impl Node {
     /// The node as a JSON object, moved out.
     #[must_use]
     pub fn into_map(self) -> Map {
-        match self.0 {
+        match self.into_value() {
             Value::Object(node) => node,
             _ => unreachable!("a node is a JSON object"),
         }
@@ -294,13 +300,14 @@ impl Node {
 
     /// The node as a JSON value, for writing a path in it. A field update's
     /// [`NodePath`] keeps the node's shape.
+    /// A node that another holder shares is copied first.
     pub(crate) fn as_value_mut(&mut self) -> &mut Value {
-        &mut self.0
+        Arc::make_mut(&mut self.0)
     }
 
-    /// The node as a JSON value, moved out.
+    /// The node as a JSON value, moved out: a copy while another holder shares it.
     pub(crate) fn into_value(self) -> Value {
-        self.0
+        Arc::unwrap_or_clone(self.0)
     }
 
     /// Check that `node` has the shape of a node.
@@ -379,7 +386,7 @@ impl TryFrom<Map> for Node {
     /// Check `node`, and keep it as a node.
     fn try_from(node: Map) -> Result<Self> {
         Self::check(&node).map_err(|error| error.into_error("node"))?;
-        Ok(Self(Value::Object(node)))
+        Ok(Self(Arc::new(Value::Object(node))))
     }
 }
 
@@ -387,7 +394,7 @@ impl FromValue for Node {
     fn from_value(value: Value) -> Result<Self, FromValueError> {
         let node = Map::from_value(value)?;
         Self::check(&node)?;
-        Ok(Self(Value::Object(node)))
+        Ok(Self(Arc::new(Value::Object(node))))
     }
 }
 
@@ -396,9 +403,10 @@ impl FromValue for Node {
 /// Its `id`, `source` and `target` are non-empty strings. An `Edge` cannot be
 /// made without these checks, and an edge is never written in place, so no
 /// reader checks them again. Whether the nodes and handles it names exist
-/// depends on the flow, so apply checks that.
+/// depends on the flow, so apply checks that. Like a [`Node`], an edge is
+/// shared, not copied.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Edge(Map);
+pub struct Edge(Arc<Map>);
 
 impl Edge {
     /// The edge's id.
@@ -428,7 +436,7 @@ impl Edge {
     /// The edge as a JSON object, moved out.
     #[must_use]
     pub fn into_map(self) -> Map {
-        self.0
+        Arc::unwrap_or_clone(self.0)
     }
 
     /// Check that `edge` has the shape of an edge.
@@ -448,7 +456,7 @@ impl TryFrom<Map> for Edge {
     /// Check `edge`, and keep it as an edge.
     fn try_from(edge: Map) -> Result<Self> {
         Self::check(&edge).map_err(|error| error.into_error("edge"))?;
-        Ok(Self(edge))
+        Ok(Self(Arc::new(edge)))
     }
 }
 
@@ -456,7 +464,7 @@ impl FromValue for Edge {
     fn from_value(value: Value) -> Result<Self, FromValueError> {
         let edge = Map::from_value(value)?;
         Self::check(&edge)?;
-        Ok(Self(edge))
+        Ok(Self(Arc::new(edge)))
     }
 }
 

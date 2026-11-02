@@ -26,6 +26,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::json_out::{self, Ascii};
@@ -454,8 +455,9 @@ pub struct GraphState {
     /// [`Self::drop_staged`].
     staged: bool,
     /// The length of the graph's last JSON text, to size the next one's
-    /// buffer: growing a buffer of megabytes copies it each time.
-    text_len: AtomicUsize,
+    /// buffer: growing a buffer of megabytes copies it each time. Its
+    /// snapshots share it.
+    text_len: Arc<AtomicUsize>,
 }
 
 impl GraphState {
@@ -493,7 +495,7 @@ impl GraphState {
             lists: Lists::default(),
             base_checked: false,
             staged: false,
-            text_len: AtomicUsize::new(0),
+            text_len: Arc::default(),
         })
     }
 
@@ -632,23 +634,28 @@ impl GraphState {
     /// [`GraphState::json`] writes, with every character above U+007F
     /// escaped.
     pub(crate) fn json_text(&self) -> Vec<u8> {
-        let mut out = self.text_buffer();
-        json_out::write_entries(
-            &mut out,
-            self.entries(),
-            |out, entry| match entry {
-                Entry::Value(value) => json_out::write_value(out, value, Ascii::Escape),
-                Entry::Nodes(nodes) => json_out::write_seq(out, nodes.iter(), |out, node| {
-                    json_out::write_value(out, node, Ascii::Escape);
-                }),
-                Entry::Edges(edges) => json_out::write_seq(out, edges.iter(), |out, edge| {
-                    json_out::write_map(out, edge, Ascii::Escape);
-                }),
-            },
-            Ascii::Escape,
+        let out = graph_text(
+            &self.root,
+            self.graph.nodes.values().map(Node::as_value),
+            self.graph.edges.values().map(Edge::as_map),
+            self.text_buffer(),
         );
         self.text_len.store(out.len(), Ordering::Relaxed);
         out
+    }
+
+    /// The committed graph as it is now, without a staged batch, to read
+    /// while the state goes on changing ([`GraphSnapshot`]). It shares every
+    /// node and edge with the state, so it costs a pointer for each: a write
+    /// after it copies only the node it changes.
+    #[must_use]
+    pub fn snapshot(&self) -> GraphSnapshot {
+        GraphSnapshot {
+            root: self.root.clone(),
+            nodes: self.graph.nodes.values().cloned().collect(),
+            edges: self.graph.edges.values().cloned().collect(),
+            text_len: Arc::clone(&self.text_len),
+        }
     }
 
     /// The graph with its staged batch as ASCII JSON text: what
@@ -950,6 +957,85 @@ impl Serialize for GraphJson<'_> {
     }
 }
 
+/// A graph as a [`GraphState`] held it when [`GraphState::snapshot`] took
+/// it: read only, and unchanged by the state's later batches. A server takes
+/// one while it holds the state, and writes and hashes it after, on another
+/// thread, while batches go on.
+#[derive(Debug, Clone)]
+pub struct GraphSnapshot {
+    /// The flow's top-level object; `nodes` and `edges` hold placeholders.
+    root: Map,
+    nodes: Vec<Node>,
+    edges: Vec<Edge>,
+    /// The length of the state's last JSON text, shared with the state.
+    text_len: Arc<AtomicUsize>,
+}
+
+impl GraphSnapshot {
+    /// The number of nodes and edges: a measure of what work on the whole graph costs.
+    #[must_use]
+    pub fn item_count(&self) -> usize {
+        self.nodes.len() + self.edges.len()
+    }
+
+    /// The graph as ASCII JSON text: what [`GraphState`] wrote when the
+    /// snapshot was taken ([`crate::ops::api::json_text`]).
+    pub(crate) fn json_text(&self) -> Vec<u8> {
+        let last = self.text_len.load(Ordering::Relaxed);
+        let out = graph_text(
+            &self.root,
+            self.nodes.iter().map(Node::as_value),
+            self.edges.iter().map(Edge::as_map),
+            Vec::with_capacity(last + last / 16),
+        );
+        self.text_len.store(out.len(), Ordering::Relaxed);
+        out
+    }
+
+    /// The SHA-256 hex digest of the graph's canonical form: what
+    /// [`GraphState::graph_hash`] gave when the snapshot was taken.
+    ///
+    /// # Errors
+    ///
+    /// A number that is not finite as JavaScript reads it.
+    pub fn graph_hash(&self) -> Result<String> {
+        canonical::loaded_graph_hash(
+            &self.root,
+            self.nodes
+                .iter()
+                .map(|node| Cow::Borrowed(node.as_value()))
+                .collect(),
+            self.edges.iter().map(Edge::as_map).collect(),
+        )
+    }
+}
+
+/// A loaded graph as ASCII JSON text, into `out`: the top-level keys in
+/// order, with `nodes` and `edges` in their place.
+fn graph_text<'g>(
+    root: &'g Map,
+    nodes: impl IntoIterator<Item = &'g Value>,
+    edges: impl IntoIterator<Item = &'g Map>,
+    mut out: Vec<u8>,
+) -> Vec<u8> {
+    let (mut nodes, mut edges) = (Some(nodes), Some(edges));
+    json_out::write_entries(
+        &mut out,
+        root.iter().map(|(key, value)| (key, (key.as_str(), value))),
+        |out, (key, value)| match key {
+            "nodes" => json_out::write_seq(out, nodes.take().into_iter().flatten(), |out, node| {
+                json_out::write_value(out, node, Ascii::Escape);
+            }),
+            "edges" => json_out::write_seq(out, edges.take().into_iter().flatten(), |out, edge| {
+                json_out::write_map(out, edge, Ascii::Escape);
+            }),
+            _ => json_out::write_value(out, value, Ascii::Escape),
+        },
+        Ascii::Escape,
+    );
+    out
+}
+
 /// Writes a [`GraphState`] with its staged batch ([`GraphState::staged_json`]).
 struct StagedJson<'s>(&'s GraphState);
 
@@ -1100,6 +1186,47 @@ pub(crate) fn resolve_mut<'v>(root: &'v mut Value, steps: &[PathPart]) -> Option
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_snapshot_keeps_the_graph_as_it_was() {
+        use crate::json;
+        use crate::ops::api::{graph_json, snapshot_json, state_graph_hash};
+        use crate::ops::{ApplyOptions, Operation};
+        let node = |id: &str| json!({"id": id, "data": {"node": {"template": {"t": {"value": "x", "type": "str"}}}}});
+        let flow = json!({"nodes": [node("a"), node("b")], "edges": [{"id": "e", "source": "a", "target": "b"}], "name": "f"});
+        let mut state = GraphState::new(flow).unwrap();
+        let (text, hash) = (graph_json(&state), state_graph_hash(&state).unwrap());
+        let snapshot = state.snapshot();
+        let write = json!([{"type": "update_nodes", "updates": [
+            {"id": "a", "op": "set_field", "path": ["data", "node", "template", "t", "value"], "value": "y"}
+        ]}]);
+        let delete = json!([{"type": "delete_nodes", "ids": ["b"]}]);
+        for batch in [write, delete] {
+            let operations = Operation::list_from_value(batch).unwrap();
+            state.apply(operations, ApplyOptions::default()).unwrap();
+        }
+        // A staged batch is not in a snapshot either.
+        let staged = json!([{"type": "update_nodes", "updates": [
+            {"id": "a", "op": "set_field", "path": ["data", "node", "template", "t", "value"], "value": "z"}
+        ]}]);
+        state
+            .stage(
+                Operation::list_from_value(staged).unwrap(),
+                ApplyOptions::default(),
+            )
+            .unwrap();
+        let later = state.snapshot();
+        assert_eq!(
+            (snapshot_json(&snapshot), snapshot.graph_hash().unwrap()),
+            (text, hash)
+        );
+        assert_eq!(snapshot_json(&later), graph_json(&state));
+        assert_eq!(
+            later.graph_hash().unwrap(),
+            state_graph_hash(&state).unwrap()
+        );
+        assert_ne!(later.graph_hash().unwrap(), snapshot.graph_hash().unwrap());
+    }
 
     fn stored(keys: &[&str]) -> Layered<u32> {
         let map = keys
