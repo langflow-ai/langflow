@@ -98,7 +98,11 @@ def flow_file_target_key(key: str, flow_id: str) -> str:
 
 
 def rewrite_flow_file_keys_in_place(
-    flow_data: dict | None, flow_id: str, *, key_mapping: Mapping[str, str] | None = None
+    flow_data: dict | None,
+    flow_id: str,
+    *,
+    key_mapping: Mapping[str, str] | None = None,
+    mapped_namespace: str | None = None,
 ) -> dict[str, str]:
     """Point every storage key a flow's file inputs read at the flow's own namespace.
 
@@ -108,8 +112,10 @@ def rewrite_flow_file_keys_in_place(
     package names cannot disagree. Absolute paths and bare names are left as they are.
 
     ``key_mapping`` can give canonical source keys explicit destinations for versioned
-    documents. Each destination must remain in the deployed flow's namespace. Unmapped
-    keys keep their file names and use the default destination.
+    documents. Each destination must be in ``mapped_namespace``, the deployed flow's own
+    namespace when that is not given; a caller passes the serving account's id there when
+    the documents live in that account's storage. Unmapped keys keep their file names and
+    use the default destination.
 
     Returns ``{source key: target key}`` for every key rewritten, including one already in
     the flow's namespace, which maps to itself.
@@ -121,6 +127,7 @@ def rewrite_flow_file_keys_in_place(
     """
     mapping: dict[str, str] = {}
     claimed: dict[str, str] = {}
+    allowed_namespace = validate_namespace(mapped_namespace or flow_id)
 
     def rewrite(value: object) -> object:
         if not isinstance(value, str) or _why_not_a_key(value) is not None:
@@ -130,12 +137,12 @@ def rewrite_flow_file_keys_in_place(
         target = flow_file_target_key(source, flow_id)
         if key_mapping is not None and source in key_mapping:
             target = key_mapping[source]
-            invalid_target = "A mapped file key must name a file in the deployed flow's namespace"
+            invalid_target = "A mapped file key must name a file in the namespace the deploy maps into"
             if _why_not_a_key(target) is not None:
                 raise ValueError(invalid_target)
             target_namespace, _, target_name = target.partition("/")
             target_namespace = validate_namespace(target_namespace)
-            if target_namespace != validate_namespace(flow_id) or target_name == "." or "\x00" in target_name:
+            if target_namespace != allowed_namespace or target_name == "." or "\x00" in target_name:
                 raise ValueError(invalid_target)
             target = f"{target_namespace}/{target_name}"
         holder = claimed.setdefault(target, source)

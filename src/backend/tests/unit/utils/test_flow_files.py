@@ -407,3 +407,31 @@ def test_should_refuse_a_mapped_target_outside_the_flow_storage(target):
         rewrite_flow_file_keys_in_place(data, FLOW, key_mapping={f"{USER}/report.pdf": target})
 
     assert field["file_path"] == f"{USER}/report.pdf"
+
+
+def test_should_map_into_the_given_namespace_instead_of_the_flow():
+    account = str(uuid4())
+    field = _file_field(file_path=f"{USER}/report.pdf")
+    data = {"nodes": [_node("File-a", {"path": field})]}
+    target = f"{account}/report-version-one.pdf"
+
+    mapping = rewrite_flow_file_keys_in_place(
+        data, FLOW, key_mapping={f"{USER}/report.pdf": target.upper()}, mapped_namespace=account
+    )
+
+    assert mapping == {f"{USER}/report.pdf": f"{account}/REPORT-VERSION-ONE.PDF"}
+
+
+@pytest.mark.parametrize("outside", ["flow", "user"])
+def test_should_refuse_a_mapped_target_outside_the_given_namespace(outside):
+    account = str(uuid4())
+    field = _file_field(file_path=f"{USER}/report.pdf")
+    data = {"nodes": [_node("File-a", {"path": field})]}
+    target = f"{FLOW if outside == 'flow' else USER}/report-version-one.pdf"
+
+    with pytest.raises(ValueError, match="mapped file key"):
+        rewrite_flow_file_keys_in_place(
+            data, FLOW, key_mapping={f"{USER}/report.pdf": target}, mapped_namespace=account
+        )
+
+    assert field["file_path"] == f"{USER}/report.pdf"
