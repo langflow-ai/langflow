@@ -2,7 +2,7 @@
 name = "langflow"
 version = "1.14.0"
 description = "A Python package with a built-in web application"
-requires-python = ">=3.10,<3.16"
+requires-python = ">=3.11,<3.16"
 license = "MIT"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 readme = "README.md"
@@ -39,12 +39,14 @@ dependencies = [
     "lfx-ollama>=0.2.1,<1.0.0",
     "lfx-amazon>=0.3.0,<1.0.0",
     "lfx-cohere>=0.2.1,<1.0.0",
-    "lfx-oracle>=0.2.1,<1.0.0",
+    "lfx-oracle>=0.4.0,<1.0.0",
     "lfx-vllm>=0.2.1,<1.0.0",
     "lfx-openai-compatible>=0.2.1,<1.0.0",
     "lfx-google>=0.4.0,<1.0.0",
     "lfx-microsoft>=0.1.5,<1.0.0",
+    "lfx-jira>=0.1.0,<1.0.0",
     "lfx-slack>=0.2.3,<1.0.0",
+    "lfx-github>=0.1.0,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -132,7 +134,9 @@ lfx-confluent = { workspace = true }
 lfx-serply = { workspace = true }
 lfx-serpingapi = { workspace = true }
 lfx-microsoft = { workspace = true }
+lfx-jira = { workspace = true }
 lfx-slack = { workspace = true }
+lfx-github = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -172,7 +176,9 @@ members = [
     "src/bundles/serply",
     "src/bundles/serpingapi",
     "src/bundles/microsoft",
+    "src/bundles/jira",
     "src/bundles/slack",
+    "src/bundles/github",
     # langflow-extensions:bundle-members-end
 ]
 
@@ -270,28 +276,40 @@ constraint-dependencies = [
     "pymongo>=4.18.2,<5.0.0",  # CVE-2026-88029, CVE-2026-96747, CVE-2026-96748, CVE-2026-96749
     "tornado>=6.5.10,<7.0.0",  # 6.5.8/6.5.9 security fixes plus Jupyter compatibility fix
     # Python 3.15 preview: lock releases that ship cp315 wheels so the locked 3.15 install
-    # does not fall back to source builds. Scoped to 3.15 so the 3.10-3.14 pins do not move.
+    # does not fall back to source builds. Scoped to 3.15 so the 3.11-3.14 pins do not move.
     "aiohttp>=3.14.5; python_version >= '3.15'",
+    "beartype>=0.23.1; python_version >= '3.15'",
     "cramjam>=2.13.0; python_version >= '3.15'",
     "crc32c>=2.9.post0; python_version >= '3.15'",
+    "duckdb>=2.0.0; python_version >= '3.15'",
     "fastavro>=1.13.1; python_version >= '3.15'",
     "google-crc32c>=1.9.0; python_version >= '3.15'",
+    "grpcio>=1.84.0; python_version >= '3.15'",
     "httptools>=0.9.0; python_version >= '3.15'",
+    "ijson>=3.6.0; python_version >= '3.15'",
     "jiter>=0.17.0; python_version >= '3.15'",
+    "jq>=1.13.0; python_version >= '3.15'",
     "libcst>=1.9.0; python_version >= '3.15'",
+    "line-profiler>=5.1.0; python_version >= '3.15'",
+    "lxml>=6.1.2; python_version >= '3.15'",
+    "markupsafe>=3.0.4; python_version >= '3.15'",
     "mmh3>=5.3.1; python_version >= '3.15'",
     "msgpack>=1.2.3; python_version >= '3.15'",
     "numpy>=2.5.4; python_version >= '3.15'",
     "orjson>=3.13.0; python_version >= '3.15'",
+    "ormsgpack>=1.13.0; python_version >= '3.15'",
     "psycopg-binary>=3.3.6; python_version >= '3.15'",
     "psycopg2-binary>=2.9.13; python_version >= '3.15'",
     "pyroaring>=1.2.0; python_version >= '3.15'",
+    "pyarrow>=26.0.0; python_version >= '3.15'",
+    "pymongo>=4.19.0; python_version >= '3.15'",
     "rapidfuzz>=3.14.6; python_version >= '3.15'",
     "regex>=2026.9.29; python_version >= '3.15'",
     "rpds-py>=2026.9.1; python_version >= '3.15'",
     "scipy>=1.18.1; python_version >= '3.15'",
     "tiktoken>=0.14.0; python_version >= '3.15'",
     "uvloop>=0.23.0; python_version >= '3.15'",
+    "uuid-utils>=0.18.0; python_version >= '3.15'",
     "xxhash>=4.0.1; python_version >= '3.15'",
 ]
 override-dependencies = [

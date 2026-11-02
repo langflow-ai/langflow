@@ -36,6 +36,7 @@ class ConnectionStatusReason(str, Enum):
     OAUTH_DENIED = "oauth-denied"
     OAUTH_EXPIRED = "oauth-expired"
     OAUTH_FAILED = "oauth-failed"
+    OAUTH_REFRESH_TOKEN_MISSING = "oauth-refresh-token-missing"  # noqa: S105 - public status reason
 
 
 class ConnectionHealth(str, Enum):
@@ -98,6 +99,15 @@ class ConnectionCreate(BaseModel):
             msg = "granted_scopes must not contain duplicates"
             raise ValueError(msg)
         return normalized
+
+
+class ConnectionTokenRenewal(BaseModel):
+    """Replace a manual token without changing its connection handle or owner."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    credentials: ConnectionCredentialWrite
+    allow_non_interactive: bool = False
 
 
 class ConnectionUpdate(BaseModel):

@@ -88,6 +88,7 @@ class TriggerReason(str, Enum):
     ERROR = "error"
     NEEDS_RECONNECT = "needs_reconnect"
     CONSENT_REQUIRED = "consent_required"
+    READY_TO_RESUME = "ready_to_resume"
     EXPIRED = "expired"
     DEAD = "dead"
     # Caller and applicability reasons; only ever values in ``blocked_actions``.

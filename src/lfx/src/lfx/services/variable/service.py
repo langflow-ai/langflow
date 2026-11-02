@@ -1,14 +1,11 @@
 """Minimal variable service for lfx package with in-memory storage and environment fallback."""
 
-import json
-import os
-
 from lfx.log.logger import logger
 from lfx.services.base import Service
 from lfx.services.variable.request_scope import (
-    get_active_request_variables,
+    get_effective_request_variables,
+    global_var_alias,
     is_env_fallback_disabled,
-    normalize_parsed_variables,
 )
 from lfx.utils.env_var_security import safe_getenv
 
@@ -31,34 +28,9 @@ class VariableService(Service):
         logger.debug("Variable service initialized (env vars only)")
 
     @staticmethod
-    def _normalize_global_var_key(name: str) -> str:
-        return f"x-langflow-global-var-{name.lower().replace('_', '-')}"
-
-    @staticmethod
     def _get_request_variables() -> dict[str, str]:
         """Request-scoped variables from serve ContextVar or LANGFLOW_REQUEST_VARIABLES env."""
-        active = get_active_request_variables()
-        if active is not None:
-            return active
-
-        # LANGFLOW_REQUEST_VARIABLES is a process-wide env var, so reading it is an
-        # os.environ access. Honor the no-env-fallback contract and skip it when the
-        # request disables env fallback, keeping the "never reads os.environ" guarantee.
-        if is_env_fallback_disabled():
-            return {}
-
-        raw = os.getenv("LANGFLOW_REQUEST_VARIABLES")
-        if not raw:
-            return {}
-        try:
-            parsed = json.loads(raw)
-        except json.JSONDecodeError:
-            logger.debug("Invalid LANGFLOW_REQUEST_VARIABLES JSON; skipping request-scoped lookup")
-            return {}
-        if not isinstance(parsed, dict):
-            logger.debug("LANGFLOW_REQUEST_VARIABLES must be a JSON object; skipping request-scoped lookup")
-            return {}
-        return normalize_parsed_variables(parsed)
+        return get_effective_request_variables()
 
     async def get_variable(self, name: str, **kwargs) -> str | None:  # noqa: ARG002
         """Get a variable value.
@@ -89,7 +61,7 @@ class VariableService(Service):
             logger.debug(f"Variable '{name}' loaded from request-scoped variables")
             return request_variables[name]
 
-        global_alias = self._normalize_global_var_key(name)
+        global_alias = global_var_alias(name)
         if global_alias in request_variables:
             logger.debug(f"Variable '{name}' loaded from request-scoped alias '{global_alias}'")
             return request_variables[global_alias]
