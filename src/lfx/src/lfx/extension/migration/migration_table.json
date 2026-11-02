@@ -5270,6 +5270,16 @@
       "bare_class_name": "MrscraperWebSearch",
       "target": "ext:mrscraper:MrscraperWebSearch@official",
       "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "ApiverveFindApisComponent",
+      "target": "ext:apiverve:ApiverveFindApisComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "ApiverveRunApiComponent",
+      "target": "ext:apiverve:ApiverveRunApiComponent@official",
+      "added_in": "1.14.0"
     }
   ],
   "ambiguous_bare_names": [

@@ -1,0 +1,57 @@
+---
+title: APIVerve
+slug: /bundles-apiverve
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **APIVerve** bundle.
+
+[APIVerve](https://apiverve.com) is a catalog of about 380 REST APIs behind one API key, including email and phone validation, IP geolocation, DNS, WHOIS and SSL lookups, exchange rates, stock and SEC data, VIN decoding, and PDF and screenshot generation.
+The components in this bundle call the APIVerve HTTP API directly at `https://api.apiverve.com`.
+
+**APIVerve Run API** needs an APIVerve API key, which is sent as the `x-api-key` header.
+Create a key in the [APIVerve dashboard](https://dashboard.apiverve.com). A free account includes monthly credits.
+**APIVerve Find APIs** reads the public catalog and needs no key.
+
+For more information, see the [APIVerve documentation](https://docs.apiverve.com).
+
+Both components support **Tool Mode**, so an agent can search the catalog with **APIVerve Find APIs** and then call the API it found with **APIVerve Run API**.
+
+## APIVerve Run API
+
+This component calls one APIVerve API by its id and returns the `data` object of the API's response.
+Each parameter is sent where the API expects it, in the query string or the JSON body, based on the APIVerve catalog.
+
+It outputs the response data as [`Data`](/data-types#json).
+
+### APIVerve Run API parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| API Key (`api_key`) | SecretString | Input parameter. Your APIVerve API key. |
+| API (`api_id`) | String | Input parameter. The API id, such as `emailvalidator`, `iplookup`, or `vindecoder`. Use the **APIVerve Find APIs** component to look up ids. |
+| Parameters (`api_parameters`) | String | Input parameter. The API parameters as a JSON object, such as `{"email": "jane@example.com"}`. Default: `{}`. |
+| Timeout (seconds) (`timeout`) | Integer | Input parameter. How long to wait for APIVerve to respond. Default: `60`. |
+
+## APIVerve Find APIs
+
+This component searches the APIVerve catalog and returns the best matches with their parameters, ready to pass to **APIVerve Run API**.
+It does not call an API, so it uses no credits.
+
+It outputs a [`DataFrame`](/data-types#table) with one row per API, including the API's `api` id, `title`, `category`, `description`, and `parameters`.
+
+### APIVerve Find APIs parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Search (`query`) | String | Input parameter. What you need, such as `vat rates` or `decode vin`. |
+| Max Results (`max_results`) | Integer | Input parameter. How many matches to return, from 1 to 25. Default: `10`. |

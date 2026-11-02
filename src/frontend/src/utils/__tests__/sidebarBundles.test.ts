@@ -102,4 +102,16 @@ describe("SIDEBAR_BUNDLES", () => {
       ]),
     );
   });
+
+  it("classifies APIVerve as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "APIVerve",
+          icon: "APIVerve",
+          name: "apiverve",
+        }),
+      ]),
+    );
+  });
 });
