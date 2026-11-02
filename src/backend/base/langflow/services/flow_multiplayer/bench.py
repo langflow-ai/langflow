@@ -41,8 +41,10 @@ endpoints (``/health``, ``/healthz``) get request records too.
 Each sample also has ``threads``: the CPU seconds of each thread of the process
 (``/proc``), ``loop_tid`` (the thread that runs the event loop), ``gc_collections``
 (collections so far per generation), ``gc_count`` and ``blocks`` (allocated memory
-blocks). A gen-2 ``gc`` record has ``gen2_objects``: the tracked objects the full
-collection traverses, counted just before it starts (outside ``dur``).
+blocks). With ``LANGFLOW_OPS_BENCH_GC_OBJECTS=1``, a gen-2 ``gc`` record has
+``gen2_objects``: the tracked objects the full collection traverses, counted just
+before it starts (outside ``dur``, but on the loop thread: about 15 ms per million
+objects, so it stays off in measured runs).
 Compactions (``kind: "compaction"``) record start, end and the time of every
 phase, with ``lock_held`` from the advisory lock granted to the commit's end
 and ``checkpoints_delete``, the unlocked transaction after it.
@@ -127,6 +129,7 @@ GIL_INTERVAL = 0.005
 GIL_RECORD_MS = float(os.environ.get("LANGFLOW_OPS_BENCH_GIL_MS") or 20.0)
 ECALL_RECORD_MS = float(os.environ.get("LANGFLOW_OPS_BENCH_ECALL_MS") or 5.0)
 GC_RECORD_MS = 20.0
+GC_COUNT_OBJECTS = (os.environ.get("LANGFLOW_OPS_BENCH_GC_OBJECTS") or "").strip().lower() in ("1", "true", "yes")
 _loop_thread: int | None = None
 _gil_probe: threading.Thread | None = None
 PATH_PREFIXES = ("/api/v2/flows", "/api/v1/flows", "/health")
@@ -477,7 +480,9 @@ class _GcProbe:
     def __call__(self, phase: str, info: dict[str, Any]) -> None:
         if phase == "start":
             # What a full collection traverses: the tracked objects of generation 2 (frozen ones are not).
-            self.gen2_objects = len(gc.get_objects(generation=2)) if info.get("generation") == 2 else None  # noqa: PLR2004
+            # Off by default: listing ~1 M objects adds ~15 ms to each gen-2 pause, on the loop thread.
+            count = GC_COUNT_OBJECTS and info.get("generation") == 2  # noqa: PLR2004
+            self.gen2_objects = len(gc.get_objects(generation=2)) if count else None
             self.started = time.perf_counter()
             self.wall = time.time()
             return
