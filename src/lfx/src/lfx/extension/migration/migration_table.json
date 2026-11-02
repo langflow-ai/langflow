@@ -5057,6 +5057,16 @@
       "added_in": "1.13.0"
     },
     {
+      "bare_class_name": "ContextFetchSearchComponent",
+      "target": "ext:contextfetch:ContextFetchSearchComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "ContextFetchContentsComponent",
+      "target": "ext:contextfetch:ContextFetchContentsComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
       "bare_class_name": "GmailSendComponent",
       "target": "ext:google:GmailSendComponent@official",
       "added_in": "1.13.0"

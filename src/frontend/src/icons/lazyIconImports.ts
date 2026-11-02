@@ -151,6 +151,10 @@ export const lazyIconsMapping = {
     import("@/icons/Confluence").then((mod) => ({
       default: mod.ConfluenceIcon,
     })),
+  ContextFetch: () =>
+    import("@/icons/ContextFetch").then((mod) => ({
+      default: mod.ContextFetchIcon,
+    })),
   Couchbase: () =>
     import("@/icons/Couchbase").then((mod) => ({ default: mod.CouchbaseIcon })),
   Classroom: () =>

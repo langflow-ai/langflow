@@ -1,0 +1,59 @@
+---
+title: ContextFetch
+slug: /bundles-contextfetch
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="contextfetch" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **ContextFetch** bundle.
+
+Both components need a ContextFetch API key. For how to get one, and for details on the underlying API, see the [ContextFetch documentation](https://contextfetch.dev/docs).
+
+If a request fails, for example because the API key is missing or invalid or the credits are used up, the output table contains a single row with an `error` column that describes the problem.
+
+## ContextFetch Search
+
+This component searches the web through the [ContextFetch API](https://contextfetch.dev) and returns the results with page content as Markdown.
+
+It outputs the results as a [`Table`](/data-types#table) with `title`, `url`, `published_date`, and `content` columns. The `text` of each row is the page content selected in **Page Content**.
+
+In [tool mode](/agents-tools), the component exposes a single tool named `contextfetch_search` that an [**Agent** component](/agents) can call with a search query.
+
+### ContextFetch Search parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Search Query (`input_value`) | String | Input parameter. What to search the web for, up to 2,000 characters. |
+| ContextFetch API Key (`contextfetch_api_key`) | SecretString | Input parameter. Your ContextFetch API key. |
+| Max Results (`max_results`) | Integer | Input parameter. The maximum number of results to return, from `1` to `25`. Default: `5`. |
+| Page Content (`content`) | String | Input parameter. The page content added to each result: `Pruned Context` (the relevant chunks joined in page order), `Highlights` (the chunks most relevant to the query), or `Full Text` (the whole page as Markdown). Default: `Pruned Context`. |
+| Include Domains (`include_domains`) | String | Input parameter. Comma-separated domains. Only results from these domains are returned. Optional. |
+| Exclude Domains (`exclude_domains`) | String | Input parameter. Comma-separated domains to leave out of the results. Optional. |
+| Published After (`start_published_date`) | String | Input parameter. Only return results published on or after this date, in `YYYY-MM-DD` format. Optional. |
+
+## ContextFetch Get Contents
+
+This component fetches one or more web pages by URL and returns each page as Markdown.
+
+It outputs a [`Table`](/data-types#table) with one row per URL and `title`, `url`, `published_date`, `text`, and `highlights` columns. A URL that did not load gets a row with `url` and `error` columns.
+
+In [tool mode](/agents-tools), the component exposes a single tool named `contextfetch_get_contents` that an [**Agent** component](/agents) can call with one or more URLs.
+
+### ContextFetch Get Contents parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| URLs (`urls`) | String | Input parameter. One or more public `http(s)` page URLs, up to 100, separated by commas, spaces, or new lines. |
+| ContextFetch API Key (`contextfetch_api_key`) | SecretString | Input parameter. Your ContextFetch API key. |
+| Highlights Query (`highlights_query`) | String | Input parameter. If set, each page also gets the chunks most relevant to this query as highlights. Optional. |
+
+## See also
+
+* [**Web Search** component](/web-search)
+* [**Exa** bundle](/bundles-exa)
+* [**Tavily** bundle](/bundles-tavily)

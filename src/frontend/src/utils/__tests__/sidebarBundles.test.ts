@@ -25,6 +25,18 @@ describe("SIDEBAR_BUNDLES", () => {
     );
   });
 
+  it("classifies ContextFetch as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "ContextFetch",
+          icon: "ContextFetch",
+          name: "contextfetch",
+        }),
+      ]),
+    );
+  });
+
   it("classifies Serping API as a sidebar bundle", () => {
     expect(SIDEBAR_BUNDLES).toEqual(
       expect.arrayContaining([
