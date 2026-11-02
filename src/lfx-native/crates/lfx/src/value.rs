@@ -959,7 +959,7 @@ const NUMBER_TOKEN: &str = "$serde_json::private::Number";
 
 impl<'de> Deserialize<'de> for Value {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Value, D::Error> {
-        deserializer.deserialize_any(ValueVisitor::<false>)
+        Builder::<false>::default().value(deserializer)
     }
 }
 
@@ -975,16 +975,36 @@ pub struct FiniteValue(pub Value);
 
 impl<'de> Deserialize<'de> for FiniteValue {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<FiniteValue, D::Error> {
-        deserializer
-            .deserialize_any(ValueVisitor::<true>)
+        Builder::<true>::default()
+            .value(deserializer)
             .map(FiniteValue)
     }
 }
 
-/// Builds a [`Value`]; with `FINITE`, refuses a number that is not finite.
-struct ValueVisitor<const FINITE: bool>;
+/// What a parse holds while it builds a [`Value`]: the members and items of
+/// the objects and arrays it is inside, one stack for each kind.
+///
+/// JSON text does not say how many members an object has, so a list that
+/// grows as they come reallocates its buffer several times, and ends with
+/// room to spare. Each member goes on the stack instead, and when the object
+/// ends its members move off the stack into a list of exactly their number:
+/// one allocation for each object and array, with no room to spare.
+#[derive(Debug, Default)]
+struct Builder<const FINITE: bool> {
+    entries: Vec<(String, Value)>,
+    items: Vec<Value>,
+}
 
-impl<'de, const FINITE: bool> DeserializeSeed<'de> for ValueVisitor<FINITE> {
+impl<const FINITE: bool> Builder<FINITE> {
+    fn value<'de, D: Deserializer<'de>>(mut self, deserializer: D) -> Result<Value, D::Error> {
+        deserializer.deserialize_any(ValueVisitor::<FINITE>(&mut self))
+    }
+}
+
+/// Builds a [`Value`] with a [`Builder`]; with `FINITE`, refuses a number that is not finite.
+struct ValueVisitor<'b, const FINITE: bool>(&'b mut Builder<FINITE>);
+
+impl<'de, const FINITE: bool> DeserializeSeed<'de> for ValueVisitor<'_, FINITE> {
     type Value = Value;
 
     fn deserialize<D: Deserializer<'de>>(self, deserializer: D) -> Result<Value, D::Error> {
@@ -992,7 +1012,7 @@ impl<'de, const FINITE: bool> DeserializeSeed<'de> for ValueVisitor<FINITE> {
     }
 }
 
-impl<'de, const FINITE: bool> Visitor<'de> for ValueVisitor<FINITE> {
+impl<'de, const FINITE: bool> Visitor<'de> for ValueVisitor<'_, FINITE> {
     type Value = Value;
 
     fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -1036,17 +1056,19 @@ impl<'de, const FINITE: bool> Visitor<'de> for ValueVisitor<FINITE> {
     }
 
     fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Value, A::Error> {
-        let mut items = Vec::with_capacity(seq.size_hint().unwrap_or(0));
-        while let Some(item) = seq.next_element_seed(ValueVisitor::<FINITE>)? {
-            items.push(item);
+        let builder = self.0;
+        let start = builder.items.len();
+        while let Some(item) = seq.next_element_seed(ValueVisitor(&mut *builder))? {
+            builder.items.push(item);
         }
-        Ok(Value::Array(items))
+        Ok(Value::Array(builder.items.drain(start..).collect()))
     }
 
     fn visit_map<A: MapAccess<'de>>(self, mut access: A) -> Result<Value, A::Error> {
-        let mut map = Map::with_capacity(access.size_hint().unwrap_or(0));
+        let builder = self.0;
+        let start = builder.entries.len();
         while let Some(key) = access.next_key::<String>()? {
-            if map.is_empty() && key == NUMBER_TOKEN {
+            if builder.entries.len() == start && key == NUMBER_TOKEN {
                 let text: String = access.next_value()?;
                 let number: Number = text
                     .parse()
@@ -1056,11 +1078,19 @@ impl<'de, const FINITE: bool> Visitor<'de> for ValueVisitor<FINITE> {
                 }
                 return Ok(Value::Number(number));
             }
-            let value = access.next_value_seed(ValueVisitor::<FINITE>)?;
+            let value = access.next_value_seed(ValueVisitor(&mut *builder))?;
             // A repeated key keeps its first position and its last value, as serde_json.
-            map.insert(key, value);
+            match builder.entries[start..]
+                .iter_mut()
+                .find(|(at, _)| *at == key)
+            {
+                Some(entry) => entry.1 = value,
+                None => builder.entries.push((key, value)),
+            }
         }
-        Ok(Value::Object(map))
+        Ok(Value::Object(Map {
+            entries: builder.entries.drain(start..).collect(),
+        }))
     }
 }
 
