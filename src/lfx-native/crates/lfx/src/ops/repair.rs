@@ -36,8 +36,8 @@ use crate::ops::keyed::{Renumber, fill_missing_positions, match_row_ids};
 use crate::ops::schema::{NODE_OBJECT_PATHS, NODE_SCHEMA};
 use crate::ops::state::resolve_mut;
 use crate::ops::validate::{
-    GraphPath, Numbers, PathPart, Resolution, ViolationCode, changed_keyed_lists, changed_tables,
-    find_edge_violations, validate_flow_data,
+    GraphPath, Numbers, PathPart, Resolution, Step, ViolationCode, changed_keyed_lists,
+    changed_tables, find_edge_violations, owned_path, validate_flow_data,
 };
 
 const GENERATED_ID_LENGTH: usize = 5;
@@ -169,43 +169,34 @@ fn replace_non_finite(value: &mut Value, fixes: &mut Fixes) {
 
 /// [`replace_non_finite`] in the container at `at`. Its own members come
 /// first, in order; then each container among them, the last one first.
-/// The path is built for a fix only, so a graph with nothing to fix copies
-/// no key.
-fn replace_non_finite_at(container: &mut Value, at: &mut Vec<PathPart>, fixes: &mut Fixes) {
-    let mut children: Vec<(PathPart, &mut Value)> = Vec::new();
-    let mut visit = |part: &dyn Fn() -> PathPart, item: &'_ mut Value| -> Option<PathPart> {
-        match item {
-            Value::Number(number) if !is_finite_number(number) => {
-                fixes.add(
-                    ViolationCode::NonFiniteNumber,
-                    at.iter().cloned().chain([part()]).collect(),
-                );
-                *item = Value::Null;
-                None
-            }
-            Value::Object(_) | Value::Array(_) => Some(part()),
-            _ => None,
+/// The walk borrows each key, and copies a path only for a fix.
+fn replace_non_finite_at<'a>(container: &'a mut Value, at: &mut Vec<Step<'a>>, fixes: &mut Fixes) {
+    let mut children: Vec<(Step<'a>, &'a mut Value)> = Vec::new();
+    let mut visit = |step: Step<'a>, item: &'a mut Value, fixes: &mut Fixes| match item {
+        Value::Number(number) if !is_finite_number(number) => {
+            at.push(step);
+            fixes.add(ViolationCode::NonFiniteNumber, owned_path(at));
+            at.pop();
+            *item = Value::Null;
         }
+        Value::Object(_) | Value::Array(_) => children.push((step, item)),
+        _ => {}
     };
     match container {
         Value::Object(map) => {
             for (key, item) in map.iter_mut() {
-                if let Some(part) = visit(&|| PathPart::Key(key.clone()), &mut *item) {
-                    children.push((part, item));
-                }
+                visit(Step::Key(key), item, fixes);
             }
         }
         Value::Array(items) => {
             for (index, item) in items.iter_mut().enumerate() {
-                if let Some(part) = visit(&|| index.into(), &mut *item) {
-                    children.push((part, item));
-                }
+                visit(Step::Index(index), item, fixes);
             }
         }
         _ => {}
     }
-    for (part, child) in children.into_iter().rev() {
-        at.push(part);
+    for (step, child) in children.into_iter().rev() {
+        at.push(step);
         replace_non_finite_at(child, at, fixes);
         at.pop();
     }
