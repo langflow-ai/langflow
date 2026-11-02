@@ -9,7 +9,7 @@ it, as the legacy maintenance does (``maintenance.compact_to``): the row
 checkpoints before ``k`` that are not retained.
 
 1. Without a lock: one statement picks the cut, a second reads that one
-   checkpoint's text, and the engine checks its hash in a worker thread (a large call).
+   checkpoint's text, and its SHA-256 is checked against the stored hash in a worker thread.
    This needs no lock: a checkpoint row never changes, and when it is deleted
    meanwhile the guarded delete of step 2 deletes nothing.
 2. One short transaction, the only work under the lock: the advisory lock,
@@ -33,8 +33,8 @@ from typing import TYPE_CHECKING
 from sqlalchemy import text
 
 from langflow.services.deps import session_scope
-from langflow.services.flow_multiplayer import bench, config, oplog
-from langflow.services.flow_multiplayer.cache import call
+from langflow.services.flow_multiplayer import bench, oplog
+from langflow.services.flow_multiplayer.cache import call, text_hash
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -148,19 +148,14 @@ async def compact(flow_id: UUID, *, last: int, window: int) -> int | None:
 
 
 async def _verify(flow_id: UUID, cut: Cut, data: str) -> float:
-    """Raise when the checkpoint no longer hashes to its stored hash; return the engine CPU in milliseconds.
+    """Raise when the checkpoint's stored text no longer hashes to its stored hash; return the hash CPU in ms.
 
-    It becomes the only anchor for everything after it, so it must still be intact.
+    It becomes the only anchor for everything after it, so its stored bytes must be unchanged.
+    The hash is SHA-256 of the text (worker thread, no engine call).
     """
     from langflow.services.flow_history.errors import FlowHistoryCorruptionError
 
-    engine = config.engine()
-    try:
-        graph_hash, cpu = await call(
-            bench.engine_call_cpu, lambda: engine.GraphPlain(data.encode()).graph_hash(), large=True, name="verify"
-        )
-    except engine.EngineError:
-        graph_hash, cpu = None, 0.0
+    graph_hash, cpu = await call(bench.engine_call_cpu, text_hash, data, large=True, name="verify")
     if graph_hash != cut.graph_hash:
         raise FlowHistoryCorruptionError(flow_id, "checkpoint does not match its hash", revision=cut.revision)
     return cpu

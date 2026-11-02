@@ -59,7 +59,9 @@ from lfx.services.flow_operations import (
     parse_flow_operation,
 )
 from lfx.services.flow_operations.limits import check_graph_limits
+from sqlalchemy import JSON, Text, bindparam, cast
 from sqlalchemy.orm.attributes import set_committed_value
+from sqlalchemy.types import TypeDecorator
 from sqlmodel import func, select
 
 from langflow.services.database.models.flow_operation import FlowOperation as FlowOperationRow
@@ -377,7 +379,7 @@ async def write_flow_graph(
     if not started:
         # Revision 0, or one past the revisions recorded before history paused.
         anchor = flow.latest_revision + 1 if resuming else 0
-        session.add(await checkpoint_system(flow, base, revision=anchor))
+        await checkpoint_system(session, flow, base, revision=anchor)
         flow.latest_revision = flow.current_revision = anchor
         flow.history_paused = False
 
@@ -497,13 +499,25 @@ async def _username(session: AsyncSession, user_id: UUID | None) -> str | None:
 
 
 async def projection_matches(session: AsyncSession, flow: Flow) -> bool:
-    """Return whether ``flow.data`` is the graph its ``current_revision`` replays to."""
+    """Return whether ``flow.data`` is the graph its ``current_revision`` replays to.
+
+    At a checkpoint's revision, the stored text of ``Flow.data`` that hashes to the
+    checkpoint's hash is the checkpoint's text, so it matches without the engine. Other
+    text can still be the same graph (a save that changed only view state, or the same
+    graph written by another serializer), so the engine compares the graphs then.
+    """
     anchor = await latest_anchor_at_or_before(session, flow.id, flow.current_revision)
     if anchor is None:
         raise FlowHistoryCorruptionError(flow.id, "no checkpoint to replay from", revision=flow.current_revision)
     try:
         if anchor.operation_revision == flow.current_revision:
-            return await _engine("graph_hash", flow.data) == anchor.graph_hash
+            from langflow.services.database.models.flow.model import Flow
+            from langflow.services.flow_multiplayer.cache import call, text_hash
+
+            stored = (await session.exec(select(cast(Flow.data, Text)).where(Flow.id == flow.id))).first()
+            if stored is not None and await call(text_hash, stored, large=True, name="hash") == anchor.graph_hash:
+                return True
+            return await _engine("graphs_equal", anchor.data, flow.data)
         return await _engine(
             "graphs_equal", await replay_from(session, flow.id, anchor, flow.current_revision), flow.data
         )
@@ -517,7 +531,9 @@ async def checkpoint_fields(session: AsyncSession, flow: Flow) -> dict[str, Any]
 
     A version is an anchor only when the stored graph is exactly the graph at
     the flow's current revision; otherwise, or before history starts, it is a
-    plain snapshot and replay never starts from it.
+    plain snapshot and replay never starts from it. The caller stores a copy of
+    ``flow.data`` as a dict, which SQLAlchemy serializes with ``json.dumps`` and its
+    defaults (SQLite and psycopg alike), so the hash is of that same text.
     """
     if (
         flow.user_id is None
@@ -529,21 +545,62 @@ async def checkpoint_fields(session: AsyncSession, flow: Flow) -> dict[str, Any]
     try:
         if not await projection_matches(session, flow):
             return {}
-        return {"operation_revision": flow.current_revision, "graph_hash": await _engine("graph_hash", flow.data)}
     except (FlowHistoryError, FlowOperationError):
         return {}
+    from langflow.services.flow_multiplayer.cache import call
+
+    _, graph_hash = await call(_dump_and_hash, flow.data, large=True, name="hash")
+    return {"operation_revision": flow.current_revision, "graph_hash": graph_hash}
 
 
-async def checkpoint_system(flow: Flow, flow_data: dict[str, Any], *, revision: int) -> FlowVersion:
-    """Build a system checkpoint: no version number, never listed or pruned."""
-    return FlowVersion(
+class _JsonText(TypeDecorator):
+    """A JSON column's value that is JSON text already: bound as it is, never serialized again.
+
+    PostgreSQL's ``json`` keeps its input text byte for byte; SQLite stores the string.
+    """
+
+    impl = JSON
+    cache_ok = True
+
+    def bind_processor(self, dialect: Any) -> None:  # noqa: ARG002
+        return None
+
+
+async def checkpoint_system(
+    session: AsyncSession, flow: Flow, flow_data: dict[str, Any], *, revision: int, text: str | None = None
+) -> FlowVersion:
+    """Add a system checkpoint (no version number, never listed or pruned) and flush it.
+
+    ``text`` is ``flow_data`` already serialized (``Flow.data``'s stored text); without
+    it ``flow_data`` is serialized here, once. The row stores that text as it is and its
+    hash is the SHA-256 of that text. ``data`` is expired after the flush: a query loads it.
+    """
+    from langflow.services.flow_multiplayer.cache import call, text_hash
+
+    if text is None:
+        text, graph_hash = await call(_dump_and_hash, flow_data, large=True, name="hash")
+    else:
+        graph_hash = await call(text_hash, text, large=True, name="hash")
+    checkpoint = FlowVersion(
         flow_id=flow.id,
         user_id=flow.user_id,
-        data=copy.deepcopy(flow_data),
         version_number=None,
         operation_revision=revision,
-        graph_hash=await _engine("graph_hash", flow_data),
+        graph_hash=graph_hash,
     )
+    checkpoint.data = bindparam(None, text, type_=_JsonText())
+    session.add(checkpoint)
+    await session.flush()
+    session.expire(checkpoint, ["data"])
+    return checkpoint
+
+
+def _dump_and_hash(graph: Any) -> tuple[str, str]:
+    """The JSON text SQLAlchemy stores for ``graph`` (``json.dumps``, defaults) and its SHA-256."""
+    from langflow.services.flow_multiplayer.cache import text_hash
+
+    text = json.dumps(graph)
+    return text, text_hash(text)
 
 
 async def _keep_repaired_original(session: AsyncSession, flow: Flow, actor_id: UUID) -> None:

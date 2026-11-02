@@ -40,7 +40,15 @@ import orjson
 
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.flow_multiplayer import bench, checkpoint, config, oplog
-from langflow.services.flow_multiplayer.cache import CACHE, EntryGoneError, FlowEntry, call, catch_up, uncancellable
+from langflow.services.flow_multiplayer.cache import (
+    CACHE,
+    EntryGoneError,
+    FlowEntry,
+    call,
+    catch_up,
+    text_hash,
+    uncancellable,
+)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable, Callable
@@ -265,8 +273,8 @@ async def _start_history(session: AsyncSession, flow_id: UUID, read: oplog.HeadR
     raw = (data.data if data is not None else None) or EMPTY_GRAPH.encode()
     text = raw.decode()
     revision = max(read.head, read.latest) + 1 if read.paused else 0
-    engine = config.engine()
-    graph_hash = await call(lambda: engine.GraphPlain(raw).graph_hash(), large=True, name="hash")
+    # The checkpoint stores ``raw`` as it is, so its hash is of those bytes.
+    graph_hash = await call(text_hash, raw, large=True, name="hash")
     await oplog.start_history(
         session,
         flow_id,

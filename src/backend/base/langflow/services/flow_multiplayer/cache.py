@@ -8,9 +8,9 @@ is always a committed revision. Two asyncio locks guard it:
   database commit). Catching up for a reader takes it too.
 - ``use``: held around every call on the ``GraphState``, so no call runs
   while another runs in a worker thread (the Rust object refuses a
-  concurrent borrow; the Python object would race). Serializing and hashing
-  for readers and checkpoints take only a snapshot under ``use``
-  (``GraphState.snapshot``) and work on it after ``use`` is released.
+  concurrent borrow; the Python object would race). Serializing for readers
+  and checkpoints takes only a snapshot under ``use`` (``GraphState.snapshot``)
+  and works on it after ``use`` is released; a checkpoint hashes the text.
 
 While a batch is staged, ``to_json()`` returns the committed graph, so a
 reader serializes the entry's revision while a writer waits for its commit,
@@ -22,14 +22,15 @@ by concurrent readers.
 Which engine calls run in a worker thread (both engines alike): building a
 graph from ``Flow.data``, ``to_json``, a catch-up replay of at least
 ``LARGE_OPS_COUNT`` operations or ``LARGE_OPS_BYTES`` bytes, whole-flow calls
-(validate, repair, diff, hash, the loaded graph's hash), and the first batch on a newly built graph
-(the engine checks the whole graph before its first batch). A batch's
+(validate, repair, diff, equality), the SHA-256 of a checkpoint's text, and the
+first batch on a newly built graph (the engine checks the whole graph before its first batch). A batch's
 ``stage``, ``keep`` and ``drop`` and a small catch-up run inline.
 """
 
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import time
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Any
@@ -48,6 +49,11 @@ if TYPE_CHECKING:
 
 class EntryGoneError(Exception):
     """The cached graph is ahead of the log (only after a database reset): rebuild it."""
+
+
+def text_hash(text: str | bytes) -> str:
+    """A checkpoint's hash: the SHA-256 (hex) of the exact JSON text its row stores, as UTF-8 bytes."""
+    return hashlib.sha256(text.encode() if isinstance(text, str) else text).hexdigest()
 
 
 def is_large(payload: bytes, count: int) -> bool:
@@ -144,17 +150,18 @@ class FlowEntry:
                 return result
 
     async def text_and_hash(self) -> tuple[int, str, float, bool, str, float]:
-        """One committed revision's JSON text and graph hash, for a checkpoint.
+        """One committed revision's JSON text and its checkpoint hash (SHA-256 of the text), for a checkpoint.
 
-        Returns ``(revision, text, text_cpu, serialized_here, graph_hash, hash_cpu)`` (CPU in ms).
-        Only the snapshot (``GraphState.snapshot``, a cheap call) is taken under ``use``; the text
-        (unless the revision's shared serialization exists) and the hash are made from the snapshot
-        after ``use`` is released, so writers on the flow do not wait for them.
+        Returns ``(revision, text, text_cpu, serialized_here, text_sha256, hash_cpu)`` (CPU in ms).
+        Only the snapshot (``GraphState.snapshot``, a cheap call) is taken under ``use``, and only
+        when the revision's shared serialization does not exist yet; the text is made from the
+        snapshot and hashed in worker threads after ``use`` is released, so writers on the flow do
+        not wait for them. The same code for both engines: the hash is not an engine call.
         """
         async with self.use:
             revision = self.revision
             shared = self.json if self.json is not None and self.json[0] == revision else None
-            snapshot = bench.engine_call("snapshot", self.state.snapshot)
+            snapshot = None if shared is not None else bench.engine_call("snapshot", self.state.snapshot)
         if shared is not None:
             text, text_cpu, here = shared[1], self.json_cpu, False
         else:
@@ -163,8 +170,8 @@ class FlowEntry:
             here = True
             if self.revision == revision and (self.json is None or self.json[0] != revision):
                 self.json, self.json_cpu = (revision, text), text_cpu
-        graph_hash, hash_cpu = await call(bench.engine_call_cpu, snapshot.graph_hash, large=True, name="hash")
-        return revision, text, text_cpu, here, graph_hash, hash_cpu
+        text_sha256, hash_cpu = await call(bench.engine_call_cpu, text_hash, text, large=True, name="hash")
+        return revision, text, text_cpu, here, text_sha256, hash_cpu
 
     async def _serialize(self, revision: int) -> tuple[int, str] | None:
         """Serialize ``revision`` for readers: a snapshot under ``use``, the text after it is released."""

@@ -18,6 +18,7 @@ The test drops and recreates the ``public`` schema of that database.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import os
 import secrets
 import socket
@@ -671,6 +672,99 @@ async def test_legacy_save(servers):
     assert_rows_contiguous(flow_id, 6)
 
 
+def checkpoint_texts(flow_id: str) -> list[tuple[int, str, str]]:
+    """``(revision, stored text, hash)`` of the flow's system checkpoints, oldest first."""
+    with psycopg.connect(ADMIN_URL) as conn:
+        return conn.execute(
+            "SELECT operation_revision, data::text, graph_hash FROM flow_version "
+            "WHERE flow_id = %s AND version_number IS NULL AND graph_hash IS NOT NULL ORDER BY operation_revision",
+            (flow_id,),
+        ).fetchall()
+
+
+async def _projection_matches(flow_id: str, *, engine_allowed: bool) -> bool:
+    """``recorder.projection_matches`` on the stored flow; without ``engine_allowed`` it must not call the engine."""
+    from langflow.services.database.models.flow.model import Flow
+    from langflow.services.flow_history import recorder
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    real_engine = recorder._engine
+
+    async def no_engine(name, *_args, **_kwargs):
+        pytest.fail(f"engine call {name} on byte-identical text")
+
+    recorder._engine = real_engine if engine_allowed else no_engine
+    db_engine = create_async_engine(ADMIN_URL.replace("postgresql://", "postgresql+psycopg://"))
+    try:
+        async with AsyncSession(db_engine) as session:
+            return await recorder.projection_matches(session, await session.get(Flow, uuid.UUID(flow_id)))
+    finally:
+        recorder._engine = real_engine
+        await db_engine.dispose()
+
+
+async def test_checkpoints_store_the_text_they_hash(servers):
+    """Every checkpoint row hashes to the SHA-256 of its stored text; at its revision Flow.data holds the same text.
+
+    Multiplayer writes: byte-identical in every mode, so ``projection_matches`` needs no engine. A legacy save
+    that lands on the cadence writes Flow.data with ``json.dumps``; in cache and wal the checkpoint task then
+    stores the engine's text at that revision, so ``projection_matches`` falls back to ``graphs_equal``.
+    """
+    mode, urls = servers["mode"], servers["urls"]
+    async with httpx.AsyncClient(timeout=60, headers=servers["headers"]) as client:
+        flow_id = await create_flow(client, urls[0])
+        for i in range(CADENCE * 2):
+            assert (await post_ops(client, urls[i % 2], flow_id, set_field("n0", f"h{i}"))).status_code == 200
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline and checkpoint_texts(flow_id)[-1][0] < CADENCE * 2:  # noqa: ASYNC110
+            await asyncio.sleep(0.2)
+        checkpoints = checkpoint_texts(flow_id)
+        assert [revision for revision, _text, _hash in checkpoints] == [0, CADENCE, CADENCE * 2]
+        for _revision, text, graph_hash in checkpoints:
+            assert hashlib.sha256(text.encode()).hexdigest() == graph_hash
+        data, current, _latest = db_flow(flow_id)
+        assert current == CADENCE * 2
+        assert data == checkpoints[-1][1]
+        assert await _projection_matches(flow_id, engine_allowed=False)
+
+        # Another graph at the same revision: no match.
+        with psycopg.connect(ADMIN_URL) as conn:
+            conn.execute(
+                "UPDATE flow SET data = CAST(%s AS json) WHERE id = %s",
+                (data.replace('"h9"', '"edited"'), flow_id),
+            )
+        assert not await _projection_matches(flow_id, engine_allowed=True)
+        with psycopg.connect(ADMIN_URL) as conn:
+            conn.execute("UPDATE flow SET data = CAST(%s AS json) WHERE id = %s", (data, flow_id))
+
+        # A legacy save on the next cadence, then its checkpoint.
+        for i in range(CADENCE - 1):
+            assert (await post_ops(client, urls[0], flow_id, set_field("n1", f"g{i}"))).status_code == 200
+        graph = (await v1_flow(client, urls[0], flow_id))["data"]
+        next(n for n in graph["nodes"] if n["id"] == "n2")["data"]["node"]["template"]["t"]["value"] = "legacy"
+        saved = await client.patch(f"{urls[1]}/api/v1/flows/{flow_id}", json={"data": graph})
+        assert saved.status_code == 200, saved.text
+        assert saved.json()["current_revision"] == CADENCE * 3
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline and checkpoint_texts(flow_id)[-1][0] <= CADENCE * 2:  # noqa: ASYNC110
+            await asyncio.sleep(0.2)
+        await asyncio.sleep(0.5)  # checkpoint tasks
+    checkpoints = checkpoint_texts(flow_id)
+    for _revision, text, graph_hash in checkpoints:
+        assert hashlib.sha256(text.encode()).hexdigest() == graph_hash
+    revision, text, _hash = checkpoints[-1]
+    assert revision > CADENCE * 2
+    data, current, _latest = db_flow(flow_id)
+    assert current == CADENCE * 3
+    assert await _projection_matches(flow_id, engine_allowed=True)
+    if revision == current:
+        # nocache: legacy maintenance stores Flow.data's text as it is. cache and wal: the engine's text.
+        assert (data == text) is (mode == "nocache")
+        if mode == "nocache":
+            assert await _projection_matches(flow_id, engine_allowed=False)
+
+
 async def test_legacy_save_then_checkpoint_keeps_flow_data_monotonic(servers):
     """A legacy save writes Flow.data at the head; later multiplayer writes and checkpoints only move it forward."""
     from langflow.services.flow_multiplayer import oplog
@@ -939,7 +1033,7 @@ async def test_compaction_deletes_nothing_after_a_concurrent_purge_or_compaction
             assert len(picked) == 4
             assert (picked[0], picked[1], picked[3]) == (newer_id, newer, starts[newer])
             text = (await session.execute(CUT_DATA, {"checkpoint_id": picked[0]})).scalar_one()
-        assert engine_for(servers["engine"]).GraphPlain(text.encode()).graph_hash() == picked[2]
+        assert hashlib.sha256(text.encode()).hexdigest() == picked[2]
         # The checkpoint is gone (a purge deleted it): nothing is deleted.
         assert await delete(cut(uuid.uuid4(), newer)) == (0, 0)
         assert db_rows(flow_id)[0][0] == 1

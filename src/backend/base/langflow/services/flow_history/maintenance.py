@@ -41,8 +41,7 @@ import zlib
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
-from sqlalchemy import event, text
-from sqlalchemy import inspect as sa_inspect
+from sqlalchemy import Text, cast, event, text
 from sqlalchemy.orm import Session, defer
 from sqlalchemy.orm.attributes import set_committed_value
 from sqlmodel import col, delete, func, select
@@ -163,10 +162,9 @@ async def write_checkpoint(session: AsyncSession, flow: Flow) -> FlowVersion | N
             revision=flow.current_revision,
         )
         return None
-    checkpoint = await checkpoint_system(flow, flow.data, revision=flow.current_revision)
-    session.add(checkpoint)
-    await session.flush()
-    return checkpoint
+    # The row stores Flow.data's stored text as it is (no serialization), so the two are byte-identical.
+    stored = (await session.exec(select(cast(Flow.data, Text)).where(Flow.id == flow.id))).first()
+    return await checkpoint_system(session, flow, flow.data, revision=flow.current_revision, text=stored)
 
 
 async def compact_if_due(session: AsyncSession, flow: Flow) -> int | None:
@@ -232,11 +230,9 @@ async def compact_to(session: AsyncSession, flow: Flow, checkpoint: FlowVersion,
     With ``keep_row`` the row that ends at the checkpoint stays, so the
     operations that produced it remain in the timeline. Purge drops it too.
     """
-    if "data" in sa_inspect(checkpoint).unloaded:
-        # Chosen without its graph (``_cutoff_checkpoint``): read it only to compact.
-        await session.refresh(checkpoint, attribute_names=["data"])
-    # It becomes the only anchor for everything after it, so it must still be intact.
-    await verify_checkpoint(checkpoint)
+    # It becomes the only anchor for everything after it, so it must still be intact. Only its
+    # stored text is read for that (``_cutoff_checkpoint`` chose it without its graph).
+    await verify_checkpoint(session, checkpoint)
     revision = checkpoint.operation_revision
     ending_row = (
         await session.exec(

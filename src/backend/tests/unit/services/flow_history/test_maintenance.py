@@ -168,9 +168,9 @@ async def test_the_cutoff_is_chosen_without_loading_its_graph(client: AsyncClien
         assert cutoff is not None
         # What a save asks under the flow's lock reads no graph.
         assert "data" in sa_inspect(cutoff).unloaded
-        # Compacting to it still reads and checks its graph.
+        # Compacting to it checks the SHA-256 of its stored text, still without loading its graph.
         await maintenance.compact_to(session, flow, cutoff)
-        assert cutoff.data is not None
+        assert "data" in sa_inspect(cutoff).unloaded
         revision = cutoff.operation_revision
         await session.commit()
     assert revision == 3
