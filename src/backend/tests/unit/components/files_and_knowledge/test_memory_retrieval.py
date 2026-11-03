@@ -393,6 +393,100 @@ class TestMemoryBaseProviderPolicyPreflight:
         assert get_embeddings.call_args.kwargs["provider_policy"] is snapshot
         backend.ensure_ready.assert_awaited_once()
 
+    async def test_missing_flow_id_during_preflight_does_not_raise(self):
+        """Toggling tool mode must not crash when flow_id is absent.
+
+        The UI sends ``POST /custom_component/update`` with ``tool_mode=True``
+        before the component is part of an executing graph.  At that point
+        ``_frontend_node_flow_id`` may be present in the template, but a newly
+        dragged-on node or an edge connection that flips the toggle may fire
+        before the template has been fully hydrated.  The provider-policy
+        preflight must skip gracefully in that case rather than raising
+        ``ValueError: flow_id is not available``.
+
+        Regression guard for GitHub issue #15872.
+        """
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+        # Simulate: memory_base selected, but flow_id not yet available
+        component = _make_component(flow_id=None, session_id=None)
+        component._get_runtime_or_frontend_node_attr = MagicMock(return_value=None)
+
+        # Must return () without raising
+        result = await component._additional_model_provider_policy_ids(
+            ModelProviderPolicyPurpose.CONFIGURE,
+            parameters={"memory_base": "mb-one"},
+        )
+        assert result == ()
+
+
+class TestToolDescription:
+    """Pin the tool-description injection for LLM agents.
+
+    When the Memory Base component is used in tool mode, the LLM must be told
+    *which* Memory Base it is querying so it does not have to rely on the user
+    spelling it out in every prompt.
+
+    Regression guard for GitHub issue #15872.
+    """
+
+    async def test_get_tools_annotates_description_with_memory_base_name(self):
+        """Selected Memory Base name must appear in every tool description."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        component = _make_component(flow_id=uuid.uuid4(), session_id="s1", selected="my-long-term-memory")
+
+        fake_tool = MagicMock()
+        fake_tool.description = "Returns matching memory chunks."
+
+        # Patch the parent _get_tools to return our fake tool
+        with patch.object(
+            type(component).__bases__[0],  # Component
+            "_get_tools",
+            new=AsyncMock(return_value=[fake_tool]),
+        ):
+            tools = await component._get_tools()
+
+        assert len(tools) == 1
+        assert "my-long-term-memory" in tools[0].description
+
+    async def test_get_tools_does_not_duplicate_name_if_already_present(self):
+        """If the name is already in the description, it must not be added twice."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        component = _make_component(flow_id=uuid.uuid4(), session_id="s1", selected="my-memory")
+
+        fake_tool = MagicMock()
+        fake_tool.description = '[Memory Base: "my-memory"] existing description'
+
+        with patch.object(
+            type(component).__bases__[0],
+            "_get_tools",
+            new=AsyncMock(return_value=[fake_tool]),
+        ):
+            tools = await component._get_tools()
+
+        assert tools[0].description.count("my-memory") == 1
+
+    async def test_get_tools_returns_tools_unchanged_when_no_memory_base_selected(self):
+        """When no Memory Base is selected yet, the tools are returned as-is."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        component = _make_component(flow_id=uuid.uuid4(), session_id="s1", selected=None)
+
+        fake_tool = MagicMock()
+        original_desc = "Returns matching memory chunks."
+        fake_tool.description = original_desc
+
+        with patch.object(
+            type(component).__bases__[0],
+            "_get_tools",
+            new=AsyncMock(return_value=[fake_tool]),
+        ):
+            tools = await component._get_tools()
+
+        assert tools[0].description == original_desc
+
 
 class TestServingFailClosed:
     async def test_anonymous_cross_session_recall_returns_empty(self):

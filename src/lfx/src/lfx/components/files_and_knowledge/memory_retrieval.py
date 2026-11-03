@@ -161,7 +161,14 @@ class MemoryBaseComponent(Component):
         return await resolve_embedding_selection(user_id=memory_base.user_id, kb_name=memory_base.kb_name)
 
     async def _additional_model_provider_policy_ids(self, purpose, parameters=None) -> tuple[str, ...]:
-        """Discover the persisted embedding provider before runtime input hydration."""
+        """Discover the persisted embedding provider before runtime input hydration.
+
+        When ``flow_id`` is unavailable (e.g., during tool-mode preflight /
+        validation triggered by the UI before the component is part of a running
+        graph), the lookup cannot be completed and is skipped.  The check will be
+        enforced at actual runtime when ``flow_id`` is present.  This mirrors the
+        identical early-return in ``update_build_config``.
+        """
         from lfx.base.models.provider_registry import resolve_provider_id
         from lfx.services.model_provider_policy import ModelProviderPolicyError
 
@@ -172,11 +179,44 @@ class MemoryBaseComponent(Component):
         if not isinstance(selected, str) or not selected.strip():
             return ()
 
+        # flow_id is required to resolve the MB row. When it is absent (preflight /
+        # validation context, tool-mode toggle from the canvas), skip silently.
+        # The enforcement happens during actual graph execution where flow_id is always set.
+        flow_id = _coerce_uuid(self._get_runtime_or_frontend_node_attr("flow_id"))
+        if flow_id is None:
+            logger.warning(
+                "flow_id is not available during provider policy preflight; "
+                "skipping embedding provider check for Memory Base '%s'.",
+                selected.strip(),
+            )
+            return ()
+
         provider, _model = await self._policy_embedding_selection(selected.strip())
         if not isinstance(provider, str) or not provider.strip():
             unknown_provider = "unknown"
             raise ModelProviderPolicyError(unknown_provider, purpose)
         return (resolve_provider_id(provider),)
+
+    async def _get_tools(self) -> list:
+        """Return tools annotated with the selected Memory Base name.
+
+        The base ``_get_tools`` builds generic tool objects whose description
+        comes from the output ``info`` string — it does not know *which* Memory
+        Base is wired up.  Appending the name here ensures the LLM can identify
+        the correct knowledge source without requiring the user to repeat it in
+        every chat prompt.
+        """
+        tools = await super()._get_tools()
+
+        selected = getattr(self, "memory_base", None)
+        if isinstance(selected, str) and selected.strip() and tools:
+            mb_name = selected.strip()
+            for tool in tools:
+                existing = tool.description or ""
+                if mb_name not in existing:
+                    tool.description = f'[Memory Base: "{mb_name}"] {existing}'.rstrip()
+
+        return tools
 
     async def arequire_model_provider_policy(self, purpose, *, user_id=None, parameters=None) -> None:
         """Capture the trusted actor context after the shared pre-hydration gate."""
