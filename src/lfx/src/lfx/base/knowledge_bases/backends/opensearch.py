@@ -558,6 +558,38 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         docs = await self.vector_store.asimilarity_search(**kwargs)
         return [(doc, 0.0) for doc in docs]
 
+    async def get_documents_by_ids(self, ids: list[str]) -> list[Document]:
+        """Read exact IDs without depending on search-index refreshes."""
+        from langchain_core.documents import Document
+
+        if not ids:
+            return []
+        await self.ensure_ready()
+        _ = self.vector_store
+        try:
+            result = await _drained_worker(
+                self._os_client.mget, index=self._os_index, body={"ids": list(dict.fromkeys(ids))}
+            )
+        except Exception as exc:
+            if _is_missing_index(exc):
+                return []
+            raise
+        documents = []
+        for item in result["docs"]:
+            if "error" in item:
+                msg = "OpenSearch could not check an existing document."
+                raise RuntimeError(msg)
+            if item.get("found"):
+                source = item["_source"]
+                documents.append(
+                    Document(
+                        id=item["_id"],
+                        page_content=source.get(self._os_text_field) or source.get("text", ""),
+                        metadata=source.get("metadata", {}),
+                    )
+                )
+        return documents
+
     async def count(self) -> int:
         await self.ensure_ready()
         client = getattr(self, "_os_client", None)
