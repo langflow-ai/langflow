@@ -30,7 +30,7 @@ ITEM_KEYS = {
     "actor",
     "details",
 }
-ACTOR_KEYS = {"type", "id", "user_id", "acting_issuer", "acting_subject"}
+ACTOR_KEYS = {"type", "id", "user_id", "acting_issuer", "acting_subject", "represented_issuer", "represented_subject"}
 
 
 @pytest.fixture
@@ -51,6 +51,7 @@ async def _audits(client, headers, query: str = "") -> dict:
 
 
 async def test_a_page_has_the_contract_shape_newest_first(client, logged_in_headers, active_user):
+    """Return the audit contract in descending order with both identity fields present."""
     project = await _project(client, logged_in_headers, description="d")
     await client.patch(f"api/v1/projects/{project['id']}", json={"description": "e"}, headers=logged_in_headers)
     await client.delete(f"api/v1/projects/{project['id']}", headers=logged_in_headers)
@@ -74,6 +75,8 @@ async def test_a_page_has_the_contract_shape_newest_first(client, logged_in_head
         "user_id": str(active_user.id),
         "acting_issuer": None,
         "acting_subject": None,
+        "represented_issuer": None,
+        "represented_subject": None,
     }
     assert delete["error_code"] is None
     assert page["items"][1]["details"] == {"schema_version": 1, "description": "e"}

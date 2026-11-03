@@ -9,6 +9,7 @@ from langflow.services.base import Service
 from langflow.services.schema import ServiceType
 from lfx.services.manager import get_service_manager
 from sqlmodel.ext.asyncio.session import AsyncSession
+from starlette.requests import Request
 
 
 class DummyAuthService(Service):
@@ -75,12 +76,13 @@ async def test_api_key_security_uses_registered_service(dummy_auth_registration)
 
 @pytest.mark.anyio
 async def test_get_current_user_delegates_to_service(dummy_auth_registration):
+    """Retain registered-service delegation with the real request header interface."""
     dummy = dummy_auth_registration
     db = MagicMock(spec=AsyncSession)
     # get_current_user now extracts the external credential from the request and
     # threads it to the service as external_token. With external auth disabled the
     # extractor returns None, so delegation records external_token=None.
-    request = SimpleNamespace(headers={}, cookies={})
+    request = Request({"type": "http", "headers": []})
     response = await auth_utils.get_current_user(request, token=None, query_param="q", header_param=None, db=db)
 
     assert ("get_current_user", None, "q", None, None) in dummy.calls

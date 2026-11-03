@@ -9,7 +9,7 @@ signatures or teaching OSS how to interpret policy.
 from __future__ import annotations
 
 from contextvars import ContextVar
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -32,6 +32,7 @@ class AuthCredentialContext:
     api_key_id: UUID | None = None
     api_key_source: str | None = None
     external_provider: str | None = None
+    api_key_fingerprint: str | None = field(default=None, repr=False)
 
     @classmethod
     def from_api_key_result(cls, result: ApiKeyAuthResult) -> AuthCredentialContext:
@@ -43,6 +44,7 @@ class AuthCredentialContext:
         return cls(
             method=AUTH_METHOD_API_KEY,
             api_key_id=result.api_key_id,
+            api_key_fingerprint=result.api_key_fingerprint,
             api_key_source=result.api_key_source,
         )
 
