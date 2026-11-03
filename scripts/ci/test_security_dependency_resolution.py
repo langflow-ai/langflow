@@ -19,6 +19,7 @@ MANIFESTS = [
 
 
 def locked_packages(environment: dict[str, str]) -> dict[str, str]:
+    """Select one locked package version for each dependency in an environment."""
     lock = tomllib.loads((ROOT / "uv.lock").read_text())
     packages = {}
     for package in lock["package"]:
@@ -33,6 +34,7 @@ def locked_packages(environment: dict[str, str]) -> dict[str, str]:
 @pytest.mark.parametrize("python", ["3.10", "3.11", "3.14"])
 @pytest.mark.parametrize("platform", ["linux", "darwin", "win32"])
 def test_fixed_dependencies_resolve_on_every_supported_python_line(python: str, platform: str) -> None:
+    """Check patched versions while retaining compatible Python 3.10 resolutions."""
     environment = {
         "python_version": python,
         "python_full_version": f"{python}.0",
@@ -65,6 +67,7 @@ def test_fixed_dependencies_resolve_on_every_supported_python_line(python: str, 
 
 
 def test_opentelemetry_lock_updates_the_whole_official_release_set() -> None:
+    """Keep the stable and instrumentation packages on compatible patched releases."""
     packages = locked_packages({"python_version": "3.14", "python_full_version": "3.14.0", "sys_platform": "linux"})
     stable = {
         version
@@ -96,6 +99,7 @@ def test_opentelemetry_lock_updates_the_whole_official_release_set() -> None:
 
 @pytest.mark.parametrize("manifest", MANIFESTS[:2])
 def test_published_requirements_reject_vulnerable_aiohttp_without_workspace_constraints(manifest: str) -> None:
+    """Apply the aiohttp security floor to published packages without workspace rules."""
     project = tomllib.loads((ROOT / manifest).read_text())["project"]
     requirement = next(
         requirement for value in project["dependencies"] if (requirement := Requirement(value)).name == "aiohttp"
@@ -106,10 +110,13 @@ def test_published_requirements_reject_vulnerable_aiohttp_without_workspace_cons
 
 
 def test_published_base_requirements_reject_vulnerable_mako_without_workspace_overrides() -> None:
+    """Reject vulnerable Mako ranges in the published base package requirements."""
     project = tomllib.loads((ROOT / MANIFESTS[0]).read_text())["project"]
     requirement = next(
         requirement for value in project["dependencies"] if (requirement := Requirement(value)).name == "mako"
     )
     assert requirement.marker is None
-    assert "1.3.12" not in requirement.specifier
+    assert any(bound.operator == ">=" and Version(bound.version) >= Version("1.4.2") for bound in requirement.specifier)
+    assert "1.4.1" not in requirement.specifier
     assert "1.4.2" in requirement.specifier
+    assert "2.0.0" not in requirement.specifier

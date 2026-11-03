@@ -36,6 +36,7 @@ RUN microdnf install -y tar xz \
 COPY ./src/backend ./src/backend
 COPY ./src/lfx ./src/lfx
 COPY ./src/sdk ./src/sdk
+COPY ./docker/build_lxml.sh /tmp/build_lxml.sh
 
 # Create venv and install langflow-base with dependencies
 # Using uv pip instead of uv sync to avoid workspace complexities
@@ -51,10 +52,11 @@ ENV VIRTUAL_ENV="/app/.venv"
 # use a Langflow application image or install the required extension packages.
 # Build lxml against UBI's patched XML libraries instead of its bundled copies.
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --no-binary lxml \
+    uv pip install "lxml==6.1.1" \
         ./src/sdk \
         ./src/lfx \
-        "./src/backend/base[complete,postgresql]"
+        "./src/backend/base[complete,postgresql]" \
+    && sh /tmp/build_lxml.sh
 
 ################################
 # RUNTIME
@@ -95,6 +97,8 @@ RUN useradd --uid 1000 --gid 0 --no-create-home --home-dir /app/data user
 
 # Copy only the virtual environment
 COPY --from=builder --chown=1000:0 /app/.venv /app/.venv
+COPY --chown=1000:0 ./scripts/ci/verify_lxml_runtime.py /tmp/verify_lxml_runtime.py
+RUN /app/.venv/bin/python /tmp/verify_lxml_runtime.py && rm /tmp/verify_lxml_runtime.py
 ENV PATH="/app/.venv/bin:$PATH"
 ENV HOME=/app/data
 ENV BASH_ENV="" \
