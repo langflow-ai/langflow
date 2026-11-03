@@ -4,7 +4,7 @@ import asyncio
 import math
 import time
 from http import HTTPStatus
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import toml  # type: ignore[import-untyped]
 
@@ -30,6 +30,9 @@ from lfx.io import (
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.token_usage import accumulate_usage, extract_usage_from_message
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 class BatchRunComponent(Component):
@@ -186,33 +189,54 @@ class BatchRunComponent(Component):
             }
 
     @staticmethod
+    def _exception_causes(error: BaseException) -> Iterator[BaseException]:
+        """Follow explicit provider causes without revisiting cyclic errors."""
+        seen: set[int] = set()
+        current: BaseException | None = error
+        while current is not None and id(current) not in seen:
+            seen.add(id(current))
+            yield current
+            current = getattr(current, "__cause__", None)
+
+    @staticmethod
     def _is_rate_limit_error(error: Exception) -> bool:
         """Identify common provider rate-limit errors without depending on a provider SDK."""
-        status_code = getattr(error, "status_code", None)
-        response = getattr(error, "response", None)
-        if status_code is None:
-            status_code = getattr(response, "status_code", None)
-        if status_code is not None:
-            return status_code == HTTPStatus.TOO_MANY_REQUESTS
+        errors = list(BatchRunComponent._exception_causes(error))
+        for cause in errors:
+            status_code = getattr(cause, "status_code", None)
+            response = getattr(cause, "response", None)
+            if status_code is None:
+                status_code = getattr(response, "status_code", None)
+            if status_code is None:
+                code = getattr(cause, "code", None)
+                if isinstance(code, int):
+                    status_code = code
+            if status_code is not None:
+                return status_code == HTTPStatus.TOO_MANY_REQUESTS
 
-        error_text = f"{type(error).__name__}: {error}".lower()
-        return "rate limit" in error_text or "rate_limit" in error_text or "too many requests" in error_text
+        for cause in errors:
+            error_text = f"{type(cause).__name__}: {cause}".lower()
+            if "rate limit" in error_text or "rate_limit" in error_text or "too many requests" in error_text:
+                return True
+        return False
 
     @staticmethod
     def _retry_after_seconds(error: Exception) -> float | None:
         """Read a numeric Retry-After value exposed by common HTTP clients and provider SDKs."""
-        retry_after = getattr(error, "retry_after", None)
-        response = getattr(error, "response", None)
-        headers = getattr(response, "headers", None)
-        if retry_after is None and headers is not None:
-            retry_after = headers.get("Retry-After") or headers.get("retry-after")
-        try:
-            delay = float(retry_after)
-        except (TypeError, ValueError):
-            return None
-        if not math.isfinite(delay) or delay < 0:
-            return None
-        return min(delay, BatchRunComponent.MAX_RETRY_AFTER_SECONDS)
+        for cause in BatchRunComponent._exception_causes(error):
+            retry_after = getattr(cause, "retry_after", None)
+            response = getattr(cause, "response", None)
+            headers = getattr(response, "headers", None)
+            if retry_after is None and headers is not None:
+                retry_after = headers.get("Retry-After") or headers.get("retry-after")
+            try:
+                delay = float(retry_after)
+            except (TypeError, ValueError):
+                continue
+            if not math.isfinite(delay) or delay < 0:
+                continue
+            return min(delay, BatchRunComponent.MAX_RETRY_AFTER_SECONDS)
+        return None
 
     async def _run_conversations(self, model: Any, conversations: list[list[dict[str, str]]]) -> list[Any]:
         """Run conversations in bounded batches, backing off and shrinking after 429s."""
@@ -232,20 +256,18 @@ class BatchRunComponent(Component):
 
             inputs = [conversations[index] for index in current_indices]
             try:
-                batch_responses = await model.abatch(inputs, return_exceptions=True)
-            except TypeError as error:
-                # Keep support for simple custom Runnable implementations that expose
-                # abatch(inputs) without LangChain's optional return_exceptions argument.
-                if "unexpected keyword argument 'return_exceptions'" not in str(error):
-                    raise
                 try:
-                    batch_responses = await model.abatch(inputs)
-                except Exception as error:
-                    if not self._is_rate_limit_error(error):
+                    batch_responses = await model.abatch(inputs, return_exceptions=True)
+                except TypeError as error:
+                    # Keep support for custom models without the optional argument.
+                    if "unexpected keyword argument 'return_exceptions'" not in str(error):
                         raise
-                    # A custom runnable without return_exceptions can only report a
-                    # rate limit for the whole submitted batch, so retry each row.
-                    batch_responses = [error] * len(current_indices)
+                    batch_responses = await model.abatch(inputs)
+            except Exception as error:
+                if not self._is_rate_limit_error(error):
+                    raise
+                # Without individual results, every submitted row remains pending.
+                batch_responses = [error] * len(current_indices)
             if len(batch_responses) != len(current_indices):
                 msg = "The model returned a different number of responses than input conversations."
                 raise ValueError(msg)
@@ -288,12 +310,11 @@ class BatchRunComponent(Component):
                 for index in rate_limited_indices:
                     retry_counts[index] += 1
                 batch_size = max(1, batch_size // 2)
-                retry_after = max(
-                    (self._retry_after_seconds(error) or 0.0 for error in rate_limit_errors),
-                    default=0.0,
-                )
-                retry_attempt = max(retry_counts[index] for index in rate_limited_indices)
-                backoff = max(configured_delay, retry_after, min(2 ** (retry_attempt - 1), 30))
+                backoff = configured_delay
+                for index, error in zip(rate_limited_indices, rate_limit_errors, strict=True):
+                    retry_after = self._retry_after_seconds(error)
+                    retry_delay = retry_after if retry_after is not None else min(2 ** (retry_counts[index] - 1), 30)
+                    backoff = max(backoff, retry_delay)
                 await logger.awarning(
                     f"Model rate limit reached; retrying {len(rate_limited_indices)} request(s) "
                     f"with batch size {batch_size} after {backoff:.1f} seconds"

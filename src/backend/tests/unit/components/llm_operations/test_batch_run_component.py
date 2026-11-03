@@ -82,6 +82,77 @@ def test_rate_limit_detection_and_retry_after_bounds():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("wrap_error", "retry_after"),
+    [(False, None), (True, None), (True, "7.5")],
+)
+async def test_run_conversations_retries_provider_quota_errors(wrap_error, retry_after):
+    """Recover from provider codes and wrapped quota errors without retrying successful rows."""
+
+    class ProviderQuotaError(Exception):
+        code = 429
+        response = SimpleNamespace(headers={"Retry-After": retry_after})
+
+    error = ProviderQuotaError("RESOURCE_EXHAUSTED")
+    if wrap_error:
+        wrapped_error = RuntimeError("Error calling model (RESOURCE_EXHAUSTED)")
+        wrapped_error.__cause__ = error
+        wrapped_error.retry_after = "invalid"
+        error = wrapped_error
+
+    def handle_batch(batch):
+        """Return a quota error once, followed by successful retry responses."""
+        if len(model.batch_sizes) == 1:
+            return [error, "ok:1"]
+        return [f"ok:{item[0]['content']}" for item in batch]
+
+    model = _BatchModel(handle_batch)
+    component = BatchRunComponent(batch_size=2, max_rate_limit_retries=1)
+
+    with patch("lfx.components.llm_operations.batch_run.asyncio.sleep", new_callable=AsyncMock) as sleep:
+        results = await component._run_conversations(model, _conversations(2))
+
+    assert results == ["ok:0", "ok:1"]
+    assert model.batch_sizes == [2, 1]
+    sleep.assert_awaited_once_with(float(retry_after) if retry_after is not None else 1)
+
+
+@pytest.mark.asyncio
+async def test_run_conversations_does_not_retry_wrapped_non_rate_limit_errors():
+    """Use the provider's concrete status instead of misleading wrapper text."""
+
+    class ProviderError(Exception):
+        code = 503
+
+    error = RuntimeError("rate limit request failed")
+    error.__cause__ = ProviderError("Service unavailable")
+    model = _BatchModel(lambda batch: [error for _ in batch])
+    component = BatchRunComponent(max_rate_limit_retries=3)
+
+    with (
+        patch("lfx.components.llm_operations.batch_run.asyncio.sleep", new_callable=AsyncMock) as sleep,
+        pytest.raises(RuntimeError) as raised,
+    ):
+        await component._run_conversations(model, _conversations(1))
+
+    assert raised.value is error
+    assert model.batch_sizes == [1]
+    sleep.assert_not_awaited()
+
+
+def test_rate_limit_helpers_stop_at_cyclic_causes():
+    """Terminate when a provider constructs a cyclic exception cause chain."""
+    error = RuntimeError("Provider failed")
+    cause = RuntimeError("Request failed")
+    error.__cause__ = cause
+    cause.__cause__ = error
+    component = BatchRunComponent()
+
+    assert not component._is_rate_limit_error(error)
+    assert component._retry_after_seconds(error) is None
+
+
+@pytest.mark.asyncio
 async def test_run_conversations_stops_after_retry_limit():
     """Raise the provider error without sleeping when retries are disabled."""
 
@@ -208,6 +279,105 @@ async def test_custom_abatch_fallback_retries_direct_rate_limit_errors():
 
     assert results == ["ok:0", "ok:1"]
     assert model.calls == [["0", "1"], ["0"], ["1"]]
+    sleep.assert_awaited_once_with(1)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status_code", [429, 503])
+async def test_custom_abatch_handles_direct_errors_with_return_exceptions(status_code):
+    """Retry direct 429s from the modern signature while propagating other failures."""
+
+    class ProviderError(Exception):
+        pass
+
+    error = ProviderError("Provider failed")
+    error.status_code = status_code
+
+    class CustomModel:
+        def __init__(self):
+            """Track inputs to verify that a direct error enters the retry path."""
+            self.calls = []
+
+        async def abatch(self, conversations, *, return_exceptions=False):
+            """Accept the modern argument but report the first failure directly."""
+            assert return_exceptions
+            ids = [conversation[-1]["content"] for conversation in conversations]
+            self.calls.append(ids)
+            if len(self.calls) == 1:
+                raise error
+            return [f"ok:{row_id}" for row_id in ids]
+
+    model = CustomModel()
+    component = BatchRunComponent(batch_size=2, max_rate_limit_retries=1)
+
+    with patch("lfx.components.llm_operations.batch_run.asyncio.sleep", new_callable=AsyncMock) as sleep:
+        if status_code == 429:
+            results = await component._run_conversations(model, _conversations(2))
+            assert results == ["ok:0", "ok:1"]
+            assert model.calls == [["0", "1"], ["0"], ["1"]]
+            sleep.assert_awaited_once_with(1)
+        else:
+            with pytest.raises(ProviderError) as raised:
+                await component._run_conversations(model, _conversations(2))
+            assert raised.value is error
+            assert model.calls == [["0", "1"]]
+            sleep.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("retry_after", "configured_delay", "expected_delay"),
+    [("0", 0.0, 0.0), ("0.5", 0.0, 0.5), ("0.5", 1.25, 1.25)],
+)
+async def test_run_conversations_honors_short_retry_after(retry_after, configured_delay, expected_delay):
+    """Use present provider delays while preserving the configured minimum wait."""
+
+    class RateLimitError(Exception):
+        status_code = 429
+        response = SimpleNamespace(headers={"Retry-After": retry_after})
+
+    def handle_batch(batch):
+        """Limit the first request, then return a successful response."""
+        if len(model.batch_sizes) == 1:
+            return [RateLimitError("busy")]
+        return [item[0]["content"] for item in batch]
+
+    model = _BatchModel(handle_batch)
+    component = BatchRunComponent(delay_between_batches=configured_delay, max_rate_limit_retries=1)
+
+    with patch("lfx.components.llm_operations.batch_run.asyncio.sleep", new_callable=AsyncMock) as sleep:
+        results = await component._run_conversations(model, _conversations(1))
+
+    assert results == ["0"]
+    assert model.batch_sizes == [1, 1]
+    sleep.assert_awaited_once_with(expected_delay)
+
+
+@pytest.mark.asyncio
+async def test_run_conversations_backs_off_headerless_rows_in_mixed_batch():
+    """A short provider delay must not suppress another row's fallback wait."""
+
+    class RateLimitError(Exception):
+        status_code = 429
+
+    immediate_error = RateLimitError("busy")
+    immediate_error.retry_after = 0
+    headerless_error = RateLimitError("busy")
+
+    def handle_batch(batch):
+        """Limit two rows with different delay guidance, then answer retries."""
+        if len(model.batch_sizes) == 1:
+            return [immediate_error, headerless_error]
+        return [f"ok:{item[0]['content']}" for item in batch]
+
+    model = _BatchModel(handle_batch)
+    component = BatchRunComponent(batch_size=2, max_rate_limit_retries=1)
+
+    with patch("lfx.components.llm_operations.batch_run.asyncio.sleep", new_callable=AsyncMock) as sleep:
+        results = await component._run_conversations(model, _conversations(2))
+
+    assert results == ["ok:0", "ok:1"]
+    assert model.batch_sizes == [2, 1, 1]
     sleep.assert_awaited_once_with(1)
 
 
