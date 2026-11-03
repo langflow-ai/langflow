@@ -52,6 +52,13 @@ INVALID_CRON_ERROR = "Invalid cron expression: a valid five-field cron expressio
 CRON_NEVER_MATCHES_ERROR = "Invalid cron expression: it never matches a real date."
 TIMEZONE_REQUIRED_ERROR = "A non-empty IANA timezone is required."
 UNKNOWN_TIMEZONE_ERROR = "Unknown timezone; use an IANA timezone name."
+SLACK_BACKGROUND_RUNS_NOT_ALLOWED_ERROR = (
+    "Turn on 'Allow background runs' for the Slack connection this trigger uses: a trigger runs its flow "
+    "with no one signed in, and the connection's owner has not allowed that yet."
+)
+SLACK_CONNECTION_UNUSABLE_ERROR = (
+    "The Slack connection this trigger uses is revoked or expired. Reconnect it, then enable the trigger."
+)
 
 _STORED_ERRORS: dict[str, TriggerErrorCode] = {
     NODE_REMOVED_ERROR: TriggerErrorCode.NODE_REMOVED,
@@ -61,6 +68,8 @@ _STORED_ERRORS: dict[str, TriggerErrorCode] = {
     CRON_NEVER_MATCHES_ERROR: TriggerErrorCode.CRON_NEVER_MATCHES,
     TIMEZONE_REQUIRED_ERROR: TriggerErrorCode.TIMEZONE_REQUIRED,
     UNKNOWN_TIMEZONE_ERROR: TriggerErrorCode.UNKNOWN_TIMEZONE,
+    SLACK_BACKGROUND_RUNS_NOT_ALLOWED_ERROR: TriggerErrorCode.BACKGROUND_RUNS_NOT_ALLOWED,
+    SLACK_CONNECTION_UNUSABLE_ERROR: TriggerErrorCode.CONNECTION_UNUSABLE,
 }
 
 
