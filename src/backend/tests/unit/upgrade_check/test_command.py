@@ -125,10 +125,10 @@ def test_check_reads_nothing_of_the_server_and_writes_nowhere(tmp_path):
 
     result = _upgrade_check("--database-url", _url(database), "--json", "--output", output, env=env)
 
-    assert result.returncode == 1, result.stderr
+    assert result.returncode == 0, result.stderr
     events = _events(result)
     statuses = {event["flow"]["name"]: event["flow"]["status"] for event in events[:-1]}
-    assert statuses == {"Fixture nested groups": "ok", "Fixture saved component": "ok", "MCP flow": "fail"}
+    assert statuses == {"Fixture nested groups": "ok", "Fixture saved component": "ok", "MCP flow": "warn"}
     report = events[-1]["report"]
     assert json.loads(output.read_text()) == report
     # Every flow with a node to update is listed, ok ones too, and its nodes say what the update does.
@@ -139,7 +139,9 @@ def test_check_reads_nothing_of_the_server_and_writes_nowhere(tmp_path):
             ("outdated_safe", "keeps")
         }
     mcp_nodes = [(node["type"], node["status"]) for node in listed["MCP flow"]["nodes"]]
-    assert mcp_nodes == [("MCPTools", "outdated_breaking")]
+    assert mcp_nodes == [("MCPTools", "could_not_verify")]
+    assert report["summary"]["nodes"]["could_not_verify"] == 1
+    assert report["summary"]["flows"] == {"ok": 2, "warn": 1, "fail": 0}
     # Defaults, not the server's variables: custom code allowed, no components path.
     assert {key: value for key, value in report["settings"].items() if key != "catalog_rules"} == _default_settings()
     assert report["target"]["custom_components"] == {"path": [], "count": 0}
