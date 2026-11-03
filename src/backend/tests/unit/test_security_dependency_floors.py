@@ -23,9 +23,13 @@ def _load_pyproject(relative_path: str) -> dict:
 
 
 def _requirement(requirements: list[str], name: str) -> Requirement:
-    matches = [requirement for spec in requirements if (requirement := Requirement(spec)).name.lower() == name.lower()]
-    assert len(matches) == 1, f"Expected one {name} requirement, found {matches}"
-    assert matches[0].marker is None, f"Security floor for {name} must be unconditional"
+    """Find the unconditional security floor, allowing extra Python-specific constraints."""
+    matches = [
+        requirement
+        for spec in requirements
+        if (requirement := Requirement(spec)).name.lower() == name.lower() and requirement.marker is None
+    ]
+    assert len(matches) == 1, f"Expected one unconditional {name} requirement, found {matches}"
     return matches[0]
 
 

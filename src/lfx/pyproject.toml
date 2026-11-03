@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Gabriel Luiz Freitas Almeida", email = "gabriel@langflow.org" }
 ]
-requires-python = ">=3.10,<3.16"
+requires-python = ">=3.11,<3.16"
 dependencies = [
     "langchain-core>=1.2.28,<2.0.0",
     "pandas>=2.0.0,<3.0.0",
@@ -83,7 +83,11 @@ dependencies = [
 [project.optional-dependencies]
 # Local vector storage uses a private, pinned SQLite runtime. Keep this extra
 # independent from the provider bundle collection and the application SQL driver.
-sqlite = ["apsw==3.53.4.0", "sqlite-vec==0.1.9"]
+sqlite = [
+    "apsw==3.53.4.0; python_version < '3.15'",
+    "apsw==3.54.1.0; python_version >= '3.15'",
+    "sqlite-vec==0.1.9",
+]
 # Opt-in hardware-isolated execution backend for the code-execution components
 # (LANGFLOW_SANDBOX_BACKEND=exec-sandbox, issue #12029). exec-sandbox requires
 # Python >= 3.12, so on 3.10/3.11 this extra installs nothing and the backend

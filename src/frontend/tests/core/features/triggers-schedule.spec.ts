@@ -92,6 +92,13 @@ test.describe("Schedule trigger lifecycle", () => {
       await expect(
         drawer.getByTestId(`trigger-event-${testEvent.id}`),
       ).toBeHidden();
+      await drawer.getByTestId("trigger-events-filter-tests").click();
+      await expect(
+        drawer.getByTestId(`trigger-event-${testEvent.id}`),
+      ).toBeVisible();
+      await expect(
+        drawer.getByTestId(`trigger-event-${replayed.id}`),
+      ).toBeHidden();
       await page.keyboard.press("Escape");
       await expect(drawer).toBeHidden();
 
@@ -192,19 +199,19 @@ test.describe("Schedule trigger lifecycle", () => {
     { tag: ["@release", "@workspace", "@api"] },
     async ({ page }) => {
       const events: MockTriggerEvent[] = Array.from(
-        { length: 220 },
+        { length: 275 },
         (_, index) => ({
           id: `history-${index}`,
           trigger_id: TRIGGER_ID,
           dedupe_key: `schedule:${index}`,
-          state: index === 219 ? "failed" : "completed",
+          state: index >= 220 ? "failed" : "completed",
           attempt: 1,
           available_at: null,
           payload: { text: `Event ${index}` },
           session_id: null,
           job_id: null,
           replay_of_event_id: null,
-          error: index === 219 ? "job_failed" : null,
+          error: index >= 220 ? "job_failed" : null,
           created_at: "2026-10-15T09:00:00Z",
           updated_at: "2026-10-15T09:00:05Z",
         }),
@@ -218,12 +225,13 @@ test.describe("Schedule trigger lifecycle", () => {
       await page.getByTestId(`trigger-menu-${TRIGGER_ID}`).click();
       await page.getByTestId("trigger-action-view_events").click();
       await page.getByTestId("trigger-events-filter-failed").click();
-      for (let index = 0; index < 4; index++) {
-        const older = page.getByTestId("trigger-events-load-more");
-        await expect(older).not.toHaveAttribute("aria-busy", "true");
-        await older.click();
-      }
-      await expect(page.getByTestId("trigger-event-history-219")).toBeVisible();
+      await expect(page.getByTestId("trigger-event-history-220")).toBeVisible();
+      await expect(page.getByTestId("trigger-event-history-0")).toBeHidden();
+      await expect(page.getByTestId("trigger-event-history-274")).toBeHidden();
+      const older = page.getByTestId("trigger-events-load-more");
+      await expect(older).not.toHaveAttribute("aria-busy", "true");
+      await older.click();
+      await expect(page.getByTestId("trigger-event-history-274")).toBeVisible();
       await expect(page.getByTestId("trigger-events-load-more")).toBeHidden();
       await page.runA11yScan("settings-triggers-older-failed-event");
     },

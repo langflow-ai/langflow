@@ -1,0 +1,114 @@
+{
+  "boolean": {
+    "kind": "boolean",
+    "model": "gpt-6-luna",
+    "model_source": "response",
+    "probability_true": 0.88,
+    "provider": "OpenAI",
+    "request": {
+      "kind": "boolean",
+      "question": "Is the customer asking for a refund?"
+    },
+    "status": "success",
+    "usage": {
+      "input_tokens": 296,
+      "output_tokens": 0,
+      "total_tokens": 296
+    }
+  },
+  "choice": {
+    "confidence": 0.71,
+    "kind": "choice",
+    "model": "pplx-decider-latest",
+    "model_source": "request",
+    "probabilities": {
+      "billing": 0.82,
+      "sales": 0.06,
+      "technical": 0.12
+    },
+    "provider": "Perplexity",
+    "request": {
+      "kind": "choice",
+      "options": [
+        {
+          "description": "Payments and invoices",
+          "id": "billing",
+          "label": "Billing"
+        },
+        {
+          "description": "Bugs and outages",
+          "id": "technical",
+          "label": "Technical Support"
+        },
+        {
+          "description": "Pricing and plans",
+          "id": "sales",
+          "label": "Sales"
+        }
+      ],
+      "question": "Which team should handle this message?"
+    },
+    "request_id": "req_5f0c9a",
+    "selected_option": "billing",
+    "status": "success",
+    "usage": {
+      "input_tokens": 296,
+      "output_tokens": 0,
+      "total_tokens": 296
+    }
+  },
+  "refusal": {
+    "kind": "boolean",
+    "model": "gpt-6-luna",
+    "model_source": "response",
+    "provider": "OpenAI",
+    "refusal": "I can't evaluate this request.",
+    "request": {
+      "kind": "boolean",
+      "question": "Is the customer asking for a refund?"
+    },
+    "status": "refusal"
+  },
+  "score": {
+    "confidence": 0.4,
+    "kind": "score",
+    "model": "jev-1.13.0",
+    "model_source": "response",
+    "probabilities": {
+      "delighted": 0.3,
+      "neutral": 0.15,
+      "satisfied": 0.5,
+      "upset": 0.05
+    },
+    "provider": "TypeSafe",
+    "request": {
+      "kind": "score",
+      "levels": [
+        {
+          "id": "upset",
+          "label": "Upset"
+        },
+        {
+          "id": "neutral",
+          "label": "Neutral"
+        },
+        {
+          "id": "satisfied",
+          "label": "Satisfied"
+        },
+        {
+          "id": "delighted",
+          "label": "Delighted"
+        }
+      ],
+      "question": "How satisfied is the customer?"
+    },
+    "score": 2.05,
+    "status": "success",
+    "usage": {
+      "input_tokens": 296,
+      "output_tokens": 0,
+      "total_tokens": 296
+    }
+  }
+}

@@ -88,6 +88,7 @@ class TriggerReason(str, Enum):
     ERROR = "error"
     NEEDS_RECONNECT = "needs_reconnect"
     CONSENT_REQUIRED = "consent_required"
+    READY_TO_RESUME = "ready_to_resume"
     EXPIRED = "expired"
     DEAD = "dead"
     # Caller and applicability reasons; only ever values in ``blocked_actions``.
@@ -110,6 +111,14 @@ class TriggerEventState(str, Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     DEAD = "dead"
+
+
+class TriggerEventFilter(str, Enum):
+    """The events drawer's filters, applied by the server so they search every event, not one page."""
+
+    FAILED = "failed"  # failed or dead
+    REPLAYS = "replays"  # a replay of another event
+    TESTS = "tests"  # a test event, not a replay of one
 
 
 #: Rows that no dispatcher will ever pick up again.
@@ -317,6 +326,18 @@ class TriggerBulkResult(BaseModel):
     unchanged: list[UUID]
     failed: list[TriggerBulkFailure]
     owners: int = Field(description="Distinct owners of the changed triggers.")
+
+
+class TriggerSessionRead(BaseModel):
+    """What started a trigger-run chat session, so the Playground can label it."""
+
+    session_id: str
+    trigger_id: UUID
+    trigger_name: str
+    kind: str
+    provider: str | None
+    #: When the session's first event arrived. A shared session spans many runs.
+    started_at: datetime
 
 
 class TriggerEventRead(BaseModel):

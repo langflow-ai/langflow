@@ -37,12 +37,14 @@ from langflow.services.database.models.trigger.schemas import (
     TriggerBulkRequest,
     TriggerBulkResult,
     TriggerCreate,
+    TriggerEventFilter,
     TriggerEventRead,
     TriggerIngressRead,
     TriggerListScope,
     TriggerPinRequest,
     TriggerRead,
     TriggerReplayRequest,
+    TriggerSessionRead,
     TriggerSigningSecretRead,
     TriggerState,
     TriggerTestRequest,
@@ -66,6 +68,8 @@ from langflow.services.triggers.service import TriggerService
 router = APIRouter(prefix="/triggers", tags=["Triggers"])
 
 _MAX_PAGE_SIZE = 200
+#: Session ids per label lookup; they travel in the query string.
+_MAX_SESSION_IDS = 100
 
 
 def _service() -> TriggerService:
@@ -199,17 +203,44 @@ async def list_triggers(
         rows = await list_all_triggers(
             session, flow_id=flow_id, provider=provider, state=state, limit=limit, offset=offset
         )
-        return await present(rows, current_user)
+        return await present(session, rows, current_user)
     if flow_id is None:
         rows = await list_visible_triggers(
             session, current_user, provider=provider, state=state, limit=limit, offset=offset
         )
-        return await present(rows, current_user)
+        return await present(session, rows, current_user)
     flow = await _authorized_flow(session, current_user, flow_id, FlowAction.READ)
     triggers = await service.list_for_flows(
         session, flow_ids=[flow_id], limit=limit, offset=offset, provider=provider, state=state
     )
-    return await present([(row, flow, None) for row in triggers], current_user)
+    return await present(session, [(row, flow, None) for row in triggers], current_user)
+
+
+@router.get("/sessions", response_model=list[TriggerSessionRead])
+async def list_trigger_sessions(
+    session: DbSessionReadOnly,
+    current_user: CurrentActiveUser,
+    flow_id: Annotated[UUID, Query(description="The flow whose Playground sessions to label")],
+    session_ids: Annotated[list[str], Query(alias="session_id", max_length=_MAX_SESSION_IDS)],
+) -> list[TriggerSessionRead]:
+    """What started each of ``session_ids`` that a trigger on ``flow_id`` ran, for the Playground's labels.
+
+    Authorized as a flow read (404 when the caller cannot read it). Session ids
+    no trigger on the flow started are left out.
+    """
+    await _authorized_flow(session, current_user, flow_id, FlowAction.READ)
+    origins = await ledger.session_origins(session, flow_id=flow_id, session_ids=session_ids)
+    return [
+        TriggerSessionRead(
+            session_id=session_id,
+            trigger_id=trigger.id,
+            trigger_name=trigger.name,
+            kind=trigger.kind,
+            provider=trigger.provider,
+            started_at=started_at,
+        )
+        for session_id, trigger, started_at in origins
+    ]
 
 
 @router.post("/bulk/pause", response_model=TriggerBulkResult)
@@ -403,11 +434,14 @@ async def list_trigger_events(
     service: TriggerServiceDep,
     limit: Annotated[int, Query(ge=1, le=_MAX_PAGE_SIZE)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
+    event_filter: Annotated[TriggerEventFilter | None, Query(alias="filter")] = None,
 ) -> list[TriggerEventRead]:
     await _authorized_trigger(
         service=service, session=session, user=current_user, trigger_id=trigger_id, action=FlowAction.READ
     )
-    rows = await ledger.list_events(session, trigger_id=trigger_id, limit=limit, offset=offset)
+    rows = await ledger.list_events(
+        session, trigger_id=trigger_id, limit=limit, offset=offset, event_filter=event_filter
+    )
     return [TriggerEventRead.model_validate(row) for row in rows]
 
 
