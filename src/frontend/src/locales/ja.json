@@ -2689,6 +2689,8 @@
   "updateComponents.cannotRunDisabled_one": "{{count}} カスタムコンポーネントが無効になっている間は、カスタムコンポーネントを実行できません",
   "updateComponents.cannotRunDisabled_other": "{{count}} カスタムコンポーネントが無効になっている間は、カスタムコンポーネントを実行できません",
   "updateComponents.customComponentsDisabled": "カスタムコンポーネントは無効になっています",
+  "updateComponents.fieldsNotRestored": "{{component}} の一部のフィールドを復元できませんでした",
+  "updateComponents.fieldsRefreshFailed": "{{component}} のフィールドを再読み込みできませんでした",
   "updateComponents.dismiss": "消去",
   "updateComponents.dismissAll": "すべて取り消します",
   "updateComponents.flowNeedsReview": "フローの確認が必要です",
