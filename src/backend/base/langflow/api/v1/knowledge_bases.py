@@ -824,7 +824,7 @@ async def create_knowledge_base(
             # duplicate is a 409, not a 500.
             await logger.awarning("Concurrent KB create collided for %s: %s", kb_name, exc)
             if kb_path is not None:
-                KBStorageHelper.delete_storage(kb_path, kb_name)
+                await asyncio.to_thread(KBStorageHelper.delete_storage, kb_path, kb_name)
             raise HTTPException(status_code=409, detail=f"Knowledge base '{kb_name}' already exists") from exc
         except StorageUnavailableError:
             raise
@@ -836,7 +836,7 @@ async def create_knowledge_base(
                 exc,
             )
             if kb_path is not None:
-                KBStorageHelper.delete_storage(kb_path, kb_name)
+                await asyncio.to_thread(KBStorageHelper.delete_storage, kb_path, kb_name)
             raise HTTPException(
                 status_code=500,
                 detail=(
@@ -868,7 +868,7 @@ async def create_knowledge_base(
     except Exception as e:
         # Clean up if something went wrong
         if kb_path is not None and kb_path.exists():
-            KBStorageHelper.delete_storage(kb_path, kb_name)
+            await asyncio.to_thread(KBStorageHelper.delete_storage, kb_path, kb_name)
         await logger.aerror("Error creating knowledge base: %s", e)
         raise HTTPException(status_code=500, detail="Internal error creating knowledge base") from e
 
