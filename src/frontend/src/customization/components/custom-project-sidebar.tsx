@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { FolderType } from "@/pages/MainPage/entities";
 
 export interface CustomProjectSidebarState {
+  activeIndicatorClassName?: string;
   className?: string;
   contentClassName?: string;
   footer: ReactNode;
@@ -14,6 +15,7 @@ export interface CustomProjectSidebarState {
   itemActionClassName?: string;
   itemClassName?: string;
   projects: FolderType[];
+  secondaryNavigationState?: "open" | "closed";
   tools: ReactNode;
 }
 
