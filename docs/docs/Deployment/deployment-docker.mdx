@@ -63,13 +63,22 @@ The Langflow repo includes a ready-to-use Compose file at `docker_example/docker
    cd langflow/docker_example
    ```
 
-3. Run the Docker Compose file:
+3. Create a `.env` file in the `docker_example` directory with separate strong passwords for the Langflow superuser and PostgreSQL:
+
+   ```text
+   LANGFLOW_SUPERUSER_PASSWORD=SUPERUSER_PASSWORD
+   POSTGRES_PASSWORD=POSTGRES_PASSWORD
+   ```
+
+   The Compose file requires both values. It percent-encodes the raw PostgreSQL password when constructing `LANGFLOW_DATABASE_URL` and keeps PostgreSQL on the private Compose network without publishing its port to the host.
+
+4. Run the Docker Compose file:
 
    ```shell
    docker compose up
    ```
 
-4. Access Langflow at `http://localhost:7860/`.
+5. Access Langflow at `http://localhost:7860/`.
 
 ## Customize the Docker Compose file {#customize}
 
@@ -324,6 +333,8 @@ To override these values, edit `docker/dev.docker-compose.yml` directly.
 ## Upgrade the Langflow Docker image {#upgrade-the-langflow-docker-image}
 
 To upgrade a Langflow Docker deployment without losing your database or flows, do the following:
+
+If you use the quickstart Compose files and are changing `POSTGRES_PASSWORD`, rotate the existing PostgreSQL role password before updating `.env`. The environment variable initializes the password only for an empty database volume. Follow the [quickstart password rotation instructions](https://github.com/langflow-ai/langflow/blob/release-1.12.9/docker_example/README.md#changing-the-postgresql-password-during-an-upgrade) and keep the existing data volume.
 
 1. Keep data on persistent volumes, so when you upgrade Langflow, you will replace only the container image.
 Use Docker volumes or bind mounts for Langflow data and the database so they persist outside of the container.

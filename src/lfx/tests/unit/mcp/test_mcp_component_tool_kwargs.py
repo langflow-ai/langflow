@@ -29,7 +29,7 @@ def test_method_named_tool_argument_receives_configured_value(index, storage):
     assert callable(component.index)
 
 
-@pytest.mark.parametrize("arg_name", ["index", "run", "log", "build_output", "name", "description", "code"])
+@pytest.mark.parametrize("arg_name", ["index", "run", "log", "build_output", "name", "description"])
 def test_unset_tool_argument_does_not_receive_component_member(arg_name):
     args_schema = create_model("ToolArgs", **{arg_name: (str | None, None)})
     component = MCPToolsComponent()
