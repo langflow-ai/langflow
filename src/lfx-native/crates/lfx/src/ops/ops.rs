@@ -54,7 +54,7 @@ impl Segment {
     /// value instead of copying it.
     fn into_value(self) -> AnyValue {
         match self {
-            Self::Key(key) => AnyValue::String(key),
+            Self::Key(key) => AnyValue::from(key),
             Self::Item(key) => json!({"key": key}),
         }
     }
@@ -617,7 +617,7 @@ fn objects<T>(objects: Vec<T>, into_map: fn(T) -> AnyMap) -> AnyValue {
 }
 
 fn strings(strings: Vec<String>) -> AnyValue {
-    AnyValue::Array(strings.into_iter().map(AnyValue::String).collect())
+    AnyValue::Array(strings.into_iter().map(AnyValue::from).collect())
 }
 
 impl TryFrom<AnyValue> for Operation {
@@ -718,7 +718,7 @@ impl FieldUpdate {
     #[must_use]
     pub fn into_value(self) -> AnyValue {
         let mut update = AnyMap::new();
-        update.insert("id".into(), AnyValue::String(self.id));
+        update.insert("id".into(), AnyValue::from(self.id));
         update.insert(
             "path".into(),
             AnyValue::Array(
@@ -821,13 +821,13 @@ impl FromAnyValue for Segment {
             FromAnyValueError::new(r#"must be an object key or {"key": ...} with a non-empty key"#)
         };
         match value {
-            AnyValue::String(key) => Ok(Self::Key(key)),
+            AnyValue::String(key) => Ok(Self::Key(key.to_string())),
             AnyValue::Number(_) => Err(FromAnyValueError::new(
                 r#"integer list indexes are not allowed; name a list item with {"key": ...}"#,
             )),
             AnyValue::Object(item) if item.len() == 1 => match item.into_iter().next() {
                 Some((name, AnyValue::String(key))) if name == "key" && !key.is_empty() => {
-                    Ok(Self::Item(key))
+                    Ok(Self::Item(key.to_string()))
                 }
                 _ => Err(invalid()),
             },

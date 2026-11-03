@@ -2,10 +2,11 @@
 //!
 //! A value is `null`, a boolean, a number, a string, an array or an object.
 //!
-//! - An object ([`AnyMap`]) is a hash map that keeps its keys in insertion
-//!   order. Finding a key takes the same time however many keys the object
-//!   has. Removing a key keeps the order of the others. Copies of an object
+//! - An object ([`AnyMap`]) keeps its keys in insertion order. Small objects
+//!   use a bounded list, and larger objects use a hash map. Removing a key keeps the order of the others. Copies of an object
 //!   share it until one of them is written.
+//! - Keys and string values share immutable text. Each parse or Python input
+//!   keeps one shared copy of each distinct string, then releases its pool.
 //! - A number is an integer or a double ([`Number`]), not its text. `1` and
 //!   `1.0` stay apart, as Python's `int` and `float` do. A number that neither
 //!   holds exactly, an integer too large for 64 bits or a value that is
@@ -18,15 +19,199 @@
 //! [`FiniteAnyValue`] parses text as [`AnyValue`] does, but refuses a number that
 //! is infinite as a double, as reading a Python `float` refuses Infinity.
 
+use std::borrow::Borrow;
+use std::collections::HashSet;
 use std::fmt;
+use std::hash::BuildHasher;
 use std::ops::{Index, IndexMut};
 use std::str::FromStr;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use indexmap::IndexMap;
 
 use serde::de::{self, Deserialize, DeserializeSeed, Deserializer, MapAccess, SeqAccess, Visitor};
 use serde::ser::{Serialize, SerializeMap, Serializer};
+
+/// Immutable text. Copies share the same allocation.
+#[derive(Debug, Clone)]
+pub struct AnyString(Arc<Text>);
+
+#[derive(Debug)]
+struct Text {
+    text: Box<str>,
+    ascii_json: OnceLock<Box<[u8]>>,
+}
+
+impl PartialEq for AnyString {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.0, &other.0) || self.as_str() == other.as_str()
+    }
+}
+impl Eq for AnyString {}
+impl std::hash::Hash for AnyString {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.as_str().hash(state);
+    }
+}
+impl PartialOrd for AnyString {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for AnyString {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.as_str().cmp(other.as_str())
+    }
+}
+
+impl AnyString {
+    /// The text, borrowed.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0.text
+    }
+
+    /// Reuse the JSON spelling of long repeated text. Unique text is written
+    /// directly, so unshared strings do not retain a second copy.
+    pub(crate) fn shared_ascii_json(&self) -> Option<&[u8]> {
+        if self.len() < 256 {
+            return None;
+        }
+        if let Some(encoded) = self.0.ascii_json.get() {
+            return Some(encoded);
+        }
+        if Arc::strong_count(&self.0) <= 1 {
+            return None;
+        }
+        Some(self.0.ascii_json.get_or_init(|| {
+            let mut encoded = Vec::with_capacity(self.len() + 2);
+            crate::json_out::write_str(&mut encoded, self, crate::json_out::Ascii::Escape);
+            encoded.into_boxed_slice()
+        }))
+    }
+}
+
+impl std::ops::Deref for AnyString {
+    type Target = str;
+    fn deref(&self) -> &str {
+        self.as_str()
+    }
+}
+impl Borrow<str> for AnyString {
+    fn borrow(&self) -> &str {
+        self.as_str()
+    }
+}
+impl AsRef<str> for AnyString {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+impl From<&str> for AnyString {
+    fn from(text: &str) -> Self {
+        Self(Arc::new(Text {
+            text: text.into(),
+            ascii_json: OnceLock::new(),
+        }))
+    }
+}
+impl From<String> for AnyString {
+    fn from(text: String) -> Self {
+        Self(Arc::new(Text {
+            text: text.into_boxed_str(),
+            ascii_json: OnceLock::new(),
+        }))
+    }
+}
+impl fmt::Display for AnyString {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self)
+    }
+}
+impl PartialEq<str> for AnyString {
+    fn eq(&self, other: &str) -> bool {
+        self.as_str() == other
+    }
+}
+impl PartialEq<&str> for AnyString {
+    fn eq(&self, other: &&str) -> bool {
+        self.as_str() == *other
+    }
+}
+impl Serialize for AnyString {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self)
+    }
+}
+
+/// Text shared within one input. The pool ends when reading ends; values
+/// retain their own references. Separate inputs never retain each other.
+#[derive(Debug, Default)]
+pub struct StringPool {
+    // Edge handles and small operation inputs usually fit here. Avoid a
+    // separate hash-table allocation for those short-lived inputs.
+    small: [Option<AnyString>; 16],
+    large: Option<HashSet<AnyString, ahash::RandomState>>,
+}
+
+impl StringPool {
+    /// Reuse equal text, or allocate its first copy.
+    pub fn intern(&mut self, text: &str) -> AnyString {
+        if let Some(strings) = &mut self.large {
+            if let Some(shared) = strings.get(text) {
+                return shared.clone();
+            }
+            let shared = AnyString::from(text);
+            strings.insert(shared.clone());
+            return shared;
+        }
+        for slot in &mut self.small {
+            if let Some(shared) = slot {
+                if shared.as_str() == text {
+                    return shared.clone();
+                }
+            } else {
+                let shared = AnyString::from(text);
+                *slot = Some(shared.clone());
+                return shared;
+            }
+        }
+        // Keep standard-library random seeding on every target. Only the
+        // temporary pool uses the faster string hasher.
+        let seed = std::collections::hash_map::RandomState::new();
+        let state = ahash::RandomState::with_seeds(
+            seed.hash_one(0_u8),
+            seed.hash_one(1_u8),
+            seed.hash_one(2_u8),
+            seed.hash_one(3_u8),
+        );
+        #[expect(
+            clippy::mutable_key_type,
+            reason = "the JSON cache is excluded from equality and hashing"
+        )]
+        let mut strings = HashSet::with_capacity_and_hasher(self.small.len() * 2, state);
+        strings.extend(self.small.iter_mut().filter_map(Option::take));
+        self.large = Some(strings);
+        self.intern(text)
+    }
+}
+
+struct StringSeed<'a>(&'a mut StringPool);
+impl<'de> DeserializeSeed<'de> for StringSeed<'_> {
+    type Value = AnyString;
+    fn deserialize<D: Deserializer<'de>>(self, deserializer: D) -> Result<AnyString, D::Error> {
+        deserializer.deserialize_str(self)
+    }
+}
+impl Visitor<'_> for StringSeed<'_> {
+    type Value = AnyString;
+    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("a string")
+    }
+    fn visit_str<E>(self, text: &str) -> Result<AnyString, E> {
+        Ok(self.0.intern(text))
+    }
+}
 
 /// A JSON value.
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -39,7 +224,7 @@ pub enum AnyValue {
     /// A number.
     Number(Number),
     /// A string.
-    String(String),
+    String(AnyString),
     /// An array.
     Array(Vec<AnyValue>),
     /// An object, its keys in insertion order.
@@ -368,9 +553,151 @@ impl<I: AnyValueIndex> IndexMut<I> for AnyValue {
 
 /// The entries of an object (an entry is a key and its value), by key, in
 /// insertion order.
-type Entries = IndexMap<String, AnyValue>;
+const SMALL_OBJECT_KEYS: usize = 8;
+type Row = (AnyString, AnyValue);
+#[derive(Debug, Clone)]
+enum Entries {
+    Small(Vec<Row>),
+    Indexed(IndexMap<AnyString, AnyValue>),
+}
+impl Default for Entries {
+    fn default() -> Self {
+        Self::Small(Vec::new())
+    }
+}
+impl Entries {
+    fn with_capacity(n: usize) -> Self {
+        if n <= SMALL_OBJECT_KEYS {
+            Self::Small(Vec::with_capacity(n))
+        } else {
+            Self::Indexed(IndexMap::with_capacity(n))
+        }
+    }
+    fn len(&self) -> usize {
+        match self {
+            Self::Small(v) => v.len(),
+            Self::Indexed(v) => v.len(),
+        }
+    }
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+    fn get(&self, key: &str) -> Option<&AnyValue> {
+        match self {
+            Self::Small(v) => v.iter().find(|(k, _)| k.as_str() == key).map(|(_, v)| v),
+            Self::Indexed(v) => v.get(key),
+        }
+    }
+    fn get_mut(&mut self, key: &str) -> Option<&mut AnyValue> {
+        match self {
+            Self::Small(v) => v
+                .iter_mut()
+                .find(|(k, _)| k.as_str() == key)
+                .map(|(_, v)| v),
+            Self::Indexed(v) => v.get_mut(key),
+        }
+    }
+    fn contains_key(&self, key: &str) -> bool {
+        self.get(key).is_some()
+    }
+    fn get_index_of(&self, key: &str) -> Option<usize> {
+        match self {
+            Self::Small(v) => v.iter().position(|(k, _)| k.as_str() == key),
+            Self::Indexed(v) => v.get_index_of(key),
+        }
+    }
+    fn insert(&mut self, key: AnyString, value: AnyValue) -> Option<AnyValue> {
+        match self {
+            Self::Small(v) => {
+                if let Some((_, old)) = v.iter_mut().find(|(k, _)| k.as_str() == key.as_str()) {
+                    return Some(std::mem::replace(old, value));
+                }
+                if v.len() < SMALL_OBJECT_KEYS {
+                    v.push((key, value));
+                    return None;
+                }
+            }
+            Self::Indexed(v) => return v.insert(key, value),
+        }
+        let Self::Small(rows) = std::mem::take(self) else {
+            unreachable!()
+        };
+        let mut map = IndexMap::with_capacity(SMALL_OBJECT_KEYS * 2);
+        map.extend(rows);
+        let old = map.insert(key, value);
+        *self = Self::Indexed(map);
+        old
+    }
+    fn insert_full(&mut self, key: AnyString, value: AnyValue) -> (usize, Option<AnyValue>) {
+        let slot = self.get_index_of(&key).unwrap_or(self.len());
+        (slot, self.insert(key, value))
+    }
+    fn shift_remove(&mut self, key: &str) -> Option<AnyValue> {
+        match self {
+            Self::Small(v) => {
+                let slot = v.iter().position(|(k, _)| k.as_str() == key)?;
+                Some(v.remove(slot).1)
+            }
+            Self::Indexed(v) => v.shift_remove(key),
+        }
+    }
+    fn swap_remove(&mut self, key: &str) -> Option<AnyValue> {
+        match self {
+            Self::Small(v) => {
+                let slot = v.iter().position(|(k, _)| k.as_str() == key)?;
+                Some(v.swap_remove(slot).1)
+            }
+            Self::Indexed(v) => v.swap_remove(key),
+        }
+    }
+    fn retain(&mut self, mut keep: impl FnMut(&AnyString, &mut AnyValue) -> bool) {
+        match self {
+            Self::Small(v) => v.retain_mut(|(k, v)| keep(k, v)),
+            Self::Indexed(v) => v.retain(keep),
+        }
+    }
+    fn iter(&self) -> Iter<'_> {
+        Iter(match self {
+            Self::Small(v) => IterInner::Small(v.iter()),
+            Self::Indexed(v) => IterInner::Indexed(v.iter()),
+        })
+    }
+    fn iter_mut(&mut self) -> IterMut<'_> {
+        IterMut(match self {
+            Self::Small(v) => IterMutInner::Small(v.iter_mut()),
+            Self::Indexed(v) => IterMutInner::Indexed(v.iter_mut()),
+        })
+    }
+}
+impl Index<usize> for Entries {
+    type Output = AnyValue;
+    fn index(&self, slot: usize) -> &AnyValue {
+        match self {
+            Self::Small(v) => &v[slot].1,
+            Self::Indexed(v) => &v[slot],
+        }
+    }
+}
+impl IndexMut<usize> for Entries {
+    fn index_mut(&mut self, slot: usize) -> &mut AnyValue {
+        match self {
+            Self::Small(v) => &mut v[slot].1,
+            Self::Indexed(v) => &mut v[slot],
+        }
+    }
+}
+impl IntoIterator for Entries {
+    type Item = Row;
+    type IntoIter = IntoIter;
+    fn into_iter(self) -> IntoIter {
+        IntoIter(match self {
+            Self::Small(v) => IntoIterInner::Small(v.into_iter()),
+            Self::Indexed(v) => IntoIterInner::Indexed(v.into_iter()),
+        })
+    }
+}
 
-/// An object: a hash map of its entries, in insertion order.
+/// An object whose entries keep insertion order.
 ///
 /// A new key goes last, and a replaced key keeps its place. A removal keeps
 /// the order of the other entries ([`AnyMap::remove`], [`AnyMap::shift_remove`]),
@@ -389,7 +716,8 @@ pub struct AnyMap {
 /// Two objects are equal when they hold equal entries in the same order.
 impl PartialEq for AnyMap {
     fn eq(&self, other: &Self) -> bool {
-        self.len() == other.len() && self.iter().eq(other.iter())
+        Arc::ptr_eq(&self.entries, &other.entries)
+            || (self.len() == other.len() && self.iter().eq(other.iter()))
     }
 }
 
@@ -408,6 +736,15 @@ impl AnyMap {
         Self {
             entries: Arc::new(Entries::with_capacity(capacity)),
         }
+    }
+
+    /// Consume this object without destroying shared entries. `None` proves
+    /// this reference was released without dropping its payload. `Some` owns
+    /// the last entries, so a caller can move their destruction to a worker.
+    /// The entries are moved, never cloned, and the ownership decision is atomic.
+    #[must_use]
+    pub fn into_unshared_entries(self) -> Option<impl Send + 'static> {
+        Arc::into_inner(self.entries)
     }
 
     /// The number of entries.
@@ -441,6 +778,11 @@ impl AnyMap {
 
     /// Insert or replace. A replaced key keeps its position; a new key goes last.
     pub fn insert(&mut self, key: String, value: AnyValue) -> Option<AnyValue> {
+        self.insert_shared(key.into(), value)
+    }
+
+    /// Insert a key whose text can be shared with other objects.
+    pub fn insert_shared(&mut self, key: AnyString, value: AnyValue) -> Option<AnyValue> {
         self.entries_mut().insert(key, value)
     }
 
@@ -464,13 +806,13 @@ impl AnyMap {
         let entries = self.entries_mut();
         let index = match entries.get_index_of(key) {
             Some(index) => index,
-            None => entries.insert_full(key.to_owned(), AnyValue::Null).0,
+            None => entries.insert_full(key.into(), AnyValue::Null).0,
         };
         &mut entries[index]
     }
 
     /// Keep the entries `keep` holds for, in order.
-    pub fn retain(&mut self, keep: impl FnMut(&String, &mut AnyValue) -> bool) {
+    pub fn retain(&mut self, keep: impl FnMut(&AnyString, &mut AnyValue) -> bool) {
         self.entries_mut().retain(keep);
     }
 
@@ -482,127 +824,161 @@ impl AnyMap {
     /// The entries, in order.
     #[must_use]
     pub fn iter(&self) -> Iter<'_> {
-        Iter(self.entries.iter())
+        self.entries.iter()
     }
 
     /// The entries, in order, to change the values.
     pub fn iter_mut(&mut self) -> IterMut<'_> {
-        IterMut(self.entries_mut().iter_mut())
+        self.entries_mut().iter_mut()
     }
 
     /// The keys, in order.
-    pub fn keys(&self) -> impl DoubleEndedIterator<Item = &String> + ExactSizeIterator {
-        self.entries.keys()
+    pub fn keys(&self) -> impl DoubleEndedIterator<Item = &AnyString> + ExactSizeIterator {
+        self.iter().map(|(key, _)| key)
     }
 
     /// The values, in order.
     pub fn values(&self) -> impl DoubleEndedIterator<Item = &AnyValue> + ExactSizeIterator {
-        self.entries.values()
+        self.iter().map(|(_, value)| value)
     }
 
     /// The values, in order, to change them.
     pub fn values_mut(
         &mut self,
     ) -> impl DoubleEndedIterator<Item = &mut AnyValue> + ExactSizeIterator {
-        self.entries_mut().values_mut()
+        self.iter_mut().map(|(_, value)| value)
     }
 }
 
-/// The entries of an [`AnyMap`], borrowed.
+/// Borrowed entries, in insertion order.
 #[derive(Debug, Clone)]
-pub struct Iter<'m>(indexmap::map::Iter<'m, String, AnyValue>);
-
+pub struct Iter<'m>(IterInner<'m>);
+#[derive(Debug, Clone)]
+enum IterInner<'m> {
+    Small(std::slice::Iter<'m, Row>),
+    Indexed(indexmap::map::Iter<'m, AnyString, AnyValue>),
+}
 impl<'m> Iterator for Iter<'m> {
-    type Item = (&'m String, &'m AnyValue);
+    type Item = (&'m AnyString, &'m AnyValue);
     fn next(&mut self) -> Option<Self::Item> {
-        self.0.next()
+        match &mut self.0 {
+            IterInner::Small(v) => v.next().map(|(k, v)| (k, v)),
+            IterInner::Indexed(v) => v.next(),
+        }
     }
     fn size_hint(&self) -> (usize, Option<usize>) {
-        self.0.size_hint()
+        match &self.0 {
+            IterInner::Small(v) => v.size_hint(),
+            IterInner::Indexed(v) => v.size_hint(),
+        }
     }
 }
-
 impl DoubleEndedIterator for Iter<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.0.next_back()
+        match &mut self.0 {
+            IterInner::Small(v) => v.next_back().map(|(k, v)| (k, v)),
+            IterInner::Indexed(v) => v.next_back(),
+        }
     }
 }
-
 impl ExactSizeIterator for Iter<'_> {}
-
-/// The entries of an [`AnyMap`], borrowed to change the values.
+/// Borrowed entries with mutable values.
 #[derive(Debug)]
-pub struct IterMut<'m>(indexmap::map::IterMut<'m, String, AnyValue>);
-
+pub struct IterMut<'m>(IterMutInner<'m>);
+#[derive(Debug)]
+enum IterMutInner<'m> {
+    Small(std::slice::IterMut<'m, Row>),
+    Indexed(indexmap::map::IterMut<'m, AnyString, AnyValue>),
+}
 impl<'m> Iterator for IterMut<'m> {
-    type Item = (&'m String, &'m mut AnyValue);
+    type Item = (&'m AnyString, &'m mut AnyValue);
     fn next(&mut self) -> Option<Self::Item> {
-        self.0.next()
+        match &mut self.0 {
+            IterMutInner::Small(v) => v.next().map(|row| (&row.0, &mut row.1)),
+            IterMutInner::Indexed(v) => v.next(),
+        }
     }
     fn size_hint(&self) -> (usize, Option<usize>) {
-        self.0.size_hint()
+        match &self.0 {
+            IterMutInner::Small(v) => v.size_hint(),
+            IterMutInner::Indexed(v) => v.size_hint(),
+        }
     }
 }
-
+impl DoubleEndedIterator for IterMut<'_> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        match &mut self.0 {
+            IterMutInner::Small(v) => v.next_back().map(|row| (&row.0, &mut row.1)),
+            IterMutInner::Indexed(v) => v.next_back(),
+        }
+    }
+}
 impl ExactSizeIterator for IterMut<'_> {}
-
 impl<'m> IntoIterator for &'m AnyMap {
-    type Item = (&'m String, &'m AnyValue);
+    type Item = (&'m AnyString, &'m AnyValue);
     type IntoIter = Iter<'m>;
     fn into_iter(self) -> Iter<'m> {
         self.iter()
     }
 }
-
 impl<'m> IntoIterator for &'m mut AnyMap {
-    type Item = (&'m String, &'m mut AnyValue);
+    type Item = (&'m AnyString, &'m mut AnyValue);
     type IntoIter = IterMut<'m>;
     fn into_iter(self) -> IterMut<'m> {
         self.iter_mut()
     }
 }
-
-/// The entries of an [`AnyMap`], owned, in order.
+/// Owned entries, in insertion order.
 #[derive(Debug)]
-pub struct IntoIter(indexmap::map::IntoIter<String, AnyValue>);
-
+pub struct IntoIter(IntoIterInner);
+#[derive(Debug)]
+enum IntoIterInner {
+    Small(std::vec::IntoIter<Row>),
+    Indexed(indexmap::map::IntoIter<AnyString, AnyValue>),
+}
 impl Iterator for IntoIter {
-    type Item = (String, AnyValue);
+    type Item = Row;
     fn next(&mut self) -> Option<Self::Item> {
-        self.0.next()
+        match &mut self.0 {
+            IntoIterInner::Small(v) => v.next(),
+            IntoIterInner::Indexed(v) => v.next(),
+        }
     }
     fn size_hint(&self) -> (usize, Option<usize>) {
-        self.0.size_hint()
+        match &self.0 {
+            IntoIterInner::Small(v) => v.size_hint(),
+            IntoIterInner::Indexed(v) => v.size_hint(),
+        }
     }
 }
-
 impl DoubleEndedIterator for IntoIter {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.0.next_back()
+        match &mut self.0 {
+            IntoIterInner::Small(v) => v.next_back(),
+            IntoIterInner::Indexed(v) => v.next_back(),
+        }
     }
 }
-
 impl ExactSizeIterator for IntoIter {}
-
 impl IntoIterator for AnyMap {
-    type Item = (String, AnyValue);
+    type Item = Row;
     type IntoIter = IntoIter;
     fn into_iter(self) -> IntoIter {
-        IntoIter(Arc::unwrap_or_clone(self.entries).into_iter())
+        Arc::unwrap_or_clone(self.entries).into_iter()
     }
 }
 
 /// Insert each entry: a repeated key keeps its first position and its last value.
-impl Extend<(String, AnyValue)> for AnyMap {
-    fn extend<T: IntoIterator<Item = (String, AnyValue)>>(&mut self, entries: T) {
+impl<K: Into<AnyString>> Extend<(K, AnyValue)> for AnyMap {
+    fn extend<T: IntoIterator<Item = (K, AnyValue)>>(&mut self, entries: T) {
         for (key, value) in entries {
-            self.insert(key, value);
+            self.insert_shared(key.into(), value);
         }
     }
 }
 
-impl FromIterator<(String, AnyValue)> for AnyMap {
-    fn from_iter<T: IntoIterator<Item = (String, AnyValue)>>(entries: T) -> Self {
+impl<K: Into<AnyString>> FromIterator<(K, AnyValue)> for AnyMap {
+    fn from_iter<T: IntoIterator<Item = (K, AnyValue)>>(entries: T) -> Self {
         let mut map = AnyMap::new();
         map.extend(entries);
         map
@@ -827,19 +1203,25 @@ impl From<bool> for AnyValue {
 
 impl From<&str> for AnyValue {
     fn from(text: &str) -> Self {
-        AnyValue::String(text.to_owned())
+        AnyValue::String(text.into())
     }
 }
 
 impl From<String> for AnyValue {
     fn from(text: String) -> Self {
-        AnyValue::String(text)
+        AnyValue::String(text.into())
     }
 }
 
 impl From<&String> for AnyValue {
     fn from(text: &String) -> Self {
-        AnyValue::String(text.clone())
+        AnyValue::String(text.as_str().into())
+    }
+}
+
+impl From<AnyString> for AnyValue {
+    fn from(text: AnyString) -> Self {
+        AnyValue::String(text)
     }
 }
 
@@ -920,7 +1302,7 @@ impl From<serde_json::Value> for AnyValue {
                 .to_string()
                 .parse()
                 .map_or(AnyValue::Null, AnyValue::Number),
-            serde_json::Value::String(text) => AnyValue::String(text),
+            serde_json::Value::String(text) => AnyValue::String(text.into()),
             serde_json::Value::Array(items) => items.into_iter().map(AnyValue::from).collect(),
             serde_json::Value::Object(map) => AnyValue::Object(
                 map.into_iter()
@@ -1016,7 +1398,8 @@ impl<'de> Deserialize<'de> for FiniteAnyValue {
 /// exactly their number.
 #[derive(Debug, Default)]
 struct Builder<const FINITE: bool> {
-    entries: Vec<(String, AnyValue)>,
+    strings: StringPool,
+    entries: Vec<(AnyString, AnyValue)>,
     items: Vec<AnyValue>,
 }
 
@@ -1061,11 +1444,11 @@ impl<'de, const FINITE: bool> Visitor<'de> for AnyValueVisitor<'_, FINITE> {
     }
 
     fn visit_str<E>(self, text: &str) -> Result<AnyValue, E> {
-        Ok(AnyValue::String(text.to_owned()))
+        Ok(AnyValue::String(self.0.strings.intern(text)))
     }
 
     fn visit_string<E>(self, text: String) -> Result<AnyValue, E> {
-        Ok(AnyValue::String(text))
+        Ok(AnyValue::String(self.0.strings.intern(&text)))
     }
 
     fn visit_unit<E>(self) -> Result<AnyValue, E> {
@@ -1092,7 +1475,7 @@ impl<'de, const FINITE: bool> Visitor<'de> for AnyValueVisitor<'_, FINITE> {
     fn visit_map<A: MapAccess<'de>>(self, mut access: A) -> Result<AnyValue, A::Error> {
         let builder = self.0;
         let start = builder.entries.len();
-        while let Some(key) = access.next_key::<String>()? {
+        while let Some(key) = access.next_key_seed(StringSeed(&mut builder.strings))? {
             if builder.entries.len() == start && key == NUMBER_TOKEN {
                 let text: String = access.next_value()?;
                 let number: Number = text
@@ -1109,7 +1492,7 @@ impl<'de, const FINITE: bool> Visitor<'de> for AnyValueVisitor<'_, FINITE> {
         // A repeated key keeps its first position and its last value.
         let mut map = AnyMap::with_capacity(builder.entries.len() - start);
         for (key, value) in builder.entries.drain(start..) {
-            map.insert(key, value);
+            map.insert_shared(key, value);
         }
         Ok(AnyValue::Object(map))
     }
@@ -1121,6 +1504,125 @@ mod tests {
 
     fn parse(text: &str) -> AnyValue {
         serde_json::from_str(text).unwrap()
+    }
+
+    #[test]
+    fn consuming_shared_maps_never_destroys_their_payload() {
+        let child = AnyMap::new();
+        let weak = Arc::downgrade(&child.entries);
+        let mut map = AnyMap::new();
+        map.insert("child".into(), AnyValue::Object(child));
+        let shared = map.clone();
+        assert!(map.into_unshared_entries().is_none());
+        assert!(weak.upgrade().is_some());
+        let payload = shared
+            .into_unshared_entries()
+            .expect("the last owner takes the entries");
+        assert!(weak.upgrade().is_some());
+        drop(payload);
+        assert!(weak.upgrade().is_none());
+    }
+
+    #[test]
+    fn concurrent_last_map_owners_transfer_one_payload_without_dropping_it() {
+        let child = AnyMap::new();
+        let weak = Arc::downgrade(&child.entries);
+        let mut map = AnyMap::new();
+        map.insert("child".into(), AnyValue::Object(child));
+        let other = map.clone();
+        let barrier = Arc::new(std::sync::Barrier::new(2));
+        let threads: Vec<_> = [map, other]
+            .into_iter()
+            .map(|map| {
+                let barrier = barrier.clone();
+                std::thread::spawn(move || {
+                    barrier.wait();
+                    map.into_unshared_entries()
+                })
+            })
+            .collect();
+        let payloads: Vec<_> = threads
+            .into_iter()
+            .map(|thread| thread.join().unwrap())
+            .collect();
+        assert_eq!(payloads.iter().flatten().count(), 1);
+        assert!(weak.upgrade().is_some());
+        drop(payloads);
+        assert!(weak.upgrade().is_none());
+    }
+
+    #[test]
+    fn a_pool_keeps_shared_text_when_it_grows_beyond_small_inputs() {
+        let mut pool = StringPool::default();
+        let first = pool.intern("first");
+        for i in 0..32 {
+            pool.intern(&format!("key-{i}"));
+        }
+        let again = pool.intern("first");
+        assert!(Arc::ptr_eq(&first.0, &again.0));
+        drop(pool);
+        assert_eq!(first.as_str(), "first");
+        assert_eq!(again.as_str(), "first");
+    }
+
+    #[test]
+    fn shared_json_cache_preserves_equality_hashes_and_thread_safety() {
+        let mut pool = StringPool::default();
+        let text = "code \"quoted\"\nœ 😀 ".repeat(50);
+        let a = pool.intern(&text);
+        let b = pool.intern(&text);
+        drop(pool);
+        let independent = AnyString::from(text.clone());
+        let hash = std::collections::hash_map::RandomState::new();
+        let before = hash.hash_one(&a);
+        let threads: Vec<_> = [a.clone(), b.clone()]
+            .into_iter()
+            .map(|text| {
+                std::thread::spawn(move || crate::ops::api::json_text(&AnyValue::String(text)))
+            })
+            .collect();
+        for thread in threads {
+            let encoded = thread.join().unwrap();
+            assert!(encoded.is_ascii());
+            assert_eq!(serde_json::from_str::<String>(&encoded).unwrap(), text);
+        }
+        assert!(a.0.ascii_json.get().is_some());
+        assert_eq!(a, independent);
+        assert_eq!(hash.hash_one(&a), before);
+        assert_eq!(hash.hash_one(&a), hash.hash_one(&independent));
+    }
+
+    #[test]
+    fn unique_long_text_is_written_without_a_cache() {
+        let text = AnyString::from("unique \"text\"\n".repeat(100));
+        let value = AnyValue::String(text);
+        let encoded = crate::ops::api::json_text(&value);
+        assert_eq!(serde_json::from_str::<AnyValue>(&encoded).unwrap(), value);
+        let AnyValue::String(text) = value else {
+            panic!("string");
+        };
+        assert!(text.0.ascii_json.get().is_none());
+    }
+
+    #[test]
+    fn parsed_keys_and_values_share_text_within_one_input() {
+        let value = parse(r#"[{"repeat":"shared"},{"repeat":"sh\u0061red"}]"#);
+        let a = value[0].as_object().unwrap();
+        let b = value[1].as_object().unwrap();
+        let (ka, va) = a.iter().next().unwrap();
+        let (kb, vb) = b.iter().next().unwrap();
+        assert!(Arc::ptr_eq(&ka.0, &kb.0));
+        let (AnyValue::String(va), AnyValue::String(vb)) = (va, vb) else {
+            panic!("strings");
+        };
+        assert!(Arc::ptr_eq(&va.0, &vb.0));
+        let mut copied = value.clone();
+        copied[0]["repeat"] = AnyValue::from("changed");
+        assert_eq!(value[0]["repeat"].as_str(), Some("shared"));
+        let AnyValue::String(unchanged) = &copied[1]["repeat"] else {
+            panic!("string");
+        };
+        assert!(Arc::ptr_eq(&va.0, &unchanged.0));
     }
 
     #[test]
@@ -1204,5 +1706,83 @@ mod tests {
     fn json_text_reads_back_as_written() {
         let text = r#"{"x":[null,true,"é",{"k":-3}],"y":2.5}"#;
         assert_eq!(parse(text).to_string(), text);
+    }
+
+    #[test]
+    fn adaptive_objects_preserve_order_duplicate_and_cow_across_promotion() {
+        for size in [1_usize, 4, 8, 9, 32] {
+            let mut map = AnyMap::with_capacity(size);
+            for i in 0..size {
+                map.insert(format!("k{i}"), AnyValue::from(i as u64));
+            }
+            let original = map.clone();
+            assert_eq!(
+                map.insert("k0".into(), AnyValue::from(99)),
+                Some(AnyValue::from(0))
+            );
+            assert_eq!(map.keys().next().unwrap().as_str(), "k0");
+            assert_eq!(original.get("k0"), Some(&AnyValue::from(0)));
+            let mut value = AnyValue::Object(map);
+            *value.pointer_mut("/k0").unwrap() = AnyValue::from(100);
+            value["added"] = AnyValue::Bool(true);
+            assert_eq!(
+                serde_json::from_str::<AnyValue>(&value.to_string()).unwrap(),
+                value
+            );
+            assert_eq!(value.as_object().unwrap().iter().len(), size + 1);
+            let mut map = value.as_object().unwrap().clone();
+            map.shift_remove("k0");
+            let keys: Vec<_> = map.keys().map(AnyString::as_str).collect();
+            let expected: Vec<_> = (1..size)
+                .map(|i| format!("k{i}"))
+                .chain(["added".to_owned()])
+                .collect();
+            assert_eq!(keys, expected);
+            map.swap_remove("added");
+            map.retain(|_, value| {
+                *value = AnyValue::Null;
+                true
+            });
+            assert!(map.values().all(AnyValue::is_null));
+            assert_eq!(map.into_iter().count(), size - 1);
+        }
+        let mut map = AnyMap::new();
+        for i in 0..8 {
+            map.insert(format!("k{i}"), AnyValue::Null);
+        }
+        assert!(matches!(&*map.entries, Entries::Small(_)));
+        map.insert("k0".into(), AnyValue::Bool(true));
+        assert!(matches!(&*map.entries, Entries::Small(_)));
+        map.insert("ninth".into(), AnyValue::Null);
+        assert!(matches!(&*map.entries, Entries::Indexed(_)));
+        assert_eq!(map.keys().last().unwrap().as_str(), "ninth");
+    }
+
+    #[test]
+    fn adaptive_iterators_preserve_exact_size_and_both_ends() {
+        for size in [4_usize, 16] {
+            let mut map = AnyMap::with_capacity(size);
+            for i in 0..size {
+                map.insert(format!("k{i}"), AnyValue::from(i as u64));
+            }
+            let mut entries = map.iter();
+            assert_eq!(entries.len(), size);
+            assert_eq!(entries.next().unwrap().0.as_str(), "k0");
+            assert_eq!(
+                entries.next_back().unwrap().0.as_str(),
+                format!("k{}", size - 1)
+            );
+            assert_eq!(entries.len(), size - 2);
+            for value in map.values_mut().rev() {
+                *value = AnyValue::Null;
+            }
+            let mut entries = map.into_iter();
+            assert_eq!(entries.next().unwrap().0.as_str(), "k0");
+            assert_eq!(
+                entries.next_back().unwrap().0.as_str(),
+                format!("k{}", size - 1)
+            );
+            assert_eq!(entries.len(), size - 2);
+        }
     }
 }
