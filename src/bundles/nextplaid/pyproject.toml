@@ -22,7 +22,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "nextplaid", "colbert", "p
 #   bundle keeps building if lfx drops it.
 #
 # lfx is floored at the current major.minor line (admitting the branch's own
-# ``X.Y.0.devN`` nightlies under PEP 440) and capped below the next lfx major;
+# ``X.Y.0.devN`` nightlies under PEP 440). This maintenance build excludes 1.14.
 # the floor is re-synced on ``make patch`` via
 # scripts/ci/sync_bundle_lfx_pin.py.  Fine-grained BUNDLE_API compatibility is
 # enforced via extension.json's "lfx": {"compat": [...]} contract.
