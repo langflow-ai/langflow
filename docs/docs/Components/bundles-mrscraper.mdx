@@ -10,13 +10,13 @@ import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-ins
 
 <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support third-party integrations with Langflow.
 
-The **MrScraper** bundle provides three components: **Account**, **Scraper API**, and **Web Search**. They use `mrscraper-sdk` version `0.6.x`. Install the provider dependencies with `pip install "lfx-bundles[mrscraper]"`, then enter your API token from [the MrScraper app](https://app.mrscraper.com) in each component's **MrScraper API Token** field.
+The **MrScraper** bundle provides three components: **Account**, **Scraper API**, and **Web Search**. They use `mrscraper-sdk` version `0.9.x`. Install the provider dependencies with `pip install "lfx-bundles[mrscraper]"`, then enter your API token from [the MrScraper app](https://app.mrscraper.com) in each component's **MrScraper API Token** field.
 
 All three components return the API payload as [`Data`](/data-types#json). The SDK's `status_code` and `headers` envelope is removed. Object responses are preserved; text and list responses are wrapped in a field so they remain valid Langflow data. API, authentication, and network errors fail the component.
 
 ## MrScraper Account
 
-Check account identity, subscription status, token quota, and rate limits. This component calls `GET https://api.app.mrscraper.com/api/v1/subscription-accounts`.
+Check account identity, subscription status, token quota, and rate limits.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
@@ -29,26 +29,27 @@ For example, connect **Account** to a **Parser** to read `token_remaining` befor
 
 ## MrScraper Scraper API
 
-Fetch HTML, Markdown, screenshots, or a combination. This component sends `POST https://api.mrscraper.com`. The request body contains `url`, `maxRetries`, and optional `tokenCap`; page options and the API token are query parameters.
+Fetch a public web page as rendered HTML, Markdown, screenshot, or a combination.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | MrScraper API Token (`api_token`) | Required | Your API token. |
 | URL (`url`) | Required | Target page URL. Available in Tool Mode. |
-| HTML (`html`) | `true` | Request HTML. |
-| Markdown (`markdown`) | `false` | Request Markdown, independently of HTML. |
-| Screenshot (`screenshot`) | `false` | Capture a screenshot; always enables browser rendering. |
+| HTML (`html`) | `true` | Return the rendered page HTML. |
+| Markdown (`markdown`) | `false` | Return the page as Markdown, independently of HTML. |
+| Screenshot (`screenshot`) | `false` | Capture a base64-encoded screenshot; always enables browser rendering. |
 | Browser Rendering (`browser_rendering`) | `Auto` | `Auto` tries without a browser before falling back. `Enabled` forces rendering; `Disabled` disables it unless Screenshot is enabled. |
 | Super (`super`) | `false` | Enable real device routing independently of browser rendering. |
 | Timeout (seconds) (`timeout`) | `120` | Page timeout from 1 to 300 seconds. The SDK adds 30 seconds for the HTTP deadline. |
 | Geo Code (`geo_code`) | `US` | Geolocation country code. |
-| Proxy Country (`proxy_country`) | Empty | Optional `proxyCountry` value. |
+| Proxy Country (`proxy_country`) | Empty | Optional country code for proxy routing. |
 | Use Proxy (`use_proxy`) | `true` | Allow the API to use a proxy. |
 | Custom Proxy (`proxy`) | Empty | Optional secret proxy in `username:password@host:port` form. |
 | Block Resources (`block_resources`) | `false` | Block images, CSS, and fonts. |
 | Bypass Proxy (`bypass_proxy`) | `false` | Enable the API's proxy bypass behavior. |
 | Wait for Selector (`wait_for_selector`) | Empty | Wait for a CSS selector. |
-| Visit Home Page First (`home_page`) | `false` | Visit the site's root first; sent as `warmStart=true`. |
+| Wait Until (`wait_until`) | Empty | Optional page lifecycle event to wait for, such as `domcontentloaded`. |
+| Visit Home Page First (`home_page`) | `false` | Visit the site's root before the target page. |
 | Cookie Jar (`cookie_jar`) | Empty | Optional configuration such as `domain=example.com&country=us&max_used=100&max_age=50m`. |
 | Target Headers (`headers`) | Empty | Target request headers as a JSON object string. |
 | Max Retries (`max_retries`) | `3` | Nonnegative maximum retries; `0` is preserved. |
@@ -56,33 +57,29 @@ Fetch HTML, Markdown, screenshots, or a combination. This component sends `POST 
 | Stream (`stream`) | `Auto` | `Auto` leaves streaming unset; `Enabled` or `Disabled` sends an explicit value. The SDK buffers the response. |
 | Discard Token Secret (`discard_token_secret`) | Empty | Optional secret `x-discard-token-secret` request header. |
 
-Only the URL and output options are shown initially; open the component's advanced settings for the remaining controls. To retrieve all representations, enter `https://example.com` and enable **HTML**, **Markdown**, and **Screenshot**. Screenshot also enables browser rendering when **Browser Rendering** is `Disabled`.
+Only the URL and output options are shown initially; open the component's advanced settings for the remaining controls. Enable at least one of **HTML**, **Markdown**, or **Screenshot**; the component fails before sending a request if all three are disabled. To retrieve all representations, enter `https://books.toscrape.com/` and enable **HTML**, **Markdown**, and **Screenshot**. Screenshot also enables browser rendering when **Browser Rendering** is `Disabled`.
 
-JSON object responses pass through unchanged, including combined HTML, Markdown, and screenshot responses. Text responses are returned as `{"html": "..."}`; the `html` field name is retained for existing flows and can contain Markdown when only Markdown is requested. Other non-object payloads also use the `html` field. Inspect the response before assuming it contains an HTML string.
+When only **HTML** is enabled, the page is returned as `{"html": "..."}`; the `html` field name is retained for existing flows. When **Markdown** or **Screenshot** is enabled, the response is an object containing the requested outputs under keys such as `html`, `markdown`, and `screenshot`, and passes through unchanged. Screenshots are base64-encoded strings. Other non-object payloads also use the `html` field.
 
 ## MrScraper Web Search
 
-Search Google using query text or a full Google search URL. This component sends `POST https://sync.scraper.mrscraper.com/api/google/serp/v2/sync`.
+Search the web for real-time results: website URLs, titles, and descriptions.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | MrScraper API Token (`api_token`) | Required | Your API token. |
-| Query or Google URL (`url`) | Required | Query text or Google search URL. Available in Tool Mode. |
-| Raw HTML (`raw`) | `true` | Return HTML regardless of Format. Disable this to request structured JSON. |
-| Format (`format`) | `json` | `json` or `html`, used when Raw HTML is disabled. |
-| Region (`region`) | Empty | Optional country code; overrides `gl` from a URL. |
-| Language (`language`) | Empty | Optional language code; overrides `hl` from a URL. |
-| Page (`page`) | Empty | Optional positive integer page; overrides `start` from a URL. |
-| Render JavaScript (`render_js`) | `false` | Render JavaScript-dependent search features. |
+| Search Query (`query`) | Required | The search query. Available in Tool Mode. |
+| Country (`country`) | Empty | Optional country code for localized results, such as `us`. Leave empty to use the API default. |
+| Number of Results (`num_results`) | `10` | Number of results to return, an integer from `10` to `100`. |
 | Timeout (seconds) (`timeout`) | `600` | Positive HTTP request timeout. |
 
-The SDK extracts `q`, `gl`, `hl`, and `start` from Google URLs. For example, `https://www.google.com/search?q=running+shoes&gl=us&hl=en&start=20` searches for `running shoes` in region `us`, language `en`, on page `3`. Explicit component settings override URL values.
-
-For structured results, enter `python web scraping`, disable **Raw HTML**, and select **Format: json**. JSON objects pass through unchanged; HTML, list, and other scalar responses are wrapped as `{"result": ...}`.
+For example, enter `e-menessaptieka.lv linkedin`, set **Country** to `us`, and keep **Number of Results** at `10`. The output contains `success`, `message`, and a `data` list. Each result has `rank`, `title`, `url`, `description`, and `source`. Non-object responses are wrapped as `{"result": ...}`.
 
 ## Updating existing flows
 
 **MrScraper Fetch Rendered HTML** is now displayed as **MrScraper Scraper API**. Its class and saved-flow identifier remain `MrscraperFetchHtml`, its output name remains `data`, and plain text output keeps the `html` field. Existing URL, timeout, geolocation, and resource-blocking settings remain available. Browser rendering now defaults to the SDK's automatic fallback; select **Enabled** to always use a browser.
+
+**MrScraper Web Search** keeps its saved-flow identifier `MrscraperWebSearch` and output name `data`. Its inputs are now **Search Query**, **Country**, **Number of Results**, and **Timeout**. The previous **Raw HTML**, **Format**, **Region**, **Language**, **Page**, and **Render JavaScript** controls are removed, and results are always returned as structured data. After updating the component in an existing flow, re-enter the search text in **Search Query**, set **Country** in place of **Region**, and update downstream parsing to read the `data` result list.
 
 The previous AI Agent Scraper, Batch Scrape URLs, Crawl Website, Get Result Detail, Get Results, Run AI Scraper, and Run Manual Scraper components have been removed. Their historical migration entries remain for old flow identification, but those operations have no equivalent in this three-component bundle. Replace affected nodes with **Scraper API** for page retrieval or **Web Search** for discovery, and update downstream parsing. A prompt-driven extraction workflow can connect page content to a language model; it requires rebuilding the workflow rather than an automatic node conversion.
 

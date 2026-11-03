@@ -8,13 +8,10 @@ from lfx_bundles.mrscraper.mrscraper_common import call_sdk, optional_integer, p
 
 
 class MrscraperFetchHtml(Component):
-    """Fetch HTML, Markdown, and screenshots through the current SDK."""
+    """Fetch a page as HTML, Markdown, a screenshot, or a combination through the SDK."""
 
     display_name: str = "MrScraper Scraper API"
-    description: str = (
-        "Fetch HTML, Markdown, and screenshots with optional browser rendering, "
-        "proxy geolocation, and real device routing."
-    )
+    description: str = "Fetch a public web page as rendered HTML, Markdown, screenshot, or a combination."
     name = "MrscraperFetchHtml"
     icon: str = "MrScraper"
     documentation: str = "https://docs.mrscraper.com"
@@ -34,13 +31,23 @@ class MrscraperFetchHtml(Component):
             info="Target page URL to retrieve.",
             tool_mode=True,
         ),
-        BoolInput(name="html", display_name="HTML", value=True),
-        BoolInput(name="markdown", display_name="Markdown", value=False),
+        BoolInput(
+            name="html",
+            display_name="HTML",
+            value=True,
+            info="Return the rendered page HTML. Enable at least one of HTML, Markdown, or Screenshot.",
+        ),
+        BoolInput(
+            name="markdown",
+            display_name="Markdown",
+            value=False,
+            info="Return the page as Markdown.",
+        ),
         BoolInput(
             name="screenshot",
             display_name="Screenshot",
             value=False,
-            info="Capture a screenshot. This also enables browser rendering.",
+            info="Capture a base64-encoded screenshot. This also enables browser rendering.",
         ),
         DropdownInput(
             name="browser_rendering",
@@ -89,6 +96,13 @@ class MrscraperFetchHtml(Component):
         ),
         BoolInput(name="bypass_proxy", display_name="Bypass Proxy", value=False, advanced=True),
         StrInput(name="wait_for_selector", display_name="Wait for Selector", advanced=True),
+        StrInput(
+            name="wait_until",
+            display_name="Wait Until",
+            value="",
+            advanced=True,
+            info='Optional page lifecycle event to wait for, for example "domcontentloaded".',
+        ),
         BoolInput(
             name="home_page",
             display_name="Visit Home Page First",
@@ -157,6 +171,7 @@ class MrscraperFetchHtml(Component):
             proxy=self.proxy or None,
             bypass_proxy=self.bypass_proxy,
             wait_for_selector=self.wait_for_selector or None,
+            wait_until=self.wait_until or None,
             home_page=self.home_page,
             cookie_jar=self.cookie_jar or None,
             headers=self.headers or None,
