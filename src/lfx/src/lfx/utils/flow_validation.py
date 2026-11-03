@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
 from lfx.utils.component_aliases import ComponentIdentityIndex, get_component_type_aliases
+from lfx.utils.flow_code import has_code_lines, normalize_code_for_import
 
 if TYPE_CHECKING:
     from lfx.services.catalog_policy import CatalogPolicySnapshot
@@ -276,11 +277,24 @@ def _extract_graph_payload(graph: Any) -> Mapping[str, Any] | None:
 
 
 def _extract_flow_data(target: Mapping[str, Any] | Any | None) -> dict[str, Any] | None:
-    """Normalize a flow payload or graph-like object to raw graph data."""
-    if isinstance(target, Mapping) or target is None:
-        return _normalize_flow_data(target)
+    """Normalize a flow payload or graph-like object to raw graph data.
 
-    return _normalize_flow_data(_extract_graph_payload(target))
+    Downloaded flows store component code as lists of lines, and ``Graph.from_payload`` joins
+    them before it builds. Join them here as well, on a copy, so policy checks hash and sanitize
+    the source that will run. Lines that cannot be joined stay as they are, and the code checks
+    still block them.
+    """
+    if isinstance(target, Mapping) or target is None:
+        flow_data = _normalize_flow_data(target)
+    else:
+        flow_data = _normalize_flow_data(_extract_graph_payload(target))
+
+    if flow_data is None or not has_code_lines(flow_data):
+        return flow_data
+    try:
+        return normalize_code_for_import(flow_data)
+    except ValueError:
+        return flow_data
 
 
 def _collect_catalog_component_keys(nodes: Any) -> set[str]:
@@ -1317,10 +1331,10 @@ def substitute_outdated_component_code_in_place(
     claim is likewise left untouched, so drift is never resolved into the *wrong* component —
     see :class:`SubstitutableComponentTypes`.
 
-    Mutates ``flow_data`` in place, matching ``Graph.from_payload``'s existing contract with
-    ``migrate_flow_payload``; callers that must preserve the stored flow (so the editor keeps
-    flagging the node as outdated) pass a copy. Returns ``display_name (id)`` labels for the
-    nodes that were swapped.
+    Mutates ``flow_data`` in place. ``Graph.from_payload`` passes the normalized copy it builds
+    from, so a stored flow is never changed there. Other callers that must preserve the stored
+    flow, so the editor keeps flagging the node as outdated, pass a copy. Returns
+    ``display_name (id)`` labels for the nodes that were swapped.
 
     When ``validate_public_execution`` is true, the exact post-substitution bytes are checked
     against the public code-execution policy using the same registry snapshot that supplied
@@ -1603,7 +1617,8 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
     graph dict for the caller to build from.
 
     Opt-in (``allow_public_custom_components`` is True): preserves stored custom code only when
-    the global custom-component policy is also permissive. When the global policy is restricted,
+    both global and admin-only custom-component policies permit anonymous execution.
+    When the global policy is restricted,
     this helper mirrors its trusted-code substitution. Both paths validate the expanded graph
     and return its grouped form, preserving group IDs in build status and graph snapshots.
 
@@ -1653,6 +1668,12 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
     except (AttributeError, IndexError, KeyError, TypeError, ValueError) as exc:
         msg = "Flow validation failed: malformed grouped graph."
         raise CustomComponentValidationError(msg) from exc
+
+    if settings.allow_public_custom_components and _admin_only_build_required(settings, is_superuser=False):
+        # Public execution never carries an administrator entitlement.
+        prepared = await prepare_flow_build_for_user(sanitized, is_superuser=False)
+        if prepared is not None:
+            sanitized = prepared
 
     if settings.allow_public_custom_components and settings.allow_custom_components:
         validate_flow_for_current_settings(sanitized)
@@ -1731,6 +1752,10 @@ def revalidate_public_executable_flow(flow_data: dict[str, Any]) -> None:
             )
             raise CustomComponentValidationError(message)
     else:
+        prepared = prepare_flow_build_for_user_from_cache(flow_data, is_superuser=False)
+        if prepared is not None:
+            flow_data.clear()
+            flow_data.update(prepared)
         substitute_outdated_component_code_in_place(flow_data, validate_public_execution=True)
         validate_flow_for_current_settings(flow_data)
 

@@ -30,7 +30,8 @@ async def test_optional_user_sets_telemetry_identity(monkeypatch) -> None:
     auth_service = SimpleNamespace(get_current_user=AsyncMock(return_value=user))
     monkeypatch.setattr(auth_utils, "_auth_service", lambda: auth_service)
 
-    result = await auth_utils.get_optional_user(None, None, None, db=AsyncMock())
+    request = SimpleNamespace(headers={}, cookies={})
+    result = await auth_utils.get_optional_user(request, None, None, None, db=AsyncMock())
 
     assert result is user
     assert get_current_telemetry_user_id() == get_installation_user_id(user.id, "test-installation")
@@ -69,10 +70,10 @@ async def test_streaming_user_sets_telemetry_identity(monkeypatch, auth_method, 
     monkeypatch.setattr(auth_utils, "_auth_service", lambda: auth_service)
 
     if auth_method is auth_utils.get_current_user_for_websocket:
-        request = SimpleNamespace(cookies={}, query_params={}, headers={})
+        request = SimpleNamespace(cookies={}, query_params={}, headers={}, scope={})
         result = await auth_method(request, AsyncMock())
     else:
-        request = SimpleNamespace(cookies={}, query_params={}, headers={})
+        request = SimpleNamespace(cookies={}, query_params={}, headers={}, scope={})
         result = await auth_method(request, db=AsyncMock())
 
     assert result is user
@@ -84,7 +85,7 @@ async def test_current_user_optional_sets_telemetry_identity(monkeypatch) -> Non
     user = SimpleNamespace(id=uuid4(), username="alice")
     auth_service = SimpleNamespace(get_current_user_for_sse=AsyncMock(return_value=user))
     monkeypatch.setattr(auth_utils, "_auth_service", lambda: auth_service)
-    request = SimpleNamespace(cookies={"access_token_lf": "token"}, query_params={}, headers={})
+    request = SimpleNamespace(cookies={"access_token_lf": "token"}, query_params={}, headers={}, scope={})
 
     result = await auth_utils.get_current_user_optional(request, db=AsyncMock())
 

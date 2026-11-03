@@ -156,7 +156,7 @@ async def test_should_keep_a_renamed_owners_base_waiting_when_nothing_ties_its_d
     assert (run.error_code, run.source_identity) == ("legacy_source_missing", None)
     # Whoever holds the folder's name now does not adopt it, and the inventory says why.
     expected = {"code": "unattributed_legacy_source", "owner_id": str(newcomer_id)} if newcomer else None
-    assert inventory(database) == [expected or {"code": "missing_source_owner"}]
+    assert inventory(database) == [{**(expected or {"code": "missing_source_owner"}), "source": f"{FORMER}/knowledge"}]
     if newcomer_id:
         assert await bases_of(database, newcomer_id) == []
     assert not await coordinator.readiness()
@@ -188,7 +188,9 @@ async def test_should_not_let_a_newcomer_adopt_a_renamed_owners_directory_whose_
     await upgrade()
 
     assert await bases_of(database, newcomer) == []
-    assert inventory(database) == [{"code": "unattributed_legacy_source", "owner_id": str(newcomer)}]
+    assert inventory(database) == [
+        {"code": "unattributed_legacy_source", "owner_id": str(newcomer), "source": f"{FORMER}/{KB_NAME}"}
+    ]
     assert (await run_of(database, kb_id)).error_code == "legacy_source_missing"
     assert (source / "chroma.sqlite3").read_bytes() == b"legacy chunks"
 
@@ -205,7 +207,9 @@ async def test_should_not_let_a_newcomer_adopt_a_disk_only_base_in_a_folder_anot
     await coordinator.reconcile_legacy_inventory()
 
     assert await read_kb(database, disk_only) is None
-    assert inventory(database) == [{"code": "unattributed_legacy_source", "owner_id": str(newcomer)}]
+    assert inventory(database) == [
+        {"code": "unattributed_legacy_source", "owner_id": str(newcomer), "source": f"{FORMER}/notes"}
+    ]
 
 
 async def test_should_not_adopt_a_directory_without_a_recorded_id_for_whoever_holds_its_folder(database):
@@ -214,7 +218,9 @@ async def test_should_not_adopt_a_directory_without_a_recorded_id_for_whoever_ho
     await coordinator.reconcile_legacy_inventory()
 
     assert await bases_of(database, database.user.id) == []
-    assert inventory(database) == [{"code": "unattributed_legacy_source", "owner_id": str(database.user.id)}]
+    assert inventory(database) == [
+        {"code": "unattributed_legacy_source", "owner_id": str(database.user.id), "source": f"{FORMER}/knowledge"}
+    ]
 
 
 @pytest.mark.parametrize(("offset", "adopted"), [(timedelta(days=-1), False), (timedelta(days=1), True)])
@@ -233,7 +239,9 @@ async def test_should_adopt_a_disk_only_base_only_for_an_account_that_existed_wh
         # Adoption records the directory in the base's ledger run, so a later rename cannot move it.
         assert (await run_of(database, disk_only)).source_identity == f"{FORMER}/{KB_NAME}"
     else:
-        assert inventory(database) == [{"code": "unattributed_legacy_source", "owner_id": str(database.user.id)}]
+        assert inventory(database) == [
+            {"code": "unattributed_legacy_source", "owner_id": str(database.user.id), "source": f"{FORMER}/{KB_NAME}"}
+        ]
 
 
 async def test_should_hold_a_directory_that_a_renamed_owner_and_a_newcomer_both_may_own(database):
@@ -250,7 +258,7 @@ async def test_should_hold_a_directory_that_a_renamed_owner_and_a_newcomer_both_
     for kb_id in (renamed_kb, newcomer_kb):
         run = await run_of(database, kb_id)
         assert (run.error_code, run.source_identity) == ("legacy_source_ambiguous", None)
-    assert {"code": "ambiguous_source_identity"} in inventory(database)
+    assert {"code": "ambiguous_source_identity", "source": f"{FORMER}/knowledge"} in inventory(database)
 
 
 async def test_should_keep_the_recorded_directory_when_the_owner_is_renamed_after_a_failed_attempt(
@@ -355,7 +363,9 @@ async def test_should_not_let_a_newcomer_adopt_a_renamed_owners_directory_once_i
     await coordinator.reconcile_legacy_inventory()
 
     assert await bases_of(database, newcomer) == []
-    assert inventory(database) == [{"code": "unattributed_legacy_source", "owner_id": str(newcomer)}]
+    assert inventory(database) == [
+        {"code": "unattributed_legacy_source", "owner_id": str(newcomer), "source": f"{FORMER}/{KB_NAME}"}
+    ]
     assert (source / "chroma.sqlite3").read_bytes() == b"legacy chunks"
 
 
@@ -372,7 +382,7 @@ async def test_should_hold_a_directory_a_newcomers_base_may_own_when_a_renamed_o
     for kb_id in (renamed_kb, newcomer_kb):
         run = await run_of(database, kb_id)
         assert (run.error_code, run.source_identity) == ("legacy_source_ambiguous", None)
-    assert {"code": "ambiguous_source_identity"} in inventory(database)
+    assert {"code": "ambiguous_source_identity", "source": f"{FORMER}/knowledge"} in inventory(database)
 
 
 async def test_should_let_a_newcomer_create_a_base_of_the_name_without_blocking_the_renamed_owners_upgrade(

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -258,12 +260,43 @@ class _User:
 
 
 @pytest.fixture
-def _reset_override_context():
+def _reset_override_context(monkeypatch):
     from langflow.services.authorization import flow_data_override
 
+    authz = SimpleNamespace(
+        is_enabled=AsyncMock(return_value=True),
+        supports_cross_user_fetch=AsyncMock(return_value=True),
+    )
+    monkeypatch.setattr(flow_data_override, "get_authorization_service", lambda: authz, raising=False)
     token = flow_data_override._flow_data_override_allowed.set(False)
     yield
     flow_data_override._flow_data_override_allowed.reset(token)
+
+
+@pytest.mark.usefixtures("_reset_override_context")
+@pytest.mark.parametrize(("enabled", "cross_user"), [(False, False), (True, False), (False, True)])
+async def test_passthrough_cannot_authorize_graph_or_tweak_override(monkeypatch, enabled, cross_user):
+    from langflow.api.v2.workflow_validation import _apply_flow_data_override_policy
+    from langflow.services.authorization import flow_data_override
+    from lfx.workflow.converters import ParsedWorkflowRun
+
+    authz = SimpleNamespace(
+        is_enabled=AsyncMock(return_value=enabled),
+        supports_cross_user_fetch=AsyncMock(return_value=cross_user),
+    )
+    monkeypatch.setattr(flow_data_override, "get_authorization_service", lambda: authz, raising=False)
+    write_check = AsyncMock()
+    monkeypatch.setattr(flow_data_override, "ensure_flow_permission", write_check)
+    flow, user = _Flow(owner_id=uuid4()), _User()
+
+    assert await flow_data_override.resolve_flow_data_override(user, flow) is False
+    parsed = ParsedWorkflowRun(
+        flow_id=str(flow.id), data={"nodes": [{"id": "alternate"}], "edges": []}, tweaks={"File": {"path": "other"}}
+    )
+    result = _apply_flow_data_override_policy(parsed, flow, user)
+    assert result.data is None
+    assert result.tweaks == {}
+    write_check.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -315,6 +348,35 @@ async def test_execute_only_caller_may_not_override(monkeypatch):
 
     assert await flow_data_override.resolve_flow_data_override(_User(), _Flow(owner_id=uuid4())) is False
     assert flow_data_override.flow_data_override_allowed() is False
+
+
+@pytest.mark.usefixtures("_reset_override_context")
+@pytest.mark.parametrize("failing_probe", ["service", "supports_cross_user_fetch", "is_enabled"])
+async def test_failing_capability_probe_falls_back_to_stored_graph(monkeypatch, failing_probe):
+    """A raising plugin probe degrades to no-override instead of failing the build."""
+    from langflow.services.authorization import flow_data_override
+
+    failure = RuntimeError("policy service unavailable")
+    authz = SimpleNamespace(
+        is_enabled=AsyncMock(return_value=True, side_effect=failure if failing_probe == "is_enabled" else None),
+        supports_cross_user_fetch=AsyncMock(
+            return_value=True,
+            side_effect=failure if failing_probe == "supports_cross_user_fetch" else None,
+        ),
+    )
+
+    def _service():
+        if failing_probe == "service":
+            raise failure
+        return authz
+
+    monkeypatch.setattr(flow_data_override, "get_authorization_service", _service, raising=False)
+    write_check = AsyncMock()
+    monkeypatch.setattr(flow_data_override, "ensure_flow_permission", write_check)
+
+    assert await flow_data_override.resolve_flow_data_override(_User(), _Flow(owner_id=uuid4())) is False
+    assert flow_data_override.flow_data_override_allowed() is False
+    write_check.assert_not_awaited()
 
 
 @pytest.mark.usefixtures("_reset_override_context")

@@ -9,6 +9,7 @@ accounting.
 from __future__ import annotations
 
 import asyncio
+from dataclasses import replace
 from uuid import uuid4
 
 import pytest
@@ -19,6 +20,7 @@ from langflow.services.deps import session_scope
 from langflow.services.triggers.listeners import connection_leases
 from langflow.services.triggers.listeners.adapters import (
     ListenerContext,
+    ListenerDeliveryRejectedError,
     ListenerTrigger,
     register_adapter,
     unregister_adapter,
@@ -210,6 +212,83 @@ async def test_a_revoked_connection_moves_its_triggers_to_needs_reconnect(
     state, last_error = await _state(trigger_id)
     assert state == TriggerState.NEEDS_RECONNECT.value
     assert "econnect" in (last_error or "")
+
+
+@pytest.mark.parametrize("timing", ["before_claim", "idle", "delivery_rejected"])
+@pytest.mark.parametrize("reconcile_order", ["holder_first", "peer_first"])
+async def test_withdrawing_background_consent_stops_listeners_without_restarting(
+    make_connection, make_trigger, adapter_registry, timing, reconcile_order
+) -> None:
+    emit_next = asyncio.Event()
+
+    class ConsentAdapter(RecordingAdapter):
+        async def start(self, ctx: ListenerContext) -> None:
+            self.start_count += 1
+            self.ctx = ctx
+            self.started.set()
+            await emit_next.wait()
+            await ctx.emit(trigger_id=ctx.triggers[0].id, dedupe_key="after-withdrawal", payload={})
+
+    adapter = adapter_registry(ConsentAdapter())
+    connection_id = await make_connection()
+    trigger_ids = [await make_trigger(kind=TEST_KIND, connection_id=connection_id) for _ in range(2)]
+    paused = await make_trigger(kind=TEST_KIND, connection_id=connection_id, state=TriggerState.PAUSED.value)
+    schedule = await make_trigger(kind="schedule", connection_id=connection_id)
+    first = ListenerSupervisor(holder="replica-a")
+    second = ListenerSupervisor(holder="replica-b")
+    try:
+        if timing != "before_claim":
+            await first.reconcile()
+            await asyncio.wait_for(adapter.started.wait(), timeout=5)
+            assert adapter.ctx is not None
+            assert await adapter.ctx.emit(trigger_id=trigger_ids[0], dedupe_key="before-withdrawal", payload={})
+
+        async with session_scope() as session:
+            connection = await session.get(Connection, connection_id)
+            connection.allow_non_interactive = False
+            session.add(connection)
+
+        if timing == "delivery_rejected":
+            task = first.workers[connection_id].task
+            assert task is not None
+            emit_next.set()
+            await asyncio.wait_for(task, timeout=5)
+            assert connection_id not in first.workers
+            async with session_scope() as session:
+                assert (
+                    await connection_leases.current_holder(session, connection_id=connection_id, ttl_s=300)
+                    == "replica-a"
+                )
+
+        if reconcile_order == "peer_first":
+            await second.reconcile()
+            for trigger_id in trigger_ids:
+                assert await _state(trigger_id) == (TriggerState.NEEDS_RECONNECT.value, "connection_not_authorized")
+            if timing == "delivery_rejected":
+                async with session_scope() as session:
+                    assert (
+                        await connection_leases.current_holder(session, connection_id=connection_id, ttl_s=300)
+                        == "replica-a"
+                    )
+
+        for _ in range(3):
+            await first.reconcile()
+            await second.reconcile()
+            assert first.workers == second.workers == {}
+        assert adapter.start_count == (0 if timing == "before_claim" else 1)
+        if timing != "before_claim":
+            assert adapter.stopped
+        for trigger_id in trigger_ids:
+            assert await _state(trigger_id) == (TriggerState.NEEDS_RECONNECT.value, "connection_not_authorized")
+        assert await _state(paused) == (TriggerState.PAUSED.value, None)
+        assert await _state(schedule) == (TriggerState.ACTIVE.value, None)
+        async with session_scope() as session:
+            assert await connection_leases.current_holder(session, connection_id=connection_id, ttl_s=300) is None
+            events = await session.exec(select(TriggerEvent).where(TriggerEvent.dedupe_key == "after-withdrawal"))
+            assert not events.all()
+    finally:
+        await first.stop()
+        await second.stop()
 
 
 async def test_an_auth_failure_stops_retrying_and_asks_for_a_reconnect(
@@ -443,6 +522,97 @@ async def test_editing_the_adapter_configuration_rebuilds_it_without_losing_the_
 # --------------------------------------------------------------------------- #
 # Fencing: lease expiry is a recovery bound, not proof the old holder stopped
 # --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        "handover",
+        "same-holder-new-generation",
+        "expired",
+        "pause",
+        "config",
+        "refreshed-config",
+        "connection",
+        "foreign-target",
+        "ownership",
+        "consent",
+        "kind",
+        "provider",
+        "unregistered",
+    ],
+)
+async def test_old_listener_context_cannot_append_after_its_authority_changes(
+    make_connection, make_trigger, adapter_registry, change
+):
+    adapter_registry(RecordingAdapter())
+    connection_id = await make_connection()
+    trigger_id = await make_trigger(kind=TEST_KIND, connection_id=connection_id)
+    supervisor = ListenerSupervisor(holder="replica-a")
+    try:
+        await supervisor.reconcile()
+        worker = supervisor.workers[connection_id]
+        stale_ctx = supervisor._context(worker)
+        assert await stale_ctx.emit(trigger_id=trigger_id, dedupe_key="before-change", payload={})
+        async with session_scope() as session:
+            if change in {"handover", "same-holder-new-generation"}:
+                await connection_leases.release(session, connection_id=connection_id, holder="replica-a")
+                generation = await connection_leases.claim_generation(
+                    session,
+                    connection_id=connection_id,
+                    holder="replica-b" if change == "handover" else "replica-a",
+                    ttl_s=300,
+                )
+                assert generation is not None
+                # Reusing a mutable worker object must not give an old context
+                # the authority of a newly acquired generation.
+                worker.lease_generation = generation
+            elif change == "expired":
+                from langflow.services.database.models.trigger.model import TriggerListenerLease
+
+                lease = await session.get(TriggerListenerLease, connection_id)
+                lease.heartbeat_at = lease.heartbeat_at.replace(year=2020)
+                session.add(lease)
+            else:
+                row = await session.get(Trigger, trigger_id)
+                if change == "pause":
+                    row.state = "paused"
+                elif change in {"config", "refreshed-config"}:
+                    row.config = {"filter": "changed"}
+                elif change == "connection":
+                    row.connection_id = await make_connection()
+                elif change == "foreign-target":
+                    trigger_id = await make_trigger(kind=TEST_KIND, connection_id=await make_connection())
+                elif change in {"ownership", "consent"}:
+                    connection = await session.get(Connection, connection_id)
+                    if change == "ownership":
+                        connection.ownership_mode = "instance"
+                        connection.owner_id = None
+                    else:
+                        connection.allow_non_interactive = False
+                    session.add(connection)
+                elif change == "kind":
+                    row.kind = "changed_kind"
+                elif change == "provider":
+                    row.provider = "changed_provider"
+                else:
+                    unregister_adapter(kind=TEST_KIND, mechanism=None)
+                session.add(row)
+        expected = {}
+        if change == "refreshed-config":
+            worker.triggers[:] = [replace(worker.triggers[0], config={"filter": "changed"})]
+            # This event matched the original snapshot before the list was
+            # refreshed; the adapter passes that snapshot with its delivery.
+            expected = {"expected_config": {}, "expected_kind": TEST_KIND}
+        with pytest.raises(ListenerDeliveryRejectedError):
+            await stale_ctx.emit(trigger_id=trigger_id, dedupe_key="after-change", payload={}, **expected)
+        assert stale_ctx.stopping.is_set()
+        await stale_ctx.save_cursor(trigger_id=trigger_id, provider_state={"stale": True})
+        async with session_scope() as session:
+            assert not (await session.exec(select(TriggerEvent).where(TriggerEvent.dedupe_key == "after-change"))).all()
+            assert (await session.get(Trigger, trigger_id)).provider_state == {}
+    finally:
+        await supervisor.stop()
 
 
 async def test_a_dispossessed_adapter_cannot_rewind_the_cursor_its_successor_saved(

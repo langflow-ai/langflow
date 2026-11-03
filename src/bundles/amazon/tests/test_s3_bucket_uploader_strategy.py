@@ -1,9 +1,20 @@
 """Regression tests for the S3 Bucket Uploader strategy dispatch."""
 
+from types import SimpleNamespace
+
 import pytest
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx_amazon.components.amazon.s3_bucket_uploader import S3BucketUploaderComponent
+
+
+@pytest.fixture
+def unrestricted_local_files(monkeypatch):
+    """These dispatch tests record SDK arguments without reading real files."""
+    monkeypatch.setattr(
+        "lfx.utils.file_path_security.get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(restrict_local_file_access=False)),
+    )
 
 
 def test_default_strategy_is_selectable_and_dispatches() -> None:
@@ -62,6 +73,7 @@ def test_saved_invalid_strategy_fails_visibly(strategy: str) -> None:
         ),
     ],
 )
+@pytest.mark.usefixtures("unrestricted_local_files")
 def test_file_message_and_directory_table_upload(
     strategy: str,
     client_method: str,
@@ -117,6 +129,7 @@ def test_file_message_and_directory_table_upload(
         ),
     ],
 )
+@pytest.mark.usefixtures("unrestricted_local_files")
 def test_multiple_read_files_upload_separately(strategy: str, client_method: str, expected_calls: list) -> None:
     component = S3BucketUploaderComponent()
     component.strategy = strategy
