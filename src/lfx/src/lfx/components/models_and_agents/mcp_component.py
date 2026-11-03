@@ -1036,14 +1036,20 @@ class MCPToolsComponent(ComponentWithCache):
 
     async def _update_tool_config(self, build_config: dict, tool_name: str) -> None:
         """Update tool configuration with proper error handling."""
-        if not self.tools:
-            self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
+        tools_refreshed = not self.tools
+        server_info = None
+        if tools_refreshed:
+            self.tools, server_info = await self.update_tool_list()
 
         if not tool_name:
+            if tools_refreshed:
+                build_config["mcp_server"]["value"] = server_info
             return
 
         tool_obj = next((tool for tool in self.tools if tool.name == tool_name), None)
         if not tool_obj:
+            if tools_refreshed:
+                build_config["mcp_server"]["value"] = server_info
             msg = f"Tool {tool_name} not found in available tools: {self.tools}"
             self.remove_non_default_keys(build_config)
             build_config["tool"]["value"] = ""
@@ -1051,6 +1057,14 @@ class MCPToolsComponent(ComponentWithCache):
             return
 
         try:
+            schema_inputs = await self._validate_schema_inputs(tool_obj)
+            for schema_input in schema_inputs:
+                if schema_input and hasattr(schema_input, "name"):
+                    self._validate_tool_argument_name(schema_input.name)
+
+            if tools_refreshed:
+                build_config["mcp_server"]["value"] = server_info
+
             # Store current values before removing inputs (only for the current tool)
             current_values = {}
             for key, value in build_config.items():
@@ -1060,8 +1074,7 @@ class MCPToolsComponent(ComponentWithCache):
             # Remove ALL non-default keys (all previous tool inputs)
             self.remove_non_default_keys(build_config)
 
-            # Get and validate new inputs for the selected tool
-            self.schema_inputs = await self._validate_schema_inputs(tool_obj)
+            self.schema_inputs = schema_inputs
             if not self.schema_inputs:
                 msg = f"No input parameters to configure for tool '{tool_name}'"
                 await logger.ainfo(msg)
@@ -1076,7 +1089,6 @@ class MCPToolsComponent(ComponentWithCache):
 
                 try:
                     name = schema_input.name
-                    self._validate_tool_argument_name(name)
                     input_dict = schema_input.to_dict()
                     input_dict.setdefault("value", None)
                     input_dict.setdefault("required", True)
