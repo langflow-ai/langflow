@@ -95,7 +95,10 @@ class TestMatchClassAttributes:
         "pattern",
         [
             "Record(name=name)",
-            "Record(name, count)",
+            "Record()",
+            "1",
+            "name",
+            "_",
             "Record(item=Record(name=name))",
             "[Record(name=name)]",
             "Record(__name__=name, __qualname__=qualname, __module__=module, __doc__=doc)",
@@ -111,6 +114,15 @@ class TestMatchClassAttributes:
         result = scan_code_security(f"match value:\n    case {pattern}:\n        pass")
         assert result.is_safe is False
         assert "Access to '__class__' is forbidden in components (sandbox escape)" in result.violations
+
+    @pytest.mark.parametrize("pattern", ["Record(name, count)", "Record(_)", "Record(item=Record(_))", "int(1)"])
+    def test_rejects_positional_class_patterns(self, pattern):
+        result = scan_code_security(f"match value:\n    case {pattern}:\n        pass")
+        assert result.is_safe is False
+        assert (
+            "Positional class patterns are not allowed. Use keyword patterns with named attributes instead."
+            in result.violations
+        )
 
 
 class TestScanCodeSecurityModuleReexports:

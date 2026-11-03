@@ -145,7 +145,7 @@ class TestMatchClassAttributes:
 
     @pytest.mark.parametrize(
         "pattern",
-        ["Record(name=name)", "Record(name, count)", "Record(item=Record(name=name))", "[Record(name=name)]"],
+        ["Record(name=name)", "Record()", "Record(item=Record(name=name))", "[Record(name=name)]", "1", "name", "_"],
     )
     def test_preserves_benign_class_patterns(self, pattern):
         validate_code_safety(f"match value:\n    case {pattern}:\n        pass")
@@ -153,6 +153,11 @@ class TestMatchClassAttributes:
     @pytest.mark.parametrize("pattern", ["Record(item=Record(__class__=_))", "Record.__class__()"])
     def test_checks_nested_pattern_nodes(self, pattern):
         with pytest.raises(ValueError, match="Access to attribute '__class__' is not allowed"):
+            validate_code_safety(f"match value:\n    case {pattern}:\n        pass")
+
+    @pytest.mark.parametrize("pattern", ["Record(name, count)", "Record(_)", "Record(item=Record(_))", "int(1)"])
+    def test_rejects_positional_class_patterns(self, pattern):
+        with pytest.raises(ValueError, match="Positional class patterns are not allowed"):
             validate_code_safety(f"match value:\n    case {pattern}:\n        pass")
 
 
