@@ -208,6 +208,8 @@ async def complete(*, provider: str, state: str, browser: str, code: str | None,
             # A new consent may belong to a different account. Clear stale
             # metadata when this authorization does not provide identity.
             row.executing_identity = {**row.executing_identity, "account": account}
+            binding.completed_registration_id = binding.registration_id
+            session.add(binding)
             session.add(row)
     except OAuthError:
         await _record_failed_authorization(values["connection_id"], values["generation"], reason)

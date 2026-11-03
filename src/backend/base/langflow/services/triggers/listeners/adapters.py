@@ -56,6 +56,14 @@ if TYPE_CHECKING:
     from uuid import UUID
 
 
+class ListenerDeliveryRejectedError(RuntimeError):
+    """This adapter no longer owns the target configuration or listener lease."""
+
+    def __init__(self, *, reason: str) -> None:
+        self.reason = reason
+        super().__init__(f"Listener delivery rejected: {reason}.")
+
+
 @dataclass(frozen=True)
 class ListenerTrigger:
     """An immutable snapshot of one trigger row, as an adapter sees it.
@@ -174,6 +182,8 @@ class SelfTestAdapter(PollingListenerAdapter):
             created = await ctx.emit(
                 trigger_id=trigger.id,
                 dedupe_key=f"{LISTENER_FAKE_DEDUPE_PREFIX}:{bucket}",
+                expected_config=trigger.config,
+                expected_kind=trigger.kind,
                 payload={
                     "source": LISTENER_FAKE_MECHANISM,
                     "connection_id": str(ctx.connection_id),
@@ -364,6 +374,7 @@ __all__ = [
     "AdapterFactory",
     "ListenerAdapter",
     "ListenerContext",
+    "ListenerDeliveryRejectedError",
     "ListenerTrigger",
     "PollingListenerAdapter",
     "SelfTestAdapter",

@@ -77,6 +77,7 @@ EXPECTED_FIELDS = {
     "backend_only",
     "ssl_cert_file",
     "ssl_key_file",
+    "ssl_cert_hostname",
     "root_path",
     "user_agent",
     # DatabaseSettings
@@ -362,6 +363,7 @@ def test_critical_defaults_unchanged():
     settings = Settings()
     assert settings.host == "localhost"
     assert settings.port == 7860
+    assert settings.ssl_cert_hostname is None
     assert settings.workers == 1
     assert settings.knowledge_base_auto_migrate is True
     assert settings.cache_type == "async"
@@ -556,6 +558,7 @@ def test_yaml_round_trip():
     ("env_var", "env_value", "field", "expected"),
     [
         ("LANGFLOW_HOST", "0.0.0.0", "host", "0.0.0.0"),
+        ("LANGFLOW_SSL_CERT_HOSTNAME", "backend.internal", "ssl_cert_hostname", "backend.internal"),
         ("LANGFLOW_PORT", "8080", "port", 8080),
         ("LANGFLOW_WORKERS", "2", "workers", 2),
         ("LANGFLOW_KNOWLEDGE_BASE_AUTO_MIGRATE", "false", "knowledge_base_auto_migrate", False),
