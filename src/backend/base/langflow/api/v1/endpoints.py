@@ -1973,7 +1973,10 @@ async def custom_component(
                 user_id=user.id,
                 parameters=_raw_component_parameters(current_template),
             )
-        built_frontend_node = await update_rebuilt_node(component_instance, built_frontend_node, raw_code.frontend_node)
+        update_warnings = []
+        built_frontend_node = await update_rebuilt_node(
+            component_instance, built_frontend_node, raw_code.frontend_node, warnings=update_warnings
+        )
     except IntegrationPolicyError as exc:
         # Same reasoning as the model-provider denial below: a governed
         # integration that discovery hides must not be distinguishable from one
@@ -1993,7 +1996,7 @@ async def custom_component(
             built_frontend_node = translate_component_node(type_, built_frontend_node, locale)
         except Exception:  # noqa: BLE001
             logger.exception("Failed to translate component node", extra={"locale": locale})
-    return CustomComponentResponse(data=built_frontend_node, type=type_)
+    return CustomComponentResponse(data=built_frontend_node, type=type_, warnings=update_warnings)
 
 
 @router.post("/custom_component/update", status_code=HTTPStatus.OK, include_in_schema=False)
