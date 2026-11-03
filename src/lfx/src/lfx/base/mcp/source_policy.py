@@ -163,7 +163,8 @@ CMD_TOKEN_TRANSFORM_CHARS = frozenset({"%", "!", "^", '"'})
 CMD_NON_EXEC_SWITCH_LETTERS = frozenset({"a", "d", "e", "f", "q", "s", "t", "u", "v"})
 
 # Only no-argument short options may precede the inline-command flag.
-POSIX_SHELL_BOOLEAN_FLAGS = frozenset("aefhiklmnptuvxBCEHPT")
+# Keyword assignment mode is excluded because it changes the command environment.
+POSIX_SHELL_BOOLEAN_FLAGS = frozenset("aefhilmnptuvxBCEHPT")
 
 HARDENED_ALLOWED_PYTHON_MODULES = frozenset({"langflow.agentic.mcp", "langflow.agentic.mcp.server"})
 PYTHON_MODULE_MIN_ARGS = 2
@@ -261,6 +262,7 @@ def _base_command(command: str) -> str:
 
 
 def _looks_like_file_path(command: str) -> bool:
+    """Distinguish an executable path from a legacy packed command."""
     return (
         "/" in command.split(" ", 1)[0]
         or "\\" in command
@@ -578,6 +580,7 @@ def _validate_allowed_package(base_command: str, args: list[str], allowed_packag
 
 
 def _validate_interpreter_invocation(base_command: str, args: list[str], *, hardened: bool) -> None:
+    """Enforce inline shell wrappers and the configured interpreter restrictions."""
     # Node interprets options before the script operand. A tenant can use --import,
     # --require, --run, or future runtime options to execute code without supplying
     # a script path. `node inspect` is also a launcher: it respawns Node with

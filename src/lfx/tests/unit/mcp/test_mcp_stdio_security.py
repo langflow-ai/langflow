@@ -240,7 +240,7 @@ def test_shell_wrappers_require_an_inline_command_by_default(command, args):
 
 
 @pytest.mark.parametrize("command", ["sh", "bash"])
-@pytest.mark.parametrize("flag", ["-C", "-norc", "-rcfile", "-oc"])
+@pytest.mark.parametrize("flag", ["-C", "-norc", "-rcfile", "-oc", "-kc", "-kec"])
 @pytest.mark.parametrize("hardened", [False, True])
 def test_shell_wrappers_reject_unsupported_option_forms(command, flag, hardened):
     with pytest.raises(MCPStdioSecurityError):

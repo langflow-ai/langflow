@@ -325,7 +325,7 @@ def test_posix_wrapper_parser_preserves_supported_option_clusters(command, flag)
 
 
 @pytest.mark.parametrize("command", ["sh", "bash"])
-@pytest.mark.parametrize("flag", ["-C", "-norc", "--norc", "-rcfile", "-oc", "-Ocompat43c", "/c"])
+@pytest.mark.parametrize("flag", ["-C", "-norc", "--norc", "-rcfile", "-oc", "-Ocompat43c", "/c", "-kc", "-kec"])
 def test_posix_wrapper_parser_rejects_unsupported_option_forms(command, flag):
     assert parse_mcp_shell_wrapper(command, [flag, "uvx mcp-proxy"]) is None
 
