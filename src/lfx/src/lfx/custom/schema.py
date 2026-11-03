@@ -9,6 +9,8 @@ class ComponentUpdateWarning(TypedDict):
     fields: list[str]
     refresh_fields: list[str]
     unverified: bool
+    inputs_unverified: bool
+    outputs_unverified: bool
 
 
 class ClassCodeDetails(BaseModel):
