@@ -62,14 +62,16 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
     resultMessage = resultMessage.raw;
   }
 
-  // A stopped Smart Router has no output, but its log keeps the evidence.
+  // A stopped Smart Router has no output, but its log keeps the evidence. The
+  // log is keyed to whichever output was building when the run stopped, so
+  // every output's logs are searched.
   const decisionEvidence = useMemo(
     () =>
       type === "outputs"
         ? (findDecisionEvidence(resultMessage) ??
-          findDecisionEvidence(flowPoolNode?.data?.logs?.[outputName]))
+          findDecisionEvidence(Object.values(flowPoolNode?.data?.logs ?? {})))
         : null,
-    [type, resultMessage, flowPoolNode, outputName],
+    [type, resultMessage, flowPoolNode],
   );
 
   const resultMessageMemoized = useMemo(() => {

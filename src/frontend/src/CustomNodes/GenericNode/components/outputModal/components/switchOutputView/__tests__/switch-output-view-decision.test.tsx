@@ -63,12 +63,14 @@ describe("SwitchOutputView decision evidence", () => {
   });
 
   it("falls back to the evidence log when the run stopped with an error", () => {
+    // The backend logs the evidence under the output it was building when it
+    // stopped, which is the first route, whichever output is inspected.
     mockFlowPool = {
       "SmartRouter-1": [
         {
           data: {
             outputs: {
-              category_5_result: {
+              default_result: {
                 type: "error",
                 message: { errorMessage: "Langflow couldn't reach OpenAI." },
               },
@@ -83,7 +85,7 @@ describe("SwitchOutputView decision evidence", () => {
       ],
     };
 
-    renderOutput();
+    renderOutput("default_result");
 
     expect(screen.getByTestId("decision-failure")).toHaveTextContent(
       "Connection failed",
