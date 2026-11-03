@@ -95,6 +95,10 @@ export const lazyIconsMapping = {
     import("@/icons/asana").then((mod) => ({ default: mod.AsanaIcon })),
   Airtable: () =>
     import("@/icons/airtable").then((mod) => ({ default: mod.AirtableIcon })),
+  AtlasCloud: () =>
+    import("@/icons/AtlasCloud").then((mod) => ({
+      default: mod.AtlasCloudIcon,
+    })),
   AstraDB: () =>
     import("@/icons/AstraDB").then((mod) => ({ default: mod.AstraDBIcon })),
   Athena: () =>
