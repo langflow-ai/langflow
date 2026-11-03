@@ -5164,7 +5164,7 @@
               "dependencies": [
                 {
                   "name": "numpy",
-                  "version": "2.5.1"
+                  "version": "2.4.6"
                 },
                 {
                   "name": "lfx",
@@ -6620,7 +6620,7 @@
                 },
                 {
                   "name": "numpy",
-                  "version": "2.5.1"
+                  "version": "2.4.6"
                 }
               ],
               "total_dependencies": 5
@@ -8186,7 +8186,7 @@
               "dependencies": [
                 {
                   "name": "numpy",
-                  "version": "2.5.1"
+                  "version": "2.4.6"
                 },
                 {
                   "name": "langflow",
@@ -31988,6 +31988,6 @@
     "num_components": 128,
     "num_modules": 16
   },
-  "sha256": "71d385c1c9e0cb0be6740378fc38b1b1f92d5c8e92213686d31ee4d1daa320d2",
+  "sha256": "80e42af01f98477adf5df750d9259d11364d637cd15bbc34b5df0d561d649055",
   "version": "1.12.9"
 }
