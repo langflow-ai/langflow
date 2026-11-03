@@ -174,6 +174,16 @@ def _detect_encoding_with_fallbacks(raw_data: bytes) -> list[str]:
         encodings: list[str] = ["utf-8"]
         if re.search(rb"[\x81-\xfe][0-9][\x81-\xfe][0-9]", raw_data[: _CHARDET_SAMPLE_BYTES + 3]):
             encodings.append("gb18030")
+        # A Windows-1254 guess must precede cp1252: both decode every byte
+        # string, so whichever comes first wins. The detector only reports 1254
+        # when it matched Turkish-specific bytes (0xD0, 0xDD, 0xDE, 0xF0, 0xFD,
+        # 0xFE), and cp1252 renders those as different characters, so cp1254 is
+        # the only candidate that can read them right. cp1252 stays next:
+        # bytes undefined in cp1254 (0x8E, 0x9E) fall through to it. MacRoman
+        # must stay behind cp1252 — chardet reports it for cp1252 files whose
+        # apostrophes (0x92) only read correctly as cp1252.
+        if detected_encoding == "Windows-1254":
+            encodings.append("cp1254")
         # Otherwise cp1252 must precede gb18030, which accepts some Windows
         # punctuation as CJK characters. Both readers validate each candidate.
         encodings.append("cp1252")
