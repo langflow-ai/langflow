@@ -336,11 +336,11 @@ async def test_handle_read_resource_denies_user_bucket_under_project_scope(monke
 @pytest.mark.asyncio
 async def test_handle_read_resource_project_scope_binds_flow_id_as_uuid(monkeypatch, async_session):
     """A flow UUID parsed from an advertised resource URI must remain UUID-typed in the database query."""
-    user = User(username="mcp-resource-reader", password="test-password")  # noqa: S106
+    user = User(username="mcp-resource-reader", password=str(uuid4()))
     project = Folder(name="MCP Resource Project", user_id=user.id)
-    flow = Flow(name="MCP Resource Flow", user_id=user.id, folder_id=project.id)
+    flow = Flow(name="MCP Resource Flow", user_id=user.id, folder_id=project.id, mcp_enabled=True)
     other_project = Folder(name="Other MCP Resource Project", user_id=user.id)
-    other_flow = Flow(name="Other MCP Resource Flow", user_id=user.id, folder_id=other_project.id)
+    other_flow = Flow(name="Other MCP Resource Flow", user_id=user.id, folder_id=other_project.id, mcp_enabled=True)
     async_session.add_all([user, project, flow, other_project, other_flow])
     await async_session.flush()
 
@@ -373,6 +373,79 @@ async def test_handle_read_resource_project_scope_binds_flow_id_as_uuid(monkeypa
     import base64
 
     assert base64.b64decode(result) == b"project file contents"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("project_scoped", [True, False])
+async def test_handle_list_resources_respects_project_flow_visibility(monkeypatch, async_session, project_scoped):
+    user = User(username="mcp-resource-owner", password=str(uuid4()))
+    other_user = User(username="mcp-resource-other-owner", password=str(uuid4()))
+    project = Folder(name="Resource visibility project", user_id=user.id)
+    other_project = Folder(name="Other resource visibility project", user_id=user.id)
+    enabled_flow = Flow(name="Enabled resource flow", user_id=user.id, folder_id=project.id, mcp_enabled=True)
+    disabled_flow = Flow(name="Disabled resource flow", user_id=user.id, folder_id=project.id)
+    other_project_flow = Flow(
+        name="Other project resource flow", user_id=user.id, folder_id=other_project.id, mcp_enabled=True
+    )
+    other_user_flow = Flow(
+        name="Other owner resource flow", user_id=other_user.id, folder_id=project.id, mcp_enabled=True
+    )
+    async_session.add_all(
+        [user, other_user, project, other_project, enabled_flow, disabled_flow, other_project_flow, other_user_flow]
+    )
+    await async_session.flush()
+
+    flows = [enabled_flow, disabled_flow, other_project_flow, other_user_flow]
+    storage_service = FakeStorageService({f"flow-{flow.id}": ["resource.txt"] for flow in flows})
+    monkeypatch.setattr(mcp_utils, "session_scope", lambda: FakeSessionContext(async_session))
+    monkeypatch.setattr(mcp_utils, "get_storage_service", lambda: storage_service)
+    monkeypatch.setattr(
+        mcp_utils,
+        "get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(host="localhost", port=4000)),
+    )
+
+    token = mcp_utils.current_user_ctx.set(user)
+    try:
+        resources = await mcp_utils.handle_list_resources(project_id=project.id if project_scoped else None)
+    finally:
+        mcp_utils.current_user_ctx.reset(token)
+
+    expected_flows = [enabled_flow] if project_scoped else [enabled_flow, disabled_flow, other_project_flow]
+    assert {str(resource.uri) for resource in resources} == {
+        f"http://localhost:4000/api/v1/files/download/{flow.id}/resource.txt" for flow in expected_flows
+    }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("project_scoped", [True, False])
+@pytest.mark.parametrize("mcp_enabled", [True, False])
+async def test_handle_read_resource_respects_project_flow_visibility(
+    monkeypatch, async_session, project_scoped, mcp_enabled
+):
+    import base64
+
+    user = User(username="mcp-resource-reader", password=str(uuid4()))
+    project = Folder(name="Resource visibility project", user_id=user.id)
+    flow = Flow(name="Resource flow", user_id=user.id, folder_id=project.id, mcp_enabled=mcp_enabled)
+    async_session.add_all([user, project, flow])
+    await async_session.flush()
+
+    storage_service = FakeStorageService({}, {f"flow-{flow.id}/resource.txt": b"resource contents"})
+    monkeypatch.setattr(mcp_utils, "session_scope", lambda: FakeSessionContext(async_session))
+    monkeypatch.setattr(mcp_utils, "get_storage_service", lambda: storage_service)
+
+    token = mcp_utils.current_user_ctx.set(user)
+    try:
+        uri = f"http://host/api/v1/files/download/{flow.id}/resource.txt"
+        if project_scoped and not mcp_enabled:
+            with pytest.raises(ValueError, match="Resource not found or access denied"):
+                await mcp_utils.handle_read_resource(uri, project_id=project.id)
+        else:
+            result = await mcp_utils.handle_read_resource(uri, project_id=project.id if project_scoped else None)
+            assert base64.b64decode(result) == b"resource contents"
+    finally:
+        mcp_utils.current_user_ctx.reset(token)
 
 
 @pytest.mark.asyncio
