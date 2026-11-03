@@ -595,6 +595,7 @@ module.exports = {
             "Components/bundles-plivo",
             "Components/bundles-qdrant",
             "Components/bundles-redis",
+            "Components/bundles-runcrate",
             "Components/bundles-sambanova",
             "Components/bundles-searchapi",
             "Components/bundles-serper",

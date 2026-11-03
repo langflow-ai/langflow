@@ -315,6 +315,7 @@
         "plivo",
         "qdrant",
         "redis",
+        "runcrate",
         "sambanova",
         "scrapegraph",
         "searchapi",
