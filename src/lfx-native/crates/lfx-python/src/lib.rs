@@ -18,7 +18,8 @@
 //! Engine work runs without the GIL only when it is large ([`Work`]): a
 //! thread that gives the GIL back must wait for it again, and while another
 //! thread runs Python code, that wait is one switch interval (5 ms by
-//! default). A field write takes 2 µs, so small calls keep the GIL.
+//! default). A field write is much shorter than that, so small calls keep
+//! the GIL.
 
 use std::collections::HashMap;
 use std::sync::mpsc::{SyncSender, TrySendError, sync_channel};
@@ -182,9 +183,8 @@ fn to_python<'py>(py: Python<'py>, value: &AnyValue) -> PyResult<Bound<'py, PyAn
 /// Each distinct dict key becomes one Python `str`, which every dict with
 /// that key shares, as `json.loads` does: a flow repeats the same few keys
 /// thousands of times. A shared key is a new reference, not a new object, so
-/// it is not allocated, copied or hashed again. A 320-node graph builds in
-/// 14.7 ms instead of 20.8 ms, and takes 24 MB instead of 30 MB. A `str` cannot
-/// change, so sharing it is safe.
+/// it is not allocated, copied or hashed again, and the result takes less
+/// memory. A `str` cannot change, so sharing it is safe.
 struct Builder<'py, 'v> {
     py: Python<'py>,
     keys: HashMap<&'v str, Bound<'py, PyString>>,
@@ -377,27 +377,19 @@ fn number_to_python<'py>(py: Python<'py>, number: &Number) -> PyResult<Bound<'py
 /// A call gives the GIL back only for work larger than this: while it runs
 /// without the GIL, other Python threads run, but it must then wait for the
 /// GIL again, and while another thread runs Python code that wait is one
-/// switch interval (5 ms by default). Work below this takes about a
-/// millisecond or less, so a call that keeps the GIL never stops other threads
-/// for longer than a Python thread does.
-///
-/// Measured on the starter-project nodes of the 14.4 MB benchmark flow
-/// (168,217 values, 501 nodes and 350 edges), on one thread: writing JSON
-/// text takes 0.08 µs per value, a diff 0.18 µs, a replay of stored
-/// revisions 0.1 µs per value of its operations, and parsing text 1.2 µs per
-/// KB. At 8,192 values, the largest of these takes about 1.5 ms, and a field
-/// write's 30 values take 2 µs.
+/// switch interval (5 ms by default). Work below this is short next to that
+/// interval, so a call that keeps the GIL never stops other threads for
+/// longer than a Python thread does.
 const HELD_VALUES: usize = 8192;
 
-/// JSON text counts as one value per this many bytes: the 1,000 stored
-/// revisions of the benchmark take 14.5 bytes per value, and a flow 86. So
-/// text counts as larger than its values, never smaller: text of 128 KB or
-/// more is parsed without the GIL.
+/// JSON text counts as one value per this many bytes, fewer than stored
+/// operations or flows take per value. So text counts as larger than its
+/// values, never smaller: text of 128 KB or more is parsed without the GIL.
 const TEXT_BYTES_PER_VALUE: usize = 16;
 
-/// A node or an edge of a loaded graph counts as this many values: the mean
-/// of the benchmark flow is 198. Counting nodes and edges costs nothing,
-/// where counting values would walk the graph.
+/// A node or an edge of a loaded graph counts as this many values, about
+/// what a typical node holds. Counting nodes and edges costs nothing, where
+/// counting values would walk the graph.
 const VALUES_PER_GRAPH_ITEM: usize = 200;
 
 /// How large a piece of engine work is, in JSON values, up to [`HELD_VALUES`].
@@ -498,13 +490,18 @@ fn finish(py: Python<'_>, value: AnyValue) -> PyResult<Bound<'_, PyAny>> {
 }
 
 /// Build operation results after the state lock has been released.
+///
+/// `options` says which operations become Python objects. With
+/// `forward_json`, the forward operations also come back as JSON text,
+/// one `bytes` each, under `forward_operations_json`.
 fn finish_applied(
     py: Python<'_>,
     applied: Applied,
     options: ApplyOptions,
+    forward_json: bool,
 ) -> PyResult<Bound<'_, PyAny>> {
     let mut builder = Builder::new(py);
-    let result = builder.applied(&applied, options);
+    let mut result = builder.applied(&applied, options);
     #[cfg(debug_assertions)]
     if let Ok(actual) = &result {
         // Check the same operation objects, so unordered cascades cannot
@@ -514,6 +511,23 @@ fn finish_applied(
         let expected = reference.value(&generic)?;
         debug_assert_eq!(actual.repr()?.to_str()?, expected.repr()?.to_str()?);
         debug_assert_eq!(builder.work.0, reference.work.0);
+    }
+    if forward_json && let Ok(dict) = &result {
+        let mut text = Vec::new();
+        let added = PyList::new(
+            py,
+            applied.forward.iter().map(|operation| {
+                api::write_operation_json(&mut text, operation);
+                PyBytes::new(py, &text)
+            }),
+        )
+        .and_then(|list| {
+            dict.cast::<PyDict>()?
+                .set_item("forward_operations_json", list)
+        });
+        if let Err(error) = added {
+            result = Err(error);
+        }
     }
     let work = builder.work;
     drop(builder);
@@ -538,7 +552,7 @@ type Dropped = Box<dyn Send>;
 
 /// Drop a large graph on a thread of its own, so that the thread that lets
 /// go of it, often a server's event loop, does not wait while it is freed:
-/// freeing the 14 MB benchmark graph takes about 8 ms. Without that thread,
+/// freeing a large graph frees many small allocations. Without that thread,
 /// or with [`DROPS_WAITING`] graphs waiting already, it is dropped here,
 /// without the GIL.
 fn drop_elsewhere(py: Python<'_>, value: Dropped) {
@@ -698,17 +712,21 @@ impl GraphState {
     }
 
     /// Apply a batch, with every rule; returns what it did.
-    #[pyo3(signature = (operations, *, forward = false, backward = false))]
+    #[pyo3(signature = (operations, *, forward = false, backward = false, forward_json = false))]
     fn apply<'py>(
         &self,
         py: Python<'py>,
         operations: &Bound<'_, PyAny>,
         forward: bool,
         backward: bool,
+        forward_json: bool,
     ) -> PyResult<Bound<'py, PyAny>> {
         let operations = input(operations)?;
         let work = Work::of_input(&operations);
-        let options = ApplyOptions { forward, backward };
+        let options = ApplyOptions {
+            forward: forward || forward_json,
+            backward,
+        };
         let applied = self
             .write(
                 py,
@@ -725,24 +743,29 @@ impl GraphState {
         finish_applied(
             py,
             applied.map_err(|error| engine_error(py, &error))?,
-            options,
+            ApplyOptions { forward, backward },
+            forward_json,
         )
     }
 
     /// Apply a batch with every rule, as `apply` does, and keep it staged
     /// until `keep` or `drop`; returns what `apply` returns. A refused batch
     /// is not staged.
-    #[pyo3(signature = (operations, *, forward = false, backward = false))]
+    #[pyo3(signature = (operations, *, forward = false, backward = false, forward_json = false))]
     fn stage<'py>(
         &self,
         py: Python<'py>,
         operations: &Bound<'_, PyAny>,
         forward: bool,
         backward: bool,
+        forward_json: bool,
     ) -> PyResult<Bound<'py, PyAny>> {
         let operations = input(operations)?;
         let work = Work::of_input(&operations);
-        let options = ApplyOptions { forward, backward };
+        let options = ApplyOptions {
+            forward: forward || forward_json,
+            backward,
+        };
         let staged = self
             .write(
                 py,
@@ -759,7 +782,8 @@ impl GraphState {
         finish_applied(
             py,
             staged.map_err(|error| engine_error(py, &error))?,
-            options,
+            ApplyOptions { forward, backward },
+            forward_json,
         )
     }
 

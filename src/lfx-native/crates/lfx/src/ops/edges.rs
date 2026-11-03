@@ -33,8 +33,8 @@ use crate::value::{AnyMap, AnyValue};
 use indexmap::IndexSet;
 
 use crate::ops::canonical::{
-    HANDLE_KEYS, HANDLE_QUOTE, edge_data_with_type_sets, handle_with_type_sets, parse_handle,
-    values_equal,
+    HANDLE_KEYS, HANDLE_QUOTE, edge_data_with_type_sets, handle_spells, handle_with_type_sets,
+    parse_handle, values_equal,
 };
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result, bail, invalid, quoted};
@@ -473,7 +473,16 @@ fn handle<'e>(edge: &'e AnyMap, key: &str) -> Result<&'e AnyMap> {
             format!("data.{key} must be an object"),
         ));
     }
-    if let Some(string) = edge.get(key) {
+    // Text that spells the object as the editor writes it encodes that object:
+    // no parse is needed.
+    let spelled = match (
+        edge.get(key).and_then(AnyValue::as_str),
+        object.and_then(AnyValue::as_object),
+    ) {
+        (Some(text), Some(object)) => handle_spells(text, object),
+        _ => false,
+    };
+    if let Some(string) = edge.get(key).filter(|_| !spelled) {
         let Some(parsed) = parse_handle(string) else {
             return Err(error(
                 edge,

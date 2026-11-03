@@ -147,6 +147,7 @@ impl<T: Clone> Rows<T> {
         }
     }
 
+    #[cfg(test)]
     pub(super) fn remove(&mut self, index: usize) -> T {
         fn remove<T: Clone>(node: &mut Arc<Node<T>>, index: usize) -> T {
             let value = match Arc::make_mut(node) {

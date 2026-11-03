@@ -306,6 +306,20 @@ def test_the_staged_graph_is_the_graph_keep_makes():
         state.to_json(staged=True)
 
 
+@pytest.mark.parametrize("call", ["apply", "stage"])
+def test_forward_json_gives_each_forward_operation_as_ascii_text(call):
+    value = 'x"\\\n\u00e9\u2028\U0001f600'
+    with_objects = getattr(ops.GraphState(FLOW), call)(set_value(value), forward=True, forward_json=True)
+    texts = with_objects["forward_operations_json"]
+    assert all(isinstance(text, bytes) and text.isascii() for text in texts)
+    operations = with_objects["forward_operations"]
+    assert [json.loads(text) for text in texts] == operations
+    # The text ``to_json`` writes for the same value: compact, every character above U+007F escaped.
+    assert texts == [json.dumps(operation, separators=(",", ":")).encode() for operation in operations]
+    only_text = getattr(ops.GraphState(FLOW), call)(set_value(value), forward_json=True)
+    assert only_text == {"forward_operations_json": texts}
+
+
 def test_a_dropped_batch_leaves_the_graph_as_it_was():
     state = ops.GraphState(FLOW)
     state.stage(set_value("y"))

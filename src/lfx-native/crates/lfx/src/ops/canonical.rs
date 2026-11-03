@@ -355,6 +355,65 @@ pub fn parse_handle(handle: &AnyValue) -> Option<AnyMap> {
     }
 }
 
+/// Whether `handle` spells `object` as a handle is written: its JSON, keys in
+/// their order, with `œ` for each `"`, and with or without one space after
+/// each `:` and `,` outside strings (`json.dumps` writes one, `JSON.stringify`
+/// none).
+///
+/// Such text encodes exactly `object`, so [`parse_handle`] would read it as a
+/// value equal to `object`, and a caller can skip it. Other text can still
+/// encode `object` (other key order, spacing or number spelling): parse it.
+#[must_use]
+pub fn handle_spells(handle: &str, object: &AnyMap) -> bool {
+    // [`values_equal`] refuses a number that is not finite: leave those to it.
+    fn finite(value: &AnyValue) -> bool {
+        match value {
+            AnyValue::Number(number) => number.as_f64().is_some_and(f64::is_finite),
+            AnyValue::Array(items) => items.iter().all(finite),
+            AnyValue::Object(map) => map.values().all(finite),
+            _ => true,
+        }
+    }
+    if !object.values().all(finite) {
+        return false;
+    }
+    let mut text = Vec::with_capacity(handle.len());
+    json_out::write_map(&mut text, object, Ascii::Keep);
+    let mut quote = [0; 4];
+    let quote = HANDLE_QUOTE.encode_utf8(&mut quote).as_bytes();
+    let mut handle = handle.as_bytes();
+    let (mut in_string, mut escaped) = (false, false);
+    // The handle reads as `parse_handle` reads it: each `œ` as `"`. A `œ` in
+    // the written text cannot match, as the handle's `œ` reads as `"`.
+    for &byte in &text {
+        if let Some(after) = handle.strip_prefix(quote) {
+            if byte != b'"' {
+                return false;
+            }
+            handle = after;
+        } else if handle.first() == Some(&byte) {
+            handle = &handle[1..];
+        } else {
+            return false;
+        }
+        if in_string {
+            if escaped {
+                escaped = false;
+            } else if byte == b'\\' {
+                escaped = true;
+            } else if byte == b'"' {
+                in_string = false;
+            }
+        } else if byte == b'"' {
+            in_string = true;
+        } else if byte == b':' || byte == b',' {
+            // Space between tokens does not change what the text encodes.
+            handle = handle.strip_prefix(b" ").unwrap_or(handle);
+        }
+    }
+    handle.is_empty()
+}
+
 // --- Table rows ---------------------------------------------------------------------------
 
 /// A table's rows in order: by `(__pos__, __id__)`, or as stored for a legacy table without them.
@@ -1073,6 +1132,52 @@ mod tests {
 
     fn canonical(text: &str) -> String {
         canonical_json(&serde_json::from_str(text).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn a_handle_spells_its_object_only_when_it_encodes_it() {
+        let object = |text: &str| -> AnyMap {
+            match serde_json::from_str(text).unwrap() {
+                AnyValue::Object(map) => map,
+                _ => unreachable!(),
+            }
+        };
+        let handle = object(
+            r#"{"dataType": "Prompt", "id": "P-1", "name": "prompt", "output_types": ["Message"]}"#,
+        );
+        // Both spellings a handle is written in, and a `"` that reads as itself.
+        for text in [
+            "{œdataTypeœ: œPromptœ, œidœ: œP-1œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+            "{œdataTypeœ:œPromptœ,œidœ:œP-1œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+            "{\"dataTypeœ:œPromptœ,œidœ:œP-1œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        ] {
+            assert!(handle_spells(text, &handle), "{text}");
+            let parsed = parse_handle(&AnyValue::String(text.into())).unwrap();
+            assert!(
+                values_equal(&AnyValue::Object(parsed), &AnyValue::Object(handle.clone())).unwrap()
+            );
+        }
+        // Other text is left to the parse, which decides.
+        for text in [
+            "{œidœ: œP-1œ, œdataTypeœ: œPromptœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+            "{ œdataTypeœ: œPromptœ, œidœ: œP-1œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+            "{œdataTypeœ:  œPromptœ, œidœ: œP-1œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+            "{œdataTypeœ: œPromptœ, œidœ: œP-2œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+            "{œdataTypeœ: œPromptœ, œidœ: œP-1œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]} ",
+        ] {
+            assert!(!handle_spells(text, &handle), "{text}");
+        }
+        // A space inside a string is text, not spacing.
+        let spaced = object(r#"{"name": "a b"}"#);
+        assert!(handle_spells("{œnameœ: œa bœ}", &spaced));
+        assert!(!handle_spells("{œnameœ: œa  bœ}", &spaced));
+        // An `œ` in the object cannot be spelled: the handle's `œ` reads as `"`.
+        assert!(!handle_spells(
+            "{œnameœ: œaœbœ}",
+            &object(r#"{"name": "aœb"}"#)
+        ));
+        // A number that is not finite is left to `values_equal`, which refuses it.
+        assert!(!handle_spells("{œnœ: 1e400}", &object(r#"{"n": 1e400}"#)));
     }
 
     #[test]
