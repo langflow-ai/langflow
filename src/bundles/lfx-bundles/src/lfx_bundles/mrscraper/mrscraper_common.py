@@ -11,7 +11,7 @@ import json
 from typing import Any
 from urllib.parse import quote, quote_plus
 
-MISSING_SDK_MSG = "Could not import mrscraper SDK. Please install it with `pip install 'mrscraper-sdk>=0.8.0,<0.9.0'`."
+MISSING_SDK_MSG = "Could not import mrscraper SDK. Please install it with `pip install 'mrscraper-sdk>=0.9.0,<0.10.0'`."
 
 
 def build_client(token: str) -> Any:

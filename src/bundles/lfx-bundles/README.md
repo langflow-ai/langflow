@@ -56,7 +56,7 @@ from the generated aggregate extras because Langflow installs them directly.
 
 ## MrScraper
 
-Install `pip install "lfx-bundles[mrscraper]"` for the MrScraper SDK 0.8.x.
+Install `pip install "lfx-bundles[mrscraper]"` for the MrScraper SDK 0.9.x.
 The bundle exposes three components: **MrScraper Account** for subscription and
 usage, **MrScraper Scraper API** for HTML, Markdown, and screenshots, and
 **MrScraper Web Search** for real-time web search results. Each accepts a secret

@@ -10,7 +10,7 @@ import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-ins
 
 <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support third-party integrations with Langflow.
 
-The **MrScraper** bundle provides three components: **Account**, **Scraper API**, and **Web Search**. They use `mrscraper-sdk` version `0.8.x`. Install the provider dependencies with `pip install "lfx-bundles[mrscraper]"`, then enter your API token from [the MrScraper app](https://app.mrscraper.com) in each component's **MrScraper API Token** field.
+The **MrScraper** bundle provides three components: **Account**, **Scraper API**, and **Web Search**. They use `mrscraper-sdk` version `0.9.x`. Install the provider dependencies with `pip install "lfx-bundles[mrscraper]"`, then enter your API token from [the MrScraper app](https://app.mrscraper.com) in each component's **MrScraper API Token** field.
 
 All three components return the API payload as [`Data`](/data-types#json). The SDK's `status_code` and `headers` envelope is removed. Object responses are preserved; text and list responses are wrapped in a field so they remain valid Langflow data. API, authentication, and network errors fail the component.
 
@@ -63,7 +63,7 @@ When only **HTML** is enabled, the page is returned as `{"html": "..."}`; the `h
 
 ## MrScraper Web Search
 
-Search the web to retrieve real-time results, including relevant website URLs, titles, descriptions, and related questions based on a given query.
+Search the web for real-time results: website URLs, titles, and descriptions.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|

@@ -12,10 +12,7 @@ class MrscraperWebSearch(Component):
     """Search the web through MrScraper."""
 
     display_name: str = "MrScraper Web Search"
-    description: str = (
-        "Search the web to retrieve real-time results, including relevant website URLs, titles, "
-        "descriptions, and related questions based on a given query."
-    )
+    description: str = "Search the web for real-time results: website URLs, titles, and descriptions."
     name = "MrscraperWebSearch"
     icon: str = "MrScraper"
     documentation: str = "https://docs.mrscraper.com"

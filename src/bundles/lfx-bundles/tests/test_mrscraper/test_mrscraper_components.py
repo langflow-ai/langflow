@@ -100,7 +100,7 @@ async def test_missing_sdk_error(component_class, method_name):
 
     with (
         patch("builtins.__import__", side_effect=import_without_mrscraper),
-        pytest.raises(ImportError, match=r"mrscraper-sdk>=0\.8\.0,<0\.9\.0"),
+        pytest.raises(ImportError, match=r"mrscraper-sdk>=0\.9\.0,<0\.10\.0"),
     ):
         await getattr(configure(component_class), method_name)()
 
