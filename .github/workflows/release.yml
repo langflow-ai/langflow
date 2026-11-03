@@ -944,12 +944,10 @@ jobs:
           # Verify the change
           echo "Updated pyproject.toml version:"
           grep "^version" pyproject.toml
-      - name: Update lfx dependency for pre-release
-        if: ${{ inputs.pre_release }}
+      - name: Pin LFX release dependency
         run: |
           LFX_VERSION="${{ needs.determine-lfx-version.outputs.version }}"
-          echo "Updating lfx dependency to allow pre-release version: $LFX_VERSION"
-          python3 scripts/ci/update_lfx_pre_release_dependency.py \
+          uv run --no-project --with packaging python scripts/ci/update_lfx_pre_release_dependency.py \
             src/backend/base/pyproject.toml "$LFX_VERSION"
 
           echo "Updated lfx dependency:"
@@ -973,6 +971,8 @@ jobs:
             exit 1
           fi
           echo "✅ Version verified: $EXPECTED_VERSION"
+          uv run --no-project --with packaging python scripts/ci/check_core_dependency_pins.py \
+            "$WHEEL_FILE" --dependency-version "${{ needs.determine-lfx-version.outputs.version }}"
       - name: Verify base wheel composition
         run: |
           WHEEL_FILE=$(find dist -name 'langflow_base-*.whl' -type f)
@@ -1003,7 +1003,11 @@ jobs:
           # TODO: Unsure why the whl is not built in src/backend/base/dist
           mkdir src/backend/base/dist
           mv dist/*.whl src/backend/base/dist
-          uv pip install src/backend/base/dist/*.whl
+          FIND_LINKS=(--find-links ./lfx-dist)
+          if [ -d "./sdk-dist" ]; then
+            FIND_LINKS+=(--find-links ./sdk-dist)
+          fi
+          uv pip install "${FIND_LINKS[@]}" --prerelease=allow src/backend/base/dist/*.whl
           # Workspace sources take precedence over --find-links during dependency
           # installation. Replace LFX last so startup tests the published artifact.
           uv pip install --force-reinstall --no-deps lfx-dist/*.whl
@@ -1123,8 +1127,7 @@ jobs:
           # Verify the change
           echo "Updated pyproject.toml version:"
           grep "^version" pyproject.toml
-      - name: Update langflow-base dependency for pre-release
-        if: ${{ inputs.pre_release }}
+      - name: Pin langflow-base release dependency
         env:
           BASE_VERSION: ${{ needs.determine-base-version.outputs.version }}
         run: |
@@ -1136,8 +1139,8 @@ jobs:
           path = pathlib.Path("pyproject.toml")
           content = path.read_text()
           content, count = re.subn(
-              r'"langflow-base(\[[^]]+\])?[^";]*"',
-              lambda match: f'"langflow-base{match.group(1) or ""}=={os.environ["BASE_VERSION"]}"',
+              r'"langflow-base(\[[^]]+\])?[^";]*(;[^"]*)?"',
+              lambda match: f'"langflow-base{match.group(1) or ""}=={os.environ["BASE_VERSION"]}{match.group(2) or ""}"',
               content,
           )
           if count == 0:
@@ -1192,6 +1195,8 @@ jobs:
             exit 1
           fi
           echo "✅ Version verified: $EXPECTED_VERSION"
+          uv run --no-project --with packaging python scripts/ci/check_core_dependency_pins.py \
+            "$WHEEL_FILE" --dependency-version "${{ needs.determine-base-version.outputs.version }}"
       - name: Verify main wheel composition
         run: |
           WHEEL_FILE=$(find dist -maxdepth 1 -name 'langflow-*.whl' -type f)

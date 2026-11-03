@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { StorageUpgradeStatus } from "@/controllers/API/queries/knowledge-base-storage/use-get-storage-status";
 import { useGetStorageStatus } from "@/controllers/API/queries/knowledge-base-storage/use-get-storage-status";
 import { usePostStorageRetry } from "@/controllers/API/queries/knowledge-base-storage/use-post-storage-retry";
+import { axe } from "@/utils/a11y-test";
 import { StorageUpgradeNotice, StorageUpgradePanel } from "..";
 
 jest.mock("react-i18next", () => ({
@@ -80,6 +81,114 @@ function wrapper(queryClient = new QueryClient()) {
   );
 }
 
+it("names orphaned folders and retries discovery without a migration ID", async () => {
+  status = {
+    ...status,
+    running: false,
+    stores: [],
+    inventory: {
+      complete: false,
+      issues: 17,
+      storage_directory: "C:/Users/test/.langflow/knowledge_bases",
+      details: [
+        { source: "former-owner/my-base", code: "missing_source_owner" },
+      ],
+    },
+  };
+  const { container, rerender } = render(<StorageUpgradeNotice />, {
+    wrapper: wrapper(),
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: /view upgrade progress/i }),
+  );
+  expect(
+    screen.getByText(status.inventory!.storage_directory!),
+  ).toBeInTheDocument();
+  expect(screen.getByText("former-owner/my-base")).toBeInTheDocument();
+  expect(screen.getByText(/another Langflow database/)).toBeInTheDocument();
+  expect(await axe(document.body)).toHaveNoViolations();
+  fireEvent.click(screen.getByRole("button", { name: /retry storage check/i }));
+  expect(mutate).toHaveBeenCalledWith({ inventory: true }, expect.any(Object));
+  act(() => mutate.mock.calls[0][1].onError());
+  expect(screen.getByText(/Could not schedule/)).toHaveAttribute(
+    "role",
+    "alert",
+  );
+  fireEvent.click(screen.getByRole("button", { name: /retry storage check/i }));
+  act(() => mutate.mock.calls[1][1].onSuccess());
+  expect(screen.getByText(/Retry scheduled/)).toHaveAttribute("role", "status");
+  status = { ...status, inventory: { complete: true, issues: 0 } };
+  rerender(<StorageUpgradeNotice />);
+  expect(
+    container.querySelector('[data-testid="storage-upgrade-notice"]'),
+  ).toBeNull();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
+it("explains an unfinished storage check instead of naming earlier folders", () => {
+  status = {
+    ...status,
+    running: false,
+    stores: [],
+    inventory: {
+      complete: false,
+      issues: 2,
+      storage_directory: "/srv/langflow/knowledge_bases",
+      details: [],
+      scan_failed: true,
+    },
+  };
+  render(<StorageUpgradeNotice />, { wrapper: wrapper() });
+  fireEvent.click(
+    screen.getByRole("button", { name: /view upgrade progress/i }),
+  );
+  expect(
+    screen.getByText(/last storage check did not finish/i),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByText(/another Langflow database/),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByRole("list")).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: /retry storage check/i }),
+  ).toBeEnabled();
+});
+
+it("keeps an empty fresh instance free of storage warnings", () => {
+  status = { ...status, running: false, stores: [] };
+  render(<StorageUpgradeNotice />, { wrapper: wrapper() });
+  expect(
+    screen.queryByTestId("storage-upgrade-notice"),
+  ).not.toBeInTheDocument();
+});
+
+it("offers an inventory retry for older scans without folder details", () => {
+  status = {
+    ...status,
+    running: false,
+    stores: [],
+    inventory: { complete: false, issues: 1 },
+  };
+  render(<StorageUpgradeNotice />, { wrapper: wrapper() });
+  fireEvent.click(
+    screen.getByRole("button", { name: /view upgrade progress/i }),
+  );
+  expect(
+    screen.getByRole("button", { name: /retry storage check/i }),
+  ).toBeEnabled();
+});
+
+it("disables inventory retries during discovery", () => {
+  status = { ...status, inventory: { complete: false, issues: 1 } };
+  render(<StorageUpgradeNotice />, { wrapper: wrapper() });
+  fireEvent.click(
+    screen.getByRole("button", { name: /view upgrade progress/i }),
+  );
+  expect(
+    screen.getByRole("button", { name: /retry storage check/i }),
+  ).toBeDisabled();
+});
+
 it("shows automatic background progress and source retention from any screen", () => {
   render(<StorageUpgradeNotice />, { wrapper: wrapper() });
   fireEvent.click(
@@ -123,7 +232,7 @@ it("lets an administrator retry the bound migration and reports scheduling failu
   mutate.mockImplementation((_params, options) => options.onError());
   render(<StorageUpgradePanel kbId="kb-id" />, { wrapper: wrapper() });
   expect(
-    screen.getByText(/Stop the other Langflow instance/),
+    screen.getByText(/Stop all other Langflow processes on this host/),
   ).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: /retry upgrade/i }));
   expect(mutate).toHaveBeenCalledWith(
@@ -133,6 +242,82 @@ it("lets an administrator retry the bound migration and reports scheduling failu
   expect(screen.getByRole("alert")).toHaveTextContent(
     "Could not schedule the upgrade",
   );
+});
+
+it.each(["panel", "dialog"])(
+  "acknowledges a retry in the %s even when the same blocker remains",
+  (surface) => {
+    status.stores[0] = {
+      ...status.stores[0],
+      storage_state: "needs_attention",
+      phase: "needs_attention",
+      error_code: "legacy_workers_running",
+      can_retry: true,
+    };
+    mutate.mockImplementation(() => {});
+    render(
+      surface === "panel" ? (
+        <StorageUpgradePanel kbId="kb-id" />
+      ) : (
+        <StorageUpgradeNotice />
+      ),
+      { wrapper: wrapper() },
+    );
+    if (surface === "dialog") {
+      fireEvent.click(
+        screen.getByRole("button", { name: /view upgrade progress/i }),
+      );
+    }
+    expect(
+      screen.getByText(
+        "Stop all other Langflow processes on this host, then retry the upgrade. This includes instances using different databases or knowledge directories.",
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /retry upgrade/i }));
+    act(() => mutate.mock.calls[0][1].onSuccess());
+    expect(screen.getByText(/Retry scheduled/)).toHaveAttribute(
+      "role",
+      "status",
+    );
+    expect(screen.getByText(/Retry scheduled/)).toHaveTextContent(
+      /resolve the issue shown above/,
+    );
+    expect(
+      screen.getByText(/Stop all other Langflow processes on this host/),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /retry upgrade/i }));
+    expect(screen.queryByText(/Retry scheduled/)).not.toBeInTheDocument();
+    act(() => mutate.mock.calls[1][1].onError());
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Could not schedule the upgrade",
+    );
+  },
+);
+
+it("labels a pending retry and prevents duplicate requests", () => {
+  status.stores[0] = {
+    ...status.stores[0],
+    storage_state: "needs_attention",
+    phase: "needs_attention",
+    can_retry: true,
+  };
+  mockRetry.mockReturnValue({
+    ...mockRetry(),
+    isPending: true,
+    isIdle: false,
+    isError: false,
+    isSuccess: false,
+    status: "pending",
+    data: undefined,
+    error: null,
+    variables: { migrationId: "migration-id" },
+  });
+  render(<StorageUpgradePanel kbId="kb-id" />, { wrapper: wrapper() });
+  const button = screen.getByRole("button", { name: /scheduling retry/i });
+  expect(button).toBeDisabled();
+  fireEvent.click(button);
+  expect(mutate).not.toHaveBeenCalled();
 });
 
 it.each([

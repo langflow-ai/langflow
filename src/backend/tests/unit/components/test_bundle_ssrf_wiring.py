@@ -44,6 +44,8 @@ RAW_SINKS = frozenset({"get", "post", "put", "patch", "delete", "request", "stre
 # Mirrors the behavioural coverage that skips without the bundle installed.
 GUARDED_MODULES: dict[str, set[str]] = {
     "deepseek/deepseek.py": {"ssrf_safe_httpx_get", "ssrf_protected_openai_clients_for_url"},
+    "elastic/opensearch.py": {"validate_connector_url_for_ssrf"},
+    "elastic/opensearch_multimodal.py": {"validate_connector_url_for_ssrf"},
     "figranium/base.py": {"ssrf_safe_httpx_get", "ssrf_safe_httpx_post"},
     "funasr/funasr_transcription.py": {"ssrf_safe_httpx_post"},
     "glean/glean_search_api.py": {"ssrf_safe_httpx_post"},
@@ -70,6 +72,62 @@ def _bundles_root() -> Path:
 
 
 BUNDLES_ROOT = _bundles_root()
+
+_CONNECTION_SDK_GUARDS = {
+    "lfx-bundles/src/lfx_bundles/mistral/mistral.py": {
+        "provider_httpx_client_kwargs",
+        "ensure_credential_endpoint_allowed",
+    },
+    "lfx-bundles/src/lfx_bundles/huggingface/huggingface.py": {
+        "validate_provider_base_url",
+        "ensure_credential_endpoint_allowed",
+    },
+    "lfx-bundles/src/lfx_bundles/cloudflare/cloudflare.py": {
+        "validate_provider_base_url",
+        "ensure_credential_endpoint_allowed",
+    },
+    "lfx-bundles/src/lfx_bundles/unstructured/unstructured.py": {
+        "provider_httpx_client_kwargs",
+        "ensure_credential_endpoint_allowed",
+    },
+    "oracle/src/lfx_oracle/components/oracle/oraclevs.py": {"build_connection_params"},
+    "oracle/src/lfx_oracle/components/oracle/oracledb_embeddings.py": {"build_connection_params"},
+    "oracle/src/lfx_oracle/components/oracle/oracledb_loaders.py": {"build_connection_params"},
+    "ibm/src/lfx_ibm/components/ibm/db2_vector.py": {"validate_hostname"},
+}
+_CONNECTION_SDK_NAMES = {
+    "ChatMistralAI",
+    "HuggingFaceEndpoint",
+    "CompatibleCloudflareEmbeddings",
+    "UnstructuredLoader",
+    "oracledb.connect",
+    "ibm_db_dbi.connect",
+}
+
+
+def test_connection_sdk_construction_has_destination_guards() -> None:
+    """Discover these SDK constructors even when no guard has been imported."""
+    root = BUNDLES_ROOT.parents[2]
+    found = set()
+    for path in root.rglob("*.py"):
+        if "tests" in path.parts:
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        calls = set()
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            if isinstance(node.func, ast.Name):
+                calls.add(node.func.id)
+            elif isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
+                calls.add(f"{node.func.value.id}.{node.func.attr}")
+        if not calls & _CONNECTION_SDK_NAMES:
+            continue
+        relative = path.relative_to(root).as_posix()
+        found.add(relative)
+        assert relative in _CONNECTION_SDK_GUARDS, f"Register destination guards for {relative}"
+        assert _CONNECTION_SDK_GUARDS[relative] <= calls
+    assert found == set(_CONNECTION_SDK_GUARDS)
 
 
 def _parse(rel_path: str) -> ast.Module:
@@ -147,16 +205,23 @@ def test_no_raw_network_sink(rel_path: str) -> None:
 
 
 def test_registry_covers_every_declared_guard_user() -> None:
-    """Any bundle module importing a ``ssrf_safe_*`` helper must be in GUARDED_MODULES.
+    """Discover SSRF helpers and OpenSearch SDK users, including unguarded ones.
 
     Without this, a new provider can fetch a tenant-controlled URL and silently sit outside the
     conformance net -- the registry would still be green because it never heard of the module.
     """
-    users = {
-        str(path.relative_to(BUNDLES_ROOT))
-        for path in BUNDLES_ROOT.rglob("*.py")
-        if "ssrf_safe_" in path.read_text(encoding="utf-8")
-    }
+    users = set()
+    for path in BUNDLES_ROOT.rglob("*.py"):
+        source = path.read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        uses_opensearch = any(
+            isinstance(node, ast.ImportFrom)
+            and node.module == "opensearchpy"
+            and any(alias.name == "OpenSearch" for alias in node.names)
+            for node in ast.walk(tree)
+        )
+        if "ssrf_safe_" in source or uses_opensearch:
+            users.add(str(path.relative_to(BUNDLES_ROOT)))
     unregistered = users - set(GUARDED_MODULES)
     assert not unregistered, (
         f"these bundle modules use an SSRF-safe helper but are not in GUARDED_MODULES: {sorted(unregistered)}. "

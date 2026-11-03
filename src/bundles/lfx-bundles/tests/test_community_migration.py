@@ -82,14 +82,15 @@ def test_cloudflare_batching_and_existing_routing(monkeypatch):
     )
     observed = []
 
-    def post(url, *, headers, json):
+    def post(url, *, headers, json, timeout):
+        assert timeout is None
         observed.append((url, headers, json))
         response = Response()
         response.status_code = 200
         response._content = __import__("json").dumps({"result": {"data": [[1.0, 2.0] for _ in json["text"]]}}).encode()
         return response
 
-    with patch("langchain_cloudflare.embeddings.requests.post", side_effect=post):
+    with patch("lfx_bundles.cloudflare.cloudflare_common.provider_safe_httpx_post", side_effect=post):
         assert embeddings.embed_documents(["a\nb", "c", "d"]) == [[1.0, 2.0]] * 3
     assert [call[2]["text"] for call in observed] == [["a b", "c"], ["d"]]
     assert observed[0][0] == "https://api.cloudflare.com/client/v4/accounts/account/ai/run/@cf/baai/bge-base-en-v1.5"
@@ -103,7 +104,10 @@ def test_cloudflare_rejects_http_errors():
     response = Response()
     response.status_code = 401
     response._content = b'{"error": "unauthorized"}'
-    with patch("langchain_cloudflare.embeddings.requests.post", return_value=response), pytest.raises(HTTPError):
+    with (
+        patch("lfx_bundles.cloudflare.cloudflare_common.provider_safe_httpx_post", return_value=response),
+        pytest.raises(HTTPError),
+    ):
         embeddings.embed_query("test")
 
 
@@ -137,7 +141,7 @@ def test_chroma_retirement_preserves_source_and_bundle_discovery(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_cloudflare_async_preserves_slow_successful_responses():
+async def test_cloudflare_async_preserves_slow_successful_responses(monkeypatch):
     import asyncio
     import json
     import threading
@@ -159,6 +163,7 @@ async def test_cloudflare_async_preserves_slow_successful_responses():
             pass
 
     server = ThreadingHTTPServer(("127.0.0.1", 0), EmbeddingHandler)
+    monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "127.0.0.1")
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:

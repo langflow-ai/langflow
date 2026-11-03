@@ -511,26 +511,20 @@ class WorkflowResumeResponse(BaseModel):
     message: str | None = None
 
 
+# FastAPI registers ``model`` in components.schemas and emits oneOf $refs.
+# Inlining model_json_schema() leaves the discriminator mapping pointing at names
+# that are never created, which Redoc cannot resolve.
+WorkflowExecutionResult = Annotated[
+    WorkflowExecutionResponse | WorkflowJobResponse,
+    Field(discriminator="object"),
+]
+
 # OpenAPI response definitions
 WORKFLOW_EXECUTION_RESPONSES = {
     200: {
+        "model": WorkflowExecutionResult,
         "description": "Workflow execution response",
         "content": {
-            "application/json": {
-                "schema": {
-                    "oneOf": [
-                        WorkflowExecutionResponse.model_json_schema(),
-                        WorkflowJobResponse.model_json_schema(),
-                    ],
-                    "discriminator": {
-                        "propertyName": "object",
-                        "mapping": {
-                            "response": "#/components/schemas/WorkflowExecutionResponse",
-                            "job": "#/components/schemas/WorkflowJobResponse",
-                        },
-                    },
-                }
-            },
             "text/event-stream": {
                 "schema": WorkflowStreamEvent.model_json_schema(),
                 "description": "Server-sent events for streaming execution",

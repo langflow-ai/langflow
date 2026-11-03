@@ -218,7 +218,7 @@ If your flows use the File System component, also follow [Move shared files when
 4. Set `LANGFLOW_AUTO_LOGIN=false`, set `LANGFLOW_SUPERUSER` to the existing account's username, and set `LANGFLOW_SUPERUSER_PASSWORD` before restarting or upgrading. Startup requires this setting, but it does **not** overwrite a non-legacy password on an existing account. Use the password established in the previous steps.
 5. Start the new release with the existing database and configuration directory. In a fresh browser session, sign in with the established password and verify that your existing flows are present.
 
-Do not delete the existing account, database, or encryption key to regain access. Creating a different superuser does not transfer ownership of the existing account's flows. If you already upgraded without preparing the account, see [Recover access after upgrading](#recover-access-after-upgrading).
+Do not delete the existing account, database, or encryption key to regain access. Creating a different superuser does not transfer ownership of the existing account's flows. If you already upgraded without preparing the account, see [Recover access after upgrading](/troubleshoot#recover-access-after-upgrading).
 
 An explicit `LANGFLOW_AUTO_LOGIN=true` in an existing environment or `.env` file takes precedence over the new default. Remove that override or set it to `false` as part of the transition. Disabling auto-login prevents new anonymous sessions; it does not revoke previously issued sessions or API keys.
 
@@ -610,6 +610,8 @@ Connector validation covers Cassandra, MongoDB, Redis vector store, PGVector, Co
 Use commas to separate Couchbase bootstrap hosts. With connector SSRF validation enabled, semicolons in the Couchbase connection-string authority are rejected because the SDK can interpret them as part of a DNS hostname.
 
 In 1.12.4, PGVector connections to `localhost` or `127.0.0.1` are blocked by default, matching the SQL Database components. To keep a trusted local PGVector flow working, set `LANGFLOW_SSRF_ALLOWED_HOSTS=localhost` (and include `127.0.0.1` if used). Connector checks validate bootstrap addresses, but MongoDB, Redis Sentinel, Couchbase, and Valkey clients can discover additional peers after connecting or resolve a validated name again. Use network egress controls to prevent those clients from reaching internal services.
+
+MCP servers using HTTP or SSE require an explicit `LANGFLOW_SSRF_ALLOWED_HOSTS` entry for loopback addresses, even when `LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK=true`. This applies to tool discovery and execution. Add only the hosts your deployment trusts, such as `localhost,127.0.0.1` for an intended local MCP server. When validated DNS addresses are available, MCP connections pin those addresses and bypass environment HTTP proxies. Allowlisted hosts that produce no validated addresses use the default HTTP transport and can use environment HTTP proxies.
 
 #### Model provider endpoints {#provider-allowed-hosts}
 

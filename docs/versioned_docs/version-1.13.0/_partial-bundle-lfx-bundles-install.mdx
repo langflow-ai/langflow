@@ -1,0 +1,12 @@
+:::tip
+This provider is an extra of the `lfx-bundles` metapackage. It is opt-in for both Langflow and standalone LFX installs:
+
+```bash
+uv pip install "lfx-bundles[<bundle>]"
+```
+
+Replace `<bundle>` with this page's provider name, for example `qdrant`.
+For a torch-free full Langflow install, run `uv pip install "langflow[bundles]"`.
+For standalone LFX with every provider in `lfx-bundles`, including PyTorch-based providers, run `uv pip install "lfx[bundles]"`.
+See [Additional bundles](/extensions-bundle-list#additional-bundles) for the exact extra name.
+:::

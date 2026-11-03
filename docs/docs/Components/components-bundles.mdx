@@ -71,13 +71,28 @@ To install PyTorch and the components that require it, run the following in your
 uv pip install "lfx-bundles[all]"
 ```
 
-## Legacy bundles
+## Legacy bundles {#legacy-bundles}
+
+<span id="vector-stores-bundle" />
 
 import PartialLegacy from '@site/docs/_partial-legacy.mdx';
 
 <PartialLegacy />
 
 The following bundles include only legacy components.
+
+### Chroma DB and Local DB {#chroma}
+
+The **Chroma DB** and **Local DB** components are legacy in Langflow 1.13.
+Saved nodes remain on the canvas so you can inspect older flows.
+Replace **Chroma DB** and **Local DB** with a [knowledge base](/knowledge#knowledge-bases) or a supported remote vector store before running the flow.
+For data already stored in local Chroma, see [Upgrade Knowledge and Memory storage](/knowledge-storage-upgrade).
+
+### ALTK bundle {#altk}
+
+The **ALTK** component is removed in Langflow 1.13.
+Saved nodes remain on the canvas so you can inspect older flows.
+Replace **ALTK** with the [**Agent** component](/components-agents) before running the flow.
 
 ### CrewAI bundle
 
@@ -184,22 +199,6 @@ It accepts the following parameters:
 
 * **Embedding Similarity**: Replaced by built-in similarity search functionality in vector store components.
 * **Text Embedder**: Replaced by the embedding model components.
-
-### Vector Stores bundle
-
-This bundle contains only the legacy **Local DB** component.
-All other vector store components can be found within their respective provider-specific bundles, such as the [**DataStax** bundle](/bundles-datastax).
-
-<details>
-<summary>Local DB</summary>
-
-The **Local DB** and **Chroma DB** components are retired in Langflow 1.13.
-Saved nodes remain available for inspection, but must be replaced before running a flow.
-For local storage, use [Knowledge components](/knowledge#knowledge-bases).
-For remote storage, use a supported vector store component such as [Astra DB](/bundles-datastax) or [pgVector](/bundles-pgvector).
-See [Upgrade Knowledge and Memory storage](../Develop/knowledge-storage-upgrade.mdx) for retained data and recovery options.
-
-</details>
 
 ### Zep bundle
 
