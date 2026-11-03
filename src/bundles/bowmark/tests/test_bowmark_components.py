@@ -106,6 +106,16 @@ def test_run_string_result_is_text(run):
     assert data.text == "plain answer"
 
 
+def test_run_partial_result_is_marked(run):
+    payload = {**RUN_OK, "status": "partial", "result": "two of three"}
+    with patch(POST_PATCH_TARGET, MagicMock(return_value=_response("POST", RUN_URL, json=payload))):
+        data = run.bowmark_run()
+    assert data.text.startswith("Partial result")
+    assert data.text.endswith("two of three")
+    assert data.data["status"] == "partial"
+    assert data.data["result"] == "two of three"
+
+
 def test_run_failed_run_is_error_row(run):
     payload = {"ok": False, "status": "error", "result": None, "error": "boom", "runId": "run-9"}
     with patch(POST_PATCH_TARGET, MagicMock(return_value=_response("POST", RUN_URL, json=payload))):

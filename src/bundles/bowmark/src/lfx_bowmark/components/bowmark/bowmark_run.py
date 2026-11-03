@@ -109,6 +109,9 @@ class BowmarkRunComponent(Component):
 
         result = payload.get("result")
         text = result if isinstance(result, str) else json.dumps(result, default=str)
+        if payload.get("status") == "partial":
+            # Some legs failed; say so instead of presenting the result as complete.
+            text = f"Partial result (some steps failed, see logs): {text}"
         data = Data(
             text=text,
             data={
