@@ -11,7 +11,7 @@ import json
 from typing import Any
 from urllib.parse import quote, quote_plus
 
-MISSING_SDK_MSG = "Could not import mrscraper SDK. Please install it with `pip install 'mrscraper-sdk>=0.6.0,<0.7.0'`."
+MISSING_SDK_MSG = "Could not import mrscraper SDK. Please install it with `pip install 'mrscraper-sdk>=0.8.0,<0.9.0'`."
 
 
 def build_client(token: str) -> Any:
@@ -67,7 +67,7 @@ def payload(response: Any, *, scalar_key: str = "result") -> dict[str, Any]:
     SDK raises on any non-2xx status, so the status code carries no information
     by the time a component sees it.
 
-    A non-dict payload (``scraper_api`` yields text when the response is not JSON)
+    A non-dict payload (``scraper_api`` yields an HTML string when only HTML is requested)
     is boxed under ``scalar_key`` so the return value is always a mapping, which
     is what ``Data`` accepts.
     """

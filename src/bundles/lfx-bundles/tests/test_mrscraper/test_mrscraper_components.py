@@ -100,7 +100,7 @@ async def test_missing_sdk_error(component_class, method_name):
 
     with (
         patch("builtins.__import__", side_effect=import_without_mrscraper),
-        pytest.raises(ImportError, match=r"0\.6\.0"),
+        pytest.raises(ImportError, match=r"mrscraper-sdk>=0\.8\.0,<0\.9\.0"),
     ):
         await getattr(configure(component_class), method_name)()
 
@@ -175,6 +175,7 @@ async def test_scraper_api_maps_all_options_without_losing_false_or_zero(http_tr
         bypass_proxy=True,
         block_resources=True,
         wait_for_selector=".ready",
+        wait_until="domcontentloaded",
         home_page=True,
         cookie_jar="domain=example.com&country=sg",
         headers='{"accept-language": "en-US"}',
@@ -185,9 +186,9 @@ async def test_scraper_api_maps_all_options_without_losing_false_or_zero(http_tr
     )
     output = await component.fetch()
     request = requests[0]
-    assert request.method == "POST"
+    assert request.method == "GET"
     assert request.url.host == "api.mrscraper.com"
-    assert json.loads(request.content) == {"url": "https://example.com/page", "maxRetries": 0, "tokenCap": 0}
+    assert request.content == b""
     assert dict(request.url.params) == {
         "token": MOCK_MR_API_TOKEN,
         "timeout": "45",
@@ -200,6 +201,7 @@ async def test_scraper_api_maps_all_options_without_losing_false_or_zero(http_tr
         "html": "true",
         "markdown": "true",
         "waitForSelector": ".ready",
+        "waitUntil": "domcontentloaded",
         "warmStart": "true",
         "screenshot": "true",
         "blockResources": "true",
@@ -207,6 +209,9 @@ async def test_scraper_api_maps_all_options_without_losing_false_or_zero(http_tr
         "cookieJar": "domain=example.com&country=sg",
         "headers": '{"accept-language": "en-US"}',
         "stream": "false",
+        "url": "https://example.com/page",
+        "maxRetries": "0",
+        "tokenCap": "0",
     }
     assert request.headers["x-discard-token-secret"] == "discard-test-value"
     assert request.headers["authorization"] == f"Bearer {MOCK_MR_API_TOKEN}"
@@ -221,51 +226,86 @@ async def test_scraper_defaults_and_html_output_remain_compatible(http_transport
     requests, responses = http_transport
     responses.append(httpx.Response(200, text="<html>plain</html>"))
     output = await configure(MrscraperFetchHtml, url="https://example.com").fetch()
+    request = requests[0]
     assert output.data == {"html": "<html>plain</html>"}
-    assert json.loads(requests[0].content) == {"url": "https://example.com", "maxRetries": 3}
-    assert "browserRendering" not in requests[0].url.params
-    assert "super" not in requests[0].url.params
-    assert "stream" not in requests[0].url.params
-    assert requests[0].url.params["html"] == "true"
-    assert requests[0].url.params["markdown"] == "false"
+    assert request.method == "GET"
+    assert request.content == b""
+    assert request.url.params["url"] == "https://example.com"
+    assert request.url.params["maxRetries"] == "3"
+    for absent in ("browserRendering", "super", "stream", "screenshot", "tokenCap", "waitUntil"):
+        assert absent not in request.url.params
+    assert request.url.params["html"] == "true"
+    assert request.url.params["markdown"] == "false"
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("overrides", [{}, {"region": "id", "language": "id", "page": "2"}])
 @pytest.mark.asyncio
-async def test_web_search_normalizes_google_url(http_transport, overrides):
-    """Google URL defaults and explicit overrides are delegated to the SDK v2 API."""
+async def test_scraper_markdown_only_returns_object(http_transport):
+    """Markdown without HTML is requested explicitly and the object response passes through."""
     requests, responses = http_transport
-    responses.append(httpx.Response(200, json={"organic": [{"title": "Example"}]}))
+    responses.append(httpx.Response(200, json={"markdown": "# Page"}))
+    output = await configure(MrscraperFetchHtml, url="https://example.com", html=False, markdown=True).fetch()
+    assert requests[0].url.params["html"] == "false"
+    assert requests[0].url.params["markdown"] == "true"
+    assert output.data == {"markdown": "# Page"}
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_web_search_posts_query_country_and_result_count(http_transport):
+    """Web Search posts the websearch action and returns the structured result list."""
+    requests, responses = http_transport
+    expected = {
+        "success": True,
+        "message": "ok",
+        "data": [
+            {
+                "rank": 1,
+                "title": "Example",
+                "url": "https://example.com",
+                "description": "Example result",
+                "source": "example.com",
+            }
+        ],
+    }
+    responses.append(httpx.Response(200, json=expected))
     output = await configure(
-        MrscraperWebSearch,
-        url="https://www.google.com/search?q=running+shoes&gl=us&hl=en&start=20",
-        raw=False,
-        render_js=True,
-        **overrides,
+        MrscraperWebSearch, query="  e-menessaptieka.lv linkedin ", country=" us ", num_results=25, timeout=30
     ).search()
     request = requests[0]
-    assert str(request.url) == "https://sync.scraper.mrscraper.com/api/google/serp/v2/sync"
+    assert request.method == "POST"
+    assert str(request.url) == "https://api.mrscraper.com"
+    assert request.headers["authorization"] == f"Bearer {MOCK_MR_API_TOKEN}"
     assert json.loads(request.content) == {
-        "query": "running shoes",
-        "region": overrides.get("region", "us"),
-        "language": overrides.get("language", "en"),
-        "page": int(overrides.get("page", 3)),
-        "format": "json",
-        "renderJs": True,
+        "action": "websearch",
+        "query": "e-menessaptieka.lv linkedin",
+        "country": "us",
+        "numResults": 25,
     }
-    assert output.data == {"organic": [{"title": "Example"}]}
+    assert request.extensions["timeout"]["read"] == 30
+    assert output.data == expected
 
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_web_search_defaults_to_raw_html(http_transport):
-    """Raw is true by SDK default and takes precedence over the JSON format field."""
+async def test_web_search_defaults_omit_country(http_transport):
+    """A blank country is left to the API default and ten results are requested."""
     requests, responses = http_transport
-    responses.append(httpx.Response(200, text="<html>SERP</html>"))
-    output = await configure(MrscraperWebSearch, url="example query").search()
-    assert json.loads(requests[0].content) == {"query": "example query", "format": "html", "renderJs": False}
-    assert output.data == {"result": "<html>SERP</html>"}
+    responses.append(httpx.Response(200, json={"success": True, "data": []}))
+    output = await configure(MrscraperWebSearch, query="example query").search()
+    assert json.loads(requests[0].content) == {"action": "websearch", "query": "example query", "numResults": 10}
+    assert requests[0].extensions["timeout"]["read"] == 600
+    assert output.data == {"success": True, "data": []}
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_web_search_wraps_non_object_payload(http_transport):
+    """Non-object responses are boxed so the output remains valid Langflow data."""
+    _requests, responses = http_transport
+    responses.append(httpx.Response(200, text="plain text"))
+    output = await configure(MrscraperWebSearch, query="example query").search()
+    assert output.data == {"result": "plain text"}
 
 
 @pytest.mark.unit
@@ -276,10 +316,16 @@ async def test_web_search_defaults_to_raw_html(http_transport):
         (MrscraperFetchHtml, "fetch", {"url": "https://example.com", "timeout": 301}, "timeout"),
         (MrscraperFetchHtml, "fetch", {"url": "https://example.com", "max_retries": -1}, "max_retries"),
         (MrscraperFetchHtml, "fetch", {"url": "https://example.com", "token_cap": "-1"}, "token_cap"),
-        (MrscraperWebSearch, "search", {"url": "test", "page": "0"}, "page"),
-        (MrscraperWebSearch, "search", {"url": "test", "page": "1.5"}, "page"),
-        (MrscraperWebSearch, "search", {"url": "test", "timeout": 0}, "timeout"),
-        (MrscraperWebSearch, "search", {"url": " "}, "query"),
+        (
+            MrscraperFetchHtml,
+            "fetch",
+            {"url": "https://example.com", "html": False, "markdown": False, "screenshot": False},
+            "At least one",
+        ),
+        (MrscraperWebSearch, "search", {"query": "test", "num_results": 9}, "num_results"),
+        (MrscraperWebSearch, "search", {"query": "test", "num_results": 101}, "num_results"),
+        (MrscraperWebSearch, "search", {"query": "test", "timeout": 0}, "timeout"),
+        (MrscraperWebSearch, "search", {"query": " "}, "query"),
     ],
 )
 @pytest.mark.asyncio
@@ -402,6 +448,10 @@ class TestSdkContract:
     def test_client_accepts_token_kwarg(self):
         assert "token" in inspect.signature(real_sdk().MrScraper).parameters
 
+    def test_sdk_public_methods_match_components(self):
+        public = {name for name, _ in inspect.getmembers(real_sdk().MrScraper, inspect.isfunction)}
+        assert {name for name in public if not name.startswith("_")} == {"account", "scraper_api", "web_search"}
+
     @pytest.mark.parametrize(
         ("method_name", "call_site_kwargs"),
         [
@@ -423,6 +473,7 @@ class TestSdkContract:
                     "proxy",
                     "bypass_proxy",
                     "wait_for_selector",
+                    "wait_until",
                     "home_page",
                     "cookie_jar",
                     "headers",
@@ -432,7 +483,7 @@ class TestSdkContract:
                     "discard_token_secret",
                 },
             ),
-            ("web_search", {"url", "raw", "format", "region", "language", "page", "render_js", "timeout"}),
+            ("web_search", {"query", "country", "num_results", "timeout"}),
         ],
     )
     def test_call_site_kwargs_still_accepted(self, method_name, call_site_kwargs):
