@@ -159,10 +159,10 @@ class Image(BaseModel):
     path: str | None = None
     url: str | None = None
 
-    def to_base64(self):
+    async def to_base64(self):
         """Convert image to base64 string."""
         if self.path:
-            files = get_files([self.path], convert_to_base64=True)
+            files = await get_files([self.path], convert_to_base64=True)
             if not files:
                 msg = f"No files found or file could not be converted to base64: {self.path}"
                 raise ValueError(msg)
