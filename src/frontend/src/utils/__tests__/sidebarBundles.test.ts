@@ -91,6 +91,18 @@ describe("SIDEBAR_BUNDLES", () => {
     );
   });
 
+  it("classifies SpecStream as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "SpecStream",
+          icon: "SpecStream",
+          name: "specstream",
+        }),
+      ]),
+    );
+  });
+
   it("classifies Figranium as a sidebar bundle", () => {
     expect(SIDEBAR_BUNDLES).toEqual(
       expect.arrayContaining([
