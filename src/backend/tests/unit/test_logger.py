@@ -204,7 +204,7 @@ class TestConfigure:
         """Test configure() with invalid log file path falls back to cache dir."""
         invalid_path = Path("/nonexistent/directory/log.txt")
 
-        with patch("lfx.log.logger.user_cache_dir", return_value=str(tmp_path)):
+        with patch.object(importlib.import_module("lfx.log.logger"), "user_cache_dir", return_value=str(tmp_path)):
             configure(log_file=invalid_path)
         assert (tmp_path / "langflow.log").is_file()
         config = structlog._config
@@ -1312,7 +1312,7 @@ class TestEdgeCasesAndErrorConditions:
         nonexistent_path = Path("/definitely/nonexistent/directory/logfile.log")
 
         # Should not raise an exception
-        with patch("lfx.log.logger.user_cache_dir", return_value=str(tmp_path)):
+        with patch.object(importlib.import_module("lfx.log.logger"), "user_cache_dir", return_value=str(tmp_path)):
             configure(log_file=nonexistent_path)
         assert (tmp_path / "langflow.log").is_file()
 
