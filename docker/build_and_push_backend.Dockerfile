@@ -28,6 +28,7 @@ RUN microdnf install -y tar xz \
         gcc gcc-c++ make python3.14-devel \
         gcc \
         git \
+        libxml2-devel libxslt-devel \
         curl \
     && microdnf clean all
 
@@ -48,8 +49,9 @@ ENV VIRTUAL_ENV="/app/.venv"
 # Install the runnable base with PostgreSQL. ``complete`` is retained as an
 # empty 1.12 compatibility alias. Provider extensions are intentionally absent;
 # use a Langflow application image or install the required extension packages.
+# Build lxml against UBI's patched XML libraries instead of its bundled copies.
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install \
+    uv pip install --no-binary lxml \
         ./src/sdk \
         ./src/lfx \
         "./src/backend/base[complete,postgresql]"
@@ -65,6 +67,7 @@ RUN microdnf update -y \
         curl \
         git \
         libpq \
+        libxml2 libxslt \
         gnupg \
         xz tar \
     && microdnf clean all

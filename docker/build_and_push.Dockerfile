@@ -23,8 +23,10 @@ COPY --from=uv-installer /uvx /usr/local/bin/uvx
 
 WORKDIR /app
 
+# Build lxml against UBI's patched XML libraries instead of its bundled copies.
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
+    UV_NO_BINARY_PACKAGE=lxml \
     RUSTFLAGS='--cfg reqwest_unstable'
 
 RUN microdnf install -y \
@@ -32,6 +34,8 @@ RUN microdnf install -y \
         gcc \
         gcc-c++ \
         git \
+        libxml2-devel \
+        libxslt-devel \
         make \
         python3.14-devel \
         tar \
@@ -187,7 +191,7 @@ FROM ${PYTHON_IMAGE} AS runtime
 USER root
 
 RUN microdnf update -y \
-    && microdnf install -y curl git gnupg libpq shadow-utils tar xz \
+    && microdnf install -y curl git gnupg libpq libxml2 libxslt shadow-utils tar xz \
     && microdnf clean all
 
 RUN python3.14 -m pip install --no-cache-dir --upgrade "pip==26.2.1"

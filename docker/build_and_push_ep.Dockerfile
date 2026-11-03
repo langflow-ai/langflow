@@ -31,12 +31,15 @@ ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
 
 # Set RUSTFLAGS for reqwest unstable features needed by apify-client v2.0.0
-ENV RUSTFLAGS='--cfg reqwest_unstable'
+# Build lxml against UBI's patched XML libraries instead of its bundled copies.
+ENV RUSTFLAGS='--cfg reqwest_unstable' \
+    UV_NO_BINARY_PACKAGE=lxml
 
 RUN microdnf install -y tar xz \
     # deps for building python deps
     gcc gcc-c++ make python3.14-devel \
     git \
+    libxml2-devel libxslt-devel \
     # npm
     npm \
     # gcc
@@ -114,7 +117,7 @@ RUN python3.14 /tmp/install_release_wheels.py /tmp/release-artifacts \
 FROM ${PYTHON_IMAGE} AS runtime
 USER root
 RUN microdnf update -y \
-    && microdnf install -y curl git libpq gnupg xz tar shadow-utils \
+    && microdnf install -y curl git libpq libxml2 libxslt gnupg xz tar shadow-utils \
     && microdnf clean all
 RUN python3.14 -m pip install --no-cache-dir --upgrade "pip==26.2.1"
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
