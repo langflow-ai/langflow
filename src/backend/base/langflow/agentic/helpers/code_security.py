@@ -2071,6 +2071,13 @@ class _SecurityChecker(ast.NodeVisitor):
             self._restore_alias_state(enclosing_state)
         self._bind_name(node.name, frozenset())
 
+    def visit_MatchClass(self, node: ast.MatchClass):
+        """Apply attribute restrictions to class pattern keyword names."""
+        for attr in node.kwd_attrs:
+            if _is_blocked_attribute(attr):
+                self.violations.append(f"Access to '{attr}' is forbidden in components (sandbox escape)")
+        return self.generic_visit(node)
+
     def visit_Attribute(self, node: ast.Attribute):
         """Check attribute access: dunder escapes, os.environ, urllib.request, ..."""
         if isinstance(node.ctx, ast.Store) and node.attr == "allow_pickle":

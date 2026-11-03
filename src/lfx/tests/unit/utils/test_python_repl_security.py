@@ -136,6 +136,26 @@ class TestValidateCodeSafety:
             validate_code_safety("print('unterminated")
 
 
+class TestMatchClassAttributes:
+    @pytest.mark.parametrize("attribute", ["__class__", "__name__", "gi_frame", "f_globals", "format", "attrgetter"])
+    def test_rejects_blocked_keyword_attributes(self, attribute):
+        code = f"match value:\n    case Record({attribute}=_):\n        pass"
+        with pytest.raises(ValueError, match=f"Access to attribute '{attribute}' is not allowed"):
+            validate_code_safety(code)
+
+    @pytest.mark.parametrize(
+        "pattern",
+        ["Record(name=name)", "Record(name, count)", "Record(item=Record(name=name))", "[Record(name=name)]"],
+    )
+    def test_preserves_benign_class_patterns(self, pattern):
+        validate_code_safety(f"match value:\n    case {pattern}:\n        pass")
+
+    @pytest.mark.parametrize("pattern", ["Record(item=Record(__class__=_))", "Record.__class__()"])
+    def test_checks_nested_pattern_nodes(self, pattern):
+        with pytest.raises(ValueError, match="Access to attribute '__class__' is not allowed"):
+            validate_code_safety(f"match value:\n    case {pattern}:\n        pass")
+
+
 class TestFormatterSinkBypassesAreBlocked:
     """Env-canary regression for the sibling-formatter sandbox bypass.
 
