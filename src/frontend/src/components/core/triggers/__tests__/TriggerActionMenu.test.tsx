@@ -146,6 +146,42 @@ describe("TriggerStatusSummary", () => {
     expect(container.querySelector("img")).toBeNull();
   });
 
+  it("shows a coded server error in the reader's language, not as the server wrote it", () => {
+    render(
+      <TriggerStatusSummary
+        trigger={makeTrigger({
+          state: "pending",
+          reason: "config_invalid",
+          last_error:
+            "Invalid cron expression: a valid five-field cron expression is required.",
+          last_error_code: "invalid_cron",
+        })}
+      />,
+    );
+
+    expect(screen.getByTestId("trigger-last-error")).toHaveTextContent(
+      "Invalid cron expression: enter five fields (minute, hour, day of month, month, day of week).",
+    );
+  });
+
+  it("does not repeat a removed node under the reason that already says so", () => {
+    render(
+      <TriggerStatusSummary
+        trigger={makeTrigger({
+          state: "paused",
+          reason: "node_removed",
+          last_error: "trigger node removed from the flow",
+          last_error_code: "node_removed",
+        })}
+      />,
+    );
+
+    expect(
+      screen.getByText("The trigger node was removed from the flow."),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("trigger-last-error")).toBeNull();
+  });
+
   it("explains a running trigger only when asked", () => {
     const { rerender } = render(
       <TriggerStatusSummary trigger={makeTrigger()} />,

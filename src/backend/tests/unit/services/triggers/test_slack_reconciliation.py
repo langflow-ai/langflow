@@ -17,6 +17,7 @@ from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import TriggerState
 from langflow.services.deps import get_trigger_service, session_scope
 from langflow.services.triggers.constants import SLACK_PROVIDER_STATE_APP_ID
+from langflow.services.triggers.error_codes import refusal_detail
 from langflow.services.triggers.reconciliation import find_trigger_nodes, reconcile_flow_triggers
 from sqlmodel import select
 
@@ -371,16 +372,16 @@ async def test_enabling_arms_a_ready_slack_trigger(trigger_owner, owned_flow) ->
 
 
 @pytest.mark.parametrize(
-    ("setup", "fragment"),
+    ("setup", "fragment", "code"),
     [
-        ("no_consent", "Allow background runs"),
-        ("revoked", "revoked or expired"),
-        ("missing_scope", "missing channels:history"),
-        ("unarmable", "Choose a Slack connection"),
+        ("no_consent", "Allow background runs", "background_runs_not_allowed"),
+        ("revoked", "revoked or expired", "connection_unusable"),
+        ("missing_scope", "missing channels:history", None),
+        ("unarmable", "Choose a Slack connection", None),
     ],
 )
 async def test_enabling_refuses_a_trigger_that_could_not_run(
-    trigger_owner, owned_flow, setup: str, fragment: str
+    trigger_owner, owned_flow, setup: str, fragment: str, code: str | None
 ) -> None:
     connection_id = await fx.make_oauth_connection(trigger_owner)
     node = _node(connection=f"slack/{await _connection_name(connection_id)}")
@@ -397,8 +398,10 @@ async def test_enabling_refuses_a_trigger_that_could_not_run(
             connection.granted_scopes = ["chat:write"]
         session.add(connection)
 
-    with pytest.raises(ValueError, match=fragment):
+    with pytest.raises(ValueError, match=fragment) as refused:
         await _enable(row.id)
+    # The UI shows a coded refusal in the reader's language.
+    assert refusal_detail(refused.value)["code"] == code
     async with session_scope() as session:
         assert (await session.get(Trigger, row.id)).state == TriggerState.PENDING.value
 
