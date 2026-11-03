@@ -16,9 +16,11 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import orjson
+from starlette.responses import Response
 
 from langflow.services.flow_multiplayer import bench, config, oplog
-from langflow.services.flow_multiplayer.cache import CACHE, EntryGoneError, entry_at_head
+from langflow.services.flow_multiplayer.cache import CACHE, EntryGoneError, SerializedGraph, entry_at_head
+from langflow.services.flow_multiplayer.serialization_response import SerializedGraphResponse, hold_for_response
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -59,6 +61,21 @@ async def revisions_body(session: AsyncSession, flow_id: UUID, after: int, fallb
 class CurrentGraph:
     revision: int
     text: str
+    lease: SerializedGraph | None = None
+
+    def close(self) -> None:
+        """Release a service-level lease not managed by the outer HTTP scope."""
+        if self.lease is not None:
+            self.lease.close()
+            self.lease = None
+
+    def response(self, body: bytes) -> Response:
+        """Transfer a router-only lease to the response which sends these bytes."""
+        if self.lease is None:
+            return Response(body, media_type="application/json")
+        response = SerializedGraphResponse(body, lease=self.lease, media_type="application/json")
+        self.lease = None
+        return response
 
 
 async def join_graph(session: AsyncSession, flow_id: UUID) -> CurrentGraph | None:
@@ -88,10 +105,15 @@ async def _cached_at_head(session: AsyncSession, flow_id: UUID) -> CurrentGraph 
         if entry is None:
             return None
         try:
-            revision, text = await entry.serialized()
+            serialized = await entry.serialized()
         except EntryGoneError:
             continue
-        return CurrentGraph(revision, text)
+        try:
+            managed = hold_for_response(serialized)
+            return CurrentGraph(serialized.revision, serialized.text, None if managed else serialized)
+        except BaseException:
+            serialized.close()
+            raise
     msg = f"could not read flow {flow_id}"
     raise RuntimeError(msg)
 

@@ -16,8 +16,8 @@ While a batch is staged, ``to_json()`` returns the committed graph, so a
 reader serializes the entry's revision while a writer waits for its commit,
 and never sees a revision that is not committed. Mode ``cache`` writes the
 staged graph to ``Flow.data`` with ``to_json(staged=True)`` before its commit.
-Serialization for readers is coalesced: one ``to_json`` per revision, shared
-by concurrent readers.
+Serialization is coalesced while consumers are in flight. Text is released
+after the last response or checkpoint consumer finishes; idle entries keep only the graph.
 
 Which engine calls run in a worker thread (both engines alike): building a
 graph from ``Flow.data``, ``to_json``, a catch-up replay of at least
@@ -33,7 +33,9 @@ import asyncio
 import hashlib
 import time
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Any
+from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Self
 
 import anyio
 import orjson
@@ -41,7 +43,7 @@ import orjson
 from langflow.services.flow_multiplayer import bench, config, oplog
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import AsyncIterator, Callable
     from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -102,8 +104,65 @@ async def uncancellable(awaitable: Any) -> Any:
         raise
 
 
+@dataclass
+class _Serialization:
+    revision: int
+    task: asyncio.Task[tuple[int, str, float] | None] | None = None
+    users: int = 0
+
+
+class SerializedGraph:
+    """One consumer of shared committed text. Closing the last lease releases it."""
+
+    __slots__ = ("_entry", "_record", "owns_serialization")
+
+    def __init__(self, entry: FlowEntry, record: _Serialization, *, owner: bool) -> None:
+        self._entry: FlowEntry | None = entry
+        self._record: _Serialization | None = record
+        self.owns_serialization = owner
+        record.users += 1
+
+    @property
+    def result(self) -> tuple[int, str, float]:
+        record = self._record
+        if record is None or record.task is None:
+            msg = "The graph serialization lease is closed."
+            raise RuntimeError(msg)
+        value = record.task.result()
+        if value is None:
+            msg = "The graph revision changed before its snapshot was taken."
+            raise RuntimeError(msg)
+        return value
+
+    @property
+    def revision(self) -> int:
+        return self.result[0]
+
+    @property
+    def text(self) -> str:
+        return self.result[1]
+
+    @property
+    def cpu(self) -> float:
+        return self.result[2]
+
+    def close(self) -> None:
+        """Release this consumer exactly once; it never cancels worker-thread work."""
+        entry, record = self._entry, self._record
+        self._entry = self._record = None
+        if entry is not None and record is not None:
+            record.users -= 1
+            entry.release_serialization(record)
+
+    async def __aenter__(self) -> Self:
+        return self
+
+    async def __aexit__(self, *_exc: object) -> None:
+        self.close()
+
+
 class FlowEntry:
-    __slots__ = ("flow_id", "json", "json_cpu", "json_task", "new", "revision", "state", "use", "write")
+    __slots__ = ("_serialization", "flow_id", "new", "revision", "state", "use", "write")
 
     def __init__(self, flow_id: UUID, state: Any, revision: int) -> None:
         self.flow_id = flow_id
@@ -111,83 +170,108 @@ class FlowEntry:
         self.revision = revision
         self.write = asyncio.Lock()
         self.use = asyncio.Lock()
-        self.json: tuple[int, str] | None = None
-        self.json_cpu = 0.0  # engine CPU (ms) of the serialization in ``json``
-        self.json_task: tuple[int, asyncio.Task] | None = None
-        # Built and not yet given a batch: the engine checks the whole graph before the first one.
+        # Only current-revision in-flight consumers keep a record here. Older
+        # revisions belong to their outstanding leases, never to an idle cache.
+        self._serialization: _Serialization | None = None
         self.new = True
 
-    async def replay(self, operations: list[Any], revision: int) -> None:
-        """Replay ``operations`` and move the entry to ``revision`` in one step.
+    def invalidate_serialized(self) -> None:
+        """Detach the old revision without cancelling consumers or worker threads.
 
-        The revision changes in the same call as the graph (in the worker thread for a large
-        replay), so a cancelled caller can never leave a replayed graph labelled with its old revision.
+        Call on the event-loop thread after moving the revision under ``use``.
+        Existing readers own their old leases; new readers must use the new head.
         """
+        record = self._serialization
+        if record is not None and record.revision != self.revision:
+            self._serialization = None
+
+    def release_serialization(self, record: _Serialization) -> None:
+        task = record.task
+        if record.users == 0 and task is not None and task.done():
+            if self._serialization is record:
+                self._serialization = None
+            record.task = None
+
+    def _serialization_done(self, record: _Serialization, task: asyncio.Task) -> None:
+        # A sole waiter may have been cancelled while the shielded work ran.
+        # Retrieve its exception without consuming it for any remaining waiter.
+        if not task.cancelled():
+            task.exception()
+        self.release_serialization(record)
+
+    async def replay(self, operations: list[Any], revision: int) -> None:
+        """Replay and move revision together, including when the caller is cancelled."""
         payload = orjson.dumps(operations)
         large = is_large(payload, len(operations))
 
         def replay_and_move() -> None:
             self.state.replay(payload)
             self.revision = revision
-            self.json = None
 
         async with self.use:
-            await call(replay_and_move, large=large, name="replay")
+            try:
+                await call(replay_and_move, large=large, name="replay")
+            finally:
+                # Task ownership changes only on the event loop, not the worker.
+                self.invalidate_serialized()
 
-    async def serialized(self) -> tuple[int, str]:
-        """The JSON text of the entry's committed revision, one serialization per revision."""
+    async def serialized(self) -> SerializedGraph:
+        """Lease shared text until the consumer finishes, including response sending.
+
+        Concurrent consumers of one committed revision share a serialization even
+        after its worker finishes. No text remains cached after the last lease.
+        """
         while True:
             revision = self.revision
-            if self.json is not None and self.json[0] == revision:
-                return self.json
-            if self.json_task is None or self.json_task[0] != revision or self.json_task[1].done():
+            record = self._serialization
+            owner = (
+                record is None
+                or record.revision != revision
+                or (record.users == 0 and record.task is not None and record.task.done())
+            )
+            if owner:
+                record = _Serialization(revision)
                 task = asyncio.ensure_future(self._serialize(revision))
-                self.json_task = (revision, task)
+                record.task = task
+                self._serialization = record
+                task.add_done_callback(lambda done, record=record: self._serialization_done(record, done))
             else:
-                task = self.json_task[1]
-            result = await asyncio.shield(task)
+                task = record.task
+                if task is None:
+                    # The last lease released this result before this call.
+                    self._serialization = None
+                    continue
+            lease = SerializedGraph(self, record, owner=owner)
+            try:
+                result = await asyncio.shield(task)
+            except BaseException:
+                lease.close()
+                raise
             if result is not None:
-                return result
+                return lease
+            lease.close()
 
-    async def text_and_hash(self) -> tuple[int, str, float, bool, str, float]:
-        """One committed revision's JSON text and its checkpoint hash (SHA-256 of the text), for a checkpoint.
+    @asynccontextmanager
+    async def text_and_hash(self) -> AsyncIterator[tuple[int, str, float, bool, str, float]]:
+        """Lease one revision's text through checkpoint hashing and storage.
 
-        Returns ``(revision, text, text_cpu, serialized_here, text_sha256, hash_cpu)`` (CPU in ms).
-        Only the snapshot (``GraphState.snapshot``, a cheap call) is taken under ``use``, and only
-        when the revision's shared serialization does not exist yet; the text is made from the
-        snapshot and hashed in worker threads after ``use`` is released, so writers on the flow do
-        not wait for them. The same code for both engines: the hash is not an engine call.
+        The caller keeps this context open through the database write. Only the
+        checkpoint which starts serialization owns its serialization CPU cost.
         """
-        async with self.use:
-            revision = self.revision
-            shared = self.json if self.json is not None and self.json[0] == revision else None
-            snapshot = None if shared is not None else bench.engine_call("snapshot", self.state.snapshot)
-        if shared is not None:
-            text, text_cpu, here = shared[1], self.json_cpu, False
-        else:
-            with bench.timed("ser"):
-                text, text_cpu = await call(bench.engine_call_cpu, snapshot.to_json, large=True, name="to_json")
-            here = True
-            if self.revision == revision and (self.json is None or self.json[0] != revision):
-                self.json, self.json_cpu = (revision, text), text_cpu
-        text_sha256, hash_cpu = await call(bench.engine_call_cpu, text_hash, text, large=True, name="hash")
-        return revision, text, text_cpu, here, text_sha256, hash_cpu
+        async with await self.serialized() as serialized:
+            text = serialized.text
+            digest, hash_cpu = await call(bench.engine_call_cpu, text_hash, text, large=True, name="hash")
+            yield (serialized.revision, text, serialized.cpu, serialized.owns_serialization, digest, hash_cpu)
 
-    async def _serialize(self, revision: int) -> tuple[int, str] | None:
-        """Serialize ``revision`` for readers: a snapshot under ``use``, the text after it is released."""
+    async def _serialize(self, revision: int) -> tuple[int, str, float] | None:
+        """Take a committed snapshot under ``use`` and serialize after releasing it."""
         async with self.use:
             if self.revision != revision:
                 return None
-            if self.json is not None and self.json[0] == revision:
-                # A checkpoint serialized this revision while this task waited.
-                return self.json
             snapshot = bench.engine_call("snapshot", self.state.snapshot)
         with bench.timed("ser"):
             text, cpu = await call(bench.engine_call_cpu, snapshot.to_json, large=True, name="to_json")
-        if self.revision == revision:
-            self.json = (revision, text)
-            self.json_cpu = cpu
-        return revision, text
+        return revision, text, cpu
 
 
 class FlowCache:

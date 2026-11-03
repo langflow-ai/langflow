@@ -1337,7 +1337,7 @@ def create_app():
     limiter = get_rate_limiter()
     app.state.limiter = limiter
 
-    # Multiplayer flow-ops measurement (LANGFLOW_OPS_BENCH=1): outermost, so it times the whole server side.
+    # Multiplayer flow-ops measurement (LANGFLOW_OPS_BENCH=1): wraps response middleware and sends.
     from langflow.services.flow_multiplayer import config as flow_multiplayer_config
 
     if flow_multiplayer_config.bench_enabled():
@@ -1345,6 +1345,10 @@ def create_app():
 
         app.add_middleware(BenchMiddleware)
 
+    # This pure-ASGI scope must wrap every response transformation and send.
+    from langflow.services.flow_multiplayer.serialization_response import SerializationResponseMiddleware
+
+    app.add_middleware(SerializationResponseMiddleware)
     return app
 
 

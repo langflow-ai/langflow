@@ -169,11 +169,11 @@ async def graph_at_head(session: AsyncSession, flow_id: UUID, head: int) -> byte
         if entry is None:
             break
         try:
-            revision, text = await entry.serialized()
+            async with await entry.serialized() as serialized:
+                if serialized.revision == head:
+                    return serialized.text.encode()
         except EntryGoneError:
             continue
-        if revision == head:
-            return text.encode()
     msg = f"Could not read flow {flow_id} at revision {head}"
     raise FlowHistoryError(msg)
 

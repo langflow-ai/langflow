@@ -184,20 +184,26 @@ async def get_flow_revisions(
 async def join_flow(flow_id: UUID, current_user: CurrentActiveUser) -> Response:
     """The flow's graph at a revision; the client then reads the revisions after it."""
     bench.mark_handler()
-    async with session_scope() as session:
-        if not multiplayer_available(session):
-            raise _unavailable()
-        with bench.timed("auth"):
-            flow = await load_flow_header(session, flow_id, current_user, FlowAction.READ)
-        graph = await reads.join_graph(session, flow_id)
-        closing = time.perf_counter()
-    bench.add("close", (time.perf_counter() - closing) * 1000)
-    if graph is None:
-        raise HTTPException(status_code=404, detail="Flow not found")
-    with bench.timed("respond"):
-        if flow.user_id != current_user.id:
-            graph = reads.CurrentGraph(graph.revision, _strip_secrets(graph.text))
-        return Response(reads.join_body(graph), media_type=_JSON)
+    graph = None
+    try:
+        async with session_scope() as session:
+            if not multiplayer_available(session):
+                raise _unavailable()
+            with bench.timed("auth"):
+                flow = await load_flow_header(session, flow_id, current_user, FlowAction.READ)
+            graph = await reads.join_graph(session, flow_id)
+            closing = time.perf_counter()
+        bench.add("close", (time.perf_counter() - closing) * 1000)
+        if graph is None:
+            raise HTTPException(status_code=404, detail="Flow not found")
+        with bench.timed("respond"):
+            if flow.user_id != current_user.id:
+                graph.text = _strip_secrets(graph.text)
+            return graph.response(reads.join_body(graph))
+    except BaseException:
+        if graph is not None:
+            graph.close()
+        raise
 
 
 def _strip_secrets(text: str) -> str:
@@ -217,19 +223,23 @@ async def v1_current_flow_response(session: Any, flow_id: UUID, current_user: An
     graph = await reads.current_graph(session, flow_id)
     if graph is None:
         raise HTTPException(status_code=404, detail="Flow not found")
-    with bench.timed("respond"):
-        fields = {name: getattr(flow, name, None) for name in FlowRead.model_fields if name != "data"}
-        fields["data"] = None
-        fields["latest_revision"] = max(graph.revision, flow.latest_revision)
-        fields["current_revision"] = graph.revision
-        if config.write_mode() == "wal":
-            fields["version_token"] = wal_version_token(flow.version_token, flow.id, graph.revision)
-        header = FlowRead.model_validate(fields).model_dump_json().encode()
-        text = graph.text if flow.user_id == current_user.id else _strip_secrets(graph.text)
-        marker = b'"data":null'
-        position = header.find(marker)
-        body = header[:position] + b'"data":' + text.encode() + header[position + len(marker) :]
-        return Response(body, media_type=_JSON)
+    try:
+        with bench.timed("respond"):
+            fields = {name: getattr(flow, name, None) for name in FlowRead.model_fields if name != "data"}
+            fields["data"] = None
+            fields["latest_revision"] = max(graph.revision, flow.latest_revision)
+            fields["current_revision"] = graph.revision
+            if config.write_mode() == "wal":
+                fields["version_token"] = wal_version_token(flow.version_token, flow.id, graph.revision)
+            header = FlowRead.model_validate(fields).model_dump_json().encode()
+            text = graph.text if flow.user_id == current_user.id else _strip_secrets(graph.text)
+            marker = b'"data":null'
+            position = header.find(marker)
+            body = header[:position] + b'"data":' + text.encode() + header[position + len(marker) :]
+            return graph.response(body)
+    except BaseException:
+        graph.close()
+        raise
 
 
 def _bench_only() -> None:

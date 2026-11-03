@@ -32,6 +32,7 @@ from __future__ import annotations
 import asyncio
 import time
 from collections import OrderedDict
+from contextlib import AsyncExitStack
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
@@ -154,73 +155,78 @@ async def checkpoint_now(flow_id: UUID, end: int) -> int | None:
 
 async def _write_checkpoint(flow_id: UUID, end: int, started: float, t0: float) -> int | None:
     """Serialize, hash and store the newest graph this process can serialize (the caller holds the claim)."""
-    t_claim = time.perf_counter()
-    mode = config.write_mode()
-    ser_cpu, ser_here = 0.0, False
-    raw: bytes | None = None
-    entry = None
-    entry_hash, entry_hash_cpu = "", 0.0
-    if config.uses_cache():
-        if CACHE.get(flow_id) is None:
-            _skip(flow_id, end, "not_cached", t0)
-            return None
-        try:
-            # Caught up to the log first: a legacy save appends rows without touching the cache.
-            async with session_scope() as session:
-                entry = await entry_at_head(session, flow_id, await oplog.read_head(session, flow_id))
-            if entry is None:
+    async with AsyncExitStack() as consumers:
+        t_claim = time.perf_counter()
+        mode = config.write_mode()
+        ser_cpu, ser_here = 0.0, False
+        raw: bytes | None = None
+        entry = None
+        entry_hash, entry_hash_cpu = "", 0.0
+        if config.uses_cache():
+            if CACHE.get(flow_id) is None:
                 _skip(flow_id, end, "not_cached", t0)
                 return None
-            # The engine CPU of the text is of this revision's serialization, whoever ran it (shared).
-            revision, text, ser_cpu, ser_here, entry_hash, entry_hash_cpu = await entry.text_and_hash()
-        except EntryGoneError:
-            _skip(flow_id, end, "not_cached", t0)
+            try:
+                # Caught up to the log first: a legacy save appends rows without touching the cache.
+                async with session_scope() as session:
+                    entry = await entry_at_head(session, flow_id, await oplog.read_head(session, flow_id))
+                if entry is None:
+                    _skip(flow_id, end, "not_cached", t0)
+                    return None
+                # The engine CPU of the text is of this revision's serialization, whoever ran it (shared).
+                revision, text, ser_cpu, ser_here, entry_hash, entry_hash_cpu = await consumers.enter_async_context(
+                    entry.text_and_hash()
+                )
+            except EntryGoneError:
+                _skip(flow_id, end, "not_cached", t0)
+                return None
+        else:
+            async with session_scope() as session:
+                data = await oplog.read_flow_data(session, flow_id, as_bytes=True)
+            if data is None or data.data is None:
+                _skip(flow_id, end, "gone", t0)
+                return None
+            revision, raw = data.current_revision, data.data
+            text = raw.decode()
+        t_ser = time.perf_counter()
+        if revision <= _last.get(flow_id, -1):
+            _skip(flow_id, end, "not_newer", t0, revision=revision)
             return None
-    else:
+        if entry is not None:
+            hash_from, graph_hash, hash_cpu = "text", entry_hash, entry_hash_cpu
+        else:
+            # ``raw`` is the text the row stores (``text`` is its decoding).
+            hash_from = "stored"
+            graph_hash, hash_cpu = await call(bench.engine_call_cpu, text_hash, raw, large=True, name="hash")
+        t_hash = time.perf_counter()
         async with session_scope() as session:
-            data = await oplog.read_flow_data(session, flow_id, as_bytes=True)
-        if data is None or data.data is None:
-            _skip(flow_id, end, "gone", t0)
-            return None
-        revision, raw = data.current_revision, data.data
-        text = raw.decode()
-    t_ser = time.perf_counter()
-    if revision <= _last.get(flow_id, -1):
-        _skip(flow_id, end, "not_newer", t0, revision=revision)
-        return None
-    if entry is not None:
-        hash_from, graph_hash, hash_cpu = "text", entry_hash, entry_hash_cpu
-    else:
-        # ``raw`` is the text the row stores (``text`` is its decoding).
-        hash_from = "stored"
-        graph_hash, hash_cpu = await call(bench.engine_call_cpu, text_hash, raw, large=True, name="hash")
-    t_hash = time.perf_counter()
-    async with session_scope() as session:
-        moved = await oplog.checkpoint_flow(session, flow_id, text, revision=revision) if mode == "wal" else False
-        inserted = await oplog.insert_checkpoint_row(session, flow_id, text, revision=revision, graph_hash=graph_hash)
-        await session.commit()
-    t_db = time.perf_counter()
-    note_checkpoint(flow_id, revision)
-    bench.event(
-        "checkpoint",
-        flow=str(flow_id),
-        revision=revision,
-        start=started,
-        end=time.time(),
-        dur=(t_db - t0) * 1000,
-        claim=(t_claim - t0) * 1000,
-        ser=(t_ser - t_claim) * 1000,
-        hash=(t_hash - t_ser) * 1000,
-        ser_cpu=ser_cpu,
-        ser_by_checkpoint=ser_here,
-        hash_cpu=hash_cpu,
-        hash_from=hash_from,
-        db=(t_db - t_hash) * 1000,
-        flow_moved=moved,
-        row_inserted=inserted,
-        bytes=len(text),
-    )
-    return revision
+            moved = await oplog.checkpoint_flow(session, flow_id, text, revision=revision) if mode == "wal" else False
+            inserted = await oplog.insert_checkpoint_row(
+                session, flow_id, text, revision=revision, graph_hash=graph_hash
+            )
+            await session.commit()
+        t_db = time.perf_counter()
+        note_checkpoint(flow_id, revision)
+        bench.event(
+            "checkpoint",
+            flow=str(flow_id),
+            revision=revision,
+            start=started,
+            end=time.time(),
+            dur=(t_db - t0) * 1000,
+            claim=(t_claim - t0) * 1000,
+            ser=(t_ser - t_claim) * 1000,
+            hash=(t_hash - t_ser) * 1000,
+            ser_cpu=ser_cpu,
+            ser_by_checkpoint=ser_here,
+            hash_cpu=hash_cpu,
+            hash_from=hash_from,
+            db=(t_db - t_hash) * 1000,
+            flow_moved=moved,
+            row_inserted=inserted,
+            bytes=len(text),
+        )
+        return revision
 
 
 async def _compact_if_due(flow_id: UUID) -> None:

@@ -438,7 +438,7 @@ async def _write_cached(
         try:
             # Committed: keep the batch and move the revision even when this request is cancelled
             # meanwhile, so the entry never holds a committed batch staged under its old revision.
-            await uncancellable(_keep(entry, end, text))
+            await uncancellable(_keep(entry, end))
         except BaseException:
             CACHE.evict(flow_id, entry)
             raise
@@ -448,7 +448,7 @@ async def _write_cached(
     return _answer("applied", end, head + 1, end), end
 
 
-async def _keep(entry: FlowEntry, end: int | None = None, text: str | None = None) -> None:
+async def _keep(entry: FlowEntry, end: int | None = None) -> None:
     """Keep the staged batch and move the entry to ``end`` in one step, under ``entry.use``.
 
     A keep that fails drops the batch in the same step, so the graph stays at the entry's revision.
@@ -463,8 +463,7 @@ async def _keep(entry: FlowEntry, end: int | None = None, text: str | None = Non
                 raise
             if end is not None:
                 entry.revision = end
-                # Mode cache serialized this revision for Flow.data: readers share it.
-                entry.json = (end, text) if text is not None else None
+                entry.invalidate_serialized()
 
 
 async def _discard(flow_id: UUID, entry: FlowEntry) -> None:
