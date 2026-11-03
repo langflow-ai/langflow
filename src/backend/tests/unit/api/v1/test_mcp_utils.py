@@ -378,6 +378,7 @@ async def test_handle_read_resource_project_scope_binds_flow_id_as_uuid(monkeypa
 @pytest.mark.asyncio
 @pytest.mark.parametrize("project_scoped", [True, False])
 async def test_handle_list_resources_respects_project_flow_visibility(monkeypatch, async_session, project_scoped):
+    """Project listings require MCP exposure while global listings retain all owner-scoped flows."""
     user = User(username="mcp-resource-owner", password=str(uuid4()))
     other_user = User(username="mcp-resource-other-owner", password=str(uuid4()))
     project = Folder(name="Resource visibility project", user_id=user.id)
@@ -423,6 +424,7 @@ async def test_handle_list_resources_respects_project_flow_visibility(monkeypatc
 async def test_handle_read_resource_respects_project_flow_visibility(
     monkeypatch, async_session, project_scoped, mcp_enabled
 ):
+    """Project reads require MCP exposure while global reads retain access to the owner's flows."""
     import base64
 
     user = User(username="mcp-resource-reader", password=str(uuid4()))
