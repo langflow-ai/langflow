@@ -1,3 +1,5 @@
+import io
+import logging
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
@@ -12,6 +14,8 @@ from langflow.schema import OpenAIResponsesRequest
 from langflow.services.telemetry import run_event_store
 from langflow.services.telemetry import service as telemetry_module
 from langflow.services.telemetry.service import TelemetryService
+from structlog import PrintLogger, make_filtering_bound_logger, wrap_logger
+from structlog.dev import ConsoleRenderer
 
 
 @pytest.fixture(params=["enabled", "opted_out", "keyless"])
@@ -116,8 +120,14 @@ async def test_telemetry_failure_preserves_http_result(
     else:
         failing_step = AsyncMock(side_effect=recording_error)
         monkeypatch.setattr(telemetry_service.telemetry_queue, "put", failing_step)
-    warning = AsyncMock()
-    monkeypatch.setattr(endpoints.logger, "awarning", warning)
+    # Keep structlog's real argument formatting; mocking awarning would hide a bad template.
+    sink = io.StringIO()
+    warning_logger = wrap_logger(
+        PrintLogger(file=sink),
+        processors=[ConsoleRenderer(colors=False)],
+        wrapper_class=make_filtering_bound_logger(logging.WARNING),
+    )
+    monkeypatch.setattr(endpoints, "logger", warning_logger)
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.post(f"/api/v1/run/{flow.id}", json={})
@@ -130,8 +140,11 @@ async def test_telemetry_failure_preserves_http_result(
     assert str(recording_error) not in response.text
     run.assert_awaited_once()
     failing_step.assert_called_once()
-    warning.assert_awaited_once()
-    assert str(recording_error) not in str(warning.call_args)
+    logged = sink.getvalue()
+    assert logged.count("Failed to record run telemetry") == 1
+    assert run.await_args.kwargs["run_id"] in logged
+    assert "RuntimeError" in logged
+    assert str(recording_error) not in logged
     assert telemetry_service.telemetry_queue.empty()
     events = run_event_store.pop_all()
     if failure_stage == "append":

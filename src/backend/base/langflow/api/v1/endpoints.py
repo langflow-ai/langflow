@@ -995,7 +995,7 @@ async def _record_run_telemetry(telemetry_service: TelemetryService, payload: Ru
         await telemetry_service.log_package_run(payload)
     except Exception as exc:  # noqa: BLE001
         # Exception messages can contain private payload data; log only the type and run ID.
-        await logger.awarning("Failed to record run telemetry for run_id={} ({})", payload.run_id, type(exc).__name__)
+        await logger.awarning("Failed to record run telemetry for run_id=%s (%s)", payload.run_id, type(exc).__name__)
 
 
 async def _run_flow_internal(
