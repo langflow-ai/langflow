@@ -90,8 +90,7 @@ pub type ApiResult<T = AnyValue> = Result<T, ApiError>;
 ///
 /// Every edge handle holds a `œ`. Python keeps a string with one at two bytes
 /// per character, and both Python and JavaScript decode an ASCII string
-/// fastest. For a 13.4 MB graph, Python builds the string in 1.4 ms instead
-/// of 17 ms, and `json.loads` reads it in 34 ms instead of 52 ms. Canonical
+/// fastest, so ASCII text is faster for Python to build and to read. Canonical
 /// text ([`canonical_json`]) is not escaped: RFC 8785 writes the characters.
 #[must_use]
 pub fn json_text(value: &AnyValue) -> String {
@@ -226,6 +225,15 @@ pub fn applied_json(applied: Applied, options: ApplyOptions) -> AnyMap {
         );
     }
     out
+}
+
+/// An operation as [`json_text`] writes it, in place of what `out` held: the
+/// text an operation log stores, without a value that the caller would write
+/// as JSON again. A caller that writes many reuses `out`, so the text does
+/// not grow a new buffer each time.
+pub fn write_operation_json(out: &mut Vec<u8>, operation: &Operation) {
+    out.clear();
+    json_out::write_value(out, &operation.clone().into_value(), Ascii::Escape);
 }
 
 /// Apply operations to a graph: `{"flow_data", ...}` and what [`applied_json`] lists.
