@@ -13,7 +13,6 @@ serde = "1"
 serde_json = { version = "1", features = ["preserve_order", "arbitrary_precision"] }
 sha2 = "0.10"
 indexmap = "2"
-imbl = "7.0.2"
 ahash = { version = "0.8", default-features = false, features = ["std"] }
 getrandom = "0.3"
 

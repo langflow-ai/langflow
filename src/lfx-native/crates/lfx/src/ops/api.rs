@@ -302,7 +302,7 @@ pub fn apply_to(
     operations_in: Input<'_>,
     options: ApplyOptions,
 ) -> ApiResult<AnyValue> {
-    let applied = state.apply(operations(operations_in)?, options)?;
+    let applied = apply_to_typed(state, operations_in, options)?;
     Ok(AnyValue::Object(applied_json(applied, options)))
 }
 
@@ -318,8 +318,34 @@ pub fn stage_to(
     operations_in: Input<'_>,
     options: ApplyOptions,
 ) -> ApiResult<AnyValue> {
-    let applied = state.stage(operations(operations_in)?, options)?;
+    let applied = stage_to_typed(state, operations_in, options)?;
     Ok(AnyValue::Object(applied_json(applied, options)))
+}
+
+/// Apply a batch and keep its operation types for a binding's output builder.
+///
+/// # Errors
+///
+/// The inputs and rules are the same as [`apply_to`].
+pub fn apply_to_typed(
+    state: &mut GraphState,
+    operations_in: Input<'_>,
+    options: ApplyOptions,
+) -> ApiResult<Applied> {
+    Ok(state.apply(operations(operations_in)?, options)?)
+}
+
+/// Stage a batch and keep its operation types for a binding's output builder.
+///
+/// # Errors
+///
+/// The inputs and rules are the same as [`stage_to`].
+pub fn stage_to_typed(
+    state: &mut GraphState,
+    operations_in: Input<'_>,
+    options: ApplyOptions,
+) -> ApiResult<Applied> {
+    Ok(state.stage(operations(operations_in)?, options)?)
 }
 
 // --- Replay --------------------------------------------------------------------------------

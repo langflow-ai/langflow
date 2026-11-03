@@ -25,7 +25,9 @@ use std::sync::mpsc::{SyncSender, TrySendError, sync_channel};
 use std::sync::{LazyLock, PoisonError, RwLock, RwLockWriteGuard, TryLockError};
 
 use lfx::ops::api::{self, ApiError, ApiResult, Input};
-use lfx::ops::{ApplyOptions, Entry, Error, ReplayOptions};
+use lfx::ops::{
+    Applied, ApplyOptions, Change, Entry, Error, FieldUpdate, Operation, ReplayOptions, Segment,
+};
 use lfx::value::{AnyMap, AnyValue, Number, StringPool};
 use pyo3::create_exception;
 use pyo3::exceptions::{PyException, PyRuntimeError, PyTypeError, PyValueError};
@@ -229,6 +231,117 @@ impl<'py, 'v> Builder<'py, 'v> {
         Ok(dict)
     }
 
+    /// Count the same JSON values that the generic value builder visits.
+    fn count_value(&mut self) {
+        self.work.0 = (self.work.0 + 1).min(HELD_VALUES);
+    }
+
+    fn string(&mut self, text: &str) -> Bound<'py, PyString> {
+        self.count_value();
+        PyString::new(self.py, text)
+    }
+
+    fn applied(
+        &mut self,
+        applied: &'v Applied,
+        options: ApplyOptions,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        self.count_value();
+        let dict = PyDict::new(self.py);
+        if options.forward {
+            dict.set_item(
+                self.key("forward_operations"),
+                self.operations(&applied.forward)?,
+            )?;
+        }
+        if options.backward {
+            self.count_value();
+            let batches = PyList::empty(self.py);
+            for batch in &applied.backward {
+                batches.append(self.operations(batch)?)?;
+            }
+            dict.set_item(self.key("backward_operations"), batches)?;
+        }
+        Ok(dict.into_any())
+    }
+
+    fn operations(&mut self, operations: &'v [Operation]) -> PyResult<Bound<'py, PyList>> {
+        self.count_value();
+        let list = PyList::empty(self.py);
+        for operation in operations {
+            list.append(self.operation(operation)?)?;
+        }
+        Ok(list)
+    }
+
+    fn operation(&mut self, operation: &'v Operation) -> PyResult<Bound<'py, PyDict>> {
+        self.count_value();
+        let dict = PyDict::new(self.py);
+        dict.set_item(self.key("type"), self.string(operation.kind().as_str()))?;
+        self.count_value();
+        let list = PyList::empty(self.py);
+        let key = match operation {
+            Operation::AddNodes(nodes) => {
+                for node in nodes {
+                    self.count_value();
+                    list.append(self.dict(node.as_map())?)?;
+                }
+                "nodes"
+            }
+            Operation::UpdateNodes(updates) => {
+                for update in updates {
+                    list.append(self.update(update)?)?;
+                }
+                "updates"
+            }
+            Operation::DeleteNodes(ids) | Operation::DeleteEdges(ids) => {
+                for id in ids {
+                    list.append(self.string(id))?;
+                }
+                "ids"
+            }
+            Operation::AddEdges(edges) => {
+                for edge in edges {
+                    self.count_value();
+                    list.append(self.dict(edge.as_map())?)?;
+                }
+                "edges"
+            }
+        };
+        dict.set_item(self.key(key), list)?;
+        Ok(dict)
+    }
+
+    fn update(&mut self, update: &'v FieldUpdate) -> PyResult<Bound<'py, PyDict>> {
+        self.count_value();
+        let dict = PyDict::new(self.py);
+        dict.set_item(self.key("id"), self.string(&update.id))?;
+        self.count_value();
+        let path = PyList::empty(self.py);
+        for segment in update.path.iter() {
+            match segment {
+                Segment::Key(key) => path.append(self.string(key))?,
+                Segment::Item(key) => {
+                    self.count_value();
+                    let item = PyDict::new(self.py);
+                    item.set_item(self.key("key"), self.string(key))?;
+                    path.append(item)?;
+                }
+            }
+        }
+        dict.set_item(self.key("path"), path)?;
+        match &update.change {
+            Change::Set(value) => {
+                dict.set_item(self.key("op"), self.string("set_field"))?;
+                dict.set_item(self.key("value"), self.value(value)?)?;
+            }
+            Change::Delete => {
+                dict.set_item(self.key("op"), self.string("delete_field"))?;
+            }
+        }
+        Ok(dict)
+    }
+
     /// The Python `str` for a key: made the first time, shared after.
     fn key(&mut self, key: &'v str) -> Bound<'py, PyString> {
         let py = self.py;
@@ -380,6 +493,38 @@ fn finish(py: Python<'_>, value: AnyValue) -> PyResult<Bound<'_, PyAny>> {
     drop(builder);
     if work.is_large() {
         py.detach(move || drop(value));
+    }
+    result
+}
+
+/// Build operation results after the state lock has been released.
+fn finish_applied(
+    py: Python<'_>,
+    applied: Applied,
+    options: ApplyOptions,
+) -> PyResult<Bound<'_, PyAny>> {
+    let mut builder = Builder::new(py);
+    let result = builder.applied(&applied, options);
+    #[cfg(debug_assertions)]
+    if let Ok(actual) = &result {
+        // Check the same operation objects, so unordered cascades cannot
+        // change the reference result between two independent engine calls.
+        let generic = AnyValue::Object(api::applied_json(applied.clone(), options));
+        let mut reference = Builder::new(py);
+        let expected = reference.value(&generic)?;
+        debug_assert_eq!(actual.repr()?.to_str()?, expected.repr()?.to_str()?);
+        debug_assert_eq!(builder.work.0, reference.work.0);
+    }
+    let work = builder.work;
+    drop(builder);
+    if result.is_err() {
+        // Preserve the generic builder's bounded scan when conversion stops early.
+        let value = AnyValue::Object(api::applied_json(applied, options));
+        if Work::of_value(&value).is_large() {
+            py.detach(move || drop(value));
+        }
+    } else if work.is_large() {
+        py.detach(move || drop(applied));
     }
     result
 }
@@ -568,10 +713,20 @@ impl GraphState {
             .write(
                 py,
                 |_| work,
-                |state| Ok(api::apply_to(&mut *unstaged(state)?, operations, options)),
+                |state| {
+                    Ok(api::apply_to_typed(
+                        &mut *unstaged(state)?,
+                        operations,
+                        options,
+                    ))
+                },
             )
             .map_err(refused)?;
-        finish(py, applied.map_err(|error| engine_error(py, &error))?)
+        finish_applied(
+            py,
+            applied.map_err(|error| engine_error(py, &error))?,
+            options,
+        )
     }
 
     /// Apply a batch with every rule, as `apply` does, and keep it staged
@@ -592,10 +747,20 @@ impl GraphState {
             .write(
                 py,
                 |_| work,
-                |state| Ok(api::stage_to(&mut *unstaged(state)?, operations, options)),
+                |state| {
+                    Ok(api::stage_to_typed(
+                        &mut *unstaged(state)?,
+                        operations,
+                        options,
+                    ))
+                },
             )
             .map_err(refused)?;
-        finish(py, staged.map_err(|error| engine_error(py, &error))?)
+        finish_applied(
+            py,
+            staged.map_err(|error| engine_error(py, &error))?,
+            options,
+        )
     }
 
     /// Commit the staged batch. Raises `RuntimeError` when no batch is staged.

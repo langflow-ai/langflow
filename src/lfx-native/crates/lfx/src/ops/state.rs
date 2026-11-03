@@ -31,7 +31,8 @@ use std::sync::{Arc, Mutex, PoisonError, TryLockError};
 
 use crate::json_out::{self, Ascii};
 use crate::value::{AnyMap, AnyString, AnyValue, FiniteAnyValue};
-use imbl::Vector;
+#[path = "snapshot_rows.rs"]
+mod snapshot_rows;
 use indexmap::{IndexMap, IndexSet};
 use serde::ser::{Serialize, SerializeMap, Serializer};
 
@@ -228,7 +229,7 @@ impl<V: Clone> Layered<V> {
 }
 
 /// A dense ordered mirror. None exists only transiently inside commit.
-type SnapshotRows = Vector<Option<AnyMap>>;
+type SnapshotRows = snapshot_rows::Rows<Option<AnyMap>>;
 fn mirror_layer<V>(
     mirror: &mut SnapshotRows,
     entries: &Layered<V>,
@@ -308,12 +309,12 @@ pub(crate) struct Graph {
 impl Graph {
     /// The ids of the edges at a node.
     pub fn edges_at(&self, node_id: &str) -> impl Iterator<Item = &str> {
-        self.edges_at
-            .0
-            .get(node_id)
-            .into_iter()
-            .flatten()
-            .map(AnyString::as_str)
+        self.edge_keys_at(node_id).map(AnyString::as_str)
+    }
+
+    /// The shared ids of the edges at a node, in the same order as `edges_at`.
+    pub(crate) fn edge_keys_at(&self, node_id: &str) -> impl Iterator<Item = &AnyString> {
+        self.edges_at.0.get(node_id).into_iter().flatten()
     }
 
     /// Whether the graph has an edge with `id`.
@@ -640,9 +641,9 @@ impl GraphState {
     }
 
     /// The committed graph as it is now, without a staged batch, to read
-    /// while the state goes on changing ([`GraphSnapshot`]). It shares every
-    /// node and edge with the state, so it costs a pointer for each: a write
-    /// after it copies only the objects on the way to the value it writes.
+    /// while the state goes on changing ([`GraphSnapshot`]). Capturing shares
+    /// the current mirror roots. A later write copies only its search path
+    /// and a bounded leaf while an earlier snapshot remains alive.
     #[must_use]
     pub fn snapshot(&self) -> GraphSnapshot {
         let mut cache = self
@@ -829,11 +830,11 @@ impl GraphState {
                 .get_index_of(&id)
                 .expect("a field write's node exists");
             // A unique mirror must release its ref before the in-place write.
-            let previous = self
+            let snapshot_slot = self
                 .snapshot_nodes
                 .get_mut(slot)
-                .expect("mirror slot exists")
-                .take();
+                .expect("mirror slot exists");
+            let previous = snapshot_slot.take();
             drop(previous);
             let node = graph
                 .nodes
@@ -852,10 +853,7 @@ impl GraphState {
                 &mut Vec::new(),
                 indexed.then_some(&mut lists),
             );
-            *self
-                .snapshot_nodes
-                .get_mut(slot)
-                .expect("mirror slot exists") = Some(node.as_map().clone());
+            *snapshot_slot = Some(node.as_map().clone());
         }
         graph.fields.finish();
         self.edge_index.fold();
