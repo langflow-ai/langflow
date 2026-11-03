@@ -65,6 +65,27 @@ def test_fixed_dependencies_resolve_on_every_supported_python_line(python: str, 
     assert Version(packages["aiohttp"]) >= Version("3.14.4")
     assert Version(packages["mako"]) >= Version("1.4.2")
 
+    for name, minimum in {
+        "black": "26.10.1",
+        "certifi": "2026.10.18",
+        "docling-core": "2.103.0",
+        "joserfc": "1.7.6",
+        "langgraph": "1.2.15",
+        "mem0ai": "2.0.18",
+        "msgpack": "1.2.3",
+        "nltk": "3.10.4",
+        "pyasn1": "0.6.5",
+        "pymongo": "4.18.3",
+        "setuptools": "84.1.0",
+    }.items():
+        assert Version(packages[name]) >= Version(minimum), name
+
+    # Upstream fixes require Python 3.11. Keep the 3.10 runtime installable;
+    # these three findings remain open for that runtime.
+    if python != "3.10":
+        for name, minimum in {"dnspython": "2.9.0", "locust": "2.47.0", "pyarrow": "26.0.0"}.items():
+            assert Version(packages[name]) >= Version(minimum), name
+
 
 def test_opentelemetry_lock_updates_the_whole_official_release_set() -> None:
     """Keep the stable and instrumentation packages on compatible patched releases."""
