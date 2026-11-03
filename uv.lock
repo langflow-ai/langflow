@@ -10569,7 +10569,7 @@ requires-dist = [{ name = "lfx", editable = "src/lfx" }]
 
 [[package]]
 name = "lfx-nextplaid"
-version = "0.2.0"
+version = "0.2.2"
 source = { editable = "src/bundles/nextplaid" }
 dependencies = [
     { name = "httpx" },
