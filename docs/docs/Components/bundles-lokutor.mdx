@@ -1,0 +1,52 @@
+---
+title: Lokutor
+slug: /bundles-lokutor
+---
+
+import Icon from "@site/src/components/icon";
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support third-party integrations with Langflow.
+
+The **Lokutor** bundle provides two components, **Lokutor Text to Speech** and **Lokutor Speech to Text**. They call the [Lokutor API](https://docs.lokutor.com), which runs Lokutor's own speech models for English, Spanish, Catalan, Galician, Basque, Portuguese, French, Italian, and German.
+
+The bundle has no extra Python dependencies, so `pip install "lfx-bundles[lokutor]"` only registers the extra. Create an API key in the [Lokutor app](https://app.lokutor.com) and enter it in each component's **Lokutor API Key** field. The key is sent only to the **Lokutor Base URL**, which defaults to `https://api.lokutor.com/v1`. Requests are made through Langflow's SSRF-protected HTTP client, and a server-provisioned key is not forwarded to a custom base URL unless the host is in `LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS`.
+
+API, authentication, quota, and network errors fail the component with the status and message returned by Lokutor. Requests are billed from your Lokutor balance at the [published rates](https://api.lokutor.com/v1/pricing).
+
+## Lokutor Text to Speech
+
+Synthesize text with `POST /v1/tts/synthesize`.
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| Lokutor API Key (`api_key`) | Required | Your Lokutor API key, stored as a secret. |
+| Text (`text`) | Required | Text to speak, up to 10,000 characters. Available in Tool Mode. |
+| Voice (`voice`) | `F1` | A voice slot, `F1` to `F5` or `M1` to `M5`, or the id of one of your cloned voices (`clone_...`). |
+| Language (`language`) | `en` | `en`, `es`, `ca`, `gl`, `eu`, `pt`, `fr`, `it`, or `de`. `auto` sends no language hint, and the voice then speaks with the English speaker. |
+| Temperature (`temperature`) | Empty | How varied the delivery is, from `0.1` to `1.0`. Empty uses the server default. |
+| Lokutor Base URL (`base_url`) | `https://api.lokutor.com/v1` | Advanced. Change it only to use a proxy. |
+| Timeout (`timeout`) | `120` | Advanced. Maximum request time in seconds. |
+
+The **Audio** output is a [`Data`](/data-types#json) object whose `text` is the spoken text. Its data contains `audio_base64` (the WAV file), `mime_type` (`audio/wav`), `format`, `size_bytes`, `sample_rate`, `duration_seconds`, `voice`, `language`, and `characters`. The audio is always WAV.
+
+## Lokutor Speech to Text
+
+Transcribe a recording with `POST /v1/speech-to-text`.
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| Lokutor API Key (`api_key`) | Required | Your Lokutor API key, stored as a secret. |
+| Audio File (`audio_file`) | Empty | A WAV file, PCM 8 or 16 bit, 8 to 48 kHz, up to 10 MB. Other formats aren't decoded yet. |
+| Audio Data (`audio_data`) | Empty | Audio from another component, such as **Lokutor Text to Speech**. Used when no file is uploaded. |
+| Language (`language`) | `auto` | The recording's language, or `auto` to detect it. |
+| Label Speakers (`diarize`) | `false` | Advanced. Label each word with its speaker. |
+| Number of Speakers (`num_speakers`) | Empty | Advanced. `1` to `32`; improves labelling when you know it. |
+| Lokutor Base URL (`base_url`) | `https://api.lokutor.com/v1` | Advanced. Change it only to use a proxy. |
+| Timeout (`timeout`) | `300` | Advanced. Maximum request time in seconds. |
+
+The **Transcript** output is a [`Message`](/data-types#message) with the transcribed text. The **Details** output is a `Data` object with `language_code`, `language_probability`, and `words`, where each word has `text`, `start`, `end`, and `speaker_id`. When both outputs are connected, one API request serves both.
+
+For example, connect **Lokutor Text to Speech** **Audio** to **Lokutor Speech to Text** **Audio Data** to round-trip a sentence.

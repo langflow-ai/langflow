@@ -64,6 +64,7 @@ keenable = []
 langwatch = []
 litellm = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
 lmstudio = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "langchain-nvidia-ai-endpoints~=1.0.0"]
+lokutor = []
 maritalk = ["langchain-community>=0.4.1,<1.0.0"]
 mem0 = ["mem0ai>=2.0.2,<3.0.0"]
 milvus = ["langchain-milvus~=0.3.2"]
@@ -138,6 +139,7 @@ all = [
     "lfx-bundles[langwatch]",
     "lfx-bundles[litellm]",
     "lfx-bundles[lmstudio]",
+    "lfx-bundles[lokutor]",
     "lfx-bundles[maritalk]",
     "lfx-bundles[mem0]",
     "lfx-bundles[milvus]",
@@ -210,6 +212,7 @@ all-no-torch = [
     "lfx-bundles[langwatch]",
     "lfx-bundles[litellm]",
     "lfx-bundles[lmstudio]",
+    "lfx-bundles[lokutor]",
     "lfx-bundles[maritalk]",
     "lfx-bundles[mem0]",
     "lfx-bundles[milvus]",

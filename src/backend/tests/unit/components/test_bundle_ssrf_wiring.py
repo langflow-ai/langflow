@@ -48,6 +48,8 @@ GUARDED_MODULES: dict[str, set[str]] = {
     "elastic/opensearch_multimodal.py": {"validate_connector_url_for_ssrf"},
     "figranium/base.py": {"ssrf_safe_httpx_get", "ssrf_safe_httpx_post"},
     "funasr/funasr_transcription.py": {"ssrf_safe_httpx_post"},
+    "lokutor/lokutor_speech_to_text.py": {"ssrf_safe_strict_httpx_post"},
+    "lokutor/lokutor_text_to_speech.py": {"ssrf_safe_strict_httpx_post"},
     "glean/glean_search_api.py": {"ssrf_safe_httpx_post"},
     "git/git.py": {"validate_git_repository_url"},
     "git/gitextractor.py": {"validate_git_repository_url"},
