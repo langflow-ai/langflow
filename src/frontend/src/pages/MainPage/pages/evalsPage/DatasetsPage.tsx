@@ -145,7 +145,6 @@ export default function DatasetsPage() {
             <EvalsEmptyState
               icon="Table"
               title={t("evals.datasets.emptyTitle")}
-              description={t("evals.datasets.emptyBody")}
               actions={
                 <div className="flex w-full flex-col items-center gap-8">
                   <div className="flex gap-2">{createButtons}</div>

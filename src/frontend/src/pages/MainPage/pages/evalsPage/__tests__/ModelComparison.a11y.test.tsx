@@ -105,7 +105,7 @@ describe("ModelComparison", () => {
     expect(within(table).getAllByTestId("comparison-safety-row")).toHaveLength(
       3,
     );
-    expect(table).toHaveTextContent("Jailbreak");
+    expect(table).toHaveTextContent("Breaks its rules");
   });
 
   it("should leave the safety table out when no version ran safety checks", () => {

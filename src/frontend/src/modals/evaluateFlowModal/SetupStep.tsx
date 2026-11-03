@@ -41,8 +41,6 @@ interface SetupStepProps {
   onCreateDataset: () => void;
   previewItems: DatasetItem[];
   previewTotal: number;
-  /** Model pickers the Models step can swap. */
-  models: number;
 }
 
 /** What to evaluate: the flow, the dataset its rows come from, and whether the flow can run at all. */
@@ -62,7 +60,6 @@ export default function SetupStep({
   onCreateDataset,
   previewItems,
   previewTotal,
-  models,
 }: SetupStepProps) {
   const { t } = useTranslation();
   const hasDatasets = (datasets?.length ?? 0) > 0;
@@ -152,7 +149,6 @@ export default function SetupStep({
             outputs.find((output) => output.id === outputVertexId)?.name ??
             (outputs.length === 1 ? outputs[0].name : undefined)
           }
-          models={models}
         />
       )}
       {flowId && <EvaluationPreflight report={report} failed={checkFailed} />}

@@ -69,7 +69,10 @@ export default function DatasetItemDialog({
       className={DIALOG_CONTAINER}
       onSubmit={handleSave}
     >
-      <BaseModal.Header description={t("evals.items.dialogDescription")}>
+      <BaseModal.Header
+        description={t("evals.items.dialogDescription")}
+        descriptionClassName="sr-only"
+      >
         <ForwardedIconComponent name="ListPlus" className="mr-2 h-4 w-4" />
         {item ? t("evals.items.editTitle") : t("evals.items.addTitle")}
       </BaseModal.Header>

@@ -189,7 +189,6 @@ export default function DatasetDetailPage() {
               <EvalsEmptyState
                 icon="ListPlus"
                 title={t("evals.items.emptyTitle")}
-                description={t("evals.items.emptyBody")}
                 actions={
                   <div className="flex flex-col items-center gap-3">
                     <div className="flex gap-2">

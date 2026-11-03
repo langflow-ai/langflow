@@ -761,10 +761,11 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
   is a stepper; Next (or Enter) moves on once the step is valid, Back and the
   finished steps in the stepper go back:
   1. **Setup**: flow, dataset and, with several outputs, the one to score; the
-     flow check (ready, the scored output and how many models can be swapped,
-     or its blocking issues and warnings) and the dataset's first rows.
+     flow check (ready and the scored output, or its blocking issues and
+     warnings) and the dataset's first rows.
   2. **Scoring**: the scoring methods, the LLM judge's model, rubric, limits and
-     safety checks, and the pass threshold.
+     safety checks, and the pass threshold ("Pass when the average score
+     reaches").
   3. **Models**, only when the flow has model pickers: each picker for this run
      only; a picker the flow saved empty is flagged and blocks Next until one is
      chosen. **Compare with other models** adds a version (a copy of the last);
@@ -809,6 +810,11 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
   for 60 s after a variant ends so the next one shows up (until then the next
   version shows "Waiting", then "Not run"). Re-run offers re-running the whole
   comparison on the same flow version.
+- Copy is kept to what the layout cannot say: no step hints, taglines or
+  helper lines that restate a label. Dialog descriptions stay for screen
+  readers only; empty states are a title plus their actions; the token
+  estimate of a finished run sits in a tooltip on its Tokens card; the
+  comparison's "N of M versions finished" shows only while it runs.
 - All strings are in the eight locale files; every screen passes the Jest axe
   and Playwright `runA11yScan` checks.
 

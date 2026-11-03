@@ -28,11 +28,9 @@ export default function VariantLabel({
       <VariantMarker index={index} />
       <span className="flex min-w-0 flex-col">
         <span className="truncate">{variantName(overrides, t)}</span>
-        {detail && (
+        {detail && providers.length > 0 && (
           <span className="truncate text-xs text-muted-foreground">
-            {providers.length > 0
-              ? providers.join(" + ")
-              : t("evals.compare.flowModelsHint")}
+            {providers.join(" + ")}
           </span>
         )}
       </span>

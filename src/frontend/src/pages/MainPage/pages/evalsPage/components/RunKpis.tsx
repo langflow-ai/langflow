@@ -12,6 +12,7 @@ import {
   formatTokenCount,
   formatUsd,
 } from "../utils/format";
+import HintTooltip from "./HintTooltip";
 import Kpi from "./Kpi";
 
 export default function RunKpis({ run }: { run: EvaluationRun }) {
@@ -93,18 +94,24 @@ export default function RunKpis({ run }: { run: EvaluationRun }) {
         />
         <Kpi
           label={t("evals.tokens")}
-          value={formatTokenCount(summary?.tokens.total)}
-          hint={
+          value={
             estimate?.tokens_low != null &&
             estimate.tokens_high != null &&
-            !active
-              ? t("evals.results.estimated", {
+            !active ? (
+              <HintTooltip
+                underline
+                hint={t("evals.results.estimated", {
                   range: formatRange(
                     formatTokenCount(estimate.tokens_low),
                     formatTokenCount(estimate.tokens_high),
                   ),
-                })
-              : undefined
+                })}
+              >
+                {formatTokenCount(summary?.tokens.total)}
+              </HintTooltip>
+            ) : (
+              formatTokenCount(summary?.tokens.total)
+            )
           }
         />
         <Kpi

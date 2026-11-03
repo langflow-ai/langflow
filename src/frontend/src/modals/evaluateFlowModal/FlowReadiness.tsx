@@ -2,15 +2,13 @@ import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import type { FlowCheckReport } from "@/controllers/API/queries/evals/types";
 
-/** The good news of the flow check: it can run, which answer is scored, which models can be swapped. */
+/** The good news of the flow check: it can run, and which answer is scored. */
 export default function FlowReadiness({
   report,
   outputName,
-  models,
 }: {
   report: FlowCheckReport;
   outputName?: string;
-  models: number;
 }) {
   const { t } = useTranslation();
   if (report.blocking.length > 0) return null;
@@ -29,11 +27,6 @@ export default function FlowReadiness({
         {outputName && (
           <span className="text-muted-foreground">
             {t("evals.evaluate.readyOutput", { output: outputName })}
-          </span>
-        )}
-        {models > 0 && (
-          <span className="text-muted-foreground">
-            {t("evals.evaluate.readyModels", { count: models })}
           </span>
         )}
       </div>

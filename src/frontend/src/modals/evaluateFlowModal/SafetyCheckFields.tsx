@@ -45,20 +45,11 @@ export default function SafetyCheckFields({
                 data-testid={id}
                 checked={value.includes(check)}
                 onCheckedChange={(checked) => setCheck(check, checked === true)}
-                aria-describedby={`${id}-hint`}
                 className="mt-0.5"
               />
-              <div className="flex flex-col gap-0.5">
-                <Label htmlFor={id} className="font-normal">
-                  {t(`evals.safety.check.${check}`)}
-                </Label>
-                <span
-                  id={`${id}-hint`}
-                  className="text-xs text-muted-foreground"
-                >
-                  {t(`evals.safety.checkHint.${check}`)}
-                </span>
-              </div>
+              <Label htmlFor={id} className="font-normal">
+                {t(`evals.safety.check.${check}`)}
+              </Label>
             </div>
           );
         })}

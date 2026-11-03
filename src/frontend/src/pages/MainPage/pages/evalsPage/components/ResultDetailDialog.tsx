@@ -84,6 +84,7 @@ export default function ResultDetailDialog({
         description={t("evals.results.detailDescription", {
           row: result.position + 1,
         })}
+        descriptionClassName="sr-only"
       >
         <ForwardedIconComponent name="ScanText" className="mr-2 h-4 w-4" />
         {t("evals.results.detailTitle", { row: result.position + 1 })}

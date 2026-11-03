@@ -77,7 +77,6 @@ export default function EvaluationsPage() {
             <EvalsEmptyState
               icon="FlaskConical"
               title={t("evals.evaluations.emptyTitle")}
-              description={t("evals.evaluations.emptyBody")}
               actions={newButton}
             />
           }

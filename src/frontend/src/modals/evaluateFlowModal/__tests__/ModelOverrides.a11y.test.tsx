@@ -76,9 +76,8 @@ describe("ModelOverrides versions", () => {
 
   it("should show one card per version with what each changes", async () => {
     const { onDuplicate, onRemove } = renderVersions(versions(2));
-    expect(screen.getByTestId("evaluate-models")).toHaveTextContent(
-      "Comparing 2 versions",
-    );
+    // The numbered cards say how many versions there are; no summary line repeats it.
+    expect(screen.queryByTestId("evaluate-models")).not.toBeInTheDocument();
 
     expect(screen.getByTestId("model-version-0")).toHaveTextContent(
       "As in the flow",
@@ -98,6 +97,9 @@ describe("ModelOverrides versions", () => {
 
     expect(screen.getByTestId("model-version-add")).toBeDisabled();
     expect(screen.getByTestId("model-version-0-duplicate")).toBeDisabled();
+    expect(
+      screen.getByText(`Up to ${MAX_MODEL_VARIANTS} versions.`),
+    ).toBeInTheDocument();
   });
 
   it("should flag the models when the flow saved a picker empty", () => {

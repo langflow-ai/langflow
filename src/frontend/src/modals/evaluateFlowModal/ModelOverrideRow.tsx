@@ -86,13 +86,11 @@ export default function ModelOverrideRow({
           aria-label={label}
         />
       </div>
-      {unset && (
+      {/* Once a model is chosen the note has nothing left to say. */}
+      {missing && (
         <p
           id={hintId}
-          className={cn(
-            "text-xs",
-            missing ? "text-destructive" : "text-muted-foreground",
-          )}
+          className="text-xs text-destructive"
           data-testid={`${id}-unset`}
         >
           {t("evals.evaluate.modelUnset")}

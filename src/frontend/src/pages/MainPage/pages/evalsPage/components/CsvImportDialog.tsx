@@ -126,7 +126,10 @@ export default function CsvImportDialog({
       className={DIALOG_CONTAINER}
       onSubmit={handleSubmit}
     >
-      <BaseModal.Header description={t("evals.csv.description")}>
+      <BaseModal.Header
+        description={t("evals.csv.description")}
+        descriptionClassName="sr-only"
+      >
         <ForwardedIconComponent name="FileUp" className="mr-2 h-4 w-4" />
         {t("evals.csv.title")}
       </BaseModal.Header>

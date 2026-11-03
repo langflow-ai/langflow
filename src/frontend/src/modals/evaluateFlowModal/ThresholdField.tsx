@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-/** The weighted score a row needs to pass. */
+/** The weighted score a row needs to pass; the label states the rule, so no hint is needed. */
 export default function ThresholdField({
   value,
   onChange,
@@ -25,19 +25,12 @@ export default function ThresholdField({
           step={0.05}
           className="h-9 w-full"
           value={value}
-          aria-describedby="evaluation-threshold-hint"
           onChange={(event) => {
             const next = Number(event.target.value);
             if (!Number.isNaN(next)) onChange(Math.min(1, Math.max(0, next)));
           }}
         />
       </div>
-      <span
-        id="evaluation-threshold-hint"
-        className="text-xs text-muted-foreground"
-      >
-        {t("evals.evaluate.thresholdHint")}
-      </span>
     </div>
   );
 }

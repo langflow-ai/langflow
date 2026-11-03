@@ -13,7 +13,8 @@ import { cn } from "@/utils/utils";
 interface EvalsEmptyStateProps {
   icon: string;
   title: string;
-  description: string;
+  /** Only when the title and the actions do not already say what to do. */
+  description?: string;
   actions?: ReactNode;
   testId?: string;
   /** Spin the icon for "waiting" states; it stays still under prefers-reduced-motion. */
@@ -41,9 +42,11 @@ export function EvalsEmptyState({
           )}
         />
         <EmptyTitle className="text-2xl">{title}</EmptyTitle>
-        <EmptyDescription className="max-w-lg text-center text-lg text-secondary-foreground">
-          {description}
-        </EmptyDescription>
+        {description && (
+          <EmptyDescription className="max-w-lg text-center text-lg text-secondary-foreground">
+            {description}
+          </EmptyDescription>
+        )}
       </EmptyHeader>
       {actions && (
         <EmptyContent className="w-full justify-center gap-2">

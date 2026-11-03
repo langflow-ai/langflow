@@ -28,7 +28,8 @@ interface JudgeLimitFieldsProps {
 interface BudgetFieldProps {
   id: string;
   label: string;
-  hint: string;
+  /** Shown only when it says something the label does not. */
+  hint?: string;
   error: string;
   invalid: boolean;
   max: number;
@@ -62,18 +63,22 @@ function BudgetField({
           className="w-full"
           value={value}
           aria-invalid={invalid}
-          aria-describedby={hintId}
+          aria-describedby={invalid || hint ? hintId : undefined}
           onChange={(event) => onChange(event.target.value)}
         />
       </div>
-      <span
-        id={hintId}
-        className={
-          invalid ? "text-xs text-destructive" : "text-xs text-muted-foreground"
-        }
-      >
-        {invalid ? error : hint}
-      </span>
+      {(invalid || hint) && (
+        <span
+          id={hintId}
+          className={
+            invalid
+              ? "text-xs text-destructive"
+              : "text-xs text-muted-foreground"
+          }
+        >
+          {invalid ? error : hint}
+        </span>
+      )}
     </div>
   );
 }
@@ -133,11 +138,11 @@ export default function JudgeLimitFields({
             <BudgetField
               id="judge-max-tokens"
               label={t("evals.evaluate.judgeMaxTokens")}
-              hint={t(
+              hint={
                 reasoningModel
-                  ? "evals.evaluate.judgeMaxTokensReasoningHint"
-                  : "evals.evaluate.judgeMaxTokensHint",
-              )}
+                  ? t("evals.evaluate.judgeMaxTokensReasoningHint")
+                  : undefined
+              }
               error={t("evals.evaluate.judgeMaxTokensInvalid", {
                 max: JUDGE_MAX_OUTPUT_TOKENS_CEILING.toLocaleString(),
               })}
@@ -151,7 +156,6 @@ export default function JudgeLimitFields({
             <BudgetField
               id="judge-max-run-tokens"
               label={t("evals.evaluate.judgeMaxRunTokens")}
-              hint={t("evals.evaluate.judgeMaxRunTokensHint")}
               error={t("evals.evaluate.judgeMaxRunTokensInvalid", {
                 max: JUDGE_MAX_RUN_OUTPUT_TOKENS_CEILING.toLocaleString(),
               })}

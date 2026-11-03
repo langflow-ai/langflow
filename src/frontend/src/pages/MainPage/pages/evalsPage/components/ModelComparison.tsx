@@ -94,15 +94,10 @@ export default function ModelComparison({
       className="flex flex-col gap-3"
       data-testid="model-comparison"
     >
-      <div className="flex flex-col gap-1">
-        {/* The Comparison tab already names this view; the heading labels the section for screen readers. */}
-        <h2 id="comparison-heading" className="sr-only">
-          {t("evals.compare.title")}
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          {t("evals.compare.description")}
-        </p>
-      </div>
+      {/* The Comparison tab already names this view; the heading labels the section for screen readers. */}
+      <h2 id="comparison-heading" className="sr-only">
+        {t("evals.compare.title")}
+      </h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Kpi
           testId="comparison-most-accurate"
@@ -149,10 +144,14 @@ export default function ModelComparison({
           icon={<KpiIcon name="Coins" />}
           label={t("evals.compare.totalCost")}
           value={formatUsd(comparison.totalCost, { precise: true })}
-          hint={t("evals.compare.finished", {
-            done: comparison.finished,
-            total,
-          })}
+          hint={
+            comparison.finished < total
+              ? t("evals.compare.finished", {
+                  done: comparison.finished,
+                  total,
+                })
+              : undefined
+          }
         />
       </div>
       <ComparisonLeaderboard

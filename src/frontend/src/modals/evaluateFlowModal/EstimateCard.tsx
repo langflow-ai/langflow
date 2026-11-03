@@ -82,7 +82,11 @@ export default function EstimateCard({
       aria-busy={loading}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-medium">{t("evals.estimate.title")}</span>
+        <span className="text-sm font-medium">
+          {(estimate.variants ?? 1) > 1
+            ? t("evals.estimate.titleVersions", { count: estimate.variants })
+            : t("evals.estimate.title")}
+        </span>
         <Badge variant="secondaryStatic" size="tag">
           {estimate.basis === "history"
             ? t("evals.estimate.fromHistory")
@@ -125,11 +129,6 @@ export default function EstimateCard({
           />
         )}
       </div>
-      {(estimate.variants ?? 1) > 1 && (
-        <p className="text-xs text-muted-foreground">
-          {t("evals.compare.estimateNote", { count: estimate.variants })}
-        </p>
-      )}
       {estimate.has_agent && (
         <p className="text-xs text-muted-foreground">
           {t("evals.estimate.agentNote")}

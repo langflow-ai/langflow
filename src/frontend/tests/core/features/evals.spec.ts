@@ -296,9 +296,13 @@ test(
       "aria-selected",
       "true",
     );
-    await expect(page.getByTestId("comparison-total-cost")).toContainText(
-      "2 of 2",
+    // A tie needs both versions finished; the progress line under the cost goes away then.
+    await expect(page.getByTestId("comparison-most-accurate")).toContainText(
+      "2 versions tied",
       { timeout: 60000 },
+    );
+    await expect(page.getByTestId("comparison-total-cost")).not.toContainText(
+      "of 2",
     );
     const rows = page.getByTestId("comparison-row");
     await expect(rows).toHaveCount(2);

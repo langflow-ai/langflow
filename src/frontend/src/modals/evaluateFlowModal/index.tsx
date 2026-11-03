@@ -158,7 +158,10 @@ export default function EvaluateFlowModal({
       className={DIALOG_CONTAINER}
       onSubmit={handleSubmit}
     >
-      <BaseModal.Header description={t("evals.evaluate.description")}>
+      <BaseModal.Header
+        description={t("evals.evaluate.description")}
+        descriptionClassName="sr-only"
+      >
         <ForwardedIconComponent name="FlaskConical" className="mr-2 h-4 w-4" />
         {t("evals.evaluate.title")}
       </BaseModal.Header>
@@ -174,15 +177,10 @@ export default function EvaluateFlowModal({
             className="flex flex-col gap-4"
             data-testid={`evaluate-step-panel-${stepKey}`}
           >
-            <div className="flex flex-col gap-1">
-              {/* The stepper already shows the step's name; the heading names the section for screen readers. */}
-              <h3 id="evaluate-step-title" className="sr-only">
-                {t(`evals.evaluate.step.${stepKey}`)}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {t(`evals.evaluate.stepHint.${stepKey}`)}
-              </p>
-            </div>
+            {/* The stepper already shows the step's name; the heading names the section for screen readers. */}
+            <h3 id="evaluate-step-title" className="sr-only">
+              {t(`evals.evaluate.step.${stepKey}`)}
+            </h3>
             {stepKey === "setup" && (
               <SetupStep
                 flowFixed={Boolean(fixedFlowId)}
@@ -200,7 +198,6 @@ export default function EvaluateFlowModal({
                 onCreateDataset={() => navigate("/assets/datasets")}
                 previewItems={preview?.items ?? []}
                 previewTotal={preview?.total ?? 0}
-                models={hasModels ? pickers.length : 0}
               />
             )}
             {stepKey === "scoring" && (

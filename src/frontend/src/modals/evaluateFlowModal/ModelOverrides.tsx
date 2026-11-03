@@ -65,28 +65,28 @@ export default function ModelOverrides({
       ? t("evals.evaluate.modelsChanged", { count: changed })
       : t("evals.evaluate.modelsAsInFlow");
   };
+  // With versions, each card states its own models; only a missing model needs a line above them.
   const summary = missing
     ? t("evals.evaluate.modelsMissing")
     : comparing
-      ? t("evals.compare.comparing", { count: versions.length })
+      ? null
       : describe(versions[0]?.chosen ?? {});
   const atLimit = versions.length >= MAX_MODEL_VARIANTS;
 
   return (
     <div className="flex flex-col gap-4">
-      <p
-        className={cn(
-          "text-sm",
-          missing ? "text-destructive" : "text-muted-foreground",
-        )}
-        data-testid="evaluate-models"
-      >
-        {summary}
-      </p>
-      <div className="flex flex-col gap-4">
-        <p className="text-xs text-muted-foreground">
-          {comparing ? t("evals.compare.hint") : t("evals.evaluate.modelsHint")}
+      {summary && (
+        <p
+          className={cn(
+            "text-sm",
+            missing ? "text-destructive" : "text-muted-foreground",
+          )}
+          data-testid="evaluate-models"
+        >
+          {summary}
         </p>
+      )}
+      <div className="flex flex-col gap-4">
         {comparing ? (
           <div className="grid gap-3 md:grid-cols-2">
             {versions.map(({ key, chosen }, version) => (
@@ -129,13 +129,11 @@ export default function ModelOverrides({
             <ForwardedIconComponent name="Plus" className="h-4 w-4" />
             {comparing ? t("evals.compare.add") : t("evals.compare.start")}
           </Button>
-          <span className="text-xs text-muted-foreground">
-            {atLimit
-              ? t("evals.compare.limit", { count: MAX_MODEL_VARIANTS })
-              : comparing
-                ? t("evals.compare.sequential")
-                : t("evals.compare.startHint")}
-          </span>
+          {atLimit && (
+            <span className="text-xs text-muted-foreground">
+              {t("evals.compare.limit", { count: MAX_MODEL_VARIANTS })}
+            </span>
+          )}
         </div>
       </div>
     </div>
