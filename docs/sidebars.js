@@ -594,6 +594,7 @@ module.exports = {
             "Components/bundles-openrouter",
             "Components/bundles-oracle",
             "Components/bundles-orcarouter",
+            "Components/bundles-fortytwo",
             "Components/bundles-paddle",
             "Components/bundles-perplexity",
             "Components/bundles-pgvector",

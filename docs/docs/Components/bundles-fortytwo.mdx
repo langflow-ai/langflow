@@ -1,0 +1,37 @@
+---
+title: Fortytwo
+slug: /bundles-fortytwo
+---
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+The **Fortytwo** bundle generates responses using the [Fortytwo API](https://docs.fortytwo.network/docs/models).
+Install it with `uv pip install "lfx-bundles[fortytwo]"`.
+
+Enter your Fortytwo API key and refresh **Model** to load the models available to your account.
+The list is fetched from the API, so newly available models do not require a component update.
+If discovery fails, check your key and retry the refresh.
+
+Connect **Language Model** to an **Agent** component to use tools, or use **Model Response** for a chat response.
+The client preserves reasoning in the language model message's `reasoning_content` additional field.
+The component does not add reasoning to the final answer text.
+
+You can also configure the generic [OpenAI Compatible](./bundles-openai-compatible) provider with
+the base URL `https://api.fortytwo.network/v1`.
+
+## Parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Your Fortytwo API key, used for model discovery and inference. |
+| model_name | Dropdown | Model ID fetched from the authenticated catalogue. |
+| temperature | Float | Sampling temperature from 0 to 2. Default: 0.7. |
+| max_tokens | Integer | Maximum generated tokens. Leave at 0 to use the API default. |
+| reasoning_effort | Dropdown | `none`, `low`, `medium` or `xhigh`. Default: `medium`. |
+
+Requests include `HTTP-Referer: https://langflow.org/` and `X-Title: Langflow` to identify the integration.
