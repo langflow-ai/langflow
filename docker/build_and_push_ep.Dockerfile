@@ -31,9 +31,7 @@ ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
 
 # Set RUSTFLAGS for reqwest unstable features needed by apify-client v2.0.0
-# Build lxml against UBI's patched XML libraries instead of its bundled copies.
-ENV RUSTFLAGS='--cfg reqwest_unstable' \
-    UV_NO_BINARY_PACKAGE=lxml
+ENV RUSTFLAGS='--cfg reqwest_unstable'
 
 RUN microdnf install -y tar xz \
     # deps for building python deps
@@ -57,6 +55,7 @@ COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
 COPY ./src/sdk/README.md /app/src/sdk/README.md
 COPY ./src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
 COPY ./scripts/ci/rewrite_langflow_base_constraint.sh /tmp/rewrite_langflow_base_constraint.sh
+COPY ./docker/build_lxml.sh /tmp/build_lxml.sh
 # Workspace bundles (LE-1023 pilot+): every directory under ``src/bundles``
 # is a uv workspace member, so each bundle's pyproject.toml must be present
 # for ``uv sync --no-install-project`` to resolve the workspace.  Copy the
@@ -108,7 +107,8 @@ COPY ./scripts/ci/install_release_wheels.py /tmp/install_release_wheels.py
 RUN python3.14 /tmp/install_release_wheels.py /tmp/release-artifacts \
     --python /app/.venv/bin/python \
     --mode main \
-    --frontend-source /app/src/backend/base/langflow/frontend
+    --frontend-source /app/src/backend/base/langflow/frontend \
+    && sh /tmp/build_lxml.sh
 
 ################################
 # RUNTIME
@@ -139,6 +139,8 @@ RUN ARCH=$(uname -m) \
 RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
+COPY --chown=1000:0 ./scripts/ci/verify_lxml_runtime.py /tmp/verify_lxml_runtime.py
+RUN /app/.venv/bin/python /tmp/verify_lxml_runtime.py && rm /tmp/verify_lxml_runtime.py
 ENV PATH="/app/.venv/bin:$PATH"
 ENV HOME=/app/data
 ENV BASH_ENV="" \
