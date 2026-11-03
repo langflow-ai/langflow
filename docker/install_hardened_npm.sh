@@ -3,10 +3,12 @@
 set -eu
 
 NPM_VERSION="12.0.2"
-IP_ADDRESS_VERSION="10.7.1"
+IP_ADDRESS_VERSION="10.7.4"
 BRACE_EXPANSION_VERSION="5.0.12"
 TAR_VERSION="7.5.22"
-UNDICI_VERSION="6.28.1"
+# node-gyp requires undici 6.x. The 6.29.1 maintenance release carries the
+# security fixes also released in 7.30.1 and 8.12.2 without breaking npm ls.
+UNDICI_VERSION="6.29.1"
 npm_cache="$(npm config get cache)"
 
 case "$npm_cache" in
@@ -48,10 +50,10 @@ done
 node <<'NODE'
 const path = "/usr/local/lib/node_modules/npm/node_modules";
 const expected = {
-  "ip-address": "10.7.1",
+  "ip-address": "10.7.4",
   "brace-expansion": "5.0.12",
   tar: "7.5.22",
-  undici: "6.28.1",
+  undici: "6.29.1",
   sigstore: "5.0.0",
   "@sigstore/core": "4.0.1",
   "tinyglobby/node_modules/picomatch": "4.0.5",
