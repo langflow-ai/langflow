@@ -62,21 +62,21 @@ JSON object responses pass through unchanged, including combined HTML, Markdown,
 
 ## MrScraper Web Search
 
-Search Google using query text or a full Google search URL. This component sends `POST https://sync.scraper.mrscraper.com/api/google/serp/v2/sync`.
+Search the web to retrieve real-time search results, including relevant website URLs, titles, descriptions, and related questions based on a given query.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | MrScraper API Token (`api_token`) | Required | Your API token. |
-| Query or Google URL (`url`) | Required | Query text or Google search URL. Available in Tool Mode. |
+| Search Query (`url`) | Required | The search query. Available in Tool Mode. |
 | Raw HTML (`raw`) | `true` | Return HTML regardless of Format. Disable this to request structured JSON. |
 | Format (`format`) | `json` | `json` or `html`, used when Raw HTML is disabled. |
-| Region (`region`) | Empty | Optional country code; overrides `gl` from a URL. |
-| Language (`language`) | Empty | Optional language code; overrides `hl` from a URL. |
-| Page (`page`) | Empty | Optional positive integer page; overrides `start` from a URL. |
+| Region (`region`) | Empty | Optional country code for search results. |
+| Language (`language`) | Empty | Optional language code for search results. |
+| Page (`page`) | Empty | Optional results page number, starting at `1`. |
 | Render JavaScript (`render_js`) | `false` | Render JavaScript-dependent search features. |
 | Timeout (seconds) (`timeout`) | `600` | Positive HTTP request timeout. |
 
-The SDK extracts `q`, `gl`, `hl`, and `start` from Google URLs. For example, `https://www.google.com/search?q=running+shoes&gl=us&hl=en&start=20` searches for `running shoes` in region `us`, language `en`, on page `3`. Explicit component settings override URL values.
+Each call retrieves one results page. Set **Region**, **Language**, and **Page** to customize the search; page numbers start at `1`.
 
 For structured results, enter `python web scraping`, disable **Raw HTML**, and select **Format: json**. JSON objects pass through unchanged; HTML, list, and other scalar responses are wrapped as `{"result": ...}`.
 
