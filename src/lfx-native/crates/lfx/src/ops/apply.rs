@@ -342,7 +342,7 @@ impl GraphState {
             if !self.graph.has_node(id) {
                 continue;
             }
-            incident.extend(self.graph.edges_at(id).cloned());
+            incident.extend(self.graph.edges_at(id).map(str::to_owned));
             if report.options.backward {
                 removed_nodes.extend(self.node_copy(id));
             }

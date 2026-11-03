@@ -186,6 +186,8 @@ fn to_python<'py>(py: Python<'py>, value: &AnyValue) -> PyResult<Bound<'py, PyAn
 struct Builder<'py, 'v> {
     py: Python<'py>,
     keys: HashMap<&'v str, Bound<'py, PyString>>,
+    /// Values visited while building the result, capped at the GIL threshold.
+    work: Work,
 }
 
 impl<'py, 'v> Builder<'py, 'v> {
@@ -193,10 +195,12 @@ impl<'py, 'v> Builder<'py, 'v> {
         Self {
             py,
             keys: HashMap::new(),
+            work: Work::default(),
         }
     }
 
     fn value(&mut self, value: &'v AnyValue) -> PyResult<Bound<'py, PyAny>> {
+        self.work.0 = (self.work.0 + 1).min(HELD_VALUES);
         let py = self.py;
         Ok(match value {
             AnyValue::Null => py.None().into_bound(py),
@@ -364,8 +368,17 @@ fn call(
 /// A result as Python objects. A large result is dropped without the GIL:
 /// freeing a large graph takes time.
 fn finish(py: Python<'_>, value: AnyValue) -> PyResult<Bound<'_, PyAny>> {
-    let result = to_python(py, &value);
-    if Work::of_value(&value).is_large() {
+    let mut builder = Builder::new(py);
+    let result = builder.value(&value);
+    // Successful conversion already visited every value. A conversion error
+    // can stop early, so keep the original bounded scan on that path.
+    let work = if result.is_ok() {
+        builder.work
+    } else {
+        Work::of_value(&value)
+    };
+    drop(builder);
+    if work.is_large() {
         py.detach(move || drop(value));
     }
     result
@@ -678,9 +691,20 @@ impl GraphState {
     /// nodes it changes. Another thread can write and hash the snapshot while
     /// batches go on.
     fn snapshot(&self, py: Python<'_>) -> PyResult<GraphSnapshot> {
-        let snapshot = self
-            .read(py, |_| Work::default(), lfx::ops::GraphState::snapshot)
+        let cached = self
+            .read(py, |_| Work::default(), lfx::ops::GraphState::try_snapshot)
             .map_err(poisoned)?;
+        let snapshot = if let Some(snapshot) = cached {
+            snapshot
+        } else {
+            // Neither the state lock nor the capture mutex is held while the
+            // GIL is released to wait for another native capture.
+            py.detach(|| {
+                let state = self.state.read().map_err(|_| Poisoned)?;
+                Ok(state.snapshot())
+            })
+            .map_err(poisoned)?
+        };
         Ok(GraphSnapshot::wrap(snapshot))
     }
 
@@ -719,7 +743,7 @@ impl GraphState {
 #[pyclass(module = "lfx_native", frozen)]
 #[derive(Debug)]
 struct GraphSnapshot {
-    snapshot: lfx::ops::GraphSnapshot,
+    snapshot: Option<lfx::ops::GraphSnapshot>,
     /// The work on the whole graph.
     work: Work,
 }
@@ -727,7 +751,10 @@ struct GraphSnapshot {
 impl GraphSnapshot {
     fn wrap(snapshot: lfx::ops::GraphSnapshot) -> Self {
         let work = Work::of_items(snapshot.item_count());
-        Self { snapshot, work }
+        Self {
+            snapshot: Some(snapshot),
+            work,
+        }
     }
 }
 
@@ -738,13 +765,13 @@ impl Drop for GraphSnapshot {
         if !self.work.is_large() {
             return;
         }
-        let snapshot = std::mem::replace(
-            &mut self.snapshot,
-            lfx::ops::GraphState::new(empty_graph())
-                .expect("an empty graph loads")
-                .snapshot(),
-        );
-        Python::attach(|py| drop_elsewhere(py, Box::new(snapshot)));
+        let Some(snapshot) = self.snapshot.take() else {
+            return;
+        };
+        let Some(data) = snapshot.into_unshared_data() else {
+            return;
+        };
+        Python::attach(|py| drop_elsewhere(py, Box::new(data)));
     }
 }
 
@@ -752,7 +779,11 @@ impl Drop for GraphSnapshot {
 impl GraphSnapshot {
     /// The graph as JSON text: what the state's `to_json()` gave when the snapshot was taken.
     fn to_json(&self, py: Python<'_>) -> String {
-        let write = || api::snapshot_json(&self.snapshot);
+        let snapshot = self
+            .snapshot
+            .as_ref()
+            .expect("a live snapshot holds its graph");
+        let write = || api::snapshot_json(snapshot);
         if self.work.is_large() {
             py.detach(write)
         } else {
@@ -763,7 +794,11 @@ impl GraphSnapshot {
     /// The SHA-256 hex digest of the graph's canonical form: what the
     /// state's `graph_hash()` gave when the snapshot was taken.
     fn graph_hash(&self, py: Python<'_>) -> PyResult<String> {
-        run(py, self.work, || api::snapshot_graph_hash(&self.snapshot))
+        let snapshot = self
+            .snapshot
+            .as_ref()
+            .expect("a live snapshot holds its graph");
+        run(py, self.work, || api::snapshot_graph_hash(snapshot))
     }
 }
 
@@ -775,7 +810,7 @@ impl GraphSnapshot {
 #[pyclass(module = "lfx_native", frozen)]
 #[derive(Debug)]
 struct GraphPlain {
-    plain: lfx::ops::GraphPlain,
+    plain: Option<lfx::ops::GraphPlain>,
     /// The work on the whole graph, counted once.
     work: Work,
 }
@@ -783,7 +818,16 @@ struct GraphPlain {
 impl GraphPlain {
     fn wrap(plain: lfx::ops::GraphPlain) -> Self {
         let work = Work::of_value(plain.as_value());
-        Self { plain, work }
+        Self {
+            plain: Some(plain),
+            work,
+        }
+    }
+
+    fn core(&self) -> &lfx::ops::GraphPlain {
+        self.plain
+            .as_ref()
+            .expect("a live plain graph holds its value")
     }
 }
 
@@ -793,8 +837,20 @@ impl Drop for GraphPlain {
         if !self.work.is_large() {
             return;
         }
-        let plain = std::mem::replace(&mut self.plain, lfx::ops::GraphPlain::new(AnyValue::Null));
-        Python::attach(|py| drop_elsewhere(py, Box::new(plain)));
+        let Some(plain) = self.plain.take() else {
+            return;
+        };
+        let value = plain.into_value();
+        let deferred: Dropped = match value {
+            AnyValue::Object(map) => {
+                let Some(entries) = map.into_unshared_entries() else {
+                    return;
+                };
+                Box::new(entries)
+            }
+            value => Box::new(value),
+        };
+        Python::attach(|py| drop_elsewhere(py, deferred));
     }
 }
 
@@ -803,7 +859,7 @@ fn plain<'a>(
 ) -> (Option<&'a lfx::ops::GraphPlain>, Work) {
     object.map_or((None, Work::default()), |object| {
         let object = object.get();
-        (Some(&object.plain), object.work)
+        (Some(object.core()), object.work)
     })
 }
 
@@ -826,7 +882,7 @@ impl GraphPlain {
     ) -> PyResult<Bound<'py, PyAny>> {
         let (base, base_work) = plain(base);
         call(py, self.work + base_work, || {
-            api::plain_validate(&self.plain, base, check_values)
+            api::plain_validate(self.core(), base, check_values)
         })
     }
 
@@ -839,24 +895,37 @@ impl GraphPlain {
     ) -> PyResult<(Bound<'py, GraphPlain>, Bound<'py, PyAny>)> {
         let (base, base_work) = plain(base);
         let (repaired, fixes) = run(py, self.work + base_work, || {
-            api::plain_repair(&self.plain, base)
+            api::plain_repair(self.core(), base)
         })?;
+        // No fixes means the repaired graph is the same graph, so its size
+        // classification is already known. Do not walk it again on a cache hit.
+        let work = if fixes.as_array().is_some_and(Vec::is_empty) {
+            self.work
+        } else {
+            Work::of_value(repaired.as_value())
+        };
         Ok((
-            Bound::new(py, Self::wrap(repaired))?,
+            Bound::new(
+                py,
+                Self {
+                    plain: Some(repaired),
+                    work,
+                },
+            )?,
             to_python(py, &fixes)?,
         ))
     }
 
     /// The SHA-256 hex digest of the graph's canonical form.
     fn graph_hash(&self, py: Python<'_>) -> PyResult<String> {
-        run(py, self.work, || api::plain_graph_hash(&self.plain))
+        run(py, self.work, || api::plain_graph_hash(self.core()))
     }
 
     /// Whether the two graphs are the same graph.
     fn equals(&self, py: Python<'_>, other: &Bound<'_, GraphPlain>) -> PyResult<bool> {
         let other = other.get();
         run(py, self.work + other.work, || {
-            api::plain_equals(&self.plain, &other.plain)
+            api::plain_equals(self.core(), other.core())
         })
     }
 
@@ -868,13 +937,13 @@ impl GraphPlain {
     ) -> PyResult<Bound<'py, PyAny>> {
         let target = target.get();
         call(py, self.work + target.work, || {
-            api::plain_ops_diff(&self.plain, &target.plain)
+            api::plain_ops_diff(self.core(), target.core())
         })
     }
 
     /// The graph as JSON text.
     fn to_json(&self, py: Python<'_>) -> String {
-        let write = || api::json_text(self.plain.as_value());
+        let write = || api::json_text(self.core().as_value());
         if self.work.is_large() {
             py.detach(write)
         } else {
@@ -884,7 +953,7 @@ impl GraphPlain {
 
     /// The graph as a dict.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        to_python(py, self.plain.as_value())
+        to_python(py, self.core().as_value())
     }
 }
 
