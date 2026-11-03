@@ -14,8 +14,6 @@ import os
 import subprocess
 import sys
 
-import pytest
-
 REPRO_SCRIPT = """
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph import Graph
@@ -51,13 +49,12 @@ def test_graph_edge_order_stable_across_hash_seed():
         for seed in ("0", "1", "123", "9999", "42"):
             proc = subprocess.run(
                 [sys.executable, path],
+                check=False,
                 capture_output=True,
                 text=True,
                 env={**os.environ, "PYTHONHASHSEED": seed},
             )
             assert proc.returncode == 0, proc.stderr
-            assert proc.stdout.strip() == "B,C", (
-                f"edge order unstable under PYTHONHASHSEED={seed}: {proc.stdout!r}"
-            )
+            assert proc.stdout.strip() == "B,C", f"edge order unstable under PYTHONHASHSEED={seed}: {proc.stdout!r}"
     finally:
         os.unlink(path)

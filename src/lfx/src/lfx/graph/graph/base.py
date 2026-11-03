@@ -93,7 +93,7 @@ INPUT_TYPE_COMPONENT_TYPES = {
 }
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Callable, Generator, Iterable
+    from collections.abc import AsyncIterator, Callable, Generator
     from typing import Any
 
     from lfx.custom.custom_component.component import Component
