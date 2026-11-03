@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import DecisionInspection from "@/components/core/decisionInspection";
+import { findDecisionEvidence } from "@/components/core/decisionInspection/decision-evidence";
 import JsonOutputViewComponent from "@/components/core/jsonOutputComponent/json-output-view";
 import { MAX_TEXT_LENGTH } from "@/constants/constants";
 import type { LogsLogType, OutputLogType } from "@/types/api";
@@ -59,6 +61,16 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
   if (resultMessage?.raw) {
     resultMessage = resultMessage.raw;
   }
+
+  // A stopped Smart Router has no output, but its log keeps the evidence.
+  const decisionEvidence = useMemo(
+    () =>
+      type === "outputs"
+        ? (findDecisionEvidence(resultMessage) ??
+          findDecisionEvidence(flowPoolNode?.data?.logs?.[outputName]))
+        : null,
+    [type, resultMessage, flowPoolNode, outputName],
+  );
 
   const resultMessageMemoized = useMemo(() => {
     if (!resultMessage) return "";
@@ -135,6 +147,9 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
 
   return type === "outputs" ? (
     <>
+      {decisionEvidence && !isToolOutput && (
+        <DecisionInspection evidence={decisionEvidence} className="mb-4" />
+      )}
       <Case condition={isToolOutput && resultMessageMemoized}>
         <ToolOutputDisplay
           tools={
