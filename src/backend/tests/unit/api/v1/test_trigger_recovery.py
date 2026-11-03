@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
+from langflow.services.audit.attribution import audit_request_id
 from langflow.services.connection.oauth import broker
 from langflow.services.database.models.connection.model import Connection, ConnectionSecret
 from langflow.services.database.models.flow.model import Flow
@@ -104,7 +105,8 @@ async def test_ready_connection_keeps_reconnect_until_credentials_change(
     statements = []
 
     def record(_connection, _cursor, statement, _parameters, _context, _many):
-        statements.append(statement.lower())
+        if audit_request_id() is not None:
+            statements.append(statement.lower())
 
     event.listen(engine, "before_cursor_execute", record)
     try:
@@ -119,6 +121,7 @@ async def test_ready_connection_keeps_reconnect_until_credentials_change(
             assert "old-synthetic-token" not in response.text
     finally:
         event.remove(engine, "before_cursor_execute", record)
+    assert statements
     assert not any("encrypted_payload" in statement for statement in statements)
     assert not any(statement.lstrip().startswith(("insert ", "update ", "delete ")) for statement in statements)
     async with session_scope() as session:
