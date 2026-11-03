@@ -1,5 +1,8 @@
 # Trigger frontend QA acceptance checks
 
+Status: proposed
+Owners (sign-off roles): frontend owner, release owner
+
 These checks clarify the [frontend surface contract](frontend-surfaces.md). The complete source and deployment
 matrix remains part of TRG-8, as recorded in [the estimate](estimate.md).
 
@@ -55,3 +58,10 @@ above. Mocked reader/writer capability tests cover rendering and mutation wiring
 TRG-8 owns the full source and deployment matrix, listener packaging checks, soak, and upgrade validation.
 Desktop checks must confirm that triggers fire only while the app is open. Hosted and self-managed checks must
 use their supported push or polling transport. Keep these runtime results separate from the frontend test results.
+
+## Sign-off
+
+| Role | Name | Date | PR |
+|------|------|------|----|
+| frontend owner | | | |
+| release owner | | | |
