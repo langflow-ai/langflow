@@ -82,6 +82,7 @@
       ],
       "forbidden_distributions_add": [
         "lfx-arxiv",
+        "lfx-asyntai",
         "lfx-confluent",
         "lfx-duckduckgo",
         "lfx-empiriolabs",
@@ -202,6 +203,7 @@
       "extends": "python-default",
       "required_distributions_add": [
         "lfx-arxiv",
+        "lfx-asyntai",
         "lfx-bundles",
         "lfx-confluent",
         "lfx-duckduckgo",
@@ -216,6 +218,7 @@
       ],
       "forbidden_distributions_remove": [
         "lfx-arxiv",
+        "lfx-asyntai",
         "lfx-bundles",
         "lfx-confluent",
         "lfx-duckduckgo",
@@ -233,6 +236,7 @@
           "lfx-amazon",
           "lfx-anthropic",
           "lfx-arxiv",
+          "lfx-asyntai",
           "lfx-azure",
           "lfx-cohere",
           "lfx-confluent",

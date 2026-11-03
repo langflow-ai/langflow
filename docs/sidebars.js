@@ -536,6 +536,7 @@ module.exports = {
             "Components/bundles-anthropic",
             "Components/bundles-apify",
             "Components/bundles-arxiv",
+            "Components/bundles-asyntai",
             "Components/bundles-assemblyai",
             "Components/bundles-azure",
             "Components/bundles-baidu",
