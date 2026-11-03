@@ -77,6 +77,7 @@ class OpenAPIAgentComponent(LCAgentComponent):
         )
 
     def build_agent(self) -> AgentExecutor:
+        """Build tools from the confined API specification with outbound request protection."""
         llm = self._get_llm()
         # self.path is tenant-controlled: confine reads to the storage dir when
         # LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS is enabled (multi-tenant), blocking /etc/passwd etc.

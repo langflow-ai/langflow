@@ -9,9 +9,6 @@ from unittest.mock import Mock
 
 import httpx
 import pytest
-
-pytest.importorskip("langchain_community")
-
 from lfx.base.langchain_utilities.requests import SSRFSafeTextRequestsWrapper
 from lfx.components.langchain_utilities import openapi
 from lfx.utils import ssrf_protection
@@ -25,6 +22,9 @@ URL = "https://api.example.test/items"
 
 @pytest.fixture(autouse=True)
 def outbound_policy(monkeypatch):
+    """Isolate policy settings and prevent unit tests from opening network connections."""
+    monkeypatch.delenv("LANGFLOW_SSRF_PROTECTION_ENABLED", raising=False)
+    monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
     settings = SimpleNamespace(
         ssrf_protection_enabled=True,
         ssrf_allowed_hosts=[],
@@ -34,12 +34,18 @@ def outbound_policy(monkeypatch):
     monkeypatch.setattr(ssrf_protection, "get_settings_service", lambda: SimpleNamespace(settings=settings))
 
     def resolve(host, *_args, **_kwargs):
+        """Resolve fixture hostnames while retaining literal addresses for policy checks."""
         try:
             ipaddress.ip_address(host)
         except ValueError:
             host = "93.184.216.34"
         return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (host, 443))]
 
+    def deny_network(*_args, **_kwargs):
+        pytest.fail("OpenAPI unit tests must not open network connections")
+
+    monkeypatch.setattr(socket.socket, "connect", deny_network)
+    monkeypatch.setattr(socket.socket, "connect_ex", deny_network)
     monkeypatch.setattr(socket, "getaddrinfo", resolve)
     for name in tuple(os.environ):
         if name.lower().endswith("_proxy"):
@@ -55,11 +61,13 @@ def outbound_request(monkeypatch):
 
 
 def call_args(method):
+    """Supply a JSON body only for the wrapper methods that accept one."""
     return (BODY,) if method in {"post", "patch", "put"} else ()
 
 
 @pytest.mark.parametrize("method", METHODS)
 def test_sync_tools_preserve_requests(method, outbound_request):
+    """Keep caller headers, parameters, timeouts, and JSON bodies on protected requests."""
     wrapper = SSRFSafeTextRequestsWrapper(headers={"X-Request": "fixture"})
 
     assert getattr(wrapper, method)(URL, *call_args(method), params={"page": 1}, timeout=9) == "fixture response"
@@ -85,6 +93,7 @@ async def test_async_tools_use_the_protected_transport(method, outbound_request)
 @pytest.mark.parametrize("method", METHODS)
 @pytest.mark.parametrize("async_call", [False, True])
 async def test_tools_reject_disallowed_destination_before_transport(method, async_call, outbound_request):
+    """Reject disallowed destinations before sync or async tools reach a transport."""
     wrapper = SSRFSafeTextRequestsWrapper()
 
     if async_call:
@@ -109,6 +118,7 @@ def test_redirect_destination_is_checked_before_following(method, outbound_reque
 
 @pytest.mark.parametrize(("status", "expected_method"), [(302, "GET"), (307, "POST")])
 def test_valid_redirects_preserve_method_rules_and_cookies(status, expected_method, outbound_request):
+    """Retain Requests method conversion and cookies across validated redirects."""
     outbound_request.side_effect = [
         httpx.Response(status, headers={"Location": "/next", "Set-Cookie": "fixture=value; Path=/"}),
         httpx.Response(200, content=b"done"),
@@ -150,6 +160,7 @@ def test_request_transport_pins_the_validated_address(monkeypatch, outbound_requ
 
 @pytest.mark.parametrize("allowlisted", [False, True])
 def test_operator_exemptions_retain_the_requests_transport(monkeypatch, outbound_policy, outbound_request, allowlisted):
+    """Keep the standard transport when operators disable protection or allow a host."""
     import requests
 
     if allowlisted:

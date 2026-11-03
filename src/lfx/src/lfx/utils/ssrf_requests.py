@@ -49,6 +49,10 @@ class _SSRFHTTPAdapter(requests.adapters.HTTPAdapter):
     """Validate and pin each request while Requests manages redirects and authentication."""
 
     def send(self, request, stream=False, timeout=None, verify=True, cert=None, proxies=None):  # noqa: FBT002
+        """Validate each hop and return a buffered Requests response from the pinned transport.
+
+        Operator exemptions and proxy routing retain the standard Requests adapter.
+        """
         validated_url, validated_ips = validate_and_resolve_url(request.url)
         if not validated_ips or requests.utils.select_proxy(validated_url, proxies or {}):
             return super().send(request, stream=stream, timeout=timeout, verify=verify, cert=cert, proxies=proxies)
