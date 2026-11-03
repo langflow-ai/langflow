@@ -66,7 +66,8 @@ jobs:
     name: ${{ matrix.bundle }} (py${{ matrix.python-version }})
     needs: discover
     if: needs.discover.outputs.bundles != '[]'
-    runs-on: ubuntu-latest
+    # 3.15 builds SDKs from source; ibm-db's bundled driver needs libxml2.so.2, which ubuntu-26.04 dropped.
+    runs-on: ${{ matrix.python-version == '3.15' && 'ubuntu-24.04' || 'ubuntu-latest' }}
     timeout-minutes: 30
     # Python 3.15 is a preview lane: it reports ecosystem readiness without failing the run.
     continue-on-error: ${{ matrix.python-version == '3.15' }}

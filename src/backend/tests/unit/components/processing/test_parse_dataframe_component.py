@@ -1,4 +1,5 @@
 import asyncio
+import sys
 
 import pandas as pd
 import pytest
@@ -91,6 +92,10 @@ class TestParseDataFrameComponent(ComponentTestBaseWithoutClient):
         result = await asyncio.to_thread(component.parse_data)
         assert isinstance(result, Message)
 
+    @pytest.mark.skipif(
+        sys.version_info >= (3, 15),
+        reason="pandas 2.x ships no cp315 wheels; its source build segfaults in to_datetime",
+    )
     def test_various_data_types(self, component_class):
         """Test that the component correctly formats differing data types."""
         test_dataframe = DataFrame(

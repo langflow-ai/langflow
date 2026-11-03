@@ -11,6 +11,7 @@ streams, so the real httpx streaming and decoding code runs.
 
 import gzip
 import socket
+import sys
 import zlib
 from types import SimpleNamespace
 
@@ -166,6 +167,7 @@ class TestURLComponent(ComponentTestBaseWithoutClient):
         text = data_frame.iloc[0]["text"]
         assert "<h1>Heading</h1>" in text
 
+    @pytest.mark.skipif(sys.version_info >= (3, 15), reason="markitdown is not installed on Python 3.15+")
     @pytest.mark.asyncio
     @pytest.mark.usefixtures("disable_ssrf")
     async def test_url_component_markdown_format(self, monkeypatch):
