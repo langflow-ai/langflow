@@ -1,8 +1,18 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import SideBarFoldersButtonsComponent from "..";
 
 const mockMutateAddFolder = jest.fn();
 const mockMutateUpdateFolder = jest.fn();
+const mockUploadFolders = jest.fn();
+const mockUploadFlow = jest.fn();
+const mockCreateFileUpload = jest.fn();
+const mockGetObjectsFromFilelist = jest.fn();
 const mockSetErrorData = jest.fn();
 const mockCan = jest.fn(
   (_projectId: string | undefined | null, _action: string) => true,
@@ -91,7 +101,7 @@ jest.mock("@/controllers/API/queries/folders", () => ({
     mutate: mockMutateAddFolder,
     isPending: false,
   }),
-  usePostUploadFolders: () => ({ mutate: jest.fn() }),
+  usePostUploadFolders: () => ({ mutate: mockUploadFolders }),
 }));
 
 jest.mock("@/controllers/API/queries/folders/use-get-download-folders", () => ({
@@ -111,9 +121,16 @@ jest.mock("@/customization/hooks/use-custom-navigate", () => ({
 }));
 
 jest.mock("@/customization/utils/analytics", () => ({ track: jest.fn() }));
+jest.mock("@/helpers/create-file-upload", () => ({
+  createFileUpload: () => mockCreateFileUpload(),
+}));
+jest.mock("@/helpers/get-objects-from-filelist", () => ({
+  getObjectsFromFilelist: (...args: unknown[]) =>
+    mockGetObjectsFromFilelist(...args),
+}));
 jest.mock("@/hooks/flows/use-upload-flow", () => ({
   __esModule: true,
-  default: () => jest.fn(),
+  default: () => mockUploadFlow,
 }));
 jest.mock("@/hooks/use-mobile", () => ({ useIsMobile: () => false }));
 jest.mock("@/stores/authStore", () => ({
@@ -163,10 +180,21 @@ jest.mock("../../../hooks/use-on-file-drop", () => ({
   }),
 }));
 jest.mock("../components/header-buttons", () => ({
-  HeaderButtons: ({ addNewFolder }: { addNewFolder: () => void }) => (
-    <button type="button" onClick={addNewFolder}>
-      New Project
-    </button>
+  HeaderButtons: ({
+    addNewFolder,
+    handleUploadFlowsToFolder,
+  }: {
+    addNewFolder: () => void;
+    handleUploadFlowsToFolder: () => void;
+  }) => (
+    <>
+      <button type="button" onClick={addNewFolder}>
+        New Project
+      </button>
+      <button type="button" onClick={handleUploadFlowsToFolder}>
+        Upload
+      </button>
+    </>
   ),
 }));
 jest.mock("../components/input-edit-folder-name", () => ({
@@ -202,11 +230,17 @@ jest.mock("../../sidebarFolderSkeleton", () => ({
   SidebarFolderSkeleton: () => null,
 }));
 
-describe("project creation errors", () => {
+describe("project creation and upload errors", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockCan.mockReturnValue(true);
     mockFolders = [];
+    mockCreateFileUpload.mockResolvedValue([
+      new File(["{}"], "flow.json", { type: "application/json" }),
+    ]);
+    mockGetObjectsFromFilelist.mockResolvedValue([{ data: { nodes: [] } }]);
+    mockUploadFlow.mockReset();
+    mockUploadFlow.mockResolvedValue(undefined);
   });
 
   it("surfaces a backend permission denial in the alert UI", () => {
@@ -226,6 +260,80 @@ describe("project creation errors", () => {
       list: ["Not enough permissions"],
     });
   });
+
+  it("keeps the validation detail in the final flow upload alert", async () => {
+    const message =
+      "A flow can have only one trigger. Remove the extra triggers and try again.";
+    mockUploadFlow.mockRejectedValue({
+      message: "Request failed with status code 422",
+      response: {
+        status: 422,
+        data: { detail: [{ loc: ["body", "data"], msg: message }] },
+      },
+    });
+    render(<SideBarFoldersButtonsComponent handleChangeFolder={jest.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Upload" }));
+
+    await waitFor(() =>
+      expect(mockSetErrorData).toHaveBeenLastCalledWith({
+        title: "errors.upload",
+        list: [message],
+      }),
+    );
+  });
+
+  it("keeps a local file error in the upload alert", async () => {
+    mockGetObjectsFromFilelist.mockRejectedValue(
+      new Error("Invalid JSON file"),
+    );
+    render(<SideBarFoldersButtonsComponent handleChangeFolder={jest.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Upload" }));
+
+    await waitFor(() =>
+      expect(mockSetErrorData).toHaveBeenLastCalledWith({
+        title: "errors.upload",
+        list: ["Invalid JSON file"],
+      }),
+    );
+  });
+
+  it.each(["string", "validation array"])(
+    "shows a project's %s validation detail as text",
+    async (shape) => {
+      const message =
+        "A flow can have only one trigger. Remove the extra triggers and try again.";
+      mockGetObjectsFromFilelist.mockResolvedValue([{ flows: [] }]);
+      render(<SideBarFoldersButtonsComponent handleChangeFolder={jest.fn()} />);
+      fireEvent.click(screen.getByRole("button", { name: "Upload" }));
+      await waitFor(() => expect(mockUploadFolders).toHaveBeenCalledTimes(1));
+      const mutationOptions = mockUploadFolders.mock.calls[0][1];
+      const consoleError = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+
+      try {
+        act(() => {
+          mutationOptions.onError({
+            message: "Request failed with status code 422",
+            response: {
+              status: 422,
+              data: {
+                detail: shape === "string" ? message : [{ msg: message }],
+              },
+            },
+          });
+        });
+        expect(mockSetErrorData).toHaveBeenLastCalledWith({
+          title: "sidebar.projectUploadError",
+          list: [message],
+        });
+      } finally {
+        consoleError.mockRestore();
+      }
+    },
+  );
 
   it("qualifies foreign duplicate names and only renames writable projects by id", () => {
     mockFolders = [

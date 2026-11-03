@@ -289,6 +289,24 @@ def _node_kind(node_type: Any) -> str | None:
     )
 
 
+def validate_single_trigger_per_flow(flow_data: dict[str, Any] | None) -> None:
+    """Reject extra canvas triggers before saving or enabling the flow."""
+    nodes = (flow_data or {}).get("nodes")
+    if not isinstance(nodes, list):
+        return
+    count = 0
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        node_data = node.get("data")
+        if not isinstance(node_data, dict) or _node_kind(node_data.get("type")) is None:
+            continue
+        count += 1
+        if count > 1:
+            msg = "A flow can have only one trigger. Remove the extra triggers and try again."
+            raise ValueError(msg)
+
+
 def _display_name(config: dict[str, Any], kind: str) -> str:
     if kind == "schedule" and config.get("cron"):
         return f"Schedule {config['cron']}"
@@ -625,6 +643,9 @@ async def reconcile_flow_triggers_safely(
     if owner_id is None:
         return
     try:
+        # Legacy graphs remain editable, but a metadata save cannot restart
+        # their stopped triggers before the extra canvas nodes are removed.
+        validate_single_trigger_per_flow(flow_data)
         async with session.begin_nested():
             await reconcile_flow_triggers(session, flow_id=flow_id, owner_id=owner_id, flow_data=flow_data)
     except DBAPIError:

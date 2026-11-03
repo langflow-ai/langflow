@@ -228,9 +228,7 @@ const SideBarFoldersButtonsComponent = ({
               .catch((error) => {
                 setErrorData({
                   title: t("errors.upload"),
-                  list: [
-                    error instanceof Error ? error.message : String(error),
-                  ],
+                  list: extractApiErrorMessages(error),
                 });
               });
           } else {
@@ -249,10 +247,7 @@ const SideBarFoldersButtonsComponent = ({
                     console.error(err);
                     setErrorData({
                       title: t("sidebar.projectUploadError"),
-                      list: [
-                        err?.response?.data?.detail ??
-                          (err instanceof Error ? err.message : String(err)),
-                      ],
+                      list: extractApiErrorMessages(err),
                     });
                   },
                 },
@@ -263,7 +258,7 @@ const SideBarFoldersButtonsComponent = ({
         .catch((error) => {
           setErrorData({
             title: t("errors.upload"),
-            list: [error instanceof Error ? error.message : String(error)],
+            list: extractApiErrorMessages(error),
           });
         });
     });
