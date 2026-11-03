@@ -4,10 +4,12 @@ import type {
   TriggerBulkAction,
   TriggerBulkRequest,
   TriggerBulkResult,
+  TriggerEventFilterParam,
   TriggerEventRead,
   TriggerIngressRead,
   TriggerListParams,
   TriggerRead,
+  TriggerSessionRead,
   TriggerSigningSecretRead,
 } from "./types";
 
@@ -78,16 +80,34 @@ export async function testTrigger(id: string): Promise<TriggerEventRead> {
 
 export async function listTriggerEvents(
   id: string,
-  options: { limit?: number; offset?: number } = {},
+  options: {
+    limit?: number;
+    offset?: number;
+    filter?: TriggerEventFilterParam;
+  } = {},
 ): Promise<TriggerEventRead[]> {
   const query = new URLSearchParams();
   if (options.limit !== undefined) query.set("limit", String(options.limit));
   if (options.offset) query.set("offset", String(options.offset));
+  if (options.filter) query.set("filter", options.filter);
   const suffix = query.toString();
   const { data } = await api.get<TriggerEventRead[]>(
     suffix ? `${one(id)}/events?${suffix}` : `${one(id)}/events`,
   );
   return asArray<TriggerEventRead>(data);
+}
+
+/** What started each of `sessionIds` that a trigger on `flowId` ran; other ids are left out. */
+export async function listTriggerSessions(
+  flowId: string,
+  sessionIds: readonly string[],
+): Promise<TriggerSessionRead[]> {
+  const query = new URLSearchParams({ flow_id: flowId });
+  for (const sessionId of sessionIds) query.append("session_id", sessionId);
+  const { data } = await api.get<TriggerSessionRead[]>(
+    `${triggers()}/sessions?${query.toString()}`,
+  );
+  return asArray<TriggerSessionRead>(data);
 }
 
 /** Appends a new event linked to `eventId`; the original is never changed. */

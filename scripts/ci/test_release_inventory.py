@@ -175,14 +175,14 @@ def test_release_gate_covers_supported_python_and_image_architectures() -> None:
     assert "manage_bundle_profiles.py check" in profile_job
     assert "manage_bundle_profiles.py compile" in profile_job
     assert "if: ${{ inputs.base-artifact-name != '' }}" in base_job
-    assert 'python-version: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]' in base_job
+    assert 'python-version: ["3.11", "3.12", "3.13", "3.14", "3.15"]' in base_job
     assert "--profile python-base" in base_job
     for wheel_dir in ("sdk-dist", "lfx-dist", "base-dist"):
         assert wheel_dir in base_job
     assert "main-dist" not in base_job
     assert "bundles-dist" not in base_job
     assert "profile: [python-default, python-full]" in python_job
-    assert 'python-version: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]' in python_job
+    assert 'python-version: ["3.11", "3.12", "3.13", "3.14", "3.15"]' in python_job
     preview_lane = "continue-on-error: ${{ matrix.python-version == '3.15' }}"
     assert preview_lane in base_job
     assert preview_lane in python_job

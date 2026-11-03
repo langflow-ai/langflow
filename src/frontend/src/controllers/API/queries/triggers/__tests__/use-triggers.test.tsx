@@ -2,10 +2,17 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { makeEvent } from "@/components/core/triggers/__tests__/fixtures";
-import { listTriggerEvents } from "../api";
-import { useTriggerEventsQuery } from "../use-triggers";
+import { listTriggerEvents, listTriggerSessions } from "../api";
+import {
+  TRIGGER_SESSIONS_BATCH_SIZE,
+  useTriggerEventsQuery,
+  useTriggerSessionsQuery,
+} from "../use-triggers";
 
-jest.mock("../api", () => ({ listTriggerEvents: jest.fn() }));
+jest.mock("../api", () => ({
+  listTriggerEvents: jest.fn(),
+  listTriggerSessions: jest.fn(),
+}));
 jest.mock("@/stores/utilityStore", () => ({
   useUtilityStore: (selector: (state: unknown) => unknown) =>
     selector({ triggerPollingInterval: 0 }),
@@ -87,4 +94,59 @@ it("retains loaded rows while fetching older events and clears them for another 
   });
   rerender({ id: "second" });
   expect(result.current.data).toBeUndefined();
+});
+
+it("pages a filter's matches apart from the unfiltered list", async () => {
+  jest
+    .mocked(listTriggerEvents)
+    .mockImplementation(async (_id, options) =>
+      options?.filter === "failed"
+        ? [{ id: "older-failure" } as never]
+        : [{ id: "newest" } as never],
+    );
+  const render = wrapper();
+
+  const all = renderHook(() => useTriggerEventsQuery("t1"), {
+    wrapper: render,
+  });
+  const failed = renderHook(
+    () => useTriggerEventsQuery("t1", { filter: "failed" }),
+    { wrapper: render },
+  );
+
+  await waitFor(() => expect(failed.result.current.data).toHaveLength(1));
+  await waitFor(() => expect(all.result.current.data).toHaveLength(1));
+  expect(failed.result.current.data?.[0].id).toBe("older-failure");
+  expect(all.result.current.data?.[0].id).toBe("newest");
+  expect(listTriggerEvents).toHaveBeenCalledWith("t1", {
+    limit: 51,
+    offset: 0,
+    filter: "failed",
+  });
+});
+
+it("labels sessions in batches, skipping ids no trigger made", async () => {
+  jest
+    .mocked(listTriggerSessions)
+    .mockImplementation(async (_flowId, ids) =>
+      ids.map((id) => ({ session_id: id }) as never),
+    );
+  const runs = Array.from(
+    { length: 120 },
+    (_, index) => `trigger:t1:e${index}`,
+  );
+
+  const { result } = renderHook(
+    () => useTriggerSessionsQuery("f1", ["f1", "my chat", ...runs]),
+    { wrapper: wrapper() },
+  );
+
+  await waitFor(() => expect(result.current.data).toHaveLength(120));
+  expect(listTriggerSessions).toHaveBeenCalledTimes(
+    Math.ceil(120 / TRIGGER_SESSIONS_BATCH_SIZE),
+  );
+  expect(listTriggerSessions).toHaveBeenCalledWith(
+    "f1",
+    runs.slice(0, TRIGGER_SESSIONS_BATCH_SIZE),
+  );
 });

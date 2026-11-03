@@ -1,7 +1,6 @@
 """Flow ingestion must publish the totals stored in the SQLite knowledge base."""
 
 import asyncio
-import contextlib
 from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
@@ -15,6 +14,7 @@ from lfx.components.files_and_knowledge.knowledge import KnowledgeComponent
 from lfx.graph import Graph
 from lfx.graph.graph.constants import Finish
 from lfx.schema.dataframe import DataFrame
+from lfx.utils.async_helpers import RUN_CANCEL_GRACE_SECONDS, cancel_and_wait
 
 
 class LocalEmbeddings(Embeddings):
@@ -339,11 +339,10 @@ async def test_repeated_cancellation_cannot_strand_the_run(
 async def test_disconnected_playground_stream_finalizes_the_run(
     client, logged_in_headers, active_user, monkeypatch, tmp_path
 ):
-    """Leaving the flow drops the stream; the run must still end cancelled.
+    """Leaving the flow drops the stream and the run must still end canceled.
 
-    Mirrors ``_stream_event_frames``: Starlette cancels the response's AnyIO
-    scope on disconnect, and the generator's ``finally`` awaits the run task
-    inside that scope, so AnyIO re-cancels the run task on every loop tick.
+    Use the same shielded teardown as ``_stream_event_frames`` after Starlette
+    cancels the response's AnyIO scope on disconnect.
     """
     name = "disconnected_stream_ingestion"
     component, embeddings = await _create_ready_kb(
@@ -362,10 +361,8 @@ async def test_disconnected_playground_stream_finalizes_the_run(
         try:
             await asyncio.Event().wait()
         finally:
-            if not run_task.done():
-                run_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await run_task
+            await cancel_and_wait(run_task, grace_seconds=RUN_CANCEL_GRACE_SECONDS)
+            assert run_task.cancelled()
 
     with anyio.fail_after(10):
         async with anyio.create_task_group() as task_group:

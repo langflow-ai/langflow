@@ -30,6 +30,17 @@ function extractDetail(data: unknown): string | undefined {
   return undefined;
 }
 
+// Statuses that mean this user may not read the resource, so a retry fails the
+// same way. A model-provider policy denial is reported as 404.
+const ACCESS_REFUSALS = new Set([401, 403, 404]);
+
+/** Whether a failed request was refused for access rather than failing to complete. */
+export function isAccessRefusal(err: unknown): boolean {
+  const status = (err as { response?: { status?: number } } | null)?.response
+    ?.status;
+  return status !== undefined && ACCESS_REFUSALS.has(status);
+}
+
 /** Use a translated fallback when the server supplies no displayable detail. */
 export function getAxiosErrorDetail(err: unknown, fallback: string): string {
   return (
