@@ -1,3 +1,4 @@
+// biome-ignore-all lint/suspicious/noExplicitAny: TODO We need to fix this. added suppression for 1.7.1 merge
 /**
  * In Honor of Otávio Anovazzi (@anovazzi1)
  *
@@ -11,7 +12,6 @@
  * software for all.
  */
 
-// biome-ignore-all lint/suspicious/noExplicitAny: TODO We need to fix this. added suppression for 1.7.1 merge
 import {
   type Connection,
   type Edge,
@@ -63,6 +63,7 @@ import type {
   generateFlowType,
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
+import { canMigrateChatOutputInput } from "./chat-output-migration";
 import {
   cleanMcpConfig,
   type MCPServerValue,
@@ -71,6 +72,23 @@ import { getFallbackGridPositions, getLayoutedNodes } from "./layoutUtils";
 import { createRandomKey, toTitleCase } from "./utils";
 
 const uid = new ShortUniqueId();
+
+function resolveGroupInput(node: AllNodeType, fieldName: string) {
+  const visited = new Set<AllNodeType>();
+  while (node.type === "genericNode" && node.data.node && !visited.has(node)) {
+    visited.add(node);
+    const component = node.data.node;
+    const field = component.template[fieldName];
+    if (!field) return;
+    if (!field.proxy) return { component, fieldName, field };
+    const child = component.flow?.data?.nodes.find(
+      (candidate) => candidate.id === field.proxy!.id,
+    );
+    if (!child) return;
+    node = child;
+    fieldName = field.proxy.field;
+  }
+}
 
 export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
   const brokenEdges: {
@@ -193,9 +211,28 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
 
       // Backward compatibility: old flows may have Data/DataFrame types that need to match JSON/Table
       const expectedTargetHandle = scapedJSONStringfy(id);
+      // ChatOutput historically serialized this message input as str. Its current
+      // HandleInput still accepts those connections. Rewrite the handle rather than drop it.
+      // A group exposes the child's field under a different name. Resolve its proxies to
+      // identify that input while retaining the outer handle's node and field identity.
+      // handlesMatch still enforces the field identity and accepted connection types.
+      const resolvedInput = resolveGroupInput(targetNode, field);
+      const comparableTargetHandle =
+        resolvedInput?.field.type === templateFieldType &&
+        canMigrateChatOutputInput(
+          resolvedInput?.component,
+          resolvedInput?.fieldName ?? field,
+          resolvedInput?.field,
+          targetHandleObject,
+        )
+          ? scapedJSONStringfy({
+              ...targetHandleObject,
+              type: templateFieldType,
+            })
+          : targetHandle;
       const targetHandlesMatchResult = handlesMatch(
         expectedTargetHandle,
-        targetHandle,
+        comparableTargetHandle,
       );
       if (
         (!targetHandlesMatchResult ||
@@ -1846,7 +1883,7 @@ export function generateNodeFromFlow(
   return newGroupNode;
 }
 
-function generateNodeOutputs(flow: FlowType) {
+export function generateNodeOutputs(flow: FlowType) {
   const { nodes, edges } = flow.data!;
   const outputs: Array<OutputFieldType> = [];
   nodes.forEach((node: AllNodeType) => {

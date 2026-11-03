@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+from lfx.template.field_migrations import can_migrate_chat_output_input
 from lfx.upgrade.checker import (
     CompatibilityReport,
     _canonical_types,
@@ -84,12 +85,32 @@ def _apply_to_nodes(nodes: list[dict], safe_ids: set[str], registry: dict[str, d
                     # each one exactly as the registry declares it — the state a freshly
                     # added component would carry. Deep-copied so later edits to the
                     # upgraded flow cannot reach back into the shared registry lookup.
-                    # A field whose type changed is empty and unconnected on a safe node; take
-                    # the registry's declaration for it too, as the editor's update does.
+                    # Take the registry declaration for retyped fields too. Normally those are
+                    # empty and unconnected. The explicit ChatOutput migration keeps values below.
                     for key in new_template_field_keys(registry_template, flow_template) | retyped_field_keys(
                         registry_template, flow_template
                     ):
-                        flow_template[key] = copy.deepcopy(registry_template[key])
+                        replacement = copy.deepcopy(registry_template[key])
+                        saved_field = flow_template.get(key, {})
+                        if can_migrate_chat_output_input(
+                            (entry.get("metadata") or {}).get("component_class_name"),
+                            key,
+                            replacement,
+                            saved_field,
+                        ):
+                            # Unlike ordinary retyping, the explicit ChatOutput migration keeps
+                            # a saved string and its literal/global source mode.
+                            for saved_key in ("value", "load_from_db"):
+                                if saved_key in saved_field:
+                                    replacement[saved_key] = copy.deepcopy(saved_field[saved_key])
+                            # Older flows lack the class identity cleanEdges uses to migrate
+                            # the saved str handle when this upgraded flow opens in the editor.
+                            node_info = node["data"]["node"]
+                            node_info["metadata"] = {
+                                **(node_info.get("metadata") or {}),
+                                "component_class_name": "ChatOutput",
+                            }
+                        flow_template[key] = replacement
                     # Every saved output still exists on a safe node, so take the registry's
                     # outputs, as the editor's update does: an added output reaches the node. A
                     # tool-mode node keeps its toolset output.

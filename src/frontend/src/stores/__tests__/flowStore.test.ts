@@ -1056,6 +1056,96 @@ describe("useFlowStore", () => {
       );
     });
 
+    it.each(["structured", "escaped", "legacy"])(
+      "reports breaking nodes inside nested groups through %s proxy handles",
+      (handleFormat) => {
+        const leaf = {
+          ...updatedNode,
+          id: "parser-1",
+          data: {
+            ...updatedNode.data,
+            id: "parser-1",
+            type: "Parser",
+            node: {
+              ...updatedNode.data.node,
+              outputs: [],
+              template: {
+                code: { ...updatedCodeField, value: "old_code" },
+                input: {
+                  type: "other",
+                  input_types: ["Message", "Data"],
+                  show: true,
+                },
+              },
+            },
+          },
+        } as AllNodeType;
+        const group = (id: string, child: AllNodeType, field: string) =>
+          ({
+            id,
+            type: "genericNode",
+            position: { x: 0, y: 0 },
+            data: {
+              id,
+              type: "GroupNode",
+              node: {
+                template: {
+                  input: { proxy: { id: child.id, field } },
+                },
+                flow: { data: { nodes: [child], edges: [] } },
+              },
+            },
+          }) as unknown as AllNodeType;
+        const outer = group("outer", group("inner", leaf, "input"), "input");
+        const handle = {
+          id: "outer",
+          fieldName: "input",
+          type: "other",
+          proxy: { id: "inner", field: "input" },
+        };
+        const edge = {
+          id: "incoming",
+          source: "source",
+          target: "outer",
+          targetHandle:
+            handleFormat === "legacy"
+              ? "other|input|outer"
+              : scapedJSONStringfy(handle),
+          ...(handleFormat === "structured"
+            ? { data: { targetHandle: handle } }
+            : {}),
+        } as EdgeType;
+        mockTemplates = {
+          Parser: {
+            outputs: [],
+            template: {
+              code: updatedCodeField,
+              input: {
+                type: "other",
+                input_types: ["Message"],
+                show: true,
+              },
+            },
+          },
+        };
+        (checkCodeValidity as jest.Mock).mockImplementation(
+          jest.requireActual("@/CustomNodes/helpers/check-code-validity")
+            .checkCodeValidity,
+        );
+
+        useFlowStore.getState().updateComponentsToUpdate([outer], [edge]);
+
+        expect(useFlowStore.getState().componentsToUpdate).toEqual([
+          expect.objectContaining({ id: "parser-1", breakingChange: true }),
+        ]);
+
+        useFlowStore.getState().updateComponentsToUpdate([outer], []);
+        expect(useFlowStore.getState().componentsToUpdate).toEqual([
+          expect.objectContaining({ id: "parser-1", breakingChange: false }),
+        ]);
+      },
+    );
+
     it("recomputeComponentsToUpdateIfNeeded should skip recalculation when there are no nodes", () => {
       act(() => {
         useFlowStore.setState({
@@ -1811,6 +1901,43 @@ describe("useFlowStore", () => {
           expect.objectContaining({ id: "node-blocked", blocked: true }),
         ]);
       });
+
+      it.each([true, false])(
+        "checks blocked children only when their group is in the build (included=%s)",
+        async (included) => {
+          const group = {
+            id: "group",
+            type: "genericNode",
+            position: { x: 0, y: 0 },
+            data: {
+              id: "group",
+              type: "GroupNode",
+              node: {
+                template: {},
+                flow: { data: { nodes: [blockedNode], edges: [] } },
+              },
+            },
+          } as unknown as AllNodeType;
+          useFlowStore.setState({
+            nodes: [group, healthyNode],
+            edges: [{ ...edgeBlockedToHealthy, source: "group" }],
+          });
+
+          const build = useFlowStore
+            .getState()
+            .buildFlow({ startNodeId: included ? "group" : "node-healthy" });
+
+          if (included) {
+            await expect(build).rejects.toThrow(
+              "Components disabled by an administrator must be removed before building",
+            );
+            expect(mockedRunFlow).not.toHaveBeenCalled();
+          } else {
+            await build;
+            expect(mockedRunFlow).toHaveBeenCalled();
+          }
+        },
+      );
 
       it("runs an upstream build that stops before the blocked component", async () => {
         useFlowStore.setState({
