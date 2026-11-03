@@ -225,7 +225,7 @@ impl Holder {
         }
         Ok(held
             .as_object()
-            .map(|object| object.keys().cloned().collect())
+            .map(|object| object.keys().map(ToString::to_string).collect())
             .unwrap_or_default())
     }
 }
@@ -411,7 +411,7 @@ pub fn read_handles(edge: &AnyMap) -> Result<Handles> {
     let source = handle(edge, "sourceHandle")?;
     let target = handle(edge, "targetHandle")?;
     let output = match source.get("name") {
-        Some(AnyValue::String(name)) if !name.is_empty() => name.clone(),
+        Some(AnyValue::String(name)) if !name.is_empty() => name.to_string(),
         _ => {
             return Err(error(
                 edge,
@@ -439,7 +439,7 @@ pub fn read_handles(edge: &AnyMap) -> Result<Handles> {
             output,
             input: Input {
                 kind,
-                name: name.clone(),
+                name: name.to_string(),
             },
         }),
         _ => Err(error(
@@ -520,14 +520,15 @@ fn handle<'e>(edge: &'e AnyMap, key: &str) -> Result<&'e AnyMap> {
 ///
 /// A compared value holds a number that is not finite.
 pub fn edge_changed(before: &AnyMap, after: &AnyMap) -> Result<bool> {
-    let keys: IndexSet<&String> = before
+    let keys: IndexSet<&str> = before
         .keys()
         .chain(after.keys())
-        .filter(|key| !NODE_SCHEMA.edge_view_state.contains(key.as_str()))
+        .map(crate::value::AnyString::as_str)
+        .filter(|key| !NODE_SCHEMA.edge_view_state.contains(key))
         .collect();
     for key in keys {
         let same = match (before.get(key), after.get(key)) {
-            (Some(old), Some(new)) if HANDLE_KEYS.contains(&key.as_str()) => {
+            (Some(old), Some(new)) if HANDLE_KEYS.contains(&key) => {
                 let (old, new) = (handle_value(old), handle_value(new));
                 values_equal(&old, &new)?
                     || values_equal(&handle_with_type_sets(old)?, &handle_with_type_sets(new)?)?
@@ -569,7 +570,7 @@ pub fn derive_missing_handle_forms(edge: &mut AnyMap) {
         let object = edge["data"].get(key).cloned();
         match object {
             Some(object) if !edge.contains_key(key) => {
-                edge.insert(key.into(), AnyValue::String(escape_handle(&object)));
+                edge.insert(key.into(), AnyValue::from(escape_handle(&object)));
             }
             None => {
                 if let Some(parsed) = edge.get(key).and_then(parse_handle)

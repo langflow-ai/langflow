@@ -259,7 +259,7 @@ impl NodeDiff<'_> {
             if Self::skipped(path, key) {
                 continue;
             }
-            path.push(Segment::Key(key.clone()));
+            path.push(Segment::Key(key.to_string()));
             match base.get(key) {
                 None => self.set(path.clone(), value)?,
                 Some(previous) => {
@@ -272,7 +272,7 @@ impl NodeDiff<'_> {
         }
         for key in base.keys() {
             if !target.contains_key(key) && !Self::skipped(path, key) {
-                path.push(Segment::Key(key.clone()));
+                path.push(Segment::Key(key.to_string()));
                 self.delete(path.clone())?;
                 path.pop();
             }
@@ -497,7 +497,7 @@ fn item_writes<'v>(
             None => false,
         };
         if !unchanged {
-            path.push(Segment::Key(key.clone()));
+            path.push(Segment::Key(key.to_string()));
             writes.push(Write::Set {
                 path: path.clone(),
                 value,
@@ -507,7 +507,7 @@ fn item_writes<'v>(
     }
     for key in base.keys() {
         if !target.contains_key(key) {
-            path.push(Segment::Key(key.clone()));
+            path.push(Segment::Key(key.to_string()));
             writes.push(Write::Delete { path: path.clone() });
             path.pop();
         }

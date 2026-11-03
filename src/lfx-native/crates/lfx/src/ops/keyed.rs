@@ -13,8 +13,10 @@
 //! into a deleted item's place. A list whose items carry no `__pos__` keeps
 //! its array order.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::hash_map::RandomState;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt;
+use std::hash::{BuildHasher, Hash, Hasher};
 
 use indexmap::IndexSet;
 
@@ -318,7 +320,7 @@ pub fn table_fields(node: &AnyValue) -> Vec<String> {
             field.get("value").is_some_and(AnyValue::is_array)
                 && NODE_SCHEMA.is_table_at(node, &field_value_path(name))
         })
-        .map(|(name, _)| name.clone())
+        .map(|(name, _)| name.to_string())
         .collect()
 }
 
@@ -393,6 +395,92 @@ pub fn assign_row_ids(
     Ok(())
 }
 
+/// Hash canonical values without serializing or copying them. Object order
+/// does not matter, numbers use JavaScript doubles, and row metadata is
+/// excluded only at the row's root. Equality still decides every match.
+fn content_hash(value: &AnyValue, state: &RandomState, row: bool) -> Result<u64> {
+    let mut hash = state.build_hasher();
+    std::mem::discriminant(value).hash(&mut hash);
+    match value {
+        AnyValue::Null => {}
+        AnyValue::Bool(value) => value.hash(&mut hash),
+        AnyValue::String(value) => value.hash(&mut hash),
+        AnyValue::Number(value) => {
+            let value = as_double(value);
+            if !value.is_finite() {
+                return Err(crate::ops::error::Error::non_finite());
+            }
+            // Both zero signs have the same canonical form.
+            (if value == 0.0 { 0 } else { value.to_bits() }).hash(&mut hash);
+        }
+        AnyValue::Array(values) => {
+            values.len().hash(&mut hash);
+            for value in values {
+                content_hash(value, state, false)?.hash(&mut hash);
+            }
+        }
+        AnyValue::Object(values) => {
+            let mut sum = 0_u64;
+            let mut count = 0_usize;
+            for (key, value) in values {
+                if row && is_row_key(key) {
+                    continue;
+                }
+                let mut entry = state.build_hasher();
+                key.hash(&mut entry);
+                content_hash(value, state, false)?.hash(&mut entry);
+                sum = sum.wrapping_add(entry.finish());
+                count += 1;
+            }
+            count.hash(&mut hash);
+            sum.hash(&mut hash);
+        }
+    }
+    Ok(hash.finish())
+}
+
+fn row_contents_equal(left: &AnyValue, right: &AnyValue) -> Result<bool> {
+    let (Some(left), Some(right)) = (left.as_object(), right.as_object()) else {
+        return values_equal(left, right);
+    };
+    let visible = |map: &crate::value::AnyMap| map.keys().filter(|key| !is_row_key(key)).count();
+    if visible(left) != visible(right) {
+        return Ok(false);
+    }
+    for (key, value) in left {
+        if !is_row_key(key)
+            && !right
+                .get(key)
+                .map(|right| values_equal(value, right))
+                .transpose()?
+                .unwrap_or(false)
+        {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+/// Remove one equal row from a fingerprint bucket. A fingerprint collision
+/// cannot reuse another row's id, and every claimed candidate is removed once.
+fn take_matching_row<'a>(
+    bucket: &mut VecDeque<&'a AnyValue>,
+    row: &AnyValue,
+    used: &HashSet<String>,
+) -> Result<Option<&'a AnyValue>> {
+    let mut slot = 0;
+    while slot < bucket.len() {
+        if used.contains(bucket[slot].non_empty_str(row_id_key()).unwrap_or_default()) {
+            bucket.remove(slot);
+        } else if row_contents_equal(bucket[slot], row)? {
+            return Ok(bucket.remove(slot));
+        } else {
+            slot += 1;
+        }
+    }
+    Ok(None)
+}
+
 /// Give every row without a unique `__id__` one, in place, keeping stored ids.
 ///
 /// A row that equals a not yet matched row of `previous` (the stored value,
@@ -422,14 +510,40 @@ pub fn match_row_ids(rows: &mut [AnyValue], previous: Option<&AnyValue>) -> Resu
         .flatten()
         .filter(|row| row.is_object() && row.non_empty_str(id_key).is_some())
         .collect();
+    if need_id.is_empty() {
+        return Ok(());
+    }
+    let state = RandomState::new();
+    let mut by_content: HashMap<u64, VecDeque<&AnyValue>> = HashMap::new();
+    // Preserve the old short-circuit errors for invalid numbers. Such input
+    // uses the borrowed comparison below instead of constructing an index.
+    let indexed = candidates
+        .iter()
+        .filter(|row| !used.contains(row.non_empty_str(id_key).unwrap_or_default()))
+        .try_for_each(|row| -> Result<()> {
+            by_content
+                .entry(content_hash(row, &state, true)?)
+                .or_default()
+                .push_back(*row);
+            Ok(())
+        })
+        .is_ok();
     for index in need_id {
-        let content = without_row_keys(&rows[index]);
         let mut matched = None;
-        for candidate in &candidates {
-            let id = candidate.non_empty_str(id_key).unwrap_or_default();
-            if !used.contains(id) && values_equal(&without_row_keys(candidate), &content)? {
-                matched = Some(*candidate);
-                break;
+        let hash = if indexed && !candidates.is_empty() {
+            content_hash(&rows[index], &state, true).ok()
+        } else {
+            None
+        };
+        if let Some(bucket) = hash.and_then(|hash| by_content.get_mut(&hash)) {
+            matched = take_matching_row(bucket, &rows[index], &used)?;
+        } else if !indexed || (hash.is_none() && !candidates.is_empty()) {
+            for candidate in &candidates {
+                let id = candidate.non_empty_str(id_key).unwrap_or_default();
+                if !used.contains(id) && row_contents_equal(candidate, &rows[index])? {
+                    matched = Some(*candidate);
+                    break;
+                }
             }
         }
         let row = &mut rows[index];
@@ -448,7 +562,7 @@ pub fn match_row_ids(rows: &mut [AnyValue], previous: Option<&AnyValue>) -> Resu
         };
         used.insert(new_id.clone());
         if let Some(row) = row.as_object_mut() {
-            row.insert(id_key.to_owned(), AnyValue::String(new_id));
+            row.insert(id_key.to_owned(), AnyValue::from(new_id));
         }
     }
     Ok(())
@@ -734,10 +848,92 @@ pub fn append_table_rows(rows: &mut Vec<AnyValue>, new_rows: &[AnyValue]) -> Res
         used.insert(id.clone());
         last = last.floor() + 1.0;
         if let Some(fresh) = fresh.as_object_mut() {
-            fresh.insert(id_key.to_owned(), AnyValue::String(id));
+            fresh.insert(id_key.to_owned(), AnyValue::from(id));
             fresh.insert(position_key.to_owned(), Position::integer(last).to_value());
         }
         rows.push(fresh);
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::json;
+
+    #[test]
+    fn row_matching_uses_canonical_content_and_previous_order() {
+        let previous = json!([
+            {"__id__":"first", "__pos__":1, "v":{"x":1,"y":-0.0}},
+            {"__id__":"second", "__pos__":2, "v":{"y":0,"x":1.0}},
+            {"__id__":"large", "__pos__":3, "v":9_007_199_254_740_993_u64}
+        ]);
+        let mut rows = vec![
+            json!({"v":{"y":0.0,"x":1}}),
+            json!({"v":{"x":1.0,"y":0}}),
+            json!({"v":9_007_199_254_740_992_u64}),
+        ];
+        match_row_ids(&mut rows, Some(&previous)).unwrap();
+        for (row, id) in rows.iter().zip(["first", "second", "large"]) {
+            assert_eq!(row["__id__"].as_str(), Some(id));
+        }
+        assert_eq!(rows[0]["__pos__"], json!(1));
+        assert_eq!(rows[1]["__pos__"], json!(2));
+    }
+
+    #[test]
+    fn row_matching_reserves_existing_ids_and_keeps_nested_metadata() {
+        let previous = json!([
+            {"__id__":"reserved", "__pos__":1, "v":{"__id__":"nested-a"}},
+            {"__id__":"other", "__pos__":2, "v":{"__id__":"nested-a"}},
+            {"__id__":"different", "__pos__":3, "v":{"__id__":"nested-b"}}
+        ]);
+        let mut rows = vec![
+            json!({"__id__":"reserved", "v":0}),
+            json!({"v":{"__id__":"nested-a"}}),
+            json!({"v":{"__id__":"nested-b"},"__pos__":9}),
+        ];
+        match_row_ids(&mut rows, Some(&previous)).unwrap();
+        assert_eq!(rows[1]["__id__"], json!("other"));
+        assert_eq!(rows[2]["__id__"], json!("different"));
+        assert_eq!(rows[2]["__pos__"], json!(9));
+    }
+
+    #[test]
+    fn fingerprint_collisions_still_require_equal_content() {
+        let different = json!({"__id__":"wrong", "v":1});
+        let equal = json!({"__id__":"right", "v":2});
+        let mut bucket = VecDeque::from([&different, &equal]);
+        let row = json!({"v":2.0});
+        assert_eq!(
+            take_matching_row(&mut bucket, &row, &HashSet::new()).unwrap(),
+            Some(&equal)
+        );
+        assert_eq!(bucket, VecDeque::from([&different]));
+    }
+
+    #[test]
+    fn an_unused_invalid_candidate_does_not_change_short_circuit_errors() {
+        let previous: AnyValue =
+            serde_json::from_str(r#"[{"__id__":"ok","v":1},{"__id__":"bad","v":1e400}]"#).unwrap();
+        let mut rows = vec![json!({"v":1})];
+        match_row_ids(&mut rows, Some(&previous)).unwrap();
+        assert_eq!(rows[0]["__id__"], json!("ok"));
+        let mut rows: Vec<AnyValue> = serde_json::from_str(r#"[{"v":1e400}]"#).unwrap();
+        assert!(match_row_ids(&mut rows, Some(&previous)).is_err());
+    }
+
+    #[test]
+    fn equal_rows_claim_each_previous_id_only_once() {
+        let previous = AnyValue::Array(
+            (0..2000)
+                .map(|i| json!({"__id__":i.to_string(),"__pos__":i,"v":1}))
+                .collect(),
+        );
+        let mut rows = vec![json!({"v":1}); 2000];
+        match_row_ids(&mut rows, Some(&previous)).unwrap();
+        for (i, row) in rows.iter().enumerate() {
+            assert_eq!(row["__id__"], json!(i.to_string()));
+        }
+    }
 }

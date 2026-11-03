@@ -46,6 +46,103 @@ pub(crate) enum FieldWrite {
     Remove,
 }
 
+/// Successful and refused batches retain only modest reusable map storage.
+pub(crate) const MAX_RETAINED_BATCH_ENTRIES: usize = 256;
+
+/// Most written path prefixes have one child. A box keeps that child compact
+/// without allocating a hash table. Branching paths promote to an ordered map.
+#[derive(Debug, Clone, Default)]
+enum Children {
+    #[default]
+    Empty,
+    One(Box<(Segment, PathWrites)>),
+    Many(Box<IndexMap<Segment, PathWrites>>),
+}
+
+impl Children {
+    fn len(&self) -> usize {
+        match self {
+            Self::Empty => 0,
+            Self::One(_) => 1,
+            Self::Many(map) => map.len(),
+        }
+    }
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+    fn get(&self, key: &Segment) -> Option<&PathWrites> {
+        match self {
+            Self::Empty => None,
+            Self::One(pair) => (pair.0 == *key).then_some(&pair.1),
+            Self::Many(map) => map.get(key),
+        }
+    }
+    fn get_mut(&mut self, key: &Segment) -> Option<&mut PathWrites> {
+        match self {
+            Self::Empty => None,
+            Self::One(pair) => (pair.0 == *key).then_some(&mut pair.1),
+            Self::Many(map) => map.get_mut(key),
+        }
+    }
+    fn get_or_insert(&mut self, key: &Segment) -> &mut PathWrites {
+        if matches!(self, Self::Empty) {
+            *self = Self::One(Box::new((key.clone(), PathWrites::default())));
+        } else if matches!(self, Self::One(pair) if pair.0 != *key) {
+            let Self::One(pair) = std::mem::take(self) else {
+                unreachable!("one child");
+            };
+            let (first, value) = *pair;
+            let mut map = IndexMap::with_capacity(2);
+            map.insert(first, value);
+            map.insert(key.clone(), PathWrites::default());
+            *self = Self::Many(Box::new(map));
+        }
+        match self {
+            Self::One(pair) => &mut pair.1,
+            Self::Many(map) => {
+                let slot = match map.get_index_of(key) {
+                    Some(slot) => slot,
+                    None => map.insert_full(key.clone(), PathWrites::default()).0,
+                };
+                map.get_index_mut(slot).expect("the child exists").1
+            }
+            Self::Empty => unreachable!("the child was inserted"),
+        }
+    }
+    fn shift_remove(&mut self, key: &Segment) {
+        match self {
+            Self::One(pair) if pair.0 == *key => *self = Self::Empty,
+            Self::Many(map) => {
+                map.shift_remove(key);
+                if map.len() <= 1 {
+                    *self = map
+                        .pop()
+                        .map_or(Self::Empty, |pair| Self::One(Box::new(pair)));
+                }
+            }
+            _ => {}
+        }
+    }
+    fn clear(&mut self) {
+        *self = Self::Empty;
+    }
+    fn into_entries(self) -> impl Iterator<Item = (Segment, PathWrites)> {
+        let (one, many) = match self {
+            Self::Empty => (None, None),
+            Self::One(pair) => (Some(*pair), None),
+            Self::Many(map) => (None, Some(*map)),
+        };
+        one.into_iter().chain(many.into_iter().flatten())
+    }
+}
+
+impl std::ops::Index<&Segment> for Children {
+    type Output = PathWrites;
+    fn index(&self, key: &Segment) -> &PathWrites {
+        self.get(key).expect("the child exists")
+    }
+}
+
 /// The batch's writes at one path of a node and at its descendant paths: a
 /// tree of path segments.
 #[derive(Debug, Clone, Default)]
@@ -53,7 +150,7 @@ pub(crate) struct PathWrites {
     /// The write at this path. A tree node with a write has no children.
     write: Option<FieldWrite>,
     /// The tree nodes one segment further, in the order they were first written.
-    children: IndexMap<Segment, PathWrites>,
+    children: Children,
 }
 
 impl PathWrites {
@@ -73,13 +170,7 @@ impl PathWrites {
         let mut node = self;
         for segment in path {
             debug_assert!(node.write.is_none(), "no write at an ancestor path");
-            if !node.children.contains_key(segment) {
-                node.children.insert(segment.clone(), Self::default());
-            }
-            node = node
-                .children
-                .get_mut(segment)
-                .expect("the tree node was just added");
+            node = node.children.get_or_insert(segment);
         }
         node.write = Some(write);
         node.children.clear();
@@ -145,14 +236,22 @@ impl FieldLayer {
         self.by_node.remove(id);
     }
 
-    /// The writes to every node, moved out, which leaves the layer empty.
-    pub fn take(&mut self) -> HashMap<String, PathWrites> {
-        std::mem::take(&mut self.by_node)
+    /// Move out the writes while retaining the map's allocation for the next batch.
+    pub fn drain(&mut self) -> impl Iterator<Item = (String, PathWrites)> + '_ {
+        self.by_node.drain()
+    }
+
+    /// Do not retain a large allocation after an unusually wide batch.
+    pub fn finish(&mut self) {
+        if self.by_node.capacity() > MAX_RETAINED_BATCH_ENTRIES {
+            self.by_node.shrink_to_fit();
+        }
     }
 
     /// Drop every write.
     pub fn discard(&mut self) {
         self.by_node.clear();
+        self.finish();
     }
 }
 
@@ -342,7 +441,7 @@ pub(crate) fn make_writes(
     path: &mut Path,
     mut lists: Option<&mut NodeLists<'_>>,
 ) {
-    for (segment, child) in tree.children {
+    for (segment, child) in tree.children.into_entries() {
         if let Some(write) = child.write {
             make_write(value, &segment, path, write, lists.as_deref_mut());
             continue;
@@ -452,6 +551,61 @@ mod tests {
         at: &[Segment],
     ) -> impl FnMut(&'v AnyValue, usize, bool) -> Result<Option<&'v AnyValue>> {
         move |value, index, _| Ok(child(value, &at[..index], &at[index]))
+    }
+
+    #[test]
+    fn path_children_promote_demote_and_keep_insertion_order() {
+        let mut children = Children::default();
+        let key = |name: &str| Segment::Key(name.into());
+        for name in ["a", "b", "c"] {
+            children.get_or_insert(&key(name));
+        }
+        assert!(matches!(children, Children::Many(_)));
+        children.shift_remove(&key("b"));
+        let order: Vec<_> = children
+            .clone()
+            .into_entries()
+            .map(|(key, _)| key)
+            .collect();
+        assert_eq!(order, vec![key("a"), key("c")]);
+        children.shift_remove(&key("a"));
+        assert!(matches!(children, Children::One(_)));
+        assert!(children.get(&key("c")).is_some());
+        children.shift_remove(&key("c"));
+        assert!(children.is_empty());
+    }
+
+    #[test]
+    fn dropping_a_branched_write_keeps_other_writes_and_original_values() {
+        let mut writes = PathWrites::default();
+        let a = vec![Segment::Key("t".into()), Segment::Key("a".into())];
+        let b = vec![Segment::Key("t".into()), Segment::Key("b".into())];
+        writes.set(&a, FieldWrite::Set(crate::json!(1)));
+        writes.set(&b, FieldWrite::Set(crate::json!(2)));
+        writes.drop_write(&a);
+        let mut value = crate::json!({"t":{"a":0}});
+        make_writes(&mut value, writes, &mut Vec::new(), None);
+        assert_eq!(value, crate::json!({"t":{"a":0,"b":2}}));
+    }
+
+    #[test]
+    fn field_layer_reuses_small_maps_and_releases_large_batch_storage() {
+        let mut layer = FieldLayer::default();
+        layer.node_mut("a");
+        drop(layer.drain().collect::<Vec<_>>());
+        layer.finish();
+        assert!(layer.by_node.capacity() > 0);
+        for i in 0..=MAX_RETAINED_BATCH_ENTRIES {
+            layer.node_mut(&i.to_string());
+        }
+        layer.discard();
+        assert_eq!(layer.by_node.capacity(), 0);
+        for i in 0..=MAX_RETAINED_BATCH_ENTRIES {
+            layer.node_mut(&i.to_string());
+        }
+        drop(layer.drain().collect::<Vec<_>>());
+        layer.finish();
+        assert_eq!(layer.by_node.capacity(), 0);
     }
 
     #[test]

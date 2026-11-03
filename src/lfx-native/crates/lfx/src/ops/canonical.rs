@@ -36,7 +36,7 @@ use std::fmt::Write as _;
 use std::io::Write as _;
 
 use crate::json_out::{self, Ascii};
-use crate::value::{AnyMap, AnyValue, Number};
+use crate::value::{AnyMap, AnyString, AnyValue, Number};
 use sha2::{Digest, Sha256};
 
 use crate::ops::error::{Error, Result};
@@ -266,7 +266,7 @@ fn write_canonical(value: &AnyValue, out: &mut Sink) -> Result<()> {
         AnyValue::String(string) => write_string(string, out),
         AnyValue::Array(items) => write_list(out, (b'[', b']'), items, write_canonical)?,
         AnyValue::Object(map) => {
-            let write_entry = |(key, value): (&String, &AnyValue), out: &mut Sink| {
+            let write_entry = |(key, value): (&AnyString, &AnyValue), out: &mut Sink| {
                 write_string(key, out);
                 out.put(b":");
                 write_canonical(value, out)
@@ -275,7 +275,7 @@ fn write_canonical(value: &AnyValue, out: &mut Sink) -> Result<()> {
             if map.keys().is_sorted_by(|a, b| utf16_cmp(a, b).is_lt()) {
                 write_list(out, (b'{', b'}'), map.iter(), write_entry)?;
             } else {
-                let mut entries: Vec<(&String, &AnyValue)> = map.iter().collect();
+                let mut entries: Vec<(&AnyString, &AnyValue)> = map.iter().collect();
                 entries.sort_by(|a, b| utf16_cmp(a.0, b.0));
                 write_list(out, (b'{', b'}'), entries, write_entry)?;
             }

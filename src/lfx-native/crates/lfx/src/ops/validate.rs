@@ -705,7 +705,7 @@ fn removed_fields(before: &AnyMap, after: &AnyMap) -> HashSet<String> {
     before
         .keys()
         .filter(|key| !after.contains_key(key))
-        .cloned()
+        .map(ToString::to_string)
         .collect()
 }
 

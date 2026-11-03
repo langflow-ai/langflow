@@ -162,47 +162,55 @@ fn take_array(graph: &mut AnyMap, key: &str) -> Vec<AnyValue> {
     }
 }
 
-/// Replace every number that is not finite with null, containers last found first.
+/// Read first. Only paths that hold an invalid number need mutable access.
+/// Direct members precede nested containers, last container first, as before.
 fn replace_non_finite(value: &mut AnyValue, fixes: &mut Fixes) {
-    replace_non_finite_at(value, &mut Vec::new(), fixes);
+    let mut paths = Vec::new();
+    non_finite_paths(value, &mut Vec::new(), &mut paths);
+    for path in paths {
+        if let Some(value) = resolve_mut(value, &path) {
+            *value = AnyValue::Null;
+            fixes.add(ViolationCode::NonFiniteNumber, path);
+        }
+    }
 }
 
-/// [`replace_non_finite`] in the container at `at`. Its own members come
-/// first, in order; then each container among them, the last one first.
-/// The walk borrows each key, and copies a path only for a fix.
-fn replace_non_finite_at<'a>(
-    container: &'a mut AnyValue,
-    at: &mut Vec<Step<'a>>,
-    fixes: &mut Fixes,
-) {
-    let mut children: Vec<(Step<'a>, &'a mut AnyValue)> = Vec::new();
-    let mut visit = |step: Step<'a>, item: &'a mut AnyValue, fixes: &mut Fixes| match item {
-        AnyValue::Number(number) if !is_finite_number(number) => {
+fn non_finite_paths<'a>(value: &'a AnyValue, at: &mut Vec<Step<'a>>, paths: &mut Vec<GraphPath>) {
+    let mut number = |step, value: &AnyValue| {
+        if let AnyValue::Number(number) = value
+            && !is_finite_number(number)
+        {
             at.push(step);
-            fixes.add(ViolationCode::NonFiniteNumber, owned_path(at));
+            paths.push(owned_path(at));
             at.pop();
-            *item = AnyValue::Null;
         }
-        AnyValue::Object(_) | AnyValue::Array(_) => children.push((step, item)),
-        _ => {}
     };
-    match container {
+    match value {
         AnyValue::Object(map) => {
-            for (key, item) in map.iter_mut() {
-                visit(Step::Key(key), item, fixes);
+            for (key, value) in map {
+                number(Step::Key(key), value);
+            }
+            for (key, value) in map.iter().rev() {
+                if value.is_object() || value.is_array() {
+                    at.push(Step::Key(key));
+                    non_finite_paths(value, at, paths);
+                    at.pop();
+                }
             }
         }
         AnyValue::Array(items) => {
-            for (index, item) in items.iter_mut().enumerate() {
-                visit(Step::Index(index), item, fixes);
+            for (index, value) in items.iter().enumerate() {
+                number(Step::Index(index), value);
+            }
+            for (index, value) in items.iter().enumerate().rev() {
+                if value.is_object() || value.is_array() {
+                    at.push(Step::Index(index));
+                    non_finite_paths(value, at, paths);
+                    at.pop();
+                }
             }
         }
         _ => {}
-    }
-    for (step, child) in children.into_iter().rev() {
-        at.push(step);
-        replace_non_finite_at(child, at, fixes);
-        at.pop();
     }
 }
 
@@ -241,7 +249,7 @@ fn repair_nodes(nodes: Vec<AnyValue>, fixes: &mut Fixes) -> Result<Vec<AnyValue>
         let new_id = generate_node_id(node, *index, &used)?;
         used.insert(new_id.clone());
         seen.insert(new_id.clone());
-        node.insert("id".into(), AnyValue::String(new_id.clone()));
+        node.insert("id".into(), AnyValue::from(new_id.clone()));
         // The editor keeps a node's own id in data.id; follow a rename there.
         if let Some(AnyValue::Object(data)) = node.get_mut("data") {
             let follows = match data.get("id") {
@@ -249,7 +257,7 @@ fn repair_nodes(nodes: Vec<AnyValue>, fixes: &mut Fixes) -> Result<Vec<AnyValue>
                 Some(data_id) => Some(data_id) == old_id.as_ref(),
             };
             if follows {
-                data.insert("id".into(), AnyValue::String(new_id));
+                data.insert("id".into(), AnyValue::from(new_id));
             }
         }
     }
@@ -260,6 +268,16 @@ fn repair_nodes(nodes: Vec<AnyValue>, fixes: &mut Fixes) -> Result<Vec<AnyValue>
 }
 
 fn repair_node_objects(node: &mut AnyMap, index: usize, fixes: &mut Fixes) {
+    // A valid node stays shared. Do not detach its objects just to inspect them.
+    if NODE_OBJECT_PATHS.iter().all(|path| {
+        let mut value = node.get(path[0]);
+        for key in &path[1..] {
+            value = value.and_then(|value| value.get(*key));
+        }
+        value.is_some_and(AnyValue::is_object)
+    }) {
+        return;
+    }
     let mut parent = node;
     for object_path in NODE_OBJECT_PATHS {
         let key = object_path[object_path.len() - 1];
@@ -329,7 +347,7 @@ fn repair_edges(
         let new_id = unused_id(&used, new_edge_id);
         used.insert(new_id.clone());
         seen.insert(new_id.clone());
-        edge.insert("id".into(), AnyValue::String(new_id));
+        edge.insert("id".into(), AnyValue::from(new_id));
     }
     kept.into_iter()
         .map(|(_, edge)| AnyValue::Object(edge))
@@ -530,4 +548,49 @@ fn short_digest(seed: &str) -> String {
         characters.push(char::from(ID_ALPHABET[remainder]));
     }
     characters
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::json;
+
+    #[test]
+    fn repair_keeps_valid_node_objects_shared() {
+        let source = json!({"nodes":[{"id":"a","data":{"node":{"template":{"t":{"value":"unchanged"}}}}}],"edges":[]});
+        let repaired = repair_flow_data(&source, None).unwrap();
+        assert_eq!(repaired.fixes, []);
+        assert!(std::ptr::eq(
+            source["nodes"][0]["data"]
+                .as_object()
+                .unwrap()
+                .get("node")
+                .unwrap(),
+            repaired.flow_data["nodes"][0]["data"]
+                .as_object()
+                .unwrap()
+                .get("node")
+                .unwrap()
+        ));
+    }
+
+    #[test]
+    fn replacing_invalid_numbers_leaves_other_branches_shared() {
+        let source: AnyValue = serde_json::from_str(
+            r#"{"nodes":[],"edges":[],"first":{"bad":1e400},"second":{"keep":"text"}}"#,
+        )
+        .unwrap();
+        let repaired = repair_flow_data(&source, None).unwrap();
+        assert_eq!(repaired.flow_data["first"]["bad"], AnyValue::Null);
+        assert!(source["first"]["bad"].as_f64().unwrap().is_infinite());
+        assert!(std::ptr::eq(
+            source["second"].as_object().unwrap().get("keep").unwrap(),
+            repaired.flow_data["second"]
+                .as_object()
+                .unwrap()
+                .get("keep")
+                .unwrap()
+        ));
+        assert_eq!(repaired.fixes.len(), 1);
+    }
 }

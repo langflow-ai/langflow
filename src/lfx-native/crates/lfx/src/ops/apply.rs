@@ -27,7 +27,7 @@ use std::borrow::Cow;
 use std::collections::HashSet;
 use std::fmt;
 
-use crate::value::AnyValue;
+use crate::value::{AnyString, AnyValue};
 use indexmap::IndexSet;
 
 use crate::ops::edges::{GraphRead, check_edge, reads_before, removed_endpoints};
@@ -322,7 +322,7 @@ impl GraphState {
             }
         }
         let incident = self.remove_nodes(&ids, report);
-        self.remove_edges(incident.iter().map(String::as_str), report);
+        self.remove_edges(incident.iter().map(AnyString::as_str), report);
         Ok(())
     }
 
@@ -334,22 +334,26 @@ impl GraphState {
         &mut self,
         ids: &IndexSet<&str>,
         report: &mut Report,
-    ) -> IndexSet<String> {
+    ) -> IndexSet<AnyString> {
         let mut removed = Vec::new();
+        let mut changed = false;
         let mut removed_nodes = Vec::new();
         let mut incident = IndexSet::new();
         for &id in ids {
             if !self.graph.has_node(id) {
                 continue;
             }
-            incident.extend(self.graph.edges_at(id).cloned());
+            incident.extend(self.graph.edge_keys_at(id).cloned());
             if report.options.backward {
                 removed_nodes.extend(self.node_copy(id));
             }
             self.remove_node(id);
-            removed.push(id.to_owned());
+            changed = true;
+            if report.options.forward {
+                removed.push(id.to_owned());
+            }
         }
-        if !removed.is_empty() {
+        if changed {
             report.record(Operation::DeleteNodes(removed));
             report.record_backward(Operation::AddNodes(removed_nodes));
         }
@@ -423,18 +427,21 @@ impl GraphState {
     fn remove_edges<'i>(&mut self, ids: impl IntoIterator<Item = &'i str>, report: &mut Report) {
         let mut removed = Vec::new();
         let mut copies = Vec::new();
-        let mut seen = HashSet::new();
+        let mut changed = false;
         for id in ids {
-            if !seen.insert(id) || !self.graph.has_edge(id) {
+            if !self.graph.has_edge(id) {
                 continue;
             }
             if report.options.backward {
                 copies.extend(self.edge_copy(id));
             }
             self.remove_edge(id);
-            removed.push(id.to_owned());
+            changed = true;
+            if report.options.forward {
+                removed.push(id.to_owned());
+            }
         }
-        if removed.is_empty() {
+        if !changed {
             return;
         }
         report.record(Operation::DeleteEdges(removed));
@@ -955,6 +962,72 @@ mod tests {
 
     fn operations(value: AnyValue) -> Vec<Operation> {
         Operation::list_from_value(value).unwrap()
+    }
+
+    #[test]
+    fn deletion_options_preserve_cascade_order_duplicates_and_rollback() {
+        let field = json!({"type": "str", "value": ""});
+        let graph = json!({
+            "nodes": [
+                {"id": "S", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+                {"id": "T", "data": {"node": {"template": {"A": field, "B": field}}}},
+            ],
+            "edges": [edge("e1", "A"), edge("e2", "B")],
+        });
+        for forward in [false, true] {
+            for backward in [false, true] {
+                let options = ApplyOptions { forward, backward };
+                let mut state = GraphState::new(graph.clone()).unwrap();
+                let before = state.to_json();
+                let applied = state
+                    .apply(
+                        operations(json!([
+                            {"type": "delete_nodes", "ids": ["T", "S", "T"]},
+                            {"type": "delete_edges", "ids": ["e1", "e1", "absent"]},
+                        ])),
+                        options,
+                    )
+                    .unwrap();
+                assert_eq!(state.to_value()["nodes"], json!([]));
+                assert_eq!(state.to_value()["edges"], json!([]));
+                if forward {
+                    assert_eq!(
+                        applied.forward,
+                        operations(json!([
+                            {"type": "delete_nodes", "ids": ["T", "S"]},
+                            {"type": "delete_edges", "ids": ["e1", "e2"]},
+                        ]))
+                    );
+                } else {
+                    assert_eq!(applied.forward, Vec::<Operation>::new());
+                }
+                if backward {
+                    assert_eq!(applied.backward.len(), 2);
+                    assert_eq!(applied.backward[1], Vec::<Operation>::new());
+                    for batch in applied.backward.into_iter().rev() {
+                        state.replay(batch, ReplayOptions::default()).unwrap();
+                    }
+                    assert_eq!(
+                        state.graph_hash().unwrap(),
+                        GraphState::new(graph.clone())
+                            .unwrap()
+                            .graph_hash()
+                            .unwrap()
+                    );
+                } else {
+                    assert_eq!(applied.backward, Vec::<Vec<Operation>>::new());
+                }
+                let mut state = GraphState::new(graph.clone()).unwrap();
+                let refused = operations(json!([
+                    {"type": "delete_edges", "ids": ["e1", "e1"]},
+                    {"type": "delete_nodes", "ids": ["T", "absent", "S"]},
+                ]));
+                let error = state.apply(refused, options).unwrap_err();
+                assert!(error.to_string().contains("absent"));
+                assert_eq!(state.to_json(), before);
+                assert!(!state.is_staged());
+            }
+        }
     }
 
     #[test]

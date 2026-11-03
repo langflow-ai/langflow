@@ -105,7 +105,7 @@ impl FromAnyValue for AnyValue {
 impl FromAnyValue for String {
     fn from_value(value: AnyValue) -> Result<Self, FromAnyValueError> {
         match value {
-            AnyValue::String(string) => Ok(string),
+            AnyValue::String(string) => Ok(string.to_string()),
             _ => Err(FromAnyValueError::new("must be a string")),
         }
     }

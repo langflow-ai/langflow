@@ -438,7 +438,7 @@ fn natural_list(entry: &AnyValue, path: &str) -> Result<(Vec<String>, KeyedList)
             parts
                 .iter()
                 .map(|part| match part {
-                    AnyValue::String(key) => Some(PathPart::Key(key.clone())),
+                    AnyValue::String(key) => Some(PathPart::Key(key.to_string())),
                     AnyValue::Number(index) => index
                         .as_u64()
                         .and_then(|index| usize::try_from(index).ok())

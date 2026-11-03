@@ -144,7 +144,15 @@ pub(crate) fn write_value(out: &mut Vec<u8>, value: &AnyValue, ascii: Ascii) {
         AnyValue::Bool(true) => out.extend_from_slice(b"true"),
         AnyValue::Bool(false) => out.extend_from_slice(b"false"),
         AnyValue::Number(number) => write_number(out, number),
-        AnyValue::String(text) => write_str(out, text, ascii),
+        AnyValue::String(text) => {
+            if ascii == Ascii::Escape
+                && let Some(encoded) = text.shared_ascii_json()
+            {
+                out.extend_from_slice(encoded);
+            } else {
+                write_str(out, text, ascii);
+            }
+        }
         AnyValue::Array(items) => write_seq(out, items, |out, item| write_value(out, item, ascii)),
         AnyValue::Object(map) => write_map(out, map, ascii),
     }
@@ -234,8 +242,8 @@ mod tests {
         ];
         for ascii in [Ascii::Keep, Ascii::Escape] {
             for piece in pieces {
-                for before in 0..40 {
-                    for after in [0, 1, 15, 16, 17] {
+                for before in 0..96 {
+                    for after in [0, 1, 7, 8, 15, 16, 17, 31, 32, 33, 63, 64] {
                         let text =
                             format!("{}{piece}{}{piece}", "x".repeat(before), "y".repeat(after));
                         let mut out = Vec::new();
