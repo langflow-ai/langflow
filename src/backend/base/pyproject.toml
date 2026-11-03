@@ -51,6 +51,7 @@ dependencies = [
     "python-multipart>=0.0.12,<1.0.0",
     "orjson>=3.11.6,<4.0.0",
     "alembic>=1.13.0,<1.19.0",
+    "mako>=1.4.2,<2.0.0",
     # Pillow 13 and filelock 4.2 dropped Python 3.10 support.
     "pillow>=12.3.0,<13.0.0; python_version < '3.11'",
     "pillow>=13.0.0,<14.0.0; python_version >= '3.11'",

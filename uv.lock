@@ -75,7 +75,7 @@ overrides = [
     { name = "h2", specifier = ">=4.4.1" },
     { name = "langchain-litellm", specifier = "==0.5.1" },
     { name = "lxml", specifier = ">=6.1.0,<7.0.0" },
-    { name = "mako", specifier = ">=1.3.12,<2.0.0" },
+    { name = "mako", specifier = ">=1.4.2,<2.0.0" },
     { name = "markdown", specifier = ">=3.8.0" },
     { name = "nltk", specifier = ">=3.10.3" },
     { name = "orjson", specifier = ">=3.11.6" },
@@ -7983,6 +7983,7 @@ dependencies = [
     { name = "lfx" },
     { name = "litellm" },
     { name = "loguru" },
+    { name = "mako" },
     { name = "mcp" },
     { name = "multiprocess" },
     { name = "nanoid" },
@@ -8552,6 +8553,7 @@ requires-dist = [
     { name = "litellm", marker = "python_full_version < '3.14' and sys_platform != 'darwin' and extra == 'cuga'", specifier = ">=1.103.1,!=1.104.0rc1,!=1.107.0,<2.0.0" },
     { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.103.1,!=1.104.0rc1,!=1.107.0,<2.0.0" },
     { name = "loguru", specifier = ">=0.7.1,<1.0.0" },
+    { name = "mako", specifier = ">=1.4.2,<2.0.0" },
     { name = "markdown", marker = "extra == 'markdown'", specifier = ">=3.8.0" },
     { name = "markupsafe", marker = "extra == 'markup'", specifier = "==3.0.2" },
     { name = "mcp", specifier = ">=1.30.0,<2.0.0" },
@@ -10900,14 +10902,14 @@ wheels = [
 
 [[package]]
 name = "mako"
-version = "1.3.12"
+version = "1.4.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "markupsafe" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/00/62/791b31e69ae182791ec67f04850f2f062716bbd205483d63a215f3e062d3/mako-1.3.12.tar.gz", hash = "sha256:9f778e93289bd410bb35daadeb4fc66d95a746f0b75777b942088b7fd7af550a", size = 400219, upload-time = "2026-04-28T19:01:08.512Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5a/09/e07c4b5579a79f4b16f8d4f29f6c54514ac787c4ad506b8c4f28a0e6b0bf/mako-1.4.3.tar.gz", hash = "sha256:cd6537fe88d5fec315c55c2f8529bc4ce7a9a352ad7db3eeaa6a66e2dd4ec37a", size = 412799, upload-time = "2026-09-22T20:54:31.509Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bc/b1/a0ec7a5a9db730a08daef1fdfb8090435b82465abbf758a596f0ea88727e/mako-1.3.12-py3-none-any.whl", hash = "sha256:8f61569480282dbf557145ce441e4ba888be453c30989f879f0d652e39f53ea9", size = 78521, upload-time = "2026-04-28T19:01:10.393Z" },
+    { url = "https://files.pythonhosted.org/packages/6d/a0/053d6af3e8f871e0073b4a36732d9e65be77a72e5434c31b94f6af78a6bb/mako-1.4.3-py3-none-any.whl", hash = "sha256:723296007c870bfd6b3f0c3230dba7198096e5269297ebf5e4eff9e7ffa39d4f", size = 80164, upload-time = "2026-09-22T20:54:33.128Z" },
 ]
 
 [[package]]
