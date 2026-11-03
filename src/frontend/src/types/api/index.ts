@@ -43,6 +43,8 @@ export type ComponentUpdateWarning = {
   fields: string[];
   refresh_fields: string[];
   unverified?: boolean;
+  inputs_unverified?: boolean;
+  outputs_unverified?: boolean;
 };
 
 export type APIClassType = {

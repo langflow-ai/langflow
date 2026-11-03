@@ -881,6 +881,7 @@ async def update_rebuilt_node(
     )
     refresh_fields: list[str] = []
     refresh_failed = False
+    output_refresh_failed = False
     if saved_node is not None:
         frontend_node = await component_instance.update_frontend_node(frontend_node, saved_node)
         if isinstance(component_instance, Component):
@@ -902,11 +903,11 @@ async def update_rebuilt_node(
             if not refresh_fields:
                 raise
             frontend_node = before_outputs
-            refresh_failed = True
+            output_refresh_failed = True
     missing_fields = [name for name in generated_fields if name not in frontend_node.get("template", {})]
-    if warnings is not None and (missing_fields or refresh_failed):
+    if warnings is not None and (missing_fields or refresh_failed or output_refresh_failed):
         # MCP can swallow discovery failures and leave an empty catalog.
-        unverified = refresh_failed or (
+        inputs_unverified = refresh_failed or (
             bool(missing_fields)
             and type(component_instance).__name__ == "MCPToolsComponent"
             and not getattr(component_instance, "tools", None)
@@ -916,7 +917,9 @@ async def update_rebuilt_node(
                 "code": "generated_fields_not_restored",
                 "fields": missing_fields,
                 "refresh_fields": refresh_fields,
-                "unverified": unverified,
+                "unverified": inputs_unverified or output_refresh_failed,
+                "inputs_unverified": inputs_unverified,
+                "outputs_unverified": output_refresh_failed,
             }
         )
     return frontend_node

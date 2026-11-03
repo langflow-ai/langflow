@@ -31,7 +31,7 @@ def _build_current(component_class: type[Component]) -> tuple[dict[str, Any], Co
     return build_custom_component_template(Component(_code=code))
 
 
-def _selected_flow_graph(*, include_text: bool = True) -> Graph:
+def _selected_flow_graph(*, include_text: bool = True, include_output: bool = True) -> Graph:
     nodes = []
     for component_class, component_type, node_id in (
         (ChatInput, "ChatInput", "ChatInput-NrNFA"),
@@ -39,6 +39,8 @@ def _selected_flow_graph(*, include_text: bool = True) -> Graph:
         (ChatOutput, "ChatOutput", "ChatOutput-evE3l"),
     ):
         if component_class is TextInputComponent and not include_text:
+            continue
+        if component_class is ChatOutput and not include_output:
             continue
         frontend, _ = _build_current(component_class)
         nodes.append(
@@ -117,13 +119,46 @@ async def test_run_flow_discovery_confirms_removed_generated_input(monkeypatch) 
         "TextInput-v7wpH~use_global_variable",
     }
     assert warnings[0]["unverified"] is False
+    assert warnings[0]["inputs_unverified"] is False
+    assert warnings[0]["outputs_unverified"] is False
 
 
-async def test_failed_output_refresh_marks_discovery_unverified(monkeypatch) -> None:
+async def test_failed_input_refresh_keeps_successful_output_discovery_verified(monkeypatch) -> None:
     _, node = _saved_component("run_flow_inputs.json", "RunFlow")
     saved = node["data"]["node"]
     built, component = _build_current(RunFlowComponent)
-    graph = _selected_flow_graph()
+    graph = _selected_flow_graph(include_output=False)
+    discovery_calls = []
+
+    async def get_graph(**kwargs):
+        discovery_calls.append(kwargs)
+        if "flow_name_selected" not in kwargs:
+            message = "Input discovery is unavailable"
+            raise OSError(message)
+        return graph
+
+    monkeypatch.setattr(component, "get_graph", get_graph)
+    warnings = []
+
+    updated = await update_rebuilt_node(component, built, saved, warnings=warnings)
+
+    assert any("flow_name_selected" not in call for call in discovery_calls)
+    assert any("flow_name_selected" in call for call in discovery_calls)
+    assert saved["outputs"]
+    assert updated["outputs"] == []
+    assert len(warnings) == 1
+    assert warnings[0]["fields"]
+    assert warnings[0]["unverified"] is True
+    assert warnings[0]["inputs_unverified"] is True
+    assert warnings[0]["outputs_unverified"] is False
+
+
+@pytest.mark.parametrize("include_text", [True, False])
+async def test_failed_output_refresh_keeps_successful_input_discovery_verified(monkeypatch, *, include_text) -> None:
+    _, node = _saved_component("run_flow_inputs.json", "RunFlow")
+    saved = node["data"]["node"]
+    built, component = _build_current(RunFlowComponent)
+    graph = _selected_flow_graph(include_text=include_text)
 
     async def get_graph(**_kwargs):
         return graph
@@ -138,10 +173,14 @@ async def test_failed_output_refresh_marks_discovery_unverified(monkeypatch) -> 
 
     updated = await update_rebuilt_node(component, built, saved, warnings=warnings)
 
-    assert "TextInput-v7wpH~input_value" in updated["template"]
+    assert ("TextInput-v7wpH~input_value" in updated["template"]) is include_text
     assert len(warnings) == 1
-    assert warnings[0]["fields"] == []
+    assert set(warnings[0]["fields"]) == (
+        set() if include_text else {"TextInput-v7wpH~input_value", "TextInput-v7wpH~use_global_variable"}
+    )
     assert warnings[0]["unverified"] is True
+    assert warnings[0]["inputs_unverified"] is False
+    assert warnings[0]["outputs_unverified"] is True
 
 
 def _greet_tool() -> StructuredTool:
@@ -215,7 +254,16 @@ async def test_unavailable_generated_fields_are_named_without_exposing_discovery
     assert set(warnings[0]["fields"]) == missing
     assert required_refresh_fields <= set(warnings[0]["refresh_fields"])
     assert warnings[0]["unverified"] is True
-    assert set(warnings[0]) == {"code", "fields", "refresh_fields", "unverified"}
+    assert warnings[0]["inputs_unverified"] is True
+    assert warnings[0]["outputs_unverified"] is (component_class is RunFlowComponent)
+    assert set(warnings[0]) == {
+        "code",
+        "fields",
+        "refresh_fields",
+        "unverified",
+        "inputs_unverified",
+        "outputs_unverified",
+    }
     assert "private details" not in json.dumps(warnings)
     assert saved == original
 
@@ -255,6 +303,8 @@ async def test_mcp_discovery_reports_whether_missing_arguments_are_verified(monk
     assert warnings[0]["code"] == "generated_fields_not_restored"
     assert set(warnings[0]["fields"]) == ({"times"} if catalog == "fewer_arguments" else {"name", "times"})
     assert warnings[0]["unverified"] is (catalog == "empty")
+    assert warnings[0]["inputs_unverified"] is (catalog == "empty")
+    assert warnings[0]["outputs_unverified"] is False
 
 
 async def test_fresh_mcp_template_does_not_discover_tools_without_saved_selection(monkeypatch) -> None:
@@ -318,4 +368,6 @@ async def test_editor_update_returns_generated_field_warnings_outside_the_saved_
         assert result["warnings"][0]["code"] == "generated_fields_not_restored"
         assert set(result["warnings"][0]["fields"]) == {"name", "times"}
         assert result["warnings"][0]["unverified"] is True
+        assert result["warnings"][0]["inputs_unverified"] is True
+        assert result["warnings"][0]["outputs_unverified"] is False
         assert "Private discovery details" not in json.dumps(result["warnings"])
