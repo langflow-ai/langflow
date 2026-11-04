@@ -5,8 +5,11 @@
 //! - An object ([`AnyMap`]) keeps its keys in insertion order. Small objects
 //!   use a bounded list, and larger objects use a hash map. Removing a key keeps the order of the others. Copies of an object
 //!   share it until one of them is written.
-//! - Keys and string values share immutable text. Each parse or Python input
-//!   keeps one shared copy of each distinct string, then releases its pool.
+//! - Short text, nearly every key, is held inline, with no allocation and no
+//!   reference count: at most 24 bytes on a 64-bit target, 12 on a 32-bit one.
+//!   Longer keys and string values share immutable text: each parse or Python
+//!   input keeps one shared copy of each distinct long string, then releases
+//!   its pool.
 //! - A number is an integer or a double ([`Number`]), not its text. `1` and
 //!   `1.0` stay apart, as Python's `int` and `float` do. A number that neither
 //!   holds exactly, an integer too large for 64 bits or a value that is
@@ -29,9 +32,20 @@ use std::sync::{Arc, OnceLock};
 use serde::de::{self, Deserialize, DeserializeSeed, Deserializer, MapAccess, SeqAccess, Visitor};
 use serde::ser::{Serialize, SerializeMap, Serializer};
 
-/// Immutable text. Copies share the same allocation.
+/// Immutable text. Short text is held inline, with no allocation and no
+/// reference count; longer text is shared, and copies share its allocation.
 #[derive(Debug, Clone)]
-pub struct AnyString(Arc<Text>);
+pub struct AnyString(Repr);
+
+#[derive(Debug, Clone)]
+enum Repr {
+    /// At most [`INLINE`] bytes.
+    Inline(compact_str::CompactString),
+    Shared(Arc<Text>),
+}
+
+/// The longest text held inline: what `CompactString` holds without allocating.
+const INLINE: usize = std::mem::size_of::<String>();
 
 #[derive(Debug)]
 struct Text {
@@ -41,7 +55,12 @@ struct Text {
 
 impl PartialEq for AnyString {
     fn eq(&self, other: &Self) -> bool {
-        Arc::ptr_eq(&self.0, &other.0) || self.as_str() == other.as_str()
+        if let (Repr::Shared(a), Repr::Shared(b)) = (&self.0, &other.0)
+            && Arc::ptr_eq(a, b)
+        {
+            return true;
+        }
+        self.as_str() == other.as_str()
     }
 }
 impl Eq for AnyString {}
@@ -65,22 +84,28 @@ impl AnyString {
     /// The text, borrowed.
     #[must_use]
     pub fn as_str(&self) -> &str {
-        &self.0.text
+        match &self.0 {
+            Repr::Inline(text) => text.as_str(),
+            Repr::Shared(text) => &text.text,
+        }
     }
 
     /// Reuse the JSON spelling of long repeated text. Unique text is written
     /// directly, so unshared strings do not retain a second copy.
     pub(crate) fn shared_ascii_json(&self) -> Option<&[u8]> {
+        let Repr::Shared(shared) = &self.0 else {
+            return None;
+        };
         if self.len() < 256 {
             return None;
         }
-        if let Some(encoded) = self.0.ascii_json.get() {
+        if let Some(encoded) = shared.ascii_json.get() {
             return Some(encoded);
         }
-        if Arc::strong_count(&self.0) <= 1 {
+        if Arc::strong_count(shared) <= 1 {
             return None;
         }
-        Some(self.0.ascii_json.get_or_init(|| {
+        Some(shared.ascii_json.get_or_init(|| {
             let mut encoded = Vec::with_capacity(self.len() + 2);
             crate::json_out::write_str(&mut encoded, self, crate::json_out::Ascii::Escape);
             encoded.into_boxed_slice()
@@ -106,18 +131,24 @@ impl AsRef<str> for AnyString {
 }
 impl From<&str> for AnyString {
     fn from(text: &str) -> Self {
-        Self(Arc::new(Text {
+        if text.len() <= INLINE {
+            return Self(Repr::Inline(compact_str::CompactString::new(text)));
+        }
+        Self(Repr::Shared(Arc::new(Text {
             text: text.into(),
             ascii_json: OnceLock::new(),
-        }))
+        })))
     }
 }
 impl From<String> for AnyString {
     fn from(text: String) -> Self {
-        Self(Arc::new(Text {
+        if text.len() <= INLINE {
+            return Self(Repr::Inline(compact_str::CompactString::new(&text)));
+        }
+        Self(Repr::Shared(Arc::new(Text {
             text: text.into_boxed_str(),
             ascii_json: OnceLock::new(),
-        }))
+        })))
     }
 }
 impl fmt::Display for AnyString {
@@ -154,6 +185,10 @@ pub struct StringPool {
 impl StringPool {
     /// Reuse equal text, or allocate its first copy.
     pub fn intern(&mut self, text: &str) -> AnyString {
+        // Short text is inline: a copy costs no more than a shared reference.
+        if text.len() <= INLINE {
+            return AnyString::from(text);
+        }
         if let Some(strings) = &mut self.large {
             if let Some(shared) = strings.get(text) {
                 return shared.clone();
@@ -1550,18 +1585,37 @@ mod tests {
         assert!(weak.upgrade().is_none());
     }
 
+    /// Whether two strings share one allocation.
+    fn shared(a: &AnyString, b: &AnyString) -> bool {
+        matches!((&a.0, &b.0), (Repr::Shared(x), Repr::Shared(y)) if Arc::ptr_eq(x, y))
+    }
+
+    /// Whether a string keeps its JSON spelling.
+    fn cached(text: &AnyString) -> bool {
+        matches!(&text.0, Repr::Shared(t) if t.ascii_json.get().is_some())
+    }
+
+    #[test]
+    fn short_text_is_inline() {
+        assert!(matches!(AnyString::from("value").0, Repr::Inline(_)));
+        assert!(matches!(
+            AnyString::from("x".repeat(INLINE + 1)).0,
+            Repr::Shared(_)
+        ));
+    }
+
     #[test]
     fn a_pool_keeps_shared_text_when_it_grows_beyond_small_inputs() {
         let mut pool = StringPool::default();
-        let first = pool.intern("first");
+        let first = pool.intern("first text, longer than inline text");
         for i in 0..32 {
-            pool.intern(&format!("key-{i}"));
+            pool.intern(&format!("key-{i}, longer than inline text"));
         }
-        let again = pool.intern("first");
-        assert!(Arc::ptr_eq(&first.0, &again.0));
+        let again = pool.intern("first text, longer than inline text");
+        assert!(shared(&first, &again));
         drop(pool);
-        assert_eq!(first.as_str(), "first");
-        assert_eq!(again.as_str(), "first");
+        assert_eq!(first.as_str(), "first text, longer than inline text");
+        assert_eq!(again.as_str(), "first text, longer than inline text");
     }
 
     #[test]
@@ -1585,7 +1639,7 @@ mod tests {
             assert!(encoded.is_ascii());
             assert_eq!(serde_json::from_str::<String>(&encoded).unwrap(), text);
         }
-        assert!(a.0.ascii_json.get().is_some());
+        assert!(cached(&a));
         assert_eq!(a, independent);
         assert_eq!(hash.hash_one(&a), before);
         assert_eq!(hash.hash_one(&a), hash.hash_one(&independent));
@@ -1600,28 +1654,34 @@ mod tests {
         let AnyValue::String(text) = value else {
             panic!("string");
         };
-        assert!(text.0.ascii_json.get().is_none());
+        assert!(!cached(&text));
     }
 
     #[test]
     fn parsed_keys_and_values_share_text_within_one_input() {
-        let value = parse(r#"[{"repeat":"shared"},{"repeat":"sh\u0061red"}]"#);
+        let value = parse(
+            r#"[{"repeated key, longer than inline text":"shared text, longer than inline"},{"repeated key, longer than inline text":"sh\u0061red text, longer than inline"}]"#,
+        );
         let a = value[0].as_object().unwrap();
         let b = value[1].as_object().unwrap();
         let (ka, va) = a.iter().next().unwrap();
         let (kb, vb) = b.iter().next().unwrap();
-        assert!(Arc::ptr_eq(&ka.0, &kb.0));
+        assert!(shared(ka, kb));
         let (AnyValue::String(va), AnyValue::String(vb)) = (va, vb) else {
             panic!("strings");
         };
-        assert!(Arc::ptr_eq(&va.0, &vb.0));
+        assert!(shared(va, vb));
         let mut copied = value.clone();
-        copied[0]["repeat"] = AnyValue::from("changed");
-        assert_eq!(value[0]["repeat"].as_str(), Some("shared"));
-        let AnyValue::String(unchanged) = &copied[1]["repeat"] else {
+        copied[0]["repeated key, longer than inline text"] = AnyValue::from("changed");
+        assert_eq!(
+            value[0]["repeated key, longer than inline text"].as_str(),
+            Some("shared text, longer than inline")
+        );
+        let AnyValue::String(unchanged) = &copied[1]["repeated key, longer than inline text"]
+        else {
             panic!("string");
         };
-        assert!(Arc::ptr_eq(&va.0, &unchanged.0));
+        assert!(shared(va, unchanged));
     }
 
     #[test]
