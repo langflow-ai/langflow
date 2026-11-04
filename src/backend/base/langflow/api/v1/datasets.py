@@ -7,7 +7,7 @@ from uuid import UUID
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
 
-from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.utils import CurrentActiveUser, DbSession, build_content_disposition
 from langflow.api.v1.evals_errors import evals_http_errors, evals_write
 from langflow.services.authorization import DatasetAction
 from langflow.services.database.models.evaluation import Dataset, DatasetItem
@@ -270,5 +270,6 @@ async def export_csv(dataset_id: UUID, current_user: CurrentActiveUser, session:
     return StreamingResponse(
         csv_io.export_rows(rows),
         media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="{filename}.csv"'},
+        # Headers are Latin-1: a name in Japanese, Chinese or Korean goes in the UTF-8 filename* parameter.
+        headers={"Content-Disposition": build_content_disposition(f"{filename}.csv")},
     )

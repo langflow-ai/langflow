@@ -107,9 +107,12 @@ export function useEvaluateFlowForm(flowId: string) {
     () => buildScorers(selected, judgeModel, rubric, judgeLimits, safetyChecks),
     [selected, judgeModel, rubric, judgeLimits, safetyChecks],
   );
+  // The check and the estimate describe the version that will run, not the draft.
+  const pinnedVersionId = versionId === LATEST_VERSION ? null : versionId;
   const check = useCheckFlowForEvaluation({
     flowId,
     outputVertexId: outputVertexId || null,
+    flowVersionId: pinnedVersionId,
   });
   const variantOverrides = useMemo(
     () => buildModelVariants(check.data?.model_pickers ?? [], modelVersions),
@@ -130,6 +133,7 @@ export function useEvaluateFlowForm(flowId: string) {
     scorers,
     modelOverrides,
     variants,
+    flowVersionId: pinnedVersionId,
   });
   const createEvaluation = useCreateEvaluation();
   const judgeMissingModel = selected.has("llm_judge") && !judgeModel[0];
@@ -203,7 +207,7 @@ export function useEvaluateFlowForm(flowId: string) {
     const started = await createEvaluation.mutateAsync({
       payload: {
         ...payload,
-        flow_version_id: versionId === LATEST_VERSION ? null : versionId,
+        flow_version_id: pinnedVersionId,
         ...(comparing ? { variants } : { model_overrides: modelOverrides }),
       },
       run: true,

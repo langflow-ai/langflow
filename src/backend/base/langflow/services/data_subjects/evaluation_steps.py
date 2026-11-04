@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from uuid import UUID
 
-from sqlalchemy import update
+from sqlalchemy import delete, update
 from sqlmodel import col, select
 
-from langflow.services.data_subjects.batching import delete_batch
+from langflow.services.data_subjects.batching import BATCH_SIZE, delete_batch
 from langflow.services.database.models.evaluation import (
     Dataset,
     DatasetItem,
@@ -15,10 +16,9 @@ from langflow.services.database.models.evaluation import (
     EvaluationResult,
     EvaluationRun,
 )
+from langflow.services.database.models.traces.model import SpanTable, TraceTable
 
 if TYPE_CHECKING:
-    from uuid import UUID
-
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.data_subjects.context import EraseContext
@@ -30,6 +30,37 @@ def _owned_evaluation_ids(user_id: UUID):
 
 def _owned_run_ids(user_id: UUID):
     return select(EvaluationRun.id).where(col(EvaluationRun.evaluation_id).in_(_owned_evaluation_ids(user_id)))
+
+
+def _trace_uuid(value: str) -> UUID | None:
+    try:
+        return UUID(value)
+    except ValueError:
+        return None
+
+
+async def erase_evaluation_traces(session: AsyncSession, ctx: EraseContext) -> int:
+    """Row traces are filed under the evaluated flow, which may belong to someone else: delete them by the results' ids.
+
+    Each processed result's trace id is cleared, so the step ends once no result still points at a trace.
+    """
+    rows = (
+        await session.exec(
+            select(EvaluationResult.id, EvaluationResult.trace_id)
+            .where(col(EvaluationResult.run_id).in_(_owned_run_ids(ctx.subject_user_id)))
+            .where(col(EvaluationResult.trace_id).is_not(None))
+            .limit(BATCH_SIZE)
+        )
+    ).all()
+    if not rows:
+        return 0
+    trace_ids = [trace_id for _, raw in rows if (trace_id := _trace_uuid(raw)) is not None]
+    if trace_ids:
+        await session.exec(delete(SpanTable).where(col(SpanTable.trace_id).in_(trace_ids)))
+        await session.exec(delete(TraceTable).where(col(TraceTable.id).in_(trace_ids)))
+    result_ids = [row_id for row_id, _ in rows]
+    await session.exec(update(EvaluationResult).where(col(EvaluationResult.id).in_(result_ids)).values(trace_id=None))
+    return len(rows)
 
 
 async def erase_evaluation_results(session: AsyncSession, ctx: EraseContext) -> int:
@@ -69,6 +100,7 @@ async def erase_datasets(session: AsyncSession, ctx: EraseContext) -> int:
 
 
 EVALUATION_STEPS = (
+    ("evaluation_traces", erase_evaluation_traces),
     ("evaluation_results", erase_evaluation_results),
     ("evaluation_runs", erase_evaluation_runs),
     ("evaluation_run_starters", reassign_started_runs),

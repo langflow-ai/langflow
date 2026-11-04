@@ -50,6 +50,8 @@ export function useRerun(
       datasetId: evaluation?.dataset_id ?? "",
       scorers: evaluation?.scorers ?? [],
       variants: pendingRerun?.variants ?? [],
+      // Priced on the version that will run: a re-run of an older version may call models the draft no longer does.
+      flowVersionId: pendingRerun?.flowVersionId ?? null,
     },
     { enabled: pending && canRerun },
   );

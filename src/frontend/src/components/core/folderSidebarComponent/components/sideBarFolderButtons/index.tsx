@@ -663,7 +663,7 @@ const SideBarFoldersButtonsComponent = ({
           </div>
         )}
       </SidebarContent>
-      {(projectSidebar.footer || ENABLE_FILE_MANAGEMENT) && (
+      {(projectSidebar.footer || ENABLE_FILE_MANAGEMENT || evalsEnabled) && (
         <SidebarFooter
           className={cn("border-t", projectSidebar.footerClassName)}
         >
@@ -674,50 +674,40 @@ const SideBarFoldersButtonsComponent = ({
             )}
           >
             {projectSidebar.footer}
+            {ENABLE_FILE_MANAGEMENT && ENABLE_KNOWLEDGE_BASES && (
+              <SidebarMenuButton
+                onClick={handleKnowledgeNavigation}
+                size="md"
+                className={cn("text-sm", projectSidebar.footerItemClassName)}
+              >
+                <ForwardedIconComponent name="Library" className="h-4 w-4" />
+                {t("sidebar.knowledge")}
+              </SidebarMenuButton>
+            )}
+            {/* Evals has its own flag and routes; it does not depend on file management. */}
+            {evalsEnabled && (
+              <SidebarMenuButton
+                onClick={() => _navigate("/assets/evaluations")}
+                size="md"
+                className={cn("text-sm", projectSidebar.footerItemClassName)}
+                data-testid="sidebar-evaluations"
+              >
+                <ForwardedIconComponent
+                  name="FlaskConical"
+                  className="h-4 w-4"
+                />
+                {t("sidebar.evaluations")}
+              </SidebarMenuButton>
+            )}
             {ENABLE_FILE_MANAGEMENT && (
-              <>
-                {ENABLE_KNOWLEDGE_BASES && (
-                  <SidebarMenuButton
-                    onClick={handleKnowledgeNavigation}
-                    size="md"
-                    className={cn(
-                      "text-sm",
-                      projectSidebar.footerItemClassName,
-                    )}
-                  >
-                    <ForwardedIconComponent
-                      name="Library"
-                      className="h-4 w-4"
-                    />
-                    {t("sidebar.knowledge")}
-                  </SidebarMenuButton>
-                )}
-                {evalsEnabled && (
-                  <SidebarMenuButton
-                    onClick={() => _navigate("/assets/evaluations")}
-                    size="md"
-                    className={cn(
-                      "text-sm",
-                      projectSidebar.footerItemClassName,
-                    )}
-                    data-testid="sidebar-evaluations"
-                  >
-                    <ForwardedIconComponent
-                      name="FlaskConical"
-                      className="h-4 w-4"
-                    />
-                    {t("sidebar.evaluations")}
-                  </SidebarMenuButton>
-                )}
-                <SidebarMenuButton
-                  onClick={handleFilesNavigation}
-                  size="md"
-                  className={cn("text-sm", projectSidebar.footerItemClassName)}
-                >
-                  <ForwardedIconComponent name="File" className="h-4 w-4" />
-                  {t("sidebar.myFiles")}
-                </SidebarMenuButton>
-              </>
+              <SidebarMenuButton
+                onClick={handleFilesNavigation}
+                size="md"
+                className={cn("text-sm", projectSidebar.footerItemClassName)}
+              >
+                <ForwardedIconComponent name="File" className="h-4 w-4" />
+                {t("sidebar.myFiles")}
+              </SidebarMenuButton>
             )}
           </div>
         </SidebarFooter>

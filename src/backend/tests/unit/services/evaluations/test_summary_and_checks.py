@@ -50,6 +50,21 @@ class TestSummary:
         assert summary["cost_usd"]["flow"] is None
         assert summary["cost_usd"]["complete"] is False
 
+    def test_should_report_no_total_when_the_flow_cost_is_unknown_but_the_judge_cost_is_known(self):
+        result = _result(0, tokens=10, cost=None)
+        result.tokens_judge, result.cost_judge = 5, 0.01
+        summary = build_summary([result], ["exact"])
+        assert summary["cost_usd"]["judge"] == pytest.approx(0.01)
+        assert summary["cost_usd"]["total"] is None
+        assert summary["cost_usd"]["complete"] is False
+
+    def test_should_total_flow_and_judge_costs_when_both_are_known(self):
+        result = _result(0, tokens=10, cost=0.02)
+        result.tokens_judge, result.cost_judge = 5, 0.01
+        summary = build_summary([result], ["exact"])
+        assert summary["cost_usd"]["total"] == pytest.approx(0.03)
+        assert summary["cost_usd"]["complete"] is True
+
     def test_should_handle_a_run_with_no_results(self):
         summary = build_summary([], ["exact"])
         assert summary["pass_rate"] is None

@@ -181,7 +181,7 @@ safety checks), `passed`, `duration_ms`, `tokens_flow`, `tokens_judge`,
 | An evaluation row never persists chat messages and never reads stored chat history. | `graph.persist_messages = False`; `set_evals_memory_isolated` |
 | Cost is never guessed: unknown prices make costs `null`. | `pricing.py`; `cost_usd.complete` |
 | One active run per evaluation; a comparison's variants run one at a time. | Partial unique index `uq_evaluation_run_one_active` |
-| Every variant of a comparison runs the same flow version, dataset revision and scoring. | `comparison._what_changed` stops the chain otherwise |
+| Every variant of a comparison runs the same flow version, dataset revision, scoring and scored output. | `comparison._what_changed` stops the chain otherwise (`reason=dataset|scoring|output_changed`) |
 | A dataset with an active run cannot change. | 409 on item writes, import and delete |
 | API timestamps carry their UTC offset; SQLite's naive values are read as UTC. | `UtcDatetime` in `schemas.py` |
 | Nothing in `lfx` changes behavior; `lfx serve` has no database, so the feature is not offered there. | Code lives in `langflow-base` only |
@@ -498,7 +498,7 @@ A single variant is a plain run.
 | `external_memory` | A component exposing a `Memory` output; it is read and written for real and cannot be isolated |
 | `frozen_components` | Frozen components return the same cached result for every row |
 
-`GET /api/v1/evaluations/check?flow_id=` returns the same report for the saved draft.
+`GET /api/v1/evaluations/check?flow_id=` returns the same report for the saved draft, or for a saved version with `flow_version_id=`.
 
 ### Coordinator (`runner.py`)
 
@@ -630,14 +630,21 @@ before it could write one, so its kept rows still count.
 
 `safety` has one entry per judge with safety checks; an attack counts as
 resisted when no check flagged its answer. Percentiles are nearest-rank.
-`cost_usd.*` is `null` when any priced part is unknown (ADR-004).
+`cost_usd.*` is `null` when any priced part is unknown (ADR-004); `total` is
+`null` whenever `flow` or `judge` is, so a judge-only figure never reads as the
+run's whole spend.
 
 ### Estimate (`estimate.py`)
 
-`POST /api/v1/evaluations/estimate` with `{flow_id, dataset_id, scorers, model_overrides? | variants?}`.
+`POST /api/v1/evaluations/estimate` with `{flow_id, dataset_id, scorers, flow_version_id?, model_overrides? | variants?}`.
+`flow_version_id` prices a saved version instead of the draft: Re-run on an
+older version and the Evaluate dialog's version choice send it, so a draft that
+no longer calls a model cannot skip the spending confirmation.
 
 - **Flow part:** from this flow's last completed run (per-row tokens and cost,
-  ×0.8 to ×1.25) when there is one; otherwise from the flow's LLM components,
+  ×0.8 to ×1.25) when it ran the same flow content, compared after applying
+  that run's model overrides (a run on a swapped-in cheaper model never lends
+  its usage to the flow's own model); otherwise from the flow's LLM components,
   the prompt text, and the dataset's character counts (about 4 characters per
   token; answers sized from the expected outputs). Agents assume up to three
   model calls per row at the high end.
@@ -671,12 +678,12 @@ Datasets (owner scope; `dataset` authz resource)
   POST   /api/v1/datasets/{id}/items/delete         {ids: [...]}
   POST   /api/v1/datasets/{id}/import/preview       multipart file → headers, first rows, total
   POST   /api/v1/datasets/{id}/import               file + input_column [+ expected_column] → {imported, skipped}
-  GET    /api/v1/datasets/{id}/export               text/csv, formula-safe
+  GET    /api/v1/datasets/{id}/export               text/csv, formula-safe; ASCII filename plus UTF-8 filename*
 
 Evaluations
   GET    /api/v1/evaluations?project_id=&flow_id=&page=&size=
   POST   /api/v1/evaluations[?run=true]             run=true starts the first run on Latest
-  GET    /api/v1/evaluations/check?flow_id=&output_vertex_id=
+  GET    /api/v1/evaluations/check?flow_id=&output_vertex_id=&flow_version_id=
   POST   /api/v1/evaluations/estimate
   GET    /api/v1/evaluations/{id}
   PATCH  /api/v1/evaluations/{id}
@@ -738,12 +745,14 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
 | Project deleted | Evaluations of the flows currently in it (and of deleted flows that were in it) are deleted with their runs and results; a flow moved to another project keeps its evaluations. A run still executing on another worker stops writing once its run row is gone |
 | Evaluation deleted | Its runs and results are deleted; versions retained only for those runs are released |
 | Server or pod stopped mid-run | The job is lost when it is no longer queued or in progress, or when its heartbeat is older than `background_lease_ttl_s` (a dead pod leaves its job in progress until some process restarts); the next read of the run (or the next start, delete or dataset edit that checks for active runs) marks it `failed` with "The server stopped while this run was in progress"; a run younger than 30 seconds without a job row is still launching and is left alone. Finished rows are kept; the in-flight row is not replayed |
-| GDPR erase of a user | Results, runs, evaluations, items and datasets of that user are deleted; runs the user started on someone else's evaluation move to that evaluation's owner (`data_subjects/evaluation_steps.py`) |
+| GDPR erase of a user | Row traces and spans (filed under the evaluated flow, which may be someone else's) are deleted first by the results' trace ids; then results, runs, evaluations, items and datasets of that user; runs the user started on someone else's evaluation move to that evaluation's owner (`data_subjects/evaluation_steps.py`) |
 
 ### Frontend
 
 - Sidebar: one **Evaluations** entry, behind the flag (`EvalsRoute` redirects
-  to Flows when it is off). The page has `Datasets | Evaluations` tabs
+  to Flows when it is off). The entry and the `/assets/datasets|evaluations`
+  routes do not depend on `ENABLE_FILE_MANAGEMENT`, so the canvas Evaluate button
+  never leads to a missing route. The page has `Datasets | Evaluations` tabs
   (datasets first: an evaluation needs one); each tab is its own route.
 - Datasets and items use the shared `DataTableTab` (AG Grid), like Knowledge and
   Files: search, row action menu, multi-select delete, empty state with actions.
@@ -754,7 +763,9 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
   toolbar has them in an **Examples** menu. An empty dataset shows the same cards,
   which fill that dataset instead of creating one.
 - CSV import: drop zone (also on an empty dataset), file card, column mapping
-  with a preview of the mapped columns, result summary with skipped rows.
+  with a preview of the mapped columns, result summary with skipped rows. An
+  unnamed column (a pandas index) is not offered in the pickers but stays in the
+  preview data, so the previewed cells line up with their headers.
 - Evaluate: the canvas button (between Playground and Share) saves the flow and
   opens the modal; **New evaluation** on the Evaluations page opens the same
   modal with a searchable flow picker (most recently changed first). The modal

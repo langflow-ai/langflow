@@ -14,6 +14,7 @@ from sqlmodel import col, select
 from langflow.services.database.models.evaluation import DatasetItem, EvaluationRun
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.evaluations.dataset_service import item_text
+from langflow.services.evaluations.errors import EvalsValidationError
 from langflow.services.evaluations.estimate_model import (
     DatasetStats,
     TokenRange,
@@ -21,6 +22,7 @@ from langflow.services.evaluations.estimate_model import (
     estimate_judges,
     flow_llm_nodes,
 )
+from langflow.services.evaluations.model_overrides import apply_model_overrides
 from langflow.services.evaluations.schemas import EstimateRead
 
 if TYPE_CHECKING:
@@ -48,19 +50,33 @@ async def dataset_stats(session: AsyncSession, dataset_id: UUID) -> DatasetStats
     )
 
 
+def _ran_flow(version_data: dict[str, Any] | None, config: dict[str, Any] | None) -> dict[str, Any] | None:
+    """The flow a run really executed: its version with the run's model overrides applied.
+
+    Without them, a run that swapped in a cheaper model would lend its usage to the version's own model.
+    """
+    overrides = (config or {}).get("model_overrides") or []
+    if version_data is None or not overrides:
+        return version_data
+    try:
+        return apply_model_overrides(version_data, overrides)
+    except EvalsValidationError:
+        return None
+
+
 async def _history_per_row(
     session: AsyncSession, flow_id: UUID, flow_data: dict[str, Any] | None
 ) -> tuple[float, float | None] | None:
     """Per-row flow usage of the last completed run, only when it ran exactly this flow content."""
     stmt = (
-        select(EvaluationRun.summary, FlowVersion.data)
+        select(EvaluationRun.summary, FlowVersion.data, EvaluationRun.config)
         .join(FlowVersion, col(FlowVersion.id) == EvaluationRun.flow_version_id)
         .where(EvaluationRun.flow_id == flow_id, EvaluationRun.status == "completed")
         .order_by(col(EvaluationRun.created_at).desc())
         .limit(1)
     )
     row = (await session.exec(stmt)).first()
-    if row is None or row[1] != flow_data or not isinstance(row[0], dict):
+    if row is None or not isinstance(row[0], dict) or _ran_flow(row[1], row[2]) != flow_data:
         return None
     summary = row[0]
     counts = summary.get("rows") or {}

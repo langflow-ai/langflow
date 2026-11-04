@@ -70,13 +70,16 @@ async def _already_started(session: AsyncSession, run: EvaluationRun, comparison
 
 
 async def _what_changed(session: AsyncSession, run: EvaluationRun, evaluation: Evaluation) -> str | None:
-    """What of the dataset or the scoring changed since this run started, or None when nothing did."""
+    """What of the dataset, the scoring or the scored output changed since this run started, or None."""
     revision = (await session.exec(select(Dataset.revision).where(Dataset.id == run.dataset_id))).first()
     if evaluation.dataset_id != run.dataset_id or revision != run.dataset_revision:
         return "dataset"
     config = run.config or {}
     if evaluation.scorers != config.get("scorers") or evaluation.pass_threshold != config.get("pass_threshold"):
         return "scoring"
+    # The run stores the output it resolved; a cleared choice resolves the same way on the same version.
+    if evaluation.output_vertex_id is not None and evaluation.output_vertex_id != config.get("output_vertex_id"):
+        return "output"
     return None
 
 

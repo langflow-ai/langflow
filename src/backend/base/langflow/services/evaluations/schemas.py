@@ -399,6 +399,8 @@ class EstimateRequest(ModelChoices):
     flow_id: UUID
     dataset_id: UUID
     scorers: list[ScorerSpec] = Field(default_factory=list, max_length=MAX_SCORERS)
+    flow_version_id: UUID | None = None
+    """The saved version the run will use; omitted for the current draft."""
 
 
 class EstimateRead(BaseModel):

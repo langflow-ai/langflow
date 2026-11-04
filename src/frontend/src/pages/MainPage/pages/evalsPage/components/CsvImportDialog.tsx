@@ -82,10 +82,11 @@ export default function CsvImportDialog({
       {
         onSuccess: (data) => {
           if (currentFile.current !== selected) return;
-          const headers = data.headers.filter(Boolean);
-          setPreview({ ...data, headers });
-          setInputColumn(headers[0] ?? "");
-          setExpectedColumn(headers[1] ?? NO_COLUMN);
+          // The preview keeps every header so cells stay aligned; an unnamed column (a pandas index) is just not selectable.
+          const selectable = selectableHeaders(data.headers);
+          setPreview(data);
+          setInputColumn(selectable[0] ?? "");
+          setExpectedColumn(selectable[1] ?? NO_COLUMN);
         },
         onError: (error) => {
           if (currentFile.current !== selected) return;
@@ -161,14 +162,14 @@ export default function CsvImportDialog({
                       label={t("evals.csv.inputColumn")}
                       value={inputColumn}
                       onChange={setInputColumn}
-                      headers={preview.headers}
+                      headers={selectableHeaders(preview.headers)}
                     />
                     <ColumnSelect
                       id="csv-expected-column"
                       label={t("evals.csv.expectedColumn")}
                       value={expectedColumn}
                       onChange={setExpectedColumn}
-                      headers={preview.headers}
+                      headers={selectableHeaders(preview.headers)}
                       noneLabel={t("evals.csv.noExpected")}
                     />
                   </div>
@@ -343,6 +344,10 @@ interface ColumnSelectProps {
   onChange: (value: string) => void;
   headers: string[];
   noneLabel?: string;
+}
+
+function selectableHeaders(headers: string[]): string[] {
+  return headers.filter(Boolean);
 }
 
 function ColumnSelect({

@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 import pytest
 from langflow.services.deps import get_settings_service
@@ -236,6 +237,46 @@ class TestModelComparison:
         assert response.status_code == 202, response.text
         runs = await _wait_for_comparison(client, logged_in_headers, evaluation["id"], 2)
         assert [run["config"]["scorers"][0]["name"] for run in runs] == ["exact"]
+
+    async def test_should_stop_when_the_scored_output_changes_mid_comparison(
+        self, client, logged_in_headers, monkeypatch
+    ):
+        data = load_flow_data("chat_echo_no_llm.json")
+        picker = next(node for node in data["nodes"] if node["data"]["type"] == "ChatInput")
+        picker["data"]["node"]["template"]["model"] = {"type": "model", "display_name": "Language Model", "value": GPT}
+        first = next(node for node in data["nodes"] if node["data"]["type"] == "ChatOutput")
+        # A second output fed by the same input: the scored output is then a real choice.
+        data["nodes"].append(json.loads(json.dumps(first).replace(first["id"], "ChatOutput-second")))
+        data["edges"].append(json.loads(json.dumps(data["edges"][0]).replace(first["id"], "ChatOutput-second")))
+        created = await client.post(
+            "api/v1/flows/", json={"name": "Two outputs", "data": data}, headers=logged_in_headers
+        )
+        assert created.status_code == 201, created.text
+        dataset = await create_dataset(client, logged_in_headers, "reoutput", [("a", "a"), ("b", "b")])
+        evaluation = await create_evaluation(
+            client, logged_in_headers, created.json()["id"], dataset["id"], output_vertex_id=first["id"]
+        )
+
+        async def switch_output():
+            response = await client.patch(
+                f"api/v1/evaluations/{evaluation['id']}",
+                json={"output_vertex_id": "ChatOutput-second"},
+                headers=logged_in_headers,
+            )
+            assert response.status_code == 200, response.text
+
+        node_id = picker["data"]["id"]
+        monkeypatch.setattr(runner, "execute_row", _recording_execute_row([], node_id, on_first=switch_output))
+
+        response = await client.post(
+            f"api/v1/evaluations/{evaluation['id']}/runs",
+            json={"variants": _variants(node_id, None, MINI)},
+            headers=logged_in_headers,
+        )
+
+        assert response.status_code == 202, response.text
+        runs = await _wait_for_comparison(client, logged_in_headers, evaluation["id"], 2)
+        assert [run["config"]["output_vertex_id"] for run in runs] == [first["id"]]
 
     async def test_should_refuse_a_later_variant_the_flow_cannot_run_before_spending(
         self, client, logged_in_headers, monkeypatch

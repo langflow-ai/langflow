@@ -167,18 +167,29 @@ export const useGetEvaluationResult: useQueryFunctionType<
 };
 
 export const useCheckFlowForEvaluation: useQueryFunctionType<
-  { flowId: string; outputVertexId?: string | null },
+  {
+    flowId: string;
+    outputVertexId?: string | null;
+    /** A saved version to check instead of the draft. */
+    flowVersionId?: string | null;
+  },
   FlowCheckReport
-> = ({ flowId, outputVertexId }, options) => {
+> = ({ flowId, outputVertexId, flowVersionId }, options) => {
   const { query } = UseRequestProcessor();
   return query(
-    ["useCheckFlowForEvaluation", flowId, outputVertexId ?? null],
+    [
+      "useCheckFlowForEvaluation",
+      flowId,
+      outputVertexId ?? null,
+      flowVersionId ?? null,
+    ],
     async () =>
       (
         await api.get<FlowCheckReport>(`${getURL("EVALUATIONS")}/check`, {
           params: {
             flow_id: flowId,
             output_vertex_id: outputVertexId || undefined,
+            flow_version_id: flowVersionId || undefined,
           },
         })
       ).data,
@@ -199,10 +210,19 @@ export const useEstimateEvaluation: useQueryFunctionType<
     scorers: ScorerSpec[];
     modelOverrides?: ModelOverride[];
     variants?: ModelVariant[];
+    /** The saved version the run will use; the draft when omitted. */
+    flowVersionId?: string | null;
   },
   RunEstimate
 > = (
-  { flowId, datasetId, scorers, modelOverrides = [], variants = [] },
+  {
+    flowId,
+    datasetId,
+    scorers,
+    modelOverrides = [],
+    variants = [],
+    flowVersionId = null,
+  },
   options,
 ) => {
   const { query } = UseRequestProcessor();
@@ -215,6 +235,7 @@ export const useEstimateEvaluation: useQueryFunctionType<
       scorers,
       modelOverrides,
       variants,
+      flowVersionId,
     ],
     async () =>
       (
@@ -222,6 +243,7 @@ export const useEstimateEvaluation: useQueryFunctionType<
           flow_id: flowId,
           dataset_id: datasetId,
           scorers,
+          ...(flowVersionId ? { flow_version_id: flowVersionId } : {}),
           ...(variants.length > 0
             ? { variants }
             : { model_overrides: modelOverrides }),

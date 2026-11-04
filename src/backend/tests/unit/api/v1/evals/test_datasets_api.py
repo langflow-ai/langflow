@@ -1,5 +1,7 @@
+from urllib.parse import quote
 from uuid import uuid4
 
+import pytest
 from langflow.services.deps import session_scope
 
 from .conftest import create_dataset
@@ -136,6 +138,17 @@ class TestCsv:
         assert exported.status_code == 200
         assert "attachment" in exported.headers["content-disposition"]
         assert "'=HYPERLINK(1),x" in exported.text
+
+    @pytest.mark.parametrize("name", ["日本語", "中文", "한국어"])
+    async def test_should_export_a_dataset_named_in_a_cjk_script(self, client, logged_in_headers, name):
+        dataset = await create_dataset(client, logged_in_headers, name, [("q", "a")])
+
+        exported = await client.get(f"api/v1/datasets/{dataset['id']}/export", headers=logged_in_headers)
+
+        assert exported.status_code == 200
+        disposition = exported.headers["content-disposition"]
+        assert f"filename*=UTF-8''{quote(name + '.csv', safe='')}" in disposition
+        assert disposition.isascii()
 
     async def test_should_reject_a_non_utf8_upload(self, client, logged_in_headers):
         dataset = await create_dataset(client, logged_in_headers, "latin", [])

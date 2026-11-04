@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from langflow.services.evaluations import runner
 from langflow.services.evaluations.row_runner import RowExecution
 
@@ -168,3 +170,89 @@ class TestUnsetModelPicker:
         run = await wait_for_run(client, logged_in_headers, started.json()["id"])
         assert run["status"] == "completed"
         assert _picker_value(captured[0], node_id) == MINI
+
+
+class TestHistoricalVersion:
+    async def test_should_estimate_and_check_the_chosen_version_not_the_draft(self, client, logged_in_headers):
+        flow, _ = await _create_flow(client, logged_in_headers)
+        saved = await client.post(
+            f"api/v1/flows/{flow['id']}/versions/", json={"description": "calls a model"}, headers=logged_in_headers
+        )
+        assert saved.status_code == 201, saved.text
+        version_id = saved.json()["id"]
+        # The draft no longer calls a model; the saved version still does.
+        patched = await client.patch(
+            f"api/v1/flows/{flow['id']}",
+            json={"data": load_flow_data("chat_echo_no_llm.json")},
+            headers=logged_in_headers,
+        )
+        assert patched.status_code == 200, patched.text
+        dataset = await create_dataset(client, logged_in_headers, "history-estimate", [("a", "a")])
+        body = {"flow_id": flow["id"], "dataset_id": dataset["id"]}
+
+        draft = await client.post("api/v1/evaluations/estimate", json=body, headers=logged_in_headers)
+        pinned = await client.post(
+            "api/v1/evaluations/estimate", json={**body, "flow_version_id": version_id}, headers=logged_in_headers
+        )
+        draft_check = await client.get(
+            "api/v1/evaluations/check", params={"flow_id": flow["id"]}, headers=logged_in_headers
+        )
+        pinned_check = await client.get(
+            "api/v1/evaluations/check",
+            params={"flow_id": flow["id"], "flow_version_id": version_id},
+            headers=logged_in_headers,
+        )
+
+        assert draft.json()["llm_calls"] == 0
+        assert pinned.json()["llm_calls"] == 1
+        assert draft_check.json()["model_pickers"] == []
+        assert len(pinned_check.json()["model_pickers"]) == 1
+
+    async def test_should_refuse_an_estimate_for_a_version_of_another_flow(self, client, logged_in_headers):
+        flow, _ = await _create_flow(client, logged_in_headers)
+        dataset = await create_dataset(client, logged_in_headers, "history-404", [("a", "a")])
+
+        response = await client.post(
+            "api/v1/evaluations/estimate",
+            json={"flow_id": flow["id"], "dataset_id": dataset["id"], "flow_version_id": str(uuid4())},
+            headers=logged_in_headers,
+        )
+
+        assert response.status_code == 404
+
+
+class TestHistoryBasis:
+    async def test_should_not_lend_an_overridden_runs_usage_to_the_flows_own_model(
+        self, client, logged_in_headers, monkeypatch
+    ):
+        async def spending_row(**kwargs):
+            return RowExecution(
+                actual=kwargs["input_text"], error=None, duration_ms=1, tokens=100, cost=0.001, trace_id="t"
+            )
+
+        monkeypatch.setattr(runner, "execute_row", spending_row)
+        flow, node_id = await _create_flow(client, logged_in_headers)
+        dataset = await create_dataset(client, logged_in_headers, "history-override", [("a", "a"), ("b", "b")])
+        mini = [{"node_id": node_id, "field": "model", "value": MINI}]
+        started = await client.post(
+            "api/v1/evaluations",
+            params={"run": True},
+            json={
+                "flow_id": flow["id"],
+                "dataset_id": dataset["id"],
+                "scorers": [{"type": "exact_match", "name": "exact"}],
+                "model_overrides": mini,
+            },
+            headers=logged_in_headers,
+        )
+        assert started.status_code == 201, started.text
+        assert (await wait_for_run(client, logged_in_headers, started.json()["id"]))["status"] == "completed"
+        body = {"flow_id": flow["id"], "dataset_id": dataset["id"]}
+
+        own_model = await client.post("api/v1/evaluations/estimate", json=body, headers=logged_in_headers)
+        same_override = await client.post(
+            "api/v1/evaluations/estimate", json={**body, "model_overrides": mini}, headers=logged_in_headers
+        )
+
+        assert own_model.json()["basis"] == "model"
+        assert same_override.json()["basis"] == "history"

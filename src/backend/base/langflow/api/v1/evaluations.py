@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Query, status
@@ -10,6 +10,7 @@ from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.evals_errors import evals_http_errors, evals_write
 from langflow.services.authorization import DatasetAction, FlowAction
 from langflow.services.database.models.evaluation import Evaluation, EvaluationResult, EvaluationRun
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.evaluations import evaluation_service, run_service
 from langflow.services.evaluations.access import load_eval_dataset, load_eval_flow, load_evaluation
 from langflow.services.evaluations.dataset_service import item_text
@@ -31,6 +32,10 @@ from langflow.services.evaluations.schemas import (
     FlowCheckReport,
     RunStart,
 )
+from langflow.services.evaluations.versioning import load_history_version
+
+if TYPE_CHECKING:
+    from sqlmodel.ext.asyncio.session import AsyncSession
 
 router = APIRouter(tags=["Evals"])
 
@@ -84,16 +89,25 @@ async def create_evaluation(
     return await _evaluation_read(session, created)
 
 
+async def _flow_data(session: AsyncSession, flow: Flow, flow_version_id: UUID | None) -> dict[str, Any] | None:
+    """What a run would execute: the chosen saved version, or the current draft."""
+    if flow_version_id is None:
+        return flow.data
+    return (await load_history_version(session, flow.id, flow_version_id)).data
+
+
 @router.get("/evaluations/check", response_model=FlowCheckReport)
 async def check_flow_for_evaluation(
     current_user: CurrentActiveUser,
     session: DbSession,
     flow_id: UUID,
     output_vertex_id: str | None = None,
+    flow_version_id: UUID | None = None,
 ) -> FlowCheckReport:
     async with evals_http_errors():
         flow = await load_eval_flow(session, current_user, flow_id, FlowAction.READ)
-    return check_flow(flow.data, output_vertex_id)
+        data = await _flow_data(session, flow, flow_version_id)
+    return check_flow(data, output_vertex_id)
 
 
 @router.post("/evaluations/estimate", response_model=EstimateRead)
@@ -103,7 +117,8 @@ async def estimate_evaluation(
     async with evals_http_errors():
         flow = await load_eval_flow(session, current_user, payload.flow_id, FlowAction.READ)
         dataset = await load_eval_dataset(session, current_user, payload.dataset_id, DatasetAction.READ)
-        variants = [apply_model_overrides(flow.data or {}, overrides) for overrides in payload.variant_overrides()]
+        data = await _flow_data(session, flow, payload.flow_version_id)
+        variants = [apply_model_overrides(data or {}, overrides) for overrides in payload.variant_overrides()]
     return await estimate_variants(
         session,
         flow_id=flow.id,

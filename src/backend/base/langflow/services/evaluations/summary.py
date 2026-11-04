@@ -109,6 +109,13 @@ def build_summary(results: Sequence[SummaryRow], scorer_names: Sequence[str]) ->
     judge_cost = _sum_or_none(judge_costs, required=True)
     tokens_flow = int(sum(t or 0 for t in flow_tokens))
     tokens_judge = int(sum(t or 0 for t in judge_tokens))
+    cost_complete = (flow_cost is not None or not flow_costs) and (judge_cost is not None or not judge_costs)
+    # A total missing a part would read as the run's whole spend, so any unknown part makes it unknown.
+    cost_total = (
+        (flow_cost or 0.0) + (judge_cost or 0.0)
+        if cost_complete and (flow_cost is not None or judge_cost is not None)
+        else None
+    )
     return {
         "scores": scores,
         "duration_ms": _stats([float(result.duration_ms) for result in finished]),
@@ -116,8 +123,8 @@ def build_summary(results: Sequence[SummaryRow], scorer_names: Sequence[str]) ->
         "cost_usd": {
             "flow": flow_cost,
             "judge": judge_cost,
-            "total": None if flow_cost is None and judge_cost is None else (flow_cost or 0.0) + (judge_cost or 0.0),
-            "complete": (flow_cost is not None or not flow_costs) and (judge_cost is not None or not judge_costs),
+            "total": cost_total,
+            "complete": cost_complete,
         },
         "pass_rate": round(passed / len(decided), 4) if decided else None,
         "rows": {"total": len(results), "errored": len(results) - len(finished), "decided": len(decided)},

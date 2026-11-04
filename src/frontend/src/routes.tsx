@@ -96,59 +96,67 @@ const router = createBrowserRouter(
                     index
                     element={<CustomNavigate replace to={"flows"} />}
                   />
-                  {ENABLE_FILE_MANAGEMENT && (
-                    <Route path="assets">
-                      <Route
-                        index
-                        element={<CustomNavigate replace to="files" />}
-                      />
-                      <Route path="files" element={<FilesPage />} />
-                      <Route
-                        path="datasets"
-                        element={
-                          <EvalsRoute>
-                            <DatasetsPage />
-                          </EvalsRoute>
-                        }
-                      />
-                      <Route
-                        path="datasets/:datasetId"
-                        element={
-                          <EvalsRoute>
-                            <DatasetDetailPage />
-                          </EvalsRoute>
-                        }
-                      />
-                      <Route
-                        path="evaluations"
-                        element={
-                          <EvalsRoute>
-                            <EvaluationsPage />
-                          </EvalsRoute>
-                        }
-                      />
-                      <Route
-                        path="evaluations/:evaluationId"
-                        element={
-                          <EvalsRoute>
-                            <EvaluationDetailPage />
-                          </EvalsRoute>
-                        }
-                      />
-                      {ENABLE_KNOWLEDGE_BASES && (
-                        <>
-                          <Route
-                            path="knowledge-bases"
-                            element={<KnowledgePage />}
-                          />
-                          <Route
-                            path="knowledge-bases/:sourceId/chunks"
-                            element={<SourceChunksPage />}
-                          />
-                        </>
-                      )}
-                    </Route>
-                  )}
+                  {/* Evals has its own flag (checked by EvalsRoute), so its routes do not depend on file management. */}
+                  <Route path="assets">
+                    <Route
+                      index
+                      element={
+                        <CustomNavigate
+                          replace
+                          to={ENABLE_FILE_MANAGEMENT ? "files" : "evaluations"}
+                        />
+                      }
+                    />
+                    <Route
+                      path="datasets"
+                      element={
+                        <EvalsRoute>
+                          <DatasetsPage />
+                        </EvalsRoute>
+                      }
+                    />
+                    <Route
+                      path="datasets/:datasetId"
+                      element={
+                        <EvalsRoute>
+                          <DatasetDetailPage />
+                        </EvalsRoute>
+                      }
+                    />
+                    <Route
+                      path="evaluations"
+                      element={
+                        <EvalsRoute>
+                          <EvaluationsPage />
+                        </EvalsRoute>
+                      }
+                    />
+                    <Route
+                      path="evaluations/:evaluationId"
+                      element={
+                        <EvalsRoute>
+                          <EvaluationDetailPage />
+                        </EvalsRoute>
+                      }
+                    />
+                    {ENABLE_FILE_MANAGEMENT && (
+                      <>
+                        <Route path="files" element={<FilesPage />} />
+                        {ENABLE_KNOWLEDGE_BASES && (
+                          <>
+                            <Route
+                              path="knowledge-bases"
+                              element={<KnowledgePage />}
+                            />
+                            <Route
+                              path="knowledge-bases/:sourceId/chunks"
+                              element={<SourceChunksPage />}
+                            />
+                          </>
+                        )}
+                      </>
+                    )}
+                  </Route>
                   <Route
                     path="flows/"
                     element={<HomePage key="flows" type="flows" />}

@@ -56,13 +56,19 @@ async def pin_latest(session: AsyncSession, flow: Flow, user_id: UUID) -> FlowVe
     return version
 
 
-async def pin_history_version(session: AsyncSession, flow_id: UUID, version_id: UUID) -> FlowVersion:
+async def load_history_version(session: AsyncSession, flow_id: UUID, version_id: UUID) -> FlowVersion:
+    """A saved version of this flow, read only: checks and estimates look at it without retaining it."""
     version = (
         await session.exec(select(FlowVersion).where(FlowVersion.id == version_id, FlowVersion.flow_id == flow_id))
     ).first()
     if version is None or version.data is None:
         msg = "Flow version not found"
         raise EvalsNotFoundError(msg)
+    return version
+
+
+async def pin_history_version(session: AsyncSession, flow_id: UUID, version_id: UUID) -> FlowVersion:
+    version = await load_history_version(session, flow_id, version_id)
     await _retain(session, version)
     return version
 
