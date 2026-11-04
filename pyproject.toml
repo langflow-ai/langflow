@@ -274,6 +274,8 @@ constraint-dependencies = [
     "pyarrow>=26.0.0,<27.0.0; python_version >= '3.11'",
     "pymongo>=4.18.3,<5.0.0",  # CVE-2026-88029, CVE-2026-96747, CVE-2026-96748, CVE-2026-96749
     "tornado>=6.5.10,<7.0.0",  # 6.5.8/6.5.9 security fixes plus Jupyter compatibility fix
+    "brotli>=1.2.1,<2.0.0",  # CVE-2026-111497
+    "brotlicffi>=1.2.1.0,<2.0.0",  # CVE-2026-111497
 ]
 override-dependencies = [
     # z3-solver 4.15.7 dropped Linux wheels, pin until codeflash is removed
