@@ -12,28 +12,31 @@ from langflow.upgrade_check.isolation import is_local_metadata_probe
 
 from tests.unit.upgrade_check.test_offline_discovery import _options
 
-PROCESS_EVENTS = [
+REFUSED_EVENTS = [
     ("subprocess.Popen", ("/synthetic/unused", ["/synthetic/unused"], None, {})),
     ("os.system", (b"synthetic unused",)),
     ("os.posix_spawn", ("/synthetic/unused", ["/synthetic/unused"], {})),
+    ("os.spawn", (0, "/synthetic/unused", ["/synthetic/unused"], {})),
     ("os.exec", ("/synthetic/unused", ["/synthetic/unused"], {})),
     ("os.fork", ()),
     ("os.forkpty", ()),
     ("os.startfile", ("/synthetic/unused", "open")),
     ("os.startfile/2", ("/synthetic/unused", "open", None, None, None)),
     ("pty.spawn", (["/synthetic/unused"],)),
+    ("socket.sendmsg", (None, ("synthetic.invalid", 443))),
+    ("socket.getnameinfo", (("synthetic.invalid", 443), 0)),
 ]
 
 
 def _callback(event, arguments, *, swallow):
     try:
         sys.audit(event, *arguments)
-    except PermissionError:
+    except (PermissionError, ConnectionRefusedError):
         if not swallow:
             raise
 
 
-@pytest.mark.parametrize(("event", "arguments"), PROCESS_EVENTS)
+@pytest.mark.parametrize(("event", "arguments"), REFUSED_EVENTS)
 @pytest.mark.parametrize("swallow", [False, True], ids=["propagated", "swallowed"])
 def test_discovery_process_audit_event_prevents_partial_report(monkeypatch, tmp_path, event, arguments, swallow):
     options = _options(tmp_path)
@@ -47,7 +50,7 @@ def test_discovery_process_audit_event_prevents_partial_report(monkeypatch, tmp_
     with pytest.raises(command.CheckError, match="process") as caught:
         command.run(options, events.append)
     assert caught.value.code == "registry_unavailable"
-    assert event in engine._refused_calls
+    assert any(refused.startswith(event) for refused in engine._refused_calls)
     assert events == []
 
 
@@ -113,7 +116,7 @@ def test_metadata_probe_validation_error_is_a_persistent_refusal(monkeypatch):
     assert engine._refused_calls == ["subprocess.Popen"]
 
 
-@pytest.mark.parametrize(("event", "arguments"), PROCESS_EVENTS)
+@pytest.mark.parametrize(("event", "arguments"), REFUSED_EVENTS)
 @pytest.mark.parametrize("swallow", [False, True], ids=["propagated", "swallowed"])
 def test_dry_run_process_audit_event_cannot_appear_verified(monkeypatch, event, arguments, swallow):
     def build(_component, **_kwargs):
@@ -130,4 +133,4 @@ def test_dry_run_process_audit_event_cannot_appear_verified(monkeypatch, event, 
     assert failure is not None
     assert failure["code"] == "could_not_verify"
     assert event in failure["message"]
-    assert event in engine._refused_calls
+    assert any(refused.startswith(event) for refused in engine._refused_calls)

@@ -60,13 +60,22 @@ _WARNING = frozenset({"customized", "could_not_verify", "build_failed"})
 
 # Audit events of an outbound connection or a name lookup; the same names from Python 3.10 to 3.14.
 _NETWORK_EVENTS = frozenset(
-    {"socket.connect", "socket.getaddrinfo", "socket.gethostbyname", "socket.gethostbyaddr", "socket.sendto"}
+    {
+        "socket.connect",
+        "socket.getaddrinfo",
+        "socket.gethostbyname",
+        "socket.gethostbyaddr",
+        "socket.getnameinfo",
+        "socket.sendto",
+        "socket.sendmsg",
+    }
 )
 _PROCESS_EVENTS = frozenset(
     {
         "subprocess.Popen",
         "os.system",
         "os.posix_spawn",
+        "os.spawn",
         "os.exec",
         "os.fork",
         "os.forkpty",
@@ -468,7 +477,7 @@ def _refuse_network(event: str, args: tuple[Any, ...]) -> None:
         raise PermissionError(msg)
     if _dry_run_threads and event in _NETWORK_EVENTS:
         # connect and sendto get (socket, address); the lookups get the host first.
-        target = args[1] if event in {"socket.connect", "socket.sendto"} else args[0]
+        target = args[1] if event in {"socket.connect", "socket.sendto", "socket.sendmsg"} else args[0]
         _refused_calls.append(f"{event} {target!r}")
         msg = f"the upgrade check refuses network calls ({event} {target!r})"
         raise ConnectionRefusedError(msg)
