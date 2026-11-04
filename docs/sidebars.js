@@ -574,6 +574,7 @@ module.exports = {
             "Components/bundles-ibm",
             "Components/bundles-icosacomputing",
             "Components/bundles-jira",
+            "Components/bundles-keenable",
             "Components/bundles-langchain",
             "Components/bundles-lite-llm",
             "Components/bundles-lmstudio",

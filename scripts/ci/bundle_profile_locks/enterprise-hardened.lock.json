@@ -68,9 +68,9 @@
       "providers": [
         "lfx-docling"
       ],
-      "requested": ">=0.2.2,<1.0.0",
-      "requirement": "lfx-docling==0.2.2",
-      "resolved_version": "0.2.2"
+      "requested": ">=0.3.0,<1.0.0",
+      "requirement": "lfx-docling==0.3.0",
+      "resolved_version": "0.3.0"
     },
     {
       "distribution": "lfx-github",
@@ -98,9 +98,9 @@
       "providers": [
         "lfx-ibm"
       ],
-      "requested": ">=0.3.1,<1.0.0",
-      "requirement": "lfx-ibm==0.3.1",
-      "resolved_version": "0.3.1"
+      "requested": ">=0.4.0,<1.0.0",
+      "requirement": "lfx-ibm==0.4.0",
+      "resolved_version": "0.4.0"
     },
     {
       "distribution": "lfx-jira",
@@ -210,7 +210,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:ebb99368587e8c76",
+  "profile_digest": "sha256:e0bc8abae8109d9d",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",

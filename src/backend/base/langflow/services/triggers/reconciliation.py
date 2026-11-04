@@ -49,6 +49,13 @@ from langflow.services.triggers.constants import (
     PROVIDER_SLACK,
     SLACK_TRIGGER_KINDS,
 )
+from langflow.services.triggers.error_codes import (
+    MULTIPLE_TRIGGERS_ERROR,
+    NODE_REMOVED_ERROR,
+    SOURCE_SETTINGS_CHANGED_ERROR,
+    CodedTriggerError,
+    TriggerErrorCode,
+)
 from langflow.services.triggers.locking import lock_trigger
 from langflow.services.triggers.providers.registry import component_kind, get_kind, source_kinds
 from langflow.services.triggers.schedule_config import (
@@ -181,17 +188,6 @@ def normalize_webhook_config(config: dict[str, Any]) -> dict[str, Any]:
     return normalized
 
 
-#: Why a trigger whose node left the canvas was paused. Reconciliation owns this
-#: reason: it blocks resuming while the node is gone, and the save that adds the
-#: node back clears it. A config verdict must not erase it, since a schedule edit
-#: through the API does not bring the node back.
-NODE_REMOVED_ERROR = "trigger node removed from the flow"
-
-#: Why an armed Microsoft or Google source was paused by a save that changed its
-#: settings: the provider subscription was retired with the old settings, so it
-#: takes an explicit enable to subscribe again with the new ones.
-SOURCE_SETTINGS_CHANGED_ERROR = "Source settings changed. Enable the trigger again to resubscribe."
-
 #: States whose ``last_error`` a schedule verdict owns. The provider states and
 #: the terminal ``dead`` state carry reasons that a schedule edit cannot fix.
 _VERDICT_STATES = frozenset(
@@ -287,6 +283,23 @@ def _node_kind(node_type: Any) -> str | None:
     return BUNDLE_TRIGGER_COMPONENT_KINDS.get((match["bundle"], match["cls"])) or component_kind(
         match["bundle"], match["cls"]
     )
+
+
+def validate_single_trigger_per_flow(flow_data: dict[str, Any] | None) -> None:
+    """Reject extra canvas triggers before saving or enabling the flow."""
+    nodes = (flow_data or {}).get("nodes")
+    if not isinstance(nodes, list):
+        return
+    count = 0
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        node_data = node.get("data")
+        if not isinstance(node_data, dict) or _node_kind(node_data.get("type")) is None:
+            continue
+        count += 1
+        if count > 1:
+            raise CodedTriggerError(TriggerErrorCode.MULTIPLE_TRIGGERS, MULTIPLE_TRIGGERS_ERROR)
 
 
 def _display_name(config: dict[str, Any], kind: str) -> str:
@@ -625,6 +638,9 @@ async def reconcile_flow_triggers_safely(
     if owner_id is None:
         return
     try:
+        # Legacy graphs remain editable, but a metadata save cannot restart
+        # their stopped triggers before the extra canvas nodes are removed.
+        validate_single_trigger_per_flow(flow_data)
         async with session.begin_nested():
             await reconcile_flow_triggers(session, flow_id=flow_id, owner_id=owner_id, flow_data=flow_data)
     except DBAPIError:

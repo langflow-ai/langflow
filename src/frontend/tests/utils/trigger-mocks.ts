@@ -254,6 +254,11 @@ export async function installTriggerMocks(
 
   const read = (row: MockTrigger) => ({
     ...row,
+    // The server's code for the one stored error these mocks write.
+    last_error_code:
+      row.last_error === CONNECTION_NOT_AUTHORIZED_ERROR
+        ? "connection_not_authorized"
+        : null,
     binding_target: "draft",
     deployment_id: null,
     flow_version_id: null,
