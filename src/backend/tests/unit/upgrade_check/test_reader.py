@@ -132,6 +132,7 @@ def test_reads_a_database_each_release_saved(release, tmp_path):
     users = {user.username: user for user in source.users}
     assert set(users) == {"langflow", "fixture-user"}
     project = next(project for project in source.projects if project.name == "Fixture project")
+    assert project.user_id == users["langflow"].id
 
     assert set(flows) == {"Fixture nested groups", "Fixture saved component"}
     flow, component = flows["Fixture nested groups"], flows["Fixture saved component"]
@@ -380,7 +381,7 @@ def test_postgres_source_is_read_in_a_read_only_transaction():
             for statement in (
                 "CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)",
                 'CREATE TABLE "user" (id UUID PRIMARY KEY, username VARCHAR NOT NULL)',
-                "CREATE TABLE folder (id UUID PRIMARY KEY, name VARCHAR NOT NULL)",
+                "CREATE TABLE folder (id UUID PRIMARY KEY, name VARCHAR NOT NULL, user_id UUID)",
                 "CREATE TABLE flow (id UUID PRIMARY KEY, name VARCHAR, data JSON, user_id UUID, folder_id UUID,"
                 " is_component BOOLEAN, updated_at TIMESTAMP WITH TIME ZONE)",
                 "CREATE TABLE flow_version (id UUID PRIMARY KEY, flow_id UUID, user_id UUID, data JSON,"
@@ -397,7 +398,10 @@ def test_postgres_source_is_read_in_a_read_only_transaction():
             connection.execute(
                 sa.text('INSERT INTO "user" VALUES (:id, :name)'), {"id": user_id, "name": "fixture-user"}
             )
-            connection.execute(sa.text("INSERT INTO folder VALUES (:id, 'Fixture project')"), {"id": folder_id})
+            connection.execute(
+                sa.text("INSERT INTO folder VALUES (:id, 'Fixture project', :user_id)"),
+                {"id": folder_id, "user_id": user_id},
+            )
             connection.execute(
                 sa.text("INSERT INTO flow VALUES (:id, 'Fixture flow', :data, :user_id, :folder_id, false, now())"),
                 {"id": flow_id, "data": json.dumps(flow_data), "user_id": user_id, "folder_id": folder_id},
