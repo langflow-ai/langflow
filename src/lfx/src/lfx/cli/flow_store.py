@@ -98,7 +98,7 @@ class FilesystemFlowStore:
         path = self._dir / f"{flow_id}.json"
         try:
             path.resolve().relative_to(self._dir.resolve())
-        except ValueError as exc:
+        except (OSError, RuntimeError, ValueError) as exc:
             msg = f"Invalid flow_id: {flow_id!r}"
             raise ValueError(msg) from exc
         return path
@@ -129,7 +129,7 @@ class FilesystemFlowStore:
             logger.warning("Skipping unreadable flow store file %s: %r", path.name, exc)
             return None
         if not isinstance(flow_json, dict):
-            logger.warning("Skipping flow store file %s: expected a JSON object", path.name)
+            logger.warning(f"Skipping flow store file {path.name}: expected a JSON object")
             return None
         return flow_json
 
