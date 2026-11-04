@@ -11,6 +11,7 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
 from lfx.interface.components import component_cache
 from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
+from sqlalchemy import text
 
 
 class FakeResult:
@@ -385,6 +386,7 @@ async def test_handle_list_resources_respects_project_flow_visibility(monkeypatc
     other_project = Folder(name="Other resource visibility project", user_id=user.id)
     enabled_flow = Flow(name="Enabled resource flow", user_id=user.id, folder_id=project.id, mcp_enabled=True)
     disabled_flow = Flow(name="Disabled resource flow", user_id=user.id, folder_id=project.id)
+    legacy_flow = Flow(name="Legacy resource flow", user_id=user.id, folder_id=project.id, mcp_enabled=True)
     other_project_flow = Flow(
         name="Other project resource flow", user_id=user.id, folder_id=other_project.id, mcp_enabled=True
     )
@@ -392,11 +394,27 @@ async def test_handle_list_resources_respects_project_flow_visibility(monkeypatc
         name="Other owner resource flow", user_id=other_user.id, folder_id=project.id, mcp_enabled=True
     )
     async_session.add_all(
-        [user, other_user, project, other_project, enabled_flow, disabled_flow, other_project_flow, other_user_flow]
+        [
+            user,
+            other_user,
+            project,
+            other_project,
+            enabled_flow,
+            disabled_flow,
+            legacy_flow,
+            other_project_flow,
+            other_user_flow,
+        ]
     )
     await async_session.flush()
+    # Constructors apply the False default, so reproduce the legacy migration row directly.
+    await async_session.execute(
+        text("UPDATE flow SET mcp_enabled = NULL WHERE id = :flow_id"), {"flow_id": legacy_flow.id.hex}
+    )
+    await async_session.refresh(legacy_flow)
+    assert legacy_flow.mcp_enabled is None
 
-    flows = [enabled_flow, disabled_flow, other_project_flow, other_user_flow]
+    flows = [enabled_flow, disabled_flow, legacy_flow, other_project_flow, other_user_flow]
     storage_service = FakeStorageService({f"flow-{flow.id}": ["resource.txt"] for flow in flows})
     monkeypatch.setattr(mcp_utils, "session_scope", lambda: FakeSessionContext(async_session))
     monkeypatch.setattr(mcp_utils, "get_storage_service", lambda: storage_service)
@@ -412,7 +430,9 @@ async def test_handle_list_resources_respects_project_flow_visibility(monkeypatc
     finally:
         mcp_utils.current_user_ctx.reset(token)
 
-    expected_flows = [enabled_flow] if project_scoped else [enabled_flow, disabled_flow, other_project_flow]
+    expected_flows = (
+        [enabled_flow] if project_scoped else [enabled_flow, disabled_flow, legacy_flow, other_project_flow]
+    )
     assert {str(resource.uri) for resource in resources} == {
         f"http://localhost:4000/api/v1/files/download/{flow.id}/resource.txt" for flow in expected_flows
     }
@@ -420,7 +440,7 @@ async def test_handle_list_resources_respects_project_flow_visibility(monkeypatc
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("project_scoped", [True, False])
-@pytest.mark.parametrize("mcp_enabled", [True, False])
+@pytest.mark.parametrize("mcp_enabled", [True, False, None])
 async def test_handle_read_resource_respects_project_flow_visibility(
     monkeypatch, async_session, project_scoped, mcp_enabled
 ):
@@ -432,6 +452,13 @@ async def test_handle_read_resource_respects_project_flow_visibility(
     flow = Flow(name="Resource flow", user_id=user.id, folder_id=project.id, mcp_enabled=mcp_enabled)
     async_session.add_all([user, project, flow])
     await async_session.flush()
+    if mcp_enabled is None:
+        # Constructors apply the False default, so reproduce the legacy migration row directly.
+        await async_session.execute(
+            text("UPDATE flow SET mcp_enabled = NULL WHERE id = :flow_id"), {"flow_id": flow.id.hex}
+        )
+        await async_session.refresh(flow)
+        assert flow.mcp_enabled is None
 
     storage_service = FakeStorageService({}, {f"flow-{flow.id}/resource.txt": b"resource contents"})
     monkeypatch.setattr(mcp_utils, "session_scope", lambda: FakeSessionContext(async_session))

@@ -188,6 +188,7 @@ async def handle_list_resources(project_id=None):
         async with session_scope() as session:
             # SECURITY: Always scope to the calling user to prevent cross-user enumeration.
             if project_id:
+                # Legacy NULL flags stay excluded, matching project tool visibility.
                 flows_query = select(Flow).where(
                     Flow.folder_id == project_id,
                     Flow.user_id == current_user.id,
@@ -317,6 +318,7 @@ async def handle_read_resource(uri: str, project_id: UUID | str | None = None) -
             else:
                 flow_query = select(Flow).where(Flow.id == flow_id, Flow.user_id == current_user.id)
                 if parsed_project_id is not None:
+                    # Legacy NULL flags stay excluded, matching project tool visibility.
                     flow_query = flow_query.where(
                         Flow.folder_id == parsed_project_id,
                         Flow.mcp_enabled == True,  # noqa: E712
