@@ -80,6 +80,8 @@ export interface TriggerRead {
   next_fire_at: Iso8601 | null;
   last_fired_at: Iso8601 | null;
   last_error: string | null;
+  /** Stable code for `last_error`; the UI shows a known one in the reader's language. */
+  last_error_code?: string | null;
   admin_paused_at?: Iso8601 | null;
   created_at: Iso8601 | null;
   updated_at: Iso8601 | null;
