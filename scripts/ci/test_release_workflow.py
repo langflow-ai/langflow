@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 import yaml
@@ -22,6 +23,42 @@ def _job_block(path: Path, start_job: str, end_job: str) -> str:
     start = workflow.index(f"\n  {start_job}:")
     end = workflow.index(f"\n  {end_job}:", start)
     return workflow[start:end]
+
+
+def test_release_and_nightly_use_current_python_matrix() -> None:
+    for name, job_name in [("release.yml", "ci"), ("nightly_build.yml", "backend-unit-tests")]:
+        jobs = yaml.safe_load((WORKFLOWS_DIR / name).read_text())["jobs"]
+        versions = ast.literal_eval(jobs[job_name]["with"]["python-versions"])
+        assert set(versions) == {"3.11", "3.12", "3.13", "3.14", "3.15"}, name
+
+
+def test_installation_gate_requires_stable_python_and_isolates_preview() -> None:
+    jobs = yaml.safe_load(CROSS_PLATFORM_WORKFLOW_PATH.read_text())["jobs"]
+    stable = jobs["test-installation-stable"]
+    preview = jobs["test-installation-experimental"]
+    assert not stable.get("continue-on-error", False)
+    assert preview["continue-on-error"] is True
+    assert preview["strategy"]["fail-fast"] is False
+    for os_name in ("linux", "macos", "windows"):
+        versions = {leg["python-version"] for leg in stable["strategy"]["matrix"]["include"] if leg["os"] == os_name}
+        assert versions == {"3.11", "3.12", "3.13", "3.14"}, os_name
+    assert {leg["python-version"] for leg in preview["strategy"]["matrix"]["include"]} == {"3.15"}
+
+
+def test_release_python_preview_failures_cannot_cancel_required_jobs() -> None:
+    matrix_jobs = {
+        "backend-unit-tests.yml": ["test", "report"],
+        "python_test.yml": ["bundle-guarded-tests", "integration-tests", "lfx-tests", "test-cli"],
+        "release-inventory-gate.yml": ["python-base-inventory", "python-inventory"],
+        "release-lfx.yml": ["run-tests"],
+        "release_bundles.yml": ["test-install"],
+    }
+    for name, job_names in matrix_jobs.items():
+        jobs = yaml.safe_load((WORKFLOWS_DIR / name).read_text())["jobs"]
+        for job_name in job_names:
+            job = jobs[job_name]
+            assert job["continue-on-error"] == "${{ matrix.python-version == '3.15' }}", (name, job_name)
+            assert job["strategy"]["fail-fast"] is False, (name, job_name)
 
 
 def test_finalized_bundles_do_not_influence_shared_rc_number() -> None:

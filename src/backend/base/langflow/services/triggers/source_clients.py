@@ -14,6 +14,7 @@ from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest, 
 
 from langflow.services.database.models.connection.model import Connection
 from langflow.services.deps import get_connection_resolver_service
+from langflow.services.triggers.error_codes import CodedTriggerError, TriggerErrorCode
 from langflow.services.triggers.ownership import is_owned_by
 from langflow.services.triggers.principal import trigger_execution_principal
 
@@ -40,7 +41,7 @@ async def source_lease(session: AsyncSession, trigger: Trigger, *, family: str) 
         raise ValueError(msg)
     if not connection.allow_non_interactive:
         msg = "Allow background runs on the source connection before enabling this trigger."
-        raise ValueError(msg)
+        raise CodedTriggerError(TriggerErrorCode.BACKGROUND_RUNS_NOT_ALLOWED, msg)
     await check_ready(
         session,
         kind=trigger.kind,
