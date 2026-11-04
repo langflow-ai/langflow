@@ -8,7 +8,7 @@ import pytest
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import TriggerSessionPolicy, TriggerState
 from langflow.services.deps import session_scope
-from langflow.services.triggers.reconciliation import find_trigger_nodes, reconcile_flow_triggers
+from langflow.services.triggers.reconciliation import NODE_REMOVED_ERROR, find_trigger_nodes, reconcile_flow_triggers
 from sqlmodel import select
 
 pytestmark = pytest.mark.no_blockbuster
@@ -372,16 +372,21 @@ async def test_fixing_a_paused_schedule_clears_the_reason_but_stays_paused(trigg
     assert (row.state, row.last_error) == (TriggerState.PAUSED.value, None)
 
 
-async def test_a_clean_save_keeps_the_reason_a_removed_node_was_paused(trigger_owner, owned_flow) -> None:
-    """Undoing a node delete keeps the trigger paused, and says why."""
+async def test_undoing_a_node_delete_keeps_the_trigger_paused_and_clears_the_removal(trigger_owner, owned_flow) -> None:
+    """The node is back, so the removal no longer explains the pause or blocks resuming it.
+
+    The trigger stays paused: arming it again is still the owner's act.
+    """
     await _save(owned_flow, trigger_owner, _schedule_node())
     await _set_state(owned_flow, "active")
     await _save(owned_flow, trigger_owner)
+    (row,) = await _triggers(owned_flow)
+    assert (row.state, row.last_error) == (TriggerState.PAUSED.value, NODE_REMOVED_ERROR)
+
     await _save(owned_flow, trigger_owner, _schedule_node())
 
     (row,) = await _triggers(owned_flow)
-    assert row.state == TriggerState.PAUSED.value
-    assert "removed" in row.last_error
+    assert (row.state, row.last_error) == (TriggerState.PAUSED.value, None)
 
 
 async def test_a_clean_save_leaves_a_dead_trigger_alone(trigger_owner, owned_flow) -> None:
@@ -396,3 +401,54 @@ async def test_a_clean_save_leaves_a_dead_trigger_alone(trigger_owner, owned_flo
 
     (row,) = await _triggers(owned_flow)
     assert (row.state, row.last_error) == (TriggerState.DEAD.value, "dead-lettered")
+
+
+async def _rename(owned_flow, name: str) -> None:
+    async with session_scope() as session:
+        row = (await session.exec(select(Trigger).where(Trigger.flow_id == owned_flow))).one()
+        row.name = name
+        session.add(row)
+
+
+async def test_changing_the_cron_renames_the_schedule(trigger_owner, owned_flow) -> None:
+    """Settings and the events drawer show the name; it must name the cron the trigger fires on."""
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="0 8 * * 1-5"))
+    await _set_state(owned_flow, "active")
+
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="*/5 * * * *"))
+
+    (row,) = await _triggers(owned_flow)
+    assert (row.name, row.config["cron"], row.state) == ("Schedule */5 * * * *", "*/5 * * * *", "active")
+
+
+async def test_a_name_the_owner_chose_survives_a_cron_change(trigger_owner, owned_flow) -> None:
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="0 8 * * 1-5"))
+    await _rename(owned_flow, "Morning digest")
+
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="*/5 * * * *"))
+
+    (row,) = await _triggers(owned_flow)
+    assert row.name == "Morning digest"
+
+
+async def test_a_save_repairs_a_name_an_earlier_cron_change_left_stale(trigger_owner, owned_flow) -> None:
+    """Rows renamed before names followed the config still carry the cron they were created with."""
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="*/5 * * * *"))
+    await _rename(owned_flow, "Schedule 0 8 * * 1-5")
+
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="*/5 * * * *"))
+
+    (row,) = await _triggers(owned_flow)
+    assert row.name == "Schedule */5 * * * *"
+
+
+async def test_an_invalid_cron_drops_out_of_the_name_until_it_is_fixed(trigger_owner, owned_flow) -> None:
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="0 8 * * 1-5"))
+
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="not a cron"))
+    (row,) = await _triggers(owned_flow)
+    assert row.name == "Schedule"
+
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="*/5 * * * *"))
+    (row,) = await _triggers(owned_flow)
+    assert row.name == "Schedule */5 * * * *"

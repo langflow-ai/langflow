@@ -78,6 +78,10 @@ _BLOCKED_INTROSPECTION_ATTRS: frozenset[str] = frozenset(
 # alias tracking cannot reliably identify their process-spawning methods.
 _BLOCKED_EXECUTION_ATTRS: frozenset[str] = frozenset({"subprocess_exec", "subprocess_shell"})
 
+# DataFrame instances can arrive through arguments or factory results. Their
+# expression methods execute strings that the outer AST cannot inspect.
+_BLOCKED_EXPRESSION_ATTRS: frozenset[str] = frozenset({"eval", "query"})
+
 # Matches a dunder reached inside a str.format()/Formatter replacement field,
 # e.g. "{0.__globals__}" or "{0[__builtins__]}". Such traversals live inside a
 # literal template string and are invisible to the AST attribute check, so a
@@ -95,22 +99,68 @@ _INERT_DUNDER_ATTRS: frozenset[str] = frozenset({"__name__", "__qualname__", "__
 _RUNTIME_LOADER_NAMES: frozenset[str] = frozenset({"__loader__", "__spec__"})
 
 
-def _is_blocked_attribute(attr: str | None) -> bool:
+def _is_blocked_attribute(attr: str | None, *, include_expression_methods: bool = True) -> bool:
     """True if reading attribute ``attr`` is a sandbox-escape vector on any object.
 
     ``None`` (an attribute name that could not be resolved statically) is not
     blocked here: callers decide separately whether an unresolvable name is a
     violation, because that answer differs by receiver.
+
+    Ordinary mapping keys may name expression methods without exposing a
+    callable. Mapping readers include those names only for namespace mappings.
     """
     if attr is None or attr in _INERT_DUNDER_ATTRS:
         return False
-    return attr.startswith("__") or attr in _BLOCKED_INTROSPECTION_ATTRS or attr in _BLOCKED_EXECUTION_ATTRS
+    return (
+        attr.startswith("__")
+        or attr in _BLOCKED_INTROSPECTION_ATTRS
+        or attr in _BLOCKED_EXECUTION_ATTRS
+        or (include_expression_methods and attr in _BLOCKED_EXPRESSION_ATTRS)
+    )
 
 
 # Non-call attribute *reads* that are forbidden: (module, attr, message).
 # Secret/env exfiltration is the concrete threat — components must use
 # Langflow's variable/secret service, never raw process env.
 DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
+    # These shipped modules expose the real inspect module, including legacy
+    # wildcard re-exports. Restrict the member, not safe classes or functions
+    # from the same module. This also protects aliases and opaque transfers.
+    *[
+        (module, "inspect", f"{module}.inspect is forbidden in components (runtime and file access)")
+        for module in (
+            "langflow.__main__",
+            "langflow.agentic.services.helpers.flow_loader",
+            "langflow.base.mcp.preset",
+            "langflow.base.mcp.util",
+            "langflow.custom.custom_component.component",
+            "langflow.custom.utils",
+            "langflow.interface.components",
+            "langflow.interface.initialize.loading",
+            "langflow.schema.playground_events",
+            "langflow.services.auth.external",
+            "langflow.services.auth.utils",
+            "langflow.services.authorization.decorators",
+            "langflow.services.factory",
+            "langflow.services.knowledge_base_storage.runtime",
+            "lfx.base.mcp.preset",
+            "lfx.base.mcp.util",
+            "lfx.cli.script_loader",
+            "lfx.custom.code_parser.code_parser",
+            "lfx.custom.custom_component.component",
+            "lfx.custom.utils",
+            "lfx.events.event_manager",
+            "lfx.extension.loader._detection",
+            "lfx.graph.utils",
+            "lfx.graph.vertex.base",
+            "lfx.interface.components",
+            "lfx.interface.initialize.loading",
+            "lfx.run.hitl",
+            "lfx.services.manager",
+            "lfx.utils.flow_requirements",
+            "lfx.utils.util",
+        )
+    ],
     ("os", "environ", "os.environ is forbidden — use Langflow's variable/secret service"),
     ("os", "environb", "os.environb is forbidden. Use Langflow's variable/secret service"),
     ("gc", "garbage", "gc.garbage is forbidden in components (server object recovery)"),
@@ -260,6 +310,7 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     ("pandas", "read_pickle", "pandas.read_pickle() is forbidden — unsafe pickle deserialization"),
     ("pandas.io.pickle", "read_pickle", "pandas.io.pickle.read_pickle() is forbidden — unsafe pickle deserialization"),
     ("pandas.io.api", "read_pickle", "pandas.io.api.read_pickle() is forbidden — unsafe pickle deserialization"),
+    ("pandas", "eval", "pandas.eval() is forbidden in components (dynamic code execution)"),
 ]
 
 # NumPy's array readers are safe by default, but allow_pickle=True enables
@@ -313,6 +364,10 @@ DANGEROUS_IMPORTS: set[str] = {
     "codeop",
     "compileall",
     "importlib",
+    # These helpers expose live frames, arbitrary source files, or raw file readers.
+    "inspect",
+    "linecache",
+    "fileinput",
     # These profiling helpers execute source strings, bypassing AST checks on
     # the outer component (profilers, tracers, debuggers, and doctest runners).
     "timeit",
@@ -384,6 +439,8 @@ DANGEROUS_SUBMODULES: tuple[str, ...] = (
     # This compatibility module exposes several pickle entry points, including
     # Unpickler and the underlying pickle module. Block its whole namespace.
     "pandas.compat.pickle_compat",
+    # Alternate parsers and engines expose the same expression evaluation.
+    "pandas.core.computation",
 )
 
 # Imports where only specific names are dangerous (module -> set of dangerous names)
@@ -452,6 +509,11 @@ def _is_dangerous_submodule(dotted: str) -> bool:
     ``urllib.parse`` do not.
     """
     return any(dotted == prefix or dotted.startswith(prefix + ".") for prefix in DANGEROUS_SUBMODULES)
+
+
+def _is_forbidden_module_reference(dotted: str) -> bool:
+    """Whether a resolved reference belongs to a forbidden module."""
+    return dotted in DANGEROUS_IMPORTS or dotted in DANGEROUS_SUBMODULES
 
 
 def _dotted_parts(node: ast.AST) -> list[str] | None:
@@ -716,8 +778,31 @@ _DANGEROUS_CALL_MEMBERS, _DANGEROUS_READ_MEMBERS = _build_dangerous_members()
 # Importing arbitrary packages to inspect ``__all__`` would execute code during
 # the scan. These are verified star exports from packages with nested sinks;
 # the sink tables below determine which of the exported names need binding.
+# Packages without ``__all__`` also export their already-imported public children.
 _KNOWN_WILDCARD_SUBMODULE_EXPORTS: dict[str, frozenset[str]] = {
     "concurrent": frozenset({"futures"}),
+    "langflow": frozenset({"agentic", "base", "custom", "interface", "schema", "services"}),
+    "langflow.agentic": frozenset({"services"}),
+    "langflow.agentic.services": frozenset({"helpers"}),
+    "langflow.base": frozenset({"mcp"}),
+    "langflow.base.mcp": frozenset({"preset", "util"}),
+    "langflow.custom": frozenset({"custom_component", "utils"}),
+    "langflow.custom.custom_component": frozenset({"component"}),
+    "langflow.interface": frozenset({"components", "initialize"}),
+    "langflow.interface.initialize": frozenset({"loading"}),
+    "langflow.services.auth": frozenset({"external", "utils"}),
+    "langflow.services.knowledge_base_storage": frozenset({"runtime"}),
+    "lfx": frozenset(
+        {"base", "cli", "custom", "events", "extension", "graph", "interface", "run", "services", "utils"}
+    ),
+    "lfx.base": frozenset({"mcp"}),
+    "lfx.base.mcp": frozenset({"preset", "util"}),
+    "lfx.custom": frozenset({"custom_component", "utils"}),
+    "lfx.custom.custom_component": frozenset({"component"}),
+    "lfx.events": frozenset({"event_manager"}),
+    "lfx.graph.vertex": frozenset({"base"}),
+    "lfx.interface": frozenset({"components", "initialize"}),
+    "lfx.interface.initialize": frozenset({"loading"}),
     "numpy": frozenset({"lib"}),
     "numpy.lib": frozenset({"format", "npyio"}),
     "os": frozenset({"path"}),
@@ -725,6 +810,11 @@ _KNOWN_WILDCARD_SUBMODULE_EXPORTS: dict[str, frozenset[str]] = {
     "pandas.io": frozenset({"api", "pickle"}),
     "pandas.core": frozenset({"generic"}),
     "urllib": frozenset({"error", "request"}),
+}
+
+# These verified wildcard exports use a different path from their owning package.
+_SHIPPED_MODULE_REEXPORTS: dict[str, dict[str, str]] = {
+    "langflow.custom": {"custom": "lfx.custom"},
 }
 
 
@@ -745,7 +835,7 @@ def _build_wildcard_submodule_bindings() -> dict[str, dict[str, str]]:
     module_paths = {path.rpartition(".")[0] for path in sink_paths}
     module_paths.update(DANGEROUS_SUBMODULES)
 
-    bindings: dict[str, dict[str, str]] = {}
+    bindings = {package: dict(exports) for package, exports in _SHIPPED_MODULE_REEXPORTS.items()}
     for module_path in module_paths:
         parts = module_path.split(".")
         for index in range(1, len(parts)):
@@ -790,7 +880,7 @@ _PACKAGE_REEXPORT_MODULE_PATHS: dict[str, str] = {
 }
 
 
-# Known stdlib modules that expose restricted modules as attributes, mapping
+# Known modules that expose restricted modules as attributes, mapping
 # the attribute name to the canonical restricted module it resolves to. Keep
 # this exact-host allowlist narrow: an arbitrary third-party module's ``.os``
 # or ``.sys`` attribute is not necessarily the stdlib module. ``tempfile``
@@ -802,6 +892,7 @@ _PACKAGE_REEXPORT_MODULE_PATHS: dict[str, str] = {
 # still have their ``.os`` / ``.sys`` members canonicalized — see
 # _reexported_restricted_module below.
 _RESTRICTED_MODULE_REEXPORTS: dict[str, dict[str, str]] = {
+    **_SHIPPED_MODULE_REEXPORTS,
     "glob": {"os": "os", "sys": "sys"},
     "logging": {"os": "os"},
     "os": {"sys": "sys"},
@@ -811,13 +902,11 @@ _RESTRICTED_MODULE_REEXPORTS: dict[str, dict[str, str]] = {
     "tempfile": {"_os": "os", "_sys": "sys"},
 }
 
-# A stdlib module that runs ``import os`` / ``import sys`` at module level
-# re-exports the real restricted module under its original name
-# (``platform.os is os``), which is how the allowlist above would otherwise be
-# bypassed (``platform.os.system(...)``). Unlike third-party modules, a
-# stdlib-rooted attribute named ``os`` or ``sys`` is near-certainly the stdlib
-# module, so canonicalize it for every stdlib host.
-_STDLIB_REEXPORTED_MODULE_NAMES: frozenset[str] = frozenset({"os", "sys"})
+# Stdlib reexports retain the original module's restrictions. For example,
+# dataclasses.inspect and traceback.linecache expose the same runtime and file
+# readers as direct imports. Third-party attributes with these names may be
+# unrelated objects, so canonicalization remains limited to stdlib hosts.
+_STDLIB_REEXPORTED_MODULE_NAMES: frozenset[str] = frozenset({"os", "sys", "inspect", "linecache", "fileinput"})
 _STDLIB_MODULE_NAMES: frozenset[str] = frozenset(sys.stdlib_module_names)
 
 
@@ -841,6 +930,15 @@ _RESTRICTED_MODULE_REFERENCES: set[str] = {
     *_RESTRICTED_MODULE_REEXPORTS,
     "builtins",
     "__builtins__",
+}
+
+# A shipped parent package can pass the same readers through a helper.
+# Track the package objects while leaving their safe classes and functions usable.
+_RESTRICTED_MODULE_REFERENCES |= {
+    ".".join(module.split(".")[:depth])
+    for module in _RESTRICTED_MODULE_REFERENCES
+    if module.startswith(("langflow.", "lfx."))
+    for depth in range(1, module.count(".") + 1)
 }
 
 
@@ -882,7 +980,16 @@ def _restricted_mapping_owner(resolved_name: str) -> str | None:
 
 
 def _is_restricted_reflective_capability(resolved_name: str) -> bool:
-    """Whether a bound callable can recover restricted module members after alias tracking is lost."""
+    """Whether reflection can recover unsafe members after alias tracking is lost."""
+    if resolved_name in {
+        "getattr",
+        "vars",
+        "builtins.getattr",
+        "builtins.vars",
+        "__builtins__.getattr",
+        "__builtins__.vars",
+    }:
+        return True
     receiver_name, separator, method_name = resolved_name.rpartition(".")
     if separator and method_name == "__getattribute__" and receiver_name in _RESTRICTED_MODULE_REFERENCES:
         return True
@@ -997,7 +1104,7 @@ class _SecurityChecker(ast.NodeVisitor):
             self._module_global_state = None
 
     def _resolved_member_names(self, base_names: frozenset[str], member_name: str) -> frozenset[str]:
-        """Resolve a member while canonicalizing imported modules that re-export ``os``."""
+        """Resolve a member while canonicalizing restricted stdlib reexports."""
         resolved: set[str] = set()
         for base_name in base_names:
             if member_name == "__call__":
@@ -1088,10 +1195,6 @@ class _SecurityChecker(ast.NodeVisitor):
                     module_name, separator, method_name = function_name.rpartition(".")
                     if separator and method_name == "__getattribute__" and module_name in _RESTRICTED_MODULE_REFERENCES:
                         resolved.update(self._resolved_member_names(frozenset({module_name}), member_name))
-                    elif separator and method_name in {"get", "__getitem__"} and module_name.endswith(".__dict__"):
-                        resolved.update(
-                            self._resolved_member_names(frozenset({module_name.removesuffix(".__dict__")}), member_name)
-                        )
 
             if (
                 {"object.__getattribute__", "builtins.object.__getattribute__", "__builtins__.object.__getattribute__"}
@@ -1101,17 +1204,11 @@ class _SecurityChecker(ast.NodeVisitor):
             ):
                 resolved.update(self._resolved_member_names(self._resolved_assignment_value(node.args[0]), member_name))
 
-            if (
-                {"dict.get", "dict.__getitem__", "builtins.dict.get", "builtins.dict.__getitem__"} & function_names
-                and node.args[1:]
-                and (member_name := self._static_name(node.args[1])) is not None
-            ):
-                module_names = frozenset(
-                    mapping_name.removesuffix(".__dict__")
-                    for mapping_name in self._resolved_assignment_value(node.args[0])
-                    if mapping_name.endswith(".__dict__")
-                )
-                resolved.update(self._resolved_member_names(module_names, member_name))
+            if selection := self._namespace_selection(node, function_names):
+                # A modeled field selection returns the member, not the mapping.
+                # Defaults still contribute their own identities and markers.
+                resolved.update(selection[0])
+                return frozenset(resolved)
 
             if not any(name.endswith(".__dict__") for name in resolved) and self._call_reaches_namespace_mapping(node):
                 # A namespace laundered through a call - ``dict(ns)``,
@@ -1133,8 +1230,37 @@ class _SecurityChecker(ast.NodeVisitor):
             return frozenset(markers)
         return frozenset()
 
+    def _namespace_selection(self, node: ast.Call, function_names: frozenset[str]) -> tuple[frozenset[str], int] | None:
+        """Resolve fixed-key mapping reads and their modeled positional arguments."""
+        if not function_names or node.keywords or any(isinstance(arg, ast.Starred) for arg in node.args):
+            return None
+        unbound_names = {"dict.get", "dict.__getitem__", "builtins.dict.get", "builtins.dict.__getitem__"}
+        selector_index = 1 if function_names <= unbound_names else 0
+        if len(node.args) <= selector_index:
+            return None
+        if selector_index:
+            mappings = self._resolved_assignment_value(node.args[0])
+        else:
+            owners = [name.rpartition(".") for name in function_names]
+            if any(method not in {"get", "__getitem__"} for _, _, method in owners):
+                return None
+            mappings = frozenset(owner for owner, _, _ in owners)
+        if not mappings or not all(name.endswith(".__dict__") for name in mappings):
+            return None
+        max_arguments = selector_index + (2 if all(name.endswith(".get") for name in function_names) else 1)
+        if len(node.args) > max_arguments or (member := self._static_name(node.args[selector_index])) is None:
+            return None
+        selected = set(
+            self._resolved_member_names(frozenset(name.removesuffix(".__dict__") for name in mappings), member)
+        )
+        for default in node.args[selector_index + 1 :]:
+            selected.update(self._resolved_assignment_value(default))
+        return frozenset(selected), selector_index + 1
+
     def _call_reaches_namespace_mapping(self, node: ast.Call) -> bool:
         """True if a namespace mapping is this call's receiver or one of its arguments."""
+        if any(".__dict__" in name for name in self._resolved_assignment_value(node.func)):
+            return True
         if isinstance(node.func, ast.Attribute) and any(
             name.endswith(".__dict__") for name in self._resolved_assignment_value(node.func.value)
         ):
@@ -1150,6 +1276,8 @@ class _SecurityChecker(ast.NodeVisitor):
     @staticmethod
     def _dangerous_callable_message(resolved_name: str) -> str | None:
         """Return the violation for a resolved builtin or module callable."""
+        if resolved_name.split(".")[0] in DANGEROUS_IMPORTS:
+            return f"Access to '{resolved_name}' is forbidden in components"
         if resolved_name in DANGEROUS_CALLS:
             return DANGEROUS_CALLS[resolved_name]
 
@@ -1218,6 +1346,10 @@ class _SecurityChecker(ast.NodeVisitor):
                 return f"Indirect reference to restricted module '{resolved_name}' is forbidden in components"
             if _is_restricted_reflective_capability(resolved_name):
                 return f"Indirect reference to reflective capability '{resolved_name}' is forbidden in components"
+            # Untracked namespace reads could recover an evaluator under a
+            # normal data key after the namespace marker has been lost.
+            if ".__dict__" in resolved_name:
+                return "Indirect reference to a namespace mapping or its methods is forbidden in components"
             if violation := self._dangerous_callable_message(resolved_name):
                 return violation
         if resolved_names:
@@ -1355,6 +1487,11 @@ class _SecurityChecker(ast.NodeVisitor):
                     f"Indirect reference to reflective capability '{value}' is forbidden in components"
                 )
                 return
+            if ".__dict__" in value:
+                self.violations.append(
+                    "Indirect reference to a namespace mapping or its methods is forbidden in components"
+                )
+                return
             if violation := self._dangerous_callable_message(value):
                 self.violations.append(violation)
                 return
@@ -1482,7 +1619,8 @@ class _SecurityChecker(ast.NodeVisitor):
                 # `from urllib import request` / `from http import client`:
                 # the imported name *is* a blocked submodule. This also
                 # applies to packages with other restricted member names.
-                if _is_dangerous_submodule(f"{node.module}.{alias.name}"):
+                imported_name = _reexported_restricted_module(node.module, alias.name) or f"{node.module}.{alias.name}"
+                if _is_forbidden_module_reference(imported_name) or _is_dangerous_submodule(imported_name):
                     self.violations.append(f"Import of '{node.module}.{alias.name}' is forbidden in components")
 
         for alias in node.names:
@@ -1509,6 +1647,11 @@ class _SecurityChecker(ast.NodeVisitor):
                 self._check_escaping_binding(binding, imported_names)
 
         return self.generic_visit(node)
+
+    def visit_Dict(self, node: ast.Dict):
+        # Nested lookups cannot retain the identity of a stored namespace.
+        self._check_opaque_reference(node)
+        self.generic_visit(node)
 
     def visit_Assign(self, node: ast.Assign):
         self.visit(node.value)
@@ -1823,6 +1966,8 @@ class _SecurityChecker(ast.NodeVisitor):
         # Decorators, defaults, and annotations are evaluated in the enclosing
         # scope; the function body receives an isolated alias state.
         for decorator in node.decorator_list:
+            # Applying a decorator implicitly calls it, even without an ast.Call.
+            self._check_opaque_reference(decorator)
             self.visit(decorator)
         self.visit(node.args)
         if node.returns:
@@ -1889,6 +2034,8 @@ class _SecurityChecker(ast.NodeVisitor):
 
     def visit_ClassDef(self, node: ast.ClassDef):
         for decorator in node.decorator_list:
+            # Applying a decorator implicitly calls it, even without an ast.Call.
+            self._check_opaque_reference(decorator)
             self.visit(decorator)
         for base in node.bases:
             if self._resolved_assignment_value(base) & _NUMPY_NPZ_CLASSES:
@@ -1898,6 +2045,8 @@ class _SecurityChecker(ast.NodeVisitor):
             self._check_opaque_reference(base)
             self.visit(base)
         for keyword in node.keywords:
+            # Class keywords reach metaclasses and __init_subclass__ through implicit calls.
+            self._check_opaque_reference(keyword.value)
             self.visit(keyword)
         for type_parameter in getattr(node, "type_params", ()):
             self.visit(type_parameter)
@@ -1974,7 +2123,10 @@ class _SecurityChecker(ast.NodeVisitor):
     def visit_Subscript(self, node: ast.Subscript):
         """Reject dunder-key reads on any receiver and dangerous reads from a module ``__dict__``."""
         member_name = self._static_name(node.slice)
-        if _is_blocked_attribute(member_name):
+        mapping_values = frozenset(
+            name for name in self._resolved_assignment_value(node.value) if name.endswith(".__dict__")
+        )
+        if _is_blocked_attribute(member_name, include_expression_methods=bool(mapping_values)):
             # Dunder keys are sandbox escapes regardless of the receiver:
             # ``vars(X)`` returns ``X.__dict__`` for ANY object, so gating the
             # check on a restricted-module receiver lets
@@ -1984,13 +2136,9 @@ class _SecurityChecker(ast.NodeVisitor):
         if isinstance(node.slice, ast.Slice) or (
             isinstance(node.slice, ast.Constant) and not isinstance(node.slice.value, str)
         ):
-            # ``value[0]`` / ``value[1:2]`` is a sequence read, not a member
-            # lookup. The marker rides through unmodeled calls, so it lands on
-            # values that are not mappings at all (``json.dumps(vars(o))[:100]``).
+            # Namespace-derived values may be sequences rather than mappings.
+            # Numeric indices and slices do not select attribute names.
             return self.generic_visit(node)
-        mapping_values = frozenset(
-            name for name in self._resolved_assignment_value(node.value) if name.endswith(".__dict__")
-        )
         if not mapping_values:
             return self.generic_visit(node)
         restricted_mapping_names = frozenset(name for name in mapping_values if _is_restricted_module_reference(name))
@@ -2031,13 +2179,6 @@ class _SecurityChecker(ast.NodeVisitor):
                 self.violations.append(violation)
         return self.generic_visit(node)
 
-    def _resolved_dotted(self, node: ast.Attribute) -> frozenset[str]:
-        """Possible dotted names of an attribute chain, with its root alias-resolved."""
-        parts = _dotted_parts(node)
-        if not parts:
-            return frozenset()
-        return frozenset(".".join([root, *parts[1:]]) for root in self._resolved_names(parts[0]))
-
     def _resolved_receiver_names(self, node: ast.Name | ast.Attribute) -> frozenset[str]:
         """Resolve a direct or dotted module receiver to its canonical names."""
         return self._resolved_names(node.id) if isinstance(node, ast.Name) else self._resolved_assignment_value(node)
@@ -2045,7 +2186,10 @@ class _SecurityChecker(ast.NodeVisitor):
     def _dangerous_submodule_access(self, node: ast.Attribute) -> str | None:
         # Exact match (not prefix): the ``urllib.request`` node itself is visited
         # within ``urllib.request.urlopen``, so matching exactly avoids double-flagging.
-        return next((name for name in sorted(self._resolved_dotted(node)) if name in DANGEROUS_SUBMODULES), None)
+        return next(
+            (name for name in sorted(self._resolved_assignment_value(node)) if _is_forbidden_module_reference(name)),
+            None,
+        )
 
     def visit_Name(self, node: ast.Name):
         """Catch wildcard-imported reads (``from os import *``; ``environ[...]``)."""
@@ -2057,7 +2201,7 @@ class _SecurityChecker(ast.NodeVisitor):
                 if resolved_name.rsplit(".", 1)[-1] in _RUNTIME_LOADER_NAMES:
                     self.violations.append(f"Access to '{resolved_name}' is forbidden in components (runtime loader)")
                     break
-                if resolved_name in DANGEROUS_SUBMODULES:
+                if _is_forbidden_module_reference(resolved_name):
                     self.violations.append(f"Access to '{resolved_name}' is forbidden in components")
                     break
                 if violation := next(
@@ -2135,6 +2279,8 @@ class _SecurityChecker(ast.NodeVisitor):
         getattr_names = {"getattr", "builtins.getattr", "__builtins__.getattr"}
         exempt_getattr_arguments = 2 if getattr_names & resolved_call_names and getattr_arguments_validated else 0
         exempt_arguments = max(exempt_getattr_arguments, reflective_arguments_validated)
+        if selection := self._namespace_selection(node, resolved_call_names):
+            exempt_arguments = max(exempt_arguments, selection[1])
         for argument in (*node.args[exempt_arguments:], *(keyword.value for keyword in node.keywords)):
             self._check_opaque_reference(argument)
         self.generic_visit(node)
@@ -2250,7 +2396,7 @@ class _SecurityChecker(ast.NodeVisitor):
             namespace_receiver = True
         for selector in selectors:
             member_name = self._static_name(selector)
-            if _is_blocked_attribute(member_name):
+            if _is_blocked_attribute(member_name, include_expression_methods=namespace_receiver):
                 self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
                 break
             if member_name is None and namespace_receiver:

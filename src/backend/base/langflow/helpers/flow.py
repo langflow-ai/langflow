@@ -272,7 +272,14 @@ async def _build_graph_from_authorized_flow(
         # against the deployment policy would make ``off`` stop an agent from
         # calling a flow as a tool. The protected-field floor still applies.
         graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks, caller_supplied=False)
-    return Graph.from_payload(graph_data, flow_id=flow_id, user_id=user_id)
+    from langflow.api.utils.flow_utils import get_authorized_legacy_flow_ids
+
+    return Graph.from_payload(
+        graph_data,
+        flow_id=flow_id,
+        user_id=user_id,
+        authorized_legacy_flow_ids=await get_authorized_legacy_flow_ids(flow_id),
+    )
 
 
 async def _resolve_authorized_target_flow(

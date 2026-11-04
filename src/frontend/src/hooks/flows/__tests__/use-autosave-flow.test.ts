@@ -116,7 +116,7 @@ describe("useAutoSaveFlow", () => {
     const mockFlow = makeMockFlow();
     await autoSaveFlow(mockFlow);
 
-    expect(mockSaveFlow).toHaveBeenCalledWith(mockFlow);
+    expect(mockSaveFlow).toHaveBeenCalledWith(mockFlow, undefined);
   });
 
   it("keeps the flush barrier pending until direct and permission-delayed saves settle in order", async () => {
@@ -213,16 +213,20 @@ describe("useAutoSaveFlow", () => {
 
     result.current({ ...makeMockFlow(), name: "Canvas" });
     await waitFor(() => expect(mockSaveFlow).toHaveBeenCalledTimes(1));
-    const settingsSave = result.current.enqueue({
-      ...makeMockFlow(),
-      name: "Settings",
-    });
+    const settingsSave = result.current.enqueue(
+      { ...makeMockFlow(), name: "Settings" },
+      { metadataOnly: true },
+    );
     result.current({ ...makeMockFlow(), name: "Later" });
     await Promise.resolve();
     expect(mockSaveFlow).toHaveBeenCalledTimes(1);
 
     act(() => settlers.Canvas());
     await waitFor(() => expect(mockSaveFlow).toHaveBeenCalledTimes(2));
+    expect(mockSaveFlow).toHaveBeenLastCalledWith(
+      expect.objectContaining({ name: "Settings" }),
+      { metadataOnly: true },
+    );
     act(() => settlers.Settings());
     await settingsSave;
     await waitFor(() => expect(mockSaveFlow).toHaveBeenCalledTimes(3));
@@ -363,7 +367,7 @@ describe("useAutoSaveFlow", () => {
 
     await autoSaveFlow();
 
-    expect(mockSaveFlow).toHaveBeenCalledWith(undefined);
+    expect(mockSaveFlow).toHaveBeenCalledWith(undefined, undefined);
   });
 
   it("should use the correct autoSavingInterval for debounce", () => {
@@ -435,7 +439,7 @@ describe("useAutoSaveFlow", () => {
 
     // AutoSaving enabled
     await result.current(mockFlow);
-    expect(mockSaveFlow).toHaveBeenCalledWith(mockFlow);
+    expect(mockSaveFlow).toHaveBeenCalledWith(mockFlow, undefined);
 
     mockSaveFlow.mockClear();
 
@@ -496,7 +500,9 @@ describe("useAutoSaveFlow", () => {
     rerender();
 
     expect(can).toHaveBeenCalledWith("flow-1", "write");
-    await waitFor(() => expect(mockSaveFlow).toHaveBeenCalledWith(mockFlow));
+    await waitFor(() =>
+      expect(mockSaveFlow).toHaveBeenCalledWith(mockFlow, undefined),
+    );
   });
 
   it("should not call saveFlow when write permission is denied", () => {
