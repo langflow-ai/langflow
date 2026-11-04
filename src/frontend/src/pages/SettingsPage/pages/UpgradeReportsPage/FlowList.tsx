@@ -122,7 +122,7 @@ export default function FlowList({
         <label className="flex min-w-0 flex-1 flex-col gap-1">
           {t("settings.upgrade.search")}
           <input
-            className="rounded border bg-background p-2"
+            className="rounded border border-control bg-background p-2"
             value={search}
             onChange={(event) => {
               setSearch(event.target.value);
@@ -133,7 +133,7 @@ export default function FlowList({
         <label className="flex flex-col gap-1">
           {t("settings.upgrade.status")}
           <select
-            className="rounded border bg-background p-2"
+            className="rounded border border-control bg-background p-2"
             value={status}
             onChange={(event) => {
               setStatus(event.target.value);

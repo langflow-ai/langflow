@@ -3467,6 +3467,7 @@
   "settings.upgrade.reason.retired": "A component is no longer available. Replace it manually.",
   "settings.upgrade.reason.preservation": "The update could lose saved values or connections. Repair this flow manually.",
   "settings.upgrade.reason.customized": "Customized nodes were kept unchanged.",
+  "settings.upgrade.reason.providerSelection": "The selected model provider could not be verified. Review this flow manually.",
   "settings.upgrade.reason.owner": "The owner is unavailable. Owner context and credentials could not be verified.",
   "settings.upgrade.reason.managed": "This flow is locked or managed by a source file. Update it through its normal authoring path.",
   "settings.upgrade.reason.unavailable": "A required service is unavailable. Preview again after it recovers.",

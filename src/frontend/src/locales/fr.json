@@ -3468,6 +3468,7 @@
   "settings.upgrade.reason.retired": "Un composant n’est plus disponible. Remplacez-le manuellement.",
   "settings.upgrade.reason.preservation": "La mise à jour pourrait perdre des valeurs ou connexions enregistrées. Réparez ce flux manuellement.",
   "settings.upgrade.reason.customized": "Les nœuds personnalisés ont été conservés sans modification.",
+  "settings.upgrade.reason.providerSelection": "Le fournisseur de modèles sélectionné n’a pas pu être vérifié. Examinez ce flux manuellement.",
   "settings.upgrade.reason.owner": "Le propriétaire est indisponible. Son contexte et ses identifiants n’ont pas pu être vérifiés.",
   "settings.upgrade.reason.managed": "Ce flux est verrouillé ou géré par un fichier source. Utilisez son mode d’édition habituel.",
   "settings.upgrade.reason.unavailable": "Un service requis est indisponible. Relancez l’aperçu après son rétablissement.",

@@ -3468,6 +3468,7 @@
   "settings.upgrade.reason.retired": "Eine Komponente ist nicht mehr verfügbar. Ersetzen Sie sie manuell.",
   "settings.upgrade.reason.preservation": "Die Aktualisierung könnte gespeicherte Werte oder Verbindungen verlieren. Reparieren Sie den Flow manuell.",
   "settings.upgrade.reason.customized": "Angepasste Knoten wurden unverändert beibehalten.",
+  "settings.upgrade.reason.providerSelection": "Der ausgewählte Modellanbieter konnte nicht überprüft werden. Prüfen Sie diesen Flow manuell.",
   "settings.upgrade.reason.owner": "Der Eigentümer ist nicht verfügbar. Kontext und Zugangsdaten konnten nicht verifiziert werden.",
   "settings.upgrade.reason.managed": "Dieser Flow ist gesperrt oder wird durch eine Quelldatei verwaltet. Verwenden Sie den normalen Bearbeitungsweg.",
   "settings.upgrade.reason.unavailable": "Ein erforderlicher Dienst ist nicht verfügbar. Starten Sie nach der Wiederherstellung eine neue Vorschau.",

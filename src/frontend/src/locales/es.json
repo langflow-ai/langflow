@@ -3468,6 +3468,7 @@
   "settings.upgrade.reason.retired": "Un componente ya no está disponible. Reemplácelo manualmente.",
   "settings.upgrade.reason.preservation": "La actualización podría perder valores o conexiones guardados. Repare este flujo manualmente.",
   "settings.upgrade.reason.customized": "Los nodos personalizados se conservaron sin cambios.",
+  "settings.upgrade.reason.providerSelection": "No se pudo verificar el proveedor de modelos seleccionado. Revise este flujo manualmente.",
   "settings.upgrade.reason.owner": "El propietario no está disponible. No se pudieron verificar su contexto y sus credenciales.",
   "settings.upgrade.reason.managed": "Este flujo está bloqueado o lo administra un archivo fuente. Use su proceso normal de edición.",
   "settings.upgrade.reason.unavailable": "Un servicio necesario no está disponible. Obtenga otra vista previa cuando se recupere.",

@@ -3467,6 +3467,7 @@
   "settings.upgrade.reason.retired": "더 이상 제공하지 않는 Component가 있습니다. 직접 바꾸세요.",
   "settings.upgrade.reason.preservation": "업데이트하면 저장된 값이나 연결이 사라질 수 있습니다. 이 Flow를 직접 복구하세요.",
   "settings.upgrade.reason.customized": "수정한 노드는 그대로 유지했습니다.",
+  "settings.upgrade.reason.providerSelection": "선택한 모델 제공업체를 확인할 수 없습니다. 이 플로우를 수동으로 검토하세요.",
   "settings.upgrade.reason.owner": "소유자를 확인할 수 없어 실행 환경과 인증 정보를 검사하지 못했습니다.",
   "settings.upgrade.reason.managed": "이 Flow는 잠겨 있거나 원본 파일에서 관리합니다. 평소 편집하는 경로에서 업데이트하세요.",
   "settings.upgrade.reason.unavailable": "필요한 서비스를 사용할 수 없습니다. 복구한 뒤 미리보기를 다시 실행하세요.",

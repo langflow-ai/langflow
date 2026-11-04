@@ -3468,6 +3468,7 @@
   "settings.upgrade.reason.retired": "Um componente não está mais disponível. Substitua-o manualmente.",
   "settings.upgrade.reason.preservation": "A atualização pode perder valores ou conexões salvos. Repare este fluxo manualmente.",
   "settings.upgrade.reason.customized": "Os nós personalizados foram mantidos sem alterações.",
+  "settings.upgrade.reason.providerSelection": "Não foi possível verificar o provedor de modelos selecionado. Revise este fluxo manualmente.",
   "settings.upgrade.reason.owner": "O proprietário está indisponível. Não foi possível verificar seu contexto e suas credenciais.",
   "settings.upgrade.reason.managed": "Este fluxo está bloqueado ou é gerenciado por um arquivo de origem. Use o caminho normal de edição.",
   "settings.upgrade.reason.unavailable": "Um serviço necessário está indisponível. Visualize novamente após a recuperação.",

@@ -13,10 +13,14 @@ import { reportTime } from "./format";
 import ReportView from "./ReportView";
 
 export default function UpgradeReportsPage() {
-  const isSuperuser = Boolean(
-    useAuthStore((state) => state.userData)?.is_superuser,
+  const { t } = useTranslation();
+  const user = useAuthStore((state) => state.userData);
+  if (user === null) return <p role="status">{t("common.loading")}</p>;
+  return user.is_superuser ? (
+    <UpgradeReports />
+  ) : (
+    <CustomNavigate replace to="/" />
   );
-  return isSuperuser ? <UpgradeReports /> : <CustomNavigate replace to="/" />;
 }
 
 function UpgradeReports() {
@@ -122,7 +126,7 @@ function UpgradeReports() {
             <label className="flex flex-col gap-1">
               {t("settings.upgrade.chooseReport")}
               <select
-                className="max-w-full rounded border bg-background p-2"
+                className="max-w-full rounded border border-control bg-background p-2"
                 value={
                   history.data.items.some((item) => item.id === id) ? id : ""
                 }
