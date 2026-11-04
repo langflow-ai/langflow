@@ -26,7 +26,7 @@ For each node, the command reports the following:
 
 The command doesn't do the following:
 
-- It doesn't run flows or call any provider. During the dry run, every network call is refused. A node whose update makes one is reported as `could_not_verify`.
+- It doesn't run flows. Python socket audit events are refused during target component discovery and dry runs. Discovery that attempts a network call or exceeds 30 seconds stops the check with exit 2, rather than reporting against an incomplete registry. A node whose update attempts one is reported as `could_not_verify`.
 - It doesn't migrate the database schema or update any flow.
 - It doesn't check files, knowledge bases, credentials, or variables. To check those, see [Migrate to a new Langflow instance](/instance-migration).
 
@@ -34,6 +34,10 @@ The command doesn't do the following:
 
 Pass the upgraded server's settings as options.
 The command reads no environment variable and no `.env` file of the server, so a value you don't pass takes its default.
+Its child retains only interpreter and operating system essentials. Provider credential variables are removed, and its home, configuration, cache, and working directory are temporary. Explicit source, output, and custom component paths are resolved before this isolation. Supported SDK offline settings also prevent automatic model metadata downloads.
+
+The Python audit guard is not an operating system sandbox. It does not contain native extension transports or subprocesses. Run the check with trusted installed components and custom folders. Source database connections open before component discovery and remain read-only. A discovery worker that exceeds its time limit stays guarded until it ends.
+Unrelated component import or template errors retain the shared loader's existing skip behavior. This check does not turn those skips into complete discovery evidence.
 
 | Option | Server setting | Default |
 |---|---|---|
