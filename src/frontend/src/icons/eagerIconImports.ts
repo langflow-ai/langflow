@@ -31,6 +31,7 @@ import { ElasticsearchIcon } from "@/icons/ElasticsearchStore";
 import { EvernoteIcon } from "@/icons/Evernote";
 import { ExaIcon } from "@/icons/Exa";
 import { FBIcon } from "@/icons/FacebookMessenger";
+import { FaxForAgentsIcon } from "@/icons/FaxForAgents";
 import { FirecrawlIcon } from "@/icons/Firecrawl";
 import { freezeAllIcon } from "@/icons/freezeAll";
 import { GitBookIcon } from "@/icons/GitBook";
@@ -210,6 +211,7 @@ export const eagerIconsMapping = {
   Perplexity: PerplexityIcon,
   Pinecone: PineconeIcon,
   Plivo: PlivoIcon,
+  FaxForAgents: FaxForAgentsIcon,
   Postgres: PostgresIcon,
   Python: PythonIcon,
   QDrant: QDrantIcon,

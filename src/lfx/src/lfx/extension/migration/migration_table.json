@@ -5270,6 +5270,86 @@
       "bare_class_name": "MrscraperWebSearch",
       "target": "ext:mrscraper:MrscraperWebSearch@official",
       "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "FaxForAgentsSendFaxComponent",
+      "target": "ext:faxforagents:FaxForAgentsSendFaxComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.faxforagents.send_fax.FaxForAgentsSendFaxComponent",
+      "target": "ext:faxforagents:FaxForAgentsSendFaxComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.faxforagents.FaxForAgentsSendFaxComponent",
+      "target": "ext:faxforagents:FaxForAgentsSendFaxComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "legacy_slot": "ext:faxforagents:FaxForAgentsSendFaxComponent@official-pre-a",
+      "target": "ext:faxforagents:FaxForAgentsSendFaxComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "FaxForAgentsFaxStatusComponent",
+      "target": "ext:faxforagents:FaxForAgentsFaxStatusComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.faxforagents.fax_status.FaxForAgentsFaxStatusComponent",
+      "target": "ext:faxforagents:FaxForAgentsFaxStatusComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.faxforagents.FaxForAgentsFaxStatusComponent",
+      "target": "ext:faxforagents:FaxForAgentsFaxStatusComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "legacy_slot": "ext:faxforagents:FaxForAgentsFaxStatusComponent@official-pre-a",
+      "target": "ext:faxforagents:FaxForAgentsFaxStatusComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "FaxForAgentsListInboxComponent",
+      "target": "ext:faxforagents:FaxForAgentsListInboxComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.faxforagents.inbox.FaxForAgentsListInboxComponent",
+      "target": "ext:faxforagents:FaxForAgentsListInboxComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.faxforagents.FaxForAgentsListInboxComponent",
+      "target": "ext:faxforagents:FaxForAgentsListInboxComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "legacy_slot": "ext:faxforagents:FaxForAgentsListInboxComponent@official-pre-a",
+      "target": "ext:faxforagents:FaxForAgentsListInboxComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "FaxForAgentsReadInboundFaxComponent",
+      "target": "ext:faxforagents:FaxForAgentsReadInboundFaxComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.faxforagents.inbox.FaxForAgentsReadInboundFaxComponent",
+      "target": "ext:faxforagents:FaxForAgentsReadInboundFaxComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.faxforagents.FaxForAgentsReadInboundFaxComponent",
+      "target": "ext:faxforagents:FaxForAgentsReadInboundFaxComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "legacy_slot": "ext:faxforagents:FaxForAgentsReadInboundFaxComponent@official-pre-a",
+      "target": "ext:faxforagents:FaxForAgentsReadInboundFaxComponent@official",
+      "added_in": "1.13.0"
     }
   ],
   "ambiguous_bare_names": [
