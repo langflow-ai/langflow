@@ -1663,15 +1663,22 @@ class TestServeAppEndpoints:
 
     @pytest.mark.parametrize(
         ("filename", "content"),
-        [("notes.json", '["not a flow"]'), ("._flow.json", "{}")],
-        ids=["non-object-json", "hidden-file"],
+        [("notes.json", '["not a flow"]'), ("._flow.json", "{}"), ("loop.json", None)],
+        ids=["non-object-json", "hidden-file", "symlink-loop"],
     )
     def test_list_flows_skips_unusable_store_entries(self, tmp_path, monkeypatch, filename, content):
         from lfx.cli.flow_store import FilesystemFlowStore
 
         store = FilesystemFlowStore(tmp_path)
         store.write("real-flow", {"name": "Stored Flow", "data": {"nodes": [], "edges": []}})
-        (tmp_path / filename).write_text(content, encoding="utf-8")
+        path = tmp_path / filename
+        if content is None:
+            try:
+                path.symlink_to(filename)
+            except (NotImplementedError, OSError):
+                pytest.skip("Symlinks are unavailable on this filesystem")
+        else:
+            path.write_text(content, encoding="utf-8")
         monkeypatch.setenv("LANGFLOW_API_KEY", "test-key")  # pragma: allowlist secret
         app = create_multi_serve_app(registry=FlowRegistry(store=store))
 
