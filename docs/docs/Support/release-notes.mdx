@@ -63,6 +63,13 @@ Highlights of this release include the following changes. For all changes, see t
 
     For more information, see [API keys and authentication](/api-keys-and-authentication#langflow-auto-login).
 
+- MCP shell wrappers require a separate inline command
+
+    Stored MCP shell configurations must place the inline command in the argument following `-c`.
+    Replace `["-cuvx mcp-proxy"]` with `["-c", "uvx mcp-proxy"]`.
+    Direct script operands and shells without an inline command are rejected even when interpreter hardening is disabled.
+    Login, interactive, verbose, and xtrace modes are also rejected.
+
 - Chroma and Local DB components are removed
 
     Langflow 1.13 stores local Knowledge and Memory in SQLite, instead of a local Chroma database.
