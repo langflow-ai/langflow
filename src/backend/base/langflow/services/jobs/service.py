@@ -15,7 +15,7 @@ from uuid import UUID, uuid4
 
 from lfx.graph.exceptions import GraphPausedException
 from lfx.observability import inject_trace_carrier
-from sqlalchemy import false, update
+from sqlalchemy import false, or_, update
 from sqlalchemy.exc import DataError, DBAPIError, IntegrityError, OperationalError, StatementError
 from sqlmodel import col, func, select
 
@@ -1201,6 +1201,10 @@ class JobService(Service):
         path heartbeated, during a rolling upgrade, so a sweep after startup must not
         read that as death.
 
+        ``deployment_copy`` jobs are never swept. No worker owns them and they never
+        heartbeat: each deploy request advances its copy and the client's resend picks it
+        up again, so a missing heartbeat is their normal state, not a lost owner.
+
         Returns the ids of the jobs transitioned to FAILED.
         """
         from sqlmodel import update
@@ -1208,7 +1212,10 @@ class JobService(Service):
         error_payload = {"type": "worker_lost"}
         reconciled: list[UUID] = []
         async with session_scope() as session:
-            stmt = select(Job).where(Job.status == JobStatus.IN_PROGRESS)
+            stmt = select(Job).where(
+                Job.status == JobStatus.IN_PROGRESS,
+                or_(col(Job.type).is_(None), Job.type != JobType.DEPLOYMENT_COPY),
+            )
             result = await session.exec(stmt)
             in_progress = list(result.all())
             now = datetime.now(timezone.utc)

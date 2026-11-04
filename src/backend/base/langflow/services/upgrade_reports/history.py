@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import timezone
 from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
@@ -56,7 +57,7 @@ async def store_report(session: AsyncSession, content: bytes, actor_id: UUID) ->
     text, document = validate_document(content)
     row = UpgradeReport(
         created_by=actor_id,
-        generated_at=parse_report_timestamp(document.generated_at),
+        generated_at=parse_report_timestamp(document.generated_at).astimezone(timezone.utc),
         source_identity=document.source.identity.sha256 if document.source.identity is not None else None,
         target_version=document.target.langflow,
         flow_count=sum((document.summary.flows.ok, document.summary.flows.warn, document.summary.flows.fail)),

@@ -10,12 +10,13 @@ function showWith(
   paused: boolean | undefined,
   migrationOn = true,
   page = "/flows",
+  maintenance = false,
 ) {
   const client = new QueryClient({
     defaultOptions: { queries: { staleTime: Number.POSITIVE_INFINITY } },
   });
   if (paused !== undefined)
-    client.setQueryData(migrationKeys.pause, { paused });
+    client.setQueryData(migrationKeys.pause, { paused, maintenance });
   useUtilityStore.setState({
     featureFlags: { instance_migration: migrationOn },
   });
@@ -51,12 +52,17 @@ describe("ChangesPausedNotice", () => {
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
-  it("asks the server nothing when the migration is turned off", () => {
-    const client = showWith(undefined, false);
-
-    expect(client.getQueryState(migrationKeys.pause)?.fetchStatus).not.toBe(
-      "fetching",
+  it("shows database maintenance when instance migration is turned off", () => {
+    showWith(true, false, "/flows", true);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Ordinary changes and flow runs are paused for maintenance. Administrators can still make changes.",
     );
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("shows database maintenance on the migration page too", () => {
+    showWith(true, true, "/settings/migration", true);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "paused for maintenance",
+    );
   });
 });
