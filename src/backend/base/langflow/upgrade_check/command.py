@@ -151,6 +151,7 @@ def run(options: Mapping[str, Any], on_flow: Callable[[FlowResult], None] | None
 
         flows = dict.fromkeys(("ok", "warn", "fail"), 0)
         nodes = dict.fromkeys(get_args(NodeStatusLiteral), 0)
+        nodes["could_not_verify"] = 0
         kinds: Counter[str] = Counter()
         listed: list[FlowResult] = []
         errors: list[dict[str, Any]] = []

@@ -21,10 +21,12 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from langchain_core.tools import StructuredTool
 from langflow.upgrade_check import engine, open_source
 from langflow.upgrade_check.engine import Target, TargetSettings, check_nodes, check_source, flow_status
 from lfx.custom.custom_component.component import Component
 from lfx.custom.utils import build_custom_component_template
+from lfx.graph.graph.base import Graph
 from lfx.upgrade.checker import breaking_reasons, iter_flow_nodes
 from lfx.upgrade.registry import load_upgrade_registry
 
@@ -367,42 +369,264 @@ def _older_code(flow: dict, component_type: str) -> dict:
     return flow
 
 
-def test_mcp_tools_dry_run(target):
-    """MCP Tools adds a field per argument of the selected tool, and the Update does not bring them back.
-
-    The tool list comes from update_build_config, which the Update never calls, so the dry run needs
-    no network and decides.
-    """
-    flow = _older_code(_hard_flow("v1.13.0", "mcp_tools_arguments.json"), "MCPTools")
+@pytest.mark.parametrize("release", ["v1.12.6", "v1.13.0"])
+def test_mcp_tools_dry_run(target, release):
+    """MCP discovery is unavailable, so generated arguments cannot be verified."""
+    flow = _older_code(_hard_flow(release, "mcp_tools_arguments.json"), "MCPTools")
 
     nodes, _ = check_nodes(flow, target, user_id=OWNER)
 
     [mcp] = [node for node in nodes if node.type == "MCPTools"]
-    assert (mcp.status, mcp.dry_run) == ("outdated_breaking", {"result": "loses"})
-    assert [(reason["code"], reason["field"]) for reason in mcp.reasons] == [
-        ("field_removed", "name"),
-        ("field_removed", "times"),
-    ]
+    assert (mcp.status, mcp.dry_run) == ("could_not_verify", {"result": "could_not_verify"})
+    assert [reason["code"] for reason in mcp.reasons] == ["could_not_verify"]
+    assert flow_status(nodes) == "warn"
 
 
-def test_run_flow_keeps_the_rule_reasons(target):
-    """Run Flow's Update loads the selected flow through Langflow's database, which the check never opens.
-
-    The dry run cannot decide, so the node keeps the rule's verdict and its reasons: every field the
-    selected flow's inputs added (``<vertex id>~<field>``) is removed, since only update_build_config
-    adds them.
-    """
-    flow = _older_code(_hard_flow("v1.13.0", "run_flow_inputs.json"), "RunFlow")
-    saved = next(node for node in flow["nodes"] if node["data"]["type"] == "RunFlow")["data"]["node"]
+@pytest.mark.parametrize("release", ["v1.12.6", "v1.13.0"])
+def test_run_flow_generated_contract_is_unverified(target, release):
+    """The checker has no database for regenerating the selected flow's contract."""
+    flow = _older_code(_hard_flow(release, "run_flow_inputs.json"), "RunFlow")
 
     nodes, _ = check_nodes(flow, target, user_id=OWNER)
 
     [run_flow] = [node for node in nodes if node.type == "RunFlow"]
-    assert (run_flow.status, run_flow.dry_run) == ("outdated_breaking", {"result": "could_not_verify"})
-    assert run_flow.reasons[-1]["code"] == "could_not_verify"
-    removed = {reason["field"] for reason in run_flow.reasons if reason["code"] == "field_removed"}
-    assert removed == {field for field in saved["template"] if "~" in field}
-    assert removed
+    assert (run_flow.status, run_flow.dry_run) == ("could_not_verify", {"result": "could_not_verify"})
+    assert [reason["code"] for reason in run_flow.reasons] == ["could_not_verify"]
+    assert flow_status(nodes) == "warn"
+
+
+@pytest.mark.parametrize(
+    ("fixture", "component_type"),
+    [("run_flow_inputs.json", "RunFlow"), ("mcp_tools_arguments.json", "MCPTools")],
+)
+def test_unverified_generation_keeps_removed_static_field(target, fixture, component_type):
+    flow = _older_code(_hard_flow("v1.13.0", fixture), component_type)
+    saved = next(node for node in flow["nodes"] if node["data"]["type"] == component_type)["data"]["node"]
+    saved["template"]["old_setting"] = {"type": "str", "value": "saved"}
+    saved["field_order"].append("old_setting")
+
+    nodes, _ = check_nodes(flow, target, user_id=OWNER)
+
+    [result] = [node for node in nodes if node.type == component_type]
+    assert result.status == "outdated_breaking"
+    assert result.dry_run == {"result": "could_not_verify"}
+    assert [(reason["code"], reason["field"]) for reason in result.reasons] == [
+        ("field_removed", "old_setting"),
+        ("could_not_verify", None),
+    ]
+    assert flow_status(nodes) == "fail"
+
+
+def test_unverified_run_flow_keeps_incompatible_static_input(target):
+    flow = _older_code(_hard_flow("v1.13.0", "run_flow_inputs.json"), "RunFlow")
+    saved = next(node for node in flow["nodes"] if node["data"]["type"] == "RunFlow")["data"]["node"]
+    saved["template"]["session_id"].update(type="other", value="saved session")
+
+    nodes, _ = check_nodes(flow, target, user_id=OWNER)
+
+    [result] = [node for node in nodes if node.type == "RunFlow"]
+    assert result.status == "outdated_breaking"
+    assert ("value_dropped", "session_id") in [(reason["code"], reason["field"]) for reason in result.reasons]
+    assert result.reasons[-1]["code"] == "could_not_verify"
+
+
+def test_unverified_mcp_keeps_changed_static_output(target):
+    flow = _older_code(_hard_flow("v1.13.0", "mcp_tools_arguments.json"), "MCPTools")
+    saved = next(node for node in flow["nodes"] if node["data"]["type"] == "MCPTools")["data"]["node"]
+    saved["outputs"][0]["method"] = "previous_method"
+
+    nodes, _ = check_nodes(flow, target, user_id=OWNER)
+
+    [result] = [node for node in nodes if node.type == "MCPTools"]
+    assert result.status == "outdated_breaking"
+    assert ("output_changed", saved["outputs"][0]["name"]) in [
+        (reason["code"], reason["field"]) for reason in result.reasons
+    ]
+    assert result.reasons[-1]["code"] == "could_not_verify"
+
+
+def _provide_discovery(
+    monkeypatch,
+    target,
+    saved,
+    component_type,
+    *,
+    removed_input=False,
+    network_refused=False,
+    refresh_fails=False,
+    outputs_fail=False,
+):
+    calls = []
+    build = engine.build_custom_component_template
+
+    if component_type == "RunFlow":
+        children = []
+        for child_type, node_id in (
+            ("ChatInput", "ChatInput-NrNFA"),
+            ("TextInput", "TextInput-v7wpH"),
+            ("ChatOutput", "ChatOutput-evE3l"),
+        ):
+            if removed_input and child_type == "TextInput":
+                continue
+            children.append(
+                {
+                    "id": node_id,
+                    "type": "genericNode",
+                    "data": {"id": node_id, "type": child_type, "node": copy.deepcopy(target.lookup[child_type])},
+                }
+            )
+        graph = Graph.from_payload({"nodes": children, "edges": []})
+
+        async def discover(**kwargs):
+            calls.append(kwargs)
+            if network_refused:
+                socket.getaddrinfo("unavailable.invalid", 443)
+            if refresh_fails and len(calls) == 1:
+                message = "The selected flow could not be loaded"
+                raise OSError(message)
+            if outputs_fail and len(calls) > 1:
+                message = "The selected flow outputs could not be loaded"
+                raise OSError(message)
+            assert kwargs["flow_id_selected"] == saved["template"]["flow_name_selected"]["selected_metadata"]["id"]
+            return graph
+
+        method = "get_graph"
+    else:
+
+        def greet(name: str, times: int = 1) -> str:
+            return " ".join([f"Hello {name}"] * times)
+
+        def greet_without_times(name: str) -> str:
+            return f"Hello {name}"
+
+        tool = StructuredTool.from_function(
+            greet_without_times if removed_input else greet, name="greet", description="Return a greeting."
+        )
+
+        async def discover(**kwargs):
+            calls.append(kwargs)
+            if network_refused:
+                socket.getaddrinfo("unavailable.invalid", 443)
+            return [tool], copy.deepcopy(saved["template"]["mcp_server"]["value"])
+
+        method = "update_tool_list"
+
+    def build_with_discovery(*args, **kwargs):
+        frontend, instance = build(*args, **kwargs)
+        if type(instance).__name__ == f"{component_type}Component":
+            monkeypatch.setattr(instance, method, discover)
+        return frontend, instance
+
+    monkeypatch.setattr(engine, "build_custom_component_template", build_with_discovery)
+    return calls
+
+
+@pytest.mark.parametrize(
+    ("fixture", "component_type"),
+    [("run_flow_inputs.json", "RunFlow"), ("mcp_tools_arguments.json", "MCPTools")],
+)
+def test_generated_contract_with_available_discovery_keeps_values_and_connections(
+    monkeypatch, target, fixture, component_type
+):
+    flow = _older_code(_hard_flow("v1.13.0", fixture), component_type)
+    saved = next(node for node in flow["nodes"] if node["data"]["type"] == component_type)["data"]["node"]
+    calls = _provide_discovery(monkeypatch, target, saved, component_type)
+
+    nodes, _ = check_nodes(flow, target, user_id=OWNER)
+
+    [result] = [node for node in nodes if node.type == component_type]
+    assert calls
+    assert (result.status, result.dry_run, result.reasons) == ("outdated_safe", {"result": "keeps"}, [])
+
+
+@pytest.mark.parametrize(
+    ("fixture", "component_type", "removed_field"),
+    [
+        ("run_flow_inputs.json", "RunFlow", "TextInput-v7wpH~input_value"),
+        ("mcp_tools_arguments.json", "MCPTools", "times"),
+    ],
+)
+def test_verified_discovery_keeps_removed_generated_field_breaking(
+    monkeypatch, target, fixture, component_type, removed_field
+):
+    flow = _older_code(_hard_flow("v1.13.0", fixture), component_type)
+    saved = next(node for node in flow["nodes"] if node["data"]["type"] == component_type)["data"]["node"]
+    calls = _provide_discovery(monkeypatch, target, saved, component_type, removed_input=True)
+
+    nodes, _ = check_nodes(flow, target, user_id=OWNER)
+
+    [result] = [node for node in nodes if node.type == component_type]
+    assert calls
+    assert (result.status, result.dry_run) == ("outdated_breaking", {"result": "loses"})
+    assert ("field_removed", removed_field) in [(reason["code"], reason["field"]) for reason in result.reasons]
+    assert all(reason["code"] == "field_removed" for reason in result.reasons)
+    assert flow_status(nodes) == "fail"
+
+
+@pytest.mark.parametrize(
+    ("fixture", "component_type"),
+    [("run_flow_inputs.json", "RunFlow"), ("mcp_tools_arguments.json", "MCPTools")],
+)
+def test_network_refusal_keeps_partial_generated_contract_warning(monkeypatch, target, fixture, component_type):
+    flow = _older_code(_hard_flow("v1.13.0", fixture), component_type)
+    saved = next(node for node in flow["nodes"] if node["data"]["type"] == component_type)["data"]["node"]
+    calls = _provide_discovery(monkeypatch, target, saved, component_type, network_refused=True)
+
+    nodes, _ = check_nodes(flow, target, user_id=OWNER)
+
+    [result] = [node for node in nodes if node.type == component_type]
+    assert calls
+    assert (result.status, result.dry_run) == ("could_not_verify", {"result": "could_not_verify"})
+    assert [reason["code"] for reason in result.reasons] == ["could_not_verify"]
+    assert "network call" in result.reasons[0]["message"]
+    assert flow_status(nodes) == "warn"
+
+
+@pytest.mark.parametrize("changed_output_attribute", ["method", "name"])
+def test_unverified_run_flow_keeps_regenerated_output_changes(monkeypatch, target, changed_output_attribute):
+    flow = _older_code(_hard_flow("v1.13.0", "run_flow_inputs.json"), "RunFlow")
+    saved = next(node for node in flow["nodes"] if node["data"]["type"] == "RunFlow")["data"]["node"]
+    saved["outputs"][0][changed_output_attribute] = "ChatOutput-removed~message"
+    _provide_discovery(monkeypatch, target, saved, "RunFlow", refresh_fails=True)
+
+    nodes, _ = check_nodes(flow, target, user_id=OWNER)
+
+    [result] = [node for node in nodes if node.type == "RunFlow"]
+    assert (result.status, result.dry_run) == ("outdated_breaking", {"result": "could_not_verify"})
+    assert [(reason["code"], reason["field"]) for reason in result.reasons] == [
+        ("output_changed", saved["outputs"][0]["name"]),
+        ("could_not_verify", None),
+    ]
+
+
+def test_unverified_outputs_keep_confirmed_generated_input_removal(monkeypatch, target):
+    flow = _older_code(_hard_flow("v1.13.0", "run_flow_inputs.json"), "RunFlow")
+    saved = next(node for node in flow["nodes"] if node["data"]["type"] == "RunFlow")["data"]["node"]
+    _provide_discovery(monkeypatch, target, saved, "RunFlow", removed_input=True, outputs_fail=True)
+
+    nodes, _ = check_nodes(flow, target, user_id=OWNER)
+
+    [result] = [node for node in nodes if node.type == "RunFlow"]
+    assert (result.status, result.dry_run) == ("outdated_breaking", {"result": "could_not_verify"})
+    assert ("field_removed", "TextInput-v7wpH~input_value") in [
+        (reason["code"], reason["field"]) for reason in result.reasons
+    ]
+    assert result.reasons[-1]["code"] == "could_not_verify"
+    assert flow_status(nodes) == "fail"
+
+
+def test_unverified_contract_does_not_hide_runtime_refusal(target):
+    flow = _older_code(_hard_flow("v1.13.0", "mcp_tools_arguments.json"), "MCPTools")
+    restricted = dataclasses.replace(
+        target, settings=TargetSettings(allow_custom_components=False, substitute_outdated_component_code=False)
+    )
+
+    nodes, _ = check_nodes(flow, restricted, user_id=OWNER)
+
+    [result] = [node for node in nodes if node.type == "MCPTools"]
+    assert (result.status, result.runs) == ("could_not_verify", "refused")
+    assert "refused" in [reason["code"] for reason in result.reasons]
+    assert flow_status(nodes) == "fail"
 
 
 def test_check_writes_only_to_its_config_dir(tmp_path):
@@ -437,7 +661,7 @@ def test_check_writes_only_to_its_config_dir(tmp_path):
     )
 
     report = json.loads(result.stdout.strip().splitlines()[-1])
-    assert report["statuses"] == {"Fixture nested groups": "ok", "Fixture saved component": "ok", "MCP flow": "fail"}
+    assert report["statuses"] == {"Fixture nested groups": "ok", "Fixture saved component": "ok", "MCP flow": "warn"}
     assert set(report["services"]) <= {"settings_service", "shared_component_cache_service"}
     assert list(home.rglob("*")) == []
     assert sorted(path.name for path in tmp_path.iterdir()) == ["config", "home", database.name]
