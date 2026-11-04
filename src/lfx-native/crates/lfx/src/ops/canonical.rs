@@ -31,11 +31,11 @@
 
 use std::borrow::Cow;
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
 use std::io::Write as _;
 
 use crate::json_out::{self, Ascii};
+use crate::ops::maps::{HashMap, HashSet, State};
 use crate::value::{AnyMap, AnyString, AnyValue, Number};
 use sha2::{Digest, Sha256};
 
@@ -532,7 +532,7 @@ fn keyed_items<'a>(keyed: &KeyedList, list: &'a AnyValue) -> Canon<'a> {
     let AnyValue::Array(items) = list else {
         return Canon::Raw(list);
     };
-    let mut by_key = HashMap::with_capacity(items.len());
+    let mut by_key = HashMap::with_capacity_and_hasher(items.len(), State::default());
     for item in items {
         match keyed.key_of(item) {
             Some(key) if !by_key.contains_key(key) => {
@@ -553,7 +553,7 @@ fn by_id<'a>(entries: Vec<Canon<'a>>, id_key: &str) -> Canon<'a> {
     let Some(ids) = ids else {
         return Canon::Array(entries);
     };
-    let mut seen = HashSet::with_capacity(ids.len());
+    let mut seen = HashSet::with_capacity_and_hasher(ids.len(), State::default());
     if !ids.iter().all(|id| seen.insert(*id)) {
         return Canon::Array(entries);
     }

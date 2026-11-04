@@ -26,10 +26,9 @@
 //! gives one result.
 
 use std::borrow::Cow;
-use std::collections::HashMap;
 
+use crate::ops::maps::{HashMap, IndexMap, State};
 use crate::value::AnyValue;
-use indexmap::IndexMap;
 
 use crate::ops::error::Result;
 use crate::ops::keyed::{ListIndex, find_item, remove_item};
@@ -92,7 +91,7 @@ impl Children {
                 unreachable!("one child");
             };
             let (first, value) = *pair;
-            let mut map = IndexMap::with_capacity(2);
+            let mut map = IndexMap::with_capacity_and_hasher(2, State::default());
             map.insert(first, value);
             map.insert(key.clone(), PathWrites::default());
             *self = Self::Many(Box::new(map));

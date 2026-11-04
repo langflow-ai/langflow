@@ -20,6 +20,7 @@ pub(crate) mod fields;
 pub(crate) mod from_value;
 pub mod ids;
 pub mod keyed;
+pub(crate) mod maps;
 #[expect(
     clippy::module_inception,
     reason = "the layout names the operation types ops::ops"

@@ -5,7 +5,7 @@
 //! never changes its id, and no code may parse one. Existing ids are kept as
 //! they are.
 
-use std::collections::HashSet;
+use crate::ops::maps::HashSet;
 
 /// The editor's id characters: short-unique-id's default alphanumeric dictionary.
 const ALPHANUMERIC: &[u8; 62] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";

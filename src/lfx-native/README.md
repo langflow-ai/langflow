@@ -45,6 +45,7 @@ The modules of `lfx::ops`:
 | `edges` | edge rules and handle reading |
 | `entry` | what the engine reads from untyped nodes, edges and rows: ids, templates |
 | `keyed` | keyed lists and table rows |
+| `maps` | the hash maps and sets of every module, with ahash instead of `SipHash` |
 | `schema` | the node schema (`node_schema.json`, embedded) |
 | `canonical` | canonical form, number printing, `graph_hash` |
 | `restore` | restore fixes, from both sides |

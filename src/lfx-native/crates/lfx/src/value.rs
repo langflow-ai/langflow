@@ -19,15 +19,12 @@
 //! [`FiniteAnyValue`] parses text as [`AnyValue`] does, but refuses a number that
 //! is infinite as a double, as reading a Python `float` refuses Infinity.
 
+use crate::ops::maps::{HashSet, IndexMap, State};
 use std::borrow::Borrow;
-use std::collections::HashSet;
 use std::fmt;
-use std::hash::BuildHasher;
 use std::ops::{Index, IndexMut};
 use std::str::FromStr;
 use std::sync::{Arc, OnceLock};
-
-use indexmap::IndexMap;
 
 use serde::de::{self, Deserialize, DeserializeSeed, Deserializer, MapAccess, SeqAccess, Visitor};
 use serde::ser::{Serialize, SerializeMap, Serializer};
@@ -151,7 +148,7 @@ pub struct StringPool {
     // Edge handles and small operation inputs usually fit here. Avoid a
     // separate hash-table allocation for those short-lived inputs.
     small: [Option<AnyString>; 16],
-    large: Option<HashSet<AnyString, ahash::RandomState>>,
+    large: Option<HashSet<AnyString>>,
 }
 
 impl StringPool {
@@ -176,20 +173,11 @@ impl StringPool {
                 return shared;
             }
         }
-        // Keep standard-library random seeding on every target. Only the
-        // temporary pool uses the faster string hasher.
-        let seed = std::collections::hash_map::RandomState::new();
-        let state = ahash::RandomState::with_seeds(
-            seed.hash_one(0_u8),
-            seed.hash_one(1_u8),
-            seed.hash_one(2_u8),
-            seed.hash_one(3_u8),
-        );
         #[expect(
             clippy::mutable_key_type,
             reason = "the JSON cache is excluded from equality and hashing"
         )]
-        let mut strings = HashSet::with_capacity_and_hasher(self.small.len() * 2, state);
+        let mut strings = HashSet::with_capacity_and_hasher(self.small.len() * 2, State::default());
         strings.extend(self.small.iter_mut().filter_map(Option::take));
         self.large = Some(strings);
         self.intern(text)
@@ -570,7 +558,7 @@ impl Entries {
         if n <= SMALL_OBJECT_KEYS {
             Self::Small(Vec::with_capacity(n))
         } else {
-            Self::Indexed(IndexMap::with_capacity(n))
+            Self::Indexed(IndexMap::with_capacity_and_hasher(n, State::default()))
         }
     }
     fn len(&self) -> usize {
@@ -622,7 +610,7 @@ impl Entries {
         let Self::Small(rows) = std::mem::take(self) else {
             unreachable!()
         };
-        let mut map = IndexMap::with_capacity(SMALL_OBJECT_KEYS * 2);
+        let mut map = IndexMap::with_capacity_and_hasher(SMALL_OBJECT_KEYS * 2, State::default());
         map.extend(rows);
         let old = map.insert(key, value);
         *self = Self::Indexed(map);
@@ -1511,6 +1499,7 @@ impl<'de, const FINITE: bool> Visitor<'de> for AnyValueVisitor<'_, FINITE> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::hash::BuildHasher;
 
     fn parse(text: &str) -> AnyValue {
         serde_json::from_str(text).unwrap()

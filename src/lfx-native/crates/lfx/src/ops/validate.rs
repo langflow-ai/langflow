@@ -24,11 +24,10 @@
 //!   apply never disagree.
 
 use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
 use std::fmt;
 
+use crate::ops::maps::{HashMap, HashSet, IndexMap};
 use crate::value::{AnyMap, AnyValue};
-use indexmap::IndexMap;
 
 use crate::ops::canonical::{is_finite_number, is_row_position, values_equal};
 use crate::ops::edges::{
@@ -351,7 +350,7 @@ fn structure_violations(graph: &AnyMap) -> Vec<Violation> {
         }
     }
 
-    let mut node_ids = HashSet::new();
+    let mut node_ids = HashSet::default();
     if let Some(nodes) = nodes {
         for (index, node) in nodes.iter().enumerate() {
             node_violations(
@@ -363,7 +362,7 @@ fn structure_violations(graph: &AnyMap) -> Vec<Violation> {
         }
     }
     if let Some(edges) = edges {
-        let mut edge_ids = HashSet::new();
+        let mut edge_ids = HashSet::default();
         for (index, edge) in edges.iter().enumerate() {
             edge_violations(
                 edge,
@@ -584,9 +583,9 @@ impl<'a> GraphView<'a> {
     /// refuses first.
     pub fn new(graph: &'a AnyValue) -> Result<Self> {
         let mut view = Self {
-            nodes: HashMap::new(),
-            edges: HashMap::new(),
-            edges_at: HashMap::new(),
+            nodes: HashMap::default(),
+            edges: HashMap::default(),
+            edges_at: HashMap::default(),
         };
         for node in list(graph, "nodes") {
             let Some(map) = node.as_object() else {
@@ -685,7 +684,7 @@ fn removed_ends(base: &AnyValue, target: &AnyValue) -> Result<HashMap<String, Re
         .filter_map(AnyValue::as_object)
         .map(|node| (node.id(), node))
         .collect();
-    let mut removed = HashMap::new();
+    let mut removed = HashMap::default();
     for node in list(target, "nodes").iter().filter_map(AnyValue::as_object) {
         let Some(stored) = stored.get(node.id()) else {
             continue;
@@ -713,20 +712,20 @@ fn removed_fields(before: &AnyMap, after: &AnyMap) -> HashSet<String> {
 /// equal are not indexed, so a write that leaves them alone reads nothing.
 fn removed_outputs(before: &AnyMap, after: &AnyMap, node_id: &str) -> Result<HashSet<String>> {
     let Some(outputs_before) = before.get("outputs") else {
-        return Ok(HashSet::new());
+        return Ok(HashSet::default());
     };
     let outputs_after = after.get("outputs");
     if let Some(outputs_after) = outputs_after
         && values_equal(outputs_before, outputs_after)?
     {
-        return Ok(HashSet::new());
+        return Ok(HashSet::default());
     }
     let kept: HashSet<String> = match outputs_after {
         Some(outputs_after) => index_outputs(Cow::Borrowed(outputs_after), node_id)?
             .names()
             .map(str::to_owned)
             .collect(),
-        None => HashSet::new(),
+        None => HashSet::default(),
     };
     Ok(index_outputs(Cow::Borrowed(outputs_before), node_id)?
         .names()
@@ -781,7 +780,7 @@ pub fn find_edge_violations(base: &AnyValue, target: &AnyValue) -> Result<Vec<Vi
         .enumerate()
         .filter_map(|(index, edge)| Some((edge.as_object().map(EntryExt::id)?, index)))
         .collect();
-    let mut violations: IndexMap<String, Violation> = IndexMap::new();
+    let mut violations: IndexMap<String, Violation> = IndexMap::default();
     for index in indexes {
         let Some(edge) = edges[index].as_object() else {
             continue;
@@ -921,7 +920,7 @@ pub fn find_list_position_violations(base: &AnyValue, target: &AnyValue) -> Resu
 ///
 /// A compared table holds a number that is not finite.
 pub fn changed_tables<'a>(base: &AnyValue, target: &'a AnyValue) -> Result<Vec<ChangedTable<'a>>> {
-    let mut stored: HashMap<&str, &AnyMap> = HashMap::new();
+    let mut stored: HashMap<&str, &AnyMap> = HashMap::default();
     for node in list(base, "nodes") {
         if let (Some(template), Some(id)) =
             (node.template(), node.get("id").and_then(AnyValue::as_str))
@@ -1035,7 +1034,7 @@ fn is_row_key(name: &str) -> bool {
 pub fn table_row_violations(rows: &[AnyValue], path: &[PathPart]) -> Vec<Violation> {
     let (id_key, position_key) = (&NODE_SCHEMA.table_keys.id, &NODE_SCHEMA.table_keys.position);
     let mut violations = Vec::new();
-    let mut seen = HashSet::new();
+    let mut seen = HashSet::default();
     for (index, row) in rows.iter().enumerate() {
         let row_path: GraphPath = path.iter().cloned().chain([index.into()]).collect();
         let AnyValue::Object(row) = row else {
