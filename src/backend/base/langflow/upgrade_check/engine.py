@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING, Any
 
 from lfx.custom.custom_component.component import Component
 from lfx.custom.utils import build_custom_component_template, update_rebuilt_node
+from lfx.extension.migration import migrate_flow_payload
 from lfx.extension.migration.loader import load_migration_table
 from lfx.interface.components import ComponentCache
 from lfx.services.catalog_policy import CatalogPolicySnapshot
@@ -36,6 +37,7 @@ from lfx.utils.flow_validation import (
     CustomComponentValidationError,
     is_code_execution_component,
     prepare_flow_build_for_user_from_cache,
+    validate_catalog_policy_for_flow,
 )
 from lfx.utils.python_repl_security import code_execution_refusal
 
@@ -396,9 +398,12 @@ def _runs(node: dict, target: Target, *, is_superuser: bool) -> tuple[str, dict 
     the rule the code-execution gate applies when such a component runs.
     """
     data = node.get("data", {})
+    payload = {"nodes": [copy.deepcopy(node)], "edges": []}
     try:
+        validate_catalog_policy_for_flow(payload, snapshot=target.catalog_policy, cache=target.components)
+        migrate_flow_payload(payload)
         sanitized = prepare_flow_build_for_user_from_cache(
-            {"nodes": [node], "edges": []},
+            payload,
             is_superuser=is_superuser,
             settings=target.settings,
             cache=target.components,
