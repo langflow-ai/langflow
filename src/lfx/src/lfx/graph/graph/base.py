@@ -140,6 +140,7 @@ class Graph:
         context: dict[str, Any] | None = None,
         *,
         instantiate_components: bool = True,
+        authorized_legacy_flow_ids: set[str] | frozenset[str] | None = None,
     ) -> None:
         """Initializes a new Graph instance.
 
@@ -161,6 +162,7 @@ class Graph:
         # Server-set provenance for a public flow whose execution uses a virtual
         # flow_id. Request data must never populate this storage scope.
         self.source_flow_id: str | None = None
+        self.authorized_legacy_flow_ids = frozenset(authorized_legacy_flow_ids or ())
         self.flow_name = flow_name
         self.description = description
         self.user_id = user_id
@@ -1642,6 +1644,7 @@ class Graph:
             "edges": self.edges,
             "flow_id": self.flow_id,
             "source_flow_id": self.source_flow_id,
+            "authorized_legacy_flow_ids": self.authorized_legacy_flow_ids,
             "flow_name": self.flow_name,
             "description": self.description,
             "user_id": self.user_id,
@@ -1702,6 +1705,7 @@ class Graph:
                 description=copy.deepcopy(self.description, memo),
                 user_id=user_id,
                 instantiate_components=instantiate_components,
+                authorized_legacy_flow_ids=self.authorized_legacy_flow_ids,
             )
             if before_initialize is not None:
                 before_initialize(new_graph)
@@ -1715,6 +1719,7 @@ class Graph:
                 description=copy.deepcopy(self.description, memo),
                 user_id=user_id,
                 instantiate_components=instantiate_components,
+                authorized_legacy_flow_ids=self.authorized_legacy_flow_ids,
             )
             # add_nodes_and_edges synchronously builds FileInput parameters, so
             # trusted public-flow provenance must exist before reconstruction.
@@ -1795,6 +1800,7 @@ class Graph:
         # Graphs cached before source-flow provenance was introduced remain
         # loadable and simply have no additional trusted storage namespace.
         state.setdefault("source_flow_id", None)
+        state.setdefault("authorized_legacy_flow_ids", frozenset())
         state.setdefault("execution_principal", ExecutionPrincipal.unknown())
         state.setdefault("_headless_filesystem_user_id", None)
         state.setdefault("branch_inactivation_sources", {})
@@ -1822,6 +1828,7 @@ class Graph:
         *,
         instantiate_components: bool = True,
         emit_extension_events: bool = True,
+        authorized_legacy_flow_ids: set[str] | frozenset[str] | None = None,
     ) -> Graph:
         """Creates a graph from a payload.
 
@@ -1837,6 +1844,8 @@ class Graph:
             emit_extension_events: Whether migration reports should be published
                 to the extension event service. Background warm parsing disables
                 this because it is not scoped to an active caller.
+            authorized_legacy_flow_ids: Server-authorized non-colliding flow IDs
+                whose raw legacy storage namespaces remain readable.
 
         Returns:
             Graph: The created graph.
@@ -1965,6 +1974,7 @@ class Graph:
                 user_id=user_id,
                 context=context,
                 instantiate_components=instantiate_components,
+                authorized_legacy_flow_ids=authorized_legacy_flow_ids,
             )
             graph.add_nodes_and_edges(vertices, edges)
             graph.requires_extension_event_replay = bool(migration_report.any_rewritten or migration_report.errors)
@@ -3263,6 +3273,7 @@ class Graph:
             flow_name=f"{self.flow_name}_subgraph" if self.flow_name else "subgraph",
             user_id=self.user_id,
             context=dict(self.context) if self.context else None,
+            authorized_legacy_flow_ids=self.authorized_legacy_flow_ids,
         )
 
         # Inherit parent's tracing context - subgraph is an extension of parent's execution

@@ -147,7 +147,7 @@ async def test_mcp_servers_upload_replace(session, storage_service, settings_ser
 
     record = session._db[mcp_file]
     # Storage path should match user_id/_mcp_servers.json
-    expected_path = f"{current_user.id}/{mcp_file}.json"
+    expected_path = f"user-{current_user.id}/{mcp_file}.json"
     assert record.path == expected_path
 
     # Storage should have updated content
@@ -328,7 +328,7 @@ async def test_mcp_servers_upload_allowed_when_locked_for_superuser(session, sto
         settings_service=locked_settings,
     )
 
-    expected_path = f"{current_user.id}/{mcp_file}.json"
+    expected_path = f"user-{current_user.id}/{mcp_file}.json"
     assert storage_service._store[expected_path] == content
 
 
@@ -393,7 +393,7 @@ async def test_mcp_servers_upload_allows_remote_server_under_code_execution_lock
         settings_service=restricted_settings,
     )
 
-    expected_path = f"{current_user.id}/{mcp_file}.json"
+    expected_path = f"user-{current_user.id}/{mcp_file}.json"
     assert storage_service._store[expected_path] == content
 
 
@@ -426,7 +426,7 @@ async def test_mcp_servers_upload_allows_stdio_for_superuser_under_code_executio
         settings_service=restricted_settings,
     )
 
-    expected_path = f"{current_user.id}/{mcp_file}.json"
+    expected_path = f"user-{current_user.id}/{mcp_file}.json"
     assert storage_service._store[expected_path] == content
 
 

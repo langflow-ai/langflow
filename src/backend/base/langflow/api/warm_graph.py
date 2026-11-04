@@ -179,6 +179,13 @@ async def warm_deepcopy(
         # per-user extension events as the historical cold execution path.
         return None
 
+    cached_legacy_ids = getattr(hit[0], "authorized_legacy_flow_ids", frozenset())
+    if cached_legacy_ids:
+        from langflow.api.utils.flow_utils import get_authorized_legacy_flow_ids
+
+        if await get_authorized_legacy_flow_ids(flow_id_str) != cached_legacy_ids:
+            return None
+
     # Catalog and custom-component policy can change without touching the Flow
     # row. Revalidate the cached raw payload on every hit, matching the defense
     # in depth in Graph.from_payload instead of letting a newly blocked

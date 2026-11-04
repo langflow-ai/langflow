@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Header, HTTPException, Query, status
 from lfx.log import logger
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
+from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -14,6 +15,7 @@ from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.utils.author_names import attach_usernames
 from langflow.api.utils.core import strip_secret_field_values
 from langflow.api.v1.flow_conflict import ensure_version_precondition, parse_if_match
+from langflow.api.v1.flow_validation import flow_validation_error
 from langflow.api.v1.flows import _validate_catalog_policy_for_write
 from langflow.api.v1.mappers.deployments.helpers import get_owned_provider_account_or_404
 from langflow.api.v1.mappers.deployments.sync import sync_flow_version_attachments
@@ -22,7 +24,7 @@ from langflow.services.audit.operations import audited_permission, audited_route
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.guards import audit_guard_in_transaction
 from langflow.services.database.lock_retry import is_database_lock_error
-from langflow.services.database.models.flow.model import Flow, FlowRead
+from langflow.services.database.models.flow.model import Flow, FlowRead, FlowUpdate
 from langflow.services.database.models.flow_version.crud import (
     create_flow_version_entry,
     delete_flow_version_entry,
@@ -308,6 +310,11 @@ async def activate_version(
                 status_code=422,
                 detail="Flow data could not be copied. The data may be corrupted.",
             ) from exc
+
+        try:
+            target_data = FlowUpdate(data=target_data).data
+        except ValidationError as exc:
+            raise flow_validation_error(exc) from exc
 
         _validate_catalog_policy_for_write(
             target_data,
