@@ -58,6 +58,7 @@ from langflow.services.triggers.constants import (
     PROVIDER_WEBHOOK,
     TEST_DEDUPE_PREFIX,
 )
+from langflow.services.triggers.error_codes import refusal_detail
 from langflow.services.triggers.errors import (
     ReplayWindowExpiredError,
     TriggerEventNotFoundError,
@@ -380,7 +381,7 @@ async def enable_trigger(
     try:
         updated = await service.enable_and_activate(session, row=row)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=refusal_detail(exc)) from exc
     return await present_one(session, current_user, updated)
 
 

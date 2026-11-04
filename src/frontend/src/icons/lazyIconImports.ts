@@ -329,6 +329,8 @@ export const lazyIconsMapping = {
   Jira: () => import("@/icons/Jira").then((mod) => ({ default: mod.JiraIcon })),
   Jotform: () =>
     import("@/icons/Jotform").then((mod) => ({ default: mod.JotformIcon })),
+  Keenable: () =>
+    import("@/icons/Keenable").then((mod) => ({ default: mod.KeenableIcon })),
   Linear: () =>
     import("@/icons/linear").then((mod) => ({ default: mod.LinearIcon })),
   LangChain: () =>

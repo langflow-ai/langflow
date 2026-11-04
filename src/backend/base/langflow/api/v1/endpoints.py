@@ -65,6 +65,7 @@ from langflow.api.utils.execution_principal import (
     execution_principal_for,
     stamp_execution_principal,
 )
+from langflow.api.utils.flow_utils import get_authorized_legacy_flow_ids
 from langflow.api.utils.migration_pause import writing_on
 from langflow.api.v1.custom_component_policy import (
     CatalogPolicyHTTPException,
@@ -516,7 +517,12 @@ async def simple_run_flow(
             if user_id is not None:
                 graph_data = await apply_global_variable_defaults(graph_data, user_id)
             graph = Graph.from_payload(
-                graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name, context=context
+                graph_data,
+                flow_id=flow_id_str,
+                user_id=str(user_id),
+                flow_name=flow.name,
+                context=context,
+                authorized_legacy_flow_ids=await get_authorized_legacy_flow_ids(flow.id),
             )
         stamp_execution_principal(graph, execution_principal)
         graph.expose_error_details = expose_error_details
@@ -1685,6 +1691,7 @@ async def experimental_run_flow(
                     flow_id=flow_id_str,
                     user_id=str(api_key_user.id),
                     flow_name=flow.name,
+                    authorized_legacy_flow_ids=await get_authorized_legacy_flow_ids(flow.id),
                 )
         except CustomComponentValidationError as exc:
             await logger.aexception("Advanced-run flow validation failed for flow %s", flow.id)
