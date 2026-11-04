@@ -250,3 +250,82 @@ def test_cli_reports_distinguish_identical_sources_without_query_tokens(tmp_path
     assert reports[0]["source"]["counts"] == reports[1]["source"]["counts"]
     assert reports[0]["source"]["alembic_revision"] == reports[1]["source"]["alembic_revision"]
     assert reports[0]["source"]["identity"]["sha256"] != reports[1]["source"]["identity"]["sha256"]
+
+
+@pytest.mark.parametrize("parent_kind", ["missing", "file", "directory_output"])
+def test_report_output_path_is_rejected_before_reading_the_source(parent_kind, tmp_path):
+    missing_source = tmp_path / "missing.db"
+    parent = tmp_path / "report-folder"
+    if parent_kind == "file":
+        parent.write_text("not a folder")
+    elif parent_kind == "directory_output":
+        parent.mkdir()
+    output = parent if parent_kind == "directory_output" else parent / "report.json"
+
+    result = _upgrade_check("--database-url", _url(missing_source), "--output", output, "--json")
+
+    assert result.returncode == 2, result.stderr
+    [error] = _events(result)
+    assert (error["event"], error["code"]) == ("error", "output_unwritable")
+    assert not missing_source.exists()
+
+
+@pytest.mark.skipif(os.name != "posix", reason="SIGTERM handlers and SIGKILL require POSIX")
+def test_interrupted_cli_reaps_a_child_that_ignores_termination(monkeypatch):
+    import signal
+
+    from langflow.__main__ import upgrade_check
+
+    child = subprocess.Popen(  # noqa: S603
+        [
+            sys.executable,
+            "-u",
+            "-c",
+            "import signal, time; signal.signal(signal.SIGTERM, signal.SIG_IGN); print('ready'); time.sleep(60)",
+        ],
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+    original_wait = child.wait
+    original_kill = child.kill
+    killed = False
+
+    def interrupt(*_args):
+        raise KeyboardInterrupt
+
+    def kill():
+        nonlocal killed
+        killed = True
+        original_kill()
+
+    def bounded_wait(timeout=None):
+        if timeout is None and not killed:
+            msg = "cleanup must bound the wait before killing the child"
+            raise AssertionError(msg)
+        return original_wait(timeout=min(timeout, 0.1) if timeout is not None else None)
+
+    try:
+        assert child.stdout.readline().strip() == "ready"
+        monkeypatch.setattr(child, "communicate", interrupt)
+        monkeypatch.setattr(child, "wait", bounded_wait)
+        monkeypatch.setattr(child, "kill", kill)
+        monkeypatch.setattr(subprocess, "Popen", lambda *_args, **_kwargs: child)
+        with pytest.raises(KeyboardInterrupt):
+            upgrade_check(
+                database_url="sqlite:////unused.db",
+                components_path=[],
+                allow_custom_components=True,
+                substitute_outdated_component_code=True,
+                block_code_interpreter_components=False,
+                custom_component_admin_only=False,
+                allow_components_paths_override=True,
+                as_json=True,
+                output=None,
+            )
+        assert killed
+        assert child.returncode == -signal.SIGKILL
+    finally:
+        if child.poll() is None:
+            original_kill()
+        original_wait(timeout=5)
+        child.stdout.close()
