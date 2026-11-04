@@ -531,7 +531,7 @@ class TextOperations(Component):
         result = text
 
         if getattr(self, "remove_extra_spaces", True):
-            result = re.sub(r"\s+", " ", result)
+            result = re.sub(r"[^\S\r\n]+", " ", result)
 
         if getattr(self, "remove_special_chars", False):
             # Remove ALL special characters except alphanumeric and spaces
