@@ -577,6 +577,8 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         documents = []
         for item in result["docs"]:
             if "error" in item:
+                if item["error"].get("type") == "index_not_found_exception":
+                    continue
                 msg = "OpenSearch could not check an existing document."
                 raise RuntimeError(msg)
             if item.get("found"):
