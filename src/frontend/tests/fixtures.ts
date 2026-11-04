@@ -3,6 +3,7 @@
 import {
   test as base,
   expect,
+  type Frame,
   type Page,
   type Request,
   type Response,
@@ -435,6 +436,32 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
     page.on("requestfinished", requestFinishedListener);
     page.on("requestfailed", requestFailedListener);
 
+    // Playwright 1.64 can omit completion events for requests canceled by a
+    // document navigation (microsoft/playwright#43508). The new document's init
+    // script runs before its application requests; retire only the old frame's
+    // requests. SPA/hash navigation does not run init scripts.
+    const finishFrameRequests = (frame: Frame) => {
+      for (const tracker of [
+        pendingApiResponseStatuses,
+        pendingApiRequestLifecycles,
+      ]) {
+        for (const request of tracker.snapshot()) {
+          if (!request.isNavigationRequest() && request.frame() === frame) {
+            tracker.finish(request);
+          }
+        }
+      }
+    };
+    await page.exposeBinding("__langflowDocumentStarted", ({ frame }) => {
+      finishFrameRequests(frame);
+    });
+    await page.addInitScript(() => {
+      void (
+        window as unknown as { __langflowDocumentStarted: () => Promise<void> }
+      ).__langflowDocumentStarted();
+    });
+    page.on("framedetached", finishFrameRequests);
+
     await use(page as LangflowPage);
     // Freeze only the finite lifecycle set at the test boundary. Existing
     // requests must still finish, while teardown polling must not continually
@@ -466,6 +493,7 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
     page.off("response", responseListener);
     page.off("requestfinished", requestFinishedListener);
     page.off("requestfailed", requestFailedListener);
+    page.off("framedetached", finishFrameRequests);
     let responseInspectionDrainTimeoutId:
       | ReturnType<typeof setTimeout>
       | undefined;
