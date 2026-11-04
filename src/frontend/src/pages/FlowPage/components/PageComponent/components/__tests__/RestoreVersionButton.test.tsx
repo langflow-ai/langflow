@@ -42,12 +42,8 @@ describe("RestoreVersionButton", () => {
   it("should restore a historical preview using the current persisted token", async () => {
     const user = userEvent.setup();
     renderRestore();
-    await user.click(
-      screen.getByRole("button", { name: "Restore", exact: true }),
-    );
-    await user.click(
-      screen.getAllByRole("button", { name: "Restore", exact: true })[1],
-    );
+    await user.click(screen.getByRole("button", { name: /^Restore$/ }));
+    await user.click(screen.getAllByRole("button", { name: /^Restore$/ })[1]);
 
     expect(restoreHookMock).toHaveBeenCalledWith("flow-1", "persisted-token");
     expect(restoreMock).toHaveBeenCalledWith("historical-entry", {
