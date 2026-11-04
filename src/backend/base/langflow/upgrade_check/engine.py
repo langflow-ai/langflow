@@ -42,7 +42,7 @@ from lfx.utils.python_repl_security import code_execution_refusal
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping
+    from collections.abc import Callable, Iterator, Mapping
 
     from lfx.extension.migration.schema import MigrationTable
     from lfx.upgrade.checker import NodeStatus
@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     from langflow.upgrade_check.reader import SourceDatabase, SourceFlow
 
 DRY_RUN_SECONDS = 30.0
+REGISTRY_SECONDS = 30.0
 
 # A node in one of these states makes its flow fail.
 _FAILING = frozenset({"outdated_breaking", "retired", "blocked"})
@@ -60,13 +61,46 @@ _WARNING = frozenset({"customized", "could_not_verify", "build_failed"})
 _NETWORK_EVENTS = frozenset(
     {"socket.connect", "socket.getaddrinfo", "socket.gethostbyname", "socket.gethostbyaddr", "socket.sendto"}
 )
-# ponytail: one process-wide gate. The command runs the check alone in its process, and a dry run's
+# One process-wide gate covers registry callbacks and dry runs. The command runs alone, and callbacks
 # calls can come from any thread (asyncio resolves names in its executor). If the check ever runs
 # inside a server (the admin page), this would also refuse the server's own calls during a dry run;
-# gate per context then. The network is refused while any thread here is running a dry run, so a
-# dry run past its time limit stays refused until it ends.
+# gate per context then. Refusal stays active while a callback thread runs, including after its timeout.
 _dry_run_threads: set[int] = set()
 _refused_calls: list[str] = []
+
+
+class ComponentDiscoveryError(RuntimeError):
+    """The complete target registry could not be discovered offline."""
+
+
+def discover_offline(callback: Callable[[], dict[str, Any]]) -> dict[str, Any]:
+    """Bound discovery and reject partial registries after a refused network callback."""
+    _install_network_guard()
+    outcome: dict[str, Any] = {}
+    _refused_calls.clear()
+
+    def run() -> None:
+        _dry_run_threads.add(threading.get_ident())
+        try:
+            outcome["registry"] = callback()
+        except BaseException as exc:  # noqa: BLE001
+            outcome["error"] = exc
+        finally:
+            _dry_run_threads.discard(threading.get_ident())
+
+    worker = threading.Thread(target=run, name="upgrade-check-registry", daemon=True)
+    worker.start()
+    worker.join(REGISTRY_SECONDS)
+    if worker.is_alive():
+        msg = f"component discovery did not finish in {REGISTRY_SECONDS:g} seconds"
+        raise ComponentDiscoveryError(msg)
+    if _refused_calls:
+        msg = "component discovery attempted a network call, so its incomplete registry cannot be checked"
+        raise ComponentDiscoveryError(msg)
+    if error := outcome.get("error"):
+        msg = f"component discovery failed ({type(error).__name__})"
+        raise ComponentDiscoveryError(msg) from error
+    return outcome["registry"]
 
 
 @dataclass(frozen=True)
