@@ -697,6 +697,7 @@ module.exports = {
         "Contributing/contributing-components",
         "Contributing/contributing-bundles",
         "Contributing/contributing-component-tests",
+        "Contributing/contributing-component-compatibility",
         "Contributing/contributing-templates",
       ],
     },
