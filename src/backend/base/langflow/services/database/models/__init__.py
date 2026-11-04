@@ -56,6 +56,7 @@ from .trigger import (
     TriggerSourceVersion,
     TriggerSubscription,
 )
+from .upgrade_report import UpgradeReport, UpgradeReportRepair
 from .user import User
 from .variable import Variable
 
@@ -128,6 +129,8 @@ __all__ = [
     "TriggerListenerLease",
     "TriggerSourceVersion",
     "TriggerSubscription",
+    "UpgradeReport",
+    "UpgradeReportRepair",
     "User",
     "Variable",
     "decrypt_sso_client_secret",
