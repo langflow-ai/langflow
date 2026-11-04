@@ -99,15 +99,15 @@ fn read(object: &Bound<'_, PyAny>, depth: usize, strings: &mut StringPool) -> Py
     }
     if let Ok(dict) = object.cast::<PyDict>() {
         nested(object, depth)?;
-        let mut map = AnyMap::with_capacity(dict.len());
+        let mut rows = Vec::with_capacity(dict.len());
         for (key, item) in dict.iter() {
             let key = key
                 .cast::<PyString>()
                 .map_err(|_| PyTypeError::new_err("a JSON object's keys must be str"))?;
             let key = strings.intern(text_of(key)?);
-            map.insert_shared(key, read(&item, depth + 1, strings)?);
+            rows.push((key, read(&item, depth + 1, strings)?));
         }
-        return Ok(AnyValue::Object(map));
+        return Ok(AnyValue::Object(AnyMap::from_entries(rows)));
     }
     if let Ok(list) = object.cast::<PyList>() {
         nested(object, depth)?;
