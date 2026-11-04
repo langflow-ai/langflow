@@ -130,3 +130,33 @@ def test_should_not_refuse_a_collision_when_not_deploying():
     snapshot = _snapshot([_file_node("File-a", f"{USER}/report.pdf"), _file_node("File-b", f"{OTHER_USER}/report.pdf")])
 
     _build(snapshot, rewrite=False)
+
+
+@pytest.mark.parametrize("kind", ["secret", "plain", None])
+def test_file_key_rewrite_preserves_typed_variable_activation_requirements(kind):
+    snapshot = _snapshot([_file_node("File-a", f"user-{USER}/report.pdf")])
+    snapshot.payload["data"]["nodes"][0]["data"]["node"]["template"]["token"] = {
+        "type": "str",
+        "password": True,
+        "load_from_db": True,
+        "value": "API_KEY",
+    }
+
+    artifact = _build_archive(
+        project_id=uuid4(),
+        project_name="Project",
+        snapshots=(snapshot,),
+        limits=ProjectArtifactLimits(),
+        known_variable_names={"API_KEY"},
+        variable_kinds={"API_KEY": kind},
+        rewrite_file_keys=True,
+    )
+
+    with zipfile.ZipFile(io.BytesIO(artifact.content)) as archive:
+        manifest = json.loads(archive.read("manifest.json"))
+    declarations = [{"name": "API_KEY", "kind": kind}]
+    assert manifest["schema_version"] == 7
+    assert manifest["required_variables"] == ["API_KEY"]
+    assert manifest["required_variable_declarations"] == declarations
+    assert manifest["flows"][0]["required_variable_declarations"] == declarations
+    assert _packaged_path(artifact, snapshot.flow_id) == f"{snapshot.flow_id}/report.pdf"

@@ -17,6 +17,7 @@ from langflow.utils.flow_files import (
     rewrite_flow_file_keys_in_place,
 )
 from lfx.components.files_and_knowledge.file import FileComponent
+from lfx.utils.file_path_security import enforce_storage_key_scope, user_storage_scope
 
 USER = str(uuid4())
 FLOW = str(uuid4())
@@ -420,6 +421,23 @@ def test_should_map_into_the_given_namespace_instead_of_the_flow():
     )
 
     assert mapping == {f"{USER}/report.pdf": f"{account}/REPORT-VERSION-ONE.PDF"}
+
+
+@pytest.mark.parametrize("typed_namespace", [False, True])
+def test_mapped_documents_remain_readable_in_the_execution_account_scope(typed_namespace):
+    account = str(uuid4())
+    namespace = user_storage_scope(account) if typed_namespace else account
+    source = f"user-{USER}/report.pdf"
+    target = f"{namespace}/report-version-one.pdf"
+    field = _file_field(file_path=source)
+    data = {"nodes": [_node("File-a", {"path": field})]}
+
+    rewrite_flow_file_keys_in_place(data, FLOW, key_mapping={source: target}, mapped_namespace=namespace)
+
+    assert enforce_storage_key_scope(field["file_path"], [user_storage_scope(account)]) == (
+        namespace,
+        "report-version-one.pdf",
+    )
 
 
 @pytest.mark.parametrize("outside", ["flow", "user"])
