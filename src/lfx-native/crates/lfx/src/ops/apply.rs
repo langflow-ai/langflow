@@ -24,11 +24,10 @@
 //! [`Applied::backward`] says how to apply the backward operations.
 
 use std::borrow::Cow;
-use std::collections::HashSet;
 use std::fmt;
 
+use crate::ops::maps::{HashSet, IndexSet};
 use crate::value::{AnyString, AnyValue};
-use indexmap::IndexSet;
 
 use crate::ops::edges::{GraphRead, check_edge, reads_before, removed_endpoints};
 use crate::ops::error::{Error, Result, bail, invalid, quoted};
@@ -244,7 +243,7 @@ impl GraphState {
         }
         let mut backward = report.options.backward.then(FieldBackward::default);
         let mut applied = Vec::new();
-        let mut cascaded = IndexSet::new();
+        let mut cascaded = IndexSet::default();
         for (index, mut update) in updates.into_iter().enumerate() {
             let context = UpdatePlace::new(index);
             self.require_node(&update.id)?;
@@ -301,7 +300,7 @@ impl GraphState {
             node_id,
         )?;
         if removed.is_empty() {
-            return Ok(IndexSet::new());
+            return Ok(IndexSet::default());
         }
         let connections = self.edge_index.connections(&self.graph, node_id)?;
         Ok(removed
@@ -338,7 +337,7 @@ impl GraphState {
         let mut removed = Vec::new();
         let mut changed = false;
         let mut removed_nodes = Vec::new();
-        let mut incident = IndexSet::new();
+        let mut incident = IndexSet::default();
         for &id in ids {
             if !self.graph.has_node(id) {
                 continue;
@@ -903,7 +902,7 @@ impl FieldBackward {
     /// write first.
     pub(crate) fn record(self, report: &mut Report) {
         let mut batch: Vec<FieldUpdate> = Vec::new();
-        let mut written: HashSet<(String, NodePath)> = HashSet::new();
+        let mut written: HashSet<(String, NodePath)> = HashSet::default();
         for entry in self.entries.into_iter().rev() {
             let key = (entry.id.clone(), entry.path.clone());
             if written.contains(&key) {

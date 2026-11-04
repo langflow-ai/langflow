@@ -6,11 +6,11 @@
 //! by its key, never by its index. An operation that is parsed and printed
 //! again reads as it was sent.
 
-use std::collections::HashSet;
 use std::ops::Deref;
 use std::str::FromStr;
 
 use crate::json;
+use crate::ops::maps::HashSet;
 use crate::value::{AnyMap, AnyValue};
 
 use crate::ops::entry::EntryExt;
@@ -660,7 +660,7 @@ impl FromAnyValue for Operation {
 /// Fail when an id repeats in one operation. For example, the second of two
 /// nodes `a` fails with `[1].id: repeats the id 'a'`.
 fn no_repeated_ids<'a>(ids: impl Iterator<Item = &'a str>) -> Result<(), FromAnyValueError> {
-    let mut seen = HashSet::new();
+    let mut seen = HashSet::default();
     for (index, id) in ids.enumerate() {
         if !seen.insert(id) {
             let error = FromAnyValueError::new(format!("repeats the id {}", quoted(id)));
@@ -673,7 +673,7 @@ fn no_repeated_ids<'a>(ids: impl Iterator<Item = &'a str>) -> Result<(), FromAny
 /// Fail when one `update_nodes` writes one path of one node twice, which is a
 /// client bug.
 fn no_repeated_paths(updates: &[FieldUpdate]) -> Result<(), FromAnyValueError> {
-    let mut seen = HashSet::new();
+    let mut seen = HashSet::default();
     for (index, update) in updates.iter().enumerate() {
         if !seen.insert((update.id.as_str(), &*update.path)) {
             let message = format!(

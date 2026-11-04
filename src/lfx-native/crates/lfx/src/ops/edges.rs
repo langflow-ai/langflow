@@ -25,12 +25,11 @@
 //! holds it, takes the endpoint's edges (`removed_endpoints`).
 
 use std::borrow::Cow;
-use std::collections::HashMap;
 use std::fmt;
 use std::sync::LazyLock;
 
+use crate::ops::maps::{HashMap, IndexSet};
 use crate::value::{AnyMap, AnyValue};
-use indexmap::IndexSet;
 
 use crate::ops::canonical::{
     HANDLE_KEYS, HANDLE_QUOTE, edge_data_with_type_sets, handle_spells, handle_with_type_sets,

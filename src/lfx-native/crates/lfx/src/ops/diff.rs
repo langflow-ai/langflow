@@ -34,10 +34,8 @@
 //!   change. Every top-level key other than `nodes` and `edges` is view
 //!   state.
 
-use std::collections::HashSet;
-
+use crate::ops::maps::{HashSet, IndexMap, State};
 use crate::value::{AnyMap, AnyValue};
-use indexmap::IndexMap;
 
 use crate::ops::apply::ApplyOptions;
 use crate::ops::canonical::{Proven, graphs_equal_given, is_row_position, values_equal};
@@ -92,7 +90,7 @@ fn diff_proving(
     let base_edges = by_id(base, "edges");
     let target_edges = by_id(target, "edges");
 
-    let mut changed_edges = HashSet::new();
+    let mut changed_edges = HashSet::default();
     for (id, edge) in &target_edges {
         if let Some(before) = base_edges.get(id)
             && edge_changed(before, edge)?
@@ -353,7 +351,7 @@ impl NodeDiff<'_> {
             .collect();
         let in_value = |key: &str| NODE_SCHEMA.value_unit.iter().any(|unit| unit == key);
         let is_toggle = |key: &str| NODE_SCHEMA.toggles.iter().any(|toggle| toggle == key);
-        let mut written: HashSet<&str> = HashSet::new();
+        let mut written: HashSet<&str> = HashSet::default();
 
         // The definition is every key outside the value and the toggles, written together.
         let definition: Vec<&str> = all_keys
@@ -546,7 +544,7 @@ fn items_by_key<'v>(
     let AnyValue::Array(items) = items else {
         return None;
     };
-    let mut by_key = IndexMap::with_capacity(items.len());
+    let mut by_key = IndexMap::with_capacity_and_hasher(items.len(), State::default());
     for item in items {
         let key = keyed.key_of(item).filter(|key| !key.is_empty())?;
         let map = item.as_object()?;

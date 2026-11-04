@@ -17,8 +17,7 @@
 //!
 //! Anything else is an edit, which takes the save path.
 
-use std::collections::{HashMap, HashSet};
-
+use crate::ops::maps::{HashMap, HashSet};
 use crate::value::{AnyMap, AnyValue};
 
 use crate::ops::apply::{ApplyOptions, apply_flow_operations};
@@ -68,8 +67,8 @@ pub fn check_restore_fixes(
         .filter_map(AnyValue::as_object)
         .collect();
     let by_id: HashMap<&str, &AnyMap> = edges.iter().map(|edge| (edge.id(), *edge)).collect();
-    let mut deletable: HashSet<String> = HashSet::new();
-    let mut rewritable: HashSet<String> = HashSet::new();
+    let mut deletable: HashSet<String> = HashSet::default();
+    let mut rewritable: HashSet<String> = HashSet::default();
     for violation in find_graph_violations(revision, Numbers::Check, Some(stored))? {
         let Some(id) = violation.edge_id.as_deref() else {
             continue;
@@ -91,7 +90,7 @@ pub fn check_restore_fixes(
         }
     }
 
-    let mut deleted: HashSet<&str> = HashSet::new();
+    let mut deleted: HashSet<&str> = HashSet::default();
     for fix in fixes {
         match fix {
             Operation::DeleteEdges(ids) => {

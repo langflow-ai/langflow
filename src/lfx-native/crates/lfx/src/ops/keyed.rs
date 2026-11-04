@@ -13,13 +13,12 @@
 //! into a deleted item's place. A list whose items carry no `__pos__` keeps
 //! its array order.
 
+use std::collections::VecDeque;
 use std::collections::hash_map::RandomState;
-use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt;
 use std::hash::{BuildHasher, Hash, Hasher};
 
-use indexmap::IndexSet;
-
+use crate::ops::maps::{HashMap, HashSet, IndexSet, State};
 use crate::value::AnyValue;
 
 use crate::ops::canonical::{
@@ -80,8 +79,8 @@ impl ListIndex {
     pub fn build(keyed: &'static KeyedList, items: &[AnyValue]) -> Self {
         let mut index = Self {
             keyed,
-            slots: HashMap::with_capacity(items.len()),
-            repeated: IndexSet::new(),
+            slots: HashMap::with_capacity_and_hasher(items.len(), State::default()),
+            repeated: IndexSet::default(),
             keyless: 0,
             unpositioned: 0,
         };
@@ -361,7 +360,7 @@ pub fn strip_flow_table_row_keys(flow: &mut AnyValue) {
 /// the shape the server accepts.
 #[must_use]
 pub fn has_table_row_ids(rows: &[AnyValue]) -> bool {
-    let mut seen = HashSet::new();
+    let mut seen = HashSet::default();
     rows.iter().all(|row| {
         row.non_empty_str(row_id_key())
             .is_some_and(|id| seen.insert(id))
@@ -494,7 +493,7 @@ fn take_matching_row<'a>(
 /// A compared row holds a number that is not finite.
 pub fn match_row_ids(rows: &mut [AnyValue], previous: Option<&AnyValue>) -> Result<()> {
     let (id_key, position_key) = (row_id_key(), row_position_key());
-    let mut used: HashSet<String> = HashSet::new();
+    let mut used: HashSet<String> = HashSet::default();
     let mut need_id = Vec::new();
     for (index, row) in rows.iter().enumerate() {
         match row.non_empty_str(id_key) {
@@ -514,7 +513,7 @@ pub fn match_row_ids(rows: &mut [AnyValue], previous: Option<&AnyValue>) -> Resu
         return Ok(());
     }
     let state = RandomState::new();
-    let mut by_content: HashMap<u64, VecDeque<&AnyValue>> = HashMap::new();
+    let mut by_content: HashMap<u64, VecDeque<&AnyValue>> = HashMap::default();
     // Preserve the old short-circuit errors for invalid numbers. Such input
     // uses the borrowed comparison below instead of constructing an index.
     let indexed = candidates
@@ -788,7 +787,7 @@ pub fn assign_changed_table_row_ids(
     target: &mut AnyValue,
     renumber: Renumber,
 ) -> Result<()> {
-    let mut stored: HashMap<&str, &AnyValue> = HashMap::new();
+    let mut stored: HashMap<&str, &AnyValue> = HashMap::default();
     for node in base
         .get("nodes")
         .and_then(AnyValue::as_array)
@@ -906,7 +905,7 @@ mod tests {
         let mut bucket = VecDeque::from([&different, &equal]);
         let row = json!({"v":2.0});
         assert_eq!(
-            take_matching_row(&mut bucket, &row, &HashSet::new()).unwrap(),
+            take_matching_row(&mut bucket, &row, &HashSet::default()).unwrap(),
             Some(&equal)
         );
         assert_eq!(bucket, VecDeque::from([&different]));

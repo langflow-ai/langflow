@@ -24,14 +24,13 @@
 //! out an operation (see [`apply`](crate::ops::apply)). Only apply calls the
 //! rules.
 
-use indexmap::IndexSet;
-
 use crate::ops::apply::{
     AddedEdges, ApplyOptions, FieldBackward, PlacedUpdate, Report, UpdatePlace, require_path,
     written_value,
 };
 use crate::ops::edges::GraphRead;
 use crate::ops::error::{Result, bail, quoted};
+use crate::ops::maps::IndexSet;
 use crate::ops::ops::{Edge, FieldUpdate, Operation};
 use crate::ops::state::GraphState;
 use crate::value::AnyValue;

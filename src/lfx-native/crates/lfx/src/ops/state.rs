@@ -23,17 +23,16 @@
 //! [`GraphState::entries`]) is the committed graph, without the batch.
 
 use std::borrow::Cow;
-use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, PoisonError, TryLockError};
 
 use crate::json_out::{self, Ascii};
+use crate::ops::maps::{HashMap, IndexMap, IndexSet};
 use crate::value::{AnyMap, AnyString, AnyValue, FiniteAnyValue};
 #[path = "snapshot_rows.rs"]
 mod snapshot_rows;
-use indexmap::{IndexMap, IndexSet};
 use serde::ser::{Serialize, SerializeMap, Serializer};
 
 use crate::ops::canonical;
@@ -66,7 +65,7 @@ impl<V> Slots<V> {
     fn new() -> Self {
         Self {
             entries: Vec::new(),
-            index: HashMap::new(),
+            index: HashMap::default(),
         }
     }
 
@@ -195,13 +194,13 @@ pub(crate) struct Layered<V> {
 impl<V: Clone> Layered<V> {
     /// An empty map.
     pub fn new() -> Self {
-        Self::with_stored(IndexMap::new())
+        Self::with_stored(IndexMap::default())
     }
 
     fn with_stored(stored: IndexMap<String, V>) -> Self {
         Self {
             stored: stored.into_iter().collect(),
-            layer: IndexMap::new(),
+            layer: IndexMap::default(),
         }
     }
 
@@ -372,7 +371,7 @@ impl EdgesAt {
         debug_assert_eq!(id, key.as_str());
         for end in ends(edge) {
             self.0
-                .get_or_insert_with(end, IndexSet::new)
+                .get_or_insert_with(end, IndexSet::default)
                 .insert(key.clone());
         }
     }

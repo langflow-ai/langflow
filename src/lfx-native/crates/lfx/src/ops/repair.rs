@@ -22,8 +22,7 @@
 //! - every edge it adds: it derives a handle's missing form from
 //!   the one present, and drops an edge that touches a note.
 
-use std::collections::{HashMap, HashSet};
-
+use crate::ops::maps::{HashMap, HashSet};
 use crate::value::{AnyMap, AnyValue};
 use sha2::{Digest, Sha256};
 
@@ -231,7 +230,7 @@ fn repair_nodes(nodes: Vec<AnyValue>, fixes: &mut Fixes) -> Result<Vec<AnyValue>
         .iter()
         .filter_map(|(_, node)| node.non_empty_str("id").map(str::to_owned))
         .collect();
-    let mut seen = HashSet::new();
+    let mut seen = HashSet::default();
     for (index, node) in &mut kept {
         let old_id = node.get("id").cloned();
         let valid = node.non_empty_str("id").map(str::to_owned);
@@ -329,7 +328,7 @@ fn repair_edges(
         .iter()
         .filter_map(|(_, edge)| edge.non_empty_str("id").map(str::to_owned))
         .collect();
-    let mut seen = HashSet::new();
+    let mut seen = HashSet::default();
     for (index, edge) in &mut kept {
         let valid = edge.non_empty_str("id").map(str::to_owned);
         if let Some(id) = &valid
@@ -356,7 +355,7 @@ fn repair_edges(
 
 /// Fix the edge rule violations that have one fix, in the edges `graph` adds relative to `base`.
 fn repair_added_edges(graph: &mut AnyValue, base: &AnyValue, fixes: &mut Fixes) -> Result<()> {
-    let mut dropped = HashSet::new();
+    let mut dropped = HashSet::default();
     for violation in find_edge_violations(base, graph)? {
         if violation.code.resolution() == Resolution::Manual {
             continue;
@@ -434,7 +433,7 @@ fn repair_list_positions(graph: &mut AnyValue, base: &AnyValue, fixes: &mut Fixe
 
 /// Each list value `base` stores in a template field, by node id and field name.
 fn stored_tables(base: &AnyValue) -> HashMap<(&str, &str), &AnyValue> {
-    let mut stored = HashMap::new();
+    let mut stored = HashMap::default();
     for node in base
         .get("nodes")
         .and_then(AnyValue::as_array)
@@ -482,7 +481,7 @@ fn repair_table(
     let missing: Vec<usize> = (0..rows.len())
         .filter(|index| !rows[*index].get(position_key).is_some_and(is_row_position))
         .collect();
-    let mut seen = HashSet::new();
+    let mut seen = HashSet::default();
     for (index, row) in rows.iter_mut().enumerate() {
         let valid = row.non_empty_str(id_key).map(str::to_owned);
         if let Some(id) = &valid
