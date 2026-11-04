@@ -9,11 +9,15 @@ from langchain_community.utilities.requests import TextRequestsWrapper
 
 from lfx.utils.ssrf_requests import ssrf_safe_request
 
+DEFAULT_REQUEST_TIMEOUT = 30.0
+
 
 class SSRFSafeTextRequestsWrapper(TextRequestsWrapper):
     """Use the same protected transport for synchronous and asynchronous tool calls."""
 
     def _request(self, method: str, url: str, **kwargs: Any) -> str | dict[str, Any]:
+        if kwargs.get("timeout") is None:
+            kwargs["timeout"] = DEFAULT_REQUEST_TIMEOUT
         response = ssrf_safe_request(method, url, headers=self.headers, auth=self.auth, verify=self.verify, **kwargs)
         return self._get_resp_content(response)
 

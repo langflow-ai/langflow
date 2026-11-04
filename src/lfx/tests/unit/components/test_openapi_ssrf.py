@@ -93,6 +93,20 @@ async def test_async_tools_use_the_protected_transport(method, outbound_request)
 
 @pytest.mark.parametrize("method", METHODS)
 @pytest.mark.parametrize("async_call", [False, True])
+@pytest.mark.parametrize(("timeout_kwargs", "expected"), [({}, 30), ({"timeout": None}, 30), ({"timeout": 7}, 7)])
+async def test_tools_use_bounded_default_timeout(method, async_call, timeout_kwargs, expected, outbound_request):
+    wrapper = SSRFSafeTextRequestsWrapper()
+
+    if async_call:
+        await getattr(wrapper, f"a{method}")(URL, *call_args(method), **timeout_kwargs)
+    else:
+        getattr(wrapper, method)(URL, *call_args(method), **timeout_kwargs)
+
+    assert outbound_request.call_args.kwargs["timeout"] == expected
+
+
+@pytest.mark.parametrize("method", METHODS)
+@pytest.mark.parametrize("async_call", [False, True])
 async def test_tools_reject_disallowed_destination_before_transport(method, async_call, outbound_request):
     """Reject disallowed destinations before sync or async tools reach a transport."""
     wrapper = SSRFSafeTextRequestsWrapper()
