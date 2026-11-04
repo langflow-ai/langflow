@@ -19445,7 +19445,7 @@
               "dependencies": [
                 {
                   "name": "aiohttp",
-                  "version": "3.14.3"
+                  "version": "3.14.5"
                 },
                 {
                   "name": "lfx",
@@ -20890,7 +20890,7 @@
                 },
                 {
                   "name": "langgraph",
-                  "version": "1.2.14"
+                  "version": "1.2.19"
                 },
                 {
                   "name": "lfx",
@@ -32518,6 +32518,6 @@
     "num_components": 130,
     "num_modules": 17
   },
-  "sha256": "349bccc35404eeafa9176d3c07d8f8e05d09b6966196d136e95adb0f9541dc9d",
+  "sha256": "19a3a91311108a9ce35d8391c896d2a63a325ec7e55282dee4643053cb79a2a3",
   "version": "1.13.2"
 }

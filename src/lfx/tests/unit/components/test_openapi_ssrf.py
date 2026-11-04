@@ -7,6 +7,7 @@ import socket
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+import httpcore
 import httpx
 import pytest
 from lfx.base.langchain_utilities.requests import SSRFSafeTextRequestsWrapper
@@ -146,16 +147,19 @@ def test_redirect_strips_cross_origin_credentials(outbound_request):
     assert "Authorization" not in outbound_request.call_args.kwargs["headers"]
 
 
-def test_request_transport_pins_the_validated_address(monkeypatch, outbound_request):
+def test_request_transport_pins_the_validated_address(monkeypatch):
     from lfx.utils import ssrf_requests
 
     transport_factory = Mock(wraps=SSRFProtectedSyncTransport)
     monkeypatch.setattr(ssrf_requests, "SSRFProtectedSyncTransport", transport_factory)
+    connect_tcp = Mock(side_effect=RuntimeError("stop after pin check"))
+    monkeypatch.setattr(httpcore.SyncBackend, "connect_tcp", connect_tcp)
 
-    SSRFSafeTextRequestsWrapper().get(URL)
+    with pytest.raises(RuntimeError, match="stop after pin check"):
+        SSRFSafeTextRequestsWrapper().get(URL)
 
     assert transport_factory.call_args.kwargs["pinned_ips"] == {"api.example.test": ["93.184.216.34"]}
-    outbound_request.assert_called_once()
+    assert connect_tcp.call_args.kwargs["host"] == "93.184.216.34"
 
 
 @pytest.mark.parametrize("allowlisted", [False, True])
