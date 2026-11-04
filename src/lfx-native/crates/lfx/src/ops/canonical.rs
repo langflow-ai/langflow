@@ -477,6 +477,8 @@ enum Canon<'a> {
     /// A node of a graph keyed for comparison, taken as it is. The comparison
     /// makes it canonical only when it differs from the other node as it is.
     Node(&'a AnyValue),
+    /// An edge taken as it is, made canonical only when it differs.
+    Edge(&'a AnyValue),
 }
 
 fn without(map: &AnyMap, hidden: impl Fn(&str) -> bool) -> HashMap<&str, Canon<'_>> {
@@ -500,7 +502,7 @@ fn canonical_graph(flow: &AnyValue) -> Result<Canon<'_>> {
             .iter()
             .map(|entry| match key {
                 "nodes" => Ok(Canon::Node(entry)),
-                _ => canonical_edge(entry),
+                _ => Ok(Canon::Edge(entry)),
             })
             .collect::<Result<_>>()?;
         graph.insert(key, by_id(entries, "id"));
@@ -511,7 +513,9 @@ fn canonical_graph(flow: &AnyValue) -> Result<Canon<'_>> {
 /// The string member `key` of a canonical entry, borrowed from the graph.
 fn entry_id<'a>(entry: &Canon<'a>, key: &str) -> Option<&'a str> {
     match entry {
-        Canon::Raw(value) | Canon::Node(value) => value.as_object()?.get(key)?.as_str(),
+        Canon::Raw(value) | Canon::Node(value) | Canon::Edge(value) => {
+            value.as_object()?.get(key)?.as_str()
+        }
         Canon::Object(map) => match map.get(key)? {
             Canon::Raw(value) => value.as_str(),
             _ => None,
@@ -678,6 +682,7 @@ enum View<'c, 'a> {
     /// A node taken as it is ([`Canon::Node`]). Only [`canon_equal`] reads it,
     /// and it makes the node canonical first when it needs to.
     Node(&'a AnyValue),
+    Edge(&'a AnyValue),
 }
 
 impl<'c, 'a> View<'c, 'a> {
@@ -688,6 +693,7 @@ impl<'c, 'a> View<'c, 'a> {
             Canon::Object(map) => Self::Object(map),
             Canon::Array(items) => Self::Array(items),
             Canon::Node(node) => Self::Node(node),
+            Canon::Edge(edge) => Self::Edge(edge),
         }
     }
 
@@ -696,7 +702,7 @@ impl<'c, 'a> View<'c, 'a> {
             Self::Object(_) => JsonType::Object,
             Self::Array(_) => JsonType::Array,
             Self::Value(value) => JsonType::from(value),
-            Self::Node(_) => unreachable!("{NODE_READ}"),
+            Self::Node(_) | Self::Edge(_) => unreachable!("{NODE_READ}"),
         }
     }
 
@@ -707,7 +713,7 @@ impl<'c, 'a> View<'c, 'a> {
             Self::Value(AnyValue::Object(map)) => map.len(),
             Self::Value(AnyValue::Array(items)) => items.len(),
             Self::Value(_) => 0,
-            Self::Node(_) => unreachable!("{NODE_READ}"),
+            Self::Node(_) | Self::Edge(_) => unreachable!("{NODE_READ}"),
         }
     }
 
@@ -716,7 +722,7 @@ impl<'c, 'a> View<'c, 'a> {
             Self::Object(map) => map.get(key).map(Self::of),
             Self::Value(AnyValue::Object(map)) => map.get(key).map(Self::Value),
             Self::Array(_) | Self::Value(_) => None,
-            Self::Node(_) => unreachable!("{NODE_READ}"),
+            Self::Node(_) | Self::Edge(_) => unreachable!("{NODE_READ}"),
         }
     }
 
@@ -725,7 +731,7 @@ impl<'c, 'a> View<'c, 'a> {
             Self::Array(items) => items.get(index).map(Self::of),
             Self::Value(AnyValue::Array(items)) => items.get(index).map(Self::Value),
             Self::Object(_) | Self::Value(_) => None,
-            Self::Node(_) => unreachable!("{NODE_READ}"),
+            Self::Node(_) | Self::Edge(_) => unreachable!("{NODE_READ}"),
         }
     }
 
@@ -748,7 +754,7 @@ impl<'c, 'a> View<'c, 'a> {
                 }
             }
             Self::Array(_) | Self::Value(_) => {}
-            Self::Node(_) => unreachable!("{NODE_READ}"),
+            Self::Node(_) | Self::Edge(_) => unreachable!("{NODE_READ}"),
         }
         Ok(true)
     }
@@ -756,13 +762,33 @@ impl<'c, 'a> View<'c, 'a> {
 
 const NODE_READ: &str = "canon_equal makes a node canonical before it reads it";
 
-fn canon_equal(left: View<'_, '_>, right: View<'_, '_>) -> Result<bool> {
+/// Nodes already proven equal: by the address of a left node's entries, a
+/// copy of that node and the address of the right node's entries. The copy
+/// keeps the left node from changing in place: a write copies it first, and
+/// the copy has another address, which the proof does not hold.
+pub(crate) type Proven = HashMap<usize, (AnyMap, usize)>;
+
+fn canon_equal(left: View<'_, '_>, right: View<'_, '_>, proven: Option<&Proven>) -> Result<bool> {
     match (left, right) {
         (View::Value(left), View::Value(right)) => return values_equal(left, right),
-        (View::Node(left), View::Node(right)) => return nodes_equal(left, right),
+        (View::Node(left), View::Node(right)) => return nodes_equal(left, right, proven),
+        (View::Edge(left), View::Edge(right)) => {
+            // Equal edges whose handle strings spell their `data` handles have
+            // one canonical form, and `values_equal` read every number of it:
+            // a handle object that a string spells holds only finite numbers.
+            if matches!(values_equal(left, right), Ok(true)) && handles_spell_data(left) {
+                return Ok(true);
+            }
+            let (left, right) = (canonical_edge(left)?, canonical_edge(right)?);
+            return canon_equal(View::of(&left), View::of(&right), proven);
+        }
+        (View::Edge(edge), other) | (other, View::Edge(edge)) => {
+            let edge = canonical_edge(edge)?;
+            return canon_equal(View::of(&edge), other, proven);
+        }
         (View::Node(node), other) | (other, View::Node(node)) => {
             let node = canonical_node(node);
-            return canon_equal(View::of(&node), other);
+            return canon_equal(View::of(&node), other, proven);
         }
         _ => {}
     }
@@ -772,17 +798,35 @@ fn canon_equal(left: View<'_, '_>, right: View<'_, '_>) -> Result<bool> {
     }
     if kind == JsonType::Object {
         return left.all_members(|key, value| match right.member(key) {
-            Some(other) => canon_equal(value, other),
+            Some(other) => canon_equal(value, other, proven),
             None => Ok(false),
         });
     }
     for index in 0..left.len() {
         match (left.item(index), right.item(index)) {
-            (Some(a), Some(b)) if canon_equal(a, b)? => {}
+            (Some(a), Some(b)) if canon_equal(a, b, proven)? => {}
             _ => return Ok(false),
         }
     }
     Ok(true)
+}
+
+/// Whether each handle string of `edge` spells the handle object at the
+/// same key of its `data` ([`handle_spells`]), so that reading the string
+/// gives that object.
+fn handles_spell_data(edge: &AnyValue) -> bool {
+    let Some(edge) = edge.as_object() else {
+        return false;
+    };
+    let data = edge.get("data").and_then(AnyValue::as_object);
+    HANDLE_KEYS.iter().all(|key| match edge.get(key) {
+        None => true,
+        Some(AnyValue::String(text)) => data
+            .and_then(|data| data.get(key))
+            .and_then(AnyValue::as_object)
+            .is_some_and(|object| handle_spells(text, object)),
+        Some(_) => false,
+    })
 }
 
 /// Whether two nodes have the same canonical form.
@@ -792,12 +836,21 @@ fn canon_equal(left: View<'_, '_>, right: View<'_, '_>) -> Result<bool> {
 /// display-only keys and keys table rows by id: it parses nothing, and it
 /// reads only numbers that [`values_equal`] has checked. Any other answer,
 /// including an error, comes from the canonical forms.
-fn nodes_equal(left: &AnyValue, right: &AnyValue) -> Result<bool> {
+fn nodes_equal(left: &AnyValue, right: &AnyValue, proven: Option<&Proven>) -> Result<bool> {
+    if let (Some(l), Some(r)) = (left.as_object(), right.as_object())
+        && proven.is_some_and(|proven| {
+            proven
+                .get(&l.entries_ptr())
+                .is_some_and(|(_, right)| *right == r.entries_ptr())
+        })
+    {
+        return Ok(true);
+    }
     if matches!(values_equal(left, right), Ok(true)) {
         return Ok(true);
     }
     let (left, right) = (canonical_node(left), canonical_node(right));
-    canon_equal(View::of(&left), View::of(&right))
+    canon_equal(View::of(&left), View::of(&right), proven)
 }
 
 // --- The canonical text of a graph ----------------------------------------------------
@@ -1083,9 +1136,19 @@ pub(crate) fn loaded_graph_hash<'a>(
 /// A number that is not finite as JavaScript reads it, in either graph's
 /// canonical form: the graphs that [`graph_hash`] refuses.
 pub fn graphs_equal(left: &AnyValue, right: &AnyValue) -> Result<bool> {
+    graphs_equal_given(left, right, None)
+}
+
+/// [`graphs_equal`], with the nodes in `proven` taken as equal without
+/// reading them.
+pub(crate) fn graphs_equal_given(
+    left: &AnyValue,
+    right: &AnyValue,
+    proven: Option<&Proven>,
+) -> Result<bool> {
     let left = canonical_graph(left)?;
     let right = canonical_graph(right)?;
-    let equal = canon_equal(View::of(&left), View::of(&right))?;
+    let equal = canon_equal(View::of(&left), View::of(&right), proven)?;
     // Equal graphs had every number read. Graphs that differ stopped at the
     // first difference, so they are checked to the end, or which answer a
     // number that is not finite gets would depend on where the difference is.
@@ -1112,6 +1175,7 @@ fn check_finite(view: View<'_, '_>) -> Result<()> {
         View::Node(node) => {
             check_finite_value(node).or_else(|_| check_finite(View::of(&canonical_node(node))))
         }
+        View::Edge(edge) => check_finite(View::of(&canonical_edge(edge)?)),
     }
 }
 
@@ -1390,6 +1454,7 @@ mod tests {
         fn eager(canon: Canon<'_>) -> Canon<'_> {
             match canon {
                 Canon::Node(node) => canonical_node(node),
+                Canon::Edge(edge) => canonical_edge(edge).unwrap(),
                 Canon::Object(map) => Canon::Object(
                     map.into_iter()
                         .map(|(key, value)| (key, eager(value)))
@@ -1401,7 +1466,7 @@ mod tests {
         }
         let left = eager(canonical_graph(left)?);
         let right = eager(canonical_graph(right)?);
-        canon_equal(View::of(&left), View::of(&right))
+        canon_equal(View::of(&left), View::of(&right), None)
     }
 
     /// Every graph in a fixture case, nested ones included.

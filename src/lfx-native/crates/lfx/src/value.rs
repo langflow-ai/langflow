@@ -724,6 +724,12 @@ impl PartialEq for AnyMap {
 impl Eq for AnyMap {}
 
 impl AnyMap {
+    /// The address of the shared entries: equal for two copies that share them.
+    #[must_use]
+    pub fn entries_ptr(&self) -> usize {
+        Arc::as_ptr(&self.entries).cast::<()>() as usize
+    }
+
     /// An empty object.
     #[must_use]
     pub fn new() -> Self {

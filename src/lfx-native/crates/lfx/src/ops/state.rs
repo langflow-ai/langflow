@@ -623,6 +623,11 @@ impl GraphState {
     /// The graph breaks a structural rule.
     pub fn new(flow: AnyValue) -> Result<Self> {
         validate_flow_data(&flow, Numbers::Skip, "flow.data", None)?;
+        Self::from_checked(flow)
+    }
+
+    /// [`GraphState::new`] for a graph that passed its structural check.
+    pub(crate) fn from_checked(flow: AnyValue) -> Result<Self> {
         let AnyValue::Object(mut root) = flow else {
             unreachable!("the load check refuses flow data that is not an object")
         };
