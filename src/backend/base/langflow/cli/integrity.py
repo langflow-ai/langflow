@@ -324,6 +324,8 @@ async def check_files(session: AsyncSession) -> CheckResult:
     Readers resolve a file from its owner and the basename of ``path``, so this
     asks the storage backend the same question they do.
     """
+    from lfx.utils.file_path_security import user_storage_scope_for_path
+
     from langflow.services.database.models.file.model import File
     from langflow.services.deps import get_storage_service
 
@@ -334,7 +336,7 @@ async def check_files(session: AsyncSession) -> CheckResult:
     for file_id, user_id, path in rows:
         name = PurePosixPath(path).name
         try:
-            await storage.get_file_size(flow_id=str(user_id), file_name=name)
+            await storage.get_file_size(flow_id=user_storage_scope_for_path(path, user_id), file_name=name)
         except FileNotFoundError:
             problems.append(f"file {file_id} ({name}): no bytes in storage")
         except Exception as exc:  # noqa: BLE001 - reported per file
