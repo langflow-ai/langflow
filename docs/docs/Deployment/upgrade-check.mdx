@@ -52,7 +52,10 @@ If the database is SQLite, the database's folder must be writable.
 Langflow keeps SQLite in WAL mode, and SQLite creates a `-shm` file next to the database even to read it.
 The database file itself doesn't change.
 If the folder is read-only, such as a Docker volume mounted with `:ro`, the command stops and says so.
-Mount the folder writable for the check, or stop the server, copy the database to a writable folder, and check the copy.
+Mount the folder writable for the check, or stop the server and create a consistent SQLite backup in a writable folder.
+If you copy database files directly, preserve the database and its WAL sidecars together after stopping every writer.
+A WAL file can contain committed flows that have not reached the main database file.
+Check the consistent backup or complete file copy.
 
 If the database is PostgreSQL, use a database user that can only read.
 For example:
@@ -107,12 +110,8 @@ docker run --rm \
 ```
 
 For PostgreSQL, pass the database URL and no volume.
-With `--json`, the last line of `upgrade-check.jsonl` holds the report.
-To save the report as one file, run:
-
-```bash
-tail -n 1 upgrade-check.jsonl | jq .report > upgrade-check.json
-```
+With `--json`, a completed check ends with a report event.
+Save that event with the extraction command below.
 
 </TabItem>
 <TabItem value="kubernetes" label="Kubernetes">
@@ -154,15 +153,32 @@ tail -n 1 upgrade-check.jsonl | jq .report > upgrade-check.json
     `backoffLimit: 0` keeps Kubernetes from running the check again when it exits with `1`.
     If the server loads custom components, mount the same folders and add `--components-path` for each one.
 
-3. When the Job completes, copy the report out of its logs:
+3. When the Job completes, save its logs:
 
     ```bash
-    kubectl logs job/langflow-upgrade-check --namespace langflow \
-      | jq -R 'fromjson? | objects | select(.event == "report") | .report' > upgrade-check.json
+    kubectl logs job/langflow-upgrade-check --namespace langflow > upgrade-check.jsonl
     ```
 
 </TabItem>
 </Tabs>
+
+For Docker or Kubernetes, extract exactly one report event from the saved logs.
+A failed check has no report event, so extraction fails and leaves any existing report unchanged.
+Non-JSON log lines are ignored.
+
+```bash
+report_tmp=$(mktemp ./upgrade-check.XXXXXX)
+if jq -R -s -e '
+  split("\n") | map(fromjson? | objects | select(.event == "report"))
+  | if length == 1 and (.[0].report | type == "object") then .[0].report
+    else error("expected exactly one report event") end
+' upgrade-check.jsonl > "$report_tmp"; then
+  mv -- "$report_tmp" upgrade-check.json
+else
+  rm -f -- "$report_tmp"
+  exit 1
+fi
+```
 
 ## Read the result
 
