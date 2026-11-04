@@ -49,6 +49,7 @@ from langflow.services.triggers.constants import (
     PROVIDER_SLACK,
     SLACK_TRIGGER_KINDS,
 )
+from langflow.services.triggers.error_codes import NODE_REMOVED_ERROR, SOURCE_SETTINGS_CHANGED_ERROR
 from langflow.services.triggers.locking import lock_trigger
 from langflow.services.triggers.providers.registry import component_kind, get_kind, source_kinds
 from langflow.services.triggers.schedule_config import (
@@ -180,17 +181,6 @@ def normalize_webhook_config(config: dict[str, Any]) -> dict[str, Any]:
     normalized["payload_schema"] = parsed
     return normalized
 
-
-#: Why a trigger whose node left the canvas was paused. Reconciliation owns this
-#: reason: it blocks resuming while the node is gone, and the save that adds the
-#: node back clears it. A config verdict must not erase it, since a schedule edit
-#: through the API does not bring the node back.
-NODE_REMOVED_ERROR = "trigger node removed from the flow"
-
-#: Why an armed Microsoft or Google source was paused by a save that changed its
-#: settings: the provider subscription was retired with the old settings, so it
-#: takes an explicit enable to subscribe again with the new ones.
-SOURCE_SETTINGS_CHANGED_ERROR = "Source settings changed. Enable the trigger again to resubscribe."
 
 #: States whose ``last_error`` a schedule verdict owns. The provider states and
 #: the terminal ``dead`` state carry reasons that a schedule edit cannot fix.

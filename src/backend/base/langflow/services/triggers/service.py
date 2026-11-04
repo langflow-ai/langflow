@@ -33,6 +33,7 @@ from langflow.services.triggers.cleanup import delete_triggers
 from langflow.services.triggers.constants import (
     SLACK_TRIGGER_KINDS,
 )
+from langflow.services.triggers.error_codes import CodedTriggerError, TriggerErrorCode
 from langflow.services.triggers.errors import TriggerNotFoundError
 from langflow.services.triggers.locking import lock_trigger, lock_trigger_for_admission
 from langflow.services.triggers.ownership import require_owned_connection
@@ -284,7 +285,7 @@ class TriggerService(Service):
             row.state == TriggerState.PAUSED.value and not trigger_node_on_canvas(row, flow.data if flow else None)
         ):
             msg = "The trigger node was removed from the flow. Add it back to resume the trigger."
-            raise ValueError(msg)
+            raise CodedTriggerError(TriggerErrorCode.NODE_REMOVED, msg)
         if "." in row.kind and row.kind not in source_kinds() | SLACK_TRIGGER_KINDS:
             msg = "This trigger provider is unavailable. Install its integration bundle before enabling it."
             raise ValueError(msg)
