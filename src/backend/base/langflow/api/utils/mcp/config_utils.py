@@ -37,6 +37,14 @@ def mcp_server_config_uses_current_uvx_constraint(server_config: dict, package: 
     return args[: len(expected_prefix)] == expected_prefix
 
 
+def mcp_server_config_has_project_api_key(args: list[str]) -> bool:
+    """Return whether the server args include the generated Langflow API key header."""
+    return any(
+        arg == "--headers" and index + 2 < len(args) and args[index + 1] == "x-api-key"
+        for index, arg in enumerate(args)
+    )
+
+
 class MCPServerValidationResult:
     """Represents the result of an MCP server validation check.
 
@@ -440,6 +448,16 @@ async def auto_configure_starter_projects_mcp(session):
                 if flows_configured > 0:
                     await logger.adebug(f"Enabled MCP for {flows_configured} starter flows for user {user.username}")
 
+                default_auth = user_starter_folder.auth_settings or {"auth_type": "none"}
+                if not user_starter_folder.auth_settings and not (
+                    settings_service.auth_settings.AUTO_LOGIN
+                    and settings_service.auth_settings.skip_auth_auto_login
+                    and settings_service.auth_settings.SUPERUSER
+                ):
+                    default_auth = {"auth_type": "apikey"}
+                    user_starter_folder.auth_settings = encrypt_auth_settings(default_auth)
+                requires_api_key = default_auth.get("auth_type") == "apikey"
+
                 # Validate MCP server for this starter projects folder
                 validation_result = await validate_mcp_server_for_project(
                     user_starter_folder.id,
@@ -451,15 +469,17 @@ async def auto_configure_starter_projects_mcp(session):
                     operation="create",
                 )
 
-                # Skip if the server already has the expected URL and uvx SDK constraint.
+                # Reconcile credentials before accepting an existing generated config.
                 if validation_result.should_skip:
                     expected_url = await get_project_streamable_http_url(user_starter_folder.id)
                     existing_config = validation_result.existing_config or {}
                     existing_args = existing_config.get("args", [])
                     existing_urls = await extract_urls_from_strings(existing_args)
 
-                    if mcp_server_config_uses_current_uvx_constraint(existing_config, "mcp-proxy") and any(
-                        expected_url == url for url in existing_urls
+                    if (
+                        mcp_server_config_uses_current_uvx_constraint(existing_config, "mcp-proxy")
+                        and any(expected_url == url for url in existing_urls)
+                        and mcp_server_config_has_project_api_key(existing_args) == requires_api_key
                     ):
                         await logger.adebug(
                             f"MCP server '{validation_result.server_name}' already exists and is correctly "
@@ -476,38 +496,13 @@ async def auto_configure_starter_projects_mcp(session):
 
                 server_name = validation_result.server_name
 
-                # Set up THIS USER'S starter folder authentication (same as new projects)
-                # If AUTO_LOGIN is false, automatically enable API key authentication
-                default_auth = {"auth_type": "none"}
-                await logger.adebug("Settings service auth settings: [REDACTED]")
-                await logger.adebug("User starter folder auth settings: [REDACTED]")
-                if (
-                    not user_starter_folder.auth_settings
-                    and settings_service.auth_settings.AUTO_LOGIN
-                    and not settings_service.auth_settings.SUPERUSER
-                ):
-                    default_auth = {"auth_type": "apikey"}
-                    user_starter_folder.auth_settings = encrypt_auth_settings(default_auth)
-                    await logger.adebug(
-                        "AUTO_LOGIN enabled without SUPERUSER; forcing API key auth for starter folder %s",
-                        user.username,
-                    )
-                elif not settings_service.auth_settings.AUTO_LOGIN and not user_starter_folder.auth_settings:
-                    default_auth = {"auth_type": "apikey"}
-                    user_starter_folder.auth_settings = encrypt_auth_settings(default_auth)
-                    await logger.adebug(f"Set up auth settings for user {user.username}'s starter folder")
-                elif user_starter_folder.auth_settings:
-                    default_auth = user_starter_folder.auth_settings
-
-                # Create API key for this user to access their own starter projects
-                api_key_name = f"MCP Project {DEFAULT_FOLDER_NAME} - {user.username}"
-                unmasked_api_key = await create_api_key(session, ApiKeyCreate(name=api_key_name), user.id)
-
                 # Build connection URLs for THIS USER'S starter folder (unique ID per user)
                 streamable_http_url = await get_project_streamable_http_url(user_starter_folder.id)
 
                 # Prepare server config (similar to new project creation)
-                if default_auth.get("auth_type", "none") == "apikey":
+                if requires_api_key:
+                    api_key_name = f"MCP Project {DEFAULT_FOLDER_NAME} - {user.username}"
+                    unmasked_api_key = await create_api_key(session, ApiKeyCreate(name=api_key_name), user.id)
                     command = "uvx"
                     args = [
                         *mcp_sdk_constraint_args(),
