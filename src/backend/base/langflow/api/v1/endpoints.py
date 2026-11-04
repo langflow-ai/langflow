@@ -20,6 +20,7 @@ from lfx.custom.utils import (
     build_custom_component_template,
     get_instance_name,
     update_component_build_config,
+    update_rebuilt_node,
 )
 from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.graph.graph.base import Graph
@@ -1972,19 +1973,7 @@ async def custom_component(
                 user_id=user.id,
                 parameters=_raw_component_parameters(current_template),
             )
-        if raw_code.frontend_node is not None:
-            built_frontend_node = await component_instance.update_frontend_node(
-                built_frontend_node,
-                raw_code.frontend_node,
-            )
-
-        tool_mode: bool = built_frontend_node.get("tool_mode", False)
-        if isinstance(component_instance, Component):
-            await component_instance.run_and_validate_update_outputs(
-                frontend_node=built_frontend_node,
-                field_name="tool_mode",
-                field_value=tool_mode,
-            )
+        built_frontend_node = await update_rebuilt_node(component_instance, built_frontend_node, raw_code.frontend_node)
     except IntegrationPolicyError as exc:
         # Same reasoning as the model-provider denial below: a governed
         # integration that discovery hides must not be distinguishable from one
