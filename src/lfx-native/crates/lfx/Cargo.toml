@@ -9,9 +9,12 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+serde = "1"
 serde_json = { version = "1", features = ["preserve_order", "arbitrary_precision"] }
 sha2 = "0.10"
 indexmap = "2"
+ahash = { version = "0.8", default-features = false, features = ["std"] }
+compact_str = "0.9"
 getrandom = "0.3"
 
 [dev-dependencies]

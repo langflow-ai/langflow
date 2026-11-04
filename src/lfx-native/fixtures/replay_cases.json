@@ -1,0 +1,202 @@
+{
+  "description": "Replay: replay_flow_operations(base, operations). Replay carries out stored operations (the forward operations of the operation log, and backward operations to show an earlier revision) as written and in order. It runs no rule and deletes no edge as a cascade delete. A case gives `base` and `operations`, and either the replayed flow `expected` or the named `error` with its `code`, which leaves `base` unchanged. A case with `backward` replays with the backward operations on and gives them, one list per operation; replaying those lists last first, each in a call of its own, gives back `base`. Nodes, edges and table rows compare as collections keyed by id; ids a delete names and entries an add lists compare as sets. Each case names the rule it checks in `rule`; README.md lists the rules. The expected outputs are reviewed data that every engine must meet.",
+  "cases": [
+    {
+      "name": "an add_edges into a taken single input replays",
+      "rule": "replay-no-rules",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "add_edges", "edges": [{"id": "e2", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]}],
+      "expected": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}, {"id": "e2", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]}
+    },
+    {
+      "name": "an edge without handles replays",
+      "rule": "replay-no-rules",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "add_edges", "edges": [{"id": "e2", "source": "s", "target": "d"}]}],
+      "expected": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}, {"id": "e2", "source": "s", "target": "d"}]}
+    },
+    {
+      "name": "delete_nodes takes no edge with it",
+      "rule": "replay-no-rules",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "delete_nodes", "ids": ["s"]}],
+      "expected": {"nodes": [{"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]}
+    },
+    {
+      "name": "a cascade delete in the forward operations replays as written",
+      "rule": "replay-no-rules",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "delete_nodes", "ids": ["s"]}, {"type": "delete_edges", "ids": ["e1"]}],
+      "expected": {"nodes": [{"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": []}
+    },
+    {
+      "name": "delete_field of a template field takes no edge with it",
+      "rule": "replay-no-rules",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "update_nodes", "updates": [{"id": "d", "op": "delete_field", "path": ["data", "node", "template", "one"]}]}],
+      "expected": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]}
+    },
+    {
+      "name": "a table row written without __pos__ replays",
+      "rule": "replay-no-rules",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "update_nodes", "updates": [{"id": "d", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}], "value": {"__id__": "r2", "v": "y"}}]}],
+      "expected": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "v": "y"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]}
+    },
+    {
+      "name": "a write to a node added earlier in the batch replays",
+      "rule": "replay-no-rules",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "add_nodes", "nodes": [{"id": "n", "data": {"node": {"template": {"t": {"type": "str", "value": "a"}}}}}]}, {"type": "update_nodes", "updates": [{"id": "n", "op": "set_field", "path": ["data", "node", "template", "t", "value"], "value": "b"}]}],
+      "expected": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}, {"id": "n", "data": {"node": {"template": {"t": {"type": "str", "value": "b"}}}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]}
+    },
+    {
+      "name": "a stored flow with an edge to a missing node does not load",
+      "rule": "replay-failures",
+      "base": {"nodes": [{"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "update_nodes", "updates": [{"id": "d", "op": "set_field", "path": ["data", "node", "template", "one", "value"], "value": "z"}]}],
+      "error": "FlowDataValidationError",
+      "code": "FLOW_GRAPH_INVALID"
+    },
+    {
+      "name": "a stored delete of a node without its edges replays, and keeps the edges",
+      "rule": "replay-no-rules",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "delete_nodes", "ids": ["s"]}, {"type": "update_nodes", "updates": [{"id": "d", "op": "set_field", "path": ["data", "node", "template", "one", "value"], "value": "z"}]}],
+      "expected": {"nodes": [{"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": "z"}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]}
+    },
+    {
+      "name": "a table with a row without __pos__ replays a write to another row",
+      "rule": "replay-no-rules",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "v": "y"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "update_nodes", "updates": [{"id": "d", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "z"}]}],
+      "expected": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "z"}, {"__id__": "r2", "v": "y"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]}
+    },
+    {
+      "name": "a table where two rows share an id replays a write to another row",
+      "rule": "replay-no-rules",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}, {"__id__": "r2", "__pos__": 3, "v": "w"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "update_nodes", "updates": [{"id": "d", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "z"}]}],
+      "expected": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "z"}, {"__id__": "r2", "__pos__": 2, "v": "y"}, {"__id__": "r2", "__pos__": 3, "v": "w"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]}
+    },
+    {
+      "name": "a list with an item without a key replays a write to another item",
+      "rule": "replay-no-rules",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}, {"display_name": "x"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "update_nodes", "updates": [{"id": "d", "op": "set_field", "path": ["data", "node", "outputs", {"key": "res"}, "hidden"], "value": true}]}],
+      "expected": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res", "hidden": true}, {"display_name": "x"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]}
+    },
+    {
+      "name": "replay returns the backward operations of each operation",
+      "rule": "replay-backward",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "update_nodes", "updates": [{"id": "d", "op": "set_field", "path": ["data", "node", "template", "one", "value"], "value": "z"}]}, {"type": "delete_nodes", "ids": ["s"]}],
+      "backward": [[{"type": "update_nodes", "updates": [{"id": "d", "op": "set_field", "path": ["data", "node", "template", "one", "value"], "value": ""}]}], [{"type": "add_nodes", "nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}]}]],
+      "expected": {"nodes": [{"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": "z"}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]}
+    },
+    {
+      "name": "add_nodes with an id the flow has fails",
+      "rule": "replay-failures",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "add_nodes", "nodes": [{"id": "s", "data": {"node": {"template": {}}}}]}],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "add_edges with an id the flow has fails",
+      "rule": "replay-failures",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "add_edges", "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]}],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "add_edges to a missing node fails",
+      "rule": "replay-failures",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "add_edges", "edges": [{"id": "e2", "source": "x", "target": "d"}]}],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "update_nodes on a missing node fails",
+      "rule": "replay-failures",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "update_nodes", "updates": [{"id": "x", "op": "set_field", "path": ["data", "node", "template", "one", "value"], "value": "z"}]}],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "delete_nodes of a missing node fails",
+      "rule": "replay-failures",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "delete_nodes", "ids": ["x"]}],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "a path that does not exist before its last segment fails",
+      "rule": "replay-failures",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "update_nodes", "updates": [{"id": "d", "op": "set_field", "path": ["data", "node", "template", "missing", "value"], "value": "z"}]}],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "a key segment that matches no item fails",
+      "rule": "replay-failures",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "update_nodes", "updates": [{"id": "d", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r9"}, "v"], "value": "z"}]}],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "a key segment in a list where two items have that key fails",
+      "rule": "replay-failures",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r1", "__pos__": 2, "v": "y"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "update_nodes", "updates": [{"id": "d", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "z"}]}],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "a batch with one operation that fails replays nothing",
+      "rule": "replay-failures",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "update_nodes", "updates": [{"id": "d", "op": "set_field", "path": ["data", "node", "template", "one", "value"], "value": "z"}]}, {"type": "delete_nodes", "ids": ["x"]}],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "a write that changes a row's id fails, since an id never changes",
+      "rule": "keyed-list-items-by-key",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "update_nodes", "updates": [{"id": "d", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "__id__"], "value": "r9"}]}],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "a row written at its id with another id fails",
+      "rule": "keyed-list-items-by-key",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "update_nodes", "updates": [{"id": "d", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}], "value": {"__id__": "r9", "__pos__": 1, "v": "z"}}]}],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "a write that deletes a row's id fails",
+      "rule": "keyed-list-items-by-key",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "d", "data": {"node": {"template": {"one": {"type": "str", "value": ""}, "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}]}}, "outputs": [{"name": "res"}]}}}], "edges": [{"id": "e1", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œoneœ}", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}}]},
+      "operations": [{"type": "update_nodes", "updates": [{"id": "d", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "__id__"]}]}],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "a flow with two nodes of one id does not load",
+      "rule": "replay-failures",
+      "base": {"nodes": [{"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}, {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}], "edges": []},
+      "operations": [],
+      "error": "FlowDataValidationError",
+      "code": "FLOW_GRAPH_INVALID"
+    }
+  ]
+}

@@ -26,27 +26,26 @@
 //!   When any key of a unit changes, the whole unit is written. A new field
 //!   is one write, a removed field one delete;
 //! - keyed lists (outputs, tool actions, table rows) are written per item, at
-//!   the item's key, and per key inside an item. A natural-key list whose order
-//!   changed, and a table that is not keyed by row ids on both sides, is
-//!   written whole;
+//!   the item's key, and per key inside an item. Their order is their items'
+//!   `__pos__`, so a move is a write to `__pos__`. A list whose items do not
+//!   all carry a unique key and a position on both sides is written whole;
 //! - an edge that changed in any way is deleted and added again;
 //! - view state is never recorded, and two spellings of one handle are not a
 //!   change. Every top-level key other than `nodes` and `edges` is view
 //!   state.
 
-use std::collections::HashSet;
+use crate::ops::maps::{HashSet, IndexMap, State};
+use crate::value::{AnyMap, AnyValue};
 
-use indexmap::IndexMap;
-use serde_json::{Map, Value};
-
-use crate::ops::apply::{ApplyOptions, apply_flow_operations};
-use crate::ops::canonical::{graphs_equal, is_row_position, values_equal};
+use crate::ops::apply::ApplyOptions;
+use crate::ops::canonical::{Proven, graphs_equal_given, is_row_position, values_equal};
 use crate::ops::edges::edge_changed;
 use crate::ops::error::{Error, Result};
 use crate::ops::ops::{
     AsKey, Edge, FieldUpdate, Node, NodePath, Operation, Path, PathExt, Segment,
 };
-use crate::ops::schema::{KeyedList, ListKind, NODE_SCHEMA, OUTPUTS_PATH, TEMPLATE_PATH};
+use crate::ops::schema::{KeyedList, NODE_SCHEMA, OUTPUTS_PATH, TEMPLATE_PATH};
+use crate::ops::state::GraphState;
 use crate::ops::validate::{Numbers, validate_flow_data};
 
 /// Operations that turn one graph into another, verified by replay.
@@ -55,7 +54,7 @@ pub struct Derived {
     /// The operations, as the engine records them.
     pub operations: Vec<Operation>,
     /// The graph the operations replay to.
-    pub flow_data: Value,
+    pub flow_data: AnyValue,
 }
 
 /// The ordered operations that turn `base` into `target`.
@@ -68,16 +67,30 @@ pub struct Derived {
 /// # Errors
 ///
 /// A graph breaks the rules.
-pub fn diff_flow_data(base: &Value, target: &Value) -> Result<Vec<Operation>> {
+pub fn diff_flow_data(base: &AnyValue, target: &AnyValue) -> Result<Vec<Operation>> {
     validate_flow_data(base, Numbers::Skip, "flow.data", None)?;
     validate_flow_data(target, Numbers::Check, "target flow.data", None)?;
+    diff_checked(base, target)
+}
 
+/// [`diff_flow_data`] for graphs that have passed its checks.
+fn diff_checked(base: &AnyValue, target: &AnyValue) -> Result<Vec<Operation>> {
+    diff_proving(base, target, None)
+}
+
+/// [`diff_checked`], recording in `proven` each base node it finds equal
+/// to its target node.
+fn diff_proving(
+    base: &AnyValue,
+    target: &AnyValue,
+    mut proven: Option<&mut Proven>,
+) -> Result<Vec<Operation>> {
     let base_nodes = by_id(base, "nodes");
     let target_nodes = by_id(target, "nodes");
     let base_edges = by_id(base, "edges");
     let target_edges = by_id(target, "edges");
 
-    let mut changed_edges = HashSet::new();
+    let mut changed_edges = HashSet::default();
     for (id, edge) in &target_edges {
         if let Some(before) = base_edges.get(id)
             && edge_changed(before, edge)?
@@ -117,6 +130,19 @@ pub fn diff_flow_data(base: &Value, target: &Value) -> Result<Vec<Operation>> {
     let mut node_updates = Vec::new();
     for (id, node) in &target_nodes {
         if let Some(before) = base_nodes.get(id) {
+            // A node equal as it stands writes nothing, so its walk is skipped:
+            // most nodes of a save are unchanged. The walk could not fail
+            // either: it fails only on a number that is not finite, which the
+            // target's validation above refuses, or on a write.
+            if before == node {
+                if let Some(proven) = proven.as_deref_mut() {
+                    proven.insert(
+                        before.entries_ptr(),
+                        (AnyMap::clone(before), node.entries_ptr()),
+                    );
+                }
+                continue;
+            }
             NodeDiff {
                 id,
                 updates: &mut node_updates,
@@ -152,14 +178,27 @@ pub fn diff_flow_data(base: &Value, target: &Value) -> Result<Vec<Operation>> {
 ///
 /// A graph breaks the rules, or the operations do not replay to `target`,
 /// which is a bug in the diff or the engine.
-pub fn derive_flow_operations(base: Value, target: &Value) -> Result<Derived> {
-    let operations = diff_flow_data(&base, target)?;
+pub fn derive_flow_operations(base: AnyValue, target: &AnyValue) -> Result<Derived> {
+    validate_flow_data(&base, Numbers::Skip, "flow.data", None)?;
+    validate_flow_data(target, Numbers::Check, "target flow.data", None)?;
+    derive_checked(base, target)
+}
+
+/// [`derive_flow_operations`] for graphs that have passed its checks: `base`
+/// structurally, and `target` fully.
+pub(crate) fn derive_checked(base: AnyValue, target: &AnyValue) -> Result<Derived> {
+    let mut proven = Proven::default();
+    let operations = diff_proving(&base, target, Some(&mut proven))?;
     let options = ApplyOptions {
         forward: true,
         ..ApplyOptions::default()
     };
-    let (flow_data, applied) = apply_flow_operations(base, operations, options)?;
-    if !graphs_equal(&flow_data, target)? {
+    let mut state = GraphState::from_checked(base)?;
+    let applied = state.apply(operations, options)?;
+    let flow_data = state.into_value();
+    // A node the diff found equal to its target node, which the replay
+    // left shared with the base, is equal: the check reads only the rest.
+    if !graphs_equal_given(&flow_data, target, Some(&proven))? {
         return Err(Error::replay(
             "derived operations do not replay to the target graph",
         ));
@@ -171,18 +210,18 @@ pub fn derive_flow_operations(base: Value, target: &Value) -> Result<Derived> {
 }
 
 /// A validated graph's nodes or edges, by id, in the graph's order.
-fn by_id<'g>(graph: &'g Value, key: &str) -> IndexMap<&'g str, &'g Map<String, Value>> {
+fn by_id<'g>(graph: &'g AnyValue, key: &str) -> IndexMap<&'g str, &'g AnyMap> {
     graph
         .get(key)
-        .and_then(Value::as_array)
+        .and_then(AnyValue::as_array)
         .into_iter()
         .flatten()
-        .filter_map(Value::as_object)
+        .filter_map(AnyValue::as_object)
         .filter_map(|entry| Some((entry.get("id")?.as_str()?, entry)))
         .collect()
 }
 
-fn without(map: &Map<String, Value>, hidden: impl Fn(&str) -> bool) -> Map<String, Value> {
+fn without(map: &AnyMap, hidden: impl Fn(&str) -> bool) -> AnyMap {
     map.iter()
         .filter(|(key, _)| !hidden(key))
         .map(|(key, value)| (key.clone(), value.clone()))
@@ -201,7 +240,7 @@ struct NodeDiff<'a> {
 impl NodeDiff<'_> {
     /// Record a `set_field`. The walk shares one path, so a caller passes
     /// its own copy: the one copy the write needs.
-    fn set(&mut self, path: Path, value: &Value) -> Result<()> {
+    fn set(&mut self, path: Path, value: &AnyValue) -> Result<()> {
         let path = NodePath::try_from(path)?;
         self.updates
             .push(FieldUpdate::set(self.id, path, value.clone()));
@@ -232,17 +271,12 @@ impl NodeDiff<'_> {
     ///
     /// The walk shares one `path`: each step pushes its segment and pops it
     /// when done. An error ends the whole diff, so it leaves the path as it is.
-    fn object(
-        &mut self,
-        base: &Map<String, Value>,
-        target: &Map<String, Value>,
-        path: &mut Path,
-    ) -> Result<()> {
+    fn object(&mut self, base: &AnyMap, target: &AnyMap, path: &mut Path) -> Result<()> {
         for (key, value) in target {
             if Self::skipped(path, key) {
                 continue;
             }
-            path.push(Segment::Key(key.clone()));
+            path.push(Segment::Key(key.to_string()));
             match base.get(key) {
                 None => self.set(path.clone(), value)?,
                 Some(previous) => {
@@ -255,7 +289,7 @@ impl NodeDiff<'_> {
         }
         for key in base.keys() {
             if !target.contains_key(key) && !Self::skipped(path, key) {
-                path.push(Segment::Key(key.clone()));
+                path.push(Segment::Key(key.to_string()));
                 self.delete(path.clone())?;
                 path.pop();
             }
@@ -264,14 +298,14 @@ impl NodeDiff<'_> {
     }
 
     /// Diff a value the schema splits further. Returns false when it is written whole.
-    fn split(&mut self, base: &Value, target: &Value, path: &mut Path) -> Result<bool> {
+    fn split(&mut self, base: &AnyValue, target: &AnyValue, path: &mut Path) -> Result<bool> {
         let recursed = NODE_SCHEMA
             .recursed_paths
             .iter()
             .any(|recursed| path.equals(recursed));
         if recursed {
             // Validation keeps the node's data, data.node and template objects.
-            if let (Value::Object(base), Value::Object(target)) = (base, target) {
+            if let (AnyValue::Object(base), AnyValue::Object(target)) = (base, target) {
                 self.object(base, target, path)?;
                 return Ok(true);
             }
@@ -282,7 +316,7 @@ impl NodeDiff<'_> {
         }
         if path.equals(&OUTPUTS_PATH) {
             let keyed = NODE_SCHEMA
-                .keyed_list_at(&Value::Null, &OUTPUTS_PATH)
+                .keyed_list_at(&AnyValue::Null, &OUTPUTS_PATH)
                 .ok_or_else(|| Error::invalid("node_schema.json declares no outputs list"))?;
             let mut items = Vec::new();
             if keyed_list(keyed, base, target, path, &mut items)? {
@@ -304,8 +338,8 @@ impl NodeDiff<'_> {
     }
 
     /// Diff a template field unit by unit. Returns false for a key that is not a field.
-    fn field(&mut self, base: &Value, target: &Value, path: &mut Path) -> Result<bool> {
-        let (Value::Object(base_field), Value::Object(target_field)) = (base, target) else {
+    fn field(&mut self, base: &AnyValue, target: &AnyValue, path: &mut Path) -> Result<bool> {
+        let (AnyValue::Object(base_field), AnyValue::Object(target_field)) = (base, target) else {
             return Ok(false);
         };
         let base = visible_field_keys(base_field);
@@ -317,7 +351,7 @@ impl NodeDiff<'_> {
             .collect();
         let in_value = |key: &str| NODE_SCHEMA.value_unit.iter().any(|unit| unit == key);
         let is_toggle = |key: &str| NODE_SCHEMA.toggles.iter().any(|toggle| toggle == key);
-        let mut written: HashSet<&str> = HashSet::new();
+        let mut written: HashSet<&str> = HashSet::default();
 
         // The definition is every key outside the value and the toggles, written together.
         let definition: Vec<&str> = all_keys
@@ -382,7 +416,7 @@ impl NodeDiff<'_> {
 }
 
 /// A template field's keys and values, without its display-only keys.
-fn visible_field_keys(field: &Map<String, Value>) -> IndexMap<&str, &Value> {
+fn visible_field_keys(field: &AnyMap) -> IndexMap<&str, &AnyValue> {
     field
         .iter()
         .filter(|(key, _)| !NODE_SCHEMA.field_view_state.contains(key.as_str()))
@@ -392,8 +426,8 @@ fn visible_field_keys(field: &Map<String, Value>) -> IndexMap<&str, &Value> {
 
 /// Whether `key` is added, removed or changed between two fields.
 fn key_changed(
-    base: &IndexMap<&str, &Value>,
-    target: &IndexMap<&str, &Value>,
+    base: &IndexMap<&str, &AnyValue>,
+    target: &IndexMap<&str, &AnyValue>,
     key: &str,
 ) -> Result<bool> {
     Ok(match (base.get(key), target.get(key)) {
@@ -405,8 +439,8 @@ fn key_changed(
 
 /// Whether any of `keys` is added, removed or changed between two fields.
 fn any_changed(
-    base: &IndexMap<&str, &Value>,
-    target: &IndexMap<&str, &Value>,
+    base: &IndexMap<&str, &AnyValue>,
+    target: &IndexMap<&str, &AnyValue>,
     keys: &[&str],
 ) -> Result<bool> {
     for key in keys {
@@ -420,7 +454,7 @@ fn any_changed(
 /// One write the keyed-list diff found, before the node diff records it.
 #[derive(Debug)]
 enum Write<'v> {
-    Set { path: Path, value: &'v Value },
+    Set { path: Path, value: &'v AnyValue },
     Delete { path: Path },
 }
 
@@ -430,8 +464,8 @@ enum Write<'v> {
 /// and copies the path only into a write it records.
 fn keyed_list<'v>(
     keyed: &KeyedList,
-    base: &'v Value,
-    target: &'v Value,
+    base: &'v AnyValue,
+    target: &'v AnyValue,
     path: &mut Path,
     writes: &mut Vec<Write<'v>>,
 ) -> Result<bool> {
@@ -440,18 +474,6 @@ fn keyed_list<'v>(
     else {
         return Ok(false);
     };
-    if keyed.kind == ListKind::Natural {
-        // A natural list's order is state; a table's order is its rows' positions.
-        let kept = base_items
-            .keys()
-            .filter(|key| target_items.contains_key(*key));
-        let added = target_items
-            .keys()
-            .filter(|key| !base_items.contains_key(*key));
-        if !target_items.keys().eq(kept.chain(added)) {
-            return Ok(false);
-        }
-    }
     for (key, item) in &target_items {
         path.push(Segment::Item((*key).to_owned()));
         match base_items.get(key) {
@@ -480,8 +502,8 @@ fn keyed_list<'v>(
 /// The writes that turn one keyed-list item into another, key by key.
 /// `path` names the item.
 fn item_writes<'v>(
-    target: &'v Map<String, Value>,
-    base: &'v Map<String, Value>,
+    target: &'v AnyMap,
+    base: &'v AnyMap,
     path: &mut Path,
     writes: &mut Vec<Write<'v>>,
 ) -> Result<()> {
@@ -492,7 +514,7 @@ fn item_writes<'v>(
             None => false,
         };
         if !unchanged {
-            path.push(Segment::Key(key.clone()));
+            path.push(Segment::Key(key.to_string()));
             writes.push(Write::Set {
                 path: path.clone(),
                 value,
@@ -502,7 +524,7 @@ fn item_writes<'v>(
     }
     for key in base.keys() {
         if !target.contains_key(key) {
-            path.push(Segment::Key(key.clone()));
+            path.push(Segment::Key(key.to_string()));
             writes.push(Write::Delete { path: path.clone() });
             path.pop();
         }
@@ -512,23 +534,24 @@ fn item_writes<'v>(
 
 /// A list by item key, or `None` when it cannot be written item by item.
 ///
-/// That is a list whose items do not all carry a unique key, or a table whose
-/// rows do not all carry a numeric position: such a list (a legacy table) is
-/// written whole, which brings it within the rules.
-fn items_by_key<'v>(keyed: &KeyedList, items: &'v Value) -> Option<IndexMap<&'v str, &'v Value>> {
-    let Value::Array(items) = items else {
+/// That is a list whose items do not all carry a unique key and a numeric
+/// position: such a list (a legacy list) is written whole, which brings it
+/// within the rules.
+fn items_by_key<'v>(
+    keyed: &KeyedList,
+    items: &'v AnyValue,
+) -> Option<IndexMap<&'v str, &'v AnyValue>> {
+    let AnyValue::Array(items) = items else {
         return None;
     };
-    let mut by_key = IndexMap::with_capacity(items.len());
+    let mut by_key = IndexMap::with_capacity_and_hasher(items.len(), State::default());
     for item in items {
         let key = keyed.key_of(item).filter(|key| !key.is_empty())?;
         let map = item.as_object()?;
         if by_key.contains_key(key) {
             return None;
         }
-        if let Some(position) = keyed.position.as_deref()
-            && !map.get(position).is_some_and(is_row_position)
-        {
+        if !map.get(&keyed.position).is_some_and(is_row_position) {
             return None;
         }
         by_key.insert(key, item);

@@ -17,9 +17,8 @@
 //!
 //! Anything else is an edit, which takes the save path.
 
-use std::collections::{HashMap, HashSet};
-
-use serde_json::{Map, Value};
+use crate::ops::maps::{HashMap, HashSet};
+use crate::value::{AnyMap, AnyValue};
 
 use crate::ops::apply::{ApplyOptions, apply_flow_operations};
 use crate::ops::canonical::{HANDLE_KEYS, values_equal};
@@ -36,10 +35,10 @@ use crate::ops::validate::{Numbers, Resolution, ViolationCode, find_graph_violat
 /// A fix addresses no violation, or the engine cannot apply it; then the
 /// error keeps the engine's code.
 pub fn apply_restore_fixes(
-    revision: &Value,
-    stored: &Value,
+    revision: &AnyValue,
+    stored: &AnyValue,
     fixes: Vec<Operation>,
-) -> Result<Value> {
+) -> Result<AnyValue> {
     check_restore_fixes(revision, stored, &fixes)?;
     apply_flow_operations(revision.clone(), fixes, ApplyOptions::default())
         .map(|(graph, _)| graph)
@@ -55,18 +54,21 @@ pub fn apply_restore_fixes(
 ///
 /// A fix that is not an edge delete or a handle rewrite of an edge a
 /// violation allows it for, or a failure finding the violations.
-pub fn check_restore_fixes(revision: &Value, stored: &Value, fixes: &[Operation]) -> Result<()> {
-    let edges: Vec<&Map<String, Value>> = revision
+pub fn check_restore_fixes(
+    revision: &AnyValue,
+    stored: &AnyValue,
+    fixes: &[Operation],
+) -> Result<()> {
+    let edges: Vec<&AnyMap> = revision
         .get("edges")
-        .and_then(Value::as_array)
+        .and_then(AnyValue::as_array)
         .into_iter()
         .flatten()
-        .filter_map(Value::as_object)
+        .filter_map(AnyValue::as_object)
         .collect();
-    let by_id: HashMap<&str, &Map<String, Value>> =
-        edges.iter().map(|edge| (edge.id(), *edge)).collect();
-    let mut deletable: HashSet<String> = HashSet::new();
-    let mut rewritable: HashSet<String> = HashSet::new();
+    let by_id: HashMap<&str, &AnyMap> = edges.iter().map(|edge| (edge.id(), *edge)).collect();
+    let mut deletable: HashSet<String> = HashSet::default();
+    let mut rewritable: HashSet<String> = HashSet::default();
     for violation in find_graph_violations(revision, Numbers::Check, Some(stored))? {
         let Some(id) = violation.edge_id.as_deref() else {
             continue;
@@ -88,7 +90,7 @@ pub fn check_restore_fixes(revision: &Value, stored: &Value, fixes: &[Operation]
         }
     }
 
-    let mut deleted: HashSet<&str> = HashSet::new();
+    let mut deleted: HashSet<&str> = HashSet::default();
     for fix in fixes {
         match fix {
             Operation::DeleteEdges(ids) => {
@@ -141,10 +143,7 @@ pub fn check_restore_fixes(revision: &Value, stored: &Value, fixes: &[Operation]
 }
 
 /// The edges into the input `edge` takes, whose handles are valid since it is occupied.
-fn edges_into_the_same_input(
-    edges: &[&Map<String, Value>],
-    edge: &Map<String, Value>,
-) -> Result<HashSet<String>> {
+fn edges_into_the_same_input(edges: &[&AnyMap], edge: &AnyMap) -> Result<HashSet<String>> {
     let taken = read_handles(edge)?.input;
     let target = endpoint(edge, "target");
     Ok(edges
@@ -158,19 +157,19 @@ fn edges_into_the_same_input(
 
 /// Whether two versions of an edge differ only in their handles, in either
 /// form. An edge without a `data` object may gain one that holds only handles.
-fn only_handles_differ(before: &Map<String, Value>, after: &Map<String, Value>) -> Result<bool> {
+fn only_handles_differ(before: &AnyMap, after: &AnyMap) -> Result<bool> {
     values_equal(&without_handles(before), &without_handles(after))
 }
 
 /// An edge without its handles, and without a `data` that is not an object
 /// or holds nothing else.
-fn without_handles(edge: &Map<String, Value>) -> Value {
+fn without_handles(edge: &AnyMap) -> AnyValue {
     let mut edge = edge.clone();
     for key in HANDLE_KEYS {
         edge.remove(key);
     }
     let keep_data = match edge.get_mut("data") {
-        Some(Value::Object(data)) => {
+        Some(AnyValue::Object(data)) => {
             for key in HANDLE_KEYS {
                 data.remove(key);
             }
@@ -181,7 +180,7 @@ fn without_handles(edge: &Map<String, Value>) -> Value {
     if !keep_data {
         edge.remove("data");
     }
-    Value::Object(edge)
+    AnyValue::Object(edge)
 }
 
 // --- The editor's side -----------------------------------------------------------------
@@ -195,15 +194,15 @@ fn without_handles(edge: &Map<String, Value>) -> Value {
 ///
 /// A compared handle holds a number that is not finite, or a rewritten edge
 /// has no `id`, `source` or `target`.
-pub fn edge_fixes(read: &[Value], shown: &[Value]) -> Result<Vec<Operation>> {
-    let shown_by_id: HashMap<&str, &Map<String, Value>> = shown
+pub fn edge_fixes(read: &[AnyValue], shown: &[AnyValue]) -> Result<Vec<Operation>> {
+    let shown_by_id: HashMap<&str, &AnyMap> = shown
         .iter()
-        .filter_map(Value::as_object)
+        .filter_map(AnyValue::as_object)
         .map(|edge| (edge.id(), edge))
         .collect();
     let mut deleted = Vec::new();
     let mut added = Vec::new();
-    for edge in read.iter().filter_map(Value::as_object) {
+    for edge in read.iter().filter_map(AnyValue::as_object) {
         let id = edge.id();
         let Some(fixed) = shown_by_id.get(id) else {
             deleted.push(id.to_owned());
@@ -211,8 +210,8 @@ pub fn edge_fixes(read: &[Value], shown: &[Value]) -> Result<Vec<Operation>> {
         };
         let rewritten = with_handles_of(edge, fixed);
         if !values_equal(
-            &Value::Object(edge.clone()),
-            &Value::Object(rewritten.clone()),
+            &AnyValue::Object(edge.clone()),
+            &AnyValue::Object(rewritten.clone()),
         )? {
             deleted.push(id.to_owned());
             added.push(Edge::try_from(rewritten)?);
@@ -230,11 +229,11 @@ pub fn edge_fixes(read: &[Value], shown: &[Value]) -> Result<Vec<Operation>> {
 
 /// `edge` with the handles of `shown`, in both forms. An edge without a
 /// `data` object gets one that holds only the handles.
-fn with_handles_of(edge: &Map<String, Value>, shown: &Map<String, Value>) -> Map<String, Value> {
+fn with_handles_of(edge: &AnyMap, shown: &AnyMap) -> AnyMap {
     let mut edge = edge.clone();
-    let shown_data = shown.get("data").and_then(Value::as_object);
-    if !edge.get("data").is_some_and(Value::is_object) {
-        edge.insert("data".into(), Value::Object(Map::new()));
+    let shown_data = shown.get("data").and_then(AnyValue::as_object);
+    if !edge.get("data").is_some_and(AnyValue::is_object) {
+        edge.insert("data".into(), AnyValue::Object(AnyMap::new()));
     }
     for key in HANDLE_KEYS {
         match shown.get(key) {
@@ -242,7 +241,7 @@ fn with_handles_of(edge: &Map<String, Value>, shown: &Map<String, Value>) -> Map
             None => edge.remove(key),
         };
         let handle = shown_data.and_then(|data| data.get(key)).cloned();
-        if let Some(Value::Object(data)) = edge.get_mut("data") {
+        if let Some(AnyValue::Object(data)) = edge.get_mut("data") {
             match handle {
                 Some(handle) => data.insert(key.to_owned(), handle),
                 None => data.remove(key),
