@@ -4,13 +4,17 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime
 from typing import TYPE_CHECKING
 
+import sqlalchemy as sa
 from sqlmodel import col, func, select
 
 from langflow.services.database.models.upgrade_report import UpgradeReport, UpgradeReportRepair
-from langflow.services.upgrade_reports.schema import UpgradeReportDocument
+from langflow.services.upgrade_reports.schema import (
+    UpgradeReportDocument,
+    UpgradeReportMetadata,
+    parse_report_timestamp,
+)
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -26,9 +30,25 @@ def reject_nonfinite(value: str) -> None:
     raise ValueError(msg)
 
 
+def unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            msg = "duplicate JSON keys are not supported"
+            raise ValueError(msg)
+        result[key] = value
+    return result
+
+
+class UnsupportedReportFormatError(ValueError):
+    pass
+
+
 def validate_document(content: bytes) -> tuple[str, UpgradeReportDocument]:
     text = content.decode("utf-8")
-    document = json.loads(text, parse_constant=reject_nonfinite)
+    document = json.loads(text, parse_constant=reject_nonfinite, object_pairs_hook=unique_object)
+    if isinstance(document, dict) and type(document.get("format_version")) is int and document["format_version"] != 1:
+        raise UnsupportedReportFormatError
     return text, UpgradeReportDocument.model_validate(document)
 
 
@@ -36,7 +56,7 @@ async def store_report(session: AsyncSession, content: bytes, actor_id: UUID) ->
     text, document = validate_document(content)
     row = UpgradeReport(
         created_by=actor_id,
-        generated_at=datetime.fromisoformat(document.generated_at.replace("Z", "+00:00")),
+        generated_at=parse_report_timestamp(document.generated_at),
         source_identity=document.source.identity.sha256 if document.source.identity is not None else None,
         target_version=document.target.langflow,
         flow_count=sum((document.summary.flows.ok, document.summary.flows.warn, document.summary.flows.fail)),
@@ -53,19 +73,17 @@ async def store_report(session: AsyncSession, content: bytes, actor_id: UUID) ->
 
 async def list_reports(
     session: AsyncSession, *, offset: int, limit: int, target_version: str | None = None
-) -> tuple[list[UpgradeReport], int]:
+) -> tuple[list[UpgradeReportMetadata], int]:
     filters = [UpgradeReport.target_version == target_version] if target_version else []
     count = (await session.exec(select(func.count()).select_from(UpgradeReport).where(*filters))).one()
-    rows = (
-        await session.exec(
-            select(UpgradeReport)
-            .where(*filters)
-            .order_by(col(UpgradeReport.created_at).desc(), col(UpgradeReport.id).desc())
-            .offset(offset)
-            .limit(limit)
-        )
-    ).all()
-    return list(rows), count
+    rows = await session.execute(
+        sa.select(*(getattr(UpgradeReport, name) for name in UpgradeReportMetadata.model_fields))
+        .where(*filters)
+        .order_by(col(UpgradeReport.created_at).desc(), col(UpgradeReport.id).desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    return [UpgradeReportMetadata.model_validate(row) for row in rows.mappings()], count
 
 
 async def require_report(session: AsyncSession, report_id: UUID | None) -> None:

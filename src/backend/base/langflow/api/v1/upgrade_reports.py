@@ -15,23 +15,20 @@ from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.authorization.audit import audit_decision
 from langflow.services.database.models.upgrade_report import UpgradeReport
 from langflow.services.database.models.user.model import User
-from langflow.services.upgrade_reports.history import MAX_REPORT_BYTES, list_repairs, list_reports, store_report
+from langflow.services.upgrade_reports.history import (
+    MAX_REPORT_BYTES,
+    UnsupportedReportFormatError,
+    list_repairs,
+    list_reports,
+    store_report,
+)
+from langflow.services.upgrade_reports.schema import UpgradeReportMetadata
 
 router = APIRouter(prefix="/upgrade-reports", tags=["Upgrade Reports"])
 Superuser = Annotated[User, Depends(get_current_active_superuser)]
 
 
-class ReportHistoryEntry(BaseModel):
-    id: UUID
-    created_at: datetime
-    created_by: UUID | None
-    generated_at: datetime
-    source_identity: str | None
-    target_version: str
-    flow_count: int
-    warning_count: int
-    failing_count: int
-    content_sha256: str
+ReportHistoryEntry = UpgradeReportMetadata
 
 
 class ReportHistory(BaseModel):
@@ -45,7 +42,7 @@ class ReportDetail(ReportHistoryEntry):
     document: dict[str, JsonValue]
 
 
-def entry(row: UpgradeReport) -> ReportHistoryEntry:
+def entry(row: UpgradeReport | UpgradeReportMetadata) -> ReportHistoryEntry:
     values = {name: getattr(row, name) for name in ReportHistoryEntry.model_fields}
     for name in ("created_at", "generated_at"):
         if values[name].tzinfo is None:
@@ -69,6 +66,10 @@ async def import_report(request: Request, response: Response, admin: Superuser, 
         content.extend(chunk)
     try:
         row = await store_report(session, bytes(content), admin.id)
+    except UnsupportedReportFormatError:
+        raise HTTPException(
+            status_code=422, detail={"code": "unsupported_upgrade_report_format", "supported": [1]}
+        ) from None
     except ValidationError as exc:
         errors = [{"loc": list(error["loc"]), "message": error["msg"]} for error in exc.errors()[:20]]
         raise HTTPException(status_code=422, detail={"code": "invalid_upgrade_report", "errors": errors}) from None

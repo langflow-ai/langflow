@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from typing import Annotated, Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
 
@@ -22,9 +23,13 @@ def aware_timestamp(value: str) -> str:
     if not match or (match[1] is not None and (int(match[1]) > _MAX_OFFSET_HOUR or int(match[2]) > _MAX_OFFSET_MINUTE)):
         msg = "timestamps must include a valid timezone"
         raise ValueError(msg)
-    parsed = re.sub(r"\.(\d+)(?=Z|[+-])", lambda match: "." + match[1][:6].ljust(6, "0"), value)
-    datetime.fromisoformat(parsed.replace("Z", "+00:00"))
+    parse_report_timestamp(value)
     return value
+
+
+def parse_report_timestamp(value: str) -> datetime:
+    parsed = re.sub(r"\.(\d+)(?=Z|[+-])", lambda match: "." + match[1][:6].ljust(6, "0"), value)
+    return datetime.fromisoformat(parsed.replace("Z", "+00:00"))
 
 
 class ReportPart(BaseModel):
@@ -34,7 +39,7 @@ class ReportPart(BaseModel):
 class ReportSource(ReportPart):
     dialect: Literal["sqlite", "postgresql"]
     identity: SourceIdentity | None = None
-    alembic_revision: str | None
+    alembic_revision: str | None = None
     counts: dict[str, Count]
 
     @model_validator(mode="after")
@@ -71,7 +76,13 @@ class ReportOwner(ReportPart):
 
 class ReportProject(ReportPart):
     id: str
-    name: str | None
+    name: str | None = None
+
+
+class ReportReason(ReportPart):
+    code: str = Field(min_length=1)
+    message: str | None = None
+    field: str | None = None
 
 
 class ReportNode(ReportPart):
@@ -81,7 +92,7 @@ class ReportNode(ReportPart):
     display_name: str
     status: str = Field(min_length=1)
     runs: str | None = None
-    reasons: list[dict[str, str | None]] = Field(default_factory=list)
+    reasons: list[ReportReason] = Field(default_factory=list)
     dry_run: dict[str, JsonValue] | None = None
     replacement: list[str] | None = None
     bundle: str | None = None
@@ -90,10 +101,10 @@ class ReportNode(ReportPart):
 class ReportFlow(ReportPart):
     id: str = Field(min_length=1, max_length=128)
     kind: Literal["flow", "component", "flow_version"]
-    name: str | None
-    owner: ReportOwner | None
-    project: ReportProject | None
-    last_edited_at: str | None
+    name: str | None = None
+    owner: ReportOwner | None = None
+    project: ReportProject | None = None
+    last_edited_at: str | None = None
     status: Literal["ok", "warn", "fail"]
     nodes: list[ReportNode]
     ok_nodes: Count
@@ -102,6 +113,7 @@ class ReportFlow(ReportPart):
     used_by: dict[str, list[str]] | None = None
     error: str | None = None
     usage: FlowUsage | None = None
+    labels: list[str] | None = None
 
     @field_validator("last_edited_at")
     @classmethod
@@ -149,3 +161,16 @@ class UpgradeReportDocument(ReportPart):
                 msg = "flow rows cannot exceed the reported status count"
                 raise ValueError(msg)
         return self
+
+
+class UpgradeReportMetadata(BaseModel):
+    id: UUID
+    created_at: datetime
+    created_by: UUID | None
+    generated_at: datetime
+    source_identity: str | None
+    target_version: str
+    flow_count: int
+    warning_count: int
+    failing_count: int
+    content_sha256: str

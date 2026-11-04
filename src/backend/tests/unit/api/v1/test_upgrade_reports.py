@@ -92,11 +92,15 @@ async def test_invalid_reports_leave_history_unchanged(client, admin_headers, co
         document = []
     response = await client.post(URL, json=document, headers=admin_headers)
     assert response.status_code == 422, response.text
-    assert response.json()["detail"]["code"] == "invalid_upgrade_report"
+    assert response.json()["detail"]["code"] == (
+        "unsupported_upgrade_report_format" if corruption == "version" else "invalid_upgrade_report"
+    )
     assert (await client.get(URL, headers=admin_headers)).json()["total"] == 0
 
 
-@pytest.mark.parametrize("content", [b"not JSON", b'{"format_version":NaN}', b"\xff"])
+@pytest.mark.parametrize(
+    "content", [b"not JSON", b'{"format_version":NaN}', b'{"format_version":1,"format_version":2}', b"\xff"]
+)
 async def test_invalid_json_and_encoding_are_rejected(client, admin_headers, content):
     assert (await client.post(URL, content=content, headers=admin_headers)).status_code == 422
     assert (await client.get(URL, headers=admin_headers)).json()["total"] == 0
@@ -105,7 +109,7 @@ async def test_invalid_json_and_encoding_are_rejected(client, admin_headers, con
 async def test_old_report_unknown_identity_and_metadata_stay_unknown(client, admin_headers):
     document = json.loads(FIXTURE.read_text())
     del document["source"]["identity"]
-    document["flows"][0]["last_edited_at"] = None
+    del document["flows"][0]["last_edited_at"]
     response = await client.post(URL, json=document, headers=admin_headers)
     assert response.status_code == 201, response.text
     assert response.json()["source_identity"] is None
