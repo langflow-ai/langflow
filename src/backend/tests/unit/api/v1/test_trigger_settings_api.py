@@ -23,6 +23,7 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.trigger.model import Trigger, TriggerEvent
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_auth_service, session_scope
+from langflow.services.triggers.error_codes import INVALID_CRON_ERROR
 from langflow.services.triggers.reconciliation import NODE_REMOVED_ERROR, reconcile_flow_triggers
 from sqlmodel import select
 
@@ -571,9 +572,11 @@ async def test_a_trigger_whose_node_was_removed_cannot_be_resumed_until_the_node
     assert shown["reason"] == "node_removed"
     assert "resume" not in shown["allowed_actions"]
     assert shown["blocked_actions"]["resume"] == "node_removed"
+    assert shown["last_error_code"] == "node_removed"
     refused = await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=headers)
     assert refused.status_code == 409, refused.text
-    assert "removed from the flow" in refused.json()["detail"]
+    assert refused.json()["detail"]["code"] == "node_removed"
+    assert "removed from the flow" in refused.json()["detail"]["message"]
     assert (await _stored(trigger_id)).state == "paused"
 
     await _save_canvas(flow_id, owner_id, [node])
@@ -711,7 +714,8 @@ async def test_a_trigger_paused_before_its_node_was_removed_cannot_resume_withou
     refused = await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=headers)
 
     assert refused.status_code == 409, refused.text
-    assert "removed from the flow" in refused.json()["detail"]
+    assert refused.json()["detail"]["code"] == "node_removed"
+    assert "removed from the flow" in refused.json()["detail"]["message"]
     await _save_canvas(flow_id, owner_id, [node])
     assert (await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=headers)).status_code == 200
 
@@ -945,3 +949,33 @@ async def test_an_unknown_events_filter_is_rejected(
     response = await client.get(f"api/v1/triggers/{trigger_id}/events?filter=everything", headers=logged_in_headers)
 
     assert response.status_code == 422
+
+
+async def test_a_stored_and_a_refused_schedule_error_carry_a_code_the_ui_translates(client: AsyncClient) -> None:
+    """The row and the refused resume name the invalid cron by a stable code, beside the English text."""
+    owner_id, _ = await _user()
+    headers = await _login(client, await _username(owner_id))
+    trigger_id = await _trigger(
+        await _flow(owner_id),
+        owner_id,
+        state="paused",
+        config={"cron": "61 * * * *", "timezone": "UTC"},
+        last_error=INVALID_CRON_ERROR,
+    )
+
+    shown = (await client.get(f"api/v1/triggers/{trigger_id}", headers=headers)).json()
+    refused = await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=headers)
+
+    assert (shown["last_error"], shown["last_error_code"]) == (INVALID_CRON_ERROR, "invalid_cron")
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["detail"] == {"code": "invalid_cron", "message": INVALID_CRON_ERROR}
+
+
+async def test_an_error_without_a_code_is_shown_as_written(client: AsyncClient) -> None:
+    owner_id, _ = await _user()
+    headers = await _login(client, await _username(owner_id))
+    trigger_id = await _trigger(await _flow(owner_id), owner_id, last_error="Provider returned 502")
+
+    shown = (await client.get(f"api/v1/triggers/{trigger_id}", headers=headers)).json()
+
+    assert (shown["last_error"], shown["last_error_code"]) == ("Provider returned 502", None)
