@@ -705,20 +705,27 @@ class TestStatusCommandErrors:
             _run_status([str(p)], sdk_triple=triple)
         assert exc_info.value.exit_code == 1
 
-    def test_error_on_one_flow_still_processes_others(self, tmp_path):
+    @pytest.mark.parametrize(
+        "bad_content",
+        [b"{{invalid", b"[]", b"null", b"\xff"],
+        ids=["malformed", "array", "null", "invalid-utf8"],
+    )
+    def test_error_on_one_flow_still_processes_others(self, tmp_path: Path, bad_content: bytes):
         """An error on flow 1 doesn't abort processing of flow 2."""
         p_bad = tmp_path / "bad.json"
-        p_bad.write_text("{{invalid", encoding="utf-8")
+        p_bad.write_bytes(bad_content)
         p_good = _write_flow(tmp_path, "good.json")
         remote = _fake_remote_flow(flow_dict=_FLOW_DICT)
         client = _make_client_mock(remote_flow=remote)
         triple = _make_sdk_triple(client)
 
-        with pytest.raises(typer.Exit) as exc_info:
+        with patch("lfx.cli.status._render_table") as render, pytest.raises(typer.Exit) as exc_info:
             _run_status([str(p_bad), str(p_good)], sdk_triple=triple)
         # Exits 1 due to the error flow; the good flow was also processed
         assert exc_info.value.exit_code == 1
-        client.get_flow.assert_called_once()
+        client.get_flow.assert_called_once_with(_FLOW_ID)
+        statuses = render.call_args.args[0]
+        assert [(row.path, row.status) for row in statuses] == [(p_bad, "error"), (p_good, "synced")]
 
     def test_missing_file_in_flow_paths_gives_error_status(self, tmp_path):
         """A path that doesn't exist → error status → exits 1."""
