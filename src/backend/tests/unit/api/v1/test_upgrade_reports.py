@@ -4,6 +4,7 @@ import json
 import subprocess
 import sys
 from copy import deepcopy
+from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
 
@@ -60,6 +61,32 @@ async def test_history_detail_and_export_retain_exact_document(client, admin_hea
     async with session_scope() as session:
         [persisted] = (await session.exec(select(UpgradeReport))).all()
         assert persisted.document_json == original
+
+
+@pytest.mark.parametrize(
+    ("generated_at", "expected_utc"),
+    [
+        ("2026-11-04T12:00:00-08:00", "2026-11-04T20:00:00+00:00"),
+        ("2026-11-04T12:00:00+05:30", "2026-11-04T06:30:00+00:00"),
+    ],
+)
+async def test_offset_report_metadata_preserves_the_instant_and_original_bytes(
+    client, admin_headers, generated_at, expected_utc
+):
+    document = json.loads(FIXTURE.read_text())
+    document["generated_at"] = generated_at
+    original = (json.dumps(document, indent=2) + "\n\n").encode()
+    imported = await client.post(URL, content=original, headers=admin_headers)
+    assert imported.status_code == 201, imported.text
+    report_id = imported.json()["id"]
+    detail = (await client.get(f"{URL}/{report_id}", headers=admin_headers)).json()
+    history = (await client.get(URL, headers=admin_headers)).json()["items"][0]
+    for metadata in (imported.json(), detail, history):
+        assert datetime.fromisoformat(metadata["generated_at"].replace("Z", "+00:00")) == datetime.fromisoformat(
+            expected_utc
+        )
+    assert detail["document"]["generated_at"] == generated_at
+    assert (await client.get(f"{URL}/{report_id}/export", headers=admin_headers)).content == original
 
 
 async def test_all_endpoints_require_admin_authorization(client, logged_in_headers, admin_headers):
