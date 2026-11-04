@@ -74,9 +74,10 @@ jobs:
       - name: Select independently published release baselines
         id: plan
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: >-
-          uv run --no-sync python scripts/ci/component_release_plan.py
-          --base-sha "$BASE_SHA" --output compatibility-evidence/plan.json
+        run: |
+          BASE_SHA="$(printf '%s' "$BASE_SHA" | tr '[:upper:]' '[:lower:]')"
+          uv run --no-sync python scripts/ci/component_release_plan.py \
+            --base-sha "$BASE_SHA" --output compatibility-evidence/plan.json
       - name: Compare complete registries and render acknowledged release notes
         if: ${{ !cancelled() && steps.plan.outcome == 'success' }}
         run: >-

@@ -1,6 +1,8 @@
 """Every supported PR and artifact publication must retain compatibility evidence."""
 
 import ast
+import os
+import subprocess
 from pathlib import Path
 
 import yaml
@@ -97,3 +99,22 @@ def test_runtime_cases_run_in_required_gate_without_lightweight_job_dependencies
         }
         assert marked == names
         assert filename in commands
+
+
+def test_plan_receives_lowercase_sha_for_uppercase_release_input(tmp_path):
+    job = workflow(".github/workflows/component-compatibility.yml")["jobs"]["compatibility"]
+    command = next(step["run"] for step in job["steps"] if step.get("id") == "plan")
+    captured = tmp_path / "arguments.txt"
+    script = 'uv() { printf "%s\\n" "$@" > "$TASK_ARGUMENTS"; }\n' + command
+    commit = "ABCDEF01" * 5
+    result = subprocess.run(  # noqa: S603
+        ["/bin/bash", "-c", script],
+        env={**os.environ, "BASE_SHA": commit, "TASK_ARGUMENTS": str(captured)},
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    assert result.returncode == 0, result.stderr
+    arguments = captured.read_text().splitlines()
+    assert arguments[arguments.index("--base-sha") + 1] == commit.lower()

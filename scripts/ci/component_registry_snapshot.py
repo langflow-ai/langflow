@@ -82,9 +82,18 @@ def _refuse_network(event: str, _args: tuple) -> None:
         "socket.gethostbyname",
         "socket.gethostbyaddr",
         "socket.sendto",
+        "socket.sendmsg",
+        "socket.getnameinfo",
         "subprocess.Popen",
         "os.system",
         "os.posix_spawn",
+        "os.exec",
+        "os.spawn",
+        "os.fork",
+        "os.forkpty",
+        "os.startfile",
+        "os.startfile/2",
+        "pty.spawn",
     }:
         _refused_calls.append(event)
         msg = "component registry export does not allow network access or subprocesses"

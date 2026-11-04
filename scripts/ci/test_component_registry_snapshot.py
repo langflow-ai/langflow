@@ -63,7 +63,24 @@ def test_degraded_runtime_registry_fails_closed(monkeypatch, failure):
     assert module._emit_extension_diagnostics is original
 
 
-@pytest.mark.parametrize("event", ["socket.connect", "subprocess.Popen", "os.system", "os.posix_spawn"])
+@pytest.mark.parametrize(
+    "event",
+    [
+        "socket.connect",
+        "subprocess.Popen",
+        "os.system",
+        "os.posix_spawn",
+        "socket.sendmsg",
+        "socket.getnameinfo",
+        "os.exec",
+        "os.spawn",
+        "os.fork",
+        "os.forkpty",
+        "os.startfile",
+        "os.startfile/2",
+        "pty.spawn",
+    ],
+)
 def test_export_refuses_provider_network_calls(event):
     with pytest.raises(exporter.RegistrySnapshotError, match="network"):
         exporter._refuse_network(event, ())
@@ -225,7 +242,23 @@ def test_snapshot_child_clears_credentials_and_installs_denial_before_runtime(mo
     assert json.loads(output.read_text()) == {"complete": True}
 
 
-@pytest.mark.parametrize("event", ["socket.connect", "socket.getaddrinfo", "subprocess.Popen"])
+@pytest.mark.parametrize(
+    "event",
+    [
+        "socket.connect",
+        "socket.getaddrinfo",
+        "subprocess.Popen",
+        "socket.sendmsg",
+        "socket.getnameinfo",
+        "os.exec",
+        "os.spawn",
+        "os.fork",
+        "os.forkpty",
+        "os.startfile",
+        "os.startfile/2",
+        "pty.spawn",
+    ],
+)
 def test_swallowed_audit_refusal_cannot_publish_complete_snapshot(event, tmp_path):
     output = tmp_path / "snapshot.json"
     script = textwrap.dedent("""
