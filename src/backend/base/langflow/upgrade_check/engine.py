@@ -477,10 +477,12 @@ def _dry_run(
     if _refused_calls:
         # Completed partial rebuilds identify unverified fields through warnings filtered above.
         # A timeout has no completed outcome or warnings to identify which fields are missing.
+        refused = _refused_calls[0]
+        operation = "a network call" if refused.startswith("socket.") else "a child process launch"
         return outcome.get("node"), _reason(
             "could_not_verify",
             None,
-            f"the update attempted a refused network or process operation: {_refused_calls[0]}",
+            f"the update makes {operation}: {refused}",
         )
     if thread.is_alive():
         return None, _reason("could_not_verify", None, f"the update did not finish in {DRY_RUN_SECONDS:g} seconds")
