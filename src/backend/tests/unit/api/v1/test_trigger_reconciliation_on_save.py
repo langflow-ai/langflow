@@ -109,12 +109,21 @@ async def test_put_reconciles_updated_added_and_removed_schedule_nodes(client, l
     flow_id = created.json()["id"]
     updated = await client.put(
         f"api/v1/flows/{flow_id}",
-        json=_flow_body("put flow", _schedule_node(cron="*/15 * * * *"), _schedule_node("ScheduleTrigger-new")),
+        json=_flow_body("put flow", _schedule_node(cron="*/15 * * * *")),
         headers=logged_in_headers,
     )
     assert updated.status_code == 200, updated.text
     rows = {row["node_id"]: row for row in await _triggers(client, logged_in_headers, flow_id)}
     assert rows["ScheduleTrigger-abc123"]["config"]["cron"] == "*/15 * * * *"
+
+    replaced = await client.put(
+        f"api/v1/flows/{flow_id}",
+        json=_flow_body("put flow", _schedule_node("ScheduleTrigger-new")),
+        headers=logged_in_headers,
+    )
+    assert replaced.status_code == 200, replaced.text
+    rows = {row["node_id"]: row for row in await _triggers(client, logged_in_headers, flow_id)}
+    assert rows["ScheduleTrigger-abc123"]["state"] == "paused"
     assert rows["ScheduleTrigger-new"]["state"] == "pending"
     removed = await client.put(f"api/v1/flows/{flow_id}", json=_flow_body("put flow"), headers=logged_in_headers)
     assert removed.status_code == 200, removed.text

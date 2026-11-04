@@ -661,6 +661,9 @@ def test_deployment_snapshot_reports_the_same_providers_as_the_manifest() -> Non
 def test_shipped_starter_projects_select_no_provider_and_defer_every_model_field() -> None:
     """The templates ship with the model unset, so the honest answer is a count, not a list.
 
+    The exception is a decision field: LLM Gatekeeper and Support Ticket Routing ship their Smart
+    Router set to TypeSafe's jev-latest, because a decision field is never filled in for the user.
+
     This is the regression that keeps the collector from inventing a provider
     out of a bare model name: the day a starter starts resolving to one, that
     is a real change in what deploying it requires, and it should be noticed
@@ -676,5 +679,5 @@ def test_shipped_starter_projects_select_no_provider_and_defer_every_model_field
         providers |= set(requirements.providers)
         unresolved += requirements.unresolved_fields
 
-    assert providers == set()
+    assert providers == {"typesafe"}
     assert unresolved > 0

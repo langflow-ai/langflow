@@ -33,7 +33,7 @@ import {
 } from "@/controllers/API/queries/variables";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import useAlertStore from "@/stores/alertStore";
-import type { ModelType } from "@/types/models";
+import type { ModelType, ModelTypeFilter } from "@/types/models";
 import { Provider } from "../components/types";
 import { useModelToggleQueue } from "./useModelToggleQueue";
 
@@ -42,6 +42,8 @@ const MASKED_VALUE = "••••••••";
 
 interface UseProviderConfigurationOptions extends ProviderScopeParams {
   selectedProvider: Provider | null;
+  /** The dialog's view: "all", or the one model kind the picker that opened it serves. */
+  modelType?: ModelTypeFilter;
 }
 
 type ValidationState = "idle" | "validating" | "valid" | "invalid";
@@ -92,6 +94,7 @@ export const useProviderConfiguration = ({
   selectedProvider,
   flowId,
   projectId,
+  modelType = "all",
 }: UseProviderConfigurationOptions): UseProviderConfigurationReturn => {
   const [variableValues, setVariableValues] = useState<Record<string, string>>(
     {},
@@ -414,6 +417,9 @@ export const useProviderConfiguration = ({
       const newValue = variableValues[v.variable_key]?.trim();
       if (newValue) {
         variables[v.variable_key] = newValue;
+      } else if (isConfiguredOptionalVariableCleared(v)) {
+        // Say it is being cleared, or the server's saved value would stand in for it.
+        variables[v.variable_key] = "";
       } else if (!(v.variable_key in variableValues)) {
         // Use existing configured value
         const existing = globalVariables.find(
@@ -425,7 +431,12 @@ export const useProviderConfiguration = ({
       }
     }
     return variables;
-  }, [providerVariables, variableValues, globalVariables]);
+  }, [
+    providerVariables,
+    variableValues,
+    globalVariables,
+    isConfiguredOptionalVariableCleared,
+  ]);
 
   // Validate credentials with the backend
   const validateCredentials = useCallback(async (): Promise<boolean> => {
@@ -441,9 +452,27 @@ export const useProviderConfiguration = ({
     const startTime = Date.now();
 
     try {
+      // A key gets one billed check, for the kind of model it is about to serve,
+      // never one per kind. Opened from a decision picker, ask for a decision
+      // check when this provider has decision models: for a mixed provider such
+      // as OpenAI the untyped check is a chat call, which passes for a key
+      // without Decisions access, and its default decision model would then fail
+      // on its first run. A provider with no decision models (Anthropic, Ollama)
+      // keeps its own chat check. In the all-models view,
+      // send no kind: decision-only providers (TypeSafe, and Perplexity, whose
+      // chat models live in its own component rather than Model Providers) still
+      // get a decision check, and every other provider a chat check. Any other
+      // kind is checked when one of its models is switched on, because
+      // update_enabled_models validates each model with its own type.
+      const checksDecisionAccess =
+        modelType === "decision" &&
+        (trustedSelectedProvider?.models ?? []).some(
+          (model) => model.metadata?.model_type === "decision",
+        );
       const result = await validateProvider({
         provider: providerName,
         variables,
+        ...(checksDecisionAccess ? { model_type: "decision" as const } : {}),
         flowId,
         projectId,
       });
@@ -493,6 +522,7 @@ export const useProviderConfiguration = ({
     validateProvider,
     flowId,
     projectId,
+    modelType,
     isCurrentConfigurationContext,
     t,
   ]);
@@ -552,6 +582,18 @@ export const useProviderConfiguration = ({
       const isValid = await validateCredentials();
       if (!isValid || !canUseCurrentProviderPolicy(providerName)) return;
     }
+    // Saving checks a mixed provider's key again, as a chat call. From a
+    // decision picker, validateCredentials has just made the billed Decisions
+    // check, so the save says so and isn't checked again: one check, and a key
+    // with only Decisions access saves. A decision-only provider's key is
+    // never checked on save.
+    const providerModels = trustedSelectedProvider?.models ?? [];
+    const alreadyChecked =
+      modelType === "decision" &&
+      providerModels.some((m) => m.metadata?.model_type === "decision") &&
+      providerModels.some((m) => m.metadata?.model_type !== "decision")
+        ? { checkedModelType: "decision" as const }
+        : {};
     setIsSaving(true);
     setValidationFailed(false);
     let hasPersistedVariable = false;
@@ -613,6 +655,7 @@ export const useProviderConfiguration = ({
             value,
             flowId,
             projectId,
+            ...alreadyChecked,
           });
         } else {
           await createGlobalVariable({
@@ -623,6 +666,7 @@ export const useProviderConfiguration = ({
             default_fields: [],
             flowId,
             projectId,
+            ...alreadyChecked,
           });
         }
         hasPersistedVariable = true;
@@ -701,6 +745,7 @@ export const useProviderConfiguration = ({
     updateGlobalVariable,
     flowId,
     projectId,
+    modelType,
     queryClient,
     globalVariablesQueryKey,
     validateCredentials,

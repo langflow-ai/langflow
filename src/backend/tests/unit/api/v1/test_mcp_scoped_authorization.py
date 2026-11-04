@@ -1,7 +1,7 @@
 """MCP resources and long-lived sessions honor current key ceilings."""
 
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, call
 from uuid import uuid4
 
 import pytest
@@ -17,6 +17,7 @@ from langflow.services.database.models import Flow, Folder
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.file.model import File
 from langflow.services.deps import get_settings_service, session_scope
+from lfx.utils.file_path_security import flow_storage_scope
 
 pytestmark = pytest.mark.usefixtures("client")
 
@@ -81,9 +82,28 @@ async def resources(active_user, monkeypatch):
 
 async def test_mcp_lists_filter_flow_and_user_file_resources(resources):
     _project, flows, _files, _key, storage, _context = resources
+    storage.list_files.side_effect = lambda *, flow_id: ["typed.txt"] if flow_id.startswith("flow-") else ["flow.txt"]
     listed = await mcp_utils.handle_list_resources()
-    assert {resource.name for resource in listed} == {"flow.txt", "a.txt"}
-    storage.list_files.assert_awaited_once_with(flow_id=str(flows[0].id))
+    assert {resource.name for resource in listed} == {"typed.txt", "flow.txt", "a.txt"}
+    assert storage.list_files.await_args_list == [
+        call(flow_id=flow_storage_scope(flows[0].id)),
+        call(flow_id=str(flows[0].id)),
+    ]
+
+
+@pytest.mark.parametrize("typed_path", [False, True])
+async def test_image_flow_dependency_preserves_scoped_read_checks(resources, active_user, typed_path):
+    """Both image URL forms enforce the current key's flow permission."""
+    from langflow.api.v1.files import get_flow_for_image
+
+    _project, flows, _files, _key, _storage, _context = resources
+    prefix = "flow-" if typed_path else ""
+    async with session_scope() as session:
+        allowed = await get_flow_for_image(f"{prefix}{flows[0].id}", active_user, session)
+        assert allowed.id == flows[0].id
+        with pytest.raises(HTTPException) as denied:
+            await get_flow_for_image(f"{prefix}{flows[1].id}", active_user, session)
+        assert denied.value.status_code == 403
 
 
 async def test_mcp_direct_resource_reads_guard_before_storage(resources, active_user):

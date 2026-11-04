@@ -5270,6 +5270,16 @@
       "bare_class_name": "MrscraperWebSearch",
       "target": "ext:mrscraper:MrscraperWebSearch@official",
       "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "KeenableFetchComponent",
+      "target": "ext:keenable:KeenableFetchComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "KeenableSearchComponent",
+      "target": "ext:keenable:KeenableSearchComponent@official",
+      "added_in": "1.14.0"
     }
   ],
   "ambiguous_bare_names": [

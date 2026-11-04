@@ -385,7 +385,11 @@ async def test_restricted_file_and_variable_operations_release_single_connection
     monkeypatch.setattr("langflow.services.authorization.guards.get_authorization_service", lambda: plugin)
     monkeypatch.setattr("langflow.services.authorization.fetch.get_authorization_service", lambda: plugin)
     monkeypatch.setattr("langflow.services.deps.get_authorization_service", lambda: plugin)
-    storage = SimpleNamespace(get_file=read_storage, delete_file=delete_storage)
+    storage = SimpleNamespace(
+        get_file=read_storage,
+        get_file_size=AsyncMock(return_value=7),
+        delete_file=delete_storage,
+    )
     previous = get_current_auth_context()
     set_current_auth_context(AuthCredentialContext(method="api_key", api_key_id=uuid4(), api_key_restricted=True))
     try:
@@ -426,7 +430,7 @@ async def test_restricted_file_and_variable_operations_release_single_connection
                 if operation.startswith("flow_read"):
                     await files_v1.get_readable_flow(loaded, active_user, session)
                 else:
-                    await files_v1.delete_file("file.txt", loaded, active_user, storage)
+                    await files_v1.delete_file("file.txt", loaded, current_user=active_user, storage_service=storage)
             await session.commit()
     finally:
         set_current_auth_context(previous)

@@ -26,7 +26,9 @@ This module restricts that environment:
   attributes that are invisible to the AST, and it rejects literal replacement-field
   templates that reach into a dunder regardless of which formatter ultimately consumes
   them.
-* :func:`import_allowed_module` wraps each allow-listed module in :class:`_ModuleProxy`
+* :func:`import_allowed_module` limits in-process Global Imports to ``math``,
+  ``json`` and ``statistics`` before importing them. Other modules require an
+  isolated sandbox. Accepted modules are wrapped in :class:`_ModuleProxy`
   before it is injected into the exec globals. Module-granularity trust is unsound in
   Python: a module object transitively exposes its entire import graph through ordinary
   public attributes, so e.g. ``json.codecs.sys.modules["os"]`` (also ``re.enum.sys``,
@@ -195,9 +197,8 @@ _FORMAT_FIELD_DUNDER_RE = re.compile(r"\{[^{}]*__")
 # typing.sys and numpy.sys all bind ``sys`` at top level, and from there
 # ``sys.modules["os"]`` is a one-step direct hit. These chains use no dunder and no
 # blocked AST attribute, so the gate cannot see them; _ModuleProxy refuses these names
-# instead. Note this intentionally does NOT block the top-level allow-listed module
-# itself: allow-listing ``os`` in Global Imports remains an explicit (trusted) admin
-# choice — what is closed here is *transitive* exposure through an unrelated module.
+# instead. Explicit Global Imports are separately restricted to a small safe set
+# before importing on the host.
 _BLOCKED_MODULE_ATTRIBUTES = frozenset(
     {
         # Module system / interpreter internals: reaching these reaches sys.modules.
@@ -238,6 +239,13 @@ _BLOCKED_MODULE_ATTRIBUTES = frozenset(
         "enum",
     }
 )
+
+
+# Global Imports is user-controlled. A denylist cannot enumerate every module
+# that executes code or accesses the host (including import-time side effects).
+# Keep the in-process surface small and require the existing isolated sandbox
+# for every other exact module name, including dotted submodules.
+_SAFE_GLOBAL_IMPORT_MODULES = frozenset({"math", "json", "statistics"})
 
 
 class _ModuleProxy:
@@ -291,8 +299,17 @@ def import_allowed_module(name: str) -> tuple[str, _ModuleProxy]:
         wrapping the module so its transitive import graph stays out of the sandbox.
 
     Raises:
+        ValueError: If the requested module requires isolated sandbox execution.
         ImportError: If the module cannot be imported.
     """
+    # Check the exact name before importing because module initialization runs on the host.
+    # Sandbox execution uses a guest-side import preamble instead of this helper.
+    if name not in _SAFE_GLOBAL_IMPORT_MODULES:
+        msg = (
+            f"Module {name!r} is not allowed in Global Imports for in-process Python execution. "
+            "Configure LANGFLOW_SANDBOX_BACKEND to use this module in isolation."
+        )
+        raise ValueError(msg)
     module = importlib.import_module(name)
     return module.__name__, _ModuleProxy(module)
 
