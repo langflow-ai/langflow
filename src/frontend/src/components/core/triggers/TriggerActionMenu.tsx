@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
@@ -120,11 +120,30 @@ export function TriggerActionMenu({
   const { t } = useTranslation();
   const serverActions = actionsOf(trigger, MENU_ACTIONS);
   const deletion = actionsOf(trigger, ["delete"])[0];
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const chosen = useRef<TriggerUiAction | null>(null);
+  const choose = (action: TriggerUiAction) => {
+    chosen.current = action;
+  };
+
+  // An action runs only once the menu has closed and focus is back on its
+  // button. A drawer or dialog it opens then records that button as its
+  // opener and returns focus to it on Escape, rather than to a menu item that
+  // no longer exists (WCAG 2.4.3).
+  const runChosen = (event: Event) => {
+    const action = chosen.current;
+    chosen.current = null;
+    if (action === null) return;
+    event.preventDefault();
+    menuButton.current?.focus();
+    onAction(trigger, action);
+  };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
+          ref={menuButton}
           variant="ghost"
           size="iconMd"
           disabled={busy}
@@ -138,23 +157,24 @@ export function TriggerActionMenu({
           />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[14rem]">
+      <DropdownMenuContent
+        align="end"
+        className="min-w-[14rem]"
+        onCloseAutoFocus={runChosen}
+      >
         <MenuAction
           action="view_events"
-          onSelect={() => onAction(trigger, "view_events")}
+          onSelect={() => choose("view_events")}
         />
         {showOpenFlow && (
-          <MenuAction
-            action="open_flow"
-            onSelect={() => onAction(trigger, "open_flow")}
-          />
+          <MenuAction action="open_flow" onSelect={() => choose("open_flow")} />
         )}
         {serverActions.map(({ action, blockedReason }) => (
           <MenuAction
             key={action}
             action={action}
             blockedReason={blockedReason}
-            onSelect={() => onAction(trigger, action)}
+            onSelect={() => choose(action)}
           />
         ))}
         {deletion && (
@@ -164,7 +184,7 @@ export function TriggerActionMenu({
               action="delete"
               destructive
               blockedReason={deletion.blockedReason}
-              onSelect={() => onAction(trigger, "delete")}
+              onSelect={() => choose("delete")}
             />
           </>
         )}
