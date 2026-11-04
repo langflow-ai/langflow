@@ -65,6 +65,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
 
     @pytest.mark.parametrize("dtype", ["Int64", "Float64", "boolean", "string"])
     def test_parse_dataframe_nullable_value(self, component_class, dtype):
+        """Pair with the numeric-only test to preserve both sides of legacy row coercion."""
         dataframe = DataFrame({"value": pd.Series([pd.NA], dtype=dtype), "label": ["row"]})
         component = component_class(input_data=dataframe, pattern="{value} {label}")
 
@@ -73,6 +74,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
     @pytest.mark.parametrize("dtype", ["Int64", "Float64"])
     @pytest.mark.parametrize("pattern", ["{value}", "{value:.2f}"])
     def test_parse_dataframe_numeric_nullable_value(self, component_class, dtype, pattern):
+        """Pair with the mixed-row test to retain legacy numeric nan rendering for this patch."""
         dataframe = DataFrame({"value": pd.Series([pd.NA], dtype=dtype)})
         component = component_class(input_data=dataframe, pattern=pattern)
 
