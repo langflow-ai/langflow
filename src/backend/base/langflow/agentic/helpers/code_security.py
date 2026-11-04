@@ -2071,6 +2071,20 @@ class _SecurityChecker(ast.NodeVisitor):
             self._restore_alias_state(enclosing_state)
         self._bind_name(node.name, frozenset())
 
+    def visit_MatchClass(self, node: ast.MatchClass):
+        """Require explicit permitted attributes in class patterns."""
+        # Positional patterns resolve attributes through the pattern class's assignable __match_args__.
+        # Relaxing this guard also requires restricting those assignments.
+        if node.patterns:
+            self.violations.append(
+                "Positional class patterns are not allowed in saved Python Interpreter, Python REPL, "
+                "or Lambda Filter code. Use keyword patterns with named attributes instead."
+            )
+        for attr in node.kwd_attrs:
+            if _is_blocked_attribute(attr):
+                self.violations.append(f"Access to '{attr}' is forbidden in components (sandbox escape)")
+        return self.generic_visit(node)
+
     def visit_Attribute(self, node: ast.Attribute):
         """Check attribute access: dunder escapes, os.environ, urllib.request, ..."""
         if isinstance(node.ctx, ast.Store) and node.attr == "allow_pickle":
