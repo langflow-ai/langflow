@@ -522,26 +522,36 @@ class TestAutoConfigureStarterProjectsMcp:
                 settings_service.settings.add_projects_to_mcp_servers = original_setting
 
     @pytest.mark.parametrize(
-        ("skip_auth", "superuser", "explicit_public", "existing_server", "expects_key"),
+        ("skip_auth", "superuser", "explicit_public", "existing_server", "expects_key", "key_state"),
         [
-            (False, "owner", False, False, True),
-            (False, "owner", False, True, True),
-            (True, "", False, False, True),
-            (True, "owner", False, False, False),
-            (True, "other", False, False, True),
-            (True, "other", False, True, True),
-            (False, "owner", True, False, False),
+            (False, "owner", False, False, True, None),
+            (False, "owner", False, True, True, None),
+            (True, "", False, False, True, None),
+            (True, "owner", False, False, False, None),
+            (True, "other", False, False, True, None),
+            (True, "other", False, True, True, None),
+            (False, "owner", True, False, False, None),
+            (False, "owner", False, True, True, "orphan"),
+            (False, "owner", False, False, True, "orphan"),
+            (False, "owner", False, True, True, "valid"),
+            (False, "owner", False, True, True, "inactive"),
+            (False, "owner", False, True, True, "expired"),
+            (False, "owner", False, True, True, "deleted"),
+            (False, "owner", False, True, True, "foreign"),
+            (False, "owner", False, True, True, "legacy"),
         ],
     )
     async def test_starter_server_matches_auto_login_credentials(
         self,
         sample_user_with_starter_project,
+        active_user,
         monkeypatch,
         skip_auth,
         superuser,
         explicit_public,
         existing_server,
         expects_key,
+        key_state,
     ):
         from langflow.api.utils.mcp.config_utils import get_project_streamable_http_url
         from langflow.api.v1.mcp_projects import verify_project_auth
@@ -579,6 +589,28 @@ class TestAutoConfigureStarterProjectsMcp:
         async with session_scope() as session:
             stored_user = await session.get(User, user.id)
             stored_user.is_active = True
+            if key_state:
+                from datetime import datetime, timedelta, timezone
+
+                from langflow.services.database.models.api_key.crud import create_api_key
+                from langflow.services.database.models.api_key.model import ApiKeyCreate
+
+                previous = await create_api_key(
+                    session,
+                    ApiKeyCreate(name=f"MCP Project {DEFAULT_FOLDER_NAME} - {user.username}"),
+                    active_user.id if key_state == "foreign" else user.id,
+                )
+                stored_key = await session.get(ApiKey, previous.id)
+                if key_state == "inactive":
+                    stored_key.is_active = False
+                elif key_state == "expired":
+                    stored_key.expires_at = datetime.now(timezone.utc) - timedelta(days=1)
+                elif key_state == "deleted":
+                    await session.delete(stored_key)
+                elif key_state == "legacy":
+                    stored_key.api_key_hash = None
+                if key_state != "orphan":
+                    configs[folder.id]["args"][-1:-1] = ["--headers", "x-api-key", previous.api_key]
             if explicit_public:
                 stored_folder = await session.get(Folder, folder.id)
                 stored_folder.auth_settings = {"auth_type": "none"}
@@ -595,8 +627,11 @@ class TestAutoConfigureStarterProjectsMcp:
 
         args = configs[folder.id]["args"]
         assert ("x-api-key" in args) is expects_key
-        assert len(keys_after) == len(keys_before) == int(expects_key)
+        expected_count = 2 if key_state in {"inactive", "expired"} else int(expects_key)
+        assert len(keys_after) == len(keys_before) == expected_count
         api_key = args[args.index("x-api-key") + 1] if expects_key else None
+        if key_state:
+            assert (api_key == previous.api_key) is (key_state in {"orphan", "valid", "legacy"})
         authenticated_user = await verify_project_auth(folder.id, query_param=None, header_param=api_key)
         assert authenticated_user.id == user.id
 
