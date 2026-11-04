@@ -503,3 +503,215 @@ async def test_missing_linked_report_never_changes_selected_flows(client, active
 
     assert applied.status_code == 404
     assert await _read(flow_id) == before
+
+
+@pytest.mark.parametrize("policy_kind", ["custom", "catalog"])
+async def test_custom_and_catalog_policy_denials_are_not_malformed_flows(
+    client, active_user, repair_admin, monkeypatch, policy_kind
+):
+    from lfx.utils.flow_validation import CatalogPolicyValidationError, CustomComponentValidationError
+
+    _actor, headers = repair_admin
+    flow_id = await _flow(active_user.id)
+    payload = await _preview(client, headers, flow_id)
+    before = await _read(flow_id)
+    error_type = CatalogPolicyValidationError if policy_kind == "catalog" else CustomComponentValidationError
+
+    async def deny(*_args, **_kwargs):
+        msg = "fixture owner policy denial"
+        raise error_type(msg)
+
+    monkeypatch.setattr(service, "validate_owner_policy", deny)
+    preview = await client.post(PREVIEW, json={"flow_ids": [str(flow_id)]}, headers=headers)
+    assert preview.status_code == 200
+    assert preview.json()["results"][0]["reason_codes"] == ["owner_policy_denied"]
+    await _freeze(client, headers)
+    applied = await client.post(APPLY, json=payload, headers=headers)
+    assert applied.status_code == 200
+    assert applied.json()["results"][0]["reason_codes"] == ["owner_policy_denied"]
+    assert await _read(flow_id) == before
+
+
+def _delegated_repair_fixture(kind, *, override=None, selection=None):
+    from tests.unit.services.flow_repair.test_provider_selection import delegated_fixture
+
+    saved, entries = delegated_fixture(kind, selection=selection, override=override)
+    entry = entries[kind]
+    entry["template"]["code"] = {"type": "code", "value": "target source"}
+    entry["outputs"] = []
+    info = saved["nodes"][0]["data"]["node"]
+    info["template"]["code"] = {"type": "code", "value": "saved source"}
+    info["outputs"] = []
+    return saved, {"models": {kind: entry}}
+
+
+@pytest.mark.parametrize("kind", ["LanguageModelComponent", "EmbeddingModelComponent"])
+@pytest.mark.parametrize("override", [None, "Anthropic"])
+@pytest.mark.parametrize("allowed", [True, False])
+@pytest.mark.parametrize("nested", [False, True])
+async def test_delegated_repairs_enforce_actual_owner_policy_without_hydration(
+    client, active_user, repair_admin, monkeypatch, kind, override, allowed, nested
+):
+    from importlib.metadata import version
+
+    from langflow.services.database.models.folder.model import Folder
+    from langflow.services.flow_repair import policy
+    from langflow.utils.version import get_version_info
+    from lfx.base.models.unified_models import credentials
+    from lfx.custom.custom_component.component import Component
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicySnapshot,
+        current_model_provider_policy_context,
+    )
+
+    actor_id, headers = repair_admin
+    data, target = _delegated_repair_fixture(kind, override=override)
+    if nested:
+        data = {"nodes": [{"id": "model-group", "data": {"node": {"flow": {"data": data}}}}], "edges": []}
+    workspace_id = uuid4()
+    async with session_scope() as session:
+        folder = Folder(name=f"delegated-owner-{uuid4()}", user_id=active_user.id, workspace_id=workspace_id)
+        session.add(folder)
+        await session.flush()
+        folder_id = folder.id
+    flow_id = await _flow(active_user.id, data=data, folder_id=folder_id, workspace_id=workspace_id)
+    before = await _read(flow_id)
+    report_id, _original = await _import_report(client, headers)
+    calls = []
+
+    async def load():
+        return target
+
+    async def resolve(*, user_id, providers, purpose):
+        context = current_model_provider_policy_context()
+        calls.append((user_id, dict(context.attributes), frozenset(providers)))
+        return ModelProviderPolicySnapshot(
+            context=ModelProviderPolicyContext(user_id=user_id, attributes=context.attributes),
+            purpose=purpose,
+            candidate_provider_ids=frozenset(providers),
+            allowed_provider_ids=frozenset(providers) if allowed else frozenset(),
+        )
+
+    def no_hydration(*_args, **_kwargs):
+        msg = "static repair must not construct a component or resolve credentials"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr(service, "target_registry", load)
+    monkeypatch.setattr(policy, "aresolve_model_provider_policy", resolve)
+    monkeypatch.setattr(Component, "__init__", no_hydration)
+    monkeypatch.setattr(credentials, "get_api_key_for_provider", no_hydration)
+    monkeypatch.setattr(credentials, "get_all_variables_for_provider", no_hydration)
+    preview = await client.post(PREVIEW, json={"flow_ids": [str(flow_id)], "report_id": report_id}, headers=headers)
+    assert preview.status_code == 200, preview.text
+    body = preview.json()
+    assert body["target_version"] == get_version_info()["version"]
+    assert body["lfx_version"] == version("lfx")
+    [result] = body["results"]
+    assert result["status"] == ("ready" if allowed else "manual"), result
+    await _freeze(client, headers)
+    response = await client.post(
+        APPLY,
+        json={
+            "target_sha256": body["target_sha256"],
+            "report_id": report_id,
+            "flows": [
+                {
+                    "flow_id": str(flow_id),
+                    "version_token": str(before[0]["version_token"]),
+                    "data_sha256": data_digest(data),
+                }
+            ],
+        },
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    [applied] = response.json()["results"]
+    assert applied["status"] == ("updated" if allowed else "manual"), applied
+    provider = "anthropic" if override else "openai"
+    assert (
+        calls
+        == [
+            (
+                active_user.id,
+                {
+                    "is_superuser": False,
+                    "project_id": folder_id,
+                    "workspace_id": workspace_id,
+                    "provider_scope_required": True,
+                },
+                frozenset({provider}),
+            )
+        ]
+        * 2
+    )
+    assert active_user.id != actor_id
+    if not allowed:
+        assert applied["reason_codes"] == ["owner_policy_denied"]
+        assert await _read(flow_id) == before
+        history = (await client.get(f"/api/v1/upgrade-reports/{report_id}/repairs", headers=headers)).json()
+        assert [row["result"]["status"] for row in history["items"]] == ["manual"]
+
+
+@pytest.mark.parametrize("dynamic", ["unknown", "malformed", "connected", "variable", "provider_variable", "override"])
+async def test_unverifiable_delegated_selection_is_explicit_and_never_writes(
+    client, active_user, repair_admin, monkeypatch, dynamic
+):
+    from langflow.services.flow_repair import policy
+    from lfx.base.models.unified_models import credentials
+
+    _actor, headers = repair_admin
+    data, target = _delegated_repair_fixture("LanguageModelComponent")
+    template = data["nodes"][0]["data"]["node"]["template"]
+    if dynamic == "unknown":
+        template["model"]["value"] = [{"provider": "Unknown Provider", "name": "fixture"}]
+    elif dynamic == "malformed":
+        template["model"]["value"] = [{"provider": 123}]
+    elif dynamic == "connected":
+        data["edges"] = [{"target": data["nodes"][0]["id"], "data": {"targetHandle": {"fieldName": "model"}}}]
+    elif dynamic == "variable":
+        template["model"]["load_from_db"] = True
+    elif dynamic == "provider_variable":
+        template["provider"].update(value="provider-reference", load_from_db=True)
+    else:
+        template["provider"]["value"] = ["Anthropic"]
+    flow_id = await _flow(active_user.id, data=data)
+    before = await _read(flow_id)
+
+    async def load():
+        return target
+
+    async def not_resolved(**_kwargs):
+        msg = "an unverified selector cannot reach policy or credential resolution"
+        raise AssertionError(msg)
+
+    def no_credentials(*_args, **_kwargs):
+        msg = "static repair cannot resolve credentials"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr(service, "target_registry", load)
+    monkeypatch.setattr(policy, "aresolve_model_provider_policy", not_resolved)
+    monkeypatch.setattr(credentials, "get_api_key_for_provider", no_credentials)
+    response = await client.post(PREVIEW, json={"flow_ids": [str(flow_id)]}, headers=headers)
+    assert response.status_code == 200
+    [result] = response.json()["results"]
+    assert result["status"] == "manual", result
+    assert result["reason_codes"] == ["provider_selection_unverifiable"]
+    await _freeze(client, headers)
+    applied = await client.post(
+        APPLY,
+        json={
+            "target_sha256": response.json()["target_sha256"],
+            "flows": [
+                {
+                    "flow_id": str(flow_id),
+                    "version_token": str(before[0]["version_token"]),
+                    "data_sha256": data_digest(data),
+                }
+            ],
+        },
+        headers=headers,
+    )
+    assert applied.status_code == 200
+    assert applied.json()["results"][0]["reason_codes"] == ["provider_selection_unverifiable"]
+    assert await _read(flow_id) == before

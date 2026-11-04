@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 from datetime import datetime, timezone
+from importlib.metadata import PackageNotFoundError, version
 from typing import TYPE_CHECKING, Any, Literal
 from uuid import UUID, uuid4
 
@@ -25,8 +26,10 @@ from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.flow_repair.models import RepairBatchResult, RepairResult, RepairSelection
 from langflow.services.flow_repair.planning import RepairPlan, data_digest, plan_flow_repair
 from langflow.services.flow_repair.policy import authorize_flow, require_admin, validate_owner_policy
+from langflow.services.flow_repair.providers import ProviderSelectionUnverifiableError
 from langflow.services.flow_repair.retention import REPAIR_RETENTION_REASON
 from langflow.services.maintenance.state import maintenance_status
+from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -121,15 +124,31 @@ def _failed_result(flow_id: UUID, exc: Exception) -> RepairResult:
         )
     if isinstance(exc, ImportError):
         return RepairResult(flow_id=flow_id, status="failed", reason_codes=["repair_prerequisite_unavailable"])
-    if isinstance(exc, ValueError | TypeError):
-        return RepairResult(flow_id=flow_id, status="manual", reason_codes=["malformed_flow"])
+    if isinstance(exc, ProviderSelectionUnverifiableError):
+        return RepairResult(flow_id=flow_id, status="manual", reason_codes=["provider_selection_unverifiable"])
     if isinstance(exc, PermissionError | CustomComponentValidationError):
         return RepairResult(flow_id=flow_id, status="manual", reason_codes=["owner_policy_denied"])
+    if isinstance(exc, ValueError | TypeError):
+        return RepairResult(flow_id=flow_id, status="manual", reason_codes=["malformed_flow"])
     if isinstance(exc, SQLAlchemyError) and is_database_lock_error(exc):
         return RepairResult(flow_id=flow_id, status="conflict", reason_codes=["database_busy"])
     if isinstance(exc, SQLAlchemyError):
         return RepairResult(flow_id=flow_id, status="failed", reason_codes=["database_unavailable"])
     return RepairResult(flow_id=flow_id, status="failed", reason_codes=["repair_failed"])
+
+
+def _batch_result(fingerprint: str, results: list[RepairResult]) -> RepairBatchResult:
+    info = get_version_info()
+    try:
+        lfx_version = version("lfx")
+    except PackageNotFoundError:
+        lfx_version = None
+    return RepairBatchResult(
+        target_sha256=fingerprint,
+        target_version=info["version"] if info is not None else None,
+        lfx_version=lfx_version,
+        results=results,
+    )
 
 
 async def preview_repairs(payload: RepairPreviewRequest, actor_id: UUID) -> RepairBatchResult:
@@ -146,7 +165,7 @@ async def preview_repairs(payload: RepairPreviewRequest, actor_id: UUID) -> Repa
         except Exception as exc:  # noqa: BLE001
             result = _failed_result(flow_id, exc)
         results.append(result)
-    return RepairBatchResult(target_sha256=fingerprint, results=results)
+    return _batch_result(fingerprint, results)
 
 
 async def _write_selected(
@@ -252,4 +271,4 @@ async def apply_repairs(payload: RepairApplyRequest, actor_id: UUID) -> RepairBa
                 except Exception:  # noqa: BLE001
                     result.reason_codes.append("outcome_record_unavailable")
         results.append(result)
-    return RepairBatchResult(target_sha256=fingerprint, results=results)
+    return _batch_result(fingerprint, results)

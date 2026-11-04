@@ -11,7 +11,8 @@ The request cannot supply a graph, component source, or a repair result.
 
 Send `POST /api/v1/upgrade-repairs/preview` with `flow_ids` and an optional imported `report_id`.
 Each request selects between 1 and 100 distinct flow IDs.
-The response contains a target registry fingerprint and one result for each selected flow.
+The response contains the installed Langflow and LFX versions, a target registry fingerprint, and one result for each selected flow.
+These installed versions describe the code used for repair, independently of an imported report's target metadata.
 Preview does not change any flow or create a recovery version.
 
 A ready result includes `flow_id`, `version_token`, `data_sha256`, and the number of nodes that can update.
@@ -59,6 +60,9 @@ Nodes marked `edited=true` stay unchanged.
 Manual cases include locked flows, file-backed flows, missing owners, malformed graphs, duplicate node IDs, and breaking or unavailable component contracts.
 File-backed flows require a separate update of their external source files.
 Dynamic fields whose update cannot be verified remain manual.
+Delegated model inputs and provider overrides are checked under the stored owner's policy.
+Unknown, malformed, connected, or global-variable provider selections return `provider_selection_unverifiable` and require manual review.
+No input is hydrated to resolve that uncertainty.
 The existing conservative static MCP classification still applies.
 A missing prerequisite or unavailable database is reported as a failure rather than an authorization denial.
 

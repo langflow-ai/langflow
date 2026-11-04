@@ -60,4 +60,6 @@ class RepairResult(BaseModel):
 
 class RepairBatchResult(BaseModel):
     target_sha256: str
+    target_version: str | None = None
+    lfx_version: str | None = None
     results: list[RepairResult]

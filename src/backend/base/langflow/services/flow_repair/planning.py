@@ -117,7 +117,7 @@ def plan_flow_repair(data: dict[str, Any], all_types: Mapping[str, Any]) -> Repa
         if len(set(ids)) != len(ids):
             return RepairPlan(reason_codes=["duplicate_node_id"])
         report = check_flow_compatibility(data, all_types)
-        unsafe = sorted(
+        unsafe: list[str] = sorted(
             {node.status for node in report.nodes if node.status in {"blocked", "retired", "outdated_breaking"}}
         )
         if unsafe:

@@ -12,6 +12,7 @@ from lfx.utils.flow_validation import prepare_flow_build_for_user_from_cache, va
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_auth_service, get_catalog_policy_service
+from langflow.services.flow_repair.providers import component_provider_ids
 from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 
 if TYPE_CHECKING:
@@ -45,17 +46,7 @@ async def authorize_flow(session: AsyncSession, flow: Flow, actor: User) -> User
 
 
 def _component_providers(graph: dict, registry: Mapping[str, dict]) -> set[str]:
-    providers = set()
-    for node in graph.get("nodes", []):
-        data = node.get("data", {})
-        entry = registry.get(data.get("type"), {})
-        provider = (entry.get("metadata") or {}).get("model_provider_id")
-        if isinstance(provider, str) and provider:
-            providers.add(provider)
-        nested = (data.get("node") or {}).get("flow", {}).get("data")
-        if nested:
-            providers.update(_component_providers(nested, registry))
-    return providers
+    return component_provider_ids(graph, registry)
 
 
 async def validate_owner_policy(flow: Flow, owner: User, updated: dict, all_types: Mapping[str, Any]) -> None:
