@@ -95,6 +95,14 @@ async def test_tts_error_is_raised_without_leaking_the_key() -> None:
     assert API_KEY not in str(info.value)
 
 
+@respx.mock
+async def test_tts_redirect_is_an_error_not_audio() -> None:
+    respx.post(TTS_URL).mock(return_value=httpx.Response(307, content=b"moved"))
+
+    with pytest.raises(ValueError, match="HTTP 307"):
+        await _tts().synthesize()
+
+
 async def test_tts_requires_key_and_text() -> None:
     with pytest.raises(ValueError, match="API Key is required"):
         await _tts(api_key="").synthesize()
@@ -172,6 +180,16 @@ async def test_stt_error_and_missing_audio() -> None:
         await _stt().transcribe_message()
     with pytest.raises(ValueError, match="between 1 and 32"):
         await _stt(audio_data=audio, diarize=True, num_speakers=99).transcribe_message()
+
+
+@respx.mock
+async def test_stt_redirect_is_an_error_not_a_transcript() -> None:
+    respx.post(STT_URL).mock(return_value=httpx.Response(307, json={"text": "not a transcript"}))
+    from lfx.schema.data import Data
+
+    audio = Data(data={"audio_base64": base64.b64encode(_wav()).decode()})
+    with pytest.raises(ValueError, match="HTTP 307"):
+        await _stt(audio_data=audio).transcribe_message()
 
 
 def test_modules_use_the_ssrf_guard() -> None:

@@ -142,7 +142,7 @@ class LokutorTextToSpeechComponent(Component):
         except httpx.RequestError as e:
             msg = f"Lokutor request failed: {type(e).__name__}: {e}"
             raise ValueError(msg) from e
-        if response.status_code >= httpx.codes.BAD_REQUEST:
+        if not response.is_success:
             raise ValueError(error_message(response))
         audio = response.content
         if not audio:
