@@ -43,6 +43,7 @@ from lfx.services.variable.request_scope import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from types import ModuleType
 
 # Attempt to import tomllib (3.11+) else fall back to tomli
@@ -782,6 +783,21 @@ def safe_filename(name: str) -> str:
     """Convert a flow name to a safe filesystem basename (no extension)."""
     safe = "".join(c if c.isalnum() or c in "-_ " else "_" for c in name)
     return safe.strip().replace(" ", "_")
+
+
+def validate_unique_flow_filenames(flow_names: Iterable[str]) -> None:
+    """Reject batches that would write more than one flow to the same file."""
+    names_by_filename: dict[str, str] = {}
+    for name in flow_names:
+        filename = f"{safe_filename(name)}.json"
+        if filename in names_by_filename:
+            previous_name = names_by_filename[filename]
+            msg = (
+                f"Flows {previous_name!r} and {name!r} both map to {filename!r}. "
+                "Rename a flow or use --flow-id with separate output directories."
+            )
+            raise typer.BadParameter(msg)
+        names_by_filename[filename] = name
 
 
 def extract_script_docstring(script_path: Path) -> str | None:
