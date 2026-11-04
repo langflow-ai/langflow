@@ -243,6 +243,7 @@ READS = frozenset(
         "/api/v1/task/{_task_id}",
         "/api/v1/triggers",
         "/api/v1/triggers/ingress/{provider}/{public_id}",
+        "/api/v1/triggers/sessions",
         "/api/v1/triggers/{trigger_id}",
         "/api/v1/triggers/{trigger_id}/events",
         "/api/v1/triggers/{trigger_id}/ingress",

@@ -50,6 +50,7 @@ from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service
 from langflow.services.triggers.capabilities import NO_ACCESS, TriggerCaller, trigger_capabilities
 from langflow.services.triggers.connection_recovery import as_utc, connection_failure
+from langflow.services.triggers.error_codes import last_error_code
 from langflow.services.triggers.ownership import is_owned_by
 
 if TYPE_CHECKING:
@@ -158,6 +159,7 @@ async def present(
             TriggerRead.model_validate(row).model_copy(
                 update={
                     "reason": caps.reason,
+                    "last_error_code": last_error_code(row.last_error),
                     "allowed_actions": list(caps.allowed_actions),
                     "blocked_actions": dict(caps.blocked_actions),
                     "flow_name": flow.name if with_flow_name else None,
@@ -235,7 +237,7 @@ async def present_one(session: AsyncSession, user: User | UserRead, row: Trigger
     """
     flow = await session.get(Flow, row.flow_id)
     if flow is None:  # pragma: no cover - the FK cascade deletes the trigger with its flow
-        return TriggerRead.model_validate(row)
+        return TriggerRead.model_validate(row).model_copy(update={"last_error_code": last_error_code(row.last_error)})
     (response,) = await present(session, [(row, flow, None)], user, with_flow_name=False)
     return response
 
