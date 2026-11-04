@@ -94,6 +94,112 @@ def _target_env(dockerfile: Path, target: str | None = None) -> dict[str, str]:
     return stage_envs[(target or final_stage).lower()]
 
 
+def _stage_instructions(dockerfile: Path) -> dict[str, list[str]]:
+    """Group logical instructions by their named Docker build stage."""
+    stages: dict[str, list[str]] = {}
+    current_stage = ""
+    for instruction in _logical_instructions(dockerfile):
+        tokens = shlex.split(instruction)
+        if tokens[0].upper() == "FROM":
+            as_index = next((index for index, token in enumerate(tokens) if token.upper() == "AS"), None)
+            current_stage = tokens[as_index + 1].lower() if as_index is not None else f"__stage_{len(stages)}"
+            stages[current_stage] = []
+        if current_stage:
+            stages[current_stage].append(instruction)
+    return stages
+
+
+def _inherited_instructions(dockerfile: Path, target: str | None = None) -> list[str]:
+    """Return a target's instructions after those inherited from its base stages."""
+    stages = _stage_instructions(dockerfile)
+    _, stage_bases, final_stage = _dockerfile_stages(dockerfile)
+    ancestors = [target or final_stage]
+    while stage_bases[ancestors[-1]] in stages:
+        ancestors.append(stage_bases[ancestors[-1]])
+    return [instruction for stage in reversed(ancestors) for instruction in stages[stage]]
+
+
+def test_lxml_rebuild_ignores_cached_wheels_and_existing_installations() -> None:
+    """Require an uncached source reinstall rather than trusting cached lxml wheels."""
+    helper = REPO_ROOT / "docker" / "build_lxml.sh"
+    tokens = shlex.split(" ".join(_logical_instructions(helper)))
+    assert {"--no-cache", "--no-deps", "--force-reinstall", "--no-binary"}.issubset(tokens)
+    assert tokens[tokens.index("--no-binary") + 1] == "lxml"
+
+
+@pytest.mark.parametrize(
+    ("dockerfile", "final_builders"),
+    [
+        ("build_and_push.Dockerfile", ("base-builder", "full-builder", "full-bundles-builder")),
+        ("build_and_push_backend.Dockerfile", ("builder",)),
+        ("build_and_push_ep.Dockerfile", ("builder",)),
+    ],
+)
+def test_published_image_builders_rebuild_lxml_after_dependency_installs(
+    dockerfile: str, final_builders: tuple[str, ...]
+) -> None:
+    """Keep cached or restored wheels from bypassing the final lxml rebuild."""
+    path = REPO_ROOT / "docker" / dockerfile
+    stages = _stage_instructions(path)
+
+    for final_builder in final_builders:
+        builder_instructions = _inherited_instructions(path, final_builder)
+        assert any(
+            instruction.startswith("COPY ") and "docker/build_lxml.sh /tmp/build_lxml.sh" in instruction
+            for instruction in builder_instructions
+        )
+        builder_tokens = shlex.split(" ".join(builder_instructions))
+        assert {"libxml2-devel", "libxslt-devel"}.issubset(builder_tokens)
+        instructions = "\n".join(stages[final_builder])
+        rebuild = instructions.rfind("sh /tmp/build_lxml.sh")
+        assert rebuild >= 0, f"{dockerfile} {final_builder} must rebuild lxml"
+        installs = [
+            instructions.rfind(command)
+            for command in ("uv sync", "uv pip install", "python3.14 /tmp/install_release_wheels.py")
+        ]
+        assert max(installs) >= 0, f"{dockerfile} {final_builder} must install dependencies"
+        assert rebuild > max(installs), f"{dockerfile} {final_builder} rebuilds lxml before its final install"
+
+
+@pytest.mark.parametrize(("dockerfile", "target"), PUBLISHED_IMAGES)
+def test_published_images_verify_lxml_after_copying_the_environment(dockerfile: str, target: str | None) -> None:
+    """Check shared XML libraries and exercise lxml in every assembled runtime."""
+    path = REPO_ROOT / "docker" / dockerfile
+    instructions = _inherited_instructions(path, target)
+    runtime_tokens = shlex.split(" ".join(instructions))
+    assert {"libxml2", "libxslt"}.issubset(runtime_tokens)
+    assert any(
+        instruction.startswith("COPY ")
+        and "--chown=1000:0" in instruction
+        and "scripts/ci/verify_lxml_runtime.py /tmp/verify_lxml_runtime.py" in instruction
+        for instruction in instructions
+    )
+
+    source = "\n".join(instructions)
+    venv_copy = max(
+        source.rfind(instruction)
+        for instruction in instructions
+        if instruction.startswith("COPY ") and instruction.endswith("/app/.venv /app/.venv")
+    )
+    verification = source.rfind("/app/.venv/bin/python /tmp/verify_lxml_runtime.py")
+    removal = max(source.rfind("rm /tmp/verify_lxml_runtime.py"), source.rfind("rm -f /tmp/verify_lxml_runtime.py"))
+    assert verification > venv_copy
+    assert removal > verification
+
+
+def test_backend_image_lxml_pin_matches_the_release_lock() -> None:
+    """Keep the unlocked backend resolver on the same lxml version as other images."""
+    lock = tomllib.loads((REPO_ROOT / "uv.lock").read_text(encoding="utf-8"))
+    versions = {package["version"] for package in lock["package"] if package["name"] == "lxml"}
+    assert len(versions) == 1
+    pinned_requirement = f"lxml=={versions.pop()}"
+    instructions = _logical_instructions(REPO_ROOT / "docker" / "build_and_push_backend.Dockerfile")
+    assert any(
+        "uv pip install" in instruction and pinned_requirement in shlex.split(instruction)
+        for instruction in instructions
+    )
+
+
 @pytest.mark.parametrize(
     "dockerfile",
     sorted(
@@ -218,6 +324,7 @@ def test_full_target_checks_only_default_workspace_distributions() -> None:
 
 
 def test_published_images_pin_hardened_package_managers() -> None:
+    """Keep the installed package-manager versions and dependency checks aligned."""
     install_script = (REPO_ROOT / "docker" / "install_hardened_npm.sh").read_text(encoding="utf-8")
 
     assert 'NPM_VERSION="12.0.2"' in install_script
@@ -226,10 +333,10 @@ def test_published_images_pin_hardened_package_managers() -> None:
     assert 'if [ "$actual_npm_version" != "$NPM_VERSION" ]; then' in install_script
 
     for variable, version, package, validation_entry in (
-        ("IP_ADDRESS_VERSION", "10.7.1", "ip-address", '"ip-address": "10.7.1"'),
+        ("IP_ADDRESS_VERSION", "10.7.4", "ip-address", '"ip-address": "10.7.4"'),
         ("BRACE_EXPANSION_VERSION", "5.0.12", "brace-expansion", '"brace-expansion": "5.0.12"'),
         ("TAR_VERSION", "7.5.22", "tar", 'tar: "7.5.22"'),
-        ("UNDICI_VERSION", "6.28.1", "undici", 'undici: "6.28.1"'),
+        ("UNDICI_VERSION", "6.29.1", "undici", 'undici: "6.29.1"'),
     ):
         assert f'{variable}="{version}"' in install_script
         assert f'"{package}@${{{variable}}}"' in install_script
