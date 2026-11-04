@@ -3468,6 +3468,7 @@
   "settings.upgrade.reason.retired": "利用できないコンポーネントがあります。手動で置き換えてください。",
   "settings.upgrade.reason.preservation": "更新により保存された値や接続が失われる可能性があります。手動で修復してください。",
   "settings.upgrade.reason.customized": "カスタマイズされたノードは変更せず保持しました。",
+  "settings.upgrade.reason.providerSelection": "選択されたモデルプロバイダーを確認できませんでした。このフローを手動で確認してください。",
   "settings.upgrade.reason.owner": "所有者が利用できないため、コンテキストと認証情報を確認できませんでした。",
   "settings.upgrade.reason.managed": "このフローはロックされているかソースファイルで管理されています。通常の編集方法を使用してください。",
   "settings.upgrade.reason.unavailable": "必要なサービスが利用できません。復旧後に再度プレビューしてください。",

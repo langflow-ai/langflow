@@ -7,6 +7,7 @@ const categories: Record<string, string> = {
   duplicate_node_id: "invalid",
   blocked: "policy",
   owner_policy_denied: "policy",
+  provider_selection_unverifiable: "providerSelection",
   authorization_denied: "policy",
   retired: "retired",
   outdated_breaking: "preservation",

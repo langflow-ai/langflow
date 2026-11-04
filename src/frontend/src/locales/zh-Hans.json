@@ -3467,6 +3467,7 @@
   "settings.upgrade.reason.retired": "某个组件已不可用。请手动替换。",
   "settings.upgrade.reason.preservation": "更新可能丢失已保存的值或连接。请手动修复此流程。",
   "settings.upgrade.reason.customized": "自定义节点已保持不变。",
+  "settings.upgrade.reason.providerSelection": "无法验证所选的模型提供商。请手动检查此流程。",
   "settings.upgrade.reason.owner": "所有者不可用，无法验证其上下文和凭据。",
   "settings.upgrade.reason.managed": "此流程已锁定或由源文件管理。请通过常规编辑途径更新。",
   "settings.upgrade.reason.unavailable": "所需服务不可用。恢复后请重新预览。",

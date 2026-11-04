@@ -9,8 +9,10 @@ import { axe } from "@/utils/a11y-test";
 import UpgradeReportsPage from "..";
 import { history, preview, report } from "./fixture";
 
-function open(admin = true) {
-  useAuthStore.setState({ userData: { is_superuser: admin } as Users });
+function open(admin: boolean | null = true) {
+  useAuthStore.setState({
+    userData: admin === null ? null : ({ is_superuser: admin } as Users),
+  });
   const client = new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: 0 },
@@ -66,6 +68,51 @@ beforeEach(() => {
   }));
 });
 afterEach(() => jest.restoreAllMocks());
+
+it("waits for the signed-in profile before deciding admin access", async () => {
+  open(null);
+  expect(screen.queryByText("Home")).not.toBeInTheDocument();
+  expect(api.get).not.toHaveBeenCalled();
+  act(() => {
+    useAuthStore.setState({ userData: { is_superuser: true } as Users });
+  });
+  expect(
+    await screen.findByRole("heading", { name: "Upgrade reports" }),
+  ).toBeVisible();
+  expect(screen.queryByText("Home")).not.toBeInTheDocument();
+});
+
+it("explains unverifiable provider selection and requires manual review", async () => {
+  jest.spyOn(api, "post").mockResolvedValue({
+    data: {
+      ...preview,
+      results: [
+        {
+          ...preview.results[0],
+          status: "manual",
+          reason_codes: ["provider_selection_unverifiable"],
+        },
+      ],
+    },
+  });
+  open();
+  await userEvent.click(
+    await screen.findByRole("checkbox", {
+      name: "Select Customer support for preview",
+    }),
+  );
+  await userEvent.click(
+    screen.getByRole("button", { name: "Preview selected updates" }),
+  );
+  expect(
+    await screen.findByText(
+      "The selected model provider could not be verified. Review this flow manually.",
+    ),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: /Apply .* reviewed update/ }),
+  ).not.toBeInTheDocument();
+});
 
 it("redirects non-admins without reading reports", async () => {
   open(false);
