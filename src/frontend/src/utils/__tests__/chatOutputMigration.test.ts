@@ -3,8 +3,45 @@ import { resolve } from "node:path";
 import { cloneDeep } from "lodash";
 import type { APIClassType } from "@/types/api";
 import type { AllNodeType, EdgeType, GenericNodeType } from "@/types/flow";
+import { canMigrateChatOutputInput } from "../chat-output-migration";
 import { cleanEdges, scapeJSONParse } from "../reactflowUtils";
 import fixture from "./upgradeComponentEdgeLoss.fixture.json";
+
+type MigrationCase = {
+  name: string;
+  component_class_name: string | null;
+  field_name: string;
+  current_field: { type?: string; _input_type?: string };
+  saved_field: { type?: string; value?: unknown };
+  expected: boolean;
+};
+
+const migrationCases: {
+  defaults: Omit<MigrationCase, "name" | "expected">;
+  cases: (Partial<MigrationCase> & Pick<MigrationCase, "name" | "expected">)[];
+} = JSON.parse(
+  readFileSync(
+    resolve(
+      __dirname,
+      "../../../../lfx/tests/data/component_compat/chat_output_migration_cases.json",
+    ),
+    "utf8",
+  ),
+);
+
+describe("Chat Output shared migration contract", () => {
+  it.each(migrationCases.cases)("$name", (entry) => {
+    const c = { ...migrationCases.defaults, ...entry };
+    expect(
+      canMigrateChatOutputInput(
+        { metadata: { component_class_name: c.component_class_name } },
+        c.field_name,
+        c.current_field,
+        c.saved_field,
+      ),
+    ).toBe(c.expected);
+  });
+});
 
 const index = JSON.parse(
   readFileSync(
