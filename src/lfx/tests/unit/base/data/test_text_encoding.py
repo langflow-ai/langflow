@@ -56,6 +56,21 @@ async def test_automatic_legacy_encoding_is_reported(tmp_path, caplog, reader, c
     assert "specify an encoding" in caplog.text
 
 
+@pytest.mark.parametrize("reader", [read_text_file, read_text_file_async])
+async def test_automatic_windows_1254_is_used_when_detected(tmp_path, reader):
+    # Regression test for #15869: a genuine cp1254 (Turkish) file whose chardet
+    # guess is Windows-1254 must be decoded as cp1254, not silently as cp1252.
+    text = "Pijamalı hasta yağız şoföre çabucak güvendi.\n"  # noqa: RUF001
+    file_path = tmp_path / "turkish.txt"
+    file_path.write_bytes(text.encode("cp1254"))
+
+    result = reader(str(file_path))
+    if reader is read_text_file_async:
+        result = await result
+
+    assert result == text
+
+
 async def test_metadata_records_successful_fallback_not_detector_guess(tmp_path):
     file_path = tmp_path / "short.txt"
     # The trailing accented byte is invalid in ASCII, UTF-8, and GB18030.

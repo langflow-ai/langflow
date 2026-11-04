@@ -166,15 +166,30 @@ def _detect_encoding_with_fallbacks(raw_data: bytes) -> list[str]:
     result = chardet.detect(raw_data[:_CHARDET_SAMPLE_BYTES])
     detected_encoding = result.get("encoding") if result else None
 
-    if detected_encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:
+    # chardet frequently labels UTF-8 text as one of these legacy code pages, so
+    # UTF-8 is always tried first. When the file really is one of them, the
+    # detected guess must still be attempted (mapping the chardet name to its
+    # Python codec); otherwise a genuine Windows-1254 / MacRoman file is silently
+    # decoded as cp1252 and returns wrong characters (see issue #15869).
+    detected_codec = {
+        "Windows-1252": "cp1252",
+        "Windows-1254": "cp1254",
+        "MacRoman": "mac_roman",
+    }.get(detected_encoding)
+
+    if detected_codec is not None:
         # chardet reports one of these for many files that are utf-8 in reality, so
         # try utf-8 first. Its guesses also miss GB18030 four-byte characters,
         # which cp1252 would silently mangle. Include three trailing bytes so
         # a four-byte pattern can straddle the detection sample boundary.
         encodings: list[str] = ["utf-8"]
+        if detected_codec != "cp1252":
+            # Try the detected guess before the generic cp1252 fallback so a real
+            # Windows-1254 / MacRoman file is not decoded as cp1252.
+            encodings.append(detected_codec)
         if re.search(rb"[\x81-\xfe][0-9][\x81-\xfe][0-9]", raw_data[: _CHARDET_SAMPLE_BYTES + 3]):
             encodings.append("gb18030")
-        # Otherwise cp1252 must precede gb18030, which accepts some Windows
+        # cp1252 must precede gb18030, which accepts some Windows
         # punctuation as CJK characters. Both readers validate each candidate.
         encodings.append("cp1252")
     else:
