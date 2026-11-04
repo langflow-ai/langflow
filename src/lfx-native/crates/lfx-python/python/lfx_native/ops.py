@@ -42,6 +42,7 @@ from lfx_native._native import (
     strip_flow_table_row_keys,
     strip_row_keys,
     table_fields,
+    text_sha256,
     validate,
     values_equal,
 )
@@ -73,6 +74,7 @@ __all__ = [
     "strip_flow_table_row_keys",
     "strip_row_keys",
     "table_fields",
+    "text_sha256",
     "validate",
     "values_equal",
 ]

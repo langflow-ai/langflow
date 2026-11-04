@@ -1217,6 +1217,27 @@ fn repair<'py>(
 }
 
 /// The SHA-256 hex digest of a graph's canonical form.
+/// The SHA-256 hex digest of `text`, a `str` (as UTF-8) or `bytes`: what
+/// `hashlib.sha256(text.encode()).hexdigest()` gives, without the copy that
+/// `encode` makes while it holds the GIL. The UTF-8 bytes of an ASCII `str`,
+/// as JSON text is, are its own buffer. Large text is hashed without the GIL.
+#[pyfunction]
+fn text_sha256(py: Python<'_>, text: &Bound<'_, PyAny>) -> PyResult<String> {
+    let bytes = if let Ok(string) = text.cast::<PyString>() {
+        text_of(string)?.as_bytes()
+    } else if let Ok(bytes) = text.cast::<PyBytes>() {
+        bytes.as_bytes()
+    } else {
+        return Err(PyTypeError::new_err("text must be str or bytes"));
+    };
+    let hash = || api::text_sha256(bytes);
+    Ok(if Work(bytes.len() / TEXT_BYTES_PER_VALUE).is_large() {
+        py.detach(hash)
+    } else {
+        hash()
+    })
+}
+
 #[pyfunction]
 fn graph_hash(py: Python<'_>, flow: &Bound<'_, PyAny>) -> PyResult<String> {
     let flow = input(flow)?;
@@ -1429,6 +1450,6 @@ mod _native {
         assign_row_ids, assign_table_row_ids, canonical_json, edge_fixes, fixes_for_edges,
         graph_hash, graphs_equal, new_edge_id, new_table_row_id, node_schema, ops_diff,
         ordered_rows, repair, replay, strip_flow_table_row_keys, strip_row_keys, table_fields,
-        validate, values_equal,
+        text_sha256, validate, values_equal,
     };
 }
