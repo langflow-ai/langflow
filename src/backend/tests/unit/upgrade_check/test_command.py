@@ -82,7 +82,9 @@ def test_clean_source_streams_every_flow_then_the_report(tmp_path):
     report = events[-1]["report"]
     assert json.loads(output.read_text()) == report
     assert report["format_version"] == 1
-    assert report["source"] == {
+    assert report["source"]["identity"]["kind"] == "sqlite"
+    assert report["source"]["identity"]["locator"] == {"path": str(database.resolve())}
+    assert {key: value for key, value in report["source"].items() if key != "identity"} == {
         "dialect": "sqlite",
         "alembic_revision": RELEASES["1.13.0"][0],
         "counts": {"flows": 1, "components": 1, "flow_versions": 1},

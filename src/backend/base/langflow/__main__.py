@@ -1811,8 +1811,8 @@ def upgrade_check(
     before the upgrade, and why. Pass the upgraded server's settings as options: the
     command reads no environment variable and no .env file of the server.
 
-    Exits 0 when nothing needs action, 1 when a flow fails or the database has a problem
-    that stops the upgraded server, and 2 when the check could not finish.
+    Exits 0 when nothing needs review. Exit 1 means a flow warns or fails, or a database
+    problem stops the upgraded server. Exit 2 means the check could not finish.
     """
     import subprocess
     import tempfile

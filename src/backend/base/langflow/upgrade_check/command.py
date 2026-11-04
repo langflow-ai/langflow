@@ -6,8 +6,8 @@ Component code can build Langflow's settings (MCP components do when they are cr
 saves a secret key. Isolated like this, nothing reads the server's environment and nothing lands
 in its folders.
 
-Exit codes: 0 when nothing needs action, 1 when a flow fails or the source has a blocker, 2 when
-the check could not finish.
+Exit codes: 0 when nothing needs review, 1 when a flow warns or fails or the source has a blocker,
+2 when the check could not finish.
 """
 
 from __future__ import annotations
@@ -22,8 +22,10 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import IO, TYPE_CHECKING, Any, get_args
 
+import sqlalchemy as sa
 from lfx.extension import SLOT_EXTRA, SLOT_OFFICIAL
 from lfx.interface.components import _read_component_index
 from lfx.upgrade.checker import NodeStatusLiteral
@@ -31,6 +33,7 @@ from lfx.upgrade.registry import UpgradeRegistryError, load_upgrade_registry
 
 from langflow.upgrade_check.engine import Target, TargetSettings, check_source, flow_status
 from langflow.upgrade_check.reader import SourceDatabaseError, open_source
+from langflow.upgrade_check.source import identity_for_source
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
@@ -60,9 +63,10 @@ def main() -> int:
     os.dup2(sys.stderr.fileno(), sys.stdout.fileno())
     on_flow = (lambda result: _emit(out, "flow", flow=result.to_dict())) if as_json else None
     try:
+        output = _report_destination(options["database_url"], options["output"])
         report, listed = run(options, on_flow)
-        if options["output"]:
-            Path(options["output"]).write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        if output is not None:
+            _write_report(options["database_url"], output, report)
     except CheckError as exc:
         _fail(out, exc.code, str(exc), as_json=as_json)
         return 2
@@ -78,6 +82,42 @@ def main() -> int:
     return 1 if _needs_action(report) else 0
 
 
+def _report_destination(database_url: str, output: str | None) -> Path | None:
+    if output is None:
+        return None
+    try:
+        url = sa.make_url(database_url)
+    except sa.exc.ArgumentError:
+        msg = "the source database URL is invalid"
+        raise CheckError(msg, code="source_unreadable") from None
+    destination = Path(output).expanduser().resolve()
+    if url.get_backend_name() == "sqlite" and url.database and url.database != ":memory:":
+        source = Path(url.database).expanduser().resolve()
+        protected = [source, *(Path(f"{source}{suffix}") for suffix in ("-wal", "-shm", "-journal"))]
+        for path in protected:
+            if destination == path or (destination.exists() and path.exists() and destination.samefile(path)):
+                msg = "choose a report output outside the source SQLite database and its journal files"
+                raise CheckError(msg, code="output_aliases_source")
+    return destination
+
+
+def _write_report(database_url: str, output: Path, report: Mapping[str, Any]) -> None:
+    """Replace the report path without truncating a file through a hard link."""
+    temporary: Path | None = None
+    try:
+        with NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=output.parent, prefix=f".{output.name}.", suffix=".tmp", delete=False
+        ) as file:
+            temporary = Path(file.name)
+            json.dump(report, file, indent=2)
+            file.write("\n")
+        _report_destination(database_url, str(output))
+        temporary.replace(output)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
 def run(options: Mapping[str, Any], on_flow: Callable[[FlowResult], None] | None = None) -> tuple[dict, list]:
     """Check the source the options name and return the report, with the results of the flows it lists."""
     settings = TargetSettings(
@@ -89,6 +129,7 @@ def run(options: Mapping[str, Any], on_flow: Callable[[FlowResult], None] | None
     with ExitStack() as stack:
         try:
             source = stack.enter_context(open_source(options["database_url"]))
+            identity = identity_for_source(options["database_url"], source.connection)
         except Exception as exc:
             raise CheckError(_source_message(exc), code="source_unreadable") from exc
         policy = source.catalog_policy()
@@ -128,6 +169,7 @@ def run(options: Mapping[str, Any], on_flow: Callable[[FlowResult], None] | None
             "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "source": {
                 "dialect": source.dialect,
+                "identity": identity.model_dump(),
                 "alembic_revision": ", ".join(source.alembic_revisions) or None,
                 "counts": {
                     "flows": kinds["flow"],
@@ -180,7 +222,9 @@ def _target(all_types: Mapping[str, Any], settings: TargetSettings) -> dict[str,
 
 
 def _needs_action(report: Mapping[str, Any]) -> bool:
-    return bool(report["summary"]["flows"]["fail"]) or any(error["status"] == "fail" for error in report["errors"])
+    return any(report["summary"]["flows"][status] for status in ("warn", "fail")) or any(
+        error["status"] in {"warn", "fail"} for error in report["errors"]
+    )
 
 
 def _source_message(exc: Exception) -> str:
@@ -191,10 +235,11 @@ def _source_message(exc: Exception) -> str:
             f"cannot read the source database: {exc}. Install the PostgreSQL driver next to this Langflow, "
             "for example pip install 'langflow[postgresql]'."
         )
+    if isinstance(exc, FileNotFoundError):
+        return f"cannot read the source database: {_first_line(exc)}"
     return (
-        f"cannot read the source database: {_first_line(exc)}. Check --database-url, for example "
-        "sqlite:////absolute/path/langflow.db or "
-        "postgresql://user:password@host:5432/langflow."  # pragma: allowlist secret
+        f"cannot read the source database ({type(exc).__name__}). "
+        "Check the database URL, access permissions, and installed PostgreSQL driver."
     )
 
 
@@ -222,11 +267,12 @@ def _print_summary(out: IO[str], report: Mapping[str, Any], listed: list[FlowRes
     for error in report["errors"]:
         if error["status"] == "fail":
             out.write(f"\nfail  {error['message']}\n")
-    out.write(
-        "\nFix what is marked fail before the upgrade.\n"
-        if _needs_action(report)
-        else "\nNothing blocks the upgrade.\n"
-    )
+    if flows["fail"] or any(error["status"] == "fail" for error in report["errors"]):
+        out.write("\nFix what is marked fail before the upgrade.\n")
+    elif _needs_action(report):
+        out.write("\nReview the warnings before upgrading. The check could not verify every flow.\n")
+    else:
+        out.write("\nNothing blocks the upgrade.\n")
     if output:
         out.write(f"Report written to {output}.\n")
     out.flush()

@@ -168,8 +168,8 @@ tail -n 1 upgrade-check.jsonl | jq .report > upgrade-check.json
 
 | Exit code | Meaning |
 |---|---|
-| `0` | Nothing needs action. Flows with warnings can still be listed. |
-| `1` | At least one flow fails, or the database has a problem that stops the upgraded server from starting. |
+| `0` | Nothing needs review. Every checked flow is OK and no source blocker was found. |
+| `1` | At least one flow needs review or repair, or the database has a problem that stops the upgraded server from starting. Warning-only reports also exit 1. |
 | `2` | The check could not finish, such as for a wrong URL, an unreadable database, or components that could not load. The last line says what to change. |
 | `130` or `143` | The check was stopped by `SIGINT` or `SIGTERM`. It is safe to run again. |
 
@@ -189,12 +189,25 @@ If the check can't finish, the last line is `{"event": "error", "code": "...", "
 
 - `format_version`: `1`.
 - `generated_at`: when the check ran, in UTC.
-- `source`: the database's dialect, its Alembic revision, and how many flows, saved components, and running flow versions the check read.
+- `source`: the database's dialect, its credential-free identity, its Alembic revision, and how many flows, saved components, and running flow versions the check read.
 - `target`: the Langflow and LFX versions, the hash of the component index, the installed bundles, and the custom components folders and how many components they hold.
 - `settings`: every setting the check used, and the catalog rules it applied.
 - `summary`: the number of flows by status, and the number of nodes by status.
 - `flows`: every flow with a node that needs a look (`outdated_safe` included) or an unreadable row. Each flow has its owner, project, last edit, and those nodes. A flow whose nodes are all `ok` isn't listed. Each node lists its `status`, what it `runs`, its `reasons`, and its `dry_run` result: `keeps`, `loses`, `could_not_verify`, or `build_failed`.
 - `errors`: saved rows that couldn't be read, and catalog rules that couldn't be read, which stop the upgraded server from starting.
+
+The source identity contains a `kind`, a structured `locator`, and a `sha256` fingerprint of that locator.
+SQLite uses the canonical database file path, so symlinks to the same path have the same identity.
+PostgreSQL uses the connected host, port, database, and a fingerprint of the ordered schema search path.
+Schema names and arbitrary connection options are not copied into the report.
+Usernames, passwords, and URL query parameters are excluded.
+Changing only credentials does not change the identity when the endpoint and selected schemas remain the same.
+The identity's shape and fingerprint are validated together.
+This identifies the selected locator. It does not authenticate an installation or prove that its data stayed unchanged.
+
+The output file must be separate from the SQLite source database and its WAL, shared-memory, and journal files.
+The command refuses paths, symlinks, and hard links that alias those files before checking any flows.
+It replaces a report file atomically rather than truncating an inode through a hard link.
 
 ## Limits
 
