@@ -1,0 +1,197 @@
+---
+title: Jira Cloud components
+slug: /bundles-jira
+---
+
+The Jira Cloud bundle provides five issue actions and three polling triggers.
+Each component uses a [managed connection](../Develop/connections.mdx) to one Jira Cloud site.
+Credentials stay in encrypted server storage and are not included in exported flows.
+These components are in preview.
+
+## Supported contexts
+
+| Context | Actions | Triggers | Authentication |
+| --- | --- | --- | --- |
+| Self-managed Langflow with Jira Cloud | Preview | Preview polling | Customer-owned confidential OAuth 2.0 registration |
+| Hosted Langflow with Jira Cloud | Preview | Unsupported | Operator-configured confidential OAuth 2.0 registration |
+| Langflow Desktop | Unsupported | Unsupported | Jira public-client OAuth is not implemented |
+| Headless `lfx run` or `lfx serve` | Unsupported | Unsupported | Environment tokens cannot establish the required managed site grant |
+| Jira Data Center or Server | Unsupported | Unsupported | Only the Jira Cloud REST API v3 adapter is available |
+
+Use a Langflow 1.14 server with the matching `lfx-jira` bundle installed in its Python environment.
+Restart the API and listener processes after installing the bundle, and confirm it appears in `lfx extension list`.
+Importing the bundle in standalone lfx does not make Jira execution supported there.
+
+## Capabilities and permissions
+
+All connections require `read:jira-user`, `read:jira-work`, and `offline_access`.
+Write actions also require `write:jira-work`.
+The account's Jira project permissions and issue security restrictions still apply.
+Langflow's integration policy can further restrict a provider or action.
+
+| Component | Inputs and behavior | Jira permissions |
+| --- | --- | --- |
+| **Jira: Search Issues** | A project key, optional numeric status ID, and optional next-page token. Returns up to 100 issues and a continuation token. | Browse Projects and access to each issue |
+| **Jira: Read Issue** | An issue key such as `DEMO-123`. Returns its summary, project, issue type, status, and timestamps. | Browse Projects and access to the issue |
+| **Jira: Create Issue** | A project key, numeric issue type ID, summary, and optional plain text description. Returns the new issue ID and key. | Browse Projects and Create Issues |
+| **Jira: Update Issue** | An issue key, replacement summary, and optional replacement description. | Browse Projects and Edit Issues |
+| **Jira: Transition Issue** | An issue key and numeric transition ID currently available to that account and issue. | Browse Projects and Transition Issues |
+| **Jira: On Issue Created** | Observes new issues after the initial project snapshot. | Browse Projects and access to each issue |
+| **Jira: On Issue Updated** | Observes a changed update timestamp on an issue already seen by the trigger. | Browse Projects and access to each issue |
+| **Jira: On Issue Status Changed** | Observes a different status ID on an issue already seen by the trigger. | Browse Projects and access to each issue |
+
+Use uppercase project keys and positive numeric IDs for issue types, statuses, and transitions.
+Create and update accept a summary of up to 255 UTF-8 bytes and a description of up to 32768 UTF-8 bytes.
+Descriptions are converted to Atlassian Document Format.
+An empty description on update leaves the existing description unchanged.
+Required custom fields, arbitrary field updates, attachments, deletion, and unrestricted JQL are outside this preview.
+Choose a project and issue type whose required fields can be supplied by the component.
+
+## Configure the Atlassian app
+
+The server operator configures the OAuth application once.
+Flow authors then connect their accounts through Langflow.
+Atlassian recommends a single distributable integration instead of asking every end user to create an app or provide a token.
+See [Atlassian's OAuth 2.0 setup and distribution guide](https://developer.atlassian.com/cloud/jira/platform/oauth-2-3lo-apps/).
+
+1. Open the [Atlassian developer console](https://developer.atlassian.com/console/myapps/).
+   Choose **Create**, then **OAuth 2.0 integration**, and name the app.
+2. Choose the app's access type or grant type for delegated user access.
+   Atlassian offers account-level grants and resource-level grants limited to selected sites.
+   In either case, Langflow accepts only the configured site and verifies it during consent and refresh.
+3. Under **Authorization**, configure **OAuth 2.0 (3LO)**.
+   Set the callback to `https://YOUR_LANGFLOW_HOST/api/v1/connections/oauth/jira/callback` and save it.
+4. Under **Permissions**, add the **Jira API** and configure the classic scopes `read:jira-work`, `write:jira-work`, and `read:jira-user`.
+   Langflow also requests `offline_access` during consent to obtain refresh tokens.
+5. Under **Settings**, copy the client ID and client secret into the server's secret configuration.
+6. Before other users authorize the app, enable sharing under **Distribution** and complete any required Atlassian approval.
+   Start user consent from Langflow so its callback can validate the request.
+
+### Find the Jira Cloud site UUID
+
+Open `https://YOUR_SITE.atlassian.net/_edge/tenant_info` and copy the `cloudId` value.
+This is the site's UUID, not its URL, organization ID, or project key.
+You can also find it after `/s/` in the site's Atlassian Administration URL.
+See [Atlassian's Cloud ID instructions](https://support.atlassian.com/jira/kb/retrieve-my-atlassian-sites-cloud-id/).
+
+### Configure the Langflow server
+
+Set `LANGFLOW_JIRA_CLOUD_ID` to the canonical lowercase site UUID.
+Use the same UUID in `tenant` and `allowed_tenants` in the registration below.
+Replace all placeholders before loading it through your deployment's secret manager.
+
+```json
+{
+  "jira-work": {
+    "provider": "jira",
+    "profile": "user",
+    "owner": "customer",
+    "context": "self_managed",
+    "client_type": "confidential",
+    "client_id": "YOUR_CLIENT_ID",
+    "client_secret": "YOUR_CLIENT_SECRET",
+    "redirect_uri": "https://YOUR_LANGFLOW_HOST/api/v1/connections/oauth/jira/callback",
+    "tenant": "YOUR_CLOUD_UUID",
+    "allowed_tenants": ["YOUR_CLOUD_UUID"],
+    "scopes": ["read:jira-work", "write:jira-work", "read:jira-user", "offline_access"]
+  }
+}
+```
+
+Load this object into `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS`.
+The registration must include all four scopes, even when users only request read actions.
+The callback must match Atlassian's configured callback exactly, including its hostname, port, and path.
+Keep client secrets outside flow inputs, global variables, and frontend configuration.
+The server verifies the site through Atlassian's accessible-resources API and reads the active account from that site's account API.
+
+Configure the API and every listener with the same site UUID, OAuth registration, database, and `LANGFLOW_SECRET_KEY`.
+For a hosted server, set the registration's `context` and `LANGFLOW_CONNECTION_OAUTH_CONTEXT` to `hosted`.
+A Langflow-owned hosted registration also requires `LANGFLOW_CONNECTION_OAUTH_HOSTED_ENABLED=true`.
+See [Configure connection OAuth](../Develop/connection-oauth.mdx) for shared registration settings.
+
+## Connect an account and run actions
+
+1. Open **Settings**, then **Connections**, and select **Add connection**.
+2. Select **Jira Cloud**, enter a handle such as `work`, and give it a display name.
+3. Keep the required `offline_access` scope selected.
+   Keep the read scopes and include `write:jira-work` when the flow creates, edits, or transitions issues.
+4. Select **Continue** and authorize the configured Jira site in Atlassian.
+5. Add a Jira action to your flow and select the connection in its **Jira Connection** field.
+   The flow stores the handle `jira/work`, without credentials.
+6. Start with **Jira: Read Issue** and a visible issue key to confirm the connection and project access.
+
+Every saved Jira connection needs a refresh token, including action-only connections.
+If consent returns no refresh token, Langflow asks for `offline_access` and removes a failed new connection.
+A failed reconnect preserves the existing connection for another attempt.
+
+## Enable polling triggers
+
+Run `langflow listeners` alongside the self-managed API, or set `LANGFLOW_LISTENERS_MODE=subprocess` before starting Langflow.
+See [Deploy Langflow trigger listeners](../Deployment/deployment-trigger-listeners.mdx) for deployment instructions.
+The listener needs outbound HTTPS access to Atlassian.
+Public webhook ingress is not required.
+
+1. Add one of the three Jira triggers at the start of a flow you own.
+   Select your own Jira connection and enter **Project Key**.
+   Shared and instance connections cannot arm these triggers.
+2. If necessary, enter a positive numeric **Issue Type ID** to narrow the project.
+   A snapshot and its retained history must fit within 5000 distinct issue IDs.
+3. Save the flow, then enable **Allow background runs** in the trigger node controls.
+   You can also open **Settings**, **Connections**, and the connection's **Actions** menu, then enable **Allow scheduled and deployed runs**.
+   Both controls grant the same permission for this connection.
+4. Enable the trigger with its **Enabled** switch, or use **Resume** in **Settings**, **Triggers**.
+5. Wait for the first complete poll to establish a baseline, then create or change a matching Jira issue.
+   Open the trigger's event list to inspect the observed event and its run.
+
+Polling defaults to 30 seconds and never runs faster than that minimum.
+An operator can increase `LANGFLOW_LISTENER_POLL_INTERVAL_S`.
+Provider rate limits, retries, and the time needed to scan a project can delay the next observation.
+
+## Event identity and delivery limits
+
+The first complete snapshot emits no events.
+Later polls compare the project's latest visible issue state with the saved snapshot.
+Created events require a previously unseen issue created at or after the baseline began.
+An older issue moved into the project, or newly made visible, does not produce a created event.
+Update and status events require the issue to have been seen before.
+
+Each trigger deduplicates events using the provider, project, immutable Jira issue ID, and observed version.
+For created events the version is `created`.
+For update and status events it combines the issue's update timestamp and status ID.
+Repeated observations of that identity do not create another event for the same trigger.
+The event records and new observation state commit together.
+A failed fetch or commit keeps the previous state, and a stale listener cannot replace a newer snapshot.
+
+These triggers observe latest state and cannot recover every intermediate edit or transition.
+Jira search indexing can delay results, and pagination is not an isolated snapshot.
+Deleted or inaccessible issues stay in the retained map to avoid reporting them as new if they reappear.
+Deletion events are not emitted.
+An incomplete scan, repeated page token, duplicate issue ID, or exceeded size limit rejects the entire round.
+
+## Recover a connection or trigger
+
+| Symptom | Recovery |
+| --- | --- |
+| The connection is expired or its Jira app access was removed | In **Settings**, **Connections**, open **Actions**, select **Reconnect**, and complete consent again. Then open **Settings**, **Triggers**, and select **Resume** for each affected trigger showing **Ready to resume**. Reconnect alone does not restart listening. |
+| Background use is blocked | As the connection owner, enable **Allow background runs** on the trigger or **Allow scheduled and deployed runs** on the connection. Then resume the trigger. |
+| The project exceeds 5000 issues or retained issue IDs | Set **Issue Type ID** to narrow the project, or choose a smaller project. Save, pause, and resume the trigger to establish a new baseline. |
+| Jira is unavailable or rate limited | Keep the trigger active while the listener retries. Jira's `Retry-After` delay is honored. Check listener health if retries continue. |
+| A scope or project permission is missing | Reconnect with the required scopes, or ask the Jira administrator to grant the project permission. Resume any blocked triggers afterward. |
+| An issue type requires extra fields or a transition is unavailable | Use a compatible issue type or a transition currently available for that issue and account. |
+
+A listener restart or temporary outage preserves the committed snapshot, so the next successful poll compares against it.
+Changes overwritten between polls remain unrecoverable.
+Pausing and resuming, including resuming after a credential block, starts a fresh baseline and does not replay the gap.
+Use the trigger's event list to replay an event that Langflow already recorded.
+Replay cannot reconstruct an event that polling never observed.
+
+Writes are not retried after an ambiguous network failure.
+Check Jira before repeating a create, update, or transition whose outcome is uncertain.
+
+## Webhook boundary
+
+Jira triggers use authenticated polling only.
+They do not register a remote webhook, and pausing them requires no remote webhook cleanup.
+Do not configure Jira admin or dynamic webhooks for these components.
+Unsigned or forged webhook requests cannot start a Jira trigger flow.
+Polling works without public ingress in the supported self-managed context.

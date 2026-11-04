@@ -14,6 +14,7 @@ from langflow.services.connection.service import DatabaseConnectionResolverServi
 from langflow.services.data_subjects.stop import stop_builder
 from langflow.services.database.models.connection.model import Connection, ConnectionSecret
 from langflow.services.database.models.connection.schemas import ConnectionCreate
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.trigger.model import Trigger, TriggerCleanup, TriggerEvent, TriggerSubscription
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
@@ -174,6 +175,11 @@ async def reconcile(flow_id, owner_id, *, kind="issue"):
         "edges": [],
     }
     async with session_scope() as session:
+        flow = await session.get(Flow, flow_id)
+        assert flow is not None
+        flow.data = data
+        session.add(flow)
+        await session.flush()
         await reconcile_flow_triggers(session, flow_id=flow_id, owner_id=owner_id, flow_data=data)
     async with session_scope() as session:
         return (await session.exec(select(Trigger).where(Trigger.flow_id == flow_id))).one()
