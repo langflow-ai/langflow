@@ -36,6 +36,18 @@ To find your **Base URL**, see your provider's documentation.
 5. Enable the models you want to use.
 6. In any **Language Model**, **Embedding Model**, or **Agent** field, select **OpenAI Compatible** and a discovered model.
 
+### Example hosted endpoint
+
+Any endpoint that answers `GET /v1/models` with an OpenAI-shaped list works.
+One example: [Fikra API](https://fikraapi.co.ke) (hosted open-weight models, DeepSeek-first).
+
+| Field | Value |
+|-------|-------|
+| **Base URL** | `https://api.fikraapi.co.ke/v1` |
+| **API Key** | Your Fikra API key |
+
+Discovered lanes then include `deepseek-v4.1-flash` ($0.045/$0.09 per 1M input/output on a 1M context), `glm-5.3-flash`, `kimi-k3`, and others. See [Fikra pricing](https://fikraapi.co.ke/pricing) for per-lane rates.
+
 ### Local and private endpoints
 
 Langflow enables [SSRF protection](/api-keys-and-authentication#ssrf-protection) by default.
