@@ -397,6 +397,78 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
 
         assert results["text"].tolist() == ["Alpha", "Beta"]
 
+    @pytest.mark.parametrize("clean_output", [False, True])
+    @pytest.mark.parametrize("input_shape", ["list", "single", "table"])
+    def test_split_text_chunk_replaces_record_text_field(self, input_shape, clean_output):
+        """Test that each chunk's text replaces a record's own "text" field when Text Key names another field."""
+        record = {"body": "Alpha\nBeta", "text": "OLD", "source": "memo"}
+        data_inputs = {
+            "list": [Data(data=dict(record))],
+            "single": Data(data=dict(record)),
+            "table": DataFrame([record]),
+        }[input_shape]
+        component = SplitTextComponent()
+        component.set_attributes(
+            {
+                "data_inputs": data_inputs,
+                "text_key": "body",
+                "chunk_overlap": 0,
+                "chunk_size": 5,
+                "separator": "\n",
+                "clean_output": clean_output,
+            }
+        )
+
+        results = component.split_text()
+
+        assert results["text"].tolist() == ["Alpha", "Beta"]
+        if not clean_output:
+            assert results["source"].tolist() == ["memo", "memo"]
+
+    def test_split_text_chunk_replaces_text_field_when_record_has_own_text_key(self):
+        """Test that a record's leftover "text" field gives way to the chunk under the default Text Key."""
+        component = SplitTextComponent()
+        component.set_attributes(
+            {
+                "data_inputs": [
+                    Data(text_key="content", data={"content": "Alpha\nBeta", "text": "OLD", "source": "memo"})
+                ],
+                "chunk_overlap": 0,
+                "chunk_size": 5,
+                "separator": "\n",
+            }
+        )
+
+        results = component.split_text()
+
+        assert results.to_dict("records") == [
+            {"text": "Alpha", "source": "memo"},
+            {"text": "Beta", "source": "memo"},
+        ]
+
+    def test_split_text_table_chunk_replaces_partial_text_column(self):
+        """Test that a Table whose "text" column is only partly filled still returns every chunk, not NaN."""
+        component = SplitTextComponent()
+        component.set_attributes(
+            {
+                "data_inputs": DataFrame(
+                    [{"body": "Alpha\nBeta", "source": "memo"}, {"body": "Gamma", "text": "OLD", "source": "note"}]
+                ),
+                "text_key": "body",
+                "chunk_overlap": 0,
+                "chunk_size": 5,
+                "separator": "\n",
+            }
+        )
+
+        results = component.split_text()
+
+        assert results.to_dict("records") == [
+            {"text": "Alpha", "source": "memo"},
+            {"text": "Beta", "source": "memo"},
+            {"text": "Gamma", "source": "note"},
+        ]
+
     def test_split_text_list_keeps_record_text_key_with_default_text_key(self):
         """Test that records carrying their own text_key keep it when Text Key is left at its default."""
         component = SplitTextComponent()

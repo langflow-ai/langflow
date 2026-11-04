@@ -77,8 +77,11 @@ class SplitTextComponent(Component):
     ]
 
     def _docs_to_data(self, docs, *, clean: bool = False) -> list[Data]:
+        """Convert split documents to Data rows, keeping each document's metadata unless clean is set."""
+        # The chunk goes last so it replaces a leftover "text" field from the source record.
         return [
-            Data(text=doc.page_content) if clean else Data(text=doc.page_content, data=doc.metadata) for doc in docs
+            Data(text=doc.page_content) if clean else Data(data={**doc.metadata, "text": doc.page_content})
+            for doc in docs
         ]
 
     def _fix_separator(self, separator: str) -> str:
