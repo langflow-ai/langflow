@@ -329,7 +329,15 @@ class JobQueueService(Service):
             existing_task.cancel()
 
         # Wrap the coroutine so that any crash emits on_error + sentinel before exit.
-        task = asyncio.create_task(self._guarded_task(job_id, task_coro, event_manager, main_queue))
+        from langflow.api.utils.migration_pause import admitted_maintenance_caller
+
+        task = asyncio.create_task(
+            self._guarded_task(
+                job_id, task_coro, event_manager, main_queue, maintenance_caller=admitted_maintenance_caller()
+            )
+        )
+        # Also close a coroutine canceled before the wrapper gets its first turn.
+        task.add_done_callback(lambda _done: task_coro.close())
         self._queues[job_id] = (main_queue, event_manager, task, None)
         if FEATURE_FLAGS.instance_migration:
             # Loaded only where an instance can be paused. The task goes on after the request that started
@@ -345,6 +353,8 @@ class JobQueueService(Service):
         task_coro: Coroutine,
         event_manager: EventManager,
         main_queue: asyncio.Queue,
+        *,
+        maintenance_caller: UUID | None = None,
     ) -> None:
         """Run *task_coro* and guarantee the end-of-stream sentinel is written on crash.
 
@@ -364,6 +374,12 @@ class JobQueueService(Service):
         cancel paths and any backend-specific end-of-stream delivery.
         """
         try:
+            from langflow.api.utils.migration_pause import write_refusal
+
+            # The request already owns the file pause's drain slot. Database
+            # maintenance is checked again when the queued coroutine can start.
+            while await write_refusal(maintenance_caller, check_file=False):  # noqa: ASYNC110
+                await asyncio.sleep(0.1)
             await task_coro
         except asyncio.CancelledError:
             raise

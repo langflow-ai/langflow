@@ -35,7 +35,7 @@ from lfx.integrations.errors import (
 from lfx.log.logger import logger
 from sqlmodel import col, func, select, update
 
-from langflow.api.utils.migration_pause import is_paused, writing
+from langflow.api.utils.migration_pause import async_writing, writes_paused
 from langflow.services.database.models.trigger.model import Trigger, TriggerEvent, TriggerSubscription
 from langflow.services.database.models.trigger.schemas import (
     IN_FLIGHT_EVENT_STATES,
@@ -806,7 +806,7 @@ class TriggerDispatcher:
         while not self._stopping.is_set():
             try:
                 # A pass holds a place, so a pause waits for one that is under way.
-                with writing(name="trigger_dispatcher") as let_in:
+                async with async_writing(name="trigger_dispatcher") as let_in:
                     dispatched = await self.tick() if let_in else 0
                 if dispatched >= settings.trigger_max_events_per_poll:
                     # Continue draining full batches without adding a fixed
@@ -831,7 +831,7 @@ class TriggerDispatcher:
 
         # A paused instance produces and dispatches nothing. Triggers are not paused one by one, which
         # would fail their queued events: a due schedule catches up afterwards by its catchup_policy.
-        if is_paused():
+        if await writes_paused():
             return 0
         await run_scheduler_pass(owner=self.owner)
         settings = get_settings_service().settings
@@ -883,7 +883,7 @@ class TriggerDispatcher:
         from langflow.services.triggers.source_cleanup import run_cleanup_pass
         from langflow.services.triggers.subscriptions import run_renewal_pass
 
-        if is_paused():
+        if await writes_paused():
             return 0
         name = "trigger-source-maintenance"
         async with session_scope() as session:
@@ -904,7 +904,7 @@ class TriggerDispatcher:
     async def _source_loop(self) -> None:
         while not self._stopping.is_set():
             try:
-                with writing(name="trigger_sources") as let_in:
+                async with async_writing(name="trigger_sources") as let_in:
                     if let_in:
                         await self.source_tick()
             except asyncio.CancelledError:

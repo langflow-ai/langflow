@@ -203,6 +203,7 @@ READS = frozenset(
         "/api/v1/memories/{memory_base_id}/messages",
         "/api/v1/memories/{memory_base_id}/mismatch",
         "/api/v1/memories/{memory_base_id}/sessions",
+        "/api/v1/maintenance/status",
         "/api/v1/model-provider-policy",
         "/api/v1/model-provider-policy/",
         "/api/v1/model_options/embedding",
@@ -889,7 +890,7 @@ async def test_a_record_that_says_paused_changes_nothing_while_the_feature_is_of
     _write_record(config_dir, PAUSED)
 
     assert not is_paused()
-    assert MigrationPauseMiddleware not in [middleware.cls for middleware in create_app().user_middleware]
+    assert MigrationPauseMiddleware in [middleware.cls for middleware in create_app().user_middleware]
     assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=logged_in_headers)).status_code == 201
     listener = ListenerSupervisor()
     sync = asyncio.create_task(sync_flows_from_fs())
