@@ -157,7 +157,7 @@ class TestMatchClassAttributes:
 
     @pytest.mark.parametrize("pattern", ["Record(name, count)", "Record(_)", "Record(item=Record(_))", "int(1)"])
     def test_rejects_positional_class_patterns(self, pattern):
-        with pytest.raises(ValueError, match="Positional class patterns are not allowed"):
+        with pytest.raises(ValueError, match="Positional class patterns are not allowed in saved Python Interpreter"):
             validate_code_safety(f"match value:\n    case {pattern}:\n        pass")
 
 

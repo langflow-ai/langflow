@@ -2073,9 +2073,12 @@ class _SecurityChecker(ast.NodeVisitor):
 
     def visit_MatchClass(self, node: ast.MatchClass):
         """Require explicit permitted attributes in class patterns."""
+        # Positional patterns resolve attributes through the pattern class's assignable __match_args__.
+        # Relaxing this guard also requires restricting those assignments.
         if node.patterns:
             self.violations.append(
-                "Positional class patterns are not allowed. Use keyword patterns with named attributes instead."
+                "Positional class patterns are not allowed in saved Python Interpreter, Python REPL, "
+                "or Lambda Filter code. Use keyword patterns with named attributes instead."
             )
         for attr in node.kwd_attrs:
             if _is_blocked_attribute(attr):

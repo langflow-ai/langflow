@@ -120,8 +120,8 @@ class TestMatchClassAttributes:
         result = scan_code_security(f"match value:\n    case {pattern}:\n        pass")
         assert result.is_safe is False
         assert (
-            "Positional class patterns are not allowed. Use keyword patterns with named attributes instead."
-            in result.violations
+            "Positional class patterns are not allowed in saved Python Interpreter, Python REPL, "
+            "or Lambda Filter code. Use keyword patterns with named attributes instead." in result.violations
         )
 
 
