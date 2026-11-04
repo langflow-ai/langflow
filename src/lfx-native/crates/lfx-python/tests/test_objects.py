@@ -320,6 +320,25 @@ def test_forward_json_gives_each_forward_operation_as_ascii_text(call):
     assert only_text == {"forward_operations_json": texts}
 
 
+def test_stage_json_gives_what_stage_gives_under_forward_operations_json():
+    value = 'x"\\\n\u00e9\u2028\U0001f600'
+    expected = ops.GraphState(FLOW).stage(set_value(value), forward_json=True)["forward_operations_json"]
+    state = ops.GraphState(FLOW)
+    assert state.stage_json(set_value(value)) == expected
+    assert state.staged
+    state.keep()
+    assert value_of(state.to_dict()) == value
+    texts = state.stage_json(json.dumps(set_value("w")).encode())
+    assert [json.loads(text) for text in texts] == set_value("w")
+    state.keep()
+    with pytest.raises(ops.EngineError):
+        state.stage_json([{"type": "delete_nodes", "ids": ["missing"]}])
+    assert not state.staged
+    state.stage_json(set_value("y"))
+    with pytest.raises(RuntimeError, match="a batch is staged"):
+        state.stage_json(set_value("z"))
+
+
 def test_a_dropped_batch_leaves_the_graph_as_it_was():
     state = ops.GraphState(FLOW)
     state.stage(set_value("y"))
