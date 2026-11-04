@@ -31,6 +31,7 @@ import json
 import sqlite3
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -360,9 +361,18 @@ def _uuid(value: Any) -> str | None:
 
 
 def _timestamp(value: Any) -> str | None:
-    if value is None:
-        return None
-    return value.isoformat() if hasattr(value, "isoformat") else str(value)
+    """Keep known edit times in ISO 8601 and leave absent or invalid times unknown."""
+    if not isinstance(value, datetime):
+        if not isinstance(value, str) or not any(separator in value for separator in ("T", " ")):
+            return None
+        try:
+            value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    # Langflow stores naive SQLite timestamps in UTC, as its flow serializers do.
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.isoformat()
 
 
 def _flow_data(value: Any) -> dict[str, Any]:
