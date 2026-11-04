@@ -550,6 +550,10 @@ const DROPS_WAITING: usize = 4;
 /// Something that the drop thread frees.
 type Dropped = Box<dyn Send>;
 
+/// Whether the process may run on more than one CPU, its CPU quota included.
+static SPARE_CPU: LazyLock<bool> =
+    LazyLock::new(|| std::thread::available_parallelism().is_ok_and(|cpus| cpus.get() > 1));
+
 /// Drop a large graph on a thread of its own, so that the thread that lets
 /// go of it, often a server's event loop, does not wait while it is freed:
 /// freeing a large graph frees many small allocations. Without that thread,
@@ -789,18 +793,30 @@ impl GraphState {
 
     /// Commit the staged batch. Raises `RuntimeError` when no batch is staged.
     fn keep(&self, py: Python<'_>) -> PyResult<()> {
-        self.write(
-            py,
-            |_| Work::default(),
-            |mut state| {
-                if state.keep() {
-                    Ok(())
-                } else {
-                    Err(Refused::NotStaged)
-                }
-            },
-        )
-        .map_err(refused)
+        let released = self
+            .write(
+                py,
+                |_| Work::default(),
+                |mut state| {
+                    if state.keep() {
+                        Ok(state.take_released())
+                    } else {
+                        Err(Refused::NotStaged)
+                    }
+                },
+            )
+            .map_err(refused)?;
+        // With a spare CPU, the drop thread frees the nodes and edges the
+        // batch removed while this thread goes on. With one CPU, it would
+        // only add a thread switch to the same work, so they are freed here.
+        if let Some(released) = released {
+            if *SPARE_CPU {
+                drop_elsewhere(py, Box::new(released));
+            } else {
+                drop(released);
+            }
+        }
+        Ok(())
     }
 
     /// Drop the staged batch, so the graph stays as it was before it.
