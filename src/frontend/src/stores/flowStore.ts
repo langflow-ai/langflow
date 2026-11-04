@@ -25,6 +25,7 @@ import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import { track, trackFlowBuild } from "@/customization/utils/analytics";
 import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
 import type { GlobalVariable } from "@/types/global_variables";
+import { nodeWithGroupValues, walkFlowNodes } from "@/utils/grouped-nodes";
 import { clearLoadRefreshes } from "@/utils/load-refreshes";
 import { brokenEdgeMessage } from "@/utils/utils";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
@@ -191,14 +192,28 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const templates = useTypesStore.getState().templates;
     const allowCustomComponents =
       useUtilityStore.getState().allowCustomComponents;
-    const connectedFields = connectedFieldsByNode(edges);
-    nodes.forEach((node) => {
+    const fieldsByEdges = new Map<
+      EdgeType[],
+      ReturnType<typeof connectedFieldsByNode>
+    >();
+    for (const context of walkFlowNodes(nodes, edges)) {
+      const node = nodeWithGroupValues(context);
+      let connectedFields: ReturnType<typeof connectedFieldsByNode> | undefined;
+      if (context.edges !== undefined) {
+        connectedFields = fieldsByEdges.get(context.edges);
+        if (!connectedFields) {
+          connectedFields = connectedFieldsByNode(context.edges);
+          fieldsByEdges.set(context.edges, connectedFields);
+        }
+      }
       if (node.type === "genericNode") {
         const codeValidity = checkCodeValidity(
           node.data,
           templates,
           allowCustomComponents,
-          connectedFields.get(node.id) ?? new Set(),
+          connectedFields
+            ? (connectedFields.get(node.id) ?? new Set())
+            : undefined,
         );
         if (
           codeValidity &&
@@ -220,7 +235,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             replacement: codeValidity.replacement,
           });
       }
-    });
+    }
     set({ componentsToUpdate: outdatedNodes });
   },
   onFlowPage: false,
@@ -1073,7 +1088,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       );
     // A partial build only executes its own subgraph, so only that subgraph can
     // block it. componentsToUpdate stays whole-flow for the update banner.
-    const validatedNodeIds = new Set(nodesToValidate.map((node) => node.id));
+    const validatedNodeIds = new Set(
+      Array.from(walkFlowNodes(nodesToValidate), ({ node }) => node.id),
+    );
     const componentsToPreflight = get().componentsToUpdate.filter((component) =>
       validatedNodeIds.has(component.id),
     );

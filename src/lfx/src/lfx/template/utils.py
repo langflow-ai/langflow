@@ -6,6 +6,7 @@ from platformdirs import user_cache_dir
 
 from lfx.schema.data import Data
 from lfx.services.deps import get_settings_service
+from lfx.template.field_migrations import can_migrate_chat_output_input
 from lfx.utils.file_path_security import enforce_storage_key_scope
 
 
@@ -92,10 +93,14 @@ def _get_single_file_path_value(file_path, scope_ids):
     return str(path)
 
 
-def update_template_field(new_template, key, previous_value_dict, scope_ids=None) -> None:
+def update_template_field(new_template, key, previous_value_dict, scope_ids=None, *, component_class_name=None) -> None:
     """Updates a specific field in the frontend template."""
     template_field = new_template.get(key)
-    if not template_field or template_field.get("type") != previous_value_dict.get("type"):
+    if not template_field:
+        return
+    if template_field.get("type") != previous_value_dict.get("type") and not can_migrate_chat_output_input(
+        component_class_name, key, template_field, previous_value_dict
+    ):
         return
 
     if "value" in previous_value_dict and previous_value_dict["value"] is not None:
@@ -122,13 +127,15 @@ def is_valid_data(frontend_node, raw_frontend_data):
     return frontend_node and "template" in frontend_node and raw_frontend_data_is_valid(raw_frontend_data)
 
 
-def update_template_values(new_template, previous_template, scope_ids=None) -> None:
+def update_template_values(new_template, previous_template, scope_ids=None, *, component_class_name=None) -> None:
     """Updates the frontend template with values from the raw template."""
     for key, previous_value_dict in previous_template.items():
         if key == "code" or not isinstance(previous_value_dict, dict):
             continue
 
-        update_template_field(new_template, key, previous_value_dict, scope_ids)
+        update_template_field(
+            new_template, key, previous_value_dict, scope_ids, component_class_name=component_class_name
+        )
 
 
 def copy_saved_custom_field_values(frontend_node, raw_frontend_node, scope_ids=None) -> None:
@@ -169,7 +176,12 @@ def update_frontend_node_with_template_values(frontend_node, raw_frontend_node, 
     if not is_valid_data(frontend_node, raw_frontend_node):
         return frontend_node
 
-    update_template_values(frontend_node["template"], raw_frontend_node["template"], scope_ids)
+    update_template_values(
+        frontend_node["template"],
+        raw_frontend_node["template"],
+        scope_ids,
+        component_class_name=(frontend_node.get("metadata") or {}).get("component_class_name"),
+    )
 
     old_code = raw_frontend_node["template"]["code"]["value"]
     new_code = frontend_node["template"]["code"]["value"]

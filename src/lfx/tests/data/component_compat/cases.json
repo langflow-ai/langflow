@@ -3654,5 +3654,395 @@
       ]
     },
     "expected": "customized"
+  },
+  {
+    "name": "chat_output_legacy_connected_string",
+    "description": "ChatOutput migrated MessageInput/str to HandleInput/other without changing accepted messages. Updates preserve string values and connections.",
+    "component": {
+      "metadata": {
+        "component_class_name": "ChatOutput"
+      },
+      "template": {
+        "code": {
+          "type": "code",
+          "value": "new"
+        },
+        "input_value": {
+          "type": "other",
+          "_input_type": "HandleInput",
+          "input_types": [
+            "Message",
+            "Data",
+            "DataFrame"
+          ],
+          "value": ""
+        }
+      },
+      "outputs": []
+    },
+    "saved_node": {
+      "template": {
+        "code": {
+          "type": "code",
+          "value": "old"
+        },
+        "input_value": {
+          "type": "str",
+          "_input_type": "MessageInput",
+          "input_types": [
+            "Message",
+            "Data",
+            "DataFrame"
+          ],
+          "value": "A saved message"
+        }
+      },
+      "outputs": []
+    },
+    "connected_fields": [
+      "input_value"
+    ],
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "chat_output_legacy_unconnected_string",
+    "description": "ChatOutput migrated MessageInput/str to HandleInput/other without changing accepted messages. Updates preserve string values and connections.",
+    "component": {
+      "metadata": {
+        "component_class_name": "ChatOutput"
+      },
+      "template": {
+        "code": {
+          "type": "code",
+          "value": "new"
+        },
+        "input_value": {
+          "type": "other",
+          "_input_type": "HandleInput",
+          "input_types": [
+            "Message",
+            "Data",
+            "DataFrame"
+          ],
+          "value": ""
+        }
+      },
+      "outputs": []
+    },
+    "saved_node": {
+      "template": {
+        "code": {
+          "type": "code",
+          "value": "old"
+        },
+        "input_value": {
+          "type": "str",
+          "_input_type": "MessageInput",
+          "input_types": [
+            "Message",
+            "Data",
+            "DataFrame"
+          ],
+          "value": "A saved message"
+        }
+      },
+      "outputs": []
+    },
+    "connected_fields": [],
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "chat_output_legacy_empty_connected",
+    "description": "ChatOutput migrated MessageInput/str to HandleInput/other without changing accepted messages. Updates preserve string values and connections.",
+    "component": {
+      "metadata": {
+        "component_class_name": "ChatOutput"
+      },
+      "template": {
+        "code": {
+          "type": "code",
+          "value": "new"
+        },
+        "input_value": {
+          "type": "other",
+          "_input_type": "HandleInput",
+          "input_types": [
+            "Message",
+            "Data",
+            "DataFrame"
+          ],
+          "value": ""
+        }
+      },
+      "outputs": []
+    },
+    "saved_node": {
+      "template": {
+        "code": {
+          "type": "code",
+          "value": "old"
+        },
+        "input_value": {
+          "type": "str",
+          "_input_type": "MessageInput",
+          "input_types": [
+            "Message",
+            "Data",
+            "DataFrame"
+          ],
+          "value": ""
+        }
+      },
+      "outputs": []
+    },
+    "connected_fields": [
+      "input_value"
+    ],
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "chat_output_current_connected",
+    "description": "ChatOutput migrated MessageInput/str to HandleInput/other without changing accepted messages. Updates preserve string values and connections.",
+    "component": {
+      "metadata": {
+        "component_class_name": "ChatOutput"
+      },
+      "template": {
+        "code": {
+          "type": "code",
+          "value": "new"
+        },
+        "input_value": {
+          "type": "other",
+          "_input_type": "HandleInput",
+          "input_types": [
+            "Message",
+            "Data",
+            "DataFrame"
+          ],
+          "value": ""
+        }
+      },
+      "outputs": []
+    },
+    "saved_node": {
+      "template": {
+        "code": {
+          "type": "code",
+          "value": "old"
+        },
+        "input_value": {
+          "type": "other",
+          "_input_type": "HandleInput",
+          "input_types": [
+            "Message",
+            "Data",
+            "DataFrame"
+          ],
+          "value": "A saved message"
+        }
+      },
+      "outputs": []
+    },
+    "connected_fields": [
+      "input_value"
+    ],
+    "expected": "outdated_safe"
+  },
+  {
+    "name": "chat_output_legacy_narrowed_connections",
+    "description": "ChatOutput migrated MessageInput/str to HandleInput/other without changing accepted messages. Updates preserve string values and connections.",
+    "component": {
+      "metadata": {
+        "component_class_name": "ChatOutput"
+      },
+      "template": {
+        "code": {
+          "type": "code",
+          "value": "new"
+        },
+        "input_value": {
+          "type": "other",
+          "_input_type": "HandleInput",
+          "input_types": [
+            "Message"
+          ],
+          "value": ""
+        }
+      },
+      "outputs": []
+    },
+    "saved_node": {
+      "template": {
+        "code": {
+          "type": "code",
+          "value": "old"
+        },
+        "input_value": {
+          "type": "str",
+          "_input_type": "MessageInput",
+          "input_types": [
+            "Message",
+            "Data",
+            "DataFrame"
+          ],
+          "value": "A saved message"
+        }
+      },
+      "outputs": []
+    },
+    "connected_fields": [
+      "input_value"
+    ],
+    "expected": "outdated_breaking"
+  },
+  {
+    "name": "chat_output_legacy_object_requires_manual_repair",
+    "description": "ChatOutput migrated MessageInput/str to HandleInput/other without changing accepted messages. Updates preserve string values and connections.",
+    "component": {
+      "metadata": {
+        "component_class_name": "ChatOutput"
+      },
+      "template": {
+        "code": {
+          "type": "code",
+          "value": "new"
+        },
+        "input_value": {
+          "type": "other",
+          "_input_type": "HandleInput",
+          "input_types": [
+            "Message",
+            "Data",
+            "DataFrame"
+          ],
+          "value": ""
+        }
+      },
+      "outputs": []
+    },
+    "saved_node": {
+      "template": {
+        "code": {
+          "type": "code",
+          "value": "old"
+        },
+        "input_value": {
+          "type": "str",
+          "_input_type": "MessageInput",
+          "input_types": [
+            "Message",
+            "Data",
+            "DataFrame"
+          ],
+          "value": {
+            "text": "serialized message"
+          }
+        }
+      },
+      "outputs": []
+    },
+    "connected_fields": [
+      "input_value"
+    ],
+    "expected": "outdated_breaking"
+  },
+  {
+    "name": "chat_output_migration_does_not_apply_to_other_components",
+    "description": "ChatOutput migrated MessageInput/str to HandleInput/other without changing accepted messages. Updates preserve string values and connections.",
+    "component": {
+      "metadata": {
+        "component_class_name": "OtherOutput"
+      },
+      "template": {
+        "code": {
+          "type": "code",
+          "value": "new"
+        },
+        "input_value": {
+          "type": "other",
+          "_input_type": "HandleInput",
+          "input_types": [
+            "Message",
+            "Data",
+            "DataFrame"
+          ],
+          "value": ""
+        }
+      },
+      "outputs": []
+    },
+    "saved_node": {
+      "template": {
+        "code": {
+          "type": "code",
+          "value": "old"
+        },
+        "input_value": {
+          "type": "str",
+          "_input_type": "MessageInput",
+          "input_types": [
+            "Message",
+            "Data",
+            "DataFrame"
+          ],
+          "value": "A saved message"
+        }
+      },
+      "outputs": []
+    },
+    "connected_fields": [
+      "input_value"
+    ],
+    "expected": "outdated_breaking"
+  },
+  {
+    "name": "chat_output_migration_does_not_allow_other_field_types",
+    "description": "ChatOutput migrated MessageInput/str to HandleInput/other without changing accepted messages. Updates preserve string values and connections.",
+    "component": {
+      "metadata": {
+        "component_class_name": "ChatOutput"
+      },
+      "template": {
+        "code": {
+          "type": "code",
+          "value": "new"
+        },
+        "input_value": {
+          "type": "int",
+          "_input_type": "HandleInput",
+          "input_types": [
+            "Message",
+            "Data",
+            "DataFrame"
+          ],
+          "value": ""
+        }
+      },
+      "outputs": []
+    },
+    "saved_node": {
+      "template": {
+        "code": {
+          "type": "code",
+          "value": "old"
+        },
+        "input_value": {
+          "type": "str",
+          "_input_type": "MessageInput",
+          "input_types": [
+            "Message",
+            "Data",
+            "DataFrame"
+          ],
+          "value": "A saved message"
+        }
+      },
+      "outputs": []
+    },
+    "connected_fields": [
+      "input_value"
+    ],
+    "expected": "outdated_breaking"
   }
 ]

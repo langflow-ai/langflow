@@ -2434,6 +2434,8 @@
   "updateComponents.mustBeUpdated_other": "Component {{count}}개를 업데이트해야 Flow를 실행할 수 있습니다",
   "updateComponents.updatesAvailable_one": "Component {{count}}개를 업데이트할 수 있습니다",
   "updateComponents.updatesAvailable_other": "Component {{count}}개를 업데이트할 수 있습니다",
+  "updateComponents.fieldsNotRestored": "{{component}}의 일부 필드를 복원하지 못했습니다",
+  "updateComponents.fieldsRefreshFailed": "{{component}}의 필드를 새로 고치지 못했습니다",
   "updateComponents.dismiss": "무시",
   "updateComponents.dismissAll": "모두 무시",
   "updateComponents.reviewAll": "모두 검토",

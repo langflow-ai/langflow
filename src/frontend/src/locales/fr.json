@@ -2707,6 +2707,8 @@
   "updateComponents.cannotRunDisabled_one": "{{count}} Le composant personnalisé ne peut pas s'exécuter tant que les composants personnalisés sont désactivés",
   "updateComponents.cannotRunDisabled_other": "{{count}} Les composants personnalisés ne peuvent pas s'exécuter tant que les composants personnalisés sont désactivés",
   "updateComponents.customComponentsDisabled": "Les composants personnalisés sont désactivés",
+  "updateComponents.fieldsNotRestored": "Certains champs de {{component}} n’ont pas pu être restaurés",
+  "updateComponents.fieldsRefreshFailed": "Impossible d’actualiser les champs de {{component}}",
   "updateComponents.dismiss": "Ignorer",
   "updateComponents.dismissAll": "Ignorer tout",
   "updateComponents.flowNeedsReview": "Il faut revoir le déroulement",

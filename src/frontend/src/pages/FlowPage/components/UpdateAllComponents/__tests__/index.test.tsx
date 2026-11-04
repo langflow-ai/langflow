@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
+import type { GenericNodeType } from "@/types/flow";
 import type { ComponentsToUpdateType } from "@/types/zustand/flow";
 import UpdateAllComponents from "../index";
 
@@ -79,7 +80,22 @@ jest.mock(
   }),
 );
 
-jest.mock("@/modals/updateComponentModal", () => () => null);
+jest.mock(
+  "@/modals/updateComponentModal",
+  () =>
+    ({ open, onUpdateNode, components }) =>
+      open ? (
+        <button
+          onClick={() =>
+            void onUpdateNode(components.map(({ id }) => id)).catch(
+              () => undefined,
+            )
+          }
+        >
+          Confirm reviewed components
+        </button>
+      ) : null,
+);
 
 jest.mock("@/stores/alertStore", () => {
   type AlertState = {
@@ -293,6 +309,133 @@ describe("UpdateAllComponents", () => {
 
     expect(mockAddDismissedNodes).toHaveBeenCalledWith(["node-1"]);
     expect(mockSetNodes).toHaveBeenCalled();
+  });
+
+  function nestUpdatableNode() {
+    configureUpdatableNodes(["node-1"]);
+    const child = (flowStoreState.nodes as GenericNodeType[])[0];
+    child.data.node!.template.input = {
+      type: "str",
+      value: "stale child value",
+      required: false,
+      list: false,
+      show: true,
+      readonly: false,
+    };
+    flowStoreState.nodes = [
+      {
+        id: "group",
+        type: "genericNode",
+        data: {
+          id: "group",
+          type: "GroupNode",
+          node: {
+            template: {
+              exposed: {
+                value: "saved group value",
+                proxy: { id: "node-1", field: "input" },
+              },
+            },
+            flow: { data: { nodes: [child], edges: [] } },
+          },
+        },
+      },
+    ];
+    flowStoreState.edges = [
+      {
+        id: "incoming",
+        source: "source",
+        target: "group",
+        targetHandle: "str|exposed|group",
+      },
+    ];
+    flowStoreState.dismissedNodes = [];
+    return child;
+  }
+
+  it("reviews and updates grouped components using saved group values and proxy connections", async () => {
+    const user = userEvent.setup();
+    const child = nestUpdatableNode();
+    (
+      flowStoreState.componentsToUpdate as { breakingChange: boolean }[]
+    )[0].breakingChange = true;
+    mockValidateComponentCode.mockResolvedValue({
+      data: { display_name: "Prompt" },
+      type: "Prompt",
+    });
+    render(<UpdateAllComponents />);
+
+    await user.click(screen.getByTestId("update-all-button"));
+    expect(mockValidateComponentCode).not.toHaveBeenCalled();
+    await user.click(
+      screen.getByRole("button", { name: "Confirm reviewed components" }),
+    );
+
+    await waitFor(() =>
+      expect(mockUpdateAllNodes).toHaveBeenCalledWith([
+        expect.objectContaining({ nodeId: "node-1" }),
+      ]),
+    );
+    expect(mockValidateComponentCode).toHaveBeenCalledWith({
+      code: "server_code",
+      frontend_node: expect.objectContaining({
+        template: expect.objectContaining({
+          input: expect.objectContaining({ value: "saved group value" }),
+        }),
+      }),
+    });
+    expect(mockProcessNodeAdvancedFields).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.arrayContaining([
+        expect.objectContaining({
+          target: "node-1",
+          data: expect.objectContaining({
+            targetHandle: expect.objectContaining({ fieldName: "input" }),
+          }),
+        }),
+      ]),
+      "node-1",
+    );
+    expect(child.data.node!.template.input.value).toBe("stale child value");
+  });
+
+  it("dismisses the grouped node itself without editing its wrapper or saved source", async () => {
+    const user = userEvent.setup();
+    const child = nestUpdatableNode();
+    render(<UpdateAllComponents />);
+
+    await user.click(screen.getByRole("button", { name: /dismiss/i }));
+
+    const changed = mockSetNodes.mock.calls[0][0](
+      flowStoreState.nodes,
+    ) as GenericNodeType[];
+    const changedChild = changed[0].data.node!.flow!.data!
+      .nodes[0] as GenericNodeType;
+    expect(changedChild.data.node!.edited).toBe(true);
+    expect(changed[0].data.node!.edited).toBeUndefined();
+    expect(child.data.node!.edited).toBe(false);
+    expect(mockAddDismissedNodes).toHaveBeenCalledWith(["node-1"]);
+  });
+
+  it("reports a connection removed inside a group during the update", async () => {
+    const user = userEvent.setup();
+    nestUpdatableNode();
+    const nested = (flowStoreState.nodes as GenericNodeType[])[0].data.node!
+      .flow!.data!;
+    nested.edges = [{ id: "internal", source: "source", target: "node-1" }];
+    mockValidateComponentCode.mockResolvedValue({
+      data: { display_name: "Prompt" },
+      type: "Prompt",
+    });
+    mockUpdateAllNodes.mockImplementationOnce(() => {
+      nested.edges = [];
+    });
+    render(<UpdateAllComponents />);
+
+    await user.click(screen.getByTestId("update-all-button"));
+
+    await waitFor(() => expect(mockSetSuccessData).toHaveBeenCalled());
+    expect(mockSetNoticeData).toHaveBeenCalledTimes(1);
   });
 
   it("clears dismissed nodes after a successful bulk update", async () => {
