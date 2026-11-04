@@ -93,10 +93,12 @@ class MessageBase(SQLModel):
             for file in message.files:
                 if hasattr(file, "path") and hasattr(file, "url") and file.path:
                     session_id = message.session_id
-                    if session_id and str(session_id) in file.path:
-                        parts = file.path.split(str(session_id))
+                    typed_flow_scope = f"flow-{session_id}"
+                    attachment_scope = typed_flow_scope if f"{typed_flow_scope}/" in file.path else str(session_id)
+                    if session_id and attachment_scope in file.path:
+                        parts = file.path.split(attachment_scope)
                         if len(parts) > 1:
-                            image_paths.append(f"{session_id}{parts[1]}")
+                            image_paths.append(f"{attachment_scope}{parts[1]}")
                         else:
                             image_paths.append(file.path)
                     else:

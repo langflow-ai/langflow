@@ -5,7 +5,9 @@ import json
 import logging
 import logging.handlers
 import os
+import re
 import sys
+import traceback
 import warnings
 from collections import deque
 from collections.abc import Iterator
@@ -234,42 +236,72 @@ DEFAULT_REDACT_KEYS: frozenset[str] = frozenset(
         "cookie",
         "set-cookie",
         "x-api-key",
+        "x_api_key",
         "x-auth-token",
     }
 )
 _REDACTED = "***"
-_REDACT_MAX_DEPTH = 4
+_REDACT_MAX_DEPTH = 32
+
+
+def _extra_redact_keys() -> frozenset[str]:
+    return frozenset(k.strip().lower() for k in os.getenv("LANGFLOW_LOG_REDACT_KEYS", "").split(",") if k.strip())
 
 
 def _build_redact_processor(extra_keys: frozenset[str]) -> Any:
-    """Build a structlog processor that scrubs sensitive keys.
+    """Scrub credential fields and query parameters before rendering.
 
-    Matches case-insensitively, walks nested dicts and lists up to a small
-    depth, and replaces values with a fixed sentinel so logs still show the
-    shape of the data without leaking the value.
+    Preserve ordinary query parameters and container structure. Replace cycles
+    and containers beyond the walk limit rather than exposing their contents.
     """
     sensitive = {k.lower() for k in DEFAULT_REDACT_KEYS | extra_keys}
 
-    def _scrub(value: Any, depth: int) -> Any:
-        if depth >= _REDACT_MAX_DEPTH:
+    # Query parameter names may be percent encoded before the server decodes them.
+    names = [
+        "".join(f"(?:{re.escape(char)}|%{ord(char):02x})" for char in key)
+        for key in sorted(sensitive, key=len, reverse=True)
+    ]
+    sensitive_names = "|".join(names)
+    credential_values = re.compile(
+        rf"(?P<name>(?<![\w%+.-])(?:(?:{sensitive_names})\s*=\s*"
+        rf"|(?P<key_quote>[\"'])(?:{sensitive_names})(?P=key_quote)\s*:\s*))"
+        r"(?:(?P<quote>[\"'])(?:\\[^\r\n]|(?!(?P=quote))[^\\\r\n])*(?P=quote)"
+        r"|[\"'][^\r\n]*|[^\s&#\"'<>]*)",
+        re.IGNORECASE,
+    )
+
+    def _scrub(value: Any, depth: int, ancestors: set[int]) -> Any:
+        if isinstance(value, str):
+            if "=" not in value and ":" not in value:
+                return value
+            return credential_values.sub(
+                lambda match: match["name"] + (match["quote"] or "") + _REDACTED + (match["quote"] or ""), value
+            )
+        if not isinstance(value, (dict, list, tuple)):
             return value
-        if isinstance(value, dict):
-            return {
-                k: (_REDACTED if isinstance(k, str) and k.lower() in sensitive else _scrub(v, depth + 1))
-                for k, v in value.items()
-            }
-        if isinstance(value, list):
-            return [_scrub(item, depth + 1) for item in value]
-        if isinstance(value, tuple):
-            return tuple(_scrub(item, depth + 1) for item in value)
-        return value
+        identity = id(value)
+        if depth >= _REDACT_MAX_DEPTH or identity in ancestors:
+            return _REDACTED
+        ancestors.add(identity)
+        try:
+            if isinstance(value, dict):
+                return {
+                    k: (_REDACTED if isinstance(k, str) and k.lower() in sensitive else _scrub(v, depth + 1, ancestors))
+                    for k, v in value.items()
+                }
+            if len(value) == 2 and isinstance(value[0], str) and value[0].lower() in sensitive:  # noqa: PLR2004
+                return (value[0], _REDACTED) if isinstance(value, tuple) else [value[0], _REDACTED]
+            scrubbed = [_scrub(item, depth + 1, ancestors) for item in value]
+            return tuple(scrubbed) if isinstance(value, tuple) else scrubbed
+        finally:
+            ancestors.remove(identity)
 
     def redact(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
         for key in list(event_dict.keys()):
             if isinstance(key, str) and key.lower() in sensitive:
                 event_dict[key] = _REDACTED
             else:
-                event_dict[key] = _scrub(event_dict[key], 1)
+                event_dict[key] = _scrub(event_dict[key], 1, {id(event_dict)})
         return event_dict
 
     return redact
@@ -940,13 +972,26 @@ def setup_loguru_logger(log_level: str, *, enqueue: bool = False) -> None:
     )
 
 
+class _RedactingFileFormatter(logging.Formatter):
+    """Scrub foreign records that bypass structlog in plain file modes."""
+
+    def __init__(self) -> None:
+        super().__init__("%(message)s")
+        self._redact = _build_redact_processor(_extra_redact_keys())
+
+    def format(self, record: logging.LogRecord) -> str:
+        text = super().format(record)
+        return self._redact(None, record.levelname.lower(), {"event": text})["event"]
+
+
 def setup_log_file(log_file: Path, *, max_bytes: int, formatter: logging.Formatter | None = None) -> None:
     """Set up Langflow's rotating file handler.
 
     ``formatter`` lets JSON modes attach a ``structlog.stdlib.ProcessorFormatter``
     so third-party stdlib records (uvicorn, sqlalchemy, httpx, ...) are rendered
     as JSON through the same processor chain as application logs. When omitted,
-    the handler writes the message verbatim (structlog has already rendered it).
+    the handler preserves plain formatting and scrubs credentials from the final
+    message and traceback, including foreign records that bypass structlog.
     """
     global _file_handler  # noqa: PLW0603
 
@@ -959,7 +1004,7 @@ def setup_log_file(log_file: Path, *, max_bytes: int, formatter: logging.Formatt
         maxBytes=max_bytes,
         backupCount=5,
     )
-    _file_handler.setFormatter(formatter if formatter is not None else logging.Formatter("%(message)s"))
+    _file_handler.setFormatter(formatter if formatter is not None else _RedactingFileFormatter())
     logging.root.addHandler(_file_handler)
 
 
@@ -1067,10 +1112,7 @@ def configure(
             event_dict.setdefault(key, value)
         return event_dict
 
-    extra_redact = frozenset(
-        k.strip().lower() for k in os.getenv("LANGFLOW_LOG_REDACT_KEYS", "").split(",") if k.strip()
-    )
-    redact_processor = _build_redact_processor(extra_redact)
+    redact_processor = _build_redact_processor(_extra_redact_keys())
 
     processors: list[Any] = [
         structlog.contextvars.merge_contextvars,
@@ -1152,17 +1194,20 @@ def configure(
                 processors=[
                     structlog.stdlib.ProcessorFormatter.remove_processors_meta,
                     json_traceback,
+                    redact_processor,
                     structlog.processors.JSONRenderer(),
                 ],
             )
         else:
             processors.append(json_traceback)
+            processors.append(redact_processor)
             processors.append(structlog.processors.JSONRenderer())
 
     if log_env.lower() in ("container", "container_json"):
         _append_json_tail()
     elif log_env.lower() == "container_csv":
         processors.append(structlog.processors.format_exc_info)
+        processors.append(redact_processor)
         # Include callsite fields in key order when DEV is enabled
         key_order = ["timestamp", "level", "event"]
         if DEV:
@@ -1176,14 +1221,21 @@ def configure(
             # If custom format is provided, use KeyValueRenderer with custom format
             if log_format:
                 processors.append(structlog.processors.format_exc_info)
+                processors.append(redact_processor)
                 processors.append(structlog.processors.KeyValueRenderer())
             else:
-                # structlog's default rich formatter renders frame locals, so pass the
-                # same opt-in gate as the JSON tracebacks above.
+
+                def format_safe_console_exception(sio: Any, exc_info: Any) -> None:
+                    # Redact before color or line wrapping can split a credential.
+                    exception = traceback.TracebackException(*exc_info, capture_locals=show_locals)
+                    text = "".join(exception.format())
+                    safe = redact_processor(None, "error", {"exception": text})["exception"]
+                    sio.write("\n" + safe)
+
                 processors.append(
                     structlog.dev.ConsoleRenderer(
                         colors=True,
-                        exception_formatter=structlog.dev.RichTracebackFormatter(show_locals=show_locals),
+                        exception_formatter=format_safe_console_exception,
                     )
                 )
         else:
