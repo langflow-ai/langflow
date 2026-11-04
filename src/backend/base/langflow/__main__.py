@@ -1859,7 +1859,11 @@ def upgrade_check(
         finally:
             if child.poll() is None:
                 child.terminate()
-                child.wait()
+                try:
+                    child.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    child.kill()
+                    child.wait()
     if child.returncode not in {0, 1, 2}:
         message = f"the check stopped unexpectedly (exit code {child.returncode}). It is safe to run again."
         if as_json:

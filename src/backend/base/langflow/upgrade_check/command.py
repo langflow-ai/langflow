@@ -98,6 +98,9 @@ def _report_destination(database_url: str, output: str | None) -> Path | None:
         msg = "the source database URL is invalid"
         raise CheckError(msg, code="source_unreadable") from None
     destination = Path(output).expanduser().resolve()
+    if not destination.parent.is_dir() or destination.is_dir():
+        msg = "choose a report file in an existing folder"
+        raise CheckError(msg, code="output_unwritable")
     if url.get_backend_name() == "sqlite" and url.database and url.database != ":memory:":
         source = Path(url.database).expanduser().resolve()
         protected = [source, *(Path(f"{source}{suffix}") for suffix in ("-wal", "-shm", "-journal"))]
