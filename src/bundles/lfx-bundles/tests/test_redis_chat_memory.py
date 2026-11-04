@@ -3,6 +3,11 @@
 from unittest.mock import patch
 
 import pytest
+
+pytest.importorskip("lfx_bundles")
+pytest.importorskip("langchain_community")
+pytest.importorskip("redis")
+
 from lfx_bundles.redis.redis_chat import RedisIndexChatMemory
 from redis.connection import parse_url
 
