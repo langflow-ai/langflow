@@ -30,7 +30,8 @@ async def test_optional_user_sets_telemetry_identity(monkeypatch) -> None:
     auth_service = SimpleNamespace(get_current_user=AsyncMock(return_value=user))
     monkeypatch.setattr(auth_utils, "_auth_service", lambda: auth_service)
 
-    result = await auth_utils.get_optional_user(None, None, None, db=AsyncMock())
+    request = SimpleNamespace(headers={}, cookies={})
+    result = await auth_utils.get_optional_user(request, None, None, None, db=AsyncMock())
 
     assert result is user
     assert get_current_telemetry_user_id() == get_installation_user_id(user.id, "test-installation")

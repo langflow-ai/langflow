@@ -4,11 +4,14 @@ import pytest
 from langchain_oracledb import OracleEmbeddings
 from lfx_oracle.components.oracle.oracledb_embeddings import OracleEmbeddingsComponent
 from oracle_test_utils import (
+    get_oracle_connect_string,
     get_oracle_connection_inputs,
     get_oracle_connection_params,
     get_oracle_embedding_params,
     get_oracle_test_connection_inputs,
 )
+
+pytestmark = pytest.mark.usefixtures("trusted_mock_oracle_endpoint")
 
 
 def test_oracle_embeddings_connection_secrets_are_password_inputs():
@@ -53,7 +56,7 @@ def test_build_embeddings_returns_oracle_embeddings_instance():
         result = component.build_embeddings()
 
     assert result is embeddings
-    mock_connect.assert_called_once_with(dsn=test_connection_inputs["dsn"])
+    mock_connect.assert_called_once_with(dsn=get_oracle_connect_string(test_connection_inputs["dsn"]))
     mock_oracle_embeddings.assert_called_once_with(
         conn=connection,
         params={"provider": "database", "model": "ALL_MINILM_L12_V2"},
@@ -103,7 +106,9 @@ def test_build_embeddings_accepts_credentialized_dsn_without_user_password():
         result = component.build_embeddings()
 
     assert result is embeddings
-    mock_connect.assert_called_once_with(**test_connection_inputs)
+    mock_connect.assert_called_once_with(
+        **{**test_connection_inputs, "dsn": get_oracle_connect_string(test_connection_inputs["dsn"])}
+    )
 
 
 @patch("lfx_oracle.components.oracle.oracledb_embeddings.OracleEmbeddings")
@@ -123,7 +128,9 @@ def test_build_embeddings_passes_none_proxy_when_unset(mock_connect, mock_oracle
     result = component.build_embeddings()
 
     assert result is embeddings
-    mock_connect.assert_called_once_with(**test_connection_inputs)
+    mock_connect.assert_called_once_with(
+        **{**test_connection_inputs, "dsn": get_oracle_connect_string(test_connection_inputs["dsn"])}
+    )
     mock_oracle_embeddings.assert_called_once_with(
         conn=connection,
         params={"provider": "database", "model": "ALL_MINILM_L12_V2"},

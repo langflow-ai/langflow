@@ -6,6 +6,10 @@
       "contract": "contracts/github.v1.json"
     },
     {
+      "provider_id": "jira",
+      "contract": "contracts/jira.v1.json"
+    },
+    {
       "provider_id": "telegram",
       "contract": "contracts/telegram.v1.json"
     }

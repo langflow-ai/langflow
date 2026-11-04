@@ -104,8 +104,9 @@ def runtime():
 
 def test_native_qualification_verifies_extension_and_wal_persistence(runtime):
     result = runtime.qualify_runtime()
-    assert result["apsw"] == "3.53.4.0"
-    assert result["sqlite"] == "3.53.4"
+    expected_apsw, expected_sqlite = ("3.54.1.0", "3.54.1") if sys.version_info >= (3, 15) else ("3.53.4.0", "3.53.4")
+    assert result["apsw"] == expected_apsw
+    assert result["sqlite"] == expected_sqlite
     assert result["sqlite_vec"] == "v0.1.9"
 
 
