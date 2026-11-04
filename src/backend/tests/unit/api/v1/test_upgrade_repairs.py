@@ -1,6 +1,7 @@
 """Selected repairs keep ownership, recovery, and author concurrency intact."""
 
 import asyncio
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -427,3 +428,78 @@ async def test_null_token_cannot_bypass_protection_on_a_repaired_row(
 
     assert response.status_code == 428
     assert await _read(flow_id) == saved
+
+
+async def _import_report(client, headers):
+    content = (Path(__file__).parent / "fixtures" / "upgrade-report-v1.json").read_bytes()
+    response = await client.post("/api/v1/upgrade-reports", content=content, headers=headers)
+    assert response.status_code == 201, response.text
+    return response.json()["id"], content
+
+
+async def test_report_linked_repair_persists_server_outcome_and_preserves_export(client, active_user, repair_admin):
+    _actor, headers = repair_admin
+    flow_id = await _flow(active_user.id)
+    report_id, original = await _import_report(client, headers)
+    payload = {**await _preview(client, headers, flow_id), "report_id": report_id}
+    await _freeze(client, headers)
+
+    response = await client.post(APPLY, json=payload, headers=headers)
+
+    assert response.status_code == 200, response.text
+    [result] = response.json()["results"]
+    assert result["status"] == "updated", result
+    history = await client.get(f"/api/v1/upgrade-reports/{report_id}/repairs", headers=headers)
+    assert history.status_code == 200, history.text
+    assert history.json()["total"] == 1
+    assert history.json()["items"][0]["result"] == result
+    [recovery] = (await _read(flow_id))[1]
+    assert result["recovery_version_id"] == str(recovery["id"])
+    assert recovery["user_id"] == active_user.id
+    exported = await client.get(f"/api/v1/upgrade-reports/{report_id}/export", headers=headers)
+    assert exported.content == original
+
+
+async def test_report_outcome_failure_rolls_back_the_repair_transaction(client, active_user, repair_admin, monkeypatch):
+    _actor, headers = repair_admin
+    flow_id = await _flow(active_user.id)
+    before = await _read(flow_id)
+    report_id, original = await _import_report(client, headers)
+    payload = {**await _preview(client, headers, flow_id), "report_id": report_id}
+    record = service._record_result
+
+    async def fail_after_flush(session, result, **kwargs):
+        await record(session, result, **kwargs)
+        if result.status == "updated":
+            msg = "injected failure after report outcome flush"
+            raise RuntimeError(msg)
+
+    monkeypatch.setattr(service, "_record_result", fail_after_flush)
+    await _freeze(client, headers)
+
+    response = await client.post(APPLY, json=payload, headers=headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["results"][0]["status"] == "failed"
+    assert await _read(flow_id) == before
+    history = (await client.get(f"/api/v1/upgrade-reports/{report_id}/repairs", headers=headers)).json()
+    assert [row["result"]["status"] for row in history["items"]] == ["failed"]
+    assert (await client.get(f"/api/v1/upgrade-reports/{report_id}/export", headers=headers)).content == original
+
+
+async def test_missing_linked_report_never_changes_selected_flows(client, active_user, repair_admin):
+    _actor, headers = repair_admin
+    flow_id = await _flow(active_user.id)
+    unknown_report = str(uuid4())
+    before = await _read(flow_id)
+    preview = await client.post(
+        PREVIEW, json={"flow_ids": [str(flow_id)], "report_id": unknown_report}, headers=headers
+    )
+    assert preview.status_code == 404
+    payload = {**await _preview(client, headers, flow_id), "report_id": unknown_report}
+    await _freeze(client, headers)
+
+    applied = await client.post(APPLY, json=payload, headers=headers)
+
+    assert applied.status_code == 404
+    assert await _read(flow_id) == before

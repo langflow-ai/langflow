@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import copy
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException
 from lfx.log import logger
 from lfx.utils.flow_validation import CustomComponentValidationError
 from sqlalchemy.exc import SQLAlchemyError
-from sqlmodel import select, update
+from sqlmodel import col, select, update
 
 from langflow.api.utils.migration_pause import is_paused
 from langflow.services.audit import vocabulary as audit_vocab
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 
 
 async def target_registry() -> dict[str, Any]:
-    from langflow.interface.components import get_and_cache_all_types_dict
+    from lfx.interface.components import get_and_cache_all_types_dict
 
     return await get_and_cache_all_types_dict(settings_service=get_settings_service())
 
@@ -111,7 +111,7 @@ async def _plan_selected(
 
 def _failed_result(flow_id: UUID, exc: Exception) -> RepairResult:
     if isinstance(exc, HTTPException):
-        status = (
+        status: Literal["forbidden", "conflict", "failed"] = (
             "forbidden" if exc.status_code in {401, 403} else "conflict" if exc.status_code in {409, 428} else "failed"
         )
         return RepairResult(
@@ -163,11 +163,15 @@ async def _write_selected(
         return result
     if result.status != "ready" or flow is None or plan is None:
         return result
+    owner_id = flow.user_id
+    if owner_id is None:
+        result.status, result.reason_codes = "manual", ["owner_unavailable"]
+        return result
     claim = uuid4()
     token_condition = (
         Flow.version_token == selection.version_token
         if selection.version_token is not None
-        else Flow.version_token.is_(None)
+        else col(Flow.version_token).is_(None)
     )
     claimed = await session.exec(
         update(Flow)
@@ -181,7 +185,7 @@ async def _write_selected(
     recovery = await create_flow_version_entry(
         session,
         flow_id=flow.id,
-        user_id=flow.user_id,
+        user_id=owner_id,
         data=copy.deepcopy(flow.data),
         description="Recovery before an administrator upgraded this flow",
         prune=False,
