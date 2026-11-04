@@ -35,6 +35,7 @@ apify = ["apify-client>=1.8.1"]
 assemblyai = ["assemblyai>=0.33.0,<1.0.0"]
 azure = ["lfx-azure>=0.1.0,<1.0.0"]
 baidu = ["qianfan==0.3.5", "langchain-community>=0.4.1,<1.0.0"]
+bhived = ["bhived>=0.1.0,<0.2"]
 bing = ["langchain-community>=0.4.1,<1.0.0"]
 # Retired in 1.13. Saved component identities remain importable.
 chroma = []
@@ -112,6 +113,7 @@ all = [
     "lfx-bundles[apify]",
     "lfx-bundles[assemblyai]",
     "lfx-bundles[baidu]",
+    "lfx-bundles[bhived]",
     "lfx-bundles[bing]",
     "lfx-bundles[cleanlab]",
     "lfx-bundles[clickhouse]",
@@ -186,6 +188,7 @@ all-no-torch = [
     "lfx-bundles[apify]",
     "lfx-bundles[assemblyai]",
     "lfx-bundles[baidu]",
+    "lfx-bundles[bhived]",
     "lfx-bundles[bing]",
     "lfx-bundles[cleanlab]",
     "lfx-bundles[clickhouse]",

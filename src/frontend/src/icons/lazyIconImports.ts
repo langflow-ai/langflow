@@ -106,6 +106,8 @@ export const lazyIconsMapping = {
     })),
   Azure: () =>
     import("@/icons/Azure").then((mod) => ({ default: mod.AzureIcon })),
+  Bhived: () =>
+    import("@/icons/Bhived").then((mod) => ({ default: mod.BhivedIcon })),
   Bing: () => import("@/icons/Bing").then((mod) => ({ default: mod.BingIcon })),
   Bolna: () =>
     import("@/icons/Bolna").then((mod) => ({ default: mod.BolnaIcon })),
