@@ -72,6 +72,10 @@ Highlights of this release include the following changes. For all changes, see t
 
     For more information, see [Upgrade Knowledge and Memory storage](/knowledge-storage-upgrade).
 
+    In 1.13.2, repeated ingestion uses stable chunk IDs.
+    The first re-ingestion of data created before this fix can add one stable-ID copy per chunk.
+    Updating a document's content leaves its previous chunks in place.
+
 ### New features
 
 - Audit logging

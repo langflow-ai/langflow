@@ -234,6 +234,35 @@ async def test_duplicate_items_in_one_job_count_each_stored_chunk_once(ingestion
     assert result["chunks_created"] == 1
 
 
+@pytest.mark.parametrize("lookup_shape", ["missing_id", "unrequested_id", "duplicate_result"])
+async def test_lookup_results_do_not_abort_repeated_ingestion(ingestion, monkeypatch, lookup_shape):
+    from langchain_core.documents import Document
+    from lfx.base.knowledge_bases.backends.sqlite import SQLiteBackend
+
+    ingest, documents, _ = ingestion
+    lookup = SQLiteBackend.get_documents_by_ids
+
+    async def lookup_with_unexpected_results(self, ids):
+        existing = await lookup(self, ids)
+        if lookup_shape == "duplicate_result":
+            return [*existing, *existing]
+        unexpected_id = None if lookup_shape == "missing_id" else "unrequested"
+        return [
+            *existing,
+            Document(id=unexpected_id, page_content="unrelated", metadata={"job_id": str(uuid4())}),
+        ]
+
+    monkeypatch.setattr(SQLiteBackend, "get_documents_by_ids", lookup_with_unexpected_results)
+
+    _, first_result = await ingest([("same.txt", b"same")])
+    original = await documents()
+    _, repeated_result = await ingest([("same.txt", b"same")])
+
+    assert first_result["chunks_created"] == 1
+    assert repeated_result["chunks_created"] == 0
+    assert await documents() == original
+
+
 async def test_cached_ids_still_validate_reclaimed_ownership(ingestion, active_user):
     from langchain_core.documents import Document
 

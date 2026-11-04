@@ -462,10 +462,11 @@ class _GuardedMethods:
             return documents
         candidates = {doc.id: doc for doc in documents if doc.id is not None}
         existing = await self._target.get_documents_by_ids(list(candidates))
+        matched = [(doc, candidate) for doc in existing if (candidate := candidates.get(doc.id)) is not None]
         other_jobs = {
             UUID(doc.metadata["job_id"])
-            for doc in existing
-            if doc.metadata.get("job_id") and doc.metadata["job_id"] != candidates[doc.id].metadata.get("job_id")
+            for doc, candidate in matched
+            if doc.metadata.get("job_id") and doc.metadata["job_id"] != candidate.metadata.get("job_id")
         }
         if other_jobs:
             async with session_scope() as session:
@@ -478,12 +479,23 @@ class _GuardedMethods:
             failed_jobs = {str(job.job_id) for job in jobs if job.status != JobStatus.COMPLETED}
         else:
             failed_jobs = set()
-        for doc in existing:
-            if doc.metadata.get("job_id") not in failed_jobs and doc.metadata.get("job_id") != candidates[
-                doc.id
-            ].metadata.get("job_id"):
+        for doc, candidate in matched:
+            if doc.metadata.get("job_id") not in failed_jobs and doc.metadata.get("job_id") != candidate.metadata.get(
+                "job_id"
+            ):
                 candidates.pop(doc.id, None)
         return [*candidates.values(), *(doc for doc in documents if doc.id is None)]
+
+    def _record_written_documents(self, documents):
+        """Count newly acknowledged IDs once across successful batches in this ingestion."""
+        previous_count = len(self._written_document_ids)
+        without_id = 0
+        for doc in documents:
+            if doc.id is None:
+                without_id += 1
+            else:
+                self._written_document_ids.add(doc.id)
+        return len(self._written_document_ids) - previous_count + without_id
 
     def __getattr__(self, name):
         """Wrap asynchronous methods and iterators with the appropriate storage lease."""
@@ -539,11 +551,7 @@ class _GuardedMethods:
                         embedded = await self._new_documents(embedded)
                         await self._target.add_embedded_documents(embedded)
                         if self._preserve_existing_documents:
-                            created = sum(
-                                doc.id is None or doc.id not in self._written_document_ids for doc in embedded
-                            )
-                            self._written_document_ids.update(doc.id for doc in embedded if doc.id is not None)
-                            return created
+                            return self._record_written_documents(embedded)
                         return len(embedded)
                 read_only = name in _READ_METHODS or (
                     name == "ensure_ready" and not getattr(self._target, "_create", False)
@@ -555,9 +563,7 @@ class _GuardedMethods:
                         documents = args[0] if args else kwargs["docs"]
                         documents = await self._new_documents(documents)
                         await value(documents)
-                        created = sum(doc.id is None or doc.id not in self._written_document_ids for doc in documents)
-                        self._written_document_ids.update(doc.id for doc in documents if doc.id is not None)
-                        return created
+                        return self._record_written_documents(documents)
                     return await value(*args, **kwargs)
 
             return call
