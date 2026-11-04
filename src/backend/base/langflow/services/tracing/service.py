@@ -71,6 +71,12 @@ def _get_openlayer_tracer():
     return OpenlayerTracer
 
 
+def _get_mixpanel_tracer():
+    from langflow.services.tracing.mixpanel import MixpanelTracer
+
+    return MixpanelTracer
+
+
 trace_context_var: ContextVar[TraceContext | None] = ContextVar("trace_context", default=None)
 component_context_var: ContextVar[ComponentTraceContext | None] = ContextVar("component_trace_context", default=None)
 
@@ -268,6 +274,20 @@ class TracingService(Service):
             session_id=trace_context.session_id,
         )
 
+    def _initialize_mixpanel_tracer(self, trace_context: TraceContext) -> None:
+        if self.deactivated:
+            return
+        mixpanel_tracer = _get_mixpanel_tracer()
+        trace_context.tracers["mixpanel"] = mixpanel_tracer(
+            trace_name=trace_context.run_name,
+            trace_type="chain",
+            project_name=trace_context.project_name,
+            trace_id=trace_context.run_id,
+            user_id=trace_context.user_id,
+            session_id=trace_context.session_id,
+            tracing_user_id=trace_context.tracing_user_id,
+        )
+
     async def start_tracers(
         self,
         run_id: UUID,
@@ -318,6 +338,7 @@ class TracingService(Service):
             self._initialize_traceloop_tracer,
             self._initialize_native_tracer,
             self._initialize_openlayer_tracer,
+            self._initialize_mixpanel_tracer,
         ):
             try:
                 initialize_tracer(trace_context)
