@@ -306,6 +306,7 @@ def _node_result(
             }
             outputs_unverified = any(warning.get("outputs_unverified", False) for warning in unverified)
             outputs = {output.get("name") for output in rebuilt.node.get("outputs", [])}
+            # Run Flow joins node IDs and discovered output names with "~". MCP Tools outputs stay fixed.
             reasons = [
                 reason
                 for reason in reasons
@@ -403,6 +404,8 @@ def _dry_run(
     thread.start()
     thread.join(DRY_RUN_SECONDS)
     if _refused_calls:
+        # Completed partial rebuilds identify unverified fields through warnings filtered above.
+        # A timeout has no completed outcome or warnings to identify which fields are missing.
         return outcome.get("node"), _reason(
             "could_not_verify", None, f"the update makes a network call: {_refused_calls[0]}"
         )
