@@ -37,7 +37,9 @@ from lfx.services.model_provider_policy import (
     set_current_model_provider_policy_context,
 )
 from lfx.services.settings.service import SettingsService
+from lfx.template.utils import copy_saved_custom_field_values
 from lfx.utils.component_aliases import ComponentIdentityIndex, build_component_identity_index
+from lfx.utils.file_path_security import component_file_access_scopes
 from lfx.utils.flow_validation import (
     CustomComponentValidationError,
     admin_only_build_required,
@@ -1976,6 +1978,13 @@ async def custom_component(
             built_frontend_node = await component_instance.update_frontend_node(
                 built_frontend_node,
                 raw_code.frontend_node,
+            )
+            # The hook rebuilds custom fields (a Prompt's variables) from the template text with
+            # empty values; give them back the values the user saved.
+            copy_saved_custom_field_values(
+                built_frontend_node,
+                raw_code.frontend_node,
+                component_file_access_scopes(component_instance),
             )
 
         tool_mode: bool = built_frontend_node.get("tool_mode", False)
