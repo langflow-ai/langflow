@@ -743,8 +743,8 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
 ### Frontend
 
 - Sidebar: one **Evaluations** entry, behind the flag (`EvalsRoute` redirects
-  to Flows when it is off). The page has `Evaluations | Datasets` tabs; each tab
-  is its own route.
+  to Flows when it is off). The page has `Datasets | Evaluations` tabs
+  (datasets first: an evaluation needs one); each tab is its own route.
 - Datasets and items use the shared `DataTableTab` (AG Grid), like Knowledge and
   Files: search, row action menu, multi-select delete, empty state with actions.
 - New dataset is one click: it creates "Untitled dataset" (a free name) and opens
@@ -763,9 +763,14 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
   1. **Setup**: flow, dataset and, with several outputs, the one to score; the
      flow check (ready and the scored output, or its blocking issues and
      warnings) and the dataset's first rows.
-  2. **Scoring**: the scoring methods, the LLM judge's model, rubric, limits and
-     safety checks, and the pass threshold ("Pass when the average score
-     reaches").
+  2. **Scoring**: the scoring methods, each with a one-line description; the
+     LLM judge's model and rubric, then **Safety checks** and **Token limits**
+     as collapsed sections whose headers summarize the choice ("None
+     selected", "600 per row · 8192 per run · stops at a limit"); and the pass
+     threshold ("Pass when the average score reaches (threshold)"). Each safety
+     check, the stop-on-limit box and, for a reasoning judge, the per-row
+     budget carry an (i) button whose tooltip explains them (hover, focus or
+     tap). Token limits stays open while a budget is invalid.
   3. **Models**, only when the flow has model pickers: each picker for this run
      only; a picker the flow saved empty is flagged and blocks Next until one is
      chosen. **Compare with other models** adds a version (a copy of the last);
@@ -776,9 +781,10 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
      confirmation: Create and run (or "Create & compare N") starts it without a
      second dialog; Re-run still asks in one.
 - Evaluation page: three views in tabs, one at a time, the chosen one and the
-  run in the URL (`?run=&view=runs|results|comparison`). A run opens on
-  Comparison when it is part of one, on Results otherwise; a started run opens
-  on its own default view.
+  run in the URL (`?run=&view=runs|results|comparison`). Without a `view` the
+  page opens on Runs, including right after Create and run or a re-run; a row
+  opens its Results. Until the evaluation and its runs load, the page shows a
+  spinner instead of an empty frame.
   - **Runs**: every run (version, models, pass rate, tokens and change against
     the previous run, cost); a row opens its results.
   - **Results**: the selected run's metric cards, Passed/Failed/Errored filter

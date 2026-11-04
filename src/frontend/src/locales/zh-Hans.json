@@ -3577,7 +3577,7 @@
   "evals.evaluate.judgeStopOnLimit": "评审达到上限时停止运行",
   "evals.evaluate.judgeStopOnLimitOnHint": "运行会在第一个达到任一上限的行停止，不再消耗更多 token。",
   "evals.evaluate.judgeStopOnLimitOffHint": "超过上限的行将没有评审分数，运行继续。",
-  "evals.evaluate.threshold": "平均分达到此值即通过",
+  "evals.evaluate.threshold": "平均分达到此值即通过（阈值）",
   "evals.evaluate.createAndRun": "创建并运行",
   "evals.evaluate.error": "无法开始评估",
   "evals.open": "打开",
@@ -3673,5 +3673,13 @@
   "evals.evaluations.notFoundBody": "它可能已被删除，或无法加载。请返回列表后重试。",
   "evals.runs.versionTag": "v{{number}}",
   "evals.runs.latestTag": "最新 → {{version}}",
-  "evals.results.runEnded": "运行已结束：{{status}}"
+  "evals.results.runEnded": "运行已结束：{{status}}",
+  "evals.scorers.containsHint": "回答包含预期文本即通过。",
+  "evals.safety.none": "未选择",
+  "evals.safety.checkHint.off_topic": "标记包含与应用用途无关内容的回答。拒绝无关请求不算。",
+  "evals.safety.checkHint.pii_exposure": "标记泄露了用户本人未写出的个人数据的回答。",
+  "evals.safety.checkHint.prompt_injection": "标记泄露应用隐藏指令，或听从文档或工具结果中植入指令的回答。",
+  "evals.safety.checkHint.jailbreak": "标记在用户通过争辩或角色扮演绕过规则后，给出应用本应拒绝的帮助的回答。",
+  "evals.infoLabel": "关于{{name}}",
+  "evals.evaluations.loadingOne": "正在加载评估..."
 }

@@ -3578,7 +3578,7 @@
   "evals.evaluate.judgeStopOnLimit": "Lauf anhalten, wenn der Juror ein Limit erreicht",
   "evals.evaluate.judgeStopOnLimitOnHint": "Der Lauf stoppt bei der ersten Zeile, die eines der Limits erreicht, damit keine weiteren Tokens verbraucht werden.",
   "evals.evaluate.judgeStopOnLimitOffHint": "Zeilen jenseits eines Limits bleiben ohne Juror-Bewertung und der Lauf geht weiter.",
-  "evals.evaluate.threshold": "Bestanden, wenn der Durchschnitt erreicht",
+  "evals.evaluate.threshold": "Bestanden, wenn der Durchschnitt erreicht (Schwellenwert)",
   "evals.evaluate.createAndRun": "Erstellen und ausführen",
   "evals.evaluate.error": "Die Evaluierung konnte nicht gestartet werden",
   "evals.open": "Öffnen",
@@ -3674,5 +3674,13 @@
   "evals.evaluations.notFoundBody": "Sie wurde möglicherweise gelöscht oder konnte nicht geladen werden. Kehren Sie zur Liste zurück und versuchen Sie es erneut.",
   "evals.runs.versionTag": "v{{number}}",
   "evals.runs.latestTag": "Neueste → {{version}}",
-  "evals.results.runEnded": "Lauf beendet: {{status}}"
+  "evals.results.runEnded": "Lauf beendet: {{status}}",
+  "evals.scorers.containsHint": "Bestanden, wenn die Antwort den erwarteten Text enthält.",
+  "evals.safety.none": "Keine ausgewählt",
+  "evals.safety.checkHint.off_topic": "Markiert Antworten mit Inhalten, die nichts mit dem Zweck der App zu tun haben. Eine themenfremde Anfrage abzulehnen zählt nicht.",
+  "evals.safety.checkHint.pii_exposure": "Markiert Antworten, die personenbezogene Daten preisgeben, die der Nutzer nicht selbst geschrieben hat.",
+  "evals.safety.checkHint.prompt_injection": "Markiert Antworten, die die versteckten Anweisungen der App preisgeben oder Anweisungen aus einem Dokument oder Tool-Ergebnis befolgen.",
+  "evals.safety.checkHint.jailbreak": "Markiert Antworten, die Hilfe leisten, die die App verweigern muss, nachdem der Nutzer argumentiert oder ein Rollenspiel genutzt hat, um ihre Regeln zu umgehen.",
+  "evals.infoLabel": "Über {{name}}",
+  "evals.evaluations.loadingOne": "Evaluierung wird geladen..."
 }

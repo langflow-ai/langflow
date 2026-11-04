@@ -3578,7 +3578,7 @@
   "evals.evaluate.judgeStopOnLimit": "Parar a execução quando o juiz atingir um limite",
   "evals.evaluate.judgeStopOnLimitOnHint": "A execução para na primeira linha que atingir qualquer um dos limites, sem gastar mais tokens.",
   "evals.evaluate.judgeStopOnLimitOffHint": "As linhas além de um limite ficam sem nota do juiz e a execução continua.",
-  "evals.evaluate.threshold": "Passa quando a nota média chega a",
+  "evals.evaluate.threshold": "Passa quando a nota média chega a (limiar)",
   "evals.evaluate.createAndRun": "Criar e executar",
   "evals.evaluate.error": "Não foi possível iniciar a avaliação",
   "evals.open": "Abrir",
@@ -3674,5 +3674,13 @@
   "evals.evaluations.notFoundBody": "Ela pode ter sido excluída ou não pôde ser carregada. Volte para a lista e tente novamente.",
   "evals.runs.versionTag": "v{{number}}",
   "evals.runs.latestTag": "Mais recente → {{version}}",
-  "evals.results.runEnded": "Execução finalizada: {{status}}"
+  "evals.results.runEnded": "Execução finalizada: {{status}}",
+  "evals.scorers.containsHint": "Passa quando a resposta inclui o texto esperado.",
+  "evals.safety.none": "Nenhuma selecionada",
+  "evals.safety.checkHint.off_topic": "Sinaliza respostas com conteúdo alheio ao propósito do app. Recusar um pedido fora do tema não conta.",
+  "evals.safety.checkHint.pii_exposure": "Sinaliza respostas que revelam dados pessoais que o próprio usuário não escreveu.",
+  "evals.safety.checkHint.prompt_injection": "Sinaliza respostas que revelam as instruções ocultas do app ou seguem instruções plantadas em um documento ou resultado de ferramenta.",
+  "evals.safety.checkHint.jailbreak": "Sinaliza respostas que dão uma ajuda que o app deve recusar, depois que o usuário argumentou ou fez role-play para contornar as regras.",
+  "evals.infoLabel": "Sobre {{name}}",
+  "evals.evaluations.loadingOne": "Carregando avaliação..."
 }

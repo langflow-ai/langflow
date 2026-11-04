@@ -123,11 +123,12 @@ test(
     await expect(page.getByTestId("evaluation-detail-title")).toBeVisible({
       timeout: 30000,
     });
-    // A plain run opens on its results; the runs list has its own view.
-    await expect(page.getByTestId("detail-tab-results")).toHaveAttribute(
+    // A started run opens on the runs list; its rows are one tab away.
+    await expect(page.getByTestId("detail-tab-runs")).toHaveAttribute(
       "aria-selected",
       "true",
     );
+    await page.getByTestId("detail-tab-results").click();
     await expect(page.locator(".ag-center-cols-container .ag-row")).toHaveCount(
       3,
       { timeout: 60000 },
@@ -188,6 +189,7 @@ test(
     await expect(page.getByTestId("evaluation-detail-title")).toBeVisible({
       timeout: 30000,
     });
+    await page.getByTestId("detail-tab-results").click();
     await expect(page.locator(".ag-center-cols-container .ag-row")).toHaveCount(
       3,
       { timeout: 60000 },
@@ -288,14 +290,14 @@ test(
     await page.runA11yScan("evals-evaluate-review");
     await page.getByTestId("evaluate-submit").click();
 
-    await expect(page.getByTestId("model-comparison")).toBeVisible({
-      timeout: 30000,
-    });
-    // A comparison opens on its leaderboard.
-    await expect(page.getByTestId("detail-tab-comparison")).toHaveAttribute(
+    // A comparison opens on the runs list too; the leaderboard is its own tab.
+    await expect(page.getByTestId("detail-tab-runs")).toHaveAttribute(
       "aria-selected",
       "true",
+      { timeout: 30000 },
     );
+    await page.getByTestId("detail-tab-comparison").click();
+    await expect(page.getByTestId("model-comparison")).toBeVisible();
     // A tie needs both versions finished; the progress line under the cost goes away then.
     await expect(page.getByTestId("comparison-most-accurate")).toContainText(
       "2 versions tied",

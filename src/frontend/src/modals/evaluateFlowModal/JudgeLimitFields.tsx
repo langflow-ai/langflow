@@ -1,9 +1,10 @@
-import { useState } from "react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import InfoHint from "@/pages/MainPage/pages/evalsPage/components/InfoHint";
+import CollapsibleSection from "./CollapsibleSection";
 import {
   JUDGE_MAX_OUTPUT_TOKENS_CEILING,
   JUDGE_MAX_RUN_OUTPUT_TOKENS_CEILING,
@@ -28,8 +29,8 @@ interface JudgeLimitFieldsProps {
 interface BudgetFieldProps {
   id: string;
   label: string;
-  /** Shown only when it says something the label does not. */
-  hint?: string;
+  /** An (i) next to the label, for what the label leaves out. */
+  info?: ReactNode;
   error: string;
   invalid: boolean;
   max: number;
@@ -40,17 +41,20 @@ interface BudgetFieldProps {
 function BudgetField({
   id,
   label,
-  hint,
+  info,
   error,
   invalid,
   max,
   value,
   onChange,
 }: BudgetFieldProps) {
-  const hintId = `${id}-hint`;
+  const errorId = `${id}-error`;
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor={id}>{label}</Label>
+      <div className="flex items-center gap-1.5">
+        <Label htmlFor={id}>{label}</Label>
+        {info}
+      </div>
       <div className="w-36">
         <Input
           id={id}
@@ -63,20 +67,13 @@ function BudgetField({
           className="w-full"
           value={value}
           aria-invalid={invalid}
-          aria-describedby={invalid || hint ? hintId : undefined}
+          aria-describedby={invalid ? errorId : undefined}
           onChange={(event) => onChange(event.target.value)}
         />
       </div>
-      {(invalid || hint) && (
-        <span
-          id={hintId}
-          className={
-            invalid
-              ? "text-xs text-destructive"
-              : "text-xs text-muted-foreground"
-          }
-        >
-          {invalid ? error : hint}
+      {invalid && (
+        <span id={errorId} className="text-xs text-destructive">
+          {error}
         </span>
       )}
     </div>
@@ -91,9 +88,6 @@ export default function JudgeLimitFields({
   reasoningModel,
 }: JudgeLimitFieldsProps) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  // An invalid value must never hide behind a collapsed section.
-  const expanded = open || rowInvalid || runInvalid;
   const summary = t("evals.evaluate.judgeLimitsSummary", {
     row: value.maxOutputTokens || "—",
     run: value.maxRunOutputTokens || "—",
@@ -103,99 +97,76 @@ export default function JudgeLimitFields({
         : "evals.evaluate.judgeLimitsContinues",
     ),
   });
+  const rowLabel = t("evals.evaluate.judgeMaxTokens");
+  const stopLabel = t("evals.evaluate.judgeStopOnLimit");
 
   return (
-    <div className="flex flex-col gap-3">
-      <button
-        type="button"
-        data-testid="judge-limits-toggle"
-        aria-expanded={expanded}
-        aria-controls="judge-limits-panel"
-        onClick={() => setOpen(!expanded)}
-        className="flex w-full items-center gap-2 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <ForwardedIconComponent
-          name="ChevronRight"
-          aria-hidden="true"
-          className={
-            expanded
-              ? "h-4 w-4 shrink-0 rotate-90 text-muted-foreground transition-transform motion-reduce:transition-none"
-              : "h-4 w-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none"
+    <CollapsibleSection
+      id="judge-limits"
+      title={t("evals.evaluate.judgeLimits")}
+      summary={summary}
+      // An invalid value must never hide behind a collapsed section.
+      forceOpen={rowInvalid || runInvalid}
+    >
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <BudgetField
+          id="judge-max-tokens"
+          label={rowLabel}
+          info={
+            reasoningModel && (
+              <InfoHint
+                hint={t("evals.evaluate.judgeMaxTokensReasoningHint")}
+                label={t("evals.infoLabel", { name: rowLabel })}
+                testId="judge-max-tokens-info"
+              />
+            )
+          }
+          error={t("evals.evaluate.judgeMaxTokensInvalid", {
+            max: JUDGE_MAX_OUTPUT_TOKENS_CEILING.toLocaleString(),
+          })}
+          invalid={rowInvalid}
+          max={JUDGE_MAX_OUTPUT_TOKENS_CEILING}
+          value={value.maxOutputTokens}
+          onChange={(maxOutputTokens) =>
+            onChange({ ...value, maxOutputTokens })
           }
         />
-        <span className="text-sm font-medium">
-          {t("evals.evaluate.judgeLimits")}
-        </span>
-        {!expanded && (
-          <span className="truncate text-xs text-muted-foreground">
-            {summary}
-          </span>
-        )}
-      </button>
-      {expanded && (
-        <div id="judge-limits-panel" className="flex flex-col gap-3 pl-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <BudgetField
-              id="judge-max-tokens"
-              label={t("evals.evaluate.judgeMaxTokens")}
-              hint={
-                reasoningModel
-                  ? t("evals.evaluate.judgeMaxTokensReasoningHint")
-                  : undefined
-              }
-              error={t("evals.evaluate.judgeMaxTokensInvalid", {
-                max: JUDGE_MAX_OUTPUT_TOKENS_CEILING.toLocaleString(),
-              })}
-              invalid={rowInvalid}
-              max={JUDGE_MAX_OUTPUT_TOKENS_CEILING}
-              value={value.maxOutputTokens}
-              onChange={(maxOutputTokens) =>
-                onChange({ ...value, maxOutputTokens })
-              }
-            />
-            <BudgetField
-              id="judge-max-run-tokens"
-              label={t("evals.evaluate.judgeMaxRunTokens")}
-              error={t("evals.evaluate.judgeMaxRunTokensInvalid", {
-                max: JUDGE_MAX_RUN_OUTPUT_TOKENS_CEILING.toLocaleString(),
-              })}
-              invalid={runInvalid}
-              max={JUDGE_MAX_RUN_OUTPUT_TOKENS_CEILING}
-              value={value.maxRunOutputTokens}
-              onChange={(maxRunOutputTokens) =>
-                onChange({ ...value, maxRunOutputTokens })
-              }
-            />
-          </div>
-          <div className="flex items-start gap-2">
-            <Checkbox
-              id="judge-stop-on-limit"
-              data-testid="judge-stop-on-limit"
-              checked={value.stopOnOutputLimit}
-              aria-describedby="judge-stop-on-limit-hint"
-              onCheckedChange={(checked) =>
-                onChange({ ...value, stopOnOutputLimit: checked === true })
-              }
-              className="mt-0.5"
-            />
-            <div className="flex flex-col gap-0.5">
-              <Label htmlFor="judge-stop-on-limit" className="font-normal">
-                {t("evals.evaluate.judgeStopOnLimit")}
-              </Label>
-              <span
-                id="judge-stop-on-limit-hint"
-                className="text-xs text-muted-foreground"
-              >
-                {t(
-                  value.stopOnOutputLimit
-                    ? "evals.evaluate.judgeStopOnLimitOnHint"
-                    : "evals.evaluate.judgeStopOnLimitOffHint",
-                )}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+        <BudgetField
+          id="judge-max-run-tokens"
+          label={t("evals.evaluate.judgeMaxRunTokens")}
+          error={t("evals.evaluate.judgeMaxRunTokensInvalid", {
+            max: JUDGE_MAX_RUN_OUTPUT_TOKENS_CEILING.toLocaleString(),
+          })}
+          invalid={runInvalid}
+          max={JUDGE_MAX_RUN_OUTPUT_TOKENS_CEILING}
+          value={value.maxRunOutputTokens}
+          onChange={(maxRunOutputTokens) =>
+            onChange({ ...value, maxRunOutputTokens })
+          }
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <Checkbox
+          id="judge-stop-on-limit"
+          data-testid="judge-stop-on-limit"
+          checked={value.stopOnOutputLimit}
+          onCheckedChange={(checked) =>
+            onChange({ ...value, stopOnOutputLimit: checked === true })
+          }
+        />
+        <Label htmlFor="judge-stop-on-limit" className="font-normal">
+          {stopLabel}
+        </Label>
+        <InfoHint
+          hint={t(
+            value.stopOnOutputLimit
+              ? "evals.evaluate.judgeStopOnLimitOnHint"
+              : "evals.evaluate.judgeStopOnLimitOffHint",
+          )}
+          label={t("evals.infoLabel", { name: stopLabel })}
+          testId="judge-stop-on-limit-info"
+        />
+      </div>
+    </CollapsibleSection>
   );
 }

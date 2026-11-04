@@ -14,12 +14,11 @@ import { isReasoningModel } from "./judgeLimits";
 import SafetyCheckFields from "./SafetyCheckFields";
 import { useModelOptions } from "./useModelOptions";
 
-// A hint only where the name leaves out something that changes the result or the cost.
-const SCORERS: { type: ScorerType; icon: string; hint: boolean }[] = [
-  { type: "exact_match", icon: "Equal", hint: true },
-  { type: "contains", icon: "TextSearch", hint: false },
-  { type: "similarity", icon: "Percent", hint: true },
-  { type: "llm_judge", icon: "Sparkle", hint: true },
+const SCORERS: { type: ScorerType; icon: string }[] = [
+  { type: "exact_match", icon: "Equal" },
+  { type: "contains", icon: "TextSearch" },
+  { type: "similarity", icon: "Percent" },
+  { type: "llm_judge", icon: "Sparkle" },
 ];
 
 interface ScorerFieldsProps {
@@ -63,7 +62,7 @@ export default function ScorerFields({
         {t("evals.evaluate.scorers")}
       </legend>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {SCORERS.map(({ type, icon, hint }) => {
+        {SCORERS.map(({ type, icon }) => {
           const checked = selected.has(type);
           return (
             <button
@@ -100,11 +99,9 @@ export default function ScorerFields({
                   />
                   {t(`evals.scorers.${type}`)}
                 </span>
-                {hint && (
-                  <span className="text-xs text-muted-foreground">
-                    {t(`evals.scorers.${type}Hint`)}
-                  </span>
-                )}
+                <span className="text-xs text-muted-foreground">
+                  {t(`evals.scorers.${type}Hint`)}
+                </span>
               </span>
             </button>
           );

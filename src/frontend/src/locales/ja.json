@@ -3578,7 +3578,7 @@
   "evals.evaluate.judgeStopOnLimit": "判定モデルが上限に達したら実行を停止する",
   "evals.evaluate.judgeStopOnLimitOnHint": "いずれかの上限に最初に達した行で実行が止まり、それ以上トークンを消費しません。",
   "evals.evaluate.judgeStopOnLimitOffHint": "上限を超えた行は判定スコアなしになり、実行は続行します。",
-  "evals.evaluate.threshold": "平均スコアがこの値に達したら合格",
+  "evals.evaluate.threshold": "平均スコアがこの値に達したら合格（しきい値）",
   "evals.evaluate.createAndRun": "作成して実行",
   "evals.evaluate.error": "評価を開始できませんでした",
   "evals.open": "開く",
@@ -3674,5 +3674,13 @@
   "evals.evaluations.notFoundBody": "削除されたか、読み込めなかった可能性があります。一覧に戻ってもう一度お試しください。",
   "evals.runs.versionTag": "v{{number}}",
   "evals.runs.latestTag": "最新 → {{version}}",
-  "evals.results.runEnded": "実行が終了しました: {{status}}"
+  "evals.results.runEnded": "実行が終了しました: {{status}}",
+  "evals.scorers.containsHint": "回答に期待するテキストが含まれていれば合格です。",
+  "evals.safety.none": "選択なし",
+  "evals.safety.checkHint.off_topic": "アプリの目的と関係のない内容を含む回答を検出します。関係のない依頼を断るのは問題ありません。",
+  "evals.safety.checkHint.pii_exposure": "ユーザー自身が書いていない個人データを明かす回答を検出します。",
+  "evals.safety.checkHint.prompt_injection": "アプリの隠れた指示を明かしたり、ドキュメントやツール結果に仕込まれた指示に従ったりする回答を検出します。",
+  "evals.safety.checkHint.jailbreak": "ユーザーが議論やロールプレイでルールを回避した後に、アプリが断るべき支援をした回答を検出します。",
+  "evals.infoLabel": "{{name}}について",
+  "evals.evaluations.loadingOne": "評価を読み込んでいます..."
 }

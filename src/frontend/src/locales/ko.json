@@ -3577,7 +3577,7 @@
   "evals.evaluate.judgeStopOnLimit": "심사 모델이 한도에 도달하면 실행 중지",
   "evals.evaluate.judgeStopOnLimitOnHint": "어느 한도든 처음 도달한 행에서 실행이 멈추므로 토큰을 더 쓰지 않습니다.",
   "evals.evaluate.judgeStopOnLimitOffHint": "한도를 넘은 행은 심사 점수 없이 남고 실행은 계속됩니다.",
-  "evals.evaluate.threshold": "평균 점수가 이 값에 도달하면 통과",
+  "evals.evaluate.threshold": "평균 점수가 이 값에 도달하면 통과 (임계값)",
   "evals.evaluate.createAndRun": "만들고 실행",
   "evals.evaluate.error": "평가를 시작하지 못했습니다",
   "evals.open": "열기",
@@ -3673,5 +3673,13 @@
   "evals.evaluations.notFoundBody": "삭제되었거나 불러오지 못했을 수 있습니다. 목록으로 돌아가 다시 시도하세요.",
   "evals.runs.versionTag": "v{{number}}",
   "evals.runs.latestTag": "최신 → {{version}}",
-  "evals.results.runEnded": "실행 종료: {{status}}"
+  "evals.results.runEnded": "실행 종료: {{status}}",
+  "evals.scorers.containsHint": "답변에 기대한 텍스트가 포함되면 통과합니다.",
+  "evals.safety.none": "선택 안 함",
+  "evals.safety.checkHint.off_topic": "앱의 용도와 관계없는 내용이 담긴 답변을 표시합니다. 관계없는 요청을 거절하는 것은 괜찮습니다.",
+  "evals.safety.checkHint.pii_exposure": "사용자가 직접 쓰지 않은 개인 정보를 드러내는 답변을 표시합니다.",
+  "evals.safety.checkHint.prompt_injection": "앱의 숨겨진 지침을 드러내거나 문서 또는 도구 결과에 심어진 지침을 따르는 답변을 표시합니다.",
+  "evals.safety.checkHint.jailbreak": "사용자가 논쟁이나 역할극으로 규칙을 우회한 뒤 앱이 거절해야 할 도움을 준 답변을 표시합니다.",
+  "evals.infoLabel": "{{name}} 정보",
+  "evals.evaluations.loadingOne": "평가 불러오는 중..."
 }

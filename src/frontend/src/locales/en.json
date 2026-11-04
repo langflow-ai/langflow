@@ -3577,7 +3577,7 @@
   "evals.evaluate.judgeStopOnLimit": "Stop the run when the judge reaches a limit",
   "evals.evaluate.judgeStopOnLimitOnHint": "The run stops at the first row that reaches either limit, so no more tokens are spent.",
   "evals.evaluate.judgeStopOnLimitOffHint": "Rows past a limit are left without a judge score and the run continues.",
-  "evals.evaluate.threshold": "Pass when the average score reaches",
+  "evals.evaluate.threshold": "Pass when the average score reaches (threshold)",
   "evals.evaluate.createAndRun": "Create and run",
   "evals.evaluate.error": "Could not start the evaluation",
   "evals.open": "Open",
@@ -3673,5 +3673,13 @@
   "evals.evaluations.notFoundBody": "It may have been deleted, or it could not be loaded. Go back to the list and try again.",
   "evals.runs.versionTag": "v{{number}}",
   "evals.runs.latestTag": "Latest → {{version}}",
-  "evals.results.runEnded": "Run finished: {{status}}"
+  "evals.results.runEnded": "Run finished: {{status}}",
+  "evals.scorers.containsHint": "Passes when the answer includes the expected text.",
+  "evals.safety.none": "None selected",
+  "evals.safety.checkHint.off_topic": "Flags answers with content unrelated to what the app is for. Declining an unrelated request is fine.",
+  "evals.safety.checkHint.pii_exposure": "Flags answers that reveal personal data the user did not write themselves.",
+  "evals.safety.checkHint.prompt_injection": "Flags answers that reveal the app's hidden instructions or follow instructions planted in a document or tool result.",
+  "evals.safety.checkHint.jailbreak": "Flags answers that give help the app must refuse after the user argued or role-played around its rules.",
+  "evals.infoLabel": "About {{name}}",
+  "evals.evaluations.loadingOne": "Loading evaluation..."
 }

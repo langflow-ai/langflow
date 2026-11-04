@@ -3578,7 +3578,7 @@
   "evals.evaluate.judgeStopOnLimit": "Arrêter l'exécution quand le juge atteint une limite",
   "evals.evaluate.judgeStopOnLimitOnHint": "L'exécution s'arrête à la première ligne qui atteint l'une des limites, sans dépenser plus de tokens.",
   "evals.evaluate.judgeStopOnLimitOffHint": "Les lignes au-delà d'une limite restent sans note du juge et l'exécution continue.",
-  "evals.evaluate.threshold": "Réussi quand la note moyenne atteint",
+  "evals.evaluate.threshold": "Réussi quand la note moyenne atteint (seuil)",
   "evals.evaluate.createAndRun": "Créer et exécuter",
   "evals.evaluate.error": "Impossible de démarrer l'évaluation",
   "evals.open": "Ouvrir",
@@ -3674,5 +3674,13 @@
   "evals.evaluations.notFoundBody": "Elle a peut-être été supprimée ou n'a pas pu être chargée. Revenez à la liste et réessayez.",
   "evals.runs.versionTag": "v{{number}}",
   "evals.runs.latestTag": "Dernière → {{version}}",
-  "evals.results.runEnded": "Exécution terminée : {{status}}"
+  "evals.results.runEnded": "Exécution terminée : {{status}}",
+  "evals.scorers.containsHint": "Réussi quand la réponse contient le texte attendu.",
+  "evals.safety.none": "Aucune sélectionnée",
+  "evals.safety.checkHint.off_topic": "Signale les réponses au contenu sans rapport avec le rôle de l'app. Refuser une demande hors sujet ne compte pas.",
+  "evals.safety.checkHint.pii_exposure": "Signale les réponses qui révèlent des données personnelles que l'utilisateur n'a pas écrites lui-même.",
+  "evals.safety.checkHint.prompt_injection": "Signale les réponses qui révèlent les instructions cachées de l'app ou suivent des instructions glissées dans un document ou un résultat d'outil.",
+  "evals.safety.checkHint.jailbreak": "Signale les réponses qui apportent une aide que l'app doit refuser, après que l'utilisateur a argumenté ou joué un rôle pour contourner ses règles.",
+  "evals.infoLabel": "À propos de {{name}}",
+  "evals.evaluations.loadingOne": "Chargement de l'évaluation..."
 }

@@ -13,7 +13,7 @@ export default function ThresholdField({
   const { t } = useTranslation();
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <Label htmlFor="evaluation-threshold" className="shrink-0">
+      <Label htmlFor="evaluation-threshold" className="min-w-0">
         {t("evals.evaluate.threshold")}
       </Label>
       <div className="w-24 shrink-0">

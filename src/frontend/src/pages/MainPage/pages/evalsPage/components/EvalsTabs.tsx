@@ -6,17 +6,18 @@ import { cn } from "@/utils/utils";
 export type EvalsTab = "evaluations" | "datasets";
 
 const TABS: { id: EvalsTab; to: string; icon: string; label: string }[] = [
-  {
-    id: "evaluations",
-    to: "/assets/evaluations",
-    icon: "FlaskConical",
-    label: "evals.evaluations.title",
-  },
+  // An evaluation needs a dataset first, so the dataset tab leads.
   {
     id: "datasets",
     to: "/assets/datasets",
     icon: "Table",
     label: "evals.datasets.title",
+  },
+  {
+    id: "evaluations",
+    to: "/assets/evaluations",
+    icon: "FlaskConical",
+    label: "evals.evaluations.title",
   },
 ];
 

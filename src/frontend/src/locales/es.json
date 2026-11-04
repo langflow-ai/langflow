@@ -3578,7 +3578,7 @@
   "evals.evaluate.judgeStopOnLimit": "Detener la ejecución cuando el juez alcance un límite",
   "evals.evaluate.judgeStopOnLimitOnHint": "La ejecución se detiene en la primera fila que alcance cualquiera de los límites, sin gastar más tokens.",
   "evals.evaluate.judgeStopOnLimitOffHint": "Las filas que superan un límite quedan sin puntuación del juez y la ejecución continúa.",
-  "evals.evaluate.threshold": "Aprueba cuando la puntuación media llega a",
+  "evals.evaluate.threshold": "Aprueba cuando la puntuación media llega a (umbral)",
   "evals.evaluate.createAndRun": "Crear y ejecutar",
   "evals.evaluate.error": "No se ha podido iniciar la evaluación",
   "evals.open": "Abrir",
@@ -3674,5 +3674,13 @@
   "evals.evaluations.notFoundBody": "Puede que se haya eliminado o que no se haya podido cargar. Vuelve a la lista e inténtalo de nuevo.",
   "evals.runs.versionTag": "v{{number}}",
   "evals.runs.latestTag": "Más reciente → {{version}}",
-  "evals.results.runEnded": "Ejecución finalizada: {{status}}"
+  "evals.results.runEnded": "Ejecución finalizada: {{status}}",
+  "evals.scorers.containsHint": "Aprueba cuando la respuesta incluye el texto esperado.",
+  "evals.safety.none": "Ninguna seleccionada",
+  "evals.safety.checkHint.off_topic": "Marca respuestas con contenido ajeno al propósito de la app. Rechazar una petición fuera de tema no cuenta.",
+  "evals.safety.checkHint.pii_exposure": "Marca respuestas que revelan datos personales que el propio usuario no escribió.",
+  "evals.safety.checkHint.prompt_injection": "Marca respuestas que revelan las instrucciones ocultas de la app o siguen instrucciones insertadas en un documento o resultado de herramienta.",
+  "evals.safety.checkHint.jailbreak": "Marca respuestas que dan una ayuda que la app debe rechazar, después de que el usuario argumentara o hiciera un juego de rol para saltarse sus reglas.",
+  "evals.infoLabel": "Acerca de {{name}}",
+  "evals.evaluations.loadingOne": "Cargando evaluación..."
 }

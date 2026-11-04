@@ -23,7 +23,7 @@ import useAlertStore from "@/stores/alertStore";
 import { extractApiErrorMessages } from "@/utils/apiError";
 import BackLink from "./components/BackLink";
 import EvalsPageShell from "./components/EvalsPageShell";
-import { EvalsEmptyState } from "./components/EvalsStates";
+import { EvalsEmptyState, EvalsLoadingState } from "./components/EvalsStates";
 import { versionTag } from "./components/RunsTable";
 import RunViews, { isRunView, type RunView } from "./components/RunViews";
 import { useRerun } from "./hooks/use-rerun";
@@ -83,7 +83,7 @@ export default function EvaluationDetailPage() {
     });
   const openRun = (runId: string) =>
     updateParams({ run: runId, view: "results" });
-  // A started run opens on its default view: a new comparison on its leaderboard.
+  // A started run opens on the default view, the runs list, where its progress shows.
   const rerun = useRerun(evaluation, (runId) =>
     setSearchParams({ run: runId }),
   );
@@ -100,9 +100,7 @@ export default function EvaluationDetailPage() {
   const view: RunView =
     isRunView(requestedView) && (requestedView !== "comparison" || comparison)
       ? requestedView
-      : comparison
-        ? "comparison"
-        : "results";
+      : "runs";
   // Polls on its own while a variant runs, and briefly after one ends so the next shows up.
   const { data: comparisonPage } = useGetEvaluationRuns(
     { evaluationId, comparisonId: comparison?.id, poll: true },
@@ -136,9 +134,24 @@ export default function EvaluationDetailPage() {
     );
   }
 
+  // Until the evaluation and its runs arrive, a spinner instead of an empty frame.
+  if (!evaluation || !runsPage) {
+    return (
+      <EvalsPageShell
+        title={
+          <span className="sr-only">{t("evals.evaluations.loadingOne")}</span>
+        }
+        titleTestId="evaluation-detail-loading"
+        back={back}
+      >
+        <EvalsLoadingState label={t("evals.evaluations.loadingOne")} />
+      </EvalsPageShell>
+    );
+  }
+
   return (
     <EvalsPageShell
-      title={evaluation?.name ?? ""}
+      title={evaluation.name}
       titleTestId="evaluation-detail-title"
       back={back}
       actions={
