@@ -159,11 +159,35 @@ def test_published_settings_argument_does_not_start_application_services(monkeyp
 
 
 def test_export_allows_only_the_git_library_local_version_probe():
-    exporter._refuse_network("subprocess.Popen", ("git", ["git", "version"]))
+    trusted_path = {"PATH": "/usr/bin:/bin"}
+    exporter._refuse_network("subprocess.Popen", ("git", ["git", "version"], None, trusted_path))
+    exporter._refuse_network("subprocess.Popen", ("/usr/bin/git", ["/usr/bin/git", "version"], None, trusted_path))
     with pytest.raises(exporter.RegistrySnapshotError):
         exporter._refuse_network("subprocess.Popen", ("/bin/sh", ["git", "version"]))
     with pytest.raises(exporter.RegistrySnapshotError):
         exporter._refuse_network("subprocess.Popen", ("git", ["git", "clone", "https://example.test/repo"]))
+
+
+def test_git_version_probe_rejects_path_lookalikes_without_executing_them(tmp_path, monkeypatch):
+    fake = tmp_path / "git"
+    fake.write_text("fixture-only")
+    fake.chmod(0o755)
+    trusted_path = {"PATH": "/usr/bin:/bin"}
+    forbidden = [
+        ("git", ["git", "version"], None, {"PATH": str(tmp_path)}),
+        ("git", ["git", "version"], None, {"PATH": f"{tmp_path}:/usr/bin:/bin"}),
+        ("git", ["git", "version"], None, {"PATH": ".:/usr/bin:/bin"}),
+        ("git", ["git", "version"], None, {"PATH": ""}),
+        (str(fake), ["git", "version"], None, trusted_path),
+        ("git", [str(fake), "version"], None, trusted_path),
+        ("git", ["git", "version", "extra"], None, trusted_path),
+    ]
+    for arguments in forbidden:
+        with pytest.raises(exporter.RegistrySnapshotError):
+            exporter._refuse_network("subprocess.Popen", arguments)
+    monkeypatch.setenv("PATH", str(tmp_path))
+    with pytest.raises(exporter.RegistrySnapshotError):
+        exporter._refuse_network("subprocess.Popen", ("git", ["git", "version"], None, None))
 
 
 def test_snapshot_child_clears_credentials_and_installs_denial_before_runtime(monkeypatch, tmp_path):
@@ -190,6 +214,7 @@ def test_snapshot_child_clears_credentials_and_installs_denial_before_runtime(mo
         assert installed == [exporter._refuse_network]
         assert "OPENAI_API_KEY" not in os.environ
         assert "AWS_SESSION_TOKEN" not in os.environ
+        assert os.environ["PATH"] == os.defpath
         assert os.environ["HOME"] != "/fixture/original-home"
         assert os.environ["LANGFLOW_CONFIG_DIR"].startswith(os.environ["HOME"])
         assert os.environ["LITELLM_LOCAL_MODEL_COST_MAP"] == "True"

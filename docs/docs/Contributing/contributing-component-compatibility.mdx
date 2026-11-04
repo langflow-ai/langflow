@@ -19,10 +19,11 @@ uv run python scripts/ci/run_component_compatibility.py \
 
 The current environment must contain the full Langflow distribution and its installed bundles.
 The exporter uses each installed runtime's loader in a separate process with network access blocked.
-It clears inherited credentials and uses temporary home and configuration directories before importing runtime code.
+It clears inherited credentials and PATH, uses the OS default system search path, and sets temporary home and configuration directories before importing runtime code.
 Both exports set LiteLLM's supported `LITELLM_LOCAL_MODEL_COST_MAP=True` mode to inspect its packaged pricing table without an import-time HTTP refresh.
 This does not discover live provider models or make unavailable dynamic fields verifiable.
-The process guard permits the exact local Git version probe and croniter's `platform.architecture()` probe through the canonical system `/usr/bin/file` executable, limited to `-b` and the resolved current Python interpreter.
+The process guard permits only `git version` through the canonical system `/usr/bin/git` and croniter's `platform.architecture()` probe through `/usr/bin/file`, limited to `-b` and the resolved current Python interpreter.
+Each probe verifies the executable selected by its supplied environment and PATH before allowing it.
 Other executables, targets, extra arguments, and PATH lookalikes are refused.
 A refused operation invalidates the entire snapshot even if component code catches the exception and returns a fallback contract.
 A missing index, failed module import, or skipped template fails the export.

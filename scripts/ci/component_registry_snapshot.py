@@ -26,27 +26,22 @@ class RegistrySnapshotError(RuntimeError):
     """An installed registry could not be exported completely."""
 
 
-def _is_interpreter_file_probe(arguments: tuple) -> bool:
-    """Allow croniter's platform.architecture probe of this interpreter only."""
+def _is_trusted_local_probe(arguments: tuple, program: str, options: tuple[str, ...]) -> bool:
+    """Match the actual executable selected by this subprocess's environment."""
     try:
         executable, argv, _cwd, environment = arguments
-    except ValueError:
+    except (TypeError, ValueError):
         return False
-    trusted = Path("/usr/bin/file").resolve()
-    if not trusted.is_file() or not isinstance(executable, str) or executable not in {"file", str(trusted)}:
-        return False
-    if not isinstance(argv, (list, tuple)):
-        return False
-    try:
-        program, option, target = argv
-    except ValueError:
-        return False
-    if not isinstance(program, str) or program not in {"file", str(trusted)} or option != "-b":
+    trusted = Path(f"/usr/bin/{program}").resolve()
+    allowed = {program, str(trusted)}
+    if not trusted.is_file() or not isinstance(executable, str) or executable not in allowed:
         return False
     if (
-        not isinstance(target, str)
-        or not Path(target).is_absolute()
-        or os.path.realpath(target) != os.path.realpath(sys.executable)
+        not isinstance(argv, (list, tuple))
+        or not argv
+        or not isinstance(argv[0], str)
+        or argv[0] not in allowed
+        or tuple(argv[1:]) != options
     ):
         return False
     environment = os.environ if environment is None else environment
@@ -59,10 +54,27 @@ def _is_interpreter_file_probe(arguments: tuple) -> bool:
     return resolved is not None and Path(resolved).resolve() == trusted
 
 
+def _is_interpreter_file_probe(arguments: tuple) -> bool:
+    """Allow croniter's platform.architecture probe of this interpreter only."""
+    try:
+        _executable, argv, _cwd, _environment = arguments
+        if not isinstance(argv, (list, tuple)):
+            return False
+        _program, _option, target = argv
+    except (TypeError, ValueError):
+        return False
+    return (
+        isinstance(target, str)
+        and Path(target).is_absolute()
+        and os.path.realpath(target) == os.path.realpath(sys.executable)
+        and _is_trusted_local_probe(arguments, "file", ("-b", target))
+    )
+
+
 def _refuse_network(event: str, _args: tuple) -> None:
-    if event == "subprocess.Popen" and _is_interpreter_file_probe(_args):
-        return
-    if event == "subprocess.Popen" and len(_args) > 1 and _args[0] == "git" and _args[1] == ["git", "version"]:
+    if event == "subprocess.Popen" and (
+        _is_interpreter_file_probe(_args) or _is_trusted_local_probe(_args, "git", ("version",))
+    ):
         return
     if event in {
         "socket.connect",
@@ -259,7 +271,7 @@ def main() -> None:
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="component-registry-home-") as home:
         environment = {
-            "PATH": os.environ.get("PATH", ""),
+            "PATH": os.defpath,
             "HOME": home,
             "LANGFLOW_CONFIG_DIR": str(Path(home) / "config"),
             "DO_NOT_TRACK": "true",
