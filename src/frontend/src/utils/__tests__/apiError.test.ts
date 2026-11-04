@@ -38,6 +38,24 @@ describe("extractApiErrorMessages", () => {
     ]);
   });
 
+  it("shows repeated validation errors once without the Pydantic prefix", () => {
+    const message =
+      "A flow can have only one trigger. Remove the extra triggers and try again.";
+    const error = {
+      response: {
+        data: {
+          detail: [
+            { msg: `Value error, ${message}`, loc: ["body", "data"] },
+            { msg: `Value error, ${message}`, loc: ["body", "data"] },
+            message,
+          ],
+        },
+      },
+    };
+
+    expect(extractApiErrorMessages(error)).toEqual([message]);
+  });
+
   it("supports arrays mixing strings and objects", () => {
     const error = {
       response: {
