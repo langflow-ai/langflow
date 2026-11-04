@@ -57,11 +57,11 @@ class JSONCleaner(Component):
         normalize_unicode = self.normalize_unicode
         validate_json = self.validate_json
 
-        start = json_str.find("{")
-        end = json_str.rfind("}")
-        if start == -1 or end == -1:
-            msg = "Invalid JSON string: Missing '{' or '}'"
+        span = self._find_json_span(json_str)
+        if span is None:
+            msg = "Invalid JSON string: no JSON object or array found"
             raise ValueError(msg)
+        start, end = span
         try:
             json_str = json_str[start : end + 1]
 
@@ -80,6 +80,19 @@ class JSONCleaner(Component):
         except Exception as e:
             msg = f"Error cleaning JSON string: {e}"
             raise ValueError(msg) from e
+
+    @staticmethod
+    def _find_json_span(s: str) -> tuple[int, int] | None:
+        """Return the start and end index of the outermost JSON object or array in the string."""
+        object_span = (s.find("{"), s.rfind("}"))
+        array_span = (s.find("["), s.rfind("]"))
+        has_object = -1 not in object_span
+        has_array = -1 not in array_span
+        if has_array and (not has_object or (array_span[0] < object_span[0] and array_span[1] > object_span[1])):
+            return array_span
+        if has_object:
+            return object_span
+        return None
 
     def _remove_control_characters(self, s: str) -> str:
         """Remove control characters from the string."""
