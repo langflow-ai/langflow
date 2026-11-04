@@ -306,6 +306,62 @@ async def test_overwrite_keeps_the_replaced_version_in_history(client: AsyncClie
     assert archived.json()["data"]["nodes"][0]["id"] == "n-theirs"
 
 
+async def _overwrite_a_version_written_by(client: AsyncClient, headers, author_id: uuid.UUID) -> dict:
+    """Overwrite a flow whose last save is attributed to another user, as a shared editor's is."""
+    from langflow.services.database.models.flow.model import Flow
+    from langflow.services.deps import session_scope
+
+    flow = await _create_flow(client, headers)
+    theirs = await client.patch(f"api/v1/flows/{flow['id']}", json={"data": _graph("theirs")}, headers=headers)
+    async with session_scope() as session:
+        db_flow = await session.get(Flow, uuid.UUID(flow["id"]))
+        assert db_flow is not None
+        db_flow.last_modified_by = author_id
+        session.add(db_flow)
+
+    overwritten = await client.post(
+        f"api/v1/flows/{flow['id']}/overwrite",
+        json={"data": _graph("merged")},
+        headers={**headers, "If-Match": theirs.json()["version_token"]},
+    )
+    assert overwritten.status_code == status.HTTP_200_OK, overwritten.text
+    return flow
+
+
+async def test_owner_can_recover_a_version_another_user_wrote_after_overwriting(
+    client: AsyncClient, logged_in_headers, user_two
+):
+    """The archive is filed under its author, and the owner must still reach it.
+
+    With two real users the replaced version belongs to whoever wrote it last,
+    not to the flow's owner. History scoped to the caller's own entries hid it
+    from everyone: the owner listed nothing and the author has no access to the
+    flow's history at all, so overwriting lost their work after all.
+    """
+    flow = await _overwrite_a_version_written_by(client, logged_in_headers, user_two.id)
+
+    versions = await client.get(f"api/v1/flows/{flow['id']}/versions/", headers=logged_in_headers)
+    entries = versions.json()["entries"]
+    assert len(entries) == 1, "the owner must see the version that was replaced"
+    assert entries[0]["username"] == user_two.username, "history must keep naming who wrote it"
+    archived = await client.get(f"api/v1/flows/{flow['id']}/versions/{entries[0]['id']}", headers=logged_in_headers)
+    assert archived.status_code == status.HTTP_200_OK, archived.text
+    assert archived.json()["data"]["nodes"][0]["id"] == "n-theirs"
+
+
+async def test_owner_can_delete_a_version_another_user_wrote(client: AsyncClient, logged_in_headers, user_two):
+    """An entry the owner can see must also be one the owner can remove."""
+    flow = await _overwrite_a_version_written_by(client, logged_in_headers, user_two.id)
+    versions = await client.get(f"api/v1/flows/{flow['id']}/versions/", headers=logged_in_headers)
+    entry_id = versions.json()["entries"][0]["id"]
+
+    deleted = await client.delete(f"api/v1/flows/{flow['id']}/versions/{entry_id}", headers=logged_in_headers)
+
+    assert deleted.status_code == status.HTTP_204_NO_CONTENT, deleted.text
+    remaining = await client.get(f"api/v1/flows/{flow['id']}/versions/", headers=logged_in_headers)
+    assert remaining.json()["entries"] == []
+
+
 async def test_overwrite_is_still_refused_when_the_flow_moved_again(client: AsyncClient, logged_in_headers):
     """Overwrite means "replace what I reviewed", not "write unconditionally".
 
