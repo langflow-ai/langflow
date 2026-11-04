@@ -274,7 +274,7 @@ async def get_flow_version_entries_by_ids(
 
     stmt = select(FlowVersion).where(
         col(FlowVersion.id).in_(version_ids),
-        FlowVersion.user_id == user_id,
+        _visible_to(user_id),
     )
     rows = (await session.exec(stmt)).all()
     return {row.id: row for row in rows}
