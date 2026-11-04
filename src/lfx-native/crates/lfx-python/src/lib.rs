@@ -791,6 +791,48 @@ impl GraphState {
         )
     }
 
+    /// `stage(operations, forward_json=True)["forward_operations_json"]`
+    /// without the dict: the forward operations as JSON text, one `bytes`
+    /// each. The batch stays staged until `keep` or `drop`, as with `stage`.
+    fn stage_json<'py>(
+        &self,
+        py: Python<'py>,
+        operations: &Bound<'_, PyAny>,
+    ) -> PyResult<Bound<'py, PyList>> {
+        let operations = input(operations)?;
+        let work = Work::of_input(&operations);
+        let options = ApplyOptions {
+            forward: true,
+            backward: false,
+        };
+        let staged = self
+            .write(
+                py,
+                |_| work,
+                |state| {
+                    Ok(api::stage_to_typed(
+                        &mut *unstaged(state)?,
+                        operations,
+                        options,
+                    ))
+                },
+            )
+            .map_err(refused)?
+            .map_err(|error| engine_error(py, &error))?;
+        let mut text = Vec::new();
+        let list = PyList::new(
+            py,
+            staged.forward.iter().map(|operation| {
+                api::write_operation_json(&mut text, operation);
+                PyBytes::new(py, &text)
+            }),
+        );
+        if work.is_large() {
+            py.detach(move || drop(staged));
+        }
+        list
+    }
+
     /// Commit the staged batch. Raises `RuntimeError` when no batch is staged.
     fn keep(&self, py: Python<'_>) -> PyResult<()> {
         let released = self
