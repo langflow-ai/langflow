@@ -270,6 +270,7 @@ def test_report_output_path_is_rejected_before_reading_the_source(parent_kind, t
     assert not missing_source.exists()
 
 
+@pytest.mark.skipif(os.name != "posix", reason="SIGTERM handlers and SIGKILL require POSIX")
 def test_interrupted_cli_reaps_a_child_that_ignores_termination(monkeypatch):
     import signal
 
