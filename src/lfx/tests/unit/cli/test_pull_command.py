@@ -536,10 +536,13 @@ class TestPullCommandProjectByName:
 
 class TestPullCommandProjectById:
     @pytest.mark.parametrize("project_id", [None, str(_PROJECT_ID)])
-    def test_bulk_pull_rejects_colliding_filenames_before_writing(self, tmp_path: Path, project_id: str | None):
+    @pytest.mark.parametrize("second_name", ["Team_A", "team a"])
+    def test_bulk_pull_rejects_colliding_filenames_before_writing(
+        self, tmp_path: Path, project_id: str | None, second_name: str
+    ):
         flows = [
             _fake_flow_obj(flow_id=_FLOW_ID, name="Team A", flow_dict={**_FLOW_DICT, "name": "Team A"}),
-            _fake_flow_obj(flow_id=_FLOW_ID_2, name="Team_A", flow_dict={**_FLOW_DICT_2, "name": "Team_A"}),
+            _fake_flow_obj(flow_id=_FLOW_ID_2, name=second_name, flow_dict={**_FLOW_DICT_2, "name": second_name}),
         ]
         client = _make_client_mock()
         client.get_project.return_value = _fake_project(flows=flows)
@@ -547,7 +550,7 @@ class TestPullCommandProjectById:
         sdk = _make_sdk_mock(client_mock=client)
         sdk.flow_to_json.side_effect = json.dumps
 
-        with pytest.raises(typer.BadParameter, match=r"'Team A' and 'Team_A'.*Team_A\.json"):
+        with pytest.raises(typer.BadParameter, match=rf"'Team A' and {second_name!r}.*Team_A\.json"):
             _run_pull(project_id=project_id, output_dir=str(tmp_path), sdk_mock=sdk)
 
         assert list(tmp_path.iterdir()) == []

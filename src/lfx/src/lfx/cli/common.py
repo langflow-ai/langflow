@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import unicodedata
 import uuid
 import zipfile
 from io import StringIO
@@ -786,18 +787,20 @@ def safe_filename(name: str) -> str:
 
 
 def validate_unique_flow_filenames(flow_names: Iterable[str]) -> None:
-    """Reject batches that would write more than one flow to the same file."""
+    """Reject filenames that would collide on a case-insensitive filesystem."""
     names_by_filename: dict[str, str] = {}
     for name in flow_names:
         filename = f"{safe_filename(name)}.json"
-        if filename in names_by_filename:
-            previous_name = names_by_filename[filename]
+        portable_filename = unicodedata.normalize("NFC", filename).casefold()
+        if portable_filename in names_by_filename:
+            previous_name = names_by_filename[portable_filename]
+            previous_filename = f"{safe_filename(previous_name)}.json"
             msg = (
-                f"Flows {previous_name!r} and {name!r} both map to {filename!r}. "
+                f"Flows {previous_name!r} and {name!r} collide at {previous_filename!r}. "
                 "Rename a flow or use --flow-id with separate output directories."
             )
             raise typer.BadParameter(msg)
-        names_by_filename[filename] = name
+        names_by_filename[portable_filename] = name
 
 
 def extract_script_docstring(script_path: Path) -> str | None:
