@@ -67,6 +67,7 @@ from langflow.services.database.models.connection import (
     ExecutingIdentityDescriptor,
     PersistedConnectionStatus,
 )
+from langflow.services.database.models.connection.oauth import ConnectionOAuth
 from langflow.services.database.models.connection.schemas import ConnectionRevokeRead, ConnectionTokenRenewal
 from langflow.services.deps import get_authorization_service, get_settings_service, session_scope
 
@@ -505,7 +506,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         from langflow.services.triggers.providers.registry import get_provider
 
         provider = get_provider(row.provider_key)
-        if provider is None or provider.validate_manual_credential is None:
+        if row.provider_key != PROVIDER_SLACK and (provider is None or provider.validate_manual_credential is None):
             msg = "This integration does not support manual token renewal."
             raise ManualCredentialError(msg)
         await enforce_integration_policy_for_provider(row.provider_key, user_id=user.id, require_usable_action=True)
@@ -525,6 +526,10 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
             msg = "The integration credential validator returned no token."
             raise ManualCredentialError(msg)
         encrypted_payload = _encrypt_credential_payload(raw_credentials)
+        # Manual renewal supersedes consent that may still be open in a browser.
+        binding = await session.get(ConnectionOAuth, row.id)
+        if binding is not None:
+            await session.delete(binding)
         secret = await session.get(ConnectionSecret, row.id)
         if secret is None:
             secret = ConnectionSecret(connection_id=row.id, encrypted_payload=encrypted_payload)

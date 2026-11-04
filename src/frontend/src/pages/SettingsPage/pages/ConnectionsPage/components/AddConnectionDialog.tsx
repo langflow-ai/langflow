@@ -148,6 +148,7 @@ export function AddConnectionDialog({
     providerId,
     deploymentContext,
     reauthorizing: !!reauthorize,
+    reauthorizingIdentity: reauthorize?.executing_identity?.identity,
     initialAllowBackgroundRuns: reauthorize?.allow_non_interactive ?? false,
     create: (payload) =>
       reauthorize && payload.credentials
@@ -628,6 +629,21 @@ export function AddConnectionDialog({
               : t("connections.add.title")}
           </DialogTitle>
         </DialogHeader>
+
+        {reauthorize &&
+          step !== "authorize" &&
+          slackToken.offersToken &&
+          !tokenOnly && (
+            <ConnectionMethodSelect
+              providerName={provider?.display_name ?? providerId}
+              method={slackToken.method}
+              onMethodChange={(method) => {
+                slackToken.setMethod(method);
+                setStep(method === "token" ? "details" : "scopes");
+                setFieldError(null);
+              }}
+            />
+          )}
 
         {step === "details" && noProviders && (
           <div
