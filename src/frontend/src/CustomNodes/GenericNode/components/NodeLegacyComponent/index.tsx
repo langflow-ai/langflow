@@ -11,11 +11,14 @@ import {
 export default function NodeLegacyComponent({
   legacy,
   replacement,
+  retiredIn,
   setDismissAll,
   disabled = false,
 }: {
   legacy?: boolean;
   replacement?: string[];
+  // Set for a retired component: the bar says so and cannot be dismissed.
+  retiredIn?: string;
   setDismissAll: (value: boolean) => void;
   disabled?: boolean;
 }) {
@@ -43,23 +46,41 @@ export default function NodeLegacyComponent({
       )}
     >
       <div className="flex items-center gap-3 w-full">
-        <div className="h-2.5 w-2.5 rounded-full bg-warning" />
-        <div className="mb-px flex-1 truncate text-mmd font-medium">Legacy</div>
+        <div
+          className={cn(
+            "h-2.5 w-2.5 shrink-0 rounded-full",
+            retiredIn ? "bg-destructive" : "bg-warning",
+          )}
+        />
+        {retiredIn ? (
+          <div
+            className="mb-px flex-1 text-mmd font-medium"
+            data-testid="retired-component-bar"
+          >
+            Retired in {retiredIn}. This component fails when the flow runs.
+          </div>
+        ) : (
+          <>
+            <div className="mb-px flex-1 truncate text-mmd font-medium">
+              Legacy
+            </div>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="shrink-0 !text-mmd"
-          onClick={(e) => {
-            e.stopPropagation();
-            setDismissAll(true);
-          }}
-          aria-label={t("node.dismissWarning")}
-          data-testid="dismiss-warning-bar"
-          disabled={disabled}
-        >
-          Dismiss
-        </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0 !text-mmd"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDismissAll(true);
+              }}
+              aria-label={t("node.dismissWarning")}
+              data-testid="dismiss-warning-bar"
+              disabled={disabled}
+            >
+              Dismiss
+            </Button>
+          </>
+        )}
       </div>
       <div className="text-mmd text-muted-foreground w-full">
         {foundComponents.length > 0 ? (

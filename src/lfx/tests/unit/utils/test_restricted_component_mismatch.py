@@ -12,6 +12,7 @@ These tests pin the diagnosis appended to such a failure, and the cases it must 
 
 import asyncio
 import json
+import pathlib
 from copy import deepcopy
 from importlib.resources import files
 from types import SimpleNamespace
@@ -22,6 +23,8 @@ from lfx.utils.flow_validation import (
     describe_restricted_component_mismatch,
     explain_restricted_component_mismatch,
 )
+
+HARD_FLOWS = pathlib.Path(__file__).parents[2] / "data" / "component_compat" / "hard_flows"
 
 SERVER_AGENT_CODE = "# Agent (this server)"
 
@@ -76,6 +79,13 @@ def _customized_agent() -> dict:
             "system_prompt": {"required": False, "value": "", "show": True},
         }
     )
+
+
+def _agent_with_retyped_empty_prompt() -> dict:
+    """An Agent whose empty ``system_prompt`` was saved with another type: safe unless an edge goes into it."""
+    node_info = _saved_agent()
+    node_info["template"]["system_prompt"] = {"required": False, "value": "", "show": True, "type": "dict"}
+    return node_info
 
 
 def _restrict(monkeypatch, *, allow_custom=False, registry=_registry, ready=True) -> None:
@@ -144,6 +154,40 @@ def test_breaking_outputs_are_reported_without_a_missing_input_clause(monkeypatc
     assert "missing required input" not in hint
 
 
+def test_connected_fields_decide_a_retyped_field_like_the_checker(monkeypatch):
+    """The checker and the editor call an empty, unconnected retyped field safe, so it is not blamed."""
+    _restrict(monkeypatch)
+
+    assert describe_restricted_component_mismatch("Agent", _agent_with_retyped_empty_prompt(), set()) is None
+    assert describe_restricted_component_mismatch("Agent", _agent_with_retyped_empty_prompt(), {"system_prompt"})
+
+
+@pytest.mark.parametrize("allow_custom", [False, True], ids=["restricted", "permissive"])
+@pytest.mark.parametrize("drifted", [True, False], ids=["breaking", "current"])
+def test_retired_component_is_named_with_its_replacement(monkeypatch, drifted, allow_custom):
+    """Neither updating a retired component nor running its saved code helps, so the hint says it was retired."""
+    from lfx.components.chroma.chroma import ChromaVectorStoreComponent
+    from lfx.custom.utils import create_component_template
+
+    chroma = create_component_template(component_extractor=ChromaVectorStoreComponent())[0]
+    _restrict(monkeypatch, allow_custom=allow_custom, registry=lambda: {"chroma": {"Chroma": chroma}})
+    if drifted:
+        flow = json.loads((HARD_FLOWS / "v1.12.6" / "chroma_legacy_type.json").read_text(encoding="utf-8"))["data"]
+        saved = next(node for node in flow["nodes"] if node["data"]["type"] == "Chroma")["data"]["node"]
+        # A field the server's component does not have makes the saved node breaking.
+        saved["template"]["chroma_tenant"] = {"type": "str", "value": "tenant", "show": True}
+    else:
+        # Saved with this server's own component: nothing drifted, but it still fails when the flow runs.
+        saved = deepcopy(chroma)
+
+    hint = describe_restricted_component_mismatch("Chroma", saved)
+
+    assert hint == (
+        'Note: the "Chroma" component was retired in 1.13.0 and fails when the flow runs. '
+        "Replace it with files_and_knowledge.Knowledge."
+    )
+
+
 def test_explain_never_raises(monkeypatch):
     """The only caller is an error handler: a raising diagnosis would mask the real failure."""
 
@@ -173,6 +217,7 @@ async def test_build_error_carries_the_diagnosis(monkeypatch):
     vertex.display_name = "Agent"
     vertex.data = {"type": "Agent", "node": _customized_agent()}
     vertex.graph = SimpleNamespace(flow_id=None)
+    vertex._incoming_edges = []
 
     with pytest.raises(ComponentBuildError) as excinfo:
         await vertex._build_results(custom_component=None, custom_params={}, base_type="component")
@@ -183,9 +228,35 @@ async def test_build_error_carries_the_diagnosis(monkeypatch):
     assert "missing required input: model" in message
 
 
+@pytest.mark.parametrize(("incoming_fields", "expect_hint"), [((), False), (("system_prompt",), True)])
+async def test_build_error_reads_the_vertex_edges(monkeypatch, incoming_fields, expect_hint):
+    """The build path passes the fields the vertex's edges go into, so it agrees with the checker."""
+    from lfx.exceptions.component import ComponentBuildError
+    from lfx.graph.vertex.base import Vertex
+
+    _restrict(monkeypatch)
+
+    async def _raise(**_kwargs):
+        msg = "unrelated failure"
+        raise ValueError(msg)
+
+    monkeypatch.setattr("lfx.interface.initialize.loading.get_instance_results", _raise)
+
+    vertex = Vertex.__new__(Vertex)
+    vertex.display_name = "Agent"
+    vertex.data = {"type": "Agent", "node": _agent_with_retyped_empty_prompt()}
+    vertex.graph = SimpleNamespace(flow_id=None)
+    vertex._incoming_edges = [SimpleNamespace(target_param=field) for field in incoming_fields]
+
+    with pytest.raises(ComponentBuildError) as excinfo:
+        await vertex._build_results(custom_component=None, custom_params={}, base_type="component")
+
+    assert ("LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false" in str(excinfo.value)) is expect_hint
+
+
 @pytest.mark.parametrize(
     ("allow_custom", "customized", "expect_hint"),
-    [(False, True, True), (False, False, False), (True, True, False)],
+    [(False, True, True), (False, False, False), (True, True, False), (False, "retyped prompt", False)],
 )
 async def test_first_streamed_error_carries_the_diagnosis(monkeypatch, allow_custom, customized, expect_hint):
     """The real Agent emits an error before the vertex wraps it; AG-UI stops on that first event."""
@@ -207,7 +278,11 @@ async def test_first_streamed_error_carries_the_diagnosis(monkeypatch, allow_cus
     monkeypatch.setattr(settings, "allow_custom_components", allow_custom)
     monkeypatch.setattr(settings, "substitute_outdated_component_code", True)
     saved = deepcopy(registry["models_and_agents"]["Agent"])
-    if customized:
+    if customized == "retyped prompt":
+        # Empty and unconnected, so the checker calls the retyped field safe and the error must not blame it.
+        saved["template"]["system_prompt"]["type"] = "dict"
+        saved["template"]["system_prompt"]["value"] = ""
+    elif customized:
         saved["template"].pop("model")
         saved["template"]["code"]["value"] += "\n# Customized Agent\n"
         saved["template"]["provider"] = {

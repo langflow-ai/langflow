@@ -1,6 +1,7 @@
 """Substitution must be visible even when a customized built-in runs successfully."""
 
 import json
+import pathlib
 from copy import deepcopy
 from importlib.resources import files
 
@@ -8,6 +9,8 @@ import pytest
 from lfx.interface import components
 from lfx.services.deps import get_settings_service
 from lfx.utils.flow_validation import describe_component_code_substitution
+
+HARD_FLOWS = pathlib.Path(__file__).parents[2] / "data" / "component_compat" / "hard_flows"
 
 
 @pytest.fixture
@@ -68,6 +71,101 @@ def test_warning_includes_nested_substitutions_once(saved_agent):
     wrapper = {"nodes": [{"data": {"type": "GroupNode", "node": {"flow": {"data": saved_agent}}}}]}
     warning = describe_component_code_substitution(wrapper)
     assert warning.count("Agent (Agent-qa)") == 1
+
+
+@pytest.mark.parametrize(
+    ("allow_custom", "substitute"),
+    [(False, True), (False, False), (True, True), (True, False)],
+    ids=["substitution-on", "substitution-off", "permissive", "permissive-substitution-off"],
+)
+@pytest.mark.parametrize("code_current", [False, True], ids=["drifted", "current"])
+@pytest.mark.parametrize("include_component_names", [True, False], ids=["owner", "shared"])
+def test_retired_component_is_named_with_its_replacement(
+    monkeypatch, include_component_names, code_current, allow_custom, substitute
+):
+    """Updating a retired component cannot help: it fails whatever code runs, in every mode."""
+    from lfx.components.chroma.chroma import ChromaVectorStoreComponent
+    from lfx.custom.utils import create_component_template
+
+    chroma = create_component_template(component_extractor=ChromaVectorStoreComponent())[0]
+    cache = components.ComponentCache()
+    cache.all_types_dict = {"chroma": {"Chroma": chroma}}
+    cache.all_types_ready = True
+    monkeypatch.setattr(components, "component_cache", cache)
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "allow_custom_components", allow_custom)
+    monkeypatch.setattr(settings, "substitute_outdated_component_code", substitute)
+    flow = json.loads((HARD_FLOWS / "v1.12.6" / "chroma_legacy_type.json").read_text(encoding="utf-8"))["data"]
+    if code_current:
+        saved = next(node for node in flow["nodes"] if node["data"]["type"] == "Chroma")["data"]["node"]
+        saved["template"]["code"]["value"] = chroma["template"]["code"]["value"]
+    original = deepcopy(flow)
+
+    warning = describe_component_code_substitution(flow, include_component_names=include_component_names)
+
+    assert flow == original
+
+    assert warning == (
+        "Chroma DB (Chroma-9e7b2) was retired in 1.13.0 and fails when the flow runs. "
+        "Replace it with files_and_knowledge.Knowledge."
+        if include_component_names
+        else "Some components in this flow were retired and fail when the flow runs. "
+        "Ask the flow owner to replace them."
+    )
+
+
+@pytest.mark.parametrize("with_outdated", [False, True], ids=["retired-only", "with-outdated"])
+def test_refusal_names_a_retired_component_with_its_replacement(monkeypatch, with_outdated):
+    """With substitution off, a drifted retired component is refused with its replacement, not sent to an update."""
+    from lfx.components.chroma.chroma import ChromaVectorStoreComponent
+    from lfx.custom.utils import create_component_template
+    from lfx.utils.flow_validation import CustomComponentValidationError, validate_flow_for_current_settings
+
+    registry = dict(json.loads(files("lfx").joinpath("_assets/component_index.json").read_text())["entries"])
+    registry["chroma"] = {"Chroma": create_component_template(component_extractor=ChromaVectorStoreComponent())[0]}
+    cache = components.ComponentCache()
+    cache.all_types_dict = registry
+    cache.all_types_ready = True
+    monkeypatch.setattr(components, "component_cache", cache)
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "allow_custom_components", False)
+    monkeypatch.setattr(settings, "substitute_outdated_component_code", False)
+    flow = json.loads((HARD_FLOWS / "v1.12.6" / "chroma_legacy_type.json").read_text(encoding="utf-8"))["data"]
+    for node in flow["nodes"]:
+        component_type = node["data"]["type"]
+        if component_type != "Chroma":
+            code = registry["input_output"][component_type]["template"]["code"]["value"]
+            drift = "\n# edited\n" if with_outdated and component_type == "ChatInput" else ""
+            node["data"]["node"]["template"]["code"]["value"] = code + drift
+
+    with pytest.raises(CustomComponentValidationError) as refusal:
+        validate_flow_for_current_settings(flow)
+
+    retired = (
+        "Chroma DB (Chroma-9e7b2) was retired in 1.13.0 and fails when the flow runs. "
+        "Replace it with files_and_knowledge.Knowledge."
+    )
+    assert str(refusal.value) == (
+        "Flow build blocked: outdated components must be updated before running: "
+        f"Chat Input (ChatInput-1e6ab). {retired}"
+        if with_outdated
+        else f"Flow build blocked: {retired}"
+    )
+
+
+@pytest.mark.usefixtures("saved_agent")
+def test_flow_without_component_code_skips_the_registry(monkeypatch):
+    """No node has code, so no component can be retired: the registry lookup is never built."""
+    from lfx.utils import flow_validation
+
+    def fail():
+        msg = "the registry lookup was built for a flow without component code"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr(flow_validation, "_registry_lookup", fail)
+    note = {"id": "note-1", "data": {"id": "note-1", "type": "note", "node": {"template": {}}}}
+
+    assert describe_component_code_substitution({"nodes": [note], "edges": []}) is None
 
 
 def test_unknown_component_is_not_reported_as_a_substitution(saved_agent):
