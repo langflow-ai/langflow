@@ -1,5 +1,12 @@
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  type ReactNode,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -90,6 +97,9 @@ const SideBarFoldersButtonsComponent = ({
   const loading = !folders;
   const projectSidebar = useCustomProjectSidebar(folders);
   const refInput = useRef<HTMLInputElement>(null);
+  const projectMenuRef = useRef<HTMLUListElement>(null);
+  const [activeIndicatorStyle, setActiveIndicatorStyle] =
+    useState<CSSProperties>({ opacity: 0 });
 
   const _navigate = useCustomNavigate();
 
@@ -114,6 +124,31 @@ const SideBarFoldersButtonsComponent = ({
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
   const folderId = useParams().folderId ?? myCollectionId ?? "";
+
+  useLayoutEffect(() => {
+    if (!projectSidebar.activeIndicatorClassName) return;
+
+    const menu = projectMenuRef.current;
+    const activeButton = menu?.querySelector<HTMLElement>(
+      '[data-sidebar="menu-button"][data-active="true"]',
+    );
+    if (!menu || !activeButton) {
+      setActiveIndicatorStyle((style) => ({ ...style, opacity: 0 }));
+      return;
+    }
+
+    const menuBounds = menu.getBoundingClientRect();
+    const buttonBounds = activeButton.getBoundingClientRect();
+    setActiveIndicatorStyle({
+      height: buttonBounds.height,
+      opacity: 1,
+      transform: `translateY(${buttonBounds.top - menuBounds.top}px)`,
+    });
+  }, [
+    pathname,
+    projectSidebar.activeIndicatorClassName,
+    projectSidebar.projects,
+  ]);
 
   const { dragOver, dragEnter, dragLeave, onDrop } = useFileDrop(folderId);
   const uploadFlow = useUploadFlow();
@@ -443,10 +478,16 @@ const SideBarFoldersButtonsComponent = ({
 
   return (
     <Sidebar
+      aria-hidden={
+        projectSidebar.secondaryNavigationState === "closed" || undefined
+      }
+      data-secondary-navigation-state={projectSidebar.secondaryNavigationState}
       collapsible={isMobile ? "offcanvas" : "none"}
       className={projectSidebar.className}
       data-testid="project-sidebar"
       aria-labelledby="project-sidebar-title"
+      id="project-sidebar"
+      inert={projectSidebar.secondaryNavigationState === "closed" || undefined}
     >
       <SidebarHeader
         className={cn("px-4 py-1", projectSidebar.headerContainerClassName)}
@@ -472,7 +513,20 @@ const SideBarFoldersButtonsComponent = ({
                 .map((folder) => folder.id ?? "")
                 .filter(Boolean)}
             >
-              <SidebarMenu>
+              <SidebarMenu
+                className={cn(
+                  projectSidebar.activeIndicatorClassName && "relative",
+                )}
+                ref={projectMenuRef}
+              >
+                {projectSidebar.activeIndicatorClassName ? (
+                  <span
+                    aria-hidden="true"
+                    className={projectSidebar.activeIndicatorClassName}
+                    data-testid="project-active-indicator"
+                    style={activeIndicatorStyle}
+                  />
+                ) : null}
                 {!loading ? (
                   projectSidebar.projects.length === 0 ? (
                     <div className="px-2 py-5 text-center text-sm text-muted-foreground">

@@ -1,5 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import TriggerActionMenu from "../TriggerActionMenu";
 import TriggerStatusSummary from "../TriggerStatusSummary";
 import { makeTrigger } from "./fixtures";
@@ -144,6 +146,42 @@ describe("TriggerStatusSummary", () => {
     expect(container.querySelector("img")).toBeNull();
   });
 
+  it("shows a coded server error in the reader's language, not as the server wrote it", () => {
+    render(
+      <TriggerStatusSummary
+        trigger={makeTrigger({
+          state: "pending",
+          reason: "config_invalid",
+          last_error:
+            "Invalid cron expression: a valid five-field cron expression is required.",
+          last_error_code: "invalid_cron",
+        })}
+      />,
+    );
+
+    expect(screen.getByTestId("trigger-last-error")).toHaveTextContent(
+      "Invalid cron expression: enter five fields (minute, hour, day of month, month, day of week).",
+    );
+  });
+
+  it("does not repeat a removed node under the reason that already says so", () => {
+    render(
+      <TriggerStatusSummary
+        trigger={makeTrigger({
+          state: "paused",
+          reason: "node_removed",
+          last_error: "trigger node removed from the flow",
+          last_error_code: "node_removed",
+        })}
+      />,
+    );
+
+    expect(
+      screen.getByText("The trigger node was removed from the flow."),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("trigger-last-error")).toBeNull();
+  });
+
   it("explains a running trigger only when asked", () => {
     const { rerender } = render(
       <TriggerStatusSummary trigger={makeTrigger()} />,
@@ -153,4 +191,52 @@ describe("TriggerStatusSummary", () => {
     rerender(<TriggerStatusSummary trigger={makeTrigger()} explainRunning />);
     expect(screen.getByText("Listening for events.")).toBeInTheDocument();
   });
+});
+
+describe("TriggerActionMenu focus return", () => {
+  /** A row menu whose View events and Delete each open a dialog, as on the Triggers page. */
+  function MenuWithDialog() {
+    const [open, setOpen] = useState<string | null>(null);
+    return (
+      <>
+        <TriggerActionMenu
+          trigger={makeTrigger()}
+          busy={false}
+          onAction={(_trigger, action) => setOpen(action)}
+        />
+        <Dialog
+          open={open !== null}
+          onOpenChange={(next) => !next && setOpen(null)}
+        >
+          <DialogContent>
+            <DialogTitle>{open}</DialogTitle>
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
+
+  it.each(["trigger-action-view_events", "trigger-action-delete"])(
+    "returns focus to the row's actions button when %s's dialog closes with Escape",
+    async (testId) => {
+      const user = userEvent.setup();
+      render(<MenuWithDialog />);
+      const menuButton = screen.getByRole("button", {
+        name: "Actions for Slack: On Message",
+      });
+
+      menuButton.focus();
+      await user.keyboard("{Enter}");
+      screen.getByTestId(testId).focus();
+      await user.keyboard("{Enter}");
+      expect(await screen.findByRole("dialog")).toBeInTheDocument();
+
+      await user.keyboard("{Escape}");
+
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+      );
+      expect(menuButton).toHaveFocus();
+    },
+  );
 });
