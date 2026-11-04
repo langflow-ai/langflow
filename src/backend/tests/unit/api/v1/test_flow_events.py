@@ -10,6 +10,8 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_flow_events_service, session_scope
 from starlette import status
 
+from tests.unit.services.authorization._policy_double import create_user_share, install_policy_authz
+
 
 async def _create_flow(client: AsyncClient, headers: dict) -> str:
     """Create a minimal flow and return its id."""
@@ -263,3 +265,46 @@ async def test_events_honor_permission_denials(client: AsyncClient, logged_in_he
     assert response.status_code == (403 if readable else 404)
     events, _ = get_flow_events_service().get_since(flow_id, 0)
     assert events == []
+
+
+@pytest.mark.parametrize("permission", ["write", "read", None])
+async def test_events_enforce_stored_shares_for_non_owners(
+    client: AsyncClient, logged_in_headers, active_user, user_two, permission
+):
+    """Stored shares govern event access through the real fetch and permission guards."""
+    from langflow.services.deps import get_settings_service
+
+    async with session_scope() as session:
+        flow = Flow(name="shared-events", data={}, user_id=user_two.id)
+        session.add(flow)
+        await session.flush()
+        flow_id = flow.id
+        if permission:
+            await create_user_share(
+                session,
+                resource_type="flow",
+                resource_id=flow_id,
+                target_user_id=active_user.id,
+                permission_level=permission,
+                created_by=user_two.id,
+            )
+
+    try:
+        with install_policy_authz(get_settings_service()):
+            read = await client.get(f"api/v1/flows/{flow_id}/events", headers=logged_in_headers)
+            assert read.status_code == (200 if permission else 404)
+            write = await client.post(
+                f"api/v1/flows/{flow_id}/events",
+                json={"type": "flow_updated", "summary": "Shared event"},
+                headers=logged_in_headers,
+            )
+            assert write.status_code == ({"write": 201, "read": 403, None: 404}[permission])
+            if permission == "write":
+                read = await client.get(f"api/v1/flows/{flow_id}/events", headers=logged_in_headers)
+                assert read.status_code == 200
+                assert read.json()["events"][0]["summary"] == "Shared event"
+        events, _ = get_flow_events_service().get_since(str(flow_id), 0)
+        assert [event.summary for event in events] == (["Shared event"] if permission == "write" else [])
+    finally:
+        async with session_scope() as session:
+            await session.delete(await session.get(Flow, flow_id))
