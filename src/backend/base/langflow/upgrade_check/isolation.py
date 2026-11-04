@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import os
+import shutil
+import sys
+from collections.abc import Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import sqlalchemy as sa
-
-if TYPE_CHECKING:
-    from collections.abc import Mapping
 
 _RUNTIME_ENVIRONMENT = frozenset(
     {
@@ -32,6 +32,68 @@ _RUNTIME_ENVIRONMENT = frozenset(
         "PYTHONIOENCODING",
     }
 )
+_CHILD_ENVIRONMENT = frozenset(
+    {
+        "HOME",
+        "USERPROFILE",
+        "APPDATA",
+        "LOCALAPPDATA",
+        "XDG_CONFIG_HOME",
+        "XDG_CACHE_HOME",
+        "XDG_DATA_HOME",
+        "LANGFLOW_CONFIG_DIR",
+        "DO_NOT_TRACK",
+        "LITELLM_LOCAL_MODEL_COST_MAP",
+        "HF_HUB_OFFLINE",
+        "HF_DATASETS_OFFLINE",
+        "TRANSFORMERS_OFFLINE",
+    }
+)
+
+
+def is_local_metadata_probe(arguments: tuple[Any, ...]) -> bool:
+    """Allow only proven system metadata probes with an unmodified sanitized environment."""
+    try:
+        executable, argv, _cwd, supplied_environment = arguments
+    except (TypeError, ValueError):
+        return False
+    if not isinstance(executable, str) or not isinstance(argv, (list, tuple)) or not argv:
+        return False
+    if not all(isinstance(argument, str) for argument in argv):
+        return False
+    if tuple(argv[1:]) == ("version",):
+        program = "git"
+    else:
+        try:
+            option, target = argv[1:]
+        except ValueError:
+            return False
+        if (
+            option != "-b"
+            or not Path(target).is_absolute()
+            or (os.path.realpath(target) != os.path.realpath(sys.executable))
+        ):
+            return False
+        program = "file"
+    trusted = Path(f"/usr/bin/{program}").resolve()
+    allowed = {program, str(trusted)}
+    if not trusted.is_file() or executable not in allowed or argv[0] not in allowed:
+        return False
+    environment = os.environ if supplied_environment is None else supplied_environment
+    if not isinstance(environment, Mapping) or environment.get("PATH") != os.defpath:
+        return False
+    for name, value in environment.items():
+        if not isinstance(name, str) or not isinstance(value, str):
+            return False
+        # GitPython and platform._syscmd_file force C locale for their version/architecture parsers.
+        if name in {"LANGUAGE", "LC_ALL"} and value == "C":
+            continue
+        if name == "PATH":
+            continue
+        if name.upper() not in _RUNTIME_ENVIRONMENT | _CHILD_ENVIRONMENT or value != os.environ.get(name):
+            return False
+    resolved = shutil.which(executable, path=os.defpath)
+    return resolved is not None and Path(resolved).resolve() == trusted
 
 
 def child_environment(config_dir: str, inherited: Mapping[str, str]) -> dict[str, str]:
@@ -42,6 +104,7 @@ def child_environment(config_dir: str, inherited: Mapping[str, str]) -> dict[str
             str(Path(path or ".").expanduser().resolve()) for path in env["PYTHONPATH"].split(os.pathsep)
         )
     env.update(
+        PATH=os.defpath,
         HOME=config_dir,
         USERPROFILE=config_dir,
         APPDATA=config_dir,
