@@ -156,6 +156,8 @@ def test_published_settings_argument_does_not_start_application_services(monkeyp
 def test_export_allows_only_the_git_library_local_version_probe():
     exporter._refuse_network("subprocess.Popen", ("git", ["git", "version"]))
     with pytest.raises(exporter.RegistrySnapshotError):
+        exporter._refuse_network("subprocess.Popen", ("/bin/sh", ["git", "version"]))
+    with pytest.raises(exporter.RegistrySnapshotError):
         exporter._refuse_network("subprocess.Popen", ("git", ["git", "clone", "https://example.test/repo"]))
 
 

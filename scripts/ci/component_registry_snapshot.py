@@ -22,7 +22,7 @@ class RegistrySnapshotError(RuntimeError):
 
 
 def _refuse_network(event: str, _args: tuple) -> None:
-    if event == "subprocess.Popen" and len(_args) > 1 and _args[1] == ["git", "version"]:
+    if event == "subprocess.Popen" and len(_args) > 1 and _args[0] == "git" and _args[1] == ["git", "version"]:
         return
     if event in {
         "socket.connect",
