@@ -117,7 +117,11 @@ def check_source(source: SourceDatabase, all_types: Mapping[str, Any]) -> Iterat
         if row.data_error:
             flow.status, flow.error = "warn", row.data_error
             return flow
-        flow.nodes, flow.ok_nodes = check_nodes(row.data or {}, lookup, user_id=row.user_id)
+        try:
+            flow.nodes, flow.ok_nodes = check_nodes(row.data or {}, lookup, user_id=row.user_id)
+        except (ValueError, KeyError, TypeError, AttributeError) as exc:
+            flow.status, flow.error = "warn", f"flow data could not be checked: {_short(exc)}"
+            return flow
         flow.status = flow_status(flow.nodes)
         return flow
 
