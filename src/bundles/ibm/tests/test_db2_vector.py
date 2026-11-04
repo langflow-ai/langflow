@@ -698,6 +698,7 @@ class TestDB2VectorStoreComponent:
         component.password = "testpass"  # noqa: S105  # pragma: allowlist secret
 
         with (
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]),
             patch("ibm_db_dbi.connect") as mock_connect,
             patch.object(component, "_add_documents_to_vector_store"),
         ):

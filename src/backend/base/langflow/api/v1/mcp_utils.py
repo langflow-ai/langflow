@@ -18,6 +18,7 @@ from fastapi import HTTPException
 from lfx.base.mcp.util import build_mcp_tool_name_map, get_flow_snake_case
 from lfx.log.logger import logger
 from lfx.observability import execution_protocol
+from lfx.utils.file_path_security import user_storage_scope
 from lfx.utils.flow_validation import (
     CustomComponentValidationError,
     prepare_public_flow_build,
@@ -32,6 +33,12 @@ from langflow.api.utils.execution_principal import FAMILY_LEGACY_MCP, FAMILY_MCP
 from langflow.api.utils.flow_utils import compute_virtual_flow_id, scope_session_to_namespace
 from langflow.api.utils.migration_pause import REFUSAL, writing
 from langflow.api.v1.endpoints import simple_run_flow
+from langflow.api.v1.files import (
+    _get_file_with_legacy_fallback,
+    _get_flow_file,
+    _legacy_flow_storage_allowed,
+    _list_flow_files,
+)
 from langflow.api.v1.run_validation import HITL_UNSUPPORTED_DETAIL, flow_requires_hitl
 from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.helpers.flow import get_flow_input_tweaks, json_schema_from_flow
@@ -190,7 +197,8 @@ async def handle_list_resources(project_id=None):
             for flow in flows:
                 if flow.id:
                     try:
-                        files = await storage_service.list_files(flow_id=str(flow.id))
+                        allow_legacy = await _legacy_flow_storage_allowed(session, flow.id)
+                        files = await _list_flow_files(storage_service, flow.id, allow_legacy=allow_legacy)
                         for file_name in files:
                             # URL encode the filename
                             safe_filename = quote(file_name)
@@ -296,6 +304,7 @@ async def handle_read_resource(uri: str, project_id: UUID | str | None = None) -
                 msg = "Resource not found or access denied"
                 raise ValueError(msg) from exc
 
+        allow_legacy = False
         async with session_scope() as session:
             try:
                 flow_id = UUID(namespace_id)
@@ -306,6 +315,8 @@ async def handle_read_resource(uri: str, project_id: UUID | str | None = None) -
                 if parsed_project_id is not None:
                     flow_query = flow_query.where(Flow.folder_id == parsed_project_id)
                 flow = (await session.exec(flow_query)).first()
+                if flow is not None:
+                    allow_legacy = await _legacy_flow_storage_allowed(session, flow.id)
 
             if flow is None:
                 # The namespace segment may refer to the user's own bucket (user-level
@@ -320,8 +331,17 @@ async def handle_read_resource(uri: str, project_id: UUID | str | None = None) -
 
         storage_service = get_storage_service()
 
-        # Read the file content
-        content = await storage_service.get_file(flow_id=namespace_id, file_name=filename)
+        # Read the file content from its typed namespace, falling back to the
+        # authorized legacy location when the object predates typed storage.
+        if flow is not None:
+            content = await _get_flow_file(storage_service, flow.id, filename, allow_legacy=allow_legacy)
+        else:
+            content = await _get_file_with_legacy_fallback(
+                storage_service,
+                namespace=user_storage_scope(current_user.id),
+                legacy_namespace=str(current_user.id),
+                file_name=filename,
+            )
         if not content:
             msg = f"File {filename} not found in flow {namespace_id}"
             raise ValueError(msg)
