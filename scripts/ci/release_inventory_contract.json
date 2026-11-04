@@ -291,6 +291,7 @@
         "confluence",
         "couchbase",
         "cuga",
+        "deapi",
         "deepseek",
         "elastic",
         "faiss",

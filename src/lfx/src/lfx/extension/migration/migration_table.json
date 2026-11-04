@@ -5280,6 +5280,26 @@
       "bare_class_name": "KeenableSearchComponent",
       "target": "ext:keenable:KeenableSearchComponent@official",
       "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "DeapiImageGenerationComponent",
+      "target": "ext:deapi:DeapiImageGenerationComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "DeapiTextToSpeechComponent",
+      "target": "ext:deapi:DeapiTextToSpeechComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "DeapiTranscriptionComponent",
+      "target": "ext:deapi:DeapiTranscriptionComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "DeapiVideoGenerationComponent",
+      "target": "ext:deapi:DeapiVideoGenerationComponent@official",
+      "added_in": "1.14.0"
     }
   ],
   "ambiguous_bare_names": [
