@@ -176,6 +176,7 @@ describe("FlowSettingsComponent", () => {
     await waitFor(() => {
       expect(mockAutoSaveEnqueue).toHaveBeenCalledWith(
         expect.objectContaining({ name: "New Name" }),
+        { metadataOnly: true },
       );
       expect(mockSetSuccessData).toHaveBeenCalledWith({
         title: "Changes saved successfully",
@@ -205,6 +206,7 @@ describe("FlowSettingsComponent", () => {
     await waitFor(() =>
       expect(mockAutoSaveEnqueue).toHaveBeenCalledWith(
         expect.objectContaining({ locked: true }),
+        { metadataOnly: true },
       ),
     );
     expect(onClose).not.toHaveBeenCalled();
@@ -229,6 +231,7 @@ describe("FlowSettingsComponent", () => {
     await waitFor(() => {
       expect(mockSave).toHaveBeenCalledWith(
         expect.objectContaining({ locked: true }),
+        { metadataOnly: true },
       );
       expect(onClose).toHaveBeenCalled();
     });
@@ -249,6 +252,7 @@ describe("FlowSettingsComponent", () => {
     await waitFor(() => {
       expect(mockSave).toHaveBeenCalledWith(
         expect.objectContaining({ name: "New Name" }),
+        { metadataOnly: true },
       );
       expect(onClose).toHaveBeenCalled();
     });

@@ -10,6 +10,8 @@ let mockAll: TriggerRead[] = [];
 const mockBulk = jest.fn();
 const mockDryRun = jest.fn();
 const mockEnable = jest.fn();
+const mockDisable = jest.fn();
+const mockTest = jest.fn();
 const mockNavigate = jest.fn();
 
 jest.mock("@/components/common/genericIconComponent", () => ({
@@ -33,9 +35,15 @@ jest.mock("@/controllers/API/queries/triggers", () => {
       mutateAsync: mockEnable,
       isPending: false,
     }),
-    useDisableTriggerMutation: mutation,
+    useDisableTriggerMutation: () => ({
+      mutateAsync: mockDisable,
+      isPending: false,
+    }),
     useDeleteTriggerMutation: mutation,
-    useTestTriggerMutation: mutation,
+    useTestTriggerMutation: () => ({
+      mutateAsync: mockTest,
+      isPending: false,
+    }),
     useReplayTriggerEventMutation: mutation,
     useRotateSigningSecretMutation: () => ({ reset: jest.fn() }),
     useBulkTriggersMutation: () => ({
@@ -137,7 +145,89 @@ describe("TriggersPage", () => {
     expect(screen.getByTestId("trigger-row-b")).toBeInTheDocument();
   });
 
-  it("resumes a reconnected Jira trigger from its inline fix", async () => {
+  it.each(["reader", "writer"] as const)(
+    "renders a shared trigger using the server's %s permissions",
+    async (role) => {
+      const canWrite = role === "writer";
+      const blockedActions: TriggerRead["blocked_actions"] = {
+        test: "insufficient_permission",
+        replay: "insufficient_permission",
+      };
+      if (!canWrite) {
+        blockedActions.pause = "insufficient_permission";
+        blockedActions.delete = "insufficient_permission";
+      }
+      mockMine = [
+        makeTrigger({
+          id: "shared",
+          user_id: "user-other",
+          name: "Shared schedule",
+          kind: "schedule",
+          provider: null,
+          connection_id: null,
+          allowed_actions: canWrite ? ["pause", "delete"] : [],
+          blocked_actions: blockedActions,
+        }),
+      ];
+      mockDisable.mockResolvedValue(mockMine[0]);
+      const user = userEvent.setup();
+      render(<TriggersPage />);
+
+      const row = screen.getByTestId("trigger-row-shared");
+      expect(within(row).getByText("Shared schedule")).toBeInTheDocument();
+      const test = within(row).getByTestId("trigger-test-shared");
+      expect(test).toHaveAttribute("aria-disabled", "true");
+      expect(test).toHaveAccessibleDescription(
+        "You don't have permission to do this on this flow.",
+      );
+      await user.click(test);
+      expect(mockTest).not.toHaveBeenCalled();
+
+      await user.click(within(row).getByTestId("trigger-menu-shared"));
+      const pause = screen.getByTestId("trigger-action-pause");
+      const remove = screen.getByTestId("trigger-action-delete");
+      if (canWrite) {
+        expect(pause).not.toHaveAttribute("aria-disabled");
+        expect(remove).not.toHaveAttribute("aria-disabled");
+        await user.click(pause);
+        expect(mockDisable).toHaveBeenCalledWith("shared");
+      } else {
+        for (const action of [pause, remove]) {
+          expect(action).toHaveAttribute("aria-disabled", "true");
+          expect(action).toHaveAccessibleDescription(
+            "You don't have permission to do this on this flow.",
+          );
+          await user.click(action);
+        }
+        expect(mockDisable).not.toHaveBeenCalled();
+        expect(
+          screen.queryByTestId("btn_delete_delete_confirmation_modal"),
+        ).toBeNull();
+      }
+    },
+  );
+
+  it("opens connection settings without resuming a revoked trigger", async () => {
+    mockMine = [
+      makeTrigger({
+        id: "revoked",
+        state: "needs_reconnect",
+        reason: "needs_reconnect",
+        allowed_actions: ["pause", "reconnect", "delete"],
+        blocked_actions: { resume: "needs_reconnect" },
+      }),
+    ];
+    render(<TriggersPage />);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Reconnect Slack: On Message" }),
+    );
+
+    expect(mockNavigate).toHaveBeenCalledWith("/settings/connections");
+    expect(mockEnable).not.toHaveBeenCalled();
+  });
+
+  it("resumes a reconnected Jira trigger only after its inline fix is clicked", async () => {
     mockMine = [
       makeTrigger({
         id: "jira-reconnected",
@@ -153,6 +243,7 @@ describe("TriggersPage", () => {
     mockEnable.mockResolvedValue(mockMine[0]);
     render(<TriggersPage />);
 
+    expect(mockEnable).not.toHaveBeenCalled();
     await userEvent.click(
       screen.getByRole("button", { name: "Resume Jira: On Issue Created" }),
     );
