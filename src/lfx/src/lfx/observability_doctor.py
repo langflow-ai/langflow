@@ -29,6 +29,7 @@ import os
 import threading
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from http import HTTPStatus
 
 from lfx.log.logger import logger
 from lfx.observability import (
@@ -171,12 +172,10 @@ def _response_class(signal: str):
 
 
 def _recording_session():
-    """A requests session that keeps the last response, so we can inspect what the exporter ignored.
+    """Keep the exporter's response so delivery checks can inspect its history and body.
 
-    The HTTP exporter decides success on ``resp.ok`` alone: it never looks at redirects and never
-    parses the body. That makes several "delivered nothing" situations indistinguishable from a
-    real success, which is exactly what this command exists to tell apart. Keeping the response
-    lets :func:`_delivery_problem` apply the checks the exporter skips.
+    Capture at ``send`` so both the SDK's older ``post`` calls and its newer ``request`` calls
+    retain the response. The exporter can report success without accepting the whole payload.
     """
     import requests
 
@@ -185,8 +184,8 @@ def _recording_session():
             super().__init__()
             self.last_response = None
 
-        def post(self, *args, **kwargs):
-            response = super().post(*args, **kwargs)
+        def send(self, *args, **kwargs):
+            response = super().send(*args, **kwargs)
             self.last_response = response
             return response
 
@@ -198,9 +197,8 @@ def _delivery_problem(session, signal: str) -> str | None:
 
     Three cases the exporter reports as success:
 
-    - A redirect. ``requests`` follows a 302 by downgrading POST to GET and dropping the body, so
-      an auth proxy or an ingress with a trailing-slash rule swallows the payload and answers 200
-      from a login page.
+    - A redirect. Newer exporters return the redirect response without following it. Older
+      exporters can follow a 302 as a GET, dropping the payload before a login page answers 200.
     - A partial success. The collector accepted the request and then rejected some or all of the
       items, for quota, cardinality or an unknown tenant. The count is in the response body, which
       the exporter never reads.
@@ -217,6 +215,9 @@ def _delivery_problem(session, signal: str) -> str | None:
             f"the request was redirected ({chain}) to {response.url} and the payload was dropped; "
             f"redirects turn the POST into a GET, so nothing was delivered"
         )
+
+    if HTTPStatus.MULTIPLE_CHOICES <= response.status_code < HTTPStatus.BAD_REQUEST:
+        return f"the endpoint redirected the request ({response.status_code}) and did not accept the payload"
 
     body = response.content
     if not body:

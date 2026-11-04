@@ -222,7 +222,13 @@ async def test_files_delete_viewer_denied(owner):
     set_current_external_access_context(_viewer_ceiling())
     try:
         with pytest.raises(HTTPException) as exc_info:
-            await files.delete_file(file_name="x.txt", flow=flow, current_user=owner, storage_service=storage)
+            await files.delete_file(
+                file_name="x.txt",
+                flow=flow,
+                current_user=owner,
+                session=SimpleNamespace(get=AsyncMock(return_value=None)),
+                storage_service=storage,
+            )
     finally:
         set_current_external_access_context(None)
 
@@ -235,9 +241,15 @@ async def test_files_delete_owner_proceeds(owner):
     from langflow.api.v1 import files
 
     flow = _make_flow(owner.id)
-    storage = MagicMock(delete_file=AsyncMock())
+    storage = MagicMock(delete_file=AsyncMock(), get_file_size=AsyncMock())
 
-    result = await files.delete_file(file_name="x.txt", flow=flow, current_user=owner, storage_service=storage)
+    result = await files.delete_file(
+        file_name="x.txt",
+        flow=flow,
+        current_user=owner,
+        session=SimpleNamespace(get=AsyncMock(return_value=None)),
+        storage_service=storage,
+    )
 
     storage.delete_file.assert_awaited_once()
     assert "deleted successfully" in result["message"]
