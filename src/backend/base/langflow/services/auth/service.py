@@ -945,6 +945,11 @@ class AuthService(BaseAuthService):
         from sqlmodel import select
 
         from langflow.services.database.models.auth import SSOUserProfile
+        from langflow.services.maintenance.state import maintenance_enabled
+
+        if await maintenance_enabled(db):
+            msg = "External SSO/OIDC authentication is paused during maintenance. Use an API key or local JWT."
+            raise AuthBackendUnavailableError(msg)
 
         profile_stmt = select(SSOUserProfile).where(
             SSOUserProfile.sso_provider == identity.provider,
@@ -1490,7 +1495,9 @@ class AuthService(BaseAuthService):
             expires_delta=refresh_token_expires,
         )
 
-        if update_last_login:
+        from langflow.services.maintenance.state import maintenance_enabled
+
+        if update_last_login and not await maintenance_enabled(db):
             await update_user_last_login_at(user_id, db)
 
         return {

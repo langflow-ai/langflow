@@ -21,6 +21,7 @@ from langflow.services.database.models.api_key.crud import (
     hash_api_key,
 )
 from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
+from langflow.services.database.models.maintenance import MaintenanceState
 from langflow.services.database.models.user.model import User, UserRead
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
@@ -739,7 +740,7 @@ async def test_api_key_bookkeeping_commits_only_its_owned_session(
             await connection.run_sync(
                 lambda sync_connection: SQLModel.metadata.create_all(
                     sync_connection,
-                    tables=[User.__table__, ApiKey.__table__],
+                    tables=[User.__table__, ApiKey.__table__, MaintenanceState.__table__],
                 )
             )
 
@@ -788,7 +789,7 @@ async def test_owned_auth_completes_after_pre_read_releases_only_pool_connection
             await connection.run_sync(
                 lambda sync_connection: SQLModel.metadata.create_all(
                     sync_connection,
-                    tables=[User.__table__, ApiKey.__table__],
+                    tables=[User.__table__, ApiKey.__table__, MaintenanceState.__table__],
                 )
             )
 
@@ -860,7 +861,7 @@ async def test_connection_bound_bookkeeping_never_commits_flushed_caller_state(m
             await connection.run_sync(
                 lambda sync_connection: SQLModel.metadata.create_all(
                     sync_connection,
-                    tables=[User.__table__, ApiKey.__table__],
+                    tables=[User.__table__, ApiKey.__table__, MaintenanceState.__table__],
                 )
             )
 

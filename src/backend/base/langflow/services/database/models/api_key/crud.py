@@ -19,6 +19,7 @@ from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
 from langflow.services.database.models.api_key.policy import check_api_key_issuance
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
+from langflow.services.maintenance.state import maintenance_enabled
 
 if TYPE_CHECKING:
     from sqlmodel.sql.expression import SelectOfScalar
@@ -247,7 +248,7 @@ async def _check_key_from_db_with_context(
         if await _external_access_ceiling_blocks_user(session, user, settings_service):
             logger.info("API key rejected for externally managed user while external access ceiling is enabled")
             return None
-        if settings_service.settings.disable_track_apikey_usage is not True:
+        if settings_service.settings.disable_track_apikey_usage is not True and not await maintenance_enabled(session):
             api_key_obj.total_uses += 1
             api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
             session.add(api_key_obj)
@@ -291,13 +292,14 @@ async def _check_key_from_db_with_context(
             if await _external_access_ceiling_blocks_user(session, user, settings_service):
                 logger.info("API key rejected for externally managed user while external access ceiling is enabled")
                 return None
-            # Backfill hash for future O(1) lookups
-            api_key_obj.api_key_hash = incoming_hash
-            if settings_service.settings.disable_track_apikey_usage is not True:
-                api_key_obj.total_uses += 1
-                api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
-            session.add(api_key_obj)
-            await session.flush()
+            # Authentication stays available without changing the frozen database.
+            if not await maintenance_enabled(session):
+                api_key_obj.api_key_hash = incoming_hash
+                if settings_service.settings.disable_track_apikey_usage is not True:
+                    api_key_obj.total_uses += 1
+                    api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
+                session.add(api_key_obj)
+                await session.flush()
             return ApiKeyAuthResult(
                 user=user,
                 api_key_source="db",  # pragma: allowlist secret
