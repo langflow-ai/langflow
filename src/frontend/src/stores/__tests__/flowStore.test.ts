@@ -20,10 +20,32 @@ jest.mock("@/CustomNodes/helpers/check-code-validity", () => ({
   checkCodeValidity: jest.fn(),
 }));
 
-jest.mock("../../i18n", () => ({
-  __esModule: true,
-  default: { t: jest.fn((key: string) => key) },
-}));
+jest.mock("../../i18n", () => {
+  const i18n = jest
+    .requireActual<{
+      createInstance: () => import("react-i18next").I18nextProviderProps["i18n"];
+    }>("i18next")
+    .createInstance();
+  void i18n.init({
+    lng: "en",
+    fallbackLng: "en",
+    initImmediate: false,
+    resources: {
+      en: { translation: jest.requireActual("../../locales/en.json") },
+      fr: { translation: jest.requireActual("../../locales/fr.json") },
+    },
+    interpolation: { escapeValue: false },
+  });
+  return {
+    __esModule: true,
+    default: {
+      t: jest.fn((key: string, options?: Record<string, unknown>) =>
+        /^errors\.(retired|outdated)/.test(key) ? i18n.t(key, options) : key,
+      ),
+      changeLanguage: i18n.changeLanguage.bind(i18n),
+    },
+  };
+});
 
 jest.mock("@/customization/feature-flags", () => ({
   ENABLE_DATASTAX_LANGFLOW: false,
@@ -155,6 +177,8 @@ import { applyEdgeChanges } from "@xyflow/react";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import type { LogsLogType, VertexBuildTypeAPI } from "@/types/api";
 import type { AllNodeType, EdgeType } from "@/types/flow";
+import i18n from "../../i18n";
+import fr from "../../locales/fr.json";
 import { scapedJSONStringfy } from "../../utils/reactflowUtils";
 import useAlertStore from "../alertStore";
 import useAuthStore from "../authStore";
@@ -249,6 +273,7 @@ describe("useFlowStore", () => {
   beforeEach(() => {
     // Clear all mocks
     jest.clearAllMocks();
+    void i18n.changeLanguage("en");
     queryClient.clear();
     mockGlobalVariablesEntries = undefined;
     mockUnavailableFields = undefined;
@@ -1829,6 +1854,44 @@ describe("useFlowStore", () => {
           title: "Retired components must be replaced before building",
           list: [
             "Chroma DB was retired in 1.13.0 and fails when the flow runs. Use Knowledge.",
+          ],
+        });
+        expect(mockedRunFlow).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([true, false])(
+      "translates the retirement alert with replacement available %s",
+      async (hasReplacement) => {
+        await i18n.changeLanguage("fr");
+        mockTemplates = {
+          ...retiredChromaTemplates,
+          Chroma: {
+            ...retiredChromaTemplates.Chroma,
+            replacement: hasReplacement
+              ? retiredChromaTemplates.Chroma.replacement
+              : [],
+          },
+        };
+        (checkCodeValidity as jest.Mock).mockImplementationOnce(
+          realCheckCodeValidity,
+        );
+        useFlowStore.setState({ nodes: [chromaNode("NEW")] });
+
+        await expect(useFlowStore.getState().buildFlow({})).rejects.toThrow(
+          fr["errors.retiredComponents"],
+        );
+
+        const message = hasReplacement
+          ? fr["errors.retiredComponentWithReplacement"]
+          : fr["errors.retiredComponentWithoutReplacement"];
+        expect(mockSetErrorData).toHaveBeenCalledWith({
+          title: fr["errors.retiredComponentsBeforeBuilding"],
+          list: [
+            message
+              .replace("{{component}}", "Chroma DB")
+              .replace("{{version}}", "1.13.0")
+              .replace("{{replacement}}", "Knowledge"),
           ],
         });
         expect(mockedRunFlow).not.toHaveBeenCalled();
