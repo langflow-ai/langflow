@@ -1,4 +1,13 @@
+from unittest.mock import AsyncMock
+from uuid import UUID
+
+import pytest
+from fastapi import HTTPException
 from httpx import AsyncClient
+from langflow.api.v1 import authz_route_dependencies
+from langflow.services.authorization import FlowAction
+from langflow.services.database.models.flow.model import Flow
+from langflow.services.deps import get_flow_events_service, session_scope
 from starlette import status
 
 
@@ -178,3 +187,79 @@ async def test_summary_max_length_returns_422(client: AsyncClient, logged_in_hea
         headers=logged_in_headers,
     )
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+
+@pytest.mark.parametrize("ownerless", [False, True])
+async def test_events_require_an_accessible_flow(client: AsyncClient, logged_in_headers, user_two, ownerless):
+    async with session_scope() as session:
+        flow = Flow(name="inaccessible-events", data={}, user_id=None if ownerless else user_two.id)
+        session.add(flow)
+        await session.flush()
+        flow_id = flow.id
+
+    try:
+        response = await client.get(f"api/v1/flows/{flow_id}/events", headers=logged_in_headers)
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+        response = await client.post(
+            f"api/v1/flows/{flow_id}/events",
+            json={"type": "flow_updated", "summary": "Test event"},
+            headers=logged_in_headers,
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        events, _ = get_flow_events_service().get_since(str(flow_id), 0)
+        assert events == []
+    finally:
+        async with session_scope() as session:
+            await session.delete(await session.get(Flow, flow_id))
+
+
+@pytest.mark.parametrize(("method", "action"), [("GET", FlowAction.READ), ("POST", FlowAction.WRITE)])
+async def test_events_check_the_matching_permission(
+    client: AsyncClient, logged_in_headers, monkeypatch, method, action
+):
+    flow_id = await _create_flow(client, logged_in_headers)
+    async with session_scope() as session:
+        flow = await session.get(Flow, UUID(flow_id))
+        owner_id, workspace_id, folder_id = flow.user_id, flow.workspace_id, flow.folder_id
+    guard = AsyncMock()
+    monkeypatch.setattr(authz_route_dependencies, "ensure_flow_permission", guard)
+
+    response = await client.request(
+        method,
+        f"api/v1/flows/{flow_id}/events",
+        headers=logged_in_headers,
+        **({"json": {"type": "flow_updated"}} if method == "POST" else {}),
+    )
+
+    assert response.status_code == (201 if method == "POST" else 200)
+    guard.assert_awaited_once()
+    assert guard.await_args.args[1] == action
+    assert guard.await_args.kwargs == {
+        "flow_id": UUID(flow_id),
+        "flow_user_id": owner_id,
+        "workspace_id": workspace_id,
+        "folder_id": folder_id,
+    }
+
+
+@pytest.mark.parametrize(("method", "readable"), [("GET", False), ("POST", False), ("POST", True)])
+async def test_events_honor_permission_denials(client: AsyncClient, logged_in_headers, monkeypatch, method, readable):
+    flow_id = await _create_flow(client, logged_in_headers)
+
+    async def enforce_permission(_user, action, **_kwargs):
+        if readable and action == FlowAction.READ:
+            return
+        raise HTTPException(status_code=403, detail="Permission denied")
+
+    monkeypatch.setattr(authz_route_dependencies, "ensure_flow_permission", enforce_permission)
+    response = await client.request(
+        method,
+        f"api/v1/flows/{flow_id}/events",
+        headers=logged_in_headers,
+        **({"json": {"type": "flow_updated"}} if method == "POST" else {}),
+    )
+
+    assert response.status_code == (403 if readable else 404)
+    events, _ = get_flow_events_service().get_since(flow_id, 0)
+    assert events == []
