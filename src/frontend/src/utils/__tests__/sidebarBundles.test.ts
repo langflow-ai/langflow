@@ -114,4 +114,16 @@ describe("SIDEBAR_BUNDLES", () => {
       ]),
     );
   });
+
+  it("classifies TestMu AI as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "TestMu AI",
+          icon: "TestMuAI",
+          name: "testmuai",
+        }),
+      ]),
+    );
+  });
 });

@@ -1,0 +1,25 @@
+const TestMuAI = (props) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="1em"
+    height="1em"
+    fill="none"
+    viewBox="0 0 32 32"
+    {...props}
+  >
+    <rect width="32" height="32" rx="6" fill="#121212" />
+    <g transform="translate(16 16) scale(0.7) translate(-16 -16)">
+      <path d="M28.009 2.48779H20.8037V19.9005H28.009V2.48779Z" fill="white" />
+      <path
+        d="M11.1965 2.48779H3.99121V12.395L11.1965 19.9005V2.48779Z"
+        fill="white"
+      />
+      <path d="M11.1965 19.9005H3.99121V29.5075H11.1965V19.9005Z" fill="white" />
+      <path
+        d="M20.8037 19.9005H11.1965L16.9017 27.1057H20.8046L20.8037 19.9005Z"
+        fill="white"
+      />
+    </g>
+  </svg>
+);
+export default TestMuAI;

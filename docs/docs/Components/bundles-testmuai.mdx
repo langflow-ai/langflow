@@ -1,0 +1,64 @@
+---
+title: TestMu AI
+slug: /bundles-testmuai
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **TestMu AI** bundle.
+
+[TestMu AI](https://www.testmuai.com/) (formerly LambdaTest) is a cloud platform for running web and mobile app tests across browsers and real devices.
+These components read your automation test results, so an agent can report on builds and triage failed tests.
+
+Both components need your TestMu AI username and access key.
+You can find them on your [account security page](https://accounts.lambdatest.com/security).
+To avoid entering the access key in every flow, store it in a [global variable](/configuration-global-variables).
+
+For more information, see the [TestMu AI API documentation](https://www.testmuai.com/support/api-doc/).
+
+## TestMu AI Builds
+
+This component lists the latest automation builds in your TestMu AI account, newest first.
+
+It returns the builds as a [`Table`](/data-types#table), with one row per build.
+Each row has the build's `build_id`, `name`, `status_ind`, `duration`, and `dashboard_url`, among other fields.
+
+When the component is used as a [tool](/agents-tools), the agent can filter builds by status.
+
+### TestMu AI Builds parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| TestMu AI Username (`username`) | String | Input parameter. Your TestMu AI username. |
+| TestMu AI Access Key (`access_key`) | SecretString | Input parameter. Your TestMu AI access key. |
+| Status (`build_status`) | String | Input parameter. Only return builds with this status, such as `completed`, `running`, or `error`. |
+| Max Builds (`limit`) | Integer | Input parameter. The number of builds to return, from 1 to 100. Default: `10`. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for TestMu AI to answer. Default: `30`. |
+
+## TestMu AI Sessions
+
+This component lists automation test sessions, optionally for one build.
+
+It returns the sessions as a [`Table`](/data-types#table), with one row per session.
+Each row has the test's `name`, `status_ind`, `browser`, `version`, `platform`, and `remark`, and links to its `video_url` and its command, console, network, and Selenium logs.
+
+When the component is used as a [tool](/agents-tools), the agent can set the build ID and the status, for example to find the failed tests in a build and read their logs.
+
+### TestMu AI Sessions parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| TestMu AI Username (`username`) | String | Input parameter. Your TestMu AI username. |
+| TestMu AI Access Key (`access_key`) | SecretString | Input parameter. Your TestMu AI access key. |
+| Build ID (`build_id`) | String | Input parameter. Only return sessions from this build. Get build IDs from the **TestMu AI Builds** component. |
+| Status (`session_status`) | String | Input parameter. Only return sessions with this status, such as `passed`, `failed`, or `error`. |
+| Max Sessions (`limit`) | Integer | Input parameter. The number of sessions to return, from 1 to 100. Default: `10`. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for TestMu AI to answer. Default: `30`. |

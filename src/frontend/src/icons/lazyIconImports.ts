@@ -495,6 +495,8 @@ export const lazyIconsMapping = {
     import("@/icons/Tavily").then((mod) => ({ default: mod.TavilyIcon })),
   Teams: () =>
     import("@/icons/Teams").then((mod) => ({ default: mod.TeamsIcon })),
+  TestMuAI: () =>
+    import("@/icons/TestMuAI").then((mod) => ({ default: mod.TestMuAIIcon })),
   ThumbDownCustom: () =>
     import("@/icons/thumbs").then((mod) => ({
       default: mod.ThumbDownIconCustom,

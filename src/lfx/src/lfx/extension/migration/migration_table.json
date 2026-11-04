@@ -5280,6 +5280,16 @@
       "bare_class_name": "KeenableSearchComponent",
       "target": "ext:keenable:KeenableSearchComponent@official",
       "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "TestMuAIBuildsComponent",
+      "target": "ext:testmuai:TestMuAIBuildsComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "TestMuAISessionsComponent",
+      "target": "ext:testmuai:TestMuAISessionsComponent@official",
+      "added_in": "1.14.0"
     }
   ],
   "ambiguous_bare_names": [
