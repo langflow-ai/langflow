@@ -1,33 +1,30 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import type {
   ConnectionCreate,
   ConnectionRead,
   DeploymentContext,
-  IntegrationProviderRead,
+  ManualTokenProfileRead,
 } from "@/controllers/API/queries/connections";
-import { useTypesStore } from "@/stores/typesStore";
-import { scopeRequirements, uniqueScopes } from "../helpers/scopes";
 import {
   offersSlackToken,
   type SlackTokenKind,
   slackTokenKind,
 } from "../helpers/slack-token";
 
-/** Sign in through the provider, or paste a token (Slack only). */
+/** Sign in through the provider, or use a provider-validated token. */
 export type ConnectionMethod = "oauth" | "token";
-
-/** The auth profile a Slack bot token stands in for. */
-const SLACK_BOT_PROFILE = "slack-bot-install";
 
 export interface UseSlackTokenConnectionOptions {
   providerId: string;
-  provider: IntegrationProviderRead | undefined;
   /** Which deployment this is; hosted offers no pasted tokens. */
   deploymentContext: DeploymentContext | undefined;
-  /** Re-authorizing an existing connection never offers a token. */
+  /** Only token-only providers may renew a manually entered credential. */
   reauthorizing: boolean;
-  /** Creates the connection row (`POST /connections`). */
+  initialAllowBackgroundRuns?: boolean;
+  /** Stores the validated token through creation or renewal. */
   create: (payload: ConnectionCreate) => Promise<ConnectionRead>;
+  tokenProfile?: ManualTokenProfileRead;
+  tokenOnly: boolean;
 }
 
 export interface SlackTokenConnection {
@@ -38,78 +35,74 @@ export interface SlackTokenConnection {
   setMethod: (method: ConnectionMethod) => void;
   token: string;
   setToken: (token: string) => void;
+  requiresExpiry: boolean;
+  expiresAt: string;
+  setExpiresAt: (expiresAt: string) => void;
+  expiresAtValid: boolean;
   tokenKind: SlackTokenKind | null;
-  /** The scopes a pasted bot token can be recorded with: the "as app" actions'. */
-  botTokenScopes: string[];
-  tokenScopes: Set<string>;
-  toggleTokenScope: (scope: string, checked: boolean) => void;
   allowBackgroundRuns: boolean;
   setAllowBackgroundRuns: (allow: boolean) => void;
-  /** Store the pasted token as a connection: no consent window, nothing to wait for. */
+  /** Validate and store the pasted token without a consent window. */
   createWithToken: (details: {
     name: string;
     displayName: string;
   }) => Promise<ConnectionRead>;
-  /** Forget the pasted token and go back to signing in. */
+  /** Forget the pasted token and restore the provider's default method. */
   reset: () => void;
 }
 
-/** The "paste a token" method of the add-connection dialog, for Slack. */
+function isExactFutureLocalTime(value: string): boolean {
+  const match =
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?$/.exec(
+      value,
+    );
+  if (!match) return false;
+  const parsed = new Date(value);
+  return (
+    parsed.getTime() > Date.now() &&
+    parsed.getFullYear() === Number(match[1]) &&
+    parsed.getMonth() + 1 === Number(match[2]) &&
+    parsed.getDate() === Number(match[3]) &&
+    parsed.getHours() === Number(match[4]) &&
+    parsed.getMinutes() === Number(match[5]) &&
+    parsed.getSeconds() === Number(match[6] ?? 0) &&
+    parsed.getMilliseconds() === Number((match[7] ?? "").padEnd(3, "0"))
+  );
+}
+
+/** Token entry shared by Slack and installed providers with a validator. */
 export function useSlackTokenConnection({
   providerId,
-  provider,
   deploymentContext,
   reauthorizing,
+  initialAllowBackgroundRuns = false,
   create,
+  tokenProfile,
+  tokenOnly,
 }: UseSlackTokenConnectionOptions): SlackTokenConnection {
-  const typesData = useTypesStore((state) => state.data);
-  const [method, setMethod] = useState<ConnectionMethod>("oauth");
+  const [selectedMethod, setMethod] = useState<ConnectionMethod | null>(null);
   const [token, setToken] = useState("");
-  const [tokenScopes, setTokenScopes] = useState<Set<string>>(new Set());
-  // Consent to unattended use is explicit and off by default: pasting a token
-  // is not the same as allowing a trigger to run with it.
-  const [allowBackgroundRuns, setAllowBackgroundRuns] = useState(false);
+  const [expiresAt, setExpiresAt] = useState("");
+  // Renewal retains the owner's consent. New connections require explicit consent.
+  const [allowBackgroundRuns, setAllowBackgroundRuns] = useState(
+    initialAllowBackgroundRuns,
+  );
 
   const offersToken =
-    !reauthorizing && offersSlackToken(providerId, deploymentContext);
+    (!reauthorizing || tokenOnly) &&
+    (offersSlackToken(providerId, deploymentContext) ||
+      tokenProfile !== undefined);
+  const defaultMethod =
+    offersToken && providerId !== "slack" && tokenProfile ? "token" : "oauth";
+  const method = !offersToken
+    ? "oauth"
+    : tokenOnly
+      ? "token"
+      : (selectedMethod ?? defaultMethod);
   const usesToken = offersToken && method === "token";
   const tokenKind = slackTokenKind(token);
-
-  // What a pasted bot token is for: the actions that run as the app's bot.
-  const botTokenScopes = useMemo(
-    () =>
-      uniqueScopes(
-        scopeRequirements(
-          (provider?.capabilities ?? []).filter(
-            (capability) => capability.auth_profile_id === SLACK_BOT_PROFILE,
-          ),
-          typesData,
-        ),
-      ),
-    [provider, typesData],
-  );
-
-  // Keyed on the scope list's content, not its identity: the types store hands
-  // back a new object on every refetch (window focus included - which is
-  // exactly when someone returns from copying a token), and resetting on that
-  // would silently re-check a scope the person had just unchecked.
-  const botTokenScopeKey = botTokenScopes.join(" ");
-  useEffect(() => {
-    setTokenScopes(
-      new Set(botTokenScopeKey ? botTokenScopeKey.split(" ") : []),
-    );
-  }, [botTokenScopeKey]);
-
-  const toggleTokenScope = useCallback(
-    (scope: string, checked: boolean) =>
-      setTokenScopes((current) => {
-        const next = new Set(current);
-        if (checked) next.add(scope);
-        else next.delete(scope);
-        return next;
-      }),
-    [],
-  );
+  const requiresExpiry = tokenProfile?.requires_expiry === true;
+  const expiresAtValid = !requiresExpiry || isExactFutureLocalTime(expiresAt);
 
   const createWithToken = useCallback(
     ({ name, displayName }: { name: string; displayName: string }) =>
@@ -118,20 +111,34 @@ export function useSlackTokenConnection({
         name,
         display_name: displayName,
         ownership_mode: "user",
-        executing_identity: { identity: "bot" },
-        // An app-level token's scope is recorded by the server, never claimed.
-        granted_scopes: tokenKind === "bot" ? [...tokenScopes] : [],
+        executing_identity: { identity: tokenProfile?.identity ?? "bot" },
+        // The server validates the token and replaces untrusted grant claims.
+        granted_scopes: tokenProfile?.required_scopes ?? [],
         allow_non_interactive: allowBackgroundRuns,
-        credentials: { access_token: token.trim() },
+        credentials: {
+          access_token: token.trim(),
+          ...(requiresExpiry
+            ? { expires_at: new Date(expiresAt).toISOString() }
+            : {}),
+        },
       }),
-    [create, providerId, tokenKind, tokenScopes, allowBackgroundRuns, token],
+    [
+      create,
+      providerId,
+      allowBackgroundRuns,
+      token,
+      tokenProfile,
+      requiresExpiry,
+      expiresAt,
+    ],
   );
 
   const reset = useCallback(() => {
-    setMethod("oauth");
+    setMethod(null);
     setToken("");
-    setAllowBackgroundRuns(false);
-  }, []);
+    setExpiresAt("");
+    setAllowBackgroundRuns(initialAllowBackgroundRuns);
+  }, [initialAllowBackgroundRuns]);
 
   return {
     offersToken,
@@ -140,10 +147,11 @@ export function useSlackTokenConnection({
     setMethod,
     token,
     setToken,
+    requiresExpiry,
+    expiresAt,
+    setExpiresAt,
+    expiresAtValid,
     tokenKind,
-    botTokenScopes,
-    tokenScopes,
-    toggleTokenScope,
     allowBackgroundRuns,
     setAllowBackgroundRuns,
     createWithToken,

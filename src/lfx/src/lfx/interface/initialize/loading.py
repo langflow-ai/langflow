@@ -13,6 +13,7 @@ from lfx.schema.artifact import get_artifact_type, post_process_raw
 from lfx.schema.data import Data
 from lfx.services.deps import get_settings_service, session_scope
 from lfx.services.session import NoopSession
+from lfx.services.variable.exceptions import RuntimeVariableError
 from lfx.utils.env_var_security import safe_getenv
 from lfx.utils.flow_validation import is_protected_tweak_field
 
@@ -55,7 +56,9 @@ def instantiate_class(
         code,
         public_execution=str(user_id) == str(PUBLIC_ANONYMOUS_ACTOR_ID),
     )
-    class_object: type[CustomComponent | Component] = eval_custom_component_code(code)
+    class_object: type[CustomComponent | Component] = eval_custom_component_code(
+        code, class_name=_component_class_name(vertex)
+    )
     custom_component: CustomComponent | Component = class_object(
         _user_id=user_id,
         _parameters=custom_params,
@@ -66,6 +69,28 @@ def instantiate_class(
     if hasattr(custom_component, "set_event_manager"):
         custom_component.set_event_manager(event_manager)
     return custom_component, custom_params
+
+
+def _component_class_name(vertex: Vertex) -> str:
+    """Class name a node refers to; extension types are addressed as ``ext:<bundle>:<Class>@<slot>``.
+
+    The node's own ``type`` comes first because tool mode swaps ``vertex_type`` for the template's base type.
+    """
+    data = getattr(vertex, "data", None) or {}
+    node_type = data.get("type") or vertex.vertex_type
+    if node_type == "CustomComponent":
+        from lfx.graph.flow_builder.component import FLOW_BUILDER_REGISTRY_TYPE_KEY
+
+        registry_type = data.get(FLOW_BUILDER_REGISTRY_TYPE_KEY)
+        metadata = (data.get("node") or {}).get("metadata")
+        class_name = metadata.get("component_class_name") if isinstance(metadata, dict) else None
+        if isinstance(class_name, str) and class_name:
+            node_type = class_name
+        elif isinstance(registry_type, str) and registry_type:
+            node_type = registry_type
+    if node_type.startswith("ext:"):
+        return node_type.rpartition(":")[2].partition("@")[0]
+    return node_type
 
 
 async def get_instance_results(
@@ -290,6 +315,8 @@ async def update_table_params_with_load_from_db_fields(
                             name=variable_name, field=f"{table_field_name}.{column_name}", session=session
                         )
 
+                except RuntimeVariableError:
+                    raise
                 except ValueError as e:
                     if "User id is not set" in str(e):
                         raise
@@ -363,6 +390,8 @@ async def update_params_with_load_from_db_fields(
 
                 try:
                     key = await custom_component.get_variable(name=params[field], field=field, session=session)
+                except RuntimeVariableError:
+                    raise
                 except ValueError as e:
                     if "User id is not set" in str(e):
                         raise

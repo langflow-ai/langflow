@@ -11,7 +11,7 @@ import { useUtilityStore } from "@/stores/utilityStore";
 import type { FlowType } from "@/types/flow";
 import { useDebounce } from "../use-debounce";
 import { persistConflictDraft } from "./conflict-actions";
-import useSaveFlow from "./use-save-flow";
+import useSaveFlow, { type SaveFlowOptions } from "./use-save-flow";
 
 /**
  * How much longer than the debounce a continuous burst may defer its save.
@@ -59,6 +59,20 @@ const blockedComponentNames = (): string[] => {
 /** Flows already told that their stranded work has no safety net. */
 const warnedUnprotected = new Set<string>();
 
+/**
+ * The last queued save per flow, shared by every editor instance.
+ *
+ * Memories and Traces unmount the canvas while its save can still be in flight
+ * (or waiting on a transient-error retry). A queue owned by the canvas started
+ * empty on return, so the next save went out on the same version token, won,
+ * and the orphan's retry was then refused as a conflict with the user's own
+ * edit. Keyed by flow so one flow's slow save never holds up another's.
+ */
+const saveQueueTails = new Map<string, Promise<void>>();
+
+const queueTail = (flowId: string): Promise<void> =>
+  saveQueueTails.get(flowId) ?? Promise.resolve();
+
 const useAutoSaveFlow = () => {
   const { t } = useTranslation();
   const { can, isLoading } = usePermissions();
@@ -86,7 +100,6 @@ const useAutoSaveFlow = () => {
   }, [setErrorData]);
   const saveFlow = useSaveFlow();
   const pendingAutoSaveRef = useRef<PendingAutoSave | null>(null);
-  const saveQueueTailRef = useRef<Promise<void>>(Promise.resolve());
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
   const autoSavingInterval = useFlowsManagerStore(
     (state) => state.autoSavingInterval,
@@ -94,15 +107,20 @@ const useAutoSaveFlow = () => {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
   const enqueueSave = useCallback(
-    (flow?: FlowType): Promise<void> => {
-      const queuedSave = saveQueueTailRef.current.then(() => saveFlow(flow));
+    (flow?: FlowType, options?: SaveFlowOptions): Promise<void> => {
+      const flowId = flow?.id ?? currentFlowId;
+      const queuedSave = queueTail(flowId).then(() => saveFlow(flow, options));
       // Keep the tail fulfilled after a failed save so later edits still get a
       // chance to persist. The queuedSave returned to the immediate caller
       // retains the original rejection while the shared barrier tracks settle.
-      saveQueueTailRef.current = queuedSave.catch(() => undefined);
+      const tail = queuedSave.catch(() => undefined);
+      saveQueueTails.set(flowId, tail);
+      void tail.then(() => {
+        if (saveQueueTails.get(flowId) === tail) saveQueueTails.delete(flowId);
+      });
       return queuedSave;
     },
-    [saveFlow],
+    [currentFlowId, saveFlow],
   );
 
   const debouncedAutoSave = useDebounce(
@@ -167,16 +185,19 @@ const useAutoSaveFlow = () => {
     queuedAutoSave.cancel = () => debouncedAutoSave.cancel?.();
     queuedAutoSave.flush = async (): Promise<void> => {
       // flush() invokes a pending debounce callback synchronously, which adds
-      // its save to saveQueueTailRef before we capture and await the tail.
+      // its save to the flow's queue before we capture and await the tail.
       debouncedAutoSave.flush?.();
-      await saveQueueTailRef.current;
+      await queueTail(currentFlowId);
     };
-    queuedAutoSave.enqueue = (flow: FlowType): Promise<void> => {
+    queuedAutoSave.enqueue = (
+      flow: FlowType,
+      options?: SaveFlowOptions,
+    ): Promise<void> => {
       debouncedAutoSave.flush?.();
-      return enqueueSave(flow);
+      return enqueueSave(flow, options);
     };
     return queuedAutoSave;
-  }, [debouncedAutoSave, enqueueSave]);
+  }, [currentFlowId, debouncedAutoSave, enqueueSave]);
 
   useEffect(() => {
     const pendingAutoSave = pendingAutoSaveRef.current;

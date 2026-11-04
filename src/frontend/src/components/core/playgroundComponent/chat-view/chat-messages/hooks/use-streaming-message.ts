@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { applyBasePath } from "@/customization/utils/urls";
 import useAlertStore from "@/stores/alertStore";
 import { ChatMessageType } from "@/types/chat";
 
@@ -43,7 +44,7 @@ export function useStreamingMessage({
   const streamChunks = (url: string) => {
     setIsStreaming(true); // Streaming starts
     return new Promise<boolean>((resolve, reject) => {
-      eventSource.current = new EventSource(url);
+      eventSource.current = new EventSource(applyBasePath(url));
       eventSource.current.onmessage = (event) => {
         const parsedData = JSON.parse(event.data);
         if (parsedData.chunk) {

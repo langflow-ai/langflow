@@ -1,6 +1,6 @@
 """Read-only deployment snapshot response models."""
 
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -14,6 +14,13 @@ class DeploymentSnapshotProject(BaseModel):
     id: UUID
     name: str
     description: str | None = None
+
+
+class DeploymentSnapshotRequiredVariable(BaseModel):
+    """A variable name and source kind; null kind requires resolution before activation."""
+
+    name: str = Field(min_length=1)
+    kind: Literal["secret", "plain"] | None
 
 
 class DeploymentSnapshotFlow(BaseModel):
@@ -62,6 +69,13 @@ class DeploymentSnapshotRequiredModel(BaseModel):
     model_type: str | None = None
 
 
+class DeploymentSnapshotRequiredMcpProject(BaseModel):
+    """One sibling project a flow calls, and the name its config calls it by."""
+
+    server_name: str
+    project_id: str
+
+
 class DeploymentSnapshot(BaseModel):
     """A complete, safe baseline suitable for an Editor import."""
 
@@ -69,6 +83,8 @@ class DeploymentSnapshot(BaseModel):
     flows: list[DeploymentSnapshotFlow]
     dependencies: dict[str, Any] = Field(default_factory=dict)
     required_variables: list[str] = Field(default_factory=list)
+    required_variable_declarations: list[DeploymentSnapshotRequiredVariable] = Field(default_factory=list)
+    schema_version: int = 1
     required_connections: list[DeploymentSnapshotRequiredConnection] = Field(default_factory=list)
     # Model provider identities the captured flows select, and the number of
     # model fields that selected none. Both default empty, so a caller written
@@ -76,3 +92,8 @@ class DeploymentSnapshot(BaseModel):
     required_providers: list[str] = Field(default_factory=list)
     required_models: list[DeploymentSnapshotRequiredModel] = Field(default_factory=list)
     unresolved_model_fields: int = 0
+    # What the captured flows' MCP servers need from the deploy target: variable
+    # names it must already hold, and sibling projects that must already be
+    # deployed there. Both default empty, for the same reason as above.
+    required_mcp_variables: list[str] = Field(default_factory=list)
+    required_mcp_projects: list[DeploymentSnapshotRequiredMcpProject] = Field(default_factory=list)

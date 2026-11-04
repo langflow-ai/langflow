@@ -22,6 +22,7 @@ INTEGRATION_ERROR_CODES = frozenset(
         "scope-missing",
         "rate-limited",
         "provider-unavailable",
+        "network-error",
         "action-unsupported",
         "invalid-request",
         "resource-not-found",
@@ -273,6 +274,42 @@ class ProviderUnavailableError(IntegrationError):
         )
 
 
+NetworkFailureReason = Literal["timeout", "dns", "refused", "unreachable", "tls", "connection"]
+
+_NETWORK_FAILURE_MESSAGES: dict[NetworkFailureReason, str] = {
+    "timeout": "request timed out",
+    "dns": "DNS lookup failed",
+    "refused": "connection refused",
+    "unreachable": "network unreachable",
+    "tls": "TLS connection failed",
+    "connection": "connection failed",
+}
+
+
+class IntegrationNetworkError(IntegrationError):
+    """A server-side transport failure, distinct from an HTTP provider outage.
+
+    Only a trusted endpoint hostname and a fixed reason belong in this error.
+    Raw transport exceptions may contain request URLs, credentials or payloads.
+    """
+
+    code = "network-error"
+
+    def __init__(self, *, reason: NetworkFailureReason, provider: str | None = None, host: str | None = None) -> None:
+        hint = "Check this server's outbound network access, DNS, proxy, and TLS settings."
+        super().__init__(
+            f"Langflow could not reach {host or 'the provider'} ({_NETWORK_FAILURE_MESSAGES[reason]}). {hint}",
+            hint=hint,
+            provider=provider,
+            # A transport timeout may follow a successful write, so blind retries
+            # can duplicate actions such as sending email.
+            retryable=False,
+            http_status=504 if reason == "timeout" else 502,
+            details={"reason": reason, **({"host": host} if host else {})},
+        )
+        self.reason = reason
+
+
 class IntegrationPolicyBlockedError(IntegrationError):
     """The provider or action is denied by the deployment's integration policy.
 
@@ -332,6 +369,20 @@ class ActionUnsupportedError(IntegrationError):
             "The provider does not support this action.",
             provider=provider,
             http_status=http_status,
+        )
+
+
+class IntegrationContextUnsupportedError(IntegrationError):
+    """A declared provider action cannot run in this execution environment."""
+
+    code = "action-unsupported"
+
+    def __init__(self, *, provider: str, display_name: str) -> None:
+        super().__init__(
+            f"{display_name} connections are not available in headless lfx. "
+            "Run this flow on a supported Langflow server.",
+            provider=provider,
+            details={"context": "headless"},
         )
 
 

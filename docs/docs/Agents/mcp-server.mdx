@@ -31,7 +31,7 @@ For information about using Langflow as an MCP client and managing MCP server co
 
 When you create a [Langflow project](/concepts-flows#projects), Langflow automatically adds the project to your MCP server's configuration and makes the project's flows available as MCP tools.
 
-If your Langflow server has authentication enabled (`AUTO_LOGIN=false`), the project's MCP server is automatically configured with API key authentication, and a new API key is generated specifically for accessing the new project's flows.
+If your Langflow server has authentication enabled (`LANGFLOW_AUTO_LOGIN=false`), the project's MCP server is automatically configured with API key authentication, and a new API key is generated specifically for accessing the new project's flows.
 For more information, see [MCP server authentication](#authentication).
 
 
@@ -245,7 +245,7 @@ For more information, see the MCP documentation for your client, such as [Cursor
 
 Each [Langflow project](/concepts-flows#projects) has its own MCP server with its own MCP server authentication settings.
 
-When you create a new project, Langflow automatically configures authentication for the project's MCP server based on your Langflow server's authentication settings. If authentication is enabled (`AUTO_LOGIN=false`), the project is automatically configured with API key authentication, and a new API key is generated for accessing the project's flows.
+When you create a new project, Langflow automatically configures authentication for the project's MCP server based on your Langflow server's authentication settings. If authentication is enabled (`LANGFLOW_AUTO_LOGIN=false`), the project is automatically configured with API key authentication, and a new API key is generated for accessing the project's flows.
 
 To configure authentication for a Langflow MCP server, go to the **Projects** page in Langflow, click the **MCP Server** tab, click <Icon name="Fingerprint" aria-hidden="true"/> **Edit Auth**, and then select your preferred authentication method:
 

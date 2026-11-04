@@ -87,7 +87,11 @@ Open <Icon name="Ellipsis" aria-hidden="true" /> **Actions** on the row.
 * **Revoke** removes the stored credential. The row stays, with status **Revoked**, and later runs fail until someone authorizes the connection again.
 * **Delete** removes the connection. It is available after the credential is gone, so revoke the connection first, or delete it while it is still **Pending**.
 
-Revoking a Google or Slack connection also asks the provider to revoke the token.
+Revoking a Google connection authorized through OAuth sign-in also asks Google to revoke the token.
+For Slack, Langflow asks Slack to revoke the stored token whether you used OAuth sign-in or **Paste a token**.
+The notification confirms when the provider revoked the token. If provider revocation fails or is unavailable,
+it says that the credential was only removed from Langflow and directs you to revoke it in the provider's settings.
+For a Slack Socket Mode app-level token (`xapp-`), use **Basic Information > App-Level Tokens** in the Slack app's settings if Slack rejects the revocation request.
 Microsoft Entra has no per-grant revocation endpoint for this flow, so an administrator removes the app's consent in Entra when upstream revocation is required.
 For the provider differences, see [Provider revocation and token rotation](./connection-oauth#provider-revocation-and-token-rotation).
 

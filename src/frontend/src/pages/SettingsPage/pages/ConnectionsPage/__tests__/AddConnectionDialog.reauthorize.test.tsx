@@ -1,5 +1,6 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { AxiosError } from "axios";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type {
   ConnectionPollBaseline,
@@ -40,6 +41,10 @@ jest.mock("@/controllers/API/queries/connections", () => ({
     isPending: false,
   }),
   useDeleteConnectionMutation: () => ({ mutate: mockRemove }),
+  useRenewConnectionTokenMutation: () => ({
+    mutateAsync: jest.fn(),
+    isPending: false,
+  }),
   useStartOAuthMutation: () => ({ mutateAsync: mockStartOAuth }),
   useOAuthRegistrationsQuery: () => mockRegistrations,
   usePendingConnectionPoll: (baseline: ConnectionPollBaseline | null) => ({
@@ -203,7 +208,50 @@ describe("AddConnectionDialog re-authorize", () => {
       .mockReturnValue(popup as unknown as Window);
   });
 
-  afterEach(() => openSpy.mockRestore());
+  afterEach(() => {
+    openSpy.mockRestore();
+    jest.useRealTimers();
+  });
+
+  it.each(["create", "reauthorize"])(
+    "shows action names and risks for %s consent",
+    (mode) => {
+      const provider = {
+        ...MICROSOFT,
+        capabilities: [
+          {
+            ...MICROSOFT.capabilities[0],
+            display_name: "Outlook Send Mail",
+            required_scopes: ["Mail.Send"],
+            conditional_scopes: [],
+          },
+        ],
+      };
+      mockTypes = {};
+      setRegistrations([
+        registration({
+          id: "microsoft-work",
+          provider: "microsoft",
+          scopes: [MAIL_SEND],
+        }),
+      ]);
+      render(
+        dialog(
+          mode === "reauthorize"
+            ? connection({
+                provider_key: "microsoft",
+                granted_scopes: ["Mail.Send"],
+              })
+            : undefined,
+          [provider],
+        ),
+      );
+      const row = scopeBox(MAIL_SEND).closest("label")!;
+      expect(within(row).getByText("Outlook Send Mail")).toBeVisible();
+      expect(within(row).getByText("Write")).toBeVisible();
+      expect(within(row).getByText("Mail.Send")).toBeVisible();
+    },
+  );
 
   it("asks which scopes to request before starting consent", () => {
     render(dialog(connection()));
@@ -276,6 +324,139 @@ describe("AddConnectionDialog re-authorize", () => {
       await userEvent.click(screen.getByTestId("connection-done"));
       expect(popup.close).toHaveBeenCalledTimes(1);
       expect(mockRemove).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ["create", "ready"],
+    ["reauthorize", "ready"],
+    ["create", "denied"],
+    ["reauthorize", "denied"],
+  ])(
+    "accepts the %s callback (%s) after losing track of the popup",
+    async (mode, outcome) => {
+      jest.useFakeTimers();
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const initial = connection(
+        mode === "create" ? { status: "pending", has_credentials: false } : {},
+      );
+      const reauthorize = mode === "reauthorize" ? initial : undefined;
+      mockCreate.mockResolvedValue(initial);
+      mockPolledConnection = initial;
+      const { rerender } = render(dialog(reauthorize));
+
+      if (mode === "create") {
+        await user.type(screen.getByTestId("connection-name"), "work");
+        await user.type(screen.getByTestId("connection-display-name"), "Work");
+        await user.click(screen.getByTestId("connection-continue"));
+      } else {
+        await user.click(screen.getByTestId("connection-authorize"));
+      }
+
+      await waitFor(() => expect(popup.location.href).toBe(AUTHORIZATION_URL));
+      await act(async () => jest.advanceTimersByTimeAsync(1000));
+      expect(screen.getByRole("dialog")).toHaveTextContent(
+        "Waiting for consent in the provider's window…",
+      );
+
+      // COOP can sever the opener reference and report closed even while the
+      // provider's error page remains open. It cannot prove user cancellation.
+      popup.closed = true;
+      act(() => jest.advanceTimersByTime(1000));
+      expect(
+        screen.queryByText(
+          "The sign-in window closed before authorization finished.",
+        ),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Langflow can no longer track the sign-in window.",
+      );
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "check the OAuth registration before trying again",
+      );
+      expect(screen.getByTestId("connection-try-again")).toBeEnabled();
+      expect(screen.getByRole("link", { name: "Setup guide" })).toHaveAttribute(
+        "href",
+        "https://docs.langflow.org/connection-oauth#customer-owned-google-registration",
+      );
+      expect(popup.close).not.toHaveBeenCalled();
+      expect(mockStartOAuth).toHaveBeenCalledTimes(1);
+
+      mockPolledConnection = connection({
+        updated_at: "2026-09-16T10:01:00",
+        status_reason: outcome === "denied" ? "oauth-denied" : null,
+      });
+      rerender(dialog(reauthorize));
+      expect(
+        screen.getByText(
+          outcome === "ready"
+            ? "Connected"
+            : "The provider denied authorization.",
+        ),
+      ).toBeInTheDocument();
+      if (mode === "create" && outcome === "denied") {
+        expect(mockRemove).toHaveBeenCalledWith("c1", expect.any(Object));
+      } else {
+        expect(mockRemove).not.toHaveBeenCalled();
+      }
+    },
+  );
+
+  it.each(["closed", "blocked"])(
+    "retries with the same scopes after the popup is %s",
+    async (state) => {
+      jest.useFakeTimers();
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      if (state === "blocked") openSpy.mockReturnValue(null);
+      render(dialog(connection()));
+      await user.click(scopeBox(GMAIL_SEND));
+      await user.click(screen.getByTestId("connection-authorize"));
+      if (state === "closed") popup.closed = true;
+      act(() => jest.advanceTimersByTime(1000));
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Langflow can no longer track the sign-in window.",
+      );
+      expect(mockStartOAuth).toHaveBeenCalledTimes(1);
+
+      popup.closed = false;
+      openSpy.mockReturnValue(popup as unknown as Window);
+      await user.click(screen.getByTestId("connection-try-again"));
+      expect(mockStartOAuth).toHaveBeenCalledTimes(2);
+      expect(mockStartOAuth.mock.calls[1][0].scopes).toEqual([
+        CALENDAR,
+        GMAIL_SEND,
+      ]);
+      expect(
+        screen.getByText("Waiting for consent in the provider's window…"),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+      expect(mockRemove).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([false, true])(
+    "expires consent without a changed poll result (popup closed: %s)",
+    async (closed) => {
+      jest.useFakeTimers();
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const initial = connection();
+      mockPolledConnection = initial;
+      render(dialog(initial));
+      await user.click(screen.getByTestId("connection-authorize"));
+
+      popup.closed = closed;
+      act(() => jest.advanceTimersByTime(1000));
+      if (closed) {
+        expect(screen.getByRole("status")).toHaveTextContent(
+          "Langflow can no longer track the sign-in window.",
+        );
+      }
+      act(() => jest.advanceTimersByTime(10 * 60 * 1000 - 1000));
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "The sign-in link expired. Start again to get a new one.",
+      );
+      expect(screen.getByTestId("connection-try-again")).toBeEnabled();
     },
   );
 
@@ -450,6 +631,271 @@ describe("AddConnectionDialog re-authorize", () => {
     );
   });
 
+  it.each(["Mail.Send", MAIL_SEND])(
+    "requests offline access by default when reconnecting with %s",
+    async (registeredMailSend) => {
+      setRegistrations([
+        registration({
+          id: "microsoft-work",
+          provider: "microsoft",
+          scopes: [
+            registeredMailSend,
+            "Mail.Read",
+            "offline_access",
+            "openid",
+            "email",
+            "profile",
+          ],
+        }),
+      ]);
+      render(
+        dialog(
+          connection({
+            provider_key: "microsoft",
+            granted_scopes: ["Mail.Send", "openid", "email", "profile"],
+          }),
+        ),
+      );
+
+      expect(scopeBox("offline_access")).toHaveAttribute(
+        "aria-checked",
+        "true",
+      );
+      // Requesting refresh tokens does not mean Entra reported a grant.
+      expect(
+        within(screen.getByText("offline_access")).queryByText("Granted"),
+      ).not.toBeInTheDocument();
+      expect(scopeBox("Mail.Read")).toHaveAttribute("aria-checked", "false");
+
+      await userEvent.click(screen.getByTestId("connection-authorize"));
+
+      await waitFor(() =>
+        expect(mockStartOAuth).toHaveBeenCalledWith({
+          id: "c1",
+          registrationId: "microsoft-work",
+          scopes: [
+            registeredMailSend,
+            "offline_access",
+            "openid",
+            "email",
+            "profile",
+          ],
+        }),
+      );
+    },
+  );
+
+  it("allows explicitly clearing offline access when reconnecting", async () => {
+    setRegistrations([
+      registration({
+        id: "microsoft-work",
+        provider: "microsoft",
+        scopes: [MAIL_SEND, "offline_access"],
+      }),
+    ]);
+    render(
+      dialog(
+        connection({
+          provider_key: "microsoft",
+          granted_scopes: ["Mail.Send"],
+        }),
+      ),
+    );
+
+    expect(scopeBox("offline_access")).toHaveAttribute("aria-checked", "true");
+    await userEvent.click(scopeBox("offline_access"));
+    await userEvent.click(screen.getByTestId("connection-authorize"));
+
+    await waitFor(() =>
+      expect(mockStartOAuth).toHaveBeenCalledWith({
+        id: "c1",
+        registrationId: "microsoft-work",
+        scopes: [MAIL_SEND],
+      }),
+    );
+  });
+
+  it.each(["registration", "connection"])(
+    "preserves scope choices after a %s refetch",
+    async (refetched) => {
+      const registered = registration({
+        id: "microsoft-work",
+        provider: "microsoft",
+        scopes: [MAIL_SEND, "Mail.Read", "offline_access"],
+      });
+      const row = connection({
+        provider_key: "microsoft",
+        granted_scopes: ["Mail.Send"],
+      });
+      setRegistrations([registered]);
+      const { rerender } = render(dialog(row));
+
+      await userEvent.click(scopeBox("offline_access"));
+      await userEvent.click(scopeBox("Mail.Read"));
+
+      if (refetched === "registration") {
+        setRegistrations([
+          { ...registered, scopes: [...registered.scopes, "User.Read"] },
+        ]);
+        rerender(dialog(row));
+        expect(scopeBox("User.Read")).toHaveAttribute("aria-checked", "false");
+      } else {
+        rerender(dialog({ ...row, granted_scopes: [...row.granted_scopes] }));
+      }
+
+      expect(scopeBox("offline_access")).toHaveAttribute(
+        "aria-checked",
+        "false",
+      );
+      expect(scopeBox("Mail.Read")).toHaveAttribute("aria-checked", "true");
+      await userEvent.click(screen.getByTestId("connection-authorize"));
+
+      await waitFor(() =>
+        expect(mockStartOAuth).toHaveBeenCalledWith({
+          id: "c1",
+          registrationId: "microsoft-work",
+          scopes: [MAIL_SEND, "Mail.Read"],
+        }),
+      );
+    },
+  );
+
+  it.each(["registration", "connection"])(
+    "initializes scope defaults when switching to another %s",
+    async (changed) => {
+      const registered = registration({
+        id: "microsoft-work",
+        provider: "microsoft",
+        scopes: [MAIL_SEND, "Mail.Read", "offline_access"],
+      });
+      const row = connection({
+        provider_key: "microsoft",
+        granted_scopes: ["Mail.Send"],
+      });
+      setRegistrations([registered, { ...registered, id: "microsoft-other" }]);
+      const { rerender } = render(dialog(row));
+
+      await userEvent.click(scopeBox("offline_access"));
+      await userEvent.click(scopeBox("Mail.Read"));
+
+      if (changed === "registration") {
+        await userEvent.selectOptions(
+          screen.getByRole("combobox"),
+          "microsoft-other",
+        );
+      } else {
+        rerender(dialog({ ...row, id: "c2" }));
+      }
+
+      expect(scopeBox("offline_access")).toHaveAttribute(
+        "aria-checked",
+        "true",
+      );
+      expect(scopeBox("Mail.Read")).toHaveAttribute("aria-checked", "false");
+      await userEvent.click(screen.getByTestId("connection-authorize"));
+
+      await waitFor(() =>
+        expect(mockStartOAuth).toHaveBeenCalledWith({
+          id: changed === "connection" ? "c2" : "c1",
+          registrationId:
+            changed === "registration" ? "microsoft-other" : "microsoft-work",
+          scopes: [MAIL_SEND, "offline_access"],
+        }),
+      );
+    },
+  );
+
+  it("initializes offline access after the registration listing loads", async () => {
+    setRegistrations(undefined);
+    const row = connection({
+      provider_key: "microsoft",
+      granted_scopes: ["Mail.Send"],
+    });
+    const { rerender } = render(dialog(row));
+
+    expect(screen.getByTestId("connection-authorize")).toBeDisabled();
+    setRegistrations([
+      registration({
+        // The loading fallback resolves to this same id before scopes arrive.
+        id: "microsoft",
+        provider: "microsoft",
+        scopes: [MAIL_SEND, "offline_access"],
+      }),
+    ]);
+    rerender(dialog(row));
+
+    expect(scopeBox("offline_access")).toHaveAttribute("aria-checked", "true");
+    await userEvent.click(screen.getByTestId("connection-authorize"));
+
+    await waitFor(() =>
+      expect(mockStartOAuth).toHaveBeenCalledWith({
+        id: "c1",
+        registrationId: "microsoft",
+        scopes: [MAIL_SEND, "offline_access"],
+      }),
+    );
+  });
+
+  it("excludes selected scopes removed by a registration refetch", async () => {
+    const registered = registration({
+      id: "microsoft-work",
+      provider: "microsoft",
+      scopes: [MAIL_SEND, "Mail.Read", "offline_access"],
+    });
+    const row = connection({
+      provider_key: "microsoft",
+      granted_scopes: ["Mail.Send"],
+    });
+    setRegistrations([registered]);
+    const { rerender } = render(dialog(row));
+
+    await userEvent.click(scopeBox("Mail.Read"));
+    setRegistrations([{ ...registered, scopes: [MAIL_SEND] }]);
+    rerender(dialog(row));
+    await userEvent.click(screen.getByTestId("connection-authorize"));
+
+    await waitFor(() =>
+      expect(mockStartOAuth).toHaveBeenCalledWith({
+        id: "c1",
+        registrationId: "microsoft-work",
+        scopes: [MAIL_SEND],
+      }),
+    );
+  });
+
+  it("retains Google identity aliases when removing an unrelated scope", async () => {
+    setRegistrations([
+      registration({
+        scopes: [CALENDAR, GMAIL_SEND, "openid", "email", "profile"],
+      }),
+    ]);
+    render(
+      dialog(
+        connection({
+          granted_scopes: [
+            CALENDAR,
+            GMAIL_SEND,
+            "openid",
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/userinfo.profile",
+          ],
+        }),
+      ),
+    );
+
+    expect(scopeBox("email")).toHaveAttribute("aria-checked", "true");
+    expect(scopeBox("profile")).toHaveAttribute("aria-checked", "true");
+    await userEvent.click(scopeBox(CALENDAR));
+    await userEvent.click(screen.getByTestId("connection-authorize"));
+    await waitFor(() =>
+      expect(mockStartOAuth).toHaveBeenCalledWith(
+        expect.objectContaining({
+          scopes: [GMAIL_SEND, "openid", "email", "profile"],
+        }),
+      ),
+    );
+  });
+
   it("lets re-authorization add registration scopes no component declares", async () => {
     setRegistrations([
       registration({
@@ -474,7 +920,8 @@ describe("AddConnectionDialog re-authorize", () => {
       ),
     );
 
-    for (const scope of ["offline_access", "openid", "email", "profile"]) {
+    expect(scopeBox("offline_access")).toHaveAttribute("aria-checked", "true");
+    for (const scope of ["openid", "email", "profile"]) {
       expect(scopeBox(scope)).toHaveAttribute("aria-checked", "false");
       await userEvent.click(scopeBox(scope));
     }
@@ -580,5 +1027,286 @@ describe("AddConnectionDialog create flow", () => {
     } finally {
       openSpy.mockRestore();
     }
+  });
+});
+
+describe("Jira required connection scopes", () => {
+  const JIRA: IntegrationProviderRead = {
+    ...GOOGLE,
+    provider_id: "jira",
+    display_name: "Jira Cloud",
+    capabilities: [
+      {
+        ...capability("jira.issue.read", "JiraGetIssueComponent"),
+        display_name: "Get Issue",
+        required_scopes: ["read:jira-work"],
+      },
+    ],
+  };
+  const pending = () =>
+    connection({
+      provider_key: "jira",
+      status: "pending",
+      has_credentials: false,
+      granted_scopes: [],
+    });
+  let openSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockPolledConnection = undefined;
+    mockTypes = {};
+    mockStartOAuth.mockResolvedValue({ authorization_url: AUTHORIZATION_URL });
+    mockCreate.mockResolvedValue(pending());
+    mockRemove.mockImplementation((_id, options) => options?.onSuccess?.());
+    setRegistrations([
+      registration({
+        id: "jira-work",
+        provider: "jira",
+        scopes: ["read:jira-work", "offline_access"],
+        required_scopes: ["offline_access"],
+      }),
+    ]);
+    openSpy = jest
+      .spyOn(window, "open")
+      .mockReturnValue(popup as unknown as Window);
+  });
+
+  afterEach(() => openSpy.mockRestore());
+
+  const startCreate = async () => {
+    await userEvent.type(screen.getByTestId("connection-name"), "qa831_noofl");
+    await userEvent.type(
+      screen.getByTestId("connection-display-name"),
+      "Jira QA",
+    );
+    await userEvent.click(screen.getByTestId("connection-continue"));
+    await waitFor(() => expect(mockStartOAuth).toHaveBeenCalledTimes(1));
+  };
+
+  it.each(["create", "reconnect"])(
+    "requires refresh access even for action-only %s",
+    async (mode) => {
+      render(
+        dialog(
+          mode === "reconnect"
+            ? connection({
+                provider_key: "jira",
+                granted_scopes: ["read:jira-work"],
+              })
+            : undefined,
+          [JIRA],
+        ),
+      );
+      const scope = scopeBox("offline_access");
+      expect(scope).toBeChecked();
+      expect(scope).toBeDisabled();
+      expect(screen.getByText("Required for this connection")).toBeVisible();
+      await userEvent.click(scope);
+      if (mode === "create") await startCreate();
+      else await userEvent.click(screen.getByTestId("connection-authorize"));
+      await waitFor(() =>
+        expect(mockStartOAuth).toHaveBeenCalledWith({
+          id: "c1",
+          registrationId: "jira-work",
+          scopes: ["read:jira-work", "offline_access"],
+        }),
+      );
+    },
+  );
+
+  it.each(["create", "reconnect"])(
+    "blocks %s when the registration cannot request a required scope",
+    async (mode) => {
+      setRegistrations([
+        registration({
+          id: "jira-work",
+          provider: "jira",
+          scopes: ["read:jira-work"],
+          required_scopes: ["offline_access"],
+        }),
+      ]);
+      render(dialog(mode === "reconnect" ? pending() : undefined, [JIRA]));
+      if (mode === "create") {
+        await userEvent.type(
+          screen.getByTestId("connection-name"),
+          "qa831_noofl",
+        );
+        await userEvent.type(
+          screen.getByTestId("connection-display-name"),
+          "Jira QA",
+        );
+      }
+      expect(
+        screen.getByTestId(
+          mode === "create" ? "connection-continue" : "connection-authorize",
+        ),
+      ).toBeDisabled();
+      expect(screen.getByRole("alert")).toHaveTextContent("offline_access");
+      expect(mockCreate).not.toHaveBeenCalled();
+      expect(mockStartOAuth).not.toHaveBeenCalled();
+    },
+  );
+
+  it("shows safe validation detail and cleans up a failed new start", async () => {
+    mockStartOAuth.mockRejectedValueOnce(
+      Object.assign(new AxiosError("Bad request"), {
+        response: {
+          status: 400,
+          data: {
+            detail: "Jira requires offline_access for every connection.",
+          },
+        },
+      }),
+    );
+    render(dialog(undefined, [JIRA]));
+    await startCreate();
+    expect(
+      await screen.findByText(
+        "Jira requires offline_access for every connection.",
+      ),
+    ).toBeVisible();
+    expect(mockRemove).toHaveBeenCalledWith("c1", expect.any(Object));
+  });
+
+  it("names the missing refresh scope, deletes the new row, and recreates it on retry", async () => {
+    const { rerender } = render(dialog(undefined, [JIRA]));
+    await startCreate();
+    mockPolledConnection = connection({
+      ...pending(),
+      status: "error",
+      status_reason: "oauth-refresh-token-missing",
+      updated_at: "2026-09-16T10:01:00",
+    });
+    rerender(dialog(undefined, [JIRA]));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "offline_access",
+    );
+    await waitFor(() =>
+      expect(mockRemove).toHaveBeenCalledWith("c1", expect.any(Object)),
+    );
+    mockCreate.mockResolvedValueOnce({ ...pending(), id: "c2" });
+    await userEvent.click(screen.getByTestId("connection-try-again"));
+    await waitFor(() => expect(mockStartOAuth).toHaveBeenCalledTimes(2));
+    expect(mockCreate).toHaveBeenCalledTimes(2);
+    expect(mockStartOAuth.mock.calls[1][0]).toEqual({
+      id: "c2",
+      registrationId: "jira-work",
+      scopes: ["read:jira-work", "offline_access"],
+    });
+  });
+
+  it("retains an existing connection when reconnect lacks a refresh grant", async () => {
+    const existing = connection({
+      provider_key: "jira",
+      granted_scopes: ["read:jira-work"],
+    });
+    const { rerender } = render(dialog(existing, [JIRA]));
+    await userEvent.click(screen.getByTestId("connection-authorize"));
+    await waitFor(() => expect(mockStartOAuth).toHaveBeenCalledTimes(1));
+    mockPolledConnection = {
+      ...existing,
+      status_reason: "oauth-refresh-token-missing",
+      updated_at: "2026-09-16T10:01:00",
+    };
+    rerender(dialog(existing, [JIRA]));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "offline_access",
+    );
+    expect(mockRemove).not.toHaveBeenCalled();
+  });
+
+  it("shows a failed recreation after cleaning up the prior consent attempt", async () => {
+    const { rerender } = render(dialog(undefined, [JIRA]));
+    await startCreate();
+    mockPolledConnection = connection({
+      ...pending(),
+      status: "error",
+      status_reason: "oauth-refresh-token-missing",
+      updated_at: "2026-09-16T10:01:00",
+    });
+    rerender(dialog(undefined, [JIRA]));
+    await waitFor(() => expect(mockRemove).toHaveBeenCalled());
+    mockCreate.mockRejectedValueOnce(
+      Object.assign(new AxiosError("Conflict"), {
+        response: {
+          status: 409,
+          data: { detail: "This connection handle is already in use." },
+        },
+      }),
+    );
+    await userEvent.click(screen.getByTestId("connection-try-again"));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "This connection handle is already in use.",
+    );
+  });
+
+  it.each([
+    ["confluence", "offline_access"],
+    ["salesforce", "refresh_token"],
+    ["servicenow", "langflow_table_read"],
+  ])("explains missing refresh access for %s", async (providerId, scope) => {
+    const provider: IntegrationProviderRead = {
+      ...JIRA,
+      provider_id: providerId,
+      display_name: providerId,
+      capabilities: [
+        {
+          ...capability(`${providerId}.read`, "ReadComponent"),
+          required_scopes: [scope],
+        },
+      ],
+    };
+    const row = connection({ ...pending(), provider_key: providerId });
+    mockCreate.mockResolvedValue(row);
+    setRegistrations([
+      registration({
+        id: "provider-work",
+        provider: providerId,
+        scopes: [scope],
+        required_scopes: [scope],
+      }),
+    ]);
+    const { rerender } = render(dialog(undefined, [provider]));
+    await startCreate();
+    mockPolledConnection = {
+      ...row,
+      status: "error",
+      status_reason: "oauth-refresh-token-missing",
+      updated_at: "2026-09-16T10:01:00",
+    };
+    rerender(dialog(undefined, [provider]));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("did not return a refresh token");
+    expect(alert).toHaveTextContent(scope);
+    expect(alert).not.toHaveTextContent("Jira");
+    await waitFor(() =>
+      expect(mockRemove).toHaveBeenCalledWith("c1", expect.any(Object)),
+    );
+  });
+
+  it("waits for cleanup before retry and retains the row if cleanup fails", async () => {
+    let failCleanup: () => void = () => {};
+    mockRemove.mockImplementationOnce((_id, options) => {
+      failCleanup = options.onError;
+    });
+    const { rerender } = render(dialog(undefined, [JIRA]));
+    await startCreate();
+    mockPolledConnection = connection({
+      ...pending(),
+      status: "error",
+      status_reason: "oauth-refresh-token-missing",
+      updated_at: "2026-09-16T10:01:00",
+    });
+    rerender(dialog(undefined, [JIRA]));
+    expect(await screen.findByTestId("connection-try-again")).toBeDisabled();
+    await userEvent.click(screen.getByTestId("connection-try-again"));
+    expect(mockStartOAuth).toHaveBeenCalledTimes(1);
+    await act(async () => failCleanup());
+    expect(screen.getByTestId("connection-try-again")).toBeEnabled();
+    await userEvent.click(screen.getByTestId("connection-try-again"));
+    await waitFor(() => expect(mockStartOAuth).toHaveBeenCalledTimes(2));
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockStartOAuth.mock.calls[1][0].id).toBe("c1");
   });
 });

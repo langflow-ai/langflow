@@ -49,7 +49,7 @@ MIGRATION_RELEASE = "1.11.0"
 # that introduced them (one ``bare_class_name`` row per component).  They stay in
 # ``PROVIDER_DEPS`` so re-running the script keeps their extras managed, but the
 # move + migration-discovery steps are skipped for them.
-PRE_CONSOLIDATED_PROVIDERS: frozenset[str] = frozenset({"figranium", "mrscraper"})
+PRE_CONSOLIDATED_PROVIDERS: frozenset[str] = frozenset({"figranium", "keenable", "mrscraper"})
 
 # Shared spec for providers whose components go through langchain_community
 # wrappers (the wrapper itself; whatever SDK the wrapper lazy-imports at
@@ -77,7 +77,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "clickhouse": ["clickhouse-connect==0.7.19", _LC_COMMUNITY],
     "couchbase": ["couchbase>=4.2.1", _LC_COMMUNITY],
     "milvus": ["langchain-milvus~=0.3.2"],
-    "mongodb": ["pymongo>=4.18.2,<5.0.0", "langchain-mongodb>=0.11.0"],
+    "mongodb": ["pymongo>=4.18.3,<5.0.0", "langchain-mongodb>=0.11.0"],
     "pgvector": ["pgvector>=0.4.2", _LC_COMMUNITY],
     # Marker preserved from langflow-base: no py3.14 wheel yet; on 3.14 the
     # component degrades exactly as it does in today's published images.
@@ -101,8 +101,8 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "git": ["GitPython>=3.1.58", _LC_COMMUNITY],
     "glean": [],  # httpx + pydantic only (lfx core)
     "icosacomputing": ["requests>=2.32.0"],
-    "mem0": ["mem0ai>=2.0.2,<3.0.0"],
-    "mrscraper": ["mrscraper-sdk>=0.2.1,<0.3.0"],
+    "mem0": ["mem0ai>=2.0.18,<3.0.0"],
+    "mrscraper": ["mrscraper-sdk>=0.6.0,<0.7.0"],
     "needle": ["needle-python>=0.4.0"],
     "scrapegraph": ["scrapegraph-py>=1.12.0"],
     "serpapi": ["google-search-results>=2.4.1,<3.0.0", _LC_COMMUNITY],
@@ -143,6 +143,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "olivya": [],  # httpx REST only (lfx core)
     "agentql": [],  # httpx REST only (lfx core)
     "figranium": [],  # httpx REST only (lfx core); new in 1.13.0, never lived under lfx.components
+    "keenable": [],  # httpx REST only (lfx core); new in 1.14.0, never lived under lfx.components
     # --- tranche 7: google family + agent SDKs (markers preserved from base) ---
     # "google" graduated to the standalone lfx-google bundle so Gemini is
     # available in every default Langflow install.
@@ -171,8 +172,8 @@ PROVIDER_DEPS: dict[str, list[str]] = {
         # Temporary compatibility valve: newer releases require cryptography<49.
         "langchain-litellm==0.5.1; sys_platform != 'darwin' and python_version < '3.14'",
         "langchain-litellm==0.5.1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",  # noqa: E501
-        "litellm>=1.103.1,<2.0.0,!=1.104.0rc1; sys_platform != 'darwin' and python_version < '3.14'",
-        "litellm>=1.103.1,<2.0.0,!=1.104.0rc1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",  # noqa: E501
+        "litellm>=1.103.1,<2.0.0,!=1.104.0rc1,!=1.107.0; sys_platform != 'darwin' and python_version < '3.14'",
+        "litellm>=1.103.1,<2.0.0,!=1.104.0rc1,!=1.107.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",  # noqa: E501
     ],
     # --- tranche 9: langwatch evaluator (pure httpx REST; the langwatch SDK extra
     # is for the tracing service, not this component) ---

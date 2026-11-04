@@ -13,9 +13,19 @@
  * every placement path picks it up automatically.
  */
 
+import { isTriggerComponent } from "./trigger-component";
+
 // Component type identifiers referenced by name elsewhere in the UI.
 export const CHAT_INPUT_COMPONENT = "ChatInput";
 export const WEBHOOK_COMPONENT = "Webhook";
+
+/**
+ * Placement key every trigger node carries besides its own type. Triggers are
+ * recognised by `metadata.trigger_kind`, not by type name, and wave 1 allows
+ * one per flow whatever the kind. Not a valid component type name, so it can
+ * never collide with one.
+ */
+export const TRIGGER_PLACEMENT_KEY = "@trigger";
 
 export interface ComponentConstraint {
   /** Only one instance of this component type may exist in a flow. */
@@ -28,6 +38,7 @@ export interface ComponentConstraint {
 export const COMPONENT_CONSTRAINTS: Record<string, ComponentConstraint> = {
   [CHAT_INPUT_COMPONENT]: { singleton: true, excludes: [WEBHOOK_COMPONENT] },
   [WEBHOOK_COMPONENT]: { singleton: true, excludes: [CHAT_INPUT_COMPONENT] },
+  [TRIGGER_PLACEMENT_KEY]: { singleton: true, excludes: [] },
 };
 
 export type ConstraintViolationReason = "singleton" | "exclusivity";
@@ -41,8 +52,8 @@ export interface ConstraintViolation {
   conflictingType?: string;
 }
 
-/** Minimal shape needed to read a node's component type. */
-type TypedNode = { data?: { type?: string } };
+/** Minimal shape needed to read a node's component type and trigger marker. */
+type TypedNode = { data?: { type?: string; node?: unknown } };
 /** Minimal shape needed to prune edges by endpoint. */
 type EndpointEdge = { source: string; target: string };
 
@@ -59,16 +70,30 @@ function getConstraint(
     : undefined;
 }
 
-/** Collects the distinct component types present in a set of nodes. */
+/**
+ * The placement keys a component answers to: its type, plus
+ * {@link TRIGGER_PLACEMENT_KEY} when it is a trigger.
+ */
+export function placementKeysOf(
+  type: string | undefined,
+  component: unknown,
+): string[] {
+  const keys = type === undefined ? [] : [type];
+  if (isTriggerComponent(component as Parameters<typeof isTriggerComponent>[0]))
+    keys.push(TRIGGER_PLACEMENT_KEY);
+  return keys;
+}
+
+const nodeKeys = (node: TypedNode) =>
+  placementKeysOf(node.data?.type, node.data?.node);
+
+/** Collects the distinct placement keys present in a set of nodes. */
 export function getPresentComponentTypes(
   nodes: ReadonlyArray<TypedNode>,
 ): Set<string> {
   const types = new Set<string>();
   for (const node of nodes) {
-    const type = node.data?.type;
-    if (type !== undefined) {
-      types.add(type);
-    }
+    for (const key of nodeKeys(node)) types.add(key);
   }
   return types;
 }
@@ -79,9 +104,17 @@ export function getPresentComponentTypes(
  * allowed. This is the atomic decision shared by every placement path.
  */
 export function evaluatePlacement(
-  candidateType: string | undefined,
+  candidate: string | undefined | readonly string[],
   presentTypes: ReadonlySet<string>,
 ): ConstraintViolation | null {
+  if (Array.isArray(candidate)) {
+    for (const key of candidate) {
+      const violation = evaluatePlacement(key as string, presentTypes);
+      if (violation) return violation;
+    }
+    return null;
+  }
+  const candidateType = candidate as string | undefined;
   const constraint = getConstraint(candidateType);
   if (!constraint || candidateType === undefined) {
     return null;
@@ -124,7 +157,7 @@ export interface PlaceableSelection<TNode, TEdge> {
  * node of a constrained type wins and later conflicting nodes are dropped.
  */
 export function filterPlaceableSelection<
-  TNode extends { id: string; data?: { type?: string } },
+  TNode extends { id: string; data?: { type?: string; node?: unknown } },
   TEdge extends EndpointEdge,
 >(
   selection: { nodes: TNode[]; edges: TEdge[] },
@@ -132,7 +165,7 @@ export function filterPlaceableSelection<
 ): PlaceableSelection<TNode, TEdge> {
   // Fast path: nothing to enforce unless a pasted node is actually constrained.
   const hasConstrainedNode = selection.nodes.some((node) =>
-    Boolean(getConstraint(node.data?.type)),
+    nodeKeys(node).some((key) => Boolean(getConstraint(key))),
   );
   if (!hasConstrainedNode) {
     return {
@@ -148,16 +181,14 @@ export function filterPlaceableSelection<
   const violations: ConstraintViolation[] = [];
 
   const nodes = selection.nodes.filter((node) => {
-    const type = node.data?.type;
-    const violation = evaluatePlacement(type, present);
+    const keys = nodeKeys(node);
+    const violation = evaluatePlacement(keys, present);
     if (violation) {
       violations.push(violation);
       removedNodeIds.add(node.id);
       return false;
     }
-    if (type !== undefined) {
-      present.add(type);
-    }
+    for (const key of keys) present.add(key);
     return true;
   });
 

@@ -266,6 +266,25 @@ describe("FilesTab", () => {
       expect(formatType({ value: path })).toBe(expected);
     });
 
+    // The files API sends its times in UTC with a Z. Older answers came without one.
+    it.each([
+      ["2026-10-15T22:53:48.793401Z", "2026-10-15T22:53:48.793Z"],
+      ["2024-01-02T00:00:00", "2024-01-02T00:00:00Z"],
+    ])("shows the modified time %s as the instant %s", (sent, instant) => {
+      render(<FilesTab {...defaultProps} />, { wrapper: createWrapper() });
+      const modifiedColumn = mockLatestTableProps.columnDefs?.find(
+        (column) => column.field === "updated_at",
+      );
+      const formatModified = modifiedColumn?.valueFormatter as (params: {
+        value: string;
+        data: FileType;
+      }) => string;
+
+      expect(formatModified({ value: sent, data: older })).toBe(
+        new Date(instant).toLocaleString(),
+      );
+    });
+
     it("calls setQuickFilterText when typing in the search input", () => {
       const setQuickFilterText = jest.fn();
       render(

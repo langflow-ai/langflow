@@ -35,7 +35,7 @@ class SharePointFetchComponent(MicrosoftGraphComponent):
 
     display_name = "SharePoint/OneDrive: Fetch Item"
     description = "Fetch a file's metadata and content from OneDrive or SharePoint."
-    documentation = "https://learn.microsoft.com/en-us/graph/api/driveitem-get-content"
+    documentation = "https://docs.langflow.org/bundles-microsoft"
     name = "SharePointFetchItem"
     capability_id = "microsoft.files.fetch"
 

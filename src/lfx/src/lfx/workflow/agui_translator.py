@@ -166,7 +166,22 @@ class AGUITranslator:
             # dump carries the reason in ``text``; the minimal path sends
             # ``{"error": str}``.
             message = data.get("text") or data.get("error") or "Unknown error"
-            events.append(RunErrorEvent(message=str(message)))
+            # The terminal event drives the canvas alert. Preserve curated
+            # solutions from ErrorMessage, but never include its traceback.
+            parts = [str(message).strip()]
+            code = None
+            for block in data.get("content_blocks") or []:
+                if not isinstance(block, dict):
+                    continue
+                for content in [block, *(block.get("contents") or [])]:
+                    if not isinstance(content, dict) or content.get("type") != "error":
+                        continue
+                    solution = content.get("solution")
+                    if isinstance(solution, str) and solution.strip() and solution.strip() not in parts:
+                        parts.append(solution.strip())
+                    if code is None and isinstance(content.get("code"), str):
+                        code = content["code"]
+            events.append(RunErrorEvent(message="\n\n".join(parts), code=code))
             return events
         return []
 

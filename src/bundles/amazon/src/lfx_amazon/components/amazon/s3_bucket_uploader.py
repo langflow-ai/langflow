@@ -12,6 +12,7 @@ from lfx.io import (
 )
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
+from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
 
 
 class S3BucketUploaderComponent(Component):
@@ -197,8 +198,11 @@ class S3BucketUploaderComponent(Component):
             if not file_path:
                 msg = "Store Original File requires each input to contain file_path."
                 raise ValueError(msg)
+            resolved_path = enforce_local_file_access(file_path, scope_ids=component_file_access_scopes(self))
             self.log(f"Uploading file: {file_path}")
-            self._s3_client().upload_file(file_path, Bucket=self.bucket_name, Key=self._normalize_path(file_path))
+            self._s3_client().upload_file(
+                str(resolved_path), Bucket=self.bucket_name, Key=self._normalize_path(file_path)
+            )
 
     def _s3_client(self) -> Any:
         """Creates and returns an S3 client using the provided AWS access key ID and secret access key.

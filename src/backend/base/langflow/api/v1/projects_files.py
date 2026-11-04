@@ -20,11 +20,11 @@ from langflow.api.utils import (
     CurrentActiveUser,
     DbSession,
     build_content_disposition,
-    normalize_code_for_import,
     normalize_flow_for_export,
     strip_flow_secrets,
 )
 from langflow.api.utils.zip_utils import extract_flows_from_zip
+from langflow.api.v1.flow_validation import flow_validation_error
 from langflow.api.v1.flows import create_flows
 from langflow.api.v1.flows_helpers import _export_variable_names, _sanitize_flow_filename
 from langflow.api.v1.schemas import FlowListCreate
@@ -41,7 +41,7 @@ from langflow.services.creation_hooks import (
     enforce_pre_creation,
 )
 from langflow.services.database.models.base import orjson_dumps
-from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
+from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.folder.model import (
     Folder,
     FolderCreate,
@@ -178,6 +178,11 @@ async def upload_project_flows(
             status_code=400,
             detail=f"Missing required field(s): {', '.join(missing_keys)}",
         )
+    try:
+        flow_list = FlowListCreate.model_validate({"flows": data["flows"]})
+    except ValidationError as e:
+        raise flow_validation_error(e) from e
+
     project_name = await generate_unique_folder_name(data["folder_name"], current_user.id, session)
 
     data["folder_name"] = project_name
@@ -222,12 +227,6 @@ async def upload_project_flows(
     del data["folder_name"]
     data.pop("folder_description", None)
 
-    if "flows" in data:
-        # Normalise code fields: if exported with code-as-lines format, rejoin to
-        # strings before creating Pydantic models so the DB always stores strings.
-        flow_list = FlowListCreate(flows=[FlowCreate(**normalize_code_for_import(flow)) for flow in data["flows"]])
-    else:
-        raise HTTPException(status_code=400, detail="No flows found in the data")
     # Generate unique names, tracking names already assigned within this batch
     # to avoid collisions when multiple flows would get the same generated name
     used_names_in_batch: set[str] = set()

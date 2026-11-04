@@ -1,8 +1,11 @@
 import { renderHook } from "@testing-library/react";
+import { UUID_PARSING_ERROR } from "@/constants/constants";
 import { getGlobalVariablesQueryKey } from "@/controllers/API/helpers/global-variable-scope";
 import type { AllNodeType, FlowType } from "@/types/flow";
 import type { GlobalVariable } from "@/types/global_variables";
+import { processDataFromFlow } from "@/utils/reactflowUtils";
 import useAddFlow from "../use-add-flow";
+import usePrepareFlows from "../use-prepare-flows";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -14,6 +17,7 @@ const mockSetFlows = jest.fn();
 const mockSetMyCollectionId = jest.fn();
 const mockDeleteFlow = jest.fn();
 const mockPostAddFlow = jest.fn();
+const mockNavigate = jest.fn();
 const mockPostAddFolder = jest.fn();
 const mockUpdateGroupRecursion = jest.fn();
 const mockGetQueryData = jest.fn();
@@ -31,6 +35,7 @@ let mockScopedGlobalVariables: GlobalVariable[] | undefined = PROJECT_VARIABLES;
 let mockFolderId: string | undefined = "folder-1";
 let mockMyCollectionId = "folder-1";
 let mockFolders: { id: string }[] = [{ id: "folder-1" }];
+let mockFlows: FlowType[] = [];
 
 jest.mock("@tanstack/react-query", () => ({
   ...jest.requireActual("@tanstack/react-query"),
@@ -45,6 +50,10 @@ jest.mock("react-router-dom", () => ({
   useParams: () => ({ folderId: mockFolderId }),
 }));
 
+jest.mock("@/customization/hooks/use-custom-navigate", () => ({
+  useCustomNavigate: () => mockNavigate,
+}));
+
 jest.mock("@/controllers/API/queries/flows/use-post-add-flow", () => ({
   usePostAddFlow: () => ({ mutate: mockPostAddFlow }),
 }));
@@ -56,7 +65,7 @@ jest.mock("@/controllers/API/queries/folders", () => ({
 type Selector<T> = (state: T) => unknown;
 
 type AlertState = { setErrorData: jest.Mock; setNoticeData: jest.Mock };
-type FlowsManagerState = { flows: never[]; setFlows: jest.Mock };
+type FlowsManagerState = { flows: FlowType[]; setFlows: jest.Mock };
 type FolderState = {
   myCollectionId: string;
   folders: { id: string }[];
@@ -85,8 +94,8 @@ jest.mock("@/stores/alertStore", () => {
 jest.mock("@/stores/flowsManagerStore", () => {
   const store = Object.assign(
     (selector: Selector<FlowsManagerState>) =>
-      selector({ flows: [], setFlows: mockSetFlows }),
-    { getState: () => ({ flows: [], setFlows: mockSetFlows }) },
+      selector({ flows: mockFlows, setFlows: mockSetFlows }),
+    { getState: () => ({ flows: mockFlows, setFlows: mockSetFlows }) },
   );
   return { __esModule: true, default: store };
 });
@@ -192,11 +201,28 @@ const FLOW_WITH_PROJECT_CREDENTIAL: FlowType = {
   },
 };
 
+it("uses router navigation after a missing-folder error and settles the request", async () => {
+  jest.useFakeTimers();
+  try {
+    const error = {
+      response: { data: { detail: [{ type: UUID_PARSING_ERROR }] } },
+    };
+    rejectAddFlow(error);
+    const { result } = renderHook(() => useAddFlow());
+    await expect(result.current({ flow: FLOW_STUB })).rejects.toBe(error);
+    jest.advanceTimersByTime(3000);
+    expect(mockNavigate).toHaveBeenCalledWith("/flows", { replace: true });
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
 beforeEach(() => {
   mockScopedGlobalVariables = PROJECT_VARIABLES;
   mockFolderId = "folder-1";
   mockMyCollectionId = "folder-1";
   mockFolders = [{ id: "folder-1" }];
+  mockFlows = [];
   mockFetchQuery.mockRejectedValue(new Error("project snapshot unavailable"));
   mockGetQueryData.mockImplementation((queryKey) =>
     JSON.stringify(queryKey) ===
@@ -477,5 +503,66 @@ describe("useAddFlow — success path", () => {
       undefined,
       undefined,
     );
+  });
+});
+
+describe("preparing multiple imports", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("creates one destination and loads its variables once for the selection", async () => {
+    mockFolderId = undefined;
+    mockMyCollectionId = "";
+    mockFolders = [];
+    mockPostAddFolder.mockResolvedValue({ id: "new-folder" });
+    mockFetchQuery.mockResolvedValue(PROJECT_VARIABLES);
+    const { result } = renderHook(() => usePrepareFlows());
+
+    const prepared = await result.current([
+      FLOW_WITH_PROJECT_CREDENTIAL,
+      FLOW_WITH_PROJECT_CREDENTIAL,
+    ]);
+
+    expect(prepared.map((flow) => flow.folder_id)).toEqual([
+      "new-folder",
+      "new-folder",
+    ]);
+    expect(mockPostAddFolder).toHaveBeenCalledTimes(1);
+    expect(mockFetchQuery).toHaveBeenCalledTimes(1);
+    expect(mockUpdateGroupRecursion).toHaveBeenCalledTimes(2);
+    expect(prepared[0].data).not.toBe(FLOW_WITH_PROJECT_CREDENTIAL.data);
+    expect(prepared[0].data).not.toBe(prepared[1].data);
+  });
+
+  it("does not create a destination when a later graph cannot be prepared", async () => {
+    mockFolderId = undefined;
+    mockMyCollectionId = "";
+    mockFolders = [];
+    jest
+      .mocked(processDataFromFlow)
+      .mockResolvedValueOnce(FLOW_STUB.data!)
+      .mockRejectedValueOnce(new Error("Invalid graph"));
+    const { result } = renderHook(() => usePrepareFlows());
+
+    await expect(result.current([FLOW_STUB, FLOW_STUB])).rejects.toThrow(
+      "Invalid graph",
+    );
+
+    expect(mockPostAddFolder).not.toHaveBeenCalled();
+    expect(mockFetchQuery).not.toHaveBeenCalled();
+  });
+
+  it("preserves an existing flow when preparing its replacement fails", async () => {
+    mockFlows = [FLOW_STUB];
+    jest
+      .mocked(processDataFromFlow)
+      .mockRejectedValueOnce(new Error("Invalid graph"));
+    const { result } = renderHook(() => useAddFlow());
+
+    await expect(
+      result.current({ flow: FLOW_STUB, override: true }),
+    ).rejects.toThrow("Invalid graph");
+
+    expect(mockDeleteFlow).not.toHaveBeenCalled();
+    expect(mockPostAddFlow).not.toHaveBeenCalled();
   });
 });

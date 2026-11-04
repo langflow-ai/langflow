@@ -44,6 +44,7 @@ from langflow.services.database.models.flow.model import (
     FlowCreate,
     FlowRead,
     FlowUpdate,
+    is_virtual_flow_id,
 )
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.model import Folder
@@ -450,6 +451,18 @@ async def _canonicalize_flow_destination(
     return workspace_id, folder_id
 
 
+async def _validate_new_flow_id(session: AsyncSession, flow_id: UUID | None) -> None:
+    """Keep new flow IDs out of public history and legacy user storage namespaces."""
+    if flow_id is None:
+        return
+    if is_virtual_flow_id(flow_id):
+        raise HTTPException(status_code=400, detail="UUID5 flow IDs are reserved for public execution histories.")
+    from langflow.services.database.models.user.model import User
+
+    if await session.get(User, flow_id) is not None:
+        raise HTTPException(status_code=400, detail="Flow IDs must not collide with a user ID.")
+
+
 async def _new_flow(
     *,
     session: AsyncSession,
@@ -486,6 +499,8 @@ async def _new_flow(
         update_webhook: Recompute the webhook flag from the saved flow data.
     """
     try:
+        effective_id = flow_id if flow_id is not None else flow.id
+        await _validate_new_flow_id(session, effective_id)
         # Ownership follows the destination project, so it has to be resolved
         # before anything keyed on the owner: the filesystem sandbox, the
         # ``(user_id, name)`` / ``(user_id, endpoint_name)`` de-duplication, and
@@ -530,7 +545,6 @@ async def _new_flow(
 
         # Apply the stable ID: explicit flow_id param (PUT upsert) takes precedence,
         # then flow.id (stable import from FlowCreate), then the uuid4 default.
-        effective_id = flow_id if flow_id is not None else flow.id
         if effective_id is not None:
             db_flow.id = effective_id
 
@@ -821,7 +835,7 @@ async def _update_existing_flow(
         project_before=existing_folder_id,
         project_after=existing_flow.folder_id,
     )
-    if reconcile_triggers:
+    if reconcile_triggers and "data" in update_data:
         await _reconcile_flow_triggers(
             session, flow_id=existing_flow.id, owner_id=existing_flow.user_id, flow_data=existing_flow.data
         )
@@ -966,7 +980,8 @@ async def _patch_flow(
         project_before=existing_folder_id,
         project_after=db_flow.folder_id,
     )
-    await _reconcile_flow_triggers(session, flow_id=db_flow.id, owner_id=db_flow.user_id, flow_data=db_flow.data)
+    if "data" in update_data:
+        await _reconcile_flow_triggers(session, flow_id=db_flow.id, owner_id=db_flow.user_id, flow_data=db_flow.data)
     # Writes happen under the owner's storage namespace, not the actor's.
     await _save_flow_to_fs(db_flow, owner_user_id, storage_service)
 

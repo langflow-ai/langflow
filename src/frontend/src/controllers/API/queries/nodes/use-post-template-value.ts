@@ -101,6 +101,7 @@ export const usePostTemplateValue: useMutationFunctionType<
         }`,
         {
           code: template.code.value,
+          frontend_node: { metadata: node.metadata },
           template: preparedTemplate,
           field: parameterId,
           field_value: payload.value,

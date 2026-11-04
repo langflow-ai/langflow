@@ -17,11 +17,12 @@ export const ENABLE_MCP = true;
 export const ENABLE_MCP_NOTICE = false;
 export const ENABLE_KNOWLEDGE_BASES = true;
 export const ENABLE_INSPECTION_PANEL = true;
-// Keeps the Triggers palette category (the Schedule trigger) hidden until
-// TRG-7 ships the enable toggle and state badge. Flow-save reconciliation
-// creates trigger rows in `pending`, and only the enable endpoint arms them,
-// so without that control a user could build a schedule that never fires.
-export const ENABLE_TRIGGERS = false;
+// Triggers UI (TRG-7): the palette category, the node badge and Enabled
+// switch, Settings › Triggers and the events drawer. A kill switch: a
+// distribution that turns it off hides every trigger, because flow-save
+// reconciliation creates rows in `pending` and only the Enabled switch arms
+// them, so a trigger without that control would never fire.
+export const ENABLE_TRIGGERS = true;
 
 export const ENABLE_MCP_COMPOSER =
   import.meta.env.LANGFLOW_MCP_COMPOSER_ENABLED === "true";

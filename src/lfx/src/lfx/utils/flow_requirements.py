@@ -42,6 +42,8 @@ from functools import lru_cache
 from pathlib import Path
 from types import MappingProxyType
 
+from lfx.utils.flow_code import normalize_code_for_import
+
 # ---------------------------------------------------------------------------
 # Standard-library module names (3.10+)
 # ---------------------------------------------------------------------------
@@ -102,7 +104,9 @@ _MODEL_FIELDS = {"model", "agent_llm", "embeddings_model", "embedding_model"}
 # import its model class on the runner. ``test_provider_fallback_covers_unified_catalog``
 # guards this invariant. Some keys below (Amazon Bedrock, SambaNova, NVIDIA via
 # ``MODEL_PROVIDERS_DICT``) are not unified-selectable but back the dedicated
-# provider components / legacy flows.
+# provider components / legacy flows. Decision-only providers (TypeSafe,
+# Perplexity) need no entry: they can't be picked in those components, and
+# their decision models call the provider over httpx, which lfx depends on.
 _PROVIDER_PACKAGE_FALLBACKS: dict[str, set[str]] = {
     "Amazon Bedrock": {"langchain-aws"},
     "Anthropic": {"langchain-anthropic"},
@@ -548,7 +552,7 @@ def generate_requirements_from_flow(
     all_packages: set[str] = set()
     all_providers: set[str] = set()
 
-    data = flow.get("data", {})
+    data = normalize_code_for_import(flow).get("data", {})
     nodes = data.get("nodes", [])
 
     for node in nodes:

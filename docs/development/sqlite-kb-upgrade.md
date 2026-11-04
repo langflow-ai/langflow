@@ -5,14 +5,15 @@ continues to take precedence. Existing pgVector and OpenSearch stores retain
 their routing. This change targets 1.13.0 only, with no 1.12.5 backport.
 
 See the [qualification evidence](sqlite-kb-qualification.md) for measured tests,
-workloads, the temporary helper disposition and remaining release gates.
+workloads and remaining application release gates.
 
 The application workspace, universal lock and all-packages/all-extras/all-groups
 export no longer require `chromadb`, `langchain-chroma` or
 `agent-lifecycle-toolkit`. `langflow-base` installs `lfx[sqlite]`, including APSW
 3.53.4.0 and sqlite-vec 0.1.9. The default automatic reader is bundled, uses SQLite and bounded inert HNSW
 data parsing, and imports no Chroma SDK or native HNSW library. The optional
-managed controller retains a separate signed helper artifact and security gate.
+managed controller uses this same bundled reader after stopping the old workers
+and preserving a metadata backup. No separate migration helper is published.
 
 ## Runtime and storage
 
@@ -102,8 +103,8 @@ The
 managed controller accepts a **non-root POSIX single-host installation with a
 SQLite application metadata database**, local disk and a dedicated foreground
 supervisor session. See [the controller guide](sqlite-kb-controller.md) for its
-command, prerequisites and resumable states. It stages the verified helper before
-downtime, records and stops the exact API/background/Memory process family,
+command, prerequisites and resumable states. It records and stops the exact
+API/background/Memory process family,
 creates the backup and receipt, launches the new version, and verifies readiness
 on a listener owned by that new process family. External automatic restarters
 must be disabled before invoking it. This is a maintenance upgrade. An old worker cannot honor the new fence,
@@ -134,7 +135,6 @@ The new process receives:
 
 ```text
 LANGFLOW_KB_UPGRADE_RECEIPT=/private/upgrade-1.13/receipt.json
-LANGFLOW_KB_MIGRATION_HELPER_IMAGE=ghcr.io/langflow-ai/langflow-chroma-migration@sha256:<release digest>
 ```
 
 Migration then requires no per-KB command or confirmation. For each eligible KB,
@@ -143,7 +143,7 @@ including Memory backing stores, the coordinator:
 1. Acquires the whole-KB guard and persists its migration identity.
 2. Validates the stopped-worker receipt, metadata backup and source fingerprint.
 3. Preserves a full pristine source snapshot, including native indexes and logs.
-4. Exports from a disposable clone inside the isolated helper.
+4. Exports from the snapshot with the bundled legacy reader.
 5. Qualifies the complete inert JSONL stream and terminal count/checksums.
 6. Imports existing vectors into an unpublished generation, preserving IDs,
    metadata, dimensions and model identity without embedding calls.
@@ -151,8 +151,7 @@ including Memory backing stores, the coordinator:
    durable destination manifest.
 8. Changes routing with an application-DB compare-and-swap transaction, health
    checks the target and opens writes only after successful completion.
-9. Removes disposable interchange/container data and attempts helper-image
-   cleanup, while retaining source and metadata backups.
+9. Retains source and metadata backups for recovery.
 
 Source bindings prevent retained originals from being adopted again after a
 normal restart, explicit disk reconciliation or deletion of their migrated KB.
@@ -199,60 +198,29 @@ Errors are safe
 codes with guidance and do not expose document contents, credentials or native
 parser tracebacks.
 
-## Isolated helper and release prerequisites
+## Bundled reader and release prerequisites
 
-See [the helper](../../tools/chroma_migration_helper/README.md) and
-[the interchange protocol](../../src/lfx/src/lfx/base/knowledge_bases/migration/README.md).
-The separate helper has hash-locked dependencies and its own OCI build, SBOM,
-vulnerability report and signing workflow. The application checks the immutable
-image digest and the expected release-workflow identity with cosign. A missing
-or unverified helper leaves old data fenced. There is no runtime package install
-or fallback to an unrestricted reader.
+Both automatic and managed upgrades use the bundled SQLite and inert HNSW reader.
+Index metadata is decoded as bounded data without Python pickle execution or a
+native Chroma library. Stored embedding-function configuration is never
+instantiated. Migration reads a preserved source snapshot and independently
+validates the complete interchange stream before activating the SQLite generation.
+See [the interchange protocol](../../src/lfx/src/lfx/base/knowledge_bases/migration/README.md).
 
-The reader directly uses the pinned Rust binding and rejects Python Chroma SDK
-imports and Python pickle decoding. Stored embedding-function configuration is
-never instantiated. Native file parsing runs with networking disabled, a
-read-only snapshot mount, a read-only root filesystem, no capabilities, no
-privilege escalation, a non-root UID and fixed memory/CPU/process/time/output
-bounds. Writable native replay occurs only in disposable tmpfs.
+The reader is qualified against local persistent HNSW stores produced by Chroma
+0.5.23 and 1.5.9, including pending operations, purged logs, updated/deleted IDs
+and empty stores with known dimensions. Unknown historical formats, SPANN and
+stores exceeding the reader's resource limits remain fenced for administrator
+recovery. Export those sources from an isolated compatible old-release
+environment to a supported destination. The managed controller does not bypass
+the bundled reader's format or resource limits.
 
-The initial qualification matrix covers Chroma 1.5.9 local Rust/HNSW stores on
-Linux amd64/arm64 containers, including purged operation logs, persisted indexes,
-pending records, updates, deleted IDs and known-dimension empty stores. Docker on
-macOS or Windows must provide a Linux engine and source-volume access. Source
-stores above 8 GiB, SPANN, unknown historical formats, distributed old writers,
-and a PostgreSQL application metadata database require additional controller or
-reader qualification. They fail explicitly rather than bypassing the boundary.
-
-For air-gapped upgrades, load the signed OCI image from the release's offline
-kit after verifying its manifest and archive checksum. Configure absolute paths
-in `LANGFLOW_KB_MIGRATION_HELPER_BUNDLE`,
-`LANGFLOW_KB_MIGRATION_HELPER_MANIFEST` and
-`LANGFLOW_KB_MIGRATION_HELPER_TRUSTED_ROOT`. The trust root must be provisioned
-independently through Sigstore's authenticated TUF initialization before entering
-the air gap. The helper README contains the exact verification commands.
-The application verifies private copies of this material and selects the signed
-image content ID, which survives Docker save/load. No pull occurs in this path.
-Docker and the qualified cosign v3.1.3 binary are controller prerequisites.
-A root-running controller must stage a readable
-snapshot for the non-root helper UID, without making private data public.
-
-The release must publish the signed helper and protect the
-`chroma-migration-helper-release` environment with the required approval policy.
-Its security disposition must address the actual helper findings. A successful
-build or a report generated with findings is not security clearance. Final
-application images and native libraries still require the release scan, and the
-original ticket's scanner IDs must be reconciled before security closure.
-
-The helper workflow additionally reloads each signed platform archive and runs
-the real production verification/export path in an isolated network namespace.
-Only successful qualification of both platforms produces the signed
-`helper-qualification.json` and a versioned offline kit. The main 1.13 release
-workflow requires the kit's release tag through `migration_helper_release` before
-publication. It verifies both signatures, platform/image/archive bindings, source
-ancestry, unchanged helper code and unchanged third-party dependency resolution.
-Workspace version stamps may change. Missing evidence blocks publication.
-Dry runs may build without a kit but explicitly remain unqualified for release.
+Migration needs no model calls or network access. Air-gapped deployments need
+only the normal Langflow packages or image and their application dependencies.
+There is no Docker/cosign helper, offline helper kit or helper release tag gate.
+Application release inventories, cross-platform native-runtime checks and final
+artifact security scans remain required. The original scanner findings must
+still be reconciled against those final artifacts before security closure.
 
 ## Compatibility and retired providers
 
@@ -290,15 +258,15 @@ The legacy `chroma` and `altk` extras remain empty for installation compatibilit
 `scripts/ci/check_chroma_removal.py` checks the complete universal application
 export without reducing the security scanner's scope. Clean-environment tests
 exercise application construction and actual SQLite KB/Memory operations with
-both Chroma packages absent. Helper qualification independently generates real
-source stores and compares all records after import, including negative tests
-for malformed native input and isolation.
+both Chroma packages absent. Bundled-reader tests use real source fixtures and
+compare records after import, including negative tests for malformed index data
+and stored executable metadata.
 The existing release-tier inventory gate also checks every installed distribution
 for the retired SDKs, including transitive packages outside Langflow's own tiers.
 
 The native runtime workflow covers Python 3.10–3.14 on Linux x64/ARM64, macOS
 Intel/ARM64 and Windows x64. This wheel matrix does not qualify the separate
-upgrade controller on every platform. musl Linux and Windows ARM64 require a
+POSIX upgrade controller on every platform. musl Linux and Windows ARM64 require a
 qualified native runtime build before support can be claimed.
 
 `scripts/benchmark/sqlite_kb.py` measures deterministic exact search at declared

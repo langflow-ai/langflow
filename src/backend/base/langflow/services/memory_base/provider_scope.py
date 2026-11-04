@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, aresolve_model_provider_policy
 from sqlmodel import select
 
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow.model import Flow, is_virtual_flow_id
 from langflow.services.database.models.memory_base.model import MemoryBase
 from langflow.services.database.models.user.model import User
 from langflow.services.memory_base.embedding_helpers import infer_llm_provider
@@ -50,10 +50,10 @@ async def resolve_owned_memory_flow(
     flow_id: uuid.UUID,
     user_id: uuid.UUID,
 ) -> Flow:
-    """Load an owned Flow without accepting workspace or project input."""
+    """Load an owned Flow that can authorize access to persisted history."""
     result = await db.exec(select(Flow).where(Flow.id == flow_id).where(Flow.user_id == user_id))
     flow = result.first()
-    if flow is None:
+    if flow is None or is_virtual_flow_id(flow_id):
         msg = f"Flow {flow_id} not found"
         raise MemoryBaseFlowNotFoundError(msg)
     return flow

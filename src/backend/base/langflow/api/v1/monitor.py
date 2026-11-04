@@ -15,7 +15,7 @@ from langflow.schema.message import MessageResponse
 from langflow.services.auth.utils import get_current_active_superuser, get_current_active_user
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.fetch import authorized_or_owner_scoped
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow.model import Flow, is_virtual_flow_id, persisted_flow_history_filter
 from langflow.services.database.models.message.crud import (
     delete_messages_for_user,
     delete_messages_for_user_by_session,
@@ -129,6 +129,13 @@ def _message_history_response(message: MessageTable) -> MessageResponse:
     return MessageResponse.model_validate(message, from_attributes=True)
 
 
+def _message_update_response(message: MessageTable) -> MessageRead:
+    """Represent legacy NULL text in update responses without changing storage."""
+    if message.text is None:
+        return MessageRead.model_validate(message.model_dump() | {"text": ""})
+    return MessageRead.model_validate(message, from_attributes=True)
+
+
 async def _log_message_update_failure(error: Exception) -> None:
     from lfx.log.logger import logger
 
@@ -194,6 +201,8 @@ async def _ensure_flow_action_or_404(
     action: FlowAction,
 ) -> Flow | None:
     """Load a flow (share-aware), enforce permission, return None if missing."""
+    if is_virtual_flow_id(flow_id):
+        return None
     flow = await authorized_or_owner_scoped(
         session,
         Flow,
@@ -284,7 +293,7 @@ async def get_message_sessions(
 
         stmt = select(MessageTable.session_id).join(Flow, MessageTable.flow_id == Flow.id)
         stmt = stmt.where(~col(MessageTable.session_id).startswith("agentic_"))
-        stmt = stmt.where(Flow.user_id == current_user.id)
+        stmt = stmt.where(Flow.user_id == current_user.id, persisted_flow_history_filter())
 
         session_ids = await session.exec(_paged_session_ids_stmt(stmt, limit=limit, offset=offset))
         return list(session_ids)
@@ -319,7 +328,7 @@ async def get_messages(
 
         # Use JOIN instead of subquery for better performance
         stmt = select(MessageTable)
-        stmt = stmt.join(Flow, MessageTable.flow_id == Flow.id)
+        stmt = stmt.join(Flow, MessageTable.flow_id == Flow.id).where(persisted_flow_history_filter())
         if flow_id is None:
             stmt = stmt.where(Flow.user_id == current_user.id)
 
@@ -487,7 +496,7 @@ async def update_message(
                 sender=db_message.sender,
                 positive_feedback=current_positive_feedback,
             )
-    return db_message
+    return _message_update_response(db_message)
 
 
 @router.patch(
@@ -595,7 +604,7 @@ async def delete_messages_sessions(
         # First, get distinct session IDs that have messages belonging to the user's flows
         session_stmt = select(MessageTable.session_id).distinct()
         session_stmt = session_stmt.join(Flow, MessageTable.flow_id == Flow.id)
-        session_stmt = session_stmt.where(Flow.user_id == current_user.id)
+        session_stmt = session_stmt.where(Flow.user_id == current_user.id, persisted_flow_history_filter())
         session_stmt = session_stmt.where(col(MessageTable.session_id).in_(session_ids))
 
         result = await session.exec(session_stmt)
@@ -619,7 +628,7 @@ async def delete_messages_sessions(
             # Get message IDs to delete
             msg_stmt = select(MessageTable.id)
             msg_stmt = msg_stmt.join(Flow, MessageTable.flow_id == Flow.id)
-            msg_stmt = msg_stmt.where(Flow.user_id == current_user.id)
+            msg_stmt = msg_stmt.where(Flow.user_id == current_user.id, persisted_flow_history_filter())
             msg_stmt = msg_stmt.where(col(MessageTable.session_id).in_(affected_session_ids))
 
             msg_result = await session.exec(msg_stmt)
@@ -778,7 +787,7 @@ async def update_shared_message(
         await session.refresh(db_message)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
-    return db_message
+    return _message_update_response(db_message)
 
 
 @router.patch("/messages/shared/session/{old_session_id}")

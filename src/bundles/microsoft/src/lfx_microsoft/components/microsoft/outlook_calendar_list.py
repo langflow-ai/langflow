@@ -22,7 +22,7 @@ class OutlookCalendarListComponent(MicrosoftGraphComponent):
 
     display_name = "Outlook Calendar: List Events"
     description = "List the connected user's calendar events in a time window."
-    documentation = "https://learn.microsoft.com/en-us/graph/api/user-list-calendarview"
+    documentation = "https://docs.langflow.org/bundles-microsoft"
     name = "OutlookCalendarListEvents"
     capability_id = "microsoft.calendar.list"
 
@@ -92,7 +92,7 @@ class OutlookCalendarListComponent(MicrosoftGraphComponent):
     async def list_events(self) -> list[Data]:
         """Return the expanded event instances as Data rows."""
         if self._rows is not None:
-            self.status = f"{len(self._rows)} event(s)"
+            self.status = self._rows
             return self._rows
         limit = int(self.top or DEFAULT_TOP)
         if limit <= 0:
@@ -115,11 +115,12 @@ class OutlookCalendarListComponent(MicrosoftGraphComponent):
         self._next_link = next_link
         rows = [Data(data=item) for item in items]
         self._rows = rows
-        self.status = f"{len(rows)} event(s)"
+        self.status = rows
         return rows
 
     async def next_page_link(self) -> Message:
         """Return the unfollowed ``@odata.nextLink``, if Graph supplied one."""
         if self._rows is None:
             await self.list_events()
-        return Message(text=self._next_link or "")
+        self.status = self._next_link or ""
+        return Message(text=self.status)

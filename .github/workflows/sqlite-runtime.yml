@@ -6,9 +6,8 @@ on:
     paths:
       - .github/workflows/sqlite-runtime.yml
       - .github/workflows/release.yml
-      - scripts/ci/check_migration_helper_release.py
-      - scripts/ci/test_migration_helper_release.py
       - scripts/ci/test_release_inventory.py
+      - scripts/ci/test_release_workflow.py
       - scripts/ci/check_sqlite_runtime.py
       - scripts/ci/check_chroma_removal.py
       - '**/pyproject.toml'
@@ -145,15 +144,14 @@ jobs:
             src/backend/tests/unit/base/knowledge_bases/test_opensearch_backend.py \
             src/backend/tests/unit/base/knowledge_bases/test_storage_upgrade.py \
             src/backend/tests/unit/base/knowledge_bases/test_upgrade_controller.py \
+            src/backend/tests/unit/base/knowledge_bases/test_migration_io.py \
             src/backend/tests/unit/base/knowledge_bases/test_pending_cleanup.py \
-            src/backend/tests/unit/base/knowledge_bases/test_sqlite_helper.py \
-            src/backend/tests/unit/base/knowledge_bases/test_signed_helper_kit.py \
             src/backend/tests/unit/base/knowledge_bases/test_sqlite_application.py \
             src/backend/tests/unit/test_kb_storage_deletion.py
-      - name: Test signed helper release gates and application inventory
+      - name: Test release workflow and application inventory
         run: |
           uv run --no-sync pytest -q \
-            scripts/ci/test_migration_helper_release.py \
+            scripts/ci/test_release_workflow.py \
             scripts/ci/test_release_inventory.py
       - name: Test saved component source and exported dependency compatibility
         run: |
@@ -178,22 +176,23 @@ jobs:
     name: Native SQLite - ${{ matrix.runner }} Python ${{ matrix.python }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 10
+    continue-on-error: ${{ matrix.python == '3.15' }}
     strategy:
       fail-fast: false
       matrix:
         runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, macos-15-intel, windows-latest]
-        python: ['3.10', '3.11', '3.12', '3.13', '3.14']
+        python: ['3.11', '3.12', '3.13', '3.14', '3.15']
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
         with:
-          version: latest-known
+          version: ${{ matrix.python == '3.15' && '0.13.0' || 'latest-known' }}
           python-version: ${{ matrix.python }}
       - name: Install only the pinned native wheels
         run: |
           uv venv .sqlite-runtime
-          uv pip install --python .sqlite-runtime --only-binary :all: apsw==3.53.4.0 sqlite-vec==0.1.9
+          uv pip install --python .sqlite-runtime --only-binary :all: apsw==${{ matrix.python == '3.15' && '3.54.1.0' || '3.53.4.0' }} sqlite-vec==0.1.9
       - name: Qualify extension, WAL and reopen
         run: uv run --no-project --python .sqlite-runtime scripts/ci/check_sqlite_runtime.py

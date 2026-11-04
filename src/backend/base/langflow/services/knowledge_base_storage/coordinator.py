@@ -26,7 +26,7 @@ from langflow.services.database.models.knowledge_base_storage_migration import K
 from langflow.services.database.models.user.model import User
 from langflow.services.database.service import get_sqlite_database_file_path
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
-from langflow.services.knowledge_base_storage import application_backup, helper
+from langflow.services.knowledge_base_storage import application_backup
 from langflow.services.knowledge_base_storage.automatic import (
     AutomaticUpgradeUnavailableError,
     check_local_upgrade,
@@ -48,6 +48,8 @@ from langflow.services.knowledge_base_storage.maintenance import (
     tree_stat_fingerprint,
     validate_receipt,
 )
+from langflow.services.knowledge_base_storage.migration_io import read_regular_file
+from langflow.services.knowledge_base_storage.migration_io import run_worker as _worker
 from langflow.services.knowledge_base_storage.retained import retained_source
 from langflow.services.knowledge_base_storage.runtime import (
     StorageUnavailableError,
@@ -61,29 +63,12 @@ _tasks: set[asyncio.Task] = set()
 _inventory_complete = True
 _inventory_scanned = False
 _inventory_issue_count = 0
+_inventory_scan_failed = False
 _retry_requested = False
 _MAX_BINDING_BYTES = 4096
 _SOURCE_PATH_PARTS = 2
 # Set for the migrations of one upgrade pass, which share one attribution of the legacy directories.
 _pass_attribution: ContextVar[list[Attribution] | None] = ContextVar("_pass_attribution", default=None)
-
-
-async def _worker(function, *args, **kwargs):
-    """Cancellation never releases the fence while snapshot/import work is live."""
-    task = asyncio.create_task(asyncio.to_thread(function, *args, **kwargs))
-    cancelled = False
-    while not task.done():
-        try:
-            await asyncio.shield(task)
-        except asyncio.CancelledError:
-            cancelled = True
-        except Exception:
-            if not cancelled:
-                raise
-    if cancelled:
-        task.exception()
-        raise asyncio.CancelledError
-    return task.result()
 
 
 def _model_fingerprint(record: KnowledgeBaseRecord) -> str:
@@ -203,7 +188,7 @@ async def _complete(row: KnowledgeBaseRecord, run: KnowledgeBaseStorageMigration
 
 
 def _qualify(path, header, directory):
-    """Validate a helper export into a private replayable staging ledger."""
+    """Validate a legacy export into a private replayable staging ledger."""
     with path.open("rb") as stream:
         return qualify_export(stream, expected_header=header, scratch_directory=directory)
 
@@ -444,8 +429,7 @@ async def migrate_one(kb_id: UUID) -> None:
                 "model_fingerprint": _model_fingerprint(row),
             }
             if (
-                receipt is None
-                and row.chunks == 0
+                row.chunks == 0
                 and not (snapshot / "chroma.sqlite3").exists()
                 and not any(path.name != "embedding_metadata.json" for path in snapshot.iterdir())
             ):
@@ -454,8 +438,6 @@ async def migrate_one(kb_id: UUID) -> None:
                 header = ExportHeader(str(row.id), fingerprint, "chroma-empty", 0, None, "l2", _model_fingerprint(row))
                 with output.open("wb") as stream:
                     write_export(stream, header, [])
-            elif receipt is not None:
-                header = await helper.export_snapshot(snapshot, output, **arguments)
             else:
                 header = await _worker(export_local_snapshot, snapshot, output, **arguments)
             await _phase(
@@ -478,7 +460,7 @@ async def migrate_one(kb_id: UUID) -> None:
                 msg = "The legacy source changed before activation"
                 raise MaintenanceRequiredError(msg)
             # Target completion is durable before this compare-and-swap. Backend
-            # routing and ownership never depend on a path supplied by the helper.
+            # routing and ownership never depend on a path supplied by the reader.
             async with session_scope() as session:
                 result = await session.execute(
                     update(KnowledgeBaseRecord)
@@ -701,8 +683,9 @@ async def reconcile_legacy_inventory() -> None:
     folder name ties to an account is adopted only with a recorded base id and
     no sign that another account held that name.
     """
-    global _inventory_complete, _inventory_issue_count  # noqa: PLW0603 -- process-local readiness during inventory
+    global _inventory_complete, _inventory_issue_count, _inventory_scan_failed  # noqa: PLW0603 -- discovery status
     _inventory_complete = False
+    _inventory_scan_failed = False
     receipt_name = os.environ.get("LANGFLOW_KB_UPGRADE_RECEIPT")
     if receipt_name:
         database = get_sqlite_database_file_path(get_db_service().database_url)
@@ -757,29 +740,38 @@ async def reconcile_legacy_inventory() -> None:
             continue
         if relative in attribution.claims:
             if issue := _claimed_source_issue(attribution.claims[relative], relative, fingerprint, rows, runs):
-                issues.append(issue)
+                issues.append({**issue, "source": relative})
             continue
         # Nothing but its folder name ties the directory to an account.
         owner_id = attribution.holder(parts[0])
         adoption = attribution.adoption(relative, owner_id)
         if isinstance(adoption, str):
-            issues.append({"code": adoption, **({"owner_id": str(owner_id)} if owner_id else {})})
+            issues.append({"code": adoption, "source": relative, **({"owner_id": str(owner_id)} if owner_id else {})})
             continue
         if issue := await _adopt(relative, fingerprint, *adoption):
-            issues.append(issue)
+            issues.append({**issue, "source": relative})
     _inventory_issue_count = len(issues)
+    _write_inventory({"issues": issues})
+    _inventory_complete = not issues
+
+
+def _write_inventory(inventory: dict) -> None:
+    """Record the latest scan's issues, or that it did not finish, for administrator recovery."""
     directory = private_directory(storage_root() / ".migration")
     path = directory / "inventory.json"
     if path.is_symlink():
         msg = "Invalid upgrade inventory path"
         raise MaintenanceRequiredError(msg)
-    path.write_text(json.dumps({"issues": issues}), encoding="utf-8")
-    _inventory_complete = not issues
+    path.write_text(json.dumps(inventory), encoding="utf-8")
 
 
 def inventory_status() -> dict:
     """Report discovery completion and the number of unresolved source identities."""
-    return {"complete": _inventory_complete, "issues": _inventory_issue_count}
+    return {
+        "complete": _inventory_complete,
+        "issues": _inventory_issue_count,
+        **({"scan_failed": True} if _inventory_scan_failed else {}),
+    }
 
 
 def upgrade_in_progress() -> bool:
@@ -813,16 +805,17 @@ async def published_inventory_status() -> dict:
     if not path.exists():
         return inventory_status()
     try:
-        value = json.loads(await _worker(helper._verification_file, path, limit=4096))  # noqa: SLF001 -- reuse bounded no-follow reads
+        value = json.loads(await _worker(read_regular_file, path, limit=4096))
         if (
             type(value) is not dict
-            or set(value) != {"complete", "issues"}
+            or set(value) not in ({"complete", "issues"}, {"complete", "issues", "scan_failed"})
             or type(value["complete"]) is not bool
             or type(value["issues"]) is not int
             or value["issues"] < 0
+            or type(value.get("scan_failed", False)) is not bool
         ):
             raise ValueError
-    except (ValueError, helper.MigrationHelperError):
+    except (ValueError, MaintenanceRequiredError):
         return {"complete": False, "issues": 1}
     else:
         return value
@@ -842,12 +835,19 @@ async def run_pending() -> None:
 
 async def _resume_pending() -> None:
     """Reconcile legacy inventory and resume eligible storage migrations."""
-    global _inventory_scanned, _inventory_issue_count  # noqa: PLW0603 -- process-local discovery status
+    global _inventory_scanned, _inventory_issue_count, _inventory_scan_failed  # noqa: PLW0603 -- discovery status
     try:
         await reconcile_legacy_inventory()
     except Exception:  # noqa: BLE001 -- still persist actionable errors on registered KBs
         _inventory_issue_count = max(1, _inventory_issue_count)
+        _inventory_scan_failed = True
         await logger.awarning("Legacy storage inventory requires administrator recovery")
+        if get_settings_service().settings.knowledge_bases_dir:
+            try:
+                # An earlier scan's folders may already be recovered, so stop naming them.
+                await _worker(_write_inventory, {"issues": [], "scan_failed": True})
+            except Exception:  # noqa: BLE001 -- the shared status independently withholds stale details
+                await logger.awarning("The unfinished legacy storage inventory could not be recorded")
     finally:
         if get_settings_service().settings.knowledge_bases_dir:
             try:
@@ -883,13 +883,6 @@ async def _resume_pending() -> None:
                         raise
     finally:
         _pass_attribution.reset(shared)
-        # Image cleanup is separate from data success and must not revert an
-        # activated generation. The helper protects images used by other runs.
-        if os.environ.get("LANGFLOW_KB_MIGRATION_HELPER_IMAGE"):
-            try:
-                await helper.cleanup_helper_artifact()
-            except Exception:  # noqa: BLE001
-                logger.warning("Temporary knowledge base migration helper requires cleanup")
 
 
 def schedule_upgrade(*, retry: bool = False) -> asyncio.Task:

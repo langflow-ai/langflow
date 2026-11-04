@@ -27,7 +27,7 @@ class TeamsChannelPostComponent(MicrosoftGraphComponent):
 
     display_name = "Teams: Post Channel Message"
     description = "Post a message into a Microsoft Teams channel."
-    documentation = "https://learn.microsoft.com/en-us/graph/api/channel-post-messages"
+    documentation = "https://docs.langflow.org/bundles-microsoft"
     name = "TeamsPostChannelMessage"
     capability_id = "microsoft.teams.channel_post"
 

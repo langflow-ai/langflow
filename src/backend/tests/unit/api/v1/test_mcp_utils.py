@@ -38,6 +38,9 @@ class FakeSession:
             return FakeResult(self._user_files)
         return FakeResult([])
 
+    async def get(self, _model, _identifier):
+        return None
+
 
 class FakeSessionContext:
     def __init__(self, session):
@@ -81,7 +84,7 @@ async def test_handle_list_resources_includes_flow_and_user_files(monkeypatch):
     ]
 
     fake_session = FakeSession(flows=flows, user_files=user_files)
-    storage_service = FakeStorageService({flow_id: ["flow-doc.docx"]})
+    storage_service = FakeStorageService({f"flow-{flow_id}": ["flow-doc.docx"]})
 
     monkeypatch.setattr(mcp_utils, "session_scope", lambda: FakeSessionContext(fake_session))
     monkeypatch.setattr(mcp_utils, "get_storage_service", lambda: storage_service)
@@ -345,7 +348,7 @@ async def test_handle_read_resource_project_scope_binds_flow_id_as_uuid(monkeypa
     storage_service = FakeStorageService(
         {},
         {
-            f"{flow.id}/{file_name}": b"project file contents",
+            f"flow-{flow.id}/{file_name}": b"project file contents",
             f"{other_flow.id}/{file_name}": b"other project file contents",
         },
     )
@@ -370,6 +373,41 @@ async def test_handle_read_resource_project_scope_binds_flow_id_as_uuid(monkeypa
     import base64
 
     assert base64.b64decode(result) == b"project file contents"
+
+
+@pytest.mark.asyncio
+async def test_handle_read_resource_authorizes_legacy_flow_inside_open_session(monkeypatch):
+    """The legacy-flow ownership check must run before the session closes."""
+    import base64
+
+    class ClosingSession(FakeSession):
+        closed = False
+
+        async def get(self, _model, _identifier):
+            if self.closed:
+                msg = "session is closed"
+                raise RuntimeError(msg)
+
+    class ClosingContext(FakeSessionContext):
+        async def __aexit__(self, exc_type, exc, tb):
+            self._session.closed = True
+            return False
+
+    user_id = uuid4()
+    flow_id = uuid4()
+    file_name = "legacy.txt"
+    flow = SimpleNamespace(id=flow_id, user_id=user_id, folder_id=None, name="Legacy flow")
+    fake_session = ClosingSession(flows=[flow], user_files=[])
+    storage_service = FakeStorageService({}, {f"flow-{flow_id}/{file_name}": b"legacy contents"})
+    monkeypatch.setattr(mcp_utils, "session_scope", lambda: ClosingContext(fake_session))
+    monkeypatch.setattr(mcp_utils, "get_storage_service", lambda: storage_service)
+    token = mcp_utils.current_user_ctx.set(SimpleNamespace(id=user_id))
+    try:
+        result = await mcp_utils.handle_read_resource(f"http://host/api/v1/files/download/{flow_id}/{file_name}")
+    finally:
+        mcp_utils.current_user_ctx.reset(token)
+
+    assert base64.b64decode(result) == b"legacy contents"
 
 
 @pytest.mark.asyncio
@@ -853,7 +891,7 @@ async def test_handle_call_tool_forwards_only_advertised_input_fields(monkeypatc
             ]
 
         @classmethod
-        def from_payload(cls, _flow_data):
+        def from_payload(cls, _flow_data, **_kwargs):
             return cls()
 
     import lfx.graph.graph.base as graph_base_module
@@ -895,7 +933,7 @@ def test_json_schema_from_flow_includes_optional_session_id(monkeypatch):
             self.vertices = []  # No input nodes — exercises the empty-properties path.
 
         @classmethod
-        def from_payload(cls, _flow_data):
+        def from_payload(cls, _flow_data, **_kwargs):
             return cls()
 
     # Patch the lazy import inside json_schema_from_flow.
@@ -942,7 +980,7 @@ def test_json_schema_from_flow_preserves_flow_defined_session_id(monkeypatch):
             self.vertices = [_FakeNode()]
 
         @classmethod
-        def from_payload(cls, _flow_data):
+        def from_payload(cls, _flow_data, **_kwargs):
             return cls()
 
     import lfx.graph.graph.base as graph_base_module
@@ -998,7 +1036,7 @@ def test_json_schema_from_flow_only_advertises_api_exposed_fields(monkeypatch):
         vertices = [_FakeNode()]
 
         @classmethod
-        def from_payload(cls, _flow_data):
+        def from_payload(cls, _flow_data, **_kwargs):
             return cls()
 
     import lfx.graph.graph.base as graph_base_module
@@ -1024,7 +1062,7 @@ def _patch_graph_with_input_nodes(monkeypatch, templates):
         vertices = [_FakeNode(f"input-{index}", template) for index, template in enumerate(templates)]
 
         @classmethod
-        def from_payload(cls, _flow_data):
+        def from_payload(cls, _flow_data, **_kwargs):
             return cls()
 
     import lfx.graph.graph.base as graph_base_module
@@ -1188,7 +1226,7 @@ def test_json_schema_from_flow_maps_structured_and_list_field_types(monkeypatch)
         vertices = [_FakeNode()]
 
         @classmethod
-        def from_payload(cls, _flow_data):
+        def from_payload(cls, _flow_data, **_kwargs):
             return cls()
 
     import lfx.graph.graph.base as graph_base_module

@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any
 
 from lfx.utils.env_var_security import is_protected_env_var
 
+from langflow.api.utils.migration_copies import DIAL_SETTINGS as _DIAL_SETTINGS
 from langflow.api.utils.migration_copies import bucket_environment, foreign_environment
 from langflow.services.database.sqlite_to_postgres import _sync_postgres_url
 
@@ -26,15 +27,8 @@ if TYPE_CHECKING:
 CHECK_STEP = "check_target"
 # What migration-preflight calls a check that check-integrity runs, when it runs it against this instance.
 _HERE = "source: "
-# The settings that say which stores this server may dial. The first step checked this instance with them,
-# and a store that only they let through would read as out of reach without them.
-_DIAL_SETTINGS = (
-    "LANGFLOW_SSRF_PROTECTION_ENABLED",
-    "LANGFLOW_SSRF_ALLOWED_HOSTS",
-    "LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED",
-    "LANGFLOW_KB_ALLOWED_HOSTS",
-)
-# One entry of such a setting: a switch, a host, an address, or a range with its width or its mask.
+# One entry of a setting that says which stores this server may dial: a switch, a host, an address, or a range
+# with its width or its mask.
 _HOST = re.compile(r"[\w.*:\[\]-]+(/[\d.]{1,15})?")
 # What stands in for a value that is not printed.
 _SAME = "<same value as this instance>"
