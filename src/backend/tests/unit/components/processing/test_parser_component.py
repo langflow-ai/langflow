@@ -1,5 +1,6 @@
 import re
 
+import pandas as pd
 import pytest
 from lfx.components.processing.parser import ParserComponent
 from lfx.schema import Data, DataFrame
@@ -61,6 +62,36 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         component = component_class(input_data=DataFrame(index=[10, 20]), pattern="row", sep=" | ")
 
         assert component.parse_combined_text().text == "row | row"
+
+    @pytest.mark.parametrize("dtype", ["Int64", "Float64", "boolean", "string"])
+    def test_parse_dataframe_nullable_value(self, component_class, dtype):
+        dataframe = DataFrame({"value": pd.Series([pd.NA], dtype=dtype), "label": ["row"]})
+        component = component_class(input_data=dataframe, pattern="{value} {label}")
+
+        assert component.parse_combined_text().text == "None row"
+
+    @pytest.mark.parametrize("dtype", ["Int64", "Float64"])
+    @pytest.mark.parametrize("pattern", ["{value}", "{value:.2f}"])
+    def test_parse_dataframe_numeric_nullable_value(self, component_class, dtype, pattern):
+        dataframe = DataFrame({"value": pd.Series([pd.NA], dtype=dtype)})
+        component = component_class(input_data=dataframe, pattern=pattern)
+
+        assert component.parse_combined_text().text == "nan"
+
+    def test_parse_dataframe_missing_value_preserves_large_integer(self, component_class):
+        dataframe = DataFrame(
+            {"doc id": [2**53 + 1, 2**53 + 3], "score": pd.Series([pd.NA, 0.25], dtype="Float64")},
+        )
+        component = component_class(input_data=dataframe, pattern="{doc id:d} {score}", sep=" | ")
+
+        assert component.parse_combined_text().text == "9007199254740993 None | 9007199254740995 0.25"
+
+    @pytest.mark.parametrize(("value", "expected"), [(None, "None"), (float("nan"), "nan"), (pd.NaT, "NaT")])
+    def test_parse_dataframe_preserves_other_missing_values(self, component_class, value, expected):
+        dataframe = DataFrame({"value": pd.Series([value], dtype="object")})
+        component = component_class(input_data=dataframe, pattern="{value}")
+
+        assert component.parse_combined_text().text == expected
 
     def test_parse_data_object(self, component_class):
         # Arrange
