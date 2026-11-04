@@ -138,7 +138,7 @@ def test_child_environment_excludes_provider_credentials_and_original_home(monke
     }
     environment = child_environment(str(tmp_path / "isolated"), inherited)
     assert set(environment) & set(inherited) == {"PATH", "PYTHONPATH", "HOME"}
-    assert environment["PATH"] == inherited["PATH"]
+    assert environment["PATH"] == os.defpath
     assert environment["PYTHONPATH"] == os.pathsep.join(
         map(str, [tmp_path / "src", tmp_path.parent / "shared", tmp_path])
     )
