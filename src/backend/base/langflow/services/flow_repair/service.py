@@ -194,7 +194,18 @@ async def _write_selected(
     )
     claimed = await session.exec(
         update(Flow)
-        .where(Flow.id == flow.id, token_condition)
+        # Metadata-only moves keep the graph token. Bind the validated owner,
+        # policy scope and managed state too, since SQLite ignores FOR UPDATE.
+        .where(
+            Flow.id == flow.id,
+            token_condition,
+            col(Flow.user_id).is_not_distinct_from(owner_id),
+            col(Flow.folder_id).is_not_distinct_from(flow.folder_id),
+            col(Flow.workspace_id).is_not_distinct_from(flow.workspace_id),
+            col(Flow.locked).is_not_distinct_from(flow.locked),
+            col(Flow.fs_path).is_not_distinct_from(flow.fs_path),
+            col(Flow.is_component).is_not_distinct_from(flow.is_component),
+        )
         .values(version_token=claim)
         .execution_options(synchronize_session=False)
     )
