@@ -24,9 +24,21 @@ export function useStartNewFlow() {
   // mutation then reports only the later request: a spare flow, or a "Name must
   // be unique" error while the first flow was created and never opened.
   const creating = useRef(false);
+  // The router moves the URL at once but commits the new route in a transition,
+  // so the button can still be clicked after navigate() returns. Hold clicks
+  // while the URL is the new flow's. A flag kept until unmount would not do: the
+  // back button can overtake this navigation with the list page still mounted,
+  // and the button has to keep working then.
+  const openingPath = useRef<string | null>(null);
 
   return useCallback(async () => {
     if (creating.current) return;
+    if (
+      openingPath.current &&
+      window.location.pathname.endsWith(openingPath.current)
+    ) {
+      return;
+    }
     creating.current = true;
     try {
       const id = await addFlow();
@@ -38,7 +50,8 @@ export function useStartNewFlow() {
       // the user navigates to a DIFFERENT flow (e.g. picks a template in the
       // TemplatesModal which spins up its own new flow).
       openWelcome(id);
-      navigate(`/flow/${id}${folderId ? `/folder/${folderId}` : ""}`);
+      openingPath.current = `/flow/${id}${folderId ? `/folder/${folderId}` : ""}`;
+      navigate(openingPath.current);
     } finally {
       creating.current = false;
     }
