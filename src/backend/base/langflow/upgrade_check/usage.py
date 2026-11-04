@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Literal
 
@@ -86,8 +87,29 @@ class FlowUsage(BaseModel):
     serving: JobUsage
 
 
+_MAX_OFFSET_HOURS = 23
+_MAX_OFFSET_MINUTES = 59
+_USAGE_TIMESTAMP = re.compile(
+    r"^(?P<stamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(?P<fraction>\d+))?"
+    r"(?P<offset>Z|[+-](?P<hour>\d{2}):(?P<minute>\d{2}))$"
+)
+
+
 def _parse(value: str) -> datetime:
-    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    match = _USAGE_TIMESTAMP.fullmatch(value)
+    if (
+        match is None
+        or int(match["hour"] or "0") > _MAX_OFFSET_HOURS
+        or int(match["minute"] or "0") > _MAX_OFFSET_MINUTES
+    ):
+        msg = "usage timestamps must be ISO 8601 with a valid timezone"
+        raise ValueError(msg)
+    fraction = match["fraction"]
+    normalized = match["stamp"]
+    if fraction:
+        normalized += f".{fraction[:6].ljust(6, '0')}"
+    normalized += "+00:00" if match["offset"] == "Z" else match["offset"]
+    return datetime.fromisoformat(normalized)
 
 
 def _aware_timestamp(value: str | None) -> str | None:
