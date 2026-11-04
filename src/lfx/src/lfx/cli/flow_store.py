@@ -118,7 +118,7 @@ class FilesystemFlowStore:
     def read(self, flow_id: str) -> dict | None:
         path = self._safe_path(flow_id)
         try:
-            return json.loads(path.read_text(encoding="utf-8"))
+            flow_json = json.loads(path.read_text(encoding="utf-8"))
         except FileNotFoundError:
             return None
         except (json.JSONDecodeError, OSError, UnicodeDecodeError) as exc:
@@ -128,6 +128,10 @@ class FilesystemFlowStore:
             # every other flow keeps serving, instead of raising into a 500/startup crash.
             logger.warning("Skipping unreadable flow store file %s: %r", path.name, exc)
             return None
+        if not isinstance(flow_json, dict):
+            logger.warning("Skipping flow store file %s: expected a JSON object", path.name)
+            return None
+        return flow_json
 
     def delete(self, flow_id: str) -> bool:
         path = self._safe_path(flow_id)
@@ -139,7 +143,15 @@ class FilesystemFlowStore:
             return True
 
     def list_ids(self) -> list[str]:
-        return [p.stem for p in self._dir.glob("*.json")]
+        flow_ids = []
+        for path in self._dir.glob("*.json"):
+            try:
+                self._safe_path(path.stem)
+            except ValueError:
+                # A file placed directly in the directory may not have a usable flow ID.
+                continue
+            flow_ids.append(path.stem)
+        return flow_ids
 
     def exists(self, flow_id: str) -> bool:
         return self._safe_path(flow_id).exists()
