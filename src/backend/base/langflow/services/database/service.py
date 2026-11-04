@@ -449,7 +449,9 @@ class DatabaseService(Service):
                     for pragma in pragmas_list:
                         try:
                             cursor.execute(pragma)
-                        except OperationalError:
+                        # The raw DBAPI cursor raises sqlite3's error, not SQLAlchemy's. A read-only
+                        # connection, such as the upgrade check's, cannot change the journal mode.
+                        except (OperationalError, sqlite3.OperationalError):
                             logger.exception(f"Failed to set PRAGMA {pragma}")
                         except GeneratorExit:
                             logger.error(f"Failed to set PRAGMA {pragma}")
