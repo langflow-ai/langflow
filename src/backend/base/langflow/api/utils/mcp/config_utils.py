@@ -452,7 +452,7 @@ async def auto_configure_starter_projects_mcp(session):
                 if not user_starter_folder.auth_settings and not (
                     settings_service.auth_settings.AUTO_LOGIN
                     and settings_service.auth_settings.skip_auth_auto_login
-                    and settings_service.auth_settings.SUPERUSER
+                    and user.username == settings_service.auth_settings.SUPERUSER
                 ):
                     default_auth = {"auth_type": "apikey"}
                     user_starter_folder.auth_settings = encrypt_auth_settings(default_auth)

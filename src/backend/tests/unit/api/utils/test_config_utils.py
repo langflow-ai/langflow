@@ -522,13 +522,15 @@ class TestAutoConfigureStarterProjectsMcp:
                 settings_service.settings.add_projects_to_mcp_servers = original_setting
 
     @pytest.mark.parametrize(
-        ("skip_auth", "has_superuser", "explicit_public", "existing_server", "expects_key"),
+        ("skip_auth", "superuser", "explicit_public", "existing_server", "expects_key"),
         [
-            (False, True, False, False, True),
-            (False, True, False, True, True),
-            (True, False, False, False, True),
-            (True, True, False, False, False),
-            (False, True, True, False, False),
+            (False, "owner", False, False, True),
+            (False, "owner", False, True, True),
+            (True, "", False, False, True),
+            (True, "owner", False, False, False),
+            (True, "other", False, False, True),
+            (True, "other", False, True, True),
+            (False, "owner", True, False, False),
         ],
     )
     async def test_starter_server_matches_auto_login_credentials(
@@ -536,7 +538,7 @@ class TestAutoConfigureStarterProjectsMcp:
         sample_user_with_starter_project,
         monkeypatch,
         skip_auth,
-        has_superuser,
+        superuser,
         explicit_public,
         existing_server,
         expects_key,
@@ -552,7 +554,7 @@ class TestAutoConfigureStarterProjectsMcp:
         monkeypatch.setattr(settings.settings, "add_projects_to_mcp_servers", True)
         monkeypatch.setattr(settings.auth_settings, "AUTO_LOGIN", True)
         monkeypatch.setattr(settings.auth_settings, "skip_auth_auto_login", skip_auth)
-        monkeypatch.setattr(settings.auth_settings, "SUPERUSER", user.username if has_superuser else "")
+        monkeypatch.setattr(settings.auth_settings, "SUPERUSER", user.username if superuser == "owner" else superuser)
         url = await get_project_streamable_http_url(folder.id)
         configs = {}
         if existing_server:
