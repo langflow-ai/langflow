@@ -763,14 +763,15 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
   1. **Setup**: flow, dataset and, with several outputs, the one to score; the
      flow check (ready and the scored output, or its blocking issues and
      warnings) and the dataset's first rows.
-  2. **Scoring**: the scoring methods, each with a one-line description; the
+  2. **Scoring**: the scoring methods, each explained by an (i) next to its name; the
      LLM judge's model and rubric, then **Safety checks** and **Token limits**
      as collapsed sections whose headers summarize the choice ("None
      selected", "600 per row · 8192 per run · stops at a limit"); and the pass
      threshold ("Pass when the average score reaches (threshold)"). Each safety
      check, the stop-on-limit box and, for a reasoning judge, the per-row
-     budget carry an (i) button whose tooltip explains them (hover, focus or
-     tap). Token limits stays open while a budget is invalid.
+     budget carry an (i) too; its tooltip opens on hover, focus or tap. A
+     scorer card's checkbox stretches over the card so the (i) is not nested
+     in it. Token limits stays open while a budget is invalid.
   3. **Models**, only when the flow has model pickers: each picker for this run
      only; a picker the flow saved empty is flagged and blocks Next until one is
      chosen. **Compare with other models** adds a version (a copy of the last);

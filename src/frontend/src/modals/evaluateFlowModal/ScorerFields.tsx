@@ -8,6 +8,7 @@ import type {
   SafetyCheck,
   ScorerType,
 } from "@/controllers/API/queries/evals/types";
+import InfoHint from "@/pages/MainPage/pages/evalsPage/components/InfoHint";
 import { cn } from "@/utils/utils";
 import JudgeLimitFields, { type JudgeLimits } from "./JudgeLimitFields";
 import { isReasoningModel } from "./judgeLimits";
@@ -64,46 +65,55 @@ export default function ScorerFields({
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {SCORERS.map(({ type, icon }) => {
           const checked = selected.has(type);
+          const name = t(`evals.scorers.${type}`);
           return (
-            <button
+            // The checkbox stretches over the whole card (its ::after), and the (i) sits above it:
+            // a button cannot hold another button.
+            <div
               key={type}
-              type="button"
-              role="checkbox"
-              aria-checked={checked}
-              id={`scorer-${type}`}
-              data-testid={`scorer-${type}`}
-              onClick={() => onToggle(type, !checked)}
               className={cn(
-                "flex items-start gap-3 rounded-lg border px-3 py-3 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "relative flex items-center gap-1.5 rounded-lg border px-3 py-3 transition-colors hover:bg-muted",
                 checked && "border-primary",
               )}
             >
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border border-muted-foreground",
-                  checked &&
-                    "border-primary bg-primary text-primary-foreground",
-                )}
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={checked}
+                id={`scorer-${type}`}
+                data-testid={`scorer-${type}`}
+                onClick={() => onToggle(type, !checked)}
+                className="flex min-w-0 items-center gap-3 text-left after:absolute after:inset-0 after:rounded-lg focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring"
               >
-                {checked && (
-                  <ForwardedIconComponent name="Check" className="h-3 w-3" />
-                )}
-              </span>
-              <span className="flex min-w-0 flex-col gap-0.5">
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border border-muted-foreground",
+                    checked &&
+                      "border-primary bg-primary text-primary-foreground",
+                  )}
+                >
+                  {checked && (
+                    <ForwardedIconComponent name="Check" className="h-3 w-3" />
+                  )}
+                </span>
                 <span className="flex items-center gap-1.5 text-sm font-medium">
                   <ForwardedIconComponent
                     name={icon}
                     aria-hidden="true"
                     className="h-3.5 w-3.5 text-muted-foreground"
                   />
-                  {t(`evals.scorers.${type}`)}
+                  {name}
                 </span>
-                <span className="text-xs text-muted-foreground">
-                  {t(`evals.scorers.${type}Hint`)}
-                </span>
+              </button>
+              <span className="relative z-10 flex">
+                <InfoHint
+                  hint={t(`evals.scorers.${type}Hint`)}
+                  label={t("evals.infoLabel", { name })}
+                  testId={`scorer-${type}-info`}
+                />
               </span>
-            </button>
+            </div>
           );
         })}
       </div>
