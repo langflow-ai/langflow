@@ -6,10 +6,11 @@ import io
 import json
 import zipfile
 from typing import TYPE_CHECKING
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowUpdate
+from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.deps import session_scope
@@ -20,6 +21,16 @@ if TYPE_CHECKING:
     from httpx import AsyncClient
 
 pytestmark = pytest.mark.no_blockbuster
+
+TRIGGER_LIMIT_MESSAGE = "A flow can have only one trigger. Remove the extra triggers and try again."
+
+
+def _assert_plain_trigger_limit(response) -> None:
+    assert response.status_code == 422, response.text
+    detail = response.json()["detail"]
+    assert isinstance(detail, list), response.text
+    assert [error["msg"] for error in detail] == [TRIGGER_LIMIT_MESSAGE]
+    assert all("input" not in error and "ctx" not in error and "url" not in error for error in detail)
 
 
 def _schedule_node(node_id: str) -> dict:
@@ -89,7 +100,7 @@ async def test_update_rejects_multiple_triggers_without_changing_the_flow(
     assert fetched.json()["data"] == payload["data"]
 
 
-@pytest.mark.parametrize("file_type", ["json", "zip", "batch", "project"])
+@pytest.mark.parametrize("file_type", ["single", "json", "zip", "batch", "project"])
 async def test_import_rejects_multiple_triggers_before_saving_any_flows(
     client: AsyncClient, logged_in_headers: dict[str, str], file_type: str
 ) -> None:
@@ -106,7 +117,7 @@ async def test_import_rejects_multiple_triggers_before_saving_any_flows(
             contents = archive.getvalue()
             content_type = "application/zip"
         else:
-            body = {"flows": [valid, invalid]}
+            body = invalid if file_type == "single" else {"flows": [valid, invalid]}
             if file_type == "project":
                 body["folder_name"] = valid["name"]
             contents = json.dumps(body).encode()
@@ -123,6 +134,116 @@ async def test_import_rejects_multiple_triggers_before_saving_any_flows(
         assert not (await session.exec(select(Flow).where(col(Flow.name).in_([valid["name"], invalid["name"]])))).all()
         if file_type == "project":
             assert (await session.exec(select(Folder).where(Folder.name == valid["name"]))).first() is None
+    if file_type != "batch":
+        _assert_plain_trigger_limit(response)
+
+
+@pytest.mark.parametrize("use_source_graph", [False, True])
+async def test_fork_rejects_multiple_triggers_without_creating_a_copy(
+    client: AsyncClient, logged_in_headers: dict[str, str], active_user, *, use_source_graph: bool
+) -> None:
+    invalid_data = _graph(_schedule_node("schedule-a"), _schedule_node("schedule-b"))
+    async with session_scope() as session:
+        flow = Flow(
+            name=f"fork-constraint-{uuid4().hex}",
+            data=invalid_data if use_source_graph else _graph(_schedule_node("schedule-a")),
+            user_id=active_user.id,
+        )
+        session.add(flow)
+        await session.flush()
+        flow_id = flow.id
+
+    copy_name = f"rejected-copy-{uuid4().hex}"
+    response = await client.post(
+        f"api/v1/flows/{flow_id}/fork",
+        json={"name": copy_name, **({} if use_source_graph else {"data": invalid_data})},
+        headers=logged_in_headers,
+    )
+
+    _assert_plain_trigger_limit(response)
+    async with session_scope() as session:
+        assert (await session.exec(select(Flow).where(Flow.name == copy_name))).first() is None
+
+
+async def test_overwrite_rejects_multiple_triggers_without_changing_flow_or_history(
+    client: AsyncClient, logged_in_headers: dict[str, str]
+) -> None:
+    payload = _payload(_schedule_node("schedule-a"))
+    created = await client.post("api/v1/flows/", json=payload, headers=logged_in_headers)
+    assert created.status_code == 201, created.text
+    original = created.json()
+
+    response = await client.post(
+        f"api/v1/flows/{original['id']}/overwrite",
+        json={"data": _graph(_schedule_node("schedule-a"), _schedule_node("schedule-b"))},
+        headers={**logged_in_headers, "If-Match": original["version_token"]},
+    )
+
+    _assert_plain_trigger_limit(response)
+    async with session_scope() as session:
+        saved = await session.get(Flow, UUID(original["id"]))
+        assert saved.data == payload["data"]
+        assert str(saved.version_token) == original["version_token"]
+        assert not (await session.exec(select(FlowVersion).where(FlowVersion.flow_id == saved.id))).all()
+
+
+@pytest.mark.parametrize("save_draft", [False, True])
+async def test_version_activation_rejects_multiple_triggers_before_saving_a_draft(
+    client: AsyncClient, logged_in_headers: dict[str, str], *, save_draft: bool
+) -> None:
+    payload = _payload(_schedule_node("schedule-a"))
+    created = await client.post("api/v1/flows/", json=payload, headers=logged_in_headers)
+    assert created.status_code == 201, created.text
+    original = created.json()
+    version = await client.post(
+        f"api/v1/flows/{original['id']}/versions/",
+        json={"data": _graph(_schedule_node("schedule-a"), _schedule_node("schedule-b"))},
+        headers=logged_in_headers,
+    )
+    assert version.status_code == 201, version.text
+
+    response = await client.post(
+        f"api/v1/flows/{original['id']}/versions/{version.json()['id']}/activate",
+        params={"save_draft": save_draft},
+        headers=logged_in_headers,
+    )
+
+    _assert_plain_trigger_limit(response)
+    async with session_scope() as session:
+        saved = await session.get(Flow, UUID(original["id"]))
+        assert saved.data == payload["data"]
+        assert str(saved.version_token) == original["version_token"]
+        versions = (await session.exec(select(FlowVersion).where(FlowVersion.flow_id == saved.id))).all()
+        assert [str(entry.id) for entry in versions] == [version.json()["id"]]
+
+
+@pytest.mark.parametrize("method", ["patch", "put"])
+async def test_metadata_update_does_not_reactivate_a_schedule(
+    client: AsyncClient, logged_in_headers: dict[str, str], active_user, method: str
+) -> None:
+    async with session_scope() as session:
+        flow = Flow(**_payload(_schedule_node("schedule-a")), user_id=active_user.id)
+        session.add(flow)
+        await session.flush()
+        await reconcile_flow_triggers(session, flow_id=flow.id, owner_id=active_user.id, flow_data=flow.data)
+        trigger = (await session.exec(select(Trigger).where(Trigger.flow_id == flow.id))).one()
+        trigger.state = "error"
+        trigger.last_error = "The schedule could not run."
+        session.add(trigger)
+        flow_id, trigger_id = flow.id, trigger.id
+
+    response = await client.request(
+        method,
+        f"api/v1/flows/{flow_id}",
+        json={"name": f"renamed-{uuid4().hex}", "description": "Updated description"},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200, response.text
+    async with session_scope() as session:
+        trigger = await session.get(Trigger, trigger_id)
+        assert trigger.state == "error"
+        assert trigger.last_error == "The schedule could not run."
 
 
 async def test_legacy_multiple_triggers_can_be_read_and_repaired_before_enabling(

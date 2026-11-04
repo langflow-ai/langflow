@@ -49,7 +49,13 @@ from langflow.services.triggers.constants import (
     PROVIDER_SLACK,
     SLACK_TRIGGER_KINDS,
 )
-from langflow.services.triggers.error_codes import NODE_REMOVED_ERROR, SOURCE_SETTINGS_CHANGED_ERROR
+from langflow.services.triggers.error_codes import (
+    MULTIPLE_TRIGGERS_ERROR,
+    NODE_REMOVED_ERROR,
+    SOURCE_SETTINGS_CHANGED_ERROR,
+    CodedTriggerError,
+    TriggerErrorCode,
+)
 from langflow.services.triggers.locking import lock_trigger
 from langflow.services.triggers.providers.registry import component_kind, get_kind, source_kinds
 from langflow.services.triggers.schedule_config import (
@@ -293,8 +299,7 @@ def validate_single_trigger_per_flow(flow_data: dict[str, Any] | None) -> None:
             continue
         count += 1
         if count > 1:
-            msg = "A flow can have only one trigger. Remove the extra triggers and try again."
-            raise ValueError(msg)
+            raise CodedTriggerError(TriggerErrorCode.MULTIPLE_TRIGGERS, MULTIPLE_TRIGGERS_ERROR)
 
 
 def _display_name(config: dict[str, Any], kind: str) -> str:

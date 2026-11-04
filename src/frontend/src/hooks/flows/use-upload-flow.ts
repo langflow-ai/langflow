@@ -1,23 +1,34 @@
+import { usePostUploadFlows } from "@/controllers/API/queries/flows/use-post-upload-flows";
 import { createFileUpload } from "@/helpers/create-file-upload";
 import { getObjectsFromFilelist } from "@/helpers/get-objects-from-filelist";
 import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useTypesStore } from "@/stores/typesStore";
 import type { FlowType } from "@/types/flow";
-import { processDataFromFlow } from "@/utils/reactflowUtils";
-import useAddFlow from "./use-add-flow";
+import {
+  extractFieldsFromComponenents,
+  processDataFromFlow,
+  processFlows,
+} from "@/utils/reactflowUtils";
+import usePrepareFlows from "./use-prepare-flows";
 
 const useUploadFlow = () => {
-  const addFlow = useAddFlow();
+  const prepareFlows = usePrepareFlows();
+  const { mutateAsync: postUploadFlows } = usePostUploadFlows();
   const paste = useFlowStore((state) => state.paste);
+  const setFlows = useFlowsManagerStore((state) => state.setFlows);
 
   const getFlowsFromFiles = async ({
     files,
   }: {
     files: File[];
   }): Promise<FlowType[]> => {
-    const objectList = await getObjectsFromFilelist<any>(files);
+    const objectList = await getObjectsFromFilelist<
+      FlowType | { flows: FlowType[] }
+    >(files);
     const flows: FlowType[] = [];
     objectList.forEach((object) => {
-      if (object.flows) {
+      if (object && "flows" in object && Array.isArray(object.flows)) {
         object.flows.forEach((flow: FlowType) => {
           flows.push(flow);
         });
@@ -53,45 +64,47 @@ const useUploadFlow = () => {
     isComponent?: boolean;
     position?: { x: number; y: number };
   }): Promise<void> => {
-    try {
-      const flows = await getFlowsToUpload({ files });
+    const flows = await getFlowsToUpload({ files });
+    if (flows.some((flow) => !flow?.data)) {
+      throw new Error("Invalid flow data");
+    }
+    if (
+      isComponent !== undefined &&
+      flows.some((flow) => (flow.is_component ?? false) !== isComponent)
+    ) {
+      throw new Error("You cannot upload a component as a flow or vice versa");
+    }
+    if (flows.length === 0) return;
+
+    if (position) {
       for (const flow of flows) {
         await processDataFromFlow(flow);
       }
-
-      if (
-        isComponent !== undefined &&
-        flows.every(
-          (fileData) =>
-            (!fileData.is_component && isComponent === true) ||
-            (fileData.is_component !== undefined &&
-              fileData.is_component !== isComponent),
-        )
-      ) {
-        throw new Error(
-          "You cannot upload a component as a flow or vice versa",
-        );
-      } else {
-        let currentPosition = position;
-        for (const flow of flows) {
-          if (flow.data) {
-            if (currentPosition) {
-              paste(flow.data, currentPosition);
-              currentPosition = {
-                x: currentPosition.x + 50,
-                y: currentPosition.y + 50,
-              };
-            } else {
-              await addFlow({ flow });
-            }
-          } else {
-            throw new Error("Invalid flow data");
-          }
-        }
+      let currentPosition = position;
+      for (const flow of flows) {
+        paste(flow.data!, currentPosition);
+        currentPosition = {
+          x: currentPosition.x + 50,
+          y: currentPosition.y + 50,
+        };
       }
-    } catch (e) {
-      throw e;
+      return;
     }
+
+    const preparedFlows = await prepareFlows(flows);
+    const createdFlows = await postUploadFlows(preparedFlows);
+    const { data, flows: myFlows } = processFlows([
+      ...createdFlows,
+      ...(useFlowsManagerStore.getState().flows ?? []),
+    ]);
+    setFlows(myFlows);
+    useTypesStore.setState((state) => ({
+      data: { ...state.data, saved_components: data },
+      ComponentFields: extractFieldsFromComponenents({
+        ...state.data,
+        saved_components: data,
+      }),
+    }));
   };
 
   return uploadFlow;

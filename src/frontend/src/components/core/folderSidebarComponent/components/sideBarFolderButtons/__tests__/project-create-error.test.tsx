@@ -299,12 +299,36 @@ describe("project creation and upload errors", () => {
     );
   });
 
+  it.each(["selection", "bundle"])(
+    "uploads a flow %s in one request",
+    async (source) => {
+      const flows = [{ data: { nodes: [] } }, { data: { nodes: [] } }];
+      const files = [
+        new File(["{}"], "first.json", { type: "application/json" }),
+        new File(["{}"], "second.json", { type: "application/json" }),
+      ];
+      mockCreateFileUpload.mockResolvedValue(files);
+      mockGetObjectsFromFilelist.mockResolvedValue(
+        source === "bundle" ? [{ flows }] : flows,
+      );
+      render(<SideBarFoldersButtonsComponent handleChangeFolder={jest.fn()} />);
+
+      fireEvent.click(screen.getByRole("button", { name: "Upload" }));
+
+      await waitFor(() => expect(mockUploadFlow).toHaveBeenCalledTimes(1));
+      expect(mockUploadFlow).toHaveBeenCalledWith({ files });
+      expect(mockUploadFolders).not.toHaveBeenCalled();
+    },
+  );
+
   it.each(["string", "validation array"])(
     "shows a project's %s validation detail as text",
     async (shape) => {
       const message =
         "A flow can have only one trigger. Remove the extra triggers and try again.";
-      mockGetObjectsFromFilelist.mockResolvedValue([{ flows: [] }]);
+      mockGetObjectsFromFilelist.mockResolvedValue([
+        { folder_name: "Imported Project", flows: [] },
+      ]);
       render(<SideBarFoldersButtonsComponent handleChangeFolder={jest.fn()} />);
       fireEvent.click(screen.getByRole("button", { name: "Upload" }));
       await waitFor(() => expect(mockUploadFolders).toHaveBeenCalledTimes(1));
