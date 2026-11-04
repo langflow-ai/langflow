@@ -9,6 +9,7 @@ import {
   pickFirstNumber,
 } from "./flowTraceColumnsHelpers";
 
+/** Returns AgGrid column definitions for the Flow Activity trace table. Token counts use toLocaleString for readable thousands formatting. */
 export function createFlowTracesColumns({
   flowId,
   flowName,
@@ -91,7 +92,7 @@ export function createFlowTracesColumns({
           params.data?.totalTokens,
           params.data?.total_tokens,
         );
-        return tokens === null ? "" : String(tokens);
+        return tokens === null ? "" : tokens.toLocaleString();
       },
     },
     {
