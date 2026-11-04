@@ -1,6 +1,5 @@
 import { type ReactNode, useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getAxiosErrorDetail } from "@/controllers/API/helpers/get-axios-error-message";
 import {
   useGetConnections,
   useUpdateConnectionMutation,
@@ -17,6 +16,7 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import BackgroundRunsConsentDialog from "../BackgroundRunsConsentDialog";
+import { triggerRefusalText } from "../helpers/trigger-error-text";
 
 /** Client-only actions that sit beside the server's vocabulary. */
 export type TriggerUiAction = TriggerAction | "view_events" | "open_flow";
@@ -78,7 +78,7 @@ export function useTriggerActionRunner(
       } catch (error) {
         setErrorData({
           title: failure,
-          list: [getAxiosErrorDetail(error, t("triggers.errors.unknown"))],
+          list: [triggerRefusalText(error, t)],
         });
       } finally {
         setBusyId(null);
@@ -163,7 +163,7 @@ export function useTriggerActionRunner(
     } catch (error) {
       setErrorData({
         title: t("triggers.alerts.consentFailed"),
-        list: [getAxiosErrorDetail(error, t("triggers.errors.unknown"))],
+        list: [triggerRefusalText(error, t)],
       });
     } finally {
       setBusyId(null);

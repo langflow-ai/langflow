@@ -98,6 +98,10 @@ from lfx.cli._observability_commands import observability_app  # noqa: E402
 app.add_typer(observability_app, name="observability")
 app.add_typer(admin_app, name="admin")
 
+from langflow.cli.secrets import secrets_app  # noqa: E402
+
+app.add_typer(secrets_app, name="secrets")
+
 
 class ProcessManager:
     """Manages the lifecycle of the backend process."""
@@ -603,6 +607,8 @@ def run(
             settings_service.settings.ssl_cert_file if ssl_cert_file_path is None else ssl_cert_file_path
         )
         ssl_key_file_path = settings_service.settings.ssl_key_file if ssl_key_file_path is None else ssl_key_file_path
+        settings_service.settings.ssl_cert_file = ssl_cert_file_path
+        settings_service.settings.ssl_key_file = ssl_key_file_path
 
         # create path object if frontend_path is provided
         static_files_dir: Path | None = Path(frontend_path) if frontend_path else None

@@ -24,6 +24,7 @@ from langflow.api.utils import (
     strip_flow_secrets,
 )
 from langflow.api.utils.zip_utils import extract_flows_from_zip
+from langflow.api.v1.flow_validation import flow_validation_error
 from langflow.api.v1.flows import create_flows
 from langflow.api.v1.flows_helpers import _export_variable_names, _sanitize_flow_filename
 from langflow.api.v1.schemas import FlowListCreate
@@ -180,7 +181,7 @@ async def upload_project_flows(
     try:
         flow_list = FlowListCreate.model_validate({"flows": data["flows"]})
     except ValidationError as e:
-        raise HTTPException(status_code=422, detail=str(e)) from e
+        raise flow_validation_error(e) from e
 
     project_name = await generate_unique_folder_name(data["folder_name"], current_user.id, session)
 

@@ -25,11 +25,13 @@ code-generating endpoints.
 from contextvars import ContextVar
 from typing import Any
 
+import httpx
 from fastapi import APIRouter, HTTPException, Request, Response
 from lfx.log.logger import logger
 from lfx.mcp.client import LangflowClient
 from lfx.mcp.server import client_scope
 from lfx.mcp.server import mcp as lfx_mcp
+from lfx.utils.ssrf_transport import pin_host_for_url
 from mcp import types
 from mcp.server import Server
 
@@ -69,11 +71,27 @@ async def _loopback_client(request: Request) -> LangflowClient:
     """
     access_token = await oauth2_login(request)
     api_key = None if access_token else request.query_params.get("x-api-key") or request.headers.get("x-api-key")
+    # The ASGI server address comes from the listener, never the request headers.
+    settings = get_settings_service().settings
+    host, port = request.scope.get("server") or (settings.host, settings.runtime_port or settings.port)
+    host = {"0.0.0.0": "127.0.0.1", "::": "::1"}.get(host, host)  # noqa: S104
+    scheme = "https" if settings.ssl_cert_file and settings.ssl_key_file else "http"
+    # Verify the operator's certificate name while connecting to the listener.
+    # Without an override, the certificate must cover the listener address.
+    tls_host = settings.ssl_cert_hostname if scheme == "https" else None
+    server_url = httpx.URL(
+        scheme=scheme,
+        host=tls_host or host,
+        port=port,
+        path=settings.root_path.rstrip("/"),
+    )
     return LangflowClient(
-        server_url=str(request.base_url).rstrip("/"),
+        server_url=str(server_url),
         api_key=api_key,
         access_token=access_token,
         use_env_api_key=False,
+        use_env_proxies=False,
+        pinned_ips={pin_host_for_url(str(server_url)): [host]},
     )
 
 
@@ -93,15 +111,7 @@ async def handle_list_tools() -> list[types.Tool]:
     return [tool for tool in await lfx_mcp.list_tools() if tool.name not in excluded]
 
 
-@server.call_tool(validate_input=False)
-async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Any:
-    """Delegate to the lfx FastMCP server with the caller's loopback client bound.
-
-    ``validate_input=False`` mirrors FastMCP's own transport registration;
-    FastMCP still validates the final arguments via pydantic. The shared
-    lowlevel ``request_ctx`` contextvar makes FastMCP's Context (progress/log
-    notifications) work through this delegation unchanged.
-    """
+def _ensure_tool_allowed(name: str) -> None:
     if name in _HTTP_EXCLUDED_TOOLS:
         msg = f"Tool '{name}' is not available over HTTP"
         raise ValueError(msg)
@@ -111,11 +121,27 @@ async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Any:
             "(LANGFLOW_AGENTIC_EXPERIENCE is not enabled). The other tools remain available."
         )
         raise ValueError(msg)
+
+
+@server.call_tool(validate_input=False)
+async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Any:
+    """Delegate to the lfx FastMCP server with the caller's loopback client bound.
+
+    ``validate_input=False`` mirrors FastMCP's own transport registration;
+    FastMCP still validates the final arguments via pydantic. The shared
+    lowlevel ``request_ctx`` contextvar makes FastMCP's Context (progress/log
+    notifications) work through this delegation unchanged.
+    """
+    _ensure_tool_allowed(name)
+    if name == "batch" and isinstance(arguments.get("actions"), list):
+        for action in arguments["actions"]:
+            if isinstance(action, dict):
+                _ensure_tool_allowed(action.get("tool", ""))
     client = current_loopback_client_ctx.get()
     if client is None:
         msg = "Authenticated client is unavailable for this MCP request"
         raise ValueError(msg)
-    with client_scope(client):
+    async with client_scope(client):
         return await lfx_mcp.call_tool(name, arguments)
 
 
@@ -158,7 +184,8 @@ async def handle_agentic_streamable_http(
     await db.close()
     # start() is idempotent; called here so the session manager only runs once the endpoint is used.
     await _streamable_http.start()
-    context_token = current_loopback_client_ctx.set(await _loopback_client(request))
+    client = await _loopback_client(request)
+    context_token = current_loopback_client_ctx.set(client)
     try:
         manager = _streamable_http.get_manager()
         await manager.handle_request(request.scope, request.receive, request._send)  # noqa: SLF001
@@ -169,4 +196,5 @@ async def handle_agentic_streamable_http(
         raise HTTPException(status_code=500, detail="Internal server error in agentic MCP transport") from exc
     finally:
         current_loopback_client_ctx.reset(context_token)
+        await client.aclose()
     return ResponseNoOp()

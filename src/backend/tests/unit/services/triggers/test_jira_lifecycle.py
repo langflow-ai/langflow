@@ -1,0 +1,616 @@
+"""Installed Jira adapter ownership, durable delivery and cleanup contracts."""
+
+import asyncio
+import json
+from dataclasses import replace
+from pathlib import Path
+from types import SimpleNamespace
+from urllib.parse import parse_qs, urlsplit
+from uuid import UUID, uuid4
+
+import httpx
+import pytest
+from langflow.services.connection.oauth.broker import store_tokens
+from langflow.services.database.models.connection import Connection, ConnectionSecret
+from langflow.services.database.models.connection.oauth import ConnectionOAuth
+from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.trigger.model import Trigger, TriggerCleanup, TriggerEvent, TriggerSubscription
+from langflow.services.database.models.user.model import User
+from langflow.services.deps import session_scope
+from langflow.services.triggers import dispatcher, source_runtime
+from langflow.services.triggers.providers import registry
+from langflow.services.triggers.reconciliation import reconcile_flow_triggers
+from langflow.services.triggers.service import TriggerService
+from langflow.services.triggers.source_cleanup import run_cleanup_pass
+from langflow.services.triggers.source_poll import collect_source, commit_source
+from lfx.extension import load_extension
+from lfx.extension.bundle_registry import BundleRecord
+from lfx.integrations.errors import AuthExpiredError, IntegrationPolicyBlockedError, ProviderUnavailableError
+from lfx.services.deps import get_integration_policy_service, get_policy_bundle_service
+from lfx_jira.client import JiraClient
+from lfx_jira.schema import SCOPES
+from sqlmodel import select
+
+from tests.unit.services.triggers.jira_testkit import SITE, issue
+
+pytestmark = pytest.mark.no_blockbuster
+
+
+@pytest.fixture
+def jira(monkeypatch, client):  # noqa: ARG001 - initialize application services
+    import lfx_jira
+    from langflow.services.triggers.providers.jira import PROVIDER, collector
+    from lfx.extension import bundle_registry
+
+    monkeypatch.setenv("LANGFLOW_JIRA_CLOUD_ID", SITE)
+    monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_CONTEXT", "self_managed")
+    loaded = load_extension(Path(lfx_jira.__file__).parent, distribution="lfx-jira")
+    assert loaded.ok, loaded.errors
+    record = BundleRecord(
+        bundle="jira",
+        extension_id="lfx-jira",
+        extension_version="0.1.0",
+        slot="official",
+        components=tuple(loaded.components),
+        integrations=tuple(loaded.integrations),
+    )
+    monkeypatch.setattr(
+        bundle_registry,
+        "get_default_registry",
+        lambda: SimpleNamespace(snapshot=lambda: {"jira": record}, list_integrations=lambda: loaded.integrations),
+    )
+    monkeypatch.setattr(registry, "_cache_key", None)
+    monkeypatch.setattr(registry, "_providers", {})
+    original = registry.metadata.entry_points
+    monkeypatch.setattr(
+        registry.metadata,
+        "entry_points",
+        lambda **kwargs: [
+            SimpleNamespace(name="jira", dist=SimpleNamespace(metadata={"Name": "lfx-jira"}), load=lambda: PROVIDER)
+        ]
+        if kwargs.get("group") == registry.ENTRY_POINT_GROUP
+        else original(**kwargs),
+    )
+    state = SimpleNamespace(version="2026-10-22T10:00:00Z", status="1", fail=False, calls=[])
+
+    def handler(request):
+        state.calls.append(request)
+        assert request.url.host == "api.atlassian.com"
+        assert request.url.path == f"/ex/jira/{SITE}/rest/api/3/search/jql"
+        return (
+            httpx.Response(503)
+            if state.fail
+            else httpx.Response(
+                200, json={"issues": [issue(updated=state.version, status=state.status)], "isLast": True}
+            )
+        )
+
+    monkeypatch.setattr(
+        collector, "JiraClient", lambda lease: JiraClient(lease, transport=httpx.MockTransport(handler))
+    )
+    return state
+
+
+async def connection(owner_id, *, allow=True, identity="user_delegated"):
+    async with session_scope() as session:
+        row = Connection(
+            provider_key="jira",
+            name="work",
+            display_name="Jira work",
+            owner_id=owner_id,
+            status="ready",
+            ownership_mode="user",
+            allow_non_interactive=allow,
+            executing_identity={"identity": identity, "account": {"id": "user-1", "tenant_id": SITE}},
+        )
+        session.add(row)
+        await session.flush()
+        await store_tokens(
+            session,
+            row,
+            {"version": 1, "access_token": "synthetic-jira-access", "token_type": "Bearer"},
+            ["read:jira-work", "write:jira-work", "read:jira-user", "offline_access"],
+        )
+        return row.id
+
+
+@pytest.fixture
+def jira_oauth(jira, monkeypatch):  # noqa: ARG001 - install the provider before validating its registration
+    monkeypatch.setenv(
+        "LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS",
+        json.dumps(
+            {
+                "jira-work": {
+                    "provider": "jira",
+                    "client_id": "synthetic-jira-client",
+                    "client_secret": "synthetic-jira-client-secret",  # pragma: allowlist secret
+                    "redirect_uri": "http://localhost/api/v1/connections/oauth/jira/callback",
+                    "tenant": SITE,
+                    "scopes": sorted(SCOPES),
+                }
+            }
+        ),
+    )
+
+
+@pytest.mark.usefixtures("jira_oauth")
+async def test_jira_oauth_requires_offline_access_before_starting_consent(client, logged_in_headers):
+    registrations = await client.get("api/v1/connections/oauth/registrations", headers=logged_in_headers)
+    assert registrations.status_code == 200, registrations.text
+    assert registrations.json()["registrations"][0]["required_scopes"] == ["offline_access"]
+    created = await client.post(
+        "api/v1/connections",
+        headers=logged_in_headers,
+        json={
+            "provider_key": "jira",
+            "name": "actions_only",
+            "display_name": "Jira actions",
+            "executing_identity": {"identity": "user_delegated"},
+        },
+    )
+    assert created.status_code == 201, created.text
+    connection_id = created.json()["id"]
+    rejected = await client.post(
+        f"api/v1/connections/{connection_id}/oauth/start",
+        headers=logged_in_headers,
+        json={"registration_id": "jira-work", "scopes": sorted(SCOPES - {"offline_access"})},
+    )
+    assert rejected.status_code == 400, rejected.text
+    assert "offline_access" in rejected.json()["detail"]
+    assert "set-cookie" not in rejected.headers
+    async with session_scope() as session:
+        assert await session.get(ConnectionOAuth, UUID(connection_id)) is None
+        assert (await session.get(Connection, UUID(connection_id))).status == "pending"
+
+    selected_scopes = sorted(SCOPES - {"write:jira-work"})
+    started = await client.post(
+        f"api/v1/connections/{connection_id}/oauth/start",
+        headers=logged_in_headers,
+        json={"registration_id": "jira-work", "scopes": selected_scopes},
+    )
+    assert started.status_code == 200, started.text
+    query = parse_qs(urlsplit(started.json()["authorization_url"]).query)
+    assert set(query["scope"][0].split()) == set(selected_scopes)
+
+
+@pytest.mark.parametrize("saved_grant", [False, True])
+@pytest.mark.usefixtures("jira_oauth")
+async def test_jira_missing_refresh_token_reports_scope_without_replacing_saved_grant(
+    client, active_user, logged_in_headers, monkeypatch, saved_grant
+):
+    from langflow.services.connection.oauth import providers
+
+    connection_id = await connection(active_user.id)
+    async with session_scope() as session:
+        secret = await session.get(ConnectionSecret, connection_id)
+        previous_payload = secret.encrypted_payload
+        if not saved_grant:
+            await session.delete(secret)
+            row = await session.get(Connection, connection_id)
+            row.status = "pending"
+            row.granted_scopes = []
+            session.add(row)
+    started = await client.post(
+        f"api/v1/connections/{connection_id}/oauth/start",
+        headers=logged_in_headers,
+        json={"registration_id": "jira-work", "scopes": sorted(SCOPES)},
+    )
+    assert started.status_code == 200, started.text
+    query = parse_qs(urlsplit(started.json()["authorization_url"]).query)
+
+    async def exchange(*_args, **_kwargs):
+        return {
+            "access_token": "synthetic-jira-access",
+            "expires_in": 3600,
+            "scope": " ".join(sorted(SCOPES - {"offline_access"})),
+        }
+
+    monkeypatch.setattr(providers, "_request", exchange)
+    failed = await client.get(
+        "api/v1/connections/oauth/jira/callback",
+        params={"state": query["state"][0], "code": "synthetic-jira-code"},
+    )
+    assert failed.status_code == 400, failed.text
+    assert "offline_access" in failed.text
+    assert "synthetic-jira" not in failed.text
+    visible = await client.get("api/v1/connections", headers=logged_in_headers)
+    row = next(item for item in visible.json() if item["id"] == str(connection_id))
+    assert row["status_reason"] == "oauth-refresh-token-missing"
+    assert row["status"] == ("ready" if saved_grant else "error")
+    async with session_scope() as session:
+        secret = await session.get(ConnectionSecret, connection_id)
+        assert (secret.encrypted_payload if secret else None) == (previous_payload if saved_grant else None)
+        assert (await session.get(ConnectionOAuth, connection_id)).state_digest is None
+
+
+@pytest.mark.usefixtures("jira_oauth")
+async def test_atlassian_access_removal_asks_to_reconnect_instead_of_reporting_an_outage(
+    client, active_user, logged_in_headers, monkeypatch, respx_mock
+):
+    from langflow.services.connection.oauth import providers
+    from langflow.services.connection.oauth.broker import digest
+    from langflow.services.deps import get_connection_resolver_service
+    from langflow.services.triggers.providers.jira import oauth
+    from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest
+    from lfx.services.authorization.base import ExecutionPrincipal
+
+    created = await client.post(
+        "api/v1/connections",
+        headers=logged_in_headers,
+        json={
+            "provider_key": "jira",
+            "name": "work",
+            "display_name": "Jira work",
+            "executing_identity": {"identity": "user_delegated"},
+        },
+    )
+    assert created.status_code == 201, created.text
+    connection_id = created.json()["id"]
+    started = await client.post(
+        f"api/v1/connections/{connection_id}/oauth/start",
+        headers=logged_in_headers,
+        json={"registration_id": "jira-work", "scopes": sorted(SCOPES)},
+    )
+    assert started.status_code == 200, started.text
+    state = parse_qs(urlsplit(started.json()["authorization_url"]).query)["state"][0]
+
+    async def consent(*_args, **_kwargs):
+        return {
+            "access_token": "synthetic-jira-access",
+            "refresh_token": "synthetic-jira-refresh",
+            "expires_in": 3600,
+            "scope": " ".join(sorted(SCOPES)),
+        }
+
+    def atlassian(request):
+        if request.url.path == "/oauth/token/accessible-resources":
+            return httpx.Response(200, json=[{"id": SITE, "scopes": sorted(SCOPES)}])
+        return httpx.Response(200, json={"accountId": "user-1", "active": True})
+
+    monkeypatch.setattr(oauth, "http_client", lambda: httpx.AsyncClient(transport=httpx.MockTransport(atlassian)))
+    with monkeypatch.context() as consent_patch:
+        consent_patch.setattr(providers, "_request", consent)
+        completed = await client.get(
+            "api/v1/connections/oauth/jira/callback", params={"state": state, "code": "synthetic-jira-code"}
+        )
+    assert completed.status_code == 200, completed.text
+
+    # The app's access is removed at Atlassian, so the next call's token and its refresh are both refused.
+    refused = respx_mock.post("https://auth.atlassian.com/oauth/token").mock(
+        return_value=httpx.Response(
+            403, json={"error": "unauthorized_client", "error_description": "refresh_token is invalid"}
+        )
+    )
+    request = ConnectionResolutionRequest(
+        ref=ConnectionRef(provider="jira", name="work"),
+        principal=ExecutionPrincipal(
+            kind="actor", user_id=str(active_user.id), actor_id=str(active_user.id), interactive=True
+        ),
+        rejected_token_digest=digest("synthetic-jira-access"),
+    )
+    with pytest.raises(AuthExpiredError):
+        await get_connection_resolver_service().resolve(request)
+    assert refused.call_count == 1
+    assert json.loads(refused.calls[0].request.content)["grant_type"] == "refresh_token"
+
+    visible = await client.get("api/v1/connections", headers=logged_in_headers)
+    row = next(item for item in visible.json() if item["id"] == connection_id)
+    assert (row["status"], row["health"]) == ("expired", "unhealthy")
+
+    async with session_scope() as session:
+        flow = Flow(name="Jira access removed", user_id=active_user.id)
+        session.add(flow)
+        await session.flush()
+        flow_id = flow.id
+    trigger = await reconcile(flow_id, active_user.id)
+    async with session_scope() as session:
+        disarmed = await session.get(Trigger, trigger.id)
+        disarmed.state = "needs_reconnect"
+        session.add(disarmed)
+    detail = await client.get(f"api/v1/triggers/{trigger.id}", headers=logged_in_headers)
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["reason"] == "needs_reconnect"
+    assert "reconnect" in detail.json()["allowed_actions"]
+    assert "resume" not in detail.json()["allowed_actions"]
+
+
+async def reconcile(flow_id, owner_id):
+    data = {
+        "nodes": [
+            {
+                "id": "jira-source",
+                "data": {
+                    "type": "ext:jira:JiraOnIssueUpdatedTriggerComponent@official",
+                    "node": {
+                        "template": {
+                            name: {"value": value}
+                            for name, value in {
+                                "connection": "jira/work",
+                                "project": "DEMO",
+                            }.items()
+                        }
+                    },
+                },
+            }
+        ],
+        "edges": [],
+    }
+    async with session_scope() as session:
+        await reconcile_flow_triggers(session, flow_id=flow_id, owner_id=owner_id, flow_data=data)
+    async with session_scope() as session:
+        return (await session.exec(select(Trigger).where(Trigger.flow_id == flow_id))).one()
+
+
+async def activate(trigger_id):
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger_id)
+        await TriggerService().enable_and_activate(session, row=row)
+        assert row.state == "active"
+        assert row.config["mechanism_id"] == "jira.issue.poll"
+
+
+@pytest.mark.usefixtures("jira")
+async def test_reconnected_jira_trigger_offers_resume_in_list_and_detail(client, active_user, logged_in_headers):
+    from langflow.services.triggers.listeners.supervisor import mark_needs_reconnect
+
+    connection_id = await connection(active_user.id)
+    async with session_scope() as session:
+        flow = Flow(name="Reconnected Jira", user_id=active_user.id)
+        session.add(flow)
+        await session.flush()
+        flow_id = flow.id
+    trigger = await reconcile(flow_id, active_user.id)
+    async with session_scope() as session:
+        await mark_needs_reconnect(
+            session,
+            trigger_ids=[trigger.id],
+            reason="The connection was revoked or expired. Reconnect it to resume this trigger.",
+        )
+        restored = await session.get(Connection, connection_id)
+        restored.status = "revoked"
+        session.add(restored)
+
+    revoked = await client.get(f"api/v1/triggers/{trigger.id}", headers=logged_in_headers)
+    assert revoked.status_code == 200, revoked.text
+    assert "reconnect" in revoked.json()["allowed_actions"]
+
+    async with session_scope() as session:
+        restored = await session.get(Connection, connection_id)
+        await store_tokens(
+            session,
+            restored,
+            {"version": 1, "access_token": "synthetic-jira-reconnected", "token_type": "Bearer"},
+            ["read:jira-work", "offline_access"],
+        )
+
+    for url in (f"api/v1/triggers/{trigger.id}", f"api/v1/triggers?flow_id={flow_id}", "api/v1/triggers"):
+        response = await client.get(url, headers=logged_in_headers)
+        assert response.status_code == 200, response.text
+        body = response.json()
+        if isinstance(body, list):
+            body = next(row for row in body if row["id"] == str(trigger.id))
+        assert body["state"] == "needs_reconnect"
+        assert body["reason"] == "ready_to_resume"
+        assert "resume" in body["allowed_actions"]
+        assert "reconnect" not in body["allowed_actions"]
+        assert body["blocked_actions"]["reconnect"] == "reconnect_not_needed"
+
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        assert row.state == "needs_reconnect"
+        assert row.last_error == "The connection was revoked or expired. Reconnect it to resume this trigger."
+
+    resumed = await client.post(f"api/v1/triggers/{trigger.id}/enable", headers=logged_in_headers)
+    assert resumed.status_code == 200, resumed.text
+    assert resumed.json()["state"] == "active"
+
+
+@pytest.mark.parametrize(
+    ("changes", "reason"),
+    [
+        ({"status": "revoked"}, "needs_reconnect"),
+        ({"status": "expired"}, "needs_reconnect"),
+        ({"status": "pending"}, "needs_reconnect"),
+        ({"status": "error"}, "needs_reconnect"),
+        ({"allow_non_interactive": False}, "consent_required"),
+        ({"granted_scopes": ["offline_access"]}, "needs_reconnect"),
+        ({"executing_identity": {"identity": "bot"}}, "needs_reconnect"),
+        ({"provider_key": "google"}, "config_invalid"),
+        ({"name": "different"}, "config_invalid"),
+        ({"ownership_mode": "instance", "owner_id": None}, "needs_reconnect"),
+    ],
+)
+@pytest.mark.usefixtures("jira")
+async def test_jira_recovery_requires_usable_owned_connection_metadata(
+    client, active_user, logged_in_headers, changes, reason
+):
+    connection_id = await connection(active_user.id)
+    async with session_scope() as session:
+        flow = Flow(name="Jira recovery prerequisites", user_id=active_user.id)
+        session.add(flow)
+        await session.flush()
+        flow_id = flow.id
+    trigger = await reconcile(flow_id, active_user.id)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        row.state = "needs_reconnect"
+        session.add(row)
+        source = await session.get(Connection, connection_id)
+        for field, value in changes.items():
+            setattr(source, field, value)
+        session.add(source)
+
+    response = await client.get(f"api/v1/triggers/{trigger.id}", headers=logged_in_headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["reason"] == reason
+    assert "resume" not in response.json()["allowed_actions"]
+    assert response.json()["blocked_actions"]["resume"] == reason
+
+
+@pytest.mark.parametrize("missing", [False, True], ids=["another-owner", "missing-connection"])
+@pytest.mark.usefixtures("jira")
+async def test_jira_recovery_does_not_offer_resume_for_missing_or_foreign_connections(
+    client, active_user, logged_in_headers, trigger_owner, missing
+):
+    connection_id = await connection(active_user.id)
+    async with session_scope() as session:
+        flow = Flow(name="Jira recovery ownership", user_id=active_user.id)
+        session.add(flow)
+        await session.flush()
+        flow_id = flow.id
+    trigger = await reconcile(flow_id, active_user.id)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        row.state = "needs_reconnect"
+        if missing:
+            row.connection_id = uuid4()
+        else:
+            source = await session.get(Connection, connection_id)
+            source.owner_id = trigger_owner
+            session.add(source)
+        session.add(row)
+
+    response = await client.get(f"api/v1/triggers/{trigger.id}", headers=logged_in_headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["reason"] == "needs_reconnect"
+    assert "resume" not in response.json()["allowed_actions"]
+
+
+async def test_registered_listener_adapter_baselines_delivers_dedupes_and_pauses(
+    jira, trigger_owner, owned_flow, fake_background_service, monkeypatch
+):
+    from langflow.services.triggers.listeners import adapters
+    from langflow.services.triggers.listeners.supervisor import ListenerSupervisor
+
+    connection_id = await connection(trigger_owner)
+    row = await reconcile(owned_flow, trigger_owner)
+    assert row.last_error is None
+    await activate(row.id)
+    assert await source_runtime.sync_source(row.id) == 0
+    jira.version = "2026-10-22T11:00:00Z"
+    monkeypatch.setattr(adapters, "_REGISTRY", {})
+    adapters.register_builtin_adapters()
+    supervisor = ListenerSupervisor(holder="jira-listener-contract")
+
+    async def wait_for_delivery():
+        while True:
+            async with session_scope() as session:
+                events = (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == row.id))).all()
+                if events:
+                    assert len(events) == 1
+                    assert events[0].payload["data"]["key"] == "DEMO-1"
+                    assert "synthetic-jira-access" not in repr(events[0].payload)
+                    return
+            await asyncio.sleep(0.01)
+
+    try:
+        await supervisor.reconcile()
+        assert isinstance(supervisor.workers[connection_id].adapter, adapters.ProviderSourcePollAdapter)
+        await asyncio.wait_for(wait_for_delivery(), timeout=10)
+    finally:
+        await supervisor.stop()
+    assert await source_runtime.sync_source(row.id) == 0
+    assert await dispatcher.run_once(owner="jira-dispatch") == 1
+    assert len(fake_background_service.submits) == 1
+    async with session_scope() as session:
+        current = await session.get(Trigger, row.id)
+        await TriggerService().disable(session, row=current)
+        assert not (
+            await session.exec(select(TriggerSubscription).where(TriggerSubscription.trigger_id == row.id))
+        ).all()
+        assert not (await session.exec(select(TriggerCleanup).where(TriggerCleanup.trigger_id == row.id))).all()
+    assert await run_cleanup_pass() == 0
+    calls = len(jira.calls)
+    assert await source_runtime.sync_source(row.id) == 0
+    assert len(jira.calls) == calls
+
+
+async def test_failed_fetch_and_stale_replica_cannot_advance_cursor(jira, trigger_owner, owned_flow):
+    from langflow.services.triggers.source_clients import source_lease
+
+    await connection(trigger_owner)
+    row = await reconcile(owned_flow, trigger_owner)
+    await activate(row.id)
+    assert await source_runtime.sync_source(row.id) == 0
+    async with session_scope() as session:
+        original = dict((await session.get(Trigger, row.id)).provider_state)
+    jira.fail = True
+    with pytest.raises(ProviderUnavailableError):
+        await source_runtime.sync_source(row.id)
+    async with session_scope() as session:
+        assert (await session.get(Trigger, row.id)).provider_state == original
+    jira.fail = False
+    jira.version = "2026-10-22T11:00:00Z"
+    async with session_scope() as session:
+        current = await session.get(Trigger, row.id)
+        lease = await source_lease(session, current, family="trigger_listener")
+        snapshot = Trigger(**current.model_dump())
+    first = await collect_source(snapshot, lease)
+    second = await collect_source(snapshot, lease)
+    async with session_scope() as session:
+        assert await commit_source(session, trigger_id=row.id, source_round=first) == 1
+    with pytest.raises(RuntimeError, match="cursor changed"):
+        async with session_scope() as session:
+            await commit_source(session, trigger_id=row.id, source_round=second)
+
+
+async def test_arming_rejects_invalid_issue_type_before_provider_io(jira, trigger_owner, owned_flow):
+    await connection(trigger_owner)
+    row = await reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        current = await session.get(Trigger, row.id)
+        current.config = {**current.config, "issue_type_id": "Bug"}
+        session.add(current)
+    async with session_scope() as session:
+        current = await session.get(Trigger, row.id)
+        with pytest.raises(ValueError, match="Issue Type ID must be a positive numeric ID"):
+            await TriggerService().enable_and_activate(session, row=current)
+        assert current.state == "pending"
+    assert not jira.calls
+
+
+@pytest.mark.parametrize("failure", ["owner", "consent", "identity", "scope", "policy"])
+async def test_activation_enforces_owner_consent_identity_scopes_policy(jira, trigger_owner, owned_flow, failure):
+    owner = trigger_owner
+    if failure == "owner":
+        async with session_scope() as session:
+            other = User(
+                username=f"jira-{uuid4().hex}",
+                password="not-a-login",  # noqa: S106  # pragma: allowlist secret
+                is_active=True,
+            )
+            session.add(other)
+            await session.flush()
+            owner = other.id
+    identifier = await connection(
+        owner, allow=failure != "consent", identity="bot" if failure == "identity" else "user_delegated"
+    )
+    if failure == "scope":
+        async with session_scope() as session:
+            row = await session.get(Connection, identifier)
+            row.granted_scopes = []
+            session.add(row)
+    row = await reconcile(owned_flow, trigger_owner)
+    bundle = get_policy_bundle_service()
+    original = bundle.snapshot
+    if failure == "policy":
+        bundle.publish(
+            replace(
+                original,
+                revision=original.revision + 1,
+                initialized=True,
+                blocked_integration_action_keys=frozenset({"integrations.jira.trigger.updated"}),
+            )
+        )
+        get_integration_policy_service().invalidate()
+    try:
+        async with session_scope() as session:
+            current = await session.get(Trigger, row.id)
+            with pytest.raises((ValueError, IntegrationPolicyBlockedError)):
+                await TriggerService().enable_and_activate(session, row=current)
+        assert not jira.calls
+    finally:
+        bundle.publish(replace(original, revision=bundle.snapshot.revision + 1))
+        get_integration_policy_service().invalidate()

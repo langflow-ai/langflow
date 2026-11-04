@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
 import pytest
-from fastapi import BackgroundTasks, FastAPI, Request
+from fastapi import FastAPI, Request
 from httpx import ASGITransport, AsyncClient
 from langflow.api.v1 import endpoints
 from langflow.api.v1.schemas import SimplifiedAPIRequest
@@ -32,6 +32,7 @@ pytestmark = pytest.mark.no_blockbuster
     ],
 )
 async def test_simple_run_keeps_typed_errors_through_the_http_boundary(monkeypatch, owner, error, status_code):
+    """Preserve integration error codes and status without exposing delegated-call details."""
     user = SimpleNamespace(id=uuid4(), is_superuser=False)
     flow = SimpleNamespace(
         id=uuid4(),
@@ -57,7 +58,6 @@ async def test_simple_run_keeps_typed_errors_through_the_http_boundary(monkeypat
     @app.post("/run")
     async def run():
         return await endpoints._run_flow_internal(
-            background_tasks=BackgroundTasks(),
             flow=flow,
             input_request=SimplifiedAPIRequest(),
             stream=False,

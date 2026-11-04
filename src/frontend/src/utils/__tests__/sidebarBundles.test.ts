@@ -102,6 +102,18 @@ describe("SIDEBAR_BUNDLES", () => {
       ]),
     );
   });
+
+  it("classifies Keenable as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Keenable",
+          icon: "Keenable",
+          name: "keenable",
+        }),
+      ]),
+    );
+  });
 });
 
 it("uses the Salesforce logo for its integration palette group", () => {
