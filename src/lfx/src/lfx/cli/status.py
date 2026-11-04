@@ -205,9 +205,15 @@ def status_command(
                 continue
 
             try:
-                raw: dict = json.loads(path.read_text(encoding="utf-8"))
-            except (json.JSONDecodeError, OSError) as exc:
+                raw = json.loads(path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError, UnicodeDecodeError) as exc:
                 statuses.append(FlowStatus(name=path.name, status=_STATUS_ERROR, path=path, detail=str(exc)))
+                continue
+
+            if not isinstance(raw, dict):
+                statuses.append(
+                    FlowStatus(name=path.name, status=_STATUS_ERROR, path=path, detail="expected a flow JSON object")
+                )
                 continue
 
             name: str = raw.get("name", path.stem)
