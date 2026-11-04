@@ -82,6 +82,49 @@ result = math.sqrt(16)
         assert result.is_safe is True
 
 
+class TestMatchClassAttributes:
+    @pytest.mark.parametrize(
+        "attribute", ["__class__", "gi_frame", "f_globals", "format", "attrgetter", "subprocess_exec", "eval", "query"]
+    )
+    def test_rejects_blocked_keyword_attributes(self, attribute):
+        result = scan_code_security(f"match value:\n    case Record({attribute}=_):\n        pass")
+        assert result.is_safe is False
+        assert f"Access to '{attribute}' is forbidden in components (sandbox escape)" in result.violations
+
+    @pytest.mark.parametrize(
+        "pattern",
+        [
+            "Record(name=name)",
+            "Record()",
+            "1",
+            "name",
+            "_",
+            "Record(item=Record(name=name))",
+            "[Record(name=name)]",
+            "Record(__name__=name, __qualname__=qualname, __module__=module, __doc__=doc)",
+        ],
+    )
+    def test_preserves_benign_class_patterns(self, pattern):
+        result = scan_code_security(f"match value:\n    case {pattern}:\n        pass")
+        assert result.is_safe is True
+        assert result.violations == ()
+
+    @pytest.mark.parametrize("pattern", ["Record(item=Record(__class__=_))", "Record.__class__()"])
+    def test_checks_nested_pattern_nodes(self, pattern):
+        result = scan_code_security(f"match value:\n    case {pattern}:\n        pass")
+        assert result.is_safe is False
+        assert "Access to '__class__' is forbidden in components (sandbox escape)" in result.violations
+
+    @pytest.mark.parametrize("pattern", ["Record(name, count)", "Record(_)", "Record(item=Record(_))", "int(1)"])
+    def test_rejects_positional_class_patterns(self, pattern):
+        result = scan_code_security(f"match value:\n    case {pattern}:\n        pass")
+        assert result.is_safe is False
+        assert (
+            "Positional class patterns are not allowed in saved Python Interpreter, Python REPL, "
+            "or Lambda Filter code. Use keyword patterns with named attributes instead." in result.violations
+        )
+
+
 class TestScanCodeSecurityModuleReexports:
     """Modules must not expose blocked capabilities through safe package imports."""
 

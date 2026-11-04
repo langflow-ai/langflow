@@ -72,6 +72,12 @@ Highlights of this release include the following changes. For all changes, see t
 
     For more information, see [Upgrade Knowledge and Memory storage](/knowledge-storage-upgrade).
 
+- Python components require keyword class patterns
+
+    Positional class patterns such as `case Point(x, y)` are no longer accepted in Python Interpreter, Python REPL, or Lambda Filter code, including saved flows.
+    Use keyword patterns such as `case Point(x=x, y=y)`.
+    This restriction also applies to builtin positional patterns such as `case int(n)`.
+
 - Repeated ingestion uses stable chunk IDs
 
     In 1.13.2, repeated ingestion uses stable chunk IDs.
